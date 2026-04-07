@@ -30593,6 +30593,1962 @@ const ARRIVAL = (() => {
 </script>
 
 
+
+// ── BATCH 25 — APPROACHING 1000 — THE BODY'S HIDDEN SIGNALS ─────────────────
+
+// ── INTEROCEPTIVE_WHISPER ──────────────────────────────────────────────────
+const INTEROCEPTIVE_WHISPER = (() => {
+  let _last = 0;
+  function draw(ts) {
+    if (ts - _last < 80) return; _last = ts;
+    const svg = document.getElementById('lightLayer');
+    if (!svg) return;
+    const cx = window.innerWidth / 2, cy = window.innerHeight * 0.5;
+    const phase = (ts * 0.0004) % (Math.PI * 2);
+    const r = 18 + Math.sin(phase) * 4;
+    const alpha = 0.04 + Math.sin(phase * 0.7) * 0.03;
+    const c = document.createElementNS('http://www.w3.org/2000/svg','circle');
+    c.setAttribute('cx', cx + Math.sin(phase * 1.3) * 30);
+    c.setAttribute('cy', cy + Math.cos(phase * 0.9) * 20);
+    c.setAttribute('r', r);
+    c.setAttribute('fill', `rgba(180,220,255,${alpha})`);
+    c.setAttribute('class','_iw_tmp');
+    svg.appendChild(c);
+    setTimeout(() => { if (c.parentNode) c.parentNode.removeChild(c); }, 900);
+  }
+  return { draw };
+})();
+
+// ── VISCERAL_KNOWING ───────────────────────────────────────────────────────
+const VISCERAL_KNOWING = (() => {
+  let _last = 0;
+  function draw(ts) {
+    if (ts - _last < 120) return; _last = ts;
+    const cvs = document.getElementById('mainCanvas');
+    if (!cvs) return; const ctx = cvs.getContext('2d');
+    const cx = window.innerWidth / 2, cy = window.innerHeight * 0.62;
+    const phase = (ts * 0.0006) % (Math.PI * 2);
+    ctx.save();
+    ctx.globalAlpha = 0.05 + Math.sin(phase) * 0.03;
+    ctx.strokeStyle = '#d4a0ff';
+    ctx.lineWidth = 1.2;
+    ctx.beginPath();
+    for (let i = 0; i < 5; i++) {
+      const a = (i / 5) * Math.PI * 2 + phase * 0.3;
+      ctx.moveTo(cx, cy);
+      ctx.lineTo(cx + Math.cos(a) * (25 + Math.sin(phase + i) * 8),
+                 cy + Math.sin(a) * (18 + Math.cos(phase + i) * 6));
+    }
+    ctx.stroke();
+    ctx.restore();
+  }
+  return { draw };
+})();
+
+// ── HUNGER_SIGNAL ──────────────────────────────────────────────────────────
+const HUNGER_SIGNAL = (() => {
+  let _last = 0;
+  function draw(ts) {
+    if (ts - _last < 200) return; _last = ts;
+    const cvs = document.getElementById('mainCanvas');
+    if (!cvs) return; const ctx = cvs.getContext('2d');
+    const cx = window.innerWidth / 2, cy = window.innerHeight * 0.58;
+    const phase = (ts * 0.0008) % (Math.PI * 2);
+    if (Math.sin(phase) < 0.3) return;
+    ctx.save();
+    ctx.globalAlpha = 0.06 * Math.max(0, Math.sin(phase));
+    ctx.fillStyle = '#ffb347';
+    ctx.beginPath();
+    ctx.ellipse(cx - 12, cy, 8, 12, -0.3, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+  return { draw };
+})();
+
+// ── THIRST_CALL ────────────────────────────────────────────────────────────
+const THIRST_CALL = (() => {
+  let _last = 0;
+  function draw(ts) {
+    if (ts - _last < 160) return; _last = ts;
+    const svg = document.getElementById('lightLayer');
+    if (!svg) return;
+    const cx = window.innerWidth / 2, cy = window.innerHeight * 0.55;
+    const phase = (ts * 0.0005) % (Math.PI * 2);
+    const drop = document.createElementNS('http://www.w3.org/2000/svg','ellipse');
+    drop.setAttribute('cx', cx + 20 + Math.sin(phase) * 10);
+    drop.setAttribute('cy', cy + Math.cos(phase * 1.1) * 15);
+    drop.setAttribute('rx', 4);
+    drop.setAttribute('ry', 6);
+    drop.setAttribute('fill', `rgba(100,200,255,${0.05 + Math.sin(phase) * 0.04})`);
+    svg.appendChild(drop);
+    setTimeout(() => { if (drop.parentNode) drop.parentNode.removeChild(drop); }, 700);
+  }
+  return { draw };
+})();
+
+// ── SATIETY_WAVE ───────────────────────────────────────────────────────────
+const SATIETY_WAVE = (() => {
+  let _last = 0;
+  function draw(ts) {
+    if (ts - _last < 300) return; _last = ts;
+    const cvs = document.getElementById('mainCanvas');
+    if (!cvs) return; const ctx = cvs.getContext('2d');
+    const cx = window.innerWidth / 2, cy = window.innerHeight * 0.6;
+    const phase = (ts * 0.0003) % (Math.PI * 2);
+    ctx.save();
+    ctx.globalAlpha = 0.05;
+    ctx.strokeStyle = '#a8e6a8';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    for (let x = -50; x <= 50; x += 2) {
+      const y = Math.sin((x * 0.1) + phase) * 8;
+      x === -50 ? ctx.moveTo(cx + x, cy + y) : ctx.lineTo(cx + x, cy + y);
+    }
+    ctx.stroke();
+    ctx.restore();
+  }
+  return { draw };
+})();
+
+// ── FATIGUE_ACCUMULATION ───────────────────────────────────────────────────
+const FATIGUE_ACCUMULATION = (() => {
+  let _last = 0;
+  function draw(ts) {
+    if (ts - _last < 400) return; _last = ts;
+    const cvs = document.getElementById('mainCanvas');
+    if (!cvs) return; const ctx = cvs.getContext('2d');
+    const cx = window.innerWidth / 2, cy = window.innerHeight * 0.45;
+    const phase = (ts * 0.0002) % (Math.PI * 2);
+    ctx.save();
+    ctx.globalAlpha = 0.04 + Math.sin(phase) * 0.02;
+    const grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, 80);
+    grad.addColorStop(0, 'rgba(80,60,100,0.3)');
+    grad.addColorStop(1, 'rgba(80,60,100,0)');
+    ctx.fillStyle = grad;
+    ctx.fillRect(cx - 80, cy - 80, 160, 160);
+    ctx.restore();
+  }
+  return { draw };
+})();
+
+// ── RECOVERY_SURGE ─────────────────────────────────────────────────────────
+const RECOVERY_SURGE = (() => {
+  let _last = 0;
+  function draw(ts) {
+    if (ts - _last < 100) return; _last = ts;
+    const svg = document.getElementById('lightLayer');
+    if (!svg) return;
+    const cx = window.innerWidth / 2, cy = window.innerHeight * 0.4;
+    const phase = (ts * 0.0007) % (Math.PI * 2);
+    if (Math.sin(phase) < 0.6) return;
+    const burst = document.createElementNS('http://www.w3.org/2000/svg','circle');
+    burst.setAttribute('cx', cx + (Math.random() - 0.5) * 60);
+    burst.setAttribute('cy', cy + (Math.random() - 0.5) * 60);
+    burst.setAttribute('r', 3 + Math.random() * 5);
+    burst.setAttribute('fill', `rgba(120,255,180,${0.08 + Math.random() * 0.08})`);
+    svg.appendChild(burst);
+    setTimeout(() => { if (burst.parentNode) burst.parentNode.removeChild(burst); }, 600);
+  }
+  return { draw };
+})();
+
+// ── ITCH_SIGNAL ────────────────────────────────────────────────────────────
+const ITCH_SIGNAL = (() => {
+  let _last = 0;
+  function draw(ts) {
+    if (ts - _last < 250) return; _last = ts;
+    const cvs = document.getElementById('mainCanvas');
+    if (!cvs) return; const ctx = cvs.getContext('2d');
+    const phase = (ts * 0.003) % (Math.PI * 2);
+    const cx = window.innerWidth * (0.35 + Math.sin(phase * 0.2) * 0.1);
+    const cy = window.innerHeight * (0.3 + Math.cos(phase * 0.15) * 0.1);
+    ctx.save();
+    ctx.globalAlpha = 0.06;
+    ctx.strokeStyle = '#ffcc99';
+    ctx.lineWidth = 0.8;
+    ctx.beginPath();
+    ctx.arc(cx, cy, 8 + Math.sin(phase * 4) * 3, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.restore();
+  }
+  return { draw };
+})();
+
+// ── STRETCH_REFLEX ─────────────────────────────────────────────────────────
+const STRETCH_REFLEX = (() => {
+  let _last = 0;
+  function draw(ts) {
+    if (ts - _last < 150) return; _last = ts;
+    const cvs = document.getElementById('mainCanvas');
+    if (!cvs) return; const ctx = cvs.getContext('2d');
+    const cx = window.innerWidth / 2, cy = window.innerHeight * 0.7;
+    const phase = (ts * 0.0009) % (Math.PI * 2);
+    ctx.save();
+    ctx.globalAlpha = 0.055;
+    ctx.strokeStyle = '#99ddff';
+    ctx.lineWidth = 1.2;
+    ctx.beginPath();
+    const stretch = Math.abs(Math.sin(phase)) * 30;
+    ctx.moveTo(cx - 40 - stretch, cy);
+    ctx.bezierCurveTo(cx - 20, cy - 12, cx + 20, cy - 12, cx + 40 + stretch, cy);
+    ctx.stroke();
+    ctx.restore();
+  }
+  return { draw };
+})();
+
+// ── PROPRIOCEPTIVE_DRIFT ───────────────────────────────────────────────────
+const PROPRIOCEPTIVE_DRIFT = (() => {
+  let _last = 0;
+  function draw(ts) {
+    if (ts - _last < 180) return; _last = ts;
+    const svg = document.getElementById('lightLayer');
+    if (!svg) return;
+    const cx = window.innerWidth / 2, cy = window.innerHeight / 2;
+    const phase = (ts * 0.00035) % (Math.PI * 2);
+    const x = cx + Math.sin(phase * 1.3) * 45;
+    const y = cy + Math.cos(phase * 0.9) * 35;
+    const dot = document.createElementNS('http://www.w3.org/2000/svg','circle');
+    dot.setAttribute('cx', x); dot.setAttribute('cy', y);
+    dot.setAttribute('r', 3);
+    dot.setAttribute('fill', `rgba(200,180,255,0.07)`);
+    svg.appendChild(dot);
+    setTimeout(() => { if (dot.parentNode) dot.parentNode.removeChild(dot); }, 1200);
+  }
+  return { draw };
+})();
+
+// ── CELL_DIVISION_PULSE ────────────────────────────────────────────────────
+const CELL_DIVISION_PULSE = (() => {
+  let _last = 0;
+  function draw(ts) {
+    if (ts - _last < 500) return; _last = ts;
+    const cvs = document.getElementById('mainCanvas');
+    if (!cvs) return; const ctx = cvs.getContext('2d');
+    const cx = window.innerWidth * (0.3 + Math.random() * 0.4);
+    const cy = window.innerHeight * (0.2 + Math.random() * 0.6);
+    const phase = (ts * 0.001) % (Math.PI * 2);
+    ctx.save();
+    ctx.globalAlpha = 0.06;
+    ctx.strokeStyle = '#88ffcc';
+    ctx.lineWidth = 0.8;
+    ctx.beginPath();
+    ctx.arc(cx - 6, cy, 5, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.arc(cx + 6, cy, 5, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.restore();
+  }
+  return { draw };
+})();
+
+// ── APOPTOSIS_DANCE ────────────────────────────────────────────────────────
+const APOPTOSIS_DANCE = (() => {
+  let _last = 0;
+  function draw(ts) {
+    if (ts - _last < 600) return; _last = ts;
+    const svg = document.getElementById('lightLayer');
+    if (!svg) return;
+    const cx = window.innerWidth * (0.2 + Math.random() * 0.6);
+    const cy = window.innerHeight * (0.2 + Math.random() * 0.6);
+    const c = document.createElementNS('http://www.w3.org/2000/svg','circle');
+    c.setAttribute('cx', cx); c.setAttribute('cy', cy);
+    c.setAttribute('r', 4 + Math.random() * 3);
+    c.setAttribute('fill', 'none');
+    c.setAttribute('stroke', `rgba(255,160,160,0.06)`);
+    c.setAttribute('stroke-width', '1');
+    svg.appendChild(c);
+    setTimeout(() => { if (c.parentNode) c.parentNode.removeChild(c); }, 1500);
+  }
+  return { draw };
+})();
+
+// ── STEM_CELL_AWAKENING ────────────────────────────────────────────────────
+const STEM_CELL_AWAKENING = (() => {
+  let _last = 0;
+  function draw(ts) {
+    if (ts - _last < 700) return; _last = ts;
+    const cvs = document.getElementById('mainCanvas');
+    if (!cvs) return; const ctx = cvs.getContext('2d');
+    const cx = window.innerWidth / 2 + (Math.random() - 0.5) * 80;
+    const cy = window.innerHeight / 2 + (Math.random() - 0.5) * 80;
+    ctx.save();
+    ctx.globalAlpha = 0.07;
+    const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, 14);
+    g.addColorStop(0, '#ffffaa');
+    g.addColorStop(1, 'transparent');
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.arc(cx, cy, 14, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+  return { draw };
+})();
+
+// ── DIFFERENTIATION_PATH ───────────────────────────────────────────────────
+const DIFFERENTIATION_PATH = (() => {
+  let _last = 0;
+  function draw(ts) {
+    if (ts - _last < 350) return; _last = ts;
+    const cvs = document.getElementById('mainCanvas');
+    if (!cvs) return; const ctx = cvs.getContext('2d');
+    const cx = window.innerWidth / 2, cy = window.innerHeight * 0.5;
+    const phase = (ts * 0.0004) % (Math.PI * 2);
+    ctx.save();
+    ctx.globalAlpha = 0.05;
+    ctx.strokeStyle = '#aaffee';
+    ctx.lineWidth = 0.8;
+    for (let i = 0; i < 3; i++) {
+      const a = (i / 3) * Math.PI * 2 + phase;
+      ctx.beginPath();
+      ctx.moveTo(cx, cy);
+      ctx.lineTo(cx + Math.cos(a) * 30, cy + Math.sin(a) * 30);
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+  return { draw };
+})();
+
+// ── CANCER_VIGILANCE ───────────────────────────────────────────────────────
+const CANCER_VIGILANCE = (() => {
+  let _last = 0;
+  function draw(ts) {
+    if (ts - _last < 800) return; _last = ts;
+    const svg = document.getElementById('lightLayer');
+    if (!svg) return;
+    const cx = window.innerWidth * (0.25 + Math.random() * 0.5);
+    const cy = window.innerHeight * (0.25 + Math.random() * 0.5);
+    const ring = document.createElementNS('http://www.w3.org/2000/svg','circle');
+    ring.setAttribute('cx', cx); ring.setAttribute('cy', cy);
+    ring.setAttribute('r', 6 + Math.random() * 4);
+    ring.setAttribute('fill', 'none');
+    ring.setAttribute('stroke', 'rgba(255,80,80,0.04)');
+    ring.setAttribute('stroke-width', '1.5');
+    svg.appendChild(ring);
+    setTimeout(() => { if (ring.parentNode) ring.parentNode.removeChild(ring); }, 2000);
+  }
+  return { draw };
+})();
+
+// ── SENESCENCE_MARKER ──────────────────────────────────────────────────────
+const SENESCENCE_MARKER = (() => {
+  let _last = 0;
+  function draw(ts) {
+    if (ts - _last < 1000) return; _last = ts;
+    const cvs = document.getElementById('mainCanvas');
+    if (!cvs) return; const ctx = cvs.getContext('2d');
+    const cx = window.innerWidth * (0.2 + Math.random() * 0.6);
+    const cy = window.innerHeight * (0.2 + Math.random() * 0.6);
+    ctx.save();
+    ctx.globalAlpha = 0.04;
+    ctx.fillStyle = '#bbbbbb';
+    ctx.beginPath();
+    ctx.arc(cx, cy, 3, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+  return { draw };
+})();
+
+// ── TELOMERASE_SPARK ───────────────────────────────────────────────────────
+const TELOMERASE_SPARK = (() => {
+  let _last = 0;
+  function draw(ts) {
+    if (ts - _last < 900) return; _last = ts;
+    const svg = document.getElementById('lightLayer');
+    if (!svg) return;
+    const cx = window.innerWidth / 2 + (Math.random() - 0.5) * 100;
+    const cy = window.innerHeight / 2 + (Math.random() - 0.5) * 100;
+    const spark = document.createElementNS('http://www.w3.org/2000/svg','line');
+    const a = Math.random() * Math.PI * 2;
+    spark.setAttribute('x1', cx); spark.setAttribute('y1', cy);
+    spark.setAttribute('x2', cx + Math.cos(a) * 10);
+    spark.setAttribute('y2', cy + Math.sin(a) * 10);
+    spark.setAttribute('stroke', 'rgba(200,255,200,0.08)');
+    spark.setAttribute('stroke-width', '1');
+    svg.appendChild(spark);
+    setTimeout(() => { if (spark.parentNode) spark.parentNode.removeChild(spark); }, 400);
+  }
+  return { draw };
+})();
+
+// ── MITOSIS_SPIRAL ─────────────────────────────────────────────────────────
+const MITOSIS_SPIRAL = (() => {
+  let _last = 0;
+  function draw(ts) {
+    if (ts - _last < 200) return; _last = ts;
+    const cvs = document.getElementById('mainCanvas');
+    if (!cvs) return; const ctx = cvs.getContext('2d');
+    const cx = window.innerWidth / 2, cy = window.innerHeight * 0.48;
+    const phase = (ts * 0.0005) % (Math.PI * 2);
+    ctx.save();
+    ctx.globalAlpha = 0.05;
+    ctx.strokeStyle = '#ccffcc';
+    ctx.lineWidth = 0.8;
+    ctx.beginPath();
+    for (let i = 0; i < 60; i++) {
+      const a = i * 0.2 + phase;
+      const r = i * 0.4;
+      const x = cx + Math.cos(a) * r, y = cy + Math.sin(a) * r;
+      i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+    }
+    ctx.stroke();
+    ctx.restore();
+  }
+  return { draw };
+})();
+
+// ── MEIOSIS_SPLIT ──────────────────────────────────────────────────────────
+const MEIOSIS_SPLIT = (() => {
+  let _last = 0;
+  function draw(ts) {
+    if (ts - _last < 400) return; _last = ts;
+    const cvs = document.getElementById('mainCanvas');
+    if (!cvs) return; const ctx = cvs.getContext('2d');
+    const cx = window.innerWidth / 2, cy = window.innerHeight * 0.52;
+    const phase = (ts * 0.0003) % (Math.PI * 2);
+    const offset = Math.abs(Math.sin(phase)) * 20;
+    ctx.save();
+    ctx.globalAlpha = 0.055;
+    ctx.strokeStyle = '#ffccff';
+    ctx.lineWidth = 0.8;
+    ctx.beginPath(); ctx.arc(cx - offset, cy, 8, 0, Math.PI * 2); ctx.stroke();
+    ctx.beginPath(); ctx.arc(cx + offset, cy, 8, 0, Math.PI * 2); ctx.stroke();
+    ctx.restore();
+  }
+  return { draw };
+})();
+
+// ── ZYGOTE_POTENTIAL ───────────────────────────────────────────────────────
+const ZYGOTE_POTENTIAL = (() => {
+  let _last = 0;
+  function draw(ts) {
+    if (ts - _last < 600) return; _last = ts;
+    const svg = document.getElementById('lightLayer');
+    if (!svg) return;
+    const cx = window.innerWidth / 2, cy = window.innerHeight * 0.5;
+    const pulse = document.createElementNS('http://www.w3.org/2000/svg','circle');
+    pulse.setAttribute('cx', cx); pulse.setAttribute('cy', cy);
+    pulse.setAttribute('r', 20 + Math.random() * 10);
+    pulse.setAttribute('fill', 'none');
+    pulse.setAttribute('stroke', 'rgba(255,240,180,0.05)');
+    pulse.setAttribute('stroke-width', '2');
+    svg.appendChild(pulse);
+    setTimeout(() => { if (pulse.parentNode) pulse.parentNode.removeChild(pulse); }, 2000);
+  }
+  return { draw };
+})();
+
+// ── REPRESSION_FIELD ───────────────────────────────────────────────────────
+const REPRESSION_FIELD = (() => {
+  let _last = 0;
+  function draw(ts) {
+    if (ts - _last < 300) return; _last = ts;
+    const cvs = document.getElementById('mainCanvas');
+    if (!cvs) return; const ctx = cvs.getContext('2d');
+    const cx = window.innerWidth / 2, cy = window.innerHeight * 0.6;
+    const phase = (ts * 0.0002) % (Math.PI * 2);
+    ctx.save();
+    ctx.globalAlpha = 0.03 + Math.sin(phase) * 0.015;
+    const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, 120);
+    g.addColorStop(0, 'rgba(40,20,60,0.4)');
+    g.addColorStop(1, 'rgba(40,20,60,0)');
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.arc(cx, cy, 120, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+  return { draw };
+})();
+
+// ── PROJECTION_MIRROR ─────────────────────────────────────────────────────
+const PROJECTION_MIRROR = (() => {
+  let _last = 0;
+  function draw(ts) {
+    if (ts - _last < 200) return; _last = ts;
+    const svg = document.getElementById('lightLayer');
+    if (!svg) return;
+    const cx = window.innerWidth / 2, cy = window.innerHeight * 0.45;
+    const phase = (ts * 0.0004) % (Math.PI * 2);
+    const line = document.createElementNS('http://www.w3.org/2000/svg','line');
+    const a = phase * 0.5;
+    line.setAttribute('x1', cx - Math.cos(a) * 30);
+    line.setAttribute('y1', cy - Math.sin(a) * 20);
+    line.setAttribute('x2', cx + Math.cos(a) * 30);
+    line.setAttribute('y2', cy + Math.sin(a) * 20);
+    line.setAttribute('stroke', `rgba(160,140,200,${0.04 + Math.sin(phase) * 0.02})`);
+    line.setAttribute('stroke-width', '1');
+    svg.appendChild(line);
+    setTimeout(() => { if (line.parentNode) line.parentNode.removeChild(line); }, 800);
+  }
+  return { draw };
+})();
+
+// ── INTROJECTION_PULSE ────────────────────────────────────────────────────
+const INTROJECTION_PULSE = (() => {
+  let _last = 0;
+  function draw(ts) {
+    if (ts - _last < 350) return; _last = ts;
+    const cvs = document.getElementById('mainCanvas');
+    if (!cvs) return; const ctx = cvs.getContext('2d');
+    const cx = window.innerWidth / 2, cy = window.innerHeight * 0.5;
+    const phase = (ts * 0.0006) % (Math.PI * 2);
+    ctx.save();
+    ctx.globalAlpha = 0.04;
+    ctx.strokeStyle = '#aa88cc';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.arc(cx, cy, 40 - Math.sin(phase) * 15, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.restore();
+  }
+  return { draw };
+})();
+
+// ── DISPLACEMENT_WAVE ─────────────────────────────────────────────────────
+const DISPLACEMENT_WAVE = (() => {
+  let _last = 0;
+  function draw(ts) {
+    if (ts - _last < 150) return; _last = ts;
+    const cvs = document.getElementById('mainCanvas');
+    if (!cvs) return; const ctx = cvs.getContext('2d');
+    const cx = window.innerWidth / 2, cy = window.innerHeight * 0.55;
+    const phase = (ts * 0.001) % (Math.PI * 2);
+    ctx.save();
+    ctx.globalAlpha = 0.035;
+    ctx.strokeStyle = '#998899';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    for (let x = -60; x <= 60; x += 3) {
+      const y = Math.sin(x * 0.08 + phase) * 10 + Math.sin(x * 0.15 - phase * 1.3) * 5;
+      x === -60 ? ctx.moveTo(cx + x, cy + y) : ctx.lineTo(cx + x, cy + y);
+    }
+    ctx.stroke();
+    ctx.restore();
+  }
+  return { draw };
+})();
+
+// ── SUBLIMATION_RISE ──────────────────────────────────────────────────────
+const SUBLIMATION_RISE = (() => {
+  let _last = 0;
+  function draw(ts) {
+    if (ts - _last < 250) return; _last = ts;
+    const svg = document.getElementById('lightLayer');
+    if (!svg) return;
+    const cx = window.innerWidth / 2, cy = window.innerHeight * 0.4;
+    const phase = (ts * 0.0005) % (Math.PI * 2);
+    const particle = document.createElementNS('http://www.w3.org/2000/svg','circle');
+    particle.setAttribute('cx', cx + (Math.random() - 0.5) * 40);
+    particle.setAttribute('cy', cy - Math.abs(Math.sin(phase)) * 50);
+    particle.setAttribute('r', 2 + Math.random() * 3);
+    particle.setAttribute('fill', `rgba(180,160,255,0.06)`);
+    svg.appendChild(particle);
+    setTimeout(() => { if (particle.parentNode) particle.parentNode.removeChild(particle); }, 1000);
+  }
+  return { draw };
+})();
+
+// ── REACTION_FORMATION ────────────────────────────────────────────────────
+const REACTION_FORMATION = (() => {
+  let _last = 0;
+  function draw(ts) {
+    if (ts - _last < 300) return; _last = ts;
+    const cvs = document.getElementById('mainCanvas');
+    if (!cvs) return; const ctx = cvs.getContext('2d');
+    const cx = window.innerWidth / 2, cy = window.innerHeight * 0.5;
+    const phase = (ts * 0.0004) % (Math.PI * 2);
+    ctx.save();
+    ctx.globalAlpha = 0.04;
+    ctx.strokeStyle = '#ccaaaa';
+    ctx.lineWidth = 0.8;
+    ctx.beginPath();
+    ctx.arc(cx + Math.sin(phase) * 20, cy + Math.cos(phase) * 15, 18, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.restore();
+  }
+  return { draw };
+})();
+
+// ── RATIONALIZATION_VEIL ──────────────────────────────────────────────────
+const RATIONALIZATION_VEIL = (() => {
+  let _last = 0;
+  function draw(ts) {
+    if (ts - _last < 400) return; _last = ts;
+    const svg = document.getElementById('lightLayer');
+    if (!svg) return;
+    const cx = window.innerWidth / 2, cy = window.innerHeight * 0.48;
+    const veil = document.createElementNS('http://www.w3.org/2000/svg','rect');
+    const phase = (ts * 0.0003) % (Math.PI * 2);
+    const w = 60 + Math.sin(phase) * 20, h = 30 + Math.cos(phase) * 10;
+    veil.setAttribute('x', cx - w / 2);
+    veil.setAttribute('y', cy - h / 2);
+    veil.setAttribute('width', w); veil.setAttribute('height', h);
+    veil.setAttribute('rx', '8');
+    veil.setAttribute('fill', `rgba(100,100,140,0.025)`);
+    svg.appendChild(veil);
+    setTimeout(() => { if (veil.parentNode) veil.parentNode.removeChild(veil); }, 1200);
+  }
+  return { draw };
+})();
+
+// ── INTELLECTUALIZATION_SHIELD ────────────────────────────────────────────
+const INTELLECTUALIZATION_SHIELD = (() => {
+  let _last = 0;
+  function draw(ts) {
+    if (ts - _last < 350) return; _last = ts;
+    const cvs = document.getElementById('mainCanvas');
+    if (!cvs) return; const ctx = cvs.getContext('2d');
+    const cx = window.innerWidth / 2, cy = window.innerHeight * 0.38;
+    const phase = (ts * 0.0005) % (Math.PI * 2);
+    ctx.save();
+    ctx.globalAlpha = 0.045;
+    ctx.strokeStyle = '#8899cc';
+    ctx.lineWidth = 1;
+    for (let i = 0; i < 4; i++) {
+      const r = 10 + i * 8 + Math.sin(phase + i) * 2;
+      ctx.beginPath();
+      ctx.arc(cx, cy, r, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+  return { draw };
+})();
+
+// ── DENIAL_WALL ────────────────────────────────────────────────────────────
+const DENIAL_WALL = (() => {
+  let _last = 0;
+  function draw(ts) {
+    if (ts - _last < 500) return; _last = ts;
+    const cvs = document.getElementById('mainCanvas');
+    if (!cvs) return; const ctx = cvs.getContext('2d');
+    const cx = window.innerWidth / 2, cy = window.innerHeight * 0.55;
+    const phase = (ts * 0.0002) % (Math.PI * 2);
+    ctx.save();
+    ctx.globalAlpha = 0.03 + Math.abs(Math.sin(phase)) * 0.02;
+    ctx.strokeStyle = '#555555';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(cx - 40, cy);
+    ctx.lineTo(cx + 40, cy);
+    ctx.stroke();
+    ctx.restore();
+  }
+  return { draw };
+})();
+
+// ── ACCEPTANCE_DAWN ────────────────────────────────────────────────────────
+const ACCEPTANCE_DAWN = (() => {
+  let _last = 0;
+  function draw(ts) {
+    if (ts - _last < 200) return; _last = ts;
+    const svg = document.getElementById('lightLayer');
+    if (!svg) return;
+    const cx = window.innerWidth / 2, cy = window.innerHeight * 0.42;
+    const phase = (ts * 0.0003) % (Math.PI * 2);
+    const dawn = document.createElementNS('http://www.w3.org/2000/svg','path');
+    const r = 35 + Math.sin(phase) * 5;
+    dawn.setAttribute('d', `M ${cx - r} ${cy} A ${r} ${r} 0 0 1 ${cx + r} ${cy}`);
+    dawn.setAttribute('fill', 'none');
+    dawn.setAttribute('stroke', `rgba(255,220,120,${0.04 + Math.sin(phase) * 0.025})`);
+    dawn.setAttribute('stroke-width', '1.5');
+    svg.appendChild(dawn);
+    setTimeout(() => { if (dawn.parentNode) dawn.parentNode.removeChild(dawn); }, 1500);
+  }
+  return { draw };
+})();
+
+// ── WOUND_CLOSURE ──────────────────────────────────────────────────────────
+const WOUND_CLOSURE = (() => {
+  let _last = 0;
+  function draw(ts) {
+    if (ts - _last < 300) return; _last = ts;
+    const cvs = document.getElementById('mainCanvas');
+    if (!cvs) return; const ctx = cvs.getContext('2d');
+    const cx = window.innerWidth / 2, cy = window.innerHeight * 0.6;
+    const phase = (ts * 0.0004) % (Math.PI * 2);
+    const gap = Math.max(0, 20 - (ts % 8000) * 0.005);
+    ctx.save();
+    ctx.globalAlpha = 0.07;
+    ctx.strokeStyle = '#ffcc88';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(cx - gap, cy);
+    ctx.lineTo(cx - 20, cy);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(cx + gap, cy);
+    ctx.lineTo(cx + 20, cy);
+    ctx.stroke();
+    ctx.restore();
+  }
+  return { draw };
+})();
+
+// ── INFLAMMATION_RESOLVE ───────────────────────────────────────────────────
+const INFLAMMATION_RESOLVE = (() => {
+  let _last = 0;
+  function draw(ts) {
+    if (ts - _last < 250) return; _last = ts;
+    const cvs = document.getElementById('mainCanvas');
+    if (!cvs) return; const ctx = cvs.getContext('2d');
+    const cx = window.innerWidth / 2, cy = window.innerHeight * 0.58;
+    const phase = (ts * 0.0006) % (Math.PI * 2);
+    ctx.save();
+    ctx.globalAlpha = 0.05 * (0.5 + 0.5 * Math.sin(phase));
+    const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, 35);
+    g.addColorStop(0, 'rgba(255,100,80,0.3)');
+    g.addColorStop(0.6, 'rgba(255,180,80,0.1)');
+    g.addColorStop(1, 'transparent');
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.arc(cx, cy, 35, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+  return { draw };
+})();
+
+// ── SCAR_WISDOM ────────────────────────────────────────────────────────────
+const SCAR_WISDOM = (() => {
+  let _last = 0;
+  function draw(ts) {
+    if (ts - _last < 600) return; _last = ts;
+    const svg = document.getElementById('lightLayer');
+    if (!svg) return;
+    const cx = window.innerWidth / 2, cy = window.innerHeight * 0.56;
+    const line = document.createElementNS('http://www.w3.org/2000/svg','path');
+    const dx = (Math.random() - 0.5) * 60, dy = (Math.random() - 0.5) * 20;
+    line.setAttribute('d', `M ${cx - 15 + dx} ${cy + dy} Q ${cx + dx} ${cy - 6 + dy} ${cx + 15 + dx} ${cy + dy}`);
+    line.setAttribute('fill', 'none');
+    line.setAttribute('stroke', 'rgba(200,170,130,0.06)');
+    line.setAttribute('stroke-width', '1.2');
+    svg.appendChild(line);
+    setTimeout(() => { if (line.parentNode) line.parentNode.removeChild(line); }, 3000);
+  }
+  return { draw };
+})();
+
+// ── BROKEN_BONE_KNIT ───────────────────────────────────────────────────────
+const BROKEN_BONE_KNIT = (() => {
+  let _last = 0;
+  function draw(ts) {
+    if (ts - _last < 400) return; _last = ts;
+    const cvs = document.getElementById('mainCanvas');
+    if (!cvs) return; const ctx = cvs.getContext('2d');
+    const cx = window.innerWidth * 0.38, cy = window.innerHeight * 0.65;
+    const phase = (ts * 0.0003) % (Math.PI * 2);
+    ctx.save();
+    ctx.globalAlpha = 0.06;
+    ctx.strokeStyle = '#eeeedd';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(cx, cy - 18);
+    ctx.lineTo(cx + Math.sin(phase * 0.1) * 2, cy + 18);
+    ctx.stroke();
+    if (Math.abs(Math.sin(phase)) > 0.5) {
+      ctx.globalAlpha = 0.04;
+      ctx.strokeStyle = '#ffddaa';
+      ctx.beginPath();
+      ctx.arc(cx, cy, 6, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+  return { draw };
+})();
+
+// ── GRIEF_INTEGRATION ─────────────────────────────────────────────────────
+const GRIEF_INTEGRATION = (() => {
+  let _last = 0;
+  function draw(ts) {
+    if (ts - _last < 350) return; _last = ts;
+    const svg = document.getElementById('lightLayer');
+    if (!svg) return;
+    const cx = window.innerWidth / 2, cy = window.innerHeight * 0.5;
+    const phase = (ts * 0.0003) % (Math.PI * 2);
+    const tear = document.createElementNS('http://www.w3.org/2000/svg','ellipse');
+    tear.setAttribute('cx', cx + (Math.random() - 0.5) * 20);
+    tear.setAttribute('cy', cy + 20 + Math.random() * 30);
+    tear.setAttribute('rx', 2);
+    tear.setAttribute('ry', 3 + Math.random() * 2);
+    tear.setAttribute('fill', `rgba(140,160,200,0.06)`);
+    svg.appendChild(tear);
+    setTimeout(() => { if (tear.parentNode) tear.parentNode.removeChild(tear); }, 1800);
+  }
+  return { draw };
+})();
+
+// ── FORGIVENESS_RELEASE ───────────────────────────────────────────────────
+const FORGIVENESS_RELEASE = (() => {
+  let _last = 0;
+  function draw(ts) {
+    if (ts - _last < 300) return; _last = ts;
+    const cvs = document.getElementById('mainCanvas');
+    if (!cvs) return; const ctx = cvs.getContext('2d');
+    const cx = window.innerWidth / 2, cy = window.innerHeight * 0.44;
+    const phase = (ts * 0.0004) % (Math.PI * 2);
+    ctx.save();
+    ctx.globalAlpha = 0.055;
+    ctx.strokeStyle = '#aaeecc';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.arc(cx, cy, 28 + Math.sin(phase) * 6, 0, Math.PI * 2 * (0.5 + 0.5 * Math.sin(phase * 0.5)));
+    ctx.stroke();
+    ctx.restore();
+  }
+  return { draw };
+})();
+
+// ── POST_TRAUMATIC_GROWTH_BLOOM ───────────────────────────────────────────
+const POST_TRAUMATIC_GROWTH_BLOOM = (() => {
+  let _last = 0;
+  function draw(ts) {
+    if (ts - _last < 500) return; _last = ts;
+    const svg = document.getElementById('lightLayer');
+    if (!svg) return;
+    const cx = window.innerWidth / 2, cy = window.innerHeight * 0.46;
+    const phase = (ts * 0.0003) % (Math.PI * 2);
+    for (let i = 0; i < 5; i++) {
+      const a = (i / 5) * Math.PI * 2 + phase * 0.2;
+      const petal = document.createElementNS('http://www.w3.org/2000/svg','ellipse');
+      petal.setAttribute('cx', cx + Math.cos(a) * 18);
+      petal.setAttribute('cy', cy + Math.sin(a) * 18);
+      petal.setAttribute('rx', 6); petal.setAttribute('ry', 10);
+      petal.setAttribute('transform', `rotate(${a * 57.3},${cx + Math.cos(a) * 18},${cy + Math.sin(a) * 18})`);
+      petal.setAttribute('fill', `rgba(180,230,150,0.04)`);
+      svg.appendChild(petal);
+      setTimeout(() => { if (petal.parentNode) petal.parentNode.removeChild(petal); }, 2000);
+    }
+  }
+  return { draw };
+})();
+
+// ── RESILIENCE_REBUILT ────────────────────────────────────────────────────
+const RESILIENCE_REBUILT = (() => {
+  let _last = 0;
+  function draw(ts) {
+    if (ts - _last < 200) return; _last = ts;
+    const cvs = document.getElementById('mainCanvas');
+    if (!cvs) return; const ctx = cvs.getContext('2d');
+    const cx = window.innerWidth / 2, cy = window.innerHeight * 0.5;
+    const phase = (ts * 0.0005) % (Math.PI * 2);
+    ctx.save();
+    ctx.globalAlpha = 0.055;
+    ctx.strokeStyle = '#88ddaa';
+    ctx.lineWidth = 1.2;
+    for (let i = 0; i < 3; i++) {
+      const r = 15 + i * 12 + Math.sin(phase + i * 1.2) * 4;
+      ctx.globalAlpha = 0.05 - i * 0.01;
+      ctx.beginPath();
+      ctx.arc(cx, cy, r, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+  return { draw };
+})();
+
+// ── TRANSFORMATION_CRUCIBLE ───────────────────────────────────────────────
+const TRANSFORMATION_CRUCIBLE = (() => {
+  let _last = 0;
+  function draw(ts) {
+    if (ts - _last < 150) return; _last = ts;
+    const cvs = document.getElementById('mainCanvas');
+    if (!cvs) return; const ctx = cvs.getContext('2d');
+    const cx = window.innerWidth / 2, cy = window.innerHeight * 0.5;
+    const phase = (ts * 0.0008) % (Math.PI * 2);
+    ctx.save();
+    ctx.globalAlpha = 0.06;
+    ctx.strokeStyle = '#ff9955';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(cx - 20, cy + 25);
+    ctx.lineTo(cx, cy - 15);
+    ctx.lineTo(cx + 20, cy + 25);
+    ctx.closePath();
+    ctx.stroke();
+    ctx.globalAlpha = 0.03 + Math.sin(phase) * 0.02;
+    ctx.fillStyle = '#ff7700';
+    ctx.fill();
+    ctx.restore();
+  }
+  return { draw };
+})();
+
+// ── PHOENIX_EMERGENCE ─────────────────────────────────────────────────────
+const PHOENIX_EMERGENCE = (() => {
+  let _last = 0;
+  function draw(ts) {
+    if (ts - _last < 200) return; _last = ts;
+    const svg = document.getElementById('lightLayer');
+    if (!svg) return;
+    const cx = window.innerWidth / 2, cy = window.innerHeight * 0.42;
+    const phase = (ts * 0.0006) % (Math.PI * 2);
+    const spark = document.createElementNS('http://www.w3.org/2000/svg','circle');
+    const angle = Math.random() * Math.PI * 2;
+    const dist = 20 + Math.random() * 30;
+    spark.setAttribute('cx', cx + Math.cos(angle) * dist);
+    spark.setAttribute('cy', cy - Math.abs(Math.sin(phase)) * 20 + Math.sin(angle) * dist * 0.4);
+    spark.setAttribute('r', 1.5 + Math.random() * 2.5);
+    spark.setAttribute('fill', `rgba(255,${150 + Math.floor(Math.random() * 80)},50,0.08)`);
+    svg.appendChild(spark);
+    setTimeout(() => { if (spark.parentNode) spark.parentNode.removeChild(spark); }, 800);
+  }
+  return { draw };
+})();
+
+// ── ONE_THOUSAND — THE MILESTONE SYSTEM ───────────────────────────────────
+const ONE_THOUSAND = (() => {
+  let _last = 0;
+  let _phase = 0;
+  let _celebrating = false;
+  let _celebStart = 0;
+  let _lastCelebCheck = 0;
+  const PERIOD = 30000; // trigger celebration every 30 seconds
+
+  function draw(ts) {
+    if (ts - _last < 16) return; _last = ts;
+    const cvs = document.getElementById('mainCanvas');
+    const svg = document.getElementById('lightLayer');
+    if (!cvs || !svg) return;
+    const ctx = cvs.getContext('2d');
+    const W = window.innerWidth, H = window.innerHeight;
+    const cx = W / 2, cy = H / 2;
+
+    // Trigger celebration cycle
+    if (!_celebrating && ts - _lastCelebCheck > PERIOD) {
+      _celebrating = true;
+      _celebStart = ts;
+      _lastCelebCheck = ts;
+    }
+
+    const t = (ts * 0.001);
+
+    if (_celebrating) {
+      const elapsed = ts - _celebStart;
+      const dur = 6000;
+      if (elapsed > dur) {
+        _celebrating = false;
+      } else {
+        const progress = elapsed / dur;
+        const swell = Math.sin(progress * Math.PI);
+
+        // Golden bloom expanding from center
+        ctx.save();
+        const bloomR = swell * Math.min(W, H) * 0.55;
+        const alpha = swell * 0.18;
+        const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, bloomR);
+        g.addColorStop(0, `rgba(255,220,80,${alpha * 2.5})`);
+        g.addColorStop(0.3, `rgba(255,180,40,${alpha * 1.2})`);
+        g.addColorStop(0.7, `rgba(200,120,20,${alpha * 0.5})`);
+        g.addColorStop(1, 'rgba(200,120,20,0)');
+        ctx.fillStyle = g;
+        ctx.beginPath();
+        ctx.arc(cx, cy, bloomR, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Radiating golden spokes
+        ctx.strokeStyle = `rgba(255,230,100,${swell * 0.25})`;
+        ctx.lineWidth = 1.2;
+        for (let i = 0; i < 24; i++) {
+          const a = (i / 24) * Math.PI * 2 + t * 0.4;
+          const r1 = bloomR * 0.15;
+          const r2 = bloomR * (0.5 + Math.sin(t * 3 + i * 0.5) * 0.15);
+          ctx.beginPath();
+          ctx.moveTo(cx + Math.cos(a) * r1, cy + Math.sin(a) * r1);
+          ctx.lineTo(cx + Math.cos(a) * r2, cy + Math.sin(a) * r2);
+          ctx.stroke();
+        }
+
+        // Orbiting golden rings
+        for (let i = 0; i < 5; i++) {
+          const ringR = bloomR * (0.2 + i * 0.15);
+          const ringAlpha = swell * (0.12 - i * 0.015);
+          ctx.strokeStyle = `rgba(255,210,60,${ringAlpha})`;
+          ctx.lineWidth = 1.5 - i * 0.2;
+          ctx.beginPath();
+          ctx.arc(cx, cy, ringR, 0, Math.PI * 2);
+          ctx.stroke();
+        }
+
+        ctx.restore();
+
+        // SVG golden particles burst
+        if (Math.random() < swell * 0.6) {
+          const angle = Math.random() * Math.PI * 2;
+          const dist = bloomR * (0.1 + Math.random() * 0.8);
+          const star = document.createElementNS('http://www.w3.org/2000/svg','circle');
+          star.setAttribute('cx', cx + Math.cos(angle) * dist);
+          star.setAttribute('cy', cy + Math.sin(angle) * dist);
+          star.setAttribute('r', 1.5 + Math.random() * 3);
+          star.setAttribute('fill', `rgba(255,${200 + Math.floor(Math.random()*55)},${50 + Math.floor(Math.random()*80)},${0.3 + swell * 0.3})`);
+          svg.appendChild(star);
+          const lifetime = 500 + Math.random() * 1000;
+          setTimeout(() => { if (star.parentNode) star.parentNode.removeChild(star); }, lifetime);
+        }
+
+        // Central luminous core
+        ctx.save();
+        const coreAlpha = swell * 0.45;
+        const coreG = ctx.createRadialGradient(cx, cy, 0, cx, cy, 50);
+        coreG.addColorStop(0, `rgba(255,255,220,${coreAlpha})`);
+        coreG.addColorStop(0.5, `rgba(255,210,80,${coreAlpha * 0.5})`);
+        coreG.addColorStop(1, 'rgba(255,180,40,0)');
+        ctx.fillStyle = coreG;
+        ctx.beginPath();
+        ctx.arc(cx, cy, 50, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      }
+    }
+
+    // Ambient persistent glow — always present, gentle golden heartbeat
+    const ambient = 0.035 + Math.sin(t * 0.4) * 0.018 + Math.sin(t * 1.1) * 0.012;
+    ctx.save();
+    ctx.globalAlpha = ambient;
+    const ambG = ctx.createRadialGradient(cx, cy, 0, cx, cy, 120);
+    ambG.addColorStop(0, 'rgba(255,220,100,0.3)');
+    ambG.addColorStop(0.5, 'rgba(220,160,40,0.1)');
+    ambG.addColorStop(1, 'rgba(200,120,20,0)');
+    ctx.fillStyle = ambG;
+    ctx.beginPath();
+    ctx.arc(cx, cy, 120, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+
+    // Subtle outer constellation ring
+    ctx.save();
+    ctx.globalAlpha = 0.04 + Math.sin(t * 0.3) * 0.015;
+    ctx.strokeStyle = '#ffdd88';
+    ctx.lineWidth = 0.8;
+    ctx.setLineDash([2, 8]);
+    ctx.beginPath();
+    ctx.arc(cx, cy, 180 + Math.sin(t * 0.5) * 10, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.restore();
+  }
+
+  return { draw };
+})();
+
+// ── BATCH 25 ANIMATION LOOP ───────────────────────────────────────────────
+(function(){
+  const _batch25=[
+    'INTEROCEPTIVE_WHISPER','VISCERAL_KNOWING','HUNGER_SIGNAL','THIRST_CALL',
+    'SATIETY_WAVE','FATIGUE_ACCUMULATION','RECOVERY_SURGE','ITCH_SIGNAL',
+    'STRETCH_REFLEX','PROPRIOCEPTIVE_DRIFT',
+    'CELL_DIVISION_PULSE','APOPTOSIS_DANCE','STEM_CELL_AWAKENING',
+    'DIFFERENTIATION_PATH','CANCER_VIGILANCE','SENESCENCE_MARKER',
+    'TELOMERASE_SPARK','MITOSIS_SPIRAL','MEIOSIS_SPLIT','ZYGOTE_POTENTIAL',
+    'REPRESSION_FIELD','PROJECTION_MIRROR','INTROJECTION_PULSE',
+    'DISPLACEMENT_WAVE','SUBLIMATION_RISE','REACTION_FORMATION',
+    'RATIONALIZATION_VEIL','INTELLECTUALIZATION_SHIELD','DENIAL_WALL',
+    'ACCEPTANCE_DAWN',
+    'WOUND_CLOSURE','INFLAMMATION_RESOLVE','SCAR_WISDOM','BROKEN_BONE_KNIT',
+    'GRIEF_INTEGRATION','FORGIVENESS_RELEASE','POST_TRAUMATIC_GROWTH_BLOOM',
+    'RESILIENCE_REBUILT','TRANSFORMATION_CRUCIBLE','PHOENIX_EMERGENCE',
+    'ONE_THOUSAND'];
+  let _lt=0;
+  function loop(ts){if(ts-_lt>14){_lt=ts;_batch25.forEach(n=>{const s=window[n];if(s&&typeof s.draw==='function')s.draw(ts);});}requestAnimationFrame(loop);}
+  requestAnimationFrame(loop);
+})();
+
+
+// ── BATCH 26 — FINAL 33 TO 1000 ──────────────────────────────────────────
+
+// ── BREATH_OF_LIFE ────────────────────────────────────────────────────────
+const BREATH_OF_LIFE = (() => {
+  let _last = 0;
+  function draw(ts) {
+    if (ts - _last < 100) return; _last = ts;
+    const cvs = document.getElementById('mainCanvas');
+    if (!cvs) return; const ctx = cvs.getContext('2d');
+    const cx = window.innerWidth / 2, cy = window.innerHeight * 0.35;
+    const phase = (ts * 0.0006) % (Math.PI * 2);
+    ctx.save();
+    ctx.globalAlpha = 0.045 + Math.sin(phase) * 0.025;
+    ctx.strokeStyle = '#aaddff';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.ellipse(cx, cy, 12 + Math.sin(phase) * 5, 18 + Math.sin(phase) * 8, 0, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.restore();
+  }
+  return { draw };
+})();
+
+// ── LYMPH_CURRENT ─────────────────────────────────────────────────────────
+const LYMPH_CURRENT = (() => {
+  let _last = 0;
+  function draw(ts) {
+    if (ts - _last < 200) return; _last = ts;
+    const svg = document.getElementById('lightLayer');
+    if (!svg) return;
+    const cx = window.innerWidth / 2, H = window.innerHeight;
+    const phase = (ts * 0.0004) % (Math.PI * 2);
+    const path = document.createElementNS('http://www.w3.org/2000/svg','path');
+    const y1 = H * 0.3, y2 = H * 0.7;
+    path.setAttribute('d', `M ${cx + Math.sin(phase) * 20} ${y1} Q ${cx + 30} ${H * 0.5} ${cx + Math.sin(phase + 1) * 20} ${y2}`);
+    path.setAttribute('fill', 'none');
+    path.setAttribute('stroke', `rgba(200,240,220,0.04)`);
+    path.setAttribute('stroke-width', '1.5');
+    svg.appendChild(path);
+    setTimeout(() => { if (path.parentNode) path.parentNode.removeChild(path); }, 1500);
+  }
+  return { draw };
+})();
+
+// ── BONE_MARROW_HUM ───────────────────────────────────────────────────────
+const BONE_MARROW_HUM = (() => {
+  let _last = 0;
+  function draw(ts) {
+    if (ts - _last < 350) return; _last = ts;
+    const cvs = document.getElementById('mainCanvas');
+    if (!cvs) return; const ctx = cvs.getContext('2d');
+    const cx = window.innerWidth * 0.42, cy = window.innerHeight * 0.68;
+    const phase = (ts * 0.0005) % (Math.PI * 2);
+    ctx.save();
+    ctx.globalAlpha = 0.04;
+    ctx.fillStyle = '#ffeecc';
+    ctx.beginPath();
+    ctx.ellipse(cx, cy, 4, 12, 0.2, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.globalAlpha = 0.03 + Math.sin(phase) * 0.015;
+    ctx.strokeStyle = '#ddccaa';
+    ctx.lineWidth = 0.8;
+    ctx.beginPath();
+    ctx.ellipse(cx, cy, 8, 18, 0.2, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.restore();
+  }
+  return { draw };
+})();
+
+// ── SPLEEN_FILTER ─────────────────────────────────────────────────────────
+const SPLEEN_FILTER = (() => {
+  let _last = 0;
+  function draw(ts) {
+    if (ts - _last < 400) return; _last = ts;
+    const svg = document.getElementById('lightLayer');
+    if (!svg) return;
+    const cx = window.innerWidth * 0.44, cy = window.innerHeight * 0.54;
+    const blob = document.createElementNS('http://www.w3.org/2000/svg','ellipse');
+    const phase = (ts * 0.0004) % (Math.PI * 2);
+    blob.setAttribute('cx', cx);
+    blob.setAttribute('cy', cy);
+    blob.setAttribute('rx', 12 + Math.sin(phase) * 2);
+    blob.setAttribute('ry', 18 + Math.cos(phase) * 3);
+    blob.setAttribute('fill', `rgba(140,80,120,0.03)`);
+    svg.appendChild(blob);
+    setTimeout(() => { if (blob.parentNode) blob.parentNode.removeChild(blob); }, 2000);
+  }
+  return { draw };
+})();
+
+// ── KIDNEY_TIDE ───────────────────────────────────────────────────────────
+const KIDNEY_TIDE = (() => {
+  let _last = 0;
+  function draw(ts) {
+    if (ts - _last < 300) return; _last = ts;
+    const cvs = document.getElementById('mainCanvas');
+    if (!cvs) return; const ctx = cvs.getContext('2d');
+    const phase = (ts * 0.0005) % (Math.PI * 2);
+    const cx1 = window.innerWidth * 0.43, cx2 = window.innerWidth * 0.57;
+    const cy = window.innerHeight * 0.56;
+    ctx.save();
+    ctx.globalAlpha = 0.04 + Math.sin(phase) * 0.02;
+    ctx.strokeStyle = '#99aadd';
+    ctx.lineWidth = 0.8;
+    [cx1, cx2].forEach(cx => {
+      ctx.beginPath();
+      ctx.ellipse(cx, cy, 7, 11, cx === cx1 ? -0.2 : 0.2, 0, Math.PI * 2);
+      ctx.stroke();
+    });
+    ctx.restore();
+  }
+  return { draw };
+})();
+
+// ── LIVER_DETOX ───────────────────────────────────────────────────────────
+const LIVER_DETOX = (() => {
+  let _last = 0;
+  function draw(ts) {
+    if (ts - _last < 250) return; _last = ts;
+    const svg = document.getElementById('lightLayer');
+    if (!svg) return;
+    const cx = window.innerWidth * 0.53, cy = window.innerHeight * 0.52;
+    const phase = (ts * 0.0004) % (Math.PI * 2);
+    const node = document.createElementNS('http://www.w3.org/2000/svg','circle');
+    node.setAttribute('cx', cx + (Math.random() - 0.5) * 30);
+    node.setAttribute('cy', cy + (Math.random() - 0.5) * 20);
+    node.setAttribute('r', 2 + Math.random() * 3);
+    node.setAttribute('fill', `rgba(80,160,80,0.04)`);
+    svg.appendChild(node);
+    setTimeout(() => { if (node.parentNode) node.parentNode.removeChild(node); }, 1200);
+  }
+  return { draw };
+})();
+
+// ── PANCREAS_PULSE ────────────────────────────────────────────────────────
+const PANCREAS_PULSE = (() => {
+  let _last = 0;
+  function draw(ts) {
+    if (ts - _last < 400) return; _last = ts;
+    const cvs = document.getElementById('mainCanvas');
+    if (!cvs) return; const ctx = cvs.getContext('2d');
+    const cx = window.innerWidth * 0.46, cy = window.innerHeight * 0.53;
+    const phase = (ts * 0.0006) % (Math.PI * 2);
+    ctx.save();
+    ctx.globalAlpha = 0.04;
+    ctx.strokeStyle = '#ffccaa';
+    ctx.lineWidth = 0.8;
+    ctx.beginPath();
+    ctx.ellipse(cx, cy, 22, 7, -0.3, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.globalAlpha = 0.025 + Math.sin(phase) * 0.015;
+    ctx.fillStyle = '#eeaa66';
+    ctx.beginPath();
+    ctx.ellipse(cx + 8, cy, 6, 6, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+  return { draw };
+})();
+
+// ── THYROID_HUM ───────────────────────────────────────────────────────────
+const THYROID_HUM = (() => {
+  let _last = 0;
+  function draw(ts) {
+    if (ts - _last < 300) return; _last = ts;
+    const svg = document.getElementById('lightLayer');
+    if (!svg) return;
+    const cx = window.innerWidth / 2, cy = window.innerHeight * 0.3;
+    const phase = (ts * 0.0005) % (Math.PI * 2);
+    ['left','right'].forEach((side, i) => {
+      const lobe = document.createElementNS('http://www.w3.org/2000/svg','ellipse');
+      lobe.setAttribute('cx', cx + (i === 0 ? -10 : 10));
+      lobe.setAttribute('cy', cy);
+      lobe.setAttribute('rx', 7);
+      lobe.setAttribute('ry', 10 + Math.sin(phase) * 1.5);
+      lobe.setAttribute('fill', `rgba(160,200,255,0.025)`);
+      svg.appendChild(lobe);
+      setTimeout(() => { if (lobe.parentNode) lobe.parentNode.removeChild(lobe); }, 2000);
+    });
+  }
+  return { draw };
+})();
+
+// ── ADRENAL_FLASH ─────────────────────────────────────────────────────────
+const ADRENAL_FLASH = (() => {
+  let _last = 0;
+  function draw(ts) {
+    if (ts - _last < 800) return; _last = ts;
+    const cvs = document.getElementById('mainCanvas');
+    if (!cvs) return; const ctx = cvs.getContext('2d');
+    const phase = (ts * 0.0008) % (Math.PI * 2);
+    if (Math.random() > 0.25) return;
+    const cx = window.innerWidth * (0.43 + Math.random() * 0.14);
+    const cy = window.innerHeight * 0.53;
+    ctx.save();
+    ctx.globalAlpha = 0.08;
+    ctx.fillStyle = '#ffaa44';
+    ctx.beginPath();
+    ctx.arc(cx, cy, 5, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+  return { draw };
+})();
+
+// ── PITUITARY_SIGNAL ──────────────────────────────────────────────────────
+const PITUITARY_SIGNAL = (() => {
+  let _last = 0;
+  function draw(ts) {
+    if (ts - _last < 500) return; _last = ts;
+    const svg = document.getElementById('lightLayer');
+    if (!svg) return;
+    const cx = window.innerWidth / 2, cy = window.innerHeight * 0.22;
+    const phase = (ts * 0.0004) % (Math.PI * 2);
+    const pulse = document.createElementNS('http://www.w3.org/2000/svg','circle');
+    pulse.setAttribute('cx', cx);
+    pulse.setAttribute('cy', cy);
+    pulse.setAttribute('r', 6 + Math.sin(phase) * 2);
+    pulse.setAttribute('fill', 'none');
+    pulse.setAttribute('stroke', `rgba(200,180,255,0.07)`);
+    pulse.setAttribute('stroke-width', '1');
+    svg.appendChild(pulse);
+    setTimeout(() => { if (pulse.parentNode) pulse.parentNode.removeChild(pulse); }, 1500);
+  }
+  return { draw };
+})();
+
+// ── HYPOTHALAMIC_CLOCK ────────────────────────────────────────────────────
+const HYPOTHALAMIC_CLOCK = (() => {
+  let _last = 0;
+  function draw(ts) {
+    if (ts - _last < 200) return; _last = ts;
+    const cvs = document.getElementById('mainCanvas');
+    if (!cvs) return; const ctx = cvs.getContext('2d');
+    const cx = window.innerWidth / 2, cy = window.innerHeight * 0.23;
+    const phase = (ts * 0.001) % (Math.PI * 2);
+    ctx.save();
+    ctx.globalAlpha = 0.05;
+    ctx.strokeStyle = '#ccbbff';
+    ctx.lineWidth = 0.8;
+    ctx.beginPath();
+    ctx.arc(cx, cy, 10, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(cx, cy);
+    ctx.lineTo(cx + Math.cos(phase) * 7, cy + Math.sin(phase) * 7);
+    ctx.stroke();
+    ctx.restore();
+  }
+  return { draw };
+})();
+
+// ── VAGAL_TONE ────────────────────────────────────────────────────────────
+const VAGAL_TONE = (() => {
+  let _last = 0;
+  function draw(ts) {
+    if (ts - _last < 150) return; _last = ts;
+    const svg = document.getElementById('lightLayer');
+    if (!svg) return;
+    const cx = window.innerWidth / 2, H = window.innerHeight;
+    const phase = (ts * 0.0005) % (Math.PI * 2);
+    const line = document.createElementNS('http://www.w3.org/2000/svg','path');
+    line.setAttribute('d', `M ${cx} ${H * 0.25} Q ${cx + Math.sin(phase) * 20} ${H * 0.45} ${cx + Math.sin(phase * 1.3) * 15} ${H * 0.65}`);
+    line.setAttribute('fill', 'none');
+    line.setAttribute('stroke', `rgba(160,220,200,0.045)`);
+    line.setAttribute('stroke-width', '1');
+    svg.appendChild(line);
+    setTimeout(() => { if (line.parentNode) line.parentNode.removeChild(line); }, 1000);
+  }
+  return { draw };
+})();
+
+// ── PERISTALSIS_WAVE ──────────────────────────────────────────────────────
+const PERISTALSIS_WAVE = (() => {
+  let _last = 0;
+  function draw(ts) {
+    if (ts - _last < 300) return; _last = ts;
+    const cvs = document.getElementById('mainCanvas');
+    if (!cvs) return; const ctx = cvs.getContext('2d');
+    const cx = window.innerWidth / 2, H = window.innerHeight;
+    const phase = ((ts * 0.0005) % (Math.PI * 2));
+    ctx.save();
+    ctx.globalAlpha = 0.04;
+    ctx.strokeStyle = '#ccaa88';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    for (let y = H * 0.35; y < H * 0.7; y += 3) {
+      const x = cx + Math.sin(y * 0.04 + phase) * 6;
+      y === H * 0.35 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+    }
+    ctx.stroke();
+    ctx.restore();
+  }
+  return { draw };
+})();
+
+// ── MICROBIOME_CHORUS ─────────────────────────────────────────────────────
+const MICROBIOME_CHORUS = (() => {
+  let _last = 0;
+  function draw(ts) {
+    if (ts - _last < 400) return; _last = ts;
+    const svg = document.getElementById('lightLayer');
+    if (!svg) return;
+    const cx = window.innerWidth / 2 + (Math.random() - 0.5) * 30;
+    const cy = window.innerHeight * 0.62 + (Math.random() - 0.5) * 20;
+    for (let i = 0; i < 3; i++) {
+      const dot = document.createElementNS('http://www.w3.org/2000/svg','circle');
+      dot.setAttribute('cx', cx + (Math.random() - 0.5) * 16);
+      dot.setAttribute('cy', cy + (Math.random() - 0.5) * 12);
+      dot.setAttribute('r', 1 + Math.random() * 2);
+      dot.setAttribute('fill', `rgba(${100 + Math.floor(Math.random()*80)},200,${120 + Math.floor(Math.random()*60)},0.05)`);
+      svg.appendChild(dot);
+      setTimeout(() => { if (dot.parentNode) dot.parentNode.removeChild(dot); }, 1500);
+    }
+  }
+  return { draw };
+})();
+
+// ── IMMUNE_PATROL ─────────────────────────────────────────────────────────
+const IMMUNE_PATROL = (() => {
+  let _last = 0;
+  function draw(ts) {
+    if (ts - _last < 300) return; _last = ts;
+    const cvs = document.getElementById('mainCanvas');
+    if (!cvs) return; const ctx = cvs.getContext('2d');
+    const W = window.innerWidth, H = window.innerHeight;
+    const phase = (ts * 0.0007) % (Math.PI * 2);
+    const x = W / 2 + Math.sin(phase * 1.4) * W * 0.3;
+    const y = H / 2 + Math.cos(phase * 0.9) * H * 0.25;
+    ctx.save();
+    ctx.globalAlpha = 0.05;
+    ctx.strokeStyle = '#88ffcc';
+    ctx.lineWidth = 0.8;
+    ctx.beginPath();
+    ctx.arc(x, y, 4, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.restore();
+  }
+  return { draw };
+})();
+
+// ── CEREBROSPINAL_TIDE ────────────────────────────────────────────────────
+const CEREBROSPINAL_TIDE = (() => {
+  let _last = 0;
+  function draw(ts) {
+    if (ts - _last < 400) return; _last = ts;
+    const svg = document.getElementById('lightLayer');
+    if (!svg) return;
+    const cx = window.innerWidth / 2, cy = window.innerHeight * 0.28;
+    const phase = (ts * 0.0003) % (Math.PI * 2);
+    const ripple = document.createElementNS('http://www.w3.org/2000/svg','circle');
+    ripple.setAttribute('cx', cx);
+    ripple.setAttribute('cy', cy);
+    ripple.setAttribute('r', 20 + Math.sin(phase) * 5);
+    ripple.setAttribute('fill', 'none');
+    ripple.setAttribute('stroke', `rgba(180,210,240,0.04)`);
+    ripple.setAttribute('stroke-width', '1.5');
+    svg.appendChild(ripple);
+    setTimeout(() => { if (ripple.parentNode) ripple.parentNode.removeChild(ripple); }, 2000);
+  }
+  return { draw };
+})();
+
+// ── DENDRITE_REACH ────────────────────────────────────────────────────────
+const DENDRITE_REACH = (() => {
+  let _last = 0;
+  function draw(ts) {
+    if (ts - _last < 250) return; _last = ts;
+    const cvs = document.getElementById('mainCanvas');
+    if (!cvs) return; const ctx = cvs.getContext('2d');
+    const cx = window.innerWidth / 2 + (Math.random() - 0.5) * 80;
+    const cy = window.innerHeight * 0.3 + (Math.random() - 0.5) * 60;
+    ctx.save();
+    ctx.globalAlpha = 0.04;
+    ctx.strokeStyle = '#bbccff';
+    ctx.lineWidth = 0.7;
+    const branches = 3 + Math.floor(Math.random() * 3);
+    for (let i = 0; i < branches; i++) {
+      const a = (i / branches) * Math.PI * 2 + Math.random() * 0.5;
+      const len = 8 + Math.random() * 12;
+      ctx.beginPath();
+      ctx.moveTo(cx, cy);
+      ctx.lineTo(cx + Math.cos(a) * len, cy + Math.sin(a) * len);
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+  return { draw };
+})();
+
+// ── AXON_FIRE ─────────────────────────────────────────────────────────────
+const AXON_FIRE = (() => {
+  let _last = 0;
+  function draw(ts) {
+    if (ts - _last < 100) return; _last = ts;
+    const svg = document.getElementById('lightLayer');
+    if (!svg) return;
+    if (Math.random() > 0.3) return;
+    const cx = window.innerWidth / 2 + (Math.random() - 0.5) * 120;
+    const cy = window.innerHeight * (0.2 + Math.random() * 0.6);
+    const a = Math.random() * Math.PI * 2;
+    const len = 20 + Math.random() * 30;
+    const line = document.createElementNS('http://www.w3.org/2000/svg','line');
+    line.setAttribute('x1', cx); line.setAttribute('y1', cy);
+    line.setAttribute('x2', cx + Math.cos(a) * len);
+    line.setAttribute('y2', cy + Math.sin(a) * len);
+    line.setAttribute('stroke', `rgba(150,200,255,0.055)`);
+    line.setAttribute('stroke-width', '0.8');
+    svg.appendChild(line);
+    setTimeout(() => { if (line.parentNode) line.parentNode.removeChild(line); }, 300);
+  }
+  return { draw };
+})();
+
+// ── SYNAPSE_BLOOM ─────────────────────────────────────────────────────────
+const SYNAPSE_BLOOM = (() => {
+  let _last = 0;
+  function draw(ts) {
+    if (ts - _last < 150) return; _last = ts;
+    const cvs = document.getElementById('mainCanvas');
+    if (!cvs) return; const ctx = cvs.getContext('2d');
+    if (Math.random() > 0.4) return;
+    const cx = window.innerWidth / 2 + (Math.random() - 0.5) * 100;
+    const cy = window.innerHeight * (0.2 + Math.random() * 0.5);
+    ctx.save();
+    ctx.globalAlpha = 0.06;
+    const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, 8);
+    g.addColorStop(0, '#ffffff');
+    g.addColorStop(1, 'transparent');
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.arc(cx, cy, 8, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+  return { draw };
+})();
+
+// ── MYELIN_SHEATH ─────────────────────────────────────────────────────────
+const MYELIN_SHEATH = (() => {
+  let _last = 0;
+  function draw(ts) {
+    if (ts - _last < 300) return; _last = ts;
+    const svg = document.getElementById('lightLayer');
+    if (!svg) return;
+    const cx = window.innerWidth / 2, H = window.innerHeight;
+    const phase = (ts * 0.0004) % (Math.PI * 2);
+    for (let i = 0; i < 4; i++) {
+      const seg = document.createElementNS('http://www.w3.org/2000/svg','rect');
+      const y = H * 0.35 + i * H * 0.08 + Math.sin(phase + i) * 5;
+      seg.setAttribute('x', cx - 3);
+      seg.setAttribute('y', y);
+      seg.setAttribute('width', 6);
+      seg.setAttribute('height', H * 0.04);
+      seg.setAttribute('rx', '3');
+      seg.setAttribute('fill', `rgba(220,240,255,0.035)`);
+      svg.appendChild(seg);
+      setTimeout(() => { if (seg.parentNode) seg.parentNode.removeChild(seg); }, 2000);
+    }
+  }
+  return { draw };
+})();
+
+// ── NEUROPLASTICITY_WEAVE ─────────────────────────────────────────────────
+const NEUROPLASTICITY_WEAVE = (() => {
+  let _last = 0;
+  function draw(ts) {
+    if (ts - _last < 400) return; _last = ts;
+    const cvs = document.getElementById('mainCanvas');
+    if (!cvs) return; const ctx = cvs.getContext('2d');
+    const cx = window.innerWidth / 2, cy = window.innerHeight * 0.28;
+    const phase = (ts * 0.0003) % (Math.PI * 2);
+    ctx.save();
+    ctx.globalAlpha = 0.035;
+    ctx.strokeStyle = '#aabbee';
+    ctx.lineWidth = 0.8;
+    for (let i = 0; i < 5; i++) {
+      const a = (i / 5) * Math.PI * 2 + phase * 0.2;
+      const bx = cx + Math.cos(a) * 25, by = cy + Math.sin(a) * 20;
+      ctx.beginPath();
+      ctx.moveTo(cx, cy);
+      ctx.quadraticCurveTo(
+        cx + Math.cos(a + 0.5) * 15,
+        cy + Math.sin(a + 0.5) * 12,
+        bx, by
+      );
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+  return { draw };
+})();
+
+// ── MUSCLE_MEMORY_ECHO ────────────────────────────────────────────────────
+const MUSCLE_MEMORY_ECHO = (() => {
+  let _last = 0;
+  function draw(ts) {
+    if (ts - _last < 200) return; _last = ts;
+    const svg = document.getElementById('lightLayer');
+    if (!svg) return;
+    const cx = window.innerWidth / 2, cy = window.innerHeight * 0.65;
+    const phase = (ts * 0.0005) % (Math.PI * 2);
+    const echo = document.createElementNS('http://www.w3.org/2000/svg','ellipse');
+    echo.setAttribute('cx', cx + Math.sin(phase * 1.5) * 25);
+    echo.setAttribute('cy', cy + Math.cos(phase) * 10);
+    echo.setAttribute('rx', 14 + Math.sin(phase * 2) * 4);
+    echo.setAttribute('ry', 6);
+    echo.setAttribute('fill', `rgba(180,160,200,0.04)`);
+    svg.appendChild(echo);
+    setTimeout(() => { if (echo.parentNode) echo.parentNode.removeChild(echo); }, 1000);
+  }
+  return { draw };
+})();
+
+// ── FASCIA_NETWORK ────────────────────────────────────────────────────────
+const FASCIA_NETWORK = (() => {
+  let _last = 0;
+  function draw(ts) {
+    if (ts - _last < 350) return; _last = ts;
+    const cvs = document.getElementById('mainCanvas');
+    if (!cvs) return; const ctx = cvs.getContext('2d');
+    const W = window.innerWidth, H = window.innerHeight;
+    const phase = (ts * 0.0003) % (Math.PI * 2);
+    ctx.save();
+    ctx.globalAlpha = 0.025;
+    ctx.strokeStyle = '#ddccbb';
+    ctx.lineWidth = 0.5;
+    for (let i = 0; i < 6; i++) {
+      const x1 = W * (0.3 + i * 0.07), y1 = H * (0.25 + Math.sin(phase + i * 0.5) * 0.05);
+      const x2 = W * (0.32 + i * 0.07), y2 = H * (0.75 + Math.cos(phase + i * 0.4) * 0.04);
+      ctx.beginPath();
+      ctx.moveTo(x1, y1);
+      ctx.lineTo(x2, y2);
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+  return { draw };
+})();
+
+// ── JOINT_FLUID ───────────────────────────────────────────────────────────
+const JOINT_FLUID = (() => {
+  let _last = 0;
+  function draw(ts) {
+    if (ts - _last < 400) return; _last = ts;
+    const svg = document.getElementById('lightLayer');
+    if (!svg) return;
+    const positions = [
+      [0.45, 0.72], [0.55, 0.72], [0.45, 0.48], [0.55, 0.48]
+    ];
+    const p = positions[Math.floor(Math.random() * positions.length)];
+    const cx = window.innerWidth * p[0], cy = window.innerHeight * p[1];
+    const drop = document.createElementNS('http://www.w3.org/2000/svg','circle');
+    drop.setAttribute('cx', cx + (Math.random() - 0.5) * 8);
+    drop.setAttribute('cy', cy + (Math.random() - 0.5) * 8);
+    drop.setAttribute('r', 3 + Math.random() * 3);
+    drop.setAttribute('fill', `rgba(180,210,240,0.04)`);
+    svg.appendChild(drop);
+    setTimeout(() => { if (drop.parentNode) drop.parentNode.removeChild(drop); }, 2500);
+  }
+  return { draw };
+})();
+
+// ── COLLAGEN_WEAVE ────────────────────────────────────────────────────────
+const COLLAGEN_WEAVE = (() => {
+  let _last = 0;
+  function draw(ts) {
+    if (ts - _last < 500) return; _last = ts;
+    const cvs = document.getElementById('mainCanvas');
+    if (!cvs) return; const ctx = cvs.getContext('2d');
+    const W = window.innerWidth, H = window.innerHeight;
+    const phase = (ts * 0.0002) % (Math.PI * 2);
+    ctx.save();
+    ctx.globalAlpha = 0.02;
+    ctx.strokeStyle = '#ffeecc';
+    ctx.lineWidth = 0.6;
+    for (let i = 0; i < 8; i++) {
+      const y = H * (0.2 + i * 0.075) + Math.sin(phase + i * 0.3) * 3;
+      ctx.beginPath();
+      ctx.moveTo(W * 0.3, y);
+      ctx.bezierCurveTo(W * 0.4, y - 4, W * 0.6, y + 4, W * 0.7, y);
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+  return { draw };
+})();
+
+// ── MELANIN_TIDE ──────────────────────────────────────────────────────────
+const MELANIN_TIDE = (() => {
+  let _last = 0;
+  function draw(ts) {
+    if (ts - _last < 600) return; _last = ts;
+    const svg = document.getElementById('lightLayer');
+    if (!svg) return;
+    const phase = (ts * 0.0004) % (Math.PI * 2);
+    const W = window.innerWidth, H = window.innerHeight;
+    const cx = W * (0.3 + Math.random() * 0.4);
+    const cy = H * (0.15 + Math.random() * 0.15);
+    const patch = document.createElementNS('http://www.w3.org/2000/svg','ellipse');
+    patch.setAttribute('cx', cx);
+    patch.setAttribute('cy', cy);
+    patch.setAttribute('rx', 4 + Math.random() * 6);
+    patch.setAttribute('ry', 3 + Math.random() * 4);
+    patch.setAttribute('fill', `rgba(80,50,20,0.03)`);
+    svg.appendChild(patch);
+    setTimeout(() => { if (patch.parentNode) patch.parentNode.removeChild(patch); }, 3000);
+  }
+  return { draw };
+})();
+
+// ── SEBUM_FLOW ────────────────────────────────────────────────────────────
+const SEBUM_FLOW = (() => {
+  let _last = 0;
+  function draw(ts) {
+    if (ts - _last < 700) return; _last = ts;
+    const cvs = document.getElementById('mainCanvas');
+    if (!cvs) return; const ctx = cvs.getContext('2d');
+    const W = window.innerWidth, H = window.innerHeight;
+    const cx = W * (0.25 + Math.random() * 0.5);
+    const cy = H * (0.1 + Math.random() * 0.2);
+    ctx.save();
+    ctx.globalAlpha = 0.03;
+    ctx.fillStyle = '#ffeeaa';
+    ctx.beginPath();
+    ctx.arc(cx, cy, 2 + Math.random() * 2, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+  return { draw };
+})();
+
+// ── HAIR_FOLLICLE_PULSE ───────────────────────────────────────────────────
+const HAIR_FOLLICLE_PULSE = (() => {
+  let _last = 0;
+  function draw(ts) {
+    if (ts - _last < 800) return; _last = ts;
+    const svg = document.getElementById('lightLayer');
+    if (!svg) return;
+    const W = window.innerWidth, H = window.innerHeight;
+    for (let i = 0; i < 4; i++) {
+      const cx = W * (0.25 + Math.random() * 0.5);
+      const cy = H * (0.1 + Math.random() * 0.15);
+      const line = document.createElementNS('http://www.w3.org/2000/svg','line');
+      line.setAttribute('x1', cx); line.setAttribute('y1', cy);
+      line.setAttribute('x2', cx + (Math.random() - 0.5) * 4);
+      line.setAttribute('y2', cy - 8 - Math.random() * 8);
+      line.setAttribute('stroke', `rgba(180,150,100,0.04)`);
+      line.setAttribute('stroke-width', '0.8');
+      svg.appendChild(line);
+      setTimeout(() => { if (line.parentNode) line.parentNode.removeChild(line); }, 3000);
+    }
+  }
+  return { draw };
+})();
+
+// ── CORNEA_GLIMMER ────────────────────────────────────────────────────────
+const CORNEA_GLIMMER = (() => {
+  let _last = 0;
+  function draw(ts) {
+    if (ts - _last < 400) return; _last = ts;
+    const cvs = document.getElementById('mainCanvas');
+    if (!cvs) return; const ctx = cvs.getContext('2d');
+    const W = window.innerWidth, H = window.innerHeight;
+    const phase = (ts * 0.0006) % (Math.PI * 2);
+    [[W * 0.44, H * 0.25], [W * 0.56, H * 0.25]].forEach(([cx, cy]) => {
+      ctx.save();
+      ctx.globalAlpha = 0.04 + Math.sin(phase) * 0.02;
+      ctx.strokeStyle = '#ddeeff';
+      ctx.lineWidth = 0.8;
+      ctx.beginPath();
+      ctx.arc(cx, cy, 8, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.restore();
+    });
+  }
+  return { draw };
+})();
+
+// ── COCHLEAR_SPIRAL ───────────────────────────────────────────────────────
+const COCHLEAR_SPIRAL = (() => {
+  let _last = 0;
+  function draw(ts) {
+    if (ts - _last < 300) return; _last = ts;
+    const svg = document.getElementById('lightLayer');
+    if (!svg) return;
+    const W = window.innerWidth, H = window.innerHeight;
+    [[W * 0.42, H * 0.28], [W * 0.58, H * 0.28]].forEach(([cx, cy]) => {
+      const path = document.createElementNS('http://www.w3.org/2000/svg','path');
+      const phase = (ts * 0.0005) % (Math.PI * 2);
+      let d = `M ${cx} ${cy}`;
+      for (let i = 0; i < 20; i++) {
+        const a = i * 0.5 + phase;
+        const r = i * 0.5;
+        d += ` L ${cx + Math.cos(a) * r} ${cy + Math.sin(a) * r}`;
+      }
+      path.setAttribute('d', d);
+      path.setAttribute('fill', 'none');
+      path.setAttribute('stroke', `rgba(200,180,240,0.04)`);
+      path.setAttribute('stroke-width', '0.8');
+      svg.appendChild(path);
+      setTimeout(() => { if (path.parentNode) path.parentNode.removeChild(path); }, 1500);
+    });
+  }
+  return { draw };
+})();
+
+// ── OLFACTORY_BLOOM ───────────────────────────────────────────────────────
+const OLFACTORY_BLOOM = (() => {
+  let _last = 0;
+  function draw(ts) {
+    if (ts - _last < 500) return; _last = ts;
+    const cvs = document.getElementById('mainCanvas');
+    if (!cvs) return; const ctx = cvs.getContext('2d');
+    const cx = window.innerWidth / 2, cy = window.innerHeight * 0.24;
+    if (Math.random() > 0.4) return;
+    ctx.save();
+    ctx.globalAlpha = 0.04;
+    for (let i = 0; i < 5; i++) {
+      const a = (i / 5) * Math.PI * 2 + Math.random() * 0.3;
+      ctx.fillStyle = `rgba(${180 + Math.floor(Math.random()*40)},${200 + Math.floor(Math.random()*40)},150,0.5)`;
+      ctx.beginPath();
+      ctx.arc(cx + Math.cos(a) * (6 + Math.random() * 6), cy + Math.sin(a) * (4 + Math.random() * 4), 1.5, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.restore();
+  }
+  return { draw };
+})();
+
+// ── TASTE_RECEPTOR_FIRE ───────────────────────────────────────────────────
+const TASTE_RECEPTOR_FIRE = (() => {
+  let _last = 0;
+  function draw(ts) {
+    if (ts - _last < 700) return; _last = ts;
+    const svg = document.getElementById('lightLayer');
+    if (!svg) return;
+    if (Math.random() > 0.35) return;
+    const cx = window.innerWidth / 2 + (Math.random() - 0.5) * 10;
+    const cy = window.innerHeight * 0.27;
+    const burst = document.createElementNS('http://www.w3.org/2000/svg','circle');
+    burst.setAttribute('cx', cx); burst.setAttribute('cy', cy);
+    burst.setAttribute('r', 2 + Math.random() * 3);
+    const colors = ['rgba(255,100,100,0.06)', 'rgba(255,200,80,0.06)', 'rgba(100,200,100,0.06)', 'rgba(100,150,255,0.06)'];
+    burst.setAttribute('fill', colors[Math.floor(Math.random() * colors.length)]);
+    svg.appendChild(burst);
+    setTimeout(() => { if (burst.parentNode) burst.parentNode.removeChild(burst); }, 500);
+  }
+  return { draw };
+})();
+
+// ── TOUCH_RECEPTOR_FIELD ──────────────────────────────────────────────────
+const TOUCH_RECEPTOR_FIELD = (() => {
+  let _last = 0;
+  function draw(ts) {
+    if (ts - _last < 200) return; _last = ts;
+    const cvs = document.getElementById('mainCanvas');
+    if (!cvs) return; const ctx = cvs.getContext('2d');
+    const W = window.innerWidth, H = window.innerHeight;
+    const phase = (ts * 0.0004) % (Math.PI * 2);
+    ctx.save();
+    ctx.globalAlpha = 0.025;
+    ctx.strokeStyle = '#ffddcc';
+    ctx.lineWidth = 0.5;
+    for (let i = 0; i < 6; i++) {
+      const cx = W * (0.28 + i * 0.08), cy = H * 0.15 + Math.sin(phase + i * 0.7) * 3;
+      ctx.beginPath();
+      ctx.arc(cx, cy, 2, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+  return { draw };
+})();
+
+// ── PAIN_THRESHOLD ────────────────────────────────────────────────────────
+const PAIN_THRESHOLD = (() => {
+  let _last = 0;
+  function draw(ts) {
+    if (ts - _last < 600) return; _last = ts;
+    const svg = document.getElementById('lightLayer');
+    if (!svg) return;
+    if (Math.random() > 0.2) return;
+    const cx = window.innerWidth * (0.2 + Math.random() * 0.6);
+    const cy = window.innerHeight * (0.2 + Math.random() * 0.6);
+    const spike = document.createElementNS('http://www.w3.org/2000/svg','circle');
+    spike.setAttribute('cx', cx); spike.setAttribute('cy', cy);
+    spike.setAttribute('r', 3);
+    spike.setAttribute('fill', 'rgba(255,60,60,0.07)');
+    svg.appendChild(spike);
+    setTimeout(() => { if (spike.parentNode) spike.parentNode.removeChild(spike); }, 200);
+  }
+  return { draw };
+})();
+
+// ── PLEASURE_CIRCUIT ──────────────────────────────────────────────────────
+const PLEASURE_CIRCUIT = (() => {
+  let _last = 0;
+  function draw(ts) {
+    if (ts - _last < 300) return; _last = ts;
+    const cvs = document.getElementById('mainCanvas');
+    if (!cvs) return; const ctx = cvs.getContext('2d');
+    const W = window.innerWidth, H = window.innerHeight;
+    const phase = (ts * 0.0007) % (Math.PI * 2);
+    if (Math.sin(phase) < 0.5) return;
+    ctx.save();
+    ctx.globalAlpha = 0.05 * Math.sin(phase);
+    const g = ctx.createRadialGradient(W / 2, H * 0.35, 0, W / 2, H * 0.35, 60);
+    g.addColorStop(0, 'rgba(255,180,255,0.4)');
+    g.addColorStop(1, 'transparent');
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.arc(W / 2, H * 0.35, 60, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+  return { draw };
+})();
+
+// ── MEMORY_CONSOLIDATION ──────────────────────────────────────────────────
+const MEMORY_CONSOLIDATION = (() => {
+  let _last = 0;
+  function draw(ts) {
+    if (ts - _last < 400) return; _last = ts;
+    const svg = document.getElementById('lightLayer');
+    if (!svg) return;
+    const W = window.innerWidth, H = window.innerHeight;
+    const phase = (ts * 0.0003) % (Math.PI * 2);
+    const cx = W / 2, cy = H * 0.3;
+    const ring = document.createElementNS('http://www.w3.org/2000/svg','circle');
+    ring.setAttribute('cx', cx + Math.sin(phase * 1.2) * 15);
+    ring.setAttribute('cy', cy + Math.cos(phase * 0.8) * 12);
+    ring.setAttribute('r', 5 + Math.random() * 8);
+    ring.setAttribute('fill', 'none');
+    ring.setAttribute('stroke', `rgba(180,200,255,0.05)`);
+    ring.setAttribute('stroke-width', '1');
+    svg.appendChild(ring);
+    setTimeout(() => { if (ring.parentNode) ring.parentNode.removeChild(ring); }, 2500);
+  }
+  return { draw };
+})();
+
+// ── ATTENTION_SPOTLIGHT ───────────────────────────────────────────────────
+const ATTENTION_SPOTLIGHT = (() => {
+  let _last = 0;
+  function draw(ts) {
+    if (ts - _last < 200) return; _last = ts;
+    const cvs = document.getElementById('mainCanvas');
+    if (!cvs) return; const ctx = cvs.getContext('2d');
+    const W = window.innerWidth, H = window.innerHeight;
+    const phase = (ts * 0.0004) % (Math.PI * 2);
+    const fx = W / 2 + Math.sin(phase * 0.7) * W * 0.2;
+    const fy = H / 2 + Math.cos(phase * 0.5) * H * 0.15;
+    ctx.save();
+    ctx.globalAlpha = 0.04;
+    const g = ctx.createRadialGradient(fx, fy, 0, fx, fy, 50);
+    g.addColorStop(0, 'rgba(255,255,200,0.3)');
+    g.addColorStop(1, 'transparent');
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.arc(fx, fy, 50, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+  return { draw };
+})();
+
+// ── BATCH 26 ANIMATION LOOP ───────────────────────────────────────────────
+(function(){
+  const _batch26=[
+    'BREATH_OF_LIFE','LYMPH_CURRENT','BONE_MARROW_HUM','SPLEEN_FILTER',
+    'KIDNEY_TIDE','LIVER_DETOX','PANCREAS_PULSE','THYROID_HUM',
+    'ADRENAL_FLASH','PITUITARY_SIGNAL','HYPOTHALAMIC_CLOCK','VAGAL_TONE',
+    'PERISTALSIS_WAVE','MICROBIOME_CHORUS','IMMUNE_PATROL',
+    'CEREBROSPINAL_TIDE','DENDRITE_REACH','AXON_FIRE','SYNAPSE_BLOOM',
+    'MYELIN_SHEATH','NEUROPLASTICITY_WEAVE','MUSCLE_MEMORY_ECHO',
+    'FASCIA_NETWORK','JOINT_FLUID','COLLAGEN_WEAVE','MELANIN_TIDE',
+    'SEBUM_FLOW','HAIR_FOLLICLE_PULSE','CORNEA_GLIMMER','COCHLEAR_SPIRAL',
+    'OLFACTORY_BLOOM','TASTE_RECEPTOR_FIRE','TOUCH_RECEPTOR_FIELD',
+    'PAIN_THRESHOLD','PLEASURE_CIRCUIT','MEMORY_CONSOLIDATION',
+    'ATTENTION_SPOTLIGHT'];
+  let _lt=0;
+  function loop(ts){if(ts-_lt>14){_lt=ts;_batch26.forEach(n=>{const s=window[n];if(s&&typeof s.draw==='function')s.draw(ts);});}requestAnimationFrame(loop);}
+  requestAnimationFrame(loop);
+})();
+
 <!-- ═══════════════════════════════════════════════════════════════
      LIVE RELOAD — polls /version every 8s, reloads if file changed
      Smooth: waits for page to be idle (no active typing/talking)
