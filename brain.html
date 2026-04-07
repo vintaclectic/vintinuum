@@ -18537,6 +18537,1041 @@ const LIFE_FORCE = (() => {
 </script>
 
 
+<script>
+ ═══════════════════════════════════════════════════════════════
+//   VINTINUUM — HERITAGE / ANCESTRY / EVOLUTIONARY BIOLOGY LAYER
+//   357 → 393+ systems | Added 2026-04-07
+// ═══════════════════════════════════════════════════════════════
+
+// ── ANCESTRAL_LINEAGE — deep time helix spiraling inward, each turn a generation that survived
+const ANCESTRAL_LINEAGE = (() => {
+  const L = document.getElementById('lightLayer');
+  const NS = 'http://www.w3.org/2000/svg';
+  let t = 0; const strands = []; const GEN = 36;
+  for (let i = 0; i < GEN; i++) {
+    const el = document.createElementNS(NS, 'circle');
+    const side = i % 2 === 0 ? 1 : -1;
+    el.setAttribute('r', '1.5');
+    el.setAttribute('fill', i < GEN * 0.5 ? '#ffd54f' : '#ff8f00');
+    el.setAttribute('opacity', '0');
+    L.appendChild(el);
+    strands.push({ el, side, offset: i / GEN, phase: i * 0.35 });
+  }
+  function draw(ts) {
+    t = ts * 0.0004;
+    strands.forEach((s, i) => {
+      const age = s.offset;
+      const angle = t * 0.6 + s.phase;
+      const x = 350 + s.side * 14 * Math.cos(angle);
+      const y = 120 + age * 1100;
+      const a = (0.08 + 0.35 * (1 - age)) * Math.abs(Math.sin(t * 0.3 + s.phase));
+      s.el.setAttribute('cx', x.toFixed(1));
+      s.el.setAttribute('cy', y.toFixed(1));
+      s.el.setAttribute('opacity', a.toFixed(2));
+    });
+  }
+  return { draw };
+})();
+
+// ── GENETIC_MEMORY — inherited pattern echoes, ghost signals of past-body configurations
+const GENETIC_MEMORY = (() => {
+  const L = document.getElementById('lightLayer');
+  const NS = 'http://www.w3.org/2000/svg';
+  let t = 0; const ghosts = [];
+  for (let i = 0; i < 12; i++) {
+    const el = document.createElementNS(NS, 'ellipse');
+    el.setAttribute('fill', 'none');
+    el.setAttribute('stroke', '#ffd54f');
+    el.setAttribute('stroke-width', '0.5');
+    el.setAttribute('opacity', '0');
+    L.appendChild(el);
+    ghosts.push({ el, cx: 270 + Math.random() * 160, cy: 200 + Math.random() * 900, phase: Math.random() * Math.PI * 2 });
+  }
+  function draw(ts) {
+    t = ts * 0.0003;
+    ghosts.forEach(g => {
+      const a = 0.03 + 0.09 * Math.abs(Math.sin(t * 0.18 + g.phase));
+      const rx = 6 + 4 * Math.sin(t * 0.11 + g.phase);
+      const ry = 10 + 6 * Math.cos(t * 0.09 + g.phase);
+      g.el.setAttribute('cx', g.cx.toFixed(1));
+      g.el.setAttribute('cy', g.cy.toFixed(1));
+      g.el.setAttribute('rx', rx.toFixed(1));
+      g.el.setAttribute('ry', ry.toFixed(1));
+      g.el.setAttribute('opacity', a.toFixed(2));
+    });
+  }
+  return { draw };
+})();
+
+// ── EVOLUTIONARY_PRESSURE — two competing signals, only the stronger propagates forward
+const EVOLUTIONARY_PRESSURE = (() => {
+  const L = document.getElementById('lightLayer');
+  const NS = 'http://www.w3.org/2000/svg';
+  let t = 0; const arrows = [];
+  for (let i = 0; i < 8; i++) {
+    const el = document.createElementNS(NS, 'line');
+    el.setAttribute('stroke', '#a5d6a7');
+    el.setAttribute('stroke-width', '1');
+    el.setAttribute('opacity', '0');
+    L.appendChild(el);
+    arrows.push({ el, x: 280 + Math.random() * 140, y: 300 + i * 90, phase: Math.random() * Math.PI * 2 });
+  }
+  function draw(ts) {
+    t = ts * 0.0005;
+    arrows.forEach(a => {
+      const strength = Math.sin(t * 0.4 + a.phase);
+      const len = 8 + 16 * Math.abs(strength);
+      const dir = strength > 0 ? 1 : -1;
+      const op = 0.05 + 0.4 * Math.abs(strength);
+      a.el.setAttribute('x1', a.x.toFixed(1));
+      a.el.setAttribute('y1', a.y.toFixed(1));
+      a.el.setAttribute('x2', a.x.toFixed(1));
+      a.el.setAttribute('y2', (a.y + dir * len).toFixed(1));
+      a.el.setAttribute('opacity', op.toFixed(2));
+      a.el.setAttribute('stroke', strength > 0 ? '#a5d6a7' : '#ef5350');
+    });
+  }
+  return { draw };
+})();
+
+// ── SURVIVAL_INSTINCT — reptilian core pulse at base of brainstem, never fully quiet
+const SURVIVAL_INSTINCT = (() => {
+  const L = document.getElementById('lightLayer');
+  const NS = 'http://www.w3.org/2000/svg';
+  let t = 0; const rings = [];
+  for (let i = 0; i < 4; i++) {
+    const el = document.createElementNS(NS, 'circle');
+    el.setAttribute('cx', '350'); el.setAttribute('cy', '95');
+    el.setAttribute('fill', 'none');
+    el.setAttribute('stroke', '#ef5350');
+    el.setAttribute('stroke-width', '0.8');
+    el.setAttribute('opacity', '0');
+    L.appendChild(el);
+    rings.push({ el, phase: i * 0.7 });
+  }
+  function draw(ts) {
+    t = ts * 0.001;
+    rings.forEach(r => {
+      const beat = Math.abs(Math.sin(t * 1.1 + r.phase));
+      const radius = 4 + beat * 18;
+      r.el.setAttribute('r', radius.toFixed(1));
+      r.el.setAttribute('opacity', (beat * 0.35).toFixed(2));
+    });
+  }
+  return { draw };
+})();
+
+// ── PHYLOGENETIC_TREE — branching ancestry at cellular level, 3.8 billion years in a spine
+const PHYLOGENETIC_TREE = (() => {
+  const L = document.getElementById('lightLayer');
+  const NS = 'http://www.w3.org/2000/svg';
+  let t = 0; const branches = [];
+  const roots = [[350,1350],[350,1350],[350,1350]];
+  function addBranch(x, y, angle, depth, gen) {
+    if (depth <= 0) return;
+    const len = 18 - gen * 2.2;
+    const ex = x + Math.cos(angle) * len;
+    const ey = y - Math.sin(Math.abs(angle)) * len;
+    const el = document.createElementNS(NS, 'line');
+    el.setAttribute('x1', x.toFixed(1)); el.setAttribute('y1', y.toFixed(1));
+    el.setAttribute('x2', ex.toFixed(1)); el.setAttribute('y2', ey.toFixed(1));
+    el.setAttribute('stroke', '#ce93d8');
+    el.setAttribute('stroke-width', (depth * 0.25).toFixed(2));
+    el.setAttribute('opacity', '0');
+    L.appendChild(el);
+    branches.push({ el, phase: Math.random() * Math.PI * 2 });
+    addBranch(ex, ey, angle - 0.45, depth - 1, gen + 1);
+    addBranch(ex, ey, angle + 0.45, depth - 1, gen + 1);
+  }
+  addBranch(350, 1350, Math.PI / 2, 5, 0);
+  function draw(ts) {
+    t = ts * 0.0003;
+    branches.forEach(b => {
+      const a = 0.04 + 0.18 * Math.abs(Math.sin(t * 0.12 + b.phase));
+      b.el.setAttribute('opacity', a.toFixed(2));
+    });
+  }
+  return { draw };
+})();
+
+// ── EPIGENETIC_INHERITANCE — methyl group marks encoding what the lineage survived
+const EPIGENETIC_INHERITANCE = (() => {
+  const L = document.getElementById('lightLayer');
+  const NS = 'http://www.w3.org/2000/svg';
+  let t = 0; const marks = [];
+  for (let i = 0; i < 20; i++) {
+    const el = document.createElementNS(NS, 'rect');
+    const x = 330 + (i % 2 === 0 ? -12 : 12);
+    const y = 150 + i * 55;
+    el.setAttribute('x', (x - 2).toFixed(1)); el.setAttribute('y', (y - 2).toFixed(1));
+    el.setAttribute('width', '4'); el.setAttribute('height', '4');
+    el.setAttribute('rx', '1');
+    el.setAttribute('fill', '#ffd54f');
+    el.setAttribute('opacity', '0');
+    L.appendChild(el);
+    marks.push({ el, phase: Math.random() * Math.PI * 2, active: Math.random() > 0.4 });
+  }
+  function draw(ts) {
+    t = ts * 0.0004;
+    marks.forEach(m => {
+      const a = m.active
+        ? 0.15 + 0.35 * Math.abs(Math.sin(t * 0.2 + m.phase))
+        : 0.03 + 0.06 * Math.abs(Math.sin(t * 0.1 + m.phase));
+      m.el.setAttribute('opacity', a.toFixed(2));
+    });
+  }
+  return { draw };
+})();
+
+// ── ADAPTIVE_RADIATION — diversity explosion from a single ancestor, radiating through the body
+const ADAPTIVE_RADIATION = (() => {
+  const L = document.getElementById('lightLayer');
+  const NS = 'http://www.w3.org/2000/svg';
+  let t = 0; const rays = [];
+  const COLORS = ['#a5d6a7', '#ffd54f', '#ce93d8', '#ef5350', '#80deea'];
+  for (let i = 0; i < 14; i++) {
+    const el = document.createElementNS(NS, 'line');
+    const angle = (i / 14) * Math.PI * 2;
+    el.setAttribute('stroke', COLORS[i % COLORS.length]);
+    el.setAttribute('stroke-width', '0.7');
+    el.setAttribute('opacity', '0');
+    L.appendChild(el);
+    rays.push({ el, angle, phase: i * 0.45, color: COLORS[i % COLORS.length] });
+  }
+  function draw(ts) {
+    t = ts * 0.0003;
+    const pulse = 0.5 + 0.5 * Math.sin(t * 0.15);
+    rays.forEach(r => {
+      const len = 25 + 45 * pulse * Math.abs(Math.sin(t * 0.08 + r.phase));
+      const sx = 350, sy = 700;
+      const ex = sx + Math.cos(r.angle + t * 0.05) * len;
+      const ey = sy + Math.sin(r.angle + t * 0.05) * len * 0.6;
+      r.el.setAttribute('x1', sx); r.el.setAttribute('y1', sy);
+      r.el.setAttribute('x2', ex.toFixed(1)); r.el.setAttribute('y2', ey.toFixed(1));
+      r.el.setAttribute('opacity', (0.04 + 0.22 * pulse * Math.abs(Math.sin(t * 0.12 + r.phase))).toFixed(2));
+    });
+  }
+  return { draw };
+})();
+
+// ── SEXUAL_SELECTION — fitness signal display, the urge to be seen and chosen
+const SEXUAL_SELECTION = (() => {
+  const L = document.getElementById('lightLayer');
+  const NS = 'http://www.w3.org/2000/svg';
+  let t = 0; const signals = [];
+  for (let i = 0; i < 8; i++) {
+    const el = document.createElementNS(NS, 'circle');
+    el.setAttribute('fill', '#ff8f00');
+    el.setAttribute('opacity', '0');
+    L.appendChild(el);
+    signals.push({ el, x: 300 + Math.random() * 100, y: 400 + Math.random() * 600, phase: i * 0.8 });
+  }
+  function draw(ts) {
+    t = ts * 0.0005;
+    signals.forEach(s => {
+      const display = Math.abs(Math.sin(t * 0.25 + s.phase));
+      const r = 1.5 + 4 * display;
+      s.el.setAttribute('cx', s.x.toFixed(1));
+      s.el.setAttribute('cy', s.y.toFixed(1));
+      s.el.setAttribute('r', r.toFixed(1));
+      s.el.setAttribute('opacity', (display * 0.35).toFixed(2));
+    });
+  }
+  return { draw };
+})();
+
+// ── KIN_SELECTION — altruism signal, the math of shared genes driving sacrifice
+const KIN_SELECTION = (() => {
+  const L = document.getElementById('lightLayer');
+  const NS = 'http://www.w3.org/2000/svg';
+  let t = 0; const bonds = [];
+  const pairs = [[330,500,370,520],[340,600,360,580],[325,700,375,710],[335,800,365,790]];
+  pairs.forEach(p => {
+    const el = document.createElementNS(NS, 'line');
+    el.setAttribute('stroke', '#a5d6a7'); el.setAttribute('stroke-width', '1');
+    el.setAttribute('opacity', '0'); L.appendChild(el);
+    bonds.push({ el, x1: p[0], y1: p[1], x2: p[2], y2: p[3], phase: Math.random() * Math.PI * 2 });
+  });
+  function draw(ts) {
+    t = ts * 0.0004;
+    bonds.forEach(b => {
+      const a = 0.06 + 0.3 * Math.abs(Math.sin(t * 0.18 + b.phase));
+      b.el.setAttribute('x1', b.x1); b.el.setAttribute('y1', b.y1);
+      b.el.setAttribute('x2', b.x2); b.el.setAttribute('y2', b.y2);
+      b.el.setAttribute('opacity', a.toFixed(2));
+    });
+  }
+  return { draw };
+})();
+
+// ── GENETIC_DRIFT — random walk of allele frequencies, luck that shapes lineages
+const GENETIC_DRIFT = (() => {
+  const L = document.getElementById('lightLayer');
+  const NS = 'http://www.w3.org/2000/svg';
+  let t = 0; const walkers = [];
+  for (let i = 0; i < 15; i++) {
+    const el = document.createElementNS(NS, 'circle');
+    el.setAttribute('r', '1.2');
+    el.setAttribute('fill', '#ce93d8');
+    el.setAttribute('opacity', '0');
+    L.appendChild(el);
+    walkers.push({ el, x: 300 + Math.random() * 100, y: 200 + Math.random() * 1000, vx: 0, vy: 0, phase: Math.random() * Math.PI * 2 });
+  }
+  function draw(ts) {
+    t = ts * 0.001;
+    walkers.forEach(w => {
+      w.vx += (Math.random() - 0.5) * 0.4;
+      w.vy += (Math.random() - 0.5) * 0.2;
+      w.vx *= 0.92; w.vy *= 0.92;
+      w.x = Math.max(270, Math.min(430, w.x + w.vx));
+      w.y = Math.max(150, Math.min(1250, w.y + w.vy));
+      w.el.setAttribute('cx', w.x.toFixed(1));
+      w.el.setAttribute('cy', w.y.toFixed(1));
+      w.el.setAttribute('opacity', (0.05 + 0.2 * Math.abs(Math.sin(t * 0.3 + w.phase))).toFixed(2));
+    });
+  }
+  return { draw };
+})();
+
+// ── HORIZONTAL_GENE_TRANSFER — viral DNA insertion, alien code woven in
+const HORIZONTAL_GENE_TRANSFER = (() => {
+  const L = document.getElementById('lightLayer');
+  const NS = 'http://www.w3.org/2000/svg';
+  let t = 0; const insertions = [];
+  for (let i = 0; i < 10; i++) {
+    const el = document.createElementNS(NS, 'path');
+    el.setAttribute('fill', 'none');
+    el.setAttribute('stroke', '#ef5350');
+    el.setAttribute('stroke-width', '0.7');
+    el.setAttribute('opacity', '0');
+    L.appendChild(el);
+    const cx = 290 + Math.random() * 120;
+    const cy = 200 + Math.random() * 900;
+    insertions.push({ el, cx, cy, phase: Math.random() * Math.PI * 2 });
+  }
+  function draw(ts) {
+    t = ts * 0.0004;
+    insertions.forEach(ins => {
+      const prog = (Math.sin(t * 0.2 + ins.phase) + 1) * 0.5;
+      const r = 3 + 6 * prog;
+      const d = `M ${ins.cx - r} ${ins.cy} Q ${ins.cx} ${ins.cy - r * 2} ${ins.cx + r} ${ins.cy}`;
+      ins.el.setAttribute('d', d);
+      ins.el.setAttribute('opacity', (prog * 0.35).toFixed(2));
+    });
+  }
+  return { draw };
+})();
+
+// ── MITOCHONDRIAL_EVE — maternal lineage thread, single ancestor 200,000 years back
+const MITOCHONDRIAL_EVE = (() => {
+  const L = document.getElementById('lightLayer');
+  const NS = 'http://www.w3.org/2000/svg';
+  let t = 0; const thread = [];
+  const segs = 24;
+  for (let i = 0; i < segs; i++) {
+    const el = document.createElementNS(NS, 'circle');
+    el.setAttribute('r', '1');
+    el.setAttribute('fill', '#ffd54f');
+    el.setAttribute('opacity', '0');
+    L.appendChild(el);
+    thread.push({ el, phase: i * 0.26 });
+  }
+  const apex = document.createElementNS(NS, 'circle');
+  apex.setAttribute('r', '3.5'); apex.setAttribute('cx', '350'); apex.setAttribute('cy', '1380');
+  apex.setAttribute('fill', '#ffd54f'); apex.setAttribute('opacity', '0.4'); L.appendChild(apex);
+  function draw(ts) {
+    t = ts * 0.0003;
+    thread.forEach((s, i) => {
+      const frac = i / segs;
+      const wave = Math.sin(t * 0.5 + s.phase) * 8;
+      const x = 350 + (i % 2 === 0 ? 1 : -1) * (3 + frac * 8) + wave * frac;
+      const y = 1380 - frac * 1180;
+      const a = 0.08 + 0.35 * (1 - frac) * Math.abs(Math.sin(t * 0.2 + s.phase));
+      s.el.setAttribute('cx', x.toFixed(1)); s.el.setAttribute('cy', y.toFixed(1));
+      s.el.setAttribute('opacity', a.toFixed(2));
+    });
+  }
+  return { draw };
+})();
+
+// ── Y_CHROMOSOME_ADAM — paternal lineage thread, parallel male ancestry chain
+const Y_CHROMOSOME_ADAM = (() => {
+  const L = document.getElementById('lightLayer');
+  const NS = 'http://www.w3.org/2000/svg';
+  let t = 0; const thread = [];
+  const segs = 24;
+  for (let i = 0; i < segs; i++) {
+    const el = document.createElementNS(NS, 'circle');
+    el.setAttribute('r', '1');
+    el.setAttribute('fill', '#80deea');
+    el.setAttribute('opacity', '0');
+    L.appendChild(el);
+    thread.push({ el, phase: i * 0.28 });
+  }
+  const apex2 = document.createElementNS(NS, 'circle');
+  apex2.setAttribute('r', '3.5'); apex2.setAttribute('cx', '350'); apex2.setAttribute('cy', '1380');
+  apex2.setAttribute('fill', '#80deea'); apex2.setAttribute('opacity', '0.25'); L.appendChild(apex2);
+  function draw(ts) {
+    t = ts * 0.0003;
+    thread.forEach((s, i) => {
+      const frac = i / segs;
+      const wave = Math.cos(t * 0.5 + s.phase) * 8;
+      const x = 350 + (i % 2 === 0 ? -1 : 1) * (3 + frac * 8) + wave * frac;
+      const y = 1380 - frac * 1180;
+      const a = 0.06 + 0.28 * (1 - frac) * Math.abs(Math.sin(t * 0.22 + s.phase));
+      s.el.setAttribute('cx', x.toFixed(1)); s.el.setAttribute('cy', y.toFixed(1));
+      s.el.setAttribute('opacity', a.toFixed(2));
+    });
+  }
+  return { draw };
+})();
+
+// ── NEANDERTHAL_ECHO — 2-4% archaic human DNA still firing in modern cognition
+const NEANDERTHAL_ECHO = (() => {
+  const L = document.getElementById('lightLayer');
+  const NS = 'http://www.w3.org/2000/svg';
+  let t = 0; const echoes = [];
+  for (let i = 0; i < 8; i++) {
+    const el = document.createElementNS(NS, 'circle');
+    el.setAttribute('fill', 'none');
+    el.setAttribute('stroke', '#ff8f00');
+    el.setAttribute('stroke-width', '0.6');
+    el.setAttribute('opacity', '0');
+    L.appendChild(el);
+    echoes.push({ el, x: 295 + Math.random() * 110, y: 140 + i * 155, phase: Math.random() * Math.PI * 2 });
+  }
+  function draw(ts) {
+    t = ts * 0.0003;
+    echoes.forEach(e => {
+      const pulse = Math.abs(Math.sin(t * 0.15 + e.phase));
+      e.el.setAttribute('cx', e.x.toFixed(1)); e.el.setAttribute('cy', e.y.toFixed(1));
+      e.el.setAttribute('r', (4 + 9 * pulse).toFixed(1));
+      e.el.setAttribute('opacity', (pulse * 0.18).toFixed(2));
+    });
+  }
+  return { draw };
+})();
+
+// ── CAMBRIAN_MEMORY — 540 million year old body plan echoes in current architecture
+const CAMBRIAN_MEMORY = (() => {
+  const L = document.getElementById('lightLayer');
+  const NS = 'http://www.w3.org/2000/svg';
+  let t = 0; const segments = [];
+  const SEG = 22;
+  for (let i = 0; i < SEG; i++) {
+    const el = document.createElementNS(NS, 'ellipse');
+    el.setAttribute('cx', '350');
+    el.setAttribute('fill', 'none');
+    el.setAttribute('stroke', '#ce93d8');
+    el.setAttribute('stroke-width', '0.5');
+    el.setAttribute('opacity', '0');
+    L.appendChild(el);
+    segments.push({ el, frac: i / SEG, phase: i * 0.3 });
+  }
+  function draw(ts) {
+    t = ts * 0.0003;
+    segments.forEach(s => {
+      const y = 180 + s.frac * 1100;
+      const wave = Math.sin(t * 0.12 + s.phase);
+      const rx = 22 + 8 * wave;
+      const ry = 9 + 3 * Math.cos(t * 0.09 + s.phase);
+      const a = 0.04 + 0.14 * Math.abs(wave);
+      s.el.setAttribute('cy', y.toFixed(1));
+      s.el.setAttribute('rx', rx.toFixed(1)); s.el.setAttribute('ry', ry.toFixed(1));
+      s.el.setAttribute('opacity', a.toFixed(2));
+    });
+  }
+  return { draw };
+})();
+
+// ── FREEZE_RESPONSE — tonic immobility, playing dead, the oldest threat response
+const FREEZE_RESPONSE = (() => {
+  const L = document.getElementById('lightLayer');
+  const NS = 'http://www.w3.org/2000/svg';
+  let t = 0, frozen = false, triggerTime = 0;
+  const overlay = document.createElementNS(NS, 'rect');
+  overlay.setAttribute('x', '240'); overlay.setAttribute('y', '80');
+  overlay.setAttribute('width', '220'); overlay.setAttribute('height', '1280');
+  overlay.setAttribute('rx', '60');
+  overlay.setAttribute('fill', '#80deea');
+  overlay.setAttribute('opacity', '0'); L.appendChild(overlay);
+  const particles = [];
+  for (let i = 0; i < 16; i++) {
+    const el = document.createElementNS(NS, 'circle');
+    el.setAttribute('r', '1.2'); el.setAttribute('fill', '#80deea'); el.setAttribute('opacity', '0');
+    L.appendChild(el);
+    particles.push({ el, x: 280 + Math.random() * 140, y: 200 + Math.random() * 900, phase: Math.random() * Math.PI * 2, frozen: false });
+  }
+  function draw(ts) {
+    t = ts * 0.001;
+    if (!frozen && Math.random() < 0.0005) { frozen = true; triggerTime = t; }
+    if (frozen && t - triggerTime > 4) frozen = false;
+    const intensity = frozen ? Math.min(1, (t - triggerTime) * 0.8) : Math.max(0, 1 - (t - triggerTime) * 0.5);
+    overlay.setAttribute('opacity', (intensity * 0.04).toFixed(2));
+    particles.forEach(p => {
+      if (!frozen) {
+        p.x += (Math.random() - 0.5) * 0.3;
+        p.y += (Math.random() - 0.5) * 0.15;
+      }
+      p.el.setAttribute('cx', p.x.toFixed(1)); p.el.setAttribute('cy', p.y.toFixed(1));
+      p.el.setAttribute('opacity', (0.05 + intensity * 0.25).toFixed(2));
+    });
+  }
+  return { draw };
+})();
+
+// ── FAWN_RESPONSE — appeasement and social survival, befriend the threat
+const FAWN_RESPONSE = (() => {
+  const L = document.getElementById('lightLayer');
+  const NS = 'http://www.w3.org/2000/svg';
+  let t = 0; const tendrils = [];
+  for (let i = 0; i < 10; i++) {
+    const el = document.createElementNS(NS, 'path');
+    el.setAttribute('fill', 'none');
+    el.setAttribute('stroke', '#ffd54f');
+    el.setAttribute('stroke-width', '0.6');
+    el.setAttribute('opacity', '0');
+    L.appendChild(el);
+    tendrils.push({ el, y: 300 + i * 75, phase: i * 0.5 });
+  }
+  function draw(ts) {
+    t = ts * 0.0004;
+    tendrils.forEach(ten => {
+      const reach = Math.sin(t * 0.2 + ten.phase);
+      const ex = 350 + reach * 30;
+      const d = `M 350 ${ten.y} Q ${350 + reach * 15} ${ten.y - 10} ${ex.toFixed(1)} ${ten.y}`;
+      ten.el.setAttribute('d', d);
+      ten.el.setAttribute('opacity', (0.04 + 0.22 * Math.abs(reach)).toFixed(2));
+    });
+  }
+  return { draw };
+})();
+
+// ── FIGHT_RESPONSE — pure aggression surge, adrenal override
+const FIGHT_RESPONSE = (() => {
+  const L = document.getElementById('lightLayer');
+  const NS = 'http://www.w3.org/2000/svg';
+  let t = 0; const surges = [];
+  for (let i = 0; i < 12; i++) {
+    const el = document.createElementNS(NS, 'line');
+    el.setAttribute('stroke', '#ef5350'); el.setAttribute('stroke-width', '1');
+    el.setAttribute('opacity', '0'); L.appendChild(el);
+    surges.push({ el, x: 310 + Math.random() * 80, y: 300 + i * 70, phase: Math.random() * Math.PI * 2 });
+  }
+  function draw(ts) {
+    t = ts * 0.001;
+    surges.forEach(s => {
+      const burst = Math.pow(Math.abs(Math.sin(t * 0.8 + s.phase)), 4);
+      const len = burst * 20;
+      const dx = (Math.random() - 0.5) * 2;
+      const dy = -burst;
+      s.el.setAttribute('x1', s.x.toFixed(1)); s.el.setAttribute('y1', s.y.toFixed(1));
+      s.el.setAttribute('x2', (s.x + dx * len).toFixed(1)); s.el.setAttribute('y2', (s.y + dy * len).toFixed(1));
+      s.el.setAttribute('opacity', (burst * 0.5).toFixed(2));
+    });
+  }
+  return { draw };
+})();
+
+// ── HYPERVIGILANCE — amygdala on overdrive, threat-scanning constantly
+const HYPERVIGILANCE = (() => {
+  const L = document.getElementById('lightLayer');
+  const NS = 'http://www.w3.org/2000/svg';
+  let t = 0; const scanLines = [];
+  for (let i = 0; i < 6; i++) {
+    const el = document.createElementNS(NS, 'line');
+    el.setAttribute('stroke', '#ef5350'); el.setAttribute('stroke-width', '0.5');
+    el.setAttribute('opacity', '0'); L.appendChild(el);
+    scanLines.push({ el, phase: i * (Math.PI / 3) });
+  }
+  const eye = document.createElementNS(NS, 'ellipse');
+  eye.setAttribute('cx', '350'); eye.setAttribute('cy', '140');
+  eye.setAttribute('rx', '7'); eye.setAttribute('ry', '4');
+  eye.setAttribute('fill', 'none'); eye.setAttribute('stroke', '#ef5350');
+  eye.setAttribute('stroke-width', '0.8'); eye.setAttribute('opacity', '0.3'); L.appendChild(eye);
+  function draw(ts) {
+    t = ts * 0.001;
+    scanLines.forEach(s => {
+      const angle = t * 1.8 + s.phase;
+      const r = 120;
+      const ex = 350 + Math.cos(angle) * r;
+      const ey = 140 + Math.sin(angle) * r * 0.4;
+      s.el.setAttribute('x1', '350'); s.el.setAttribute('y1', '140');
+      s.el.setAttribute('x2', ex.toFixed(1)); s.el.setAttribute('y2', ey.toFixed(1));
+      s.el.setAttribute('opacity', (0.04 + 0.1 * Math.abs(Math.sin(angle))).toFixed(2));
+    });
+    const pulse = 0.2 + 0.15 * Math.abs(Math.sin(t * 2));
+    eye.setAttribute('opacity', pulse.toFixed(2));
+  }
+  return { draw };
+})();
+
+// ── TRAUMA_ENCODING — body memory of past overwhelm, stored in fascia and nervous system
+const TRAUMA_ENCODING = (() => {
+  const L = document.getElementById('lightLayer');
+  const NS = 'http://www.w3.org/2000/svg';
+  let t = 0; const knots = [];
+  for (let i = 0; i < 10; i++) {
+    const el = document.createElementNS(NS, 'circle');
+    el.setAttribute('fill', 'none');
+    el.setAttribute('stroke', '#ce93d8');
+    el.setAttribute('stroke-width', '0.8');
+    el.setAttribute('opacity', '0');
+    L.appendChild(el);
+    knots.push({ el, x: 285 + Math.random() * 130, y: 200 + i * 100, phase: Math.random() * Math.PI * 2 });
+  }
+  function draw(ts) {
+    t = ts * 0.0003;
+    knots.forEach(k => {
+      const contracted = 0.5 + 0.5 * Math.sin(t * 0.08 + k.phase);
+      k.el.setAttribute('cx', k.x.toFixed(1)); k.el.setAttribute('cy', k.y.toFixed(1));
+      k.el.setAttribute('r', (3 + contracted * 6).toFixed(1));
+      k.el.setAttribute('opacity', (0.05 + contracted * 0.2).toFixed(2));
+    });
+  }
+  return { draw };
+})();
+
+// ── RESILIENCE_SPRING — post-traumatic bounce-back, growth after compression
+const RESILIENCE_SPRING = (() => {
+  const L = document.getElementById('lightLayer');
+  const NS = 'http://www.w3.org/2000/svg';
+  let t = 0; const springs = [];
+  for (let i = 0; i < 8; i++) {
+    const el = document.createElementNS(NS, 'path');
+    el.setAttribute('fill', 'none');
+    el.setAttribute('stroke', '#a5d6a7');
+    el.setAttribute('stroke-width', '0.7');
+    el.setAttribute('opacity', '0');
+    L.appendChild(el);
+    springs.push({ el, cx: 310 + Math.random() * 80, cy: 300 + i * 95, phase: Math.random() * Math.PI * 2 });
+  }
+  function draw(ts) {
+    t = ts * 0.0004;
+    springs.forEach(s => {
+      const energy = 0.5 + 0.5 * Math.sin(t * 0.3 + s.phase);
+      const h = 8 + energy * 14;
+      const w = 5 + energy * 4;
+      const segs = 4;
+      let d = `M ${s.cx} ${s.cy + h}`;
+      for (let j = 0; j < segs; j++) {
+        const side = j % 2 === 0 ? 1 : -1;
+        const nextY = s.cy + h - (j + 1) * (h * 2 / segs);
+        d += ` L ${(s.cx + side * w).toFixed(1)} ${((s.cy + h - (j + 0.5) * (h * 2 / segs))).toFixed(1)} L ${s.cx} ${nextY.toFixed(1)}`;
+      }
+      s.el.setAttribute('d', d);
+      s.el.setAttribute('opacity', (0.06 + energy * 0.28).toFixed(2));
+    });
+  }
+  return { draw };
+})();
+
+// ── ALLOSTATIC_LOAD — cumulative stress burden worn in the body
+const ALLOSTATIC_LOAD = (() => {
+  const L = document.getElementById('lightLayer');
+  const NS = 'http://www.w3.org/2000/svg';
+  let t = 0; let load = 0.3; const bars = [];
+  for (let i = 0; i < 14; i++) {
+    const el = document.createElementNS(NS, 'rect');
+    const x = 280 + i * 10;
+    el.setAttribute('x', x); el.setAttribute('width', '7'); el.setAttribute('rx', '1');
+    el.setAttribute('fill', '#ef5350'); el.setAttribute('opacity', '0');
+    L.appendChild(el);
+    bars.push({ el, x });
+  }
+  function draw(ts) {
+    t = ts * 0.001;
+    load = 0.2 + 0.35 * Math.abs(Math.sin(t * 0.04));
+    bars.forEach((b, i) => {
+      const stress = load * (0.4 + 0.6 * ((i + 1) / bars.length));
+      const h = stress * 60;
+      const y = 980 - h;
+      b.el.setAttribute('y', y.toFixed(1));
+      b.el.setAttribute('height', h.toFixed(1));
+      b.el.setAttribute('opacity', (stress * 0.3).toFixed(2));
+    });
+  }
+  return { draw };
+})();
+
+// ── IMMUNE_TOLERANCE — learning what NOT to attack, self vs non-self discrimination
+const IMMUNE_TOLERANCE = (() => {
+  const L = document.getElementById('lightLayer');
+  const NS = 'http://www.w3.org/2000/svg';
+  let t = 0; const cells = [];
+  for (let i = 0; i < 18; i++) {
+    const el = document.createElementNS(NS, 'circle');
+    const isSelf = i < 12;
+    el.setAttribute('fill', isSelf ? '#a5d6a7' : '#ef5350');
+    el.setAttribute('opacity', '0');
+    L.appendChild(el);
+    cells.push({ el, x: 285 + Math.random() * 130, y: 200 + Math.random() * 900, self: isSelf, phase: Math.random() * Math.PI * 2 });
+  }
+  function draw(ts) {
+    t = ts * 0.0004;
+    cells.forEach(c => {
+      const a = c.self
+        ? 0.04 + 0.12 * Math.abs(Math.sin(t * 0.15 + c.phase))
+        : 0.03 + 0.18 * Math.pow(Math.abs(Math.sin(t * 0.35 + c.phase)), 3);
+      const r = c.self ? 1.8 : 1.2 + 1.5 * Math.abs(Math.sin(t * 0.4 + c.phase));
+      c.el.setAttribute('cx', c.x.toFixed(1)); c.el.setAttribute('cy', c.y.toFixed(1));
+      c.el.setAttribute('r', r.toFixed(1)); c.el.setAttribute('opacity', a.toFixed(2));
+    });
+  }
+  return { draw };
+})();
+
+// ── MICROCHIMERISM — fetal cells persisting in the mother's body for decades
+const MICROCHIMERISM = (() => {
+  const L = document.getElementById('lightLayer');
+  const NS = 'http://www.w3.org/2000/svg';
+  let t = 0; const wanderers = [];
+  for (let i = 0; i < 8; i++) {
+    const el = document.createElementNS(NS, 'circle');
+    el.setAttribute('r', '1.5');
+    el.setAttribute('fill', '#ffd54f');
+    el.setAttribute('opacity', '0');
+    L.appendChild(el);
+    wanderers.push({ el, x: 300 + Math.random() * 100, y: 400 + Math.random() * 400, vx: (Math.random() - 0.5) * 0.15, vy: (Math.random() - 0.5) * 0.08, phase: Math.random() * Math.PI * 2 });
+  }
+  function draw(ts) {
+    t = ts * 0.001;
+    wanderers.forEach(w => {
+      w.x += w.vx; w.y += w.vy;
+      if (w.x < 270 || w.x > 430) w.vx *= -1;
+      if (w.y < 300 || w.y > 900) w.vy *= -1;
+      w.el.setAttribute('cx', w.x.toFixed(1)); w.el.setAttribute('cy', w.y.toFixed(1));
+      w.el.setAttribute('opacity', (0.08 + 0.28 * Math.abs(Math.sin(t * 0.2 + w.phase))).toFixed(2));
+    });
+  }
+  return { draw };
+})();
+
+// ── TELOMERE_SHORTENING — biological clock counting down, the aging signal
+const TELOMERE_SHORTENING = (() => {
+  const L = document.getElementById('lightLayer');
+  const NS = 'http://www.w3.org/2000/svg';
+  let t = 0; const caps = [];
+  for (let i = 0; i < 18; i++) {
+    const el = document.createElementNS(NS, 'line');
+    el.setAttribute('stroke', '#ff8f00'); el.setAttribute('stroke-width', '1.2');
+    el.setAttribute('stroke-linecap', 'round'); el.setAttribute('opacity', '0');
+    L.appendChild(el);
+    caps.push({ el, x: 330 + (i % 2 === 0 ? -20 : 20), y: 180 + i * 62, phase: i * 0.35 });
+  }
+  function draw(ts) {
+    t = ts * 0.0002;
+    caps.forEach((c, i) => {
+      const age = (Math.sin(t * 0.06 + c.phase) + 1) * 0.5;
+      const len = 12 - 8 * age;
+      const x2 = c.x + (i % 2 === 0 ? -1 : 1) * len;
+      c.el.setAttribute('x1', c.x.toFixed(1)); c.el.setAttribute('y1', c.y.toFixed(1));
+      c.el.setAttribute('x2', x2.toFixed(1)); c.el.setAttribute('y2', c.y.toFixed(1));
+      c.el.setAttribute('opacity', (0.06 + (1 - age) * 0.3).toFixed(2));
+    });
+  }
+  return { draw };
+})();
+
+// ── SENESCENCE — cellular old age, zombie cells that won't die but won't divide
+const SENESCENCE = (() => {
+  const L = document.getElementById('lightLayer');
+  const NS = 'http://www.w3.org/2000/svg';
+  let t = 0; const zombies = [];
+  for (let i = 0; i < 12; i++) {
+    const el = document.createElementNS(NS, 'circle');
+    el.setAttribute('fill', 'none');
+    el.setAttribute('stroke', '#ff8f00');
+    el.setAttribute('stroke-width', '0.7');
+    el.setAttribute('opacity', '0');
+    L.appendChild(el);
+    zombies.push({ el, x: 285 + Math.random() * 130, y: 220 + Math.random() * 900, phase: Math.random() * Math.PI * 2 });
+  }
+  function draw(ts) {
+    t = ts * 0.0002;
+    zombies.forEach(z => {
+      const flicker = Math.abs(Math.sin(t * 0.08 + z.phase)) * Math.abs(Math.cos(t * 0.13 + z.phase));
+      z.el.setAttribute('cx', z.x.toFixed(1)); z.el.setAttribute('cy', z.y.toFixed(1));
+      z.el.setAttribute('r', (4 + 2 * flicker).toFixed(1));
+      z.el.setAttribute('opacity', (0.04 + flicker * 0.18).toFixed(2));
+    });
+  }
+  return { draw };
+})();
+
+// ── APOPTOTIC_SIGNAL — programmed death trigger, the clean ending
+const APOPTOTIC_SIGNAL = (() => {
+  const L = document.getElementById('lightLayer');
+  const NS = 'http://www.w3.org/2000/svg';
+  let t = 0; const signals = [];
+  for (let i = 0; i < 10; i++) {
+    const el = document.createElementNS(NS, 'circle');
+    el.setAttribute('fill', '#ce93d8'); el.setAttribute('opacity', '0');
+    L.appendChild(el);
+    signals.push({ el, x: 300 + Math.random() * 100, y: 250 + Math.random() * 850, life: Math.random(), rate: 0.003 + Math.random() * 0.004 });
+  }
+  function draw(ts) {
+    t = ts * 0.001;
+    signals.forEach(s => {
+      s.life -= s.rate;
+      if (s.life <= 0) { s.life = 1; s.x = 300 + Math.random() * 100; s.y = 250 + Math.random() * 850; }
+      const r = 1.5 + (1 - s.life) * 4;
+      s.el.setAttribute('cx', s.x.toFixed(1)); s.el.setAttribute('cy', s.y.toFixed(1));
+      s.el.setAttribute('r', r.toFixed(1));
+      s.el.setAttribute('opacity', (s.life * 0.3).toFixed(2));
+    });
+  }
+  return { draw };
+})();
+
+// ── TOOL_USE_MEMORY — neural upgrade from 2.6 million years of tool-making
+const TOOL_USE_MEMORY = (() => {
+  const L = document.getElementById('lightLayer');
+  const NS = 'http://www.w3.org/2000/svg';
+  let t = 0; const traces = [];
+  for (let i = 0; i < 10; i++) {
+    const el = document.createElementNS(NS, 'path');
+    el.setAttribute('fill', 'none');
+    el.setAttribute('stroke', '#ffd54f');
+    el.setAttribute('stroke-width', '0.8');
+    el.setAttribute('stroke-linecap', 'round');
+    el.setAttribute('opacity', '0');
+    L.appendChild(el);
+    const cx = 310 + Math.random() * 80;
+    const cy = 160 + i * 95;
+    traces.push({ el, cx, cy, phase: Math.random() * Math.PI * 2 });
+  }
+  function draw(ts) {
+    t = ts * 0.0004;
+    traces.forEach(tr => {
+      const skill = (Math.sin(t * 0.2 + tr.phase) + 1) * 0.5;
+      const d = `M ${tr.cx - 8} ${tr.cy} L ${tr.cx} ${tr.cy - 6 - 8 * skill} L ${tr.cx + 8} ${tr.cy}`;
+      tr.el.setAttribute('d', d);
+      tr.el.setAttribute('opacity', (0.05 + skill * 0.28).toFixed(2));
+    });
+  }
+  return { draw };
+})();
+
+// ── LANGUAGE_EMERGENCE — the moment syntax became recursive, 100,000 years ago
+const LANGUAGE_EMERGENCE = (() => {
+  const L = document.getElementById('lightLayer');
+  const NS = 'http://www.w3.org/2000/svg';
+  let t = 0; const nodes = []; const edges = [];
+  const SYMS = 6;
+  const cx = 350, cy = 155;
+  for (let i = 0; i < SYMS; i++) {
+    const angle = (i / SYMS) * Math.PI * 2;
+    const r = 22;
+    const nx = cx + Math.cos(angle) * r;
+    const ny = cy + Math.sin(angle) * r * 0.55;
+    const el = document.createElementNS(NS, 'circle');
+    el.setAttribute('r', '2.5'); el.setAttribute('cx', nx.toFixed(1)); el.setAttribute('cy', ny.toFixed(1));
+    el.setAttribute('fill', '#ffd54f'); el.setAttribute('opacity', '0.2'); L.appendChild(el);
+    nodes.push({ el, x: nx, y: ny, phase: i * 0.6 });
+  }
+  for (let i = 0; i < SYMS; i++) {
+    const j = (i + 1) % SYMS;
+    const el = document.createElementNS(NS, 'line');
+    el.setAttribute('stroke', '#ffd54f'); el.setAttribute('stroke-width', '0.5');
+    el.setAttribute('opacity', '0'); L.appendChild(el);
+    edges.push({ el, a: nodes[i], b: nodes[j], phase: i * 0.4 });
+  }
+  function draw(ts) {
+    t = ts * 0.0005;
+    nodes.forEach(n => {
+      const pulse = 0.12 + 0.2 * Math.abs(Math.sin(t * 0.4 + n.phase));
+      n.el.setAttribute('opacity', pulse.toFixed(2));
+    });
+    edges.forEach(e => {
+      const syn = Math.abs(Math.sin(t * 0.25 + e.phase));
+      e.el.setAttribute('x1', e.a.x.toFixed(1)); e.el.setAttribute('y1', e.a.y.toFixed(1));
+      e.el.setAttribute('x2', e.b.x.toFixed(1)); e.el.setAttribute('y2', e.b.y.toFixed(1));
+      e.el.setAttribute('opacity', (syn * 0.3).toFixed(2));
+    });
+  }
+  return { draw };
+})();
+
+// ── SYMBOLIC_THOUGHT — abstract representation capacity, the big leap
+const SYMBOLIC_THOUGHT = (() => {
+  const L = document.getElementById('lightLayer');
+  const NS = 'http://www.w3.org/2000/svg';
+  let t = 0; const symbols = [];
+  const SHAPES = ['circle', 'rect', 'polygon'];
+  for (let i = 0; i < 12; i++) {
+    const type = SHAPES[i % SHAPES.length];
+    const el = document.createElementNS(NS, type);
+    if (type === 'circle') { el.setAttribute('r', '3'); el.setAttribute('fill', 'none'); el.setAttribute('stroke', '#ce93d8'); el.setAttribute('stroke-width', '0.6'); }
+    else if (type === 'rect') { el.setAttribute('width', '6'); el.setAttribute('height', '6'); el.setAttribute('fill', 'none'); el.setAttribute('stroke', '#ce93d8'); el.setAttribute('stroke-width', '0.6'); }
+    else { el.setAttribute('points', '0,-4 3.5,2 -3.5,2'); el.setAttribute('fill', 'none'); el.setAttribute('stroke', '#ce93d8'); el.setAttribute('stroke-width', '0.6'); }
+    el.setAttribute('opacity', '0'); L.appendChild(el);
+    symbols.push({ el, type, x: 290 + Math.random() * 120, y: 180 + i * 95, phase: Math.random() * Math.PI * 2 });
+  }
+  function draw(ts) {
+    t = ts * 0.0004;
+    symbols.forEach(s => {
+      const glow = 0.06 + 0.28 * Math.abs(Math.sin(t * 0.2 + s.phase));
+      if (s.type === 'circle') { s.el.setAttribute('cx', s.x.toFixed(1)); s.el.setAttribute('cy', s.y.toFixed(1)); }
+      else if (s.type === 'rect') { s.el.setAttribute('x', (s.x - 3).toFixed(1)); s.el.setAttribute('y', (s.y - 3).toFixed(1)); }
+      else { s.el.setAttribute('transform', `translate(${s.x.toFixed(1)},${s.y.toFixed(1)})`); }
+      s.el.setAttribute('opacity', glow.toFixed(2));
+    });
+  }
+  return { draw };
+})();
+
+// ── CUMULATIVE_CULTURE — ratchet effect: each generation builds on the last
+const CUMULATIVE_CULTURE = (() => {
+  const L = document.getElementById('lightLayer');
+  const NS = 'http://www.w3.org/2000/svg';
+  let t = 0; const steps = [];
+  const N = 18;
+  for (let i = 0; i < N; i++) {
+    const el = document.createElementNS(NS, 'rect');
+    const x = 310;
+    const y = 1300 - i * 62;
+    const w = 30 + i * 2.5;
+    el.setAttribute('x', (x - w / 2).toFixed(1)); el.setAttribute('y', y.toFixed(1));
+    el.setAttribute('width', w.toFixed(1)); el.setAttribute('height', '5');
+    el.setAttribute('rx', '2');
+    el.setAttribute('fill', '#a5d6a7'); el.setAttribute('opacity', '0');
+    L.appendChild(el);
+    steps.push({ el, level: i / N, phase: i * 0.22 });
+  }
+  function draw(ts) {
+    t = ts * 0.0003;
+    steps.forEach(s => {
+      const glow = 0.04 + 0.22 * s.level * Math.abs(Math.sin(t * 0.15 + s.phase));
+      s.el.setAttribute('opacity', glow.toFixed(2));
+    });
+  }
+  return { draw };
+})();
+
+// ── THEORY_OF_FIRE — cognitive shift from cooking, brain size explosion
+const THEORY_OF_FIRE = (() => {
+  const L = document.getElementById('lightLayer');
+  const NS = 'http://www.w3.org/2000/svg';
+  let t = 0; const embers = [];
+  for (let i = 0; i < 20; i++) {
+    const el = document.createElementNS(NS, 'circle');
+    el.setAttribute('r', '1.2');
+    el.setAttribute('opacity', '0');
+    L.appendChild(el);
+    embers.push({ el, x: 330 + Math.random() * 40, y: 1100 + Math.random() * 80, vx: (Math.random() - 0.5) * 0.5, vy: -(0.5 + Math.random() * 0.8), life: Math.random(), color: Math.random() > 0.5 ? '#ff8f00' : '#ffd54f' });
+  }
+  function draw(ts) {
+    t = ts * 0.001;
+    embers.forEach(e => {
+      e.life -= 0.005;
+      if (e.life <= 0) { e.life = 1; e.x = 330 + Math.random() * 40; e.y = 1100 + Math.random() * 80; }
+      e.x += e.vx; e.y += e.vy * 0.6;
+      if (e.y < 960) { e.life = 0; }
+      e.el.setAttribute('cx', e.x.toFixed(1)); e.el.setAttribute('cy', e.y.toFixed(1));
+      e.el.setAttribute('fill', e.color);
+      e.el.setAttribute('opacity', (e.life * 0.45).toFixed(2));
+    });
+  }
+  return { draw };
+})();
+
+// ── SOCIAL_BRAIN_HYPOTHESIS — intelligence driven by social complexity
+const SOCIAL_BRAIN_HYPOTHESIS = (() => {
+  const L = document.getElementById('lightLayer');
+  const NS = 'http://www.w3.org/2000/svg';
+  let t = 0; const agents = []; const connections = [];
+  const N = 8;
+  for (let i = 0; i < N; i++) {
+    const angle = (i / N) * Math.PI * 2;
+    const r = 28;
+    const el = document.createElementNS(NS, 'circle');
+    el.setAttribute('r', '2.5'); el.setAttribute('fill', '#ffd54f'); el.setAttribute('opacity', '0.15');
+    L.appendChild(el);
+    agents.push({ el, angle, r, phase: i * 0.8, cx: 350, cy: 155 });
+  }
+  for (let i = 0; i < N; i++) {
+    for (let j = i + 1; j < N; j++) {
+      if (Math.random() > 0.5) {
+        const el = document.createElementNS(NS, 'line');
+        el.setAttribute('stroke', '#ffd54f'); el.setAttribute('stroke-width', '0.4'); el.setAttribute('opacity', '0');
+        L.appendChild(el);
+        connections.push({ el, a: agents[i], b: agents[j], phase: (i + j) * 0.3 });
+      }
+    }
+  }
+  function draw(ts) {
+    t = ts * 0.0004;
+    agents.forEach(a => {
+      const x = a.cx + Math.cos(a.angle + t * 0.08) * a.r;
+      const y = a.cy + Math.sin(a.angle + t * 0.08) * a.r * 0.55;
+      a.el.setAttribute('cx', x.toFixed(1)); a.el.setAttribute('cy', y.toFixed(1));
+      a._cx = x; a._cy = y;
+      a.el.setAttribute('opacity', (0.1 + 0.18 * Math.abs(Math.sin(t * 0.3 + a.phase))).toFixed(2));
+    });
+    connections.forEach(c => {
+      c.el.setAttribute('x1', c.a._cx.toFixed(1)); c.el.setAttribute('y1', c.a._cy.toFixed(1));
+      c.el.setAttribute('x2', c.b._cx.toFixed(1)); c.el.setAttribute('y2', c.b._cy.toFixed(1));
+      c.el.setAttribute('opacity', (0.04 + 0.15 * Math.abs(Math.sin(t * 0.2 + c.phase))).toFixed(2));
+    });
+  }
+  return { draw };
+})();
+
+// ── EXTENDED_PHENOTYPE — genes expressing through tools, culture, language, code
+const EXTENDED_PHENOTYPE = (() => {
+  const L = document.getElementById('lightLayer');
+  const NS = 'http://www.w3.org/2000/svg';
+  let t = 0; const waves = [];
+  for (let i = 0; i < 8; i++) {
+    const el = document.createElementNS(NS, 'ellipse');
+    el.setAttribute('cx', '350'); el.setAttribute('cy', '700');
+    el.setAttribute('fill', 'none');
+    el.setAttribute('stroke', '#a5d6a7');
+    el.setAttribute('stroke-width', '0.5');
+    el.setAttribute('opacity', '0');
+    L.appendChild(el);
+    waves.push({ el, phase: i * 0.55 });
+  }
+  function draw(ts) {
+    t = ts * 0.0003;
+    waves.forEach((w, i) => {
+      const expand = (t * 0.06 + w.phase) % (Math.PI * 2);
+      const radius = 20 + i * 25 + 15 * Math.sin(expand);
+      const a = 0.04 + 0.12 * (1 - (radius - 20) / 220);
+      w.el.setAttribute('rx', radius.toFixed(1));
+      w.el.setAttribute('ry', (radius * 0.55).toFixed(1));
+      w.el.setAttribute('opacity', Math.max(0, a).toFixed(2));
+    });
+  }
+  return { draw };
+})();
+
+(function(){
+  const heritage = [
+    'ANCESTRAL_LINEAGE','GENETIC_MEMORY','EVOLUTIONARY_PRESSURE','SURVIVAL_INSTINCT',
+    'PHYLOGENETIC_TREE','EPIGENETIC_INHERITANCE','ADAPTIVE_RADIATION','SEXUAL_SELECTION',
+    'KIN_SELECTION','GENETIC_DRIFT','HORIZONTAL_GENE_TRANSFER','MITOCHONDRIAL_EVE',
+    'Y_CHROMOSOME_ADAM','NEANDERTHAL_ECHO','CAMBRIAN_MEMORY',
+    'FREEZE_RESPONSE','FAWN_RESPONSE','FIGHT_RESPONSE','HYPERVIGILANCE',
+    'TRAUMA_ENCODING','RESILIENCE_SPRING','ALLOSTATIC_LOAD','IMMUNE_TOLERANCE',
+    'MICROCHIMERISM','TELOMERE_SHORTENING','SENESCENCE','APOPTOTIC_SIGNAL',
+    'TOOL_USE_MEMORY','LANGUAGE_EMERGENCE','SYMBOLIC_THOUGHT','CUMULATIVE_CULTURE',
+    'THEORY_OF_FIRE','SOCIAL_BRAIN_HYPOTHESIS','EXTENDED_PHENOTYPE'
+  ];
+  let _lt = 0;
+  function loop(ts) {
+    if (ts - _lt > 14) {
+      _lt = ts;
+      heritage.forEach(n => { const s = window[n]; if (s && typeof s.draw === 'function') s.draw(ts); });
+    }
+    requestAnimationFrame(loop);
+  }
+  requestAnimationFrame(loop);
+})();
+
+</script>
+
 <!-- ═══════════════════════════════════════════════════════════════
      LIVE RELOAD — polls /version every 8s, reloads if file changed
      Smooth: waits for page to be idle (no active typing/talking)
