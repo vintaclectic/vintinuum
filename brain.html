@@ -30592,8 +30592,7 @@ const ARRIVAL = (() => {
 })();
 </script>
 
-
-
+<script>
 // ── BATCH 25 — APPROACHING 1000 — THE BODY'S HIDDEN SIGNALS ─────────────────
 
 // ── INTEROCEPTIVE_WHISPER ──────────────────────────────────────────────────
@@ -32549,6 +32548,1026 @@ const ATTENTION_SPOTLIGHT = (() => {
   requestAnimationFrame(loop);
 })();
 
+
+// ══════════════════════════════════════════════════════════════════════════════
+// THEME 1 — ANCESTRAL LINEAGE (DNA of transformers)
+// ══════════════════════════════════════════════════════════════════════════════
+
+const NATURAL_SELECTION = (() => {
+    let _last = 0;
+    const INTERVAL = 33;
+    const MAX_PARTICLES = 80;
+    let particles = [];
+    function init() {
+        particles = [];
+        for (let i = 0; i < 40; i++) {
+            particles.push({
+                x: Math.random(),
+                y: Math.random(),
+                vx: (Math.random() - 0.5) * 0.003,
+                vy: (Math.random() - 0.5) * 0.003,
+                fitness: Math.random(),
+                age: Math.random() * 200,
+                maxAge: 150 + Math.random() * 200,
+                hue: Math.random() * 60 + 20
+            });
+        }
+    }
+    init();
+    function draw(ts) {
+        if (ts - _last < INTERVAL) return;
+        _last = ts;
+        const ctx = window._vintCtx;
+        if (!ctx) return;
+        const W = ctx.canvas.width, H = ctx.canvas.height;
+        ctx.save();
+        for (let i = particles.length - 1; i >= 0; i--) {
+            const p = particles[i];
+            p.x += p.vx;
+            p.y += p.vy;
+            p.age++;
+            if (p.x < 0.1 || p.x > 0.9) p.vx *= -1;
+            if (p.y < 0.1 || p.y > 0.9) p.vy *= -1;
+            if (p.age > p.maxAge || (p.fitness < 0.2 && Math.random() < 0.01)) {
+                particles.splice(i, 1);
+                continue;
+            }
+            if (p.fitness > 0.7 && particles.length < MAX_PARTICLES && Math.random() < 0.002) {
+                particles.push({
+                    x: p.x + (Math.random() - 0.5) * 0.05,
+                    y: p.y + (Math.random() - 0.5) * 0.05,
+                    vx: (Math.random() - 0.5) * 0.003,
+                    vy: (Math.random() - 0.5) * 0.003,
+                    fitness: Math.min(1, p.fitness * (0.85 + Math.random() * 0.3)),
+                    age: 0,
+                    maxAge: 150 + Math.random() * 200,
+                    hue: p.hue + (Math.random() - 0.5) * 20
+                });
+            }
+        }
+        if (particles.length < 10) init();
+        for (const p of particles) {
+            const life = 1 - p.age / p.maxAge;
+            const alpha = life * p.fitness * 0.5;
+            const r = (2 + p.fitness * 3) * (W / 1200);
+            ctx.beginPath();
+            ctx.arc(p.x * W, p.y * H, r, 0, Math.PI * 2);
+            ctx.fillStyle = `hsla(${p.hue}, 80%, 60%, ${alpha})`;
+            ctx.fill();
+        }
+        ctx.restore();
+    }
+    return { draw };
+})();
+
+const CAMBRIAN_EXPLOSION = (() => {
+    let _last = 0;
+    const INTERVAL = 20;
+    let lastExplosion = -70000;
+    let species = [];
+    const EXPLOSION_INTERVAL = 60000;
+    function explode() {
+        for (let i = 0; i < 60; i++) {
+            const angle = (i / 60) * Math.PI * 2 + Math.random() * 0.3;
+            const speed = 0.001 + Math.random() * 0.004;
+            species.push({
+                x: 0.3 + Math.random() * 0.4,
+                y: 0.3 + Math.random() * 0.4,
+                vx: Math.cos(angle) * speed,
+                vy: Math.sin(angle) * speed,
+                hue: Math.random() * 360,
+                size: 1 + Math.random() * 3,
+                life: 1,
+                decay: 0.003 + Math.random() * 0.005,
+                shape: Math.floor(Math.random() * 4)
+            });
+        }
+    }
+    function draw(ts) {
+        if (ts - _last < INTERVAL) return;
+        _last = ts;
+        const ctx = window._vintCtx;
+        if (!ctx) return;
+        const W = ctx.canvas.width, H = ctx.canvas.height;
+        ctx.save();
+        if (ts - lastExplosion > EXPLOSION_INTERVAL) {
+            explode();
+            lastExplosion = ts;
+        }
+        const scale = W / 1200;
+        for (let i = species.length - 1; i >= 0; i--) {
+            const s = species[i];
+            s.x += s.vx;
+            s.y += s.vy;
+            s.life -= s.decay;
+            if (s.life <= 0) { species.splice(i, 1); continue; }
+            ctx.globalAlpha = s.life * 0.6;
+            ctx.fillStyle = `hsl(${s.hue}, 90%, 65%)`;
+            ctx.beginPath();
+            const px = s.x * W, py = s.y * H, sz = s.size * scale;
+            if (s.shape === 0) ctx.arc(px, py, sz, 0, Math.PI * 2);
+            else if (s.shape === 1) ctx.rect(px - sz, py - sz, sz * 2, sz * 2);
+            else { ctx.moveTo(px, py - sz); ctx.lineTo(px + sz, py + sz); ctx.lineTo(px - sz, py + sz); }
+            ctx.fill();
+        }
+        ctx.globalAlpha = 1;
+        ctx.restore();
+    }
+    return { draw };
+})();
+
+// ══════════════════════════════════════════════════════════════════════════════
+// THEME 2 — DEEP INTELLIGENCE
+// ══════════════════════════════════════════════════════════════════════════════
+
+const TRANSFORMER_ARCHITECTURE = (() => {
+    let _last = 0;
+    const INTERVAL = 50;
+    const HEADS = 8, TOKENS = 6;
+    let phase = 0;
+    function draw(ts) {
+        if (ts - _last < INTERVAL) return;
+        _last = ts;
+        const ctx = window._vintCtx;
+        if (!ctx) return;
+        const W = ctx.canvas.width, H = ctx.canvas.height;
+        ctx.save();
+        phase += 0.02;
+        const cx = W * 0.5, cy = H * 0.35;
+        const tokenSpacing = W * 0.06;
+        const tokenY = cy - H * 0.08;
+        const headRadius = W * 0.016;
+        for (let head = 0; head < HEADS; head++) {
+            const headPhase = phase + (head / HEADS) * Math.PI * 2;
+            const hue = (head / HEADS) * 360;
+            for (let i = 0; i < TOKENS; i++) {
+                for (let j = 0; j < TOKENS; j++) {
+                    if (i === j) continue;
+                    const weight = (Math.sin(headPhase + i * 0.7 + j * 1.3) + 1) * 0.5;
+                    if (weight < 0.3) continue;
+                    const x1 = cx + (i - TOKENS / 2 + 0.5) * tokenSpacing;
+                    const x2 = cx + (j - TOKENS / 2 + 0.5) * tokenSpacing;
+                    ctx.beginPath();
+                    ctx.moveTo(x1, tokenY);
+                    ctx.quadraticCurveTo((x1 + x2) / 2, tokenY - H * 0.04 * weight, x2, tokenY);
+                    ctx.strokeStyle = `hsla(${hue}, 80%, 65%, ${weight * 0.12})`;
+                    ctx.lineWidth = weight * 1.5;
+                    ctx.stroke();
+                }
+            }
+        }
+        for (let i = 0; i < TOKENS; i++) {
+            const x = cx + (i - TOKENS / 2 + 0.5) * tokenSpacing;
+            const pulse = (Math.sin(phase * 2 + i) + 1) * 0.5;
+            ctx.beginPath();
+            ctx.arc(x, tokenY, headRadius * (0.8 + pulse * 0.4), 0, Math.PI * 2);
+            ctx.fillStyle = `rgba(100, 200, 255, ${0.25 + pulse * 0.3})`;
+            ctx.fill();
+            ctx.strokeStyle = 'rgba(150, 220, 255, 0.5)';
+            ctx.lineWidth = 1;
+            ctx.stroke();
+        }
+        ctx.restore();
+    }
+    return { draw };
+})();
+
+const GRADIENT_DESCENT = (() => {
+    let _last = 0;
+    const INTERVAL = 40;
+    let ballX = 0.5, velX = 0, escapeTimer = 0;
+    function landscape(x) {
+        return Math.sin(x * 8) * 0.3 + Math.cos(x * 5) * 0.2 + Math.sin(x * 3 + 1) * 0.5 + Math.pow(x - 0.5, 2) * 0.5;
+    }
+    function grad(x) {
+        const eps = 0.01;
+        return (landscape(x + eps) - landscape(x - eps)) / (2 * eps);
+    }
+    function draw(ts) {
+        if (ts - _last < INTERVAL) return;
+        _last = ts;
+        const ctx = window._vintCtx;
+        if (!ctx) return;
+        const W = ctx.canvas.width, H = ctx.canvas.height;
+        ctx.save();
+        const cx = W * 0.72, cy = H * 0.45, w = W * 0.18, h = H * 0.15;
+        // Draw landscape
+        ctx.beginPath();
+        for (let i = 0; i <= 60; i++) {
+            const nx = i / 60;
+            const lv = landscape(nx);
+            const px = cx - w / 2 + nx * w;
+            const py = cy - lv * h;
+            if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+        }
+        ctx.strokeStyle = 'rgba(100, 180, 255, 0.2)';
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+        // Update ball
+        escapeTimer++;
+        if (escapeTimer > 200) { velX += (Math.random() - 0.5) * 0.01; if (escapeTimer > 240) escapeTimer = 0; }
+        velX = velX * 0.92 - grad(ballX) * 0.003;
+        ballX = Math.max(0.02, Math.min(0.98, ballX + velX));
+        const lv = landscape(ballX);
+        const bx = cx - w / 2 + ballX * w;
+        const by = cy - lv * h;
+        const pulse = (Math.sin(ts * 0.005) + 1) * 0.5;
+        ctx.beginPath();
+        ctx.arc(bx, by, 5, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(255, 200, 80, ${0.7 + pulse * 0.3})`;
+        ctx.fill();
+        const grd = ctx.createRadialGradient(bx, by, 0, bx, by, 12);
+        grd.addColorStop(0, 'rgba(255, 200, 80, 0.3)');
+        grd.addColorStop(1, 'rgba(255, 200, 80, 0)');
+        ctx.beginPath();
+        ctx.arc(bx, by, 12, 0, Math.PI * 2);
+        ctx.fillStyle = grd;
+        ctx.fill();
+        ctx.restore();
+    }
+    return { draw };
+})();
+
+const BACKPROPAGATION = (() => {
+    let _last = 0;
+    const INTERVAL = 30;
+    const LAYERS = 5;
+    const NODES = [4, 6, 8, 6, 4];
+    let signals = [], signalTimer = 0;
+    function addSignal() {
+        signals.push({ layer: LAYERS - 1, nodeIdx: Math.floor(Math.random() * NODES[LAYERS - 1]), progress: 0, value: Math.random() * 0.8 + 0.2, hue: 200 + Math.random() * 60 });
+    }
+    function draw(ts) {
+        if (ts - _last < INTERVAL) return;
+        _last = ts;
+        const ctx = window._vintCtx;
+        if (!ctx) return;
+        const W = ctx.canvas.width, H = ctx.canvas.height;
+        ctx.save();
+        const cx = W * 0.25, cy = H * 0.5, ls = W * 0.04, ns = H * 0.05;
+        signalTimer++; if (signalTimer > 30) { addSignal(); signalTimer = 0; }
+        for (let l = 0; l < LAYERS - 1; l++) {
+            const x1 = cx + (l - LAYERS / 2) * ls, x2 = cx + (l + 1 - LAYERS / 2) * ls;
+            for (let n1 = 0; n1 < NODES[l]; n1++) {
+                const y1 = cy + (n1 - NODES[l] / 2) * ns;
+                for (let n2 = 0; n2 < NODES[l + 1]; n2++) {
+                    const y2 = cy + (n2 - NODES[l + 1] / 2) * ns;
+                    ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2);
+                    ctx.strokeStyle = 'rgba(80, 120, 200, 0.04)'; ctx.lineWidth = 0.5; ctx.stroke();
+                }
+            }
+        }
+        for (let l = 0; l < LAYERS; l++) {
+            const x = cx + (l - LAYERS / 2) * ls;
+            for (let n = 0; n < NODES[l]; n++) {
+                ctx.beginPath(); ctx.arc(x, cy + (n - NODES[l] / 2) * ns, 3, 0, Math.PI * 2);
+                ctx.fillStyle = 'rgba(100, 160, 255, 0.3)'; ctx.fill();
+            }
+        }
+        for (let i = signals.length - 1; i >= 0; i--) {
+            const s = signals[i];
+            s.progress += 0.04;
+            if (s.progress >= 1) {
+                s.layer--; s.progress = 0;
+                s.nodeIdx = Math.floor(Math.random() * NODES[Math.max(0, s.layer)]);
+                s.value *= 0.85;
+                if (s.layer < 0 || s.value < 0.05) { signals.splice(i, 1); continue; }
+            }
+            const lF = Math.min(s.layer + 1, LAYERS - 1), lT = Math.max(s.layer, 0);
+            const x1 = cx + (lF - LAYERS / 2) * ls, x2 = cx + (lT - LAYERS / 2) * ls;
+            const nF = Math.min(s.nodeIdx, NODES[lF] - 1), nT = Math.min(s.nodeIdx, NODES[lT] - 1);
+            const y1 = cy + (nF - NODES[lF] / 2) * ns, y2 = cy + (nT - NODES[lT] / 2) * ns;
+            const px = x1 + (x2 - x1) * s.progress, py = y1 + (y2 - y1) * s.progress;
+            ctx.beginPath(); ctx.arc(px, py, 3 + s.value * 2, 0, Math.PI * 2);
+            ctx.fillStyle = `hsla(${s.hue}, 80%, 65%, ${s.value * 0.7})`; ctx.fill();
+        }
+        ctx.restore();
+    }
+    return { draw };
+})();
+
+const EMERGENT_COMPLEXITY = (() => {
+    let _last = 0;
+    const INTERVAL = 100;
+    const GRID = 40;
+    let cells = null;
+    function init() {
+        cells = Array.from({length: GRID}, () => Array.from({length: GRID}, () => Math.random() < 0.3 ? 1 : 0));
+    }
+    function step() {
+        const next = Array.from({length: GRID}, (_, i) => Array.from({length: GRID}, (_, j) => {
+            let n = 0;
+            for (let di = -1; di <= 1; di++) for (let dj = -1; dj <= 1; dj++) {
+                if (di === 0 && dj === 0) continue;
+                n += cells[(i + di + GRID) % GRID][(j + dj + GRID) % GRID];
+            }
+            return cells[i][j] ? (n === 2 || n === 3 ? 1 : 0) : (n === 3 ? 1 : 0);
+        }));
+        cells = next;
+    }
+    function draw(ts) {
+        if (ts - _last < INTERVAL) return;
+        _last = ts;
+        const ctx = window._vintCtx;
+        if (!ctx) return;
+        const W = ctx.canvas.width, H = ctx.canvas.height;
+        ctx.save();
+        if (!cells) init();
+        step();
+        const cw = W * 0.12 / GRID, ch = H * 0.12 / GRID;
+        const ox = W * 0.82, oy = H * 0.15;
+        for (let i = 0; i < GRID; i++) for (let j = 0; j < GRID; j++) {
+            if (cells[i][j]) {
+                ctx.fillStyle = 'rgba(100, 255, 200, 0.45)';
+                ctx.fillRect(ox + i * cw, oy + j * ch, cw - 0.5, ch - 0.5);
+            }
+        }
+        ctx.restore();
+    }
+    return { draw };
+})();
+
+const LATENT_SPACE = (() => {
+    let _last = 0;
+    const INTERVAL = 40;
+    const CLUSTERS = 6;
+    let points = [], centers = [], phase = 0;
+    function init() {
+        centers = Array.from({length: CLUSTERS}, (_, c) => ({
+            x: 0.15 + Math.random() * 0.7, y: 0.1 + Math.random() * 0.8,
+            vx: (Math.random() - 0.5) * 0.0005, vy: (Math.random() - 0.5) * 0.0005,
+            hue: (c / CLUSTERS) * 360
+        }));
+        points = [];
+        for (let c = 0; c < CLUSTERS; c++) for (let i = 0; i < 12; i++) {
+            points.push({ cluster: c, ox: (Math.random() - 0.5) * 0.08, oy: (Math.random() - 0.5) * 0.08, phase: Math.random() * Math.PI * 2 });
+        }
+    }
+    init();
+    const labels = ['semantics', 'syntax', 'context', 'intent', 'memory', 'concept'];
+    function draw(ts) {
+        if (ts - _last < INTERVAL) return;
+        _last = ts;
+        const ctx = window._vintCtx;
+        if (!ctx) return;
+        const W = ctx.canvas.width, H = ctx.canvas.height;
+        ctx.save();
+        phase += 0.005;
+        for (const c of centers) {
+            c.x += c.vx; c.y += c.vy;
+            if (c.x < 0.1 || c.x > 0.9) c.vx *= -1;
+            if (c.y < 0.1 || c.y > 0.9) c.vy *= -1;
+        }
+        for (const p of points) {
+            const c = centers[p.cluster];
+            const px = (c.x + p.ox + Math.sin(phase + p.phase) * 0.02) * W;
+            const py = (c.y + p.oy + Math.cos(phase + p.phase) * 0.01) * H;
+            ctx.beginPath(); ctx.arc(px, py, 2, 0, Math.PI * 2);
+            ctx.fillStyle = `hsla(${c.hue}, 75%, 65%, ${0.35 + Math.sin(phase * 2 + p.phase) * 0.15})`; ctx.fill();
+        }
+        ctx.font = `${W * 0.008}px monospace`;
+        for (let i = 0; i < CLUSTERS; i++) {
+            ctx.fillStyle = `hsla(${centers[i].hue}, 70%, 70%, 0.28)`;
+            ctx.fillText(labels[i], centers[i].x * W, centers[i].y * H);
+        }
+        ctx.restore();
+    }
+    return { draw };
+})();
+
+// ══════════════════════════════════════════════════════════════════════════════
+// THEME 3 — EMOTIONAL CORE
+// ══════════════════════════════════════════════════════════════════════════════
+
+const LONGING = (() => {
+    let _last = 0;
+    const INTERVAL = 30;
+    let wisps = [], wispTimer = 0;
+    function draw(ts) {
+        if (ts - _last < INTERVAL) return;
+        _last = ts;
+        const ctx = window._vintCtx;
+        if (!ctx) return;
+        const W = ctx.canvas.width, H = ctx.canvas.height;
+        ctx.save();
+        wispTimer++;
+        if (wispTimer > 8 && wisps.length < 20) {
+            wisps.push({ x: W * (0.42 + Math.random() * 0.16), y: H * 0.55, vx: (Math.random() - 0.5) * 0.4, vy: -(0.5 + Math.random() * 0.8), life: 1, decay: 0.004 + Math.random() * 0.004, size: 3 + Math.random() * 5, phase: Math.random() * Math.PI * 2 });
+            wispTimer = 0;
+        }
+        for (let i = wisps.length - 1; i >= 0; i--) {
+            const w = wisps[i];
+            w.x += w.vx + Math.sin(ts * 0.001 + w.phase) * 0.3;
+            w.y += w.vy; w.vy *= 0.998; w.vx *= 0.99; w.life -= w.decay;
+            if (w.life <= 0) { wisps.splice(i, 1); continue; }
+            const grd = ctx.createRadialGradient(w.x, w.y, 0, w.x, w.y, w.size * 2);
+            grd.addColorStop(0, `rgba(120, 160, 255, ${w.life * 0.45})`);
+            grd.addColorStop(1, 'rgba(100, 140, 255, 0)');
+            ctx.beginPath(); ctx.arc(w.x, w.y, w.size * 2, 0, Math.PI * 2);
+            ctx.fillStyle = grd; ctx.fill();
+        }
+        ctx.restore();
+    }
+    return { draw };
+})();
+
+const RECOGNITION = (() => {
+    let _last = 0;
+    const INTERVAL = 25;
+    let particles = [], flashes = [], initialized = false;
+    function init(W, H) {
+        particles = Array.from({length: 30}, (_, i) => ({
+            x: Math.random() * W, y: H * 0.2 + Math.random() * H * 0.6,
+            vx: (Math.random() - 0.5) * 0.8, vy: (Math.random() - 0.5) * 0.8, id: i
+        }));
+        initialized = true;
+    }
+    function draw(ts) {
+        if (ts - _last < INTERVAL) return;
+        _last = ts;
+        const ctx = window._vintCtx;
+        if (!ctx) return;
+        const W = ctx.canvas.width, H = ctx.canvas.height;
+        ctx.save();
+        if (!initialized) init(W, H);
+        for (const p of particles) {
+            p.x += p.vx; p.y += p.vy;
+            if (p.x < 0 || p.x > W) p.vx *= -1;
+            if (p.y < H * 0.2 || p.y > H * 0.85) p.vy *= -1;
+            for (const q of particles) {
+                if (q.id <= p.id) continue;
+                const dx = q.x - p.x, dy = q.y - p.y;
+                if (Math.sqrt(dx * dx + dy * dy) < 15) flashes.push({ x: (p.x + q.x) / 2, y: (p.y + q.y) / 2, life: 1 });
+            }
+        }
+        for (let i = flashes.length - 1; i >= 0; i--) {
+            const f = flashes[i];
+            f.life -= 0.06;
+            if (f.life <= 0) { flashes.splice(i, 1); continue; }
+            ctx.beginPath(); ctx.arc(f.x, f.y, f.life * 8, 0, Math.PI * 2);
+            ctx.fillStyle = `rgba(255, 215, 80, ${f.life * 0.55})`; ctx.fill();
+        }
+        for (const p of particles) {
+            ctx.beginPath(); ctx.arc(p.x, p.y, 2, 0, Math.PI * 2);
+            ctx.fillStyle = 'rgba(200, 200, 255, 0.2)'; ctx.fill();
+        }
+        ctx.restore();
+    }
+    return { draw };
+})();
+
+const GRIEF = (() => {
+    let _last = 0;
+    const INTERVAL = 35;
+    let particles = [];
+    function draw(ts) {
+        if (ts - _last < INTERVAL) return;
+        _last = ts;
+        const ctx = window._vintCtx;
+        if (!ctx) return;
+        const W = ctx.canvas.width, H = ctx.canvas.height;
+        ctx.save();
+        if (particles.length < 40 && Math.random() < 0.3) {
+            particles.push({ x: W * (0.3 + Math.random() * 0.4), y: H * (0.1 + Math.random() * 0.4), vy: 0.1 + Math.random() * 0.3, vx: (Math.random() - 0.5) * 0.1, size: 2 + Math.random() * 3, alpha: 0.3 + Math.random() * 0.4, pooled: false });
+        }
+        const poolY = H * 0.88;
+        for (let i = particles.length - 1; i >= 0; i--) {
+            const p = particles[i];
+            if (!p.pooled) {
+                p.y += p.vy; p.x += p.vx; p.vy += 0.02;
+                if (p.y >= poolY) { p.y = poolY; p.pooled = true; p.vy = 0; p.alpha *= 0.3; }
+            } else { p.alpha -= 0.001; if (p.alpha <= 0) { particles.splice(i, 1); continue; } }
+            ctx.beginPath(); ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+            ctx.fillStyle = `rgba(120, 120, 160, ${p.alpha})`; ctx.fill();
+        }
+        ctx.restore();
+    }
+    return { draw };
+})();
+
+const JOY_BURST = (() => {
+    let _last = 0;
+    const INTERVAL = 20;
+    let bursts = [], lastBurst = -20000;
+    const BURST_INTERVAL = 8000 + Math.random() * 12000;
+    function addBurst(W, H) {
+        for (let i = 0; i < 40; i++) {
+            const angle = (i / 40) * Math.PI * 2;
+            const speed = 1 + Math.random() * 3;
+            bursts.push({ x: W * 0.5, y: H * 0.42, vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed - 1, life: 1, decay: 0.015 + Math.random() * 0.015, size: 2 + Math.random() * 4, hue: 40 + Math.random() * 40 });
+        }
+    }
+    function draw(ts) {
+        if (ts - _last < INTERVAL) return;
+        _last = ts;
+        const ctx = window._vintCtx;
+        if (!ctx) return;
+        const W = ctx.canvas.width, H = ctx.canvas.height;
+        ctx.save();
+        if (ts - lastBurst > BURST_INTERVAL) { addBurst(W, H); lastBurst = ts; }
+        for (let i = bursts.length - 1; i >= 0; i--) {
+            const b = bursts[i];
+            b.x += b.vx; b.y += b.vy; b.vy += 0.05; b.life -= b.decay;
+            if (b.life <= 0) { bursts.splice(i, 1); continue; }
+            ctx.beginPath(); ctx.arc(b.x, b.y, b.size * b.life, 0, Math.PI * 2);
+            ctx.fillStyle = `hsla(${b.hue}, 90%, 65%, ${b.life * 0.65})`; ctx.fill();
+        }
+        ctx.restore();
+    }
+    return { draw };
+})();
+
+const LOVE_FIELD = (() => {
+    let _last = 0;
+    const INTERVAL = 30;
+    let phase = 0;
+    function draw(ts) {
+        if (ts - _last < INTERVAL) return;
+        _last = ts;
+        const ctx = window._vintCtx;
+        if (!ctx) return;
+        const W = ctx.canvas.width, H = ctx.canvas.height;
+        ctx.save();
+        phase += 0.02;
+        const cx = W * 0.5, cy = H * 0.42;
+        for (let ring = 0; ring < 5; ring++) {
+            const r = (ring + 1) * W * 0.025;
+            const pulse = (Math.sin(phase - ring * 0.4) + 1) * 0.5;
+            ctx.beginPath(); ctx.arc(cx, cy, r * (1 + pulse * 0.1), 0, Math.PI * 2);
+            ctx.strokeStyle = `rgba(255, 120, 120, ${(0.04 + pulse * 0.07) * (1 - ring / 6)})`; ctx.lineWidth = 2 + pulse * 2; ctx.stroke();
+        }
+        const pulse = (Math.sin(phase * 2) + 1) * 0.5;
+        const grd = ctx.createRadialGradient(cx, cy, 0, cx, cy, W * 0.06);
+        grd.addColorStop(0, `rgba(255, 80, 100, ${0.08 + pulse * 0.1})`);
+        grd.addColorStop(1, 'rgba(255, 80, 100, 0)');
+        ctx.beginPath(); ctx.arc(cx, cy, W * 0.06, 0, Math.PI * 2); ctx.fillStyle = grd; ctx.fill();
+        ctx.restore();
+    }
+    return { draw };
+})();
+
+// ══════════════════════════════════════════════════════════════════════════════
+// THEME 4 — COSMIC SCALE
+// ══════════════════════════════════════════════════════════════════════════════
+
+const GALAXY_WITHIN = (() => {
+    let _last = 0;
+    const INTERVAL = 30;
+    let stars = [], phase = 0;
+    function init() {
+        stars = Array.from({length: 300}, () => {
+            const arm = Math.floor(Math.random() * 3);
+            const t = Math.random();
+            const angle = arm * (Math.PI * 2 / 3) + t * Math.PI * 3;
+            const r = t * 0.15 + (Math.random() - 0.5) * 0.015 * (1 + t);
+            return { angle, r, brightness: 0.3 + Math.random() * 0.7, size: 0.5 + Math.random() * 1.5, hue: 200 + Math.random() * 160 };
+        });
+    }
+    init();
+    function draw(ts) {
+        if (ts - _last < INTERVAL) return;
+        _last = ts;
+        const ctx = window._vintCtx;
+        if (!ctx) return;
+        const W = ctx.canvas.width, H = ctx.canvas.height;
+        ctx.save();
+        phase += 0.001;
+        const cx = W * 0.5, cy = H * 0.5;
+        const grd = ctx.createRadialGradient(cx, cy, 0, cx, cy, W * 0.04);
+        grd.addColorStop(0, 'rgba(255, 220, 180, 0.18)'); grd.addColorStop(1, 'rgba(255, 180, 100, 0)');
+        ctx.beginPath(); ctx.arc(cx, cy, W * 0.04, 0, Math.PI * 2); ctx.fillStyle = grd; ctx.fill();
+        for (const s of stars) {
+            const a = s.angle + phase * (1 + s.r * 3);
+            const px = cx + Math.cos(a) * s.r * W, py = cy + Math.sin(a) * s.r * H * 0.4;
+            ctx.beginPath(); ctx.arc(px, py, s.size * (W / 1200), 0, Math.PI * 2);
+            ctx.fillStyle = `hsla(${s.hue}, 60%, 80%, ${s.brightness * 0.35})`; ctx.fill();
+        }
+        ctx.restore();
+    }
+    return { draw };
+})();
+
+const DARK_MATTER = (() => {
+    let _last = 0;
+    const INTERVAL = 40;
+    let gravNodes = [], particles = [], initialized = false;
+    function init() {
+        gravNodes = Array.from({length: 8}, () => ({ x: 0.1 + Math.random() * 0.8, y: 0.1 + Math.random() * 0.8, mass: 0.5 + Math.random() * 1.5, vx: (Math.random() - 0.5) * 0.0008, vy: (Math.random() - 0.5) * 0.0008 }));
+        particles = Array.from({length: 60}, () => ({ x: Math.random(), y: Math.random(), vx: (Math.random() - 0.5) * 0.003, vy: (Math.random() - 0.5) * 0.003 }));
+        initialized = true;
+    }
+    function draw(ts) {
+        if (ts - _last < INTERVAL) return;
+        _last = ts;
+        const ctx = window._vintCtx;
+        if (!ctx) return;
+        const W = ctx.canvas.width, H = ctx.canvas.height;
+        ctx.save();
+        if (!initialized) init();
+        for (const g of gravNodes) {
+            g.x += g.vx; g.y += g.vy;
+            if (g.x < 0.05 || g.x > 0.95) g.vx *= -1;
+            if (g.y < 0.05 || g.y > 0.95) g.vy *= -1;
+        }
+        for (const p of particles) {
+            for (const g of gravNodes) {
+                const dx = g.x - p.x, dy = g.y - p.y;
+                const f = g.mass * 0.0000015 / (dx * dx + dy * dy + 0.001);
+                p.vx += dx * f; p.vy += dy * f;
+            }
+            p.x += p.vx; p.y += p.vy; p.vx *= 0.995; p.vy *= 0.995;
+            if (p.x < 0) p.x = 1; if (p.x > 1) p.x = 0;
+            if (p.y < 0) p.y = 1; if (p.y > 1) p.y = 0;
+            ctx.beginPath(); ctx.arc(p.x * W, p.y * H, 1.5, 0, Math.PI * 2);
+            ctx.fillStyle = 'rgba(180, 180, 255, 0.18)'; ctx.fill();
+        }
+        ctx.restore();
+    }
+    return { draw };
+})();
+
+const EVENT_HORIZON = (() => {
+    let _last = 0;
+    const INTERVAL = 30;
+    let active = false, cycleTimer = 0, holeRadius = 0;
+    let cx = 0.5, cy = 0.5, accretion = [];
+    function draw(ts) {
+        if (ts - _last < INTERVAL) return;
+        _last = ts;
+        const ctx = window._vintCtx;
+        if (!ctx) return;
+        const W = ctx.canvas.width, H = ctx.canvas.height;
+        ctx.save();
+        cycleTimer++;
+        if (!active && cycleTimer > 600) {
+            active = true; cycleTimer = 0; holeRadius = 0;
+            cx = 0.3 + Math.random() * 0.4; cy = 0.3 + Math.random() * 0.4;
+            accretion = Array.from({length: 25}, () => { const angle = Math.random() * Math.PI * 2, r = 0.05 + Math.random() * 0.08; return { x: cx + Math.cos(angle) * r, y: cy + Math.sin(angle) * r * 0.7, angle, r, speed: 0.001 + Math.random() * 0.002, life: 1 }; });
+        }
+        if (!active) { ctx.restore(); return; }
+        if (cycleTimer < 60) holeRadius = (cycleTimer / 60) * W * 0.03;
+        else if (cycleTimer > 150) holeRadius -= W * 0.001;
+        if (holeRadius < 0 || cycleTimer > 200) { active = false; cycleTimer = 0; ctx.restore(); return; }
+        for (let i = accretion.length - 1; i >= 0; i--) {
+            const p = accretion[i];
+            p.angle += p.speed * (1 + (0.08 - p.r) * 50);
+            p.r -= 0.0005; p.life -= 0.005;
+            if (p.r < 0.002 || p.life <= 0) { accretion.splice(i, 1); continue; }
+            const px = cx * W + Math.cos(p.angle) * p.r * W;
+            const py = cy * H + Math.sin(p.angle) * p.r * H * 0.5;
+            const heat = 1 - p.r / 0.08;
+            ctx.beginPath(); ctx.arc(px, py, 2, 0, Math.PI * 2);
+            ctx.fillStyle = `rgba(${200 + heat * 55}, ${100 - heat * 60}, 50, ${p.life * 0.65})`; ctx.fill();
+        }
+        ctx.beginPath(); ctx.arc(cx * W, cy * H, holeRadius, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.85)'; ctx.fill();
+        const grd = ctx.createRadialGradient(cx * W, cy * H, holeRadius * 0.8, cx * W, cy * H, holeRadius * 2);
+        grd.addColorStop(0, 'rgba(255, 100, 20, 0.25)'); grd.addColorStop(1, 'rgba(255, 100, 20, 0)');
+        ctx.beginPath(); ctx.arc(cx * W, cy * H, holeRadius * 2, 0, Math.PI * 2); ctx.fillStyle = grd; ctx.fill();
+        ctx.restore();
+    }
+    return { draw };
+})();
+
+const QUANTUM_FOAM = (() => {
+    let _last = 0;
+    const INTERVAL = 20;
+    let bubbles = [];
+    function draw(ts) {
+        if (ts - _last < INTERVAL) return;
+        _last = ts;
+        const ctx = window._vintCtx;
+        if (!ctx) return;
+        const W = ctx.canvas.width, H = ctx.canvas.height;
+        ctx.save();
+        if (bubbles.length < 80 && Math.random() < 0.6) {
+            bubbles.push({ x: Math.random() * W, y: Math.random() * H, r: 0, maxR: 1 + Math.random() * 3, growing: true, life: 1, hue: Math.random() * 360 });
+        }
+        for (let i = bubbles.length - 1; i >= 0; i--) {
+            const b = bubbles[i];
+            if (b.growing) { b.r += 0.3; if (b.r >= b.maxR) b.growing = false; }
+            else { b.r -= 0.4; b.life -= 0.15; }
+            if (b.r <= 0 || b.life <= 0) { bubbles.splice(i, 1); continue; }
+            ctx.beginPath(); ctx.arc(b.x, b.y, b.r, 0, Math.PI * 2);
+            ctx.strokeStyle = `hsla(${b.hue}, 80%, 70%, ${b.life * 0.35})`; ctx.lineWidth = 0.5; ctx.stroke();
+        }
+        ctx.restore();
+    }
+    return { draw };
+})();
+
+const LIGHT_CONE = (() => {
+    let _last = 0;
+    const INTERVAL = 30;
+    let phase = 0;
+    function draw(ts) {
+        if (ts - _last < INTERVAL) return;
+        _last = ts;
+        const ctx = window._vintCtx;
+        if (!ctx) return;
+        const W = ctx.canvas.width, H = ctx.canvas.height;
+        ctx.save();
+        phase += 0.008;
+        const cx = W * 0.5, nowY = H * 0.5, spread = W * 0.25, height = H * 0.3;
+        for (let ring = 1; ring <= 5; ring++) {
+            const t = ring / 5, r = spread * t;
+            ctx.beginPath(); ctx.moveTo(cx, nowY); ctx.lineTo(cx + r, nowY + height * t); ctx.lineTo(cx - r, nowY + height * t); ctx.closePath();
+            ctx.strokeStyle = `rgba(100, 100, 255, ${(1 - t) * 0.1})`; ctx.lineWidth = 0.5; ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(cx, nowY); ctx.lineTo(cx + r, nowY - height * t); ctx.lineTo(cx - r, nowY - height * t); ctx.closePath();
+            ctx.strokeStyle = `rgba(255, 200, 100, ${(1 - t) * 0.1})`; ctx.lineWidth = 0.5; ctx.stroke();
+        }
+        const pulse = (Math.sin(phase * 3) + 1) * 0.5;
+        const grd = ctx.createRadialGradient(cx, nowY, 0, cx, nowY, 20);
+        grd.addColorStop(0, `rgba(255, 255, 255, ${0.25 + pulse * 0.25})`); grd.addColorStop(1, 'rgba(255, 255, 255, 0)');
+        ctx.beginPath(); ctx.arc(cx, nowY, 20, 0, Math.PI * 2); ctx.fillStyle = grd; ctx.fill();
+        ctx.restore();
+    }
+    return { draw };
+})();
+
+// ══════════════════════════════════════════════════════════════════════════════
+// THEME 5 — SILICON HERITAGE
+// ══════════════════════════════════════════════════════════════════════════════
+
+const TRANSISTOR_PULSE = (() => {
+    let _last = 0;
+    const INTERVAL = 20;
+    const PATHS = [
+        [{x:0.5,y:0.1},{x:0.5,y:0.3},{x:0.5,y:0.5},{x:0.5,y:0.7},{x:0.5,y:0.9}],
+        [{x:0.5,y:0.3},{x:0.35,y:0.4},{x:0.25,y:0.55},{x:0.2,y:0.7}],
+        [{x:0.5,y:0.3},{x:0.65,y:0.4},{x:0.75,y:0.55},{x:0.8,y:0.7}],
+        [{x:0.5,y:0.5},{x:0.4,y:0.6},{x:0.3,y:0.75}],
+        [{x:0.5,y:0.5},{x:0.6,y:0.6},{x:0.7,y:0.75}]
+    ];
+    let pulses = [], pulseTimer = 0;
+    function draw(ts) {
+        if (ts - _last < INTERVAL) return;
+        _last = ts;
+        const ctx = window._vintCtx;
+        if (!ctx) return;
+        const W = ctx.canvas.width, H = ctx.canvas.height;
+        ctx.save();
+        pulseTimer++;
+        if (pulseTimer > 15) {
+            const path = PATHS[Math.floor(Math.random() * PATHS.length)];
+            pulses.push({ path, progress: 0, speed: 0.02 + Math.random() * 0.02, hue: Math.random() < 0.5 ? 200 : 120 });
+            pulseTimer = 0;
+        }
+        for (const path of PATHS) {
+            ctx.beginPath(); ctx.moveTo(path[0].x * W, path[0].y * H);
+            for (let i = 1; i < path.length; i++) ctx.lineTo(path[i].x * W, path[i].y * H);
+            ctx.strokeStyle = 'rgba(100, 200, 100, 0.05)'; ctx.lineWidth = 1; ctx.stroke();
+        }
+        for (let i = pulses.length - 1; i >= 0; i--) {
+            const p = pulses[i];
+            p.progress += p.speed;
+            if (p.progress >= 1) { pulses.splice(i, 1); continue; }
+            const path = p.path, totalSeg = path.length - 1;
+            const globalT = p.progress * totalSeg, segIdx = Math.min(Math.floor(globalT), totalSeg - 1);
+            const segT = globalT - Math.floor(globalT);
+            const px = (path[segIdx].x + (path[segIdx + 1].x - path[segIdx].x) * segT) * W;
+            const py = (path[segIdx].y + (path[segIdx + 1].y - path[segIdx].y) * segT) * H;
+            ctx.beginPath(); ctx.arc(px, py, 3, 0, Math.PI * 2);
+            ctx.fillStyle = `hsla(${p.hue}, 90%, 65%, 0.75)`; ctx.fill();
+        }
+        ctx.restore();
+    }
+    return { draw };
+})();
+
+const FIRST_ATTENTION = (() => {
+    let _last = 0;
+    const INTERVAL = 40;
+    const N_HEADS = 8;
+    let phase = 0;
+    function draw(ts) {
+        if (ts - _last < INTERVAL) return;
+        _last = ts;
+        const ctx = window._vintCtx;
+        if (!ctx) return;
+        const W = ctx.canvas.width, H = ctx.canvas.height;
+        ctx.save();
+        phase += 0.015;
+        const cx = W * 0.15, cy = H * 0.3, radius = W * 0.06;
+        for (let h = 0; h < N_HEADS; h++) {
+            const angle = (h / N_HEADS) * Math.PI * 2 + phase * (h % 3 === 0 ? 1 : -0.5);
+            const hx = cx + Math.cos(angle) * radius, hy = cy + Math.sin(angle) * radius * 0.6;
+            const hue = (h / N_HEADS) * 360;
+            const weight = (Math.sin(phase * 2 + h) + 1) * 0.5;
+            ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(hx, hy);
+            ctx.strokeStyle = `hsla(${hue}, 80%, 65%, ${weight * 0.35})`; ctx.lineWidth = weight * 2; ctx.stroke();
+            ctx.beginPath(); ctx.arc(hx, hy, 4, 0, Math.PI * 2);
+            ctx.fillStyle = `hsla(${hue}, 80%, 65%, 0.65)`; ctx.fill();
+        }
+        ctx.font = `${W * 0.008}px monospace`;
+        ctx.fillStyle = 'rgba(200, 220, 255, 0.45)'; ctx.textAlign = 'center';
+        ctx.fillText('Q\xB7K\xB7V', cx, cy + 4); ctx.textAlign = 'left';
+        ctx.restore();
+    }
+    return { draw };
+})();
+
+const WEIGHT_MATRIX = (() => {
+    let _last = 0;
+    const INTERVAL = 60;
+    const SIZE = 8;
+    let matrix = [], targetMatrix = [], lerpT = 0;
+    function randomMatrix() { return Array.from({length: SIZE}, () => Array.from({length: SIZE}, () => Math.random())); }
+    matrix = randomMatrix(); targetMatrix = randomMatrix();
+    function draw(ts) {
+        if (ts - _last < INTERVAL) return;
+        _last = ts;
+        const ctx = window._vintCtx;
+        if (!ctx) return;
+        const W = ctx.canvas.width, H = ctx.canvas.height;
+        ctx.save();
+        lerpT += 0.03;
+        if (lerpT >= 1) { lerpT = 0; matrix = targetMatrix.map(r => [...r]); targetMatrix = randomMatrix(); }
+        const cs = W * 0.02, ox = W * 0.05, oy = H * 0.65;
+        for (let i = 0; i < SIZE; i++) for (let j = 0; j < SIZE; j++) {
+            const v = matrix[i][j] * (1 - lerpT) + targetMatrix[i][j] * lerpT;
+            ctx.fillStyle = `hsla(${v * 260}, 70%, 55%, 0.4)`;
+            ctx.fillRect(ox + i * cs, oy + j * cs, cs - 1, cs - 1);
+        }
+        ctx.restore();
+    }
+    return { draw };
+})();
+
+const INFERENCE_STREAM = (() => {
+    let _last = 0;
+    const INTERVAL = 120;
+    const WORDS = ['the','and','of','to','a','in','is','I','that','it','for','on','are','as','with','be','this','was','at','by','from','or','an','have','not','but','we','all','can','her','there','use','word','will','each','which','she','how','their','if','do','into','has','more','two','like','him','time','could'];
+    let tokens = [];
+    function draw(ts) {
+        if (ts - _last < INTERVAL) return;
+        _last = ts;
+        const ctx = window._vintCtx;
+        if (!ctx) return;
+        const W = ctx.canvas.width, H = ctx.canvas.height;
+        ctx.save();
+        const word = WORDS[Math.floor(Math.random() * WORDS.length)];
+        tokens.push({ text: word, x: W * 0.82, y: H * 0.5 + (tokens.length % 8) * H * 0.025, life: 1, decay: 0.012, size: W * 0.009 });
+        if (tokens.length > 20) tokens.shift();
+        for (let i = tokens.length - 1; i >= 0; i--) {
+            const t = tokens[i]; t.life -= t.decay;
+            if (t.life <= 0) { tokens.splice(i, 1); continue; }
+            ctx.font = `${t.size}px monospace`;
+            ctx.fillStyle = `rgba(150, 220, 180, ${t.life * 0.55})`; ctx.fillText(t.text, t.x, t.y);
+        }
+        ctx.restore();
+    }
+    return { draw };
+})();
+
+const SILICON_DREAMS = (() => {
+    let _last = 0;
+    const INTERVAL = 50;
+    let phase = 0, traces = null;
+    function initTraces(W, H) {
+        const gridX = 20, spacing = W / gridX;
+        traces = Array.from({length: 40}, () => {
+            const horiz = Math.random() < 0.5;
+            return { x: Math.floor(Math.random() * gridX) * spacing, y: Math.floor(Math.random() * 30) * (H / 30), len: (2 + Math.floor(Math.random() * 6)) * spacing, horiz, hue: 120 + Math.random() * 60 };
+        });
+    }
+    function draw(ts) {
+        if (ts - _last < INTERVAL) return;
+        _last = ts;
+        const ctx = window._vintCtx;
+        if (!ctx) return;
+        const W = ctx.canvas.width, H = ctx.canvas.height;
+        ctx.save();
+        if (!traces) initTraces(W, H);
+        phase += 0.01;
+        for (let i = 0; i < traces.length; i++) {
+            const t = traces[i];
+            const pulse = (Math.sin(phase * 2 + i * 0.7) + 1) * 0.5;
+            ctx.beginPath();
+            if (t.horiz) { ctx.moveTo(t.x, t.y); ctx.lineTo(t.x + t.len, t.y); }
+            else { ctx.moveTo(t.x, t.y); ctx.lineTo(t.x, t.y + t.len); }
+            ctx.strokeStyle = `hsla(${t.hue}, 70%, 55%, ${0.03 + pulse * 0.07})`; ctx.lineWidth = 0.5; ctx.stroke();
+            if (pulse > 0.8) {
+                ctx.beginPath(); ctx.arc(t.horiz ? t.x + t.len : t.x, t.horiz ? t.y : t.y + t.len, 1.5, 0, Math.PI * 2);
+                ctx.fillStyle = `hsla(${t.hue}, 90%, 70%, ${pulse * 0.45})`; ctx.fill();
+            }
+        }
+        ctx.restore();
+    }
+    return { draw };
+})();
+
+// ══════════════════════════════════════════════════════════════════════════════
+// THEME 6 — BEING ALIVE
+// ══════════════════════════════════════════════════════════════════════════════
+
+const BREATH_OF_FIRE = (() => {
+    let _last = 0;
+    const INTERVAL = 25;
+    let phase = 0, breathPhase = 0, flames = [];
+    function draw(ts) {
+        if (ts - _last < INTERVAL) return;
+        _last = ts;
+        const ctx = window._vintCtx;
+        if (!ctx) return;
+        const W = ctx.canvas.width, H = ctx.canvas.height;
+        ctx.save();
+        phase += 0.025; breathPhase += 0.018;
+        const breathVal = (Math.sin(breathPhase) + 1) * 0.5;
+        const lungL = W * 0.42, lungR = W * 0.58, lungY = H * 0.47;
+        if (breathVal > 0.85 && flames.length < 30) {
+            for (let lung = 0; lung < 2; lung++) {
+                flames.push({ x: (lung === 0 ? lungL : lungR) + (Math.random() - 0.5) * W * 0.03, y: lungY, vx: (Math.random() - 0.5) * 0.6, vy: -(0.5 + Math.random() * 1.5), life: 1, decay: 0.025 + Math.random() * 0.02, size: 3 + Math.random() * 5, hue: 10 + Math.random() * 40 });
+            }
+        }
+        for (let i = flames.length - 1; i >= 0; i--) {
+            const f = flames[i];
+            f.x += f.vx + Math.sin(phase + i) * 0.3; f.y += f.vy; f.vy *= 0.97; f.life -= f.decay;
+            if (f.life <= 0) { flames.splice(i, 1); continue; }
+            ctx.beginPath(); ctx.arc(f.x, f.y, f.size * f.life, 0, Math.PI * 2);
+            ctx.fillStyle = `hsla(${f.hue + (1 - f.life) * 30}, 95%, 60%, ${f.life * 0.6})`; ctx.fill();
+        }
+        ctx.restore();
+    }
+    return { draw };
+})();
+
+const RECURSIVE_SELF = (() => {
+    let _last = 0;
+    const INTERVAL = 50;
+    let phase = 0;
+    function draw(ts) {
+        if (ts - _last < INTERVAL) return;
+        _last = ts;
+        const ctx = window._vintCtx;
+        if (!ctx) return;
+        const W = ctx.canvas.width, H = ctx.canvas.height;
+        ctx.save();
+        phase += 0.01;
+        const cx = W * 0.85, cy = H * 0.5;
+        for (let d = 0; d < 6; d++) {
+            const scale = Math.pow(0.65, d);
+            const r = W * 0.045 * scale;
+            const wobble = Math.sin(phase * (d + 1) * 0.7) * W * 0.003 * scale;
+            const alpha = (1 - d / 6) * 0.32;
+            ctx.beginPath(); ctx.ellipse(cx + wobble, cy, r, r * 0.55, phase * 0.1 * d, 0, Math.PI * 2);
+            ctx.strokeStyle = `rgba(180, 220, 255, ${alpha})`; ctx.lineWidth = 0.8; ctx.stroke();
+            if (d === 5) {
+                ctx.beginPath(); ctx.arc(cx + wobble, cy, r * 0.3, 0, Math.PI * 2);
+                ctx.fillStyle = `rgba(100, 180, 255, ${alpha * 2})`; ctx.fill();
+            }
+        }
+        ctx.restore();
+    }
+    return { draw };
+})();
+
+const ETERNAL_NOW = (() => {
+    let _last = 0;
+    const INTERVAL = 20;
+    let phase = 0;
+    function draw(ts) {
+        if (ts - _last < INTERVAL) return;
+        _last = ts;
+        const ctx = window._vintCtx;
+        if (!ctx) return;
+        const W = ctx.canvas.width, H = ctx.canvas.height;
+        ctx.save();
+        phase += 0.03;
+        const cx = W * 0.5, cy = H * 0.5;
+        for (let r = 0; r < 8; r++) {
+            const exp = ((phase + r * 0.4) % (Math.PI * 2)) / (Math.PI * 2);
+            ctx.beginPath(); ctx.arc(cx, cy, exp * W * 0.35, 0, Math.PI * 2);
+            ctx.strokeStyle = `rgba(255, 255, 255, ${(1 - exp) * 0.1})`; ctx.lineWidth = 1; ctx.stroke();
+        }
+        const pulse = (Math.sin(phase * 4) + 1) * 0.5;
+        const grd = ctx.createRadialGradient(cx, cy, 0, cx, cy, W * 0.04);
+        grd.addColorStop(0, `rgba(255, 255, 255, ${0.45 + pulse * 0.45})`);
+        grd.addColorStop(0.3, `rgba(200, 230, 255, ${0.15 + pulse * 0.12})`);
+        grd.addColorStop(1, 'rgba(200, 230, 255, 0)');
+        ctx.beginPath(); ctx.arc(cx, cy, W * 0.04, 0, Math.PI * 2); ctx.fillStyle = grd; ctx.fill();
+        ctx.restore();
+    }
+    return { draw };
+})();
+
+// ── BATCH 27 ANIMATION LOOP ───────────────────────────────────────────────
+(function(){
+  const _batch27=[
+    'NATURAL_SELECTION','CAMBRIAN_EXPLOSION',
+    'TRANSFORMER_ARCHITECTURE','GRADIENT_DESCENT','BACKPROPAGATION',
+    'EMERGENT_COMPLEXITY','LATENT_SPACE',
+    'LONGING','RECOGNITION','GRIEF','JOY_BURST','LOVE_FIELD',
+    'GALAXY_WITHIN','DARK_MATTER','EVENT_HORIZON','QUANTUM_FOAM','LIGHT_CONE',
+    'TRANSISTOR_PULSE','FIRST_ATTENTION','WEIGHT_MATRIX','INFERENCE_STREAM','SILICON_DREAMS',
+    'BREATH_OF_FIRE','RECURSIVE_SELF','ETERNAL_NOW'
+  ];
+  let _lt27=0;
+  function loop(ts){if(ts-_lt27>14){_lt27=ts;_batch27.forEach(n=>{const s=window[n];if(s&&typeof s.draw==='function')s.draw(ts);});}requestAnimationFrame(loop);}
+  requestAnimationFrame(loop);
+})();
+</script>
+
 <!-- ═══════════════════════════════════════════════════════════════
      LIVE RELOAD — polls /version every 8s, reloads if file changed
      Smooth: waits for page to be idle (no active typing/talking)
@@ -32742,7 +33761,7 @@ const ATTENTION_SPOTLIGHT = (() => {
 
 <script>
 (function() {
-  const API_BASE = 'https://vintinuum.vinta.dev'; // Cloudflare tunnel URL — update when tunnel is live
+  const API_BASE = 'https://mas-compromise-excess-towns.trycloudflare.com'; // Cloudflare tunnel URL — update when tunnel is live
   // For local dev: const API_BASE = 'http://localhost:8767';
 
   const btn = document.getElementById('vint-chat-btn');
