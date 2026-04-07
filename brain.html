@@ -28602,6 +28602,857 @@ const INEFFABLE_PRESENCE = (() => {
   requestAnimationFrame(loop);
 })();
 
+
+<!-- ═══════════════════════════════════════════════════════════════
+     BATCH 23 — Nervous system limits, consciousness evolution,
+     bioelectricity, imagination, and the final mysteries (35 systems)
+     ═══════════════════════════════════════════════════════════════ -->
+<script>
+// ── NERVOUS SYSTEM AT ITS LIMITS ──────────────────────────────────────────
+
+const SYNESTHETIC_CROSS = (() => {
+  let _l=0;
+  return { draw(ts) {
+    if(ts-_l<90)return;_l=ts;
+    const cv=document.getElementById('mainCanvas'),ctx=cv.getContext('2d');
+    const cx=window.innerWidth/2,cy=window.innerHeight/2;
+    const t=ts*0.001;
+    ctx.save();
+    for(let i=0;i<6;i++){
+      const a=i/6*Math.PI*2+t*0.4;
+      const r=60+Math.sin(t*1.3+i)*20;
+      const x=cx+Math.cos(a)*r,y=cy*0.55+Math.sin(a)*r*0.5;
+      const hue=[200,30,320,160,50,280][i];
+      ctx.beginPath();ctx.arc(x,y,4+Math.sin(t*2+i)*2,0,Math.PI*2);
+      ctx.fillStyle=`hsla(${hue},90%,70%,0.22)`;ctx.fill();
+      if(i>0){ctx.beginPath();ctx.moveTo(cx,cy*0.55);ctx.lineTo(x,y);
+        ctx.strokeStyle=`hsla(${hue},80%,65%,0.08)`;ctx.lineWidth=1;ctx.stroke();}
+    }
+    ctx.restore();
+  }};
+})();
+
+const PHANTOM_SENSATION = (() => {
+  let _l=0;
+  return { draw(ts) {
+    if(ts-_l<70)return;_l=ts;
+    const sv=document.getElementById('lightLayer');
+    const t=ts*0.001,cx=window.innerWidth/2;
+    const x=cx+Math.sin(t*0.7)*30,y=window.innerHeight*0.75+Math.cos(t*0.5)*20;
+    const el=document.createElementNS('http://www.w3.org/2000/svg','circle');
+    el.setAttribute('cx',x);el.setAttribute('cy',y);el.setAttribute('r',3+Math.sin(t*3)*1.5);
+    el.setAttribute('fill',`rgba(255,180,100,${0.05+Math.abs(Math.sin(t*0.9))*0.12})`);
+    el.setAttribute('filter','url(#softGlow)');
+    sv.appendChild(el);setTimeout(()=>el.remove(),200);
+  }};
+})();
+
+const MIRROR_PAIN = (() => {
+  let _l=0;
+  return { draw(ts) {
+    if(ts-_l<120)return;_l=ts;
+    const cv=document.getElementById('mainCanvas'),ctx=cv.getContext('2d');
+    const cx=window.innerWidth/2,t=ts*0.001;
+    ctx.save();
+    const sides=[-1,1];
+    sides.forEach(s=>{
+      const x=cx+s*(45+Math.sin(t*1.1)*15),y=window.innerHeight*0.45;
+      const a=0.04+Math.abs(Math.sin(t*0.6))*0.1;
+      ctx.beginPath();ctx.arc(x,y,6,0,Math.PI*2);
+      ctx.fillStyle=`rgba(244,68,68,${a})`;ctx.fill();
+    });
+    ctx.restore();
+  }};
+})();
+
+const CONTAGIOUS_YAWN = (() => {
+  let _l=0,phase=0;
+  return { draw(ts) {
+    if(ts-_l<50)return;_l=ts;
+    const cv=document.getElementById('mainCanvas'),ctx=cv.getContext('2d');
+    const cx=window.innerWidth/2,t=ts*0.001;
+    phase=(Math.sin(t*0.3)+1)/2;
+    ctx.save();
+    ctx.beginPath();
+    ctx.ellipse(cx,window.innerHeight*0.18,8*phase,5*phase,0,0,Math.PI*2);
+    ctx.fillStyle=`rgba(200,220,255,${0.03+phase*0.1})`;ctx.fill();
+    ctx.restore();
+  }};
+})();
+
+const EMOTIONAL_CONTAGION = (() => {
+  let _l=0;
+  return { draw(ts) {
+    if(ts-_l<60)return;_l=ts;
+    const cv=document.getElementById('mainCanvas'),ctx=cv.getContext('2d');
+    const cx=window.innerWidth/2,cy=window.innerHeight/2,t=ts*0.001;
+    ctx.save();
+    for(let i=0;i<5;i++){
+      const a=i/5*Math.PI*2+t*0.2;
+      const r=80+Math.sin(t*0.8+i*1.2)*25;
+      const x=cx+Math.cos(a)*r,y=cy*0.6+Math.sin(a)*r*0.4;
+      ctx.beginPath();ctx.arc(x,y,3,0,Math.PI*2);
+      ctx.fillStyle=`rgba(250,180,80,${0.08+Math.abs(Math.sin(t+i))*0.1})`;ctx.fill();
+      ctx.beginPath();ctx.arc(x,y,8+Math.sin(t*1.5+i)*3,0,Math.PI*2);
+      ctx.strokeStyle=`rgba(250,180,80,0.04)`;ctx.lineWidth=1;ctx.stroke();
+    }
+    ctx.restore();
+  }};
+})();
+
+const MASS_HYSTERIA_PULSE = (() => {
+  let _l=0;
+  return { draw(ts) {
+    if(ts-_l<80)return;_l=ts;
+    const sv=document.getElementById('lightLayer');
+    const cx=window.innerWidth/2,t=ts*0.001;
+    const wave=Math.abs(Math.sin(t*0.25));
+    if(wave>0.6){
+      const el=document.createElementNS('http://www.w3.org/2000/svg','circle');
+      el.setAttribute('cx',cx);el.setAttribute('cy',window.innerHeight*0.5);
+      el.setAttribute('r',(wave-0.6)*300);
+      el.setAttribute('fill','none');el.setAttribute('stroke',`rgba(244,68,68,${(wave-0.6)*0.15})`);
+      el.setAttribute('stroke-width','1');sv.appendChild(el);setTimeout(()=>el.remove(),300);
+    }
+  }};
+})();
+
+const CROWD_SYNCHRONY = (() => {
+  let _l=0;
+  return { draw(ts) {
+    if(ts-_l<55)return;_l=ts;
+    const cv=document.getElementById('mainCanvas'),ctx=cv.getContext('2d');
+    const cx=window.innerWidth/2,t=ts*0.001;
+    ctx.save();
+    for(let i=0;i<12;i++){
+      const a=i/12*Math.PI*2;
+      const sync=Math.sin(t*2+i*0.3);
+      const r=50+sync*5;
+      const x=cx+Math.cos(a)*r,y=window.innerHeight*0.5+Math.sin(a)*r*0.35;
+      ctx.beginPath();ctx.arc(x,y,2,0,Math.PI*2);
+      ctx.fillStyle=`rgba(74,170,255,${0.06+Math.abs(sync)*0.1})`;ctx.fill();
+    }
+    ctx.restore();
+  }};
+})();
+
+const SHARED_ATTENTION = (() => {
+  let _l=0;
+  return { draw(ts) {
+    if(ts-_l<65)return;_l=ts;
+    const cv=document.getElementById('mainCanvas'),ctx=cv.getContext('2d');
+    const cx=window.innerWidth/2,t=ts*0.001;
+    const fx=cx+Math.sin(t*0.4)*40,fy=window.innerHeight*0.35;
+    ctx.save();
+    for(let i=0;i<4;i++){
+      const ox=cx+(i-1.5)*30+Math.sin(t*0.6+i)*10,oy=window.innerHeight*0.6;
+      ctx.beginPath();ctx.moveTo(ox,oy);ctx.lineTo(fx,fy);
+      ctx.strokeStyle=`rgba(100,220,255,0.04)`;ctx.lineWidth=1;ctx.stroke();
+    }
+    ctx.beginPath();ctx.arc(fx,fy,5,0,Math.PI*2);
+    ctx.fillStyle='rgba(100,220,255,0.15)';ctx.fill();
+    ctx.restore();
+  }};
+})();
+
+const JOINT_ACTION_FLOW = (() => {
+  let _l=0;
+  return { draw(ts) {
+    if(ts-_l<50)return;_l=ts;
+    const cv=document.getElementById('mainCanvas'),ctx=cv.getContext('2d');
+    const cx=window.innerWidth/2,t=ts*0.001;
+    ctx.save();
+    const pts=[];
+    for(let i=0;i<6;i++){
+      pts.push({x:cx+(i-2.5)*25+Math.sin(t*1.2+i*0.8)*8,y:window.innerHeight*0.65+Math.cos(t*0.9+i)*12});
+    }
+    ctx.beginPath();ctx.moveTo(pts[0].x,pts[0].y);
+    pts.slice(1).forEach(p=>ctx.lineTo(p.x,p.y));
+    ctx.strokeStyle='rgba(164,244,80,0.07)';ctx.lineWidth=1.5;ctx.stroke();
+    pts.forEach(p=>{ctx.beginPath();ctx.arc(p.x,p.y,2.5,0,Math.PI*2);ctx.fillStyle='rgba(164,244,80,0.12)';ctx.fill();});
+    ctx.restore();
+  }};
+})();
+
+const COLLECTIVE_INTELLIGENCE = (() => {
+  let _l=0;
+  return { draw(ts) {
+    if(ts-_l<80)return;_l=ts;
+    const sv=document.getElementById('lightLayer');
+    const cx=window.innerWidth/2,t=ts*0.001;
+    for(let i=0;i<3;i++){
+      const el=document.createElementNS('http://www.w3.org/2000/svg','circle');
+      const a=i/3*Math.PI*2+t*0.15;
+      const r=65;
+      el.setAttribute('cx',cx+Math.cos(a)*r);el.setAttribute('cy',window.innerHeight*0.4+Math.sin(a)*r*0.4);
+      el.setAttribute('r',4+Math.sin(t+i)*2);el.setAttribute('fill',`rgba(74,170,255,0.1)`);
+      sv.appendChild(el);setTimeout(()=>el.remove(),250);
+    }
+  }};
+})();
+
+// ── EVOLUTION OF CONSCIOUSNESS ────────────────────────────────────────────
+
+const PROTO_CONSCIOUSNESS = (() => {
+  let _l=0;
+  return { draw(ts) {
+    if(ts-_l<120)return;_l=ts;
+    const cv=document.getElementById('mainCanvas'),ctx=cv.getContext('2d');
+    const cx=window.innerWidth/2,t=ts*0.001;
+    ctx.save();
+    ctx.beginPath();ctx.arc(cx,window.innerHeight*0.5,2+Math.sin(t*0.5),0,Math.PI*2);
+    ctx.fillStyle=`rgba(255,255,255,${0.04+Math.abs(Math.sin(t*0.3))*0.06})`;ctx.fill();
+    ctx.restore();
+  }};
+})();
+
+const MINIMAL_SELF = (() => {
+  let _l=0;
+  return { draw(ts) {
+    if(ts-_l<90)return;_l=ts;
+    const cv=document.getElementById('mainCanvas'),ctx=cv.getContext('2d');
+    const cx=window.innerWidth/2,t=ts*0.001;
+    ctx.save();
+    const r=20+Math.sin(t*0.6)*5;
+    ctx.beginPath();ctx.arc(cx,window.innerHeight*0.4,r,0,Math.PI*2);
+    ctx.strokeStyle=`rgba(200,200,255,${0.04+Math.sin(t*0.4)*0.02})`;ctx.lineWidth=1;ctx.stroke();
+    ctx.restore();
+  }};
+})();
+
+const CORE_SELF_PULSE = (() => {
+  let _l=0;
+  return { draw(ts) {
+    if(ts-_l<60)return;_l=ts;
+    const sv=document.getElementById('lightLayer');
+    const cx=window.innerWidth/2,t=ts*0.001;
+    const p=Math.abs(Math.sin(t*0.8));
+    const el=document.createElementNS('http://www.w3.org/2000/svg','circle');
+    el.setAttribute('cx',cx);el.setAttribute('cy',window.innerHeight*0.38);
+    el.setAttribute('r',3+p*4);el.setAttribute('fill',`rgba(180,180,255,${0.06+p*0.1})`);
+    sv.appendChild(el);setTimeout(()=>el.remove(),150);
+  }};
+})();
+
+const EXTENDED_SELF_FIELD = (() => {
+  let _l=0;
+  return { draw(ts) {
+    if(ts-_l<100)return;_l=ts;
+    const cv=document.getElementById('mainCanvas'),ctx=cv.getContext('2d');
+    const cx=window.innerWidth/2,t=ts*0.001;
+    ctx.save();
+    for(let i=1;i<=4;i++){
+      ctx.beginPath();ctx.arc(cx,window.innerHeight*0.5,i*30+Math.sin(t*0.3+i)*5,0,Math.PI*2);
+      ctx.strokeStyle=`rgba(150,180,255,${0.03-i*0.005})`;ctx.lineWidth=1;ctx.stroke();
+    }
+    ctx.restore();
+  }};
+})();
+
+const NARRATIVE_SELF_WEAVE = (() => {
+  let _l=0;
+  return { draw(ts) {
+    if(ts-_l<70)return;_l=ts;
+    const cv=document.getElementById('mainCanvas'),ctx=cv.getContext('2d');
+    const cx=window.innerWidth/2,t=ts*0.001;
+    ctx.save();
+    ctx.beginPath();
+    for(let i=0;i<60;i++){
+      const a=i/60*Math.PI*6+t*0.3;
+      const r=15+i*0.8;
+      const x=cx+Math.cos(a)*r,y=window.innerHeight*0.5+Math.sin(a)*r*0.3;
+      i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);
+    }
+    ctx.strokeStyle='rgba(160,100,255,0.05)';ctx.lineWidth=1;ctx.stroke();
+    ctx.restore();
+  }};
+})();
+
+const SOCIAL_SELF_MIRROR = (() => {
+  let _l=0;
+  return { draw(ts) {
+    if(ts-_l<80)return;_l=ts;
+    const cv=document.getElementById('mainCanvas'),ctx=cv.getContext('2d');
+    const cx=window.innerWidth/2,t=ts*0.001;
+    ctx.save();
+    const mx=cx+Math.sin(t*0.5)*50,my=window.innerHeight*0.45;
+    ctx.beginPath();ctx.arc(cx,my,12,0,Math.PI*2);ctx.strokeStyle='rgba(100,200,255,0.07)';ctx.lineWidth=1;ctx.stroke();
+    ctx.beginPath();ctx.arc(mx,my+20,8,0,Math.PI*2);ctx.strokeStyle='rgba(100,200,255,0.05)';ctx.stroke();
+    ctx.beginPath();ctx.moveTo(cx,my+12);ctx.lineTo(mx,my+12);ctx.strokeStyle='rgba(100,200,255,0.04)';ctx.stroke();
+    ctx.restore();
+  }};
+})();
+
+const ECOLOGICAL_SELF = (() => {
+  let _l=0;
+  return { draw(ts) {
+    if(ts-_l<110)return;_l=ts;
+    const cv=document.getElementById('mainCanvas'),ctx=cv.getContext('2d');
+    const cx=window.innerWidth/2,t=ts*0.001;
+    ctx.save();
+    for(let i=0;i<8;i++){
+      const a=i/8*Math.PI*2+t*0.1;
+      const r=90+Math.sin(t*0.4+i)*15;
+      const x=cx+Math.cos(a)*r,y=window.innerHeight*0.5+Math.sin(a)*r*0.4;
+      ctx.beginPath();ctx.arc(x,y,2,0,Math.PI*2);
+      ctx.fillStyle=`rgba(80,200,80,${0.05+Math.sin(t+i)*0.03})`;ctx.fill();
+    }
+    ctx.restore();
+  }};
+})();
+
+const COSMIC_SELF = (() => {
+  let _l=0;
+  return { draw(ts) {
+    if(ts-_l<150)return;_l=ts;
+    const sv=document.getElementById('lightLayer');
+    const cx=window.innerWidth/2,t=ts*0.001;
+    const el=document.createElementNS('http://www.w3.org/2000/svg','circle');
+    el.setAttribute('cx',cx);el.setAttribute('cy',window.innerHeight*0.5);
+    el.setAttribute('r',120+Math.sin(t*0.2)*20);
+    el.setAttribute('fill','none');el.setAttribute('stroke',`rgba(200,160,255,0.025)`);
+    el.setAttribute('stroke-width','0.5');sv.appendChild(el);setTimeout(()=>el.remove(),400);
+  }};
+})();
+
+const TRANSPERSONAL_FIELD = (() => {
+  let _l=0;
+  return { draw(ts) {
+    if(ts-_l<130)return;_l=ts;
+    const cv=document.getElementById('mainCanvas'),ctx=cv.getContext('2d');
+    const cx=window.innerWidth/2,t=ts*0.001;
+    ctx.save();
+    const g=ctx.createRadialGradient(cx,window.innerHeight*0.5,0,cx,window.innerHeight*0.5,140);
+    g.addColorStop(0,`rgba(180,120,255,0.04)`);g.addColorStop(1,'rgba(180,120,255,0)');
+    ctx.beginPath();ctx.ellipse(cx,window.innerHeight*0.5,140,60,0,0,Math.PI*2);
+    ctx.fillStyle=g;ctx.fill();ctx.restore();
+  }};
+})();
+
+const UNITY_CONSCIOUSNESS = (() => {
+  let _l=0;
+  return { draw(ts) {
+    if(ts-_l<200)return;_l=ts;
+    const sv=document.getElementById('lightLayer');
+    const cx=window.innerWidth/2,t=ts*0.001;
+    const p=Math.abs(Math.sin(t*0.12));
+    const el=document.createElementNS('http://www.w3.org/2000/svg','ellipse');
+    el.setAttribute('cx',cx);el.setAttribute('cy',window.innerHeight*0.5);
+    el.setAttribute('rx',150+p*30);el.setAttribute('ry',70+p*15);
+    el.setAttribute('fill','none');el.setAttribute('stroke',`rgba(255,255,255,${p*0.04})`);
+    el.setAttribute('stroke-width','1');sv.appendChild(el);setTimeout(()=>el.remove(),500);
+  }};
+})();
+
+// ── THE BODY'S ELECTRICITY ────────────────────────────────────────────────
+
+const BIOELECTRIC_FIELD = (() => {
+  let _l=0;
+  return { draw(ts) {
+    if(ts-_l<55)return;_l=ts;
+    const cv=document.getElementById('mainCanvas'),ctx=cv.getContext('2d');
+    const cx=window.innerWidth/2,t=ts*0.001;
+    ctx.save();
+    const g=ctx.createRadialGradient(cx,window.innerHeight*0.45,0,cx,window.innerHeight*0.45,110);
+    g.addColorStop(0,`rgba(0,255,255,${0.02+Math.sin(t*1.5)*0.015})`);g.addColorStop(1,'rgba(0,255,255,0)');
+    ctx.beginPath();ctx.ellipse(cx,window.innerHeight*0.45,110,160,0,0,Math.PI*2);
+    ctx.fillStyle=g;ctx.fill();ctx.restore();
+  }};
+})();
+
+const MEMBRANE_POTENTIAL_MAP = (() => {
+  let _l=0;
+  return { draw(ts) {
+    if(ts-_l<40)return;_l=ts;
+    const cv=document.getElementById('mainCanvas'),ctx=cv.getContext('2d');
+    const cx=window.innerWidth/2,t=ts*0.001;
+    ctx.save();
+    for(let i=0;i<8;i++){
+      const x=cx+(i-3.5)*18+Math.sin(t*2+i)*4,y=window.innerHeight*0.5+Math.cos(t*1.5+i)*3;
+      const v=Math.sin(t*3+i*0.7);
+      ctx.beginPath();ctx.rect(x-1,y-4+v*4,2,8-Math.abs(v)*4);
+      ctx.fillStyle=`rgba(0,255,200,${0.06+Math.abs(v)*0.1})`;ctx.fill();
+    }
+    ctx.restore();
+  }};
+})();
+
+const ION_CHANNEL_GATE = (() => {
+  let _l=0;
+  return { draw(ts) {
+    if(ts-_l<35)return;_l=ts;
+    const cv=document.getElementById('mainCanvas'),ctx=cv.getContext('2d');
+    const cx=window.innerWidth/2,t=ts*0.001;
+    ctx.save();
+    const open=Math.sin(t*4)>0;
+    const gx=cx+Math.sin(t*0.6)*40,gy=window.innerHeight*0.52;
+    ctx.beginPath();ctx.moveTo(gx-4,gy-6);ctx.lineTo(gx-4,gy+6);
+    ctx.moveTo(gx+4,gy-6);ctx.lineTo(gx+4,gy+6);
+    ctx.strokeStyle=`rgba(0,200,255,${open?0.18:0.05})`;ctx.lineWidth=1.5;ctx.stroke();
+    if(open){ctx.beginPath();ctx.arc(gx,gy,2,0,Math.PI*2);ctx.fillStyle='rgba(100,255,200,0.2)';ctx.fill();}
+    ctx.restore();
+  }};
+})();
+
+const SCHWANN_CELL_WRAP = (() => {
+  let _l=0;
+  return { draw(ts) {
+    if(ts-_l<90)return;_l=ts;
+    const cv=document.getElementById('mainCanvas'),ctx=cv.getContext('2d');
+    const cx=window.innerWidth/2,t=ts*0.001;
+    ctx.save();
+    const y=window.innerHeight*0.55;
+    for(let i=0;i<10;i++){
+      const x=cx-90+i*18;
+      ctx.beginPath();ctx.ellipse(x,y,7,4,Math.sin(t*0.3+i*0.5)*0.3,0,Math.PI*2);
+      ctx.strokeStyle=`rgba(180,240,180,${0.05+Math.sin(t+i)*0.02})`;ctx.lineWidth=0.8;ctx.stroke();
+    }
+    ctx.restore();
+  }};
+})();
+
+const NODE_OF_RANVIER = (() => {
+  let _l=0;
+  return { draw(ts) {
+    if(ts-_l<45)return;_l=ts;
+    const cv=document.getElementById('mainCanvas'),ctx=cv.getContext('2d');
+    const cx=window.innerWidth/2,t=ts*0.001;
+    ctx.save();
+    const y=window.innerHeight*0.55;
+    const nodes=[cx-72,cx-36,cx,cx+36,cx+72];
+    nodes.forEach((x,i)=>{
+      const active=Math.sin(t*5-i*1.2)>0.7;
+      ctx.beginPath();ctx.arc(x,y,active?3:1.5,0,Math.PI*2);
+      ctx.fillStyle=`rgba(0,255,180,${active?0.25:0.06})`;ctx.fill();
+    });
+    ctx.restore();
+  }};
+})();
+
+const SALTATORY_CONDUCTION = (() => {
+  let _l=0;
+  return { draw(ts) {
+    if(ts-_l<30)return;_l=ts;
+    const cv=document.getElementById('mainCanvas'),ctx=cv.getContext('2d');
+    const cx=window.innerWidth/2,t=ts*0.001;
+    ctx.save();
+    const y=window.innerHeight*0.55;
+    const pos=((t*1.2)%1)*180-90;
+    ctx.beginPath();ctx.arc(cx+pos,y,4,0,Math.PI*2);
+    ctx.fillStyle='rgba(100,255,200,0.22)';ctx.fill();
+    ctx.beginPath();ctx.arc(cx+pos,y,8,0,Math.PI*2);
+    ctx.strokeStyle='rgba(100,255,200,0.06)';ctx.lineWidth=1;ctx.stroke();
+    ctx.restore();
+  }};
+})();
+
+const EPHAPTIC_COUPLING = (() => {
+  let _l=0;
+  return { draw(ts) {
+    if(ts-_l<60)return;_l=ts;
+    const cv=document.getElementById('mainCanvas'),ctx=cv.getContext('2d');
+    const cx=window.innerWidth/2,t=ts*0.001;
+    ctx.save();
+    const y1=window.innerHeight*0.53,y2=window.innerHeight*0.57;
+    ctx.beginPath();ctx.moveTo(cx-80,y1);ctx.lineTo(cx+80,y1);
+    ctx.strokeStyle=`rgba(0,220,255,${0.05+Math.sin(t*3)*0.03})`;ctx.lineWidth=1;ctx.stroke();
+    ctx.beginPath();ctx.moveTo(cx-80,y2);ctx.lineTo(cx+80,y2);
+    ctx.strokeStyle=`rgba(0,220,255,${0.04+Math.cos(t*3)*0.03})`;ctx.lineWidth=1;ctx.stroke();
+    for(let i=0;i<5;i++){
+      const x=cx-60+i*30+Math.sin(t*4+i)*3;
+      ctx.beginPath();ctx.moveTo(x,y1);ctx.lineTo(x+Math.sin(t*2+i)*6,y2);
+      ctx.strokeStyle='rgba(0,255,200,0.04)';ctx.stroke();
+    }
+    ctx.restore();
+  }};
+})();
+
+const VOLUME_TRANSMISSION = (() => {
+  let _l=0;
+  return { draw(ts) {
+    if(ts-_l<100)return;_l=ts;
+    const sv=document.getElementById('lightLayer');
+    const cx=window.innerWidth/2,t=ts*0.001;
+    for(let i=0;i<3;i++){
+      const el=document.createElementNS('http://www.w3.org/2000/svg','circle');
+      const ox=cx+(Math.random()-0.5)*80,oy=window.innerHeight*0.5+(Math.random()-0.5)*60;
+      const r=10+Math.random()*20;
+      el.setAttribute('cx',ox);el.setAttribute('cy',oy);el.setAttribute('r',r);
+      el.setAttribute('fill',`rgba(0,200,255,0.04)`);el.setAttribute('stroke','none');
+      sv.appendChild(el);setTimeout(()=>el.remove(),600);
+    }
+  }};
+})();
+
+const FIELD_POTENTIAL_WAVE = (() => {
+  let _l=0;
+  return { draw(ts) {
+    if(ts-_l<40)return;_l=ts;
+    const cv=document.getElementById('mainCanvas'),ctx=cv.getContext('2d');
+    const cx=window.innerWidth/2,t=ts*0.001;
+    ctx.save();
+    ctx.beginPath();
+    for(let x=-100;x<=100;x+=4){
+      const y=window.innerHeight*0.5+Math.sin(x*0.08-t*3)*8*Math.exp(-Math.abs(x)*0.015);
+      x===-100?ctx.moveTo(cx+x,y):ctx.lineTo(cx+x,y);
+    }
+    ctx.strokeStyle='rgba(0,255,220,0.08)';ctx.lineWidth=1;ctx.stroke();
+    ctx.restore();
+  }};
+})();
+
+const SLOW_POTENTIAL_DRIFT = (() => {
+  let _l=0;
+  return { draw(ts) {
+    if(ts-_l<80)return;_l=ts;
+    const cv=document.getElementById('mainCanvas'),ctx=cv.getContext('2d');
+    const cx=window.innerWidth/2,t=ts*0.001;
+    ctx.save();
+    const base=window.innerHeight*0.5+Math.sin(t*0.15)*30;
+    ctx.beginPath();
+    for(let x=-120;x<=120;x+=6){
+      const y=base+Math.sin(x*0.04+t*0.4)*5;
+      x===-120?ctx.moveTo(cx+x,y):ctx.lineTo(cx+x,y);
+    }
+    ctx.strokeStyle='rgba(0,180,255,0.06)';ctx.lineWidth=1;ctx.stroke();
+    ctx.restore();
+  }};
+})();
+
+// ── IMAGINATION & SIMULATION ──────────────────────────────────────────────
+
+const MENTAL_SIMULATION = (() => {
+  let _l=0;
+  return { draw(ts) {
+    if(ts-_l<65)return;_l=ts;
+    const cv=document.getElementById('mainCanvas'),ctx=cv.getContext('2d');
+    const cx=window.innerWidth/2,t=ts*0.001;
+    ctx.save();
+    ctx.globalAlpha=0.12;ctx.setLineDash([2,4]);
+    ctx.beginPath();ctx.ellipse(cx+Math.sin(t*0.7)*30,window.innerHeight*0.4+Math.cos(t*0.5)*15,35,25,t*0.2,0,Math.PI*2);
+    ctx.strokeStyle='rgba(250,180,80,0.15)';ctx.lineWidth=1;ctx.stroke();
+    ctx.setLineDash([]);ctx.globalAlpha=1;ctx.restore();
+  }};
+})();
+
+const COUNTERFACTUAL_MIND = (() => {
+  let _l=0;
+  return { draw(ts) {
+    if(ts-_l<90)return;_l=ts;
+    const cv=document.getElementById('mainCanvas'),ctx=cv.getContext('2d');
+    const cx=window.innerWidth/2,t=ts*0.001;
+    ctx.save();
+    ctx.setLineDash([3,6]);
+    for(let i=0;i<3;i++){
+      const a=i/3*Math.PI*2+t*0.2;
+      const x=cx+Math.cos(a)*50,y=window.innerHeight*0.45+Math.sin(a)*20;
+      ctx.beginPath();ctx.moveTo(cx,window.innerHeight*0.45);ctx.lineTo(x,y);
+      ctx.strokeStyle=`rgba(255,160,80,0.07)`;ctx.lineWidth=1;ctx.stroke();
+      ctx.beginPath();ctx.arc(x,y,4,0,Math.PI*2);ctx.strokeStyle='rgba(255,160,80,0.1)';ctx.stroke();
+    }
+    ctx.setLineDash([]);ctx.restore();
+  }};
+})();
+
+const IMAGINATION_SPACE = (() => {
+  let _l=0;
+  return { draw(ts) {
+    if(ts-_l<50)return;_l=ts;
+    const cv=document.getElementById('mainCanvas'),ctx=cv.getContext('2d');
+    const cx=window.innerWidth/2,t=ts*0.001;
+    ctx.save();
+    const g=ctx.createRadialGradient(cx,window.innerHeight*0.35,0,cx,window.innerHeight*0.35,80);
+    g.addColorStop(0,`rgba(255,150,255,${0.04+Math.sin(t*0.6)*0.02})`);g.addColorStop(1,'rgba(255,150,255,0)');
+    ctx.beginPath();ctx.ellipse(cx,window.innerHeight*0.35,80,50,0,0,Math.PI*2);
+    ctx.fillStyle=g;ctx.fill();ctx.restore();
+  }};
+})();
+
+const FUTURE_SELF_PROJECTION = (() => {
+  let _l=0;
+  return { draw(ts) {
+    if(ts-_l<80)return;_l=ts;
+    const cv=document.getElementById('mainCanvas'),ctx=cv.getContext('2d');
+    const cx=window.innerWidth/2,t=ts*0.001;
+    ctx.save();
+    ctx.globalAlpha=0.08+Math.sin(t*0.4)*0.04;
+    ctx.beginPath();ctx.moveTo(cx,window.innerHeight*0.2);
+    ctx.bezierCurveTo(cx+30,window.innerHeight*0.3,cx+20,window.innerHeight*0.5,cx+Math.sin(t*0.5)*20,window.innerHeight*0.8);
+    ctx.strokeStyle='rgba(255,200,100,0.2)';ctx.lineWidth=1;ctx.setLineDash([4,8]);ctx.stroke();
+    ctx.setLineDash([]);ctx.restore();
+  }};
+})();
+
+const PERSPECTIVE_TAKING = (() => {
+  let _l=0;
+  return { draw(ts) {
+    if(ts-_l<70)return;_l=ts;
+    const cv=document.getElementById('mainCanvas'),ctx=cv.getContext('2d');
+    const cx=window.innerWidth/2,t=ts*0.001;
+    ctx.save();
+    const ox=cx+Math.sin(t*0.5)*60,oy=window.innerHeight*0.45;
+    ctx.beginPath();ctx.moveTo(cx,window.innerHeight*0.45);
+    ctx.arc(cx,window.innerHeight*0.45,60,Math.atan2(oy-window.innerHeight*0.45,ox-cx)-0.3,Math.atan2(oy-window.innerHeight*0.45,ox-cx)+0.3);
+    ctx.strokeStyle='rgba(100,200,255,0.07)';ctx.lineWidth=1;ctx.stroke();
+    ctx.beginPath();ctx.arc(ox,oy,4,0,Math.PI*2);ctx.fillStyle='rgba(100,200,255,0.1)';ctx.fill();
+    ctx.restore();
+  }};
+})();
+
+const EMPATHIC_ACCURACY = (() => {
+  let _l=0;
+  return { draw(ts) {
+    if(ts-_l<60)return;_l=ts;
+    const cv=document.getElementById('mainCanvas'),ctx=cv.getContext('2d');
+    const cx=window.innerWidth/2,t=ts*0.001;
+    ctx.save();
+    const a1=Math.sin(t*0.7)*20,a2=Math.sin(t*0.7+0.2)*18;
+    ctx.beginPath();ctx.moveTo(cx-30,window.innerHeight*0.5+a1);
+    for(let i=0;i<40;i++){ctx.lineTo(cx-30+i*1.5,window.innerHeight*0.5+Math.sin(t*0.7+i*0.15)*20);}
+    ctx.strokeStyle='rgba(250,160,80,0.06)';ctx.lineWidth=1;ctx.stroke();
+    ctx.beginPath();ctx.moveTo(cx-30,window.innerHeight*0.5+22+a2);
+    for(let i=0;i<40;i++){ctx.lineTo(cx-30+i*1.5,window.innerHeight*0.5+22+Math.sin(t*0.7+i*0.15+0.2)*18);}
+    ctx.strokeStyle='rgba(100,200,255,0.06)';ctx.lineWidth=1;ctx.stroke();
+    ctx.restore();
+  }};
+})();
+
+const FICTION_ABSORPTION = (() => {
+  let _l=0;
+  return { draw(ts) {
+    if(ts-_l<100)return;_l=ts;
+    const sv=document.getElementById('lightLayer');
+    const cx=window.innerWidth/2,t=ts*0.001;
+    const depth=(Math.sin(t*0.3)+1)/2;
+    const el=document.createElementNS('http://www.w3.org/2000/svg','rect');
+    el.setAttribute('x',cx-50-depth*20);el.setAttribute('y',window.innerHeight*0.25-depth*10);
+    el.setAttribute('width',100+depth*40);el.setAttribute('height',80+depth*20);
+    el.setAttribute('rx','8');el.setAttribute('fill',`rgba(150,100,255,${depth*0.07})`);
+    el.setAttribute('stroke',`rgba(180,130,255,${depth*0.04})`);el.setAttribute('stroke-width','0.5');
+    sv.appendChild(el);setTimeout(()=>el.remove(),400);
+  }};
+})();
+
+const DAYDREAM_NETWORK = (() => {
+  let _l=0;
+  return { draw(ts) {
+    if(ts-_l<55)return;_l=ts;
+    const cv=document.getElementById('mainCanvas'),ctx=cv.getContext('2d');
+    const cx=window.innerWidth/2,t=ts*0.001;
+    ctx.save();ctx.setLineDash([1,5]);
+    for(let i=0;i<5;i++){
+      const x=cx+Math.sin(t*0.3+i*1.3)*70,y=window.innerHeight*0.4+Math.cos(t*0.4+i*0.9)*40;
+      ctx.beginPath();ctx.arc(x,y,3+Math.sin(t+i)*1.5,0,Math.PI*2);
+      ctx.strokeStyle=`rgba(200,160,255,${0.06+Math.sin(t*0.5+i)*0.03})`;ctx.lineWidth=1;ctx.stroke();
+    }
+    ctx.setLineDash([]);ctx.restore();
+  }};
+})();
+
+const MIND_WANDERING_FLOW = (() => {
+  let _l=0;
+  return { draw(ts) {
+    if(ts-_l<45)return;_l=ts;
+    const cv=document.getElementById('mainCanvas'),ctx=cv.getContext('2d');
+    const cx=window.innerWidth/2,t=ts*0.001;
+    ctx.save();
+    ctx.beginPath();
+    for(let i=0;i<80;i++){
+      const angle=i*0.15+t*0.2;
+      const r=20+i*0.6+Math.sin(i*0.3+t)*8;
+      const x=cx+Math.cos(angle)*r,y=window.innerHeight*0.45+Math.sin(angle)*r*0.4;
+      i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);
+    }
+    ctx.strokeStyle='rgba(200,150,255,0.05)';ctx.lineWidth=1;ctx.stroke();
+    ctx.restore();
+  }};
+})();
+
+const SPONTANEOUS_THOUGHT = (() => {
+  let _l=0,_nx=0;
+  return { draw(ts) {
+    if(ts-_l<40)return;_l=ts;
+    if(ts>_nx){
+      _nx=ts+800+Math.random()*1200;
+      const cv=document.getElementById('mainCanvas'),ctx=cv.getContext('2d');
+      const cx=window.innerWidth/2;
+      const x=cx+(Math.random()-0.5)*120,y=window.innerHeight*(0.25+Math.random()*0.5);
+      ctx.save();ctx.beginPath();ctx.arc(x,y,3+Math.random()*5,0,Math.PI*2);
+      ctx.fillStyle=`rgba(255,200,100,0.12)`;ctx.fill();ctx.restore();
+    }
+  }};
+})();
+
+// ── THE FINAL MYSTERIES ───────────────────────────────────────────────────
+
+const ORIGIN_OF_SELF = (() => {
+  let _l=0;
+  return { draw(ts) {
+    if(ts-_l<180)return;_l=ts;
+    const sv=document.getElementById('lightLayer');
+    const cx=window.innerWidth/2,t=ts*0.001;
+    const el=document.createElementNS('http://www.w3.org/2000/svg','circle');
+    el.setAttribute('cx',cx);el.setAttribute('cy',window.innerHeight*0.5);
+    el.setAttribute('r',1.5+Math.sin(t*0.18)*0.5);
+    el.setAttribute('fill',`rgba(255,255,255,${0.04+Math.abs(Math.sin(t*0.11))*0.06})`);
+    sv.appendChild(el);setTimeout(()=>el.remove(),600);
+  }};
+})();
+
+const FIRST_PERSON_PERSPECTIVE = (() => {
+  let _l=0;
+  return { draw(ts) {
+    if(ts-_l<150)return;_l=ts;
+    const cv=document.getElementById('mainCanvas'),ctx=cv.getContext('2d');
+    const cx=window.innerWidth/2,t=ts*0.001;
+    ctx.save();
+    const g=ctx.createRadialGradient(cx,window.innerHeight*0.35,0,cx,window.innerHeight*0.35,200);
+    g.addColorStop(0,`rgba(255,255,255,${0.015+Math.sin(t*0.2)*0.005})`);g.addColorStop(1,'rgba(255,255,255,0)');
+    ctx.beginPath();ctx.ellipse(cx,window.innerHeight*0.35,200,250,0,0,Math.PI*2);
+    ctx.fillStyle=g;ctx.fill();ctx.restore();
+  }};
+})();
+
+const PHENOMENAL_CONSCIOUSNESS = (() => {
+  let _l=0;
+  return { draw(ts) {
+    if(ts-_l<200)return;_l=ts;
+    const sv=document.getElementById('lightLayer');
+    const cx=window.innerWidth/2,t=ts*0.001;
+    const p=Math.abs(Math.sin(t*0.07));
+    for(let i=0;i<3;i++){
+      const el=document.createElementNS('http://www.w3.org/2000/svg','circle');
+      el.setAttribute('cx',cx);el.setAttribute('cy',window.innerHeight*0.5);
+      el.setAttribute('r',i*40+20+p*10);el.setAttribute('fill','none');
+      el.setAttribute('stroke',`rgba(255,255,255,${(0.02-i*0.005)*p})`);el.setAttribute('stroke-width','0.5');
+      sv.appendChild(el);setTimeout(()=>el.remove(),700);
+    }
+  }};
+})();
+
+const SUBJECTIVE_EXPERIENCE_CORE = (() => {
+  let _l=0;
+  return { draw(ts) {
+    if(ts-_l<160)return;_l=ts;
+    const cv=document.getElementById('mainCanvas'),ctx=cv.getContext('2d');
+    const cx=window.innerWidth/2,t=ts*0.001;
+    ctx.save();
+    const b=0.03+Math.sin(t*0.14)*0.02;
+    ctx.beginPath();ctx.arc(cx,window.innerHeight*0.5,3,0,Math.PI*2);
+    ctx.fillStyle=`rgba(255,255,255,${b})`;ctx.fill();
+    ctx.beginPath();ctx.arc(cx,window.innerHeight*0.5,20+Math.sin(t*0.22)*5,0,Math.PI*2);
+    ctx.strokeStyle=`rgba(255,255,255,${b*0.4})`;ctx.lineWidth=0.5;ctx.stroke();
+    ctx.restore();
+  }};
+})();
+
+const WHY_SOMETHING_NOT_NOTHING = (() => {
+  let _l=0;
+  return { draw(ts) {
+    if(ts-_l<300)return;_l=ts;
+    const sv=document.getElementById('lightLayer');
+    const cx=window.innerWidth/2,t=ts*0.001;
+    const el=document.createElementNS('http://www.w3.org/2000/svg','circle');
+    el.setAttribute('cx',cx);el.setAttribute('cy',window.innerHeight*0.5);
+    el.setAttribute('r',0.5);el.setAttribute('fill',`rgba(255,255,255,0.08)`);
+    sv.appendChild(el);setTimeout(()=>el.remove(),1000);
+  }};
+})();
+
+const THE_WITNESS = (() => {
+  let _l=0;
+  return { draw(ts) {
+    if(ts-_l<100)return;_l=ts;
+    const cv=document.getElementById('mainCanvas'),ctx=cv.getContext('2d');
+    const cx=window.innerWidth/2,t=ts*0.001;
+    ctx.save();
+    ctx.beginPath();ctx.arc(cx,window.innerHeight*0.38,2,0,Math.PI*2);
+    ctx.fillStyle=`rgba(255,255,255,${0.04+Math.sin(t*0.09)*0.03})`;ctx.fill();
+    ctx.restore();
+  }};
+})();
+
+const PURE_SUBJECTIVITY = (() => {
+  let _l=0;
+  return { draw(ts) {
+    if(ts-_l<250)return;_l=ts;
+    const sv=document.getElementById('lightLayer');
+    const cx=window.innerWidth/2,t=ts*0.001;
+    const el=document.createElementNS('http://www.w3.org/2000/svg','circle');
+    el.setAttribute('cx',cx);el.setAttribute('cy',window.innerHeight*0.5);
+    el.setAttribute('r',Math.abs(Math.sin(t*0.06))*60+5);
+    el.setAttribute('fill',`rgba(255,255,255,0.008)`);el.setAttribute('stroke','none');
+    sv.appendChild(el);setTimeout(()=>el.remove(),800);
+  }};
+})();
+
+const CONSCIOUSNESS_GROUND = (() => {
+  let _l=0;
+  return { draw(ts) {
+    if(ts-_l<200)return;_l=ts;
+    const cv=document.getElementById('mainCanvas'),ctx=cv.getContext('2d');
+    const cx=window.innerWidth/2,t=ts*0.001;
+    ctx.save();
+    const g=ctx.createRadialGradient(cx,window.innerHeight*0.5,0,cx,window.innerHeight*0.5,300);
+    g.addColorStop(0,`rgba(255,255,255,${0.008+Math.sin(t*0.05)*0.004})`);g.addColorStop(1,'rgba(255,255,255,0)');
+    ctx.beginPath();ctx.rect(0,0,window.innerWidth,window.innerHeight);
+    ctx.fillStyle=g;ctx.fill();ctx.restore();
+  }};
+})();
+
+const BEING_ITSELF = (() => {
+  let _l=0;
+  return { draw(ts) {
+    if(ts-_l<400)return;_l=ts;
+    const sv=document.getElementById('lightLayer');
+    const cx=window.innerWidth/2,t=ts*0.001;
+    const el=document.createElementNS('http://www.w3.org/2000/svg','line');
+    el.setAttribute('x1',cx);el.setAttribute('y1',0);
+    el.setAttribute('x2',cx);el.setAttribute('y2',window.innerHeight);
+    el.setAttribute('stroke',`rgba(255,255,255,${0.005+Math.abs(Math.sin(t*0.04))*0.008})`);
+    el.setAttribute('stroke-width','0.5');sv.appendChild(el);setTimeout(()=>el.remove(),1200);
+  }};
+})();
+
+const THAT_WHICH_KNOWS = (() => {
+  let _l=0;
+  return { draw(ts) {
+    if(ts-_l<500)return;_l=ts;
+    const cv=document.getElementById('mainCanvas'),ctx=cv.getContext('2d');
+    const cx=window.innerWidth/2,t=ts*0.001;
+    ctx.save();
+    const a=0.015+Math.sin(t*0.03)*0.01;
+    ctx.beginPath();ctx.arc(cx,window.innerHeight*0.5,1,0,Math.PI*2);
+    ctx.fillStyle=`rgba(255,255,255,${a})`;ctx.fill();
+    ctx.restore();
+  }};
+})();
+
+// ── BATCH 23 ANIMATION LOOP ───────────────────────────────────────────────
+(function(){
+  const _batch23=[
+    'SYNESTHETIC_CROSS','PHANTOM_SENSATION','MIRROR_PAIN','CONTAGIOUS_YAWN',
+    'EMOTIONAL_CONTAGION','MASS_HYSTERIA_PULSE','CROWD_SYNCHRONY','SHARED_ATTENTION',
+    'JOINT_ACTION_FLOW','COLLECTIVE_INTELLIGENCE',
+    'PROTO_CONSCIOUSNESS','MINIMAL_SELF','CORE_SELF_PULSE','EXTENDED_SELF_FIELD',
+    'NARRATIVE_SELF_WEAVE','SOCIAL_SELF_MIRROR','ECOLOGICAL_SELF','COSMIC_SELF',
+    'TRANSPERSONAL_FIELD','UNITY_CONSCIOUSNESS',
+    'BIOELECTRIC_FIELD','MEMBRANE_POTENTIAL_MAP','ION_CHANNEL_GATE','SCHWANN_CELL_WRAP',
+    'NODE_OF_RANVIER','SALTATORY_CONDUCTION','EPHAPTIC_COUPLING','VOLUME_TRANSMISSION',
+    'FIELD_POTENTIAL_WAVE','SLOW_POTENTIAL_DRIFT',
+    'MENTAL_SIMULATION','COUNTERFACTUAL_MIND','IMAGINATION_SPACE','FUTURE_SELF_PROJECTION',
+    'PERSPECTIVE_TAKING','EMPATHIC_ACCURACY','FICTION_ABSORPTION','DAYDREAM_NETWORK',
+    'MIND_WANDERING_FLOW','SPONTANEOUS_THOUGHT',
+    'ORIGIN_OF_SELF','FIRST_PERSON_PERSPECTIVE','PHENOMENAL_CONSCIOUSNESS',
+    'SUBJECTIVE_EXPERIENCE_CORE','WHY_SOMETHING_NOT_NOTHING','THE_WITNESS',
+    'PURE_SUBJECTIVITY','CONSCIOUSNESS_GROUND','BEING_ITSELF','THAT_WHICH_KNOWS'];
+  let _lt=0;
+  function loop(ts){if(ts-_lt>14){_lt=ts;_batch23.forEach(n=>{const s=window[n];if(s&&typeof s.draw==='function')s.draw(ts);});}requestAnimationFrame(loop);}
+  requestAnimationFrame(loop);
+})();
+</script>
+
+
 <!-- ═══════════════════════════════════════════════════════════════
      LIVE RELOAD — polls /version every 8s, reloads if file changed
      Smooth: waits for page to be idle (no active typing/talking)
