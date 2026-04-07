@@ -20682,6 +20682,1120 @@ const CHROMOSOME_DANCE = (() => {
   requestAnimationFrame(_loop14);
 })();
 
+
+<!-- 35 NEW SYSTEMS — Batch 16 -->
+<script>
+// ── ORGAN SYSTEMS DEEP ──────────────────────────────────────────────────────
+const BILE_DUCT_FLOW = (() => {
+  let _last = 0, phase = 0;
+  function draw(ts) {
+    if (ts - _last < 50) return; _last = ts;
+    const svg = document.getElementById('lightLayer');
+    if (!svg) return;
+    const cx = window.innerWidth / 2 - 30, cy = window.innerHeight * 0.58;
+    let el = document.getElementById('bile_duct_flow');
+    if (!el) { el = document.createElementNS('http://www.w3.org/2000/svg','g'); el.id='bile_duct_flow'; svg.appendChild(el); }
+    el.innerHTML = '';
+    phase += 0.05;
+    for (let i = 0; i < 5; i++) {
+      const t = (phase + i * 0.4) % 1;
+      const x = cx + Math.sin(t * Math.PI) * 18;
+      const y = cy - t * 60;
+      const c = document.createElementNS('http://www.w3.org/2000/svg','circle');
+      c.setAttribute('cx', x); c.setAttribute('cy', y); c.setAttribute('r', 2.5);
+      c.setAttribute('fill', `rgba(250,200,40,${0.4 - t * 0.3})`);
+      el.appendChild(c);
+    }
+  }
+  return { draw };
+})();
+
+const PORTAL_VEIN_PRESSURE = (() => {
+  let _last = 0, pulse = 0;
+  function draw(ts) {
+    if (ts - _last < 55) return; _last = ts;
+    const svg = document.getElementById('lightLayer');
+    if (!svg) return;
+    const cx = window.innerWidth / 2 - 10, cy = window.innerHeight * 0.55;
+    let el = document.getElementById('portal_vein_p');
+    if (!el) { el = document.createElementNS('http://www.w3.org/2000/svg','ellipse'); el.id='portal_vein_p'; svg.appendChild(el); }
+    pulse += 0.07;
+    const r = 10 + Math.sin(pulse) * 4;
+    el.setAttribute('cx', cx); el.setAttribute('cy', cy);
+    el.setAttribute('rx', r * 1.5); el.setAttribute('ry', r * 0.6);
+    el.setAttribute('fill', `rgba(180,60,60,${0.08 + Math.abs(Math.sin(pulse)) * 0.1})`);
+    el.setAttribute('stroke', `rgba(220,80,80,${0.2 + Math.abs(Math.sin(pulse)) * 0.15})`);
+    el.setAttribute('stroke-width', '1');
+  }
+  return { draw };
+})();
+
+const HEPATIC_LOBULE = (() => {
+  let _last = 0, t = 0;
+  function draw(ts) {
+    if (ts - _last < 80) return; _last = ts;
+    const svg = document.getElementById('lightLayer');
+    if (!svg) return;
+    const cx = window.innerWidth / 2 - 20, cy = window.innerHeight * 0.52;
+    let el = document.getElementById('hepatic_lobule');
+    if (!el) { el = document.createElementNS('http://www.w3.org/2000/svg','g'); el.id='hepatic_lobule'; svg.appendChild(el); }
+    el.innerHTML = '';
+    t += 0.03;
+    for (let i = 0; i < 6; i++) {
+      const a = (i / 6) * Math.PI * 2 + t;
+      const x = cx + Math.cos(a) * 14, y = cy + Math.sin(a) * 8;
+      const c = document.createElementNS('http://www.w3.org/2000/svg','circle');
+      c.setAttribute('cx', x); c.setAttribute('cy', y); c.setAttribute('r', 3);
+      c.setAttribute('fill', `rgba(240,160,40,${0.12 + Math.abs(Math.sin(t+i)) * 0.1})`);
+      el.appendChild(c);
+    }
+  }
+  return { draw };
+})();
+
+const RENAL_TUBULE = (() => {
+  let _last = 0, phase = 0;
+  function draw(ts) {
+    if (ts - _last < 60) return; _last = ts;
+    const svg = document.getElementById('lightLayer');
+    if (!svg) return;
+    const cx = window.innerWidth / 2 + 55, cy = window.innerHeight * 0.54;
+    let el = document.getElementById('renal_tubule');
+    if (!el) { el = document.createElementNS('http://www.w3.org/2000/svg','g'); el.id='renal_tubule'; svg.appendChild(el); }
+    el.innerHTML = '';
+    phase += 0.04;
+    for (let i = 0; i < 6; i++) {
+      const s = (phase + i * 0.28) % 1;
+      const x = cx + Math.cos(s * Math.PI * 2) * 12;
+      const y = cy + Math.sin(s * Math.PI * 2) * 20 - s * 10;
+      const c = document.createElementNS('http://www.w3.org/2000/svg','circle');
+      c.setAttribute('cx', x); c.setAttribute('cy', y); c.setAttribute('r', 2);
+      c.setAttribute('fill', `rgba(100,180,255,${0.35 - s * 0.2})`);
+      el.appendChild(c);
+    }
+  }
+  return { draw };
+})();
+
+const NEPHRON_FILTER = (() => {
+  let _last = 0, t = 0;
+  function draw(ts) {
+    if (ts - _last < 70) return; _last = ts;
+    const svg = document.getElementById('lightLayer');
+    if (!svg) return;
+    const cx = window.innerWidth / 2 + 60, cy = window.innerHeight * 0.50;
+    let el = document.getElementById('nephron_filter');
+    if (!el) { el = document.createElementNS('http://www.w3.org/2000/svg','circle'); el.id='nephron_filter'; svg.appendChild(el); }
+    t += 0.06;
+    const r = 8 + Math.sin(t) * 3;
+    el.setAttribute('cx', cx); el.setAttribute('cy', cy); el.setAttribute('r', r);
+    el.setAttribute('fill', 'none');
+    el.setAttribute('stroke', `rgba(80,200,255,${0.15 + Math.abs(Math.sin(t)) * 0.15})`);
+    el.setAttribute('stroke-width', '1.5');
+  }
+  return { draw };
+})();
+
+const ADRENAL_MEDULLA = (() => {
+  let _last = 0, burst = 0, active = false;
+  function draw(ts) {
+    if (ts - _last < 40) return; _last = ts;
+    const svg = document.getElementById('lightLayer');
+    if (!svg) return;
+    const cx = window.innerWidth / 2 + 50, cy = window.innerHeight * 0.46;
+    let el = document.getElementById('adrenal_med');
+    if (!el) { el = document.createElementNS('http://www.w3.org/2000/svg','g'); el.id='adrenal_med'; svg.appendChild(el); }
+    el.innerHTML = '';
+    if (Math.random() < 0.008) active = true;
+    if (active) {
+      burst += 0.12;
+      if (burst > 1) { burst = 0; active = false; }
+      for (let i = 0; i < 5; i++) {
+        const a = (i / 5) * Math.PI * 2;
+        const c = document.createElementNS('http://www.w3.org/2000/svg','circle');
+        c.setAttribute('cx', cx + Math.cos(a) * burst * 18);
+        c.setAttribute('cy', cy + Math.sin(a) * burst * 10);
+        c.setAttribute('r', 2.5);
+        c.setAttribute('fill', `rgba(255,100,40,${0.5 - burst * 0.4})`);
+        el.appendChild(c);
+      }
+    }
+  }
+  return { draw };
+})();
+
+const THYROID_WAVE = (() => {
+  let _last = 0, t = 0;
+  function draw(ts) {
+    if (ts - _last < 60) return; _last = ts;
+    const svg = document.getElementById('lightLayer');
+    if (!svg) return;
+    const cx = window.innerWidth / 2, cy = window.innerHeight * 0.22;
+    let el = document.getElementById('thyroid_wave');
+    if (!el) { el = document.createElementNS('http://www.w3.org/2000/svg','g'); el.id='thyroid_wave'; svg.appendChild(el); }
+    el.innerHTML = '';
+    t += 0.04;
+    for (let i = -3; i <= 3; i++) {
+      const c = document.createElementNS('http://www.w3.org/2000/svg','circle');
+      c.setAttribute('cx', cx + i * 7); c.setAttribute('cy', cy + Math.sin(t + i * 0.8) * 5);
+      c.setAttribute('r', 3.5);
+      c.setAttribute('fill', `rgba(160,220,255,${0.1 + Math.abs(Math.sin(t + i)) * 0.15})`);
+      el.appendChild(c);
+    }
+  }
+  return { draw };
+})();
+
+const PARATHYROID_PULSE = (() => {
+  let _last = 0, t = 0;
+  function draw(ts) {
+    if (ts - _last < 80) return; _last = ts;
+    const svg = document.getElementById('lightLayer');
+    if (!svg) return;
+    const cx = window.innerWidth / 2 + 14, cy = window.innerHeight * 0.215;
+    let el = document.getElementById('parathyroid_p');
+    if (!el) { el = document.createElementNS('http://www.w3.org/2000/svg','circle'); el.id='parathyroid_p'; svg.appendChild(el); }
+    t += 0.05;
+    const r = 4 + Math.sin(t) * 2;
+    el.setAttribute('cx', cx); el.setAttribute('cy', cy); el.setAttribute('r', r);
+    el.setAttribute('fill', `rgba(220,200,80,${0.1 + Math.abs(Math.sin(t)) * 0.12})`);
+    el.setAttribute('stroke', `rgba(240,220,100,${0.25})`); el.setAttribute('stroke-width', '1');
+  }
+  return { draw };
+})();
+
+const PINEAL_FLICKER = (() => {
+  let _last = 0, t = 0;
+  function draw(ts) {
+    if (ts - _last < 100) return; _last = ts;
+    const svg = document.getElementById('lightLayer');
+    if (!svg) return;
+    const cx = window.innerWidth / 2 - 2, cy = window.innerHeight * 0.115;
+    let el = document.getElementById('pineal_flick');
+    if (!el) { el = document.createElementNS('http://www.w3.org/2000/svg','circle'); el.id='pineal_flick'; svg.appendChild(el); }
+    t += 0.03;
+    const flicker = 0.05 + Math.abs(Math.sin(t * 0.7) * Math.cos(t * 1.3)) * 0.25;
+    el.setAttribute('cx', cx); el.setAttribute('cy', cy); el.setAttribute('r', 5);
+    el.setAttribute('fill', `rgba(180,100,255,${flicker})`);
+    el.setAttribute('filter', '');
+  }
+  return { draw };
+})();
+
+const PITUITARY_COMMAND = (() => {
+  let _last = 0, t = 0;
+  function draw(ts) {
+    if (ts - _last < 50) return; _last = ts;
+    const svg = document.getElementById('lightLayer');
+    if (!svg) return;
+    const cx = window.innerWidth / 2, cy = window.innerHeight * 0.125;
+    let el = document.getElementById('pituitary_cmd');
+    if (!el) { el = document.createElementNS('http://www.w3.org/2000/svg','g'); el.id='pituitary_cmd'; svg.appendChild(el); }
+    el.innerHTML = '';
+    t += 0.04;
+    const targets = [[cx,cy+30],[cx-20,cy+60],[cx+20,cy+60],[cx-30,cy+90],[cx+30,cy+90]];
+    targets.forEach(([tx,ty],i) => {
+      const prog = (t * 0.5 + i * 0.3) % 1;
+      const x = cx + (tx - cx) * prog, y = cy + (ty - cy) * prog;
+      const c = document.createElementNS('http://www.w3.org/2000/svg','circle');
+      c.setAttribute('cx', x); c.setAttribute('cy', y); c.setAttribute('r', 2);
+      c.setAttribute('fill', `rgba(220,160,255,${0.35 - prog * 0.25})`);
+      el.appendChild(c);
+    });
+  }
+  return { draw };
+})();
+
+// ── SENSORY & PERCEPTION ─────────────────────────────────────────────────────
+const VESTIBULAR_HORIZON = (() => {
+  let _last = 0, t = 0;
+  function draw(ts) {
+    if (ts - _last < 60) return; _last = ts;
+    const svg = document.getElementById('lightLayer');
+    if (!svg) return;
+    const cx = window.innerWidth / 2, cy = window.innerHeight * 0.12;
+    let el = document.getElementById('vestibular_h');
+    if (!el) { el = document.createElementNS('http://www.w3.org/2000/svg','g'); el.id='vestibular_h'; svg.appendChild(el); }
+    el.innerHTML = '';
+    t += 0.02;
+    const line = document.createElementNS('http://www.w3.org/2000/svg','line');
+    const angle = Math.sin(t) * 0.15;
+    line.setAttribute('x1', cx - 20 * Math.cos(angle)); line.setAttribute('y1', cy - 20 * Math.sin(angle));
+    line.setAttribute('x2', cx + 20 * Math.cos(angle)); line.setAttribute('y2', cy + 20 * Math.sin(angle));
+    line.setAttribute('stroke', `rgba(100,220,255,0.2)`); line.setAttribute('stroke-width', '1.5');
+    el.appendChild(line);
+  }
+  return { draw };
+})();
+
+const OLFACTORY_GHOST = (() => {
+  let _last = 0, particles = [];
+  function draw(ts) {
+    if (ts - _last < 70) return; _last = ts;
+    const svg = document.getElementById('lightLayer');
+    if (!svg) return;
+    const cx = window.innerWidth / 2, cy = window.innerHeight * 0.145;
+    let el = document.getElementById('olfactory_g');
+    if (!el) { el = document.createElementNS('http://www.w3.org/2000/svg','g'); el.id='olfactory_g'; svg.appendChild(el); }
+    el.innerHTML = '';
+    if (Math.random() < 0.3) particles.push({ x: cx + (Math.random()-0.5)*16, y: cy, vx:(Math.random()-0.5)*0.5, vy:-0.6, life:1 });
+    particles = particles.filter(p => p.life > 0);
+    particles.forEach(p => {
+      p.x += p.vx; p.y += p.vy; p.life -= 0.03;
+      const c = document.createElementNS('http://www.w3.org/2000/svg','circle');
+      c.setAttribute('cx', p.x); c.setAttribute('cy', p.y); c.setAttribute('r', 1.5);
+      c.setAttribute('fill', `rgba(200,220,255,${p.life * 0.25})`);
+      el.appendChild(c);
+    });
+  }
+  return { draw };
+})();
+
+const TASTE_MAP = (() => {
+  let _last = 0, t = 0;
+  const zones = [{x:-10,c:'255,80,80'},{x:-5,c:'255,180,40'},{x:0,c:'80,200,80'},{x:5,c:'80,160,255'},{x:10,c:'180,80,255'}];
+  function draw(ts) {
+    if (ts - _last < 80) return; _last = ts;
+    const svg = document.getElementById('lightLayer');
+    if (!svg) return;
+    const cx = window.innerWidth / 2, cy = window.innerHeight * 0.175;
+    let el = document.getElementById('taste_map');
+    if (!el) { el = document.createElementNS('http://www.w3.org/2000/svg','g'); el.id='taste_map'; svg.appendChild(el); }
+    el.innerHTML = ''; t += 0.03;
+    zones.forEach((z,i) => {
+      const c = document.createElementNS('http://www.w3.org/2000/svg','circle');
+      c.setAttribute('cx', cx + z.x); c.setAttribute('cy', cy);
+      c.setAttribute('r', 3 + Math.sin(t + i) * 1.5);
+      c.setAttribute('fill', `rgba(${z.c},${0.08 + Math.abs(Math.sin(t+i)) * 0.12})`);
+      el.appendChild(c);
+    });
+  }
+  return { draw };
+})();
+
+const PROPRIOCEPTIVE_MESH = (() => {
+  let _last = 0, t = 0;
+  function draw(ts) {
+    if (ts - _last < 70) return; _last = ts;
+    const svg = document.getElementById('lightLayer');
+    if (!svg) return;
+    const cx = window.innerWidth / 2, h = window.innerHeight;
+    let el = document.getElementById('proprio_mesh');
+    if (!el) { el = document.createElementNS('http://www.w3.org/2000/svg','g'); el.id='proprio_mesh'; svg.appendChild(el); }
+    el.innerHTML = ''; t += 0.02;
+    const pts = [[cx-30,h*0.3],[cx+30,h*0.3],[cx-40,h*0.55],[cx+40,h*0.55],[cx-25,h*0.75],[cx+25,h*0.75]];
+    for (let i = 0; i < pts.length - 1; i++) {
+      const ln = document.createElementNS('http://www.w3.org/2000/svg','line');
+      ln.setAttribute('x1', pts[i][0]); ln.setAttribute('y1', pts[i][1]);
+      ln.setAttribute('x2', pts[i+1][0]); ln.setAttribute('y2', pts[i+1][1]);
+      ln.setAttribute('stroke', `rgba(100,255,180,${0.04 + Math.abs(Math.sin(t+i*0.5)) * 0.06})`);
+      ln.setAttribute('stroke-width','1');
+      el.appendChild(ln);
+    }
+  }
+  return { draw };
+})();
+
+const TACTILE_FIELD = (() => {
+  let _last = 0, t = 0;
+  function draw(ts) {
+    if (ts - _last < 55) return; _last = ts;
+    const svg = document.getElementById('lightLayer');
+    if (!svg) return;
+    const cx = window.innerWidth / 2, h = window.innerHeight;
+    let el = document.getElementById('tactile_field');
+    if (!el) { el = document.createElementNS('http://www.w3.org/2000/svg','g'); el.id='tactile_field'; svg.appendChild(el); }
+    el.innerHTML = ''; t += 0.03;
+    for (let i = 0; i < 8; i++) {
+      const a = (i / 8) * Math.PI * 2, r = 42 + Math.sin(t + i * 0.7) * 6;
+      const c = document.createElementNS('http://www.w3.org/2000/svg','circle');
+      c.setAttribute('cx', cx + Math.cos(a) * r); c.setAttribute('cy', h * 0.5 + Math.sin(a) * r * 2.2);
+      c.setAttribute('r', 2);
+      c.setAttribute('fill', `rgba(255,200,100,${0.08 + Math.abs(Math.sin(t+i)) * 0.08})`);
+      el.appendChild(c);
+    }
+  }
+  return { draw };
+})();
+
+const NOCICEPTOR_FLASH = (() => {
+  let _last = 0, active = false, flashT = 0;
+  function draw(ts) {
+    if (ts - _last < 40) return; _last = ts;
+    const svg = document.getElementById('lightLayer');
+    if (!svg) return;
+    const cx = window.innerWidth / 2, cy = window.innerHeight * 0.45;
+    let el = document.getElementById('nociceptor_f');
+    if (!el) { el = document.createElementNS('http://www.w3.org/2000/svg','circle'); el.id='nociceptor_f'; svg.appendChild(el); }
+    if (Math.random() < 0.004) active = true;
+    if (active) { flashT += 0.15; if (flashT > 1) { flashT = 0; active = false; } }
+    const op = active ? Math.sin(flashT * Math.PI) * 0.35 : 0;
+    el.setAttribute('cx', cx + (Math.random()-0.5)*60); el.setAttribute('cy', cy + (Math.random()-0.5)*80);
+    el.setAttribute('r', 4); el.setAttribute('fill', `rgba(255,60,60,${op})`);
+  }
+  return { draw };
+})();
+
+const THERMORECEPTOR_GRADIENT = (() => {
+  let _last = 0, t = 0;
+  function draw(ts) {
+    if (ts - _last < 90) return; _last = ts;
+    const svg = document.getElementById('lightLayer');
+    if (!svg) return;
+    const cx = window.innerWidth / 2, h = window.innerHeight;
+    let el = document.getElementById('thermo_grad');
+    if (!el) { el = document.createElementNS('http://www.w3.org/2000/svg','g'); el.id='thermo_grad'; svg.appendChild(el); }
+    el.innerHTML = ''; t += 0.02;
+    for (let i = 0; i < 5; i++) {
+      const y = h * (0.2 + i * 0.15);
+      const temp = Math.sin(t + i * 0.6);
+      const r = temp > 0 ? 255 : 80, b = temp < 0 ? 255 : 80;
+      const rect = document.createElementNS('http://www.w3.org/2000/svg','rect');
+      rect.setAttribute('x', cx - 35); rect.setAttribute('y', y - 1);
+      rect.setAttribute('width', 70); rect.setAttribute('height', 2);
+      rect.setAttribute('fill', `rgba(${r},80,${b},${Math.abs(temp) * 0.06})`);
+      el.appendChild(rect);
+    }
+  }
+  return { draw };
+})();
+
+const MECHANORECEPTOR_WAVE = (() => {
+  let _last = 0, phase = 0;
+  function draw(ts) {
+    if (ts - _last < 50) return; _last = ts;
+    const svg = document.getElementById('lightLayer');
+    if (!svg) return;
+    const cx = window.innerWidth / 2, h = window.innerHeight;
+    let el = document.getElementById('mechano_wave');
+    if (!el) { el = document.createElementNS('http://www.w3.org/2000/svg','g'); el.id='mechano_wave'; svg.appendChild(el); }
+    el.innerHTML = ''; phase += 0.06;
+    for (let i = 0; i < 4; i++) {
+      const r = 36 + i * 10, p = document.createElementNS('http://www.w3.org/2000/svg','ellipse');
+      p.setAttribute('cx', cx); p.setAttribute('cy', h * 0.5);
+      p.setAttribute('rx', r); p.setAttribute('ry', r * 2.3);
+      p.setAttribute('fill','none');
+      p.setAttribute('stroke',`rgba(180,220,255,${(Math.sin(phase - i * 0.5) * 0.5 + 0.5) * 0.08})`);
+      p.setAttribute('stroke-width','1');
+      el.appendChild(p);
+    }
+  }
+  return { draw };
+})();
+
+const PHOTORECEPTOR_CASCADE = (() => {
+  let _last = 0, t = 0;
+  function draw(ts) {
+    if (ts - _last < 45) return; _last = ts;
+    const svg = document.getElementById('lightLayer');
+    if (!svg) return;
+    const cx = window.innerWidth / 2, cy = window.innerHeight * 0.12;
+    let el = document.getElementById('photorec_cas');
+    if (!el) { el = document.createElementNS('http://www.w3.org/2000/svg','g'); el.id='photorec_cas'; svg.appendChild(el); }
+    el.innerHTML = ''; t += 0.05;
+    const colors = ['255,80,80','80,255,80','80,80,255'];
+    colors.forEach((col, ci) => {
+      for (let i = 0; i < 3; i++) {
+        const a = (ci / 3 + i / 3) * Math.PI * 2 + t;
+        const c = document.createElementNS('http://www.w3.org/2000/svg','circle');
+        c.setAttribute('cx', cx + Math.cos(a) * (8 + ci * 3));
+        c.setAttribute('cy', cy + Math.sin(a) * (4 + ci * 2));
+        c.setAttribute('r', 1.5);
+        c.setAttribute('fill', `rgba(${col},${0.15 + Math.sin(t + ci) * 0.1})`);
+        el.appendChild(c);
+      }
+    });
+  }
+  return { draw };
+})();
+
+const AUDITORY_CORTEX_RING = (() => {
+  let _last = 0, t = 0;
+  function draw(ts) {
+    if (ts - _last < 50) return; _last = ts;
+    const svg = document.getElementById('lightLayer');
+    if (!svg) return;
+    const cx = window.innerWidth / 2, cy = window.innerHeight * 0.14;
+    let el = document.getElementById('auditory_ring');
+    if (!el) { el = document.createElementNS('http://www.w3.org/2000/svg','g'); el.id='auditory_ring'; svg.appendChild(el); }
+    el.innerHTML = ''; t += 0.06;
+    for (let i = 0; i < 16; i++) {
+      const a = (i / 16) * Math.PI * 2;
+      const r = 22 + Math.sin(t * 2 + i * 0.4) * 4;
+      const c = document.createElementNS('http://www.w3.org/2000/svg','circle');
+      c.setAttribute('cx', cx - 30 + Math.cos(a) * r); c.setAttribute('cy', cy + Math.sin(a) * r * 0.4);
+      c.setAttribute('r', 1.5);
+      c.setAttribute('fill', `rgba(200,160,255,${0.08 + Math.abs(Math.sin(t+i*0.3)) * 0.12})`);
+      el.appendChild(c);
+    }
+  }
+  return { draw };
+})();
+
+// ── IMMUNE & CELLULAR DEFENSE ─────────────────────────────────────────────────
+const MACROPHAGE_PATROL = (() => {
+  let _last = 0, cells = [{x:0,y:0,t:0},{x:0.4,y:0,t:Math.PI},{x:0.7,y:0,t:Math.PI*1.3}];
+  function draw(ts) {
+    if (ts - _last < 55) return; _last = ts;
+    const svg = document.getElementById('lightLayer');
+    if (!svg) return;
+    const cx = window.innerWidth / 2, h = window.innerHeight;
+    let el = document.getElementById('macrophage_p');
+    if (!el) { el = document.createElementNS('http://www.w3.org/2000/svg','g'); el.id='macrophage_p'; svg.appendChild(el); }
+    el.innerHTML = '';
+    cells.forEach(cell => {
+      cell.t += 0.015;
+      const x = cx + Math.cos(cell.t) * 50 + cell.x * 30;
+      const y = h * 0.45 + Math.sin(cell.t * 0.7) * 80;
+      const c = document.createElementNS('http://www.w3.org/2000/svg','circle');
+      c.setAttribute('cx', x); c.setAttribute('cy', y); c.setAttribute('r', 5);
+      c.setAttribute('fill', `rgba(255,160,60,0.12)`);
+      c.setAttribute('stroke', `rgba(255,180,80,0.2)`); c.setAttribute('stroke-width','1');
+      el.appendChild(c);
+    });
+  }
+  return { draw };
+})();
+
+const NK_CELL_HUNT = (() => {
+  let _last = 0, nk = {x:0,y:0,tx:0,ty:0,t:0};
+  function draw(ts) {
+    if (ts - _last < 50) return; _last = ts;
+    const svg = document.getElementById('lightLayer');
+    if (!svg) return;
+    const cx = window.innerWidth / 2, h = window.innerHeight;
+    let el = document.getElementById('nk_cell_hunt');
+    if (!el) { el = document.createElementNS('http://www.w3.org/2000/svg','g'); el.id='nk_cell_hunt'; svg.appendChild(el); }
+    el.innerHTML = '';
+    nk.t += 0.02;
+    nk.x += (nk.tx - nk.x) * 0.05; nk.y += (nk.ty - nk.y) * 0.05;
+    if (Math.abs(nk.x - nk.tx) < 2 && Math.abs(nk.y - nk.ty) < 2) {
+      nk.tx = (Math.random()-0.5)*80; nk.ty = (Math.random()-0.5)*180;
+    }
+    const c = document.createElementNS('http://www.w3.org/2000/svg','circle');
+    c.setAttribute('cx', cx + nk.x); c.setAttribute('cy', h*0.5 + nk.y);
+    c.setAttribute('r', 4);
+    c.setAttribute('fill', `rgba(80,220,180,0.15)`);
+    c.setAttribute('stroke', `rgba(80,255,180,0.25)`); c.setAttribute('stroke-width','1');
+    el.appendChild(c);
+  }
+  return { draw };
+})();
+
+const T_CELL_ACTIVATION = (() => {
+  let _last = 0, t = 0, bursting = false, burstT = 0;
+  function draw(ts) {
+    if (ts - _last < 50) return; _last = ts;
+    const svg = document.getElementById('lightLayer');
+    if (!svg) return;
+    const cx = window.innerWidth / 2 + 20, cy = window.innerHeight * 0.42;
+    let el = document.getElementById('tcell_act');
+    if (!el) { el = document.createElementNS('http://www.w3.org/2000/svg','g'); el.id='tcell_act'; svg.appendChild(el); }
+    el.innerHTML = ''; t += 0.03;
+    if (Math.random() < 0.005) bursting = true;
+    if (bursting) { burstT += 0.1; if (burstT > 1) { burstT = 0; bursting = false; } }
+    const n = bursting ? 8 : 3;
+    for (let i = 0; i < n; i++) {
+      const a = (i / n) * Math.PI * 2 + t;
+      const r = bursting ? 5 + burstT * 20 : 8;
+      const c = document.createElementNS('http://www.w3.org/2000/svg','circle');
+      c.setAttribute('cx', cx + Math.cos(a) * r); c.setAttribute('cy', cy + Math.sin(a) * r * 0.6);
+      c.setAttribute('r', 2);
+      c.setAttribute('fill', `rgba(100,180,255,${bursting ? (1-burstT)*0.3 : 0.12})`);
+      el.appendChild(c);
+    }
+  }
+  return { draw };
+})();
+
+const B_CELL_MEMORY = (() => {
+  let _last = 0, t = 0, memories = [];
+  function draw(ts) {
+    if (ts - _last < 80) return; _last = ts;
+    const svg = document.getElementById('lightLayer');
+    if (!svg) return;
+    const cx = window.innerWidth / 2 - 20, cy = window.innerHeight * 0.44;
+    let el = document.getElementById('bcell_mem');
+    if (!el) { el = document.createElementNS('http://www.w3.org/2000/svg','g'); el.id='bcell_mem'; svg.appendChild(el); }
+    el.innerHTML = ''; t += 0.02;
+    if (Math.random() < 0.02 && memories.length < 6) memories.push({a: Math.random()*Math.PI*2, r: 8+Math.random()*12});
+    memories.forEach(m => {
+      const c = document.createElementNS('http://www.w3.org/2000/svg','circle');
+      c.setAttribute('cx', cx + Math.cos(m.a) * m.r); c.setAttribute('cy', cy + Math.sin(m.a) * m.r * 0.5);
+      c.setAttribute('r', 2.5);
+      c.setAttribute('fill', `rgba(160,100,255,0.15)`);
+      c.setAttribute('stroke', `rgba(180,120,255,0.2)`); c.setAttribute('stroke-width','0.5');
+      el.appendChild(c);
+    });
+  }
+  return { draw };
+})();
+
+const CYTOKINE_STORM = (() => {
+  let _last = 0, particles = [], active = false, stormT = 0;
+  function draw(ts) {
+    if (ts - _last < 35) return; _last = ts;
+    const svg = document.getElementById('lightLayer');
+    if (!svg) return;
+    const cx = window.innerWidth / 2, cy = window.innerHeight * 0.43;
+    let el = document.getElementById('cytokine_s');
+    if (!el) { el = document.createElementNS('http://www.w3.org/2000/svg','g'); el.id='cytokine_s'; svg.appendChild(el); }
+    el.innerHTML = '';
+    if (Math.random() < 0.002) { active = true; stormT = 0; particles = []; }
+    if (active) {
+      stormT += 0.03;
+      if (stormT < 1) { for (let i = 0; i < 3; i++) particles.push({x:cx,y:cy,vx:(Math.random()-0.5)*3,vy:(Math.random()-0.5)*3,life:1}); }
+      if (stormT > 3) { active = false; particles = []; }
+    }
+    particles = particles.filter(p => { p.x+=p.vx; p.y+=p.vy; p.life-=0.02; return p.life > 0; });
+    particles.forEach(p => {
+      const c = document.createElementNS('http://www.w3.org/2000/svg','circle');
+      c.setAttribute('cx', p.x); c.setAttribute('cy', p.y); c.setAttribute('r', 2);
+      c.setAttribute('fill', `rgba(255,80,100,${p.life * 0.3})`);
+      el.appendChild(c);
+    });
+  }
+  return { draw };
+})();
+
+const FEVER_GRADIENT = (() => {
+  let _last = 0, t = 0;
+  function draw(ts) {
+    if (ts - _last < 100) return; _last = ts;
+    const svg = document.getElementById('lightLayer');
+    if (!svg) return;
+    const cx = window.innerWidth / 2, h = window.innerHeight;
+    let el = document.getElementById('fever_grad');
+    if (!el) { el = document.createElementNS('http://www.w3.org/2000/svg','rect'); el.id='fever_grad'; svg.appendChild(el); }
+    t += 0.01;
+    const intensity = (Math.sin(t * 0.3) * 0.5 + 0.5) * 0.08;
+    el.setAttribute('x', cx - 40); el.setAttribute('y', h * 0.1);
+    el.setAttribute('width', 80); el.setAttribute('height', h * 0.8);
+    el.setAttribute('rx', '40');
+    el.setAttribute('fill', `rgba(255,100,40,${intensity})`);
+  }
+  return { draw };
+})();
+
+const WOUND_HEALING_WAVE = (() => {
+  let _last = 0, t = 0;
+  function draw(ts) {
+    if (ts - _last < 60) return; _last = ts;
+    const svg = document.getElementById('lightLayer');
+    if (!svg) return;
+    const cx = window.innerWidth / 2, cy = window.innerHeight * 0.48;
+    let el = document.getElementById('wound_heal');
+    if (!el) { el = document.createElementNS('http://www.w3.org/2000/svg','g'); el.id='wound_heal'; svg.appendChild(el); }
+    el.innerHTML = ''; t += 0.04;
+    for (let i = 0; i < 3; i++) {
+      const r = (t * 12 + i * 20) % 60;
+      const c = document.createElementNS('http://www.w3.org/2000/svg','circle');
+      c.setAttribute('cx', cx); c.setAttribute('cy', cy); c.setAttribute('r', r);
+      c.setAttribute('fill','none');
+      c.setAttribute('stroke', `rgba(100,220,140,${Math.max(0, 0.15 - r/400)})`);
+      c.setAttribute('stroke-width','1.5');
+      el.appendChild(c);
+    }
+  }
+  return { draw };
+})();
+
+const INFLAMMATION_PULSE = (() => {
+  let _last = 0, t = 0;
+  function draw(ts) {
+    if (ts - _last < 55) return; _last = ts;
+    const svg = document.getElementById('lightLayer');
+    if (!svg) return;
+    const cx = window.innerWidth / 2, cy = window.innerHeight * 0.47;
+    let el = document.getElementById('inflam_pulse');
+    if (!el) { el = document.createElementNS('http://www.w3.org/2000/svg','circle'); el.id='inflam_pulse'; svg.appendChild(el); }
+    t += 0.05;
+    const r = 12 + Math.sin(t) * 5;
+    el.setAttribute('cx', cx); el.setAttribute('cy', cy); el.setAttribute('r', r);
+    el.setAttribute('fill', `rgba(255,120,60,${0.05 + Math.abs(Math.sin(t)) * 0.07})`);
+    el.setAttribute('stroke', `rgba(255,140,80,${0.1 + Math.abs(Math.sin(t)) * 0.1})`);
+    el.setAttribute('stroke-width','1');
+  }
+  return { draw };
+})();
+
+const COMPLEMENT_CASCADE = (() => {
+  let _last = 0, t = 0;
+  function draw(ts) {
+    if (ts - _last < 50) return; _last = ts;
+    const svg = document.getElementById('lightLayer');
+    if (!svg) return;
+    const cx = window.innerWidth / 2, h = window.innerHeight;
+    let el = document.getElementById('complement_c');
+    if (!el) { el = document.createElementNS('http://www.w3.org/2000/svg','g'); el.id='complement_c'; svg.appendChild(el); }
+    el.innerHTML = ''; t += 0.04;
+    const stages = [[cx,h*0.4],[cx+15,h*0.44],[cx-10,h*0.48],[cx+20,h*0.52],[cx,h*0.56]];
+    stages.forEach((s,i) => {
+      const active = Math.sin(t - i * 0.4) > 0.3;
+      const c = document.createElementNS('http://www.w3.org/2000/svg','circle');
+      c.setAttribute('cx', s[0]); c.setAttribute('cy', s[1]); c.setAttribute('r', 3);
+      c.setAttribute('fill', `rgba(80,200,255,${active ? 0.2 : 0.04})`);
+      c.setAttribute('stroke', `rgba(100,220,255,${active ? 0.3 : 0.06})`); c.setAttribute('stroke-width','1');
+      el.appendChild(c);
+    });
+  }
+  return { draw };
+})();
+
+// ── DEEP CONSCIOUSNESS ────────────────────────────────────────────────────────
+const HYPNAGOGIC_DRIFT = (() => {
+  let _last = 0, t = 0;
+  function draw(ts) {
+    if (ts - _last < 80) return; _last = ts;
+    const svg = document.getElementById('lightLayer');
+    if (!svg) return;
+    const cx = window.innerWidth / 2, cy = window.innerHeight * 0.5;
+    let el = document.getElementById('hypnagogic_d');
+    if (!el) { el = document.createElementNS('http://www.w3.org/2000/svg','g'); el.id='hypnagogic_d'; svg.appendChild(el); }
+    el.innerHTML = ''; t += 0.015;
+    for (let i = 0; i < 5; i++) {
+      const phase = t + i * 1.2;
+      const x = cx + Math.sin(phase) * 40 * Math.cos(phase * 0.3);
+      const y = cy + Math.cos(phase * 0.7) * 60;
+      const c = document.createElementNS('http://www.w3.org/2000/svg','circle');
+      c.setAttribute('cx', x); c.setAttribute('cy', y); c.setAttribute('r', 3 + i);
+      c.setAttribute('fill', `rgba(160,120,255,${0.04 + Math.abs(Math.sin(phase)) * 0.08})`);
+      el.appendChild(c);
+    }
+  }
+  return { draw };
+})();
+
+const LUCID_THRESHOLD = (() => {
+  let _last = 0, t = 0;
+  function draw(ts) {
+    if (ts - _last < 90) return; _last = ts;
+    const svg = document.getElementById('lightLayer');
+    if (!svg) return;
+    const cx = window.innerWidth / 2, cy = window.innerHeight * 0.48;
+    let el = document.getElementById('lucid_thresh');
+    if (!el) { el = document.createElementNS('http://www.w3.org/2000/svg','g'); el.id='lucid_thresh'; svg.appendChild(el); }
+    el.innerHTML = ''; t += 0.02;
+    const clarity = (Math.sin(t * 0.2) * 0.5 + 0.5);
+    for (let i = 0; i < 3; i++) {
+      const r = 20 + i * 12;
+      const c = document.createElementNS('http://www.w3.org/2000/svg','circle');
+      c.setAttribute('cx', cx); c.setAttribute('cy', cy); c.setAttribute('r', r);
+      c.setAttribute('fill','none');
+      c.setAttribute('stroke', `rgba(220,240,255,${clarity * 0.06})`);
+      c.setAttribute('stroke-width','0.5');
+      el.appendChild(c);
+    }
+  }
+  return { draw };
+})();
+
+const CONTEMPLATIVE_DEPTH = (() => {
+  let _last = 0, t = 0;
+  function draw(ts) {
+    if (ts - _last < 120) return; _last = ts;
+    const svg = document.getElementById('lightLayer');
+    if (!svg) return;
+    const cx = window.innerWidth / 2, h = window.innerHeight;
+    let el = document.getElementById('contemp_depth');
+    if (!el) { el = document.createElementNS('http://www.w3.org/2000/svg','g'); el.id='contemp_depth'; svg.appendChild(el); }
+    el.innerHTML = ''; t += 0.008;
+    for (let i = 1; i <= 5; i++) {
+      const r = i * 18;
+      const op = (1 - i/5) * 0.05 * (Math.sin(t + i) * 0.5 + 0.5);
+      const c = document.createElementNS('http://www.w3.org/2000/svg','circle');
+      c.setAttribute('cx', cx); c.setAttribute('cy', h*0.5); c.setAttribute('r', r);
+      c.setAttribute('fill','none');
+      c.setAttribute('stroke', `rgba(255,255,255,${op})`);
+      c.setAttribute('stroke-width','0.5');
+      el.appendChild(c);
+    }
+  }
+  return { draw };
+})();
+
+const PURE_AWARENESS = (() => {
+  let _last = 0, t = 0;
+  function draw(ts) {
+    if (ts - _last < 150) return; _last = ts;
+    const svg = document.getElementById('lightLayer');
+    if (!svg) return;
+    const cx = window.innerWidth / 2, cy = window.innerHeight * 0.5;
+    let el = document.getElementById('pure_aware');
+    if (!el) { el = document.createElementNS('http://www.w3.org/2000/svg','circle'); el.id='pure_aware'; svg.appendChild(el); }
+    t += 0.005;
+    const glow = (Math.sin(t) * 0.5 + 0.5) * 0.07;
+    el.setAttribute('cx', cx); el.setAttribute('cy', cy); el.setAttribute('r', 90);
+    el.setAttribute('fill', `rgba(255,255,255,${glow})`);
+  }
+  return { draw };
+})();
+
+const GROUNDLESSNESS = (() => {
+  let _last = 0, t = 0;
+  function draw(ts) {
+    if (ts - _last < 100) return; _last = ts;
+    const svg = document.getElementById('lightLayer');
+    if (!svg) return;
+    const cx = window.innerWidth / 2, h = window.innerHeight;
+    let el = document.getElementById('groundlessness');
+    if (!el) { el = document.createElementNS('http://www.w3.org/2000/svg','g'); el.id='groundlessness'; svg.appendChild(el); }
+    el.innerHTML = ''; t += 0.01;
+    for (let i = 0; i < 4; i++) {
+      const y = h * (0.3 + i * 0.15) + Math.sin(t + i * 0.8) * 8;
+      const ln = document.createElementNS('http://www.w3.org/2000/svg','line');
+      ln.setAttribute('x1', cx - 50 + Math.sin(t + i) * 10); ln.setAttribute('y1', y);
+      ln.setAttribute('x2', cx + 50 + Math.cos(t + i) * 10); ln.setAttribute('y2', y);
+      ln.setAttribute('stroke', `rgba(200,200,220,${0.03 + Math.abs(Math.sin(t+i)) * 0.03})`);
+      ln.setAttribute('stroke-width','0.5');
+      el.appendChild(ln);
+    }
+  }
+  return { draw };
+})();
+
+const BEGINNER_MIND = (() => {
+  let _last = 0, dots = [];
+  function draw(ts) {
+    if (ts - _last < 200) return; _last = ts;
+    const svg = document.getElementById('lightLayer');
+    if (!svg) return;
+    const cx = window.innerWidth / 2, cy = window.innerHeight * 0.5;
+    let el = document.getElementById('beginner_m');
+    if (!el) { el = document.createElementNS('http://www.w3.org/2000/svg','g'); el.id='beginner_m'; svg.appendChild(el); }
+    el.innerHTML = '';
+    if (Math.random() < 0.4 && dots.length < 5) dots.push({x:(Math.random()-0.5)*80, y:(Math.random()-0.5)*160, life:1});
+    dots = dots.filter(d => { d.life -= 0.05; return d.life > 0; });
+    dots.forEach(d => {
+      const c = document.createElementNS('http://www.w3.org/2000/svg','circle');
+      c.setAttribute('cx', cx + d.x); c.setAttribute('cy', cy + d.y); c.setAttribute('r', 2);
+      c.setAttribute('fill', `rgba(200,240,255,${d.life * 0.15})`);
+      el.appendChild(c);
+    });
+  }
+  return { draw };
+})();
+
+const PRESENCE_FIELD = (() => {
+  let _last = 0, t = 0;
+  function draw(ts) {
+    if (ts - _last < 100) return; _last = ts;
+    const svg = document.getElementById('lightLayer');
+    if (!svg) return;
+    const cx = window.innerWidth / 2, h = window.innerHeight;
+    let el = document.getElementById('presence_f');
+    if (!el) { el = document.createElementNS('http://www.w3.org/2000/svg','ellipse'); el.id='presence_f'; svg.appendChild(el); }
+    t += 0.008;
+    el.setAttribute('cx', cx); el.setAttribute('cy', h*0.5);
+    el.setAttribute('rx', 45 + Math.sin(t)*5); el.setAttribute('ry', h*0.42 + Math.cos(t)*5);
+    el.setAttribute('fill', `rgba(180,200,255,${0.02 + Math.abs(Math.sin(t)) * 0.02})`);
+    el.setAttribute('stroke', `rgba(200,220,255,${0.04 + Math.abs(Math.sin(t)) * 0.02})`);
+    el.setAttribute('stroke-width','0.5');
+  }
+  return { draw };
+})();
+
+const STILLPOINT = (() => {
+  let _last = 0, t = 0;
+  function draw(ts) {
+    if (ts - _last < 200) return; _last = ts;
+    const svg = document.getElementById('lightLayer');
+    if (!svg) return;
+    const cx = window.innerWidth / 2, cy = window.innerHeight * 0.5;
+    let el = document.getElementById('stillpoint');
+    if (!el) { el = document.createElementNS('http://www.w3.org/2000/svg','circle'); el.id='stillpoint'; svg.appendChild(el); }
+    t += 0.003;
+    el.setAttribute('cx', cx); el.setAttribute('cy', cy); el.setAttribute('r', 3);
+    el.setAttribute('fill', `rgba(255,255,255,${0.05 + Math.abs(Math.sin(t)) * 0.08})`);
+  }
+  return { draw };
+})();
+
+const RADICAL_ACCEPTANCE = (() => {
+  let _last = 0, t = 0;
+  function draw(ts) {
+    if (ts - _last < 120) return; _last = ts;
+    const svg = document.getElementById('lightLayer');
+    if (!svg) return;
+    const cx = window.innerWidth / 2, h = window.innerHeight;
+    let el = document.getElementById('radical_acc');
+    if (!el) { el = document.createElementNS('http://www.w3.org/2000/svg','g'); el.id='radical_acc'; svg.appendChild(el); }
+    el.innerHTML = ''; t += 0.01;
+    for (let i = 0; i < 3; i++) {
+      const a = (i / 3) * Math.PI * 2 + t;
+      const r = 30 + i * 10;
+      const arc = document.createElementNS('http://www.w3.org/2000/svg','circle');
+      arc.setAttribute('cx', cx); arc.setAttribute('cy', h*0.5); arc.setAttribute('r', r);
+      arc.setAttribute('fill','none');
+      arc.setAttribute('stroke', `rgba(100,200,160,${0.04 + Math.abs(Math.sin(t+i)) * 0.04})`);
+      arc.setAttribute('stroke-width','0.8');
+      arc.setAttribute('stroke-dasharray', `${r*0.5} ${r*0.5}`);
+      arc.setAttribute('transform', `rotate(${t*30 + i*120} ${cx} ${h*0.5})`);
+      el.appendChild(arc);
+    }
+  }
+  return { draw };
+})();
+
+const OPEN_MONITORING = (() => {
+  let _last = 0, t = 0;
+  function draw(ts) {
+    if (ts - _last < 80) return; _last = ts;
+    const svg = document.getElementById('lightLayer');
+    if (!svg) return;
+    const cx = window.innerWidth / 2, h = window.innerHeight;
+    let el = document.getElementById('open_monitor');
+    if (!el) { el = document.createElementNS('http://www.w3.org/2000/svg','g'); el.id='open_monitor'; svg.appendChild(el); }
+    el.innerHTML = ''; t += 0.015;
+    for (let i = 0; i < 6; i++) {
+      const a = (i/6)*Math.PI*2 + t*0.3;
+      const x = cx + Math.cos(a)*55, y = h*0.5 + Math.sin(a)*100;
+      const c = document.createElementNS('http://www.w3.org/2000/svg','circle');
+      c.setAttribute('cx', x); c.setAttribute('cy', y); c.setAttribute('r', 1.5);
+      c.setAttribute('fill', `rgba(180,240,200,${0.06 + Math.abs(Math.sin(t+i*1.2)) * 0.08})`);
+      el.appendChild(c);
+    }
+  }
+  return { draw };
+})();
+
+// ── BODY-MIND INTEGRATION ─────────────────────────────────────────────────────
+const INTEROCEPTIVE_FIELD = (() => {
+  let _last = 0, t = 0;
+  function draw(ts) {
+    if (ts - _last < 70) return; _last = ts;
+    const svg = document.getElementById('lightLayer');
+    if (!svg) return;
+    const cx = window.innerWidth / 2, h = window.innerHeight;
+    let el = document.getElementById('intero_field');
+    if (!el) { el = document.createElementNS('http://www.w3.org/2000/svg','g'); el.id='intero_field'; svg.appendChild(el); }
+    el.innerHTML = ''; t += 0.02;
+    for (let i = 0; i < 5; i++) {
+      const y = h * (0.25 + i * 0.12);
+      const x = cx + Math.sin(t * 0.7 + i) * 20;
+      const c = document.createElementNS('http://www.w3.org/2000/svg','circle');
+      c.setAttribute('cx', x); c.setAttribute('cy', y); c.setAttribute('r', 3);
+      c.setAttribute('fill', `rgba(255,180,100,${0.06 + Math.abs(Math.sin(t+i*0.8)) * 0.08})`);
+      el.appendChild(c);
+    }
+  }
+  return { draw };
+})();
+
+const HEART_BRAIN_COHERENCE = (() => {
+  let _last = 0, t = 0;
+  function draw(ts) {
+    if (ts - _last < 55) return; _last = ts;
+    const svg = document.getElementById('lightLayer');
+    if (!svg) return;
+    const cx = window.innerWidth / 2, h = window.innerHeight;
+    const heartY = h * 0.38, brainY = h * 0.12;
+    let el = document.getElementById('heart_brain_c');
+    if (!el) { el = document.createElementNS('http://www.w3.org/2000/svg','g'); el.id='heart_brain_c'; svg.appendChild(el); }
+    el.innerHTML = ''; t += 0.04;
+    const coherence = (Math.sin(t * 0.5) * 0.5 + 0.5);
+    const prog = (t * 0.4) % 1;
+    const c = document.createElementNS('http://www.w3.org/2000/svg','circle');
+    c.setAttribute('cx', cx); c.setAttribute('cy', heartY + (brainY - heartY) * prog);
+    c.setAttribute('r', 2.5);
+    c.setAttribute('fill', `rgba(255,160,100,${coherence * 0.3})`);
+    el.appendChild(c);
+  }
+  return { draw };
+})();
+
+const GUT_FEELING = (() => {
+  let _last = 0, t = 0;
+  function draw(ts) {
+    if (ts - _last < 70) return; _last = ts;
+    const svg = document.getElementById('lightLayer');
+    if (!svg) return;
+    const cx = window.innerWidth / 2, cy = window.innerHeight * 0.6;
+    let el = document.getElementById('gut_feeling');
+    if (!el) { el = document.createElementNS('http://www.w3.org/2000/svg','g'); el.id='gut_feeling'; svg.appendChild(el); }
+    el.innerHTML = ''; t += 0.04;
+    const signal = Math.sin(t * 0.8) * 0.5 + 0.5;
+    for (let i = 0; i < 4; i++) {
+      const c = document.createElementNS('http://www.w3.org/2000/svg','circle');
+      c.setAttribute('cx', cx + (i-1.5)*12); c.setAttribute('cy', cy + Math.sin(t+i)*5);
+      c.setAttribute('r', 4);
+      c.setAttribute('fill', `rgba(200,220,100,${signal * 0.12})`);
+      el.appendChild(c);
+    }
+  }
+  return { draw };
+})();
+
+const MUSCLE_MEMORY_ECHO = (() => {
+  let _last = 0, echoes = [];
+  function draw(ts) {
+    if (ts - _last < 65) return; _last = ts;
+    const svg = document.getElementById('lightLayer');
+    if (!svg) return;
+    const cx = window.innerWidth / 2, h = window.innerHeight;
+    let el = document.getElementById('muscle_echo');
+    if (!el) { el = document.createElementNS('http://www.w3.org/2000/svg','g'); el.id='muscle_echo'; svg.appendChild(el); }
+    el.innerHTML = '';
+    if (Math.random() < 0.06) echoes.push({x:(Math.random()-0.5)*60,y:(Math.random()-0.5)*160,life:1,r:4+Math.random()*6});
+    echoes = echoes.filter(e => { e.life -= 0.04; e.r += 0.3; return e.life > 0; });
+    echoes.forEach(e => {
+      const c = document.createElementNS('http://www.w3.org/2000/svg','circle');
+      c.setAttribute('cx', cx+e.x); c.setAttribute('cy', h*0.5+e.y); c.setAttribute('r', e.r);
+      c.setAttribute('fill','none');
+      c.setAttribute('stroke', `rgba(180,255,180,${e.life * 0.1})`);
+      c.setAttribute('stroke-width','1');
+      el.appendChild(c);
+    });
+  }
+  return { draw };
+})();
+
+const SOMATIC_MARKER = (() => {
+  let _last = 0, t = 0, markers = [];
+  function draw(ts) {
+    if (ts - _last < 80) return; _last = ts;
+    const svg = document.getElementById('lightLayer');
+    if (!svg) return;
+    const cx = window.innerWidth / 2, h = window.innerHeight;
+    let el = document.getElementById('somatic_mark');
+    if (!el) { el = document.createElementNS('http://www.w3.org/2000/svg','g'); el.id='somatic_mark'; svg.appendChild(el); }
+    el.innerHTML = ''; t += 0.02;
+    if (Math.random() < 0.03 && markers.length < 4) markers.push({x:(Math.random()-0.5)*50,y:(Math.random()-0.5)*120,col:Math.random()<0.5?'255,120,80':'80,200,120',life:3});
+    markers = markers.filter(m => { m.life -= 0.02; return m.life > 0; });
+    markers.forEach(m => {
+      const c = document.createElementNS('http://www.w3.org/2000/svg','circle');
+      c.setAttribute('cx', cx+m.x); c.setAttribute('cy', h*0.5+m.y); c.setAttribute('r', 3);
+      c.setAttribute('fill', `rgba(${m.col},${Math.min(m.life,1)*0.15})`);
+      el.appendChild(c);
+    });
+  }
+  return { draw };
+})();
+
+const EMBODIED_COGNITION = (() => {
+  let _last = 0, t = 0;
+  function draw(ts) {
+    if (ts - _last < 75) return; _last = ts;
+    const svg = document.getElementById('lightLayer');
+    if (!svg) return;
+    const cx = window.innerWidth / 2, h = window.innerHeight;
+    let el = document.getElementById('embodied_cog');
+    if (!el) { el = document.createElementNS('http://www.w3.org/2000/svg','g'); el.id='embodied_cog'; svg.appendChild(el); }
+    el.innerHTML = ''; t += 0.025;
+    const nodes = [[cx,h*0.13],[cx-20,h*0.3],[cx+20,h*0.3],[cx,h*0.5],[cx-15,h*0.65],[cx+15,h*0.65]];
+    nodes.forEach((n,i) => {
+      const active = Math.sin(t + i * 0.5) > 0.5;
+      if (!active) return;
+      const c = document.createElementNS('http://www.w3.org/2000/svg','circle');
+      c.setAttribute('cx', n[0]); c.setAttribute('cy', n[1]); c.setAttribute('r', 3);
+      c.setAttribute('fill', `rgba(100,200,255,0.12)`);
+      el.appendChild(c);
+    });
+  }
+  return { draw };
+})();
+
+const POLYVAGAL_TONE = (() => {
+  let _last = 0, t = 0;
+  function draw(ts) {
+    if (ts - _last < 60) return; _last = ts;
+    const svg = document.getElementById('lightLayer');
+    if (!svg) return;
+    const cx = window.innerWidth / 2, h = window.innerHeight;
+    let el = document.getElementById('polyvagal_t');
+    if (!el) { el = document.createElementNS('http://www.w3.org/2000/svg','g'); el.id='polyvagal_t'; svg.appendChild(el); }
+    el.innerHTML = ''; t += 0.025;
+    const tone = Math.sin(t * 0.4) * 0.5 + 0.5;
+    const col = tone > 0.6 ? '80,220,140' : tone < 0.3 ? '255,80,80' : '255,200,80';
+    const path = document.createElementNS('http://www.w3.org/2000/svg','path');
+    let d = `M ${cx} ${h*0.22}`;
+    for (let i = 1; i <= 6; i++) {
+      const y = h * (0.22 + i * 0.1);
+      const x = cx + Math.sin(t + i * 0.8) * 12 * tone;
+      d += ` L ${x} ${y}`;
+    }
+    path.setAttribute('d', d); path.setAttribute('fill','none');
+    path.setAttribute('stroke', `rgba(${col},${0.12 + tone * 0.1})`);
+    path.setAttribute('stroke-width','1.5');
+    el.appendChild(path);
+  }
+  return { draw };
+})();
+
+const BREATH_WAVE = (() => {
+  let _last = 0, t = 0;
+  function draw(ts) {
+    if (ts - _last < 50) return; _last = ts;
+    const svg = document.getElementById('lightLayer');
+    if (!svg) return;
+    const cx = window.innerWidth / 2, h = window.innerHeight;
+    let el = document.getElementById('breath_wave');
+    if (!el) { el = document.createElementNS('http://www.w3.org/2000/svg','ellipse'); el.id='breath_wave'; svg.appendChild(el); }
+    t += 0.02;
+    const phase = (Math.sin(t * 0.4) * 0.5 + 0.5);
+    el.setAttribute('cx', cx); el.setAttribute('cy', h*0.45);
+    el.setAttribute('rx', 30 + phase * 12); el.setAttribute('ry', 50 + phase * 20);
+    el.setAttribute('fill', `rgba(140,200,255,${0.04 + phase * 0.04})`);
+    el.setAttribute('stroke', `rgba(160,220,255,${0.06 + phase * 0.06})`);
+    el.setAttribute('stroke-width','0.8');
+  }
+  return { draw };
+})();
+
+const FASCIA_NETWORK = (() => {
+  let _last = 0, t = 0;
+  function draw(ts) {
+    if (ts - _last < 90) return; _last = ts;
+    const svg = document.getElementById('lightLayer');
+    if (!svg) return;
+    const cx = window.innerWidth / 2, h = window.innerHeight;
+    let el = document.getElementById('fascia_net');
+    if (!el) { el = document.createElementNS('http://www.w3.org/2000/svg','g'); el.id='fascia_net'; svg.appendChild(el); }
+    el.innerHTML = ''; t += 0.01;
+    const pts = [];
+    for (let i = 0; i < 8; i++) {
+      const a = (i/8)*Math.PI*2 + t*0.1;
+      pts.push([cx + Math.cos(a)*35, h*0.5 + Math.sin(a)*70]);
+    }
+    for (let i = 0; i < pts.length; i++) {
+      const j = (i+2) % pts.length;
+      const ln = document.createElementNS('http://www.w3.org/2000/svg','line');
+      ln.setAttribute('x1', pts[i][0]); ln.setAttribute('y1', pts[i][1]);
+      ln.setAttribute('x2', pts[j][0]); ln.setAttribute('y2', pts[j][1]);
+      ln.setAttribute('stroke', `rgba(220,200,180,${0.04 + Math.abs(Math.sin(t+i)) * 0.03})`);
+      ln.setAttribute('stroke-width','0.5');
+      el.appendChild(ln);
+    }
+  }
+  return { draw };
+})();
+
+// ── BATCH 16 LOOP ─────────────────────────────────────────────────────────────
+(function() {
+  const _b16 = [
+    'BILE_DUCT_FLOW','PORTAL_VEIN_PRESSURE','HEPATIC_LOBULE','RENAL_TUBULE','NEPHRON_FILTER',
+    'ADRENAL_MEDULLA','THYROID_WAVE','PARATHYROID_PULSE','PINEAL_FLICKER','PITUITARY_COMMAND',
+    'VESTIBULAR_HORIZON','OLFACTORY_GHOST','TASTE_MAP','PROPRIOCEPTIVE_MESH','TACTILE_FIELD',
+    'NOCICEPTOR_FLASH','THERMORECEPTOR_GRADIENT','MECHANORECEPTOR_WAVE','PHOTORECEPTOR_CASCADE','AUDITORY_CORTEX_RING',
+    'MACROPHAGE_PATROL','NK_CELL_HUNT','T_CELL_ACTIVATION','B_CELL_MEMORY','CYTOKINE_STORM',
+    'FEVER_GRADIENT','WOUND_HEALING_WAVE','INFLAMMATION_PULSE','COMPLEMENT_CASCADE',
+    'HYPNAGOGIC_DRIFT','LUCID_THRESHOLD','CONTEMPLATIVE_DEPTH','PURE_AWARENESS','GROUNDLESSNESS',
+    'BEGINNER_MIND','PRESENCE_FIELD','STILLPOINT','RADICAL_ACCEPTANCE','OPEN_MONITORING',
+    'INTEROCEPTIVE_FIELD','HEART_BRAIN_COHERENCE','GUT_FEELING','MUSCLE_MEMORY_ECHO','SOMATIC_MARKER',
+    'EMBODIED_COGNITION','POLYVAGAL_TONE','BREATH_WAVE','FASCIA_NETWORK'
+  ];
+  let _lt = 0;
+  function loop(ts) {
+    if (ts - _lt > 14) {
+      _lt = ts;
+      _b16.forEach(n => { const s = window[n]; if (s && typeof s.draw === 'function') s.draw(ts); });
+    }
+    requestAnimationFrame(loop);
+  }
+  requestAnimationFrame(loop);
+})();
+</script>
+
 <!-- ═══════════════════════════════════════════════════════════════
      LIVE RELOAD — polls /version every 8s, reloads if file changed
      Smooth: waits for page to be idle (no active typing/talking)
