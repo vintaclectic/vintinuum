@@ -24497,6 +24497,1014 @@ const ORDER_PARAMETER = (() => {
   requestAnimationFrame(loop);
 })();
 
+
+// ═══════════════════════════════════════════════════════════════
+// BATCH 19 — Vascular, Respiratory, Neuromodulation, Identity, Connection
+// ═══════════════════════════════════════════════════════════════
+
+// CORONARY_FLOW — pulsing coronary artery rings around heart
+const CORONARY_FLOW = (() => {
+  let _last = 0;
+  function draw(ts) {
+    if (ts - _last < 60) return; _last = ts;
+    const svg = document.getElementById('lightLayer'); if (!svg) return;
+    const cx = window.innerWidth / 2, cy = window.innerHeight * 0.38;
+    const p = (Math.sin(ts * 0.0025) + 1) / 2;
+    let el = document.getElementById('_coronary_flow');
+    if (!el) { el = document.createElementNS('http://www.w3.org/2000/svg','ellipse'); el.id='_coronary_flow'; svg.appendChild(el); }
+    el.setAttribute('cx', cx); el.setAttribute('cy', cy);
+    el.setAttribute('rx', 22 + p * 6); el.setAttribute('ry', 18 + p * 4);
+    el.setAttribute('fill','none'); el.setAttribute('stroke','#f44');
+    el.setAttribute('stroke-width', 1.2 + p * 1.8); el.setAttribute('opacity', 0.12 + p * 0.18);
+  }
+  return { draw };
+})();
+
+// CARDIAC_OUTPUT — radial burst from heart each beat
+const CARDIAC_OUTPUT = (() => {
+  let _last = 0, _beat = 0;
+  function draw(ts) {
+    if (ts - _last < 30) return; _last = ts;
+    const svg = document.getElementById('lightLayer'); if (!svg) return;
+    const cx = window.innerWidth / 2, cy = window.innerHeight * 0.38;
+    const beat = Math.floor(ts / 857) % 2;
+    if (beat !== _beat) { _beat = beat;
+      for (let i = 0; i < 6; i++) {
+        const a = (i / 6) * Math.PI * 2;
+        let ln = document.createElementNS('http://www.w3.org/2000/svg','line');
+        ln.setAttribute('x1', cx); ln.setAttribute('y1', cy);
+        ln.setAttribute('x2', cx + Math.cos(a) * 32); ln.setAttribute('y2', cy + Math.sin(a) * 32);
+        ln.setAttribute('stroke','#fa4'); ln.setAttribute('stroke-width','1.5'); ln.setAttribute('opacity','0.22');
+        ln.style.transition = 'opacity 0.6s'; svg.appendChild(ln);
+        setTimeout(() => { if (ln.parentNode) ln.parentNode.removeChild(ln); }, 700);
+      }
+    }
+  }
+  return { draw };
+})();
+
+// STROKE_VOLUME — expanding ring per heartbeat
+const STROKE_VOLUME = (() => {
+  let _last = 0, _rings = [];
+  function draw(ts) {
+    if (ts - _last < 20) return; _last = ts;
+    const svg = document.getElementById('lightLayer'); if (!svg) return;
+    const cx = window.innerWidth / 2, cy = window.innerHeight * 0.38;
+    if (Math.floor(ts / 860) !== Math.floor((ts - 20) / 860)) {
+      let c = document.createElementNS('http://www.w3.org/2000/svg','circle');
+      c._born = ts; c.setAttribute('cx', cx); c.setAttribute('cy', cy);
+      c.setAttribute('fill','none'); c.setAttribute('stroke','#4af'); c.setAttribute('stroke-width','1');
+      svg.appendChild(c); _rings.push(c);
+    }
+    _rings = _rings.filter(c => {
+      const age = ts - c._born, r = age * 0.05;
+      if (age > 1200) { if (c.parentNode) c.parentNode.removeChild(c); return false; }
+      c.setAttribute('r', r); c.setAttribute('opacity', Math.max(0, 0.25 - age * 0.0002));
+      return true;
+    });
+  }
+  return { draw };
+})();
+
+// EJECTION_FRACTION — arc meter near heart
+const EJECTION_FRACTION = (() => {
+  let _last = 0;
+  function draw(ts) {
+    if (ts - _last < 80) return; _last = ts;
+    const svg = document.getElementById('lightLayer'); if (!svg) return;
+    const cx = window.innerWidth / 2 + 50, cy = window.innerHeight * 0.36;
+    const ef = 0.55 + Math.sin(ts * 0.0004) * 0.1;
+    const angle = ef * Math.PI; const r = 18;
+    const x2 = cx + r * Math.cos(Math.PI - angle), y2 = cy - r * Math.sin(Math.PI - angle);
+    let p = document.getElementById('_ejection_arc');
+    if (!p) { p = document.createElementNS('http://www.w3.org/2000/svg','path'); p.id='_ejection_arc'; svg.appendChild(p); }
+    p.setAttribute('d', `M ${cx - r} ${cy} A ${r} ${r} 0 0 1 ${x2} ${y2}`);
+    p.setAttribute('fill','none'); p.setAttribute('stroke','#4f8'); p.setAttribute('stroke-width','2'); p.setAttribute('opacity','0.2');
+  }
+  return { draw };
+})();
+
+// PRELOAD_SIGNAL — diastolic fill dots drifting toward heart
+const PRELOAD_SIGNAL = (() => {
+  let _last = 0, _dots = [];
+  function draw(ts) {
+    if (ts - _last < 40) return; _last = ts;
+    const svg = document.getElementById('lightLayer'); if (!svg) return;
+    const cx = window.innerWidth / 2, cy = window.innerHeight * 0.38;
+    if (_dots.length < 6 && Math.random() < 0.15) {
+      const angle = Math.random() * Math.PI * 2;
+      const dist = 60 + Math.random() * 40;
+      const d = { x: cx + Math.cos(angle) * dist, y: cy + Math.sin(angle) * dist, born: ts };
+      const el = document.createElementNS('http://www.w3.org/2000/svg','circle');
+      el.setAttribute('r','2'); el.setAttribute('fill','#a4f'); el.setAttribute('opacity','0.3');
+      svg.appendChild(el); d.el = el; _dots.push(d);
+    }
+    _dots = _dots.filter(d => {
+      const age = ts - d.born, t = Math.min(age / 800, 1);
+      d.el.setAttribute('cx', d.x + (cx - d.x) * t); d.el.setAttribute('cy', d.y + (cy - d.y) * t);
+      d.el.setAttribute('opacity', 0.3 * (1 - t));
+      if (t >= 1) { if (d.el.parentNode) d.el.parentNode.removeChild(d.el); return false; }
+      return true;
+    });
+  }
+  return { draw };
+})();
+
+// AFTERLOAD_RESISTANCE — concentric resistance rings at aorta
+const AFTERLOAD_RESISTANCE = (() => {
+  let _last = 0;
+  function draw(ts) {
+    if (ts - _last < 70) return; _last = ts;
+    const svg = document.getElementById('lightLayer'); if (!svg) return;
+    const cx = window.innerWidth / 2, cy = window.innerHeight * 0.32;
+    for (let i = 0; i < 3; i++) {
+      let el = document.getElementById('_afterload_r' + i);
+      if (!el) { el = document.createElementNS('http://www.w3.org/2000/svg','circle'); el.id='_afterload_r'+i; svg.appendChild(el); }
+      const pulse = (Math.sin(ts * 0.002 + i * 1.2) + 1) / 2;
+      el.setAttribute('cx', cx); el.setAttribute('cy', cy);
+      el.setAttribute('r', 14 + i * 8 + pulse * 4); el.setAttribute('fill','none');
+      el.setAttribute('stroke','#f80'); el.setAttribute('stroke-width','0.8');
+      el.setAttribute('opacity', 0.05 + pulse * 0.12);
+    }
+  }
+  return { draw };
+})();
+
+// BARORECEPTOR_REFLEX — pressure sensor flash at carotid
+const BARORECEPTOR_REFLEX = (() => {
+  let _last = 0;
+  function draw(ts) {
+    if (ts - _last < 55) return; _last = ts;
+    const svg = document.getElementById('lightLayer'); if (!svg) return;
+    const cx = window.innerWidth / 2 - 15, cy = window.innerHeight * 0.28;
+    const pulse = (Math.sin(ts * 0.0022) + 1) / 2;
+    let el = document.getElementById('_baroreceptor');
+    if (!el) { el = document.createElementNS('http://www.w3.org/2000/svg','circle'); el.id='_baroreceptor'; svg.appendChild(el); }
+    el.setAttribute('cx', cx); el.setAttribute('cy', cy); el.setAttribute('r', 4 + pulse * 3);
+    el.setAttribute('fill','#fa4'); el.setAttribute('opacity', 0.08 + pulse * 0.22);
+  }
+  return { draw };
+})();
+
+// RENIN_ANGIOTENSIN — cascade dots kidney→blood
+const RENIN_ANGIOTENSIN = (() => {
+  let _last = 0, _pts = [];
+  function draw(ts) {
+    if (ts - _last < 50) return; _last = ts;
+    const svg = document.getElementById('lightLayer'); if (!svg) return;
+    const kx = window.innerWidth / 2 + 55, ky = window.innerHeight * 0.55;
+    const tx = window.innerWidth / 2, ty = window.innerHeight * 0.38;
+    if (_pts.length < 5 && Math.random() < 0.1) {
+      const el = document.createElementNS('http://www.w3.org/2000/svg','circle');
+      el.setAttribute('r','2.5'); el.setAttribute('fill','#f44'); el.setAttribute('opacity','0.25');
+      svg.appendChild(el); _pts.push({ born: ts, el });
+    }
+    _pts = _pts.filter(p => {
+      const t = Math.min((ts - p.born) / 1200, 1);
+      p.el.setAttribute('cx', kx + (tx - kx) * t); p.el.setAttribute('cy', ky + (ty - ky) * t);
+      if (t >= 1) { if (p.el.parentNode) p.el.parentNode.removeChild(p.el); return false; }
+      return true;
+    });
+  }
+  return { draw };
+})();
+
+// NATRIURETIC_PULSE — kidney glow wave
+const NATRIURETIC_PULSE = (() => {
+  let _last = 0;
+  function draw(ts) {
+    if (ts - _last < 65) return; _last = ts;
+    const svg = document.getElementById('lightLayer'); if (!svg) return;
+    const cx = window.innerWidth / 2 - 55, cy = window.innerHeight * 0.55;
+    const p = (Math.sin(ts * 0.0018) + 1) / 2;
+    let el = document.getElementById('_natriuretic');
+    if (!el) { el = document.createElementNS('http://www.w3.org/2000/svg','ellipse'); el.id='_natriuretic'; svg.appendChild(el); }
+    el.setAttribute('cx', cx); el.setAttribute('cy', cy);
+    el.setAttribute('rx', 10 + p * 5); el.setAttribute('ry', 14 + p * 5);
+    el.setAttribute('fill','#0ff'); el.setAttribute('opacity', 0.04 + p * 0.1);
+  }
+  return { draw };
+})();
+
+// ENDOTHELIAL_SHEAR — horizontal streaks along vessel walls
+const ENDOTHELIAL_SHEAR = (() => {
+  let _last = 0;
+  function draw(ts) {
+    if (ts - _last < 45) return; _last = ts;
+    const canvas = document.getElementById('mainCanvas'); if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    const cx = window.innerWidth / 2, h = window.innerHeight;
+    ctx.save(); ctx.globalAlpha = 0.06;
+    for (let i = 0; i < 4; i++) {
+      const y = h * 0.3 + i * 40 + Math.sin(ts * 0.001 + i) * 5;
+      const len = 30 + Math.sin(ts * 0.002 + i * 0.7) * 10;
+      const grd = ctx.createLinearGradient(cx - 18, y, cx - 18 + len, y);
+      grd.addColorStop(0, 'rgba(74,175,255,0)'); grd.addColorStop(0.5, 'rgba(74,175,255,0.8)'); grd.addColorStop(1, 'rgba(74,175,255,0)');
+      ctx.strokeStyle = grd; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(cx - 18, y); ctx.lineTo(cx - 18 + len, y); ctx.stroke();
+    }
+    ctx.restore();
+  }
+  return { draw };
+})();
+
+// TIDAL_BREATH — lungs expand/contract silhouette
+const TIDAL_BREATH = (() => {
+  let _last = 0;
+  function draw(ts) {
+    if (ts - _last < 50) return; _last = ts;
+    const svg = document.getElementById('lightLayer'); if (!svg) return;
+    const cx = window.innerWidth / 2, cy = window.innerHeight * 0.42;
+    const breath = (Math.sin(ts * 0.0008) + 1) / 2;
+    for (let side = -1; side <= 1; side += 2) {
+      const id = '_tidal_lung' + (side < 0 ? 'L' : 'R');
+      let el = document.getElementById(id);
+      if (!el) { el = document.createElementNS('http://www.w3.org/2000/svg','ellipse'); el.id=id; svg.appendChild(el); }
+      el.setAttribute('cx', cx + side * (28 + breath * 4)); el.setAttribute('cy', cy);
+      el.setAttribute('rx', 14 + breath * 5); el.setAttribute('ry', 24 + breath * 8);
+      el.setAttribute('fill','#4af'); el.setAttribute('opacity', 0.06 + breath * 0.1);
+    }
+  }
+  return { draw };
+})();
+
+// RESIDUAL_VOLUME — faint lung floor fill
+const RESIDUAL_VOLUME = (() => {
+  let _last = 0;
+  function draw(ts) {
+    if (ts - _last < 100) return; _last = ts;
+    const svg = document.getElementById('lightLayer'); if (!svg) return;
+    const cx = window.innerWidth / 2, cy = window.innerHeight * 0.46;
+    for (let side = -1; side <= 1; side += 2) {
+      const id = '_residual_v' + (side < 0 ? 'L' : 'R');
+      let el = document.getElementById(id);
+      if (!el) { el = document.createElementNS('http://www.w3.org/2000/svg','ellipse'); el.id=id; svg.appendChild(el); }
+      el.setAttribute('cx', cx + side * 28); el.setAttribute('cy', cy);
+      el.setAttribute('rx', 10); el.setAttribute('ry', 8);
+      el.setAttribute('fill','#4af'); el.setAttribute('opacity', '0.05');
+    }
+  }
+  return { draw };
+})();
+
+// DEAD_SPACE_DRIFT — slow drifting motes in trachea area
+const DEAD_SPACE_DRIFT = (() => {
+  let _last = 0, _motes = [];
+  function draw(ts) {
+    if (ts - _last < 40) return; _last = ts;
+    const svg = document.getElementById('lightLayer'); if (!svg) return;
+    const cx = window.innerWidth / 2, cyTop = window.innerHeight * 0.28, cyBot = window.innerHeight * 0.38;
+    if (_motes.length < 5 && Math.random() < 0.12) {
+      const el = document.createElementNS('http://www.w3.org/2000/svg','circle');
+      el.setAttribute('r','1.5'); el.setAttribute('fill','#8f4'); el.setAttribute('opacity','0.18');
+      svg.appendChild(el); _motes.push({ x: cx + (Math.random()-0.5)*8, y: cyTop, born: ts, el });
+    }
+    _motes = _motes.filter(m => {
+      const age = ts - m.born;
+      m.el.setAttribute('cx', m.x + Math.sin(age*0.003)*4); m.el.setAttribute('cy', m.y + age * 0.012);
+      if (m.y + age * 0.012 > cyBot) { if (m.el.parentNode) m.el.parentNode.removeChild(m.el); return false; }
+      return true;
+    });
+  }
+  return { draw };
+})();
+
+// OXYGEN_CASCADE — O2 dots lung→blood→tissue
+const OXYGEN_CASCADE = (() => {
+  let _last = 0, _o2 = [];
+  function draw(ts) {
+    if (ts - _last < 35) return; _last = ts;
+    const svg = document.getElementById('lightLayer'); if (!svg) return;
+    const sx = window.innerWidth / 2 - 30, sy = window.innerHeight * 0.42;
+    const ex = window.innerWidth / 2, ey = window.innerHeight * 0.38;
+    if (_o2.length < 8 && Math.random() < 0.18) {
+      const el = document.createElementNS('http://www.w3.org/2000/svg','circle');
+      el.setAttribute('r','2'); el.setAttribute('fill','#4af'); el.setAttribute('opacity','0.35');
+      svg.appendChild(el); _o2.push({ born: ts, el });
+    }
+    _o2 = _o2.filter(o => {
+      const t = Math.min((ts - o.born) / 900, 1);
+      o.el.setAttribute('cx', sx + (ex - sx) * t); o.el.setAttribute('cy', sy + (ey - sy) * t);
+      o.el.setAttribute('opacity', 0.35 * (1 - t * 0.5));
+      if (t >= 1) { if (o.el.parentNode) o.el.parentNode.removeChild(o.el); return false; }
+      return true;
+    });
+  }
+  return { draw };
+})();
+
+// CARBON_DIOXIDE_WASH — CO2 exhalation stream from lungs upward
+const CARBON_DIOXIDE_WASH = (() => {
+  let _last = 0, _co2 = [];
+  function draw(ts) {
+    if (ts - _last < 45) return; _last = ts;
+    const svg = document.getElementById('lightLayer'); if (!svg) return;
+    const cx = window.innerWidth / 2, sy = window.innerHeight * 0.38, ey = window.innerHeight * 0.2;
+    if (_co2.length < 6 && Math.random() < 0.14) {
+      const el = document.createElementNS('http://www.w3.org/2000/svg','circle');
+      el.setAttribute('r','2'); el.setAttribute('fill','#f4a'); el.setAttribute('opacity','0.22');
+      svg.appendChild(el); _co2.push({ born: ts, x: cx + (Math.random()-0.5)*10, el });
+    }
+    _co2 = _co2.filter(c => {
+      const t = Math.min((ts - c.born) / 1000, 1);
+      c.el.setAttribute('cx', c.x + Math.sin(t * 8) * 5); c.el.setAttribute('cy', sy + (ey - sy) * t);
+      c.el.setAttribute('opacity', 0.22 * (1 - t));
+      if (t >= 1) { if (c.el.parentNode) c.el.parentNode.removeChild(c.el); return false; }
+      return true;
+    });
+  }
+  return { draw };
+})();
+
+// BOHR_SHIFT — pH-driven color shift around RBC stream
+const BOHR_SHIFT = (() => {
+  let _last = 0;
+  function draw(ts) {
+    if (ts - _last < 80) return; _last = ts;
+    const canvas = document.getElementById('mainCanvas'); if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    const cx = window.innerWidth / 2, cy = window.innerHeight * 0.5;
+    const ph = (Math.sin(ts * 0.0006) + 1) / 2;
+    const r = Math.floor(80 + ph * 170), g = Math.floor(40 + ph * 40), b = Math.floor(255 - ph * 100);
+    ctx.save(); ctx.globalAlpha = 0.05;
+    ctx.fillStyle = `rgb(${r},${g},${b})`;
+    ctx.beginPath(); ctx.ellipse(cx, cy, 12, 30, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.restore();
+  }
+  return { draw };
+})();
+
+// HALDANE_EFFECT — CO2 carriage overlay near RBC
+const HALDANE_EFFECT = (() => {
+  let _last = 0;
+  function draw(ts) {
+    if (ts - _last < 90) return; _last = ts;
+    const svg = document.getElementById('lightLayer'); if (!svg) return;
+    const cx = window.innerWidth / 2 + 20, cy = window.innerHeight * 0.5;
+    const p = (Math.sin(ts * 0.0007 + 1.2) + 1) / 2;
+    let el = document.getElementById('_haldane');
+    if (!el) { el = document.createElementNS('http://www.w3.org/2000/svg','ellipse'); el.id='_haldane'; svg.appendChild(el); }
+    el.setAttribute('cx', cx); el.setAttribute('cy', cy);
+    el.setAttribute('rx', 8 + p * 4); el.setAttribute('ry', 12 + p * 6);
+    el.setAttribute('fill','#f4a'); el.setAttribute('opacity', 0.04 + p * 0.1);
+  }
+  return { draw };
+})();
+
+// HYPOXIC_DRIVE — warning glow when O2 low (simulated)
+const HYPOXIC_DRIVE = (() => {
+  let _last = 0;
+  function draw(ts) {
+    if (ts - _last < 75) return; _last = ts;
+    const canvas = document.getElementById('mainCanvas'); if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    const cx = window.innerWidth / 2, cy = window.innerHeight * 0.4;
+    const o2low = (Math.sin(ts * 0.0003) + 1) / 2;
+    if (o2low < 0.3) {
+      ctx.save(); ctx.globalAlpha = 0.06 * (0.3 - o2low) * 3;
+      ctx.fillStyle = '#f44';
+      ctx.beginPath(); ctx.ellipse(cx, cy, 40, 60, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.restore();
+    }
+  }
+  return { draw };
+})();
+
+// RESPIRATORY_CENTER_RHYTHM — brainstem oscillator tick
+const RESPIRATORY_CENTER_RHYTHM = (() => {
+  let _last = 0;
+  function draw(ts) {
+    if (ts - _last < 50) return; _last = ts;
+    const svg = document.getElementById('lightLayer'); if (!svg) return;
+    const cx = window.innerWidth / 2, cy = window.innerHeight * 0.22;
+    const p = (Math.sin(ts * 0.0009) + 1) / 2;
+    let el = document.getElementById('_resp_center');
+    if (!el) { el = document.createElementNS('http://www.w3.org/2000/svg','circle'); el.id='_resp_center'; svg.appendChild(el); }
+    el.setAttribute('cx', cx); el.setAttribute('cy', cy);
+    el.setAttribute('r', 5 + p * 4); el.setAttribute('fill','#4f8'); el.setAttribute('opacity', 0.08 + p * 0.18);
+  }
+  return { draw };
+})();
+
+// SURFACTANT_LAYER — shimmering alveolar surface film
+const SURFACTANT_LAYER = (() => {
+  let _last = 0;
+  function draw(ts) {
+    if (ts - _last < 60) return; _last = ts;
+    const canvas = document.getElementById('mainCanvas'); if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    const cx = window.innerWidth / 2, cy = window.innerHeight * 0.44;
+    ctx.save(); ctx.globalAlpha = 0.07;
+    for (let i = 0; i < 5; i++) {
+      const x = cx + (i - 2) * 14 + Math.sin(ts * 0.002 + i) * 3;
+      const y = cy + Math.cos(ts * 0.0015 + i * 0.8) * 5;
+      ctx.strokeStyle = '#0ff'; ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.arc(x, y, 5, 0, Math.PI * 2); ctx.stroke();
+    }
+    ctx.restore();
+  }
+  return { draw };
+})();
+
+// NOREPINEPHRINE_SWEEP — yellow alert sweep across upper body
+const NOREPINEPHRINE_SWEEP = (() => {
+  let _last = 0;
+  function draw(ts) {
+    if (ts - _last < 55) return; _last = ts;
+    const canvas = document.getElementById('mainCanvas'); if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    const cx = window.innerWidth / 2, h = window.innerHeight;
+    const p = (Math.sin(ts * 0.0013) + 1) / 2;
+    ctx.save(); ctx.globalAlpha = p * 0.06;
+    const grd = ctx.createRadialGradient(cx, h * 0.3, 0, cx, h * 0.3, 80);
+    grd.addColorStop(0, '#fa4'); grd.addColorStop(1, 'transparent');
+    ctx.fillStyle = grd; ctx.fillRect(cx - 80, h * 0.15, 160, 200);
+    ctx.restore();
+  }
+  return { draw };
+})();
+
+// ACETYLCHOLINE_GATE — synaptic spark at neuromuscular junctions
+const ACETYLCHOLINE_GATE = (() => {
+  let _last = 0, _sparks = [];
+  function draw(ts) {
+    if (ts - _last < 30) return; _last = ts;
+    const svg = document.getElementById('lightLayer'); if (!svg) return;
+    if (_sparks.length < 8 && Math.random() < 0.15) {
+      const x = window.innerWidth / 2 + (Math.random() - 0.5) * 120;
+      const y = window.innerHeight * (0.4 + Math.random() * 0.35);
+      const el = document.createElementNS('http://www.w3.org/2000/svg','circle');
+      el.setAttribute('r','2'); el.setAttribute('fill','#fff'); el.setAttribute('opacity','0.3');
+      svg.appendChild(el); el.setAttribute('cx', x); el.setAttribute('cy', y);
+      _sparks.push({ el, born: ts });
+    }
+    _sparks = _sparks.filter(s => {
+      const age = ts - s.born;
+      s.el.setAttribute('opacity', Math.max(0, 0.3 - age * 0.0006));
+      if (age > 500) { if (s.el.parentNode) s.el.parentNode.removeChild(s.el); return false; }
+      return true;
+    });
+  }
+  return { draw };
+})();
+
+// GABA_BRAKE — inhibitory damping rings at brain
+const GABA_BRAKE = (() => {
+  let _last = 0;
+  function draw(ts) {
+    if (ts - _last < 70) return; _last = ts;
+    const svg = document.getElementById('lightLayer'); if (!svg) return;
+    const cx = window.innerWidth / 2, cy = window.innerHeight * 0.13;
+    const p = (Math.sin(ts * 0.0008) + 1) / 2;
+    for (let i = 0; i < 3; i++) {
+      let el = document.getElementById('_gaba_r' + i);
+      if (!el) { el = document.createElementNS('http://www.w3.org/2000/svg','circle'); el.id='_gaba_r'+i; svg.appendChild(el); }
+      el.setAttribute('cx', cx); el.setAttribute('cy', cy);
+      el.setAttribute('r', 16 + i * 10 + p * 4); el.setAttribute('fill','none');
+      el.setAttribute('stroke','#a4f'); el.setAttribute('stroke-width','0.8');
+      el.setAttribute('opacity', 0.04 + p * 0.08);
+    }
+  }
+  return { draw };
+})();
+
+// GLUTAMATE_DRIVE — excitatory pulse through cortex
+const GLUTAMATE_DRIVE = (() => {
+  let _last = 0;
+  function draw(ts) {
+    if (ts - _last < 40) return; _last = ts;
+    const canvas = document.getElementById('mainCanvas'); if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    const cx = window.innerWidth / 2, cy = window.innerHeight * 0.12;
+    const p = Math.abs(Math.sin(ts * 0.0014));
+    ctx.save(); ctx.globalAlpha = p * 0.08;
+    const grd = ctx.createRadialGradient(cx, cy, 0, cx, cy, 50);
+    grd.addColorStop(0, '#fa4'); grd.addColorStop(1, 'transparent');
+    ctx.fillStyle = grd; ctx.beginPath(); ctx.arc(cx, cy, 50, 0, Math.PI * 2); ctx.fill();
+    ctx.restore();
+  }
+  return { draw };
+})();
+
+// DOPAMINE_PATHWAY — reward pathway arc midbrain→PFC
+const DOPAMINE_PATHWAY = (() => {
+  let _last = 0, _pts = [];
+  function draw(ts) {
+    if (ts - _last < 40) return; _last = ts;
+    const svg = document.getElementById('lightLayer'); if (!svg) return;
+    const sx = window.innerWidth / 2, sy = window.innerHeight * 0.24;
+    const ex = window.innerWidth / 2 - 10, ey = window.innerHeight * 0.1;
+    if (_pts.length < 5 && Math.random() < 0.08) {
+      const el = document.createElementNS('http://www.w3.org/2000/svg','circle');
+      el.setAttribute('r','2'); el.setAttribute('fill','#fa4'); el.setAttribute('opacity','0.35');
+      svg.appendChild(el); _pts.push({ born: ts, el });
+    }
+    _pts = _pts.filter(p => {
+      const t = Math.min((ts - p.born) / 1100, 1);
+      p.el.setAttribute('cx', sx + (ex - sx) * t + Math.sin(t * 10) * 8);
+      p.el.setAttribute('cy', sy + (ey - sy) * t);
+      if (t >= 1) { if (p.el.parentNode) p.el.parentNode.removeChild(p.el); return false; }
+      return true;
+    });
+  }
+  return { draw };
+})();
+
+// SEROTONIN_MODULATION — gentle warmth wash from raphe nucleus
+const SEROTONIN_MODULATION = (() => {
+  let _last = 0;
+  function draw(ts) {
+    if (ts - _last < 80) return; _last = ts;
+    const canvas = document.getElementById('mainCanvas'); if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    const cx = window.innerWidth / 2, cy = window.innerHeight * 0.25;
+    const p = (Math.sin(ts * 0.0005) + 1) / 2;
+    ctx.save(); ctx.globalAlpha = p * 0.05;
+    const grd = ctx.createRadialGradient(cx, cy, 0, cx, cy, 100);
+    grd.addColorStop(0, '#f4a'); grd.addColorStop(1, 'transparent');
+    ctx.fillStyle = grd; ctx.fillRect(cx - 100, cy - 100, 200, 200);
+    ctx.restore();
+  }
+  return { draw };
+})();
+
+// HISTAMINE_ALERT — mast cell flash dots scattered in skin layer
+const HISTAMINE_ALERT = (() => {
+  let _last = 0;
+  function draw(ts) {
+    if (ts - _last < 90) return; _last = ts;
+    const svg = document.getElementById('lightLayer'); if (!svg) return;
+    const cx = window.innerWidth / 2, h = window.innerHeight;
+    const alert = Math.random() < 0.05;
+    if (!alert) return;
+    for (let i = 0; i < 4; i++) {
+      const el = document.createElementNS('http://www.w3.org/2000/svg','circle');
+      el.setAttribute('cx', cx + (Math.random()-0.5)*90); el.setAttribute('cy', h*(0.3+Math.random()*0.4));
+      el.setAttribute('r','3'); el.setAttribute('fill','#f80'); el.setAttribute('opacity','0.3');
+      svg.appendChild(el);
+      setTimeout(() => { if (el.parentNode) el.parentNode.removeChild(el); }, 600);
+    }
+  }
+  return { draw };
+})();
+
+// ADENOSINE_BRAKE — sleep pressure dimming overlay
+const ADENOSINE_BRAKE = (() => {
+  let _last = 0;
+  function draw(ts) {
+    if (ts - _last < 100) return; _last = ts;
+    const canvas = document.getElementById('mainCanvas'); if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    const cx = window.innerWidth / 2, cy = window.innerHeight * 0.14;
+    const pressure = (Math.sin(ts * 0.0002) + 1) / 2;
+    ctx.save(); ctx.globalAlpha = pressure * 0.07;
+    ctx.fillStyle = '#a4f';
+    ctx.beginPath(); ctx.arc(cx, cy, 45, 0, Math.PI * 2); ctx.fill();
+    ctx.restore();
+  }
+  return { draw };
+})();
+
+// NITRIC_OXIDE_SIGNAL — vasodilation flash in vessel walls
+const NITRIC_OXIDE_SIGNAL = (() => {
+  let _last = 0;
+  function draw(ts) {
+    if (ts - _last < 55) return; _last = ts;
+    const canvas = document.getElementById('mainCanvas'); if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    const cx = window.innerWidth / 2, h = window.innerHeight;
+    if (Math.random() < 0.12) {
+      const y = h * (0.3 + Math.random() * 0.3);
+      ctx.save(); ctx.globalAlpha = 0.1;
+      ctx.strokeStyle = '#0ff'; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.moveTo(cx - 20, y); ctx.lineTo(cx + 20, y); ctx.stroke();
+      ctx.restore();
+    }
+  }
+  return { draw };
+})();
+
+// ENDOCANNABINOID_TIDE — slow undulating shimmer
+const ENDOCANNABINOID_TIDE = (() => {
+  let _last = 0;
+  function draw(ts) {
+    if (ts - _last < 70) return; _last = ts;
+    const canvas = document.getElementById('mainCanvas'); if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    const cx = window.innerWidth / 2, h = window.innerHeight;
+    ctx.save(); ctx.globalAlpha = 0.04;
+    for (let y = h * 0.25; y < h * 0.75; y += 25) {
+      const wave = Math.sin(ts * 0.0006 + y * 0.02) * 8;
+      ctx.strokeStyle = '#4f8'; ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.moveTo(cx - 30 + wave, y); ctx.lineTo(cx + 30 + wave, y); ctx.stroke();
+    }
+    ctx.restore();
+  }
+  return { draw };
+})();
+
+// NARRATIVE_IDENTITY — text trail of self-story keywords
+const NARRATIVE_IDENTITY = (() => {
+  let _last = 0, _words = ['story','self','past','future','I am','who','meaning','thread'], _idx = 0;
+  let _active = [];
+  function draw(ts) {
+    if (ts - _last < 1200) return; _last = ts;
+    const canvas = document.getElementById('mainCanvas'); if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    const cx = window.innerWidth / 2 - 80, cy = window.innerHeight * 0.18 + (_idx % 5) * 14;
+    ctx.save(); ctx.globalAlpha = 0.12; ctx.fillStyle = '#fff';
+    ctx.font = '10px monospace'; ctx.fillText(_words[_idx % _words.length], cx, cy);
+    ctx.restore(); _idx++;
+  }
+  return { draw };
+})();
+
+// SELF_CONCEPT_CORE — stable central glow
+const SELF_CONCEPT_CORE = (() => {
+  let _last = 0;
+  function draw(ts) {
+    if (ts - _last < 80) return; _last = ts;
+    const svg = document.getElementById('lightLayer'); if (!svg) return;
+    const cx = window.innerWidth / 2, cy = window.innerHeight * 0.5;
+    const p = (Math.sin(ts * 0.0003) + 1) / 2;
+    let el = document.getElementById('_self_core');
+    if (!el) { el = document.createElementNS('http://www.w3.org/2000/svg','circle'); el.id='_self_core'; svg.appendChild(el); }
+    el.setAttribute('cx', cx); el.setAttribute('cy', cy);
+    el.setAttribute('r', 8 + p * 5); el.setAttribute('fill','#fff'); el.setAttribute('opacity', 0.04 + p * 0.08);
+  }
+  return { draw };
+})();
+
+// SELF_ESTEEM_FIELD — expanding/contracting aura
+const SELF_ESTEEM_FIELD = (() => {
+  let _last = 0;
+  function draw(ts) {
+    if (ts - _last < 65) return; _last = ts;
+    const canvas = document.getElementById('mainCanvas'); if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    const cx = window.innerWidth / 2, cy = window.innerHeight * 0.5;
+    const level = (Math.sin(ts * 0.0004) + 1) / 2;
+    ctx.save(); ctx.globalAlpha = level * 0.05;
+    const grd = ctx.createRadialGradient(cx, cy, 0, cx, cy, 100 + level * 60);
+    grd.addColorStop(0, '#4af'); grd.addColorStop(1, 'transparent');
+    ctx.fillStyle = grd; ctx.beginPath(); ctx.arc(cx, cy, 160 + level * 60, 0, Math.PI * 2); ctx.fill();
+    ctx.restore();
+  }
+  return { draw };
+})();
+
+// SELF_EFFICACY_PULSE — upward rising sparks from center
+const SELF_EFFICACY_PULSE = (() => {
+  let _last = 0, _sparks = [];
+  function draw(ts) {
+    if (ts - _last < 40) return; _last = ts;
+    const svg = document.getElementById('lightLayer'); if (!svg) return;
+    const cx = window.innerWidth / 2, cy = window.innerHeight * 0.5;
+    if (_sparks.length < 6 && Math.random() < 0.12) {
+      const el = document.createElementNS('http://www.w3.org/2000/svg','circle');
+      el.setAttribute('r','2'); el.setAttribute('fill','#4f8'); el.setAttribute('opacity','0.35');
+      svg.appendChild(el); _sparks.push({ x: cx + (Math.random()-0.5)*20, born: ts, el });
+    }
+    _sparks = _sparks.filter(s => {
+      const age = ts - s.born;
+      s.el.setAttribute('cx', s.x); s.el.setAttribute('cy', cy - age * 0.05);
+      s.el.setAttribute('opacity', Math.max(0, 0.35 - age * 0.0005));
+      if (age > 700) { if (s.el.parentNode) s.el.parentNode.removeChild(s.el); return false; }
+      return true;
+    });
+  }
+  return { draw };
+})();
+
+// IDENTITY_COHERENCE — stable lattice pattern overlay
+const IDENTITY_COHERENCE = (() => {
+  let _last = 0;
+  function draw(ts) {
+    if (ts - _last < 120) return; _last = ts;
+    const canvas = document.getElementById('mainCanvas'); if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    const cx = window.innerWidth / 2, cy = window.innerHeight * 0.5;
+    const coherence = (Math.sin(ts * 0.0003) + 1) / 2;
+    ctx.save(); ctx.globalAlpha = coherence * 0.05;
+    ctx.strokeStyle = '#fff'; ctx.lineWidth = 0.5;
+    for (let i = -2; i <= 2; i++) {
+      ctx.beginPath(); ctx.moveTo(cx + i * 15, cy - 40); ctx.lineTo(cx + i * 15, cy + 40); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(cx - 40, cy + i * 15); ctx.lineTo(cx + 40, cy + i * 15); ctx.stroke();
+    }
+    ctx.restore();
+  }
+  return { draw };
+})();
+
+// ROLE_MULTIPLICITY — orbiting role satellites
+const ROLE_MULTIPLICITY = (() => {
+  let _last = 0, _roles = ['parent','worker','friend','partner','self','learner'];
+  function draw(ts) {
+    if (ts - _last < 60) return; _last = ts;
+    const svg = document.getElementById('lightLayer'); if (!svg) return;
+    const cx = window.innerWidth / 2, cy = window.innerHeight * 0.5;
+    _roles.forEach((r, i) => {
+      const angle = (i / _roles.length) * Math.PI * 2 + ts * 0.0004;
+      const x = cx + Math.cos(angle) * 70, y = cy + Math.sin(angle) * 70;
+      let el = document.getElementById('_role_' + i);
+      if (!el) { el = document.createElementNS('http://www.w3.org/2000/svg','circle'); el.id='_role_'+i; svg.appendChild(el); }
+      el.setAttribute('cx', x); el.setAttribute('cy', y); el.setAttribute('r','4');
+      el.setAttribute('fill','#a4f'); el.setAttribute('opacity','0.18');
+    });
+  }
+  return { draw };
+})();
+
+// MASK_LAYER — translucent face overlay persona
+const MASK_LAYER = (() => {
+  let _last = 0;
+  function draw(ts) {
+    if (ts - _last < 100) return; _last = ts;
+    const svg = document.getElementById('lightLayer'); if (!svg) return;
+    const cx = window.innerWidth / 2, cy = window.innerHeight * 0.14;
+    const opacity = (Math.sin(ts * 0.0005) + 1) / 2 * 0.15;
+    let el = document.getElementById('_mask_layer');
+    if (!el) { el = document.createElementNS('http://www.w3.org/2000/svg','ellipse'); el.id='_mask_layer'; svg.appendChild(el); }
+    el.setAttribute('cx', cx); el.setAttribute('cy', cy);
+    el.setAttribute('rx','22'); el.setAttribute('ry','28');
+    el.setAttribute('fill','#fff'); el.setAttribute('opacity', opacity.toFixed(3));
+  }
+  return { draw };
+})();
+
+// AUTHENTIC_SELF — inner radiance when mask fades
+const AUTHENTIC_SELF = (() => {
+  let _last = 0;
+  function draw(ts) {
+    if (ts - _last < 80) return; _last = ts;
+    const canvas = document.getElementById('mainCanvas'); if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    const cx = window.innerWidth / 2, cy = window.innerHeight * 0.5;
+    const p = (Math.cos(ts * 0.0004) + 1) / 2;
+    ctx.save(); ctx.globalAlpha = p * 0.07;
+    const grd = ctx.createRadialGradient(cx, cy, 0, cx, cy, 80);
+    grd.addColorStop(0, '#fff'); grd.addColorStop(1, 'transparent');
+    ctx.fillStyle = grd; ctx.beginPath(); ctx.arc(cx, cy, 80, 0, Math.PI * 2); ctx.fill();
+    ctx.restore();
+  }
+  return { draw };
+})();
+
+// EGO_DISSOLUTION — boundary fade at edges
+const EGO_DISSOLUTION = (() => {
+  let _last = 0;
+  function draw(ts) {
+    if (ts - _last < 90) return; _last = ts;
+    const canvas = document.getElementById('mainCanvas'); if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    const cx = window.innerWidth / 2, cy = window.innerHeight * 0.5;
+    const dissolve = (Math.sin(ts * 0.00025) + 1) / 2;
+    ctx.save(); ctx.globalAlpha = dissolve * 0.06;
+    ctx.strokeStyle = '#0ff'; ctx.lineWidth = 1;
+    for (let r = 80; r < 160; r += 20) {
+      ctx.globalAlpha = dissolve * 0.06 * (1 - (r - 80) / 80);
+      ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.stroke();
+    }
+    ctx.restore();
+  }
+  return { draw };
+})();
+
+// REBIRTH_IDENTITY — periodic spiral unfurl from center
+const REBIRTH_IDENTITY = (() => {
+  let _last = 0;
+  function draw(ts) {
+    if (ts - _last < 60) return; _last = ts;
+    const canvas = document.getElementById('mainCanvas'); if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    const cx = window.innerWidth / 2, cy = window.innerHeight * 0.5;
+    const cycle = (ts % 8000) / 8000;
+    ctx.save(); ctx.globalAlpha = Math.sin(cycle * Math.PI) * 0.08;
+    ctx.strokeStyle = '#f4a'; ctx.lineWidth = 1;
+    ctx.beginPath();
+    for (let a = 0; a < cycle * Math.PI * 6; a += 0.1) {
+      const r = a * 6; const x = cx + Math.cos(a) * r; const y = cy + Math.sin(a) * r;
+      if (a === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+    }
+    ctx.stroke(); ctx.restore();
+  }
+  return { draw };
+})();
+
+// ATTACHMENT_SECURE — warm steady glow at chest
+const ATTACHMENT_SECURE = (() => {
+  let _last = 0;
+  function draw(ts) {
+    if (ts - _last < 80) return; _last = ts;
+    const canvas = document.getElementById('mainCanvas'); if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    const cx = window.innerWidth / 2, cy = window.innerHeight * 0.42;
+    const p = (Math.sin(ts * 0.0004) + 1) / 2;
+    ctx.save(); ctx.globalAlpha = 0.05 + p * 0.05;
+    const grd = ctx.createRadialGradient(cx, cy, 0, cx, cy, 50);
+    grd.addColorStop(0, '#f4a'); grd.addColorStop(1, 'transparent');
+    ctx.fillStyle = grd; ctx.beginPath(); ctx.arc(cx, cy, 50, 0, Math.PI * 2); ctx.fill();
+    ctx.restore();
+  }
+  return { draw };
+})();
+
+// ATTACHMENT_ANXIOUS — flickering uncertain chest pulse
+const ATTACHMENT_ANXIOUS = (() => {
+  let _last = 0;
+  function draw(ts) {
+    if (ts - _last < 45) return; _last = ts;
+    const svg = document.getElementById('lightLayer'); if (!svg) return;
+    const cx = window.innerWidth / 2 + 30, cy = window.innerHeight * 0.41;
+    const flicker = Math.random() < 0.3 ? Math.random() * 0.2 : 0;
+    let el = document.getElementById('_att_anx');
+    if (!el) { el = document.createElementNS('http://www.w3.org/2000/svg','circle'); el.id='_att_anx'; svg.appendChild(el); }
+    el.setAttribute('cx', cx); el.setAttribute('cy', cy); el.setAttribute('r', 6 + flicker * 10);
+    el.setAttribute('fill','#fa4'); el.setAttribute('opacity', flicker.toFixed(3));
+  }
+  return { draw };
+})();
+
+// ATTACHMENT_AVOIDANT — retreating ring away from center
+const ATTACHMENT_AVOIDANT = (() => {
+  let _last = 0;
+  function draw(ts) {
+    if (ts - _last < 70) return; _last = ts;
+    const svg = document.getElementById('lightLayer'); if (!svg) return;
+    const cx = window.innerWidth / 2 - 30, cy = window.innerHeight * 0.41;
+    const p = (Math.sin(ts * 0.0006) + 1) / 2;
+    let el = document.getElementById('_att_avo');
+    if (!el) { el = document.createElementNS('http://www.w3.org/2000/svg','circle'); el.id='_att_avo'; svg.appendChild(el); }
+    el.setAttribute('cx', cx); el.setAttribute('cy', cy);
+    el.setAttribute('r', 10 + p * 15); el.setAttribute('fill','none');
+    el.setAttribute('stroke','#4af'); el.setAttribute('stroke-width','1');
+    el.setAttribute('opacity', 0.04 + (1 - p) * 0.12);
+  }
+  return { draw };
+})();
+
+// LOVE_BIOCHEMISTRY — oxytocin+dopamine blend shimmer
+const LOVE_BIOCHEMISTRY = (() => {
+  let _last = 0;
+  function draw(ts) {
+    if (ts - _last < 70) return; _last = ts;
+    const canvas = document.getElementById('mainCanvas'); if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    const cx = window.innerWidth / 2, cy = window.innerHeight * 0.4;
+    const p = (Math.sin(ts * 0.0005) + 1) / 2;
+    ctx.save(); ctx.globalAlpha = p * 0.06;
+    const grd = ctx.createRadialGradient(cx, cy, 0, cx, cy, 60);
+    grd.addColorStop(0, '#f4a'); grd.addColorStop(0.5, '#fa4'); grd.addColorStop(1, 'transparent');
+    ctx.fillStyle = grd; ctx.beginPath(); ctx.arc(cx, cy, 60, 0, Math.PI * 2); ctx.fill();
+    ctx.restore();
+  }
+  return { draw };
+})();
+
+// PAIR_BOND_FORMATION — two orbiting nodes converging
+const PAIR_BOND_FORMATION = (() => {
+  let _last = 0;
+  function draw(ts) {
+    if (ts - _last < 55) return; _last = ts;
+    const svg = document.getElementById('lightLayer'); if (!svg) return;
+    const cx = window.innerWidth / 2, cy = window.innerHeight * 0.43;
+    const bond = (Math.sin(ts * 0.0003) + 1) / 2;
+    const dist = 40 - bond * 25;
+    for (let i = 0; i < 2; i++) {
+      let el = document.getElementById('_bond_node' + i);
+      if (!el) { el = document.createElementNS('http://www.w3.org/2000/svg','circle'); el.id='_bond_node'+i; svg.appendChild(el); }
+      el.setAttribute('cx', cx + (i === 0 ? -dist : dist)); el.setAttribute('cy', cy);
+      el.setAttribute('r','4'); el.setAttribute('fill','#f4a'); el.setAttribute('opacity', 0.1 + bond * 0.15);
+    }
+  }
+  return { draw };
+})();
+
+// SEPARATION_DISTRESS — red fragmenting particles drifting apart
+const SEPARATION_DISTRESS = (() => {
+  let _last = 0;
+  function draw(ts) {
+    if (ts - _last < 80) return; _last = ts;
+    const svg = document.getElementById('lightLayer'); if (!svg) return;
+    const cx = window.innerWidth / 2, cy = window.innerHeight * 0.42;
+    const distress = (Math.sin(ts * 0.0002 + 2) + 1) / 2;
+    if (distress > 0.7 && Math.random() < 0.2) {
+      const el = document.createElementNS('http://www.w3.org/2000/svg','circle');
+      const angle = Math.random() * Math.PI * 2;
+      el.setAttribute('cx', cx + Math.cos(angle) * 12); el.setAttribute('cy', cy + Math.sin(angle) * 12);
+      el.setAttribute('r','2'); el.setAttribute('fill','#f44'); el.setAttribute('opacity','0.28');
+      svg.appendChild(el);
+      setTimeout(() => { if (el.parentNode) el.parentNode.removeChild(el); }, 800);
+    }
+  }
+  return { draw };
+})();
+
+// REUNION_JOY — burst of warm particles converging inward
+const REUNION_JOY = (() => {
+  let _last = 0;
+  function draw(ts) {
+    if (ts - _last < 50) return; _last = ts;
+    const svg = document.getElementById('lightLayer'); if (!svg) return;
+    const cx = window.innerWidth / 2, cy = window.innerHeight * 0.41;
+    const joy = (Math.sin(ts * 0.0004 + 4) + 1) / 2;
+    if (joy > 0.8 && Math.random() < 0.18) {
+      const angle = Math.random() * Math.PI * 2, dist = 40 + Math.random() * 20;
+      const el = document.createElementNS('http://www.w3.org/2000/svg','circle');
+      el.setAttribute('cx', cx + Math.cos(angle) * dist); el.setAttribute('cy', cy + Math.sin(angle) * dist);
+      el.setAttribute('r','2'); el.setAttribute('fill','#fa4'); el.setAttribute('opacity','0.3');
+      svg.appendChild(el); const _el = el;
+      const _cx = cx, _cy = cy;
+      let start = ts;
+      const anim = setInterval(() => {
+        const t = Math.min((performance.now() - start) / 600, 1);
+        _el.setAttribute('cx', parseFloat(_el.getAttribute('cx')) + (_cx - parseFloat(_el.getAttribute('cx'))) * 0.1);
+        _el.setAttribute('cy', parseFloat(_el.getAttribute('cy')) + (_cy - parseFloat(_el.getAttribute('cy'))) * 0.1);
+        _el.setAttribute('opacity', 0.3 * (1 - t));
+        if (t >= 1) { clearInterval(anim); if (_el.parentNode) _el.parentNode.removeChild(_el); }
+      }, 16);
+    }
+  }
+  return { draw };
+})();
+
+// LONELINESS_ACHE — cold blue hollow at chest center
+const LONELINESS_ACHE = (() => {
+  let _last = 0;
+  function draw(ts) {
+    if (ts - _last < 90) return; _last = ts;
+    const svg = document.getElementById('lightLayer'); if (!svg) return;
+    const cx = window.innerWidth / 2, cy = window.innerHeight * 0.42;
+    const ache = (Math.sin(ts * 0.00025 + 3) + 1) / 2;
+    let el = document.getElementById('_loneliness');
+    if (!el) { el = document.createElementNS('http://www.w3.org/2000/svg','circle'); el.id='_loneliness'; svg.appendChild(el); }
+    el.setAttribute('cx', cx); el.setAttribute('cy', cy);
+    el.setAttribute('r', 8 + ache * 8); el.setAttribute('fill','none');
+    el.setAttribute('stroke','#4af'); el.setAttribute('stroke-width','1.5');
+    el.setAttribute('opacity', ache * 0.15);
+  }
+  return { draw };
+})();
+
+// COMPASSION_FATIGUE — dimming warmth wave
+const COMPASSION_FATIGUE = (() => {
+  let _last = 0;
+  function draw(ts) {
+    if (ts - _last < 100) return; _last = ts;
+    const canvas = document.getElementById('mainCanvas'); if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    const cx = window.innerWidth / 2, cy = window.innerHeight * 0.42;
+    const fatigue = (Math.sin(ts * 0.00015) + 1) / 2;
+    ctx.save(); ctx.globalAlpha = fatigue * 0.04;
+    ctx.fillStyle = '#888';
+    ctx.beginPath(); ctx.arc(cx, cy, 70, 0, Math.PI * 2); ctx.fill();
+    ctx.restore();
+  }
+  return { draw };
+})();
+
+// LOVING_KINDNESS_FIELD — expanding pastel rings outward
+const LOVING_KINDNESS_FIELD = (() => {
+  let _last = 0, _rings = [];
+  function draw(ts) {
+    if (ts - _last < 30) return; _last = ts;
+    const svg = document.getElementById('lightLayer'); if (!svg) return;
+    const cx = window.innerWidth / 2, cy = window.innerHeight * 0.42;
+    if (Math.floor(ts / 2500) !== Math.floor((ts - 30) / 2500)) {
+      const el = document.createElementNS('http://www.w3.org/2000/svg','circle');
+      el._born = ts; el.setAttribute('cx', cx); el.setAttribute('cy', cy);
+      el.setAttribute('fill','none'); el.setAttribute('stroke','#f4a'); el.setAttribute('stroke-width','1.5');
+      svg.appendChild(el); _rings.push(el);
+    }
+    _rings = _rings.filter(el => {
+      const age = ts - el._born, r = age * 0.04;
+      if (age > 2800) { if (el.parentNode) el.parentNode.removeChild(el); return false; }
+      el.setAttribute('r', r); el.setAttribute('opacity', Math.max(0, 0.2 - age * 0.00007));
+      return true;
+    });
+  }
+  return { draw };
+})();
+
+// ═══════════════════════════════════════════════════════════════
+// BATCH 19 LOOP
+// ═══════════════════════════════════════════════════════════════
+(function(){
+  const _batch19=['CORONARY_FLOW','CARDIAC_OUTPUT','STROKE_VOLUME','EJECTION_FRACTION','PRELOAD_SIGNAL',
+    'AFTERLOAD_RESISTANCE','BARORECEPTOR_REFLEX','RENIN_ANGIOTENSIN','NATRIURETIC_PULSE','ENDOTHELIAL_SHEAR',
+    'TIDAL_BREATH','RESIDUAL_VOLUME','DEAD_SPACE_DRIFT','OXYGEN_CASCADE','CARBON_DIOXIDE_WASH',
+    'BOHR_SHIFT','HALDANE_EFFECT','HYPOXIC_DRIVE','RESPIRATORY_CENTER_RHYTHM','SURFACTANT_LAYER',
+    'NOREPINEPHRINE_SWEEP','ACETYLCHOLINE_GATE','GABA_BRAKE','GLUTAMATE_DRIVE','DOPAMINE_PATHWAY',
+    'SEROTONIN_MODULATION','HISTAMINE_ALERT','ADENOSINE_BRAKE','NITRIC_OXIDE_SIGNAL','ENDOCANNABINOID_TIDE',
+    'NARRATIVE_IDENTITY','SELF_CONCEPT_CORE','SELF_ESTEEM_FIELD','SELF_EFFICACY_PULSE','IDENTITY_COHERENCE',
+    'ROLE_MULTIPLICITY','MASK_LAYER','AUTHENTIC_SELF','EGO_DISSOLUTION','REBIRTH_IDENTITY',
+    'ATTACHMENT_SECURE','ATTACHMENT_ANXIOUS','ATTACHMENT_AVOIDANT','LOVE_BIOCHEMISTRY','PAIR_BOND_FORMATION',
+    'SEPARATION_DISTRESS','REUNION_JOY','LONELINESS_ACHE','COMPASSION_FATIGUE','LOVING_KINDNESS_FIELD'];
+  let _lt=0;
+  function loop(ts){if(ts-_lt>14){_lt=ts;_batch19.forEach(n=>{const s=window[n];if(s&&typeof s.draw==='function')s.draw(ts);});}requestAnimationFrame(loop);}
+  requestAnimationFrame(loop);
+})();
+
+
 <!-- ═══════════════════════════════════════════════════════════════
      LIVE RELOAD — polls /version every 8s, reloads if file changed
      Smooth: waits for page to be idle (no active typing/talking)
