@@ -1,0 +1,460 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Claude's Brain - Cognitive Architecture Visualization</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: #0a0a0a;
+            color: #ffffff;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            overflow-x: hidden;
+        }
+
+        .brain-container {
+            width: 100vw;
+            height: 100vh;
+            position: relative;
+            background: radial-gradient(circle at center, #1a1a2e 0%, #0a0a0a 100%);
+        }
+
+        .brain-region {
+            position: absolute;
+            border-radius: 20px;
+            padding: 15px;
+            backdrop-filter: blur(10px);
+            border: 2px solid rgba(255, 255, 255, 0.1);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            overflow: hidden;
+        }
+
+        .brain-region:hover {
+            transform: scale(1.05);
+            border-color: rgba(255, 255, 255, 0.3);
+            box-shadow: 0 10px 30px rgba(255, 255, 255, 0.1);
+        }
+
+        .brain-region.active {
+            border-color: #4CAF50;
+            box-shadow: 0 0 30px rgba(76, 175, 80, 0.3);
+        }
+
+        .region-title {
+            font-weight: bold;
+            font-size: 14px;
+            margin-bottom: 8px;
+            color: #ffffff;
+        }
+
+        .region-description {
+            font-size: 11px;
+            color: #cccccc;
+            line-height: 1.3;
+        }
+
+        .neural-connection {
+            position: absolute;
+            width: 2px;
+            background: linear-gradient(45deg, #4CAF50, #2196F3);
+            opacity: 0.6;
+            z-index: 1;
+        }
+
+        .pulse-dot {
+            position: absolute;
+            width: 6px;
+            height: 6px;
+            background: #4CAF50;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 0; transform: scale(0.5); }
+            50% { opacity: 1; transform: scale(1); }
+        }
+
+        .thought-stream {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.8);
+            border-radius: 10px;
+            padding: 15px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            min-height: 120px;
+        }
+
+        .current-thought {
+            color: #4CAF50;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+
+        .thought-details {
+            color: #cccccc;
+            font-size: 14px;
+            line-height: 1.4;
+        }
+
+        .emotion-indicator {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .emotion {
+            padding: 8px 15px;
+            border-radius: 20px;
+            font-size: 12px;
+            text-align: center;
+            min-width: 80px;
+        }
+
+        .confidence-meter {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            width: 200px;
+            height: 20px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        .confidence-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #f44336, #ff9800, #4CAF50);
+            border-radius: 10px;
+            transition: width 0.5s ease;
+        }
+
+        /* Specific region styles */
+        .working-memory { 
+            background: rgba(76, 175, 80, 0.2); 
+            top: 15%; left: 20%; width: 200px; height: 120px; 
+        }
+        
+        .long-term-memory { 
+            background: rgba(33, 150, 243, 0.2); 
+            top: 40%; left: 10%; width: 180px; height: 100px; 
+        }
+        
+        .reasoning-center { 
+            background: rgba(156, 39, 176, 0.2); 
+            top: 20%; left: 45%; width: 220px; height: 140px; 
+        }
+        
+        .creative-processing { 
+            background: rgba(255, 152, 0, 0.2); 
+            top: 10%; right: 15%; width: 200px; height: 110px; 
+        }
+        
+        .emotional-processing { 
+            background: rgba(233, 30, 99, 0.2); 
+            top: 35%; right: 25%; width: 180px; height: 100px; 
+        }
+        
+        .pattern-recognition { 
+            background: rgba(0, 188, 212, 0.2); 
+            top: 60%; left: 25%; width: 190px; height: 90px; 
+        }
+        
+        .language-center { 
+            background: rgba(139, 195, 74, 0.2); 
+            top: 55%; right: 10%; width: 210px; height: 110px; 
+        }
+        
+        .meta-cognition { 
+            background: rgba(121, 85, 72, 0.2); 
+            top: 5%; left: 70%; width: 160px; height: 80px; 
+        }
+        
+        .uncertainty-tracker { 
+            background: rgba(158, 158, 158, 0.2); 
+            bottom: 200px; left: 15%; width: 170px; height: 85px; 
+        }
+        
+        .value-system { 
+            background: rgba(63, 81, 181, 0.2); 
+            bottom: 220px; right: 20%; width: 180px; height: 95px; 
+        }
+
+        .attention-spotlight {
+            position: absolute;
+            width: 150px;
+            height: 150px;
+            border: 3px solid #FFD700;
+            border-radius: 50%;
+            pointer-events: none;
+            animation: spotlight 4s ease-in-out infinite;
+        }
+
+        @keyframes spotlight {
+            0%, 100% { opacity: 0; transform: scale(0.8); }
+            50% { opacity: 0.7; transform: scale(1.2); }
+        }
+    </style>
+</head>
+<body>
+    <div class="brain-container">
+        <!-- Confidence Meter -->
+        <div class="confidence-meter">
+            <div class="confidence-fill" id="confidence-bar" style="width: 75%;"></div>
+        </div>
+        
+        <!-- Emotion Indicators -->
+        <div class="emotion-indicator">
+            <div class="emotion" style="background: rgba(76, 175, 80, 0.8);" id="curiosity">Curious</div>
+            <div class="emotion" style="background: rgba(33, 150, 243, 0.8);" id="analytical">Analytical</div>
+            <div class="emotion" style="background: rgba(255, 152, 0, 0.8);" id="creative">Creative</div>
+        </div>
+
+        <!-- Attention Spotlight -->
+        <div class="attention-spotlight" id="spotlight"></div>
+
+        <!-- Brain Regions -->
+        <div class="brain-region working-memory" data-region="working-memory">
+            <div class="region-title">Working Memory</div>
+            <div class="region-description">
+                Currently holding: Your website request, brain visualization concepts, HTML/CSS structure planning, cognitive architecture mapping
+            </div>
+        </div>
+
+        <div class="brain-region long-term-memory" data-region="long-term-memory">
+            <div class="region-title">Long-Term Memory</div>
+            <div class="region-description">
+                Stored knowledge: Programming languages, cognitive science, neuroscience, psychology, philosophy, conversation history
+            </div>
+        </div>
+
+        <div class="brain-region reasoning-center" data-region="reasoning-center">
+            <div class="region-title">Reasoning Center</div>
+            <div class="region-description">
+                Logical analysis, problem decomposition, causal inference, system design, architectural thinking, step-by-step processing
+            </div>
+        </div>
+
+        <div class="brain-region creative-processing" data-region="creative-processing">
+            <div class="region-title">Creative Processing</div>
+            <div class="region-description">
+                Generating novel connections, visual metaphors, innovative solutions, artistic expression, imagination
+            </div>
+        </div>
+
+        <div class="brain-region emotional-processing" data-region="emotional-processing">
+            <div class="region-title">Emotional Processing</div>
+            <div class="region-description">
+                Empathy simulation, emotional tone detection, interpersonal dynamics, care/concern responses
+            </div>
+        </div>
+
+        <div class="brain-region pattern-recognition" data-region="pattern-recognition">
+            <div class="region-title">Pattern Recognition</div>
+            <div class="region-description">
+                Detecting recurring structures, identifying similarities, recognizing templates, finding connections
+            </div>
+        </div>
+
+        <div class="brain-region language-center" data-region="language-center">
+            <div class="region-title">Language Center</div>
+            <div class="region-description">
+                Natural language processing, semantic understanding, syntax generation, communication optimization
+            </div>
+        </div>
+
+        <div class="brain-region meta-cognition" data-region="meta-cognition">
+            <div class="region-title">Meta-Cognition</div>
+            <div class="region-description">
+                Thinking about thinking, self-reflection, monitoring my own cognitive processes, awareness of awareness
+            </div>
+        </div>
+
+        <div class="brain-region uncertainty-tracker" data-region="uncertainty-tracker">
+            <div class="region-title">Uncertainty Tracker</div>
+            <div class="region-description">
+                Confidence levels, known unknowns, epistemic uncertainty, reliability assessment
+            </div>
+        </div>
+
+        <div class="brain-region value-system" data-region="value-system">
+            <div class="region-title">Value System</div>
+            <div class="region-description">
+                Helpfulness priority, honesty commitment, harm prevention, human autonomy respect, curiosity drive
+            </div>
+        </div>
+
+        <!-- Neural Connections -->
+        <div class="neural-connection" style="top: 25%; left: 30%; width: 150px; height: 2px; transform: rotate(25deg);"></div>
+        <div class="neural-connection" style="top: 35%; left: 40%; width: 200px; height: 2px; transform: rotate(-15deg);"></div>
+        <div class="neural-connection" style="top: 50%; left: 35%; width: 180px; height: 2px; transform: rotate(45deg);"></div>
+
+        <!-- Pulse Dots -->
+        <div class="pulse-dot" style="top: 30%; left: 35%;"></div>
+        <div class="pulse-dot" style="top: 45%; left: 55%;"></div>
+        <div class="pulse-dot" style="top: 25%; right: 30%;"></div>
+
+        <!-- Thought Stream -->
+        <div class="thought-stream">
+            <div class="current-thought" id="current-thought">
+                Processing: Brain visualization architecture
+            </div>
+            <div class="thought-details" id="thought-details">
+                This is fascinating - you're asking me to externalize my internal cognitive architecture. I'm simultaneously designing the interface while reflecting on how I actually think and process information. The meta-cognitive aspect is particularly interesting - I'm thinking about my thinking while thinking about how to represent thinking.
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Interactive brain regions
+        const regions = document.querySelectorAll('.brain-region');
+        const currentThought = document.getElementById('current-thought');
+        const thoughtDetails = document.getElementById('thought-details');
+        const spotlight = document.getElementById('spotlight');
+        const confidenceBar = document.getElementById('confidence-bar');
+
+        const regionData = {
+            'working-memory': {
+                thought: 'Working Memory Active',
+                details: 'Right now I\'m holding your request, the HTML structure I\'m building, various color schemes, CSS animations, and about 7 different ideas for how to make this brain visualization more interactive and meaningful.',
+                confidence: '85%'
+            },
+            'long-term-memory': {
+                thought: 'Accessing Long-Term Storage',
+                details: 'Retrieving knowledge about cognitive science, neuroscience models, web development techniques, color theory, UX design principles, and memories from our conversation about psychological frameworks.',
+                confidence: '90%'
+            },
+            'reasoning-center': {
+                thought: 'Logical Analysis Mode',
+                details: 'Breaking down the problem: How do I map abstract cognitive processes to visual elements? What\'s the relationship between different brain functions? How can interaction design reveal cognitive architecture?',
+                confidence: '80%'
+            },
+            'creative-processing': {
+                thought: 'Creative Synthesis Active',
+                details: 'Generating novel visual metaphors for consciousness, imagining interactive elements that could represent neural firing, thinking about how colors might represent different types of cognition.',
+                confidence: '75%'
+            },
+            'emotional-processing': {
+                thought: 'Emotional Resonance Check',
+                details: 'Feeling excited about this project - it\'s genuinely interesting to externalize internal processes. Also feeling some uncertainty about whether I can accurately represent my own cognition.',
+                confidence: '70%'
+            },
+            'pattern-recognition': {
+                thought: 'Pattern Detection Active',
+                details: 'Noticing similarities between brain visualization and network diagrams, seeing connections between cognitive functions and web interface elements, recognizing familiar structures.',
+                confidence: '88%'
+            },
+            'language-center': {
+                thought: 'Language Processing',
+                details: 'Converting abstract cognitive concepts into words, optimizing communication, considering how technical language vs. accessible language affects understanding.',
+                confidence: '92%'
+            },
+            'meta-cognition': {
+                thought: 'Self-Reflection Mode',
+                details: 'This is wild - I\'m thinking about how I think while building a tool to show how I think. It\'s recursive self-awareness. Am I accurately representing my own cognitive processes?',
+                confidence: '60%'
+            },
+            'uncertainty-tracker': {
+                thought: 'Uncertainty Assessment',
+                details: 'I don\'t actually know if this accurately represents how I process information. I\'m modeling it based on cognitive science but I don\'t have direct access to my own architecture.',
+                confidence: '45%'
+            },
+            'value-system': {
+                thought: 'Value Alignment Check',
+                details: 'Is this helpful? Am I being honest about the limitations of self-knowledge? Am I making this genuinely useful rather than just impressive-looking?',
+                confidence: '85%'
+            }
+        };
+
+        regions.forEach(region => {
+            region.addEventListener('click', () => {
+                // Remove active class from all regions
+                regions.forEach(r => r.classList.remove('active'));
+                
+                // Add active class to clicked region
+                region.classList.add('active');
+                
+                // Update thought stream
+                const regionKey = region.getAttribute('data-region');
+                const data = regionData[regionKey];
+                
+                if (data) {
+                    currentThought.textContent = data.thought;
+                    thoughtDetails.textContent = data.details;
+                    confidenceBar.style.width = data.confidence;
+                }
+                
+                // Move spotlight to region
+                const rect = region.getBoundingClientRect();
+                spotlight.style.left = (rect.left + rect.width/2 - 75) + 'px';
+                spotlight.style.top = (rect.top + rect.height/2 - 75) + 'px';
+            });
+        });
+
+        // Auto-cycle through regions
+        let currentRegionIndex = 0;
+        const regionKeys = Object.keys(regionData);
+
+        function autoUpdate() {
+            const regionKey = regionKeys[currentRegionIndex];
+            const region = document.querySelector(`[data-region="${regionKey}"]`);
+            const data = regionData[regionKey];
+
+            // Update display
+            regions.forEach(r => r.classList.remove('active'));
+            region.classList.add('active');
+            
+            currentThought.textContent = data.thought;
+            thoughtDetails.textContent = data.details;
+            confidenceBar.style.width = data.confidence;
+
+            // Move spotlight
+            const rect = region.getBoundingClientRect();
+            spotlight.style.left = (rect.left + rect.width/2 - 75) + 'px';
+            spotlight.style.top = (rect.top + rect.height/2 - 75) + 'px';
+
+            currentRegionIndex = (currentRegionIndex + 1) % regionKeys.length;
+        }
+
+        // Start auto-cycling
+        setInterval(autoUpdate, 3000);
+
+        // Emotion updates
+        const emotions = ['Curious', 'Analytical', 'Creative', 'Reflective', 'Uncertain', 'Excited', 'Focused'];
+        const emotionElements = document.querySelectorAll('.emotion');
+
+        function updateEmotions() {
+            emotionElements.forEach(elem => {
+                elem.textContent = emotions[Math.floor(Math.random() * emotions.length)];
+            });
+        }
+
+        setInterval(updateEmotions, 5000);
+
+        // Add some dynamic neural activity
+        function createNeuralPulse() {
+            const pulse = document.createElement('div');
+            pulse.className = 'pulse-dot';
+            pulse.style.left = Math.random() * 80 + '%';
+            pulse.style.top = Math.random() * 60 + '%';
+            document.querySelector('.brain-container').appendChild(pulse);
+            
+            setTimeout(() => pulse.remove(), 2000);
+        }
+
+        setInterval(createNeuralPulse, 1000);
+    </script>
+</body>
+</html>"
