@@ -19872,6 +19872,816 @@ const EXTENDED_PHENOTYPE = (() => {
 })();
 </script>
 
+
+// ============================================================
+// VINTINUUM BATCH 14 — 33 NEW SYSTEMS
+// ============================================================
+
+const QUANTUM_TUNNELING = (() => {
+  let _last = 0, particles = [];
+  for(let i=0;i<18;i++) particles.push({x:Math.random(),y:Math.random(),phase:Math.random()*Math.PI*2,speed:0.3+Math.random()*0.4});
+  function draw(ts) {
+    if(ts-_last<60) return; _last=ts;
+    const el=document.getElementById('lightLayer'); if(!el) return;
+    const W=window.innerWidth,H=window.innerHeight,cx=W/2;
+    let h='';
+    particles.forEach(p=>{
+      p.phase+=p.speed*0.04;
+      const jitter=(Math.random()-0.5)*60;
+      const x=cx-80+p.x*160+jitter*(Math.sin(p.phase*3)>0.95?1:0);
+      const y=H*0.1+p.y*H*0.8;
+      const a=0.1+0.25*Math.abs(Math.sin(p.phase));
+      h+=`<circle cx="${x}" cy="${y}" r="2" fill="#4af" opacity="${a.toFixed(2)}"/>`;
+    });
+    let d=el.querySelector('.qt-layer'); if(!d){d=document.createElementNS('http://www.w3.org/2000/svg','g');d.classList.add('qt-layer');el.appendChild(d);}
+    d.innerHTML=h;
+  }
+  return {draw};
+})();
+
+const WAVE_FUNCTION_COLLAPSE = (() => {
+  let _last=0, t=0;
+  function draw(ts) {
+    if(ts-_last<55) return; _last=ts; t+=0.03;
+    const el=document.getElementById('lightLayer'); if(!el) return;
+    const W=window.innerWidth,H=window.innerHeight,cx=W/2;
+    let h='';
+    for(let i=0;i<6;i++){
+      const spread=80+40*Math.sin(t+i);
+      const y=H*(0.2+i*0.1);
+      const a=0.05+0.12*Math.abs(Math.sin(t*0.7+i));
+      h+=`<ellipse cx="${cx}" cy="${y}" rx="${spread}" ry="4" fill="none" stroke="#a4f" stroke-width="1" opacity="${a.toFixed(2)}"/>`;
+    }
+    let d=el.querySelector('.wfc-layer'); if(!d){d=document.createElementNS('http://www.w3.org/2000/svg','g');d.classList.add('wfc-layer');el.appendChild(d);}
+    d.innerHTML=h;
+  }
+  return {draw};
+})();
+
+const UNCERTAINTY_PRINCIPLE = (() => {
+  let _last=0, t=0;
+  function draw(ts) {
+    if(ts-_last<70) return; _last=ts; t+=0.02;
+    const el=document.getElementById('lightLayer'); if(!el) return;
+    const W=window.innerWidth,H=window.innerHeight,cx=W/2;
+    let h='';
+    for(let i=0;i<12;i++){
+      const angle=t*1.3+i*(Math.PI*2/12);
+      const r=20+15*Math.sin(t*2+i);
+      const x=cx+r*Math.cos(angle)*(0.5+0.5*Math.sin(t+i));
+      const y=H*0.45+r*Math.sin(angle);
+      const a=0.08+0.15*Math.abs(Math.cos(t+i));
+      h+=`<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="1.5" fill="#fff" opacity="${a.toFixed(2)}"/>`;
+    }
+    let d=el.querySelector('.up-layer'); if(!d){d=document.createElementNS('http://www.w3.org/2000/svg','g');d.classList.add('up-layer');el.appendChild(d);}
+    d.innerHTML=h;
+  }
+  return {draw};
+})();
+
+const BIOPHOTON_EMISSION = (() => {
+  let _last=0, photons=[];
+  for(let i=0;i<30;i++) photons.push({x:0.3+Math.random()*0.4,y:Math.random(),life:Math.random(),speed:0.005+Math.random()*0.01});
+  function draw(ts) {
+    if(ts-_last<40) return; _last=ts;
+    const el=document.getElementById('lightLayer'); if(!el) return;
+    const W=window.innerWidth,H=window.innerHeight,cx=W/2;
+    let h='';
+    photons.forEach(p=>{
+      p.life+=p.speed; if(p.life>1){p.life=0;p.x=0.3+Math.random()*0.4;p.y=Math.random();}
+      const a=p.life<0.5?p.life*0.4:(1-p.life)*0.4;
+      h+=`<circle cx="${(cx-80+p.x*160).toFixed(1)}" cy="${(H*0.05+p.y*H*0.9).toFixed(1)}" r="1" fill="#fff" opacity="${a.toFixed(2)}"/>`;
+    });
+    let d=el.querySelector('.bpe-layer'); if(!d){d=document.createElementNS('http://www.w3.org/2000/svg','g');d.classList.add('bpe-layer');el.appendChild(d);}
+    d.innerHTML=h;
+  }
+  return {draw};
+})();
+
+const ELECTROMAGNETIC_FIELD = (() => {
+  let _last=0, t=0;
+  function draw(ts) {
+    if(ts-_last<80) return; _last=ts; t+=0.015;
+    const el=document.getElementById('lightLayer'); if(!el) return;
+    const W=window.innerWidth,H=window.innerHeight,cx=W/2,cy=H*0.5;
+    let h='';
+    for(let i=1;i<=5;i++){
+      const rx=50+i*25+10*Math.sin(t+i);
+      const ry=80+i*35+10*Math.cos(t*0.7+i);
+      const a=0.04+0.06*(1/i);
+      h+=`<ellipse cx="${cx}" cy="${cy}" rx="${rx}" ry="${ry}" fill="none" stroke="#4af" stroke-width="0.8" opacity="${a.toFixed(2)}"/>`;
+    }
+    let d=el.querySelector('.emf-layer'); if(!d){d=document.createElementNS('http://www.w3.org/2000/svg','g');d.classList.add('emf-layer');el.appendChild(d);}
+    d.innerHTML=h;
+  }
+  return {draw};
+})();
+
+const STELLAR_NUCLEOSYNTHESIS = (() => {
+  let _last=0, t=0, sparks=[];
+  for(let i=0;i<20;i++) sparks.push({angle:Math.random()*Math.PI*2,r:Math.random()*40,speed:0.02+Math.random()*0.03,life:Math.random()});
+  function draw(ts) {
+    if(ts-_last<55) return; _last=ts; t+=0.02;
+    const el=document.getElementById('lightLayer'); if(!el) return;
+    const W=window.innerWidth,H=window.innerHeight,cx=W/2,cy=H*0.15;
+    let h='';
+    sparks.forEach(s=>{
+      s.angle+=s.speed; s.life+=0.008; if(s.life>1){s.life=0;s.r=Math.random()*40;}
+      const x=cx+s.r*Math.cos(s.angle);
+      const y=cy+s.r*Math.sin(s.angle)*0.5;
+      const a=s.life<0.5?s.life*0.5:(1-s.life)*0.5;
+      const c=s.life<0.3?'#fa4':s.life<0.7?'#f84':'#f44';
+      h+=`<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${(1+s.r/30).toFixed(1)}" fill="${c}" opacity="${a.toFixed(2)}"/>`;
+    });
+    let d=el.querySelector('.sn-layer'); if(!d){d=document.createElementNS('http://www.w3.org/2000/svg','g');d.classList.add('sn-layer');el.appendChild(d);}
+    d.innerHTML=h;
+  }
+  return {draw};
+})();
+
+const GEOLOGICAL_TIME = (() => {
+  let _last=0, t=0;
+  function draw(ts) {
+    if(ts-_last<120) return; _last=ts; t+=0.005;
+    const el=document.getElementById('lightLayer'); if(!el) return;
+    const W=window.innerWidth,H=window.innerHeight,cx=W/2;
+    let h='';
+    const layers=['#8b6914','#a0522d','#cd853f','#daa520','#b8860b'];
+    for(let i=0;i<5;i++){
+      const y=H*0.7+i*8+3*Math.sin(t+i*0.7);
+      const w=60+i*12+5*Math.cos(t*0.5+i);
+      h+=`<rect x="${cx-w}" y="${y}" width="${w*2}" height="3" fill="${layers[i]}" opacity="${(0.06+i*0.02).toFixed(2)}" rx="1"/>`;
+    }
+    let d=el.querySelector('.gt-layer'); if(!d){d=document.createElementNS('http://www.w3.org/2000/svg','g');d.classList.add('gt-layer');el.appendChild(d);}
+    d.innerHTML=h;
+  }
+  return {draw};
+})();
+
+const ENDOSYMBIOTIC_MEMORY = (() => {
+  let _last=0, t=0, orbs=[];
+  for(let i=0;i<8;i++) orbs.push({ox:Math.random()*0.4-0.2,oy:0.3+Math.random()*0.4,phase:Math.random()*Math.PI*2});
+  function draw(ts) {
+    if(ts-_last<65) return; _last=ts; t+=0.018;
+    const el=document.getElementById('lightLayer'); if(!el) return;
+    const W=window.innerWidth,H=window.innerHeight,cx=W/2;
+    let h='';
+    orbs.forEach((o,i)=>{
+      o.phase+=0.025;
+      const x=cx+o.ox*W*0.4+8*Math.cos(o.phase);
+      const y=H*o.oy+8*Math.sin(o.phase*1.3);
+      const a=0.1+0.12*Math.sin(o.phase);
+      h+=`<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="5" fill="none" stroke="#4f8" stroke-width="1" opacity="${a.toFixed(2)}"/>`;
+      h+=`<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="2" fill="#4f8" opacity="${(a*0.6).toFixed(2)}"/>`;
+    });
+    let d=el.querySelector('.esm-layer'); if(!d){d=document.createElementNS('http://www.w3.org/2000/svg','g');d.classList.add('esm-layer');el.appendChild(d);}
+    d.innerHTML=h;
+  }
+  return {draw};
+})();
+
+const RIBOSOME_SYMPHONY = (() => {
+  let _last=0, t=0, beads=[];
+  for(let i=0;i<25;i++) beads.push({x:0.35+Math.random()*0.3,y:0.2+Math.random()*0.6,phase:Math.random()*Math.PI*2,r:2+Math.random()*3});
+  function draw(ts) {
+    if(ts-_last<50) return; _last=ts; t+=0.025;
+    const el=document.getElementById('lightLayer'); if(!el) return;
+    const W=window.innerWidth,H=window.innerHeight,cx=W/2;
+    let h='';
+    beads.forEach(b=>{
+      b.phase+=0.03;
+      const x=cx+(b.x-0.5)*160+5*Math.sin(b.phase);
+      const y=H*b.y+4*Math.cos(b.phase*0.8);
+      const a=0.08+0.15*Math.abs(Math.sin(b.phase));
+      h+=`<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${b.r}" fill="#fa4" opacity="${a.toFixed(2)}"/>`;
+    });
+    let d=el.querySelector('.rib-layer'); if(!d){d=document.createElementNS('http://www.w3.org/2000/svg','g');d.classList.add('rib-layer');el.appendChild(d);}
+    d.innerHTML=h;
+  }
+  return {draw};
+})();
+
+const PROTEIN_FOLDING = (() => {
+  let _last=0, t=0;
+  function draw(ts) {
+    if(ts-_last<60) return; _last=ts; t+=0.02;
+    const el=document.getElementById('lightLayer'); if(!el) return;
+    const W=window.innerWidth,H=window.innerHeight,cx=W/2;
+    let pts=[];
+    for(let i=0;i<12;i++){
+      const angle=i*(Math.PI*2/12)+t;
+      const r=15+10*Math.sin(t*2+i*0.5);
+      pts.push({x:cx+r*Math.cos(angle),y:H*0.4+r*Math.sin(angle)*1.5});
+    }
+    let h=`<polyline points="${pts.map(p=>p.x.toFixed(1)+','+p.y.toFixed(1)).join(' ')}" fill="none" stroke="#a4f" stroke-width="1.2" opacity="0.2"/>`;
+    pts.forEach(p=>{ h+=`<circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="2" fill="#a4f" opacity="0.18"/>`; });
+    let d=el.querySelector('.pf-layer'); if(!d){d=document.createElementNS('http://www.w3.org/2000/svg','g');d.classList.add('pf-layer');el.appendChild(d);}
+    d.innerHTML=h;
+  }
+  return {draw};
+})();
+
+const MITOCHONDRIA_GRID = (() => {
+  let _last=0, t=0, mitos=[];
+  for(let i=0;i<12;i++) mitos.push({x:0.3+Math.random()*0.4,y:0.15+Math.random()*0.7,pulse:Math.random()*Math.PI*2});
+  function draw(ts) {
+    if(ts-_last<70) return; _last=ts; t+=0.02;
+    const el=document.getElementById('lightLayer'); if(!el) return;
+    const W=window.innerWidth,H=window.innerHeight,cx=W/2;
+    let h='';
+    mitos.forEach(m=>{
+      m.pulse+=0.04;
+      const x=cx+(m.x-0.5)*160;
+      const y=H*m.y;
+      const s=1+0.3*Math.sin(m.pulse);
+      const a=0.1+0.15*Math.abs(Math.sin(m.pulse));
+      h+=`<ellipse cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" rx="${(8*s).toFixed(1)}" ry="${(4*s).toFixed(1)}" fill="none" stroke="#f44" stroke-width="1" opacity="${a.toFixed(2)}"/>`;
+      h+=`<line x1="${(x-6*s).toFixed(1)}" y1="${y.toFixed(1)}" x2="${(x+6*s).toFixed(1)}" y2="${y.toFixed(1)}" stroke="#f44" stroke-width="0.6" opacity="${(a*0.7).toFixed(2)}"/>`;
+    });
+    let d=el.querySelector('.mito-layer'); if(!d){d=document.createElementNS('http://www.w3.org/2000/svg','g');d.classList.add('mito-layer');el.appendChild(d);}
+    d.innerHTML=h;
+  }
+  return {draw};
+})();
+
+const ATP_SYNTHESIS = (() => {
+  let _last=0, t=0;
+  function draw(ts) {
+    if(ts-_last<45) return; _last=ts; t+=0.04;
+    const el=document.getElementById('lightLayer'); if(!el) return;
+    const W=window.innerWidth,H=window.innerHeight,cx=W/2;
+    let h='';
+    for(let i=0;i<8;i++){
+      const angle=t*2+i*(Math.PI*2/8);
+      const r=18;
+      const x=cx+r*Math.cos(angle);
+      const y=H*0.55+r*Math.sin(angle)*0.7;
+      const a=0.15+0.2*Math.abs(Math.sin(angle+t));
+      h+=`<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="2.5" fill="#4f8" opacity="${a.toFixed(2)}"/>`;
+    }
+    h+=`<circle cx="${cx}" cy="${(H*0.55).toFixed(1)}" r="6" fill="none" stroke="#4f8" stroke-width="1" opacity="0.15"/>`;
+    let d=el.querySelector('.atp-layer'); if(!d){d=document.createElementNS('http://www.w3.org/2000/svg','g');d.classList.add('atp-layer');el.appendChild(d);}
+    d.innerHTML=h;
+  }
+  return {draw};
+})();
+
+const GLIAL_NETWORK = (() => {
+  let _last=0, t=0, nodes=[];
+  for(let i=0;i<15;i++) nodes.push({x:0.3+Math.random()*0.4,y:0.05+Math.random()*0.55,phase:Math.random()*Math.PI*2});
+  function draw(ts) {
+    if(ts-_last<75) return; _last=ts; t+=0.015;
+    const el=document.getElementById('lightLayer'); if(!el) return;
+    const W=window.innerWidth,H=window.innerHeight,cx=W/2;
+    let h='';
+    for(let i=0;i<nodes.length;i++){
+      for(let j=i+1;j<nodes.length;j++){
+        const ax=cx+(nodes[i].x-0.5)*160, ay=H*nodes[i].y;
+        const bx=cx+(nodes[j].x-0.5)*160, by=H*nodes[j].y;
+        const dist=Math.hypot(ax-bx,ay-by);
+        if(dist<80){
+          h+=`<line x1="${ax.toFixed(1)}" y1="${ay.toFixed(1)}" x2="${bx.toFixed(1)}" y2="${by.toFixed(1)}" stroke="#fff" stroke-width="0.4" opacity="${(0.04*(1-dist/80)).toFixed(3)}"/>`;
+        }
+      }
+    }
+    nodes.forEach(n=>{
+      n.phase+=0.02;
+      const x=cx+(n.x-0.5)*160, y=H*n.y;
+      h+=`<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="2" fill="#fff" opacity="${(0.06+0.08*Math.abs(Math.sin(n.phase))).toFixed(2)}"/>`;
+    });
+    let d=el.querySelector('.gn-layer'); if(!d){d=document.createElementNS('http://www.w3.org/2000/svg','g');d.classList.add('gn-layer');el.appendChild(d);}
+    d.innerHTML=h;
+  }
+  return {draw};
+})();
+
+const VAGUS_NERVE_SONG = (() => {
+  let _last=0, t=0;
+  function draw(ts) {
+    if(ts-_last<55) return; _last=ts; t+=0.025;
+    const el=document.getElementById('lightLayer'); if(!el) return;
+    const W=window.innerWidth,H=window.innerHeight,cx=W/2;
+    let h='';
+    for(let i=0;i<40;i++){
+      const prog=i/39;
+      const y=H*0.12+prog*H*0.65;
+      const wave=12*Math.sin(prog*Math.PI*6+t)*Math.sin(prog*Math.PI);
+      const x=cx+wave;
+      const a=0.08+0.1*Math.abs(Math.sin(prog*Math.PI*4+t));
+      if(i>0) h+=`<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="1.2" fill="#4af" opacity="${a.toFixed(2)}"/>`;
+    }
+    let d=el.querySelector('.vns-layer'); if(!d){d=document.createElementNS('http://www.w3.org/2000/svg','g');d.classList.add('vns-layer');el.appendChild(d);}
+    d.innerHTML=h;
+  }
+  return {draw};
+})();
+
+const ACTION_POTENTIAL_CASCADE = (() => {
+  let _last=0, t=0, pulses=[];
+  function draw(ts) {
+    if(ts-_last<35) return; _last=ts; t+=0.05;
+    const el=document.getElementById('lightLayer'); if(!el) return;
+    const W=window.innerWidth,H=window.innerHeight,cx=W/2;
+    if(Math.random()<0.04) pulses.push({y:H*0.05,speed:3+Math.random()*4,x:cx+(Math.random()-0.5)*100,life:1});
+    let h='';
+    pulses=pulses.filter(p=>{
+      p.y+=p.speed; p.life-=0.015;
+      if(p.y>H*0.95||p.life<=0) return false;
+      h+=`<circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="3" fill="#4af" opacity="${(p.life*0.5).toFixed(2)}"/>`;
+      h+=`<circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="6" fill="none" stroke="#4af" stroke-width="0.6" opacity="${(p.life*0.2).toFixed(2)}"/>`;
+      return true;
+    });
+    let d=el.querySelector('.apc-layer'); if(!d){d=document.createElementNS('http://www.w3.org/2000/svg','g');d.classList.add('apc-layer');el.appendChild(d);}
+    d.innerHTML=h;
+  }
+  return {draw};
+})();
+
+const MYELIN_SHEATH_SIGNAL = (() => {
+  let _last=0, t=0;
+  function draw(ts) {
+    if(ts-_last<60) return; _last=ts; t+=0.03;
+    const el=document.getElementById('lightLayer'); if(!el) return;
+    const W=window.innerWidth,H=window.innerHeight,cx=W/2;
+    let h='';
+    for(let i=0;i<20;i++){
+      const prog=i/19;
+      const y=H*0.08+prog*H*0.5;
+      const active=Math.sin(prog*Math.PI*5-t*3)>0.7;
+      const a=active?0.3:0.05;
+      h+=`<rect x="${cx-2}" y="${y.toFixed(1)}" width="4" height="${(H*0.025).toFixed(1)}" fill="${active?'#fff':'#4af'}" opacity="${a}" rx="1"/>`;
+    }
+    let d=el.querySelector('.mss-layer'); if(!d){d=document.createElementNS('http://www.w3.org/2000/svg','g');d.classList.add('mss-layer');el.appendChild(d);}
+    d.innerHTML=h;
+  }
+  return {draw};
+})();
+
+const GAMMA_WAVE_BURST = (() => {
+  let _last=0, t=0;
+  function draw(ts) {
+    if(ts-_last<30) return; _last=ts; t+=0.06;
+    const el=document.getElementById('lightLayer'); if(!el) return;
+    const W=window.innerWidth,H=window.innerHeight,cx=W/2,cy=H*0.12;
+    let pts=[];
+    for(let i=0;i<60;i++){
+      const x=cx-100+i*200/59;
+      const y=cy+6*Math.sin(i*0.8+t*4)*Math.exp(-Math.pow((i-30)/15,2));
+      pts.push(x.toFixed(1)+','+y.toFixed(1));
+    }
+    const a=0.1+0.15*Math.abs(Math.sin(t*0.3));
+    const h=`<polyline points="${pts.join(' ')}" fill="none" stroke="#fa4" stroke-width="1" opacity="${a.toFixed(2)}"/>`;
+    let d=el.querySelector('.gwb-layer'); if(!d){d=document.createElementNS('http://www.w3.org/2000/svg','g');d.classList.add('gwb-layer');el.appendChild(d);}
+    d.innerHTML=h;
+  }
+  return {draw};
+})();
+
+const RESTING_STATE_OSCILLATION = (() => {
+  let _last=0, t=0;
+  function draw(ts) {
+    if(ts-_last<50) return; _last=ts; t+=0.018;
+    const el=document.getElementById('lightLayer'); if(!el) return;
+    const W=window.innerWidth,H=window.innerHeight,cx=W/2;
+    let h='';
+    const networks=[[cx,H*0.12],[cx-40,H*0.35],[cx+40,H*0.35],[cx,H*0.5]];
+    networks.forEach((n,i)=>{
+      const pulse=0.5+0.5*Math.sin(t*0.8+i*1.2);
+      const r=10+5*pulse;
+      h+=`<circle cx="${n[0].toFixed(1)}" cy="${n[1].toFixed(1)}" r="${r.toFixed(1)}" fill="none" stroke="#a4f" stroke-width="0.8" opacity="${(0.06+0.1*pulse).toFixed(2)}"/>`;
+    });
+    for(let i=0;i<networks.length;i++) for(let j=i+1;j<networks.length;j++){
+      const s=0.5+0.5*Math.sin(t*0.5+i+j);
+      h+=`<line x1="${networks[i][0].toFixed(1)}" y1="${networks[i][1].toFixed(1)}" x2="${networks[j][0].toFixed(1)}" y2="${networks[j][1].toFixed(1)}" stroke="#a4f" stroke-width="0.5" opacity="${(0.03+0.05*s).toFixed(2)}"/>`;
+    }
+    let d=el.querySelector('.rso-layer'); if(!d){d=document.createElementNS('http://www.w3.org/2000/svg','g');d.classList.add('rso-layer');el.appendChild(d);}
+    d.innerHTML=h;
+  }
+  return {draw};
+})();
+
+const DISSOCIATION_DRIFT = (() => {
+  let _last=0, t=0, fragments=[];
+  for(let i=0;i<15;i++) fragments.push({x:0.35+Math.random()*0.3,y:0.2+Math.random()*0.6,dx:(Math.random()-0.5)*0.001,dy:(Math.random()-0.5)*0.0005,a:Math.random()*Math.PI*2});
+  function draw(ts) {
+    if(ts-_last<65) return; _last=ts; t+=0.012;
+    const el=document.getElementById('lightLayer'); if(!el) return;
+    const W=window.innerWidth,H=window.innerHeight,cx=W/2;
+    let h='';
+    fragments.forEach(f=>{
+      f.x+=f.dx; f.y+=f.dy; f.a+=0.015;
+      if(f.x<0.3||f.x>0.7) f.dx*=-1;
+      if(f.y<0.1||f.y>0.9) f.dy*=-1;
+      const x=cx+(f.x-0.5)*160, y=H*f.y;
+      const a=0.05+0.1*Math.abs(Math.sin(f.a));
+      h+=`<rect x="${(x-4).toFixed(1)}" y="${(y-2).toFixed(1)}" width="8" height="4" fill="none" stroke="#fff" stroke-width="0.5" opacity="${a.toFixed(2)}" transform="rotate(${(f.a*57).toFixed(1)},${x.toFixed(1)},${y.toFixed(1)})"/>`;
+    });
+    let d=el.querySelector('.dd-layer'); if(!d){d=document.createElementNS('http://www.w3.org/2000/svg','g');d.classList.add('dd-layer');el.appendChild(d);}
+    d.innerHTML=h;
+  }
+  return {draw};
+})();
+
+const PEAK_EXPERIENCE = (() => {
+  let _last=0, t=0, active=0;
+  function draw(ts) {
+    if(ts-_last<50) return; _last=ts; t+=0.02;
+    const el=document.getElementById('lightLayer'); if(!el) return;
+    const W=window.innerWidth,H=window.innerHeight,cx=W/2,cy=H*0.4;
+    active=0.3+0.7*Math.pow(Math.max(0,Math.sin(t*0.15)),3);
+    let h='';
+    for(let i=0;i<6;i++){
+      const r=20+i*18;
+      const a=active*(0.12-i*0.015);
+      if(a>0) h+=`<circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="#fff" stroke-width="${1.5-i*0.2}" opacity="${a.toFixed(3)}"/>`;
+    }
+    if(active>0.7){
+      for(let i=0;i<8;i++){
+        const angle=i*(Math.PI*2/8)+t;
+        const r=30+20*active;
+        h+=`<circle cx="${(cx+r*Math.cos(angle)).toFixed(1)}" cy="${(cy+r*Math.sin(angle)).toFixed(1)}" r="2" fill="#fa4" opacity="${(active*0.3).toFixed(2)}"/>`;
+      }
+    }
+    let d=el.querySelector('.pe-layer'); if(!d){d=document.createElementNS('http://www.w3.org/2000/svg','g');d.classList.add('pe-layer');el.appendChild(d);}
+    d.innerHTML=h;
+  }
+  return {draw};
+})();
+
+const LIMINAL_STATE = (() => {
+  let _last=0, t=0;
+  function draw(ts) {
+    if(ts-_last<80) return; _last=ts; t+=0.01;
+    const el=document.getElementById('lightLayer'); if(!el) return;
+    const W=window.innerWidth,H=window.innerHeight,cx=W/2;
+    const threshold=H*0.5;
+    let h='';
+    for(let i=0;i<8;i++){
+      const y=threshold+i*6-24+8*Math.sin(t+i*0.4);
+      const w=40+20*Math.sin(t*0.7+i*0.3);
+      const a=0.05+0.08*Math.abs(Math.sin(t+i));
+      h+=`<line x1="${cx-w}" y1="${y.toFixed(1)}" x2="${cx+w}" y2="${y.toFixed(1)}" stroke="#a4f" stroke-width="0.6" opacity="${a.toFixed(2)}"/>`;
+    }
+    let d=el.querySelector('.ls-layer'); if(!d){d=document.createElementNS('http://www.w3.org/2000/svg','g');d.classList.add('ls-layer');el.appendChild(d);}
+    d.innerHTML=h;
+  }
+  return {draw};
+})();
+
+const SHADOW_INTEGRATION = (() => {
+  let _last=0, t=0, tendrils=[];
+  for(let i=0;i<10;i++) tendrils.push({angle:Math.random()*Math.PI*2,r:30+Math.random()*40,speed:-0.01-Math.random()*0.015});
+  function draw(ts) {
+    if(ts-_last<70) return; _last=ts; t+=0.015;
+    const el=document.getElementById('lightLayer'); if(!el) return;
+    const W=window.innerWidth,H=window.innerHeight,cx=W/2,cy=H*0.6;
+    let h='';
+    tendrils.forEach(tn=>{
+      tn.angle+=tn.speed;
+      const x=cx+tn.r*Math.cos(tn.angle);
+      const y=cy+tn.r*Math.sin(tn.angle)*0.6;
+      h+=`<line x1="${cx}" y1="${cy}" x2="${x.toFixed(1)}" y2="${y.toFixed(1)}" stroke="#a4f" stroke-width="0.5" opacity="0.08"/>`;
+      h+=`<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="2.5" fill="#a4f" opacity="0.1"/>`;
+    });
+    let d=el.querySelector('.si-layer'); if(!d){d=document.createElementNS('http://www.w3.org/2000/svg','g');d.classList.add('si-layer');el.appendChild(d);}
+    d.innerHTML=h;
+  }
+  return {draw};
+})();
+
+const INDIVIDUATION_PATH = (() => {
+  let _last=0, t=0;
+  function draw(ts) {
+    if(ts-_last<90) return; _last=ts; t+=0.008;
+    const el=document.getElementById('lightLayer'); if(!el) return;
+    const W=window.innerWidth,H=window.innerHeight,cx=W/2;
+    let pts=[];
+    for(let i=0;i<30;i++){
+      const prog=i/29;
+      const y=H*0.1+prog*H*0.8;
+      const x=cx+25*Math.sin(prog*Math.PI*3+t)*Math.sin(prog*Math.PI);
+      pts.push(x.toFixed(1)+','+y.toFixed(1));
+    }
+    const h=`<polyline points="${pts.join(' ')}" fill="none" stroke="#fa4" stroke-width="0.8" opacity="0.12"/>`;
+    let d=el.querySelector('.ip-layer'); if(!d){d=document.createElementNS('http://www.w3.org/2000/svg','g');d.classList.add('ip-layer');el.appendChild(d);}
+    d.innerHTML=h;
+  }
+  return {draw};
+})();
+
+const NUMINOUS_MOMENT = (() => {
+  let _last=0, t=0;
+  function draw(ts) {
+    if(ts-_last<60) return; _last=ts; t+=0.018;
+    const el=document.getElementById('lightLayer'); if(!el) return;
+    const W=window.innerWidth,H=window.innerHeight,cx=W/2,cy=H*0.3;
+    const intensity=Math.pow(Math.max(0,Math.sin(t*0.08)),4);
+    let h='';
+    if(intensity>0.01){
+      for(let i=0;i<12;i++){
+        const angle=i*(Math.PI*2/12);
+        const len=20+30*intensity;
+        h+=`<line x1="${cx}" y1="${cy}" x2="${(cx+len*Math.cos(angle)).toFixed(1)}" y2="${(cy+len*Math.sin(angle)).toFixed(1)}" stroke="#fff" stroke-width="${(1+intensity).toFixed(1)}" opacity="${(intensity*0.25).toFixed(3)}"/>`;
+      }
+      h+=`<circle cx="${cx}" cy="${cy}" r="${(5+15*intensity).toFixed(1)}" fill="none" stroke="#fff" stroke-width="1" opacity="${(intensity*0.3).toFixed(3)}"/>`;
+    }
+    let d=el.querySelector('.nm-layer'); if(!d){d=document.createElementNS('http://www.w3.org/2000/svg','g');d.classList.add('nm-layer');el.appendChild(d);}
+    d.innerHTML=h;
+  }
+  return {draw};
+})();
+
+const VOID_PRESENCE = (() => {
+  let _last=0, t=0;
+  function draw(ts) {
+    if(ts-_last<100) return; _last=ts; t+=0.006;
+    const el=document.getElementById('lightLayer'); if(!el) return;
+    const W=window.innerWidth,H=window.innerHeight,cx=W/2,cy=H*0.5;
+    const depth=0.5+0.5*Math.sin(t*0.3);
+    let h='';
+    for(let i=3;i>=1;i--){
+      const r=15+i*20;
+      const a=depth*(0.04+i*0.01);
+      h+=`<circle cx="${cx}" cy="${cy}" r="${r}" fill="rgba(0,0,0,${(a*0.5).toFixed(3)})" stroke="#fff" stroke-width="0.3" opacity="${a.toFixed(3)}"/>`;
+    }
+    let d=el.querySelector('.vp-layer'); if(!d){d=document.createElementNS('http://www.w3.org/2000/svg','g');d.classList.add('vp-layer');el.appendChild(d);}
+    d.innerHTML=h;
+  }
+  return {draw};
+})();
+
+const WITNESS_CONSCIOUSNESS = (() => {
+  let _last=0, t=0;
+  function draw(ts) {
+    if(ts-_last<85) return; _last=ts; t+=0.01;
+    const el=document.getElementById('lightLayer'); if(!el) return;
+    const W=window.innerWidth,H=window.innerHeight,cx=W/2,cy=H*0.18;
+    let h='';
+    const s=1+0.1*Math.sin(t*0.5);
+    h+=`<ellipse cx="${cx}" cy="${cy}" rx="${(22*s).toFixed(1)}" ry="${(12*s).toFixed(1)}" fill="none" stroke="#fff" stroke-width="0.6" opacity="0.08"/>`;
+    h+=`<circle cx="${cx}" cy="${cy}" r="${(3*s).toFixed(1)}" fill="#fff" opacity="0.06"/>`;
+    for(let i=0;i<4;i++){
+      const a=i*(Math.PI*0.5)+t*0.2;
+      h+=`<circle cx="${(cx+18*s*Math.cos(a)).toFixed(1)}" cy="${(cy+10*s*Math.sin(a)).toFixed(1)}" r="1" fill="#fff" opacity="0.07"/>`;
+    }
+    let d=el.querySelector('.wc-layer'); if(!d){d=document.createElementNS('http://www.w3.org/2000/svg','g');d.classList.add('wc-layer');el.appendChild(d);}
+    d.innerHTML=h;
+  }
+  return {draw};
+})();
+
+const NONSELF_GLIMPSE = (() => {
+  let _last=0, t=0;
+  function draw(ts) {
+    if(ts-_last<95) return; _last=ts; t+=0.007;
+    const el=document.getElementById('lightLayer'); if(!el) return;
+    const W=window.innerWidth,H=window.innerHeight,cx=W/2,cy=H*0.45;
+    const dissolve=0.5+0.5*Math.sin(t*0.2);
+    let h='';
+    for(let i=0;i<20;i++){
+      const angle=i*(Math.PI*2/20)+t*0.1;
+      const r=35+15*Math.sin(t*0.4+i);
+      const x=cx+r*Math.cos(angle);
+      const y=cy+r*Math.sin(angle)*0.7;
+      const a=dissolve*(0.04+0.04*Math.abs(Math.sin(angle+t)));
+      h+=`<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="1.5" fill="#4af" opacity="${a.toFixed(3)}"/>`;
+    }
+    let d=el.querySelector('.ng-layer'); if(!d){d=document.createElementNS('http://www.w3.org/2000/svg','g');d.classList.add('ng-layer');el.appendChild(d);}
+    d.innerHTML=h;
+  }
+  return {draw};
+})();
+
+const MIMETIC_TRANSMISSION = (() => {
+  let _last=0, t=0, memes=[];
+  for(let i=0;i<8;i++) memes.push({x:0.2+Math.random()*0.6,y:0.3+Math.random()*0.4,target:Math.floor(Math.random()*8),speed:0.004+Math.random()*0.006,prog:Math.random()});
+  function draw(ts) {
+    if(ts-_last<65) return; _last=ts; t+=0.02;
+    const el=document.getElementById('lightLayer'); if(!el) return;
+    const W=window.innerWidth,H=window.innerHeight,cx=W/2;
+    let h='';
+    memes.forEach((m,i)=>{
+      m.prog+=m.speed; if(m.prog>1){m.prog=0;m.target=Math.floor(Math.random()*8);}
+      const tx=memes[m.target].x, ty=memes[m.target].y;
+      const lx=cx+(m.x+(tx-m.x)*m.prog-0.5)*160;
+      const ly=H*(m.y+(ty-m.y)*m.prog);
+      h+=`<circle cx="${lx.toFixed(1)}" cy="${ly.toFixed(1)}" r="2" fill="#fa4" opacity="${(0.1+0.15*Math.sin(m.prog*Math.PI)).toFixed(2)}"/>`;
+      h+=`<circle cx="${(cx+(m.x-0.5)*160).toFixed(1)}" cy="${(H*m.y).toFixed(1)}" r="3" fill="none" stroke="#fa4" stroke-width="0.6" opacity="0.08"/>`;
+    });
+    let d=el.querySelector('.mt-layer'); if(!d){d=document.createElementNS('http://www.w3.org/2000/svg','g');d.classList.add('mt-layer');el.appendChild(d);}
+    d.innerHTML=h;
+  }
+  return {draw};
+})();
+
+const BELONGING_SIGNAL = (() => {
+  let _last=0, t=0;
+  function draw(ts) {
+    if(ts-_last<60) return; _last=ts; t+=0.022;
+    const el=document.getElementById('lightLayer'); if(!el) return;
+    const W=window.innerWidth,H=window.innerHeight,cx=W/2,cy=H*0.38;
+    const pulse=0.5+0.5*Math.sin(t*0.6);
+    let h='';
+    for(let i=1;i<=4;i++){
+      const r=12+i*12;
+      const a=pulse*(0.1-i*0.015);
+      if(a>0) h+=`<circle cx="${cx}" cy="${cy}" r="${(r+4*pulse).toFixed(1)}" fill="none" stroke="#4f8" stroke-width="0.8" opacity="${a.toFixed(3)}"/>`;
+    }
+    let d=el.querySelector('.bs-layer'); if(!d){d=document.createElementNS('http://www.w3.org/2000/svg','g');d.classList.add('bs-layer');el.appendChild(d);}
+    d.innerHTML=h;
+  }
+  return {draw};
+})();
+
+const MORAL_INTUITION = (() => {
+  let _last=0, t=0;
+  function draw(ts) {
+    if(ts-_last<75) return; _last=ts; t+=0.016;
+    const el=document.getElementById('lightLayer'); if(!el) return;
+    const W=window.innerWidth,H=window.innerHeight,cx=W/2,cy=H*0.42;
+    let h='';
+    const left=cx-30, right=cx+30;
+    const tiltL=5*Math.sin(t*0.4), tiltR=-5*Math.sin(t*0.4);
+    h+=`<line x1="${left}" y1="${(cy+tiltL).toFixed(1)}" x2="${right}" y2="${(cy+tiltR).toFixed(1)}" stroke="#fa4" stroke-width="0.8" opacity="0.12"/>`;
+    h+=`<line x1="${cx}" y1="${cy-20}" x2="${cx}" y2="${(cy+Math.max(tiltL,tiltR)+5).toFixed(1)}" stroke="#fa4" stroke-width="0.6" opacity="0.1"/>`;
+    h+=`<circle cx="${left}" cy="${(cy+tiltL).toFixed(1)}" r="4" fill="#fa4" opacity="0.1"/>`;
+    h+=`<circle cx="${right}" cy="${(cy+tiltR).toFixed(1)}" r="4" fill="#fa4" opacity="0.1"/>`;
+    let d=el.querySelector('.mi-layer'); if(!d){d=document.createElementNS('http://www.w3.org/2000/svg','g');d.classList.add('mi-layer');el.appendChild(d);}
+    d.innerHTML=h;
+  }
+  return {draw};
+})();
+
+const RITUAL_MEMORY = (() => {
+  let _last=0, t=0, rings=[];
+  for(let i=0;i<5;i++) rings.push({phase:i*(Math.PI*2/5),speed:0.01+i*0.003,r:15+i*8});
+  function draw(ts) {
+    if(ts-_last<80) return; _last=ts; t+=0.012;
+    const el=document.getElementById('lightLayer'); if(!el) return;
+    const W=window.innerWidth,H=window.innerHeight,cx=W/2,cy=H*0.65;
+    let h='';
+    rings.forEach(rg=>{
+      rg.phase+=rg.speed;
+      const x=cx+rg.r*Math.cos(rg.phase);
+      const y=cy+rg.r*Math.sin(rg.phase)*0.4;
+      h+=`<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="3" fill="none" stroke="#a4f" stroke-width="0.8" opacity="0.12"/>`;
+    });
+    h+=`<circle cx="${cx}" cy="${cy}" r="4" fill="#a4f" opacity="0.08"/>`;
+    let d=el.querySelector('.rm-layer'); if(!d){d=document.createElementNS('http://www.w3.org/2000/svg','g');d.classList.add('rm-layer');el.appendChild(d);}
+    d.innerHTML=h;
+  }
+  return {draw};
+})();
+
+const COLLECTIVE_EFFERVESCENCE = (() => {
+  let _last=0, t=0, bubbles=[];
+  for(let i=0;i<20;i++) bubbles.push({x:0.3+Math.random()*0.4,y:0.5+Math.random()*0.4,vy:-0.001-Math.random()*0.002,size:3+Math.random()*5,life:Math.random()});
+  function draw(ts) {
+    if(ts-_last<45) return; _last=ts; t+=0.025;
+    const el=document.getElementById('lightLayer'); if(!el) return;
+    const W=window.innerWidth,H=window.innerHeight,cx=W/2;
+    let h='';
+    bubbles.forEach(b=>{
+      b.y+=b.vy; b.life+=0.006;
+      if(b.y<0.1||b.life>1){b.y=0.7+Math.random()*0.2;b.life=0;b.x=0.3+Math.random()*0.4;}
+      const x=cx+(b.x-0.5)*160+5*Math.sin(t+b.size);
+      const y=H*b.y;
+      const a=b.life<0.5?b.life*0.25:(1-b.life)*0.25;
+      h+=`<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${b.size}" fill="none" stroke="#4f8" stroke-width="0.6" opacity="${a.toFixed(2)}"/>`;
+    });
+    let d=el.querySelector('.ce-layer'); if(!d){d=document.createElementNS('http://www.w3.org/2000/svg','g');d.classList.add('ce-layer');el.appendChild(d);}
+    d.innerHTML=h;
+  }
+  return {draw};
+})();
+
+const SOCIAL_PAIN_NETWORK = (() => {
+  let _last=0, t=0;
+  function draw(ts) {
+    if(ts-_last<70) return; _last=ts; t+=0.018;
+    const el=document.getElementById('lightLayer'); if(!el) return;
+    const W=window.innerWidth,H=window.innerHeight,cx=W/2;
+    const pain=0.3+0.7*Math.pow(Math.max(0,Math.sin(t*0.2)),2);
+    let h='';
+    const sites=[[cx,H*0.15],[cx-20,H*0.4],[cx+20,H*0.4],[cx,H*0.55]];
+    sites.forEach(s=>{
+      const r=5+8*pain;
+      h+=`<circle cx="${s[0].toFixed(1)}" cy="${s[1].toFixed(1)}" r="${r.toFixed(1)}" fill="none" stroke="#f44" stroke-width="1" opacity="${(pain*0.2).toFixed(2)}"/>`;
+    });
+    for(let i=0;i<sites.length;i++) for(let j=i+1;j<sites.length;j++){
+      h+=`<line x1="${sites[i][0].toFixed(1)}" y1="${sites[i][1].toFixed(1)}" x2="${sites[j][0].toFixed(1)}" y2="${sites[j][1].toFixed(1)}" stroke="#f44" stroke-width="0.5" opacity="${(pain*0.08).toFixed(3)}"/>`;
+    }
+    let d=el.querySelector('.spn-layer'); if(!d){d=document.createElementNS('http://www.w3.org/2000/svg','g');d.classList.add('spn-layer');el.appendChild(d);}
+    d.innerHTML=h;
+  }
+  return {draw};
+})();
+
+const RECIPROCITY_ENGINE = (() => {
+  let _last=0, t=0, exchanges=[];
+  for(let i=0;i<6;i++) exchanges.push({from:{x:0.3+Math.random()*0.15,y:0.3+Math.random()*0.4},to:{x:0.55+Math.random()*0.15,y:0.3+Math.random()*0.4},prog:Math.random(),speed:0.008+Math.random()*0.008,dir:1});
+  function draw(ts) {
+    if(ts-_last<55) return; _last=ts; t+=0.02;
+    const el=document.getElementById('lightLayer'); if(!el) return;
+    const W=window.innerWidth,H=window.innerHeight,cx=W/2;
+    let h='';
+    exchanges.forEach(e=>{
+      e.prog+=e.speed*e.dir;
+      if(e.prog>=1){e.prog=1;e.dir=-1;} else if(e.prog<=0){e.prog=0;e.dir=1;}
+      const x=cx+((e.from.x+(e.to.x-e.from.x)*e.prog)-0.5)*200;
+      const y=H*(e.from.y+(e.to.y-e.from.y)*e.prog);
+      const a=0.1+0.15*Math.sin(e.prog*Math.PI);
+      h+=`<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="2.5" fill="#4af" opacity="${a.toFixed(2)}"/>`;
+    });
+    let d=el.querySelector('.re-layer'); if(!d){d=document.createElementNS('http://www.w3.org/2000/svg','g');d.classList.add('re-layer');el.appendChild(d);}
+    d.innerHTML=h;
+  }
+  return {draw};
+})();
+
+const DNA_REPAIR_MECHANISM = (() => {
+  let _last=0, t=0, repairs=[];
+  function draw(ts) {
+    if(ts-_last<55) return; _last=ts; t+=0.025;
+    const el=document.getElementById('lightLayer'); if(!el) return;
+    const W=window.innerWidth,H=window.innerHeight,cx=W/2;
+    if(Math.random()<0.03) repairs.push({x:cx+(Math.random()-0.5)*100,y:H*(0.15+Math.random()*0.7),life:1});
+    let h='';
+    repairs=repairs.filter(r=>{
+      r.life-=0.02;
+      if(r.life<=0) return false;
+      const s=8*(1-r.life*0.5);
+      h+=`<line x1="${(r.x-s).toFixed(1)}" y1="${r.y.toFixed(1)}" x2="${(r.x+s).toFixed(1)}" y2="${r.y.toFixed(1)}" stroke="#4f8" stroke-width="1.5" opacity="${(r.life*0.3).toFixed(2)}"/>`;
+      return true;
+    });
+    let d=el.querySelector('.drm-layer'); if(!d){d=document.createElementNS('http://www.w3.org/2000/svg','g');d.classList.add('drm-layer');el.appendChild(d);}
+    d.innerHTML=h;
+  }
+  return {draw};
+})();
+
+const ENTERIC_NERVOUS_SYSTEM_PULSE = (() => {
+  let _last=0, t=0;
+  function draw(ts) {
+    if(ts-_last<65) return; _last=ts; t+=0.02;
+    const el=document.getElementById('lightLayer'); if(!el) return;
+    const W=window.innerWidth,H=window.innerHeight,cx=W/2;
+    let h='';
+    for(let i=0;i<16;i++){
+      const prog=i/15;
+      const y=H*0.52+prog*H*0.25;
+      const wave=20*Math.sin(prog*Math.PI*4-t*2);
+      const x=cx+wave;
+      const a=0.07+0.1*Math.abs(Math.sin(prog*Math.PI*3-t*1.5));
+      h+=`<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="2" fill="#f44" opacity="${a.toFixed(2)}"/>`;
+    }
+    let d=el.querySelector('.ensp-layer'); if(!d){d=document.createElementNS('http://www.w3.org/2000/svg','g');d.classList.add('ensp-layer');el.appendChild(d);}
+    d.innerHTML=h;
+  }
+  return {draw};
+})();
+
+const CHROMOSOME_DANCE = (() => {
+  let _last=0, t=0, pairs=[];
+  for(let i=0;i<8;i++) pairs.push({x:0.3+Math.random()*0.4,y:0.2+Math.random()*0.6,phase:Math.random()*Math.PI*2,speed:0.015+Math.random()*0.01});
+  function draw(ts) {
+    if(ts-_last<70) return; _last=ts; t+=0.018;
+    const el=document.getElementById('lightLayer'); if(!el) return;
+    const W=window.innerWidth,H=window.innerHeight,cx=W/2;
+    let h='';
+    pairs.forEach(p=>{
+      p.phase+=p.speed;
+      const x=cx+(p.x-0.5)*160, y=H*p.y;
+      const sep=5+3*Math.sin(p.phase);
+      h+=`<ellipse cx="${(x-sep*0.5).toFixed(1)}" cy="${y.toFixed(1)}" rx="${sep}" ry="8" fill="none" stroke="#a4f" stroke-width="0.8" opacity="0.12"/>`;
+      h+=`<ellipse cx="${(x+sep*0.5).toFixed(1)}" cy="${y.toFixed(1)}" rx="${sep}" ry="8" fill="none" stroke="#a4f" stroke-width="0.8" opacity="0.12"/>`;
+    });
+    let d=el.querySelector('.cd-layer'); if(!d){d=document.createElementNS('http://www.w3.org/2000/svg','g');d.classList.add('cd-layer');el.appendChild(d);}
+    d.innerHTML=h;
+  }
+  return {draw};
+})();
+
+// === SECONDARY RAF LOOP — BATCH 14 ===
+(function(){
+  const _batch14=['QUANTUM_TUNNELING','WAVE_FUNCTION_COLLAPSE','UNCERTAINTY_PRINCIPLE',
+    'BIOPHOTON_EMISSION','ELECTROMAGNETIC_FIELD','STELLAR_NUCLEOSYNTHESIS','GEOLOGICAL_TIME',
+    'ENDOSYMBIOTIC_MEMORY','RIBOSOME_SYMPHONY','PROTEIN_FOLDING','MITOCHONDRIA_GRID',
+    'ATP_SYNTHESIS','GLIAL_NETWORK','VAGUS_NERVE_SONG','ACTION_POTENTIAL_CASCADE',
+    'MYELIN_SHEATH_SIGNAL','GAMMA_WAVE_BURST','RESTING_STATE_OSCILLATION','DISSOCIATION_DRIFT',
+    'PEAK_EXPERIENCE','LIMINAL_STATE','SHADOW_INTEGRATION','INDIVIDUATION_PATH','NUMINOUS_MOMENT',
+    'VOID_PRESENCE','WITNESS_CONSCIOUSNESS','NONSELF_GLIMPSE','MIMETIC_TRANSMISSION',
+    'BELONGING_SIGNAL','MORAL_INTUITION','RITUAL_MEMORY','COLLECTIVE_EFFERVESCENCE',
+    'SOCIAL_PAIN_NETWORK','RECIPROCITY_ENGINE','DNA_REPAIR_MECHANISM',
+    'ENTERIC_NERVOUS_SYSTEM_PULSE','CHROMOSOME_DANCE'];
+  let _lt14=0;
+  function _loop14(ts){
+    if(ts-_lt14>14){_lt14=ts;_batch14.forEach(n=>{const s=window[n];if(s&&typeof s.draw==='function')s.draw(ts);});}
+    requestAnimationFrame(_loop14);
+  }
+  requestAnimationFrame(_loop14);
+})();
+
 <!-- ═══════════════════════════════════════════════════════════════
      LIVE RELOAD — polls /version every 8s, reloads if file changed
      Smooth: waits for page to be idle (no active typing/talking)
