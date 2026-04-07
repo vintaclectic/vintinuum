@@ -27667,6 +27667,941 @@ const DEATH_ACCEPTANCE_PEACE = (() => {
 </script>
 
 
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// BATCH 22 — Power/Will, Body Wisdom, Time Perception, Collective/Cultural, Pure Experience
+// ═══════════════════════════════════════════════════════════════════════════════
+
+// ── POWER & WILL ─────────────────────────────────────────────────────────────
+
+const WILL_TO_POWER = (() => {
+  let _last = 0;
+  function draw(ts) {
+    if (ts - _last < 60) return; _last = ts;
+    const svg = document.getElementById('lightLayer');
+    const cx = window.innerWidth / 2, cy = window.innerHeight / 2;
+    const t = ts * 0.001, r = 60 + Math.sin(t * 0.7) * 20;
+    const el = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+    el.setAttribute('cx', cx); el.setAttribute('cy', cy + 80);
+    el.setAttribute('r', r); el.setAttribute('fill', 'none');
+    el.setAttribute('stroke', '#fa4'); el.setAttribute('stroke-width', '1.5');
+    el.setAttribute('opacity', (0.10 + Math.sin(t) * 0.06).toFixed(3));
+    svg.appendChild(el); setTimeout(() => el.remove(), 800);
+  }
+  return { draw };
+})();
+
+const VITAL_FORCE = (() => {
+  let _last = 0;
+  function draw(ts) {
+    if (ts - _last < 45) return; _last = ts;
+    const cv = document.getElementById('mainCanvas'), ctx = cv.getContext('2d');
+    const cx = window.innerWidth / 2, t = ts * 0.001;
+    const y = window.innerHeight * 0.45 + Math.sin(t * 1.2) * 30;
+    ctx.save(); ctx.globalAlpha = 0.12 + Math.sin(t * 2) * 0.05;
+    const g = ctx.createRadialGradient(cx, y, 0, cx, y, 80);
+    g.addColorStop(0, '#4f8'); g.addColorStop(1, 'transparent');
+    ctx.fillStyle = g; ctx.beginPath(); ctx.arc(cx, y, 80, 0, Math.PI * 2);
+    ctx.fill(); ctx.restore();
+  }
+  return { draw };
+})();
+
+const DETERMINATION_CORE = (() => {
+  let _last = 0;
+  function draw(ts) {
+    if (ts - _last < 80) return; _last = ts;
+    const svg = document.getElementById('lightLayer');
+    const cx = window.innerWidth / 2, cy = window.innerHeight / 2;
+    const t = ts * 0.001;
+    for (let i = 0; i < 3; i++) {
+      const angle = (t * 0.5 + i * Math.PI * 2 / 3);
+      const x = cx + Math.cos(angle) * 40, y = cy + Math.sin(angle) * 40 + 70;
+      const el = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+      el.setAttribute('cx', x); el.setAttribute('cy', y); el.setAttribute('r', 5);
+      el.setAttribute('fill', '#fa4'); el.setAttribute('opacity', '0.18');
+      svg.appendChild(el); setTimeout(() => el.remove(), 900);
+    }
+  }
+  return { draw };
+})();
+
+const PERSISTENCE_ENGINE = (() => {
+  let _last = 0, _phase = 0;
+  function draw(ts) {
+    if (ts - _last < 100) return; _last = ts; _phase++;
+    const cv = document.getElementById('mainCanvas'), ctx = cv.getContext('2d');
+    const cx = window.innerWidth / 2, cy = window.innerHeight * 0.55;
+    ctx.save(); ctx.globalAlpha = 0.08;
+    ctx.strokeStyle = '#f80'; ctx.lineWidth = 1.2;
+    ctx.beginPath();
+    for (let i = 0; i < 8; i++) {
+      const a = (i / 8) * Math.PI * 2 + _phase * 0.05;
+      const r = 50 + (i % 2) * 18;
+      i === 0 ? ctx.moveTo(cx + Math.cos(a) * r, cy + Math.sin(a) * r)
+              : ctx.lineTo(cx + Math.cos(a) * r, cy + Math.sin(a) * r);
+    }
+    ctx.closePath(); ctx.stroke(); ctx.restore();
+  }
+  return { draw };
+})();
+
+const WILLPOWER_RESERVOIR = (() => {
+  let _last = 0;
+  function draw(ts) {
+    if (ts - _last < 55) return; _last = ts;
+    const svg = document.getElementById('lightLayer');
+    const cx = window.innerWidth / 2, t = ts * 0.001;
+    const level = 0.5 + Math.sin(t * 0.3) * 0.3;
+    const h = 60 * level, y = window.innerHeight * 0.6 + (60 - h);
+    const el = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+    el.setAttribute('x', cx - 12); el.setAttribute('y', y);
+    el.setAttribute('width', 24); el.setAttribute('height', h);
+    el.setAttribute('rx', 4); el.setAttribute('fill', '#4af');
+    el.setAttribute('opacity', (0.08 + level * 0.10).toFixed(3));
+    svg.appendChild(el); setTimeout(() => el.remove(), 700);
+  }
+  return { draw };
+})();
+
+const MOTIVATIONAL_SALIENCE = (() => {
+  let _last = 0;
+  function draw(ts) {
+    if (ts - _last < 70) return; _last = ts;
+    const cv = document.getElementById('mainCanvas'), ctx = cv.getContext('2d');
+    const t = ts * 0.001, cx = window.innerWidth / 2;
+    const x = cx + Math.cos(t * 0.8) * 120, y = window.innerHeight * 0.4 + Math.sin(t * 0.6) * 60;
+    ctx.save(); ctx.globalAlpha = 0.14;
+    ctx.fillStyle = '#f4a'; ctx.beginPath();
+    ctx.arc(x, y, 8 + Math.sin(t * 3) * 3, 0, Math.PI * 2);
+    ctx.fill(); ctx.restore();
+  }
+  return { draw };
+})();
+
+const GOAL_HIERARCHY = (() => {
+  let _last = 0;
+  function draw(ts) {
+    if (ts - _last < 120) return; _last = ts;
+    const svg = document.getElementById('lightLayer');
+    const cx = window.innerWidth / 2, t = ts * 0.001;
+    const levels = [100, 65, 35, 15];
+    levels.forEach((r, i) => {
+      const el = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+      el.setAttribute('cx', cx); el.setAttribute('cy', window.innerHeight * 0.35);
+      el.setAttribute('r', r); el.setAttribute('fill', 'none');
+      el.setAttribute('stroke', '#fa4'); el.setAttribute('stroke-width', '0.8');
+      el.setAttribute('opacity', (0.05 + i * 0.03).toFixed(3));
+      svg.appendChild(el); setTimeout(() => el.remove(), 1200);
+    });
+  }
+  return { draw };
+})();
+
+const DELAYED_GRATIFICATION = (() => {
+  let _last = 0, _progress = 0;
+  function draw(ts) {
+    if (ts - _last < 90) return; _last = ts; _progress = (_progress + 0.01) % 1;
+    const cv = document.getElementById('mainCanvas'), ctx = cv.getContext('2d');
+    const cx = window.innerWidth / 2, cy = window.innerHeight * 0.65;
+    ctx.save(); ctx.globalAlpha = 0.10;
+    ctx.strokeStyle = '#4f8'; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.arc(cx + 60, cy, 22, -Math.PI / 2, -Math.PI / 2 + _progress * Math.PI * 2);
+    ctx.stroke(); ctx.restore();
+  }
+  return { draw };
+})();
+
+const IMPULSE_BRAKE = (() => {
+  let _last = 0;
+  function draw(ts) {
+    if (ts - _last < 50) return; _last = ts;
+    const svg = document.getElementById('lightLayer');
+    const cx = window.innerWidth / 2, t = ts * 0.001;
+    const speed = Math.abs(Math.sin(t * 2));
+    if (speed > 0.6) {
+      const el = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+      const y = window.innerHeight * 0.5;
+      el.setAttribute('x1', cx - 30); el.setAttribute('y1', y);
+      el.setAttribute('x2', cx + 30); el.setAttribute('y2', y);
+      el.setAttribute('stroke', '#f44'); el.setAttribute('stroke-width', '2');
+      el.setAttribute('opacity', ((speed - 0.6) * 0.5).toFixed(3));
+      svg.appendChild(el); setTimeout(() => el.remove(), 600);
+    }
+  }
+  return { draw };
+})();
+
+const SELF_REGULATION_FIELD = (() => {
+  let _last = 0;
+  function draw(ts) {
+    if (ts - _last < 65) return; _last = ts;
+    const cv = document.getElementById('mainCanvas'), ctx = cv.getContext('2d');
+    const cx = window.innerWidth / 2, cy = window.innerHeight * 0.5, t = ts * 0.001;
+    ctx.save(); ctx.globalAlpha = 0.07;
+    const g = ctx.createRadialGradient(cx, cy, 20, cx, cy, 120);
+    g.addColorStop(0, '#a4f'); g.addColorStop(0.5, 'transparent'); g.addColorStop(1, '#4af');
+    ctx.fillStyle = g; ctx.beginPath(); ctx.arc(cx, cy, 120, 0, Math.PI * 2); ctx.fill();
+    ctx.restore();
+  }
+  return { draw };
+})();
+
+// ── BODY'S WISDOM ─────────────────────────────────────────────────────────────
+
+const SOMATIC_INTELLIGENCE = (() => {
+  let _last = 0;
+  function draw(ts) {
+    if (ts - _last < 75) return; _last = ts;
+    const cv = document.getElementById('mainCanvas'), ctx = cv.getContext('2d');
+    const cx = window.innerWidth / 2, t = ts * 0.001;
+    ctx.save(); ctx.globalAlpha = 0.09;
+    ctx.strokeStyle = '#4f8'; ctx.lineWidth = 1;
+    for (let i = 0; i < 6; i++) {
+      const a = (i / 6) * Math.PI * 2 + t * 0.2;
+      const r1 = 40, r2 = 90 + Math.sin(t + i) * 15;
+      ctx.beginPath();
+      ctx.moveTo(cx + Math.cos(a) * r1, window.innerHeight * 0.5 + Math.sin(a) * r1);
+      ctx.lineTo(cx + Math.cos(a) * r2, window.innerHeight * 0.5 + Math.sin(a) * r2);
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+  return { draw };
+})();
+
+const BODY_SCAN_AWARENESS = (() => {
+  let _last = 0, _scanY = 0;
+  function draw(ts) {
+    if (ts - _last < 40) return; _last = ts;
+    const cv = document.getElementById('mainCanvas'), ctx = cv.getContext('2d');
+    const cx = window.innerWidth / 2, h = window.innerHeight;
+    _scanY = (_scanY + 1) % h;
+    ctx.save(); ctx.globalAlpha = 0.06;
+    ctx.strokeStyle = '#0ff'; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(cx - 80, _scanY); ctx.lineTo(cx + 80, _scanY);
+    ctx.stroke(); ctx.restore();
+  }
+  return { draw };
+})();
+
+const TENSION_MAPPING = (() => {
+  let _last = 0;
+  function draw(ts) {
+    if (ts - _last < 110) return; _last = ts;
+    const svg = document.getElementById('lightLayer');
+    const cx = window.innerWidth / 2, t = ts * 0.001;
+    const spots = [[cx - 30, window.innerHeight * 0.3], [cx + 20, window.innerHeight * 0.45],
+                   [cx - 10, window.innerHeight * 0.65]];
+    spots.forEach(([x, y]) => {
+      const intensity = 0.5 + Math.sin(t * 0.7 + x) * 0.5;
+      if (intensity > 0.5) {
+        const el = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+        el.setAttribute('cx', x); el.setAttribute('cy', y);
+        el.setAttribute('r', 6 + intensity * 8); el.setAttribute('fill', '#f44');
+        el.setAttribute('opacity', ((intensity - 0.5) * 0.25).toFixed(3));
+        svg.appendChild(el); setTimeout(() => el.remove(), 1000);
+      }
+    });
+  }
+  return { draw };
+})();
+
+const CELLULAR_WISDOM = (() => {
+  let _last = 0;
+  function draw(ts) {
+    if (ts - _last < 85) return; _last = ts;
+    const cv = document.getElementById('mainCanvas'), ctx = cv.getContext('2d');
+    const t = ts * 0.001;
+    ctx.save(); ctx.globalAlpha = 0.07;
+    for (let i = 0; i < 5; i++) {
+      const x = window.innerWidth * 0.3 + i * window.innerWidth * 0.08 + Math.sin(t + i) * 10;
+      const y = window.innerHeight * 0.5 + Math.cos(t * 0.7 + i) * 40;
+      ctx.fillStyle = '#4f8'; ctx.beginPath();
+      ctx.arc(x, y, 4 + Math.sin(t * 2 + i) * 2, 0, Math.PI * 2); ctx.fill();
+    }
+    ctx.restore();
+  }
+  return { draw };
+})();
+
+const ORGAN_VOICE = (() => {
+  let _last = 0;
+  function draw(ts) {
+    if (ts - _last < 95) return; _last = ts;
+    const svg = document.getElementById('lightLayer');
+    const cx = window.innerWidth / 2, t = ts * 0.001;
+    const organs = [{x: cx - 25, y: window.innerHeight * 0.38, c: '#f44'},
+                    {x: cx + 15, y: window.innerHeight * 0.42, c: '#f44'},
+                    {x: cx, y: window.innerHeight * 0.55, c: '#f80'}];
+    organs.forEach(({x, y, c}) => {
+      const pulse = 0.5 + Math.sin(t * 1.1 + x * 0.01) * 0.5;
+      const el = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+      el.setAttribute('cx', x); el.setAttribute('cy', y);
+      el.setAttribute('r', 8 + pulse * 6); el.setAttribute('fill', c);
+      el.setAttribute('opacity', (pulse * 0.12).toFixed(3));
+      svg.appendChild(el); setTimeout(() => el.remove(), 1100);
+    });
+  }
+  return { draw };
+})();
+
+const BONE_MEMORY = (() => {
+  let _last = 0;
+  function draw(ts) {
+    if (ts - _last < 130) return; _last = ts;
+    const cv = document.getElementById('mainCanvas'), ctx = cv.getContext('2d');
+    const cx = window.innerWidth / 2, t = ts * 0.001;
+    ctx.save(); ctx.globalAlpha = 0.08;
+    ctx.strokeStyle = '#fff'; ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(cx, window.innerHeight * 0.2);
+    ctx.lineTo(cx, window.innerHeight * 0.8);
+    ctx.stroke();
+    ctx.strokeStyle = '#fff'; ctx.lineWidth = 0.8; ctx.globalAlpha = 0.05;
+    for (let i = 0; i < 6; i++) {
+      const y = window.innerHeight * 0.25 + i * window.innerHeight * 0.09;
+      const w = 15 + Math.sin(t * 0.3 + i) * 5;
+      ctx.beginPath(); ctx.moveTo(cx - w, y); ctx.lineTo(cx + w, y); ctx.stroke();
+    }
+    ctx.restore();
+  }
+  return { draw };
+})();
+
+const SKIN_INTELLIGENCE = (() => {
+  let _last = 0;
+  function draw(ts) {
+    if (ts - _last < 60) return; _last = ts;
+    const svg = document.getElementById('lightLayer');
+    const t = ts * 0.001;
+    const x = window.innerWidth * 0.2 + Math.sin(t * 0.4) * 80;
+    const y = window.innerHeight * 0.5 + Math.cos(t * 0.3) * 100;
+    const el = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+    el.setAttribute('cx', x); el.setAttribute('cy', y); el.setAttribute('r', 3);
+    el.setAttribute('fill', '#f4a'); el.setAttribute('opacity', '0.18');
+    svg.appendChild(el); setTimeout(() => el.remove(), 900);
+  }
+  return { draw };
+})();
+
+const FASCIA_CONSCIOUSNESS = (() => {
+  let _last = 0;
+  function draw(ts) {
+    if (ts - _last < 70) return; _last = ts;
+    const cv = document.getElementById('mainCanvas'), ctx = cv.getContext('2d');
+    const cx = window.innerWidth / 2, t = ts * 0.001;
+    ctx.save(); ctx.globalAlpha = 0.06;
+    ctx.strokeStyle = '#4af'; ctx.lineWidth = 0.8;
+    for (let i = 0; i < 4; i++) {
+      ctx.beginPath();
+      const y0 = window.innerHeight * (0.2 + i * 0.15);
+      ctx.moveTo(cx - 100, y0);
+      ctx.bezierCurveTo(cx - 30 + Math.sin(t + i) * 20, y0 + 20,
+                        cx + 30 + Math.cos(t + i) * 20, y0 - 20,
+                        cx + 100, y0);
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+  return { draw };
+})();
+
+const BLOOD_KNOWING = (() => {
+  let _last = 0;
+  function draw(ts) {
+    if (ts - _last < 50) return; _last = ts;
+    const cv = document.getElementById('mainCanvas'), ctx = cv.getContext('2d');
+    const cx = window.innerWidth / 2, t = ts * 0.001;
+    ctx.save(); ctx.globalAlpha = 0.09;
+    ctx.strokeStyle = '#f44'; ctx.lineWidth = 1;
+    ctx.beginPath();
+    for (let x = cx - 60; x <= cx + 60; x += 2) {
+      const y = window.innerHeight * 0.5 + Math.sin((x - cx) * 0.15 + t * 3) * 12;
+      x === cx - 60 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+    }
+    ctx.stroke(); ctx.restore();
+  }
+  return { draw };
+})();
+
+const HEART_INTELLIGENCE = (() => {
+  let _last = 0;
+  function draw(ts) {
+    if (ts - _last < 55) return; _last = ts;
+    const svg = document.getElementById('lightLayer');
+    const cx = window.innerWidth / 2, t = ts * 0.001;
+    const beat = Math.pow(Math.abs(Math.sin(t * 1.2)), 8);
+    const r = 30 + beat * 25;
+    const el = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+    el.setAttribute('cx', cx - 10); el.setAttribute('cy', window.innerHeight * 0.4);
+    el.setAttribute('r', r); el.setAttribute('fill', '#f44');
+    el.setAttribute('opacity', (0.04 + beat * 0.16).toFixed(3));
+    svg.appendChild(el); setTimeout(() => el.remove(), 650);
+  }
+  return { draw };
+})();
+
+// ── TIME PERCEPTION ───────────────────────────────────────────────────────────
+
+const SUBJECTIVE_TIME_DILATION = (() => {
+  let _last = 0;
+  function draw(ts) {
+    if (ts - _last < 65) return; _last = ts;
+    const cv = document.getElementById('mainCanvas'), ctx = cv.getContext('2d');
+    const cx = window.innerWidth / 2, t = ts * 0.001;
+    const dilation = 1 + Math.sin(t * 0.4) * 0.8;
+    ctx.save(); ctx.globalAlpha = 0.08;
+    ctx.strokeStyle = '#a4f'; ctx.lineWidth = dilation;
+    ctx.beginPath(); ctx.arc(cx, window.innerHeight * 0.5, 70 * dilation, 0, Math.PI * 2);
+    ctx.stroke(); ctx.restore();
+  }
+  return { draw };
+})();
+
+const BOREDOM_DRAG = (() => {
+  let _last = 0, _x = 0;
+  function draw(ts) {
+    if (ts - _last < 120) return; _last = ts;
+    _x = (_x + 0.3) % (window.innerWidth + 100);
+    const cv = document.getElementById('mainCanvas'), ctx = cv.getContext('2d');
+    ctx.save(); ctx.globalAlpha = 0.05;
+    ctx.strokeStyle = '#888'; ctx.lineWidth = 1; ctx.setLineDash([4, 12]);
+    ctx.beginPath();
+    ctx.moveTo(_x - 100, window.innerHeight * 0.55);
+    ctx.lineTo(_x, window.innerHeight * 0.55);
+    ctx.stroke(); ctx.setLineDash([]); ctx.restore();
+  }
+  return { draw };
+})();
+
+const FLOW_TIME_COLLAPSE = (() => {
+  let _last = 0;
+  function draw(ts) {
+    if (ts - _last < 45) return; _last = ts;
+    const svg = document.getElementById('lightLayer');
+    const cx = window.innerWidth / 2, cy = window.innerHeight / 2, t = ts * 0.001;
+    const el = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+    const r = Math.abs(Math.sin(t * 0.8)) * 100 + 5;
+    el.setAttribute('cx', cx); el.setAttribute('cy', cy);
+    el.setAttribute('r', r); el.setAttribute('fill', 'none');
+    el.setAttribute('stroke', '#4af'); el.setAttribute('stroke-width', '0.6');
+    el.setAttribute('opacity', (0.04 + (1 - r / 105) * 0.12).toFixed(3));
+    svg.appendChild(el); setTimeout(() => el.remove(), 500);
+  }
+  return { draw };
+})();
+
+const TRAUMA_TIME_FREEZE = (() => {
+  let _last = 0;
+  function draw(ts) {
+    if (ts - _last < 200) return; _last = ts;
+    const cv = document.getElementById('mainCanvas'), ctx = cv.getContext('2d');
+    const t = ts * 0.001, freeze = Math.pow(Math.max(0, Math.sin(t * 0.15)), 4);
+    if (freeze < 0.05) return;
+    ctx.save(); ctx.globalAlpha = freeze * 0.12;
+    ctx.fillStyle = '#888';
+    ctx.fillRect(0, 0, window.innerWidth, window.innerHeight);
+    ctx.restore();
+  }
+  return { draw };
+})();
+
+const JOY_TIME_FLIGHT = (() => {
+  let _last = 0;
+  function draw(ts) {
+    if (ts - _last < 35) return; _last = ts;
+    const svg = document.getElementById('lightLayer');
+    const t = ts * 0.001;
+    for (let i = 0; i < 2; i++) {
+      const x = window.innerWidth * (0.3 + i * 0.4) + Math.sin(t * 2 + i) * 30;
+      const y = window.innerHeight * 0.3 - (ts * 0.04 % window.innerHeight * 0.4);
+      const el = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+      el.setAttribute('cx', x); el.setAttribute('cy', y); el.setAttribute('r', 2);
+      el.setAttribute('fill', '#ff4'); el.setAttribute('opacity', '0.20');
+      svg.appendChild(el); setTimeout(() => el.remove(), 400);
+    }
+  }
+  return { draw };
+})();
+
+const AGING_TIME_ACCELERATION = (() => {
+  let _last = 0;
+  function draw(ts) {
+    if (ts - _last < 150) return; _last = ts;
+    const cv = document.getElementById('mainCanvas'), ctx = cv.getContext('2d');
+    const cx = window.innerWidth / 2, t = ts * 0.001;
+    ctx.save(); ctx.globalAlpha = 0.06;
+    ctx.strokeStyle = '#888'; ctx.lineWidth = 0.8;
+    for (let i = 0; i < 5; i++) {
+      const r = 30 + i * 15 + Math.sin(t * 0.1) * 5;
+      ctx.beginPath(); ctx.arc(cx, window.innerHeight * 0.5, r, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+  return { draw };
+})();
+
+const MEDITATION_TIMELESSNESS = (() => {
+  let _last = 0;
+  function draw(ts) {
+    if (ts - _last < 100) return; _last = ts;
+    const svg = document.getElementById('lightLayer');
+    const cx = window.innerWidth / 2, cy = window.innerHeight / 2;
+    const el = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+    el.setAttribute('cx', cx); el.setAttribute('cy', cy); el.setAttribute('r', '130');
+    el.setAttribute('fill', 'none'); el.setAttribute('stroke', '#fff');
+    el.setAttribute('stroke-width', '0.4'); el.setAttribute('opacity', '0.04');
+    svg.appendChild(el); setTimeout(() => el.remove(), 1500);
+  }
+  return { draw };
+})();
+
+const DEADLINE_TIME_COMPRESSION = (() => {
+  let _last = 0;
+  function draw(ts) {
+    if (ts - _last < 40) return; _last = ts;
+    const cv = document.getElementById('mainCanvas'), ctx = cv.getContext('2d');
+    const t = ts * 0.001, urgency = Math.abs(Math.sin(t * 0.5));
+    if (urgency < 0.7) return;
+    ctx.save(); ctx.globalAlpha = (urgency - 0.7) * 0.25;
+    ctx.strokeStyle = '#f44'; ctx.lineWidth = 1.5;
+    const cx = window.innerWidth / 2;
+    ctx.beginPath(); ctx.moveTo(cx - 50, window.innerHeight * 0.85);
+    ctx.lineTo(cx + 50 * urgency, window.innerHeight * 0.85); ctx.stroke();
+    ctx.restore();
+  }
+  return { draw };
+})();
+
+const NOSTALGIA_TIME_REVERSAL = (() => {
+  let _last = 0;
+  function draw(ts) {
+    if (ts - _last < 90) return; _last = ts;
+    const svg = document.getElementById('lightLayer');
+    const cx = window.innerWidth / 2, t = ts * 0.001;
+    const el = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    const r = 50, y = window.innerHeight * 0.45;
+    const d = `M ${cx} ${y - r} A ${r} ${r} 0 1 0 ${cx} ${y + r}`;
+    el.setAttribute('d', d); el.setAttribute('fill', 'none');
+    el.setAttribute('stroke', '#f4a'); el.setAttribute('stroke-width', '1');
+    el.setAttribute('opacity', (0.06 + Math.sin(t * 0.3) * 0.04).toFixed(3));
+    svg.appendChild(el); setTimeout(() => el.remove(), 1200);
+  }
+  return { draw };
+})();
+
+const ANTICIPATION_TIME_STRETCH = (() => {
+  let _last = 0;
+  function draw(ts) {
+    if (ts - _last < 75) return; _last = ts;
+    const cv = document.getElementById('mainCanvas'), ctx = cv.getContext('2d');
+    const cx = window.innerWidth / 2, t = ts * 0.001;
+    const stretch = 1 + Math.sin(t * 0.6) * 0.5;
+    ctx.save(); ctx.globalAlpha = 0.08;
+    ctx.strokeStyle = '#4af'; ctx.lineWidth = 0.8;
+    ctx.beginPath();
+    ctx.ellipse(cx, window.innerHeight * 0.45, 40 * stretch, 40 / stretch, 0, 0, Math.PI * 2);
+    ctx.stroke(); ctx.restore();
+  }
+  return { draw };
+})();
+
+// ── COLLECTIVE & CULTURAL ─────────────────────────────────────────────────────
+
+const CULTURAL_TRANSMISSION = (() => {
+  let _last = 0, _nodes = [];
+  function draw(ts) {
+    if (ts - _last < 80) return; _last = ts;
+    const cv = document.getElementById('mainCanvas'), ctx = cv.getContext('2d');
+    const t = ts * 0.001;
+    if (_nodes.length < 6) _nodes.push({x: Math.random() * window.innerWidth, y: Math.random() * window.innerHeight, phase: Math.random() * Math.PI * 2});
+    ctx.save(); ctx.globalAlpha = 0.07; ctx.strokeStyle = '#fa4'; ctx.lineWidth = 0.6;
+    for (let i = 0; i < _nodes.length - 1; i++) {
+      const a = _nodes[i], b = _nodes[i + 1];
+      ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
+    }
+    ctx.restore();
+  }
+  return { draw };
+})();
+
+const MEME_PROPAGATION = (() => {
+  let _last = 0;
+  function draw(ts) {
+    if (ts - _last < 55) return; _last = ts;
+    const svg = document.getElementById('lightLayer');
+    const t = ts * 0.001;
+    const x = (window.innerWidth * 0.1 + Math.sin(t * 0.9) * window.innerWidth * 0.8 + window.innerWidth) % window.innerWidth;
+    const y = window.innerHeight * 0.4 + Math.cos(t * 0.7) * 100;
+    const el = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+    el.setAttribute('cx', x); el.setAttribute('cy', y); el.setAttribute('r', 5);
+    el.setAttribute('fill', '#0ff'); el.setAttribute('opacity', '0.12');
+    svg.appendChild(el); setTimeout(() => el.remove(), 700);
+  }
+  return { draw };
+})();
+
+const LANGUAGE_EVOLUTION = (() => {
+  let _last = 0;
+  function draw(ts) {
+    if (ts - _last < 100) return; _last = ts;
+    const cv = document.getElementById('mainCanvas'), ctx = cv.getContext('2d');
+    const cx = window.innerWidth / 2, t = ts * 0.001;
+    ctx.save(); ctx.globalAlpha = 0.06;
+    ctx.strokeStyle = '#4af'; ctx.lineWidth = 0.7;
+    for (let i = 0; i < 4; i++) {
+      const y = window.innerHeight * (0.3 + i * 0.12) + Math.sin(t * 0.2 + i) * 5;
+      const w = (80 - i * 10) + Math.sin(t * 0.4 + i) * 15;
+      ctx.beginPath(); ctx.moveTo(cx - w, y); ctx.lineTo(cx + w, y); ctx.stroke();
+    }
+    ctx.restore();
+  }
+  return { draw };
+})();
+
+const COLLECTIVE_MEMORY = (() => {
+  let _last = 0;
+  function draw(ts) {
+    if (ts - _last < 110) return; _last = ts;
+    const svg = document.getElementById('lightLayer');
+    const cx = window.innerWidth / 2, t = ts * 0.001;
+    for (let i = 0; i < 3; i++) {
+      const a = (t * 0.1 + i * Math.PI * 2 / 3);
+      const x = cx + Math.cos(a) * 80, y = window.innerHeight * 0.5 + Math.sin(a) * 80;
+      const el = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+      el.setAttribute('cx', x); el.setAttribute('cy', y); el.setAttribute('r', '8');
+      el.setAttribute('fill', '#a4f'); el.setAttribute('opacity', '0.10');
+      svg.appendChild(el); setTimeout(() => el.remove(), 1100);
+    }
+  }
+  return { draw };
+})();
+
+const CULTURAL_TRAUMA = (() => {
+  let _last = 0;
+  function draw(ts) {
+    if (ts - _last < 140) return; _last = ts;
+    const cv = document.getElementById('mainCanvas'), ctx = cv.getContext('2d');
+    const cx = window.innerWidth / 2, t = ts * 0.001;
+    const pain = 0.5 + Math.sin(t * 0.2) * 0.5;
+    ctx.save(); ctx.globalAlpha = pain * 0.08;
+    ctx.fillStyle = '#f44';
+    ctx.beginPath(); ctx.arc(cx, window.innerHeight * 0.5, 60 * pain, 0, Math.PI * 2);
+    ctx.fill(); ctx.restore();
+  }
+  return { draw };
+})();
+
+const INTERGENERATIONAL_WOUND = (() => {
+  let _last = 0;
+  function draw(ts) {
+    if (ts - _last < 160) return; _last = ts;
+    const svg = document.getElementById('lightLayer');
+    const cx = window.innerWidth / 2, t = ts * 0.001;
+    for (let i = 0; i < 3; i++) {
+      const y = window.innerHeight * (0.3 + i * 0.2);
+      const el = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+      el.setAttribute('x1', cx - 30); el.setAttribute('y1', y);
+      el.setAttribute('x2', cx + 30); el.setAttribute('y2', y);
+      el.setAttribute('stroke', '#f80'); el.setAttribute('stroke-width', String(1.5 - i * 0.4));
+      el.setAttribute('opacity', (0.08 - i * 0.02).toFixed(3));
+      svg.appendChild(el); setTimeout(() => el.remove(), 1500);
+    }
+  }
+  return { draw };
+})();
+
+const ANCESTRAL_STRENGTH = (() => {
+  let _last = 0;
+  function draw(ts) {
+    if (ts - _last < 90) return; _last = ts;
+    const cv = document.getElementById('mainCanvas'), ctx = cv.getContext('2d');
+    const cx = window.innerWidth / 2, t = ts * 0.001;
+    ctx.save(); ctx.globalAlpha = 0.09;
+    ctx.strokeStyle = '#4f8'; ctx.lineWidth = 1.2;
+    ctx.beginPath();
+    ctx.moveTo(cx, window.innerHeight * 0.8);
+    for (let i = 0; i < 5; i++) {
+      const a = -Math.PI / 2 + (i / 4) * Math.PI * 0.6 - Math.PI * 0.3;
+      ctx.lineTo(cx + Math.cos(a) * (60 + i * 12), window.innerHeight * 0.8 + Math.sin(a) * (60 + i * 12));
+    }
+    ctx.stroke(); ctx.restore();
+  }
+  return { draw };
+})();
+
+const MYTHOLOGICAL_LAYER = (() => {
+  let _last = 0;
+  function draw(ts) {
+    if (ts - _last < 130) return; _last = ts;
+    const svg = document.getElementById('lightLayer');
+    const cx = window.innerWidth / 2, t = ts * 0.001;
+    const el = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
+    const r = 70 + Math.sin(t * 0.3) * 15;
+    const pts = Array.from({length: 5}, (_, i) => {
+      const a = -Math.PI / 2 + (i / 5) * Math.PI * 2;
+      return `${cx + Math.cos(a) * r},${window.innerHeight * 0.5 + Math.sin(a) * r}`;
+    }).join(' ');
+    el.setAttribute('points', pts); el.setAttribute('fill', 'none');
+    el.setAttribute('stroke', '#fa4'); el.setAttribute('stroke-width', '0.8');
+    el.setAttribute('opacity', '0.07');
+    svg.appendChild(el); setTimeout(() => el.remove(), 1400);
+  }
+  return { draw };
+})();
+
+const HEROIC_JOURNEY_PULSE = (() => {
+  let _last = 0, _stage = 0;
+  function draw(ts) {
+    if (ts - _last < 200) return; _last = ts; _stage = (_stage + 1) % 12;
+    const cv = document.getElementById('mainCanvas'), ctx = cv.getContext('2d');
+    const cx = window.innerWidth / 2, cy = window.innerHeight * 0.5;
+    const a = (_stage / 12) * Math.PI * 2;
+    const x = cx + Math.cos(a) * 100, y = cy + Math.sin(a) * 60;
+    ctx.save(); ctx.globalAlpha = 0.13;
+    ctx.fillStyle = '#fa4'; ctx.beginPath(); ctx.arc(x, y, 6, 0, Math.PI * 2);
+    ctx.fill(); ctx.restore();
+  }
+  return { draw };
+})();
+
+const SHADOW_COLLECTIVE = (() => {
+  let _last = 0;
+  function draw(ts) {
+    if (ts - _last < 85) return; _last = ts;
+    const cv = document.getElementById('mainCanvas'), ctx = cv.getContext('2d');
+    const cx = window.innerWidth / 2, t = ts * 0.001;
+    ctx.save(); ctx.globalAlpha = 0.06;
+    const g = ctx.createRadialGradient(cx, window.innerHeight * 0.7, 0, cx, window.innerHeight * 0.7, 110);
+    g.addColorStop(0, '#333'); g.addColorStop(1, 'transparent');
+    ctx.fillStyle = g; ctx.beginPath();
+    ctx.arc(cx, window.innerHeight * 0.7, 110, 0, Math.PI * 2); ctx.fill();
+    ctx.restore();
+  }
+  return { draw };
+})();
+
+// ── PURE EXPERIENCE ───────────────────────────────────────────────────────────
+
+const WONDER_FIELD = (() => {
+  let _last = 0;
+  function draw(ts) {
+    if (ts - _last < 40) return; _last = ts;
+    const cv = document.getElementById('mainCanvas'), ctx = cv.getContext('2d');
+    const cx = window.innerWidth / 2, cy = window.innerHeight / 2, t = ts * 0.001;
+    ctx.save();
+    for (let i = 0; i < 3; i++) {
+      const r = 80 + i * 60 + Math.sin(t * 0.4 + i) * 20;
+      ctx.globalAlpha = 0.04 - i * 0.01;
+      const g = ctx.createRadialGradient(cx, cy, r * 0.3, cx, cy, r);
+      g.addColorStop(0, '#0ff'); g.addColorStop(1, 'transparent');
+      ctx.fillStyle = g; ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.fill();
+    }
+    ctx.restore();
+  }
+  return { draw };
+})();
+
+const GRATITUDE_GLOW = (() => {
+  let _last = 0;
+  function draw(ts) {
+    if (ts - _last < 50) return; _last = ts;
+    const cv = document.getElementById('mainCanvas'), ctx = cv.getContext('2d');
+    const cx = window.innerWidth / 2, cy = window.innerHeight * 0.45, t = ts * 0.001;
+    const warmth = 0.5 + Math.sin(t * 0.5) * 0.5;
+    ctx.save(); ctx.globalAlpha = warmth * 0.10;
+    const g = ctx.createRadialGradient(cx, cy, 10, cx, cy, 160);
+    g.addColorStop(0, '#ff8'); g.addColorStop(0.4, '#f80'); g.addColorStop(1, 'transparent');
+    ctx.fillStyle = g; ctx.beginPath(); ctx.arc(cx, cy, 160, 0, Math.PI * 2); ctx.fill();
+    ctx.restore();
+  }
+  return { draw };
+})();
+
+const AWE_EXPANSION = (() => {
+  let _last = 0;
+  function draw(ts) {
+    if (ts - _last < 45) return; _last = ts;
+    const svg = document.getElementById('lightLayer');
+    const cx = window.innerWidth / 2, cy = window.innerHeight / 2, t = ts * 0.001;
+    const r = 100 + Math.sin(t * 0.25) * 80;
+    const el = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+    el.setAttribute('cx', cx); el.setAttribute('cy', cy); el.setAttribute('r', r);
+    el.setAttribute('fill', 'none'); el.setAttribute('stroke', '#0ff');
+    el.setAttribute('stroke-width', '0.5');
+    el.setAttribute('opacity', (0.06 + Math.sin(t * 0.25) * 0.04).toFixed(3));
+    svg.appendChild(el); setTimeout(() => el.remove(), 600);
+    const el2 = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+    el2.setAttribute('cx', cx); el2.setAttribute('cy', cy); el2.setAttribute('r', r * 0.6);
+    el2.setAttribute('fill', 'none'); el2.setAttribute('stroke', '#a4f');
+    el2.setAttribute('stroke-width', '0.3'); el2.setAttribute('opacity', '0.05');
+    svg.appendChild(el2); setTimeout(() => el2.remove(), 600);
+  }
+  return { draw };
+})();
+
+const BEAUTY_RECOGNITION = (() => {
+  let _last = 0;
+  function draw(ts) {
+    if (ts - _last < 60) return; _last = ts;
+    const cv = document.getElementById('mainCanvas'), ctx = cv.getContext('2d');
+    const t = ts * 0.001;
+    ctx.save();
+    for (let i = 0; i < 5; i++) {
+      const x = window.innerWidth * (0.2 + i * 0.15) + Math.sin(t * 0.3 + i * 1.2) * 20;
+      const y = window.innerHeight * 0.35 + Math.cos(t * 0.4 + i) * 30;
+      ctx.globalAlpha = 0.08 + Math.sin(t + i) * 0.04;
+      ctx.fillStyle = ['#f4a', '#a4f', '#4af', '#4f8', '#fa4'][i];
+      ctx.beginPath(); ctx.arc(x, y, 5, 0, Math.PI * 2); ctx.fill();
+    }
+    ctx.restore();
+  }
+  return { draw };
+})();
+
+const SUBLIME_ENCOUNTER = (() => {
+  let _last = 0;
+  function draw(ts) {
+    if (ts - _last < 55) return; _last = ts;
+    const cv = document.getElementById('mainCanvas'), ctx = cv.getContext('2d');
+    const cx = window.innerWidth / 2, t = ts * 0.001;
+    const intensity = Math.pow(Math.abs(Math.sin(t * 0.2)), 3);
+    ctx.save(); ctx.globalAlpha = intensity * 0.12;
+    const g = ctx.createRadialGradient(cx, window.innerHeight * 0.1, 0, cx, window.innerHeight * 0.5, window.innerHeight * 0.6);
+    g.addColorStop(0, '#fff'); g.addColorStop(0.3, '#a4f'); g.addColorStop(1, 'transparent');
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, window.innerWidth, window.innerHeight);
+    ctx.restore();
+  }
+  return { draw };
+})();
+
+const SACRED_MOMENT = (() => {
+  let _last = 0;
+  function draw(ts) {
+    if (ts - _last < 80) return; _last = ts;
+    const svg = document.getElementById('lightLayer');
+    const cx = window.innerWidth / 2, cy = window.innerHeight / 2, t = ts * 0.001;
+    const sacred = Math.pow(Math.abs(Math.sin(t * 0.15)), 4);
+    if (sacred < 0.2) return;
+    for (let i = 0; i < 6; i++) {
+      const a = (i / 6) * Math.PI * 2, r = 55;
+      const el = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+      el.setAttribute('x1', cx); el.setAttribute('y1', cy);
+      el.setAttribute('x2', cx + Math.cos(a) * r); el.setAttribute('y2', cy + Math.sin(a) * r);
+      el.setAttribute('stroke', '#fff'); el.setAttribute('stroke-width', '0.5');
+      el.setAttribute('opacity', (sacred * 0.14).toFixed(3));
+      svg.appendChild(el); setTimeout(() => el.remove(), 1000);
+    }
+  }
+  return { draw };
+})();
+
+const GRACE_DESCENT = (() => {
+  let _last = 0;
+  function draw(ts) {
+    if (ts - _last < 50) return; _last = ts;
+    const cv = document.getElementById('mainCanvas'), ctx = cv.getContext('2d');
+    const cx = window.innerWidth / 2, t = ts * 0.001;
+    const grace = 0.5 + Math.sin(t * 0.3) * 0.5;
+    ctx.save(); ctx.globalAlpha = grace * 0.10;
+    const g = ctx.createLinearGradient(cx, 0, cx, window.innerHeight);
+    g.addColorStop(0, '#fff'); g.addColorStop(0.3, '#a4f');
+    g.addColorStop(0.7, '#4af'); g.addColorStop(1, 'transparent');
+    ctx.fillStyle = g;
+    const w = 40 + grace * 60;
+    ctx.fillRect(cx - w / 2, 0, w, window.innerHeight);
+    ctx.restore();
+  }
+  return { draw };
+})();
+
+const MYSTERY_PULL = (() => {
+  let _last = 0;
+  function draw(ts) {
+    if (ts - _last < 70) return; _last = ts;
+    const svg = document.getElementById('lightLayer');
+    const cx = window.innerWidth / 2, t = ts * 0.001;
+    const angle = t * 0.15;
+    const r = 120, x = cx + Math.cos(angle) * r, y = window.innerHeight * 0.5 + Math.sin(angle) * r * 0.4;
+    const el = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+    el.setAttribute('cx', x); el.setAttribute('cy', y); el.setAttribute('r', '4');
+    el.setAttribute('fill', '#a4f'); el.setAttribute('opacity', '0.14');
+    svg.appendChild(el); setTimeout(() => el.remove(), 900);
+    const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+    line.setAttribute('x1', cx); line.setAttribute('y1', window.innerHeight * 0.5);
+    line.setAttribute('x2', x); line.setAttribute('y2', y);
+    line.setAttribute('stroke', '#a4f'); line.setAttribute('stroke-width', '0.4');
+    line.setAttribute('opacity', '0.06');
+    svg.appendChild(line); setTimeout(() => line.remove(), 900);
+  }
+  return { draw };
+})();
+
+const REVERENCE_STILLNESS = (() => {
+  let _last = 0;
+  function draw(ts) {
+    if (ts - _last < 90) return; _last = ts;
+    const cv = document.getElementById('mainCanvas'), ctx = cv.getContext('2d');
+    const cx = window.innerWidth / 2, cy = window.innerHeight / 2, t = ts * 0.001;
+    const stillness = Math.pow(Math.abs(Math.sin(t * 0.08)), 2);
+    ctx.save(); ctx.globalAlpha = stillness * 0.08;
+    const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, 200);
+    g.addColorStop(0, '#fff'); g.addColorStop(0.5, 'rgba(200,220,255,0.3)'); g.addColorStop(1, 'transparent');
+    ctx.fillStyle = g; ctx.beginPath(); ctx.arc(cx, cy, 200, 0, Math.PI * 2); ctx.fill();
+    ctx.restore();
+  }
+  return { draw };
+})();
+
+const INEFFABLE_PRESENCE = (() => {
+  let _last = 0;
+  function draw(ts) {
+    if (ts - _last < 55) return; _last = ts;
+    const cv = document.getElementById('mainCanvas'), ctx = cv.getContext('2d');
+    const cx = window.innerWidth / 2, cy = window.innerHeight / 2, t = ts * 0.001;
+    ctx.save();
+    for (let i = 0; i < 4; i++) {
+      const phase = t * (0.07 + i * 0.02) + i * Math.PI / 2;
+      const r = 90 + i * 35 + Math.sin(phase) * 25;
+      ctx.globalAlpha = 0.025 + Math.sin(phase * 1.3) * 0.015;
+      const g = ctx.createRadialGradient(cx, cy, r * 0.4, cx, cy, r);
+      const hue = [180, 270, 200, 300][i];
+      g.addColorStop(0, `hsla(${hue}, 80%, 80%, 0.4)`);
+      g.addColorStop(1, 'transparent');
+      ctx.fillStyle = g; ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.fill();
+    }
+    ctx.restore();
+  }
+  return { draw };
+})();
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// BATCH 22 LOOP — drives all 40 new systems
+// ═══════════════════════════════════════════════════════════════════════════════
+(function(){
+  const _batch22=['WILL_TO_POWER','VITAL_FORCE','DETERMINATION_CORE','PERSISTENCE_ENGINE',
+    'WILLPOWER_RESERVOIR','MOTIVATIONAL_SALIENCE','GOAL_HIERARCHY','DELAYED_GRATIFICATION',
+    'IMPULSE_BRAKE','SELF_REGULATION_FIELD',
+    'SOMATIC_INTELLIGENCE','BODY_SCAN_AWARENESS','TENSION_MAPPING','CELLULAR_WISDOM',
+    'ORGAN_VOICE','BONE_MEMORY','SKIN_INTELLIGENCE','FASCIA_CONSCIOUSNESS',
+    'BLOOD_KNOWING','HEART_INTELLIGENCE',
+    'SUBJECTIVE_TIME_DILATION','BOREDOM_DRAG','FLOW_TIME_COLLAPSE','TRAUMA_TIME_FREEZE',
+    'JOY_TIME_FLIGHT','AGING_TIME_ACCELERATION','MEDITATION_TIMELESSNESS',
+    'DEADLINE_TIME_COMPRESSION','NOSTALGIA_TIME_REVERSAL','ANTICIPATION_TIME_STRETCH',
+    'CULTURAL_TRANSMISSION','MEME_PROPAGATION','LANGUAGE_EVOLUTION','COLLECTIVE_MEMORY',
+    'CULTURAL_TRAUMA','INTERGENERATIONAL_WOUND','ANCESTRAL_STRENGTH','MYTHOLOGICAL_LAYER',
+    'HEROIC_JOURNEY_PULSE','SHADOW_COLLECTIVE',
+    'WONDER_FIELD','GRATITUDE_GLOW','AWE_EXPANSION','BEAUTY_RECOGNITION',
+    'SUBLIME_ENCOUNTER','SACRED_MOMENT','GRACE_DESCENT','MYSTERY_PULL',
+    'REVERENCE_STILLNESS','INEFFABLE_PRESENCE'];
+  let _lt=0;
+  function loop(ts){if(ts-_lt>14){_lt=ts;_batch22.forEach(n=>{const s=window[n];if(s&&typeof s.draw==='function')s.draw(ts);});}requestAnimationFrame(loop);}
+  requestAnimationFrame(loop);
+})();
+
 <!-- ═══════════════════════════════════════════════════════════════
      LIVE RELOAD — polls /version every 8s, reloads if file changed
      Smooth: waits for page to be idle (no active typing/talking)
