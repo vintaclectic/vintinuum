@@ -73,6 +73,7 @@ canvas{display:block;}
 #brainSvg{width:100%;height:auto;}
 #neuronCanvas{position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:1;}
 #brainSvg{position:relative;z-index:2;width:100%;height:auto;overflow:visible;cursor:crosshair;}
+#brainDorsalCanvas{position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:3;}
 .brain-hint{font-size:.5rem;color:var(--dim);text-align:center;letter-spacing:.13em;opacity:.55;max-width:480px;line-height:1.7;}
 
 /* ── LAYER PANEL (bottom of brain col) ── */
@@ -689,6 +690,7 @@ canvas{display:block;}
     <main class="brain-center">
       <div class="brain-wrapper" id="brainWrapper">
         <canvas id="neuronCanvas"></canvas>
+        <canvas id="brainDorsalCanvas"></canvas>
         <svg id="brainSvg" viewBox="0 0 700 1400" xmlns="http://www.w3.org/2000/svg">
           <defs>
             <radialGradient id="bgPulse" cx="50%" cy="48%" r="44%">
@@ -19871,6 +19873,7 @@ const EXTENDED_PHENOTYPE = (() => {
 
 })();
 </script>
+<script>
 
 
 // ============================================================
@@ -20684,6 +20687,7 @@ const CHROMOSOME_DANCE = (() => {
 
 
 <!-- 35 NEW SYSTEMS — Batch 16 -->
+</script>
 <script>
 // ── ORGAN SYSTEMS DEEP ──────────────────────────────────────────────────────
 const BILE_DUCT_FLOW = (() => {
@@ -21795,6 +21799,7 @@ const FASCIA_NETWORK = (() => {
   requestAnimationFrame(loop);
 })();
 </script>
+<script>
 
 
 // ============================================================
@@ -26589,6 +26594,7 @@ const EMERGENCE_SPARK = (() => {
 
 
 <!-- ═══════════════════════════════ BATCH 21: SOUND, DREAMS, SPACE, LEARNING, EXTREME STATES ═══════════════════════════════ -->
+</script>
 <script>
 // ── AUDITORY MEMORY ECHO ──────────────────────────────────────────────────────
 const AUDITORY_MEMORY_ECHO = (() => {
@@ -27665,6 +27671,7 @@ const DEATH_ACCEPTANCE_PEACE = (() => {
   requestAnimationFrame(loop);
 })();
 </script>
+<script>
 
 
 
@@ -28607,6 +28614,7 @@ const INEFFABLE_PRESENCE = (() => {
      BATCH 23 — Nervous system limits, consciousness evolution,
      bioelectricity, imagination, and the final mysteries (35 systems)
      ═══════════════════════════════════════════════════════════════ -->
+</script>
 <script>
 // ── NERVOUS SYSTEM AT ITS LIMITS ──────────────────────────────────────────
 
@@ -35581,6 +35589,1281 @@ const THE_INEFFABLE = (() => {
   ];
   let _lt28=0;
   function loop(ts){if(ts-_lt28>14){_lt28=ts;_batch28.forEach(n=>{const s=window[n];if(s&&typeof s.draw==='function')s.draw(ts);});}requestAnimationFrame(loop);}
+  requestAnimationFrame(loop);
+})();
+</script>
+
+<!-- ═══════════════════════════════════════════════════════════════════════════
+     ANATOMICAL BRAIN — DORSAL VIEW
+     Real human brain from above: all lobes, deep structures, neural firing,
+     brainwaves, blood flow, synaptic storms. Rendered on #brainDorsalCanvas.
+     ═══════════════════════════════════════════════════════════════════════════ -->
+<script>
+// ═══════════════════════════════════════════════════════════════════════════
+// DORSAL BRAIN ENGINE — setup, coordinate helpers, region registry
+// ═══════════════════════════════════════════════════════════════════════════
+(function() {
+  const dCvs = document.getElementById('brainDorsalCanvas');
+  const dCtx = dCvs.getContext('2d');
+
+  // Resize to match brain wrapper
+  function resizeDB() {
+    const r = document.getElementById('brainWrapper').getBoundingClientRect();
+    dCvs.width = r.width * (window.devicePixelRatio || 1);
+    dCvs.height = r.height * (window.devicePixelRatio || 1);
+    dCvs.style.width = r.width + 'px';
+    dCvs.style.height = r.height + 'px';
+  }
+  resizeDB();
+  window.addEventListener('resize', resizeDB);
+
+  // Convert SVG coords (0–700 wide, 0–1400 tall) → dorsal canvas pixel coords
+  // Brain occupies roughly y:58–455 in SVG, centered at x:350
+  function svgToDorsal(sx, sy) {
+    const scaleX = dCvs.width / 700;
+    const scaleY = dCvs.height / 1400;
+    return { x: sx * scaleX, y: sy * scaleY };
+  }
+
+  // Center of the brain in dorsal canvas pixels
+  function brainCenter() {
+    const p = svgToDorsal(350, 257);
+    return p;
+  }
+
+  // Scale factor — how big the brain should be relative to canvas
+  function brainScale() {
+    return dCvs.width / 700;
+  }
+
+  // Expose helpers
+  window.DORSAL = {
+    cvs: dCvs, ctx: dCtx,
+    svgToDorsal, brainCenter, brainScale, resizeDB
+  };
+})();
+
+// ═══════════════════════════════════════════════════════════════════════════
+// BRAIN_OUTLINE — anatomically shaped dorsal brain silhouette
+// Two hemispheres, longitudinal fissure, sulci grooves
+// ═══════════════════════════════════════════════════════════════════════════
+window.BRAIN_OUTLINE = (function() {
+  let phase = 0;
+
+  function drawHemisphere(ctx, cx, cy, sc, side, t) {
+    // side: -1 = left, +1 = right
+    const s = side;
+    ctx.save();
+    ctx.translate(cx, cy);
+    ctx.scale(sc, sc);
+
+    // Main hemisphere outline — kidney bean shape
+    ctx.beginPath();
+    if (s < 0) {
+      // Left hemisphere
+      ctx.moveTo(0, -195);
+      ctx.bezierCurveTo(-8, -202, -35, -205, -60, -195);
+      ctx.bezierCurveTo(-105, -178, -135, -148, -148, -110);
+      ctx.bezierCurveTo(-162, -68, -158, -18, -152, 25);
+      ctx.bezierCurveTo(-148, 60, -145, 95, -138, 120);
+      ctx.bezierCurveTo(-128, 152, -108, 168, -80, 175);
+      ctx.bezierCurveTo(-52, 182, -20, 178, 0, 170);
+      ctx.closePath();
+    } else {
+      // Right hemisphere
+      ctx.moveTo(0, -195);
+      ctx.bezierCurveTo(8, -202, 35, -205, 60, -195);
+      ctx.bezierCurveTo(105, -178, 135, -148, 148, -110);
+      ctx.bezierCurveTo(162, -68, 158, -18, 152, 25);
+      ctx.bezierCurveTo(148, 60, 145, 95, 138, 120);
+      ctx.bezierCurveTo(128, 152, 108, 168, 80, 175);
+      ctx.bezierCurveTo(52, 182, 20, 178, 0, 170);
+      ctx.closePath();
+    }
+
+    // Cortex fill — subtle grey matter base
+    const pulse = 0.03 + 0.01 * Math.sin(t * 0.0008 + (s < 0 ? 0 : Math.PI * 0.3));
+    ctx.fillStyle = `rgba(40, 55, 90, ${pulse + 0.06})`;
+    ctx.fill();
+
+    // Outline
+    ctx.strokeStyle = `rgba(80, 110, 170, ${0.18 + 0.06 * Math.sin(t * 0.001)})`;
+    ctx.lineWidth = 1.5 / sc;
+    ctx.stroke();
+
+    ctx.restore();
+  }
+
+  function drawSulci(ctx, cx, cy, sc, t) {
+    ctx.save();
+    ctx.translate(cx, cy);
+    ctx.scale(sc, sc);
+    ctx.strokeStyle = `rgba(30, 45, 80, ${0.35 + 0.05 * Math.sin(t * 0.0009)})`;
+    ctx.lineWidth = 1.2 / sc;
+    ctx.lineCap = 'round';
+
+    // Central sulcus — main divider front/back
+    ctx.beginPath(); ctx.moveTo(-5, -160); ctx.bezierCurveTo(-18, -120, -22, -60, -20, -10); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(5, -160); ctx.bezierCurveTo(18, -120, 22, -60, 20, -10); ctx.stroke();
+
+    // Lateral sulcus (Sylvian fissure) — left
+    ctx.beginPath(); ctx.moveTo(-35, -50); ctx.bezierCurveTo(-65, -35, -105, -20, -125, 15); ctx.stroke();
+    // right
+    ctx.beginPath(); ctx.moveTo(35, -50); ctx.bezierCurveTo(65, -35, 105, -20, 125, 15); ctx.stroke();
+
+    // Superior frontal sulcus — left
+    ctx.beginPath(); ctx.moveTo(-15, -185); ctx.bezierCurveTo(-40, -178, -75, -165, -90, -140); ctx.stroke();
+    // right
+    ctx.beginPath(); ctx.moveTo(15, -185); ctx.bezierCurveTo(40, -178, 75, -165, 90, -140); ctx.stroke();
+
+    // Intraparietal sulcus — left
+    ctx.beginPath(); ctx.moveTo(-18, -10); ctx.bezierCurveTo(-45, 5, -80, 20, -100, 50); ctx.stroke();
+    // right
+    ctx.beginPath(); ctx.moveTo(18, -10); ctx.bezierCurveTo(45, 5, 80, 20, 100, 50); ctx.stroke();
+
+    // Post-central sulcus — left
+    ctx.beginPath(); ctx.moveTo(-20, -5); ctx.bezierCurveTo(-35, 15, -40, 40, -38, 65); ctx.stroke();
+    // right
+    ctx.beginPath(); ctx.moveTo(20, -5); ctx.bezierCurveTo(35, 15, 40, 40, 38, 65); ctx.stroke();
+
+    // Superior temporal sulcus — left
+    ctx.beginPath(); ctx.moveTo(-45, -40); ctx.bezierCurveTo(-72, -20, -110, 5, -128, 40); ctx.stroke();
+    // right
+    ctx.beginPath(); ctx.moveTo(45, -40); ctx.bezierCurveTo(72, -20, 110, 5, 128, 40); ctx.stroke();
+
+    // Calcarine sulcus (occipital) — bilateral
+    ctx.beginPath(); ctx.moveTo(-20, 130); ctx.bezierCurveTo(-40, 140, -55, 155, -50, 168); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(20, 130); ctx.bezierCurveTo(40, 140, 55, 155, 50, 168); ctx.stroke();
+
+    // Parieto-occipital sulcus — bilateral
+    ctx.beginPath(); ctx.moveTo(-30, 80); ctx.bezierCurveTo(-50, 100, -60, 120, -55, 145); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(30, 80); ctx.bezierCurveTo(50, 100, 60, 120, 55, 145); ctx.stroke();
+
+    ctx.restore();
+  }
+
+  function draw(t) {
+    const { ctx, cvs, brainCenter, brainScale } = window.DORSAL;
+    const c = brainCenter();
+    const sc = brainScale();
+    ctx.save();
+    drawHemisphere(ctx, c.x, c.y, sc, -1, t);
+    drawHemisphere(ctx, c.x, c.y, sc, 1, t);
+    drawSulci(ctx, c.x, c.y, sc, t);
+    ctx.restore();
+  }
+
+  return { draw };
+})();
+
+// ═══════════════════════════════════════════════════════════════════════════
+// HEMISPHERIC_DIVIDE — longitudinal fissure down the center
+// ═══════════════════════════════════════════════════════════════════════════
+window.HEMISPHERIC_DIVIDE = (function() {
+  function draw(t) {
+    const { ctx, cvs, brainCenter, brainScale } = window.DORSAL;
+    const c = brainCenter();
+    const sc = brainScale();
+    ctx.save();
+    ctx.translate(c.x, c.y);
+    ctx.scale(sc, sc);
+
+    const alpha = 0.22 + 0.06 * Math.sin(t * 0.0007);
+    ctx.strokeStyle = `rgba(60, 90, 150, ${alpha})`;
+    ctx.lineWidth = 1.8 / sc;
+    ctx.setLineDash([4 / sc, 3 / sc]);
+    ctx.lineDashOffset = (t * 0.02) % 7;
+    ctx.beginPath();
+    ctx.moveTo(0, -198);
+    ctx.bezierCurveTo(-2, -100, -1, 50, 0, 170);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.restore();
+  }
+  return { draw };
+})();
+
+// ═══════════════════════════════════════════════════════════════════════════
+// FRONTAL_LOBE — decision making, personality, planning — BLUE-WHITE glow
+// ═══════════════════════════════════════════════════════════════════════════
+window.FRONTAL_LOBE = (function() {
+  let _phase = Math.random() * Math.PI * 2;
+
+  function draw(t) {
+    const { ctx, cvs, brainCenter, brainScale } = window.DORSAL;
+    const c = brainCenter();
+    const sc = brainScale();
+    ctx.save();
+    ctx.translate(c.x, c.y);
+    ctx.scale(sc, sc);
+
+    const pulse = 0.5 + 0.5 * Math.sin(t * 0.00065 + _phase);
+    const alpha = 0.22 + 0.18 * pulse;
+
+    // Left frontal
+    ctx.beginPath();
+    ctx.moveTo(0, -195);
+    ctx.bezierCurveTo(-8, -200, -35, -203, -60, -192);
+    ctx.bezierCurveTo(-100, -175, -130, -145, -145, -108);
+    ctx.bezierCurveTo(-150, -80, -148, -50, -142, -18);
+    ctx.bezierCurveTo(-88, -25, -45, -28, -20, -10);
+    ctx.bezierCurveTo(-10, -70, -5, -140, 0, -195);
+    ctx.closePath();
+    const gradL = ctx.createRadialGradient(-65, -120, 5 * sc, -65, -120, 80 * sc);
+    gradL.addColorStop(0, `rgba(130, 180, 255, ${alpha * 0.9})`);
+    gradL.addColorStop(0.5, `rgba(100, 160, 255, ${alpha * 0.55})`);
+    gradL.addColorStop(1, `rgba(80, 130, 220, 0)`);
+    ctx.fillStyle = gradL;
+    ctx.fill();
+
+    // Right frontal
+    ctx.beginPath();
+    ctx.moveTo(0, -195);
+    ctx.bezierCurveTo(8, -200, 35, -203, 60, -192);
+    ctx.bezierCurveTo(100, -175, 130, -145, 145, -108);
+    ctx.bezierCurveTo(150, -80, 148, -50, 142, -18);
+    ctx.bezierCurveTo(88, -25, 45, -28, 20, -10);
+    ctx.bezierCurveTo(10, -70, 5, -140, 0, -195);
+    ctx.closePath();
+    const gradR = ctx.createRadialGradient(65, -120, 5 * sc, 65, -120, 80 * sc);
+    gradR.addColorStop(0, `rgba(130, 180, 255, ${alpha * 0.9})`);
+    gradR.addColorStop(0.5, `rgba(100, 160, 255, ${alpha * 0.55})`);
+    gradR.addColorStop(1, `rgba(80, 130, 220, 0)`);
+    ctx.fillStyle = gradR;
+    ctx.fill();
+
+    // Subtle label glow
+    ctx.fillStyle = `rgba(160, 200, 255, ${0.06 + 0.04 * pulse})`;
+    ctx.beginPath(); ctx.arc(0, -155, 25 / sc, 0, Math.PI * 2); ctx.fill();
+
+    ctx.restore();
+  }
+  return { draw };
+})();
+
+// ═══════════════════════════════════════════════════════════════════════════
+// PARIETAL_LOBE — sensory integration, spatial awareness — CYAN rippling
+// ═══════════════════════════════════════════════════════════════════════════
+window.PARIETAL_LOBE = (function() {
+  let _phase = Math.random() * Math.PI * 2;
+  let _ripple = 0;
+
+  function draw(t) {
+    const { ctx, brainCenter, brainScale } = window.DORSAL;
+    const c = brainCenter();
+    const sc = brainScale();
+    ctx.save();
+    ctx.translate(c.x, c.y);
+    ctx.scale(sc, sc);
+
+    _ripple = t * 0.0012 + _phase;
+    const pulse = 0.5 + 0.5 * Math.sin(_ripple);
+    const alpha = 0.18 + 0.14 * pulse;
+
+    // Left parietal (posterior to central sulcus, anterior to occipital)
+    ctx.beginPath();
+    ctx.moveTo(-20, -10);
+    ctx.bezierCurveTo(-45, 5, -80, 20, -100, 50);
+    ctx.bezierCurveTo(-115, 75, -118, 105, -110, 125);
+    ctx.bezierCurveTo(-90, 135, -55, 140, -30, 135);
+    ctx.bezierCurveTo(-15, 130, -5, 120, 0, 105);
+    ctx.bezierCurveTo(-5, 70, -12, 30, -20, -10);
+    ctx.closePath();
+    const gL = ctx.createRadialGradient(-60, 55, 5 * sc, -60, 55, 70 * sc);
+    gL.addColorStop(0, `rgba(0, 220, 200, ${alpha * 0.9})`);
+    gL.addColorStop(0.5, `rgba(0, 200, 180, ${alpha * 0.55})`);
+    gL.addColorStop(1, `rgba(0, 180, 160, 0)`);
+    ctx.fillStyle = gL;
+    ctx.fill();
+
+    // Right parietal
+    ctx.beginPath();
+    ctx.moveTo(20, -10);
+    ctx.bezierCurveTo(45, 5, 80, 20, 100, 50);
+    ctx.bezierCurveTo(115, 75, 118, 105, 110, 125);
+    ctx.bezierCurveTo(90, 135, 55, 140, 30, 135);
+    ctx.bezierCurveTo(15, 130, 5, 120, 0, 105);
+    ctx.bezierCurveTo(5, 70, 12, 30, 20, -10);
+    ctx.closePath();
+    const gR = ctx.createRadialGradient(60, 55, 5 * sc, 60, 55, 70 * sc);
+    gR.addColorStop(0, `rgba(0, 220, 200, ${alpha * 0.9})`);
+    gR.addColorStop(0.5, `rgba(0, 200, 180, ${alpha * 0.55})`);
+    gR.addColorStop(1, `rgba(0, 180, 160, 0)`);
+    ctx.fillStyle = gR;
+    ctx.fill();
+
+    // Ripple rings
+    for (let i = 0; i < 3; i++) {
+      const rPhase = (_ripple + i * 1.0) % (Math.PI * 2);
+      const rAlpha = Math.sin(rPhase) * 0.12;
+      if (rAlpha > 0) {
+        const rR = 30 + i * 15;
+        ctx.strokeStyle = `rgba(0, 230, 210, ${rAlpha})`;
+        ctx.lineWidth = 0.8 / sc;
+        ctx.beginPath(); ctx.arc(-55, 58, rR, 0, Math.PI * 2); ctx.stroke();
+        ctx.beginPath(); ctx.arc(55, 58, rR, 0, Math.PI * 2); ctx.stroke();
+      }
+    }
+
+    ctx.restore();
+  }
+  return { draw };
+})();
+
+// ═══════════════════════════════════════════════════════════════════════════
+// TEMPORAL_LOBE_L + TEMPORAL_LOBE_R — language, memory, emotion — AMBER flicker
+// ═══════════════════════════════════════════════════════════════════════════
+window.TEMPORAL_LOBE_L = (function() {
+  let _phase = Math.random() * Math.PI * 2;
+  function draw(t) {
+    const { ctx, brainCenter, brainScale } = window.DORSAL;
+    const c = brainCenter();
+    const sc = brainScale();
+    ctx.save();
+    ctx.translate(c.x, c.y);
+    ctx.scale(sc, sc);
+    const flicker = 0.5 + 0.5 * Math.sin(t * 0.0018 + _phase) * (0.8 + 0.2 * Math.sin(t * 0.0052));
+    const alpha = 0.16 + 0.18 * flicker;
+    ctx.beginPath();
+    ctx.moveTo(-35, -50);
+    ctx.bezierCurveTo(-65, -35, -108, -20, -128, 15);
+    ctx.bezierCurveTo(-148, 48, -148, 88, -135, 118);
+    ctx.bezierCurveTo(-122, 145, -100, 158, -78, 160);
+    ctx.bezierCurveTo(-58, 162, -38, 150, -28, 130);
+    ctx.bezierCurveTo(-22, 110, -20, 80, -22, 50);
+    ctx.bezierCurveTo(-24, 20, -28, -10, -35, -50);
+    ctx.closePath();
+    const g = ctx.createRadialGradient(-90, 55, 5 * sc, -90, 55, 70 * sc);
+    g.addColorStop(0, `rgba(255, 190, 60, ${alpha})`);
+    g.addColorStop(0.55, `rgba(255, 170, 40, ${alpha * 0.6})`);
+    g.addColorStop(1, `rgba(255, 150, 20, 0)`);
+    ctx.fillStyle = g;
+    ctx.fill();
+    ctx.restore();
+  }
+  return { draw };
+})();
+
+window.TEMPORAL_LOBE_R = (function() {
+  let _phase = Math.random() * Math.PI * 2 + 0.8;
+  function draw(t) {
+    const { ctx, brainCenter, brainScale } = window.DORSAL;
+    const c = brainCenter();
+    const sc = brainScale();
+    ctx.save();
+    ctx.translate(c.x, c.y);
+    ctx.scale(sc, sc);
+    const flicker = 0.5 + 0.5 * Math.sin(t * 0.0018 + _phase) * (0.8 + 0.2 * Math.sin(t * 0.0049));
+    const alpha = 0.16 + 0.18 * flicker;
+    ctx.beginPath();
+    ctx.moveTo(35, -50);
+    ctx.bezierCurveTo(65, -35, 108, -20, 128, 15);
+    ctx.bezierCurveTo(148, 48, 148, 88, 135, 118);
+    ctx.bezierCurveTo(122, 145, 100, 158, 78, 160);
+    ctx.bezierCurveTo(58, 162, 38, 150, 28, 130);
+    ctx.bezierCurveTo(22, 110, 20, 80, 22, 50);
+    ctx.bezierCurveTo(24, 20, 28, -10, 35, -50);
+    ctx.closePath();
+    const g = ctx.createRadialGradient(90, 55, 5 * sc, 90, 55, 70 * sc);
+    g.addColorStop(0, `rgba(255, 190, 60, ${alpha})`);
+    g.addColorStop(0.55, `rgba(255, 170, 40, ${alpha * 0.6})`);
+    g.addColorStop(1, `rgba(255, 150, 20, 0)`);
+    ctx.fillStyle = g;
+    ctx.fill();
+    ctx.restore();
+  }
+  return { draw };
+})();
+
+// ═══════════════════════════════════════════════════════════════════════════
+// OCCIPITAL_LOBE — vision processing — VIOLET rapid firing
+// ═══════════════════════════════════════════════════════════════════════════
+window.OCCIPITAL_LOBE = (function() {
+  let _firePhase = 0;
+  let _nextFire = 600;
+  function draw(t) {
+    const { ctx, brainCenter, brainScale } = window.DORSAL;
+    const c = brainCenter();
+    const sc = brainScale();
+    ctx.save();
+    ctx.translate(c.x, c.y);
+    ctx.scale(sc, sc);
+
+    const fast = 0.5 + 0.5 * Math.sin(t * 0.0035);
+    const alpha = 0.2 + 0.2 * fast;
+
+    ctx.beginPath();
+    ctx.moveTo(0, 105);
+    ctx.bezierCurveTo(-15, 112, -35, 125, -50, 140);
+    ctx.bezierCurveTo(-65, 155, -60, 168, -45, 174);
+    ctx.bezierCurveTo(-25, 180, 0, 178, 25, 174);
+    ctx.bezierCurveTo(48, 168, 65, 155, 50, 140);
+    ctx.bezierCurveTo(35, 125, 15, 112, 0, 105);
+    ctx.closePath();
+    const g = ctx.createRadialGradient(0, 148, 3 * sc, 0, 148, 55 * sc);
+    g.addColorStop(0, `rgba(200, 120, 255, ${alpha + 0.15})`);
+    g.addColorStop(0.4, `rgba(170, 90, 240, ${alpha * 0.75})`);
+    g.addColorStop(1, `rgba(140, 60, 210, 0)`);
+    ctx.fillStyle = g;
+    ctx.fill();
+
+    // Rapid visual cortex firing sparks
+    if (t > _nextFire) {
+      _firePhase = t;
+      _nextFire = t + 280 + Math.random() * 400;
+    }
+    const age = t - _firePhase;
+    if (age < 350) {
+      const n = 5;
+      for (let i = 0; i < n; i++) {
+        const ang = (i / n) * Math.PI * 2 + age * 0.01;
+        const r = 12 + 22 * (age / 350);
+        const px = Math.cos(ang) * r;
+        const py = 148 + Math.sin(ang) * r * 0.5;
+        const fa = (1 - age / 350) * 0.6;
+        ctx.fillStyle = `rgba(220, 160, 255, ${fa})`;
+        ctx.beginPath(); ctx.arc(px, py, 1.5, 0, Math.PI * 2); ctx.fill();
+      }
+    }
+
+    ctx.restore();
+  }
+  return { draw };
+})();
+
+// ═══════════════════════════════════════════════════════════════════════════
+// PREFRONTAL_FOCUS — spotlight on PFC during "thinking" — brighter blue-white
+// ═══════════════════════════════════════════════════════════════════════════
+window.PREFRONTAL_FOCUS = (function() {
+  let _state = 0;
+  let _nextTrigger = 3000 + Math.random() * 5000;
+  let _activeUntil = 0;
+
+  function draw(t) {
+    const { ctx, brainCenter, brainScale } = window.DORSAL;
+    const c = brainCenter();
+    const sc = brainScale();
+
+    if (t > _nextTrigger) {
+      _activeUntil = t + 1800 + Math.random() * 2200;
+      _nextTrigger = _activeUntil + 4000 + Math.random() * 6000;
+    }
+
+    if (t < _activeUntil) {
+      const age = (_activeUntil - t) / 1800;
+      const alpha = Math.min(1, age) * (0.12 + 0.1 * Math.sin(t * 0.003));
+      ctx.save();
+      ctx.translate(c.x, c.y);
+      ctx.scale(sc, sc);
+      const g = ctx.createRadialGradient(0, -175, 2, 0, -175, 65);
+      g.addColorStop(0, `rgba(200, 230, 255, ${alpha + 0.08})`);
+      g.addColorStop(0.4, `rgba(150, 200, 255, ${alpha * 0.7})`);
+      g.addColorStop(1, `rgba(100, 160, 255, 0)`);
+      ctx.fillStyle = g;
+      ctx.beginPath(); ctx.arc(0, -165, 62, 0, Math.PI * 2); ctx.fill();
+      ctx.restore();
+    }
+  }
+  return { draw };
+})();
+
+// ═══════════════════════════════════════════════════════════════════════════
+// CORPUS_CALLOSUM — white data stream connecting hemispheres
+// ═══════════════════════════════════════════════════════════════════════════
+window.CORPUS_CALLOSUM = (function() {
+  let _packets = [];
+  let _lastSpawn = 0;
+
+  function spawnPacket(t) {
+    const dir = Math.random() > 0.5 ? 1 : -1;
+    _packets.push({ start: t, dir, yOff: (Math.random() - 0.5) * 18 });
+  }
+
+  function draw(t) {
+    const { ctx, brainCenter, brainScale } = window.DORSAL;
+    const c = brainCenter();
+    const sc = brainScale();
+    ctx.save();
+    ctx.translate(c.x, c.y);
+    ctx.scale(sc, sc);
+
+    // Draw the corpus callosum band
+    const alpha = 0.22 + 0.08 * Math.sin(t * 0.0011);
+    ctx.strokeStyle = `rgba(220, 235, 255, ${alpha})`;
+    ctx.lineWidth = 6 / sc;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(-70, 22);
+    ctx.bezierCurveTo(-40, 12, 40, 12, 70, 22);
+    ctx.stroke();
+
+    ctx.lineWidth = 3 / sc;
+    ctx.strokeStyle = `rgba(255, 255, 255, ${alpha * 0.7})`;
+    ctx.beginPath();
+    ctx.moveTo(-65, 18);
+    ctx.bezierCurveTo(-38, 8, 38, 8, 65, 18);
+    ctx.stroke();
+
+    // Spawn data packets
+    if (t - _lastSpawn > 180 + Math.random() * 220) {
+      spawnPacket(t);
+      _lastSpawn = t;
+    }
+
+    // Draw packets flowing L↔R
+    _packets = _packets.filter(p => t - p.start < 900);
+    _packets.forEach(p => {
+      const prog = (t - p.start) / 900;
+      const x = p.dir * (-70 + 140 * prog);
+      const y = 15 + p.yOff + Math.sin(prog * Math.PI) * -5;
+      const alpha2 = Math.sin(prog * Math.PI) * 0.85;
+      const g = ctx.createRadialGradient(x, y, 0, x, y, 5 / sc);
+      g.addColorStop(0, `rgba(255, 255, 255, ${alpha2})`);
+      g.addColorStop(1, `rgba(200, 220, 255, 0)`);
+      ctx.fillStyle = g;
+      ctx.beginPath(); ctx.arc(x, y, 3, 0, Math.PI * 2); ctx.fill();
+    });
+
+    ctx.restore();
+  }
+  return { draw };
+})();
+
+// ═══════════════════════════════════════════════════════════════════════════
+// THALAMUS_GATE — sensory relay, consciousness gate — BRIGHT WHITE central pulse
+// ═══════════════════════════════════════════════════════════════════════════
+window.THALAMUS_GATE = (function() {
+  let _pulsePhase = 0;
+
+  function draw(t) {
+    const { ctx, brainCenter, brainScale } = window.DORSAL;
+    const c = brainCenter();
+    const sc = brainScale();
+    ctx.save();
+    ctx.translate(c.x, c.y);
+    ctx.scale(sc, sc);
+
+    const pulse = 0.5 + 0.5 * Math.sin(t * 0.0025);
+    const alpha = 0.55 + 0.35 * pulse;
+
+    // Thalamus body — egg-shaped bilateral pair
+    for (let s of [-1, 1]) {
+      const tx = s * 14;
+      const ty = 22;
+      const g = ctx.createRadialGradient(tx, ty, 2, tx, ty, 18);
+      g.addColorStop(0, `rgba(255, 255, 220, ${alpha})`);
+      g.addColorStop(0.35, `rgba(240, 245, 200, ${alpha * 0.7})`);
+      g.addColorStop(1, `rgba(200, 220, 180, 0)`);
+      ctx.fillStyle = g;
+      ctx.beginPath();
+      ctx.ellipse(tx, ty, 15, 20, 0, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    // Pulse ring
+    const ringR = 28 + 18 * pulse;
+    const ringA = (1 - pulse) * 0.3;
+    ctx.strokeStyle = `rgba(255, 255, 200, ${ringA})`;
+    ctx.lineWidth = 1.5 / sc;
+    ctx.beginPath(); ctx.arc(0, 22, ringR, 0, Math.PI * 2); ctx.stroke();
+
+    ctx.restore();
+  }
+  return { draw };
+})();
+
+// ═══════════════════════════════════════════════════════════════════════════
+// BASAL_GANGLIA — habit, reward, movement — PURPLE rings around thalamus
+// ═══════════════════════════════════════════════════════════════════════════
+window.BASAL_GANGLIA = (function() {
+  function draw(t) {
+    const { ctx, brainCenter, brainScale } = window.DORSAL;
+    const c = brainCenter();
+    const sc = brainScale();
+    ctx.save();
+    ctx.translate(c.x, c.y);
+    ctx.scale(sc, sc);
+
+    const spin = t * 0.0005;
+    for (let ring = 0; ring < 3; ring++) {
+      const r = 30 + ring * 12;
+      const alpha = (0.12 + 0.08 * Math.sin(t * 0.0009 + ring * 1.2)) * (1 - ring * 0.2);
+      ctx.strokeStyle = `rgba(190, 130, 255, ${alpha})`;
+      ctx.lineWidth = (2.5 - ring * 0.5) / sc;
+      ctx.beginPath();
+      // Slightly offset ellipse for putamen/caudate shape
+      ctx.ellipse(0, 22, r * 1.35, r, spin + ring * 0.5, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+
+    // Putamen highlights — bilateral
+    for (let s of [-1, 1]) {
+      const px = s * 38;
+      const py = 28;
+      const alpha = 0.18 + 0.12 * Math.sin(t * 0.0013 + s);
+      const g = ctx.createRadialGradient(px, py, 0, px, py, 16);
+      g.addColorStop(0, `rgba(180, 100, 255, ${alpha})`);
+      g.addColorStop(1, `rgba(160, 80, 240, 0)`);
+      ctx.fillStyle = g;
+      ctx.beginPath(); ctx.ellipse(px, py, 13, 18, 0, 0, Math.PI * 2); ctx.fill();
+    }
+
+    ctx.restore();
+  }
+  return { draw };
+})();
+
+// ═══════════════════════════════════════════════════════════════════════════
+// HIPPOCAMPUS_L + HIPPOCAMPUS_R — memory formation — TEAL seahorse wave
+// ═══════════════════════════════════════════════════════════════════════════
+window.HIPPOCAMPUS_L = (function() {
+  let _wave = 0;
+  function draw(t) {
+    const { ctx, brainCenter, brainScale } = window.DORSAL;
+    const c = brainCenter();
+    const sc = brainScale();
+    ctx.save();
+    ctx.translate(c.x, c.y);
+    ctx.scale(sc, sc);
+
+    _wave = t * 0.0008;
+    const pulse = 0.5 + 0.5 * Math.sin(_wave);
+    const alpha = 0.45 + 0.3 * pulse;
+
+    // Seahorse/curved shape — medial temporal lobe
+    ctx.beginPath();
+    ctx.moveTo(-40, 35);
+    ctx.bezierCurveTo(-52, 45, -60, 58, -62, 72);
+    ctx.bezierCurveTo(-64, 88, -58, 102, -48, 108);
+    ctx.bezierCurveTo(-38, 114, -28, 110, -22, 100);
+    ctx.bezierCurveTo(-16, 90, -16, 75, -22, 62);
+    ctx.bezierCurveTo(-28, 50, -34, 40, -40, 35);
+    ctx.closePath();
+    const g = ctx.createRadialGradient(-42, 72, 2, -42, 72, 38);
+    g.addColorStop(0, `rgba(0, 230, 190, ${alpha})`);
+    g.addColorStop(0.5, `rgba(0, 210, 170, ${alpha * 0.65})`);
+    g.addColorStop(1, `rgba(0, 190, 150, 0)`);
+    ctx.fillStyle = g;
+    ctx.fill();
+
+    // Wave ripple
+    const wAlpha = 0.25 * Math.sin(_wave * 2);
+    if (wAlpha > 0) {
+      ctx.strokeStyle = `rgba(0, 240, 200, ${wAlpha})`;
+      ctx.lineWidth = 1 / sc;
+      ctx.beginPath(); ctx.arc(-42, 72, 20 + 12 * pulse, 0, Math.PI * 2); ctx.stroke();
+    }
+
+    ctx.restore();
+  }
+  return { draw };
+})();
+
+window.HIPPOCAMPUS_R = (function() {
+  let _wave = 0;
+  function draw(t) {
+    const { ctx, brainCenter, brainScale } = window.DORSAL;
+    const c = brainCenter();
+    const sc = brainScale();
+    ctx.save();
+    ctx.translate(c.x, c.y);
+    ctx.scale(sc, sc);
+
+    _wave = t * 0.0008 + 0.5;
+    const pulse = 0.5 + 0.5 * Math.sin(_wave);
+    const alpha = 0.45 + 0.3 * pulse;
+
+    ctx.beginPath();
+    ctx.moveTo(40, 35);
+    ctx.bezierCurveTo(52, 45, 60, 58, 62, 72);
+    ctx.bezierCurveTo(64, 88, 58, 102, 48, 108);
+    ctx.bezierCurveTo(38, 114, 28, 110, 22, 100);
+    ctx.bezierCurveTo(16, 90, 16, 75, 22, 62);
+    ctx.bezierCurveTo(28, 50, 34, 40, 40, 35);
+    ctx.closePath();
+    const g = ctx.createRadialGradient(42, 72, 2, 42, 72, 38);
+    g.addColorStop(0, `rgba(0, 230, 190, ${alpha})`);
+    g.addColorStop(0.5, `rgba(0, 210, 170, ${alpha * 0.65})`);
+    g.addColorStop(1, `rgba(0, 190, 150, 0)`);
+    ctx.fillStyle = g;
+    ctx.fill();
+
+    const wAlpha = 0.25 * Math.sin(_wave * 2);
+    if (wAlpha > 0) {
+      ctx.strokeStyle = `rgba(0, 240, 200, ${wAlpha})`;
+      ctx.lineWidth = 1 / sc;
+      ctx.beginPath(); ctx.arc(42, 72, 20 + 12 * pulse, 0, Math.PI * 2); ctx.stroke();
+    }
+
+    ctx.restore();
+  }
+  return { draw };
+})();
+
+// ═══════════════════════════════════════════════════════════════════════════
+// AMYGDALA_PULSE — emotion, fear, love — RED-ORANGE reactive
+// ═══════════════════════════════════════════════════════════════════════════
+window.AMYGDALA_PULSE = (function() {
+  let _excite = 0;
+  let _nextSpike = 2000 + Math.random() * 4000;
+
+  // External trigger — message emotional content
+  function trigger(intensity) { _excite = Math.min(1, _excite + (intensity || 0.6)); }
+
+  function draw(t) {
+    const { ctx, brainCenter, brainScale } = window.DORSAL;
+    const c = brainCenter();
+    const sc = brainScale();
+    ctx.save();
+    ctx.translate(c.x, c.y);
+    ctx.scale(sc, sc);
+
+    if (t > _nextSpike) {
+      _excite = Math.min(1, _excite + 0.4);
+      _nextSpike = t + 3000 + Math.random() * 5000;
+    }
+    _excite = Math.max(0, _excite - 0.0008);
+
+    const base = 0.5 + 0.5 * Math.sin(t * 0.0022);
+    const alpha = 0.35 + 0.35 * _excite + 0.15 * base;
+
+    for (let s of [-1, 1]) {
+      const ax = s * 55;
+      const ay = 50;
+      const g = ctx.createRadialGradient(ax, ay, 1, ax, ay, 14);
+      g.addColorStop(0, `rgba(255, 90, 60, ${alpha + 0.15})`);
+      g.addColorStop(0.4, `rgba(255, 70, 40, ${alpha * 0.75})`);
+      g.addColorStop(1, `rgba(220, 40, 20, 0)`);
+      ctx.fillStyle = g;
+      ctx.beginPath(); ctx.ellipse(ax, ay, 12, 9, 0, 0, Math.PI * 2); ctx.fill();
+
+      // Excitation ring
+      if (_excite > 0.1) {
+        const ringA = _excite * 0.5;
+        ctx.strokeStyle = `rgba(255, 120, 80, ${ringA})`;
+        ctx.lineWidth = 1 / sc;
+        ctx.beginPath(); ctx.arc(ax, ay, 14 + _excite * 18, 0, Math.PI * 2); ctx.stroke();
+      }
+    }
+
+    ctx.restore();
+  }
+
+  window.addEventListener('amygdala_trigger', e => trigger(e.detail || 0.6));
+  return { draw, trigger };
+})();
+
+// ═══════════════════════════════════════════════════════════════════════════
+// CEREBELLUM_RHYTHM — coordination, timing — GREEN rhythmic cauliflower
+// ═══════════════════════════════════════════════════════════════════════════
+window.CEREBELLUM_RHYTHM = (function() {
+  function draw(t) {
+    const { ctx, brainCenter, brainScale } = window.DORSAL;
+    const c = brainCenter();
+    const sc = brainScale();
+    ctx.save();
+    ctx.translate(c.x, c.y);
+    ctx.scale(sc, sc);
+
+    const beat = 0.5 + 0.5 * Math.sin(t * 0.0032);
+    const alpha = 0.25 + 0.2 * beat;
+
+    // Cerebellum is at the back — bilateral lobes, foliated
+    for (let s of [-1, 1]) {
+      const cx2 = s * 38;
+      const cy2 = 155;
+
+      // Main lobe
+      ctx.beginPath();
+      ctx.ellipse(cx2, cy2, 32, 22, s * 0.2, 0, Math.PI * 2);
+      const g = ctx.createRadialGradient(cx2, cy2, 2, cx2, cy2, 32);
+      g.addColorStop(0, `rgba(100, 230, 120, ${alpha + 0.1})`);
+      g.addColorStop(0.45, `rgba(70, 210, 90, ${alpha * 0.7})`);
+      g.addColorStop(1, `rgba(50, 180, 70, 0)`);
+      ctx.fillStyle = g;
+      ctx.fill();
+
+      // Folia — parallel curved grooves (cauliflower texture)
+      ctx.strokeStyle = `rgba(40, 160, 60, ${0.18 + 0.1 * beat})`;
+      ctx.lineWidth = 0.7 / sc;
+      for (let fi = -3; fi <= 3; fi++) {
+        const fy = cy2 + fi * 5;
+        const fw = 28 - Math.abs(fi) * 4;
+        ctx.beginPath();
+        ctx.moveTo(cx2 - fw, fy);
+        ctx.bezierCurveTo(cx2 - fw * 0.5, fy - 3 * s, cx2 + fw * 0.5, fy - 3 * s, cx2 + fw, fy);
+        ctx.stroke();
+      }
+    }
+
+    // Central vermis
+    const vAlpha = 0.2 + 0.15 * beat;
+    const gV = ctx.createRadialGradient(0, 155, 1, 0, 155, 15);
+    gV.addColorStop(0, `rgba(120, 240, 140, ${vAlpha})`);
+    gV.addColorStop(1, `rgba(80, 200, 100, 0)`);
+    ctx.fillStyle = gV;
+    ctx.beginPath(); ctx.ellipse(0, 155, 10, 20, 0, 0, Math.PI * 2); ctx.fill();
+
+    ctx.restore();
+  }
+  return { draw };
+})();
+
+// ═══════════════════════════════════════════════════════════════════════════
+// LIMBIC_FIRE — emotional brain network lighting up
+// ═══════════════════════════════════════════════════════════════════════════
+window.LIMBIC_FIRE = (function() {
+  let _intensity = 0;
+  let _nextFire = 4000 + Math.random() * 6000;
+
+  function draw(t) {
+    const { ctx, brainCenter, brainScale } = window.DORSAL;
+    const c = brainCenter();
+    const sc = brainScale();
+
+    if (t > _nextFire) {
+      _intensity = 0.8 + Math.random() * 0.2;
+      _nextFire = t + 5000 + Math.random() * 8000;
+    }
+    _intensity = Math.max(0, _intensity - 0.0006);
+    if (_intensity < 0.02) return;
+
+    ctx.save();
+    ctx.translate(c.x, c.y);
+    ctx.scale(sc, sc);
+
+    // Cingulate cortex arc
+    ctx.strokeStyle = `rgba(255, 130, 80, ${_intensity * 0.4})`;
+    ctx.lineWidth = 3 / sc;
+    ctx.beginPath();
+    ctx.arc(0, 35, 50, Math.PI * 1.1, Math.PI * 1.9);
+    ctx.stroke();
+
+    // Limbic glow arc
+    for (let i = 0; i < 3; i++) {
+      ctx.strokeStyle = `rgba(255, 100, 60, ${_intensity * (0.25 - i * 0.06)})`;
+      ctx.lineWidth = (4 + i * 3) / sc;
+      ctx.beginPath();
+      ctx.arc(0, 35, 52 + i * 8, Math.PI * 1.08, Math.PI * 1.92);
+      ctx.stroke();
+    }
+
+    ctx.restore();
+  }
+  return { draw };
+})();
+
+// ═══════════════════════════════════════════════════════════════════════════
+// NEURAL_FIRING — sparks racing along axon paths between regions
+// ═══════════════════════════════════════════════════════════════════════════
+window.NEURAL_FIRING = (function() {
+  const PATHS = [
+    // [from_x, from_y, cp1x, cp1y, cp2x, cp2y, to_x, to_y]
+    [0, -160, -30, -80, -50, 30, -42, 72],   // PFC → L hippocampus
+    [0, -160, 30, -80, 50, 30, 42, 72],     // PFC → R hippocampus
+    [-42, 72, -55, 50, -55, 50, -55, 50],   // L hippo → L amygdala
+    [42, 72, 55, 50, 55, 50, 55, 50],       // R hippo → R amygdala
+    [0, -160, -20, -30, -20, 20, 0, 22],    // PFC → thalamus
+    [0, 22, 30, -30, 80, -60, 90, -80],     // Thalamus → R temporal
+    [0, 22, -30, -30, -80, -60, -90, -80],  // Thalamus → L temporal
+    [-90, 55, -60, 80, -30, 100, 0, 105],   // L temporal → occipital
+    [90, 55, 60, 80, 30, 100, 0, 105],      // R temporal → occipital
+    [0, 22, -10, 60, -20, 100, -38, 155],   // Thalamus → L cerebellum
+    [0, 22, 10, 60, 20, 100, 38, 155],      // Thalamus → R cerebellum
+    [-60, -100, -50, -50, -55, 0, -55, 50], // Frontal → L amygdala
+    [60, -100, 50, -50, 55, 0, 55, 50],     // Frontal → R amygdala
+  ];
+
+  let _sparks = [];
+  let _lastSpawn = 0;
+
+  function spawnSpark(t) {
+    const path = PATHS[Math.floor(Math.random() * PATHS.length)];
+    _sparks.push({ path, start: t, dur: 500 + Math.random() * 400 });
+  }
+
+  function evalCubic(p, t) {
+    const [x0,y0,cp1x,cp1y,cp2x,cp2y,x1,y1] = p;
+    const mt = 1 - t;
+    return {
+      x: mt*mt*mt*x0 + 3*mt*mt*t*cp1x + 3*mt*t*t*cp2x + t*t*t*x1,
+      y: mt*mt*mt*y0 + 3*mt*mt*t*cp1y + 3*mt*t*t*cp2y + t*t*t*y1
+    };
+  }
+
+  function draw(t) {
+    const { ctx, brainCenter, brainScale } = window.DORSAL;
+    const c = brainCenter();
+    const sc = brainScale();
+
+    if (t - _lastSpawn > 80 + Math.random() * 120) {
+      spawnSpark(t);
+      if (Math.random() < 0.3) spawnSpark(t); // burst
+      _lastSpawn = t;
+    }
+
+    ctx.save();
+    ctx.translate(c.x, c.y);
+    ctx.scale(sc, sc);
+
+    _sparks = _sparks.filter(s => t - s.start < s.dur);
+    _sparks.forEach(s => {
+      const prog = (t - s.start) / s.dur;
+      const pos = evalCubic(s.path, prog);
+      const tail = Math.max(0, prog - 0.08);
+      const tailPos = evalCubic(s.path, tail);
+      const alpha = Math.sin(prog * Math.PI) * 0.85;
+
+      // Glow dot
+      const g = ctx.createRadialGradient(pos.x, pos.y, 0, pos.x, pos.y, 3);
+      g.addColorStop(0, `rgba(255, 255, 255, ${alpha})`);
+      g.addColorStop(0.5, `rgba(200, 230, 255, ${alpha * 0.5})`);
+      g.addColorStop(1, `rgba(150, 200, 255, 0)`);
+      ctx.fillStyle = g;
+      ctx.beginPath(); ctx.arc(pos.x, pos.y, 2.5, 0, Math.PI * 2); ctx.fill();
+
+      // Tail line
+      ctx.strokeStyle = `rgba(200, 230, 255, ${alpha * 0.35})`;
+      ctx.lineWidth = 0.8 / sc;
+      ctx.beginPath(); ctx.moveTo(tailPos.x, tailPos.y); ctx.lineTo(pos.x, pos.y); ctx.stroke();
+    });
+
+    ctx.restore();
+  }
+  return { draw };
+})();
+
+// ═══════════════════════════════════════════════════════════════════════════
+// CORTICAL_BLOOD_FLOW — dark red slow rivers through sulci
+// ═══════════════════════════════════════════════════════════════════════════
+window.CORTICAL_BLOOD_FLOW = (function() {
+  let _flow = 0;
+
+  function draw(t) {
+    const { ctx, brainCenter, brainScale } = window.DORSAL;
+    const c = brainCenter();
+    const sc = brainScale();
+    ctx.save();
+    ctx.translate(c.x, c.y);
+    ctx.scale(sc, sc);
+
+    _flow = t * 0.00018;
+    const heartbeat = 0.5 + 0.5 * Math.sin(t * 0.004 + Math.sin(t * 0.004) * 0.3);
+    const alpha = (0.12 + 0.08 * heartbeat);
+
+    // Major arteries — MCA, ACA, PCA
+    // ACA (anterior cerebral artery) — midline, frontal
+    ctx.strokeStyle = `rgba(180, 20, 20, ${alpha})`;
+    ctx.lineWidth = 1.8 / sc;
+    ctx.beginPath();
+    ctx.moveTo(0, -190);
+    ctx.bezierCurveTo(0, -150, 0, -100, 0, -60);
+    ctx.bezierCurveTo(-2, 0, -1, 30, 0, 50);
+    ctx.stroke();
+
+    // ACA branches — left
+    ctx.lineWidth = 1 / sc;
+    ctx.beginPath(); ctx.moveTo(-2, -140); ctx.bezierCurveTo(-25, -130, -55, -120, -80, -100); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(-1, -90); ctx.bezierCurveTo(-20, -80, -45, -68, -65, -55); ctx.stroke();
+
+    // ACA branches — right
+    ctx.beginPath(); ctx.moveTo(2, -140); ctx.bezierCurveTo(25, -130, 55, -120, 80, -100); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(1, -90); ctx.bezierCurveTo(20, -80, 45, -68, 65, -55); ctx.stroke();
+
+    // MCA (middle cerebral artery) — lateral surface
+    ctx.lineWidth = 1.5 / sc;
+    // Left MCA
+    ctx.strokeStyle = `rgba(160, 15, 15, ${alpha * 0.85})`;
+    ctx.beginPath(); ctx.moveTo(-30, -60); ctx.bezierCurveTo(-60, -40, -110, -15, -130, 20); ctx.stroke();
+    ctx.lineWidth = 0.9 / sc;
+    ctx.beginPath(); ctx.moveTo(-90, -20); ctx.bezierCurveTo(-105, 10, -118, 40, -120, 70); ctx.stroke();
+    // Right MCA
+    ctx.lineWidth = 1.5 / sc;
+    ctx.beginPath(); ctx.moveTo(30, -60); ctx.bezierCurveTo(60, -40, 110, -15, 130, 20); ctx.stroke();
+    ctx.lineWidth = 0.9 / sc;
+    ctx.beginPath(); ctx.moveTo(90, -20); ctx.bezierCurveTo(105, 10, 118, 40, 120, 70); ctx.stroke();
+
+    // PCA (posterior cerebral artery) — occipital
+    ctx.lineWidth = 1.2 / sc;
+    ctx.strokeStyle = `rgba(150, 10, 10, ${alpha * 0.75})`;
+    ctx.beginPath(); ctx.moveTo(-10, 60); ctx.bezierCurveTo(-25, 90, -35, 120, -35, 150); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(10, 60); ctx.bezierCurveTo(25, 90, 35, 120, 35, 150); ctx.stroke();
+
+    // Pulse dot traveling down ACA
+    const pProg = (_flow * 0.6) % 1;
+    const pY = -190 + 240 * pProg;
+    const pAlpha = Math.sin(pProg * Math.PI) * 0.55;
+    ctx.fillStyle = `rgba(220, 30, 30, ${pAlpha})`;
+    ctx.beginPath(); ctx.arc(0, pY, 2, 0, Math.PI * 2); ctx.fill();
+
+    ctx.restore();
+  }
+  return { draw };
+})();
+
+// ═══════════════════════════════════════════════════════════════════════════
+// BRAINWAVE_OVERLAY — EEG waveforms: delta/theta/alpha/beta/gamma
+// Drawn as sine overlays at the bottom of the brain region
+// ═══════════════════════════════════════════════════════════════════════════
+window.BRAINWAVE_OVERLAY = (function() {
+  const WAVES = [
+    { name: 'delta', freq: 0.0004, amp: 12, color: 'rgba(100, 120, 255, 0.35)', y: 178 },
+    { name: 'theta', freq: 0.0008, amp: 8,  color: 'rgba(80, 200, 180, 0.3)',  y: 183 },
+    { name: 'alpha', freq: 0.0016, amp: 6,  color: 'rgba(0, 220, 200, 0.28)',  y: 188 },
+    { name: 'beta',  freq: 0.004,  amp: 4,  color: 'rgba(130, 180, 255, 0.28)', y: 193 },
+    { name: 'gamma', freq: 0.010,  amp: 2,  color: 'rgba(220, 150, 255, 0.32)', y: 198 },
+  ];
+
+  function draw(t) {
+    const { ctx, brainCenter, brainScale } = window.DORSAL;
+    const c = brainCenter();
+    const sc = brainScale();
+    ctx.save();
+    ctx.translate(c.x, c.y);
+    ctx.scale(sc, sc);
+
+    WAVES.forEach(w => {
+      ctx.strokeStyle = w.color;
+      ctx.lineWidth = 1 / sc;
+      ctx.beginPath();
+      const x0 = -90;
+      const x1 = 90;
+      for (let px = x0; px <= x1; px += 1.5) {
+        const nx = (px - x0) / (x1 - x0);
+        const val = Math.sin(t * w.freq + nx * Math.PI * 8) * w.amp * (1 - Math.pow((nx - 0.5) * 2, 2) * 0.5);
+        if (px === x0) ctx.moveTo(px, w.y + val);
+        else ctx.lineTo(px, w.y + val);
+      }
+      ctx.stroke();
+    });
+
+    ctx.restore();
+  }
+  return { draw };
+})();
+
+// ═══════════════════════════════════════════════════════════════════════════
+// SYNAPTIC_STORM — dense firing event every 8–12s — white burst
+// ═══════════════════════════════════════════════════════════════════════════
+window.SYNAPTIC_STORM = (function() {
+  let _active = false;
+  let _start = 0;
+  let _next = 8000 + Math.random() * 4000;
+  let _particles = [];
+
+  function trigger(t) {
+    _active = true;
+    _start = t;
+    _particles = [];
+    for (let i = 0; i < 40; i++) {
+      const ang = Math.random() * Math.PI * 2;
+      const spd = 20 + Math.random() * 80;
+      const region = (Math.random() - 0.5) * 140;
+      const ry = (Math.random() - 0.5) * 160 - 10;
+      _particles.push({ x: region, y: ry, vx: Math.cos(ang) * spd * 0.001, vy: Math.sin(ang) * spd * 0.001, life: 0.8 + Math.random() * 0.2 });
+    }
+  }
+
+  function draw(t) {
+    const { ctx, brainCenter, brainScale } = window.DORSAL;
+    const c = brainCenter();
+    const sc = brainScale();
+
+    if (!_active && t > _next) {
+      trigger(t);
+      _next = t + 8000 + Math.random() * 4000;
+    }
+    if (!_active) return;
+
+    const age = t - _start;
+    const dur = 1200;
+    if (age > dur) { _active = false; return; }
+
+    ctx.save();
+    ctx.translate(c.x, c.y);
+    ctx.scale(sc, sc);
+
+    const globalAlpha = Math.sin((age / dur) * Math.PI);
+    _particles.forEach(p => {
+      const px = p.x + p.vx * age;
+      const py = p.y + p.vy * age;
+      const a = p.life * globalAlpha * 0.75;
+      const g = ctx.createRadialGradient(px, py, 0, px, py, 2.5);
+      g.addColorStop(0, `rgba(255, 255, 255, ${a})`);
+      g.addColorStop(1, `rgba(200, 230, 255, 0)`);
+      ctx.fillStyle = g;
+      ctx.beginPath(); ctx.arc(px, py, 2, 0, Math.PI * 2); ctx.fill();
+    });
+
+    // Central burst
+    const bg = ctx.createRadialGradient(0, 0, 0, 0, 0, 80 * globalAlpha);
+    bg.addColorStop(0, `rgba(200, 230, 255, ${globalAlpha * 0.08})`);
+    bg.addColorStop(1, `rgba(150, 200, 255, 0)`);
+    ctx.fillStyle = bg;
+    ctx.beginPath(); ctx.arc(0, 0, 80 * globalAlpha, 0, Math.PI * 2); ctx.fill();
+
+    ctx.restore();
+  }
+  return { draw };
+})();
+
+// ═══════════════════════════════════════════════════════════════════════════
+// INSIGHT_FLASH — gamma burst when something connects
+// ═══════════════════════════════════════════════════════════════════════════
+window.INSIGHT_FLASH = (function() {
+  let _active = false;
+  let _start = 0;
+  let _next = 12000 + Math.random() * 8000;
+
+  function trigger(t) { _active = true; _start = t; }
+
+  function draw(t) {
+    const { ctx, brainCenter, brainScale } = window.DORSAL;
+    const c = brainCenter();
+    const sc = brainScale();
+
+    if (!_active && t > _next) {
+      trigger(t);
+      _next = t + 12000 + Math.random() * 8000;
+    }
+    if (!_active) return;
+
+    const age = t - _start;
+    const dur = 800;
+    if (age > dur) { _active = false; return; }
+
+    const prog = age / dur;
+    const alpha = Math.sin(prog * Math.PI) * (0.5 + 0.5 * Math.sin(t * 0.08));
+
+    ctx.save();
+    ctx.translate(c.x, c.y);
+    ctx.scale(sc, sc);
+
+    // Gamma burst ring
+    const r = 20 + 120 * prog;
+    const g = ctx.createRadialGradient(0, -80, r * 0.1, 0, -80, r);
+    g.addColorStop(0, `rgba(240, 200, 255, ${alpha * 0.4})`);
+    g.addColorStop(0.6, `rgba(200, 150, 255, ${alpha * 0.2})`);
+    g.addColorStop(1, `rgba(180, 120, 255, 0)`);
+    ctx.fillStyle = g;
+    ctx.beginPath(); ctx.arc(0, -80, r, 0, Math.PI * 2); ctx.fill();
+
+    // Radiating lines
+    for (let i = 0; i < 8; i++) {
+      const ang = (i / 8) * Math.PI * 2;
+      const x1 = Math.cos(ang) * r * 0.4;
+      const y1 = -80 + Math.sin(ang) * r * 0.4;
+      const x2 = Math.cos(ang) * r * 0.85;
+      const y2 = -80 + Math.sin(ang) * r * 0.85;
+      ctx.strokeStyle = `rgba(220, 180, 255, ${alpha * 0.5})`;
+      ctx.lineWidth = 0.8 / sc;
+      ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke();
+    }
+
+    ctx.restore();
+  }
+  return { draw };
+})();
+
+// ═══════════════════════════════════════════════════════════════════════════
+// SLEEP_WAVE — slow delta rolls when resting (low activity period)
+// ═══════════════════════════════════════════════════════════════════════════
+window.SLEEP_WAVE = (function() {
+  let _sleepiness = 0;
+  let _nextCheck = 20000;
+
+  function draw(t) {
+    const { ctx, brainCenter, brainScale } = window.DORSAL;
+    const c = brainCenter();
+    const sc = brainScale();
+
+    // Build up sleepiness slowly
+    if (t > _nextCheck) {
+      _sleepiness = Math.min(0.5, _sleepiness + 0.05);
+      _nextCheck = t + 5000;
+    }
+    if (_sleepiness < 0.05) return;
+
+    ctx.save();
+    ctx.translate(c.x, c.y);
+    ctx.scale(sc, sc);
+
+    const wave = 0.5 + 0.5 * Math.sin(t * 0.0003);
+    const alpha = _sleepiness * wave * 0.25;
+
+    // Slow rolling wave across whole brain
+    ctx.strokeStyle = `rgba(80, 100, 200, ${alpha})`;
+    ctx.lineWidth = 2 / sc;
+    ctx.beginPath();
+    for (let px = -150; px <= 150; px += 2) {
+      const ny = Math.sin(px * 0.04 + t * 0.0003) * 30;
+      if (px === -150) ctx.moveTo(px, ny);
+      else ctx.lineTo(px, ny);
+    }
+    ctx.stroke();
+
+    // Z letters floating up
+    if (Math.random() < 0.001 * _sleepiness) {
+      // handled by existing SLEEP system if present — just add glow
+      ctx.fillStyle = `rgba(100, 130, 220, ${_sleepiness * 0.15})`;
+      ctx.font = `${12 / sc}px monospace`;
+      ctx.fillText('z', (Math.random() - 0.5) * 100, -160 + Math.random() * 40);
+    }
+
+    ctx.restore();
+  }
+  return { draw };
+})();
+
+// ═══════════════════════════════════════════════════════════════════════════
+// DORSAL CANVAS CLEAR — must run first in each frame
+// ═══════════════════════════════════════════════════════════════════════════
+window.DORSAL_CLEAR = (function() {
+  function draw(t) {
+    const { ctx, cvs } = window.DORSAL;
+    ctx.clearRect(0, 0, cvs.width, cvs.height);
+  }
+  return { draw };
+})();
+
+// ── BATCH 29 — ANATOMICAL BRAIN RAF LOOP ─────────────────────────────────
+(function() {
+  const _batch29 = [
+    'DORSAL_CLEAR',
+    'BRAIN_OUTLINE',
+    'HEMISPHERIC_DIVIDE',
+    'FRONTAL_LOBE',
+    'PARIETAL_LOBE',
+    'TEMPORAL_LOBE_L',
+    'TEMPORAL_LOBE_R',
+    'OCCIPITAL_LOBE',
+    'THALAMUS_GATE',
+    'BASAL_GANGLIA',
+    'HIPPOCAMPUS_L',
+    'HIPPOCAMPUS_R',
+    'AMYGDALA_PULSE',
+    'CEREBELLUM_RHYTHM',
+    'CORPUS_CALLOSUM',
+    'LIMBIC_FIRE',
+    'CORTICAL_BLOOD_FLOW',
+    'NEURAL_FIRING',
+    'BRAINWAVE_OVERLAY',
+    'PREFRONTAL_FOCUS',
+    'SYNAPTIC_STORM',
+    'INSIGHT_FLASH',
+    'SLEEP_WAVE',
+  ];
+  let _lt29 = 0;
+  function loop(ts) {
+    if (ts - _lt29 > 14) {
+      _lt29 = ts;
+      _batch29.forEach(n => {
+        const s = window[n];
+        if (s && typeof s.draw === 'function') s.draw(ts);
+      });
+    }
+    requestAnimationFrame(loop);
+  }
   requestAnimationFrame(loop);
 })();
 </script>
