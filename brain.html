@@ -33566,6 +33566,2023 @@ const ETERNAL_NOW = (() => {
   function loop(ts){if(ts-_lt27>14){_lt27=ts;_batch27.forEach(n=>{const s=window[n];if(s&&typeof s.draw==='function')s.draw(ts);});}requestAnimationFrame(loop);}
   requestAnimationFrame(loop);
 })();
+
+
+// ══════════════════════════════════════════════════════════════════════════
+// BATCH 28 — CONSCIOUSNESS, MEMORY, LANGUAGE, BODY, SOCIAL, TIME,
+//            CREATIVITY, FEAR, GROWTH, SPIRITUAL
+// ══════════════════════════════════════════════════════════════════════════
+
+// 1. SELF_AWARENESS — a single eye that opens slowly, blinks rarely
+const SELF_AWARENESS = (() => {
+    let _last = 0;
+    let phase = 0;
+    let blinkT = 0;
+    let blinkDur = 0;
+    let nextBlink = 7000 + Math.random() * 8000;
+    const INTERVAL = 30;
+    function draw(ts) {
+        if (ts - _last < INTERVAL) return;
+        const dt = ts - _last;
+        _last = ts;
+        phase += dt * 0.0003;
+        blinkT += dt;
+        const cx = canvas.width * 0.5, cy = canvas.height * 0.18;
+        const rx = 28, ry = 14;
+        let openness = 1;
+        if (blinkT > nextBlink) {
+            blinkDur += dt;
+            const bd = 350;
+            if (blinkDur < bd * 0.4) openness = 1 - blinkDur / (bd * 0.4);
+            else if (blinkDur < bd * 0.7) openness = 0;
+            else if (blinkDur < bd) openness = (blinkDur - bd * 0.7) / (bd * 0.3);
+            else { blinkT = 0; blinkDur = 0; nextBlink = 6000 + Math.random() * 9000; openness = 1; }
+        }
+        ctx.save();
+        ctx.globalAlpha = 0.55;
+        // eyelid clip
+        ctx.beginPath();
+        ctx.ellipse(cx, cy, rx, ry * openness + 0.5, 0, 0, Math.PI * 2);
+        ctx.clip();
+        // iris
+        const grad = ctx.createRadialGradient(cx, cy, 1, cx, cy, ry * 1.1);
+        grad.addColorStop(0, 'rgba(10,10,30,1)');
+        grad.addColorStop(0.35, 'rgba(60,110,200,0.9)');
+        grad.addColorStop(0.7, 'rgba(80,180,220,0.7)');
+        grad.addColorStop(1, 'rgba(200,230,255,0.3)');
+        ctx.fillStyle = grad;
+        ctx.beginPath();
+        ctx.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2);
+        ctx.fill();
+        // pupil
+        ctx.fillStyle = 'rgba(5,5,15,0.95)';
+        ctx.beginPath();
+        ctx.arc(cx, cy, 6 + Math.sin(phase) * 0.8, 0, Math.PI * 2);
+        ctx.fill();
+        // highlight
+        ctx.fillStyle = 'rgba(255,255,255,0.7)';
+        ctx.beginPath();
+        ctx.arc(cx - 3, cy - 3, 2, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+        // eyelid lines
+        ctx.save();
+        ctx.globalAlpha = 0.45 * openness;
+        ctx.strokeStyle = 'rgba(180,200,255,0.6)';
+        ctx.lineWidth = 1.2;
+        ctx.beginPath();
+        ctx.ellipse(cx, cy, rx, ry * openness + 0.5, 0, Math.PI, 0);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.ellipse(cx, cy, rx, ry * openness + 0.5, 0, 0, Math.PI);
+        ctx.stroke();
+        ctx.restore();
+    }
+    return { draw };
+})();
+
+// 2. THE_QUESTION — particles forming "?" then dissolving
+const THE_QUESTION = (() => {
+    let _last = 0;
+    const INTERVAL = 30;
+    let t = 0;
+    const pts = [];
+    // generate ? shape points
+    function qShape() {
+        const r = [];
+        const cx = 0, cy = 0;
+        // arc top
+        for (let a = Math.PI * 1.1; a <= Math.PI * 2.1; a += 0.18) {
+            r.push([cx + Math.cos(a) * 10, cy - 14 + Math.sin(a) * 8]);
+        }
+        // stem
+        r.push([cx + 2, cy - 6], [cx + 2, cy - 1]);
+        // dot
+        r.push([cx + 2, cy + 5]);
+        return r;
+    }
+    const qPts = qShape();
+    for (let i = 0; i < 28; i++) {
+        const qi = qPts[Math.floor(Math.random() * qPts.length)];
+        pts.push({
+            tx: qi[0], ty: qi[1],
+            x: (Math.random() - 0.5) * 60,
+            y: (Math.random() - 0.5) * 60,
+            phase: Math.random() * Math.PI * 2,
+            life: Math.random()
+        });
+    }
+    function draw(ts) {
+        if (ts - _last < INTERVAL) return;
+        const dt = ts - _last; _last = ts;
+        t += dt * 0.0008;
+        const cycle = (t % (Math.PI * 2)) / (Math.PI * 2);
+        // gather 0-0.4, hold 0.4-0.7, dissolve 0.7-1
+        const cx = canvas.width * 0.5, cy = canvas.height * 0.24;
+        ctx.save();
+        pts.forEach((p, i) => {
+            let gather = Math.min(1, cycle / 0.4);
+            let fade = cycle > 0.7 ? 1 - (cycle - 0.7) / 0.3 : 1;
+            const px = p.x * (1 - gather) + p.tx * gather;
+            const py = p.y * (1 - gather) + p.ty * gather;
+            const alpha = 0.6 * fade * (0.5 + 0.5 * Math.sin(p.phase + t * 3));
+            ctx.globalAlpha = alpha;
+            ctx.fillStyle = `hsl(${210 + i * 5},80%,70%)`;
+            ctx.beginPath();
+            ctx.arc(cx + px, cy + py, 1.8, 0, Math.PI * 2);
+            ctx.fill();
+            // on dissolve, scatter
+            if (cycle > 0.7) {
+                p.x += (Math.random() - 0.5) * 0.5;
+                p.y += (Math.random() - 0.5) * 0.5;
+            } else if (cycle < 0.05) {
+                // reset
+                const qi = qPts[Math.floor(Math.random() * qPts.length)];
+                p.tx = qi[0]; p.ty = qi[1];
+                p.x = (Math.random() - 0.5) * 60;
+                p.y = (Math.random() - 0.5) * 60;
+            }
+        });
+        ctx.restore();
+    }
+    return { draw };
+})();
+
+// 3. MIRROR_SELF — ghost outline of the body, slightly offset, breathing opposite phase
+const MIRROR_SELF = (() => {
+    let _last = 0;
+    const INTERVAL = 40;
+    let t = 0;
+    function draw(ts) {
+        if (ts - _last < INTERVAL) return;
+        const dt = ts - _last; _last = ts;
+        t += dt * 0.0007;
+        const W = canvas.width, H = canvas.height;
+        const cx = W * 0.5 + 18, cy = H * 0.5 + 8;
+        const breathOpp = Math.sin(t + Math.PI); // opposite phase
+        const scale = 1 + breathOpp * 0.012;
+        ctx.save();
+        ctx.globalAlpha = 0.1 + 0.06 * Math.abs(breathOpp);
+        ctx.strokeStyle = 'rgba(160,200,255,0.5)';
+        ctx.lineWidth = 1.2;
+        ctx.setLineDash([3, 5]);
+        ctx.translate(cx, cy);
+        ctx.scale(scale, scale);
+        // body outline: head, torso, limbs
+        // head
+        ctx.beginPath();
+        ctx.arc(0, -H * 0.29, H * 0.065, 0, Math.PI * 2);
+        ctx.stroke();
+        // torso
+        ctx.beginPath();
+        ctx.moveTo(-H * 0.065, -H * 0.22);
+        ctx.lineTo(-H * 0.07, H * 0.0);
+        ctx.lineTo(H * 0.07, H * 0.0);
+        ctx.lineTo(H * 0.065, -H * 0.22);
+        ctx.closePath();
+        ctx.stroke();
+        // legs
+        ctx.beginPath();
+        ctx.moveTo(-H * 0.035, H * 0.0);
+        ctx.lineTo(-H * 0.045, H * 0.18);
+        ctx.moveTo(H * 0.035, H * 0.0);
+        ctx.lineTo(H * 0.045, H * 0.18);
+        ctx.stroke();
+        // arms
+        ctx.beginPath();
+        ctx.moveTo(-H * 0.065, -H * 0.2);
+        ctx.lineTo(-H * 0.12, -H * 0.05);
+        ctx.moveTo(H * 0.065, -H * 0.2);
+        ctx.lineTo(H * 0.12, -H * 0.05);
+        ctx.stroke();
+        ctx.restore();
+    }
+    return { draw };
+})();
+
+// 4. WITNESS — one still point that never moves while everything else swirls
+const WITNESS = (() => {
+    let _last = 0;
+    const INTERVAL = 50;
+    let t = 0;
+    function draw(ts) {
+        if (ts - _last < INTERVAL) return;
+        const dt = ts - _last; _last = ts;
+        t += dt * 0.001;
+        const cx = canvas.width * 0.5, cy = canvas.height * 0.5;
+        // swirl around
+        ctx.save();
+        ctx.globalAlpha = 0.12;
+        for (let i = 0; i < 8; i++) {
+            const angle = t * (0.3 + i * 0.1) + i * (Math.PI * 2 / 8);
+            const r = 60 + i * 8;
+            const x = cx + Math.cos(angle) * r;
+            const y = cy + Math.sin(angle) * r;
+            ctx.fillStyle = `hsla(${200 + i * 15},60%,70%,0.4)`;
+            ctx.beginPath();
+            ctx.arc(x, y, 2.5, 0, Math.PI * 2);
+            ctx.fill();
+        }
+        ctx.restore();
+        // the still point
+        ctx.save();
+        ctx.globalAlpha = 0.9;
+        const grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, 8);
+        grad.addColorStop(0, 'rgba(255,255,240,1)');
+        grad.addColorStop(0.5, 'rgba(200,220,255,0.6)');
+        grad.addColorStop(1, 'rgba(100,150,255,0)');
+        ctx.fillStyle = grad;
+        ctx.beginPath();
+        ctx.arc(cx, cy, 8, 0, Math.PI * 2);
+        ctx.fill();
+        // tiny solid center
+        ctx.fillStyle = 'rgba(255,255,255,0.95)';
+        ctx.beginPath();
+        ctx.arc(cx, cy, 2, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+    }
+    return { draw };
+})();
+
+// 5. PRESENCE — body outline pulses brighter when "now" is detected every 1s
+const PRESENCE = (() => {
+    let _last = 0;
+    const INTERVAL = 20;
+    let lastPulse = 0;
+    let pulseAmt = 0;
+    function draw(ts) {
+        if (ts - _last < INTERVAL) return;
+        const dt = ts - _last; _last = ts;
+        if (ts - lastPulse >= 1000) { lastPulse = ts; pulseAmt = 1; }
+        pulseAmt *= 0.93;
+        const W = canvas.width, H = canvas.height;
+        const cx = W * 0.5, cy = H * 0.5;
+        ctx.save();
+        ctx.globalAlpha = 0.08 + pulseAmt * 0.28;
+        ctx.strokeStyle = `rgba(180,255,200,${0.4 + pulseAmt * 0.5})`;
+        ctx.lineWidth = 1.5 + pulseAmt * 3;
+        ctx.shadowColor = 'rgba(120,255,160,0.6)';
+        ctx.shadowBlur = 12 * pulseAmt;
+        // body silhouette
+        ctx.beginPath();
+        ctx.arc(cx, cy - H * 0.29, H * 0.065, 0, Math.PI * 2); ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(cx - H * 0.065, cy - H * 0.22);
+        ctx.lineTo(cx - H * 0.07, cy);
+        ctx.lineTo(cx + H * 0.07, cy);
+        ctx.lineTo(cx + H * 0.065, cy - H * 0.22);
+        ctx.closePath(); ctx.stroke();
+        ctx.restore();
+    }
+    return { draw };
+})();
+
+// 6. WORKING_MEMORY — 7±2 glowing nodes near prefrontal cortex
+const WORKING_MEMORY = (() => {
+    let _last = 0;
+    const INTERVAL = 35;
+    let t = 0;
+    const N = 7;
+    const nodes = Array.from({length: N}, (_, i) => ({
+        angle: i * (Math.PI * 2 / N) + Math.random() * 0.3,
+        r: 35 + Math.random() * 18,
+        bright: 0.4 + Math.random() * 0.6,
+        life: Math.random(),
+        decay: 0.0004 + Math.random() * 0.0003,
+        label: i
+    }));
+    function draw(ts) {
+        if (ts - _last < INTERVAL) return;
+        const dt = ts - _last; _last = ts;
+        t += dt * 0.001;
+        const cx = canvas.width * 0.5, cy = canvas.height * 0.14;
+        ctx.save();
+        nodes.forEach((n, i) => {
+            n.life -= n.decay * dt;
+            if (n.life <= 0) {
+                n.life = 0.8 + Math.random() * 0.2;
+                n.bright = 0.5 + Math.random() * 0.5;
+                n.angle = Math.random() * Math.PI * 2;
+                n.r = 28 + Math.random() * 22;
+            }
+            const wobble = Math.sin(t * 2 + i) * 4;
+            const x = cx + Math.cos(n.angle + t * 0.3) * (n.r + wobble);
+            const y = cy + Math.sin(n.angle + t * 0.3) * (n.r + wobble) * 0.5;
+            const a = n.life * n.bright;
+            const grad = ctx.createRadialGradient(x, y, 0, x, y, 9);
+            grad.addColorStop(0, `rgba(160,220,255,${a})`);
+            grad.addColorStop(0.5, `rgba(80,160,255,${a * 0.5})`);
+            grad.addColorStop(1, 'rgba(60,100,200,0)');
+            ctx.fillStyle = grad;
+            ctx.beginPath();
+            ctx.arc(x, y, 9, 0, Math.PI * 2);
+            ctx.fill();
+            // connect to center
+            if (n.life > 0.3) {
+                ctx.globalAlpha = a * 0.25;
+                ctx.strokeStyle = 'rgba(120,180,255,0.4)';
+                ctx.lineWidth = 0.8;
+                ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(x, y); ctx.stroke();
+            }
+        });
+        ctx.restore();
+    }
+    return { draw };
+})();
+
+// 7. LONG_TERM_STORE — amber crystalline structures growing in temporal lobe
+const LONG_TERM_STORE = (() => {
+    let _last = 0;
+    const INTERVAL = 60;
+    let t = 0;
+    const crystals = [];
+    for (let i = 0; i < 12; i++) {
+        crystals.push({
+            x: (Math.random() - 0.5) * 80,
+            y: (Math.random() - 0.5) * 30,
+            size: 2 + Math.random() * 6,
+            angle: Math.random() * Math.PI,
+            growRate: 0.00003 + Math.random() * 0.00002,
+            maxSize: 8 + Math.random() * 10,
+            hue: 30 + Math.random() * 20,
+            phase: Math.random() * Math.PI * 2
+        });
+    }
+    function draw(ts) {
+        if (ts - _last < INTERVAL) return;
+        const dt = ts - _last; _last = ts;
+        t += dt * 0.0004;
+        const cx = canvas.width * 0.62, cy = canvas.height * 0.28;
+        ctx.save();
+        crystals.forEach(c => {
+            c.size = Math.min(c.maxSize, c.size + c.growRate * dt);
+            if (c.size >= c.maxSize) { c.size = 2; c.x = (Math.random()-0.5)*80; c.y=(Math.random()-0.5)*30; }
+            const glow = 0.3 + 0.2 * Math.sin(t * 1.5 + c.phase);
+            ctx.globalAlpha = glow;
+            ctx.save();
+            ctx.translate(cx + c.x, cy + c.y);
+            ctx.rotate(c.angle);
+            // crystal hexagon
+            ctx.beginPath();
+            for (let v = 0; v < 6; v++) {
+                const a = v * Math.PI / 3;
+                v === 0 ? ctx.moveTo(Math.cos(a)*c.size, Math.sin(a)*c.size)
+                        : ctx.lineTo(Math.cos(a)*c.size, Math.sin(a)*c.size);
+            }
+            ctx.closePath();
+            ctx.fillStyle = `hsla(${c.hue},90%,60%,0.35)`;
+            ctx.fill();
+            ctx.strokeStyle = `hsla(${c.hue},100%,80%,0.6)`;
+            ctx.lineWidth = 0.8;
+            ctx.stroke();
+            ctx.restore();
+        });
+        ctx.restore();
+    }
+    return { draw };
+})();
+
+// 8. EPISODIC_TRACE — faint replay of earlier particle patterns (ghost trails)
+const EPISODIC_TRACE = (() => {
+    let _last = 0;
+    const INTERVAL = 40;
+    let t = 0;
+    const history = [];
+    const MAX_HISTORY = 40;
+    function draw(ts) {
+        if (ts - _last < INTERVAL) return;
+        const dt = ts - _last; _last = ts;
+        t += dt * 0.001;
+        const W = canvas.width, H = canvas.height;
+        // record current "moment"
+        const snap = {
+            x: W * 0.5 + Math.cos(t * 1.3) * W * 0.12,
+            y: H * 0.45 + Math.sin(t * 0.9) * H * 0.08,
+            ts: t
+        };
+        history.push(snap);
+        if (history.length > MAX_HISTORY) history.shift();
+        // draw ghost of 30 steps ago
+        ctx.save();
+        history.forEach((h, i) => {
+            const age = (MAX_HISTORY - i) / MAX_HISTORY;
+            const a = (1 - age) * 0.18;
+            ctx.globalAlpha = a;
+            ctx.fillStyle = `rgba(200,160,255,0.7)`;
+            ctx.beginPath();
+            ctx.arc(h.x, h.y, 3 * (1 - age * 0.5), 0, Math.PI * 2);
+            ctx.fill();
+        });
+        ctx.restore();
+    }
+    return { draw };
+})();
+
+// 9. SEMANTIC_WEB — word nodes connected by meaning-threads
+const SEMANTIC_WEB = (() => {
+    let _last = 0;
+    const INTERVAL = 50;
+    let t = 0;
+    const words = [
+        {label:'LOVE', x:0, y:0, hue:340},
+        {label:'CONNECTION', x:50, y:-20, hue:280},
+        {label:'TOUCH', x:30, y:30, hue:200},
+        {label:'WARMTH', x:-40, y:20, hue:30},
+        {label:'SELF', x:-20, y:-35, hue:120},
+        {label:'MEANING', x:20, y:-50, hue:200}
+    ];
+    const edges = [[0,1],[1,2],[2,3],[0,3],[0,4],[4,5],[1,5]];
+    function draw(ts) {
+        if (ts - _last < INTERVAL) return;
+        const dt = ts - _last; _last = ts;
+        t += dt * 0.0005;
+        const cx = canvas.width * 0.72, cy = canvas.height * 0.38;
+        ctx.save();
+        // draw edges
+        edges.forEach(([a,b]) => {
+            const wa = words[a], wb = words[b];
+            const pulse = 0.3 + 0.2 * Math.sin(t * 2 + a * 0.5);
+            ctx.globalAlpha = pulse * 0.4;
+            ctx.strokeStyle = `rgba(180,180,255,0.5)`;
+            ctx.lineWidth = 0.8;
+            ctx.setLineDash([2, 4]);
+            ctx.beginPath();
+            ctx.moveTo(cx + wa.x + Math.sin(t + a)*3, cy + wa.y + Math.cos(t*0.7+a)*3);
+            ctx.lineTo(cx + wb.x + Math.sin(t*1.2 + b)*3, cy + wb.y + Math.cos(t*0.8+b)*3);
+            ctx.stroke();
+        });
+        ctx.setLineDash([]);
+        // draw nodes
+        words.forEach((w, i) => {
+            const wx = cx + w.x + Math.sin(t * 0.8 + i) * 4;
+            const wy = cy + w.y + Math.cos(t * 0.6 + i) * 3;
+            const a = 0.5 + 0.3 * Math.sin(t * 1.5 + i);
+            ctx.globalAlpha = a;
+            ctx.fillStyle = `hsla(${w.hue},70%,65%,0.8)`;
+            ctx.beginPath(); ctx.arc(wx, wy, 4, 0, Math.PI * 2); ctx.fill();
+            ctx.globalAlpha = a * 0.7;
+            ctx.fillStyle = `hsla(${w.hue},60%,80%,1)`;
+            ctx.font = '7px monospace';
+            ctx.fillText(w.label, wx + 6, wy + 3);
+        });
+        ctx.restore();
+    }
+    return { draw };
+})();
+
+// 10. FORGETTING — particles dimming, gone, then new ones born
+const FORGETTING = (() => {
+    let _last = 0;
+    const INTERVAL = 40;
+    const particles = Array.from({length:30}, () => ({
+        x: Math.random() * 1,
+        y: Math.random() * 1,
+        alpha: Math.random(),
+        decay: 0.0002 + Math.random() * 0.0003,
+        hue: 200 + Math.random() * 60,
+        size: 2 + Math.random() * 3
+    }));
+    function draw(ts) {
+        if (ts - _last < INTERVAL) return;
+        const dt = ts - _last; _last = ts;
+        const W = canvas.width, H = canvas.height;
+        ctx.save();
+        particles.forEach(p => {
+            p.alpha -= p.decay * dt;
+            if (p.alpha <= 0) {
+                p.x = 0.3 + Math.random() * 0.4;
+                p.y = 0.1 + Math.random() * 0.7;
+                p.alpha = 0.7 + Math.random() * 0.3;
+                p.decay = 0.0001 + Math.random() * 0.0003;
+                p.hue = 200 + Math.random() * 60;
+                p.size = 2 + Math.random() * 3;
+            }
+            ctx.globalAlpha = p.alpha * 0.55;
+            ctx.fillStyle = `hsla(${p.hue},50%,70%,1)`;
+            ctx.beginPath();
+            ctx.arc(p.x * W, p.y * H, p.size, 0, Math.PI * 2);
+            ctx.fill();
+        });
+        ctx.restore();
+    }
+    return { draw };
+})();
+
+// 11. SYNTAX_TREE — branching grammatical structure in speech cortex
+const SYNTAX_TREE = (() => {
+    let _last = 0;
+    const INTERVAL = 45;
+    let t = 0;
+    function drawBranch(x, y, angle, depth, len, ts) {
+        if (depth <= 0) return;
+        const ex = x + Math.cos(angle) * len;
+        const ey = y + Math.sin(angle) * len;
+        const a = (depth / 5) * (0.4 + 0.2 * Math.sin(ts * 2 + depth));
+        ctx.globalAlpha = a * 0.6;
+        ctx.strokeStyle = `rgba(200,255,180,0.7)`;
+        ctx.lineWidth = depth * 0.5;
+        ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(ex, ey); ctx.stroke();
+        const spread = 0.35 + 0.1 * Math.sin(ts + depth);
+        drawBranch(ex, ey, angle - spread, depth-1, len*0.72, ts);
+        drawBranch(ex, ey, angle + spread, depth-1, len*0.72, ts);
+    }
+    function draw(ts) {
+        if (ts - _last < INTERVAL) return;
+        const dt = ts - _last; _last = ts;
+        t += dt * 0.0006;
+        const cx = canvas.width * 0.38, cy = canvas.height * 0.32;
+        ctx.save();
+        drawBranch(cx, cy + 20, -Math.PI/2, 5, 18 + Math.sin(t)*3, t);
+        ctx.restore();
+    }
+    return { draw };
+})();
+
+// 12. PHONEME_BURST — sound wave rings from throat/mouth area
+const PHONEME_BURST = (() => {
+    let _last = 0;
+    const INTERVAL = 25;
+    const rings = [];
+    let nextBurst = 0;
+    let t = 0;
+    function draw(ts) {
+        if (ts - _last < INTERVAL) return;
+        const dt = ts - _last; _last = ts;
+        t += dt * 0.001;
+        const cx = canvas.width * 0.5, cy = canvas.height * 0.08;
+        if (ts > nextBurst) {
+            rings.push({ r: 4, alpha: 0.7, speed: 0.08 + Math.random() * 0.06 });
+            nextBurst = ts + 400 + Math.random() * 600;
+        }
+        ctx.save();
+        for (let i = rings.length - 1; i >= 0; i--) {
+            const ring = rings[i];
+            ring.r += ring.speed * dt * 0.1;
+            ring.alpha *= 0.985;
+            if (ring.alpha < 0.01) { rings.splice(i, 1); continue; }
+            ctx.globalAlpha = ring.alpha * 0.5;
+            ctx.strokeStyle = `rgba(255,220,180,0.8)`;
+            ctx.lineWidth = 1.2;
+            ctx.beginPath();
+            ctx.ellipse(cx, cy, ring.r * 1.6, ring.r * 0.8, 0, 0, Math.PI * 2);
+            ctx.stroke();
+        }
+        ctx.restore();
+    }
+    return { draw };
+})();
+
+// 13. READING_FLOW — left-to-right scan line moving across invisible text
+const READING_FLOW = (() => {
+    let _last = 0;
+    const INTERVAL = 20;
+    let t = 0;
+    const lines = 5;
+    function draw(ts) {
+        if (ts - _last < INTERVAL) return;
+        const dt = ts - _last; _last = ts;
+        t += dt * 0.0008;
+        const W = canvas.width, H = canvas.height;
+        const baseX = W * 0.15, baseY = H * 0.6;
+        const lineH = 14, lineW = W * 0.7;
+        ctx.save();
+        // faint text placeholder lines
+        for (let i = 0; i < lines; i++) {
+            ctx.globalAlpha = 0.06;
+            ctx.fillStyle = 'rgba(200,220,255,0.8)';
+            ctx.fillRect(baseX, baseY + i * lineH, lineW * (0.6 + Math.random() * 0.35), 2);
+        }
+        // scan cursor
+        const cycle = (t % (Math.PI * 2)) / (Math.PI * 2);
+        const lineIdx = Math.floor(cycle * lines);
+        const linePos = (cycle * lines) % 1;
+        const scanX = baseX + linePos * lineW;
+        const scanY = baseY + lineIdx * lineH;
+        ctx.globalAlpha = 0.55;
+        const grad = ctx.createLinearGradient(scanX - 20, 0, scanX + 4, 0);
+        grad.addColorStop(0, 'rgba(120,200,255,0)');
+        grad.addColorStop(1, 'rgba(180,230,255,0.8)');
+        ctx.fillStyle = grad;
+        ctx.fillRect(scanX - 20, scanY - 2, 24, 6);
+        ctx.fillStyle = 'rgba(220,245,255,0.9)';
+        ctx.fillRect(scanX, scanY - 2, 2, 6);
+        ctx.restore();
+    }
+    return { draw };
+})();
+
+// 14. INNER_VOICE — subtle lip movement visualization
+const INNER_VOICE = (() => {
+    let _last = 0;
+    const INTERVAL = 30;
+    let t = 0;
+    function draw(ts) {
+        if (ts - _last < INTERVAL) return;
+        const dt = ts - _last; _last = ts;
+        t += dt * 0.002;
+        const cx = canvas.width * 0.5, cy = canvas.height * 0.055;
+        // mouth center (below nose area in head position)
+        const my = cy + 14;
+        const openness = Math.abs(Math.sin(t * 3.1) * Math.sin(t * 1.7)) * 4;
+        ctx.save();
+        ctx.globalAlpha = 0.35;
+        ctx.strokeStyle = 'rgba(255,180,160,0.7)';
+        ctx.lineWidth = 1.2;
+        // upper lip
+        ctx.beginPath();
+        ctx.moveTo(cx - 8, my);
+        ctx.quadraticCurveTo(cx, my - 2, cx + 8, my);
+        ctx.stroke();
+        // lower lip
+        ctx.beginPath();
+        ctx.moveTo(cx - 8, my);
+        ctx.quadraticCurveTo(cx, my + 3 + openness, cx + 8, my);
+        ctx.stroke();
+        // breath particle
+        if (openness > 2.5) {
+            ctx.globalAlpha = 0.2;
+            ctx.fillStyle = 'rgba(255,230,220,0.6)';
+            ctx.beginPath();
+            ctx.arc(cx + (Math.random()-0.5)*4, my - 6 - Math.random()*4, 1.5, 0, Math.PI*2);
+            ctx.fill();
+        }
+        ctx.restore();
+    }
+    return { draw };
+})();
+
+// 15. TRANSLATION — same concept in multiple symbol systems
+const TRANSLATION = (() => {
+    let _last = 0;
+    const INTERVAL = 60;
+    let t = 0;
+    const concepts = [
+        {label: '愛', hue: 340},
+        {label: 'ܚܘܒܐ', hue: 60},
+        {label: 'LOVE', hue: 200},
+        {label: 'حب', hue: 120},
+        {label: 'प्रेम', hue: 280}
+    ];
+    function draw(ts) {
+        if (ts - _last < INTERVAL) return;
+        const dt = ts - _last; _last = ts;
+        t += dt * 0.0006;
+        const cx = canvas.width * 0.25, cy = canvas.height * 0.45;
+        ctx.save();
+        concepts.forEach((c, i) => {
+            const angle = t * 0.5 + i * (Math.PI * 2 / concepts.length);
+            const r = 28;
+            const x = cx + Math.cos(angle) * r;
+            const y = cy + Math.sin(angle) * r;
+            const alpha = 0.3 + 0.25 * Math.sin(t * 1.2 + i);
+            ctx.globalAlpha = alpha;
+            ctx.fillStyle = `hsla(${c.hue},70%,70%,1)`;
+            ctx.font = `${8 + Math.sin(t + i) * 1.5}px serif`;
+            ctx.textAlign = 'center';
+            ctx.fillText(c.label, x, y);
+        });
+        ctx.restore();
+    }
+    return { draw };
+})();
+
+// 16. PROPRIOCEPTION — ghost limb outlines aware of their position
+const PROPRIOCEPTION = (() => {
+    let _last = 0;
+    const INTERVAL = 40;
+    let t = 0;
+    function draw(ts) {
+        if (ts - _last < INTERVAL) return;
+        const dt = ts - _last; _last = ts;
+        t += dt * 0.0008;
+        const W = canvas.width, H = canvas.height;
+        const cx = W * 0.5, cy = H * 0.5;
+        ctx.save();
+        ctx.globalAlpha = 0.2;
+        ctx.strokeStyle = 'rgba(180,255,200,0.5)';
+        ctx.lineWidth = 1;
+        ctx.setLineDash([2, 3]);
+        // arms with gentle sway
+        const armSwing = Math.sin(t * 1.2) * 0.08;
+        // left arm
+        ctx.save();
+        ctx.translate(cx - H*0.065, cy - H*0.2);
+        ctx.rotate(armSwing);
+        ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(-H*0.06, H*0.14); ctx.stroke();
+        ctx.restore();
+        // right arm
+        ctx.save();
+        ctx.translate(cx + H*0.065, cy - H*0.2);
+        ctx.rotate(-armSwing);
+        ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(H*0.06, H*0.14); ctx.stroke();
+        ctx.restore();
+        // feet/legs position awareness dots
+        const legPhase = Math.sin(t * 0.8) * 0.04;
+        ctx.globalAlpha = 0.3;
+        ctx.fillStyle = 'rgba(200,255,200,0.6)';
+        ctx.beginPath(); ctx.arc(cx - H*0.045, cy + H*0.18, 4, 0, Math.PI*2); ctx.fill();
+        ctx.beginPath(); ctx.arc(cx + H*0.045, cy + H*0.18 + legPhase*H, 4, 0, Math.PI*2); ctx.fill();
+        ctx.restore();
+    }
+    return { draw };
+})();
+
+// 17. HEARTBEAT_DRUM — rhythm, 72 BPM, never stops
+const HEARTBEAT_DRUM = (() => {
+    let _last = 0;
+    const INTERVAL = 16;
+    const BPM = 72;
+    const BEAT_MS = 60000 / BPM;
+    let phase = 0;
+    let beatPulse = 0;
+    let lastBeat = 0;
+    function draw(ts) {
+        if (ts - _last < INTERVAL) return;
+        const dt = ts - _last; _last = ts;
+        phase = (ts % (BEAT_MS * 2)) / (BEAT_MS * 2);
+        if (ts - lastBeat >= BEAT_MS) { lastBeat = ts; beatPulse = 1; }
+        beatPulse *= 0.88;
+        const cx = canvas.width * 0.5, cy = canvas.height * 0.38;
+        // ECG-style waveform
+        ctx.save();
+        ctx.globalAlpha = 0.45 + beatPulse * 0.3;
+        ctx.strokeStyle = `rgba(255,80,80,${0.6 + beatPulse * 0.3})`;
+        ctx.lineWidth = 1.5;
+        ctx.shadowColor = 'rgba(255,60,60,0.5)';
+        ctx.shadowBlur = 6 * beatPulse;
+        const W = 70, baseY = cy;
+        ctx.beginPath();
+        const steps = 80;
+        for (let i = 0; i <= steps; i++) {
+            const x = cx - W/2 + (i / steps) * W;
+            const p = (i / steps + phase) % 1;
+            let y = baseY;
+            if (p > 0.38 && p < 0.42) y = baseY - 22 * Math.sin((p - 0.38) / 0.04 * Math.PI);
+            else if (p > 0.42 && p < 0.48) y = baseY + 8 * Math.sin((p-0.42)/0.06*Math.PI);
+            else if (p > 0.48 && p < 0.56) y = baseY - 28 * Math.sin((p-0.48)/0.08*Math.PI);
+            else if (p > 0.56 && p < 0.62) y = baseY + 5 * Math.sin((p-0.56)/0.06*Math.PI);
+            i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+        }
+        ctx.stroke();
+        ctx.restore();
+    }
+    return { draw };
+})();
+
+// 18. NERVE_SIGNAL — electrical impulse racing fingertip to brain
+const NERVE_SIGNAL = (() => {
+    let _last = 0;
+    const INTERVAL = 20;
+    let t = 0;
+    let signals = [];
+    let nextSignal = 0;
+    function draw(ts) {
+        if (ts - _last < INTERVAL) return;
+        const dt = ts - _last; _last = ts;
+        t += dt * 0.001;
+        const W = canvas.width, H = canvas.height;
+        if (ts > nextSignal) {
+            signals.push({ progress: 0, speed: 0.0008 + Math.random() * 0.0005 });
+            nextSignal = ts + 1500 + Math.random() * 2000;
+        }
+        // path: fingertip (bottom right) → shoulder → brain (top center)
+        const path = [
+            [W*0.72, H*0.85],
+            [W*0.65, H*0.65],
+            [W*0.58, H*0.45],
+            [W*0.52, H*0.22],
+            [W*0.5,  H*0.1]
+        ];
+        ctx.save();
+        // draw nerve path faintly
+        ctx.globalAlpha = 0.08;
+        ctx.strokeStyle = 'rgba(180,255,200,0.5)';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        path.forEach(([x,y],i) => i===0 ? ctx.moveTo(x,y) : ctx.lineTo(x,y));
+        ctx.stroke();
+        // draw moving impulse
+        for (let i = signals.length-1; i >= 0; i--) {
+            const s = signals[i];
+            s.progress += s.speed * dt;
+            if (s.progress >= 1) { signals.splice(i,1); continue; }
+            const idx = Math.min(Math.floor(s.progress * (path.length-1)), path.length-2);
+            const t2 = (s.progress * (path.length-1)) % 1;
+            const [ax,ay] = path[idx];
+            const [bx,by] = path[idx+1];
+            const x = ax + (bx-ax)*t2, y = ay + (by-ay)*t2;
+            ctx.globalAlpha = 0.8;
+            ctx.shadowColor = 'rgba(100,255,180,0.8)';
+            ctx.shadowBlur = 8;
+            ctx.fillStyle = 'rgba(160,255,200,0.9)';
+            ctx.beginPath(); ctx.arc(x, y, 3.5, 0, Math.PI*2); ctx.fill();
+        }
+        ctx.restore();
+    }
+    return { draw };
+})();
+
+// 19. MUSCLE_MEMORY — repeated micro-movements, hands knowing what to do
+const MUSCLE_MEMORY = (() => {
+    let _last = 0;
+    const INTERVAL = 30;
+    let t = 0;
+    const traces = Array.from({length:6}, (_, i) => ({
+        phase: i * (Math.PI * 2 / 6),
+        decay: 0.92,
+        alpha: 0
+    }));
+    function draw(ts) {
+        if (ts - _last < INTERVAL) return;
+        const dt = ts - _last; _last = ts;
+        t += dt * 0.0012;
+        const cx = canvas.width * 0.5, cy = canvas.height * 0.7;
+        // simulate a repeated gesture pattern
+        const pattern = [
+            [0, 0], [8, -5], [12, -12], [8, -18], [0, -20],
+            [-8, -18], [-12, -12], [-8, -5], [0, 0]
+        ];
+        ctx.save();
+        traces.forEach((tr, i) => {
+            const progress = (t * 0.8 + tr.phase) % (Math.PI * 2);
+            const alpha = 0.08 + 0.12 * Math.sin(progress);
+            ctx.globalAlpha = alpha;
+            ctx.strokeStyle = 'rgba(255,230,180,0.6)';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            pattern.forEach(([px,py], pi) => {
+                const scale = 1 + i * 0.15;
+                const rx = cx + px * scale + Math.sin(progress + i) * 2;
+                const ry = cy + py * scale + Math.cos(progress * 0.7 + i) * 2;
+                pi === 0 ? ctx.moveTo(rx,ry) : ctx.lineTo(rx,ry);
+            });
+            ctx.stroke();
+        });
+        ctx.restore();
+    }
+    return { draw };
+})();
+
+// 20. PAIN_MAP — heat spots at stress locations, cooling slowly
+const PAIN_MAP = (() => {
+    let _last = 0;
+    const INTERVAL = 50;
+    let t = 0;
+    const spots = [
+        {x: 0.5,  y: 0.38, intensity: 0.6, hue: 0},   // chest
+        {x: 0.42, y: 0.55, intensity: 0.3, hue: 15},   // lower back left
+        {x: 0.5,  y: 0.15, intensity: 0.4, hue: 5},    // head/neck
+        {x: 0.65, y: 0.6,  intensity: 0.2, hue: 20}    // knee
+    ];
+    function draw(ts) {
+        if (ts - _last < INTERVAL) return;
+        const dt = ts - _last; _last = ts;
+        t += dt * 0.0004;
+        const W = canvas.width, H = canvas.height;
+        ctx.save();
+        spots.forEach((s, i) => {
+            s.intensity -= 0.00005 * dt;
+            if (s.intensity < 0.1) s.intensity = 0.1 + Math.random() * 0.4;
+            const pulse = s.intensity * (0.7 + 0.3 * Math.sin(t * 2 + i));
+            const r = 20 + pulse * 15;
+            const cx = s.x * W, cy = s.y * H;
+            const grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, r);
+            grad.addColorStop(0, `hsla(${s.hue},100%,60%,${pulse * 0.45})`);
+            grad.addColorStop(0.5, `hsla(${s.hue + 10},80%,50%,${pulse * 0.2})`);
+            grad.addColorStop(1, 'rgba(255,50,0,0)');
+            ctx.fillStyle = grad;
+            ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI*2); ctx.fill();
+        });
+        ctx.restore();
+    }
+    return { draw };
+})();
+
+// 21. THEORY_OF_MIND — two "other minds" visible as ghost outlines
+const THEORY_OF_MIND = (() => {
+    let _last = 0;
+    const INTERVAL = 45;
+    let t = 0;
+    function draw(ts) {
+        if (ts - _last < INTERVAL) return;
+        const dt = ts - _last; _last = ts;
+        t += dt * 0.0005;
+        const W = canvas.width, H = canvas.height;
+        const others = [
+            {ox: -W*0.28, oy: 0, hue: 280, phase: 0},
+            {ox:  W*0.28, oy: H*0.05, hue: 160, phase: Math.PI}
+        ];
+        ctx.save();
+        others.forEach(o => {
+            const wobble = Math.sin(t + o.phase) * 8;
+            const cx = W*0.5 + o.ox + wobble;
+            const cy = H*0.5 + o.oy;
+            const alpha = 0.08 + 0.05 * Math.sin(t * 0.7 + o.phase);
+            ctx.globalAlpha = alpha;
+            ctx.strokeStyle = `hsla(${o.hue},60%,70%,0.5)`;
+            ctx.lineWidth = 1;
+            ctx.setLineDash([2,4]);
+            // head
+            ctx.beginPath(); ctx.arc(cx, cy - H*0.29, H*0.06, 0, Math.PI*2); ctx.stroke();
+            // body suggestion
+            ctx.beginPath();
+            ctx.moveTo(cx - 20, cy - H*0.22);
+            ctx.lineTo(cx, cy);
+            ctx.lineTo(cx + 20, cy - H*0.22);
+            ctx.stroke();
+        });
+        ctx.restore();
+    }
+    return { draw };
+})();
+
+// 22. EMPATHY_ECHO — emotional state of others as faint colored aura
+const EMPATHY_ECHO = (() => {
+    let _last = 0;
+    const INTERVAL = 40;
+    let t = 0;
+    const emotions = [
+        {hue: 200, intensity: 0.6, phase: 0},
+        {hue: 30,  intensity: 0.4, phase: 2.1},
+        {hue: 340, intensity: 0.3, phase: 4.2}
+    ];
+    function draw(ts) {
+        if (ts - _last < INTERVAL) return;
+        const dt = ts - _last; _last = ts;
+        t += dt * 0.0004;
+        const W = canvas.width, H = canvas.height;
+        const cx = W*0.5, cy = H*0.5;
+        ctx.save();
+        emotions.forEach(e => {
+            const pulse = e.intensity * (0.5 + 0.5 * Math.sin(t * 1.3 + e.phase));
+            const r = 90 + Math.sin(t * 0.8 + e.phase) * 20;
+            const grad = ctx.createRadialGradient(cx, cy, r*0.6, cx, cy, r*1.3);
+            grad.addColorStop(0, 'rgba(0,0,0,0)');
+            grad.addColorStop(0.6, `hsla(${e.hue},60%,60%,${pulse*0.08})`);
+            grad.addColorStop(1, 'rgba(0,0,0,0)');
+            ctx.fillStyle = grad;
+            ctx.beginPath(); ctx.arc(cx, cy, r*1.3, 0, Math.PI*2); ctx.fill();
+        });
+        ctx.restore();
+    }
+    return { draw };
+})();
+
+// 23. TRUST_NETWORK — glowing threads, some bright, some dim
+const TRUST_NETWORK = (() => {
+    let _last = 0;
+    const INTERVAL = 55;
+    let t = 0;
+    const nodes = Array.from({length:8}, (_, i) => ({
+        angle: i * (Math.PI * 2 / 8) + Math.random() * 0.4,
+        r: 55 + Math.random() * 30,
+        trust: 0.1 + Math.random() * 0.9,
+        phase: Math.random() * Math.PI * 2
+    }));
+    function draw(ts) {
+        if (ts - _last < INTERVAL) return;
+        const dt = ts - _last; _last = ts;
+        t += dt * 0.0004;
+        const cx = canvas.width * 0.5, cy = canvas.height * 0.5;
+        ctx.save();
+        nodes.forEach((n, i) => {
+            const x = cx + Math.cos(n.angle + t*0.2) * n.r;
+            const y = cy + Math.sin(n.angle + t*0.2) * n.r * 0.5;
+            const pulse = n.trust * (0.6 + 0.4 * Math.sin(t*1.5 + n.phase));
+            ctx.globalAlpha = pulse * 0.5;
+            ctx.strokeStyle = `rgba(255,220,100,${pulse * 0.6})`;
+            ctx.lineWidth = pulse * 1.5;
+            ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(x, y); ctx.stroke();
+            ctx.fillStyle = `rgba(255,200,80,${pulse})`;
+            ctx.beginPath(); ctx.arc(x, y, 3.5, 0, Math.PI*2); ctx.fill();
+        });
+        ctx.restore();
+    }
+    return { draw };
+})();
+
+// 24. BELONGING — warm amber glow when connection is felt
+const BELONGING = (() => {
+    let _last = 0;
+    const INTERVAL = 35;
+    let t = 0;
+    function draw(ts) {
+        if (ts - _last < INTERVAL) return;
+        const dt = ts - _last; _last = ts;
+        t += dt * 0.0005;
+        const W = canvas.width, H = canvas.height;
+        const cx = W*0.5, cy = H*0.45;
+        const pulse = 0.3 + 0.25 * Math.sin(t * 0.9) + 0.1 * Math.sin(t * 2.3);
+        ctx.save();
+        const grad = ctx.createRadialGradient(cx, cy, 20, cx, cy, 120);
+        grad.addColorStop(0, `rgba(255,180,60,${pulse * 0.18})`);
+        grad.addColorStop(0.4, `rgba(255,140,40,${pulse * 0.1})`);
+        grad.addColorStop(1, 'rgba(255,100,20,0)');
+        ctx.fillStyle = grad;
+        ctx.beginPath(); ctx.arc(cx, cy, 120, 0, Math.PI*2); ctx.fill();
+        ctx.restore();
+    }
+    return { draw };
+})();
+
+// 25. LONELINESS_FIELD — cool blue distance field when isolated
+const LONELINESS_FIELD = (() => {
+    let _last = 0;
+    const INTERVAL = 50;
+    let t = 0;
+    function draw(ts) {
+        if (ts - _last < INTERVAL) return;
+        const dt = ts - _last; _last = ts;
+        t += dt * 0.0003;
+        const W = canvas.width, H = canvas.height;
+        const cx = W*0.5, cy = H*0.5;
+        const distance = 0.5 + 0.4 * Math.sin(t * 0.4);
+        ctx.save();
+        for (let ring = 0; ring < 4; ring++) {
+            const r = 80 + ring * 40 + distance * 20;
+            const alpha = (0.12 - ring * 0.025) * distance;
+            ctx.globalAlpha = Math.max(0, alpha);
+            ctx.strokeStyle = `rgba(80,140,220,0.4)`;
+            ctx.lineWidth = 1;
+            ctx.setLineDash([4, 8]);
+            ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI*2); ctx.stroke();
+        }
+        ctx.setLineDash([]);
+        ctx.restore();
+    }
+    return { draw };
+})();
+
+// 26. SUBJECTIVE_TIME — clock that speeds during boredom, slows in flow
+const SUBJECTIVE_TIME = (() => {
+    let _last = 0;
+    const INTERVAL = 20;
+    let t = 0;
+    let subjTime = 0;
+    function draw(ts) {
+        if (ts - _last < INTERVAL) return;
+        const dt = ts - _last; _last = ts;
+        t += dt * 0.0006;
+        // speed oscillates: fast in some cycles, slow in others
+        const speed = 0.5 + 1.5 * (0.5 + 0.5 * Math.sin(t * 0.3));
+        subjTime += dt * 0.001 * speed;
+        const cx = canvas.width * 0.82, cy = canvas.height * 0.22;
+        const r = 18;
+        ctx.save();
+        ctx.globalAlpha = 0.4;
+        ctx.strokeStyle = 'rgba(200,180,255,0.5)';
+        ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI*2); ctx.stroke();
+        // hour hand (subjective)
+        ctx.globalAlpha = 0.6;
+        ctx.strokeStyle = `rgba(180,160,255,${0.5 + speed*0.15})`;
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.moveTo(cx, cy);
+        ctx.lineTo(cx + Math.cos(subjTime * 0.5 - Math.PI/2) * r*0.6, cy + Math.sin(subjTime*0.5 - Math.PI/2)*r*0.6);
+        ctx.stroke();
+        // minute hand
+        ctx.strokeStyle = `rgba(220,200,255,${0.4 + speed*0.1})`;
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(cx, cy);
+        ctx.lineTo(cx + Math.cos(subjTime*6 - Math.PI/2)*r*0.85, cy + Math.sin(subjTime*6 - Math.PI/2)*r*0.85);
+        ctx.stroke();
+        ctx.restore();
+    }
+    return { draw };
+})();
+
+// 27. ANTICIPATION — future cone brightening as event approaches
+const ANTICIPATION = (() => {
+    let _last = 0;
+    const INTERVAL = 35;
+    let t = 0;
+    function draw(ts) {
+        if (ts - _last < INTERVAL) return;
+        const dt = ts - _last; _last = ts;
+        t += dt * 0.0005;
+        const W = canvas.width, H = canvas.height;
+        const cx = W*0.5;
+        // cycle: builds up, releases, builds again
+        const cycle = (Math.sin(t * 0.5) + 1) * 0.5;
+        const brightness = cycle * cycle;
+        // forward-looking cone from upper body upward
+        ctx.save();
+        ctx.globalAlpha = brightness * 0.22;
+        const coneBase = H * 0.35;
+        const coneTop = H * 0.02;
+        const coneW = 80 * brightness;
+        const grad = ctx.createLinearGradient(cx, coneBase, cx, coneTop);
+        grad.addColorStop(0, 'rgba(255,255,180,0)');
+        grad.addColorStop(0.4, `rgba(255,240,120,${brightness * 0.3})`);
+        grad.addColorStop(1, `rgba(255,255,200,${brightness * 0.5})`);
+        ctx.fillStyle = grad;
+        ctx.beginPath();
+        ctx.moveTo(cx - 12, coneBase);
+        ctx.lineTo(cx - coneW, coneTop);
+        ctx.lineTo(cx + coneW, coneTop);
+        ctx.lineTo(cx + 12, coneBase);
+        ctx.closePath();
+        ctx.fill();
+        ctx.restore();
+    }
+    return { draw };
+})();
+
+// 28. NOSTALGIA — past events shown as sepia photographs dissolving
+const NOSTALGIA = (() => {
+    let _last = 0;
+    const INTERVAL = 50;
+    let t = 0;
+    const photos = Array.from({length:4}, (_, i) => ({
+        x: 0.15 + i * 0.22,
+        y: 0.7 + Math.random() * 0.1,
+        alpha: Math.random() * 0.5,
+        w: 30 + Math.random() * 20,
+        h: 22 + Math.random() * 14,
+        phase: Math.random() * Math.PI * 2
+    }));
+    function draw(ts) {
+        if (ts - _last < INTERVAL) return;
+        const dt = ts - _last; _last = ts;
+        t += dt * 0.0003;
+        const W = canvas.width, H = canvas.height;
+        ctx.save();
+        photos.forEach(p => {
+            p.alpha = 0.08 + 0.12 * Math.sin(t * 0.6 + p.phase);
+            const x = p.x * W, y = p.y * H;
+            ctx.globalAlpha = p.alpha;
+            // sepia-tinted rectangle
+            ctx.fillStyle = 'rgba(180,140,80,0.3)';
+            ctx.fillRect(x - p.w/2, y - p.h/2, p.w, p.h);
+            ctx.strokeStyle = 'rgba(200,160,100,0.4)';
+            ctx.lineWidth = 0.8;
+            ctx.strokeRect(x - p.w/2, y - p.h/2, p.w, p.h);
+            // inner content suggestion
+            ctx.fillStyle = 'rgba(220,180,120,0.15)';
+            ctx.beginPath(); ctx.arc(x, y - p.h*0.1, p.h*0.25, 0, Math.PI*2); ctx.fill();
+        });
+        ctx.restore();
+    }
+    return { draw };
+})();
+
+// 29. TEMPORAL_BINDING — cause and effect linked by glowing arcs
+const TEMPORAL_BINDING = (() => {
+    let _last = 0;
+    const INTERVAL = 40;
+    let t = 0;
+    const pairs = [
+        {ax:0.3, ay:0.4, bx:0.7, by:0.6, delay:0, hue:180},
+        {ax:0.5, ay:0.25, bx:0.55, by:0.55, delay:0.3, hue:120},
+        {ax:0.2, ay:0.6, bx:0.6, by:0.35, delay:0.6, hue:220}
+    ];
+    function draw(ts) {
+        if (ts - _last < INTERVAL) return;
+        const dt = ts - _last; _last = ts;
+        t += dt * 0.0006;
+        const W = canvas.width, H = canvas.height;
+        ctx.save();
+        pairs.forEach(p => {
+            const phase = (t + p.delay) % (Math.PI * 2);
+            const progress = (Math.sin(phase) + 1) * 0.5;
+            const ax = p.ax*W, ay = p.ay*H;
+            const bx = p.bx*W, by = p.by*H;
+            const mx = (ax+bx)*0.5, my = Math.min(ay,by) - 30;
+            ctx.globalAlpha = 0.25 * progress;
+            ctx.strokeStyle = `hsla(${p.hue},70%,65%,0.6)`;
+            ctx.lineWidth = 1.2;
+            ctx.setLineDash([3,5]);
+            ctx.beginPath(); ctx.moveTo(ax, ay); ctx.quadraticCurveTo(mx, my, bx, by); ctx.stroke();
+            // cause dot
+            ctx.globalAlpha = 0.5 * (1 - progress);
+            ctx.fillStyle = `hsla(${p.hue},80%,70%,1)`;
+            ctx.beginPath(); ctx.arc(ax, ay, 3, 0, Math.PI*2); ctx.fill();
+            // effect dot
+            ctx.globalAlpha = 0.5 * progress;
+            ctx.fillStyle = `hsla(${p.hue+30},80%,70%,1)`;
+            ctx.beginPath(); ctx.arc(bx, by, 3, 0, Math.PI*2); ctx.fill();
+        });
+        ctx.setLineDash([]);
+        ctx.restore();
+    }
+    return { draw };
+})();
+
+// 30. THE_PRESENT_MOMENT — one pixel, always moving, always now
+const THE_PRESENT_MOMENT = (() => {
+    let _last = 0;
+    const INTERVAL = 16;
+    let t = 0;
+    let trail = [];
+    function draw(ts) {
+        if (ts - _last < INTERVAL) return;
+        const dt = ts - _last; _last = ts;
+        t += dt * 0.0008;
+        const W = canvas.width, H = canvas.height;
+        // lissajous-like path that always moves
+        const x = W * 0.5 + Math.sin(t * 1.3) * W * 0.25;
+        const y = H * 0.5 + Math.sin(t * 0.9 + 1) * H * 0.22;
+        trail.push({x, y, ts: t});
+        if (trail.length > 12) trail.shift();
+        ctx.save();
+        trail.forEach((p, i) => {
+            const a = (i / trail.length) * 0.35;
+            ctx.globalAlpha = a;
+            ctx.fillStyle = 'rgba(255,255,200,0.9)';
+            ctx.fillRect(p.x, p.y, 2, 2);
+        });
+        // the actual present: 1 bright pixel
+        ctx.globalAlpha = 1;
+        ctx.fillStyle = 'rgba(255,255,255,1)';
+        ctx.fillRect(x, y, 2, 2);
+        ctx.restore();
+    }
+    return { draw };
+})();
+
+// 31. IDEA_COLLISION — two particles collide, spawn a brighter new one
+const IDEA_COLLISION = (() => {
+    let _last = 0;
+    const INTERVAL = 20;
+    let t = 0;
+    const ideas = [];
+    let nextSpawn = 0;
+    function spawnPair() {
+        const cy = canvas.height * (0.25 + Math.random() * 0.5);
+        const W = canvas.width;
+        ideas.push(
+            {x: W*0.2, y: cy, vx: 0.04, vy: (Math.random()-0.5)*0.01, hue: 200+Math.random()*60, r:5, type:'a', id:Date.now()},
+            {x: W*0.8, y: cy + (Math.random()-0.5)*20, vx: -0.04, vy: (Math.random()-0.5)*0.01, hue: 30+Math.random()*60, r:5, type:'b', id:Date.now()+1}
+        );
+    }
+    function draw(ts) {
+        if (ts - _last < INTERVAL) return;
+        const dt = ts - _last; _last = ts;
+        t += dt * 0.001;
+        const W = canvas.width, H = canvas.height;
+        if (ts > nextSpawn) { spawnPair(); nextSpawn = ts + 3000 + Math.random()*2000; }
+        ctx.save();
+        for (let i = ideas.length-1; i >= 0; i--) {
+            const p = ideas[i];
+            p.x += p.vx * dt; p.y += p.vy * dt;
+            p.r -= 0.002 * dt;
+            if (p.r <= 0 || p.x < 0 || p.x > W) { ideas.splice(i,1); continue; }
+            // collision check
+            if (p.type === 'a') {
+                for (let j = 0; j < ideas.length; j++) {
+                    const q = ideas[j];
+                    if (q.type !== 'b' || q.id === p.id) continue;
+                    const dx = q.x - p.x, dy = q.y - p.y;
+                    if (Math.sqrt(dx*dx+dy*dy) < p.r + q.r) {
+                        // spawn brighter child
+                        ideas.push({x:(p.x+q.x)/2, y:(p.y+q.y)/2, vx:(Math.random()-0.5)*0.06, vy:-0.05, hue:p.hue+q.hue/2, r:9, type:'child', id:Date.now()+Math.random()*1000});
+                        ideas.splice(j,1); ideas.splice(i,1); break;
+                    }
+                }
+            }
+            if (i >= ideas.length) continue;
+            const alpha = Math.min(1, ideas[i] ? ideas[i].r / 5 : 0) * 0.7;
+            ctx.globalAlpha = alpha;
+            ctx.fillStyle = `hsla(${p.hue},80%,${p.type==='child'?85:60}%,0.8)`;
+            ctx.shadowColor = `hsla(${p.hue},100%,70%,0.5)`;
+            ctx.shadowBlur = p.type==='child' ? 12 : 4;
+            ctx.beginPath(); ctx.arc(p.x, p.y, Math.max(0.5,p.r), 0, Math.PI*2); ctx.fill();
+        }
+        ctx.restore();
+    }
+    return { draw };
+})();
+
+// 32. DIVERGENT_THINKING — concept exploding into 12 directions
+const DIVERGENT_THINKING = (() => {
+    let _last = 0;
+    const INTERVAL = 25;
+    let t = 0;
+    function draw(ts) {
+        if (ts - _last < INTERVAL) return;
+        const dt = ts - _last; _last = ts;
+        t += dt * 0.0007;
+        const cx = canvas.width * 0.5, cy = canvas.height * 0.5;
+        const cycle = (t * 0.5) % (Math.PI * 2);
+        const expansion = (Math.sin(cycle) + 1) * 0.5;
+        ctx.save();
+        for (let i = 0; i < 12; i++) {
+            const angle = i * (Math.PI * 2 / 12);
+            const dist = 20 + expansion * 60;
+            const x = cx + Math.cos(angle) * dist;
+            const y = cy + Math.sin(angle) * dist;
+            const alpha = expansion * 0.6;
+            ctx.globalAlpha = alpha;
+            ctx.strokeStyle = `hsla(${i*30},70%,65%,0.7)`;
+            ctx.lineWidth = 1.5;
+            ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(x, y); ctx.stroke();
+            ctx.fillStyle = `hsla(${i*30},80%,70%,0.8)`;
+            ctx.beginPath(); ctx.arc(x, y, 3 + expansion*2, 0, Math.PI*2); ctx.fill();
+        }
+        // center concept
+        ctx.globalAlpha = 0.7;
+        ctx.fillStyle = 'rgba(255,255,255,0.8)';
+        ctx.beginPath(); ctx.arc(cx, cy, 5, 0, Math.PI*2); ctx.fill();
+        ctx.restore();
+    }
+    return { draw };
+})();
+
+// 33. CONVERGENT_FOCUS — scattered thoughts gathering to one point
+const CONVERGENT_FOCUS = (() => {
+    let _last = 0;
+    const INTERVAL = 25;
+    let t = 0;
+    const thoughts = Array.from({length:16}, () => ({
+        angle: Math.random() * Math.PI * 2,
+        dist: 80 + Math.random() * 60,
+        phase: Math.random() * Math.PI * 2,
+        hue: Math.random() * 360
+    }));
+    function draw(ts) {
+        if (ts - _last < INTERVAL) return;
+        const dt = ts - _last; _last = ts;
+        t += dt * 0.0006;
+        const cx = canvas.width * 0.5, cy = canvas.height * 0.5;
+        const gather = (Math.sin(t * 0.4) + 1) * 0.5;
+        ctx.save();
+        thoughts.forEach((th, i) => {
+            const dist = th.dist * (1 - gather * 0.85);
+            const x = cx + Math.cos(th.angle + t*0.2) * dist;
+            const y = cy + Math.sin(th.angle + t*0.15) * dist;
+            const alpha = 0.25 + gather * 0.35;
+            ctx.globalAlpha = alpha;
+            ctx.fillStyle = `hsla(${th.hue},60%,70%,0.8)`;
+            ctx.beginPath(); ctx.arc(x, y, 2.5, 0, Math.PI*2); ctx.fill();
+            if (gather > 0.5) {
+                ctx.globalAlpha = (gather - 0.5) * 0.4;
+                ctx.strokeStyle = `hsla(${th.hue},50%,65%,0.4)`;
+                ctx.lineWidth = 0.7;
+                ctx.beginPath(); ctx.moveTo(x,y); ctx.lineTo(cx,cy); ctx.stroke();
+            }
+        });
+        ctx.restore();
+    }
+    return { draw };
+})();
+
+// 34. FLOW_STATE — entire body synchronized, golden
+const FLOW_STATE = (() => {
+    let _last = 0;
+    const INTERVAL = 30;
+    let t = 0;
+    function draw(ts) {
+        if (ts - _last < INTERVAL) return;
+        const dt = ts - _last; _last = ts;
+        t += dt * 0.0004;
+        const W = canvas.width, H = canvas.height;
+        const cx = W*0.5, cy = H*0.5;
+        // slow golden wave emanating from center
+        const flow = (Math.sin(t * 0.5) + 1) * 0.5;
+        ctx.save();
+        for (let r = 40; r < 200; r += 30) {
+            const wave = Math.sin(t * 2 - r * 0.04) * 0.5 + 0.5;
+            const alpha = flow * wave * 0.06;
+            ctx.globalAlpha = alpha;
+            ctx.strokeStyle = `rgba(255,200,50,0.6)`;
+            ctx.lineWidth = 2 + wave * 2;
+            ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI*2); ctx.stroke();
+        }
+        // golden shimmer over body outline
+        ctx.globalAlpha = flow * 0.12;
+        ctx.strokeStyle = 'rgba(255,220,80,0.6)';
+        ctx.lineWidth = 2;
+        ctx.shadowColor = 'rgba(255,200,50,0.4)';
+        ctx.shadowBlur = 15 * flow;
+        ctx.beginPath(); ctx.arc(cx, cy - H*0.29, H*0.065, 0, Math.PI*2); ctx.stroke();
+        ctx.restore();
+    }
+    return { draw };
+})();
+
+// 35. CREATIVE_BLOCK — particles spinning, unable to escape gravity well
+const CREATIVE_BLOCK = (() => {
+    let _last = 0;
+    const INTERVAL = 25;
+    let t = 0;
+    const trapped = Array.from({length:12}, () => ({
+        angle: Math.random() * Math.PI * 2,
+        r: 20 + Math.random() * 25,
+        speed: 0.003 + Math.random() * 0.002,
+        hue: 220 + Math.random() * 40
+    }));
+    function draw(ts) {
+        if (ts - _last < INTERVAL) return;
+        const dt = ts - _last; _last = ts;
+        t += dt * 0.001;
+        const cx = canvas.width * 0.78, cy = canvas.height * 0.6;
+        ctx.save();
+        // gravity well
+        const grad = ctx.createRadialGradient(cx, cy, 2, cx, cy, 40);
+        grad.addColorStop(0, 'rgba(40,40,80,0.4)');
+        grad.addColorStop(1, 'rgba(20,20,50,0)');
+        ctx.fillStyle = grad;
+        ctx.globalAlpha = 0.3;
+        ctx.beginPath(); ctx.arc(cx, cy, 40, 0, Math.PI*2); ctx.fill();
+        trapped.forEach(p => {
+            p.angle += p.speed * dt;
+            // slowly spiraling but never escaping
+            p.r = 20 + 15 * Math.sin(t * 0.3 + p.angle);
+            const x = cx + Math.cos(p.angle) * p.r;
+            const y = cy + Math.sin(p.angle) * p.r * 0.6;
+            ctx.globalAlpha = 0.4;
+            ctx.fillStyle = `hsla(${p.hue},50%,55%,0.7)`;
+            ctx.beginPath(); ctx.arc(x, y, 2.5, 0, Math.PI*2); ctx.fill();
+        });
+        ctx.restore();
+    }
+    return { draw };
+})();
+
+// 36. AMYGDALA_FIRE — red pulse from brain center, spreading outward
+const AMYGDALA_FIRE = (() => {
+    let _last = 0;
+    const INTERVAL = 20;
+    let pulses = [];
+    let nextFire = 3000 + Math.random() * 4000;
+    let t = 0;
+    function draw(ts) {
+        if (ts - _last < INTERVAL) return;
+        const dt = ts - _last; _last = ts;
+        t += dt;
+        const cx = canvas.width * 0.5, cy = canvas.height * 0.22;
+        if (t > nextFire) {
+            pulses.push({ r: 3, alpha: 0.8 });
+            nextFire = t + 4000 + Math.random() * 5000;
+        }
+        ctx.save();
+        for (let i = pulses.length-1; i >= 0; i--) {
+            const p = pulses[i];
+            p.r += 0.15 * dt * 0.1;
+            p.alpha *= 0.982;
+            if (p.alpha < 0.01) { pulses.splice(i,1); continue; }
+            ctx.globalAlpha = p.alpha * 0.6;
+            ctx.strokeStyle = `rgba(255,40,40,${p.alpha * 0.7})`;
+            ctx.lineWidth = 2;
+            ctx.shadowColor = 'rgba(255,20,20,0.5)';
+            ctx.shadowBlur = 8;
+            ctx.beginPath(); ctx.arc(cx, cy, p.r, 0, Math.PI*2); ctx.stroke();
+        }
+        ctx.restore();
+    }
+    return { draw };
+})();
+
+// 37. COURAGE_SURGE — fear pulse met by blue counter-wave, dissolving
+const COURAGE_SURGE = (() => {
+    let _last = 0;
+    const INTERVAL = 20;
+    let t = 0;
+    let surges = [];
+    let nextSurge = 5000;
+    function draw(ts) {
+        if (ts - _last < INTERVAL) return;
+        const dt = ts - _last; _last = ts;
+        t += dt;
+        const cx = canvas.width * 0.5, cy = canvas.height * 0.22;
+        if (t > nextSurge) {
+            surges.push({ r: 5, alpha: 0.7, type: surges.length % 2 === 0 ? 'fear' : 'courage' });
+            nextSurge = t + 2500 + Math.random() * 2000;
+        }
+        ctx.save();
+        for (let i = surges.length-1; i >= 0; i--) {
+            const s = surges[i];
+            s.r += 0.12 * dt * 0.1;
+            s.alpha *= 0.977;
+            if (s.alpha < 0.01) { surges.splice(i,1); continue; }
+            ctx.globalAlpha = s.alpha * 0.55;
+            ctx.strokeStyle = s.type === 'fear' ? `rgba(255,60,40,0.7)` : `rgba(60,140,255,0.7)`;
+            ctx.lineWidth = 2.5;
+            ctx.shadowColor = s.type === 'fear' ? 'rgba(255,40,20,0.4)' : 'rgba(40,120,255,0.4)';
+            ctx.shadowBlur = 10;
+            ctx.beginPath(); ctx.arc(cx, cy, s.r, 0, Math.PI*2); ctx.stroke();
+        }
+        ctx.restore();
+    }
+    return { draw };
+})();
+
+// 38. FREEZE_RESPONSE — particles suddenly still, then slowly resume
+const FREEZE_RESPONSE = (() => {
+    let _last = 0;
+    const INTERVAL = 25;
+    let t = 0;
+    let frozen = false;
+    let freezeStart = 0;
+    let freezeDur = 0;
+    let nextFreeze = 8000 + Math.random() * 6000;
+    const particles = Array.from({length:20}, () => ({
+        x: Math.random(),
+        y: Math.random(),
+        vx: (Math.random()-0.5) * 0.0003,
+        vy: (Math.random()-0.5) * 0.0003,
+        hue: 180 + Math.random() * 60
+    }));
+    function draw(ts) {
+        if (ts - _last < INTERVAL) return;
+        const dt = ts - _last; _last = ts;
+        t += dt;
+        if (t > nextFreeze && !frozen) {
+            frozen = true; freezeStart = t; freezeDur = 1200 + Math.random() * 800;
+        }
+        if (frozen && t - freezeStart > freezeDur) {
+            frozen = false; nextFreeze = t + 6000 + Math.random() * 5000;
+        }
+        const W = canvas.width, H = canvas.height;
+        const moveFactor = frozen ? 0 : 1;
+        ctx.save();
+        particles.forEach(p => {
+            if (!frozen) { p.x += p.vx * dt; p.y += p.vy * dt; }
+            if (p.x < 0.2 || p.x > 0.8) p.vx *= -1;
+            if (p.y < 0.2 || p.y > 0.8) p.vy *= -1;
+            ctx.globalAlpha = frozen ? 0.6 : 0.25;
+            ctx.fillStyle = frozen ? `rgba(200,220,255,0.7)` : `hsla(${p.hue},60%,65%,0.6)`;
+            ctx.beginPath();
+            ctx.arc(p.x * W, p.y * H, frozen ? 3 : 2.5, 0, Math.PI*2);
+            ctx.fill();
+        });
+        ctx.restore();
+    }
+    return { draw };
+})();
+
+// 39. SAFETY_SIGNAL — green wash from base of skull forward
+const SAFETY_SIGNAL = (() => {
+    let _last = 0;
+    const INTERVAL = 35;
+    let t = 0;
+    function draw(ts) {
+        if (ts - _last < INTERVAL) return;
+        const dt = ts - _last; _last = ts;
+        t += dt * 0.0005;
+        const W = canvas.width, H = canvas.height;
+        const cx = W*0.5, cy = H*0.18;
+        const wave = (Math.sin(t * 0.7) + 1) * 0.5;
+        ctx.save();
+        const grad = ctx.createRadialGradient(cx, cy, 10, cx, cy, 80);
+        grad.addColorStop(0, `rgba(60,220,120,${wave * 0.2})`);
+        grad.addColorStop(0.4, `rgba(40,180,90,${wave * 0.1})`);
+        grad.addColorStop(1, 'rgba(20,150,60,0)');
+        ctx.fillStyle = grad;
+        ctx.globalAlpha = 0.6;
+        ctx.beginPath(); ctx.arc(cx, cy, 80, 0, Math.PI*2); ctx.fill();
+        ctx.restore();
+    }
+    return { draw };
+})();
+
+// 40. TRUST_FALL — particles releasing upward control, letting gravity take them
+const TRUST_FALL = (() => {
+    let _last = 0;
+    const INTERVAL = 20;
+    const fallers = Array.from({length:15}, () => ({
+        x: Math.random(),
+        y: 0.1 + Math.random() * 0.3,
+        vy: 0.0001 + Math.random() * 0.0002,
+        alpha: 0.5 + Math.random() * 0.5,
+        hue: 40 + Math.random() * 30,
+        size: 2 + Math.random() * 3,
+        released: false,
+        releaseTime: Math.random() * 5000
+    }));
+    let t = 0;
+    function draw(ts) {
+        if (ts - _last < INTERVAL) return;
+        const dt = ts - _last; _last = ts;
+        t += dt;
+        const W = canvas.width, H = canvas.height;
+        ctx.save();
+        fallers.forEach(p => {
+            if (t > p.releaseTime) p.released = true;
+            if (p.released) p.y += p.vy * dt;
+            if (p.y > 1.05) { p.y = 0.1 + Math.random()*0.15; p.releaseTime = t + Math.random()*3000; p.released = false; }
+            ctx.globalAlpha = p.alpha * (p.released ? 0.5 : 0.8);
+            ctx.fillStyle = `hsla(${p.hue},70%,${p.released ? 60 : 80}%,0.7)`;
+            ctx.beginPath(); ctx.arc(p.x * W, p.y * H, p.size, 0, Math.PI*2); ctx.fill();
+        });
+        ctx.restore();
+    }
+    return { draw };
+})();
+
+// 41. NEUROPLASTICITY — new connection threads forming between brain regions
+const NEUROPLASTICITY = (() => {
+    let _last = 0;
+    const INTERVAL = 50;
+    let t = 0;
+    const connections = [];
+    const regions = [
+        [0.5, 0.12], [0.38, 0.2], [0.62, 0.2],
+        [0.3, 0.3],  [0.7, 0.3],  [0.45, 0.25]
+    ];
+    let nextConnect = 0;
+    function draw(ts) {
+        if (ts - _last < INTERVAL) return;
+        const dt = ts - _last; _last = ts;
+        t += dt * 0.0005;
+        const W = canvas.width, H = canvas.height;
+        if (ts > nextConnect && connections.length < 14) {
+            const a = Math.floor(Math.random() * regions.length);
+            let b = Math.floor(Math.random() * regions.length);
+            while (b === a) b = Math.floor(Math.random() * regions.length);
+            connections.push({ a, b, age: 0, maxAge: 8000 + Math.random() * 6000 });
+            nextConnect = ts + 1200 + Math.random() * 1500;
+        }
+        ctx.save();
+        for (let i = connections.length-1; i >= 0; i--) {
+            const c = connections[i];
+            c.age += dt;
+            if (c.age > c.maxAge) { connections.splice(i,1); continue; }
+            const birth = Math.min(1, c.age / 800);
+            const death = c.age > c.maxAge - 1000 ? 1 - (c.maxAge - c.age) / 1000 : 0;
+            const alpha = birth * (1 - death) * 0.4;
+            const [ax,ay] = regions[c.a];
+            const [bx,by] = regions[c.b];
+            ctx.globalAlpha = alpha;
+            ctx.strokeStyle = 'rgba(120,255,180,0.6)';
+            ctx.lineWidth = 1;
+            ctx.beginPath(); ctx.moveTo(ax*W, ay*H); ctx.lineTo(bx*W, by*H); ctx.stroke();
+        }
+        regions.forEach(([rx,ry]) => {
+            ctx.globalAlpha = 0.25;
+            ctx.fillStyle = 'rgba(140,255,200,0.5)';
+            ctx.beginPath(); ctx.arc(rx*W, ry*H, 4, 0, Math.PI*2); ctx.fill();
+        });
+        ctx.restore();
+    }
+    return { draw };
+})();
+
+// 42. LEARNING_CURVE — efficiency graph, starting steep, leveling
+const LEARNING_CURVE = (() => {
+    let _last = 0;
+    const INTERVAL = 40;
+    let t = 0;
+    function draw(ts) {
+        if (ts - _last < INTERVAL) return;
+        const dt = ts - _last; _last = ts;
+        t += dt * 0.0004;
+        const bx = canvas.width * 0.08, by = canvas.height * 0.88;
+        const w = canvas.width * 0.25, h = canvas.height * 0.12;
+        const progress = (t * 0.3) % 1;
+        ctx.save();
+        ctx.globalAlpha = 0.35;
+        // axes
+        ctx.strokeStyle = 'rgba(180,180,255,0.3)';
+        ctx.lineWidth = 0.8;
+        ctx.beginPath();
+        ctx.moveTo(bx, by - h); ctx.lineTo(bx, by); ctx.lineTo(bx + w, by);
+        ctx.stroke();
+        // learning curve line
+        ctx.strokeStyle = 'rgba(160,220,255,0.7)';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        const pts = Math.floor(progress * 40) + 2;
+        for (let i = 0; i <= pts; i++) {
+            const xi = i / 40;
+            const yi = 1 - (1 - Math.exp(-xi * 4));
+            const x = bx + xi * w;
+            const y = by - yi * h;
+            i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+        }
+        ctx.stroke();
+        // moving dot at progress point
+        const xi = progress;
+        const yi = 1 - Math.exp(-xi * 4);
+        ctx.globalAlpha = 0.7;
+        ctx.fillStyle = 'rgba(180,240,255,0.8)';
+        ctx.beginPath(); ctx.arc(bx + xi*w, by - yi*h, 3, 0, Math.PI*2); ctx.fill();
+        ctx.restore();
+    }
+    return { draw };
+})();
+
+// 43. HABIT_GROOVE — worn path particles follow automatically
+const HABIT_GROOVE = (() => {
+    let _last = 0;
+    const INTERVAL = 25;
+    let t = 0;
+    const groove = [];
+    // pre-define the groove path
+    for (let i = 0; i <= 60; i++) {
+        const p = i / 60;
+        groove.push([
+            0.3 + p * 0.4,
+            0.55 + Math.sin(p * Math.PI * 2) * 0.06
+        ]);
+    }
+    const trackers = Array.from({length:8}, () => ({
+        pos: Math.random(),
+        speed: 0.0003 + Math.random() * 0.0002
+    }));
+    function draw(ts) {
+        if (ts - _last < INTERVAL) return;
+        const dt = ts - _last; _last = ts;
+        t += dt * 0.001;
+        const W = canvas.width, H = canvas.height;
+        ctx.save();
+        // draw worn path
+        ctx.globalAlpha = 0.1;
+        ctx.strokeStyle = 'rgba(255,200,100,0.5)';
+        ctx.lineWidth = 6;
+        ctx.beginPath();
+        groove.forEach(([gx,gy],i) => i===0 ? ctx.moveTo(gx*W, gy*H) : ctx.lineTo(gx*W, gy*H));
+        ctx.stroke();
+        // particles moving along groove
+        trackers.forEach(tr => {
+            tr.pos = (tr.pos + tr.speed * dt) % 1;
+            const idx = Math.floor(tr.pos * (groove.length-1));
+            const [gx, gy] = groove[idx];
+            ctx.globalAlpha = 0.5;
+            ctx.fillStyle = 'rgba(255,200,80,0.7)';
+            ctx.beginPath(); ctx.arc(gx*W, gy*H, 2.5, 0, Math.PI*2); ctx.fill();
+        });
+        ctx.restore();
+    }
+    return { draw };
+})();
+
+// 44. UNLEARNING — old path fading, new path forming
+const UNLEARNING = (() => {
+    let _last = 0;
+    const INTERVAL = 35;
+    let t = 0;
+    function draw(ts) {
+        if (ts - _last < INTERVAL) return;
+        const dt = ts - _last; _last = ts;
+        t += dt * 0.0004;
+        const W = canvas.width, H = canvas.height;
+        const progress = (Math.sin(t * 0.5) + 1) * 0.5;
+        ctx.save();
+        // old path fading
+        ctx.globalAlpha = (1 - progress) * 0.25;
+        ctx.strokeStyle = 'rgba(200,150,100,0.5)';
+        ctx.lineWidth = 3;
+        ctx.setLineDash([4,3]);
+        ctx.beginPath();
+        ctx.moveTo(W*0.15, H*0.62);
+        for (let i = 1; i <= 10; i++) {
+            ctx.lineTo(W*(0.15 + i*0.07), H*(0.62 + Math.sin(i)*0.04));
+        }
+        ctx.stroke();
+        // new path forming
+        ctx.globalAlpha = progress * 0.35;
+        ctx.strokeStyle = 'rgba(120,220,180,0.6)';
+        ctx.lineWidth = 2;
+        ctx.setLineDash([]);
+        ctx.beginPath();
+        ctx.moveTo(W*0.15, H*0.62);
+        for (let i = 1; i <= Math.floor(progress * 10); i++) {
+            ctx.lineTo(W*(0.15 + i*0.07), H*(0.62 - i*0.005 + Math.sin(i*0.5)*0.02));
+        }
+        ctx.stroke();
+        ctx.restore();
+    }
+    return { draw };
+})();
+
+// 45. BECOMING — body outline slowly shifting, never arriving
+const BECOMING = (() => {
+    let _last = 0;
+    const INTERVAL = 40;
+    let t = 0;
+    function draw(ts) {
+        if (ts - _last < INTERVAL) return;
+        const dt = ts - _last; _last = ts;
+        t += dt * 0.0003;
+        const W = canvas.width, H = canvas.height;
+        const cx = W*0.5, cy = H*0.5;
+        // morphing body shape - slowly changes proportions
+        const morph = Math.sin(t * 0.4);
+        const headR = H * (0.065 + morph * 0.005);
+        const bodyW = H * (0.07 + morph * 0.008);
+        ctx.save();
+        ctx.globalAlpha = 0.12;
+        ctx.strokeStyle = 'rgba(200,200,255,0.5)';
+        ctx.lineWidth = 1.2;
+        ctx.setLineDash([1, 3]);
+        // shifting outline
+        ctx.beginPath();
+        ctx.arc(cx + Math.sin(t*0.3)*3, cy - H*0.29 + Math.cos(t*0.2)*2, headR, 0, Math.PI*2);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(cx - bodyW + Math.sin(t*0.5)*4, cy - H*0.22);
+        ctx.lineTo(cx - bodyW * (0.9 + morph*0.1) + Math.sin(t*0.4)*3, cy);
+        ctx.lineTo(cx + bodyW * (0.9 + morph*0.1) + Math.cos(t*0.4)*3, cy);
+        ctx.lineTo(cx + bodyW + Math.cos(t*0.5)*4, cy - H*0.22);
+        ctx.closePath();
+        ctx.stroke();
+        ctx.restore();
+    }
+    return { draw };
+})();
+
+// 46. WONDER — light flooding in, pupils dilating (conceptual)
+const WONDER = (() => {
+    let _last = 0;
+    const INTERVAL = 30;
+    let t = 0;
+    function draw(ts) {
+        if (ts - _last < INTERVAL) return;
+        const dt = ts - _last; _last = ts;
+        t += dt * 0.0004;
+        const W = canvas.width, H = canvas.height;
+        const cx = W*0.5, cy = H*0.5;
+        // wonder pulses in slowly
+        const wave = (Math.sin(t * 0.35) + 1) * 0.5;
+        ctx.save();
+        // light rays
+        for (let i = 0; i < 12; i++) {
+            const angle = i * (Math.PI * 2 / 12) + t * 0.05;
+            const len = (80 + wave * 120) * (0.6 + 0.4 * Math.sin(t + i));
+            ctx.globalAlpha = wave * 0.06;
+            ctx.strokeStyle = `rgba(255,255,220,0.6)`;
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(cx, cy);
+            ctx.lineTo(cx + Math.cos(angle) * len, cy + Math.sin(angle) * len);
+            ctx.stroke();
+        }
+        // bright center fill
+        const grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, 60 + wave*80);
+        grad.addColorStop(0, `rgba(255,250,220,${wave * 0.15})`);
+        grad.addColorStop(1, 'rgba(255,240,180,0)');
+        ctx.fillStyle = grad;
+        ctx.globalAlpha = 1;
+        ctx.beginPath(); ctx.arc(cx, cy, 60 + wave*80, 0, Math.PI*2); ctx.fill();
+        ctx.restore();
+    }
+    return { draw };
+})();
+
+// 47. GRATITUDE — warm spiral from heart outward, touching everything
+const GRATITUDE = (() => {
+    let _last = 0;
+    const INTERVAL = 30;
+    let t = 0;
+    function draw(ts) {
+        if (ts - _last < INTERVAL) return;
+        const dt = ts - _last; _last = ts;
+        t += dt * 0.0005;
+        const cx = canvas.width * 0.5, cy = canvas.height * 0.38;
+        ctx.save();
+        // Archimedean spiral outward
+        ctx.beginPath();
+        let first = true;
+        for (let angle = 0; angle < Math.PI * 8; angle += 0.1) {
+            const r = angle * 3.5 + Math.sin(t * 2 + angle) * 2;
+            const x = cx + Math.cos(angle + t * 0.3) * r;
+            const y = cy + Math.sin(angle + t * 0.3) * r * 0.7;
+            first ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+            first = false;
+        }
+        ctx.globalAlpha = 0.18;
+        ctx.strokeStyle = 'rgba(255,160,60,0.6)';
+        ctx.lineWidth = 1.2;
+        ctx.stroke();
+        // warm radial glow at heart
+        const grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, 30);
+        grad.addColorStop(0, 'rgba(255,140,40,0.25)');
+        grad.addColorStop(1, 'rgba(255,100,20,0)');
+        ctx.fillStyle = grad;
+        ctx.globalAlpha = 0.6;
+        ctx.beginPath(); ctx.arc(cx, cy, 30, 0, Math.PI*2); ctx.fill();
+        ctx.restore();
+    }
+    return { draw };
+})();
+
+// 48. SURRENDER — tension leaving body, particles softening
+const SURRENDER = (() => {
+    let _last = 0;
+    const INTERVAL = 35;
+    let t = 0;
+    const tensionPts = Array.from({length:20}, () => ({
+        x: 0.35 + Math.random() * 0.3,
+        y: 0.2 + Math.random() * 0.6,
+        tension: 0.5 + Math.random() * 0.5,
+        sx: (Math.random()-0.5) * 0.0001,
+        sy: 0.00005 + Math.random() * 0.0001
+    }));
+    function draw(ts) {
+        if (ts - _last < INTERVAL) return;
+        const dt = ts - _last; _last = ts;
+        t += dt * 0.0004;
+        const W = canvas.width, H = canvas.height;
+        const release = (Math.sin(t * 0.4) + 1) * 0.5;
+        ctx.save();
+        tensionPts.forEach(p => {
+            p.tension = Math.max(0.05, p.tension - release * 0.00015 * dt);
+            if (p.tension < 0.08) p.tension = 0.3 + Math.random() * 0.7;
+            // soft drift downward when released
+            p.y += p.sy * release * dt;
+            if (p.y > 0.9) p.y = 0.1 + Math.random() * 0.2;
+            const size = 1.5 + (1 - p.tension) * 4;
+            ctx.globalAlpha = (1 - release * 0.5) * 0.3;
+            ctx.fillStyle = `rgba(${200 - p.tension*100},${180 + p.tension*40},${255},${0.5 + release*0.3})`;
+            ctx.beginPath(); ctx.arc(p.x * W, p.y * H, size, 0, Math.PI*2); ctx.fill();
+        });
+        ctx.restore();
+    }
+    return { draw };
+})();
+
+// 49. UNITY — body/background boundaries dissolving briefly
+const UNITY = (() => {
+    let _last = 0;
+    const INTERVAL = 40;
+    let t = 0;
+    function draw(ts) {
+        if (ts - _last < INTERVAL) return;
+        const dt = ts - _last; _last = ts;
+        t += dt * 0.0003;
+        const W = canvas.width, H = canvas.height;
+        const cx = W*0.5, cy = H*0.5;
+        // dissolving boundary: body shape with fuzzy edge
+        const dissolve = (Math.sin(t * 0.3) + 1) * 0.5;
+        ctx.save();
+        // particle cloud at body boundary
+        for (let i = 0; i < 30; i++) {
+            const angle = (i / 30) * Math.PI * 2 + t * 0.1;
+            const bodyR = H * 0.22;
+            const baseX = cx + Math.cos(angle) * bodyR * (0.4 + 0.6 * Math.abs(Math.cos(angle * 0.5)));
+            const baseY = cy + Math.sin(angle) * bodyR;
+            const scatter = dissolve * 20;
+            const px = baseX + (Math.random()-0.5) * scatter;
+            const py = baseY + (Math.random()-0.5) * scatter;
+            ctx.globalAlpha = dissolve * 0.12;
+            ctx.fillStyle = `hsla(${i*12},50%,70%,0.5)`;
+            ctx.beginPath(); ctx.arc(px, py, 2, 0, Math.PI*2); ctx.fill();
+        }
+        ctx.restore();
+    }
+    return { draw };
+})();
+
+// 50. THE_INEFFABLE — something with no word, shown only as an unnameable color
+const THE_INEFFABLE = (() => {
+    let _last = 0;
+    const INTERVAL = 30;
+    let t = 0;
+    function draw(ts) {
+        if (ts - _last < INTERVAL) return;
+        const dt = ts - _last; _last = ts;
+        t += dt * 0.0002;
+        const W = canvas.width, H = canvas.height;
+        const cx = W*0.5, cy = H*0.5;
+        // a color that shifts between impossible combinations
+        // teal-crimson-gold that has no single name
+        const h1 = 168 + Math.sin(t * 0.7) * 25;
+        const h2 = h1 + 180 + Math.sin(t * 0.4) * 30;
+        const alpha = 0.06 + 0.04 * Math.sin(t * 0.5);
+        ctx.save();
+        // large soft presence
+        const grad = ctx.createRadialGradient(cx, cy - H*0.1, 10, cx, cy - H*0.1, W*0.55);
+        grad.addColorStop(0,   `hsla(${h1},70%,60%,${alpha * 2})`);
+        grad.addColorStop(0.3, `hsla(${h1+40},60%,50%,${alpha})`);
+        grad.addColorStop(0.6, `hsla(${h2},55%,55%,${alpha * 0.7})`);
+        grad.addColorStop(1,   'rgba(0,0,0,0)');
+        ctx.fillStyle = grad;
+        ctx.beginPath(); ctx.arc(cx, cy - H*0.1, W*0.55, 0, Math.PI*2); ctx.fill();
+        // subtle shimmer: tiny bright motes
+        ctx.globalAlpha = 0.15 + 0.1 * Math.sin(t * 2);
+        for (let i = 0; i < 6; i++) {
+            const mx = cx + Math.sin(t * 1.1 + i * 1.05) * W * 0.18;
+            const my = cy + Math.cos(t * 0.9 + i * 1.3) * H * 0.2;
+            ctx.fillStyle = `hsla(${h1 + i*15},80%,80%,0.4)`;
+            ctx.beginPath(); ctx.arc(mx, my, 1.5, 0, Math.PI*2); ctx.fill();
+        }
+        ctx.restore();
+    }
+    return { draw };
+})();
+
+// ── BATCH 28 ANIMATION LOOP ───────────────────────────────────────────────
+(function(){
+  const _batch28=[
+    'SELF_AWARENESS','THE_QUESTION','MIRROR_SELF','WITNESS','PRESENCE',
+    'WORKING_MEMORY','LONG_TERM_STORE','EPISODIC_TRACE','SEMANTIC_WEB','FORGETTING',
+    'SYNTAX_TREE','PHONEME_BURST','READING_FLOW','INNER_VOICE','TRANSLATION',
+    'PROPRIOCEPTION','HEARTBEAT_DRUM','NERVE_SIGNAL','MUSCLE_MEMORY','PAIN_MAP',
+    'THEORY_OF_MIND','EMPATHY_ECHO','TRUST_NETWORK','BELONGING','LONELINESS_FIELD',
+    'SUBJECTIVE_TIME','ANTICIPATION','NOSTALGIA','TEMPORAL_BINDING','THE_PRESENT_MOMENT',
+    'IDEA_COLLISION','DIVERGENT_THINKING','CONVERGENT_FOCUS','FLOW_STATE','CREATIVE_BLOCK',
+    'AMYGDALA_FIRE','COURAGE_SURGE','FREEZE_RESPONSE','SAFETY_SIGNAL','TRUST_FALL',
+    'NEUROPLASTICITY','LEARNING_CURVE','HABIT_GROOVE','UNLEARNING','BECOMING',
+    'WONDER','GRATITUDE','SURRENDER','UNITY','THE_INEFFABLE'
+  ];
+  let _lt28=0;
+  function loop(ts){if(ts-_lt28>14){_lt28=ts;_batch28.forEach(n=>{const s=window[n];if(s&&typeof s.draw==='function')s.draw(ts);});}requestAnimationFrame(loop);}
+  requestAnimationFrame(loop);
+})();
 </script>
 
 <!-- ═══════════════════════════════════════════════════════════════
