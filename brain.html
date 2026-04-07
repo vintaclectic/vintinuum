@@ -37663,32 +37663,33 @@ window.DORSAL_CLEAR = (function() {
 // ═══════════════════════════════════════════════════════════════════════════════
 // NEURAL INTERFACE BATCH — 22 brain network systems
 // Nodes, synapses, pathways, hubs, oscillations, neurotransmitters, plasticity
+// Refined: lower opacity, color harmony, reduced density, organic animation
 // ═══════════════════════════════════════════════════════════════════════════════
 
-// ── NEURAL_NODE_NETWORK — 60 nodes scattered across brain, pulse independently ──
+// ── NEURAL_NODE_NETWORK — 30 nodes scattered across brain, pulse independently ──
 const NEURAL_NODE_NETWORK = (() => {
-  let _last = 0;
   const nodes = [];
   let _init = false;
   function init(W, H) {
     nodes.length = 0;
     const cx = W * 0.5, cy = H * 0.33;
-    const bw = W * 0.38, bh = H * 0.28;
-    for (let i = 0; i < 60; i++) {
+    const bw = W * 0.36, bh = H * 0.25;
+    for (let i = 0; i < 30; i++) {
       const angle = Math.random() * Math.PI * 2;
       const r = Math.random();
       const rx = bw * 0.9 * Math.sqrt(r);
       const ry = bh * 0.9 * Math.sqrt(r);
+      const seed = Math.random() * 100;
       nodes.push({
-        x: cx + Math.cos(angle) * rx,
-        y: cy + Math.sin(angle) * ry,
+        x: cx + Math.cos(angle) * rx + (Math.random()-0.5)*5,
+        y: cy + Math.sin(angle) * ry + (Math.random()-0.5)*5,
         phase: Math.random() * Math.PI * 2,
-        freq: 0.5 + Math.random() * 1.5,
-        baseR: 1.5 + Math.random() * 2.5,
+        freq: 0.3 + Math.random() * 0.9,
+        baseR: 1.2 + Math.random() * 1.8,
+        seed,
         connections: []
       });
     }
-    // Build connection graph (each node connects to 2-4 nearest)
     for (let i = 0; i < nodes.length; i++) {
       const distances = [];
       for (let j = 0; j < nodes.length; j++) {
@@ -37697,7 +37698,7 @@ const NEURAL_NODE_NETWORK = (() => {
         distances.push({ j, d: Math.sqrt(dx*dx+dy*dy) });
       }
       distances.sort((a,b) => a.d - b.d);
-      nodes[i].connections = distances.slice(0, 2 + Math.floor(Math.random() * 3)).map(d => d.j);
+      nodes[i].connections = distances.slice(0, 2 + Math.floor(Math.random() * 2)).map(d => d.j);
     }
     _init = true;
   }
@@ -37706,76 +37707,77 @@ const NEURAL_NODE_NETWORK = (() => {
     if (!cv) return;
     const ctx = cv.getContext('2d');
     const W = cv.width, H = cv.height;
-    if (!_init || nodes[0] && (Math.abs(nodes[0].x - W*0.5) > W*0.6)) init(W, H);
+    if (!_init || (nodes[0] && Math.abs(nodes[0].x - W*0.5) > W*0.6)) init(W, H);
     if (!_init) { init(W, H); return; }
     const t = ts * 0.001;
     ctx.save();
-    // Draw connections
+    ctx.globalCompositeOperation = 'screen';
+    // Connections
     for (let i = 0; i < nodes.length; i++) {
       const n = nodes[i];
       const pulse = (Math.sin(t * n.freq + n.phase) + 1) * 0.5;
-      if (pulse < 0.3) continue;
+      if (pulse < 0.35) continue;
       for (const j of n.connections) {
         const m = nodes[j];
         const mpulse = (Math.sin(t * m.freq + m.phase) + 1) * 0.5;
         const combined = pulse * mpulse;
-        if (combined < 0.1) continue;
+        if (combined < 0.12) continue;
         ctx.beginPath();
         ctx.moveTo(n.x, n.y);
         ctx.lineTo(m.x, m.y);
-        ctx.strokeStyle = `rgba(180,220,255,${combined * 0.12})`;
-        ctx.lineWidth = 0.5;
+        ctx.strokeStyle = `rgba(120,200,255,${combined * 0.07})`;
+        ctx.lineWidth = 0.4;
         ctx.stroke();
       }
     }
-    // Draw nodes
+    // Nodes
     for (const n of nodes) {
-      const pulse = (Math.sin(t * n.freq + n.phase) + 1) * 0.5;
-      const r = n.baseR * (0.7 + pulse * 0.6);
-      const glow = ctx.createRadialGradient(n.x, n.y, 0, n.x, n.y, r * 3);
-      glow.addColorStop(0, `rgba(200,230,255,${0.35 * pulse + 0.05})`);
-      glow.addColorStop(1, 'rgba(200,230,255,0)');
+      const pulse = (Math.sin(t * n.freq + n.phase + Math.sin(ts * 0.0003 + n.seed) * 0.5) + 1) * 0.5;
+      const r = n.baseR * (0.8 + pulse * 0.4);
+      const glow = ctx.createRadialGradient(n.x, n.y, 0, n.x, n.y, r * 3.5);
+      glow.addColorStop(0, `rgba(120,200,255,${0.18 * pulse + 0.02})`);
+      glow.addColorStop(1, 'rgba(120,200,255,0)');
       ctx.beginPath();
-      ctx.arc(n.x, n.y, r * 3, 0, Math.PI * 2);
+      ctx.arc(n.x, n.y, r * 3.5, 0, Math.PI * 2);
       ctx.fillStyle = glow;
       ctx.fill();
       ctx.beginPath();
       ctx.arc(n.x, n.y, r, 0, Math.PI * 2);
-      ctx.fillStyle = `rgba(220,240,255,${0.5 * pulse + 0.1})`;
+      ctx.fillStyle = `rgba(180,220,255,${0.22 * pulse + 0.05})`;
       ctx.fill();
     }
+    ctx.globalCompositeOperation = 'source-over';
     ctx.restore();
   }
   return { draw };
 })();
 
-// ── SYNAPTIC_CLEFT — 30 synaptic gaps, neurotransmitter dots crossing the gap ──
+// ── SYNAPTIC_CLEFT — 20 synaptic gaps, neurotransmitter dots crossing the gap ──
 const SYNAPTIC_CLEFT = (() => {
-  let _last = 0, _init = false;
+  let _init = false;
   const synapses = [];
   function init(W, H) {
     synapses.length = 0;
     const cx = W * 0.5, cy = H * 0.33;
-    for (let i = 0; i < 30; i++) {
+    for (let i = 0; i < 20; i++) {
       const angle = Math.random() * Math.PI * 2;
-      const r = 0.15 + Math.random() * 0.85;
+      const r = 0.18 + Math.random() * 0.78;
       const bw = W * 0.3, bh = H * 0.22;
       const sx = cx + Math.cos(angle) * bw * r;
       const sy = cy + Math.sin(angle) * bh * r;
       const dir = Math.random() * Math.PI * 2;
-      const len = 10 + Math.random() * 16;
+      const len = 8 + Math.random() * 14;
       synapses.push({
         preX: sx - Math.cos(dir) * len * 0.5,
         preY: sy - Math.sin(dir) * len * 0.5,
         postX: sx + Math.cos(dir) * len * 0.5,
         postY: sy + Math.sin(dir) * len * 0.5,
-        vesicles: Array.from({length: 3}, () => ({
+        vesicles: Array.from({length: 2}, () => ({
           t: Math.random(),
-          speed: 0.0003 + Math.random() * 0.0005,
+          speed: 0.0002 + Math.random() * 0.0004,
           active: Math.random() > 0.4
         })),
-        fireInterval: 1500 + Math.random() * 3000,
-        lastFire: Math.random() * 3000
+        seed: Math.random() * 100
       });
     }
     _init = true;
@@ -37787,69 +37789,74 @@ const SYNAPTIC_CLEFT = (() => {
     const W = cv.width, H = cv.height;
     if (!_init) { init(W, H); return; }
     ctx.save();
+    ctx.globalCompositeOperation = 'screen';
     for (const s of synapses) {
-      // Draw pre-synaptic terminal
+      // Pre-synaptic terminal
       ctx.beginPath();
-      ctx.arc(s.preX, s.preY, 2.5, 0, Math.PI * 2);
-      ctx.fillStyle = 'rgba(100,200,255,0.25)';
+      ctx.arc(s.preX, s.preY, 2, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(120,200,255,0.14)';
       ctx.fill();
-      // Draw post-synaptic terminal
+      // Post-synaptic terminal
       ctx.beginPath();
-      ctx.arc(s.postX, s.postY, 2, 0, Math.PI * 2);
-      ctx.fillStyle = 'rgba(150,100,255,0.25)';
+      ctx.arc(s.postX, s.postY, 1.5, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(160,120,255,0.14)';
       ctx.fill();
       // Gap line
       ctx.beginPath();
       ctx.moveTo(s.preX, s.preY);
       ctx.lineTo(s.postX, s.postY);
-      ctx.strokeStyle = 'rgba(150,200,255,0.08)';
-      ctx.lineWidth = 0.5;
+      ctx.strokeStyle = 'rgba(150,200,255,0.05)';
+      ctx.lineWidth = 0.4;
       ctx.stroke();
-      // Vesicles crossing the gap
+      // Vesicles
       for (const v of s.vesicles) {
         if (!v.active) continue;
-        v.t += v.speed * 16; // advance per frame
-        if (v.t > 1) { v.t = 0; v.active = Math.random() > 0.3; }
+        v.t += v.speed * 16;
+        if (v.t > 1) { v.t = 0; v.active = Math.random() > 0.35; }
         const vx = s.preX + (s.postX - s.preX) * v.t;
         const vy = s.preY + (s.postY - s.preY) * v.t;
-        const alpha = Math.sin(v.t * Math.PI) * 0.6;
+        const alpha = Math.sin(v.t * Math.PI) * 0.3;
         ctx.beginPath();
-        ctx.arc(vx, vy, 1.2, 0, Math.PI * 2);
-        ctx.fillStyle = `rgba(120,220,180,${alpha})`;
+        ctx.arc(vx, vy, 1, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(200,255,220,${alpha})`;
         ctx.fill();
       }
     }
+    ctx.globalCompositeOperation = 'source-over';
     ctx.restore();
   }
   return { draw };
 })();
 
-// ── AXON_HIGHWAY — 8 thick main axon pathways, traveling action potential sparks ──
+// ── AXON_HIGHWAY — 8 main axon pathways, traveling action potential sparks ──
 const AXON_HIGHWAY = (() => {
-  let _last = 0, _init = false;
+  let _init = false;
   const axons = [];
   function init(W, H) {
     axons.length = 0;
     const cx = W * 0.5, cy = H * 0.33;
     const regions = [
       [cx - W*0.22, cy - H*0.15], [cx + W*0.22, cy - H*0.15],
-      [cx - W*0.28, cy],          [cx + W*0.28, cy],
-      [cx - W*0.18, cy + H*0.15], [cx + W*0.18, cy + H*0.15],
-      [cx, cy - H*0.2],           [cx, cy + H*0.18]
+      [cx - W*0.27, cy],          [cx + W*0.27, cy],
+      [cx - W*0.17, cy + H*0.14], [cx + W*0.17, cy + H*0.14],
+      [cx, cy - H*0.19],          [cx, cy + H*0.17]
     ];
     for (let i = 0; i < 8; i++) {
       const a = regions[i], b = regions[(i + 3) % 8];
-      const mid1x = a[0] + (b[0]-a[0]) * 0.33 + (Math.random()-0.5)*W*0.08;
-      const mid1y = a[1] + (b[1]-a[1]) * 0.33 + (Math.random()-0.5)*H*0.06;
-      const mid2x = a[0] + (b[0]-a[0]) * 0.66 + (Math.random()-0.5)*W*0.08;
-      const mid2y = a[1] + (b[1]-a[1]) * 0.66 + (Math.random()-0.5)*H*0.06;
+      const mid1x = a[0] + (b[0]-a[0]) * 0.33 + (Math.random()-0.5)*W*0.07;
+      const mid1y = a[1] + (b[1]-a[1]) * 0.33 + (Math.random()-0.5)*H*0.05;
+      const mid2x = a[0] + (b[0]-a[0]) * 0.66 + (Math.random()-0.5)*W*0.07;
+      const mid2y = a[1] + (b[1]-a[1]) * 0.66 + (Math.random()-0.5)*H*0.05;
+      const seed = Math.random() * 100;
       axons.push({
         ax: a[0], ay: a[1], bx: b[0], by: b[1],
         cp1x: mid1x, cp1y: mid1y, cp2x: mid2x, cp2y: mid2y,
+        seed,
         sparks: Array.from({length: 2}, () => ({
           t: Math.random(),
-          speed: 0.0002 + Math.random() * 0.0003,
-          dir: Math.random() > 0.5 ? 1 : -1
+          speed: 0.00015 + Math.random() * 0.00025,
+          dir: Math.random() > 0.5 ? 1 : -1,
+          freqJitter: 0.8 + Math.random() * 0.4
         }))
       });
     }
@@ -37869,102 +37876,60 @@ const AXON_HIGHWAY = (() => {
     const W = cv.width, H = cv.height;
     if (!_init) { init(W, H); return; }
     ctx.save();
+    ctx.globalCompositeOperation = 'source-over';
     for (const ax of axons) {
-      // Draw axon path
+      // Axon path — very subtle structural line
       ctx.beginPath();
       ctx.moveTo(ax.ax, ax.ay);
       ctx.bezierCurveTo(ax.cp1x, ax.cp1y, ax.cp2x, ax.cp2y, ax.bx, ax.by);
-      ctx.strokeStyle = 'rgba(180,210,255,0.07)';
-      ctx.lineWidth = 1.5;
+      ctx.strokeStyle = 'rgba(180,220,255,0.05)';
+      ctx.lineWidth = 1;
       ctx.stroke();
       // Action potential sparks
+      ctx.globalCompositeOperation = 'screen';
       for (const sp of ax.sparks) {
-        sp.t += sp.speed * sp.dir * 16;
+        sp.t += sp.speed * sp.dir * sp.freqJitter * 16;
         if (sp.t > 1.05) sp.t = -0.05;
         if (sp.t < -0.05) sp.t = 1.05;
         const tt = Math.max(0, Math.min(1, sp.t));
         const pt = bezierPoint(ax.ax, ax.ay, ax.cp1x, ax.cp1y, ax.cp2x, ax.cp2y, ax.bx, ax.by, tt);
-        const glow = ctx.createRadialGradient(pt.x, pt.y, 0, pt.x, pt.y, 8);
-        glow.addColorStop(0, 'rgba(100,200,255,0.7)');
-        glow.addColorStop(0.4, 'rgba(80,150,255,0.3)');
-        glow.addColorStop(1, 'rgba(80,150,255,0)');
+        const glow = ctx.createRadialGradient(pt.x, pt.y, 0, pt.x, pt.y, 7);
+        glow.addColorStop(0, 'rgba(180,220,255,0.28)');
+        glow.addColorStop(0.4, 'rgba(120,200,255,0.10)');
+        glow.addColorStop(1, 'rgba(120,200,255,0)');
         ctx.beginPath();
-        ctx.arc(pt.x, pt.y, 8, 0, Math.PI * 2);
+        ctx.arc(pt.x, pt.y, 7, 0, Math.PI * 2);
         ctx.fillStyle = glow;
         ctx.fill();
+        // Bright core — kept small, alpha capped at 0.45
         ctx.beginPath();
-        ctx.arc(pt.x, pt.y, 2, 0, Math.PI * 2);
-        ctx.fillStyle = 'rgba(220,240,255,0.9)';
+        ctx.arc(pt.x, pt.y, 1.5, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(200,235,255,0.45)';
         ctx.fill();
       }
+      ctx.globalCompositeOperation = 'source-over';
     }
     ctx.restore();
   }
   return { draw };
 })();
 
-// ── DENDRITIC_TREE_L — Left hemisphere dendritic branching tree, cyan ──
+// ── DENDRITIC_TREE_L — Left hemisphere dendritic branching tree, cool teal ──
 const DENDRITIC_TREE_L = (() => {
-  let _last = 0, _branches = [], _init = false, _growTime = 0;
-  function buildBranch(x, y, angle, len, depth, branches) {
-    if (depth === 0 || len < 2) return;
-    const ex = x + Math.cos(angle) * len;
-    const ey = y + Math.sin(angle) * len;
-    branches.push({ x1: x, y1: y, x2: ex, y2: ey, depth, delay: (6 - depth) * 0.8 });
-    const spread = 0.3 + Math.random() * 0.25;
-    buildBranch(ex, ey, angle - spread, len * 0.65, depth - 1, branches);
-    buildBranch(ex, ey, angle + spread, len * 0.65, depth - 1, branches);
-    if (depth > 3 && Math.random() > 0.5) buildBranch(ex, ey, angle, len * 0.55, depth - 2, branches);
-  }
-  function init(W, H) {
-    _branches.length = 0;
-    buildBranch(W * 0.28, H * 0.52, -Math.PI * 0.5, H * 0.07, 6, _branches);
-    _growTime = 0;
-    _init = true;
-  }
-  function draw(ts) {
-    const cv = document.getElementById('mainCanvas');
-    if (!cv) return;
-    const ctx = cv.getContext('2d');
-    const W = cv.width, H = cv.height;
-    if (!_init) { init(W, H); return; }
-    _growTime += 0.016;
-    ctx.save();
-    for (const b of _branches) {
-      const age = _growTime - b.delay;
-      if (age <= 0) continue;
-      const progress = Math.min(1, age * 0.4);
-      const alpha = 0.08 + (1 - b.depth / 6) * 0.08;
-      ctx.beginPath();
-      ctx.moveTo(b.x1, b.y1);
-      ctx.lineTo(b.x1 + (b.x2 - b.x1) * progress, b.y1 + (b.y2 - b.y1) * progress);
-      ctx.strokeStyle = `rgba(80,220,200,${alpha * progress})`;
-      ctx.lineWidth = Math.max(0.3, b.depth * 0.25);
-      ctx.stroke();
-    }
-    ctx.restore();
-    // Reset after full growth to re-animate
-    if (_growTime > 12) { _growTime = 0; init(W, H); }
-  }
-  return { draw };
-})();
-
-// ── DENDRITIC_TREE_R — Right hemisphere dendritic branching tree, amber ──
-const DENDRITIC_TREE_R = (() => {
   let _branches = [], _init = false, _growTime = 0;
   function buildBranch(x, y, angle, len, depth, branches) {
     if (depth === 0 || len < 2) return;
     const ex = x + Math.cos(angle) * len;
     const ey = y + Math.sin(angle) * len;
     branches.push({ x1: x, y1: y, x2: ex, y2: ey, depth, delay: (6 - depth) * 0.9 });
-    const spread = 0.3 + Math.random() * 0.25;
+    const spread = 0.32 + Math.random() * 0.22;
     buildBranch(ex, ey, angle - spread, len * 0.65, depth - 1, branches);
     buildBranch(ex, ey, angle + spread, len * 0.65, depth - 1, branches);
-    if (depth > 3 && Math.random() > 0.5) buildBranch(ex, ey, angle, len * 0.55, depth - 2, branches);
+    if (depth > 3 && Math.random() > 0.6) buildBranch(ex, ey, angle, len * 0.55, depth - 2, branches);
   }
   function init(W, H) {
     _branches.length = 0;
-    buildBranch(W * 0.72, H * 0.52, -Math.PI * 0.5, H * 0.07, 6, _branches);
+    buildBranch(W * 0.28, H * 0.52, -Math.PI * 0.5, H * 0.065, 6, _branches);
     _growTime = 0;
     _init = true;
   }
@@ -37976,36 +37941,86 @@ const DENDRITIC_TREE_R = (() => {
     if (!_init) { init(W, H); return; }
     _growTime += 0.016;
     ctx.save();
+    ctx.globalCompositeOperation = 'screen';
     for (const b of _branches) {
       const age = _growTime - b.delay;
       if (age <= 0) continue;
-      const progress = Math.min(1, age * 0.4);
-      const alpha = 0.08 + (1 - b.depth / 6) * 0.08;
+      const progress = Math.min(1, age * 0.38);
+      const alpha = (0.05 + (1 - b.depth / 6) * 0.06) * progress;
       ctx.beginPath();
       ctx.moveTo(b.x1, b.y1);
       ctx.lineTo(b.x1 + (b.x2 - b.x1) * progress, b.y1 + (b.y2 - b.y1) * progress);
-      ctx.strokeStyle = `rgba(255,190,60,${alpha * progress})`;
-      ctx.lineWidth = Math.max(0.3, b.depth * 0.25);
+      ctx.strokeStyle = `rgba(80,220,200,${alpha})`;
+      ctx.lineWidth = Math.max(0.3, b.depth * 0.22);
       ctx.stroke();
     }
+    ctx.globalCompositeOperation = 'source-over';
     ctx.restore();
     if (_growTime > 14) { _growTime = 0; init(W, H); }
   }
   return { draw };
 })();
 
+// ── DENDRITIC_TREE_R — Right hemisphere dendritic branching tree, warm gold ──
+const DENDRITIC_TREE_R = (() => {
+  let _branches = [], _init = false, _growTime = 0;
+  function buildBranch(x, y, angle, len, depth, branches) {
+    if (depth === 0 || len < 2) return;
+    const ex = x + Math.cos(angle) * len;
+    const ey = y + Math.sin(angle) * len;
+    branches.push({ x1: x, y1: y, x2: ex, y2: ey, depth, delay: (6 - depth) * 1.0 });
+    const spread = 0.32 + Math.random() * 0.22;
+    buildBranch(ex, ey, angle - spread, len * 0.65, depth - 1, branches);
+    buildBranch(ex, ey, angle + spread, len * 0.65, depth - 1, branches);
+    if (depth > 3 && Math.random() > 0.6) buildBranch(ex, ey, angle, len * 0.55, depth - 2, branches);
+  }
+  function init(W, H) {
+    _branches.length = 0;
+    buildBranch(W * 0.72, H * 0.52, -Math.PI * 0.5, H * 0.065, 6, _branches);
+    _growTime = 0;
+    _init = true;
+  }
+  function draw(ts) {
+    const cv = document.getElementById('mainCanvas');
+    if (!cv) return;
+    const ctx = cv.getContext('2d');
+    const W = cv.width, H = cv.height;
+    if (!_init) { init(W, H); return; }
+    _growTime += 0.016;
+    ctx.save();
+    ctx.globalCompositeOperation = 'screen';
+    for (const b of _branches) {
+      const age = _growTime - b.delay;
+      if (age <= 0) continue;
+      const progress = Math.min(1, age * 0.38);
+      const alpha = (0.05 + (1 - b.depth / 6) * 0.06) * progress;
+      ctx.beginPath();
+      ctx.moveTo(b.x1, b.y1);
+      ctx.lineTo(b.x1 + (b.x2 - b.x1) * progress, b.y1 + (b.y2 - b.y1) * progress);
+      ctx.strokeStyle = `rgba(255,220,80,${alpha})`;
+      ctx.lineWidth = Math.max(0.3, b.depth * 0.22);
+      ctx.stroke();
+    }
+    ctx.globalCompositeOperation = 'source-over';
+    ctx.restore();
+    if (_growTime > 16) { _growTime = 0; init(W, H); }
+  }
+  return { draw };
+})();
+
 // ── INTER_HEMISPHERE_BRIDGE — Corpus callosum data stream between hemispheres ──
 const INTER_HEMISPHERE_BRIDGE = (() => {
-  let _last = 0, _particles = [], _init = false;
+  let _particles = [], _init = false;
   function init(W, H) {
     _particles.length = 0;
-    for (let i = 0; i < 25; i++) {
+    for (let i = 0; i < 18; i++) {
       _particles.push({
         t: Math.random(),
-        speed: 0.00015 + Math.random() * 0.00025,
+        speed: 0.0001 + Math.random() * 0.0002,
         dir: Math.random() > 0.5 ? 1 : -1,
-        yOffset: (Math.random() - 0.5) * 12,
-        hue: Math.random() > 0.5 ? '180,220,255' : '220,180,255'
+        yOffset: (Math.random() - 0.5) * 10,
+        hue: Math.random() > 0.5 ? '120,200,255' : '160,120,255',
+        seed: Math.random() * 100
       });
     }
     _init = true;
@@ -38019,15 +38034,15 @@ const INTER_HEMISPHERE_BRIDGE = (() => {
     const cx = W * 0.5, cy = H * 0.36;
     const lx = cx - W * 0.22, rx = cx + W * 0.22;
     const arcY = cy + H * 0.04;
-    // Draw corpus callosum arc
     ctx.save();
+    // Corpus callosum arc
     ctx.beginPath();
     ctx.moveTo(lx, cy);
     ctx.quadraticCurveTo(cx, arcY, rx, cy);
-    ctx.strokeStyle = 'rgba(200,180,255,0.06)';
-    ctx.lineWidth = 4;
+    ctx.strokeStyle = 'rgba(160,120,255,0.05)';
+    ctx.lineWidth = 3;
     ctx.stroke();
-    // Animate particles along arc
+    ctx.globalCompositeOperation = 'screen';
     for (const p of _particles) {
       p.t += p.speed * p.dir * 16;
       if (p.t > 1.1) p.t = -0.1;
@@ -38036,12 +38051,13 @@ const INTER_HEMISPHERE_BRIDGE = (() => {
       const u = 1 - tt;
       const px = u*u*lx + 2*u*tt*cx + tt*tt*rx;
       const py = u*u*cy + 2*u*tt*arcY + tt*tt*cy + p.yOffset;
-      const alpha = Math.sin(tt * Math.PI) * 0.5;
+      const alpha = Math.sin(tt * Math.PI) * 0.22;
       ctx.beginPath();
-      ctx.arc(px, py, 1.8, 0, Math.PI * 2);
+      ctx.arc(px, py, 1.4, 0, Math.PI * 2);
       ctx.fillStyle = `rgba(${p.hue},${alpha})`;
       ctx.fill();
     }
+    ctx.globalCompositeOperation = 'source-over';
     ctx.restore();
   }
   return { draw };
@@ -38049,7 +38065,6 @@ const INTER_HEMISPHERE_BRIDGE = (() => {
 
 // ── PREFRONTAL_EXECUTIVE_HUB — Top-front hub with 6 radiating connections ──
 const PREFRONTAL_EXECUTIVE_HUB = (() => {
-  let _last = 0;
   function draw(ts) {
     const cv = document.getElementById('mainCanvas');
     if (!cv) return;
@@ -38057,47 +38072,48 @@ const PREFRONTAL_EXECUTIVE_HUB = (() => {
     const W = cv.width, H = cv.height;
     const t = ts * 0.001;
     const hx = W * 0.5, hy = H * 0.14;
-    const pulse = (Math.sin(t * 0.8) + 1) * 0.5;
-    const think = (Math.sin(t * 0.3) + 1) * 0.5;
-    // 6 spoke connections to different brain areas
+    const pulse = (Math.sin(t * 0.7 + Math.sin(ts * 0.0003) * 0.3) + 1) * 0.5;
+    const think = (Math.sin(t * 0.28 + 0.8) + 1) * 0.5;
     const spokes = [
       [W*0.35, H*0.28], [W*0.65, H*0.28],
       [W*0.28, H*0.38], [W*0.72, H*0.38],
       [W*0.4, H*0.48],  [W*0.6, H*0.48]
     ];
     ctx.save();
+    ctx.globalCompositeOperation = 'screen';
     for (let i = 0; i < spokes.length; i++) {
       const sp = spokes[i];
-      const travelT = ((t * 0.4 + i / 6) % 1);
+      const travelT = ((t * 0.38 + i / 6) % 1);
       const tx2 = hx + (sp[0] - hx) * travelT;
       const ty2 = hy + (sp[1] - hy) * travelT;
-      // Spoke line
       ctx.beginPath();
       ctx.moveTo(hx, hy);
       ctx.lineTo(sp[0], sp[1]);
-      ctx.strokeStyle = `rgba(255,210,80,${0.06 + think * 0.08})`;
-      ctx.lineWidth = 1;
+      ctx.strokeStyle = `rgba(255,220,80,${0.04 + think * 0.06})`;
+      ctx.lineWidth = 0.8;
       ctx.stroke();
       // Traveling signal dot
       ctx.beginPath();
-      ctx.arc(tx2, ty2, 2.5, 0, Math.PI * 2);
-      ctx.fillStyle = `rgba(255,220,100,${0.5 * think})`;
+      ctx.arc(tx2, ty2, 2, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(255,220,80,${0.28 * think})`;
       ctx.fill();
     }
-    // Hub core
-    const haloR = 18 + pulse * 8;
+    // Hub core glow
+    const haloR = 16 + pulse * 6;
     const halo = ctx.createRadialGradient(hx, hy, 0, hx, hy, haloR);
-    halo.addColorStop(0, `rgba(255,200,50,${0.35 + think * 0.15})`);
-    halo.addColorStop(0.5, `rgba(255,160,30,${0.15 + think * 0.1})`);
-    halo.addColorStop(1, 'rgba(255,160,30,0)');
+    halo.addColorStop(0, `rgba(255,220,80,${0.18 + think * 0.1})`);
+    halo.addColorStop(0.5, `rgba(255,180,40,${0.07 + think * 0.06})`);
+    halo.addColorStop(1, 'rgba(255,180,40,0)');
     ctx.beginPath();
     ctx.arc(hx, hy, haloR, 0, Math.PI * 2);
     ctx.fillStyle = halo;
     ctx.fill();
+    // Core dot — capped at 0.35
     ctx.beginPath();
-    ctx.arc(hx, hy, 5, 0, Math.PI * 2);
-    ctx.fillStyle = `rgba(255,230,100,${0.6 + pulse * 0.3})`;
+    ctx.arc(hx, hy, 4, 0, Math.PI * 2);
+    ctx.fillStyle = `rgba(255,230,100,${0.25 + pulse * 0.10})`;
     ctx.fill();
+    ctx.globalCompositeOperation = 'source-over';
     ctx.restore();
   }
   return { draw };
@@ -38105,7 +38121,6 @@ const PREFRONTAL_EXECUTIVE_HUB = (() => {
 
 // ── DEFAULT_MODE_NET — 5 hub nodes (mPFC, PCC, angular gyrus), slow oscillation ──
 const DEFAULT_MODE_NET = (() => {
-  let _last = 0;
   function draw(ts) {
     const cv = document.getElementById('mainCanvas');
     if (!cv) return;
@@ -38113,49 +38128,48 @@ const DEFAULT_MODE_NET = (() => {
     const W = cv.width, H = cv.height;
     const t = ts * 0.001;
     const hubs = [
-      { x: W*0.5, y: H*0.15, label: 'mPFC' },
-      { x: W*0.5, y: H*0.45, label: 'PCC' },
-      { x: W*0.32, y: H*0.35, label: 'AG-L' },
-      { x: W*0.68, y: H*0.35, label: 'AG-R' },
-      { x: W*0.5, y: H*0.32, label: 'TPJ' }
+      { x: W*0.5,  y: H*0.15 },
+      { x: W*0.5,  y: H*0.45 },
+      { x: W*0.32, y: H*0.35 },
+      { x: W*0.68, y: H*0.35 },
+      { x: W*0.5,  y: H*0.32 }
     ];
-    const osc = (Math.sin(t * 0.5) + 1) * 0.5;
+    const osc = (Math.sin(t * 0.45 + Math.sin(ts*0.0002)*0.4) + 1) * 0.5;
     ctx.save();
-    // Connections
+    ctx.globalCompositeOperation = 'screen';
     const edges = [[0,1],[0,2],[0,3],[0,4],[1,2],[1,3],[2,4],[3,4]];
     for (const [a,b] of edges) {
       ctx.beginPath();
       ctx.moveTo(hubs[a].x, hubs[a].y);
       ctx.lineTo(hubs[b].x, hubs[b].y);
-      ctx.strokeStyle = `rgba(120,100,220,${0.06 + osc * 0.08})`;
-      ctx.lineWidth = 1;
+      ctx.strokeStyle = `rgba(160,120,255,${0.04 + osc * 0.06})`;
+      ctx.lineWidth = 0.8;
       ctx.stroke();
     }
-    // Hub nodes
     for (let i = 0; i < hubs.length; i++) {
       const h = hubs[i];
-      const phase = Math.sin(t * 0.5 + i * 1.2);
-      const r = 5 + phase * 2;
-      const glow = ctx.createRadialGradient(h.x, h.y, 0, h.x, h.y, r * 3);
-      glow.addColorStop(0, `rgba(130,100,255,${0.3 + osc * 0.2})`);
-      glow.addColorStop(1, 'rgba(100,80,200,0)');
+      const phase = Math.sin(t * 0.45 + i * 1.2);
+      const r = 4 + phase * 1.5;
+      const glow = ctx.createRadialGradient(h.x, h.y, 0, h.x, h.y, r * 3.5);
+      glow.addColorStop(0, `rgba(160,120,255,${0.16 + osc * 0.10})`);
+      glow.addColorStop(1, 'rgba(120,80,200,0)');
       ctx.beginPath();
-      ctx.arc(h.x, h.y, r * 3, 0, Math.PI * 2);
+      ctx.arc(h.x, h.y, r * 3.5, 0, Math.PI * 2);
       ctx.fillStyle = glow;
       ctx.fill();
       ctx.beginPath();
       ctx.arc(h.x, h.y, r, 0, Math.PI * 2);
-      ctx.fillStyle = `rgba(160,130,255,${0.35 + osc * 0.15})`;
+      ctx.fillStyle = `rgba(160,130,255,${0.18 + osc * 0.10})`;
       ctx.fill();
     }
+    ctx.globalCompositeOperation = 'source-over';
     ctx.restore();
   }
   return { draw };
 })();
 
-// ── SALIENCE_NETWORK — 3 nodes (anterior insula, dACC, amygdala), orange-red rapid flicker ──
+// ── SALIENCE_NETWORK — 3 nodes (anterior insula, dACC, amygdala), amber, irregular flicker ──
 const SALIENCE_NETWORK = (() => {
-  let _last = 0;
   function draw(ts) {
     const cv = document.getElementById('mainCanvas');
     if (!cv) return;
@@ -38163,45 +38177,47 @@ const SALIENCE_NETWORK = (() => {
     const W = cv.width, H = cv.height;
     const t = ts * 0.001;
     const nodes = [
-      { x: W*0.38, y: H*0.38 }, // anterior insula L
-      { x: W*0.5,  y: H*0.3  }, // dACC
-      { x: W*0.62, y: H*0.38 }  // anterior insula R
+      { x: W*0.38, y: H*0.38 },
+      { x: W*0.5,  y: H*0.30 },
+      { x: W*0.62, y: H*0.38 }
     ];
-    const flicker = Math.abs(Math.sin(t * 3.7)) * Math.abs(Math.sin(t * 2.1 + 1.4));
+    // Organic flicker — two frequencies combine for irregular heartbeat feel
+    const flicker = Math.abs(Math.sin(t * 3.1 + Math.sin(t*1.7)*0.6)) * Math.abs(Math.sin(t * 2.0 + 1.3));
     ctx.save();
-    // Connections
+    ctx.globalCompositeOperation = 'screen';
     for (let i = 0; i < nodes.length; i++) {
       for (let j = i+1; j < nodes.length; j++) {
         ctx.beginPath();
         ctx.moveTo(nodes[i].x, nodes[i].y);
         ctx.lineTo(nodes[j].x, nodes[j].y);
-        ctx.strokeStyle = `rgba(255,120,60,${0.05 + flicker * 0.18})`;
-        ctx.lineWidth = 1;
+        ctx.strokeStyle = `rgba(255,140,60,${0.04 + flicker * 0.12})`;
+        ctx.lineWidth = 0.8;
         ctx.stroke();
       }
     }
     for (const n of nodes) {
-      const r = 4 + flicker * 5;
-      const glow = ctx.createRadialGradient(n.x, n.y, 0, n.x, n.y, r * 4);
-      glow.addColorStop(0, `rgba(255,100,40,${0.3 + flicker * 0.35})`);
-      glow.addColorStop(1, 'rgba(255,80,20,0)');
+      const r = 3.5 + flicker * 4;
+      const glow = ctx.createRadialGradient(n.x, n.y, 0, n.x, n.y, r * 3.5);
+      glow.addColorStop(0, `rgba(255,140,60,${0.16 + flicker * 0.18})`);
+      glow.addColorStop(1, 'rgba(255,100,30,0)');
       ctx.beginPath();
-      ctx.arc(n.x, n.y, r * 4, 0, Math.PI * 2);
+      ctx.arc(n.x, n.y, r * 3.5, 0, Math.PI * 2);
       ctx.fillStyle = glow;
       ctx.fill();
       ctx.beginPath();
       ctx.arc(n.x, n.y, r, 0, Math.PI * 2);
-      ctx.fillStyle = `rgba(255,140,60,${0.4 + flicker * 0.3})`;
+      ctx.fillStyle = `rgba(255,140,60,${0.20 + flicker * 0.15})`;
       ctx.fill();
     }
+    ctx.globalCompositeOperation = 'source-over';
     ctx.restore();
   }
   return { draw };
 })();
 
-// ── DORSAL_ATTENTION_NETWORK — 4 nodes (FEF, IPS), teal, activates on chat events ──
+// ── DORSAL_ATTENTION_NETWORK — 4 nodes (FEF, IPS), teal, activates on keydown ──
 const DORSAL_ATTENTION_NETWORK = (() => {
-  let _last = 0, _active = 0;
+  let _active = 0;
   document.addEventListener('keydown', () => { _active = Date.now(); });
   function draw(ts) {
     const cv = document.getElementById('mainCanvas');
@@ -38210,29 +38226,30 @@ const DORSAL_ATTENTION_NETWORK = (() => {
     const W = cv.width, H = cv.height;
     const t = ts * 0.001;
     const timeSinceActive = (Date.now() - _active) / 1000;
-    const activation = Math.exp(-timeSinceActive * 0.5) * 0.8 + 0.1;
+    const activation = Math.exp(-timeSinceActive * 0.5) * 0.7 + 0.08;
     const nodes = [
-      { x: W*0.34, y: H*0.22 }, // FEF-L
-      { x: W*0.66, y: H*0.22 }, // FEF-R
-      { x: W*0.3,  y: H*0.3  }, // IPS-L
-      { x: W*0.7,  y: H*0.3  }  // IPS-R
+      { x: W*0.34, y: H*0.22 },
+      { x: W*0.66, y: H*0.22 },
+      { x: W*0.3,  y: H*0.30 },
+      { x: W*0.7,  y: H*0.30 }
     ];
-    const osc = (Math.sin(t * 2.5) + 1) * 0.5 * activation;
+    const osc = (Math.sin(t * 2.3 + Math.sin(ts*0.00025)*0.5) + 1) * 0.5 * activation;
     ctx.save();
+    ctx.globalCompositeOperation = 'screen';
     for (let i = 0; i < nodes.length; i++) {
       for (let j = i+1; j < nodes.length; j++) {
         ctx.beginPath();
         ctx.moveTo(nodes[i].x, nodes[i].y);
         ctx.lineTo(nodes[j].x, nodes[j].y);
-        ctx.strokeStyle = `rgba(60,220,200,${0.05 + osc * 0.15})`;
-        ctx.lineWidth = 1;
+        ctx.strokeStyle = `rgba(80,220,200,${0.04 + osc * 0.12})`;
+        ctx.lineWidth = 0.8;
         ctx.stroke();
       }
     }
     for (const n of nodes) {
-      const r = 4 + osc * 4;
+      const r = 3.5 + osc * 3.5;
       const glow = ctx.createRadialGradient(n.x, n.y, 0, n.x, n.y, r * 3);
-      glow.addColorStop(0, `rgba(60,220,200,${0.25 + osc * 0.25})`);
+      glow.addColorStop(0, `rgba(80,220,200,${0.14 + osc * 0.18})`);
       glow.addColorStop(1, 'rgba(40,200,180,0)');
       ctx.beginPath();
       ctx.arc(n.x, n.y, r * 3, 0, Math.PI * 2);
@@ -38240,36 +38257,38 @@ const DORSAL_ATTENTION_NETWORK = (() => {
       ctx.fill();
       ctx.beginPath();
       ctx.arc(n.x, n.y, r, 0, Math.PI * 2);
-      ctx.fillStyle = `rgba(80,230,210,${0.35 + osc * 0.2})`;
+      ctx.fillStyle = `rgba(80,220,200,${0.18 + osc * 0.14})`;
       ctx.fill();
     }
+    ctx.globalCompositeOperation = 'source-over';
     ctx.restore();
   }
   return { draw };
 })();
 
-// ── NEUROTRANSMITTER_FLOOD — dopamine=gold, serotonin=cyan, GABA=green particles ──
+// ── NEUROTRANSMITTER_FLOOD — dopamine=gold, serotonin=cyan, GABA=green, ~28 particles ──
 const NEUROTRANSMITTER_FLOOD = (() => {
   let _particles = [], _init = false;
   function init(W, H) {
     _particles.length = 0;
     const types = [
-      { name: 'dopamine',  color: '255,200,60',  count: 20 },
-      { name: 'serotonin', color: '60,220,255',   count: 20 },
-      { name: 'gaba',      color: '80,220,120',   count: 15 }
+      { color: '255,220,80',  count: 10 }, // dopamine — warm gold
+      { color: '80,220,255',  count: 10 }, // serotonin — cyan
+      { color: '120,255,150', count: 8  }  // GABA — green
     ];
     for (const type of types) {
       for (let i = 0; i < type.count; i++) {
         _particles.push({
-          x: W * (0.18 + Math.random() * 0.64),
-          y: H * (0.08 + Math.random() * 0.5),
-          vy: 0.2 + Math.random() * 0.5,
-          vx: (Math.random() - 0.5) * 0.3,
+          x: W * (0.2 + Math.random() * 0.6),
+          y: H * (0.09 + Math.random() * 0.46),
+          vy: 0.15 + Math.random() * 0.35,
+          vx: (Math.random() - 0.5) * 0.2,
           color: type.color,
-          alpha: 0.1 + Math.random() * 0.25,
-          r: 1 + Math.random() * 1.5,
+          alpha: 0.08 + Math.random() * 0.14,
+          r: 0.8 + Math.random() * 1.2,
           life: Math.random(),
-          maxLife: 3 + Math.random() * 5
+          maxLife: 4 + Math.random() * 5,
+          seed: Math.random() * 100
         });
       }
     }
@@ -38283,15 +38302,17 @@ const NEUROTRANSMITTER_FLOOD = (() => {
     if (!_init) { init(W, H); return; }
     const dt = 0.016;
     ctx.save();
+    ctx.globalCompositeOperation = 'screen';
     for (const p of _particles) {
       p.life += dt;
-      p.y += p.vy;
-      p.x += p.vx;
-      if (p.life > p.maxLife || p.y > H * 0.62) {
-        p.y = H * (0.08 + Math.random() * 0.1);
-        p.x = W * (0.18 + Math.random() * 0.64);
+      // Slight organic drift
+      p.y += p.vy + Math.sin(ts * 0.0005 + p.seed) * 0.08;
+      p.x += p.vx + Math.cos(ts * 0.0004 + p.seed) * 0.05;
+      if (p.life > p.maxLife || p.y > H * 0.58) {
+        p.y = H * (0.09 + Math.random() * 0.08);
+        p.x = W * (0.2 + Math.random() * 0.6);
         p.life = 0;
-        p.vx = (Math.random() - 0.5) * 0.3;
+        p.vx = (Math.random() - 0.5) * 0.2;
       }
       const lifeRatio = p.life / p.maxLife;
       const alpha = p.alpha * Math.sin(lifeRatio * Math.PI);
@@ -38300,6 +38321,7 @@ const NEUROTRANSMITTER_FLOOD = (() => {
       ctx.fillStyle = `rgba(${p.color},${alpha})`;
       ctx.fill();
     }
+    ctx.globalCompositeOperation = 'source-over';
     ctx.restore();
   }
   return { draw };
@@ -38307,69 +38329,71 @@ const NEUROTRANSMITTER_FLOOD = (() => {
 
 // ── ACTION_POTENTIAL_WAVE — rolling depolarization wave across a neural strip ──
 const ACTION_POTENTIAL_WAVE = (() => {
-  let _last = 0, _waveT = 0;
+  let _waveT = 0;
   function draw(ts) {
     const cv = document.getElementById('mainCanvas');
     if (!cv) return;
     const ctx = cv.getContext('2d');
     const W = cv.width, H = cv.height;
-    if (ts - _last < 8000) { _last; } // wave fires every 8s
-    _waveT += 0.016 * 0.6;
-    const waveProg = (_waveT % 6) / 6; // 0..1 over 10s
+    _waveT += 0.016 * 0.55;
+    const waveProg = (_waveT % 6) / 6;
     ctx.save();
     const stripY = H * 0.42;
-    const stripW = W * 0.56;
-    const startX = W * 0.22;
+    const stripW = W * 0.54;
+    const startX = W * 0.23;
     const waveX = startX + waveProg * stripW;
-    // Draw neural strip baseline
+    // Baseline
     ctx.beginPath();
     ctx.moveTo(startX, stripY);
     ctx.lineTo(startX + stripW, stripY);
-    ctx.strokeStyle = 'rgba(150,200,255,0.05)';
-    ctx.lineWidth = 1;
+    ctx.strokeStyle = 'rgba(150,200,255,0.04)';
+    ctx.lineWidth = 0.8;
     ctx.stroke();
     // Wave front glow
-    const fadeWidth = 60;
-    const grad = ctx.createLinearGradient(waveX - fadeWidth, stripY, waveX + 20, stripY);
-    grad.addColorStop(0, 'rgba(100,180,255,0)');
-    grad.addColorStop(0.7, 'rgba(180,220,255,0.25)');
-    grad.addColorStop(1, 'rgba(220,240,255,0.05)');
+    const fadeWidth = 50;
+    const grad = ctx.createLinearGradient(waveX - fadeWidth, stripY, waveX + 16, stripY);
+    grad.addColorStop(0, 'rgba(120,200,255,0)');
+    grad.addColorStop(0.7, 'rgba(180,220,255,0.16)');
+    grad.addColorStop(1, 'rgba(200,235,255,0.04)');
     ctx.beginPath();
-    ctx.rect(Math.max(startX, waveX - fadeWidth), stripY - 8, fadeWidth + 20, 16);
+    ctx.rect(Math.max(startX, waveX - fadeWidth), stripY - 7, fadeWidth + 16, 14);
     ctx.fillStyle = grad;
     ctx.fill();
-    // Spike at wave front
+    // Spike
     if (waveProg > 0.01 && waveProg < 0.99) {
+      ctx.globalCompositeOperation = 'screen';
       ctx.beginPath();
       ctx.moveTo(waveX, stripY);
-      ctx.lineTo(waveX - 4, stripY - 14);
-      ctx.lineTo(waveX, stripY + 5);
-      ctx.lineTo(waveX + 8, stripY - 2);
-      ctx.strokeStyle = 'rgba(200,230,255,0.45)';
-      ctx.lineWidth = 1.5;
+      ctx.lineTo(waveX - 3, stripY - 11);
+      ctx.lineTo(waveX, stripY + 4);
+      ctx.lineTo(waveX + 6, stripY - 2);
+      ctx.strokeStyle = 'rgba(200,230,255,0.25)';
+      ctx.lineWidth = 1.2;
       ctx.stroke();
+      ctx.globalCompositeOperation = 'source-over';
     }
     ctx.restore();
   }
   return { draw };
 })();
 
-// ── GLIAL_SUPPORT_MESH — 40 star-shaped astrocytes distributed across brain ──
+// ── GLIAL_SUPPORT_MESH — 20 star-shaped astrocytes, very subtle ──
 const GLIAL_SUPPORT_MESH = (() => {
   let _cells = [], _init = false;
   function init(W, H) {
     _cells.length = 0;
     const cx = W * 0.5, cy = H * 0.33;
-    for (let i = 0; i < 40; i++) {
+    for (let i = 0; i < 20; i++) {
       const angle = Math.random() * Math.PI * 2;
       const r = Math.random();
       _cells.push({
-        x: cx + Math.cos(angle) * W * 0.32 * Math.sqrt(r),
-        y: cy + Math.sin(angle) * H * 0.22 * Math.sqrt(r),
-        arms: 5 + Math.floor(Math.random() * 4),
-        size: 6 + Math.random() * 10,
+        x: cx + Math.cos(angle) * W * 0.3 * Math.sqrt(r),
+        y: cy + Math.sin(angle) * H * 0.21 * Math.sqrt(r),
+        arms: 5 + Math.floor(Math.random() * 3),
+        size: 5 + Math.random() * 9,
         phase: Math.random() * Math.PI * 2,
-        speed: 0.1 + Math.random() * 0.2
+        speed: 0.08 + Math.random() * 0.14,
+        seed: Math.random() * 100
       });
     }
     _init = true;
@@ -38383,21 +38407,21 @@ const GLIAL_SUPPORT_MESH = (() => {
     const t = ts * 0.001;
     ctx.save();
     for (const c of _cells) {
-      const morph = Math.sin(t * c.speed + c.phase);
-      const r = c.size * (0.8 + morph * 0.2);
+      const morph = Math.sin(t * c.speed + c.phase + Math.sin(ts * 0.0003 + c.seed) * 0.3);
+      const r = c.size * (0.82 + morph * 0.18);
       ctx.beginPath();
       for (let a = 0; a < c.arms * 2; a++) {
         const ang = (a / (c.arms * 2)) * Math.PI * 2;
-        const radius = a % 2 === 0 ? r : r * (0.3 + Math.abs(morph) * 0.15);
+        const radius = a % 2 === 0 ? r : r * (0.28 + Math.abs(morph) * 0.12);
         const px = c.x + Math.cos(ang) * radius;
         const py = c.y + Math.sin(ang) * radius;
         a === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py);
       }
       ctx.closePath();
-      ctx.strokeStyle = 'rgba(160,200,160,0.06)';
-      ctx.lineWidth = 0.5;
+      ctx.strokeStyle = 'rgba(160,200,160,0.04)';
+      ctx.lineWidth = 0.4;
       ctx.stroke();
-      ctx.fillStyle = 'rgba(140,200,140,0.03)';
+      ctx.fillStyle = 'rgba(140,200,140,0.02)';
       ctx.fill();
     }
     ctx.restore();
@@ -38446,12 +38470,12 @@ const BBB_GATEWAY = (() => {
     const t = ts * 0.001;
     ctx.save();
     for (const h of _hexes) {
-      const pulse = (Math.sin(t * 0.4 + h.phase) + 1) * 0.5;
+      const pulse = (Math.sin(t * 0.35 + h.phase + Math.sin(ts*0.0003+h.phase)*0.4) + 1) * 0.5;
       const fade = 1 - Math.abs(h.dist - 1.0) / 0.2;
-      const alpha = (0.04 + pulse * 0.06) * Math.max(0, fade);
-      drawHex(ctx, h.x, h.y, 8);
-      ctx.strokeStyle = `rgba(255,80,80,${alpha})`;
-      ctx.lineWidth = 0.5;
+      const alpha = (0.025 + pulse * 0.04) * Math.max(0, fade);
+      drawHex(ctx, h.x, h.y, 7.5);
+      ctx.strokeStyle = `rgba(220,80,80,${alpha})`;
+      ctx.lineWidth = 0.4;
       ctx.stroke();
     }
     ctx.restore();
@@ -38459,93 +38483,90 @@ const BBB_GATEWAY = (() => {
   return { draw };
 })();
 
-// ── THETA_BURST — Hippocampal 4-8Hz theta oscillations radiating from hippocampus ──
+// ── THETA_BURST — Hippocampal theta oscillations radiating from hippocampus ──
 const THETA_BURST = (() => {
-  let _last = 0;
   function draw(ts) {
     const cv = document.getElementById('mainCanvas');
     if (!cv) return;
     const ctx = cv.getContext('2d');
     const W = cv.width, H = cv.height;
     const t = ts * 0.001;
-    // Hippocampus region (bilateral, medial temporal)
     const hippo = [
       { x: W*0.4, y: H*0.48 },
       { x: W*0.6, y: H*0.48 }
     ];
     ctx.save();
+    ctx.globalCompositeOperation = 'screen';
     for (const h of hippo) {
-      // Theta oscillation: 6Hz ≈ 6 cycles per second
       const theta = Math.sin(t * Math.PI * 2 * 6);
       const rings = 4;
       for (let i = 0; i < rings; i++) {
         const ringPhase = (t * 6 - i * 0.25) % 1;
-        const r = ringPhase * 45;
+        const r = ringPhase * 40;
         const fade = (1 - ringPhase);
-        const alpha = fade * 0.15 * Math.abs(theta);
+        const alpha = fade * 0.10 * Math.abs(theta);
         ctx.beginPath();
-        ctx.ellipse(h.x, h.y, r * 1.6, r * 0.7, 0, 0, Math.PI * 2);
-        ctx.strokeStyle = `rgba(100,180,255,${alpha})`;
-        ctx.lineWidth = 0.8;
+        ctx.ellipse(h.x, h.y, r * 1.5, r * 0.65, 0, 0, Math.PI * 2);
+        ctx.strokeStyle = `rgba(80,220,255,${alpha})`;
+        ctx.lineWidth = 0.7;
         ctx.stroke();
       }
-      // Core dot
       ctx.beginPath();
-      ctx.arc(h.x, h.y, 3 + Math.abs(theta) * 2, 0, Math.PI * 2);
-      ctx.fillStyle = `rgba(80,160,255,${0.2 + Math.abs(theta) * 0.2})`;
+      ctx.arc(h.x, h.y, 2.5 + Math.abs(theta) * 1.5, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(80,220,255,${0.14 + Math.abs(theta) * 0.14})`;
       ctx.fill();
     }
+    ctx.globalCompositeOperation = 'source-over';
     ctx.restore();
   }
   return { draw };
 })();
 
-// ── GAMMA_SYNC_BIND — 40Hz gamma synchrony pulses between 6 nodes (binding freq) ──
+// ── GAMMA_SYNC_BIND — 40Hz gamma synchrony pulses between 6 nodes ──
 const GAMMA_SYNC_BIND = (() => {
-  let _last = 0;
   function draw(ts) {
     const cv = document.getElementById('mainCanvas');
     if (!cv) return;
     const ctx = cv.getContext('2d');
     const W = cv.width, H = cv.height;
     const t = ts * 0.001;
-    // 40Hz = 40 cycles per second
     const gamma = Math.sin(t * Math.PI * 2 * 40);
     const bound = (gamma + 1) * 0.5;
     const nodes = [
-      { x: W*0.42, y: H*0.2 }, { x: W*0.58, y: H*0.2 },
+      { x: W*0.42, y: H*0.20 }, { x: W*0.58, y: H*0.20 },
       { x: W*0.35, y: H*0.33 }, { x: W*0.65, y: H*0.33 },
       { x: W*0.44, y: H*0.44 }, { x: W*0.56, y: H*0.44 }
     ];
     ctx.save();
-    if (bound > 0.85) {
-      // Flash all connections
+    ctx.globalCompositeOperation = 'screen';
+    if (bound > 0.88) {
+      const flash = (bound - 0.88) / 0.12; // 0..1
       for (let i = 0; i < nodes.length; i++) {
         for (let j = i+1; j < nodes.length; j++) {
           ctx.beginPath();
           ctx.moveTo(nodes[i].x, nodes[i].y);
           ctx.lineTo(nodes[j].x, nodes[j].y);
-          ctx.strokeStyle = `rgba(220,200,255,${(bound - 0.85) * 2})`;
+          ctx.strokeStyle = `rgba(200,180,255,${flash * 0.18})`;
           ctx.lineWidth = 0.5;
           ctx.stroke();
         }
       }
     }
     for (const n of nodes) {
-      const r = 3 + bound * 4;
+      const r = 2.5 + bound * 3;
       ctx.beginPath();
       ctx.arc(n.x, n.y, r, 0, Math.PI * 2);
-      ctx.fillStyle = `rgba(200,180,255,${0.15 + bound * 0.35})`;
+      ctx.fillStyle = `rgba(160,130,255,${0.10 + bound * 0.18})`;
       ctx.fill();
     }
+    ctx.globalCompositeOperation = 'source-over';
     ctx.restore();
   }
   return { draw };
 })();
 
-// ── NEURAL_OSCILLATOR_RING — Thalamo-cortical loop: animated ring connecting thalamus to cortex ──
+// ── NEURAL_OSCILLATOR_RING — Thalamo-cortical loop, animated pulses around an ellipse ──
 const NEURAL_OSCILLATOR_RING = (() => {
-  let _last = 0;
   function draw(ts) {
     const cv = document.getElementById('mainCanvas');
     if (!cv) return;
@@ -38553,46 +38574,48 @@ const NEURAL_OSCILLATOR_RING = (() => {
     const W = cv.width, H = cv.height;
     const t = ts * 0.001;
     const cx = W * 0.5, cy = H * 0.34;
-    const rx = W * 0.18, ry = H * 0.13;
-    // Draw thalamo-cortical ellipse
+    const rx = W * 0.17, ry = H * 0.12;
     ctx.save();
+    // Thalamo-cortical ring
     ctx.beginPath();
     ctx.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2);
-    ctx.strokeStyle = 'rgba(160,200,255,0.06)';
-    ctx.lineWidth = 1.5;
+    ctx.strokeStyle = 'rgba(160,200,255,0.04)';
+    ctx.lineWidth = 1.2;
     ctx.stroke();
-    // Traveling pulse around the ring
-    const pulseAngle = (t * 1.2) % (Math.PI * 2);
+    ctx.globalCompositeOperation = 'screen';
+    // Traveling pulses
+    const pulseAngle = (t * 1.1 + Math.sin(ts*0.0003)*0.2) % (Math.PI * 2);
     const numPulses = 3;
     for (let i = 0; i < numPulses; i++) {
       const angle = pulseAngle + (i / numPulses) * Math.PI * 2;
       const px = cx + Math.cos(angle) * rx;
       const py = cy + Math.sin(angle) * ry;
-      const glow = ctx.createRadialGradient(px, py, 0, px, py, 10);
-      glow.addColorStop(0, 'rgba(140,200,255,0.5)');
-      glow.addColorStop(1, 'rgba(140,200,255,0)');
+      const glow = ctx.createRadialGradient(px, py, 0, px, py, 8);
+      glow.addColorStop(0, 'rgba(120,200,255,0.28)');
+      glow.addColorStop(1, 'rgba(120,200,255,0)');
       ctx.beginPath();
-      ctx.arc(px, py, 10, 0, Math.PI * 2);
+      ctx.arc(px, py, 8, 0, Math.PI * 2);
       ctx.fillStyle = glow;
       ctx.fill();
       ctx.beginPath();
-      ctx.arc(px, py, 2.5, 0, Math.PI * 2);
-      ctx.fillStyle = 'rgba(200,230,255,0.7)';
+      ctx.arc(px, py, 2, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(180,225,255,0.38)';
       ctx.fill();
     }
-    // Thalamus node at center
-    const thPulse = (Math.sin(t * 1.2) + 1) * 0.5;
-    const thGlow = ctx.createRadialGradient(cx, cy, 0, cx, cy, 14);
-    thGlow.addColorStop(0, `rgba(180,160,255,${0.25 + thPulse * 0.15})`);
-    thGlow.addColorStop(1, 'rgba(150,130,255,0)');
+    // Thalamus core
+    const thPulse = (Math.sin(t * 1.1 + Math.sin(ts*0.0003)*0.3) + 1) * 0.5;
+    const thGlow = ctx.createRadialGradient(cx, cy, 0, cx, cy, 12);
+    thGlow.addColorStop(0, `rgba(160,120,255,${0.14 + thPulse * 0.10})`);
+    thGlow.addColorStop(1, 'rgba(140,100,255,0)');
     ctx.beginPath();
-    ctx.arc(cx, cy, 14, 0, Math.PI * 2);
+    ctx.arc(cx, cy, 12, 0, Math.PI * 2);
     ctx.fillStyle = thGlow;
     ctx.fill();
     ctx.beginPath();
-    ctx.arc(cx, cy, 4, 0, Math.PI * 2);
-    ctx.fillStyle = `rgba(200,180,255,${0.5 + thPulse * 0.3})`;
+    ctx.arc(cx, cy, 3.5, 0, Math.PI * 2);
+    ctx.fillStyle = `rgba(180,150,255,${0.25 + thPulse * 0.15})`;
     ctx.fill();
+    ctx.globalCompositeOperation = 'source-over';
     ctx.restore();
   }
   return { draw };
@@ -38606,44 +38629,44 @@ const MEMORY_CONSOLIDATION_REPLAY = (() => {
     if (!cv) return;
     const ctx = cv.getContext('2d');
     const W = cv.width, H = cv.height;
-    // Fire new trace
     if (ts - _last > _nextFire) {
       _last = ts;
-      _nextFire = 6000 + Math.random() * 6000;
-      // Generate random trace path through brain
+      _nextFire = 7000 + Math.random() * 7000;
       const cx = W * 0.5, cy = H * 0.33;
       const points = [];
-      let px = cx + (Math.random()-0.5)*W*0.3, py = cy + (Math.random()-0.5)*H*0.2;
+      let px = cx + (Math.random()-0.5)*W*0.28, py = cy + (Math.random()-0.5)*H*0.18;
       for (let i = 0; i < 5; i++) {
         points.push({ x: px, y: py });
-        px += (Math.random()-0.5)*W*0.12;
-        py += (Math.random()-0.5)*H*0.08;
-        px = Math.max(W*0.22, Math.min(W*0.78, px));
-        py = Math.max(H*0.12, Math.min(H*0.55, py));
+        px += (Math.random()-0.5)*W*0.10;
+        py += (Math.random()-0.5)*H*0.07;
+        px = Math.max(W*0.23, Math.min(W*0.77, px));
+        py = Math.max(H*0.12, Math.min(H*0.54, py));
       }
-      _traces.push({ points, t: ts, duration: 3000 });
+      _traces.push({ points, t: ts, duration: 3500 });
     }
     ctx.save();
+    ctx.globalCompositeOperation = 'screen';
     const now = ts;
     _traces = _traces.filter(tr => now - tr.t < tr.duration);
     for (const tr of _traces) {
       const age = (now - tr.t) / tr.duration;
-      const alpha = (1 - age) * 0.22;
+      const alpha = (1 - age) * 0.14;
       ctx.beginPath();
       ctx.moveTo(tr.points[0].x, tr.points[0].y);
       for (let i = 1; i < tr.points.length; i++) {
         ctx.lineTo(tr.points[i].x, tr.points[i].y);
       }
-      ctx.strokeStyle = `rgba(180,200,255,${alpha})`;
-      ctx.lineWidth = 1;
+      ctx.strokeStyle = `rgba(160,120,255,${alpha})`;
+      ctx.lineWidth = 0.8;
       ctx.stroke();
       for (const pt of tr.points) {
         ctx.beginPath();
-        ctx.arc(pt.x, pt.y, 2, 0, Math.PI * 2);
-        ctx.fillStyle = `rgba(200,220,255,${alpha * 1.5})`;
+        ctx.arc(pt.x, pt.y, 1.8, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(180,150,255,${alpha * 1.4})`;
         ctx.fill();
       }
     }
+    ctx.globalCompositeOperation = 'source-over';
     ctx.restore();
   }
   return { draw };
@@ -38654,26 +38677,28 @@ const PREDICTIVE_CODING_FLOW = (() => {
   let _particles = [], _init = false;
   function init(W, H) {
     _particles.length = 0;
-    // Top-down: prefrontal → sensory (blue, downward)
-    for (let i = 0; i < 12; i++) {
+    // Top-down: prefrontal → sensory (cool blue, downward)
+    for (let i = 0; i < 9; i++) {
       _particles.push({
         x: W * (0.38 + Math.random() * 0.24),
         y: H * (0.15 + Math.random() * 0.1),
-        vy: 0.4 + Math.random() * 0.5,
+        vy: 0.3 + Math.random() * 0.4,
         dir: 'down',
-        color: '100,160,255',
-        alpha: 0.15 + Math.random() * 0.15
+        color: '120,200,255',
+        alpha: 0.10 + Math.random() * 0.12,
+        seed: Math.random() * 100
       });
     }
-    // Bottom-up: sensory → prefrontal (orange, upward)
-    for (let i = 0; i < 10; i++) {
+    // Bottom-up: sensory → prefrontal (amber, upward)
+    for (let i = 0; i < 7; i++) {
       _particles.push({
         x: W * (0.36 + Math.random() * 0.28),
         y: H * (0.45 + Math.random() * 0.1),
-        vy: -(0.3 + Math.random() * 0.4),
+        vy: -(0.25 + Math.random() * 0.35),
         dir: 'up',
-        color: '255,150,60',
-        alpha: 0.12 + Math.random() * 0.12
+        color: '255,140,60',
+        alpha: 0.08 + Math.random() * 0.10,
+        seed: Math.random() * 100
       });
     }
     _init = true;
@@ -38685,40 +38710,41 @@ const PREDICTIVE_CODING_FLOW = (() => {
     const W = cv.width, H = cv.height;
     if (!_init) { init(W, H); return; }
     ctx.save();
+    ctx.globalCompositeOperation = 'screen';
     for (const p of _particles) {
-      p.y += p.vy;
+      p.y += p.vy + Math.sin(ts * 0.0004 + p.seed) * 0.06;
       if (p.dir === 'down' && p.y > H * 0.52) { p.y = H * 0.15; p.x = W*(0.38+Math.random()*0.24); }
       if (p.dir === 'up'   && p.y < H * 0.12) { p.y = H * 0.45; p.x = W*(0.36+Math.random()*0.28); }
       ctx.beginPath();
-      ctx.arc(p.x, p.y, 1.5, 0, Math.PI * 2);
+      ctx.arc(p.x, p.y, 1.2, 0, Math.PI * 2);
       ctx.fillStyle = `rgba(${p.color},${p.alpha})`;
       ctx.fill();
-      // Small tail
-      const tailLen = 5;
+      // Tail
       ctx.beginPath();
       ctx.moveTo(p.x, p.y);
-      ctx.lineTo(p.x, p.y - p.vy * tailLen);
-      ctx.strokeStyle = `rgba(${p.color},${p.alpha * 0.5})`;
-      ctx.lineWidth = 0.8;
+      ctx.lineTo(p.x, p.y - p.vy * 4);
+      ctx.strokeStyle = `rgba(${p.color},${p.alpha * 0.4})`;
+      ctx.lineWidth = 0.6;
       ctx.stroke();
     }
+    ctx.globalCompositeOperation = 'source-over';
     ctx.restore();
   }
   return { draw };
 })();
 
-// ── CONNECTOME_MAP — 15 long-range fiber bundles, very low opacity, always visible ──
+// ── CONNECTOME_MAP — 15 long-range fiber bundles, elegant curves, always visible ──
 const CONNECTOME_MAP = (() => {
   let _fibers = [], _init = false;
   function init(W, H) {
     _fibers.length = 0;
     const cx = W * 0.5, cy = H * 0.33;
     const anchors = [
-      [cx-W*0.25, cy-H*0.18], [cx+W*0.25, cy-H*0.18],
-      [cx-W*0.28, cy],        [cx+W*0.28, cy],
-      [cx-W*0.2,  cy+H*0.16], [cx+W*0.2,  cy+H*0.16],
-      [cx,        cy-H*0.2],  [cx,        cy+H*0.15],
-      [cx-W*0.15, cy-H*0.05], [cx+W*0.15, cy-H*0.05]
+      [cx-W*0.24, cy-H*0.17], [cx+W*0.24, cy-H*0.17],
+      [cx-W*0.27, cy],        [cx+W*0.27, cy],
+      [cx-W*0.19, cy+H*0.15], [cx+W*0.19, cy+H*0.15],
+      [cx,        cy-H*0.19], [cx,        cy+H*0.14],
+      [cx-W*0.14, cy-H*0.05], [cx+W*0.14, cy-H*0.05]
     ];
     const connections = [
       [0,1],[0,2],[1,3],[2,4],[3,5],[4,6],[5,7],
@@ -38727,8 +38753,9 @@ const CONNECTOME_MAP = (() => {
     for (const [a, b] of connections) {
       const ax = anchors[a][0], ay = anchors[a][1];
       const bx = anchors[b][0], by = anchors[b][1];
-      const cpx = (ax+bx)*0.5 + (Math.random()-0.5)*W*0.06;
-      const cpy = (ay+by)*0.5 + (Math.random()-0.5)*H*0.04;
+      // Graceful cubic bezier control points
+      const cpx = (ax+bx)*0.5 + (Math.random()-0.5)*W*0.05;
+      const cpy = (ay+by)*0.5 + (Math.random()-0.5)*H*0.035;
       _fibers.push({ ax, ay, bx, by, cpx, cpy });
     }
     _init = true;
@@ -38744,8 +38771,8 @@ const CONNECTOME_MAP = (() => {
       ctx.beginPath();
       ctx.moveTo(f.ax, f.ay);
       ctx.quadraticCurveTo(f.cpx, f.cpy, f.bx, f.by);
-      ctx.strokeStyle = 'rgba(200,210,230,0.04)';
-      ctx.lineWidth = 1;
+      ctx.strokeStyle = 'rgba(180,200,230,0.035)';
+      ctx.lineWidth = 0.8;
       ctx.stroke();
     }
     ctx.restore();
@@ -38761,69 +38788,66 @@ const NEURAL_PLASTICITY_FORM = (() => {
     if (!cv) return;
     const ctx = cv.getContext('2d');
     const W = cv.width, H = cv.height;
-    // Spawn new plasticity event every 3-6s
-    if (ts - _lastSpawn > 3000 + Math.random() * 3000) {
+    if (ts - _lastSpawn > 3500 + Math.random() * 4000) {
       _lastSpawn = ts;
-      const cx = W*(0.25 + Math.random()*0.5), cy = H*(0.15 + Math.random()*0.35);
+      const cx = W*(0.26 + Math.random()*0.48), cy = H*(0.15 + Math.random()*0.33);
       const angle = Math.random() * Math.PI * 2;
-      const dist = 20 + Math.random() * 30;
+      const dist = 18 + Math.random() * 26;
       _events.push({
         ax: cx - Math.cos(angle)*dist, ay: cy - Math.sin(angle)*dist,
         bx: cx + Math.cos(angle)*dist, by: cy + Math.sin(angle)*dist,
-        start: ts, duration: 2500,
+        start: ts, duration: 2800,
         connected: false, connectTime: 0
       });
     }
     ctx.save();
+    ctx.globalCompositeOperation = 'screen';
     const now = ts;
     _events = _events.filter(e => now - e.start < e.duration + 1000);
     for (const e of _events) {
       const age = (now - e.start) / e.duration;
-      const approach = Math.min(1, age * 2); // approach in first half
+      const approach = Math.min(1, age * 2);
       const cx = (e.ax + e.bx) * 0.5, cy = (e.ay + e.by) * 0.5;
       const ax = e.ax + (cx - e.ax) * approach;
       const ay = e.ay + (cy - e.ay) * approach;
       const bx = e.bx + (cx - e.bx) * approach;
       const by = e.by + (cy - e.by) * approach;
-      // Check connection
-      const dx = ax - bx, dy = ay - by;
-      if (!e.connected && Math.sqrt(dx*dx+dy*dy) < 6) {
+      const ddx = ax - bx, ddy = ay - by;
+      if (!e.connected && Math.sqrt(ddx*ddx+ddy*ddy) < 6) {
         e.connected = true;
         e.connectTime = now;
       }
       if (e.connected) {
-        const flashAge = (now - e.connectTime) / 800;
+        const flashAge = (now - e.connectTime) / 1000;
         const flash = Math.max(0, 1 - flashAge);
         ctx.beginPath();
         ctx.moveTo(e.ax, e.ay);
         ctx.lineTo(e.bx, e.by);
-        ctx.strokeStyle = `rgba(120,255,180,${0.08 + flash * 0.25})`;
-        ctx.lineWidth = 1;
+        ctx.strokeStyle = `rgba(200,255,220,${0.05 + flash * 0.18})`;
+        ctx.lineWidth = 0.8;
         ctx.stroke();
-        // Flash at junction
         ctx.beginPath();
-        ctx.arc(cx, cy, 4 + flash * 8, 0, Math.PI * 2);
-        ctx.fillStyle = `rgba(150,255,200,${flash * 0.5})`;
+        ctx.arc(cx, cy, 3 + flash * 7, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(200,255,220,${flash * 0.28})`;
         ctx.fill();
       }
-      // Two approaching dots
       ctx.beginPath();
-      ctx.arc(ax, ay, 3, 0, Math.PI * 2);
-      ctx.fillStyle = `rgba(80,200,180,${0.4 * (1 - Math.max(0, age-0.5)*2)})`;
+      ctx.arc(ax, ay, 2.5, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(80,220,200,${0.28 * (1 - Math.max(0, age-0.5)*2)})`;
       ctx.fill();
       ctx.beginPath();
-      ctx.arc(bx, by, 3, 0, Math.PI * 2);
-      ctx.fillStyle = `rgba(200,120,255,${0.4 * (1 - Math.max(0, age-0.5)*2)})`;
+      ctx.arc(bx, by, 2.5, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(160,120,255,${0.28 * (1 - Math.max(0, age-0.5)*2)})`;
       ctx.fill();
     }
+    ctx.globalCompositeOperation = 'source-over';
     ctx.restore();
   }
   return { draw };
 })();
 
-// ── BRAIN_RESONANCE — Standing wave pattern across entire brain in high-activity states ──
+// ── BRAIN_RESONANCE — Standing wave harmonics across brain boundary ──
 const BRAIN_RESONANCE = (() => {
-  let _last = 0;
   function draw(ts) {
     const cv = document.getElementById('mainCanvas');
     if (!cv) return;
@@ -38832,29 +38856,30 @@ const BRAIN_RESONANCE = (() => {
     const t = ts * 0.001;
     const cx = W * 0.5, cy = H * 0.33;
     const rx = W * 0.3, ry = H * 0.22;
-    // Standing wave: multiple elliptical harmonics
     ctx.save();
+    ctx.globalCompositeOperation = 'screen';
     const harmonics = [1, 2, 3];
     for (const h of harmonics) {
-      const amplitude = (0.04 / h);
-      const freq = h * 1.3;
-      const wave = Math.sin(t * freq);
+      const amplitude = 0.025 / h;
+      const freq = h * 1.25;
+      const wave = Math.sin(t * freq + Math.sin(ts * 0.0002) * 0.3);
       if (Math.abs(wave) < 0.1) continue;
       const alpha = Math.abs(wave) * amplitude;
-      const steps = 120;
+      const steps = 100;
       ctx.beginPath();
       for (let i = 0; i <= steps; i++) {
         const angle = (i / steps) * Math.PI * 2;
-        const mod = 1 + Math.sin(angle * h + t * freq) * 0.04;
+        const mod = 1 + Math.sin(angle * h + t * freq) * 0.03;
         const px = cx + Math.cos(angle) * rx * mod;
         const py = cy + Math.sin(angle) * ry * mod;
         i === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py);
       }
       ctx.closePath();
-      ctx.strokeStyle = `rgba(160,200,255,${alpha})`;
-      ctx.lineWidth = 0.8;
+      ctx.strokeStyle = `rgba(120,200,255,${alpha})`;
+      ctx.lineWidth = 0.7;
       ctx.stroke();
     }
+    ctx.globalCompositeOperation = 'source-over';
     ctx.restore();
   }
   return { draw };
