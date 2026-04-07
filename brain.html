@@ -21796,6 +21796,877 @@ const FASCIA_NETWORK = (() => {
 })();
 </script>
 
+
+// ============================================================
+// BATCH 17 — 50 New Systems (Language, Motor, Developmental,
+//             Energy/Metabolism, Spiritual/Transpersonal)
+// ============================================================
+
+// --- LANGUAGE & COMMUNICATION ---
+
+const BROCA_PULSE = (() => {
+  let _last = 0;
+  return { draw(ts) {
+    if (ts - _last < 60) return; _last = ts;
+    const svg = document.getElementById('lightLayer');
+    if (!svg) return;
+    const cx = window.innerWidth / 2 - 48, cy = window.innerHeight * 0.28;
+    const r = 6 + Math.sin(ts * 0.004) * 3;
+    const el = document.getElementById('_broca_p') || (() => {
+      const e = document.createElementNS('http://www.w3.org/2000/svg','circle');
+      e.id = '_broca_p'; svg.appendChild(e); return e;
+    })();
+    el.setAttribute('cx', cx); el.setAttribute('cy', cy); el.setAttribute('r', r);
+    el.setAttribute('fill', 'none'); el.setAttribute('stroke', '#f4a');
+    el.setAttribute('stroke-width', '1.5'); el.setAttribute('opacity', 0.35 + Math.sin(ts * 0.003) * 0.15);
+  }};
+})();
+
+const WERNICKE_DECODE = (() => {
+  let _last = 0;
+  return { draw(ts) {
+    if (ts - _last < 70) return; _last = ts;
+    const svg = document.getElementById('lightLayer'); if (!svg) return;
+    const cx = window.innerWidth / 2 + 52, cy = window.innerHeight * 0.27;
+    for (let i = 0; i < 4; i++) {
+      const id = '_wer_' + i;
+      const el = document.getElementById(id) || (() => { const e = document.createElementNS('http://www.w3.org/2000/svg','line'); e.id=id; svg.appendChild(e); return e; })();
+      const ang = (ts * 0.002 + i * Math.PI / 2);
+      el.setAttribute('x1', cx); el.setAttribute('y1', cy);
+      el.setAttribute('x2', cx + Math.cos(ang) * 12); el.setAttribute('y2', cy + Math.sin(ang) * 8);
+      el.setAttribute('stroke', '#4af'); el.setAttribute('stroke-width', '1'); el.setAttribute('opacity', 0.4);
+    }
+  }};
+})();
+
+const PHONEME_CASCADE = (() => {
+  let _last = 0, _phase = 0;
+  return { draw(ts) {
+    if (ts - _last < 80) return; _last = ts; _phase++;
+    const svg = document.getElementById('lightLayer'); if (!svg) return;
+    const cx = window.innerWidth / 2, cy = window.innerHeight * 0.82;
+    for (let i = 0; i < 5; i++) {
+      const id = '_phon_' + i;
+      const el = document.getElementById(id) || (() => { const e = document.createElementNS('http://www.w3.org/2000/svg','circle'); e.id=id; svg.appendChild(e); return e; })();
+      const t = (_phase + i * 3) % 20;
+      el.setAttribute('cx', cx + (i - 2) * 14);
+      el.setAttribute('cy', cy - t * 4);
+      el.setAttribute('r', 3);
+      el.setAttribute('fill', '#f4a'); el.setAttribute('opacity', Math.max(0, 1 - t / 20) * 0.45);
+    }
+  }};
+})();
+
+const SYNTAX_WEAVE = (() => {
+  let _last = 0;
+  return { draw(ts) {
+    if (ts - _last < 90) return; _last = ts;
+    const svg = document.getElementById('lightLayer'); if (!svg) return;
+    const cx = window.innerWidth / 2, cy = window.innerHeight * 0.26;
+    const pts = [-40,-12, -20,-18, 0,-14, 20,-18, 40,-12];
+    for (let i = 0; i < 4; i++) {
+      const id = '_syn_' + i;
+      const el = document.getElementById(id) || (() => { const e = document.createElementNS('http://www.w3.org/2000/svg','line'); e.id=id; svg.appendChild(e); return e; })();
+      el.setAttribute('x1', cx + pts[i*2]); el.setAttribute('y1', cy + pts[i*2+1] + Math.sin(ts*0.002+i)*3);
+      el.setAttribute('x2', cx + pts[(i+1)*2]); el.setAttribute('y2', cy + pts[(i+1)*2+1] + Math.sin(ts*0.002+i+1)*3);
+      el.setAttribute('stroke', '#a4f'); el.setAttribute('stroke-width','1'); el.setAttribute('opacity', 0.35);
+    }
+  }};
+})();
+
+const METAPHOR_BRIDGE = (() => {
+  let _last = 0;
+  return { draw(ts) {
+    if (ts - _last < 110) return; _last = ts;
+    const svg = document.getElementById('lightLayer'); if (!svg) return;
+    const cx = window.innerWidth / 2, cy = window.innerHeight * 0.29;
+    const id = '_meta_b';
+    const el = document.getElementById(id) || (() => { const e = document.createElementNS('http://www.w3.org/2000/svg','path'); e.id=id; svg.appendChild(e); return e; })();
+    const sway = Math.sin(ts * 0.0015) * 20;
+    el.setAttribute('d', `M ${cx-55} ${cy} Q ${cx+sway} ${cy-22} ${cx+55} ${cy}`);
+    el.setAttribute('fill', 'none'); el.setAttribute('stroke', '#fa4');
+    el.setAttribute('stroke-width', '1.5'); el.setAttribute('opacity', 0.3);
+  }};
+})();
+
+const NARRATIVE_THREAD = (() => {
+  let _last = 0;
+  return { draw(ts) {
+    if (ts - _last < 100) return; _last = ts;
+    const svg = document.getElementById('lightLayer'); if (!svg) return;
+    const cx = window.innerWidth / 2, cy = window.innerHeight * 0.5;
+    const id = '_narr_t';
+    const el = document.getElementById(id) || (() => { const e = document.createElementNS('http://www.w3.org/2000/svg','polyline'); e.id=id; svg.appendChild(e); return e; })();
+    let pts = '';
+    for (let i = 0; i < 10; i++) {
+      const x = cx - 60 + i * 13;
+      const y = cy + Math.sin(ts * 0.001 + i * 0.7) * 18;
+      pts += x + ',' + y + ' ';
+    }
+    el.setAttribute('points', pts); el.setAttribute('fill','none');
+    el.setAttribute('stroke','#4af'); el.setAttribute('stroke-width','1'); el.setAttribute('opacity',0.28);
+  }};
+})();
+
+const INNER_SPEECH = (() => {
+  let _last = 0;
+  return { draw(ts) {
+    if (ts - _last < 120) return; _last = ts;
+    const svg = document.getElementById('lightLayer'); if (!svg) return;
+    const cx = window.innerWidth / 2 - 20, cy = window.innerHeight * 0.275;
+    for (let i = 0; i < 3; i++) {
+      const id = '_isp_' + i;
+      const el = document.getElementById(id) || (() => { const e = document.createElementNS('http://www.w3.org/2000/svg','circle'); e.id=id; svg.appendChild(e); return e; })();
+      const r = 2 + i;
+      el.setAttribute('cx', cx + i * 10); el.setAttribute('cy', cy + Math.sin(ts * 0.003 + i) * 4);
+      el.setAttribute('r', r); el.setAttribute('fill','#fff'); el.setAttribute('opacity', 0.12 + i * 0.06);
+    }
+  }};
+})();
+
+const SUBVOCALIZATION = (() => {
+  let _last = 0;
+  return { draw(ts) {
+    if (ts - _last < 80) return; _last = ts;
+    const svg = document.getElementById('lightLayer'); if (!svg) return;
+    const cx = window.innerWidth / 2, cy = window.innerHeight * 0.83;
+    const amp = 4 + Math.sin(ts * 0.003) * 3;
+    for (let i = 0; i < 6; i++) {
+      const id = '_subv_' + i;
+      const el = document.getElementById(id) || (() => { const e = document.createElementNS('http://www.w3.org/2000/svg','line'); e.id=id; svg.appendChild(e); return e; })();
+      const x = cx - 25 + i * 10;
+      el.setAttribute('x1', x); el.setAttribute('y1', cy - amp);
+      el.setAttribute('x2', x); el.setAttribute('y2', cy + amp);
+      el.setAttribute('stroke','#4f8'); el.setAttribute('stroke-width','1.5'); el.setAttribute('opacity', 0.3);
+    }
+  }};
+})();
+
+const SEMANTIC_FIELD = (() => {
+  let _last = 0;
+  return { draw(ts) {
+    if (ts - _last < 130) return; _last = ts;
+    const svg = document.getElementById('lightLayer'); if (!svg) return;
+    const cx = window.innerWidth / 2 + 30, cy = window.innerHeight * 0.28;
+    const r = 18 + Math.sin(ts * 0.0018) * 6;
+    const id = '_semf';
+    const el = document.getElementById(id) || (() => { const e = document.createElementNS('http://www.w3.org/2000/svg','ellipse'); e.id=id; svg.appendChild(e); return e; })();
+    el.setAttribute('cx', cx); el.setAttribute('cy', cy); el.setAttribute('rx', r); el.setAttribute('ry', r * 0.6);
+    el.setAttribute('fill','none'); el.setAttribute('stroke','#0ff'); el.setAttribute('stroke-width','1'); el.setAttribute('opacity', 0.18);
+  }};
+})();
+
+const PRAGMATIC_CONTEXT = (() => {
+  let _last = 0;
+  return { draw(ts) {
+    if (ts - _last < 150) return; _last = ts;
+    const svg = document.getElementById('lightLayer'); if (!svg) return;
+    const cx = window.innerWidth / 2, cy = window.innerHeight * 0.27;
+    for (let i = 0; i < 3; i++) {
+      const id = '_prag_' + i;
+      const el = document.getElementById(id) || (() => { const e = document.createElementNS('http://www.w3.org/2000/svg','circle'); e.id=id; svg.appendChild(e); return e; })();
+      const rr = 8 + i * 9 + Math.sin(ts * 0.002) * 3;
+      el.setAttribute('cx', cx); el.setAttribute('cy', cy); el.setAttribute('r', rr);
+      el.setAttribute('fill','none'); el.setAttribute('stroke','#fa4'); el.setAttribute('stroke-width','0.8'); el.setAttribute('opacity', 0.1 + i * 0.04);
+    }
+  }};
+})();
+
+// --- MOVEMENT & MOTOR ---
+
+const BASAL_GANGLIA_LOOP = (() => {
+  let _last = 0;
+  return { draw(ts) {
+    if (ts - _last < 55) return; _last = ts;
+    const svg = document.getElementById('lightLayer'); if (!svg) return;
+    const cx = window.innerWidth / 2, cy = window.innerHeight * 0.31;
+    const ang = ts * 0.002;
+    const id = '_bgl_dot';
+    const el = document.getElementById(id) || (() => { const e = document.createElementNS('http://www.w3.org/2000/svg','circle'); e.id=id; svg.appendChild(e); return e; })();
+    el.setAttribute('cx', cx + Math.cos(ang) * 16); el.setAttribute('cy', cy + Math.sin(ang) * 10);
+    el.setAttribute('r', 3); el.setAttribute('fill','#f80'); el.setAttribute('opacity', 0.55);
+  }};
+})();
+
+const CEREBELLUM_TIMING = (() => {
+  let _last = 0;
+  return { draw(ts) {
+    if (ts - _last < 45) return; _last = ts;
+    const svg = document.getElementById('lightLayer'); if (!svg) return;
+    const cx = window.innerWidth / 2 + 4, cy = window.innerHeight * 0.32;
+    const beat = (Math.sin(ts * 0.006) + 1) / 2;
+    const id = '_cbt';
+    const el = document.getElementById(id) || (() => { const e = document.createElementNS('http://www.w3.org/2000/svg','rect'); e.id=id; svg.appendChild(e); return e; })();
+    el.setAttribute('x', cx - 10); el.setAttribute('y', cy - 2);
+    el.setAttribute('width', 20 * beat); el.setAttribute('height', 4);
+    el.setAttribute('fill','#4af'); el.setAttribute('opacity', 0.4); el.setAttribute('rx', 2);
+  }};
+})();
+
+const MOTOR_SEQUENCE = (() => {
+  let _last = 0, _step = 0;
+  return { draw(ts) {
+    if (ts - _last < 200) return; _last = ts; _step = (_step + 1) % 8;
+    const svg = document.getElementById('lightLayer'); if (!svg) return;
+    const cx = window.innerWidth / 2 - 80, cy = window.innerHeight * 0.45;
+    for (let i = 0; i < 8; i++) {
+      const id = '_mseq_' + i;
+      const el = document.getElementById(id) || (() => { const e = document.createElementNS('http://www.w3.org/2000/svg','rect'); e.id=id; svg.appendChild(e); return e; })();
+      el.setAttribute('x', cx + i * 22); el.setAttribute('y', cy - 5);
+      el.setAttribute('width', 16); el.setAttribute('height', 10);
+      el.setAttribute('rx', 3); el.setAttribute('fill', i === _step ? '#fa4' : '#334');
+      el.setAttribute('opacity', i === _step ? 0.7 : 0.15);
+    }
+  }};
+})();
+
+const GAIT_RHYTHM = (() => {
+  let _last = 0;
+  return { draw(ts) {
+    if (ts - _last < 50) return; _last = ts;
+    const svg = document.getElementById('lightLayer'); if (!svg) return;
+    const cx = window.innerWidth / 2, baseY = window.innerHeight * 0.92;
+    const phase = ts * 0.003;
+    const positions = [{x:-18,leg:0},{x:18,leg:Math.PI}];
+    positions.forEach(({x, leg}, i) => {
+      const id = '_gait_' + i;
+      const el = document.getElementById(id) || (() => { const e = document.createElementNS('http://www.w3.org/2000/svg','circle'); e.id=id; svg.appendChild(e); return e; })();
+      const lift = Math.max(0, Math.sin(phase + leg)) * 12;
+      el.setAttribute('cx', cx + x); el.setAttribute('cy', baseY - lift);
+      el.setAttribute('r', 5); el.setAttribute('fill','#4f8'); el.setAttribute('opacity', 0.4);
+    });
+  }};
+})();
+
+const GESTURE_FIELD = (() => {
+  let _last = 0;
+  return { draw(ts) {
+    if (ts - _last < 80) return; _last = ts;
+    const svg = document.getElementById('lightLayer'); if (!svg) return;
+    const cx = window.innerWidth / 2 - 70, cy = window.innerHeight * 0.52;
+    const id = '_gfld';
+    const el = document.getElementById(id) || (() => { const e = document.createElementNS('http://www.w3.org/2000/svg','path'); e.id=id; svg.appendChild(e); return e; })();
+    const t = ts * 0.0015;
+    el.setAttribute('d', `M ${cx} ${cy} Q ${cx+30*Math.cos(t)} ${cy-20*Math.sin(t)} ${cx+50} ${cy+10}`);
+    el.setAttribute('fill','none'); el.setAttribute('stroke','#f4a'); el.setAttribute('stroke-width','1.5'); el.setAttribute('opacity', 0.3);
+  }};
+})();
+
+const POSTURAL_SWAY = (() => {
+  let _last = 0;
+  return { draw(ts) {
+    if (ts - _last < 100) return; _last = ts;
+    const svg = document.getElementById('lightLayer'); if (!svg) return;
+    const cx = window.innerWidth / 2, cy = window.innerHeight * 0.5;
+    const sway = Math.sin(ts * 0.0008) * 6;
+    const id = '_psway';
+    const el = document.getElementById(id) || (() => { const e = document.createElementNS('http://www.w3.org/2000/svg','line'); e.id=id; svg.appendChild(e); return e; })();
+    el.setAttribute('x1', cx + sway); el.setAttribute('y1', cy - 140);
+    el.setAttribute('x2', cx + sway * 0.3); el.setAttribute('y2', cy + 140);
+    el.setAttribute('stroke','#fff'); el.setAttribute('stroke-width','1'); el.setAttribute('opacity', 0.08);
+  }};
+})();
+
+const FINE_MOTOR_SPARK = (() => {
+  let _last = 0;
+  return { draw(ts) {
+    if (ts - _last < 60) return; _last = ts;
+    const svg = document.getElementById('lightLayer'); if (!svg) return;
+    const cx = window.innerWidth / 2 + 75, cy = window.innerHeight * 0.7;
+    for (let i = 0; i < 5; i++) {
+      const id = '_fms_' + i;
+      const el = document.getElementById(id) || (() => { const e = document.createElementNS('http://www.w3.org/2000/svg','line'); e.id=id; svg.appendChild(e); return e; })();
+      const ang = (ts * 0.004 + i * 1.26);
+      el.setAttribute('x1', cx); el.setAttribute('y1', cy);
+      el.setAttribute('x2', cx + Math.cos(ang)*8); el.setAttribute('y2', cy + Math.sin(ang)*8);
+      el.setAttribute('stroke','#0ff'); el.setAttribute('stroke-width','1'); el.setAttribute('opacity', 0.4);
+    }
+  }};
+})();
+
+const GRIP_FORCE = (() => {
+  let _last = 0;
+  return { draw(ts) {
+    if (ts - _last < 70) return; _last = ts;
+    const svg = document.getElementById('lightLayer'); if (!svg) return;
+    const cx = window.innerWidth / 2 + 78, cy = window.innerHeight * 0.68;
+    const f = 0.5 + Math.sin(ts * 0.002) * 0.5;
+    const id = '_grip';
+    const el = document.getElementById(id) || (() => { const e = document.createElementNS('http://www.w3.org/2000/svg','rect'); e.id=id; svg.appendChild(e); return e; })();
+    el.setAttribute('x', cx - 5); el.setAttribute('y', cy - 10 * f);
+    el.setAttribute('width', 10); el.setAttribute('height', 20 * f);
+    el.setAttribute('rx', 3); el.setAttribute('fill','#f44'); el.setAttribute('opacity', 0.35);
+  }};
+})();
+
+const BALLISTIC_MOVEMENT = (() => {
+  let _last = 0, _phase = 0;
+  return { draw(ts) {
+    if (ts - _last < 40) return; _last = ts; _phase = (_phase + 1) % 30;
+    const svg = document.getElementById('lightLayer'); if (!svg) return;
+    const cx = window.innerWidth / 2 - 75, cy = window.innerHeight * 0.6;
+    const id = '_ball_m';
+    const el = document.getElementById(id) || (() => { const e = document.createElementNS('http://www.w3.org/2000/svg','circle'); e.id=id; svg.appendChild(e); return e; })();
+    const t = _phase / 30;
+    el.setAttribute('cx', cx + t * 40); el.setAttribute('cy', cy - Math.sin(t * Math.PI) * 30);
+    el.setAttribute('r', 4); el.setAttribute('fill','#fa4'); el.setAttribute('opacity', 0.5 * (1-t));
+  }};
+})();
+
+const MOTOR_LEARNING_ARC = (() => {
+  let _last = 0;
+  return { draw(ts) {
+    if (ts - _last < 150) return; _last = ts;
+    const svg = document.getElementById('lightLayer'); if (!svg) return;
+    const cx = window.innerWidth / 2, cy = window.innerHeight * 0.38;
+    const progress = (Math.sin(ts * 0.0005) + 1) / 2;
+    const id = '_mlarc';
+    const el = document.getElementById(id) || (() => { const e = document.createElementNS('http://www.w3.org/2000/svg','path'); e.id=id; svg.appendChild(e); return e; })();
+    const endX = cx - 50 + progress * 100;
+    el.setAttribute('d', `M ${cx-50} ${cy} Q ${cx} ${cy-25} ${endX} ${cy}`);
+    el.setAttribute('fill','none'); el.setAttribute('stroke','#a4f'); el.setAttribute('stroke-width','2'); el.setAttribute('opacity', 0.35);
+  }};
+})();
+
+// --- DEVELOPMENTAL & LIFESPAN ---
+
+const EMBRYONIC_FOLD = (() => {
+  let _last = 0;
+  return { draw(ts) {
+    if (ts - _last < 120) return; _last = ts;
+    const svg = document.getElementById('lightLayer'); if (!svg) return;
+    const cx = window.innerWidth / 2, cy = window.innerHeight * 0.5;
+    const id = '_embf';
+    const el = document.getElementById(id) || (() => { const e = document.createElementNS('http://www.w3.org/2000/svg','ellipse'); e.id=id; svg.appendChild(e); return e; })();
+    const rx = 8 + Math.sin(ts * 0.0012) * 5, ry = 14 + Math.cos(ts * 0.001) * 6;
+    el.setAttribute('cx', cx); el.setAttribute('cy', cy); el.setAttribute('rx', rx); el.setAttribute('ry', ry);
+    el.setAttribute('fill','none'); el.setAttribute('stroke','#f4a'); el.setAttribute('stroke-width','1'); el.setAttribute('opacity', 0.15);
+  }};
+})();
+
+const FETAL_HEARTBEAT = (() => {
+  let _last = 0;
+  return { draw(ts) {
+    if (ts - _last < 40) return; _last = ts;
+    const svg = document.getElementById('lightLayer'); if (!svg) return;
+    const cx = window.innerWidth / 2 + 8, cy = window.innerHeight * 0.48;
+    const beat = Math.sin(ts * 0.008) > 0.7 ? 1 : 0;
+    const id = '_fhb';
+    const el = document.getElementById(id) || (() => { const e = document.createElementNS('http://www.w3.org/2000/svg','circle'); e.id=id; svg.appendChild(e); return e; })();
+    el.setAttribute('cx', cx); el.setAttribute('cy', cy); el.setAttribute('r', 3 + beat * 3);
+    el.setAttribute('fill','#f44'); el.setAttribute('opacity', 0.2 + beat * 0.4);
+  }};
+})();
+
+const BIRTH_SURGE = (() => {
+  let _last = 0;
+  return { draw(ts) {
+    if (ts - _last < 60) return; _last = ts;
+    const svg = document.getElementById('lightLayer'); if (!svg) return;
+    const cx = window.innerWidth / 2, cy = window.innerHeight * 0.5;
+    const surge = (Math.sin(ts * 0.0025) + 1) / 2;
+    const id = '_bsurge';
+    const el = document.getElementById(id) || (() => { const e = document.createElementNS('http://www.w3.org/2000/svg','circle'); e.id=id; svg.appendChild(e); return e; })();
+    el.setAttribute('cx', cx); el.setAttribute('cy', cy); el.setAttribute('r', surge * 40);
+    el.setAttribute('fill','none'); el.setAttribute('stroke','#fff'); el.setAttribute('stroke-width','2'); el.setAttribute('opacity', (1 - surge) * 0.25);
+  }};
+})();
+
+const INFANT_BOND = (() => {
+  let _last = 0;
+  return { draw(ts) {
+    if (ts - _last < 90) return; _last = ts;
+    const svg = document.getElementById('lightLayer'); if (!svg) return;
+    const cx = window.innerWidth / 2, cy = window.innerHeight * 0.42;
+    const pulse = Math.sin(ts * 0.002) * 0.5 + 0.5;
+    const id = '_ibond';
+    const el = document.getElementById(id) || (() => { const e = document.createElementNS('http://www.w3.org/2000/svg','ellipse'); e.id=id; svg.appendChild(e); return e; })();
+    el.setAttribute('cx', cx); el.setAttribute('cy', cy);
+    el.setAttribute('rx', 22 + pulse * 8); el.setAttribute('ry', 14 + pulse * 5);
+    el.setAttribute('fill','none'); el.setAttribute('stroke','#f4a'); el.setAttribute('stroke-width','1.5'); el.setAttribute('opacity', 0.2 + pulse * 0.15);
+  }};
+})();
+
+const CHILDHOOD_WONDER = (() => {
+  let _last = 0;
+  return { draw(ts) {
+    if (ts - _last < 110) return; _last = ts;
+    const svg = document.getElementById('lightLayer'); if (!svg) return;
+    const cx = window.innerWidth / 2, cy = window.innerHeight * 0.35;
+    for (let i = 0; i < 5; i++) {
+      const id = '_cwon_' + i;
+      const el = document.getElementById(id) || (() => { const e = document.createElementNS('http://www.w3.org/2000/svg','circle'); e.id=id; svg.appendChild(e); return e; })();
+      const ang = ts * 0.001 + i * 1.26;
+      el.setAttribute('cx', cx + Math.cos(ang) * (18 + i * 6));
+      el.setAttribute('cy', cy + Math.sin(ang) * (10 + i * 3));
+      el.setAttribute('r', 2); el.setAttribute('fill','#fa4'); el.setAttribute('opacity', 0.3 + i * 0.04);
+    }
+  }};
+})();
+
+const ADOLESCENT_FLUX = (() => {
+  let _last = 0;
+  return { draw(ts) {
+    if (ts - _last < 55) return; _last = ts;
+    const svg = document.getElementById('lightLayer'); if (!svg) return;
+    const cx = window.innerWidth / 2, cy = window.innerHeight * 0.38;
+    const id = '_aflux';
+    const el = document.getElementById(id) || (() => { const e = document.createElementNS('http://www.w3.org/2000/svg','polyline'); e.id=id; svg.appendChild(e); return e; })();
+    let pts = '';
+    for (let i = 0; i < 8; i++) {
+      const x = cx - 35 + i * 10;
+      const y = cy + (Math.random() > 0.5 ? 1 : -1) * (Math.random() * 10 + 3);
+      pts += x + ',' + y + ' ';
+    }
+    el.setAttribute('points', pts); el.setAttribute('fill','none');
+    el.setAttribute('stroke','#a4f'); el.setAttribute('stroke-width','1.5'); el.setAttribute('opacity', 0.3);
+  }};
+})();
+
+const ADULT_CONSOLIDATION = (() => {
+  let _last = 0;
+  return { draw(ts) {
+    if (ts - _last < 200) return; _last = ts;
+    const svg = document.getElementById('lightLayer'); if (!svg) return;
+    const cx = window.innerWidth / 2, cy = window.innerHeight * 0.4;
+    const id = '_acons';
+    const el = document.getElementById(id) || (() => { const e = document.createElementNS('http://www.w3.org/2000/svg','rect'); e.id=id; svg.appendChild(e); return e; })();
+    const w = 60 + Math.sin(ts * 0.0005) * 10;
+    el.setAttribute('x', cx - w/2); el.setAttribute('y', cy - 6);
+    el.setAttribute('width', w); el.setAttribute('height', 12);
+    el.setAttribute('rx', 6); el.setAttribute('fill','none'); el.setAttribute('stroke','#4af'); el.setAttribute('stroke-width','1'); el.setAttribute('opacity', 0.2);
+  }};
+})();
+
+const ELDER_WISDOM = (() => {
+  let _last = 0;
+  return { draw(ts) {
+    if (ts - _last < 250) return; _last = ts;
+    const svg = document.getElementById('lightLayer'); if (!svg) return;
+    const cx = window.innerWidth / 2, cy = window.innerHeight * 0.3;
+    for (let i = 0; i < 4; i++) {
+      const id = '_ewis_' + i;
+      const el = document.getElementById(id) || (() => { const e = document.createElementNS('http://www.w3.org/2000/svg','circle'); e.id=id; svg.appendChild(e); return e; })();
+      const r = 5 + i * 8;
+      el.setAttribute('cx', cx); el.setAttribute('cy', cy); el.setAttribute('r', r);
+      el.setAttribute('fill','none'); el.setAttribute('stroke','#fff'); el.setAttribute('stroke-width','0.5'); el.setAttribute('opacity', 0.05 + (4-i)*0.02);
+    }
+  }};
+})();
+
+const DEATH_APPROACH = (() => {
+  let _last = 0;
+  return { draw(ts) {
+    if (ts - _last < 300) return; _last = ts;
+    const svg = document.getElementById('lightLayer'); if (!svg) return;
+    const cx = window.innerWidth / 2, cy = window.innerHeight * 0.5;
+    const fade = (Math.sin(ts * 0.0003) + 1) / 2;
+    const id = '_dapp';
+    const el = document.getElementById(id) || (() => { const e = document.createElementNS('http://www.w3.org/2000/svg','ellipse'); e.id=id; svg.appendChild(e); return e; })();
+    el.setAttribute('cx', cx); el.setAttribute('cy', cy);
+    el.setAttribute('rx', 30 + fade * 50); el.setAttribute('ry', 60 + fade * 80);
+    el.setAttribute('fill','none'); el.setAttribute('stroke','#fff'); el.setAttribute('stroke-width','0.5'); el.setAttribute('opacity', fade * 0.07);
+  }};
+})();
+
+const REBIRTH_POTENTIAL = (() => {
+  let _last = 0;
+  return { draw(ts) {
+    if (ts - _last < 120) return; _last = ts;
+    const svg = document.getElementById('lightLayer'); if (!svg) return;
+    const cx = window.innerWidth / 2, cy = window.innerHeight * 0.5;
+    const bloom = (Math.sin(ts * 0.0007) + 1) / 2;
+    const id = '_rebirth';
+    const el = document.getElementById(id) || (() => { const e = document.createElementNS('http://www.w3.org/2000/svg','circle'); e.id=id; svg.appendChild(e); return e; })();
+    el.setAttribute('cx', cx); el.setAttribute('cy', cy); el.setAttribute('r', bloom * 20);
+    el.setAttribute('fill','none'); el.setAttribute('stroke','#4f8'); el.setAttribute('stroke-width','1.5'); el.setAttribute('opacity', bloom * 0.3);
+  }};
+})();
+
+// --- ENERGY & METABOLISM ---
+
+const GLYCOLYSIS_WAVE = (() => {
+  let _last = 0;
+  return { draw(ts) {
+    if (ts - _last < 70) return; _last = ts;
+    const svg = document.getElementById('lightLayer'); if (!svg) return;
+    const cx = window.innerWidth / 2, cy = window.innerHeight * 0.55;
+    const id = '_glycw';
+    const el = document.getElementById(id) || (() => { const e = document.createElementNS('http://www.w3.org/2000/svg','polyline'); e.id=id; svg.appendChild(e); return e; })();
+    let pts = '';
+    for (let i = 0; i < 10; i++) {
+      const x = cx - 40 + i * 9;
+      const y = cy + Math.sin(ts * 0.004 + i * 0.8) * 8;
+      pts += x + ',' + y + ' ';
+    }
+    el.setAttribute('points', pts); el.setAttribute('fill','none');
+    el.setAttribute('stroke','#fa4'); el.setAttribute('stroke-width','1.5'); el.setAttribute('opacity', 0.35);
+  }};
+})();
+
+const KREBS_CYCLE = (() => {
+  let _last = 0;
+  return { draw(ts) {
+    if (ts - _last < 60) return; _last = ts;
+    const svg = document.getElementById('lightLayer'); if (!svg) return;
+    const cx = window.innerWidth / 2 - 10, cy = window.innerHeight * 0.57;
+    const n = 8;
+    for (let i = 0; i < n; i++) {
+      const id = '_krebs_' + i;
+      const el = document.getElementById(id) || (() => { const e = document.createElementNS('http://www.w3.org/2000/svg','circle'); e.id=id; svg.appendChild(e); return e; })();
+      const ang = (ts * 0.001) + i * (Math.PI * 2 / n);
+      el.setAttribute('cx', cx + Math.cos(ang) * 18); el.setAttribute('cy', cy + Math.sin(ang) * 12);
+      el.setAttribute('r', 2.5); el.setAttribute('fill','#f80'); el.setAttribute('opacity', 0.4);
+    }
+  }};
+})();
+
+const OXIDATIVE_PHOSPHORYLATION = (() => {
+  let _last = 0;
+  return { draw(ts) {
+    if (ts - _last < 50) return; _last = ts;
+    const svg = document.getElementById('lightLayer'); if (!svg) return;
+    const cx = window.innerWidth / 2 + 15, cy = window.innerHeight * 0.56;
+    const id = '_oxphos';
+    const el = document.getElementById(id) || (() => { const e = document.createElementNS('http://www.w3.org/2000/svg','path'); e.id=id; svg.appendChild(e); return e; })();
+    const t = ts * 0.003;
+    el.setAttribute('d', `M ${cx-20} ${cy} L ${cx-10} ${cy - 8 * Math.sin(t)} L ${cx} ${cy} L ${cx+10} ${cy - 8 * Math.sin(t+1)} L ${cx+20} ${cy}`);
+    el.setAttribute('fill','none'); el.setAttribute('stroke','#0ff'); el.setAttribute('stroke-width','1.5'); el.setAttribute('opacity', 0.35);
+  }};
+})();
+
+const GLUCOSE_TIDE = (() => {
+  let _last = 0;
+  return { draw(ts) {
+    if (ts - _last < 100) return; _last = ts;
+    const svg = document.getElementById('lightLayer'); if (!svg) return;
+    const cx = window.innerWidth / 2, cy = window.innerHeight * 0.5;
+    const tide = Math.sin(ts * 0.0008);
+    const id = '_gluc';
+    const el = document.getElementById(id) || (() => { const e = document.createElementNS('http://www.w3.org/2000/svg','ellipse'); e.id=id; svg.appendChild(e); return e; })();
+    el.setAttribute('cx', cx); el.setAttribute('cy', cy);
+    el.setAttribute('rx', 30 + tide * 10); el.setAttribute('ry', 70 + tide * 15);
+    el.setAttribute('fill','none'); el.setAttribute('stroke','#fa4'); el.setAttribute('stroke-width','0.8'); el.setAttribute('opacity', 0.1);
+  }};
+})();
+
+const KETONE_SHIFT = (() => {
+  let _last = 0;
+  return { draw(ts) {
+    if (ts - _last < 130) return; _last = ts;
+    const svg = document.getElementById('lightLayer'); if (!svg) return;
+    const cx = window.innerWidth / 2 - 25, cy = window.innerHeight * 0.59;
+    const shift = (Math.sin(ts * 0.0007) + 1) / 2;
+    const id = '_ket';
+    const el = document.getElementById(id) || (() => { const e = document.createElementNS('http://www.w3.org/2000/svg','circle'); e.id=id; svg.appendChild(e); return e; })();
+    el.setAttribute('cx', cx); el.setAttribute('cy', cy); el.setAttribute('r', 4 + shift * 6);
+    el.setAttribute('fill','#a4f'); el.setAttribute('opacity', shift * 0.4);
+  }};
+})();
+
+const INSULIN_SURGE = (() => {
+  let _last = 0;
+  return { draw(ts) {
+    if (ts - _last < 60) return; _last = ts;
+    const svg = document.getElementById('lightLayer'); if (!svg) return;
+    const cx = window.innerWidth / 2 + 25, cy = window.innerHeight * 0.6;
+    const surge = Math.max(0, Math.sin(ts * 0.0025));
+    const id = '_insul';
+    const el = document.getElementById(id) || (() => { const e = document.createElementNS('http://www.w3.org/2000/svg','rect'); e.id=id; svg.appendChild(e); return e; })();
+    el.setAttribute('x', cx - 4); el.setAttribute('y', cy - surge * 20);
+    el.setAttribute('width', 8); el.setAttribute('height', surge * 20 + 2);
+    el.setAttribute('rx', 3); el.setAttribute('fill','#f80'); el.setAttribute('opacity', 0.45);
+  }};
+})();
+
+const GLUCAGON_CALL = (() => {
+  let _last = 0;
+  return { draw(ts) {
+    if (ts - _last < 90) return; _last = ts;
+    const svg = document.getElementById('lightLayer'); if (!svg) return;
+    const cx = window.innerWidth / 2 + 5, cy = window.innerHeight * 0.58;
+    for (let i = 0; i < 3; i++) {
+      const id = '_gluca_' + i;
+      const el = document.getElementById(id) || (() => { const e = document.createElementNS('http://www.w3.org/2000/svg','circle'); e.id=id; svg.appendChild(e); return e; })();
+      const r = 4 + i * 5 + Math.sin(ts * 0.002 + i) * 2;
+      el.setAttribute('cx', cx); el.setAttribute('cy', cy); el.setAttribute('r', r);
+      el.setAttribute('fill','none'); el.setAttribute('stroke','#4f8'); el.setAttribute('stroke-width','0.8'); el.setAttribute('opacity', 0.25 - i * 0.07);
+    }
+  }};
+})();
+
+const FAT_MOBILIZATION = (() => {
+  let _last = 0;
+  return { draw(ts) {
+    if (ts - _last < 80) return; _last = ts;
+    const svg = document.getElementById('lightLayer'); if (!svg) return;
+    const cx = window.innerWidth / 2, cy = window.innerHeight * 0.62;
+    for (let i = 0; i < 6; i++) {
+      const id = '_fatm_' + i;
+      const el = document.getElementById(id) || (() => { const e = document.createElementNS('http://www.w3.org/2000/svg','circle'); e.id=id; svg.appendChild(e); return e; })();
+      const ang = ts * 0.0015 + i * 1.047;
+      const r = 14 + i * 5;
+      el.setAttribute('cx', cx + Math.cos(ang) * r); el.setAttribute('cy', cy + Math.sin(ang) * r * 0.4);
+      el.setAttribute('r', 2); el.setAttribute('fill','#fa4'); el.setAttribute('opacity', 0.28);
+    }
+  }};
+})();
+
+const THERMOGENESIS = (() => {
+  let _last = 0;
+  return { draw(ts) {
+    if (ts - _last < 75) return; _last = ts;
+    const svg = document.getElementById('lightLayer'); if (!svg) return;
+    const cx = window.innerWidth / 2, cy = window.innerHeight * 0.5;
+    const heat = (Math.sin(ts * 0.001) + 1) / 2;
+    const id = '_therm';
+    const el = document.getElementById(id) || (() => { const e = document.createElementNS('http://www.w3.org/2000/svg','ellipse'); e.id=id; svg.appendChild(e); return e; })();
+    el.setAttribute('cx', cx); el.setAttribute('cy', cy);
+    el.setAttribute('rx', 25 + heat * 15); el.setAttribute('ry', 80 + heat * 30);
+    el.setAttribute('fill','#f44'); el.setAttribute('opacity', heat * 0.06);
+  }};
+})();
+
+const BASAL_METABOLIC_FIELD = (() => {
+  let _last = 0;
+  return { draw(ts) {
+    if (ts - _last < 200) return; _last = ts;
+    const svg = document.getElementById('lightLayer'); if (!svg) return;
+    const cx = window.innerWidth / 2, cy = window.innerHeight * 0.5;
+    const id = '_bmf';
+    const el = document.getElementById(id) || (() => { const e = document.createElementNS('http://www.w3.org/2000/svg','ellipse'); e.id=id; svg.appendChild(e); return e; })();
+    const pulse = Math.sin(ts * 0.0005) * 0.5 + 0.5;
+    el.setAttribute('cx', cx); el.setAttribute('cy', cy);
+    el.setAttribute('rx', 35 + pulse * 10); el.setAttribute('ry', 95 + pulse * 20);
+    el.setAttribute('fill','none'); el.setAttribute('stroke','#f80'); el.setAttribute('stroke-width','0.8'); el.setAttribute('opacity', 0.08 + pulse * 0.05);
+  }};
+})();
+
+// --- SPIRITUAL & TRANSPERSONAL ---
+
+const KUNDALINI_RISE = (() => {
+  let _last = 0;
+  return { draw(ts) {
+    if (ts - _last < 40) return; _last = ts;
+    const svg = document.getElementById('lightLayer'); if (!svg) return;
+    const cx = window.innerWidth / 2, baseY = window.innerHeight * 0.92;
+    const topY = window.innerHeight * 0.12;
+    const id = '_kund';
+    const el = document.getElementById(id) || (() => { const e = document.createElementNS('http://www.w3.org/2000/svg','path'); e.id=id; svg.appendChild(e); return e; })();
+    let d = `M ${cx} ${baseY}`;
+    const segs = 16;
+    for (let i = 1; i <= segs; i++) {
+      const t = i / segs;
+      const y = baseY - t * (baseY - topY);
+      const amp = (1 - t) * 18 * Math.sin(t * Math.PI);
+      const x = cx + Math.sin(ts * 0.003 + t * 12) * amp;
+      d += ` L ${x} ${y}`;
+    }
+    el.setAttribute('d', d); el.setAttribute('fill','none');
+    el.setAttribute('stroke','#f44'); el.setAttribute('stroke-width','1.5'); el.setAttribute('opacity', 0.3);
+  }};
+})();
+
+const CHAKRA_RESONANCE = (() => {
+  let _last = 0;
+  const chakras = [0.15, 0.30, 0.42, 0.52, 0.62, 0.72, 0.88];
+  const colors = ['#a4f','#4af','#0ff','#4f8','#fa4','#f80','#f44'];
+  return { draw(ts) {
+    if (ts - _last < 60) return; _last = ts;
+    const svg = document.getElementById('lightLayer'); if (!svg) return;
+    const cx = window.innerWidth / 2;
+    chakras.forEach((yFrac, i) => {
+      const id = '_chak_' + i;
+      const el = document.getElementById(id) || (() => { const e = document.createElementNS('http://www.w3.org/2000/svg','circle'); e.id=id; svg.appendChild(e); return e; })();
+      const r = 5 + Math.sin(ts * 0.003 + i * 0.9) * 3;
+      el.setAttribute('cx', cx); el.setAttribute('cy', window.innerHeight * yFrac);
+      el.setAttribute('r', r); el.setAttribute('fill','none');
+      el.setAttribute('stroke', colors[i]); el.setAttribute('stroke-width','1.5'); el.setAttribute('opacity', 0.35);
+    });
+  }};
+})();
+
+const MERKABA_SPIN = (() => {
+  let _last = 0;
+  return { draw(ts) {
+    if (ts - _last < 50) return; _last = ts;
+    const svg = document.getElementById('lightLayer'); if (!svg) return;
+    const cx = window.innerWidth / 2, cy = window.innerHeight * 0.5;
+    const ang = ts * 0.001;
+    const s = 28;
+    for (let t = 0; t < 2; t++) {
+      const id = '_merk_' + t;
+      const el = document.getElementById(id) || (() => { const e = document.createElementNS('http://www.w3.org/2000/svg','polygon'); e.id=id; svg.appendChild(e); return e; })();
+      const a = ang + t * Math.PI;
+      const pts = [0,1,2].map(i => {
+        const aa = a + i * Math.PI * 2/3;
+        return (cx + Math.cos(aa)*s) + ',' + (cy + Math.sin(aa)*s);
+      }).join(' ');
+      el.setAttribute('points', pts); el.setAttribute('fill','none');
+      el.setAttribute('stroke','#a4f'); el.setAttribute('stroke-width','1'); el.setAttribute('opacity', 0.2);
+    }
+  }};
+})();
+
+const AURA_FIELD = (() => {
+  let _last = 0;
+  return { draw(ts) {
+    if (ts - _last < 110) return; _last = ts;
+    const svg = document.getElementById('lightLayer'); if (!svg) return;
+    const cx = window.innerWidth / 2, cy = window.innerHeight * 0.5;
+    for (let i = 0; i < 4; i++) {
+      const id = '_aura_' + i;
+      const el = document.getElementById(id) || (() => { const e = document.createElementNS('http://www.w3.org/2000/svg','ellipse'); e.id=id; svg.appendChild(e); return e; })();
+      const sway = Math.sin(ts * 0.0008 + i * 0.5) * 5;
+      el.setAttribute('cx', cx + sway); el.setAttribute('cy', cy);
+      el.setAttribute('rx', 40 + i * 18); el.setAttribute('ry', 110 + i * 22);
+      el.setAttribute('fill','none'); el.setAttribute('stroke','#a4f');
+      el.setAttribute('stroke-width', '0.7'); el.setAttribute('opacity', 0.08 - i * 0.015);
+    }
+  }};
+})();
+
+const THIRD_EYE_PULSE = (() => {
+  let _last = 0;
+  return { draw(ts) {
+    if (ts - _last < 70) return; _last = ts;
+    const svg = document.getElementById('lightLayer'); if (!svg) return;
+    const cx = window.innerWidth / 2, cy = window.innerHeight * 0.155;
+    const pulse = (Math.sin(ts * 0.0025) + 1) / 2;
+    const id = '_tep';
+    const el = document.getElementById(id) || (() => { const e = document.createElementNS('http://www.w3.org/2000/svg','circle'); e.id=id; svg.appendChild(e); return e; })();
+    el.setAttribute('cx', cx); el.setAttribute('cy', cy); el.setAttribute('r', 3 + pulse * 8);
+    el.setAttribute('fill','none'); el.setAttribute('stroke','#a4f'); el.setAttribute('stroke-width','1.5'); el.setAttribute('opacity', pulse * 0.5);
+  }};
+})();
+
+const CROWN_OPENING = (() => {
+  let _last = 0;
+  return { draw(ts) {
+    if (ts - _last < 80) return; _last = ts;
+    const svg = document.getElementById('lightLayer'); if (!svg) return;
+    const cx = window.innerWidth / 2, cy = window.innerHeight * 0.1;
+    const open = (Math.sin(ts * 0.0018) + 1) / 2;
+    for (let i = 0; i < 7; i++) {
+      const id = '_crown_' + i;
+      const el = document.getElementById(id) || (() => { const e = document.createElementNS('http://www.w3.org/2000/svg','line'); e.id=id; svg.appendChild(e); return e; })();
+      const ang = (i / 7) * Math.PI * 2;
+      const len = 12 + open * 18;
+      el.setAttribute('x1', cx); el.setAttribute('y1', cy);
+      el.setAttribute('x2', cx + Math.cos(ang) * len); el.setAttribute('y2', cy + Math.sin(ang) * len * 0.5);
+      el.setAttribute('stroke','#fff'); el.setAttribute('stroke-width','1'); el.setAttribute('opacity', open * 0.35);
+    }
+  }};
+})();
+
+const HEART_CHAKRA_BLOOM = (() => {
+  let _last = 0;
+  return { draw(ts) {
+    if (ts - _last < 90) return; _last = ts;
+    const svg = document.getElementById('lightLayer'); if (!svg) return;
+    const cx = window.innerWidth / 2, cy = window.innerHeight * 0.42;
+    const bloom = (Math.sin(ts * 0.0016) + 1) / 2;
+    for (let i = 0; i < 8; i++) {
+      const id = '_hcbloom_' + i;
+      const el = document.getElementById(id) || (() => { const e = document.createElementNS('http://www.w3.org/2000/svg','line'); e.id=id; svg.appendChild(e); return e; })();
+      const ang = (i / 8) * Math.PI * 2;
+      const len = bloom * 22;
+      el.setAttribute('x1', cx); el.setAttribute('y1', cy);
+      el.setAttribute('x2', cx + Math.cos(ang) * len); el.setAttribute('y2', cy + Math.sin(ang) * len * 0.7);
+      el.setAttribute('stroke','#4f8'); el.setAttribute('stroke-width','1'); el.setAttribute('opacity', bloom * 0.4);
+    }
+  }};
+})();
+
+const SACRED_GEOMETRY = (() => {
+  let _last = 0;
+  return { draw(ts) {
+    if (ts - _last < 120) return; _last = ts;
+    const svg = document.getElementById('lightLayer'); if (!svg) return;
+    const cx = window.innerWidth / 2, cy = window.innerHeight * 0.5;
+    const ang = ts * 0.0004;
+    const r = 45;
+    for (let i = 0; i < 6; i++) {
+      const id = '_sacg_' + i;
+      const el = document.getElementById(id) || (() => { const e = document.createElementNS('http://www.w3.org/2000/svg','circle'); e.id=id; svg.appendChild(e); return e; })();
+      const a = ang + i * Math.PI / 3;
+      el.setAttribute('cx', cx + Math.cos(a) * 20); el.setAttribute('cy', cy + Math.sin(a) * 20);
+      el.setAttribute('r', r); el.setAttribute('fill','none');
+      el.setAttribute('stroke','#fa4'); el.setAttribute('stroke-width','0.4'); el.setAttribute('opacity', 0.06);
+    }
+  }};
+})();
+
+const FIBONACCI_SPIRAL = (() => {
+  let _last = 0;
+  return { draw(ts) {
+    if (ts - _last < 80) return; _last = ts;
+    const svg = document.getElementById('lightLayer'); if (!svg) return;
+    const cx = window.innerWidth / 2, cy = window.innerHeight * 0.5;
+    const id = '_fib_s';
+    const el = document.getElementById(id) || (() => { const e = document.createElementNS('http://www.w3.org/2000/svg','path'); e.id=id; svg.appendChild(e); return e; })();
+    const offset = ts * 0.0003;
+    let d = '';
+    for (let i = 0; i < 200; i++) {
+      const t = i / 40;
+      const r = 1.618 ** (t - 2) * 30;
+      const x = cx + Math.cos(t + offset) * r;
+      const y = cy + Math.sin(t + offset) * r * 0.6;
+      d += (i === 0 ? 'M' : 'L') + ` ${x} ${y}`;
+    }
+    el.setAttribute('d', d); el.setAttribute('fill','none');
+    el.setAttribute('stroke','#4af'); el.setAttribute('stroke-width','1'); el.setAttribute('opacity', 0.18);
+  }};
+})();
+
+const GOLDEN_RATIO_PULSE = (() => {
+  let _last = 0;
+  return { draw(ts) {
+    if (ts - _last < 150) return; _last = ts;
+    const svg = document.getElementById('lightLayer'); if (!svg) return;
+    const cx = window.innerWidth / 2, cy = window.innerHeight * 0.5;
+    const phi = 1.618;
+    const pulse = (Math.sin(ts * 0.0012) + 1) / 2;
+    let r = 6;
+    for (let i = 0; i < 5; i++) {
+      const id = '_grp_' + i;
+      const el = document.getElementById(id) || (() => { const e = document.createElementNS('http://www.w3.org/2000/svg','circle'); e.id=id; svg.appendChild(e); return e; })();
+      el.setAttribute('cx', cx); el.setAttribute('cy', cy); el.setAttribute('r', r * (1 + pulse * 0.2));
+      el.setAttribute('fill','none'); el.setAttribute('stroke','#fa4');
+      el.setAttribute('stroke-width','0.7'); el.setAttribute('opacity', 0.15 - i * 0.02);
+      r *= phi;
+    }
+  }};
+})();
+
+// ============================================================
+// BATCH 17 ANIMATION LOOP
+// ============================================================
+(function(){
+  const _batch17 = [
+    'BROCA_PULSE','WERNICKE_DECODE','PHONEME_CASCADE','SYNTAX_WEAVE','METAPHOR_BRIDGE',
+    'NARRATIVE_THREAD','INNER_SPEECH','SUBVOCALIZATION','SEMANTIC_FIELD','PRAGMATIC_CONTEXT',
+    'BASAL_GANGLIA_LOOP','CEREBELLUM_TIMING','MOTOR_SEQUENCE','GAIT_RHYTHM','GESTURE_FIELD',
+    'POSTURAL_SWAY','FINE_MOTOR_SPARK','GRIP_FORCE','BALLISTIC_MOVEMENT','MOTOR_LEARNING_ARC',
+    'EMBRYONIC_FOLD','FETAL_HEARTBEAT','BIRTH_SURGE','INFANT_BOND','CHILDHOOD_WONDER',
+    'ADOLESCENT_FLUX','ADULT_CONSOLIDATION','ELDER_WISDOM','DEATH_APPROACH','REBIRTH_POTENTIAL',
+    'GLYCOLYSIS_WAVE','KREBS_CYCLE','OXIDATIVE_PHOSPHORYLATION','GLUCOSE_TIDE','KETONE_SHIFT',
+    'INSULIN_SURGE','GLUCAGON_CALL','FAT_MOBILIZATION','THERMOGENESIS','BASAL_METABOLIC_FIELD',
+    'KUNDALINI_RISE','CHAKRA_RESONANCE','MERKABA_SPIN','AURA_FIELD','THIRD_EYE_PULSE',
+    'CROWN_OPENING','HEART_CHAKRA_BLOOM','SACRED_GEOMETRY','FIBONACCI_SPIRAL','GOLDEN_RATIO_PULSE'
+  ];
+  let _lt = 0;
+  function loop(ts) {
+    if (ts - _lt > 14) {
+      _lt = ts;
+      _batch17.forEach(n => { const s = window[n]; if (s && typeof s.draw === 'function') s.draw(ts); });
+    }
+    requestAnimationFrame(loop);
+  }
+  requestAnimationFrame(loop);
+})();
+
+
 <!-- ═══════════════════════════════════════════════════════════════
      LIVE RELOAD — polls /version every 8s, reloads if file changed
      Smooth: waits for page to be idle (no active typing/talking)
