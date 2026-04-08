@@ -70,6 +70,7 @@ window.toggleVintinuumPanel = function() {
               _vpHistory.push({ role: 'assistant', content: fullText.slice(0, 500) });
               if (_vpHistory.length > 8) _vpHistory.splice(0, _vpHistory.length - 8);
               if (typeof VOICE !== 'undefined') VOICE.speakResponse(fullText.slice(0, 280));
+              if (typeof SKIN !== 'undefined') SKIN.speak(0.7);
             } else { _vpFallback(msg, msgs, aiDiv); }
             _vpStreaming = false;
             return;
@@ -5373,6 +5374,7 @@ const MIC = (() => {
                 showHeard(text);
                 handleResult(text);
                 if (typeof COCHLEA !== 'undefined') COCHLEA.hear(0.8);
+                if (typeof SKIN !== 'undefined') SKIN.hear(0.8);
               } else {
                 interimEl.textContent = '';
               }
@@ -5437,6 +5439,7 @@ const MIC = (() => {
         showHeard(last[0].transcript);
         handleResult(last[0].transcript);
         if (typeof COCHLEA !== 'undefined') COCHLEA.hear(0.7 + last[0].confidence * 0.3);
+        if (typeof SKIN !== 'undefined') SKIN.hear(0.7 + last[0].confidence * 0.3);
       }
     };
     try { recognition.start(); } catch(e) {}
