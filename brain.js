@@ -39996,22 +39996,42 @@ const MODEL_SELECTOR = (() => {
     panelOpen = true;
     const panel = document.createElement('div');
     panel.id = 'modelSelectorPanel';
+    const PANEL_W = 320;
+    const PANEL_MAX_H = Math.min(520, window.innerHeight - 40);
     panel.style.cssText =
-      'position:fixed;z-index:9999;' +
-      'background:rgba(8,12,20,0.92);' +
-      'border:1px solid rgba(255,255,255,0.1);' +
+      'position:fixed;z-index:99999;' +
+      'background:rgba(8,12,20,0.96);' +
+      'border:1px solid rgba(255,255,255,0.12);' +
       'border-radius:16px;' +
       'padding:16px;' +
-      'width:320px;max-width:calc(100vw - 32px);' +
-      'max-height:480px;overflow-y:auto;' +
-      'box-shadow:0 8px 32px rgba(0,0,0,0.6);' +
+      'width:' + PANEL_W + 'px;max-width:calc(100vw - 24px);' +
+      'max-height:' + PANEL_MAX_H + 'px;overflow-y:auto;overflow-x:hidden;' +
+      'box-shadow:0 8px 40px rgba(0,0,0,0.75);' +
       'font-family:inherit;';
 
     const indicator = document.getElementById('modelIndicator');
     if (indicator) {
       const rect = indicator.getBoundingClientRect();
-      panel.style.top = (rect.bottom + 8) + 'px';
-      panel.style.left = Math.min(rect.left, window.innerWidth - 340) + 'px';
+      const spaceBelow = window.innerHeight - rect.bottom - 8;
+      const spaceAbove = rect.top - 8;
+
+      // Clamp left/right so panel stays on screen
+      let left = rect.left;
+      if (left + PANEL_W > window.innerWidth - 12) left = window.innerWidth - PANEL_W - 12;
+      if (left < 12) left = 12;
+      panel.style.left = left + 'px';
+
+      if (spaceBelow >= 200 || spaceBelow >= spaceAbove) {
+        // Open below — clamp so it doesn't go off bottom
+        const top = rect.bottom + 8;
+        panel.style.top = top + 'px';
+        panel.style.maxHeight = Math.max(160, spaceBelow - 4) + 'px';
+      } else {
+        // Open above — anchor bottom to top of indicator
+        panel.style.bottom = (window.innerHeight - rect.top + 8) + 'px';
+        panel.style.top = 'auto';
+        panel.style.maxHeight = Math.max(160, spaceAbove - 4) + 'px';
+      }
     } else {
       panel.style.top = '80px';
       panel.style.right = '20px';
@@ -40049,132 +40069,155 @@ const MODEL_SELECTOR = (() => {
     if (!list) return;
     list.innerHTML = '';
 
-    // Group: priority-ordered first, then others not in priority
-    const ordered = [];
+    // Priority items first (in order), then remaining grouped by provider
+    const priorityModels = [];
     userPriority.forEach(key => {
       const m = models.find(x => x.key === key);
-      if (m) ordered.push(m);
+      if (m) priorityModels.push(m);
     });
-    models.forEach(m => {
-      if (!ordered.find(o => o.key === m.key)) ordered.push(m);
+    const restModels = models.filter(m => !userPriority.includes(m.key));
+
+    // Section: Active Priority
+    if (priorityModels.length > 0) {
+      const hdr = document.createElement('div');
+      hdr.style.cssText = 'font-size:8px;letter-spacing:1.5px;color:rgba(255,255,255,0.35);margin-bottom:4px;padding-left:2px;';
+      hdr.textContent = 'ACTIVE PRIORITY — drag to reorder';
+      list.appendChild(hdr);
+    }
+
+    priorityModels.forEach((model, idx) => {
+      list.appendChild(makeRow(model, idx, true, panel, models));
     });
 
-    // Provider section headers
-    let lastProvider = null;
+    // Section: Available to add
+    if (restModels.length > 0) {
+      const hdr2 = document.createElement('div');
+      hdr2.style.cssText = 'font-size:8px;letter-spacing:1.5px;color:rgba(255,255,255,0.25);margin-top:10px;margin-bottom:4px;padding-left:2px;';
+      hdr2.textContent = 'CLICK TO ADD';
+      list.appendChild(hdr2);
+      // Group rest by provider
+      let lastProv = null;
+      restModels.forEach(model => {
+        if (model.provider !== lastProv) {
+          lastProv = model.provider;
+          const ph = document.createElement('div');
+          const c = PROVIDER_COLORS[model.provider] || '#888';
+          ph.style.cssText = 'font-size:7px;letter-spacing:1px;color:' + c + ';opacity:0.5;margin-top:6px;margin-bottom:2px;padding-left:4px;';
+          ph.textContent = PROVIDER_LABELS[model.provider] || model.provider.toUpperCase();
+          list.appendChild(ph);
+        }
+        list.appendChild(makeRow(model, -1, false, panel, models));
+      });
+    }
+  }
 
-    ordered.forEach((model) => {
-      const h = MODEL_HEALTH_MONITOR.getHealth(model.key);
-      const color = PROVIDER_COLORS[model.provider] || '#888';
-      const isInPriority = userPriority.includes(model.key);
-      const isAvailable = model.available;
+  function makeRow(model, priorityIdx, isInPriority, panel, models) {
+    const h = MODEL_HEALTH_MONITOR.getHealth(model.key);
+    const color = PROVIDER_COLORS[model.provider] || '#888';
+    const isAvailable = model.available;
+    const bgActive = color + '20';
+    const bgInactive = 'rgba(255,255,255,0.04)';
+    const borderActive = color + '50';
+    const borderInactive = 'rgba(255,255,255,0.07)';
 
-      // Section header per provider group
-      if (model.provider !== lastProvider) {
-        lastProvider = model.provider;
-        const header = document.createElement('div');
-        header.style.cssText = 'font-size:8px;letter-spacing:1.5px;color:' + color + ';opacity:0.6;margin-top:' + (ordered.indexOf(model) === 0 ? '0' : '8') + 'px;margin-bottom:2px;padding-left:4px;';
-        header.textContent = PROVIDER_LABELS[model.provider] || model.provider.toUpperCase();
-        list.appendChild(header);
-      }
+    const row = document.createElement('div');
+    row.dataset.modelKey = model.key;
+    row.style.cssText =
+      'padding:8px 10px;border-radius:10px;' +
+      'background:' + (isInPriority ? bgActive : bgInactive) + ';' +
+      'border:1px solid ' + (isInPriority ? borderActive : borderInactive) + ';' +
+      'display:flex;align-items:center;gap:8px;' +
+      'min-height:38px;user-select:none;' +
+      'opacity:' + (isAvailable ? '1' : '0.35') + ';' +
+      'cursor:' + (isInPriority ? 'grab' : (isAvailable ? 'pointer' : 'default')) + ';' +
+      'transition:background 0.1s,border-color 0.1s;';
 
-      const row = document.createElement('div');
-      row.dataset.modelKey = model.key;
-      row.style.cssText =
-        'padding:7px 10px;border-radius:10px;' +
-        'background:' + (isInPriority ? color + '18' : 'rgba(255,255,255,0.04)') + ';' +
-        'border:1px solid ' + (isInPriority ? color + '40' : 'rgba(255,255,255,0.06)') + ';' +
-        'display:flex;align-items:center;gap:8px;' +
-        'transition:all 0.15s;min-height:40px;' +
-        'opacity:' + (isAvailable ? '1' : '0.4') + ';' +
-        'cursor:' + (isAvailable && isInPriority ? 'grab' : (isAvailable ? 'pointer' : 'default')) + ';';
+    const statusColor = !isAvailable ? 'rgba(255,255,255,0.2)' : (h.alive !== false ? '#81c784' : '#ef5350');
+    const statusDot = !isAvailable ? '✗' : (h.alive !== false ? '●' : '○');
 
-      const statusColor = !isAvailable ? 'rgba(255,255,255,0.2)' : (h.alive !== false ? '#81c784' : '#ef5350');
-      const statusDot = !isAvailable ? '✗' : (h.alive !== false ? '\u25CF' : '\u25CB');
+    row.innerHTML =
+      (isInPriority ? '<span style="font-size:11px;color:rgba(255,255,255,0.18);flex-shrink:0;pointer-events:none;" title="Drag to reorder">⠿</span>' : '<span style="width:11px;flex-shrink:0;"></span>') +
+      '<span style="font-size:8px;color:' + color + ';width:16px;text-align:center;flex-shrink:0;font-weight:600;pointer-events:none;">' + (isInPriority ? (priorityIdx + 1) : '+') + '</span>' +
+      '<span style="font-size:10px;color:rgba(255,255,255,' + (isInPriority ? '0.9' : '0.5') + ');flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;pointer-events:none;">' + model.label + '</span>' +
+      '<span style="font-size:9px;padding:1px 6px;border-radius:6px;background:' + color + '18;color:' + color + ';flex-shrink:0;pointer-events:none;">' + (PROVIDER_LABELS[model.provider] || '') + '</span>' +
+      '<span style="font-size:10px;color:' + statusColor + ';flex-shrink:0;pointer-events:none;">' + statusDot + '</span>';
 
-      // Drag handle (only for items in priority list)
-      const dragHandle = isInPriority ? '<span style="font-size:9px;color:rgba(255,255,255,0.2);margin-right:2px;cursor:grab;pointer-events:none;" title="Drag to reorder">\u2195</span>' : '';
-
-      row.innerHTML =
-        dragHandle +
-        '<span style="font-size:8px;color:rgba(255,255,255,0.3);width:14px;text-align:center;pointer-events:none;">' + (isInPriority ? (userPriority.indexOf(model.key) + 1) : '\u2795') + '</span>' +
-        '<span style="font-size:10px;color:rgba(255,255,255,' + (isInPriority ? '0.85' : '0.45') + ');flex:1;pointer-events:none;">' + model.label + '</span>' +
-        '<span style="font-size:10px;color:' + statusColor + ';pointer-events:none;">' + statusDot + '</span>' +
-        (!isAvailable ? '<span style="font-size:7px;color:rgba(255,255,255,0.2);margin-left:2px;pointer-events:none;">offline</span>' : '');
-
-      // HTML5 drag-to-reorder (priority items only)
-      if (isInPriority && isAvailable) {
-        row.draggable = true;
-        row.addEventListener('dragstart', (e) => {
-          _dragSrcKey = model.key;
-          e.dataTransfer.effectAllowed = 'move';
-          e.dataTransfer.setData('text/plain', model.key);
-          row.style.opacity = '0.4';
+    // ── Drag-to-reorder (priority items) ──
+    if (isInPriority && isAvailable) {
+      row.draggable = true;
+      row.addEventListener('dragstart', (e) => {
+        _dragSrcKey = model.key;
+        e.dataTransfer.effectAllowed = 'move';
+        e.dataTransfer.setData('text/plain', model.key);
+        setTimeout(() => { row.style.opacity = '0.35'; }, 0);
+      });
+      row.addEventListener('dragend', () => {
+        row.style.opacity = '1';
+        // Reset all drop highlights
+        const p = document.getElementById('modelSelectorPanel');
+        if (p) p.querySelectorAll('[data-model-key]').forEach(r => {
+          const rColor = PROVIDER_COLORS[allModels.find(m => m.key === r.dataset.modelKey)?.provider] || '#888';
+          const rInPriority = userPriority.includes(r.dataset.modelKey);
+          r.style.background = rInPriority ? rColor + '20' : 'rgba(255,255,255,0.04)';
+          r.style.borderColor = rInPriority ? rColor + '50' : 'rgba(255,255,255,0.07)';
         });
-        row.addEventListener('dragend', () => {
-          row.style.opacity = isAvailable ? '1' : '0.4';
-          list.querySelectorAll('[data-model-key]').forEach(r => r.style.background = '');
-          _dragSrcKey = null;
-        });
-        row.addEventListener('dragenter', (e) => {
-          e.preventDefault();
-          if (model.key !== _dragSrcKey) {
-            row.style.background = color + '30';
+        _dragSrcKey = null;
+      });
+      row.addEventListener('dragover', (e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; });
+      row.addEventListener('dragenter', (e) => {
+        e.preventDefault();
+        if (model.key !== _dragSrcKey) {
+          row.style.background = color + '40';
+          row.style.borderColor = color + '90';
+        }
+      });
+      row.addEventListener('dragleave', (e) => {
+        if (!row.contains(e.relatedTarget)) {
+          row.style.background = bgActive;
+          row.style.borderColor = borderActive;
+        }
+      });
+      row.addEventListener('drop', (e) => {
+        e.preventDefault(); e.stopPropagation();
+        row.style.background = bgActive; row.style.borderColor = borderActive;
+        const srcKey = _dragSrcKey || e.dataTransfer.getData('text/plain');
+        if (!srcKey || srcKey === model.key) return;
+        if (!userPriority.includes(srcKey) || !userPriority.includes(model.key)) return;
+        const np = [...userPriority];
+        const fi = np.indexOf(srcKey), ti = np.indexOf(model.key);
+        np.splice(fi, 1); np.splice(ti, 0, srcKey);
+        _dragSrcKey = null;
+        savePriority(np, localStorage.getItem('vint_access_token'));
+        renderPriorityList(panel, models);
+        renderModelIndicator();
+      });
+    }
+
+    // ── Click to add/remove/promote ──
+    if (isAvailable) {
+      row.addEventListener('click', (e) => {
+        if (_dragSrcKey) return; // was a drag
+        let np = [...userPriority];
+        if (isInPriority) {
+          if (priorityIdx === 0 && np.length === 1) {
+            // Last one — don't remove, just flash
+            row.style.borderColor = '#ef535088';
+            setTimeout(() => { row.style.borderColor = borderActive; }, 600);
+            return;
           }
-        });
-        row.addEventListener('dragover', (e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          e.dataTransfer.dropEffect = 'move';
-        });
-        row.addEventListener('dragleave', (e) => {
-          // Only reset if leaving to outside this row (not to a child)
-          if (!row.contains(e.relatedTarget)) {
-            row.style.background = isInPriority ? color + '18' : 'rgba(255,255,255,0.04)';
-          }
-        });
-        row.addEventListener('drop', (e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          row.style.background = isInPriority ? color + '18' : 'rgba(255,255,255,0.04)';
-          const srcKey = _dragSrcKey || e.dataTransfer.getData('text/plain');
-          if (!srcKey || srcKey === model.key) return;
-          // Only reorder within priority list
-          if (!userPriority.includes(srcKey) || !userPriority.includes(model.key)) return;
-          const newPriority = [...userPriority];
-          const fromIdx = newPriority.indexOf(srcKey);
-          const toIdx = newPriority.indexOf(model.key);
-          newPriority.splice(fromIdx, 1);
-          newPriority.splice(toIdx, 0, srcKey);
-          _dragSrcKey = null;
-          const tok = localStorage.getItem('vint_access_token');
-          savePriority(newPriority, tok);
-          renderPriorityList(panel, allModels);
-          renderModelIndicator();
-        });
-      }
+          // Remove from priority
+          np = np.filter(k => k !== model.key);
+        } else {
+          // Add to top of priority (becomes active)
+          np = [model.key, ...np.filter(k => k !== model.key)];
+        }
+        savePriority(np, localStorage.getItem('vint_access_token'));
+        renderPriorityList(panel, models);
+        renderModelIndicator();
+      });
+    }
 
-      if (isAvailable) {
-        row.addEventListener('click', (e) => {
-          // Don't toggle if we were dragging
-          if (e.defaultPrevented) return;
-          let newPriority = [...userPriority];
-          if (isInPriority && userPriority[0] === model.key) {
-            // Already active primary — clicking again removes from priority
-            newPriority = newPriority.filter(k => k !== model.key);
-          } else {
-            // Move to front — becomes the active model immediately
-            newPriority = newPriority.filter(k => k !== model.key);
-            newPriority.unshift(model.key);
-          }
-          const tok = localStorage.getItem('vint_access_token');
-          savePriority(newPriority, tok);
-          renderPriorityList(panel, allModels);
-          renderModelIndicator();
-        });
-      }
-
-      list.appendChild(row);
-    });
+    return row;
   }
 
   function onModelUsed(modelKey, label) {
