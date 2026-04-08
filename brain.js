@@ -5675,7 +5675,19 @@ const MIC = (() => {
     }
   }
 
-  // ── Web Speech API fallback ────────────────────────────────────────────────
+  // ── Web Speech API — continuous, never stops ─────────────────────────────
+  let _wsRestarting = false;
+  let _wsWatchdog = null;
+
+  function _wsKeepalive() {
+    // Watchdog: if autoListen is on but not listening, kick it
+    if (autoListen && !listening && !_wsRestarting) {
+      _wsRestarting = true;
+      setTimeout(() => { _wsRestarting = false; if (autoListen) startWebSpeech(); }, 200);
+    }
+    _wsWatchdog = setTimeout(_wsKeepalive, 2000);
+  }
+
   function startWebSpeech() {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SpeechRecognition) { showResponse('voice not supported in this browser', 'rgba(239,83,80,.7)'); return; }
@@ -5684,16 +5696,41 @@ const MIC = (() => {
     recognition.continuous = true;
     recognition.interimResults = true;
     recognition.lang = 'en-US';
+    recognition.maxAlternatives = 1;
 
-    recognition.onstart = () => { listening = true; setListening(true); showResponse('listening...', 'rgba(218,228,255,.5)'); };
+    recognition.onstart = () => {
+      listening = true;
+      _wsRestarting = false;
+      setListening(true);
+      // Only show "listening" on first start, not every restart
+      if (!_wsWatchdog) {
+        showResponse('listening...', 'rgba(218,228,255,.5)');
+        _wsKeepalive();
+      }
+    };
+
     recognition.onend = () => {
       listening = false;
-      if (autoListen) setTimeout(() => { if (autoListen) startWebSpeech(); }, 300);
+      // Always restart immediately if autoListen — no silence timeout should kill us
+      if (autoListen && !_wsRestarting) {
+        _wsRestarting = true;
+        setTimeout(() => { _wsRestarting = false; if (autoListen) startWebSpeech(); }, 150);
+      }
     };
+
     recognition.onerror = e => {
-      if (e.error === 'not-allowed') { showResponse('mic blocked — click 🔒 → Allow Microphone', 'rgba(239,83,80,.9)'); autoListen = false; setListening(false); }
-      else if (e.error !== 'no-speech' && e.error !== 'aborted') showResponse('error: ' + e.error, 'rgba(239,83,80,.7)');
+      if (e.error === 'not-allowed') {
+        showResponse('mic blocked — click 🔒 → Allow Microphone', 'rgba(239,83,80,.9)');
+        autoListen = false; setListening(false);
+        clearTimeout(_wsWatchdog); _wsWatchdog = null;
+      } else if (e.error === 'no-speech' || e.error === 'aborted' || e.error === 'network') {
+        // These are normal — Chrome stops after silence or network blip. Just restart.
+        // onend will fire after this and handle the restart
+      } else {
+        showResponse('mic: ' + e.error, 'rgba(239,83,80,.7)');
+      }
     };
+
     recognition.onresult = e => {
       let interim = '';
       for (let i = e.resultIndex; i < e.results.length; i++) {
@@ -5708,7 +5745,14 @@ const MIC = (() => {
         if (typeof SKIN !== 'undefined') SKIN.hear(0.7 + last[0].confidence * 0.3);
       }
     };
-    try { recognition.start(); } catch(e) {}
+
+    try { recognition.start(); } catch(e) {
+      // Already started — wait a tick and retry
+      if (autoListen && !_wsRestarting) {
+        _wsRestarting = true;
+        setTimeout(() => { _wsRestarting = false; if (autoListen) startWebSpeech(); }, 500);
+      }
+    }
   }
 
   // ── Start / Stop ──────────────────────────────────────────────────────────
