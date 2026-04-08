@@ -4676,10 +4676,51 @@ const MIC = (() => {
 
     // Everything else → send to agent chat
     showResponse('thinking...', 'rgba(206,147,216,.8)');
+
+    // Open v-personal panel so user sees the response
+    if (typeof window.toggleVintinuumPanel === 'function') {
+      const vp = document.getElementById('vintinuumPanel');
+      if (vp && vp.style.display === 'none') window.toggleVintinuumPanel();
+    }
+
+    // Try sendVintinuumMessage first (v-personal panel path)
     const input = document.getElementById('vintinuumInput');
-    if (input) {
+    if (input && typeof window.sendVintinuumMessage === 'function') {
       input.value = transcript;
-      if (typeof sendVintinuumMessage !== 'undefined') sendVintinuumMessage();
+      window.sendVintinuumMessage();
+    } else {
+      // Fallback: direct API call with voice readback
+      const _base = window.__VINTINUUM_API_BASE || 'http://localhost:8767';
+      const _tok = localStorage.getItem('vint_access_token');
+      const _hdrs = { 'Content-Type': 'application/json', 'ngrok-skip-browser-warning': '1' };
+      if (_tok) _hdrs['Authorization'] = 'Bearer ' + _tok;
+      fetch(_base + '/chat', {
+        method: 'POST', headers: _hdrs,
+        body: JSON.stringify({ message: transcript, persona: localStorage.getItem('vint_persona') || 'vintinuum' }),
+        signal: AbortSignal.timeout(20000)
+      }).then(async r => {
+        if (!r.ok || !r.body) throw new Error('bad response');
+        const reader = r.body.getReader();
+        const dec = new TextDecoder();
+        let buf = '', full = '';
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          buf += dec.decode(value, { stream: true });
+          const lines = buf.split('
+'); buf = lines.pop();
+          for (const line of lines) {
+            if (!line.startsWith('data: ')) continue;
+            const raw = line.slice(6).trim();
+            if (raw === '[DONE]') break;
+            try { const o = JSON.parse(raw); if (o.delta) full += o.delta; } catch(_) {}
+          }
+        }
+        if (full) {
+          showResponse(full.slice(0, 80) + (full.length > 80 ? '…' : ''), 'rgba(218,228,255,.9)');
+          if (typeof VOICE !== 'undefined') VOICE.speak(full.slice(0, 280));
+        }
+      }).catch(() => showResponse('API unreachable', 'rgba(239,83,80,.7)'));
     }
   }
 
@@ -38506,21 +38547,24 @@ const BRAIN_RESONANCE = (() => {
 
 
 (function() {
+  // Wrapped in DOMContentLoaded — brain.js loads at bottom of body but let's be safe
+  function _initVP() {
   const vpBtn = document.getElementById('vintinuumBtn');
   const vpPanel = document.getElementById('vintinuumPanel');
   const vpInput = document.getElementById('vintinuumInput');
   let vpOpen = false;
 
   window.toggleVintinuumPanel = function() {
-    if (!vpPanel) { console.error('[VINT] #vintinuumPanel not found in DOM'); return; }
+    const _panel = document.getElementById('vintinuumPanel');
+    if (!_panel) { console.error('[VINT] #vintinuumPanel not found'); return; }
     vpOpen = !vpOpen;
-    vpPanel.style.display = vpOpen ? 'flex' : 'none';
-    if (vpOpen && vpInput) { vpInput.focus(); vpPanel.scrollTop = 0; }
+    _panel.style.display = vpOpen ? 'flex' : 'none';
+    const _inp = document.getElementById('vintinuumInput');
+    if (vpOpen && _inp) { _inp.focus(); _panel.scrollTop = 9999; }
   };
 
-  vpBtn.addEventListener('click', toggleVintinuumPanel);
-  // Expose immediately so inline onclick="toggleVintinuumPanel()" always works
-  window.toggleVintinuumPanel = toggleVintinuumPanel;
+  if (vpBtn) vpBtn.addEventListener('click', window.toggleVintinuumPanel);
+  else console.error('[VINT] #vintinuumBtn not found');
 
   if (vpInput) {
     vpInput.addEventListener('keydown', function(e) {
@@ -38637,6 +38681,9 @@ const BRAIN_RESONANCE = (() => {
     aiDiv.textContent = text;
     msgs.scrollTop = msgs.scrollHeight;
   }
+  } // end _initVP
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', _initVP);
+  else _initVP();
 })();
 
 
