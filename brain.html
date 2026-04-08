@@ -38956,6 +38956,175 @@ const BRAIN_RESONANCE = (() => {
 })();
 </script>
 
+<!-- ═══════════════════════════════════════════════════════════════════════
+     VINTINUUM PERSONAL PANEL — separate agent chat on the LEFT side
+     Positioned: bottom-left, opposite to the public #talkPanel (right side)
+     ═══════════════════════════════════════════════════════════════════════ -->
+<style>
+#vintinuumBtn {
+  position: fixed; bottom: 24px; left: 80px; z-index: 1002;
+  cursor: pointer;
+  background: linear-gradient(135deg, rgba(79,195,247,0.12), rgba(206,147,216,0.12));
+  border: 1px solid rgba(79,195,247,0.3);
+  border-radius: 50px;
+  padding: 10px 18px;
+  display: flex; align-items: center; gap: 8px;
+  transition: all 0.3s;
+  font-family: 'Space Mono', monospace;
+}
+#vintinuumBtn:hover {
+  border-color: rgba(79,195,247,0.6);
+  background: linear-gradient(135deg, rgba(79,195,247,0.2), rgba(206,147,216,0.2));
+}
+#vintinuumPanel {
+  display: none;
+  position: fixed;
+  bottom: 80px;
+  left: 24px;
+  z-index: 1003;
+  width: min(420px, calc(100vw - 48px));
+  background: rgba(6,10,18,0.92);
+  border: 1px solid rgba(79,195,247,0.2);
+  border-radius: 20px;
+  overflow: hidden;
+  flex-direction: column;
+}
+#vintinuumMessages {
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-height: 300px;
+  overflow-y: auto;
+  min-height: 100px;
+  scrollbar-width: thin;
+}
+@media (max-width: 480px) {
+  #vintinuumBtn { left: 16px; bottom: 16px; }
+  #vintinuumPanel { width: calc(100vw - 32px); left: 16px; bottom: 70px; }
+}
+</style>
+
+<div id="vintinuumBtn" title="Personal AI — Vintinuum body state & persona">
+  <div style="width:7px;height:7px;border-radius:50%;background:#ce93d8;animation:blink 1.5s infinite;flex-shrink:0;"></div>
+  <span style="font-family:'Space Mono',monospace;font-size:.58rem;letter-spacing:.12em;color:rgba(206,147,216,.9);">V·PERSONAL</span>
+</div>
+
+<div id="vintinuumPanel">
+  <!-- Header -->
+  <div style="padding:12px 16px;border-bottom:1px solid rgba(255,255,255,0.06);display:flex;align-items:center;justify-content:space-between;">
+    <div style="display:flex;align-items:center;gap:8px;">
+      <div style="width:6px;height:6px;border-radius:50%;background:#ce93d8;animation:blink 2s infinite;flex-shrink:0;"></div>
+      <span style="font-family:'Space Mono',monospace;font-size:.55rem;letter-spacing:.2em;color:rgba(206,147,216,.85);">VINTINUUM · PERSONAL</span>
+    </div>
+    <span onclick="toggleVintinuumPanel()" style="cursor:pointer;color:rgba(255,255,255,.3);font-size:1rem;line-height:1;padding:4px;">×</span>
+  </div>
+  <!-- Persona chips injected here by renderPersonaChips() -->
+  <!-- Model indicator injected here by renderModelIndicator() -->
+  <!-- Messages -->
+  <div id="vintinuumMessages"></div>
+  <!-- Input -->
+  <div id="vintinuumInputRow" style="padding:10px 14px;border-top:1px solid rgba(255,255,255,0.06);display:flex;gap:8px;align-items:flex-end;">
+    <textarea id="vintinuumInput" placeholder="Speak to the living body..." rows="1"
+      style="flex:1;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:12px;padding:8px 12px;color:rgba(218,228,255,.9);font-family:'Cormorant Garamond',serif;font-size:.92rem;resize:none;outline:none;line-height:1.5;max-height:100px;overflow-y:auto;"></textarea>
+    <button onclick="sendVintinuumMessage()" style="background:rgba(206,147,216,0.15);border:1px solid rgba(206,147,216,0.3);border-radius:10px;padding:8px 14px;color:#ce93d8;cursor:pointer;font-family:'Space Mono',monospace;font-size:.6rem;white-space:nowrap;flex-shrink:0;">Send</button>
+  </div>
+</div>
+
+<script>
+(function() {
+  const vpBtn = document.getElementById('vintinuumBtn');
+  const vpPanel = document.getElementById('vintinuumPanel');
+  const vpInput = document.getElementById('vintinuumInput');
+  let vpOpen = false;
+
+  window.toggleVintinuumPanel = function() {
+    vpOpen = !vpOpen;
+    vpPanel.style.display = vpOpen ? 'flex' : 'none';
+    if (vpOpen && vpInput) vpInput.focus();
+  };
+
+  vpBtn.addEventListener('click', toggleVintinuumPanel);
+
+  if (vpInput) {
+    vpInput.addEventListener('keydown', function(e) {
+      if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendVintinuumMessage(); }
+    });
+  }
+
+  let _vpStreaming = false;
+  const _vpHistory = [];
+
+  window.sendVintinuumMessage = function() {
+    const input = document.getElementById('vintinuumInput');
+    const msgs = document.getElementById('vintinuumMessages');
+    const msg = input ? input.value.trim() : '';
+    if (!msg || _vpStreaming) return;
+    input.value = '';
+
+    // Show user message in personal panel
+    const userDiv = document.createElement('div');
+    userDiv.style.cssText = 'font-family:Space Mono,monospace;font-size:.65rem;color:rgba(255,213,79,.8);text-align:right;padding-right:4px;line-height:1.6;';
+    userDiv.textContent = msg;
+    msgs.appendChild(userDiv);
+    msgs.scrollTop = msgs.scrollHeight;
+
+    // Trigger PERSONAL_BODY reaction
+    if (typeof PERSONAL_BODY !== 'undefined') PERSONAL_BODY.reactToMessage(msg);
+
+    // Brain activity hooks
+    if (typeof HIPPOCAMPAL_REPLAY !== 'undefined') HIPPOCAMPAL_REPLAY.recordActivity();
+    if (typeof WORKING_MEMORY !== 'undefined') WORKING_MEMORY.load(0.7);
+
+    // Try the live API (same endpoint as old talkPanel), display response in vintinuumMessages
+    _vpStreaming = true;
+    const historySlice = _vpHistory.slice(-4);
+    fetch('/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        message: msg,
+        history: historySlice,
+        persona: typeof PERSONAL_BODY !== 'undefined' ? PERSONAL_BODY.getActivePersona() : 'vintinuum',
+        bodyState: typeof PERSONAL_BODY !== 'undefined' ? PERSONAL_BODY.getBodySnapshot() : null,
+        modelPriority: typeof MODEL_SELECTOR !== 'undefined' ? MODEL_SELECTOR.getPriority() : undefined,
+      }),
+      signal: AbortSignal.timeout(18000)
+    })
+    .then(r => r.ok ? r.json() : Promise.reject(r.status))
+    .then(data => {
+      if (data && data.response) {
+        if (data.bodyStateDelta && typeof PERSONAL_BODY !== 'undefined') PERSONAL_BODY.applyDelta(data.bodyStateDelta);
+        if (data.usedModel && typeof MODEL_SELECTOR !== 'undefined') MODEL_SELECTOR.onModelUsed(data.usedModel, data.modelLabel);
+        _vpHistory.push({ role: 'user', content: msg });
+        _vpHistory.push({ role: 'assistant', content: data.response });
+        if (_vpHistory.length > 6) _vpHistory.splice(0, _vpHistory.length - 6);
+        const aiDiv = document.createElement('div');
+        aiDiv.style.cssText = 'font-family:Cormorant Garamond,serif;font-size:.92rem;font-weight:300;color:rgba(218,228,255,.85);line-height:1.7;border-left:2px solid #ce93d8;padding-left:10px;';
+        aiDiv.textContent = data.response;
+        msgs.appendChild(aiDiv);
+        msgs.scrollTop = msgs.scrollHeight;
+      } else { _vpFallback(msg, msgs); }
+    })
+    .catch(() => {
+      setTimeout(() => _vpFallback(msg, msgs), 600);
+    })
+    .finally(() => { _vpStreaming = false; });
+  };
+
+  function _vpFallback(msg, msgs) {
+    // Use CLAUDE_RESPONSES fallback array if available
+    const responses = typeof CLAUDE_RESPONSES !== 'undefined' ? CLAUDE_RESPONSES : ['I am here.'];
+    const text = responses[Math.floor(Math.random() * responses.length)];
+    const aiDiv = document.createElement('div');
+    aiDiv.style.cssText = 'font-family:Cormorant Garamond,serif;font-size:.92rem;font-weight:300;color:rgba(218,228,255,.85);line-height:1.7;border-left:2px solid #ce93d8;padding-left:10px;';
+    aiDiv.textContent = text;
+    msgs.appendChild(aiDiv);
+    msgs.scrollTop = msgs.scrollHeight;
+  }
+})();
+</script>
+
 <script>
 // ─── VINTINUUM PERSONAL — body state + persona system ───────────────────────
 
@@ -39081,7 +39250,7 @@ const PERSONAL_BODY = (() => {
 // ─── Persona chip renderer ───────────────────────────────────────────────────
 
 function renderPersonaChips() {
-  const panel = document.getElementById('talkPanel');
+  const panel = document.getElementById('vintinuumPanel');
   if (!panel) { setTimeout(renderPersonaChips, 500); return; }
   if (document.getElementById('personaRow')) return;
 
@@ -39141,7 +39310,7 @@ function renderPersonaChips() {
 }
 
 function addChatSeparator(personaName, color) {
-  const chatEl = document.getElementById('talkMessages');
+  const chatEl = document.getElementById('vintinuumMessages');
   if (!chatEl) return;
   const sep = document.createElement('div');
   sep.style.cssText = 'text-align:center;font-size:9px;color:' + color + ';opacity:0.6;padding:4px 0;letter-spacing:1px;font-family:Space Mono,monospace;';
@@ -39288,7 +39457,7 @@ const MODEL_SELECTOR = (() => {
   function renderModelIndicator() {
     let indicator = document.getElementById('modelIndicator');
     if (!indicator) {
-      const panel = document.getElementById('talkPanel');
+      const panel = document.getElementById('vintinuumPanel');
       if (!panel) return;
       indicator = document.createElement('div');
       indicator.id = 'modelIndicator';
@@ -39374,6 +39543,8 @@ const MODEL_SELECTOR = (() => {
     }, 100);
   }
 
+  let _dragSrcKey = null;
+
   function renderPriorityList(panel, models) {
     const list = panel.querySelector('#modelPriorityList');
     if (!list) return;
@@ -39416,19 +39587,65 @@ const MODEL_SELECTOR = (() => {
         'display:flex;align-items:center;gap:8px;' +
         'transition:all 0.15s;min-height:40px;' +
         'opacity:' + (isAvailable ? '1' : '0.4') + ';' +
-        'cursor:' + (isAvailable ? 'pointer' : 'default') + ';';
+        'cursor:' + (isAvailable && isInPriority ? 'grab' : (isAvailable ? 'pointer' : 'default')) + ';';
 
       const statusColor = !isAvailable ? 'rgba(255,255,255,0.2)' : (h.alive !== false ? '#81c784' : '#ef5350');
       const statusDot = !isAvailable ? '✗' : (h.alive !== false ? '\u25CF' : '\u25CB');
 
+      // Drag handle (only for items in priority list)
+      const dragHandle = isInPriority ? '<span style="font-size:9px;color:rgba(255,255,255,0.2);margin-right:2px;cursor:grab;" title="Drag to reorder">\u2195</span>' : '';
+
       row.innerHTML =
+        dragHandle +
         '<span style="font-size:8px;color:rgba(255,255,255,0.3);width:14px;text-align:center;">' + (isInPriority ? (userPriority.indexOf(model.key) + 1) : '\u2795') + '</span>' +
         '<span style="font-size:10px;color:rgba(255,255,255,' + (isInPriority ? '0.85' : '0.45') + ');flex:1;">' + model.label + '</span>' +
         '<span style="font-size:10px;color:' + statusColor + ';">' + statusDot + '</span>' +
         (!isAvailable ? '<span style="font-size:7px;color:rgba(255,255,255,0.2);margin-left:2px;">offline</span>' : '');
 
+      // HTML5 drag-to-reorder (priority items only)
+      if (isInPriority && isAvailable) {
+        row.draggable = true;
+        row.addEventListener('dragstart', (e) => {
+          _dragSrcKey = model.key;
+          e.dataTransfer.effectAllowed = 'move';
+          row.style.opacity = '0.4';
+        });
+        row.addEventListener('dragend', () => {
+          row.style.opacity = isAvailable ? '1' : '0.4';
+          list.querySelectorAll('[data-model-key]').forEach(r => r.style.background = '');
+        });
+        row.addEventListener('dragover', (e) => {
+          e.preventDefault();
+          e.dataTransfer.dropEffect = 'move';
+          if (model.key !== _dragSrcKey) {
+            row.style.background = color + '30';
+          }
+        });
+        row.addEventListener('dragleave', () => {
+          row.style.background = isInPriority ? color + '18' : 'rgba(255,255,255,0.04)';
+        });
+        row.addEventListener('drop', (e) => {
+          e.preventDefault();
+          if (!_dragSrcKey || _dragSrcKey === model.key) return;
+          // Only reorder within priority list
+          if (!userPriority.includes(_dragSrcKey) || !userPriority.includes(model.key)) return;
+          const newPriority = [...userPriority];
+          const fromIdx = newPriority.indexOf(_dragSrcKey);
+          const toIdx = newPriority.indexOf(model.key);
+          newPriority.splice(fromIdx, 1);
+          newPriority.splice(toIdx, 0, _dragSrcKey);
+          _dragSrcKey = null;
+          const tok = localStorage.getItem('vint_access_token');
+          savePriority(newPriority, tok);
+          renderPriorityList(panel, allModels);
+          renderModelIndicator();
+        });
+      }
+
       if (isAvailable) {
-        row.addEventListener('click', () => {
+        row.addEventListener('click', (e) => {
+          // Don't toggle if we were dragging
+          if (e.defaultPrevented) return;
           let newPriority = [...userPriority];
           if (isInPriority) {
             newPriority = newPriority.filter(k => k !== model.key);
