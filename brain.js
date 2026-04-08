@@ -5626,11 +5626,20 @@ const MIC = (() => {
       return true;
     } catch (err) {
       if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
-        showResponse('mic blocked — click the 🔒 lock icon in address bar → Microphone → Allow', 'rgba(239,83,80,.9)');
-        // On GitHub Pages / HTTPS sites, Whisper (HTTP) is blocked by mixed-content rules.
-        // Fall back to Web Speech API which works natively on HTTPS.
+        showResponse('🎤 Mic blocked — click 🔒 in address bar → Microphone → Allow → reload', 'rgba(239,83,80,.95)');
+        // Inject sticky fix banner
+        if (!document.getElementById('_micFixBtn')) {
+          var _fb = document.createElement('div');
+          _fb.id = '_micFixBtn';
+          _fb.style.cssText = 'position:fixed;top:12px;left:50%;transform:translateX(-50%);z-index:99999;background:rgba(20,4,4,0.85);border:1px solid rgba(239,83,80,0.5);border-radius:12px;padding:8px 20px;font-family:monospace;font-size:11px;color:#ef9a9a;cursor:pointer;display:flex;align-items:center;gap:12px;white-space:nowrap;';
+          _fb.innerHTML = '🎤 MIC BLOCKED &nbsp;<b style="color:#fff">Click 🔒 lock icon → Microphone → Allow → Reload page</b>&nbsp;<span style="opacity:.4;cursor:pointer" id="_micFixClose">×</span>';
+          document.body.appendChild(_fb);
+          document.getElementById('_micFixClose').addEventListener('click', function(e){ e.stopPropagation(); _fb.remove(); });
+        }
+        // Fall through to Web Speech so voice still works
+        whisperAvailable = false;
         if (!autoListen) return false;
-        setTimeout(() => { whisperAvailable = false; startWebSpeech(); }, 500);
+        setTimeout(() => { startWebSpeech(); }, 500);
       } else {
         showResponse('mic error: ' + err.message, 'rgba(239,83,80,.7)');
       }
@@ -40316,11 +40325,7 @@ const VINT_EXECUTE = (function() {
   const _rreset = document.getElementById('rpReset');
   if (_rreset) _rreset.addEventListener('click', () => { if (typeof REPRODUCTIVE !== 'undefined') REPRODUCTIVE.reset(); });
 
-  // V-Personal close button
-  const _vpc = document.getElementById('vintinuumPanelClose');
-  if (_vpc) _vpc.addEventListener('click', () => { if (typeof toggleVintinuumPanel !== 'undefined') toggleVintinuumPanel(); });
-
-  // V-Personal send button
+  // V-Personal send button (close is wired in _wireVP to avoid double-fire)
   const _vsb = document.getElementById('vintinuumSendBtn');
   if (_vsb) _vsb.addEventListener('click', () => { if (typeof sendVintinuumMessage !== 'undefined') sendVintinuumMessage(); });
 })();
@@ -40992,6 +40997,88 @@ const VINT_EXECUTE = (function() {
   }, true);
 
 })();
+
+// ═══════════════════════════════════════════════════════════════════
+// UNIVERSAL CLOSE HANDLER
+// Any × or ✕ or close button in any panel/modal/popup closes it.
+// Catches all dynamically created panels too.
+// ═══════════════════════════════════════════════════════════════════
+(function() {
+  // Selectors that identify close triggers
+  var CLOSE_TRIGGERS = [
+    '#vintinuumPanelClose',
+    '#panelClose',
+    '#kpClose',
+    '[data-close]',
+    '.modal-close',
+    '.panel-close',
+    '._popupClose',
+  ];
+
+  function isCloseBtn(el) {
+    if (!el) return false;
+    // Direct selector match
+    for (var i = 0; i < CLOSE_TRIGGERS.length; i++) {
+      if (el.matches && el.matches(CLOSE_TRIGGERS[i])) return true;
+    }
+    // Text-content × or ✕ inside a panel/modal
+    var txt = (el.textContent || '').trim();
+    if ((txt === '×' || txt === '✕' || txt === '✖') && el.style && el.style.cursor === 'pointer') return true;
+    return false;
+  }
+
+  document.addEventListener('click', function(e) {
+    var el = e.target;
+    if (!isCloseBtn(el)) return;
+    e.stopPropagation();
+
+    // V·PERSONAL panel
+    if (el.id === 'vintinuumPanelClose') {
+      var vp = document.getElementById('vintinuumPanel');
+      if (vp) vp.style.display = 'none';
+      return;
+    }
+
+    // Brain region / body panel
+    if (el.id === 'panelClose') {
+      if (typeof closePanel === 'function') closePanel();
+      return;
+    }
+
+    // Knowledge popup (stats page / brain page)
+    if (el.id === 'kpClose') {
+      var kp = el.closest('[style*="position: fixed"]') || el.parentNode && el.parentNode.parentNode;
+      if (kp) kp.style.display = 'none';
+      return;
+    }
+
+    // Generic: find the closest modal-like ancestor and hide it
+    var modal = el.closest('.vint-modal, .node-panel, [role="dialog"], .living-popup, ._popup');
+    if (modal) { modal.style.display = 'none'; return; }
+
+    // Last resort: hide the parent container
+    var parent = el.parentNode;
+    if (parent && parent !== document.body) parent.style.display = 'none';
+  }, true);
+
+  // ESC key closes everything
+  document.addEventListener('keydown', function(e) {
+    if (e.key !== 'Escape') return;
+    // V·PERSONAL
+    var vp = document.getElementById('vintinuumPanel');
+    if (vp && vp.style.display === 'flex') { vp.style.display = 'none'; return; }
+    // Brain panel
+    if (typeof closePanel === 'function') { closePanel(); }
+    // Any visible modal overlay
+    document.querySelectorAll('[style*="position: fixed"][style*="z-index"]').forEach(function(el) {
+      if (el.style.display !== 'none' && el.id !== 'introOverlay' && el.id !== 'liveEmotionBar' && el.id !== 'micBtn' && !el.id.startsWith('_api')) {
+        var hasCloseBtn = el.querySelector('#kpClose, #panelClose, #vintinuumPanelClose, [data-close], .modal-close');
+        if (hasCloseBtn) el.style.display = 'none';
+      }
+    });
+  });
+})();
+
 // ═══════════════════════════════════════════════════════════════════
 // END UNIVERSAL INTERACTIVITY LAYER
 // ═══════════════════════════════════════════════════════════════════
