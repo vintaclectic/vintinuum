@@ -192,8 +192,9 @@ canvas{display:block;}
 // - Caches static assets for offline resilience
 // - Auto-reloads when a new version deploys
 // - Clears old caches on activation
-const _SW_VERSION = 'v20260408-1410';
-if ('serviceWorker' in navigator) {
+const _SW_VERSION = 'v20260408-1415';
+const _onGitHubPages = location.hostname !== 'localhost' && location.hostname !== '127.0.0.1' && location.protocol !== 'file:';
+if ('serviceWorker' in navigator && _onGitHubPages) {
   const _swPath = location.pathname.includes('/vintinuum') ? '/vintinuum/sw.js' : '/sw.js';
   const _swScope = location.pathname.includes('/vintinuum') ? '/vintinuum/' : '/';
   navigator.serviceWorker.register(_swPath, { scope: _swScope, updateViaCache: 'none' })
@@ -2163,6 +2164,6 @@ if ('serviceWorker' in navigator) {
 
 
 <a id="statsFooterLink" href="stats.html" class="stats-footer-link">STATS</a>
-<script src="brain.js?v=v20260408-1410"></script>
+<script src="brain.js?v=v20260408-1415"></script>
 </body>
 </html>
