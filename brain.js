@@ -37991,9 +37991,97 @@ window.DORSAL_CLEAR = (function() {
   ];
 
   // ── Panel toggle ──
+  // ── Drag to reposition ────────────────────────────────────────────
+  let _dragActive = false;
+  let _dragMoved = false;
+  let _dragOX = 0, _dragOY = 0; // offset within button on mousedown
+
+  btn.addEventListener('mousedown', e => {
+    if (e.button !== 0) return;
+    _dragActive = true;
+    _dragMoved = false;
+    // Convert current fixed position to top/left so we can drag freely
+    const rect = btn.getBoundingClientRect();
+    // Switch from bottom/right anchoring to top/left so transforms work cleanly
+    btn.style.right = 'auto';
+    btn.style.bottom = 'auto';
+    btn.style.left = rect.left + 'px';
+    btn.style.top = rect.top + 'px';
+    // Also move chat panel to match
+    const pRect = panel.getBoundingClientRect();
+    panel.style.right = 'auto';
+    panel.style.bottom = 'auto';
+    panel.style.left = pRect.left + 'px';
+    panel.style.top = pRect.top + 'px';
+    _dragOX = e.clientX - rect.left;
+    _dragOY = e.clientY - rect.top;
+    btn.style.transition = 'none';
+    btn.style.cursor = 'grabbing';
+    e.preventDefault();
+  });
+
+  document.addEventListener('mousemove', e => {
+    if (!_dragActive) return;
+    const nx = e.clientX - _dragOX;
+    const ny = e.clientY - _dragOY;
+    // Clamp within viewport
+    const bw = btn.offsetWidth || 52;
+    const bh = btn.offsetHeight || 52;
+    const x = Math.max(0, Math.min(window.innerWidth - bw, nx));
+    const y = Math.max(0, Math.min(window.innerHeight - bh, ny));
+    btn.style.left = x + 'px';
+    btn.style.top = y + 'px';
+    // Move panel relative to button (above it)
+    if (isOpen) {
+      panel.style.left = x + 'px';
+      panel.style.top = Math.max(0, y - (panel.offsetHeight || 420) - 12) + 'px';
+    }
+    if (Math.abs(e.clientX - (_dragOX + parseInt(btn.style.left))) > 4 ||
+        Math.abs(e.clientY - (_dragOY + parseInt(btn.style.top))) > 4) {
+      _dragMoved = true;
+    }
+    _dragMoved = true;
+  });
+
+  document.addEventListener('mouseup', e => {
+    if (!_dragActive) return;
+    _dragActive = false;
+    btn.style.transition = '';
+    btn.style.cursor = 'pointer';
+    // Save position to localStorage so it persists on reload
+    localStorage.setItem('_vintBtnX', btn.style.left);
+    localStorage.setItem('_vintBtnY', btn.style.top);
+  });
+
+  // Restore saved position on load
+  (function() {
+    const sx = localStorage.getItem('_vintBtnX');
+    const sy = localStorage.getItem('_vintBtnY');
+    if (sx && sy) {
+      btn.style.right = 'auto';
+      btn.style.bottom = 'auto';
+      btn.style.left = sx;
+      btn.style.top = sy;
+    }
+  })();
+  // ── End drag ─────────────────────────────────────────────────────
+
   btn.addEventListener('click', () => {
+    if (_dragMoved) { _dragMoved = false; return; } // was a drag, not a click
     isOpen = !isOpen;
     panel.classList.toggle('open', isOpen);
+    if (isOpen) {
+      // Position panel above/near the button wherever it is
+      const rect = btn.getBoundingClientRect();
+      panel.style.right = 'auto';
+      panel.style.bottom = 'auto';
+      const pw = panel.offsetWidth || 340;
+      const ph = panel.offsetHeight || 420;
+      let px = rect.left - Math.max(0, rect.left + pw - window.innerWidth + 8);
+      let py = Math.max(8, rect.top - ph - 12);
+      panel.style.left = px + 'px';
+      panel.style.top = py + 'px';
+    }
     if (isOpen && messages.children.length === 0) {
       addMessage('ai', 'I have been waiting. Speak.');
     }
