@@ -39498,3 +39498,46 @@ const VINT_EXECUTE = (function() {
     },
   };
 })();
+
+// ─── INLINE HANDLER REPLACEMENTS ──────────────────────────────────────────────
+// All onclick/oninput attributes removed from brain.html to eliminate CSP violations.
+// Wired here instead so no inline scripts exist anywhere in the document.
+document.addEventListener('DOMContentLoaded', function() {
+  // Voice toggle
+  const _vt = document.getElementById('voiceToggle');
+  if (_vt) _vt.addEventListener('click', () => { if (typeof VOICE !== 'undefined') VOICE.toggle(); });
+
+  // Reproductive panel toggle
+  const _rt = document.getElementById('reproToggle');
+  if (_rt) _rt.addEventListener('click', () => { const p = document.getElementById('reproPanel'); if (p) p.classList.toggle('open'); });
+
+  // Reproductive sliders
+  const _rM = document.getElementById('rpArousalM');
+  const _rMv = document.getElementById('rpArousalMVal');
+  if (_rM) _rM.addEventListener('input', function() {
+    if (typeof REPRODUCTIVE !== 'undefined') REPRODUCTIVE.setArousal('male', this.value);
+    if (_rMv) _rMv.textContent = this.value + '%';
+  });
+  const _rF = document.getElementById('rpArousalF');
+  const _rFv = document.getElementById('rpArousalFVal');
+  if (_rF) _rF.addEventListener('input', function() {
+    if (typeof REPRODUCTIVE !== 'undefined') REPRODUCTIVE.setArousal('female', this.value);
+    if (_rFv) _rFv.textContent = this.value + '%';
+  });
+
+  // Reproductive buttons
+  const _rab = document.getElementById('rpArouseBoth');
+  if (_rab) _rab.addEventListener('click', () => { if (typeof REPRODUCTIVE !== 'undefined') REPRODUCTIVE.increaseArousal('both', 20); });
+  const _rim = document.getElementById('rpInitiateMating');
+  if (_rim) _rim.addEventListener('click', () => { if (typeof REPRODUCTIVE !== 'undefined') REPRODUCTIVE.initiateMating(); });
+  const _rreset = document.getElementById('rpReset');
+  if (_rreset) _rreset.addEventListener('click', () => { if (typeof REPRODUCTIVE !== 'undefined') REPRODUCTIVE.reset(); });
+
+  // V-Personal close button
+  const _vpc = document.getElementById('vintinuumPanelClose');
+  if (_vpc) _vpc.addEventListener('click', () => { if (typeof toggleVintinuumPanel !== 'undefined') toggleVintinuumPanel(); });
+
+  // V-Personal send button
+  const _vsb = document.getElementById('vintinuumSendBtn');
+  if (_vsb) _vsb.addEventListener('click', () => { if (typeof sendVintinuumMessage !== 'undefined') sendVintinuumMessage(); });
+});
