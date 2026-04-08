@@ -5372,23 +5372,7 @@ const MIC = (() => {
   const engineEl = document.createElement('div');
   engineEl.style.cssText = 'padding:0 10px 5px;font-size:.45rem;letter-spacing:.12em;color:rgba(150,175,215,.3);cursor:pointer;user-select:none;';
   engineEl.textContent = 'ENGINE: checking...';
-  engineEl.title = 'Click to switch voice engine';
-  engineEl.addEventListener('click', () => {
-    // Force toggle override
-    if (!autoListen) return;
-    whisperAvailable = !whisperAvailable;
-    engineEl.textContent = whisperAvailable ? 'ENGINE: WHISPER (local AI)' : 'ENGINE: WEB SPEECH (browser)';
-    engineEl.style.color = whisperAvailable ? 'rgba(102,187,106,.5)' : 'rgba(255,165,38,.4)';
-    // Restart with new engine
-    stop();
-    setTimeout(() => {
-      autoListen = true;
-      btn.style.background = 'rgba(239,83,80,0.4)';
-      btn.style.borderColor = 'rgba(239,83,80,0.7)';
-      btn.style.color = '#ef5350';
-      if (whisperAvailable) startWhisper(); else startWebSpeech();
-    }, 600);
-  });
+  engineEl.title = 'Voice engine: Web Speech API (Chrome built-in)';
   panel.appendChild(engineEl);
 
   // ── Waveform ─────────────────────────────────────────────────────────────
@@ -5730,22 +5714,12 @@ const MIC = (() => {
 
   async function start() {
     if (listening) return;
-    // On GitHub Pages / remote — skip Whisper probe entirely, go straight to Web Speech
-    // Whisper is a local service, unreachable from the public internet
-    if (!_onLocalhost) {
-      whisperAvailable = false;
-      engineEl.textContent = 'ENGINE: WEB SPEECH (browser)';
-      engineEl.style.color = 'rgba(255,165,38,.4)';
-      startWebSpeech();
-      return;
-    }
-    await checkWhisper();
-    if (whisperAvailable) {
-      const ok = await startWhisper();
-      if (!ok && autoListen) startWebSpeech();
-    } else {
-      startWebSpeech();
-    }
+    // Always use Web Speech API — no local Whisper service is running
+    // Whisper path is preserved for future use but disabled until a real STT backend exists
+    whisperAvailable = false;
+    engineEl.textContent = 'ENGINE: WEB SPEECH (browser)';
+    engineEl.style.color = 'rgba(255,165,38,.4)';
+    startWebSpeech();
   }
 
   function stop() {
@@ -5867,9 +5841,7 @@ const MIC = (() => {
     banner.addEventListener('click', (e) => { if (e.target === banner) banner.remove(); });
   }
 
-  // Pre-check Whisper availability on load
-  // Only probe Whisper on localhost — on GitHub Pages it's unreachable and just spams console
-  if (_onLocalhost) setTimeout(checkWhisper, 2000);
+  // No Whisper probe — Web Speech is the engine everywhere until a real STT backend exists
 
   return { start, stop };
 })();
