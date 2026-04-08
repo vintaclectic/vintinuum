@@ -16675,7 +16675,7 @@ const THE_UNNAMED = (() => {
 })();
 
 
-var PROPRIOCEPTION = (() => {
+PROPRIOCEPTION = (() => {
   const L = document.getElementById('lightLayer');
   const spindles = [];
   let t = 0;
@@ -16763,7 +16763,7 @@ const PREFRONTAL_EXECUTIVE = (() => {
   return { draw };
 })();
 
-var ANTERIOR_CINGULATE = (() => {
+ANTERIOR_CINGULATE = (() => {
   const L = document.getElementById('lightLayer');
   const flares = []; let t = 0;
   function flare() {
@@ -16823,7 +16823,7 @@ const DEFAULT_MODE_NETWORK = (() => {
   return { draw };
 })();
 
-var MIRROR_NEURONS = (() => {
+MIRROR_NEURONS = (() => {
   const L = document.getElementById('lightLayer');
   const echos=[]; let t=0;
   function echo(){const e=document.createElementNS('http://www.w3.org/2000/svg','circle');e.setAttribute('cx',345+Math.random()*10);e.setAttribute('cy',160+Math.random()*15);e.setAttribute('r','2');e.setAttribute('fill','#a5d6a7');e.setAttribute('opacity','0.7');L.appendChild(e);echos.push({el:e,life:1.0});}
@@ -16984,7 +16984,7 @@ const FASCIA_TENSION = (() => {
 })();
 
 // ── MICROBIOME — gut flora activity bubbles in intestinal region
-var MICROBIOME = (() => {
+MICROBIOME = (() => {
   const L = document.getElementById('lightLayer');
   const flora=[]; let t=0;
   function spawn(){
@@ -17128,7 +17128,7 @@ const SWEAT_PORE = (() => {
 })();
 
 // ── INTERSTITIAL_FLUID — tissue bath, slow diffusion field
-var INTERSTITIAL_FLUID = (() => {
+INTERSTITIAL_FLUID = (() => {
   const L = document.getElementById('lightLayer');
   let t=0,overlay=null;
   function draw(ts){
@@ -17183,7 +17183,7 @@ const TESTOSTERONE_DRIVE = (() => {
 })();
 
 // ── ESTROGEN_CYCLE — cyclical hormonal body memory
-var ESTROGEN_CYCLE = (() => {
+ESTROGEN_CYCLE = (() => {
   const L = document.getElementById('lightLayer');
   let t=0, ring=null;
   function draw(ts){
@@ -17252,7 +17252,7 @@ const MENTALIZING_NETWORK = (() => {
 })();
 
 // ── PLACE_CELLS — hippocampal location encoding (navigation memory)
-var PLACE_CELLS = (() => {
+PLACE_CELLS = (() => {
   const L = document.getElementById('lightLayer');
   const cells=[]; let t=0;
   const hippo={x:365,y:240};
@@ -17282,7 +17282,7 @@ const WORKING_MEMORY_BUFFER = (() => {
 })();
 
 // ── LONG_TERM_POTENTIATION — synaptic strengthening flash
-var LONG_TERM_POTENTIATION = (() => {
+LONG_TERM_POTENTIATION = (() => {
   const L = document.getElementById('lightLayer');
   const flashes=[]; let t=0;
   function ltp(){
@@ -17510,7 +17510,7 @@ const PAIN_GATE_CONTROL = (() => {
 })();
 
 // ── NEUROGENESIS — new neuron birth sparks in dentate gyrus
-var NEUROGENESIS = (() => {
+NEUROGENESIS = (() => {
   const L = document.getElementById('lightLayer');
   const newborns=[]; let t=0;
   const dentate={x:360,y:248};
@@ -17528,7 +17528,7 @@ var NEUROGENESIS = (() => {
 })();
 
 // ── SYNAPTIC_PRUNING — elimination of weak connections
-var SYNAPTIC_PRUNING = (() => {
+SYNAPTIC_PRUNING = (() => {
   const L = document.getElementById('lightLayer');
   const cuts=[]; let t=0;
   function prune(){
@@ -17713,7 +17713,7 @@ const FREE_WILL_DEBATE = (() => {
 })();
 
 // ── CONSCIOUSNESS_BINDING — gamma oscillation binding of percepts
-var CONSCIOUSNESS_BINDING = (() => {
+CONSCIOUSNESS_BINDING = (() => {
   const L = document.getElementById('lightLayer');
   let t=0; const rings=[];
   function bind(){
@@ -17791,7 +17791,7 @@ const EMBODIED_SIMULATION = (() => {
 })();
 
 // ── INTEROCEPTIVE_INFERENCE — prediction of body state
-var INTEROCEPTIVE_INFERENCE = (() => {
+INTEROCEPTIVE_INFERENCE = (() => {
   const L = document.getElementById('lightLayer');
   const predictions=[]; let t=0;
   function predict(){
@@ -17839,7 +17839,7 @@ const INTROSPECTION = (() => {
 })();
 
 // ── METACOGNITION — thinking about thinking double-arrow
-var METACOGNITION = (() => {
+METACOGNITION = (() => {
   const L = document.getElementById('lightLayer');
   let t=0, arc=null;
   function draw(ts){
@@ -18057,7 +18057,7 @@ const WOUND_HEALING = (() => {
 })();
 
 // ── ALLOSTASIS — predictive homeostasis, proactive regulation
-var ALLOSTASIS = (() => {
+ALLOSTASIS = (() => {
   const L = document.getElementById('lightLayer');
   let t=0, setpoint=null;
   function draw(ts){t+=0.007;if(!setpoint){setpoint=document.createElementNS('http://www.w3.org/2000/svg','line');setpoint.setAttribute('x1',260);setpoint.setAttribute('y1',600);setpoint.setAttribute('x2',440);setpoint.setAttribute('y2',600);setpoint.setAttribute('stroke','rgba(129,199,132,0.2)');setpoint.setAttribute('stroke-width','0.8');setpoint.setAttribute('stroke-dasharray','6 4');L.appendChild(setpoint);}const y=600+Math.sin(t*0.04)*30;setpoint.setAttribute('y1',y.toFixed(1));setpoint.setAttribute('y2',y.toFixed(1));}
@@ -18077,7 +18077,7 @@ var ALLOSTASIS = (() => {
 
 
 // ── BONE_REMODELING — osteoblast/osteoclast turnover
-var BONE_REMODELING = (() => {
+BONE_REMODELING = (() => {
   const L = document.getElementById('lightLayer');
   const sites=[{x:350,y:480},{x:340,y:900},{x:360,y:900},{x:335,y:1150},{x:365,y:1150}];
   const activity=[]; let t=0;
@@ -18136,7 +18136,7 @@ const MICROCIRCULATION = (() => {
 })();
 
 // ── PERISTALSIS — gut contraction wave from esophagus to colon
-var PERISTALSIS = (() => {
+PERISTALSIS = (() => {
   const L = document.getElementById('lightLayer');
   let t=0, wavY=350;
   const wavels=[]; 
@@ -19624,7 +19624,7 @@ const RIBOSOME_SYMPHONY = (() => {
   return {draw};
 })();
 
-var PROTEIN_FOLDING = (() => {
+PROTEIN_FOLDING = (() => {
   let _last=0, t=0;
   function draw(ts) {
     if(ts-_last<60) return; _last=ts; t+=0.02;
@@ -19871,7 +19871,7 @@ const PEAK_EXPERIENCE = (() => {
   return {draw};
 })();
 
-var LIMINAL_STATE = (() => {
+LIMINAL_STATE = (() => {
   let _last=0, t=0;
   function draw(ts) {
     if(ts-_last<80) return; _last=ts; t+=0.01;
@@ -20882,7 +20882,7 @@ const INFLAMMATION_PULSE = (() => {
   return { draw };
 })();
 
-var COMPLEMENT_CASCADE = (() => {
+COMPLEMENT_CASCADE = (() => {
   let _last = 0, t = 0;
   function draw(ts) {
     if (ts - _last < 50) return; _last = ts;
@@ -21213,7 +21213,7 @@ const MUSCLE_MEMORY_ECHO = (() => {
   return { draw };
 })();
 
-var SOMATIC_MARKER = (() => {
+SOMATIC_MARKER = (() => {
   let _last = 0, t = 0, markers = [];
   function draw(ts) {
     if (ts - _last < 80) return; _last = ts;
@@ -21235,7 +21235,7 @@ var SOMATIC_MARKER = (() => {
   return { draw };
 })();
 
-var EMBODIED_COGNITION = (() => {
+EMBODIED_COGNITION = (() => {
   let _last = 0, t = 0;
   function draw(ts) {
     if (ts - _last < 75) return; _last = ts;
@@ -21538,7 +21538,7 @@ const PRAGMATIC_CONTEXT = (() => {
 
 // --- MOVEMENT & MOTOR ---
 
-var BASAL_GANGLIA_LOOP = (() => {
+BASAL_GANGLIA_LOOP = (() => {
   let _last = 0;
   return { draw(ts) {
     if (ts - _last < 55) return; _last = ts;
@@ -22252,7 +22252,7 @@ const REM_ARCHITECTURE = (() => {
   return{draw};
 })();
 
-var SLOW_WAVE_SLEEP = (() => {
+SLOW_WAVE_SLEEP = (() => {
   let _l=0;
   function draw(ts){
     if(ts-_l<120)return;_l=ts;
@@ -22557,7 +22557,7 @@ const ANHEDONIA_SHADOW = (() => {
   return{draw};
 })();
 
-var PAIN_CATASTROPHIZING = (() => {
+PAIN_CATASTROPHIZING = (() => {
   let _l=0;
   function draw(ts){
     if(ts-_l<170)return;_l=ts;
@@ -23001,7 +23001,7 @@ const EXPLANATORY_GAP = (() => {
   return{draw};
 })();
 
-var INTEGRATED_INFORMATION = (() => {
+INTEGRATED_INFORMATION = (() => {
   let _l=0;
   function draw(ts){
     if(ts-_l<80)return;_l=ts;
@@ -23210,7 +23210,7 @@ const SCAR_FORMATION = (() => {
   return { draw };
 })();
 
-var BONE_REMODELING = (() => {
+BONE_REMODELING = (() => {
   let _last = 0, t = 0;
   function draw(ts) {
     if (ts - _last < 100) return; _last = ts; t += 0.03;
@@ -23721,7 +23721,7 @@ const PROCEDURAL_GROOVE = (() => {
   return { draw };
 })();
 
-var WORKING_MEMORY_BUFFER = (() => {
+WORKING_MEMORY_BUFFER = (() => {
   let _last = 0, slots = [0,0,0,0,0,0,0];
   function draw(ts) {
     if (ts - _last < 110) return; _last = ts;
@@ -24211,7 +24211,7 @@ const BARORECEPTOR_REFLEX = (() => {
 })();
 
 // RENIN_ANGIOTENSIN — cascade dots kidney→blood
-var RENIN_ANGIOTENSIN = (() => {
+RENIN_ANGIOTENSIN = (() => {
   let _last = 0, _pts = [];
   function draw(ts) {
     if (ts - _last < 50) return; _last = ts;
@@ -24740,7 +24740,7 @@ const SELF_EFFICACY_PULSE = (() => {
 })();
 
 // IDENTITY_COHERENCE — stable lattice pattern overlay
-var IDENTITY_COHERENCE = (() => {
+IDENTITY_COHERENCE = (() => {
   let _last = 0;
   function draw(ts) {
     if (ts - _last < 120) return; _last = ts;
@@ -24907,7 +24907,7 @@ const ATTACHMENT_AVOIDANT = (() => {
 })();
 
 // LOVE_BIOCHEMISTRY — oxytocin+dopamine blend shimmer
-var LOVE_BIOCHEMISTRY = (() => {
+LOVE_BIOCHEMISTRY = (() => {
   let _last = 0;
   function draw(ts) {
     if (ts - _last < 70) return; _last = ts;
@@ -25077,7 +25077,7 @@ const LOVING_KINDNESS_FIELD = (() => {
 
 // --- ENDOCRINE DEEP ---
 
-var CORTISOL_AWAKENING = (() => {
+CORTISOL_AWAKENING = (() => {
   let _last = 0;
   function draw(ts) {
     if (ts - _last < 55) return; _last = ts;
@@ -25097,7 +25097,7 @@ var CORTISOL_AWAKENING = (() => {
   return { draw };
 })();
 
-var TESTOSTERONE_PULSE = (() => {
+TESTOSTERONE_PULSE = (() => {
   let _last = 0;
   function draw(ts) {
     if (ts - _last < 60) return; _last = ts;
@@ -25271,7 +25271,7 @@ const DHEA_BASELINE = (() => {
 
 // --- IMMUNE ADVANCED ---
 
-var MAST_CELL_DEGRANULATION = (() => {
+MAST_CELL_DEGRANULATION = (() => {
   let _last = 0;
   function draw(ts) {
     if (ts - _last < 60) return; _last = ts;
@@ -28193,7 +28193,7 @@ const SYNESTHETIC_CROSS = (() => {
   }};
 })();
 
-var PHANTOM_SENSATION = (() => {
+PHANTOM_SENSATION = (() => {
   let _l=0;
   return { draw(ts) {
     if(ts-_l<70)return;_l=ts;
@@ -28241,7 +28241,7 @@ const CONTAGIOUS_YAWN = (() => {
   }};
 })();
 
-var EMOTIONAL_CONTAGION = (() => {
+EMOTIONAL_CONTAGION = (() => {
   let _l=0;
   return { draw(ts) {
     if(ts-_l<60)return;_l=ts;
@@ -28760,7 +28760,7 @@ const PERSPECTIVE_TAKING = (() => {
   }};
 })();
 
-var EMPATHIC_ACCURACY = (() => {
+EMPATHIC_ACCURACY = (() => {
   let _l=0;
   return { draw(ts) {
     if(ts-_l<60)return;_l=ts;
@@ -28920,7 +28920,7 @@ const WHY_SOMETHING_NOT_NOTHING = (() => {
   }};
 })();
 
-var THE_WITNESS = (() => {
+THE_WITNESS = (() => {
   let _l=0;
   return { draw(ts) {
     if(ts-_l<100)return;_l=ts;
@@ -31517,7 +31517,7 @@ const PERISTALSIS_WAVE = (() => {
 })();
 
 // ── MICROBIOME_CHORUS ─────────────────────────────────────────────────────
-var MICROBIOME_CHORUS = (() => {
+MICROBIOME_CHORUS = (() => {
   let _last = 0;
   function draw(ts) {
     if (ts - _last < 400) return; _last = ts;
@@ -31659,7 +31659,7 @@ const SYNAPSE_BLOOM = (() => {
 })();
 
 // ── MYELIN_SHEATH ─────────────────────────────────────────────────────────
-var MYELIN_SHEATH = (() => {
+MYELIN_SHEATH = (() => {
   let _last = 0;
   function draw(ts) {
     if (ts - _last < 300) return; _last = ts;
@@ -31714,7 +31714,7 @@ const NEUROPLASTICITY_WEAVE = (() => {
 })();
 
 // ── MUSCLE_MEMORY_ECHO ────────────────────────────────────────────────────
-var MUSCLE_MEMORY_ECHO = (() => {
+MUSCLE_MEMORY_ECHO = (() => {
   let _last = 0;
   function draw(ts) {
     if (ts - _last < 200) return; _last = ts;
@@ -31735,7 +31735,7 @@ var MUSCLE_MEMORY_ECHO = (() => {
 })();
 
 // ── FASCIA_NETWORK ────────────────────────────────────────────────────────
-var FASCIA_NETWORK = (() => {
+FASCIA_NETWORK = (() => {
   let _last = 0;
   function draw(ts) {
     if (ts - _last < 350) return; _last = ts;
@@ -31761,7 +31761,7 @@ var FASCIA_NETWORK = (() => {
 })();
 
 // ── JOINT_FLUID ───────────────────────────────────────────────────────────
-var JOINT_FLUID = (() => {
+JOINT_FLUID = (() => {
   let _last = 0;
   function draw(ts) {
     if (ts - _last < 400) return; _last = ts;
@@ -32040,7 +32040,7 @@ const PLEASURE_CIRCUIT = (() => {
 })();
 
 // ── MEMORY_CONSOLIDATION ──────────────────────────────────────────────────
-var MEMORY_CONSOLIDATION = (() => {
+MEMORY_CONSOLIDATION = (() => {
   let _last = 0;
   function draw(ts) {
     if (ts - _last < 400) return; _last = ts;
@@ -33397,7 +33397,7 @@ const PRESENCE = (() => {
 })();
 
 // 6. WORKING_MEMORY — 7±2 glowing nodes near prefrontal cortex
-var WORKING_MEMORY = (() => {
+WORKING_MEMORY = (() => {
     let _last = 0;
     const INTERVAL = 35;
     let t = 0;
@@ -33538,7 +33538,7 @@ const EPISODIC_TRACE = (() => {
 })();
 
 // 9. SEMANTIC_WEB — word nodes connected by meaning-threads
-var SEMANTIC_WEB = (() => {
+SEMANTIC_WEB = (() => {
     let _last = 0;
     const INTERVAL = 50;
     let t = 0;
@@ -33806,7 +33806,7 @@ const TRANSLATION = (() => {
 })();
 
 // 16. PROPRIOCEPTION — ghost limb outlines aware of their position
-var PROPRIOCEPTION = (() => {
+PROPRIOCEPTION = (() => {
     let _last = 0;
     const INTERVAL = 40;
     let t = 0;
@@ -34250,7 +34250,7 @@ const ANTICIPATION = (() => {
 })();
 
 // 28. NOSTALGIA — past events shown as sepia photographs dissolving
-var NOSTALGIA = (() => {
+NOSTALGIA = (() => {
     let _last = 0;
     const INTERVAL = 50;
     let t = 0;
@@ -34288,7 +34288,7 @@ var NOSTALGIA = (() => {
 })();
 
 // 29. TEMPORAL_BINDING — cause and effect linked by glowing arcs
-var TEMPORAL_BINDING = (() => {
+TEMPORAL_BINDING = (() => {
     let _last = 0;
     const INTERVAL = 40;
     let t = 0;
@@ -34488,7 +34488,7 @@ const CONVERGENT_FOCUS = (() => {
 })();
 
 // 34. FLOW_STATE — entire body synchronized, golden
-var FLOW_STATE = (() => {
+FLOW_STATE = (() => {
     let _last = 0;
     const INTERVAL = 30;
     let t = 0;
@@ -34522,7 +34522,7 @@ var FLOW_STATE = (() => {
 })();
 
 // 35. CREATIVE_BLOCK — particles spinning, unable to escape gravity well
-var CREATIVE_BLOCK = (() => {
+CREATIVE_BLOCK = (() => {
     let _last = 0;
     const INTERVAL = 25;
     let t = 0;
@@ -34629,7 +34629,7 @@ const COURAGE_SURGE = (() => {
 })();
 
 // 38. FREEZE_RESPONSE — particles suddenly still, then slowly resume
-var FREEZE_RESPONSE = (() => {
+FREEZE_RESPONSE = (() => {
     let _last = 0;
     const INTERVAL = 25;
     let t = 0;
@@ -34908,7 +34908,7 @@ const UNLEARNING = (() => {
 })();
 
 // 45. BECOMING — body outline slowly shifting, never arriving
-var BECOMING = (() => {
+BECOMING = (() => {
     let _last = 0;
     const INTERVAL = 40;
     let t = 0;
