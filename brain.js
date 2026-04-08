@@ -40158,10 +40158,13 @@ const MODEL_SELECTOR = (() => {
           // Don't toggle if we were dragging
           if (e.defaultPrevented) return;
           let newPriority = [...userPriority];
-          if (isInPriority) {
+          if (isInPriority && userPriority[0] === model.key) {
+            // Already active primary — clicking again removes from priority
             newPriority = newPriority.filter(k => k !== model.key);
           } else {
-            newPriority.push(model.key);
+            // Move to front — becomes the active model immediately
+            newPriority = newPriority.filter(k => k !== model.key);
+            newPriority.unshift(model.key);
           }
           const tok = localStorage.getItem('vint_access_token');
           savePriority(newPriority, tok);
