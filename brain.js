@@ -5740,6 +5740,31 @@ const MIC = (() => {
     panel.style.opacity = '0';
   }
 
+  // Persistent mic permission stream — held open so Chrome doesn't forget the grant
+  let _micPermStream = null;
+
+  function _requestMicThenStart() {
+    // If we already have permission, go straight to Web Speech
+    if (_micPermStream) { start(); return; }
+    navigator.mediaDevices.getUserMedia({ audio: true })
+      .then(s => {
+        _micPermStream = s; // keep it alive — proves permission to Chrome
+        start();
+      })
+      .catch(err => {
+        autoListen = false;
+        btn.style.background = 'rgba(6,10,18,0.55)';
+        btn.style.borderColor = 'rgba(255,255,255,0.1)';
+        btn.style.color = 'rgba(218,228,255,0.7)';
+        if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+          showMicBlockedUI();
+        } else {
+          // NotFoundError, AbortError etc — try Web Speech anyway
+          start();
+        }
+      });
+  }
+
   btn.addEventListener('click', () => {
     if (autoListen) {
       stop();
@@ -5751,32 +5776,10 @@ const MIC = (() => {
       btn.style.background = 'rgba(239,83,80,0.4)';
       btn.style.borderColor = 'rgba(239,83,80,0.7)';
       btn.style.color = '#ef5350';
-      // Request mic immediately on user gesture — Chrome will show native prompt
-      // Never pre-check or show a banner before the browser gets its chance to ask
       if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-        // No API support — just try Web Speech directly
-        start();
-        return;
+        start(); return;
       }
-      navigator.mediaDevices.getUserMedia({ audio: true })
-        .then(s => {
-          // Permission granted — release the probe stream and start for real
-          s.getTracks().forEach(t => t.stop());
-          start();
-        })
-        .catch(err => {
-          if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
-            // Only show blocked UI AFTER Chrome already refused (user dismissed prompt or was permanently blocked)
-            autoListen = false;
-            btn.style.background = 'rgba(6,10,18,0.55)';
-            btn.style.borderColor = 'rgba(255,255,255,0.1)';
-            btn.style.color = 'rgba(218,228,255,0.7)';
-            showMicBlockedUI();
-          } else {
-            // NotFoundError (no mic hardware), AbortError, etc. — try anyway
-            start();
-          }
-        });
+      _requestMicThenStart();
     }
   });
 
