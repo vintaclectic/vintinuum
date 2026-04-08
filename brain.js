@@ -5701,9 +5701,9 @@ const MIC = (() => {
     recognition.onstart = () => {
       listening = true;
       _wsRestarting = false;
-      setListening(true);
-      // Only show "listening" on first start, not every restart
+      // Only update visuals + show message on first start, not silent restarts
       if (!_wsWatchdog) {
+        setListening(true);
         showResponse('listening...', 'rgba(218,228,255,.5)');
         _wsKeepalive();
       }
@@ -5711,10 +5711,13 @@ const MIC = (() => {
 
     recognition.onend = () => {
       listening = false;
-      // Always restart immediately if autoListen — no silence timeout should kill us
       if (autoListen && !_wsRestarting) {
+        // Seamless restart — don't touch visuals, just silently reconnect
         _wsRestarting = true;
         setTimeout(() => { _wsRestarting = false; if (autoListen) startWebSpeech(); }, 150);
+      } else if (!autoListen) {
+        // Intentional stop — update visuals
+        setListening(false);
       }
     };
 
