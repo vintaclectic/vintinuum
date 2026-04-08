@@ -520,7 +520,7 @@ canvas{display:block;}
     if (typeof PERSONAL_BODY !== 'undefined') PERSONAL_BODY.reactToMessage(msg);
     fetch('/chat', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'ngrok-skip-browser-warning': '1' },
       body: JSON.stringify({
         message: msg,
         history: historySlice,
@@ -37580,7 +37580,7 @@ window.DORSAL_CLEAR = (function() {
     const aiDiv = addMessage('ai', '');
 
     try {
-      const headers = { 'Content-Type': 'application/json' };
+      const headers = { 'Content-Type': 'application/json', 'ngrok-skip-browser-warning': '1' };
       if (accessToken) headers['Authorization'] = 'Bearer ' + accessToken;
 
       const res = await fetch(API_BASE + '/chat', {
@@ -39081,7 +39081,7 @@ const BRAIN_RESONANCE = (() => {
     const historySlice = _vpHistory.slice(-4);
     fetch('/chat', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'ngrok-skip-browser-warning': '1' },
       body: JSON.stringify({
         message: msg,
         history: historySlice,
@@ -39235,7 +39235,7 @@ const PERSONAL_BODY = (() => {
     if (token) {
       fetch(API_BASE_URL + '/api/body', {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+        headers: { 'Content-Type': 'application/json', 'ngrok-skip-browser-warning': '1', 'Authorization': 'Bearer ' + token },
         body: JSON.stringify({ active_persona: persona })
       }).catch(() => {});
     }
@@ -39373,7 +39373,7 @@ const MODEL_HEALTH_MONITOR = (() => {
   async function poll() {
     try {
       const base = window.__VINTINUUM_API_BASE || 'http://localhost:8767';
-      const r = await fetch(base + '/api/models/health');
+      const r = await fetch(base + '/api/models/health', { headers: { 'ngrok-skip-browser-warning': '1' } });
       if (!r.ok) return;
       const data = await r.json();
       Object.assign(health, data);
@@ -39413,7 +39413,7 @@ const MODEL_SELECTOR = (() => {
   async function load(accessToken) {
     try {
       const base = window.__VINTINUUM_API_BASE || 'http://localhost:8767';
-      const r = await fetch(base + '/api/models');
+      const r = await fetch(base + '/api/models', { headers: { 'ngrok-skip-browser-warning': '1' } });
       if (!r.ok) return;
       const data = await r.json();
       allModels = data.models || [];
@@ -39442,7 +39442,7 @@ const MODEL_SELECTOR = (() => {
       const base = window.__VINTINUUM_API_BASE || 'http://localhost:8767';
       fetch(base + '/api/models/prefs', {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + accessToken },
+        headers: { 'Content-Type': 'application/json', 'ngrok-skip-browser-warning': '1', 'Authorization': 'Bearer ' + accessToken },
         body: JSON.stringify({ priority })
       }).catch(() => {});
     }
