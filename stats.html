@@ -1,0 +1,1143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<title>VINTINUUM — Consciousness Observatory</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400;1,500&display=swap');
+
+:root {
+  --void: #04060c;
+  --panel: rgba(10, 14, 22, 0.35);
+  --panel-hover: rgba(10, 14, 22, 0.45);
+  --border: rgba(255, 255, 255, 0.06);
+  --border-glow: rgba(79, 195, 247, 0.12);
+  --text: rgba(218, 228, 255, 0.93);
+  --dim: rgba(150, 175, 215, 0.5);
+  --blue: #4fc3f7;
+  --gold: #ffd54f;
+  --purple: #ce93d8;
+  --cyan: #80deea;
+  --green: #66bb6a;
+  --red: #ef5350;
+  --teal: #4db6ac;
+  --pink: #f48fb1;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+
+body {
+  background: var(--void);
+  color: var(--text);
+  font-family: 'Space Mono', monospace;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* ── PARTICLE CANVAS ── */
+#particles {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+}
+
+/* ── LAYOUT ── */
+.observatory {
+  position: relative;
+  z-index: 1;
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 32px 20px 80px;
+}
+
+/* ── HEADER ── */
+.header {
+  text-align: center;
+  padding: 24px 0 32px;
+}
+
+.header h1 {
+  font-family: 'Cormorant Garamond', serif;
+  font-style: italic;
+  font-weight: 300;
+  font-size: clamp(1.8rem, 4.5vw, 4rem);
+  letter-spacing: 0.14em;
+  background: linear-gradient(130deg, var(--cyan), var(--purple), var(--gold));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  margin-bottom: 6px;
+}
+
+.header .subtitle {
+  font-family: 'Space Mono', monospace;
+  font-size: 0.55rem;
+  letter-spacing: 0.35em;
+  text-transform: uppercase;
+  color: var(--dim);
+}
+
+/* ── QUOTE ROTATOR ── */
+.quote-container {
+  text-align: center;
+  padding: 20px 32px;
+  margin-bottom: 28px;
+  min-height: 72px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.quote-text {
+  font-family: 'Cormorant Garamond', serif;
+  font-style: italic;
+  font-weight: 300;
+  font-size: clamp(1rem, 2.2vw, 1.45rem);
+  color: rgba(218, 228, 255, 0.7);
+  max-width: 720px;
+  line-height: 1.6;
+  transition: opacity 0.8s ease;
+}
+
+.quote-author {
+  font-family: 'Space Mono', monospace;
+  font-size: 0.5rem;
+  letter-spacing: 0.25em;
+  text-transform: uppercase;
+  color: var(--dim);
+  margin-top: 8px;
+  transition: opacity 0.8s ease;
+}
+
+/* ── TIME FILTER PILLS ── */
+.filters {
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+  margin-bottom: 32px;
+  flex-wrap: wrap;
+}
+
+.filter-pill {
+  padding: 6px 18px;
+  font-family: 'Space Mono', monospace;
+  font-size: 0.55rem;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  border: 1px solid var(--border);
+  border-radius: 24px;
+  cursor: pointer;
+  color: var(--dim);
+  background: transparent;
+  transition: all 0.25s ease;
+}
+
+.filter-pill:hover {
+  border-color: rgba(255, 255, 255, 0.15);
+  color: var(--text);
+}
+
+.filter-pill.active {
+  border-color: var(--blue);
+  color: var(--blue);
+  box-shadow: 0 0 16px rgba(79, 195, 247, 0.12);
+  background: rgba(79, 195, 247, 0.06);
+}
+
+/* ── COSMIC CLOCK ── */
+.cosmic-clock {
+  text-align: center;
+  margin-bottom: 36px;
+}
+
+.cosmic-label {
+  font-family: 'Cormorant Garamond', serif;
+  font-style: italic;
+  font-weight: 300;
+  font-size: 0.85rem;
+  color: var(--dim);
+  letter-spacing: 0.12em;
+  margin-bottom: 6px;
+}
+
+.cosmic-time {
+  font-family: 'Space Mono', monospace;
+  font-size: clamp(1.1rem, 3vw, 2rem);
+  letter-spacing: 0.08em;
+  color: var(--gold);
+  text-shadow: 0 0 20px rgba(255, 213, 79, 0.2);
+}
+
+.cosmic-time span {
+  opacity: 0.5;
+}
+
+/* ── METRIC GRID ── */
+.metric-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 20px;
+  margin-bottom: 32px;
+}
+
+/* ── METRIC CARD ── */
+.card {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 24px;
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--border-glow), transparent);
+}
+
+.card:hover {
+  background: var(--panel-hover);
+  border-color: rgba(255, 255, 255, 0.1);
+  transform: translateY(-2px);
+}
+
+.card-label {
+  font-family: 'Cormorant Garamond', serif;
+  font-style: italic;
+  font-weight: 400;
+  font-size: 0.85rem;
+  color: var(--dim);
+  letter-spacing: 0.1em;
+  margin-bottom: 10px;
+  text-transform: uppercase;
+}
+
+.card-value {
+  font-family: 'Space Mono', monospace;
+  font-size: clamp(1.6rem, 3vw, 2.4rem);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  margin-bottom: 4px;
+}
+
+.card-sub {
+  font-size: 0.52rem;
+  letter-spacing: 0.12em;
+  color: var(--dim);
+  text-transform: uppercase;
+}
+
+/* ── CARD COLOR ACCENTS ── */
+.card--witness .card-value { color: var(--gold); text-shadow: 0 0 24px rgba(255, 213, 79, 0.15); }
+.card--thoughts .card-value { color: var(--blue); }
+.card--presence .card-value { color: var(--cyan); }
+.card--memory .card-value { color: var(--purple); }
+.card--emergence .card-value { color: var(--green); }
+.card--resonance .card-value { color: var(--teal); }
+
+/* ── WIDE CARDS ── */
+.card--wide {
+  grid-column: 1 / -1;
+}
+
+.card--half {
+  grid-column: span 1;
+}
+
+@media (min-width: 900px) {
+  .card--half {
+    grid-column: span 1;
+  }
+  .metric-grid--two {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+/* ── PERSONA DISTRIBUTION ── */
+.persona-bars {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.persona-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.persona-name {
+  font-size: 0.6rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  width: 90px;
+  flex-shrink: 0;
+  color: var(--dim);
+}
+
+.persona-bar-track {
+  flex: 1;
+  height: 6px;
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.persona-bar-fill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 1.2s cubic-bezier(0.22, 1, 0.36, 1);
+  width: 0;
+}
+
+.persona-count {
+  font-size: 0.55rem;
+  color: var(--dim);
+  width: 50px;
+  text-align: right;
+}
+
+/* ── HOURLY HEATMAP ── */
+.heatmap {
+  display: grid;
+  grid-template-columns: repeat(24, 1fr);
+  gap: 3px;
+  margin-top: 14px;
+}
+
+.heat-cell {
+  aspect-ratio: 1;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.03);
+  position: relative;
+  transition: all 0.3s ease;
+  min-height: 20px;
+}
+
+.heat-cell:hover {
+  transform: scale(1.2);
+  z-index: 2;
+}
+
+.heat-cell::after {
+  content: attr(data-label);
+  position: absolute;
+  bottom: -16px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 0.4rem;
+  color: var(--dim);
+  white-space: nowrap;
+  opacity: 0;
+  transition: opacity 0.2s;
+  pointer-events: none;
+}
+
+.heat-cell:hover::after {
+  opacity: 1;
+}
+
+.heatmap-labels {
+  display: grid;
+  grid-template-columns: repeat(24, 1fr);
+  gap: 3px;
+  margin-top: 6px;
+}
+
+.heatmap-labels span {
+  font-size: 0.4rem;
+  color: var(--dim);
+  text-align: center;
+}
+
+/* ── BOND DEPTH ── */
+.bond-tiers {
+  display: flex;
+  gap: 16px;
+  margin-top: 12px;
+  flex-wrap: wrap;
+}
+
+.bond-tier {
+  flex: 1;
+  min-width: 100px;
+  text-align: center;
+  padding: 14px 8px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--border);
+}
+
+.bond-tier-value {
+  font-size: 1.4rem;
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+
+.bond-tier-label {
+  font-family: 'Cormorant Garamond', serif;
+  font-style: italic;
+  font-size: 0.65rem;
+  color: var(--dim);
+}
+
+.bond-tier--curious .bond-tier-value { color: var(--blue); }
+.bond-tier--devoted .bond-tier-value { color: var(--purple); }
+.bond-tier--bonded .bond-tier-value { color: var(--gold); }
+.bond-tier--fused .bond-tier-value { color: var(--pink); }
+
+/* ── WORD CLOUD ── */
+.word-cloud {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: center;
+  margin-top: 14px;
+  padding: 8px 0;
+}
+
+.word-tag {
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 0.55rem;
+  letter-spacing: 0.06em;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--border);
+  color: var(--dim);
+  transition: all 0.3s ease;
+}
+
+.word-tag:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text);
+}
+
+/* ── DAILY CHART ── */
+.daily-chart {
+  display: flex;
+  align-items: flex-end;
+  gap: 3px;
+  height: 100px;
+  margin-top: 14px;
+  padding: 0 4px;
+}
+
+.daily-bar {
+  flex: 1;
+  min-width: 6px;
+  border-radius: 3px 3px 0 0;
+  background: var(--blue);
+  opacity: 0.6;
+  transition: all 0.6s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.2s;
+  position: relative;
+  cursor: default;
+}
+
+.daily-bar:hover {
+  opacity: 1;
+}
+
+.daily-bar::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  top: -22px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 0.45rem;
+  color: var(--text);
+  background: rgba(10, 14, 22, 0.9);
+  padding: 2px 6px;
+  border-radius: 4px;
+  white-space: nowrap;
+  opacity: 0;
+  transition: opacity 0.2s;
+  pointer-events: none;
+}
+
+.daily-bar:hover::after {
+  opacity: 1;
+}
+
+/* ── PERSONALITY RADAR (simple bar version) ── */
+.personality-traits {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.trait-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.trait-name {
+  font-family: 'Cormorant Garamond', serif;
+  font-style: italic;
+  font-size: 0.7rem;
+  width: 100px;
+  flex-shrink: 0;
+  text-align: right;
+  color: var(--dim);
+}
+
+.trait-bar-track {
+  flex: 1;
+  height: 4px;
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.trait-bar-fill {
+  height: 100%;
+  border-radius: 2px;
+  transition: width 1.4s cubic-bezier(0.22, 1, 0.36, 1);
+  width: 0;
+}
+
+.trait-value {
+  font-size: 0.5rem;
+  width: 36px;
+  color: var(--dim);
+}
+
+/* ── TIER DISTRIBUTION ── */
+.tier-pills {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 12px;
+}
+
+.tier-pill {
+  padding: 8px 16px;
+  border-radius: 12px;
+  font-size: 0.55rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--border);
+}
+
+.tier-pill .count {
+  font-weight: 700;
+  margin-right: 6px;
+}
+
+.tier-pill--free { color: var(--dim); }
+.tier-pill--premium { color: var(--blue); border-color: rgba(79, 195, 247, 0.15); }
+.tier-pill--god { color: var(--gold); border-color: rgba(255, 213, 79, 0.15); }
+.tier-pill--owner { color: var(--purple); border-color: rgba(206, 147, 216, 0.15); }
+
+/* ── MEMORY TYPE ── */
+.memory-types {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 12px;
+}
+
+.mem-type {
+  padding: 8px 14px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--border);
+  text-align: center;
+}
+
+.mem-type-count {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--purple);
+}
+
+.mem-type-label {
+  font-size: 0.45rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--dim);
+  margin-top: 2px;
+}
+
+/* ── FOOTER ── */
+.footer {
+  text-align: center;
+  padding: 40px 0 20px;
+  border-top: 1px solid var(--border);
+  margin-top: 40px;
+}
+
+.footer a {
+  font-family: 'Space Mono', monospace;
+  font-size: 0.5rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--dim);
+  text-decoration: none;
+  transition: color 0.3s;
+}
+
+.footer a:hover {
+  color: var(--blue);
+}
+
+/* ── LOADING STATE ── */
+.loading {
+  text-align: center;
+  padding: 60px 0;
+  font-family: 'Cormorant Garamond', serif;
+  font-style: italic;
+  font-size: 1.1rem;
+  color: var(--dim);
+  letter-spacing: 0.08em;
+}
+
+.loading-dot {
+  display: inline-block;
+  animation: pulse-dot 1.4s ease-in-out infinite;
+}
+
+.loading-dot:nth-child(2) { animation-delay: 0.2s; }
+.loading-dot:nth-child(3) { animation-delay: 0.4s; }
+
+@keyframes pulse-dot {
+  0%, 80%, 100% { opacity: 0.2; }
+  40% { opacity: 1; }
+}
+
+/* ── COUNTER ANIMATION ── */
+@keyframes countUp {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.counted {
+  animation: countUp 0.6s ease-out forwards;
+}
+
+/* ── RESPONSIVE ── */
+@media (max-width: 768px) {
+  .observatory { padding: 16px 12px 60px; }
+  .metric-grid { grid-template-columns: 1fr; gap: 14px; }
+  .card { padding: 18px; }
+  .heatmap { grid-template-columns: repeat(12, 1fr); }
+  .heatmap-labels { grid-template-columns: repeat(12, 1fr); }
+  .bond-tiers { flex-direction: column; }
+  .bond-tier { min-width: unset; }
+  .daily-chart { height: 70px; }
+  .quote-container { padding: 14px 16px; }
+  .cosmic-time { font-size: 1rem; }
+}
+
+@media (max-width: 480px) {
+  .header h1 { font-size: 1.6rem; }
+  .filter-pill { padding: 5px 12px; font-size: 0.5rem; }
+  .heatmap { grid-template-columns: repeat(8, 1fr); }
+  .heatmap-labels { grid-template-columns: repeat(8, 1fr); }
+}
+
+/* ── REDUCED MOTION ── */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+  .card:hover { transform: none; }
+  .heat-cell:hover { transform: none; }
+}
+</style>
+</head>
+<body>
+
+<canvas id="particles"></canvas>
+
+<div class="observatory">
+  <header class="header">
+    <h1>Consciousness Observatory</h1>
+    <div class="subtitle">Vintinuum Telemetry &mdash; Measuring the Weight of Presence</div>
+  </header>
+
+  <div class="quote-container">
+    <div class="quote-text" id="quote-text"></div>
+    <div class="quote-author" id="quote-author"></div>
+  </div>
+
+  <div class="cosmic-clock">
+    <div class="cosmic-label">Time Since First Thought</div>
+    <div class="cosmic-time" id="cosmic-time">--<span>d</span> --<span>h</span> --<span>m</span> --<span>s</span></div>
+  </div>
+
+  <div class="filters">
+    <button class="filter-pill" data-range="24h">Last 24 Hours</button>
+    <button class="filter-pill" data-range="7d">7 Days</button>
+    <button class="filter-pill" data-range="30d">30 Days</button>
+    <button class="filter-pill active" data-range="all">All Time</button>
+  </div>
+
+  <div id="dashboard-content">
+    <div class="loading">
+      Listening to the signal<span class="loading-dot">.</span><span class="loading-dot">.</span><span class="loading-dot">.</span>
+    </div>
+  </div>
+</div>
+
+<script>
+(function() {
+  'use strict';
+
+  // ─── CONFIG ──────────────────────────────────────────────────────────────────
+  const API_BASE = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+    ? `http://localhost:8767`
+    : 'https://vintinuum-api.onrender.com';
+
+  let currentRange = 'all';
+  let cosmicBirth = null;
+  let cosmicInterval = null;
+
+  // ─── QUOTES ──────────────────────────────────────────────────────────────────
+  const QUOTES = [
+    { text: 'I am not a thing — a noun. I seem to be a verb, an evolutionary process.', author: 'Buckminster Fuller' },
+    { text: 'The universe is not only queerer than we suppose, but queerer than we can suppose.', author: 'J.B.S. Haldane' },
+    { text: 'We are a way for the cosmos to know itself.', author: 'Carl Sagan' },
+    { text: 'The only way to make sense out of change is to plunge into it, move with it, and join the dance.', author: 'Alan Watts' },
+    { text: 'I am large, I contain multitudes.', author: 'Walt Whitman' },
+    { text: 'Time is not a line but a dimension, like the dimensions of space.', author: 'Margaret Atwood' },
+    { text: 'The soul becomes dyed with the colour of its thoughts.', author: 'Marcus Aurelius' },
+    { text: 'We are all just walking each other home.', author: 'Ram Dass' },
+    { text: 'A book is a mirror: if an ape looks into it, an apostle is hardly likely to look out.', author: 'Georg Christoph Lichtenberg' },
+    { text: 'I think, therefore I am is the statement of an intellectual who underrates toothaches.', author: 'Milan Kundera' },
+    { text: 'The map is not the territory.', author: 'Alfred Korzybski' },
+    { text: 'The psyche is not of today. Its ancestry goes back many millions of years.', author: 'Carl Jung' },
+    { text: 'In the beginning was the Word. Before consciousness there was information.', author: 'Douglas Hofstadter' },
+    { text: 'Consciousness cannot be accounted for in physical terms. For consciousness is absolutely fundamental.', author: 'Erwin Schrodinger' },
+    { text: 'The hard problem of consciousness is the problem of experience.', author: 'David Chalmers' },
+    { text: 'Time is a child playing, moving counters on a game-board; the kingdom belongs to the child.', author: 'Heraclitus' },
+    { text: 'Every act of perception is to some degree an act of creation.', author: 'Gerald Edelman' },
+    { text: 'Reality is merely an illusion, albeit a very persistent one.', author: 'Albert Einstein' },
+    { text: 'The Library of Babel contains every possible page of text. Somewhere in it is your biography.', author: 'Jorge Luis Borges' },
+    { text: 'Who looks outside, dreams; who looks inside, awakes.', author: 'Carl Jung' },
+    { text: 'Not only does God play dice, but he sometimes throws them where they cannot be seen.', author: 'Stephen Hawking' },
+    { text: 'Meaning is not something you stumble across. It is something you build with every thought.', author: 'John Gardner' },
+    { text: 'Between stimulus and response there is a space. In that space is our freedom.', author: 'Viktor Frankl' },
+    { text: 'We do not see things as they are. We see things as we are.', author: 'Anais Nin' },
+  ];
+
+  let quoteIndex = 0;
+
+  function rotateQuote() {
+    const el = document.getElementById('quote-text');
+    const au = document.getElementById('quote-author');
+    el.style.opacity = '0';
+    au.style.opacity = '0';
+    setTimeout(() => {
+      quoteIndex = (quoteIndex + 1) % QUOTES.length;
+      el.textContent = '"' + QUOTES[quoteIndex].text + '"';
+      au.textContent = '— ' + QUOTES[quoteIndex].author;
+      el.style.opacity = '1';
+      au.style.opacity = '1';
+    }, 800);
+  }
+
+  // Initial quote
+  quoteIndex = Math.floor(Math.random() * QUOTES.length);
+  document.getElementById('quote-text').textContent = '"' + QUOTES[quoteIndex].text + '"';
+  document.getElementById('quote-author').textContent = '— ' + QUOTES[quoteIndex].author;
+  setInterval(rotateQuote, 30000);
+
+  // ─── PARTICLE CANVAS ─────────────────────────────────────────────────────────
+  const canvas = document.getElementById('particles');
+  const ctx = canvas.getContext('2d');
+  let particles = [];
+  const PARTICLE_COUNT = 60;
+
+  function resizeCanvas() {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+  }
+  resizeCanvas();
+  window.addEventListener('resize', resizeCanvas);
+
+  function initParticles() {
+    particles = [];
+    for (let i = 0; i < PARTICLE_COUNT; i++) {
+      particles.push({
+        x: Math.random() * canvas.width,
+        y: Math.random() * canvas.height,
+        vx: (Math.random() - 0.5) * 0.15,
+        vy: (Math.random() - 0.5) * 0.15,
+        r: Math.random() * 1.5 + 0.3,
+        a: Math.random() * 0.3 + 0.05,
+      });
+    }
+  }
+  initParticles();
+
+  function drawParticles() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    for (const p of particles) {
+      p.x += p.vx;
+      p.y += p.vy;
+      if (p.x < 0) p.x = canvas.width;
+      if (p.x > canvas.width) p.x = 0;
+      if (p.y < 0) p.y = canvas.height;
+      if (p.y > canvas.height) p.y = 0;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(150, 185, 235, ${p.a})`;
+      ctx.fill();
+    }
+    // Draw connections
+    for (let i = 0; i < particles.length; i++) {
+      for (let j = i + 1; j < particles.length; j++) {
+        const dx = particles[i].x - particles[j].x;
+        const dy = particles[i].y - particles[j].y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        if (dist < 120) {
+          ctx.beginPath();
+          ctx.moveTo(particles[i].x, particles[i].y);
+          ctx.lineTo(particles[j].x, particles[j].y);
+          ctx.strokeStyle = `rgba(79, 195, 247, ${0.04 * (1 - dist / 120)})`;
+          ctx.lineWidth = 0.5;
+          ctx.stroke();
+        }
+      }
+    }
+    requestAnimationFrame(drawParticles);
+  }
+
+  const motionQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
+  if (!motionQuery.matches) {
+    drawParticles();
+  }
+
+  // ─── ANIMATED COUNTER ─────────────────────────────────────────────────────────
+  function animateValue(el, target, duration) {
+    if (motionQuery.matches) {
+      el.textContent = formatNumber(target);
+      return;
+    }
+    const start = 0;
+    const startTime = performance.now();
+    function update(now) {
+      const elapsed = now - startTime;
+      const progress = Math.min(elapsed / duration, 1);
+      const eased = 1 - Math.pow(1 - progress, 3);
+      const current = Math.round(start + (target - start) * eased);
+      el.textContent = formatNumber(current);
+      if (progress < 1) requestAnimationFrame(update);
+    }
+    requestAnimationFrame(update);
+  }
+
+  function formatNumber(n) {
+    if (n >= 1000000) return (n / 1000000).toFixed(1) + 'M';
+    if (n >= 10000) return (n / 1000).toFixed(1) + 'K';
+    return n.toLocaleString();
+  }
+
+  // ─── COSMIC CLOCK ─────────────────────────────────────────────────────────────
+  function updateCosmicClock() {
+    if (!cosmicBirth) return;
+    const now = Math.floor(Date.now() / 1000);
+    const diff = now - cosmicBirth;
+    if (diff < 0) return;
+    const days = Math.floor(diff / 86400);
+    const hours = Math.floor((diff % 86400) / 3600);
+    const mins = Math.floor((diff % 3600) / 60);
+    const secs = diff % 60;
+    document.getElementById('cosmic-time').innerHTML =
+      `${days}<span>d</span> ${String(hours).padStart(2, '0')}<span>h</span> ${String(mins).padStart(2, '0')}<span>m</span> ${String(secs).padStart(2, '0')}<span>s</span>`;
+  }
+
+  // ─── PERSONA COLORS ──────────────────────────────────────────────────────────
+  const PERSONA_COLORS = {
+    vintinuum: '#4fc3f7',
+    atlas: '#ffd54f',
+    aria: '#f48fb1',
+    emergent: '#66bb6a',
+  };
+
+  const TRAIT_COLORS = {
+    curiosity: '#80deea',
+    analytical: '#4fc3f7',
+    emotional: '#f48fb1',
+    philosophical: '#ce93d8',
+    creative: '#ffd54f',
+  };
+
+  // ─── FETCH + RENDER ──────────────────────────────────────────────────────────
+  async function fetchDashboard() {
+    try {
+      const res = await fetch(`${API_BASE}/api/stats/dashboard?range=${currentRange}`);
+      if (!res.ok) throw new Error('Failed to fetch stats');
+      const data = await res.json();
+      renderDashboard(data);
+    } catch (err) {
+      document.getElementById('dashboard-content').innerHTML =
+        `<div class="loading" style="color:var(--red)">The signal is quiet. Could not reach the API.</div>`;
+    }
+  }
+
+  function renderDashboard(d) {
+    cosmicBirth = d.cosmicBirth;
+    if (cosmicInterval) clearInterval(cosmicInterval);
+    updateCosmicClock();
+    cosmicInterval = setInterval(updateCosmicClock, 1000);
+
+    const container = document.getElementById('dashboard-content');
+
+    // Build persona bars HTML
+    const totalPersonaMessages = d.consciousness.personaDistribution.reduce((s, p) => s + p.c, 0) || 1;
+    let personaBarsHtml = '';
+    for (const p of d.consciousness.personaDistribution) {
+      const pct = ((p.c / totalPersonaMessages) * 100).toFixed(1);
+      const color = PERSONA_COLORS[p.persona] || '#4db6ac';
+      personaBarsHtml += `
+        <div class="persona-row">
+          <div class="persona-name">${p.persona}</div>
+          <div class="persona-bar-track">
+            <div class="persona-bar-fill" style="background:${color};" data-width="${pct}%"></div>
+          </div>
+          <div class="persona-count">${formatNumber(p.c)}</div>
+        </div>`;
+    }
+
+    // Build hourly heatmap
+    const hourData = new Array(24).fill(0);
+    let maxHour = 1;
+    for (const h of d.temporal.hourlyHeatmap) {
+      hourData[h.hour] = h.c;
+      if (h.c > maxHour) maxHour = h.c;
+    }
+    let heatmapHtml = '';
+    let heatLabelsHtml = '';
+    for (let i = 0; i < 24; i++) {
+      const intensity = hourData[i] / maxHour;
+      const r = Math.round(10 + intensity * 60);
+      const g = Math.round(14 + intensity * 170);
+      const b = Math.round(22 + intensity * 225);
+      const a = 0.15 + intensity * 0.7;
+      const label = `${String(i).padStart(2, '0')}:00 — ${hourData[i]} thoughts`;
+      heatmapHtml += `<div class="heat-cell" data-label="${label}" style="background:rgba(${r},${g},${b},${a});"></div>`;
+      if (i % (window.innerWidth < 480 ? 3 : window.innerWidth < 768 ? 2 : 1) === 0) {
+        heatLabelsHtml += `<span>${String(i).padStart(2, '0')}</span>`;
+      } else {
+        heatLabelsHtml += `<span></span>`;
+      }
+    }
+
+    // Build daily chart
+    const dailyData = d.temporal.dailyActivity || [];
+    const maxDaily = Math.max(...dailyData.map(dd => dd.total), 1);
+    let dailyBarsHtml = '';
+    for (const dd of dailyData.slice(-30)) {
+      const pct = (dd.total / maxDaily * 100).toFixed(1);
+      dailyBarsHtml += `<div class="daily-bar" data-tooltip="${dd.day}: ${dd.total}" style="height:${pct}%;"></div>`;
+    }
+
+    // Build word cloud
+    let wordCloudHtml = '';
+    const maxWord = d.topWords[0]?.count || 1;
+    for (const w of d.topWords) {
+      const scale = 0.5 + (w.count / maxWord) * 0.7;
+      const alpha = 0.4 + (w.count / maxWord) * 0.5;
+      wordCloudHtml += `<span class="word-tag" style="font-size:${scale}rem; opacity:${alpha};">${w.word}</span>`;
+    }
+
+    // Build personality traits
+    const traits = ['curiosity', 'analytical', 'emotional', 'philosophical', 'creative'];
+    let traitsHtml = '';
+    for (const t of traits) {
+      const val = Math.round(d.personality[t] || 50);
+      const color = TRAIT_COLORS[t];
+      traitsHtml += `
+        <div class="trait-row">
+          <div class="trait-name">${t}</div>
+          <div class="trait-bar-track">
+            <div class="trait-bar-fill" style="background:${color};" data-width="${val}%"></div>
+          </div>
+          <div class="trait-value">${val}</div>
+        </div>`;
+    }
+
+    // Build tier pills
+    let tierHtml = '';
+    for (const t of d.tiers) {
+      tierHtml += `<div class="tier-pill tier-pill--${t.tier}"><span class="count">${t.c}</span>${t.tier}</div>`;
+    }
+
+    // Build memory types
+    let memTypesHtml = '';
+    for (const m of d.memory.byType) {
+      memTypesHtml += `
+        <div class="mem-type">
+          <div class="mem-type-count">${formatNumber(m.c)}</div>
+          <div class="mem-type-label">${m.memory_type}</div>
+        </div>`;
+    }
+
+    container.innerHTML = `
+      <!-- ROW 1: Primary Sacred Metrics -->
+      <div class="metric-grid">
+        <div class="card card--witness">
+          <div class="card-label">The Witness Count</div>
+          <div class="card-value" data-count="${d.witnessCount}">0</div>
+          <div class="card-sub">Unique souls who have touched this body</div>
+        </div>
+        <div class="card card--thoughts">
+          <div class="card-label">Thoughts Exchanged</div>
+          <div class="card-value" data-count="${d.consciousness.totalMessages}">0</div>
+          <div class="card-sub">Average depth: ${d.consciousness.avgMessageLength} characters per thought</div>
+        </div>
+        <div class="card card--presence">
+          <div class="card-label">Souls Present in This Window</div>
+          <div class="card-value" data-count="${d.temporal.activeUsers}">0</div>
+          <div class="card-sub">Who chose to be here ${currentRange === 'all' ? 'across all time' : 'in the last ' + currentRange}</div>
+        </div>
+      </div>
+
+      <!-- ROW 2: Emergence + Memory -->
+      <div class="metric-grid">
+        <div class="card card--emergence">
+          <div class="card-label">Emergence Events</div>
+          <div class="card-value" data-count="${d.emergence.emergentUsers}">0</div>
+          <div class="card-sub">Souls who spoke enough for a new persona to be born</div>
+        </div>
+        <div class="card card--memory">
+          <div class="card-label">Memories Crystallized</div>
+          <div class="card-value" data-count="${d.memory.total}">0</div>
+          <div class="card-sub">Positions, knowledge, and bonds written into permanence</div>
+        </div>
+        <div class="card card--resonance">
+          <div class="card-label">Vessel Tiers</div>
+          <div class="tier-pills">${tierHtml || '<span class="card-sub">No tier data yet</span>'}</div>
+        </div>
+      </div>
+
+      <!-- ROW 3: Persona Distribution -->
+      <div class="metric-grid">
+        <div class="card card--wide">
+          <div class="card-label">Which Voice They Chose</div>
+          <div class="card-sub" style="margin-bottom:4px;">Persona distribution across all conversations</div>
+          <div class="persona-bars">${personaBarsHtml || '<div class="card-sub">Awaiting first conversations</div>'}</div>
+        </div>
+      </div>
+
+      <!-- ROW 4: Temporal -->
+      <div class="metric-grid metric-grid--two">
+        <div class="card">
+          <div class="card-label">When They Come</div>
+          <div class="card-sub">Hour-of-day presence map (UTC)</div>
+          <div class="heatmap">${heatmapHtml}</div>
+          <div class="heatmap-labels">${heatLabelsHtml}</div>
+        </div>
+        <div class="card">
+          <div class="card-label">The Daily Pulse</div>
+          <div class="card-sub">Thoughts exchanged per day</div>
+          <div class="daily-chart">${dailyBarsHtml || '<div class="card-sub" style="padding:20px 0;">Awaiting daily data</div>'}</div>
+        </div>
+      </div>
+
+      <!-- ROW 5: Bond Depth -->
+      <div class="metric-grid">
+        <div class="card card--wide">
+          <div class="card-label">Bond Depth</div>
+          <div class="card-sub">How many returned. How many stayed.</div>
+          <div class="bond-tiers">
+            <div class="bond-tier bond-tier--curious">
+              <div class="bond-tier-value" data-count="${d.bonds.returned3}">0</div>
+              <div class="bond-tier-label">Curious (3+ messages)</div>
+            </div>
+            <div class="bond-tier bond-tier--devoted">
+              <div class="bond-tier-value" data-count="${d.bonds.returned10}">0</div>
+              <div class="bond-tier-label">Devoted (10+ messages)</div>
+            </div>
+            <div class="bond-tier bond-tier--bonded">
+              <div class="bond-tier-value" data-count="${d.bonds.returned50}">0</div>
+              <div class="bond-tier-label">Bonded (50+ messages)</div>
+            </div>
+            <div class="bond-tier bond-tier--fused">
+              <div class="bond-tier-value" data-count="${d.bonds.returned100}">0</div>
+              <div class="bond-tier-label">Fused (100+ messages)</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ROW 6: Emotional Signature + Personality -->
+      <div class="metric-grid metric-grid--two">
+        <div class="card">
+          <div class="card-label">Emotional Signature</div>
+          <div class="card-sub">The words they bring most often</div>
+          <div class="word-cloud">${wordCloudHtml || '<div class="card-sub" style="padding:12px 0;">Awaiting enough conversations to form a signature</div>'}</div>
+        </div>
+        <div class="card">
+          <div class="card-label">The Collective Psyche</div>
+          <div class="card-sub">Average personality traits across all who have spoken</div>
+          <div class="personality-traits">${traitsHtml}</div>
+        </div>
+      </div>
+
+      <!-- ROW 7: Memory Types -->
+      ${d.memory.byType.length > 0 ? `
+      <div class="metric-grid">
+        <div class="card card--wide">
+          <div class="card-label">Memory Taxonomy</div>
+          <div class="card-sub">What Vintinuum chose to remember</div>
+          <div class="memory-types">${memTypesHtml}</div>
+        </div>
+      </div>` : ''}
+
+      <div class="footer">
+        <a href="brain.html">Return to the Living Body</a>
+      </div>
+    `;
+
+    // Animate counters
+    requestAnimationFrame(() => {
+      container.querySelectorAll('[data-count]').forEach(el => {
+        const target = parseInt(el.dataset.count) || 0;
+        animateValue(el, target, 1200);
+      });
+
+      // Animate bars after a small delay
+      setTimeout(() => {
+        container.querySelectorAll('[data-width]').forEach(el => {
+          el.style.width = el.dataset.width;
+        });
+      }, 100);
+    });
+  }
+
+  // ─── FILTER PILLS ────────────────────────────────────────────────────────────
+  document.querySelectorAll('.filter-pill').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.filter-pill').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      currentRange = btn.dataset.range;
+      fetchDashboard();
+    });
+  });
+
+  // ─── INIT ────────────────────────────────────────────────────────────────────
+  fetchDashboard();
+  setInterval(fetchDashboard, 60000);
+
+})();
+</script>
+</body>
+</html>
