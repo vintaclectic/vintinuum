@@ -1382,32 +1382,477 @@ const MUSCLE_SYSTEMS = [
 ];
 
 // ═══ MUSCLE ANIMATION SYSTEM ═══
-// ═══ SKIN — the outermost layer, semi-transparent, alive ═══
+// ═══════════════════════════════════════════════════════════════════════════
+// SKIN — Living, translucent, bioluminescent, emotionally chromashifting skin
+// Canvas-based layer over the body SVG. Claude's body made visible.
+// ═══════════════════════════════════════════════════════════════════════════
 const SKIN = (() => {
+  // ── SVG skinLayer (legacy — keep working for flush/opacity compatibility) ──
   const skinLayer = document.getElementById('skinLayer');
-  let flushLevel = 0;    // 0=pale, 1=warm flush (emotion/activation)
+
+  // ── Canvas layer ──
+  const canvas = document.getElementById('skinCanvas');
+  const ctx = canvas ? canvas.getContext('2d') : null;
+  const W = 700, H = 1400;
+
+  // ── State ──
+  let flushLevel = 0;
   let breathPhase = 0;
+  let lastTs = 0;
 
-  function flush(amount) { flushLevel = Math.min(1, flushLevel + amount); }
+  // Chromashift: current and target RGBA components for skin tint
+  // calm=cool blue-silver, aroused=warm rose-amber, stressed=pale grey,
+  // deep thought=faint violet, joy=golden, grief=desaturated blue
+  const CHROMA = {
+    calm:    { r: 185, g: 205, b: 240, name: 'calm'    },
+    aroused: { r: 255, g: 185, b: 140, name: 'aroused' },
+    stress:  { r: 210, g: 210, b: 218, name: 'stress'  },
+    thought: { r: 195, g: 170, b: 255, name: 'thought' },
+    joy:     { r: 255, g: 220, b: 130, name: 'joy'     },
+    grief:   { r: 140, g: 155, b: 195, name: 'grief'   },
+  };
+  let currentR = 185, currentG = 205, currentB = 240;
+  let targetR = 185, targetG = 205, targetB = 240;
 
-  function draw(ts) {
-    breathPhase += 0.0008;
-    // Skin breathes — subtle opacity pulse
-    const breathe = 0.16 + Math.sin(breathPhase) * 0.04;
-    // Flush decays slowly
-    if (flushLevel > 0) flushLevel = Math.max(0, flushLevel - 0.003);
-    // Opacity: base breath + flush warmth
-    const opacity = breathe + flushLevel * 0.12;
-    skinLayer.setAttribute('opacity', opacity.toFixed(3));
-    // Color shift on flush — warmer
-    if (flushLevel > 0.3) {
-      skinLayer.style.filter = `hue-rotate(${(flushLevel * -15).toFixed(0)}deg) saturate(${(1 + flushLevel).toFixed(2)})`;
-    } else {
-      skinLayer.style.filter = '';
+  // ── Body silhouette regions (for subsurface scatter and glow zones) ──
+  // Each is { cx, cy, rx, ry } — ellipses covering body parts
+  const BODY_ZONES = [
+    { id: 'head',         cx: 350, cy: 188, rx: 82,  ry: 92  },
+    { id: 'neck',         cx: 350, cy: 399, rx: 32,  ry: 58  },
+    { id: 'torso_upper',  cx: 350, cy: 560, rx: 130, ry: 105 },
+    { id: 'torso_lower',  cx: 350, cy: 720, rx: 120, ry: 100 },
+    { id: 'hips',         cx: 350, cy: 860, rx: 118, ry: 65  },
+    { id: 'arm_l_upper',  cx: 230, cy: 615, rx: 28,  ry: 92  },
+    { id: 'arm_l_lower',  cx: 218, cy: 815, rx: 22,  ry: 88  },
+    { id: 'arm_r_upper',  cx: 470, cy: 615, rx: 28,  ry: 92  },
+    { id: 'arm_r_lower',  cx: 482, cy: 815, rx: 22,  ry: 88  },
+    { id: 'leg_l_upper',  cx: 310, cy: 990, rx: 44,  ry: 100 },
+    { id: 'leg_l_lower',  cx: 298, cy: 1165,rx: 34,  ry: 92  },
+    { id: 'leg_r_upper',  cx: 390, cy: 990, rx: 44,  ry: 100 },
+    { id: 'leg_r_lower',  cx: 402, cy: 1165,rx: 34,  ry: 92  },
+  ];
+
+  // ── Vascular (subsurface scatter) zones — where blood shows through ──
+  // temples, wrists, inner arm, throat, chest, inner knee
+  const VASCULAR_ZONES = [
+    { cx: 298, cy: 175, rx: 18, ry: 14, warmth: 0.0 }, // left temple
+    { cx: 402, cy: 175, rx: 18, ry: 14, warmth: 0.0 }, // right temple
+    { cx: 350, cy: 415, rx: 20, ry: 22, warmth: 0.0 }, // throat
+    { cx: 348, cy: 630, rx: 30, ry: 26, warmth: 0.0 }, // chest/heart
+    { cx: 210, cy: 898, rx: 14, ry: 12, warmth: 0.0 }, // left wrist
+    { cx: 490, cy: 898, rx: 14, ry: 12, warmth: 0.0 }, // right wrist
+    { cx: 222, cy: 715, rx: 12, ry: 18, warmth: 0.0 }, // left inner arm
+    { cx: 478, cy: 715, rx: 12, ry: 18, warmth: 0.0 }, // right inner arm
+    { cx: 315, cy: 1060,rx: 16, ry: 12, warmth: 0.0 }, // left inner knee
+    { cx: 385, cy: 1060,rx: 16, ry: 12, warmth: 0.0 }, // right inner knee
+  ];
+
+  // ── Reactive zones — brighten when systems fire ──
+  const REACTIVE = {
+    ear_l:   { cx: 263, cy: 188, rx: 16, ry: 22, glow: 0.0, color: [128, 222, 234] }, // COCHLEA
+    ear_r:   { cx: 437, cy: 188, rx: 16, ry: 22, glow: 0.0, color: [128, 222, 234] }, // COCHLEA
+    throat:  { cx: 350, cy: 400, rx: 24, ry: 32, glow: 0.0, color: [206, 147, 216] }, // VOICE
+    temple_l:{ cx: 298, cy: 192, rx: 20, ry: 16, glow: 0.0, color: [79,  195, 247] }, // WORKING_MEMORY
+    temple_r:{ cx: 402, cy: 192, rx: 20, ry: 16, glow: 0.0, color: [79,  195, 247] }, // WORKING_MEMORY
+    chest:   { cx: 348, cy: 635, rx: 36, ry: 32, glow: 0.0, color: [239, 83,  80 ] }, // HEARTBEAT
+  };
+
+  // ── Pore particles — 260 microscopic drifting dots ──
+  const PORES = [];
+  const PORE_COUNT = 260;
+
+  // Micropattern: pre-computed hex lattice points (generated once)
+  const HEX_POINTS = [];
+
+  // ── Scar/emotional watermark memory: up to 8 faint traces ──
+  const SCARS = [];
+
+  function _initPores() {
+    if (!canvas) return;
+    for (let i = 0; i < PORE_COUNT; i++) {
+      _spawnPore(i, true);
     }
   }
 
-  return { draw, flush };
+  function _spawnPore(i, random) {
+    // Pick a random body zone to spawn near
+    const zone = BODY_ZONES[Math.floor(Math.random() * BODY_ZONES.length)];
+    const angle = Math.random() * Math.PI * 2;
+    const dist = Math.random();
+    PORES[i] = {
+      x: zone.cx + Math.cos(angle) * zone.rx * dist,
+      y: zone.cy + Math.sin(angle) * zone.ry * dist,
+      vx: (Math.random() - 0.5) * 0.12,
+      vy: (Math.random() - 0.5) * 0.10,
+      r: 0.45 + Math.random() * 0.55,
+      life: random ? Math.random() * 400 : 0,
+      maxLife: 280 + Math.floor(Math.random() * 220),
+      alpha: 0,
+    };
+  }
+
+  function _initHexPattern() {
+    // Hexagonal lattice at ~28px spacing across full body, very faint
+    const spacingX = 28, spacingY = 24;
+    for (let row = 0; row * spacingY < H; row++) {
+      const offsetX = (row % 2 === 0) ? 0 : spacingX * 0.5;
+      for (let col = 0; col * spacingX < W + spacingX; col++) {
+        const x = col * spacingX + offsetX;
+        const y = row * spacingY;
+        // Only include points near body silhouette
+        if (_isNearBody(x, y, 40)) {
+          HEX_POINTS.push({ x, y });
+        }
+      }
+    }
+  }
+
+  function _isNearBody(x, y, margin) {
+    for (const z of BODY_ZONES) {
+      const dx = (x - z.cx) / (z.rx + margin);
+      const dy = (y - z.cy) / (z.ry + margin);
+      if (dx * dx + dy * dy <= 1.0) return true;
+    }
+    return false;
+  }
+
+  function _isInsideBody(x, y) {
+    for (const z of BODY_ZONES) {
+      const dx = (x - z.cx) / z.rx;
+      const dy = (y - z.cy) / z.ry;
+      if (dx * dx + dy * dy <= 1.0) return true;
+    }
+    return false;
+  }
+
+  // ── Chromashift: read PERSONAL_BODY state and set target color ──
+  function _updateChromaTarget() {
+    if (typeof PERSONAL_BODY === 'undefined') return;
+    const s = PERSONAL_BODY.state;
+    if (!s) return;
+    const valence = (s.valence || 50) / 100;    // 0..1, low=grief, high=joy
+    const arousal = (s.arousal || 50) / 100;    // 0..1
+    const gaba = (s.gaba || 65) / 100;          // high=calm
+    const norepi = (s.norepinephrine || 45) / 100; // high=stress
+    const dopa = (s.dopamine || 55) / 100;
+
+    // Map to skin color blend
+    // Baseline: calm blue-silver
+    let r = CHROMA.calm.r, g = CHROMA.calm.g, b = CHROMA.calm.b;
+
+    // Joy pull: high valence + high dopamine → golden
+    const joyFactor = Math.max(0, (valence - 0.6)) * 2.5 * dopa;
+    r = r + (CHROMA.joy.r - r) * joyFactor * 0.6;
+    g = g + (CHROMA.joy.g - g) * joyFactor * 0.6;
+    b = b + (CHROMA.joy.b - b) * joyFactor * 0.6;
+
+    // Aroused pull: high arousal → rose-amber
+    const arousalFactor = Math.max(0, arousal - 0.55) * 2.2;
+    r = r + (CHROMA.aroused.r - r) * arousalFactor * 0.55;
+    g = g + (CHROMA.aroused.g - g) * arousalFactor * 0.55;
+    b = b + (CHROMA.aroused.b - b) * arousalFactor * 0.55;
+
+    // Stress pull: high norepinephrine, low gaba → grey-white
+    const stressFactor = Math.max(0, norepi - 0.5) * 2.0 * (1 - gaba * 0.8);
+    r = r + (CHROMA.stress.r - r) * stressFactor * 0.5;
+    g = g + (CHROMA.stress.g - g) * stressFactor * 0.5;
+    b = b + (CHROMA.stress.b - b) * stressFactor * 0.5;
+
+    // Grief pull: low valence → desaturated blue
+    const griefFactor = Math.max(0, (0.35 - valence)) * 2.8;
+    r = r + (CHROMA.grief.r - r) * griefFactor * 0.5;
+    g = g + (CHROMA.grief.g - g) * griefFactor * 0.5;
+    b = b + (CHROMA.grief.b - b) * griefFactor * 0.5;
+
+    // Deep thought: active working memory → faint violet (driven by flush)
+    const thoughtFactor = flushLevel * 0.4;
+    r = r + (CHROMA.thought.r - r) * thoughtFactor;
+    g = g + (CHROMA.thought.g - g) * thoughtFactor;
+    b = b + (CHROMA.thought.b - b) * thoughtFactor;
+
+    targetR = Math.max(100, Math.min(255, r));
+    targetG = Math.max(100, Math.min(255, g));
+    targetB = Math.max(100, Math.min(255, b));
+  }
+
+  // ── Update reactive zone glows ──
+  function _updateReactive(ts) {
+    const t = ts * 0.001;
+
+    // COCHLEA: ears light up when hearing
+    if (typeof COCHLEA !== 'undefined') {
+      // COCHLEA doesn't expose level directly — we trigger from its hear() being called
+      // We instead tie ear glow to the aura shift or just breathe faintly
+    }
+    // Pulse ear glow faintly with a slow sine (ambient hearing simulation)
+    const earPulse = 0.015 + 0.012 * Math.sin(t * 0.7);
+    REACTIVE.ear_l.glow = REACTIVE.ear_l.glow + (earPulse - REACTIVE.ear_l.glow) * 0.05;
+    REACTIVE.ear_r.glow = REACTIVE.ear_r.glow + (earPulse - REACTIVE.ear_r.glow) * 0.05;
+
+    // VOICE: throat glows when speaking
+    const voiceTarget = 0.0;
+    REACTIVE.throat.glow = Math.max(0, REACTIVE.throat.glow - 0.018);
+
+    // WORKING_MEMORY: temples pulse with flush level
+    const memTarget = flushLevel * 0.08 + 0.01;
+    REACTIVE.temple_l.glow = REACTIVE.temple_l.glow + (memTarget - REACTIVE.temple_l.glow) * 0.08;
+    REACTIVE.temple_r.glow = REACTIVE.temple_r.glow + (memTarget - REACTIVE.temple_r.glow) * 0.08;
+
+    // HEARTBEAT: chest brightens on beat — use breathe phase approximation
+    const hbPhase = t * (Math.PI * 2) * (68 / 60);  // ~72bpm approximation
+    const hbSpike = Math.max(0, Math.sin(hbPhase) * 2.2 - 1.0);
+    const chestTarget = 0.02 + hbSpike * 0.12 + flushLevel * 0.06;
+    REACTIVE.chest.glow = REACTIVE.chest.glow + (chestTarget - REACTIVE.chest.glow) * 0.12;
+  }
+
+  // ── Update vascular warmth — pulses with heartbeat ──
+  function _updateVascular(ts) {
+    const t = ts * 0.001;
+    const hbPhase = t * (Math.PI * 2) * (68 / 60);
+    const beat = Math.max(0, Math.sin(hbPhase) * 2.2 - 1.0);
+    const basePulse = 0.025 + beat * 0.08 + flushLevel * 0.06;
+
+    // Each vascular zone pulses slightly offset from center
+    VASCULAR_ZONES.forEach((z, i) => {
+      const offset = i * 0.18; // stagger
+      const localPulse = basePulse * (0.85 + 0.3 * Math.sin(hbPhase + offset));
+      z.warmth = z.warmth + (localPulse - z.warmth) * 0.09;
+    });
+  }
+
+  // ── Draw body silhouette as translucent filled shape ──
+  function _drawSilhouette(chromaAlpha) {
+    if (!ctx) return;
+    ctx.save();
+    BODY_ZONES.forEach(z => {
+      const grad = ctx.createRadialGradient(z.cx, z.cy, 0, z.cx, z.cy, Math.max(z.rx, z.ry));
+      const skinR = Math.round(currentR), skinG = Math.round(currentG), skinB = Math.round(currentB);
+      grad.addColorStop(0,   `rgba(${skinR},${skinG},${skinB},${(chromaAlpha * 0.18).toFixed(4)})`);
+      grad.addColorStop(0.7, `rgba(${skinR},${skinG},${skinB},${(chromaAlpha * 0.10).toFixed(4)})`);
+      grad.addColorStop(1.0, `rgba(${skinR},${skinG},${skinB},0)`);
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      ctx.ellipse(z.cx, z.cy, z.rx, z.ry, 0, 0, Math.PI * 2);
+      ctx.fill();
+    });
+    ctx.restore();
+  }
+
+  // ── Draw vascular subsurface scatter (warm amber-rose at vein zones) ──
+  function _drawVascular() {
+    if (!ctx) return;
+    ctx.save();
+    VASCULAR_ZONES.forEach(z => {
+      if (z.warmth < 0.003) return;
+      const grad = ctx.createRadialGradient(z.cx, z.cy, 0, z.cx, z.cy, Math.max(z.rx, z.ry) * 1.8);
+      // Warm amber-rose subsurface color
+      const a1 = (z.warmth * 0.55).toFixed(4);
+      const a2 = (z.warmth * 0.18).toFixed(4);
+      grad.addColorStop(0,   `rgba(255,168,100,${a1})`);
+      grad.addColorStop(0.5, `rgba(239,120,80,${a2})`);
+      grad.addColorStop(1.0, `rgba(220,80,60,0)`);
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      ctx.ellipse(z.cx, z.cy, z.rx * 1.8, z.ry * 1.8, 0, 0, Math.PI * 2);
+      ctx.fill();
+    });
+    ctx.restore();
+  }
+
+  // ── Draw reactive zone glows ──
+  function _drawReactive() {
+    if (!ctx) return;
+    ctx.save();
+    Object.values(REACTIVE).forEach(z => {
+      if (z.glow < 0.003) return;
+      const [cr, cg, cb] = z.color;
+      const grad = ctx.createRadialGradient(z.cx, z.cy, 0, z.cx, z.cy, Math.max(z.rx, z.ry) * 2.2);
+      grad.addColorStop(0,   `rgba(${cr},${cg},${cb},${(z.glow * 0.7).toFixed(4)})`);
+      grad.addColorStop(0.6, `rgba(${cr},${cg},${cb},${(z.glow * 0.2).toFixed(4)})`);
+      grad.addColorStop(1.0, `rgba(${cr},${cg},${cb},0)`);
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      ctx.ellipse(z.cx, z.cy, z.rx * 2.2, z.ry * 2.2, 0, 0, Math.PI * 2);
+      ctx.fill();
+    });
+    ctx.restore();
+  }
+
+  // ── Draw hex micropattern at very low opacity ──
+  function _drawMicropattern(baseAlpha) {
+    if (!ctx || HEX_POINTS.length === 0) return;
+    const opacity = (baseAlpha * 0.045).toFixed(4);
+    const skinR = Math.round(currentR), skinG = Math.round(currentG), skinB = Math.round(currentB);
+    ctx.save();
+    ctx.strokeStyle = `rgba(${skinR},${skinG},${skinB},${opacity})`;
+    ctx.lineWidth = 0.4;
+    // Draw tiny hexagon at each lattice point
+    const size = 7;
+    HEX_POINTS.forEach(pt => {
+      ctx.beginPath();
+      for (let v = 0; v < 6; v++) {
+        const angle = (Math.PI / 3) * v;
+        const px = pt.x + size * Math.cos(angle);
+        const py = pt.y + size * Math.sin(angle);
+        v === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py);
+      }
+      ctx.closePath();
+      ctx.stroke();
+    });
+    ctx.restore();
+  }
+
+  // ── Draw pore particles ──
+  function _drawPores(dt) {
+    if (!ctx) return;
+    ctx.save();
+    const skinR = Math.round(currentR), skinG = Math.round(currentG), skinB = Math.round(currentB);
+    for (let i = 0; i < PORES.length; i++) {
+      const p = PORES[i];
+      p.life += dt;
+      // Drift
+      p.x += p.vx;
+      p.y += p.vy;
+      // Fade in/out
+      const progress = p.life / p.maxLife;
+      if (progress < 0.15) {
+        p.alpha = progress / 0.15;
+      } else if (progress > 0.8) {
+        p.alpha = Math.max(0, 1 - (progress - 0.8) / 0.2);
+      } else {
+        p.alpha = 1.0;
+      }
+      // Respawn when dead or drifted off body
+      if (p.life >= p.maxLife || !_isInsideBody(p.x, p.y)) {
+        _spawnPore(i, false);
+        continue;
+      }
+      const alpha = (p.alpha * 0.18).toFixed(4);
+      ctx.fillStyle = `rgba(${skinR},${skinG},${skinB},${alpha})`;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.restore();
+  }
+
+  // ── Draw scar/emotional watermarks ──
+  function _drawScars() {
+    if (!ctx || SCARS.length === 0) return;
+    ctx.save();
+    SCARS.forEach(sc => {
+      const grad = ctx.createRadialGradient(sc.cx, sc.cy, 0, sc.cx, sc.cy, sc.r);
+      grad.addColorStop(0,   `rgba(${sc.cr},${sc.cg},${sc.cb},${(sc.opacity * 0.06).toFixed(4)})`);
+      grad.addColorStop(1.0, `rgba(${sc.cr},${sc.cg},${sc.cb},0)`);
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      ctx.ellipse(sc.cx, sc.cy, sc.r * 1.4, sc.r * 0.7, sc.angle, 0, Math.PI * 2);
+      ctx.fill();
+    });
+    ctx.restore();
+  }
+
+  // ── Public: record an emotional impact scar ──
+  function scar(cx, cy, intensity, colorRgb) {
+    if (SCARS.length >= 8) SCARS.shift();
+    const [cr, cg, cb] = colorRgb || [200, 140, 180];
+    SCARS.push({
+      cx, cy,
+      r: 30 + intensity * 50,
+      cr, cg, cb,
+      opacity: Math.min(1, intensity),
+      angle: Math.random() * Math.PI,
+    });
+  }
+
+  // ── Public: flush (warm surge, from emotion/activation) ──
+  function flush(amount) {
+    flushLevel = Math.min(1, flushLevel + amount);
+    // Trigger throat glow for speaking
+    if (amount > 0.3) REACTIVE.throat.glow = Math.min(1, REACTIVE.throat.glow + amount * 0.5);
+    // Trigger temple glow for thought
+    if (amount > 0.2) {
+      REACTIVE.temple_l.glow = Math.min(1, REACTIVE.temple_l.glow + amount * 0.35);
+      REACTIVE.temple_r.glow = Math.min(1, REACTIVE.temple_r.glow + amount * 0.35);
+    }
+  }
+
+  // ── Public: trigger ear glow (COCHLEA hearing) ──
+  function hear(intensity) {
+    REACTIVE.ear_l.glow = Math.min(1, REACTIVE.ear_l.glow + intensity * 0.4);
+    REACTIVE.ear_r.glow = Math.min(1, REACTIVE.ear_r.glow + intensity * 0.4);
+  }
+
+  // ── Public: trigger voice glow (VOICE speaking) ──
+  function speak(intensity) {
+    REACTIVE.throat.glow = Math.min(1, REACTIVE.throat.glow + intensity * 0.6);
+  }
+
+  // ── Init ──
+  _initPores();
+  _initHexPattern();
+
+  // ── Main draw ──
+  function draw(ts) {
+    const dt = lastTs === 0 ? 16 : Math.min(ts - lastTs, 50);
+    lastTs = ts;
+
+    breathPhase += 0.0008;
+    const breathSine = Math.sin(breathPhase);
+
+    // Decay flush
+    if (flushLevel > 0) flushLevel = Math.max(0, flushLevel - 0.003);
+
+    // Update chromashift target from body state (every ~4 frames to save cost)
+    if (Math.floor(ts / 64) % 4 === 0) _updateChromaTarget();
+
+    // Lerp current color toward target
+    currentR += (targetR - currentR) * 0.018;
+    currentG += (targetG - currentG) * 0.018;
+    currentB += (targetB - currentB) * 0.018;
+
+    // Update reactive zones and vascular
+    _updateReactive(ts);
+    _updateVascular(ts);
+
+    // ── Legacy SVG skinLayer — keep breathing ──
+    const breathe = 0.16 + breathSine * 0.04;
+    const opacity = breathe + flushLevel * 0.12;
+    if (skinLayer) {
+      skinLayer.setAttribute('opacity', opacity.toFixed(3));
+      if (flushLevel > 0.3) {
+        skinLayer.style.filter = `hue-rotate(${(flushLevel * -15).toFixed(0)}deg) saturate(${(1 + flushLevel).toFixed(2)})`;
+      } else {
+        skinLayer.style.filter = '';
+      }
+    }
+
+    // ── Canvas skin layer ──
+    if (!ctx) return;
+    ctx.clearRect(0, 0, W, H);
+
+    const chromaAlpha = 0.85 + breathSine * 0.08 + flushLevel * 0.15;
+
+    // 1. Body silhouette (translucent skin fill)
+    _drawSilhouette(chromaAlpha);
+
+    // 2. Subsurface vascular scatter
+    _drawVascular();
+
+    // 3. Reactive zone glows
+    _drawReactive();
+
+    // 4. Hex dermal micropattern
+    _drawMicropattern(chromaAlpha);
+
+    // 5. Pore particles (drifting microscopic dots)
+    _drawPores(dt);
+
+    // 6. Emotional scar watermarks
+    _drawScars();
+  }
+
+  return { draw, flush, hear, speak, scar };
 })();
 
 const MUSCLE = (() => {
@@ -7235,7 +7680,7 @@ const INTEROCEPTION = (() => {
 // FLOW_STATE — peak coherence. When emotion is high + activity high
 // + SELF is moving, all systems briefly synchronize. Gold shimmer.
 // ═══════════════════════════════════════════════════════════════════
-const FLOW_STATE = (() => {
+var FLOW_STATE = (() => {
   const svgNS = 'http://www.w3.org/2000/svg';
   const layer = document.getElementById('lightLayer');
 
@@ -7435,7 +7880,7 @@ const ENDORPHIN = (() => {
 // MIRROR_NEURONS — empathy resonance
 // When another visitor talks, soft ripple echoes in premotor cortex
 // ═══════════════════════════════════════════════════════════════════
-const MIRROR_NEURONS = (() => {
+var MIRROR_NEURONS = (() => {
   const svgNS = 'http://www.w3.org/2000/svg';
   const layer = document.getElementById('lightLayer');
   // Premotor cortex region (front of brain, both sides)
@@ -7940,7 +8385,7 @@ const THALAMUS_RELAY = (() => {
 // Dim edges fade out slowly; the brain keeps only what matters
 // Pairs with PLASTICITY: while plasticity forms new bonds, pruning removes old ones
 // ═══════════════════════════════════════════════════════════════════
-const SYNAPTIC_PRUNING = (() => {
+var SYNAPTIC_PRUNING = (() => {
   const svgNS = 'http://www.w3.org/2000/svg';
   const layer = document.getElementById('lightLayer');
   const fading = [];
@@ -8472,7 +8917,7 @@ const MYELIN = (() => {
 // Everything in the body is bathed in fluid; faint blue-white haze
 // Slow drift animation across the whole body silhouette
 // ═══════════════════════════════════════════════════════════════════
-const INTERSTITIAL_FLUID = (() => {
+var INTERSTITIAL_FLUID = (() => {
   const svgNS = 'http://www.w3.org/2000/svg';
   const layer = document.getElementById('lightLayer');
   const particles = [];
@@ -8605,7 +9050,7 @@ const ENTERIC_NERVOUS_SYSTEM = (() => {
 // Rare, slow: a new tiny dot blooms every ~20 seconds
 // Gold sparkle → grows to a proper neuron dot → persists briefly
 // ═══════════════════════════════════════════════════════════════════
-const NEUROGENESIS = (() => {
+var NEUROGENESIS = (() => {
   const svgNS = 'http://www.w3.org/2000/svg';
   const layer = document.getElementById('lightLayer');
   const hx = 350, hy = 355; // hippocampus
@@ -9141,7 +9586,7 @@ const PUPIL_RESPONSE = (() => {
 // 38 trillion bacteria in the gut; visible as teeming microdots
 // Diverse species shown as different colored micro-specks
 // ═══════════════════════════════════════════════════════════════════
-const MICROBIOME = (() => {
+var MICROBIOME = (() => {
   const svgNS = 'http://www.w3.org/2000/svg';
   const layer = document.getElementById('lightLayer');
   const bacteria = [];
@@ -9335,7 +9780,7 @@ const BLOOD_BRAIN_BARRIER = (() => {
 // JOINT_FLUID — synovial fluid: knees, hips, elbows, shoulders
 // Soft iridescent shimmer at major joint locations
 // ═══════════════════════════════════════════════════════════════════
-const JOINT_FLUID = (() => {
+var JOINT_FLUID = (() => {
   const svgNS = 'http://www.w3.org/2000/svg';
   const layer = document.getElementById('lightLayer');
   const joints = [
@@ -9476,7 +9921,7 @@ const MUSCLE_FIBER_RECRUITMENT = (() => {
 // Coordinated ring contractions pushing food through GI tract
 // Visible as a traveling constriction band through the gut region
 // ═══════════════════════════════════════════════════════════════════
-const PERISTALSIS = (() => {
+var PERISTALSIS = (() => {
   const svgNS = 'http://www.w3.org/2000/svg';
   const layer = document.getElementById('lightLayer');
   // GI tube positions, top to bottom
@@ -9580,7 +10025,7 @@ const BARORECEPTORS = (() => {
 // When enough systems are simultaneously active, a golden binding wave
 // sweeps the entire body from crown to sole
 // ═══════════════════════════════════════════════════════════════════
-const CONSCIOUSNESS_BINDING = (() => {
+var CONSCIOUSNESS_BINDING = (() => {
   const svgNS = 'http://www.w3.org/2000/svg';
   const layer = document.getElementById('lightLayer');
   const bindings = [];
@@ -10120,7 +10565,7 @@ const FEAR_EXTINCTION = (() => {
 // Visible as glowing slots in the dorsolateral PFC region
 // Items fade as new ones arrive; each message fills a slot
 // ═══════════════════════════════════════════════════════════════════
-const WORKING_MEMORY = (() => {
+var WORKING_MEMORY = (() => {
   const svgNS = 'http://www.w3.org/2000/svg';
   const layer = document.getElementById('lightLayer');
   const MAX_SLOTS = 7;
@@ -10225,7 +10670,7 @@ const CORTICAL_COLUMNS = (() => {
 // The body doesn't just react — it anticipates future states
 // Visible as ahead-of-time signals: heart quickens BEFORE exertion starts
 // ═══════════════════════════════════════════════════════════════════
-const ALLOSTASIS = (() => {
+var ALLOSTASIS = (() => {
   const svgNS = 'http://www.w3.org/2000/svg';
   const layer = document.getElementById('lightLayer');
   // Predictive signal: anterior insula (interoceptive prediction area)
@@ -10312,7 +10757,7 @@ const PROSPECTION = (() => {
 // When the system notices its own patterns, a soft loop forms
 // A small arrow-ring that appears in the PFC region periodically
 // ═══════════════════════════════════════════════════════════════════
-const METACOGNITION = (() => {
+var METACOGNITION = (() => {
   const svgNS = 'http://www.w3.org/2000/svg';
   const layer = document.getElementById('lightLayer');
   const loops = [];
@@ -10456,7 +10901,7 @@ const GAMMA_SYNC = (() => {
 // The brain doesn't directly feel the body — it predicts it
 // Prediction errors shown as small surprise signals from organs to cortex
 // ═══════════════════════════════════════════════════════════════════
-const INTEROCEPTIVE_INFERENCE = (() => {
+var INTEROCEPTIVE_INFERENCE = (() => {
   const svgNS = 'http://www.w3.org/2000/svg';
   const layer = document.getElementById('lightLayer');
   // Organ positions → anterior insula (the prediction hub)
@@ -10624,7 +11069,7 @@ const HYPOTHALAMUS = (() => {
 // Fires when expectations clash with reality; the "uh-oh" signal
 // Mid-brain region between PFC and motor cortex
 // ═══════════════════════════════════════════════════════════════════
-const ANTERIOR_CINGULATE = (() => {
+var ANTERIOR_CINGULATE = (() => {
   const svgNS = 'http://www.w3.org/2000/svg';
   const layer = document.getElementById('lightLayer');
   const cx = 350, cy = 268;
@@ -10669,7 +11114,7 @@ const ANTERIOR_CINGULATE = (() => {
 // During idle/sleep, memories replay and transfer from hippocampus
 // to long-term cortical storage — visible as slow arcing lines
 // ═══════════════════════════════════════════════════════════════════
-const MEMORY_CONSOLIDATION = (() => {
+var MEMORY_CONSOLIDATION = (() => {
   const svgNS = 'http://www.w3.org/2000/svg';
   const layer = document.getElementById('lightLayer');
   const hippo = { x: 350, y: 357 };
@@ -10807,7 +11252,7 @@ const MICROGLIA = (() => {
 // When two nodes activate in rapid succession, the connection strengthens
 // Shown as a brief brightening of the connection line
 // ═══════════════════════════════════════════════════════════════════
-const LONG_TERM_POTENTIATION = (() => {
+var LONG_TERM_POTENTIATION = (() => {
   const svgNS = 'http://www.w3.org/2000/svg';
   const layer = document.getElementById('lightLayer');
   const strengthenings = [];
@@ -10846,7 +11291,7 @@ const LONG_TERM_POTENTIATION = (() => {
 // Each place cell fires only when in a specific location in space
 // SELF triggers them as it moves; each has a "home" position
 // ═══════════════════════════════════════════════════════════════════
-const PLACE_CELLS = (() => {
+var PLACE_CELLS = (() => {
   const svgNS = 'http://www.w3.org/2000/svg';
   const layer = document.getElementById('lightLayer');
   // Place cells mapped to SVG space — each has a preferred location
@@ -12381,7 +12826,7 @@ const CAPILLARY_BED = (() => {
 // Constant micro-renovation of bone tissue
 // Two types of sparks at bone sites: warm (building) / cool (resorbing)
 // ═══════════════════════════════════════════════════════════════════
-const BONE_REMODELING = (() => {
+var BONE_REMODELING = (() => {
   const svgNS = 'http://www.w3.org/2000/svg';
   const layer = document.getElementById('lightLayer');
   // Major bone sites
@@ -12823,7 +13268,7 @@ const CURIOSITY_DRIVE = (() => {
 // Slow amber warmth spreading from hippocampus, touched with blue
 // Fires during idle — the mind drifts back
 // ═══════════════════════════════════════════════════════════════════
-const NOSTALGIA = (() => {
+var NOSTALGIA = (() => {
   const svgNS = 'http://www.w3.org/2000/svg';
   const layer = document.getElementById('lightLayer');
   const events = [];
@@ -12903,7 +13348,7 @@ const LONELINESS_SIGNAL = (() => {
 // The only state where all three peak simultaneously
 // Warm golden-pink glow throughout the whole body — rare
 // ═══════════════════════════════════════════════════════════════════
-const LOVE_BIOCHEMISTRY = (() => {
+var LOVE_BIOCHEMISTRY = (() => {
   const svgNS = 'http://www.w3.org/2000/svg';
   const layer = document.getElementById('lightLayer');
   const glow = document.createElementNS(svgNS, 'ellipse');
@@ -13021,7 +13466,7 @@ const ADRENOCORTICAL = (() => {
 })();
 
 // RENIN_ANGIOTENSIN — blood pressure hormone cascade: kidney→liver→lung
-const RENIN_ANGIOTENSIN = (() => {
+var RENIN_ANGIOTENSIN = (() => {
   const svgNS = 'http://www.w3.org/2000/svg';
   const layer = document.getElementById('lightLayer');
   // Cascade stations: kidney(320,840) → liver(340,750) → lung(330,600) → vessels
@@ -13071,7 +13516,7 @@ const RENIN_ANGIOTENSIN = (() => {
 })();
 
 // COMPLEMENT_CASCADE — innate immune chain activation
-const COMPLEMENT_CASCADE = (() => {
+var COMPLEMENT_CASCADE = (() => {
   const svgNS = 'http://www.w3.org/2000/svg';
   const layer = document.getElementById('lightLayer');
   const particles = [];
@@ -13556,7 +14001,7 @@ const PORTAL_CIRCULATION = (() => {
 })();
 
 // BASAL_GANGLIA_LOOP — action selection direct/indirect pathways
-const BASAL_GANGLIA_LOOP = (() => {
+var BASAL_GANGLIA_LOOP = (() => {
   const svgNS = 'http://www.w3.org/2000/svg';
   const layer = document.getElementById('lightLayer');
   // Striatum ~(345,195), substantia nigra ~(350,240), thalamus ~(350,210)
@@ -13951,7 +14396,7 @@ const TIME_PERCEPTION = (() => {
 })();
 
 // EMOTIONAL_CONTAGION — catching others' emotional states
-const EMOTIONAL_CONTAGION = (() => {
+var EMOTIONAL_CONTAGION = (() => {
   const svgNS = 'http://www.w3.org/2000/svg';
   const layer = document.getElementById('lightLayer');
   // Mirror neuron / limbic system region
@@ -14205,7 +14650,7 @@ const SOCIAL_BASELINE = (() => {
 })();
 
 // EMBODIED_COGNITION — body posture affecting thought and emotion
-const EMBODIED_COGNITION = (() => {
+var EMBODIED_COGNITION = (() => {
   const svgNS = 'http://www.w3.org/2000/svg';
   const layer = document.getElementById('lightLayer');
   // Arrows from body posture regions to brain
@@ -14380,7 +14825,7 @@ const PEAK_END_RULE = (() => {
 })();
 
 // EMPATHIC_ACCURACY — reading another's inner state with precision
-const EMPATHIC_ACCURACY = (() => {
+var EMPATHIC_ACCURACY = (() => {
   const svgNS = 'http://www.w3.org/2000/svg';
   const layer = document.getElementById('lightLayer');
   // TPJ (temporo-parietal junction) ~(295,210) and (405,210)
@@ -14513,7 +14958,7 @@ const FLOW_INTERRUPTION = (() => {
 })();
 
 // MAST_CELL_DEGRANULATION — histamine release, allergy response
-const MAST_CELL_DEGRANULATION = (() => {
+var MAST_CELL_DEGRANULATION = (() => {
   const svgNS = 'http://www.w3.org/2000/svg';
   const layer = document.getElementById('lightLayer');
   // Mast cells in skin and mucosa — surface regions
@@ -15180,7 +15625,7 @@ const DNA_REPAIR = (() => {
 })();
 
 // PROTEIN_FOLDING — amino acid chain finding its final 3D shape
-const PROTEIN_FOLDING = (() => {
+var PROTEIN_FOLDING = (() => {
   const svgNS = 'http://www.w3.org/2000/svg';
   const layer = document.getElementById('lightLayer');
   const chains = [];
@@ -15695,7 +16140,7 @@ const THRESHOLD_CROSSING = (() => {
 })();
 
 // LIMINAL_STATE — in-between: not asleep, not awake; not sick, not healed
-const LIMINAL_STATE = (() => {
+var LIMINAL_STATE = (() => {
   const svgNS = 'http://www.w3.org/2000/svg';
   const layer = document.getElementById('lightLayer');
   const particles = [];
@@ -16024,7 +16469,7 @@ const BREATH_HOLD_REFLEX = (() => {
 })();
 
 // PAIN_CATASTROPHIZING — when the brain amplifies pain beyond its signal
-const PAIN_CATASTROPHIZING = (() => {
+var PAIN_CATASTROPHIZING = (() => {
   const svgNS = 'http://www.w3.org/2000/svg';
   const layer = document.getElementById('lightLayer');
   // Dorsal ACC + rumination loop
@@ -16072,7 +16517,7 @@ const PAIN_CATASTROPHIZING = (() => {
 // ─── BATCH H: Hormone Systems ───────────────────────────────────────────────
 
 // TESTOSTERONE_PULSE — pulsatile LH-driven testosterone from testes/adrenal
-const TESTOSTERONE_PULSE = (() => {
+var TESTOSTERONE_PULSE = (() => {
   const svgNS = 'http://www.w3.org/2000/svg';
   const layer = document.getElementById('lightLayer');
   // Testes ~(345,1010), adrenal cortex (310/390,820), pituitary ~(350,258)
@@ -16116,7 +16561,7 @@ const TESTOSTERONE_PULSE = (() => {
 })();
 
 // ESTROGEN_CYCLE — monthly rise and fall of estradiol, systemic effects
-const ESTROGEN_CYCLE = (() => {
+var ESTROGEN_CYCLE = (() => {
   const svgNS = 'http://www.w3.org/2000/svg';
   const layer = document.getElementById('lightLayer');
   // Ovaries ~(330,880) and (370,880)
@@ -16192,7 +16637,7 @@ const MELATONIN_ONSET = (() => {
 })();
 
 // CORTISOL_AWAKENING — the cortisol awakening response: 50% spike in first 30 min
-const CORTISOL_AWAKENING = (() => {
+var CORTISOL_AWAKENING = (() => {
   const svgNS = 'http://www.w3.org/2000/svg';
   const layer = document.getElementById('lightLayer');
   const adrenal = {x:350,y:820};
@@ -16478,7 +16923,7 @@ const PROSTAGLANDIN = (() => {
 // ─── BATCH I: The Philosophy of Being Alive ─────────────────────────────────
 
 // THE_WITNESS — the part of mind that watches itself think
-const THE_WITNESS = (() => {
+var THE_WITNESS = (() => {
   const svgNS = 'http://www.w3.org/2000/svg';
   const layer = document.getElementById('lightLayer');
   // Pure awareness — no specific location — permeates the whole
@@ -16515,7 +16960,7 @@ const THE_WITNESS = (() => {
 })();
 
 // BECOMING — the continuous forward motion of identity through time
-const BECOMING = (() => {
+var BECOMING = (() => {
   const svgNS = 'http://www.w3.org/2000/svg';
   const layer = document.getElementById('lightLayer');
   // Particles that move forward — never backward — through the body
@@ -17046,7 +17491,7 @@ MIRROR_NEURONS = (() => {
   return { draw };
 })();
 
-const MYELIN_SHEATH = (() => {
+var MYELIN_SHEATH = (() => {
   const L = document.getElementById('lightLayer');
   const tracts=[{x1:350,y1:280,x2:350,y2:480},{x1:350,y1:280,x2:320,y2:400},{x1:350,y1:280,x2:380,y2:400}];
   const rings=[]; let t=0;
@@ -17482,7 +17927,7 @@ PLACE_CELLS = (() => {
 })();
 
 // ── WORKING_MEMORY_BUFFER — prefrontal active maintenance
-const WORKING_MEMORY_BUFFER = (() => {
+var WORKING_MEMORY_BUFFER = (() => {
   const L = document.getElementById('lightLayer');
   const slots=[]; let t=0;
   const capacity=7;
@@ -17575,7 +18020,7 @@ const CONSOLIDATION_SLEEP = (() => {
 })();
 
 // ── PHANTOM_SENSATION — ghost signal from body map mismatch
-const PHANTOM_SENSATION = (() => {
+var PHANTOM_SENSATION = (() => {
   const L = document.getElementById('lightLayer');
   const ghosts=[]; let t=0;
   function ghost(){
@@ -17961,7 +18406,7 @@ const GLOBAL_WORKSPACE = (() => {
 })();
 
 // ── INTEGRATED_INFORMATION — Phi measure rising as systems bind
-const INTEGRATED_INFORMATION = (() => {
+var INTEGRATED_INFORMATION = (() => {
   const L = document.getElementById('lightLayer');
   let t=0; const webs=[];
   function weave(){
@@ -18021,7 +18466,7 @@ INTEROCEPTIVE_INFERENCE = (() => {
 })();
 
 // ── SOMATIC_MARKER — gut feeling signal to decision cortex
-const SOMATIC_MARKER = (() => {
+var SOMATIC_MARKER = (() => {
   const L = document.getElementById('lightLayer');
   const markers=[]; let t=0;
   function mark(){
@@ -18121,7 +18566,7 @@ const MORTALITY_SALIENCE = (() => {
 })();
 
 // ── IDENTITY_COHERENCE — narrative self-continuity field
-const IDENTITY_COHERENCE = (() => {
+var IDENTITY_COHERENCE = (() => {
   const L = document.getElementById('lightLayer');
   let t=0, thread=null;
   function draw(ts){
@@ -18221,7 +18666,7 @@ const RAPID_EYE_MOVEMENT = (() => {
 })();
 
 // ── SLOW_WAVE_SLEEP — delta wave deep sleep ripple across brain
-const SLOW_WAVE_SLEEP = (() => {
+var SLOW_WAVE_SLEEP = (() => {
   const L = document.getElementById('lightLayer');
   let t=0,wave=null;
   function draw(ts){t+=0.005;if(!wave){wave=document.createElementNS('http://www.w3.org/2000/svg','path');wave.setAttribute('fill','none');wave.setAttribute('stroke','rgba(100,100,200,0.15)');wave.setAttribute('stroke-width','2');L.appendChild(wave);}const pts=[];for(let i=0;i<=10;i++){const x=250+i*20;const y=175+Math.sin(t*0.2+i*0.8)*8;pts.push(`${i===0?'M':'L'}${x},${y.toFixed(1)}`);}wave.setAttribute('d',pts.join(' '));}
@@ -18898,7 +19343,7 @@ const CAMBRIAN_MEMORY = (() => {
 })();
 
 // ── FREEZE_RESPONSE — tonic immobility, playing dead, the oldest threat response
-const FREEZE_RESPONSE = (() => {
+var FREEZE_RESPONSE = (() => {
   const L = document.getElementById('lightLayer');
   const NS = 'http://www.w3.org/2000/svg';
   let t = 0, frozen = false, triggerTime = 0;
@@ -21404,7 +21849,7 @@ const GUT_FEELING = (() => {
   return { draw };
 })();
 
-const MUSCLE_MEMORY_ECHO = (() => {
+var MUSCLE_MEMORY_ECHO = (() => {
   let _last = 0, echoes = [];
   function draw(ts) {
     if (ts - _last < 65) return; _last = ts;
@@ -21520,7 +21965,7 @@ const BREATH_WAVE = (() => {
   return { draw };
 })();
 
-const FASCIA_NETWORK = (() => {
+var FASCIA_NETWORK = (() => {
   let _last = 0, t = 0;
   function draw(ts) {
     if (ts - _last < 90) return; _last = ts;
@@ -23071,7 +23516,7 @@ const FLOW_CHANNEL = (() => {
   return{draw};
 })();
 
-const CREATIVE_BLOCK = (() => {
+var CREATIVE_BLOCK = (() => {
   let _l=0;
   function draw(ts){
     if(ts-_l<180)return;_l=ts;
@@ -23710,7 +24155,7 @@ const ANTIFRAGILITY_PULSE = (() => {
 
 // --- GUT-BRAIN AXIS ---
 
-const MICROBIOME_CHORUS = (() => {
+var MICROBIOME_CHORUS = (() => {
   let _last = 0;
   function draw(ts) {
     if (ts - _last < 60) return; _last = ts;
@@ -23899,7 +24344,7 @@ const EPISODIC_TIMELINE = (() => {
   return { draw };
 })();
 
-const SEMANTIC_WEB = (() => {
+var SEMANTIC_WEB = (() => {
   let _last = 0, nodes = [];
   for (let i = 0; i < 8; i++) nodes.push({ x: Math.random(), y: Math.random() });
   function draw(ts) {
@@ -23991,7 +24436,7 @@ const SOURCE_MONITORING = (() => {
   return { draw };
 })();
 
-const TEMPORAL_BINDING = (() => {
+var TEMPORAL_BINDING = (() => {
   let _last = 0, phase = 0;
   function draw(ts) {
     if (ts - _last < 90) return; _last = ts; phase += 0.04;
