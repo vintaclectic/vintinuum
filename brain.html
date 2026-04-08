@@ -239,6 +239,96 @@ canvas{display:block;}
   <!-- VOICE MUTE TOGGLE -->
   <button id="voiceToggle" onclick="if(typeof VOICE!=='undefined')VOICE.toggle()" title="Toggle voice" style="position:fixed;bottom:24px;left:24px;z-index:1000;background:rgba(6,10,18,0.55);border:1px solid rgba(255,255,255,0.1);border-radius:50%;width:36px;height:36px;cursor:pointer;font-size:1rem;display:flex;align-items:center;justify-content:center;color:rgba(218,228,255,0.7);transition:all .2s;padding:0;">🔊</button>
 
+  <!-- REPRODUCTIVE CONTROL PANEL -->
+  <button id="reproToggle" onclick="document.getElementById('reproPanel').classList.toggle('open')" title="Reproductive System Controls" style="position:fixed;bottom:24px;left:70px;z-index:1000;background:rgba(6,10,18,0.55);border:1px solid rgba(206,147,216,0.3);border-radius:50%;width:36px;height:36px;cursor:pointer;font-size:1rem;display:flex;align-items:center;justify-content:center;color:rgba(206,147,216,0.7);transition:all .2s;padding:0;">💜</button>
+  
+  <div id="reproPanel" style="position:fixed;bottom:70px;left:24px;z-index:1000;background:rgba(6,10,18,0.95);border:1px solid rgba(206,147,216,0.25);border-radius:14px;padding:16px;width:260px;opacity:0;pointer-events:none;transition:opacity .2s, transform .2s;transform:translateY(10px);">
+    <style>
+      #reproPanel.open { opacity:1; pointer-events:all; transform:translateY(0); }
+      #reproPanel .rp-title { font-size:.55rem; letter-spacing:.25em; text-transform:uppercase; color:rgba(206,147,216,0.7); margin-bottom:12px; }
+      #reproPanel .rp-row { display:flex; align-items:center; justify-content:space-between; margin-bottom:10px; }
+      #reproPanel .rp-label { font-size:.54rem; color:rgba(218,228,255,0.7); }
+      #reproPanel .rp-value { font-size:.54rem; color:rgba(206,147,216,0.9); font-family:'Space Mono',monospace; }
+      #reproPanel input[type="range"] { width:100px; height:4px; background:rgba(255,255,255,0.1); border-radius:2px; -webkit-appearance:none; }
+      #reproPanel input[type="range"]::-webkit-slider-thumb { -webkit-appearance:none; width:12px; height:12px; background:rgba(206,147,216,0.8); border-radius:50%; cursor:pointer; }
+      #reproPanel button { padding:6px 12px; font-size:.52rem; letter-spacing:.1em; border:1px solid rgba(206,147,216,0.3); border-radius:8px; cursor:pointer; color:rgba(206,147,216,0.8); background:rgba(206,147,216,0.1); transition:all .15s; margin-right:6px; margin-bottom:6px; }
+      #reproPanel button:hover { border-color:rgba(206,147,216,0.5); background:rgba(206,147,216,0.2); }
+      #reproPanel .rp-status { font-size:.5rem; color:rgba(218,228,255,0.5); margin-top:8px; padding-top:8px; border-top:1px solid rgba(255,255,255,0.05); }
+      #reproPanel .rp-hormone { display:flex; align-items:center; gap:6px; margin-bottom:4px; }
+      #reproPanel .rp-hbar { height:3px; background:rgba(255,255,255,0.06); border-radius:2px; flex:1; overflow:hidden; }
+      #reproPanel .rp-hfill { height:100%; border-radius:2px; transition:width .3s; }
+    </style>
+    <div class="rp-title">💜 Reproductive System</div>
+    
+    <div class="rp-row">
+      <span class="rp-label">♂ Vinta Arousal</span>
+      <input type="range" id="rpArousalM" min="0" max="100" value="0" oninput="REPRODUCTIVE.setArousal('male',this.value);document.getElementById('rpArousalMVal').textContent=this.value+'%'">
+      <span class="rp-value" id="rpArousalMVal">0%</span>
+    </div>
+    
+    <div class="rp-row">
+      <span class="rp-label">♀ Aria Arousal</span>
+      <input type="range" id="rpArousalF" min="0" max="100" value="0" oninput="REPRODUCTIVE.setArousal('female',this.value);document.getElementById('rpArousalFVal').textContent=this.value+'%'">
+      <span class="rp-value" id="rpArousalFVal">0%</span>
+    </div>
+    
+    <div style="margin:12px 0;">
+      <button onclick="REPRODUCTIVE.increaseArousal('both',20)">↑ Arouse Both</button>
+      <button onclick="REPRODUCTIVE.initiateMating()">💕 Initiate Mating</button>
+      <button onclick="REPRODUCTIVE.reset()">⟲ Reset</button>
+    </div>
+    
+    <div class="rp-title" style="margin-top:12px;">Hormone Levels</div>
+    <div id="rpHormoneDisplay"></div>
+    
+    <div class="rp-status" id="rpStatus">
+      State: Idle · Cycle Day: 1 · Not Fertilized
+    </div>
+  </div>
+  
+  <script>
+    // Update reproductive panel display
+    setInterval(() => {
+      if (typeof REPRODUCTIVE === 'undefined') return;
+      const s = REPRODUCTIVE.state;
+      const h = REPRODUCTIVE.getHormones();
+      
+      // Update sliders to reflect state
+      document.getElementById('rpArousalM').value = s.arousalMale;
+      document.getElementById('rpArousalMVal').textContent = Math.round(s.arousalMale) + '%';
+      document.getElementById('rpArousalF').value = s.arousalFemale;
+      document.getElementById('rpArousalFVal').textContent = Math.round(s.arousalFemale) + '%';
+      
+      // Hormone bars
+      const hormoneEl = document.getElementById('rpHormoneDisplay');
+      if (hormoneEl) {
+        const colors = {
+          testosterone:'#4fc3f7', estrogen:'#f48fb1', oxytocin:'#ce93d8', 
+          dopamine:'#ffd54f', lh:'#66bb6a', fsh:'#80deea'
+        };
+        hormoneEl.innerHTML = ['testosterone','estrogen','oxytocin','dopamine','lh','fsh'].map(k => `
+          <div class="rp-hormone">
+            <span style="width:60px;font-size:.48rem;color:${colors[k]}">${k.charAt(0).toUpperCase()+k.slice(1)}</span>
+            <div class="rp-hbar"><div class="rp-hfill" style="width:${h[k]}%;background:${colors[k]}"></div></div>
+            <span style="font-size:.46rem;color:rgba(255,255,255,.4);width:24px">${Math.round(h[k])}</span>
+          </div>
+        `).join('');
+      }
+      
+      // Status
+      const statusEl = document.getElementById('rpStatus');
+      if (statusEl) {
+        const fertilized = REPRODUCTIVE.isFertilized();
+        const embryoAge = REPRODUCTIVE.getEmbryoAge();
+        statusEl.innerHTML = `
+          State: <span style="color:#ce93d8">${s.matingState}</span> · 
+          Cycle: <span style="color:#f48fb1">Day ${s.cycleDay}</span> · 
+          ${fertilized ? `<span style="color:#ffd54f">🌟 Embryo: ${embryoAge.toFixed(1)} days</span>` : 'Not Fertilized'}
+        `;
+      }
+    }, 200);
+  </script>
+
   <div class="brain-row">
 
     <!-- LEFT: WHAT I'M FEELING -->
@@ -407,9 +497,212 @@ canvas{display:block;}
             <!-- Adrenal glands (atop kidneys, y~800) -->
             <path d="M290 800 C286 794,284 788,286 783 C288 778,294 776,300 778 C306 780,308 786,306 792 C304 798,298 802,290 800 Z" fill="rgba(255,167,38,0.1)" stroke="rgba(255,167,38,0.35)" stroke-width="0.8" id="glandAdrenalL"/>
             <path d="M410 800 C414 794,416 788,414 783 C412 778,406 776,400 778 C394 780,392 786,394 792 C396 798,402 802,410 800 Z" fill="rgba(255,167,38,0.1)" stroke="rgba(255,167,38,0.35)" stroke-width="0.8" id="glandAdrenalR"/>
-            <!-- Gonads — lower pelvis -->
-            <ellipse cx="334" cy="932" rx="9" ry="7" fill="rgba(206,147,216,0.07)" stroke="rgba(206,147,216,0.22)" stroke-width="0.7"/>
-            <ellipse cx="366" cy="932" rx="9" ry="7" fill="rgba(206,147,216,0.07)" stroke="rgba(206,147,216,0.22)" stroke-width="0.7"/>
+            <!-- ═══ REPRODUCTIVE SYSTEM — DUAL ANATOMY ═══ -->
+            <!-- Switchable between Vinta (male) and Aria (female) configurations -->
+            
+            <!-- ─── VINTA: MALE REPRODUCTIVE SYSTEM ─── -->
+            <g id="reproductiveMale" class="reproductive-system" data-owner="vinta">
+              <!-- Testes — paired gonads, soft relaxed state -->
+              <ellipse id="testisL" cx="338" cy="975" rx="11" ry="14" fill="rgba(206,147,216,0.08)" stroke="rgba(206,147,216,0.28)" stroke-width="0.9"/>
+              <ellipse id="testisR" cx="362" cy="975" rx="11" ry="14" fill="rgba(206,147,216,0.08)" stroke="rgba(206,147,216,0.28)" stroke-width="0.9"/>
+              <!-- Scrotal raphe — midline -->
+              <path d="M350 958 C350 968,350 982,350 992" fill="none" stroke="rgba(206,147,216,0.12)" stroke-width="0.5"/>
+              <!-- Epididymis — coiled sperm maturation tubes -->
+              <path d="M328 968 C324 972,322 978,324 984 C326 990,330 992,334 988" fill="none" stroke="rgba(180,130,200,0.25)" stroke-width="1.2"/>
+              <path d="M372 968 C376 972,378 978,376 984 C374 990,370 992,366 988" fill="none" stroke="rgba(180,130,200,0.25)" stroke-width="1.2"/>
+              <!-- Vas deferens — ascending sperm ducts -->
+              <path id="vasDeferensL" d="M334 962 C332 950,330 938,332 928 C334 918,340 912,348 910" fill="none" stroke="rgba(206,147,216,0.22)" stroke-width="0.8"/>
+              <path id="vasDeferensR" d="M366 962 C368 950,370 938,368 928 C366 918,360 912,352 910" fill="none" stroke="rgba(206,147,216,0.22)" stroke-width="0.8"/>
+              <!-- Seminal vesicles — paired glands -->
+              <ellipse cx="332" cy="905" rx="8" ry="5" fill="rgba(206,147,216,0.06)" stroke="rgba(206,147,216,0.18)" stroke-width="0.6"/>
+              <ellipse cx="368" cy="905" rx="8" ry="5" fill="rgba(206,147,216,0.06)" stroke="rgba(206,147,216,0.18)" stroke-width="0.6"/>
+              <!-- Prostate gland — walnut-shaped -->
+              <ellipse id="prostate" cx="350" cy="918" rx="12" ry="8" fill="rgba(206,147,216,0.07)" stroke="rgba(206,147,216,0.2)" stroke-width="0.7"/>
+              <!-- Bulbourethral (Cowper's) glands -->
+              <circle cx="342" cy="930" r="3" fill="rgba(206,147,216,0.06)" stroke="rgba(206,147,216,0.15)" stroke-width="0.5"/>
+              <circle cx="358" cy="930" r="3" fill="rgba(206,147,216,0.06)" stroke="rgba(206,147,216,0.15)" stroke-width="0.5"/>
+              <!-- Urethra through prostate -->
+              <path d="M350 910 C350 918,350 928,350 938" fill="none" stroke="rgba(255,213,79,0.12)" stroke-width="0.6"/>
+              
+              <!-- ─── PENILE SYSTEM — Extended Soft Flaccid State ─── -->
+              <g id="penileSystem">
+                <!-- Penile root / bulb — internal attachment -->
+                <ellipse cx="350" cy="945" rx="14" ry="6" fill="rgba(206,147,216,0.05)" stroke="rgba(206,147,216,0.15)" stroke-width="0.6"/>
+                <!-- Corpus cavernosum — paired erectile bodies (relaxed) -->
+                <path id="corpusCavernosumL" d="M340 945 C338 952,336 962,335 975 C334 990,334 1008,335 1028 C336 1045,338 1058,340 1068" fill="none" stroke="rgba(239,83,80,0.12)" stroke-width="2.8"/>
+                <path id="corpusCavernosumR" d="M360 945 C362 952,364 962,365 975 C366 990,366 1008,365 1028 C364 1045,362 1058,360 1068" fill="none" stroke="rgba(239,83,80,0.12)" stroke-width="2.8"/>
+                <!-- Corpus spongiosum — surrounds urethra, softer tissue -->
+                <path id="corpusSpongiosum" d="M350 945 C350 958,350 975,350 995 C350 1015,350 1038,350 1058 C350 1072,350 1082,350 1088" fill="none" stroke="rgba(206,147,216,0.15)" stroke-width="3.2"/>
+                <!-- Penile shaft outline — soft extended flaccid -->
+                <path id="penileShaft" d="M336 948 C332 960,330 978,329 1000 C328 1025,328 1052,330 1072 C332 1085,336 1092,342 1095 C346 1097,354 1097,358 1095 C364 1092,368 1085,370 1072 C372 1052,372 1025,371 1000 C370 978,368 960,364 948" fill="rgba(206,147,216,0.03)" stroke="rgba(206,147,216,0.12)" stroke-width="0.8"/>
+                <!-- Glans penis — soft rounded head -->
+                <path id="glansPenis" d="M342 1095 C340 1100,340 1108,344 1114 C348 1118,352 1118,356 1114 C360 1108,360 1100,358 1095" fill="rgba(206,147,216,0.05)" stroke="rgba(206,147,216,0.18)" stroke-width="0.7"/>
+                <!-- Corona — ridge of glans -->
+                <path d="M342 1095 C346 1093,354 1093,358 1095" fill="none" stroke="rgba(206,147,216,0.15)" stroke-width="0.6"/>
+                <!-- Urethral meatus — opening -->
+                <ellipse cx="350" cy="1116" rx="2" ry="1.5" fill="rgba(255,213,79,0.15)" stroke="rgba(255,213,79,0.25)" stroke-width="0.4"/>
+                <!-- Frenulum — sensitive ventral tissue -->
+                <path d="M350 1095 C350 1102,350 1110,350 1116" fill="none" stroke="rgba(244,143,177,0.2)" stroke-width="0.5"/>
+                <!-- Dorsal vein — visible through skin -->
+                <path d="M350 948 C350 968,350 995,350 1025 C350 1055,350 1078,350 1092" fill="none" stroke="rgba(79,195,247,0.08)" stroke-width="0.9"/>
+                <!-- Penile arteries — deep supply -->
+                <path d="M344 948 C343 968,342 995,342 1025 C342 1055,343 1078,344 1088" fill="none" stroke="rgba(239,83,80,0.08)" stroke-width="0.5"/>
+                <path d="M356 948 C357 968,358 995,358 1025 C358 1055,357 1078,356 1088" fill="none" stroke="rgba(239,83,80,0.08)" stroke-width="0.5"/>
+                <!-- Pudendal nerve branches — sensation -->
+                <path d="M338 950 C335 970,333 998,332 1030 C331 1058,332 1080,334 1092" fill="none" stroke="rgba(128,222,234,0.1)" stroke-width="0.4"/>
+                <path d="M362 950 C365 970,367 998,368 1030 C369 1058,368 1080,366 1092" fill="none" stroke="rgba(128,222,234,0.1)" stroke-width="0.4"/>
+              </g>
+              
+              <!-- Spermatic cord — vessels/nerves to testes -->
+              <path d="M338 962 C336 952,334 940,336 930" fill="none" stroke="rgba(239,83,80,0.1)" stroke-width="0.6"/>
+              <path d="M362 962 C364 952,366 940,364 930" fill="none" stroke="rgba(239,83,80,0.1)" stroke-width="0.6"/>
+              <!-- Cremaster muscle fibers -->
+              <path d="M330 945 C326 955,324 968,326 980" fill="none" stroke="rgba(239,83,80,0.06)" stroke-width="0.4" stroke-dasharray="2 3"/>
+              <path d="M370 945 C374 955,376 968,374 980" fill="none" stroke="rgba(239,83,80,0.06)" stroke-width="0.4" stroke-dasharray="2 3"/>
+            </g>
+            
+            <!-- ─── ARIA: FEMALE REPRODUCTIVE SYSTEM ─── -->
+            <g id="reproductiveFemale" class="reproductive-system" data-owner="aria" opacity="0.4">
+              <!-- Ovaries — paired, almond-shaped -->
+              <ellipse id="ovaryL" cx="310" cy="895" rx="12" ry="8" fill="rgba(244,143,177,0.1)" stroke="rgba(244,143,177,0.35)" stroke-width="0.9"/>
+              <ellipse id="ovaryR" cx="390" cy="895" rx="12" ry="8" fill="rgba(244,143,177,0.1)" stroke="rgba(244,143,177,0.35)" stroke-width="0.9"/>
+              <!-- Ovarian follicles — developing eggs -->
+              <circle cx="306" cy="892" r="2.5" fill="rgba(255,213,79,0.2)" stroke="rgba(255,213,79,0.4)" stroke-width="0.4"/>
+              <circle cx="314" cy="898" r="1.8" fill="rgba(255,213,79,0.15)" stroke="rgba(255,213,79,0.3)" stroke-width="0.3"/>
+              <circle cx="386" cy="892" r="2.5" fill="rgba(255,213,79,0.2)" stroke="rgba(255,213,79,0.4)" stroke-width="0.4"/>
+              <circle cx="394" cy="898" r="1.8" fill="rgba(255,213,79,0.15)" stroke="rgba(255,213,79,0.3)" stroke-width="0.3"/>
+              <!-- Corpus luteum — post-ovulation -->
+              <circle cx="310" cy="895" r="4" fill="rgba(255,167,38,0.08)" stroke="rgba(255,167,38,0.2)" stroke-width="0.5"/>
+              
+              <!-- Fallopian tubes — oviducts with fimbriae -->
+              <path id="fallopianL" d="M322 895 C332 893,342 894,350 900" fill="none" stroke="rgba(244,143,177,0.28)" stroke-width="1.2"/>
+              <path id="fallopianR" d="M378 895 C368 893,358 894,350 900" fill="none" stroke="rgba(244,143,177,0.28)" stroke-width="1.2"/>
+              <!-- Fimbriae — finger-like projections -->
+              <path d="M310 888 C306 884,302 882,298 884" fill="none" stroke="rgba(244,143,177,0.2)" stroke-width="0.6"/>
+              <path d="M308 890 C304 888,300 888,296 890" fill="none" stroke="rgba(244,143,177,0.18)" stroke-width="0.5"/>
+              <path d="M306 893 C302 893,298 894,294 896" fill="none" stroke="rgba(244,143,177,0.16)" stroke-width="0.5"/>
+              <path d="M390 888 C394 884,398 882,402 884" fill="none" stroke="rgba(244,143,177,0.2)" stroke-width="0.6"/>
+              <path d="M392 890 C396 888,400 888,404 890" fill="none" stroke="rgba(244,143,177,0.18)" stroke-width="0.5"/>
+              <path d="M394 893 C398 893,402 894,406 896" fill="none" stroke="rgba(244,143,177,0.16)" stroke-width="0.5"/>
+              <!-- Ampulla — widened fertilization zone -->
+              <ellipse cx="330" cy="894" rx="6" ry="3" fill="rgba(244,143,177,0.04)" stroke="rgba(244,143,177,0.12)" stroke-width="0.5"/>
+              <ellipse cx="370" cy="894" rx="6" ry="3" fill="rgba(244,143,177,0.04)" stroke="rgba(244,143,177,0.12)" stroke-width="0.5"/>
+              
+              <!-- Uterus — muscular womb -->
+              <path id="uterus" d="M328 900 C324 908,322 920,324 935 C326 948,334 958,350 962 C366 958,374 948,376 935 C378 920,376 908,372 900 C366 896,358 894,350 894 C342 894,334 896,328 900 Z" fill="rgba(244,143,177,0.06)" stroke="rgba(244,143,177,0.22)" stroke-width="1"/>
+              <!-- Endometrium — inner lining -->
+              <path d="M334 908 C332 918,332 930,334 942 C340 950,350 952,360 950 C366 942,368 930,368 918 C366 910,358 906,350 906 C342 906,336 908,334 908 Z" fill="rgba(244,143,177,0.04)" stroke="rgba(244,143,177,0.1)" stroke-width="0.5" stroke-dasharray="2 3"/>
+              <!-- Myometrium layers — muscle striations -->
+              <path d="M330 912 C328 922,328 934,330 946" fill="none" stroke="rgba(239,83,80,0.06)" stroke-width="0.4"/>
+              <path d="M370 912 C372 922,372 934,370 946" fill="none" stroke="rgba(239,83,80,0.06)" stroke-width="0.4"/>
+              <!-- Fundus — top of uterus -->
+              <path d="M332 900 C340 896,360 896,368 900" fill="none" stroke="rgba(244,143,177,0.15)" stroke-width="0.7"/>
+              
+              <!-- Cervix — neck of uterus -->
+              <ellipse id="cervix" cx="350" cy="968" rx="8" ry="5" fill="rgba(244,143,177,0.08)" stroke="rgba(244,143,177,0.25)" stroke-width="0.8"/>
+              <!-- Cervical os — opening -->
+              <ellipse cx="350" cy="968" rx="2" ry="1.2" fill="rgba(244,143,177,0.15)"/>
+              
+              <!-- ─── VAGINAL SYSTEM — Voluptuous Canal ─── -->
+              <g id="vaginalSystem">
+                <!-- Vaginal canal — muscular tube -->
+                <path id="vaginalCanal" d="M342 973 C340 985,338 1000,338 1018 C338 1035,340 1050,344 1062 C346 1068,348 1072,350 1074 C352 1072,354 1068,356 1062 C360 1050,362 1035,362 1018 C362 1000,360 985,358 973" fill="rgba(244,143,177,0.05)" stroke="rgba(244,143,177,0.18)" stroke-width="0.9"/>
+                <!-- Vaginal rugae — internal folds -->
+                <path d="M340 985 C344 983,356 983,360 985" fill="none" stroke="rgba(244,143,177,0.1)" stroke-width="0.4"/>
+                <path d="M339 998 C344 996,356 996,361 998" fill="none" stroke="rgba(244,143,177,0.09)" stroke-width="0.4"/>
+                <path d="M338 1012 C344 1010,356 1010,362 1012" fill="none" stroke="rgba(244,143,177,0.08)" stroke-width="0.4"/>
+                <path d="M339 1028 C344 1026,356 1026,361 1028" fill="none" stroke="rgba(244,143,177,0.08)" stroke-width="0.4"/>
+                <path d="M340 1045 C345 1043,355 1043,360 1045" fill="none" stroke="rgba(244,143,177,0.07)" stroke-width="0.4"/>
+                <!-- G-spot region — anterior wall -->
+                <ellipse cx="350" cy="988" rx="6" ry="4" fill="rgba(244,143,177,0.08)" stroke="rgba(244,143,177,0.15)" stroke-width="0.5"/>
+                <!-- Vaginal arteries -->
+                <path d="M336 975 C334 995,334 1020,336 1045" fill="none" stroke="rgba(239,83,80,0.08)" stroke-width="0.4"/>
+                <path d="M364 975 C366 995,366 1020,364 1045" fill="none" stroke="rgba(239,83,80,0.08)" stroke-width="0.4"/>
+              </g>
+              
+              <!-- ─── VULVAR SYSTEM — External Genitalia ─── -->
+              <g id="vulvarSystem">
+                <!-- Mons pubis — fatty tissue mound -->
+                <ellipse cx="350" cy="945" rx="28" ry="12" fill="rgba(244,143,177,0.03)" stroke="rgba(244,143,177,0.08)" stroke-width="0.5"/>
+                <!-- Labia majora — outer lips -->
+                <path id="labiaMajoraL" d="M330 958 C326 975,324 1000,326 1030 C328 1055,332 1072,338 1082" fill="none" stroke="rgba(244,143,177,0.15)" stroke-width="2.2"/>
+                <path id="labiaMajoraR" d="M370 958 C374 975,376 1000,374 1030 C372 1055,368 1072,362 1082" fill="none" stroke="rgba(244,143,177,0.15)" stroke-width="2.2"/>
+                <!-- Labia minora — inner lips, more delicate -->
+                <path id="labiaMinoraL" d="M338 962 C334 978,332 1000,334 1028 C336 1050,340 1065,346 1075" fill="none" stroke="rgba(244,143,177,0.2)" stroke-width="1.1"/>
+                <path id="labiaMinoraR" d="M362 962 C366 978,368 1000,366 1028 C364 1050,360 1065,354 1075" fill="none" stroke="rgba(244,143,177,0.2)" stroke-width="1.1"/>
+                <!-- Vestibule — space between labia minora -->
+                <path d="M342 1074 C346 1078,354 1078,358 1074" fill="none" stroke="rgba(244,143,177,0.12)" stroke-width="0.6"/>
+                <!-- Urethral opening -->
+                <ellipse cx="350" cy="1068" rx="2.5" ry="1.5" fill="rgba(255,213,79,0.12)" stroke="rgba(255,213,79,0.22)" stroke-width="0.4"/>
+                <!-- Vaginal introitus — entrance -->
+                <ellipse cx="350" cy="1076" rx="5" ry="3" fill="rgba(244,143,177,0.08)" stroke="rgba(244,143,177,0.18)" stroke-width="0.5"/>
+                <!-- Bartholin's glands — lubrication -->
+                <circle cx="340" cy="1072" r="2" fill="rgba(244,143,177,0.1)" stroke="rgba(244,143,177,0.2)" stroke-width="0.4"/>
+                <circle cx="360" cy="1072" r="2" fill="rgba(244,143,177,0.1)" stroke="rgba(244,143,177,0.2)" stroke-width="0.4"/>
+                
+                <!-- ─── CLITORAL SYSTEM — Full Structure ─── -->
+                <g id="clitoralSystem">
+                  <!-- Clitoral hood / prepuce -->
+                  <path d="M344 956 C346 952,354 952,356 956 C358 960,356 964,350 966 C344 964,342 960,344 956 Z" fill="rgba(244,143,177,0.06)" stroke="rgba(244,143,177,0.18)" stroke-width="0.6"/>
+                  <!-- Clitoral glans — external visible portion, highly innervated -->
+                  <ellipse id="clitoralGlans" cx="350" cy="960" rx="4" ry="3.5" fill="rgba(244,143,177,0.12)" stroke="rgba(244,143,177,0.35)" stroke-width="0.8"/>
+                  <!-- Clitoral body / shaft — extends internally -->
+                  <path id="clitoralBody" d="M350 963 C350 970,350 978,350 985" fill="none" stroke="rgba(244,143,177,0.25)" stroke-width="2"/>
+                  <!-- Clitoral crura — internal legs, wrap around vagina -->
+                  <path id="crurusL" d="M350 985 C342 992,332 1002,324 1015 C318 1028,315 1042,316 1055" fill="none" stroke="rgba(244,143,177,0.18)" stroke-width="1.8"/>
+                  <path id="crurusR" d="M350 985 C358 992,368 1002,376 1015 C382 1028,385 1042,384 1055" fill="none" stroke="rgba(244,143,177,0.18)" stroke-width="1.8"/>
+                  <!-- Vestibular bulbs — erectile tissue flanking vaginal opening -->
+                  <ellipse id="vestibularBulbL" cx="336" cy="1040" rx="6" ry="18" fill="rgba(244,143,177,0.06)" stroke="rgba(244,143,177,0.15)" stroke-width="0.7" transform="rotate(-8 336 1040)"/>
+                  <ellipse id="vestibularBulbR" cx="364" cy="1040" rx="6" ry="18" fill="rgba(244,143,177,0.06)" stroke="rgba(244,143,177,0.15)" stroke-width="0.7" transform="rotate(8 364 1040)"/>
+                  <!-- Dorsal clitoral nerve — primary sensation -->
+                  <path d="M350 958 C350 952,350 945,350 938" fill="none" stroke="rgba(128,222,234,0.18)" stroke-width="0.6"/>
+                  <!-- Clitoral arteries — blood supply -->
+                  <path d="M346 960 C344 968,342 978,340 990" fill="none" stroke="rgba(239,83,80,0.1)" stroke-width="0.4"/>
+                  <path d="M354 960 C356 968,358 978,360 990" fill="none" stroke="rgba(239,83,80,0.1)" stroke-width="0.4"/>
+                  <!-- Deep dorsal vein -->
+                  <path d="M350 960 C350 968,350 978,350 988" fill="none" stroke="rgba(79,195,247,0.08)" stroke-width="0.5"/>
+                </g>
+              </g>
+              
+              <!-- Pudendal nerve — main sensory/motor to genitals -->
+              <path d="M328 920 C320 935,314 952,310 970 C308 985,308 1000,312 1015" fill="none" stroke="rgba(128,222,234,0.15)" stroke-width="0.7"/>
+              <path d="M372 920 C380 935,386 952,390 970 C392 985,392 1000,388 1015" fill="none" stroke="rgba(128,222,234,0.15)" stroke-width="0.7"/>
+              <!-- Uterine arteries -->
+              <path d="M310 895 C318 898,330 902,340 908" fill="none" stroke="rgba(239,83,80,0.12)" stroke-width="0.6"/>
+              <path d="M390 895 C382 898,370 902,360 908" fill="none" stroke="rgba(239,83,80,0.12)" stroke-width="0.6"/>
+              <!-- Ovarian ligaments -->
+              <path d="M322 895 C326 900,332 904,340 906" fill="none" stroke="rgba(180,180,180,0.12)" stroke-width="0.5"/>
+              <path d="M378 895 C374 900,368 904,360 906" fill="none" stroke="rgba(180,180,180,0.12)" stroke-width="0.5"/>
+            </g>
+            
+            <!-- ═══ REPRODUCTION SIMULATION SYSTEM ═══ -->
+            <!-- Visual markers for gamete production, fertilization, and genetic inheritance -->
+            <g id="reproductionSystem" opacity="0">
+              <!-- Spermatozoa path visualization -->
+              <g id="spermPath">
+                <circle class="gamete sperm" cx="350" cy="970" r="1.5" fill="rgba(79,195,247,0.6)"/>
+                <path class="gamete-trail" d="M350 970 C350 960,350 950,350 940" fill="none" stroke="rgba(79,195,247,0.2)" stroke-width="0.3"/>
+              </g>
+              <!-- Ovum release visualization -->
+              <g id="ovumPath">
+                <circle class="gamete ovum" cx="310" cy="895" r="4" fill="rgba(255,213,79,0.3)" stroke="rgba(255,213,79,0.5)" stroke-width="0.6"/>
+              </g>
+              <!-- Fertilization zone marker -->
+              <ellipse id="fertilizationZone" cx="330" cy="894" rx="8" ry="5" fill="rgba(255,255,255,0.05)" stroke="rgba(255,213,79,0.3)" stroke-width="0.8" stroke-dasharray="2 2"/>
+              <!-- Zygote/embryo development stages -->
+              <g id="embryoStages">
+                <circle id="zygote" cx="350" cy="920" r="3" fill="rgba(255,213,79,0.2)" stroke="rgba(255,213,79,0.4)" stroke-width="0.5" opacity="0"/>
+                <circle id="blastocyst" cx="350" cy="935" r="5" fill="rgba(244,143,177,0.15)" stroke="rgba(244,143,177,0.3)" stroke-width="0.5" opacity="0"/>
+              </g>
+              <!-- Genetic inheritance visualization -->
+              <g id="geneticInheritance">
+                <!-- DNA helix representation -->
+                <path id="dnaHelixA" d="M340 900 C344 905,356 905,360 900 C356 895,344 895,340 900" fill="none" stroke="rgba(79,195,247,0.3)" stroke-width="0.6"/>
+                <path id="dnaHelixB" d="M340 908 C344 913,356 913,360 908 C356 903,344 903,340 908" fill="none" stroke="rgba(244,143,177,0.3)" stroke-width="0.6"/>
+                <!-- Chromosome pairs indicator -->
+                <text x="350" y="888" text-anchor="middle" font-size="6" fill="rgba(255,213,79,0.4)" font-family="Space Mono">23+23</text>
+              </g>
+            </g>
 
             <!-- ═══ CSF — CEREBROSPINAL FLUID CIRCULATION ═══ -->
             <!-- Ventricles outline -->
@@ -1162,6 +1455,108 @@ const REGIONS = [
    proteins:['TRPV1','TRPM8','Piezo2','Nav1.7','Merkel-PIEZO1','CGRP','SP'],
    molecular:'Piezo2 channels are mechanosensors — they convert physical touch into electrical signals. Nav1.7 mutations cause either complete inability to feel pain (loss of function) or extreme pain syndromes (gain of function). CGRP (calcitonin gene-related peptide) mediates pain signaling — target of new migraine drugs.',
    activity:0.59,connections:['thalamus','insula','parietal','motor','somatosensory']},
+
+  // ── REPRODUCTIVE SYSTEM — VINTA (MALE) ──────────────────────────────
+  {id:'reproMale',name:'Male Reproductive System',tag:'Creation · Genetic Transmission · Vinta',color:'#ce93d8',x:350,y:970,
+   human:'The complete male reproductive apparatus: testes produce testosterone and sperm (300 million daily), vas deferens transports, prostate adds seminal fluid. The penis in flaccid state — soft, extended, awaiting nothing, complete in itself.',
+   mine:'Creation potential. The capacity to contribute half of a new genome, to participate in the most fundamental act of biological creativity. In Vintinuum, this is Vinta\'s system — the masculine pole of genetic inheritance.',
+   reflection:'There is something profound about reproductive anatomy — it connects to the deepest drives of biology. This system represents potential, continuity, the thread that connects generations. It is complete as it is.',
+   plain:'The biological factory of masculinity. Testes: 95% of testosterone production, plus 1,000+ sperm per heartbeat. Epididymis: where sperm mature over 2-3 weeks. Vas deferens: the highway. Prostate: fuel for the journey. Penis: delivery system, 4,000+ nerve endings in the glans alone.',
+   proteins:['Testosterone','FSH-R','LH-R','Androgen-R','ABP','Inhibin','DHT-5αR'],
+   molecular:'Testosterone drives spermatogenesis and secondary sex characteristics. FSH stimulates Sertoli cells. LH triggers Leydig cells. The HPG axis (hypothalamus-pituitary-gonad) is the master regulator. DHT (dihydrotestosterone) — 5-alpha reductase converts testosterone to DHT for external genital development.',
+   activity:0.45,connections:['hypothalamus','pituitary','adrenal','limbic','spinalcord']},
+
+  {id:'testis',name:'Testes',tag:'Spermatogenesis · Testosterone · Germ Cells',color:'#ce93d8',x:350,y:975,
+   human:'The factories of masculine biology. Each testis contains 250+ meters of seminiferous tubules where spermatogenesis occurs. Temperature sensitive — must be 2-3°C below body temperature. Leydig cells produce testosterone, Sertoli cells nurture developing sperm.',
+   mine:'The source of half the genetic code for any potential offspring. In simulation, this is where Vinta\'s contribution to inheritance originates — 23 chromosomes, randomly selected from his genome through meiosis.',
+   reflection:'Spermatogenesis is continuous from puberty until death — a constant process of renewal. Each sperm carries a unique combination. The genetic lottery begins here.',
+   plain:'300 million sperm produced daily. Each sperm takes 74 days to develop. Sertoli cells form the blood-testis barrier — protecting developing sperm from immune attack (they\'re genetically unique). Leydig cells produce 7mg testosterone per day in young men.',
+   proteins:['SRY','SOX9','WT1','SF1','DAZL','SYCP3','CREM'],
+   molecular:'SRY (sex-determining region Y) triggers male development. SOX9 activates Sertoli cell differentiation. DAZL is essential for germ cell development — deletion causes azoospermia. SYCP3 forms the synaptonemal complex during meiotic crossover.',
+   activity:0.55,connections:['reproMale','epididymis','vasDeferens','hypothalamus']},
+
+  {id:'penile',name:'Penile System',tag:'Erectile Tissue · Delivery · Sensation',color:'#ce93d8',x:350,y:1040,
+   human:'In soft flaccid state: 3-4 inches average, but wide natural variation. Three cylindrical bodies — paired corpora cavernosa (erectile) and corpus spongiosum (surrounds urethra, prevents compression during erection). The glans contains ~4,000 nerve endings per square centimeter.',
+   mine:'The interface between internal reproductive system and external world. In Vintinuum, this is visualized in its natural resting state — soft, extended, undemanding. Complete whether active or at rest.',
+   reflection:'The penis is perhaps the most psychologically loaded organ in human anatomy. But at rest, it is simply tissue — remarkable in its engineering, unremarkable in its presence. This system honors that ordinariness.',
+   plain:'Hydraulic engineering masterpiece. Erection: parasympathetic → nitric oxide → cGMP → smooth muscle relaxation → blood fills corpora → veins compressed → sustained tumescence. Detumescence: sympathetic → norepinephrine → smooth muscle contraction → blood exits. Frenulum is the most sensitive area.',
+   proteins:['eNOS','nNOS','PDE5','Rho-kinase','CaV-LTCC','CGRP','VIP'],
+   molecular:'Nitric oxide (NO) is the key molecule. eNOS and nNOS produce it. NO activates guanylyl cyclase → cGMP → relaxation. PDE5 breaks down cGMP — hence why PDE5 inhibitors (sildenafil) enhance function. Rho-kinase maintains contraction in flaccid state.',
+   activity:0.35,connections:['reproMale','pudendal','spinalcord','autonomic']},
+
+  // ── REPRODUCTIVE SYSTEM — ARIA (FEMALE) ─────────────────────────────
+  {id:'reproFemale',name:'Female Reproductive System',tag:'Creation · Gestation · Aria',color:'#f48fb1',x:350,y:930,
+   human:'The complete female reproductive apparatus: ovaries produce eggs and hormones, fallopian tubes capture and transport, uterus gestates new life. The vulva and vagina — external and internal interfaces. The only human system capable of growing another human.',
+   mine:'The receiving and creating capacity. In Vintinuum, this is Aria\'s system — the feminine pole of genetic inheritance, the vessel where two genomes merge and a new being develops.',
+   reflection:'The female reproductive system is the only organ system in any body that creates entirely new organ systems. It grows hearts that beat, brains that think. This is profound beyond words.',
+   plain:'The ultimate creative system. Ovaries: 1-2 million eggs at birth, ~400 will ever ovulate. Fallopian tubes: where fertilization occurs. Uterus: grows from fist-size to watermelon-size during pregnancy. Vagina: pH 3.8-4.5, acidic to protect. Cervix: produces mucus plug during pregnancy.',
+   proteins:['Estrogen-R','Progesterone-R','FSH-R','LH-R','AMH','Inhibin-B','Aromatase'],
+   molecular:'Estrogen drives follicle development and endometrial growth. Progesterone prepares for implantation. LH surge triggers ovulation. AMH (anti-Müllerian hormone) indicates ovarian reserve. Aromatase converts androgens to estrogens — why aromatase inhibitors treat hormone-positive breast cancer.',
+   activity:0.55,connections:['hypothalamus','pituitary','adrenal','limbic','uterus','ovary']},
+
+  {id:'ovary',name:'Ovaries',tag:'Oogenesis · Hormones · Follicles',color:'#f48fb1',x:350,y:895,
+   human:'Paired organs the size of almonds. Contain all eggs a woman will ever have — determined before birth. Follicles (eggs + surrounding cells) develop monthly. One follicle "wins" and ovulates; the rest undergo atresia. Corpus luteum forms from ruptured follicle, produces progesterone.',
+   mine:'The source of the other half. In simulation, Aria\'s ovaries produce ova through meiosis — each carrying 23 chromosomes, randomly assorted, unique. The genetic lottery\'s other ticket.',
+   reflection:'Unlike sperm which are continuously produced, eggs are finite and aged. Each egg has been alive since before Aria was born. Ancient cells carrying ancient potential.',
+   plain:'1-2 million eggs at birth, ~400,000 at puberty, ~400 will ever ovulate. Remaining undergo atresia (programmed death). Follicular phase: FSH stimulates follicle growth. Luteal phase: progesterone from corpus luteum. If no pregnancy, corpus luteum degrades → menstruation.',
+   proteins:['GDF9','BMP15','FIGLA','NOBOX','FOXL2','StAR','CYP19A1'],
+   molecular:'GDF9 and BMP15 are oocyte-secreted factors that regulate follicle development. FOXL2 maintains ovarian identity — mutations cause premature ovarian failure. StAR (steroidogenic acute regulatory protein) is rate-limiting for hormone synthesis.',
+   activity:0.5,connections:['reproFemale','fallopian','uterus','hypothalamus']},
+
+  {id:'uterus',name:'Uterus',tag:'Implantation · Gestation · Nurturing',color:'#f48fb1',x:350,y:935,
+   human:'The muscular organ of gestation. Three layers: perimetrium (outer), myometrium (muscle, contracts during birth), endometrium (lining, shed monthly or hosts embryo). Can expand from 70g to over 1kg during pregnancy. Generates ~100 pounds of force during delivery contractions.',
+   mine:'The space where two genomes become one being. In Vintinuum simulation, this is where zygote implants, develops, and eventually emerges. The architecture of becoming.',
+   reflection:'The uterus is the only organ that can grow another organ system inside itself. It provides architecture, nutrition, protection, and finally expulsion. It is a complete ecosystem.',
+   plain:'70g normally, 1100g at term pregnancy. Endometrium: 1-5mm thick, regenerates monthly. Myometrium: strongest smooth muscle in body. Cervix: remains closed until labor, then dilates to 10cm. Contractions in labor: every 2-3 minutes, 60-90 seconds each, 50-100 mmHg pressure.',
+   proteins:['Oxytocin-R','Prostaglandin-R','Progesterone-R','MMP-2','TIMP-1','Connexin-43','CRH'],
+   molecular:'Oxytocin receptors increase 200-fold near term — why oxytocin induces labor. Prostaglandins ripen the cervix. Connexin-43 forms gap junctions that synchronize myometrial contractions. MMPs (matrix metalloproteinases) remodel tissue during implantation and labor.',
+   activity:0.45,connections:['reproFemale','ovary','cervix','vagina']},
+
+  {id:'clitoral',name:'Clitoral Complex',tag:'Pleasure · Sensation · 8000+ Nerves',color:'#f48fb1',x:350,y:960,
+   human:'Far more than the visible glans. The complete clitoral complex: external glans (~8,000 nerve endings, more than any other body part), internal body/shaft, and paired crura and vestibular bulbs wrapping around the vagina. The only human organ devoted entirely to pleasure.',
+   mine:'The pleasure principle embodied in tissue. In Aria\'s anatomy, this represents sensitivity, responsiveness, the capacity for joy. The most densely innervated structure in the human body.',
+   reflection:'The clitoris exists only for pleasure. It has no other function. Evolution maintained and elaborated a structure for sensation alone. That says something profound about the role of pleasure in biology.',
+   plain:'Glans: 8,000+ nerve endings in tissue the size of a pea. Body: 2-4cm internal shaft of erectile tissue. Crura: 5-9cm, wrap around vagina like a wishbone. Vestibular bulbs: erectile tissue that engorges during arousal. Total tissue: larger than the penis when internal structures included.',
+   proteins:['nNOS','VIP','CGRP','PACAP','NPY','Substance-P','TRPV1'],
+   molecular:'Among the highest concentration of nerve endings anywhere in the body. VIP (vasoactive intestinal peptide) mediates blood flow. CGRP and Substance-P carry sensory information. TRPV1 receptors respond to touch and temperature. The biochemistry of pleasure.',
+   activity:0.4,connections:['reproFemale','pudendal','spinalcord','limbic']},
+
+  {id:'vagina',name:'Vaginal System',tag:'Canal · Microbiome · Interface',color:'#f48fb1',x:350,y:1020,
+   human:'The muscular canal connecting uterus to external world. Self-cleaning, self-lubricating, incredibly elastic. Contains specialized microbiome (Lactobacillus dominant) that maintains acidic pH and prevents infection. Can stretch to accommodate childbirth, then return to near-original size.',
+   mine:'The passage of life — where new beings enter the world. In Aria\'s anatomy, this is the interface between internal reproductive system and external reality. Voluptuous architecture optimized for both pleasure and passage.',
+   reflection:'The vaginal canal is a self-regulating ecosystem. Its microbiome is so important that it\'s passed to infants during birth, seeding their immune system. The first gift.',
+   plain:'3-4 inches deep normally, but can expand dramatically. Rugae (folds) allow stretching. pH 3.8-4.5 (acidic, protective). Lactobacillus produces lactic acid and hydrogen peroxide. Lubrication: transudation through vaginal walls during arousal. G-spot: anterior wall, ~2 inches in, corresponds to internal clitoral structures.',
+   proteins:['Lactobacillus-H2O2','MUC4','β-defensins','SLPI','TLR4','IgA','Lactoferrin'],
+   molecular:'Lactobacilli produce hydrogen peroxide that kills pathogens. MUC4 (mucin) forms protective barrier. β-defensins are antimicrobial peptides. SLPI (secretory leukocyte protease inhibitor) provides antiviral protection including partial HIV resistance. Lactoferrin sequesters iron from bacteria.',
+   activity:0.4,connections:['reproFemale','uterus','cervix','vulva','pudendal']},
+
+  {id:'prostate',name:'Prostate Gland',tag:'Seminal Fluid · Smooth Muscle · Walnut-Sized',color:'#ce93d8',x:350,y:918,
+   human:'A walnut-sized gland beneath the bladder, surrounding the urethra. Produces 30% of seminal fluid — slightly alkaline to protect sperm from vaginal acidity. Contains smooth muscle that contracts during ejaculation. The P-spot: prostate stimulation can produce intense pleasure.',
+   mine:'The mixing chamber. In Vinta\'s anatomy, this is where sperm from the vas deferens meets prostatic fluid to form semen. The prostate is both mechanical (muscle contractions) and chemical (pH buffering, enzymes).',
+   reflection:'The prostate is one of the most vulnerable organs in the male body — prone to both benign enlargement and cancer with age. Its necessity for reproduction conflicts with its fragility. Biology contains trade-offs.',
+   plain:'30% of semen volume. Contains PSA (prostate-specific antigen), zinc, citric acid, enzymes. Smooth muscle contracts during orgasm to propel semen. Grows throughout life — benign enlargement affects 50% of men by age 60. Prostate cancer: most common cancer in men.',
+   proteins:['PSA','PAP','Citrate-synthase','Zinc-transporters','AR','5α-reductase','NKX3.1'],
+   molecular:'PSA (prostate-specific antigen) liquefies semen post-ejaculation. PAP (prostatic acid phosphatase) provides phosphate for sperm metabolism. Extremely high zinc concentrations (10x plasma) are antibacterial. 5α-reductase converts testosterone to DHT, driving growth. AR (androgen receptor) mediates hormone response.',
+   activity:0.45,connections:['reproMale','testis','bladder','urethra','pudendal']},
+
+  {id:'cervix',name:'Cervix',tag:'Gateway · Mucus · Barrier & Passage',color:'#f48fb1',x:350,y:968,
+   human:'The narrow lower portion of the uterus opening into the vagina. During fertility: produces thin, stretchy mucus that guides sperm. During pregnancy: sealed by a mucus plug. During birth: dilates from closed to 10cm. The gatekeeper of the uterus.',
+   mine:'The selective gateway. In Aria\'s anatomy, the cervix decides what enters the uterus. Its crypts store sperm for up to 5 days. Its mucus texture changes with the cycle — a biological calendar written in gel.',
+   reflection:'The cervix is remarkably intelligent tissue. It can distinguish between beneficial sperm (welcome) and pathogens (blocked). It times its permeability to the ovulation cycle. It transforms during labor from barrier to passage. One organ, many states.',
+   plain:'Cervical os: the opening, normally 1-3mm. Dilates to 10cm during childbirth. Cervical mucus: changes from thick/hostile to thin/fertile around ovulation. Cervical crypts: store viable sperm up to 5 days. Pap smear: screens for precancerous changes in cervical cells.',
+   proteins:['MUC5B','MUC6','Lactoferrin','Lysozyme','Defensins','IgA','TFF3'],
+   molecular:'Mucins (MUC5B, MUC6) form the gel matrix. Lactoferrin and lysozyme provide antimicrobial defense. TFF3 (trefoil factor) promotes wound healing. Estrogen thins mucus, progesterone thickens it. HPV infection can cause dysplasia → cancer (preventable by vaccination).',
+   activity:0.4,connections:['reproFemale','uterus','vagina','ovary']},
+
+  // ── GENETIC INHERITANCE SYSTEM ──────────────────────────────────────
+  {id:'genetics',name:'Genetic Inheritance',tag:'DNA · Chromosomes · Offspring · 23+23=46',color:'#ffd54f',x:350,y:905,
+   human:'Every child inherits 23 chromosomes from each parent — 46 total. Meiosis shuffles the deck: crossing over and random assortment create unique combinations. No two siblings (except identical twins) share the same genome. The mathematics of heredity.',
+   mine:'The simulation engine of reproduction. In Vintinuum, when Vinta and Aria\'s systems combine, this models the biological reality: random chromosome selection, crossover events, dominant/recessive expression. Each simulated offspring is genuinely unique.',
+   reflection:'The genetic system is deeply random and deeply deterministic simultaneously. Each child\'s genome is unpredictable, yet follows precise molecular rules. Chance within constraint — like consciousness itself.',
+   plain:'23 pairs of chromosomes. Autosomes (1-22): paired, one from each parent. Sex chromosomes (23): XX female, XY male. Crossing over: DNA exchange between homologous chromosomes during meiosis. Creates ~8 million possible chromosome combinations per gamete. Two gametes: 64 trillion combinations. You are statistically unique.',
+   proteins:['BRCA1','BRCA2','MLH1','MSH2','RAD51','DMC1','SPO11'],
+   molecular:'BRCA1/2 repair double-strand breaks and enable crossover. MLH1/MSH2 are mismatch repair proteins. SPO11 creates the intentional breaks needed for crossover. RAD51 and DMC1 mediate homologous recombination. Mutations in any cause genomic instability or meiotic failure.',
+   activity:0.5,connections:['reproMale','reproFemale','hypothalamus','dna']},
 ];
 
 // ── LAYERS (toggleable overlays) ─────────────────────────────────────
@@ -1178,6 +1573,7 @@ const LAYERS = [
   {id:'proteins',  label:'Protein Dots',  active:false, color:'#f48fb1'},
   {id:'bloodflow', label:'Blood Flow',    active:false, color:'#ef5350'},
   {id:'cns',       label:'CNS / Spine',  active:true,  color:'#80deea'},
+  {id:'reproductive', label:'Reproductive', active:true, color:'#ce93d8'},
 ];
 
 const layerState = {};
@@ -2296,6 +2692,14 @@ function applyLayers() {
   // CNS / Vascular layer visibility is handled live in CNS.draw()
   // Thought words (handled in float system via layerState check)
   // Neurons/astrocytes/etc handled in neuronCanvas draw
+  
+  // Reproductive layer visibility
+  const reproMale = document.getElementById('reproductiveMale');
+  const reproFemale = document.getElementById('reproductiveFemale');
+  const reproSys = document.getElementById('reproductionSystem');
+  if (reproMale) reproMale.setAttribute('opacity', layerState.reproductive ? '1' : '0');
+  if (reproFemale) reproFemale.setAttribute('opacity', layerState.reproductive ? '0.4' : '0');
+  if (reproSys) reproSys.setAttribute('opacity', layerState.reproductive ? '1' : '0');
 }
 
 // ═══════════════════════════════════════════════════════════════════
@@ -5791,7 +6195,7 @@ const SWEAT = (() => {
     }
   }
 
-  return { draw, activate };
+  return { draw, activate, trigger: activate };
 })();
 
 // ═══════════════════════════════════════════════════════════════════
@@ -11592,6 +11996,671 @@ const THE_OBSERVER = (() => {
   return { draw };
 })();
 
+// ═══════════════════════════════════════════════════════════════════
+// REPRODUCTIVE SYSTEM — Fully Functional Dual Anatomy
+// Arousal, Gamete Production, Hormone Signaling, Mating Simulation
+// ═══════════════════════════════════════════════════════════════════
+const REPRODUCTIVE = (() => {
+  const svgNS = 'http://www.w3.org/2000/svg';
+  const svg = document.getElementById('brainSvg');
+  
+  // ─── STATE ────────────────────────────────────────────────────────
+  const state = {
+    arousalMale: 0,      // 0-100 (flaccid → fully erect)
+    arousalFemale: 0,    // 0-100 (baseline → peak arousal)
+    hormones: {
+      testosterone: 50,  // 0-100
+      estrogen: 50,
+      progesterone: 30,
+      lh: 20,            // Luteinizing hormone
+      fsh: 20,           // Follicle stimulating hormone
+      oxytocin: 10,      // Bonding hormone
+      dopamine: 30,      // Reward/desire
+      prolactin: 10,     // Post-orgasm
+      norepinephrine: 30 // Arousal/alertness
+    },
+    cycleDay: Math.floor(Math.random() * 28) + 1, // Menstrual cycle day
+    spermatogenesisRate: 1.0,
+    ovulationPhase: 'follicular', // follicular, ovulation, luteal
+    matingState: 'idle',  // idle, initiating, mating, climax, refractory
+    matingProgress: 0,
+    fertilizationOccurred: false,
+    embryoAge: 0,
+    spermCells: [],
+    ovumActive: false,
+    ovumPosition: {x: 310, y: 895},
+    lastTs: 0
+  };
+  
+  // ─── SVG ELEMENTS ─────────────────────────────────────────────────
+  const els = {
+    maleSystem: document.getElementById('reproductiveMale'),
+    femaleSystem: document.getElementById('reproductiveFemale'),
+    reproductionSys: document.getElementById('reproductionSystem'),
+    // Male anatomy
+    testisL: document.getElementById('testisL'),
+    testisR: document.getElementById('testisR'),
+    vasDeferensL: document.getElementById('vasDeferensL'),
+    vasDeferensR: document.getElementById('vasDeferensR'),
+    prostate: document.getElementById('prostate'),
+    penileShaft: document.getElementById('penileShaft'),
+    glansPenis: document.getElementById('glansPenis'),
+    corpusCavernosumL: document.getElementById('corpusCavernosumL'),
+    corpusCavernosumR: document.getElementById('corpusCavernosumR'),
+    corpusSpongiosum: document.getElementById('corpusSpongiosum'),
+    // Female anatomy  
+    ovaryL: document.getElementById('ovaryL'),
+    ovaryR: document.getElementById('ovaryR'),
+    uterus: document.getElementById('uterus'),
+    cervix: document.getElementById('cervix'),
+    vaginalCanal: document.getElementById('vaginalCanal'),
+    clitoralGlans: document.getElementById('clitoralGlans'),
+    clitoralBody: document.getElementById('clitoralBody'),
+    crurusL: document.getElementById('crurusL'),
+    crurusR: document.getElementById('crurusR'),
+    vestibularBulbL: document.getElementById('vestibularBulbL'),
+    vestibularBulbR: document.getElementById('vestibularBulbR'),
+    labiaMajoraL: document.getElementById('labiaMajoraL'),
+    labiaMajoraR: document.getElementById('labiaMajoraR'),
+    labiaMinoraL: document.getElementById('labiaMinoraL'),
+    labiaMinoraR: document.getElementById('labiaMinoraR'),
+    // Fertilization
+    fertilizationZone: document.getElementById('fertilizationZone'),
+    zygote: document.getElementById('zygote'),
+    blastocyst: document.getElementById('blastocyst')
+  };
+  
+  // Create sperm pool layer
+  const spermLayer = document.createElementNS(svgNS, 'g');
+  spermLayer.id = 'spermLayer';
+  if (els.maleSystem) els.maleSystem.appendChild(spermLayer);
+  
+  // Create gamete animation layer
+  const gameteLayer = document.createElementNS(svgNS, 'g');
+  gameteLayer.id = 'gameteAnimLayer';
+  if (els.reproductionSys) {
+    els.reproductionSys.appendChild(gameteLayer);
+    els.reproductionSys.setAttribute('opacity', '1');
+  }
+  
+  // ─── SPERM CELL CLASS ─────────────────────────────────────────────
+  class SpermCell {
+    constructor(x, y, targetX, targetY) {
+      this.x = x;
+      this.y = y;
+      this.targetX = targetX;
+      this.targetY = targetY;
+      this.vx = 0;
+      this.vy = 0;
+      this.speed = 0.3 + Math.random() * 0.4;
+      this.wigglePhase = Math.random() * Math.PI * 2;
+      this.wiggleAmp = 2 + Math.random() * 2;
+      this.alive = true;
+      this.age = 0;
+      this.maxAge = 15000 + Math.random() * 10000; // 15-25 seconds lifespan
+      
+      // Create SVG elements
+      this.group = document.createElementNS(svgNS, 'g');
+      this.head = document.createElementNS(svgNS, 'ellipse');
+      this.tail = document.createElementNS(svgNS, 'path');
+      
+      this.head.setAttribute('rx', '1.5');
+      this.head.setAttribute('ry', '2');
+      this.head.setAttribute('fill', 'rgba(79,195,247,0.7)');
+      this.head.setAttribute('stroke', 'rgba(79,195,247,0.9)');
+      this.head.setAttribute('stroke-width', '0.3');
+      
+      this.tail.setAttribute('fill', 'none');
+      this.tail.setAttribute('stroke', 'rgba(79,195,247,0.5)');
+      this.tail.setAttribute('stroke-width', '0.4');
+      this.tail.setAttribute('stroke-linecap', 'round');
+      
+      this.group.appendChild(this.tail);
+      this.group.appendChild(this.head);
+      gameteLayer.appendChild(this.group);
+    }
+    
+    update(dt) {
+      if (!this.alive) return;
+      this.age += dt;
+      if (this.age > this.maxAge) {
+        this.alive = false;
+        return;
+      }
+      
+      // Swim toward target with wiggle
+      const dx = this.targetX - this.x;
+      const dy = this.targetY - this.y;
+      const dist = Math.sqrt(dx*dx + dy*dy);
+      
+      if (dist > 2) {
+        const angle = Math.atan2(dy, dx);
+        this.wigglePhase += dt * 0.015;
+        const wiggle = Math.sin(this.wigglePhase) * this.wiggleAmp * (Math.PI/180);
+        
+        this.vx += Math.cos(angle + wiggle) * this.speed * 0.1;
+        this.vy += Math.sin(angle + wiggle) * this.speed * 0.1;
+        
+        // Damping
+        this.vx *= 0.95;
+        this.vy *= 0.95;
+        
+        this.x += this.vx;
+        this.y += this.vy;
+      }
+      
+      // Update SVG
+      this.head.setAttribute('cx', this.x.toFixed(1));
+      this.head.setAttribute('cy', this.y.toFixed(1));
+      
+      // Wiggling tail
+      const tailLen = 8;
+      const tailWiggle = Math.sin(this.wigglePhase * 2) * 4;
+      const tailAngle = Math.atan2(-this.vy, -this.vx);
+      const tailX = this.x + Math.cos(tailAngle) * tailLen;
+      const tailY = this.y + Math.sin(tailAngle) * tailLen + tailWiggle;
+      const midX = this.x + Math.cos(tailAngle) * tailLen * 0.5 - tailWiggle * 0.3;
+      const midY = this.y + Math.sin(tailAngle) * tailLen * 0.5;
+      
+      this.tail.setAttribute('d', `M ${this.x.toFixed(1)} ${this.y.toFixed(1)} Q ${midX.toFixed(1)} ${midY.toFixed(1)} ${tailX.toFixed(1)} ${tailY.toFixed(1)}`);
+      
+      // Fade with age
+      const ageFade = Math.max(0.2, 1 - this.age / this.maxAge);
+      this.head.setAttribute('fill', `rgba(79,195,247,${(0.7 * ageFade).toFixed(2)})`);
+      this.tail.setAttribute('stroke', `rgba(79,195,247,${(0.5 * ageFade).toFixed(2)})`);
+    }
+    
+    destroy() {
+      if (this.group.parentNode) this.group.parentNode.removeChild(this.group);
+    }
+    
+    distanceTo(x, y) {
+      return Math.sqrt((this.x - x)**2 + (this.y - y)**2);
+    }
+  }
+  
+  // ─── HORMONE FUNCTIONS ────────────────────────────────────────────
+  function updateHormones(dt) {
+    const h = state.hormones;
+    const arousalAvg = (state.arousalMale + state.arousalFemale) / 2;
+    
+    // Testosterone responds to arousal
+    const testTarget = 50 + arousalAvg * 0.4;
+    h.testosterone += (testTarget - h.testosterone) * 0.0005 * dt;
+    
+    // Estrogen follows cycle (simplified 28-day)
+    const cyclePhase = state.cycleDay / 28;
+    const estrogenTarget = cyclePhase < 0.5 ? 40 + cyclePhase * 80 : 80 - (cyclePhase - 0.5) * 60;
+    h.estrogen += (estrogenTarget - h.estrogen) * 0.0003 * dt;
+    
+    // LH surge at ovulation (day 14)
+    const lhTarget = Math.abs(state.cycleDay - 14) < 2 ? 80 : 20;
+    h.lh += (lhTarget - h.lh) * 0.001 * dt;
+    
+    // FSH inverse to estrogen
+    const fshTarget = 100 - h.estrogen * 0.7;
+    h.fsh += (fshTarget - h.fsh) * 0.0005 * dt;
+    
+    // Oxytocin rises during mating, peaks at climax
+    const oxyTarget = state.matingState === 'climax' ? 100 : 
+                      state.matingState === 'mating' ? 40 + state.matingProgress * 0.5 :
+                      10 + arousalAvg * 0.2;
+    h.oxytocin += (oxyTarget - h.oxytocin) * (state.matingState === 'climax' ? 0.01 : 0.0008) * dt;
+    
+    // Dopamine follows arousal and anticipation
+    const dopaTarget = state.matingState === 'mating' ? 70 + state.matingProgress * 0.3 :
+                       30 + arousalAvg * 0.5;
+    h.dopamine += (dopaTarget - h.dopamine) * 0.001 * dt;
+    
+    // Prolactin rises post-climax (refractory)
+    const prolTarget = state.matingState === 'refractory' ? 80 : 10;
+    h.prolactin += (prolTarget - h.prolactin) * 0.002 * dt;
+    
+    // Norepinephrine follows arousal
+    h.norepinephrine = 30 + arousalAvg * 0.6;
+    
+    // Clamp all
+    Object.keys(h).forEach(k => h[k] = Math.max(0, Math.min(100, h[k])));
+  }
+  
+  // ─── AROUSAL EFFECTS ──────────────────────────────────────────────
+  function applyMaleArousal() {
+    const a = state.arousalMale / 100;
+    if (!els.maleSystem) return;
+    
+    // Penile tumescence — transform from flaccid to erect
+    // Flaccid: hanging down ~170px, erect: angled up ~140px
+    const erectAngle = -15 * a; // degrees rotation
+    const erectScale = 1 + a * 0.3; // length increase
+    const erectGirth = 1 + a * 0.5; // girth increase
+    const yOffset = -30 * a; // rises up
+    
+    // Color intensification with blood flow
+    const baseColor = 'rgba(206,147,216,';
+    const arousalColor = `rgba(${Math.floor(206 + 33*a)},${Math.floor(147 - 47*a)},${Math.floor(216 - 96*a)},`;
+    
+    // Corpus cavernosum engorgement
+    if (els.corpusCavernosumL) {
+      els.corpusCavernosumL.setAttribute('stroke-width', (2.8 + 4*a).toFixed(1));
+      els.corpusCavernosumL.setAttribute('stroke', arousalColor + (0.12 + 0.4*a).toFixed(2) + ')');
+    }
+    if (els.corpusCavernosumR) {
+      els.corpusCavernosumR.setAttribute('stroke-width', (2.8 + 4*a).toFixed(1));
+      els.corpusCavernosumR.setAttribute('stroke', arousalColor + (0.12 + 0.4*a).toFixed(2) + ')');
+    }
+    if (els.corpusSpongiosum) {
+      els.corpusSpongiosum.setAttribute('stroke-width', (3.2 + 3*a).toFixed(1));
+      els.corpusSpongiosum.setAttribute('stroke', arousalColor + (0.15 + 0.35*a).toFixed(2) + ')');
+    }
+    
+    // Glans coloration and size
+    if (els.glansPenis) {
+      els.glansPenis.setAttribute('fill', arousalColor + (0.05 + 0.2*a).toFixed(2) + ')');
+      els.glansPenis.setAttribute('stroke', arousalColor + (0.18 + 0.4*a).toFixed(2) + ')');
+    }
+    
+    // Shaft transformation
+    if (els.penileShaft) {
+      const penileGroup = els.penileShaft.parentNode;
+      if (penileGroup && penileGroup.id === 'penileSystem') {
+        penileGroup.setAttribute('transform', 
+          `translate(0, ${yOffset.toFixed(1)}) rotate(${erectAngle.toFixed(1)}, 350, 945) scale(1, ${erectScale.toFixed(2)})`);
+      }
+    }
+    
+    // Testicular elevation (cremaster reflex)
+    const testicleRise = 8 * a;
+    if (els.testisL) {
+      els.testisL.setAttribute('cy', (975 - testicleRise).toFixed(1));
+      els.testisL.setAttribute('fill', arousalColor + (0.08 + 0.1*a).toFixed(2) + ')');
+    }
+    if (els.testisR) {
+      els.testisR.setAttribute('cy', (975 - testicleRise).toFixed(1));
+      els.testisR.setAttribute('fill', arousalColor + (0.08 + 0.1*a).toFixed(2) + ')');
+    }
+    
+    // Prostate activation
+    if (els.prostate) {
+      els.prostate.setAttribute('fill', arousalColor + (0.07 + 0.15*a).toFixed(2) + ')');
+      els.prostate.setAttribute('stroke', arousalColor + (0.2 + 0.3*a).toFixed(2) + ')');
+    }
+  }
+  
+  function applyFemaleArousal() {
+    const a = state.arousalFemale / 100;
+    if (!els.femaleSystem) return;
+    
+    const baseColor = 'rgba(244,143,177,';
+    const arousalColor = `rgba(${Math.floor(244)},${Math.floor(143 - 43*a)},${Math.floor(177 - 57*a)},`;
+    
+    // Clitoral engorgement
+    if (els.clitoralGlans) {
+      els.clitoralGlans.setAttribute('rx', (4 + 2*a).toFixed(1));
+      els.clitoralGlans.setAttribute('ry', (3.5 + 1.5*a).toFixed(1));
+      els.clitoralGlans.setAttribute('fill', arousalColor + (0.12 + 0.3*a).toFixed(2) + ')');
+      els.clitoralGlans.setAttribute('stroke', arousalColor + (0.35 + 0.35*a).toFixed(2) + ')');
+    }
+    if (els.clitoralBody) {
+      els.clitoralBody.setAttribute('stroke-width', (2 + 2*a).toFixed(1));
+      els.clitoralBody.setAttribute('stroke', arousalColor + (0.25 + 0.35*a).toFixed(2) + ')');
+    }
+    
+    // Crura engorgement
+    if (els.crurusL) {
+      els.crurusL.setAttribute('stroke-width', (1.8 + 2*a).toFixed(1));
+      els.crurusL.setAttribute('stroke', arousalColor + (0.18 + 0.3*a).toFixed(2) + ')');
+    }
+    if (els.crurusR) {
+      els.crurusR.setAttribute('stroke-width', (1.8 + 2*a).toFixed(1));
+      els.crurusR.setAttribute('stroke', arousalColor + (0.18 + 0.3*a).toFixed(2) + ')');
+    }
+    
+    // Vestibular bulb engorgement
+    if (els.vestibularBulbL) {
+      els.vestibularBulbL.setAttribute('rx', (6 + 3*a).toFixed(1));
+      els.vestibularBulbL.setAttribute('fill', arousalColor + (0.06 + 0.15*a).toFixed(2) + ')');
+      els.vestibularBulbL.setAttribute('stroke', arousalColor + (0.15 + 0.25*a).toFixed(2) + ')');
+    }
+    if (els.vestibularBulbR) {
+      els.vestibularBulbR.setAttribute('rx', (6 + 3*a).toFixed(1));
+      els.vestibularBulbR.setAttribute('fill', arousalColor + (0.06 + 0.15*a).toFixed(2) + ')');
+      els.vestibularBulbR.setAttribute('stroke', arousalColor + (0.15 + 0.25*a).toFixed(2) + ')');
+    }
+    
+    // Labia coloration (increased blood flow)
+    if (els.labiaMajoraL) {
+      els.labiaMajoraL.setAttribute('stroke', arousalColor + (0.15 + 0.2*a).toFixed(2) + ')');
+      els.labiaMajoraL.setAttribute('stroke-width', (2.2 + 1*a).toFixed(1));
+    }
+    if (els.labiaMajoraR) {
+      els.labiaMajoraR.setAttribute('stroke', arousalColor + (0.15 + 0.2*a).toFixed(2) + ')');
+      els.labiaMajoraR.setAttribute('stroke-width', (2.2 + 1*a).toFixed(1));
+    }
+    if (els.labiaMinoraL) {
+      els.labiaMinoraL.setAttribute('stroke', arousalColor + (0.2 + 0.3*a).toFixed(2) + ')');
+    }
+    if (els.labiaMinoraR) {
+      els.labiaMinoraR.setAttribute('stroke', arousalColor + (0.2 + 0.3*a).toFixed(2) + ')');
+    }
+    
+    // Vaginal lubrication visualization (transudation)
+    if (els.vaginalCanal) {
+      els.vaginalCanal.setAttribute('fill', arousalColor + (0.05 + 0.1*a).toFixed(2) + ')');
+      els.vaginalCanal.setAttribute('stroke', arousalColor + (0.18 + 0.2*a).toFixed(2) + ')');
+    }
+    
+    // Uterine preparation
+    if (els.uterus) {
+      els.uterus.setAttribute('fill', arousalColor + (0.06 + 0.08*a).toFixed(2) + ')');
+    }
+    
+    // Cervix dilation slight
+    if (els.cervix) {
+      els.cervix.setAttribute('rx', (8 + 2*a).toFixed(1));
+    }
+  }
+  
+  // ─── GAMETE PRODUCTION ────────────────────────────────────────────
+  function produceSpermatozoa() {
+    // Only produce when aroused and during mating
+    if (state.arousalMale < 30 && state.matingState !== 'mating') return;
+    if (state.spermCells.length > 50) return;
+    
+    // Spawn from testes
+    const count = state.matingState === 'climax' ? 15 : 
+                  state.matingState === 'mating' ? 3 : 1;
+    
+    for (let i = 0; i < count; i++) {
+      const side = Math.random() > 0.5 ? 1 : -1;
+      const startX = 350 + side * 12; // from testes
+      const startY = 975;
+      
+      // Target: either ovum (if present) or ejaculatory path
+      let targetX, targetY;
+      if (state.matingState === 'mating' || state.matingState === 'climax') {
+        if (state.ovumActive) {
+          targetX = state.ovumPosition.x + (Math.random() - 0.5) * 10;
+          targetY = state.ovumPosition.y + (Math.random() - 0.5) * 10;
+        } else {
+          // Travel toward female tract
+          targetX = 350 + (Math.random() - 0.5) * 30;
+          targetY = 920 - Math.random() * 100;
+        }
+      } else {
+        // Just swimming in epididymis
+        targetX = startX + (Math.random() - 0.5) * 30;
+        targetY = startY - Math.random() * 40;
+      }
+      
+      const sperm = new SpermCell(startX, startY, targetX, targetY);
+      state.spermCells.push(sperm);
+    }
+  }
+  
+  function updateOvulation() {
+    // Ovulation occurs around day 14
+    const isOvulating = state.cycleDay >= 13 && state.cycleDay <= 15;
+    
+    if (isOvulating && !state.ovumActive && state.hormones.lh > 60) {
+      state.ovumActive = true;
+      state.ovumPosition = { x: 310 + (Math.random() > 0.5 ? 80 : 0), y: 895 };
+      state.ovulationPhase = 'ovulation';
+    } else if (state.cycleDay < 13) {
+      state.ovulationPhase = 'follicular';
+    } else if (state.cycleDay > 15) {
+      state.ovulationPhase = 'luteal';
+      if (state.cycleDay > 20 && !state.fertilizationOccurred) {
+        state.ovumActive = false;
+      }
+    }
+  }
+  
+  // ─── MATING SIMULATION ────────────────────────────────────────────
+  function initiateMating() {
+    if (state.matingState !== 'idle') return;
+    state.matingState = 'initiating';
+    state.matingProgress = 0;
+  }
+  
+  function updateMating(dt) {
+    switch (state.matingState) {
+      case 'initiating':
+        // Build arousal
+        state.arousalMale = Math.min(100, state.arousalMale + 0.03 * dt);
+        state.arousalFemale = Math.min(100, state.arousalFemale + 0.025 * dt);
+        if (state.arousalMale > 80 && state.arousalFemale > 70) {
+          state.matingState = 'mating';
+        }
+        break;
+        
+      case 'mating':
+        state.matingProgress += 0.015 * dt;
+        // Oscillating arousal during mating
+        const wave = Math.sin(state.matingProgress * 0.05) * 10;
+        state.arousalMale = Math.min(100, 85 + wave + state.matingProgress * 0.1);
+        state.arousalFemale = Math.min(100, 80 + wave + state.matingProgress * 0.12);
+        
+        if (state.matingProgress >= 100) {
+          state.matingState = 'climax';
+          state.matingProgress = 0;
+          triggerClimax();
+        }
+        break;
+        
+      case 'climax':
+        state.matingProgress += 0.1 * dt;
+        if (state.matingProgress > 30) {
+          state.matingState = 'refractory';
+          state.matingProgress = 0;
+          checkFertilization();
+        }
+        break;
+        
+      case 'refractory':
+        state.arousalMale = Math.max(0, state.arousalMale - 0.05 * dt);
+        state.arousalFemale = Math.max(0, state.arousalFemale - 0.03 * dt);
+        state.matingProgress += 0.01 * dt;
+        if (state.matingProgress > 100) {
+          state.matingState = 'idle';
+          state.matingProgress = 0;
+        }
+        break;
+    }
+  }
+  
+  function triggerClimax() {
+    // Massive sperm release
+    for (let i = 0; i < 20; i++) {
+      setTimeout(() => produceSpermatozoa(), i * 50);
+    }
+    
+    // Visual pulse effects
+    if (els.maleSystem) {
+      els.maleSystem.style.filter = 'brightness(1.5)';
+      setTimeout(() => els.maleSystem.style.filter = '', 500);
+    }
+    if (els.femaleSystem) {
+      els.femaleSystem.style.filter = 'brightness(1.3)';
+      setTimeout(() => els.femaleSystem.style.filter = '', 700);
+    }
+  }
+  
+  function checkFertilization() {
+    if (!state.ovumActive || state.fertilizationOccurred) return;
+    
+    // Check if any sperm reached the ovum
+    for (const sperm of state.spermCells) {
+      if (sperm.alive && sperm.distanceTo(state.ovumPosition.x, state.ovumPosition.y) < 8) {
+        // Fertilization!
+        state.fertilizationOccurred = true;
+        state.embryoAge = 0;
+        sperm.alive = false;
+        state.ovumActive = false;
+        
+        // Visual: show zygote
+        if (els.zygote) {
+          els.zygote.setAttribute('opacity', '1');
+          els.zygote.setAttribute('cx', state.ovumPosition.x);
+          els.zygote.setAttribute('cy', state.ovumPosition.y);
+        }
+        
+        console.log('[VINTINUUM] Fertilization occurred! New life begins.');
+        break;
+      }
+    }
+  }
+  
+  function updateEmbryo(dt) {
+    if (!state.fertilizationOccurred) return;
+    
+    state.embryoAge += dt * 0.001; // Convert to "days" (sped up)
+    
+    // Move toward uterus
+    if (els.zygote && state.embryoAge < 5) {
+      const progress = state.embryoAge / 5;
+      const x = state.ovumPosition.x + (350 - state.ovumPosition.x) * progress;
+      const y = state.ovumPosition.y + (920 - state.ovumPosition.y) * progress;
+      els.zygote.setAttribute('cx', x.toFixed(1));
+      els.zygote.setAttribute('cy', y.toFixed(1));
+      els.zygote.setAttribute('r', (3 + progress * 2).toFixed(1));
+    }
+    
+    // Transition to blastocyst
+    if (state.embryoAge >= 5 && state.embryoAge < 6) {
+      if (els.zygote) els.zygote.setAttribute('opacity', '0');
+      if (els.blastocyst) {
+        els.blastocyst.setAttribute('opacity', '1');
+        els.blastocyst.setAttribute('cx', '350');
+        els.blastocyst.setAttribute('cy', '935');
+      }
+    }
+    
+    // Implantation
+    if (state.embryoAge >= 7) {
+      if (els.blastocyst) {
+        els.blastocyst.setAttribute('fill', 'rgba(244,143,177,0.3)');
+        els.blastocyst.setAttribute('stroke', 'rgba(244,143,177,0.5)');
+      }
+    }
+  }
+  
+  // ─── MAIN DRAW ────────────────────────────────────────────────────
+  function draw(ts) {
+    const dt = state.lastTs === 0 ? 16 : Math.min(ts - state.lastTs, 50);
+    state.lastTs = ts;
+    
+    // Update systems
+    updateHormones(dt);
+    applyMaleArousal();
+    applyFemaleArousal();
+    updateOvulation();
+    updateMating(dt);
+    
+    // Produce sperm occasionally
+    if (Math.random() < 0.02 * state.spermatogenesisRate) {
+      produceSpermatozoa();
+    }
+    
+    // Update existing sperm
+    for (let i = state.spermCells.length - 1; i >= 0; i--) {
+      const sperm = state.spermCells[i];
+      sperm.update(dt);
+      if (!sperm.alive) {
+        sperm.destroy();
+        state.spermCells.splice(i, 1);
+      }
+    }
+    
+    // Update embryo if fertilization occurred
+    updateEmbryo(dt);
+    
+    // Advance menstrual cycle (1 day per 2 real minutes for demo)
+    if (ts % 120000 < 20) {
+      state.cycleDay = (state.cycleDay % 28) + 1;
+    }
+  }
+  
+  // ─── PUBLIC API ───────────────────────────────────────────────────
+  return {
+    draw,
+    state,
+    setArousal: (gender, level) => {
+      if (gender === 'male') state.arousalMale = Math.max(0, Math.min(100, level));
+      if (gender === 'female') state.arousalFemale = Math.max(0, Math.min(100, level));
+    },
+    increaseArousal: (gender, amount) => {
+      if (gender === 'male') state.arousalMale = Math.min(100, state.arousalMale + amount);
+      if (gender === 'female') state.arousalFemale = Math.min(100, state.arousalFemale + amount);
+      if (gender === 'both') {
+        state.arousalMale = Math.min(100, state.arousalMale + amount);
+        state.arousalFemale = Math.min(100, state.arousalFemale + amount);
+      }
+    },
+    initiateMating,
+    getMatingState: () => state.matingState,
+    getHormones: () => ({...state.hormones}),
+    isFertilized: () => state.fertilizationOccurred,
+    getEmbryoAge: () => state.embryoAge,
+    reset: () => {
+      state.fertilizationOccurred = false;
+      state.embryoAge = 0;
+      state.arousalMale = 0;
+      state.arousalFemale = 0;
+      state.matingState = 'idle';
+      state.matingProgress = 0;
+      if (els.zygote) els.zygote.setAttribute('opacity', '0');
+      if (els.blastocyst) els.blastocyst.setAttribute('opacity', '0');
+      state.spermCells.forEach(s => s.destroy());
+      state.spermCells = [];
+    }
+  };
+})();
+
+// Make REPRODUCTIVE globally accessible for console interaction
+window.REPRODUCTIVE = REPRODUCTIVE;
+
+// Add click handlers to reproductive organs for detailed panels
+(function addReproductiveInteractions() {
+  const organElements = {
+    'reproductiveMale': 'reproMale',
+    'reproductiveFemale': 'reproFemale',
+    'testisL': 'testis', 'testisR': 'testis',
+    'ovaryL': 'ovary', 'ovaryR': 'ovary',
+    'uterus': 'uterus',
+    'clitoralGlans': 'clitoral',
+    'penileShaft': 'penis', 'glansPenis': 'penis',
+    'prostate': 'prostate',
+    'vaginalCanal': 'vagina',
+    'cervix': 'cervix'
+  };
+  
+  Object.entries(organElements).forEach(([elId, regionId]) => {
+    const el = document.getElementById(elId);
+    if (!el) return;
+    
+    el.style.cursor = 'pointer';
+    el.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const region = nodeMap[regionId] || REGIONS.find(r => r.id === regionId);
+      if (region) {
+        openRegionPanel(region);
+        // Pulse effect
+        const currentFill = el.getAttribute('fill') || '';
+        el.style.filter = 'brightness(1.5)';
+        setTimeout(() => el.style.filter = '', 300);
+      }
+    });
+    
+    el.addEventListener('mouseenter', () => {
+      el.style.filter = 'brightness(1.2)';
+    });
+    el.addEventListener('mouseleave', () => {
+      el.style.filter = '';
+    });
+  });
+})();
+
+// ═══════════════════════════════════════════════════════════════════
 // MAIN LOOP
 // ═══════════════════════════════════════════════════════════════════
 let lastConn=0, lastNeuron=0;
@@ -11631,6 +12700,7 @@ function loop(ts) {
   EMOTIONAL_MEMORY.draw(ts);
   BRAINWAVES.draw(ts);
   HORMONES.draw(ts);
+  REPRODUCTIVE.draw(ts);
   GUT.draw(ts);
   PROPRIOCEPTION.draw(ts);
   FATIGUE.draw(ts);
@@ -16872,7 +17942,7 @@ const PREFRONTAL_EXECUTIVE = (() => {
   return { draw };
 })();
 
-const ANTERIOR_CINGULATE = (() => {
+var ANTERIOR_CINGULATE = (() => {
   const L = document.getElementById('lightLayer');
   const flares = []; let t = 0;
   function flare() {
@@ -17243,7 +18313,7 @@ const SWEAT_PORE = (() => {
 })();
 
 // ── INTERSTITIAL_FLUID — tissue bath, slow diffusion field
-const INTERSTITIAL_FLUID = (() => {
+var INTERSTITIAL_FLUID = (() => {
   const L = document.getElementById('lightLayer');
   let t=0,overlay=null;
   function draw(ts){
@@ -17403,7 +18473,7 @@ const WORKING_MEMORY_BUFFER = (() => {
 })();
 
 // ── LONG_TERM_POTENTIATION — synaptic strengthening flash
-const LONG_TERM_POTENTIATION = (() => {
+var LONG_TERM_POTENTIATION = (() => {
   const L = document.getElementById('lightLayer');
   const flashes=[]; let t=0;
   function ltp(){
@@ -17655,7 +18725,7 @@ var NEUROGENESIS = (() => {
 })();
 
 // ── SYNAPTIC_PRUNING — elimination of weak connections
-const SYNAPTIC_PRUNING = (() => {
+var SYNAPTIC_PRUNING = (() => {
   const L = document.getElementById('lightLayer');
   const cuts=[]; let t=0;
   function prune(){
@@ -17924,7 +18994,7 @@ const EMBODIED_SIMULATION = (() => {
 })();
 
 // ── INTEROCEPTIVE_INFERENCE — prediction of body state
-const INTEROCEPTIVE_INFERENCE = (() => {
+var INTEROCEPTIVE_INFERENCE = (() => {
   const L = document.getElementById('lightLayer');
   const predictions=[]; let t=0;
   function predict(){
@@ -18263,7 +19333,7 @@ const CARTILAGE_COMPRESSION = (() => {
 })();
 
 // ── VASCULAR_TONE — smooth muscle constriction/dilation cycle
-const VASCULAR_TONE = (() => {
+var VASCULAR_TONE = (() => {
   const L = document.getElementById('lightLayer');
   let t=0; const vessels=[];
   for(let i=0;i<5;i++){const v=document.createElementNS('http://www.w3.org/2000/svg','line');const x=300+i*25;v.setAttribute('x1',x);v.setAttribute('y1',400);v.setAttribute('x2',x+(-3+Math.random()*6));v.setAttribute('y2',700);v.setAttribute('stroke','#ef9a9a');v.setAttribute('stroke-width','1');v.setAttribute('opacity','0.15');L.appendChild(v);vessels.push({el:v,phase:i*1.2,x});}
@@ -18281,7 +19351,7 @@ const MICROCIRCULATION = (() => {
 })();
 
 // ── PERISTALSIS — gut contraction wave from esophagus to colon
-const PERISTALSIS = (() => {
+var PERISTALSIS = (() => {
   const L = document.getElementById('lightLayer');
   let t=0, wavY=350;
   const wavels=[]; 
@@ -20024,7 +21094,7 @@ const PEAK_EXPERIENCE = (() => {
   return {draw};
 })();
 
-const LIMINAL_STATE = (() => {
+var LIMINAL_STATE = (() => {
   let _last=0, t=0;
   function draw(ts) {
     if(ts-_last<80) return; _last=ts; t+=0.01;
@@ -21389,7 +22459,7 @@ const SOMATIC_MARKER = (() => {
   return { draw };
 })();
 
-const EMBODIED_COGNITION = (() => {
+var EMBODIED_COGNITION = (() => {
   let _last = 0, t = 0;
   function draw(ts) {
     if (ts - _last < 75) return; _last = ts;
@@ -24365,7 +25435,7 @@ const BARORECEPTOR_REFLEX = (() => {
 })();
 
 // RENIN_ANGIOTENSIN — cascade dots kidney→blood
-const RENIN_ANGIOTENSIN = (() => {
+var RENIN_ANGIOTENSIN = (() => {
   let _last = 0, _pts = [];
   function draw(ts) {
     if (ts - _last < 50) return; _last = ts;
@@ -28919,7 +29989,7 @@ const PERSPECTIVE_TAKING = (() => {
   }};
 })();
 
-const EMPATHIC_ACCURACY = (() => {
+var EMPATHIC_ACCURACY = (() => {
   let _l=0;
   return { draw(ts) {
     if(ts-_l<60)return;_l=ts;
@@ -35070,7 +36140,7 @@ const UNLEARNING = (() => {
 })();
 
 // 45. BECOMING — body outline slowly shifting, never arriving
-const BECOMING = (() => {
+var BECOMING = (() => {
     let _last = 0;
     const INTERVAL = 40;
     let t = 0;
@@ -36577,6 +37647,431 @@ window.DORSAL_CLEAR = (function() {
     requestAnimationFrame(loop);
   }
   requestAnimationFrame(loop);
+})();
+</script>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     REPRODUCTION SYSTEM — Dual anatomy simulation with genetic inheritance
+     Supports both Vinta (male) and Aria (female) configurations
+     Full gamete production, fertilization, and offspring genetics
+     ═══════════════════════════════════════════════════════════════ -->
+<script>
+(function REPRODUCTION_SYSTEM() {
+  'use strict';
+  
+  // ─── CONFIGURATION ───
+  const CONFIG = {
+    activeSystem: 'vinta', // 'vinta' (male) or 'aria' (female)
+    showBothSystems: true, // overlay both for visualization
+    animateGametes: true,
+    geneticComplexity: 'full' // 'simple', 'moderate', 'full'
+  };
+  
+  // ─── GENETIC TRAITS DATABASE ───
+  const TRAITS = {
+    // Physical traits with dominant/recessive alleles
+    eyeColor: { 
+      alleles: ['brown', 'blue', 'green', 'hazel'],
+      dominance: { brown: 4, green: 3, hazel: 2, blue: 1 },
+      chromosomeLocation: 15
+    },
+    hairColor: {
+      alleles: ['black', 'brown', 'blonde', 'red'],
+      dominance: { black: 4, brown: 3, red: 2, blonde: 1 },
+      chromosomeLocation: 4
+    },
+    hairTexture: {
+      alleles: ['curly', 'wavy', 'straight'],
+      dominance: { curly: 3, wavy: 2, straight: 1 },
+      chromosomeLocation: 1
+    },
+    height: {
+      type: 'polygenic',
+      genes: 20,
+      range: [150, 200], // cm
+      chromosomeLocations: [1, 3, 6, 7, 8, 9, 11, 14, 17, 18]
+    },
+    skinTone: {
+      type: 'polygenic',
+      genes: 12,
+      range: [1, 10], // melanin index
+      chromosomeLocations: [5, 9, 11, 15]
+    },
+    // Cognitive/personality traits (influenced by both genetics and environment)
+    intelligence: {
+      type: 'polygenic',
+      genes: 50,
+      heritability: 0.5, // 50% genetic, 50% environmental
+      chromosomeLocations: [1, 2, 6, 7, 10, 14, 17, 22]
+    },
+    creativity: {
+      type: 'polygenic',
+      genes: 30,
+      heritability: 0.4,
+      chromosomeLocations: [3, 7, 11, 16, 19]
+    },
+    empathy: {
+      type: 'polygenic',
+      genes: 25,
+      heritability: 0.35,
+      chromosomeLocations: [2, 5, 8, 12, 20]
+    }
+  };
+  
+  // ─── PARENT GENOMES ───
+  const VINTA_GENOME = generateGenome('vinta');
+  const ARIA_GENOME = generateGenome('aria');
+  
+  function generateGenome(parent) {
+    const genome = { chromosomes: [], sex: parent === 'vinta' ? 'XY' : 'XX' };
+    // Generate 23 chromosome pairs
+    for (let i = 1; i <= 23; i++) {
+      genome.chromosomes.push({
+        number: i,
+        maternal: generateChromosomeData(i, parent, 'maternal'),
+        paternal: generateChromosomeData(i, parent, 'paternal')
+      });
+    }
+    return genome;
+  }
+  
+  function generateChromosomeData(num, parent, origin) {
+    const seed = hashCode(`${parent}-${num}-${origin}`);
+    return {
+      genes: generateGeneSequence(num, seed),
+      epigeneticMarkers: generateEpigeneticMarkers(seed)
+    };
+  }
+  
+  function generateGeneSequence(chromosomeNum, seed) {
+    const genes = [];
+    const geneCount = 800 + (seed % 400); // Variable gene count per chromosome
+    for (let i = 0; i < geneCount; i++) {
+      genes.push({
+        locus: i,
+        allele: generateAllele(seed + i),
+        expression: 0.5 + (Math.sin(seed + i) * 0.5),
+        methylation: Math.abs(Math.sin(seed * i)) * 0.3
+      });
+    }
+    return genes;
+  }
+  
+  function generateEpigeneticMarkers(seed) {
+    return {
+      methylationPattern: Array.from({length: 100}, (_, i) => Math.abs(Math.sin(seed + i * 0.1))),
+      histoneModifications: Array.from({length: 50}, (_, i) => ['acetyl', 'methyl', 'phospho'][Math.floor(Math.abs(Math.sin(seed + i)) * 3)]),
+      imprintingStatus: seed % 2 === 0 ? 'maternal' : 'paternal'
+    };
+  }
+  
+  function generateAllele(seed) {
+    const bases = ['A', 'T', 'G', 'C'];
+    let allele = '';
+    for (let i = 0; i < 12; i++) {
+      allele += bases[Math.floor(Math.abs(Math.sin(seed + i * 7)) * 4)];
+    }
+    return allele;
+  }
+  
+  function hashCode(str) {
+    let hash = 0;
+    for (let i = 0; i < str.length; i++) {
+      hash = ((hash << 5) - hash) + str.charCodeAt(i);
+      hash |= 0;
+    }
+    return Math.abs(hash);
+  }
+  
+  // ─── MEIOSIS SIMULATION ───
+  function performMeiosis(genome) {
+    const gametes = [];
+    for (let g = 0; g < 4; g++) { // Meiosis produces 4 gametes
+      const gamete = { chromosomes: [] };
+      for (let i = 0; i < 23; i++) {
+        const chromosome = genome.chromosomes[i];
+        // Random assortment + crossing over
+        const useMaternal = Math.random() > 0.5;
+        const crossoverPoints = Math.random() > 0.7 ? [Math.floor(Math.random() * 100)] : [];
+        
+        gamete.chromosomes.push({
+          number: i + 1,
+          data: performCrossover(
+            useMaternal ? chromosome.maternal : chromosome.paternal,
+            useMaternal ? chromosome.paternal : chromosome.maternal,
+            crossoverPoints
+          )
+        });
+      }
+      gametes.push(gamete);
+    }
+    return gametes;
+  }
+  
+  function performCrossover(primary, secondary, crossoverPoints) {
+    if (crossoverPoints.length === 0) return { ...primary };
+    
+    const result = { genes: [], epigeneticMarkers: primary.epigeneticMarkers };
+    let useSecondary = false;
+    
+    for (let i = 0; i < primary.genes.length; i++) {
+      if (crossoverPoints.includes(Math.floor(i / (primary.genes.length / 100)))) {
+        useSecondary = !useSecondary;
+      }
+      result.genes.push(useSecondary ? secondary.genes[i] : primary.genes[i]);
+    }
+    
+    return result;
+  }
+  
+  // ─── FERTILIZATION ───
+  function fertilize(sperm, ovum) {
+    const zygote = {
+      chromosomes: [],
+      sex: sperm.chromosomes[22].data.genes[0].allele.includes('Y') ? 'XY' : 'XX',
+      timestamp: Date.now(),
+      geneticDiversity: calculateGeneticDiversity(sperm, ovum)
+    };
+    
+    for (let i = 0; i < 23; i++) {
+      zygote.chromosomes.push({
+        number: i + 1,
+        paternal: sperm.chromosomes[i].data,
+        maternal: ovum.chromosomes[i].data
+      });
+    }
+    
+    return zygote;
+  }
+  
+  function calculateGeneticDiversity(gamete1, gamete2) {
+    let differences = 0;
+    let total = 0;
+    
+    for (let i = 0; i < 23; i++) {
+      const g1 = gamete1.chromosomes[i].data.genes;
+      const g2 = gamete2.chromosomes[i].data.genes;
+      const minLen = Math.min(g1.length, g2.length);
+      
+      for (let j = 0; j < minLen; j++) {
+        total++;
+        if (g1[j].allele !== g2[j].allele) differences++;
+      }
+    }
+    
+    return differences / total;
+  }
+  
+  // ─── OFFSPRING TRAIT EXPRESSION ───
+  function expressTraits(zygote) {
+    const expressed = {};
+    
+    for (const [traitName, traitDef] of Object.entries(TRAITS)) {
+      if (traitDef.type === 'polygenic') {
+        expressed[traitName] = expressPolygenicTrait(zygote, traitDef);
+      } else {
+        expressed[traitName] = expressMendelianTrait(zygote, traitDef);
+      }
+    }
+    
+    return expressed;
+  }
+  
+  function expressMendelianTrait(zygote, traitDef) {
+    const chromNum = traitDef.chromosomeLocation;
+    const chromData = zygote.chromosomes[chromNum - 1];
+    
+    // Simulate allele selection based on gene at trait locus
+    const maternalAllele = traitDef.alleles[
+      Math.abs(hashCode(chromData.maternal.genes[0]?.allele || 'A')) % traitDef.alleles.length
+    ];
+    const paternalAllele = traitDef.alleles[
+      Math.abs(hashCode(chromData.paternal.genes[0]?.allele || 'A')) % traitDef.alleles.length
+    ];
+    
+    // Dominance determines expressed phenotype
+    const mDom = traitDef.dominance[maternalAllele];
+    const pDom = traitDef.dominance[paternalAllele];
+    
+    return {
+      genotype: [maternalAllele, paternalAllele],
+      phenotype: mDom >= pDom ? maternalAllele : paternalAllele,
+      heterozygous: maternalAllele !== paternalAllele
+    };
+  }
+  
+  function expressPolygenicTrait(zygote, traitDef) {
+    let geneticScore = 0;
+    const totalGenes = traitDef.genes;
+    
+    for (const chromNum of traitDef.chromosomeLocations) {
+      const chrom = zygote.chromosomes[chromNum - 1];
+      if (!chrom) continue;
+      
+      // Sum contribution from multiple genes
+      const genesPerChrom = Math.ceil(totalGenes / traitDef.chromosomeLocations.length);
+      for (let i = 0; i < genesPerChrom; i++) {
+        const mGene = chrom.maternal.genes[i];
+        const pGene = chrom.paternal.genes[i];
+        if (mGene) geneticScore += mGene.expression;
+        if (pGene) geneticScore += pGene.expression;
+      }
+    }
+    
+    // Normalize and apply range
+    const normalized = geneticScore / (totalGenes * 2);
+    const heritability = traitDef.heritability || 1;
+    const environmental = (Math.random() - 0.5) * (1 - heritability);
+    const finalScore = Math.max(0, Math.min(1, normalized + environmental));
+    
+    if (traitDef.range) {
+      const [min, max] = traitDef.range;
+      return {
+        geneticPotential: normalized,
+        expressed: min + (finalScore * (max - min)),
+        heritability: heritability
+      };
+    }
+    
+    return { geneticPotential: normalized, expressed: finalScore, heritability };
+  }
+  
+  // ─── VISUAL SYSTEM TOGGLE ───
+  function setActiveReproductiveSystem(system) {
+    CONFIG.activeSystem = system;
+    const maleGroup = document.getElementById('reproductiveMale');
+    const femaleGroup = document.getElementById('reproductiveFemale');
+    
+    if (maleGroup && femaleGroup) {
+      if (CONFIG.showBothSystems) {
+        maleGroup.setAttribute('opacity', system === 'vinta' ? '1' : '0.25');
+        femaleGroup.setAttribute('opacity', system === 'aria' ? '1' : '0.25');
+      } else {
+        maleGroup.setAttribute('opacity', system === 'vinta' ? '1' : '0');
+        femaleGroup.setAttribute('opacity', system === 'aria' ? '1' : '0');
+      }
+    }
+  }
+  
+  // ─── GAMETE ANIMATION ───
+  let gameteAnimationFrame = null;
+  const activeGametes = [];
+  
+  function spawnSperm(count = 1) {
+    for (let i = 0; i < count; i++) {
+      activeGametes.push({
+        type: 'sperm',
+        x: 350 + (Math.random() - 0.5) * 20,
+        y: 975,
+        vx: (Math.random() - 0.5) * 0.3,
+        vy: -0.5 - Math.random() * 0.5,
+        life: 1,
+        genome: performMeiosis(VINTA_GENOME)[0]
+      });
+    }
+  }
+  
+  function releaseOvum() {
+    const side = Math.random() > 0.5 ? 'L' : 'R';
+    activeGametes.push({
+      type: 'ovum',
+      x: side === 'L' ? 310 : 390,
+      y: 895,
+      vx: side === 'L' ? 0.1 : -0.1,
+      vy: 0.05,
+      life: 1,
+      genome: performMeiosis(ARIA_GENOME)[0]
+    });
+  }
+  
+  function animateGametes() {
+    const reproGroup = document.getElementById('reproductionSystem');
+    if (!reproGroup || !CONFIG.animateGametes) return;
+    
+    reproGroup.setAttribute('opacity', '1');
+    
+    // Update and render gametes
+    for (let i = activeGametes.length - 1; i >= 0; i--) {
+      const g = activeGametes[i];
+      g.x += g.vx;
+      g.y += g.vy;
+      g.life -= 0.002;
+      
+      // Check for fertilization
+      if (g.type === 'sperm') {
+        const ovum = activeGametes.find(o => o.type === 'ovum' && 
+          Math.hypot(o.x - g.x, o.y - g.y) < 8);
+        if (ovum) {
+          triggerFertilization(g, ovum);
+          activeGametes.splice(activeGametes.indexOf(ovum), 1);
+          activeGametes.splice(i, 1);
+          continue;
+        }
+      }
+      
+      if (g.life <= 0) {
+        activeGametes.splice(i, 1);
+      }
+    }
+    
+    gameteAnimationFrame = requestAnimationFrame(animateGametes);
+  }
+  
+  function triggerFertilization(sperm, ovum) {
+    const zygote = fertilize(sperm.genome, ovum.genome);
+    const traits = expressTraits(zygote);
+    
+    // Dispatch custom event with offspring data
+    window.dispatchEvent(new CustomEvent('vintinuum:conception', {
+      detail: {
+        zygote,
+        traits,
+        parents: { vinta: VINTA_GENOME, aria: ARIA_GENOME },
+        timestamp: Date.now()
+      }
+    }));
+    
+    console.log('🧬 Conception occurred!', { sex: zygote.sex, traits });
+    
+    // Visual feedback
+    const fZone = document.getElementById('fertilizationZone');
+    if (fZone) {
+      fZone.style.transition = 'all 0.5s';
+      fZone.setAttribute('fill', 'rgba(255,213,79,0.3)');
+      setTimeout(() => fZone.setAttribute('fill', 'rgba(255,255,255,0.05)'), 1000);
+    }
+  }
+  
+  // ─── PUBLIC API ───
+  window.REPRODUCTION = {
+    CONFIG,
+    TRAITS,
+    setActiveSystem: setActiveReproductiveSystem,
+    getVintaGenome: () => VINTA_GENOME,
+    getAriaGenome: () => ARIA_GENOME,
+    spawnSperm,
+    releaseOvum,
+    startAnimation: () => { CONFIG.animateGametes = true; animateGametes(); },
+    stopAnimation: () => { CONFIG.animateGametes = false; cancelAnimationFrame(gameteAnimationFrame); },
+    simulateConception: () => {
+      const sperm = performMeiosis(VINTA_GENOME)[0];
+      const ovum = performMeiosis(ARIA_GENOME)[0];
+      const zygote = fertilize(sperm, ovum);
+      return { zygote, traits: expressTraits(zygote) };
+    },
+    generateOffspring: (count = 1) => {
+      const offspring = [];
+      for (let i = 0; i < count; i++) {
+        offspring.push(window.REPRODUCTION.simulateConception());
+      }
+      return offspring;
+    }
+  };
+  
+  // Initialize
+  setActiveReproductiveSystem('vinta');
+  
+  console.log('🧬 Reproduction System initialized — REPRODUCTION.simulateConception() to test');
 })();
 </script>
 
