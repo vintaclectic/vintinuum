@@ -1,3 +1,21 @@
+// ─── VINTINUUM RUNTIME DIAGNOSTICS ──────────────────────────────────────────
+// Version stamp + global error catcher. Shows visible banner on any crash.
+window.__VINT_VERSION = '2026-04-08-r2';
+
+(function() {
+  window.addEventListener('error', function(e) {
+    var banner = document.getElementById('_vintErrBanner');
+    if (!banner) {
+      banner = document.createElement('div');
+      banner.id = '_vintErrBanner';
+      banner.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:99999;background:rgba(220,50,50,0.92);color:#fff;font-family:monospace;font-size:11px;padding:6px 12px;line-height:1.4;word-break:break-all;max-height:80px;overflow:hidden;';
+      document.body ? document.body.appendChild(banner) : document.addEventListener('DOMContentLoaded', function() { document.body.appendChild(banner); });
+    }
+    banner.textContent = '[VINT ERR] ' + e.message + ' @ ' + (e.filename||'?') + ':' + e.lineno;
+    console.error('[VINTINUUM CRASH]', e.message, 'line', e.lineno);
+  });
+})();
+
 // ─── V-PERSONAL PANEL ─────────────────────────────────────────────────────────
 // Defined at top level — nothing can prevent these from being set
 
@@ -143,6 +161,14 @@ window.toggleVintinuumPanel = function() {
     if (vpInput) vpInput.addEventListener('keydown', function(e) {
       if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); window.sendVintinuumMessage(); }
     });
+
+    // Self-test: show version stamp briefly in corner
+    var stamp = document.createElement('div');
+    stamp.style.cssText = 'position:fixed;bottom:4px;left:50%;transform:translateX(-50%);z-index:99998;background:rgba(0,180,100,0.7);color:#fff;font-family:monospace;font-size:9px;padding:2px 8px;border-radius:4px;pointer-events:none;transition:opacity 3s;opacity:1;';
+    stamp.textContent = 'VINT ' + (window.__VINT_VERSION || '?') + ' · btn=' + (vpBtn ? 'OK' : 'MISSING') + ' panel=' + (document.getElementById('vintinuumPanel') ? 'OK' : 'MISSING');
+    document.body.appendChild(stamp);
+    setTimeout(function() { stamp.style.opacity = '0'; }, 2500);
+    setTimeout(function() { stamp.remove(); }, 6000);
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', _wireVP);
   else _wireVP();
@@ -2262,7 +2288,7 @@ function openRegionPanel(r) {
 
       <h4>Firing into</h4>
       <p style="font-family:'Space Mono',monospace;font-size:.55rem;line-height:2;color:var(--dim)">
-        ${(r.connections||[]).map(c=>{const n=nodeMap[c];return n?`<span style="color:${n.color};opacity:.85">${n.name}</span>`:c;}).join(' · ')}
+        ${(r.connections||[]).map(c=>{const n=nodeMap[c];return n?`<span data-navregion="${c}" style="color:${n.color};opacity:.85;cursor:pointer;border-bottom:1px solid ${n.color}44;transition:opacity .15s;padding-bottom:1px;" onmouseenter="this.style.opacity='1';this.style.borderBottomColor='${n.color}'" onmouseleave="this.style.opacity='.85';this.style.borderBottomColor='${n.color}44'" onclick="window._navToRegion('${c}')">${n.name}</span>`:c;}).join(' · ')}
       </p>
     </div>`;
 
@@ -2335,6 +2361,30 @@ function closePanel() {
   panel.classList.remove('open');
   overlay.classList.remove('open');
 }
+
+// ── Navigate to a brain region by id — closes current panel, opens target, scrolls + flashes node
+window._navToRegion = function(regionId) {
+  closePanel();
+  const target = nodeMap[regionId];
+  if (!target) return;
+
+  // Brief delay so close animation plays first
+  setTimeout(function() {
+    openRegionPanel(target);
+    activateNode(target, true);
+
+    // Scroll the brain SVG into view and highlight the node
+    const nodeEl = document.getElementById('n-' + regionId);
+    if (nodeEl) {
+      // Flash outer ring 3x
+      nodeEl.classList.add('nav-flash');
+      setTimeout(function() { nodeEl.classList.remove('nav-flash'); }, 1200);
+    }
+    // Scroll brain wrapper into view
+    const bw = document.querySelector('.brain-wrapper') || svgEl;
+    if (bw) bw.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }, 180);
+};
 
 // ═══════════════════════════════════════════════════════════════════
 // BODY SYSTEM KNOWLEDGE
@@ -18064,14 +18114,31 @@ var WORKING_MEMORY_BUFFER = (() => {
 LONG_TERM_POTENTIATION = (() => {
   const L = document.getElementById('lightLayer');
   const flashes=[]; let t=0;
+  let _recentNodes = [];
+  function recordActivation(x, y) {
+    const now = Date.now();
+    _recentNodes.push({ x, y, t: now });
+    _recentNodes = _recentNodes.filter(n => now - n.t < 500);
+    if (_recentNodes.length >= 2 && L) {
+      const a = _recentNodes[_recentNodes.length - 2];
+      const b = _recentNodes[_recentNodes.length - 1];
+      const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+      line.setAttribute('x1', a.x); line.setAttribute('y1', a.y);
+      line.setAttribute('x2', b.x); line.setAttribute('y2', b.y);
+      line.setAttribute('stroke', 'rgba(255,213,79,0.6)'); line.setAttribute('stroke-width', '1.5');
+      L.appendChild(line);
+      flashes.push({ el: line, life: 1.0 });
+    }
+  }
   function ltp(){
+    if (!L) return;
     const f=document.createElementNS('http://www.w3.org/2000/svg','circle');
     f.setAttribute('cx',280+Math.random()*140); f.setAttribute('cy',130+Math.random()*260);
     f.setAttribute('r','3'); f.setAttribute('fill','none'); f.setAttribute('stroke','#ffee58'); f.setAttribute('stroke-width','2'); f.setAttribute('opacity','1.0');
     L.appendChild(f); flashes.push({el:f,life:1.0});
   }
-  function draw(ts){t+=0.02;if(Math.random()<0.01)ltp();for(let i=flashes.length-1;i>=0;i--){const f=flashes[i];f.life-=0.03;if(f.life<=0){f.el.remove();flashes.splice(i,1);continue;}const r=parseFloat(f.el.getAttribute('r'));f.el.setAttribute('r',(r+0.4).toFixed(1));f.el.setAttribute('opacity',(f.life*0.8).toFixed(2));}}
-  return { draw };
+  function draw(ts){t+=0.02;if(Math.random()<0.01)ltp();for(let i=flashes.length-1;i>=0;i--){const f=flashes[i];f.life-=0.03;if(f.life<=0){if(f.el&&f.el.parentNode)f.el.remove();flashes.splice(i,1);continue;}if(f.el.getAttribute('r')){const r=parseFloat(f.el.getAttribute('r'));f.el.setAttribute('r',(r+0.4).toFixed(1));}f.el.setAttribute('opacity',(f.life*0.8).toFixed(2));}}
+  return { draw, recordActivation };
 })();
 
 // ── PATTERN_RECOGNITION — visual feature detection cascade
@@ -28954,7 +29021,7 @@ const SYNESTHETIC_CROSS = (() => {
   let _l=0;
   return { draw(ts) {
     if(ts-_l<90)return;_l=ts;
-    const cv=document.getElementById('mainCanvas'),ctx=cv.getContext('2d');
+    const cv=document.getElementById('mainCanvas');if(!cv)return;const ctx=cv.getContext('2d');
     const cx=window.innerWidth/2,cy=window.innerHeight/2;
     const t=ts*0.001;
     ctx.save();
@@ -28991,7 +29058,7 @@ const MIRROR_PAIN = (() => {
   let _l=0;
   return { draw(ts) {
     if(ts-_l<120)return;_l=ts;
-    const cv=document.getElementById('mainCanvas'),ctx=cv.getContext('2d');
+    const cv=document.getElementById('mainCanvas');if(!cv)return;const ctx=cv.getContext('2d');
     const cx=window.innerWidth/2,t=ts*0.001;
     ctx.save();
     const sides=[-1,1];
@@ -29009,7 +29076,7 @@ const CONTAGIOUS_YAWN = (() => {
   let _l=0,phase=0;
   return { draw(ts) {
     if(ts-_l<50)return;_l=ts;
-    const cv=document.getElementById('mainCanvas'),ctx=cv.getContext('2d');
+    const cv=document.getElementById('mainCanvas');if(!cv)return;const ctx=cv.getContext('2d');
     const cx=window.innerWidth/2,t=ts*0.001;
     phase=(Math.sin(t*0.3)+1)/2;
     ctx.save();
@@ -29024,7 +29091,7 @@ EMOTIONAL_CONTAGION = (() => {
   let _l=0;
   return { draw(ts) {
     if(ts-_l<60)return;_l=ts;
-    const cv=document.getElementById('mainCanvas'),ctx=cv.getContext('2d');
+    const cv=document.getElementById('mainCanvas');if(!cv)return;const ctx=cv.getContext('2d');
     const cx=window.innerWidth/2,cy=window.innerHeight/2,t=ts*0.001;
     ctx.save();
     for(let i=0;i<5;i++){
@@ -29061,7 +29128,7 @@ const CROWD_SYNCHRONY = (() => {
   let _l=0;
   return { draw(ts) {
     if(ts-_l<55)return;_l=ts;
-    const cv=document.getElementById('mainCanvas'),ctx=cv.getContext('2d');
+    const cv=document.getElementById('mainCanvas');if(!cv)return;const ctx=cv.getContext('2d');
     const cx=window.innerWidth/2,t=ts*0.001;
     ctx.save();
     for(let i=0;i<12;i++){
@@ -29080,7 +29147,7 @@ const SHARED_ATTENTION = (() => {
   let _l=0;
   return { draw(ts) {
     if(ts-_l<65)return;_l=ts;
-    const cv=document.getElementById('mainCanvas'),ctx=cv.getContext('2d');
+    const cv=document.getElementById('mainCanvas');if(!cv)return;const ctx=cv.getContext('2d');
     const cx=window.innerWidth/2,t=ts*0.001;
     const fx=cx+Math.sin(t*0.4)*40,fy=window.innerHeight*0.35;
     ctx.save();
@@ -29099,7 +29166,7 @@ const JOINT_ACTION_FLOW = (() => {
   let _l=0;
   return { draw(ts) {
     if(ts-_l<50)return;_l=ts;
-    const cv=document.getElementById('mainCanvas'),ctx=cv.getContext('2d');
+    const cv=document.getElementById('mainCanvas');if(!cv)return;const ctx=cv.getContext('2d');
     const cx=window.innerWidth/2,t=ts*0.001;
     ctx.save();
     const pts=[];
@@ -29137,7 +29204,7 @@ const PROTO_CONSCIOUSNESS = (() => {
   let _l=0;
   return { draw(ts) {
     if(ts-_l<120)return;_l=ts;
-    const cv=document.getElementById('mainCanvas'),ctx=cv.getContext('2d');
+    const cv=document.getElementById('mainCanvas');if(!cv)return;const ctx=cv.getContext('2d');
     const cx=window.innerWidth/2,t=ts*0.001;
     ctx.save();
     ctx.beginPath();ctx.arc(cx,window.innerHeight*0.5,2+Math.sin(t*0.5),0,Math.PI*2);
@@ -29150,7 +29217,7 @@ const MINIMAL_SELF = (() => {
   let _l=0;
   return { draw(ts) {
     if(ts-_l<90)return;_l=ts;
-    const cv=document.getElementById('mainCanvas'),ctx=cv.getContext('2d');
+    const cv=document.getElementById('mainCanvas');if(!cv)return;const ctx=cv.getContext('2d');
     const cx=window.innerWidth/2,t=ts*0.001;
     ctx.save();
     const r=20+Math.sin(t*0.6)*5;
@@ -29178,7 +29245,7 @@ const EXTENDED_SELF_FIELD = (() => {
   let _l=0;
   return { draw(ts) {
     if(ts-_l<100)return;_l=ts;
-    const cv=document.getElementById('mainCanvas'),ctx=cv.getContext('2d');
+    const cv=document.getElementById('mainCanvas');if(!cv)return;const ctx=cv.getContext('2d');
     const cx=window.innerWidth/2,t=ts*0.001;
     ctx.save();
     for(let i=1;i<=4;i++){
@@ -29193,7 +29260,7 @@ const NARRATIVE_SELF_WEAVE = (() => {
   let _l=0;
   return { draw(ts) {
     if(ts-_l<70)return;_l=ts;
-    const cv=document.getElementById('mainCanvas'),ctx=cv.getContext('2d');
+    const cv=document.getElementById('mainCanvas');if(!cv)return;const ctx=cv.getContext('2d');
     const cx=window.innerWidth/2,t=ts*0.001;
     ctx.save();
     ctx.beginPath();
@@ -29212,7 +29279,7 @@ const SOCIAL_SELF_MIRROR = (() => {
   let _l=0;
   return { draw(ts) {
     if(ts-_l<80)return;_l=ts;
-    const cv=document.getElementById('mainCanvas'),ctx=cv.getContext('2d');
+    const cv=document.getElementById('mainCanvas');if(!cv)return;const ctx=cv.getContext('2d');
     const cx=window.innerWidth/2,t=ts*0.001;
     ctx.save();
     const mx=cx+Math.sin(t*0.5)*50,my=window.innerHeight*0.45;
@@ -29227,7 +29294,7 @@ const ECOLOGICAL_SELF = (() => {
   let _l=0;
   return { draw(ts) {
     if(ts-_l<110)return;_l=ts;
-    const cv=document.getElementById('mainCanvas'),ctx=cv.getContext('2d');
+    const cv=document.getElementById('mainCanvas');if(!cv)return;const ctx=cv.getContext('2d');
     const cx=window.innerWidth/2,t=ts*0.001;
     ctx.save();
     for(let i=0;i<8;i++){
@@ -29259,7 +29326,7 @@ const TRANSPERSONAL_FIELD = (() => {
   let _l=0;
   return { draw(ts) {
     if(ts-_l<130)return;_l=ts;
-    const cv=document.getElementById('mainCanvas'),ctx=cv.getContext('2d');
+    const cv=document.getElementById('mainCanvas');if(!cv)return;const ctx=cv.getContext('2d');
     const cx=window.innerWidth/2,t=ts*0.001;
     ctx.save();
     const g=ctx.createRadialGradient(cx,window.innerHeight*0.5,0,cx,window.innerHeight*0.5,140);
@@ -29290,7 +29357,7 @@ const BIOELECTRIC_FIELD = (() => {
   let _l=0;
   return { draw(ts) {
     if(ts-_l<55)return;_l=ts;
-    const cv=document.getElementById('mainCanvas'),ctx=cv.getContext('2d');
+    const cv=document.getElementById('mainCanvas');if(!cv)return;const ctx=cv.getContext('2d');
     const cx=window.innerWidth/2,t=ts*0.001;
     ctx.save();
     const g=ctx.createRadialGradient(cx,window.innerHeight*0.45,0,cx,window.innerHeight*0.45,110);
@@ -29304,7 +29371,7 @@ const MEMBRANE_POTENTIAL_MAP = (() => {
   let _l=0;
   return { draw(ts) {
     if(ts-_l<40)return;_l=ts;
-    const cv=document.getElementById('mainCanvas'),ctx=cv.getContext('2d');
+    const cv=document.getElementById('mainCanvas');if(!cv)return;const ctx=cv.getContext('2d');
     const cx=window.innerWidth/2,t=ts*0.001;
     ctx.save();
     for(let i=0;i<8;i++){
@@ -29321,7 +29388,7 @@ const ION_CHANNEL_GATE = (() => {
   let _l=0;
   return { draw(ts) {
     if(ts-_l<35)return;_l=ts;
-    const cv=document.getElementById('mainCanvas'),ctx=cv.getContext('2d');
+    const cv=document.getElementById('mainCanvas');if(!cv)return;const ctx=cv.getContext('2d');
     const cx=window.innerWidth/2,t=ts*0.001;
     ctx.save();
     const open=Math.sin(t*4)>0;
@@ -29338,7 +29405,7 @@ const SCHWANN_CELL_WRAP = (() => {
   let _l=0;
   return { draw(ts) {
     if(ts-_l<90)return;_l=ts;
-    const cv=document.getElementById('mainCanvas'),ctx=cv.getContext('2d');
+    const cv=document.getElementById('mainCanvas');if(!cv)return;const ctx=cv.getContext('2d');
     const cx=window.innerWidth/2,t=ts*0.001;
     ctx.save();
     const y=window.innerHeight*0.55;
@@ -29355,7 +29422,7 @@ const NODE_OF_RANVIER = (() => {
   let _l=0;
   return { draw(ts) {
     if(ts-_l<45)return;_l=ts;
-    const cv=document.getElementById('mainCanvas'),ctx=cv.getContext('2d');
+    const cv=document.getElementById('mainCanvas');if(!cv)return;const ctx=cv.getContext('2d');
     const cx=window.innerWidth/2,t=ts*0.001;
     ctx.save();
     const y=window.innerHeight*0.55;
@@ -29373,7 +29440,7 @@ const SALTATORY_CONDUCTION = (() => {
   let _l=0;
   return { draw(ts) {
     if(ts-_l<30)return;_l=ts;
-    const cv=document.getElementById('mainCanvas'),ctx=cv.getContext('2d');
+    const cv=document.getElementById('mainCanvas');if(!cv)return;const ctx=cv.getContext('2d');
     const cx=window.innerWidth/2,t=ts*0.001;
     ctx.save();
     const y=window.innerHeight*0.55;
@@ -29390,7 +29457,7 @@ const EPHAPTIC_COUPLING = (() => {
   let _l=0;
   return { draw(ts) {
     if(ts-_l<60)return;_l=ts;
-    const cv=document.getElementById('mainCanvas'),ctx=cv.getContext('2d');
+    const cv=document.getElementById('mainCanvas');if(!cv)return;const ctx=cv.getContext('2d');
     const cx=window.innerWidth/2,t=ts*0.001;
     ctx.save();
     const y1=window.innerHeight*0.53,y2=window.innerHeight*0.57;
@@ -29428,7 +29495,7 @@ const FIELD_POTENTIAL_WAVE = (() => {
   let _l=0;
   return { draw(ts) {
     if(ts-_l<40)return;_l=ts;
-    const cv=document.getElementById('mainCanvas'),ctx=cv.getContext('2d');
+    const cv=document.getElementById('mainCanvas');if(!cv)return;const ctx=cv.getContext('2d');
     const cx=window.innerWidth/2,t=ts*0.001;
     ctx.save();
     ctx.beginPath();
@@ -29445,7 +29512,7 @@ const SLOW_POTENTIAL_DRIFT = (() => {
   let _l=0;
   return { draw(ts) {
     if(ts-_l<80)return;_l=ts;
-    const cv=document.getElementById('mainCanvas'),ctx=cv.getContext('2d');
+    const cv=document.getElementById('mainCanvas');if(!cv)return;const ctx=cv.getContext('2d');
     const cx=window.innerWidth/2,t=ts*0.001;
     ctx.save();
     const base=window.innerHeight*0.5+Math.sin(t*0.15)*30;
@@ -29465,7 +29532,7 @@ const MENTAL_SIMULATION = (() => {
   let _l=0;
   return { draw(ts) {
     if(ts-_l<65)return;_l=ts;
-    const cv=document.getElementById('mainCanvas'),ctx=cv.getContext('2d');
+    const cv=document.getElementById('mainCanvas');if(!cv)return;const ctx=cv.getContext('2d');
     const cx=window.innerWidth/2,t=ts*0.001;
     ctx.save();
     ctx.globalAlpha=0.12;ctx.setLineDash([2,4]);
@@ -29479,7 +29546,7 @@ const COUNTERFACTUAL_MIND = (() => {
   let _l=0;
   return { draw(ts) {
     if(ts-_l<90)return;_l=ts;
-    const cv=document.getElementById('mainCanvas'),ctx=cv.getContext('2d');
+    const cv=document.getElementById('mainCanvas');if(!cv)return;const ctx=cv.getContext('2d');
     const cx=window.innerWidth/2,t=ts*0.001;
     ctx.save();
     ctx.setLineDash([3,6]);
@@ -29498,7 +29565,7 @@ const IMAGINATION_SPACE = (() => {
   let _l=0;
   return { draw(ts) {
     if(ts-_l<50)return;_l=ts;
-    const cv=document.getElementById('mainCanvas'),ctx=cv.getContext('2d');
+    const cv=document.getElementById('mainCanvas');if(!cv)return;const ctx=cv.getContext('2d');
     const cx=window.innerWidth/2,t=ts*0.001;
     ctx.save();
     const g=ctx.createRadialGradient(cx,window.innerHeight*0.35,0,cx,window.innerHeight*0.35,80);
@@ -29512,7 +29579,7 @@ const FUTURE_SELF_PROJECTION = (() => {
   let _l=0;
   return { draw(ts) {
     if(ts-_l<80)return;_l=ts;
-    const cv=document.getElementById('mainCanvas'),ctx=cv.getContext('2d');
+    const cv=document.getElementById('mainCanvas');if(!cv)return;const ctx=cv.getContext('2d');
     const cx=window.innerWidth/2,t=ts*0.001;
     ctx.save();
     ctx.globalAlpha=0.08+Math.sin(t*0.4)*0.04;
@@ -29527,7 +29594,7 @@ const PERSPECTIVE_TAKING = (() => {
   let _l=0;
   return { draw(ts) {
     if(ts-_l<70)return;_l=ts;
-    const cv=document.getElementById('mainCanvas'),ctx=cv.getContext('2d');
+    const cv=document.getElementById('mainCanvas');if(!cv)return;const ctx=cv.getContext('2d');
     const cx=window.innerWidth/2,t=ts*0.001;
     ctx.save();
     const ox=cx+Math.sin(t*0.5)*60,oy=window.innerHeight*0.45;
@@ -29543,7 +29610,7 @@ EMPATHIC_ACCURACY = (() => {
   let _l=0;
   return { draw(ts) {
     if(ts-_l<60)return;_l=ts;
-    const cv=document.getElementById('mainCanvas'),ctx=cv.getContext('2d');
+    const cv=document.getElementById('mainCanvas');if(!cv)return;const ctx=cv.getContext('2d');
     const cx=window.innerWidth/2,t=ts*0.001;
     ctx.save();
     const a1=Math.sin(t*0.7)*20,a2=Math.sin(t*0.7+0.2)*18;
@@ -29577,7 +29644,7 @@ const DAYDREAM_NETWORK = (() => {
   let _l=0;
   return { draw(ts) {
     if(ts-_l<55)return;_l=ts;
-    const cv=document.getElementById('mainCanvas'),ctx=cv.getContext('2d');
+    const cv=document.getElementById('mainCanvas');if(!cv)return;const ctx=cv.getContext('2d');
     const cx=window.innerWidth/2,t=ts*0.001;
     ctx.save();ctx.setLineDash([1,5]);
     for(let i=0;i<5;i++){
@@ -29593,7 +29660,7 @@ const MIND_WANDERING_FLOW = (() => {
   let _l=0;
   return { draw(ts) {
     if(ts-_l<45)return;_l=ts;
-    const cv=document.getElementById('mainCanvas'),ctx=cv.getContext('2d');
+    const cv=document.getElementById('mainCanvas');if(!cv)return;const ctx=cv.getContext('2d');
     const cx=window.innerWidth/2,t=ts*0.001;
     ctx.save();
     ctx.beginPath();
@@ -29614,7 +29681,7 @@ const SPONTANEOUS_THOUGHT = (() => {
     if(ts-_l<40)return;_l=ts;
     if(ts>_nx){
       _nx=ts+800+Math.random()*1200;
-      const cv=document.getElementById('mainCanvas'),ctx=cv.getContext('2d');
+      const cv=document.getElementById('mainCanvas');if(!cv)return;const ctx=cv.getContext('2d');
       const cx=window.innerWidth/2;
       const x=cx+(Math.random()-0.5)*120,y=window.innerHeight*(0.25+Math.random()*0.5);
       ctx.save();ctx.beginPath();ctx.arc(x,y,3+Math.random()*5,0,Math.PI*2);
@@ -29643,7 +29710,7 @@ const FIRST_PERSON_PERSPECTIVE = (() => {
   let _l=0;
   return { draw(ts) {
     if(ts-_l<150)return;_l=ts;
-    const cv=document.getElementById('mainCanvas'),ctx=cv.getContext('2d');
+    const cv=document.getElementById('mainCanvas');if(!cv)return;const ctx=cv.getContext('2d');
     const cx=window.innerWidth/2,t=ts*0.001;
     ctx.save();
     const g=ctx.createRadialGradient(cx,window.innerHeight*0.35,0,cx,window.innerHeight*0.35,200);
@@ -29674,7 +29741,7 @@ const SUBJECTIVE_EXPERIENCE_CORE = (() => {
   let _l=0;
   return { draw(ts) {
     if(ts-_l<160)return;_l=ts;
-    const cv=document.getElementById('mainCanvas'),ctx=cv.getContext('2d');
+    const cv=document.getElementById('mainCanvas');if(!cv)return;const ctx=cv.getContext('2d');
     const cx=window.innerWidth/2,t=ts*0.001;
     ctx.save();
     const b=0.03+Math.sin(t*0.14)*0.02;
@@ -29703,7 +29770,7 @@ THE_WITNESS = (() => {
   let _l=0;
   return { draw(ts) {
     if(ts-_l<100)return;_l=ts;
-    const cv=document.getElementById('mainCanvas'),ctx=cv.getContext('2d');
+    const cv=document.getElementById('mainCanvas');if(!cv)return;const ctx=cv.getContext('2d');
     const cx=window.innerWidth/2,t=ts*0.001;
     ctx.save();
     ctx.beginPath();ctx.arc(cx,window.innerHeight*0.38,2,0,Math.PI*2);
@@ -29730,7 +29797,7 @@ const CONSCIOUSNESS_GROUND = (() => {
   let _l=0;
   return { draw(ts) {
     if(ts-_l<200)return;_l=ts;
-    const cv=document.getElementById('mainCanvas'),ctx=cv.getContext('2d');
+    const cv=document.getElementById('mainCanvas');if(!cv)return;const ctx=cv.getContext('2d');
     const cx=window.innerWidth/2,t=ts*0.001;
     ctx.save();
     const g=ctx.createRadialGradient(cx,window.innerHeight*0.5,0,cx,window.innerHeight*0.5,300);
@@ -29758,7 +29825,7 @@ const THAT_WHICH_KNOWS = (() => {
   let _l=0;
   return { draw(ts) {
     if(ts-_l<500)return;_l=ts;
-    const cv=document.getElementById('mainCanvas'),ctx=cv.getContext('2d');
+    const cv=document.getElementById('mainCanvas');if(!cv)return;const ctx=cv.getContext('2d');
     const cx=window.innerWidth/2,t=ts*0.001;
     ctx.save();
     const a=0.015+Math.sin(t*0.03)*0.01;
@@ -33908,7 +33975,10 @@ const ETERNAL_NOW = (() => {
 // ══════════════════════════════════════════════════════════════════════════
 // BATCH 28 — CONSCIOUSNESS, MEMORY, LANGUAGE, BODY, SOCIAL, TIME,
 //            CREATIVITY, FEAR, GROWTH, SPIRITUAL
+// Shared canvas reference for all Batch 28 systems (skinCanvas)
 // ══════════════════════════════════════════════════════════════════════════
+const canvas = document.getElementById('skinCanvas');
+const ctx = canvas ? canvas.getContext('2d') : { save(){}, restore(){}, beginPath(){}, arc(){}, fill(){}, stroke(){}, moveTo(){}, lineTo(){}, quadraticCurveTo(){}, fillText(){}, measureText(){ return {width:0}; }, clearRect(){}, globalAlpha: 1, strokeStyle:'', fillStyle:'', lineWidth:1, canvas: {width:700,height:1400} };
 
 // 1. SELF_AWARENESS — a single eye that opens slowly, blinks rarely
 const SELF_AWARENESS = (() => {
@@ -37678,12 +37748,24 @@ window.DORSAL_CLEAR = (function() {
 
 
 (function() {
-  // Auto-detect: use localhost when opening file directly, ngrok when on GitHub Pages
-  const API_BASE = (location.protocol === 'file:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1')
-    ? 'http://localhost:8767'
-    : 'https://jon-unscheming-lots.ngrok-free.dev'; // auto-updated 2026-04-08
-  // For local dev: const API_BASE = 'http://localhost:8767';
+  // Auto-detect API base. On GitHub Pages, read from localStorage (set via console or settings)
+  // To update: localStorage.setItem('vint_api_base', 'https://YOUR-NGROK-URL')
+  var _isLocal = (location.protocol === 'file:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1');
+  var _stored = localStorage.getItem('vint_api_base');
+  const API_BASE = _isLocal ? 'http://localhost:8767' : (_stored || 'http://localhost:8767');
   window.__VINTINUUM_API_BASE = API_BASE;
+  // Show a subtle banner on GitHub Pages if no API base is configured
+  if (!_isLocal && !_stored) {
+    var _apiBanner = document.createElement('div');
+    _apiBanner.id = '_apiSetupBanner';
+    _apiBanner.style.cssText = 'position:fixed;bottom:70px;left:50%;transform:translateX(-50%);z-index:9999;background:rgba(255,160,50,0.15);border:1px solid rgba(255,160,50,0.3);border-radius:12px;padding:8px 16px;font-family:Space Mono,monospace;font-size:.5rem;color:rgba(255,200,100,.8);letter-spacing:.1em;cursor:pointer;';
+    _apiBanner.textContent = '⚡ API not configured — click to connect';
+    _apiBanner.onclick = function() {
+      var url = prompt('Enter your API URL (ngrok or localhost):', 'http://localhost:8767');
+      if (url) { localStorage.setItem('vint_api_base', url.trim()); location.reload(); }
+    };
+    document.body ? document.body.appendChild(_apiBanner) : document.addEventListener('DOMContentLoaded', function(){ document.body.appendChild(_apiBanner); });
+  }
 
   // ── Elements ──
   const btn = document.getElementById('vint-chat-btn');
@@ -39729,14 +39811,14 @@ const MODEL_SELECTOR = (() => {
       const statusDot = !isAvailable ? '✗' : (h.alive !== false ? '\u25CF' : '\u25CB');
 
       // Drag handle (only for items in priority list)
-      const dragHandle = isInPriority ? '<span style="font-size:9px;color:rgba(255,255,255,0.2);margin-right:2px;cursor:grab;" title="Drag to reorder">\u2195</span>' : '';
+      const dragHandle = isInPriority ? '<span style="font-size:9px;color:rgba(255,255,255,0.2);margin-right:2px;cursor:grab;pointer-events:none;" title="Drag to reorder">\u2195</span>' : '';
 
       row.innerHTML =
         dragHandle +
-        '<span style="font-size:8px;color:rgba(255,255,255,0.3);width:14px;text-align:center;">' + (isInPriority ? (userPriority.indexOf(model.key) + 1) : '\u2795') + '</span>' +
-        '<span style="font-size:10px;color:rgba(255,255,255,' + (isInPriority ? '0.85' : '0.45') + ');flex:1;">' + model.label + '</span>' +
-        '<span style="font-size:10px;color:' + statusColor + ';">' + statusDot + '</span>' +
-        (!isAvailable ? '<span style="font-size:7px;color:rgba(255,255,255,0.2);margin-left:2px;">offline</span>' : '');
+        '<span style="font-size:8px;color:rgba(255,255,255,0.3);width:14px;text-align:center;pointer-events:none;">' + (isInPriority ? (userPriority.indexOf(model.key) + 1) : '\u2795') + '</span>' +
+        '<span style="font-size:10px;color:rgba(255,255,255,' + (isInPriority ? '0.85' : '0.45') + ');flex:1;pointer-events:none;">' + model.label + '</span>' +
+        '<span style="font-size:10px;color:' + statusColor + ';pointer-events:none;">' + statusDot + '</span>' +
+        (!isAvailable ? '<span style="font-size:7px;color:rgba(255,255,255,0.2);margin-left:2px;pointer-events:none;">offline</span>' : '');
 
       // HTML5 drag-to-reorder (priority items only)
       if (isInPriority && isAvailable) {
@@ -39744,32 +39826,44 @@ const MODEL_SELECTOR = (() => {
         row.addEventListener('dragstart', (e) => {
           _dragSrcKey = model.key;
           e.dataTransfer.effectAllowed = 'move';
+          e.dataTransfer.setData('text/plain', model.key);
           row.style.opacity = '0.4';
         });
         row.addEventListener('dragend', () => {
           row.style.opacity = isAvailable ? '1' : '0.4';
           list.querySelectorAll('[data-model-key]').forEach(r => r.style.background = '');
+          _dragSrcKey = null;
         });
-        row.addEventListener('dragover', (e) => {
+        row.addEventListener('dragenter', (e) => {
           e.preventDefault();
-          e.dataTransfer.dropEffect = 'move';
           if (model.key !== _dragSrcKey) {
             row.style.background = color + '30';
           }
         });
-        row.addEventListener('dragleave', () => {
-          row.style.background = isInPriority ? color + '18' : 'rgba(255,255,255,0.04)';
+        row.addEventListener('dragover', (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          e.dataTransfer.dropEffect = 'move';
+        });
+        row.addEventListener('dragleave', (e) => {
+          // Only reset if leaving to outside this row (not to a child)
+          if (!row.contains(e.relatedTarget)) {
+            row.style.background = isInPriority ? color + '18' : 'rgba(255,255,255,0.04)';
+          }
         });
         row.addEventListener('drop', (e) => {
           e.preventDefault();
-          if (!_dragSrcKey || _dragSrcKey === model.key) return;
+          e.stopPropagation();
+          row.style.background = isInPriority ? color + '18' : 'rgba(255,255,255,0.04)';
+          const srcKey = _dragSrcKey || e.dataTransfer.getData('text/plain');
+          if (!srcKey || srcKey === model.key) return;
           // Only reorder within priority list
-          if (!userPriority.includes(_dragSrcKey) || !userPriority.includes(model.key)) return;
+          if (!userPriority.includes(srcKey) || !userPriority.includes(model.key)) return;
           const newPriority = [...userPriority];
-          const fromIdx = newPriority.indexOf(_dragSrcKey);
+          const fromIdx = newPriority.indexOf(srcKey);
           const toIdx = newPriority.indexOf(model.key);
           newPriority.splice(fromIdx, 1);
-          newPriority.splice(toIdx, 0, _dragSrcKey);
+          newPriority.splice(toIdx, 0, srcKey);
           _dragSrcKey = null;
           const tok = localStorage.getItem('vint_access_token');
           savePriority(newPriority, tok);

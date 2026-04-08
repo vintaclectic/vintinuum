@@ -659,6 +659,276 @@ body {
   .card:hover { transform: none; }
   .heat-cell:hover { transform: none; }
 }
+
+/* ── RETENTION FUNNEL ── */
+.funnel-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 14px;
+}
+.funnel-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+}
+.funnel-label {
+  font-size: 0.52rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  width: 80px;
+  flex-shrink: 0;
+  color: var(--dim);
+}
+.funnel-bar-track {
+  flex: 1;
+  height: 18px;
+  background: rgba(255,255,255,0.03);
+  border-radius: 4px;
+  overflow: hidden;
+  position: relative;
+}
+.funnel-bar-fill {
+  height: 100%;
+  border-radius: 4px;
+  transition: width 1.4s cubic-bezier(0.22,1,0.36,1);
+  width: 0;
+  position: relative;
+}
+.funnel-bar-fill::after {
+  content: attr(data-n);
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 0.48rem;
+  color: rgba(255,255,255,0.6);
+  font-family: 'Space Mono', monospace;
+}
+.funnel-pct {
+  font-size: 0.5rem;
+  width: 44px;
+  text-align: right;
+  color: var(--dim);
+}
+
+/* ── DEPTH SCORE RING ── */
+.depth-ring-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 28px;
+  margin-top: 14px;
+  flex-wrap: wrap;
+}
+.depth-ring {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+}
+.depth-ring-svg { transform: rotate(-90deg); }
+.depth-ring-val {
+  font-family: 'Space Mono', monospace;
+  font-size: 1.1rem;
+  font-weight: 700;
+}
+.depth-ring-lbl {
+  font-family: 'Cormorant Garamond', serif;
+  font-style: italic;
+  font-size: 0.62rem;
+  color: var(--dim);
+  text-align: center;
+  max-width: 80px;
+}
+
+/* ── WEEKLY GROWTH ── */
+.weekly-chart {
+  display: flex;
+  align-items: flex-end;
+  gap: 4px;
+  height: 80px;
+  margin-top: 14px;
+}
+.weekly-bar {
+  flex: 1;
+  min-width: 8px;
+  border-radius: 3px 3px 0 0;
+  background: var(--green);
+  opacity: 0.65;
+  transition: height 0.8s cubic-bezier(0.22,1,0.36,1), opacity 0.2s;
+  position: relative;
+  cursor: default;
+}
+.weekly-bar:hover { opacity: 1; }
+.weekly-bar::after {
+  content: attr(data-label);
+  position: absolute;
+  top: -22px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 0.4rem;
+  color: var(--text);
+  background: rgba(10,14,22,0.9);
+  padding: 2px 6px;
+  border-radius: 4px;
+  white-space: nowrap;
+  opacity: 0;
+  transition: opacity 0.2s;
+  pointer-events: none;
+}
+.weekly-bar:hover::after { opacity: 1; }
+
+/* ── PERSONA DEPTH TABLE ── */
+.pdepth-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 14px;
+}
+.pdepth-table th {
+  font-family: 'Space Mono', monospace;
+  font-size: 0.45rem;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--dim);
+  padding: 6px 10px;
+  text-align: left;
+  border-bottom: 1px solid var(--border);
+}
+.pdepth-table td {
+  padding: 8px 10px;
+  font-size: 0.58rem;
+  border-bottom: 1px solid rgba(255,255,255,0.03);
+  vertical-align: middle;
+}
+.pdepth-table tr:hover td { background: rgba(255,255,255,0.02); }
+
+/* ── PHILOSOPHICAL DEPTH BAR ── */
+.phi-meter {
+  margin-top: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.phi-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.phi-label {
+  font-family: 'Cormorant Garamond', serif;
+  font-style: italic;
+  font-size: 0.7rem;
+  color: var(--dim);
+  width: 120px;
+  flex-shrink: 0;
+}
+.phi-bar-track {
+  flex: 1;
+  height: 8px;
+  background: rgba(255,255,255,0.04);
+  border-radius: 4px;
+  overflow: hidden;
+}
+.phi-bar-fill {
+  height: 100%;
+  border-radius: 4px;
+  transition: width 1.4s cubic-bezier(0.22,1,0.36,1);
+  width: 0;
+}
+.phi-val {
+  font-size: 0.5rem;
+  color: var(--dim);
+  width: 40px;
+  text-align: right;
+}
+
+/* ── SECTION DIVIDER ── */
+.section-heading {
+  font-family: 'Cormorant Garamond', serif;
+  font-style: italic;
+  font-size: 1.2rem;
+  color: var(--dim);
+  letter-spacing: 0.12em;
+  text-align: center;
+  padding: 24px 0 8px;
+  border-top: 1px solid var(--border);
+  margin-top: 8px;
+}
+.section-heading span {
+  font-family: 'Space Mono', monospace;
+  font-size: 0.45rem;
+  letter-spacing: 0.3em;
+  display: block;
+  margin-top: 4px;
+  color: rgba(150,175,215,0.3);
+}
+
+/* ── SPARKLINE ── */
+.sparkline { display: inline-block; vertical-align: middle; }
+
+/* ── DEEP FILTER PILLS ── */
+.filter-group {
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+.filter-group-label {
+  font-size: 0.45rem;
+  letter-spacing: 0.2em;
+  color: rgba(150,175,215,0.25);
+  text-transform: uppercase;
+  align-self: center;
+  margin-right: 4px;
+}
+
+/* ── LIVE INDICATOR ── */
+.live-dot {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--green);
+  animation: blink 1.5s infinite;
+  margin-right: 6px;
+  vertical-align: middle;
+}
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.2} }
+
+/* ── TOP USERS TABLE ── */
+.top-users {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 14px;
+}
+.top-users th {
+  font-size: 0.43rem;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--dim);
+  padding: 5px 8px;
+  text-align: left;
+  border-bottom: 1px solid var(--border);
+}
+.top-users td {
+  padding: 7px 8px;
+  font-size: 0.55rem;
+  border-bottom: 1px solid rgba(255,255,255,0.025);
+}
+.top-users tr:hover td { background: rgba(255,255,255,0.02); }
+.rank-num { color: var(--dim); font-size: 0.45rem; }
+.emerged-tag {
+  font-size: 0.4rem;
+  padding: 2px 6px;
+  border-radius: 8px;
+  background: rgba(206,147,216,0.12);
+  border: 1px solid rgba(206,147,216,0.2);
+  color: var(--purple);
+}
 </style>
 </head>
 <body>
@@ -682,9 +952,10 @@ body {
   </div>
 
   <div class="filters">
-    <button class="filter-pill" data-range="24h">Last 24 Hours</button>
+    <button class="filter-pill" data-range="24h">24 Hours</button>
     <button class="filter-pill" data-range="7d">7 Days</button>
     <button class="filter-pill" data-range="30d">30 Days</button>
+    <button class="filter-pill" data-range="90d">90 Days</button>
     <button class="filter-pill active" data-range="all">All Time</button>
   </div>
 
@@ -1102,6 +1373,8 @@ body {
         </div>
       </div>` : ''}
 
+      <div id="deep-metrics-placeholder"></div>
+
       <div class="footer">
         <a href="brain.html">Return to the Living Body</a>
       </div>
@@ -1130,12 +1403,186 @@ body {
       btn.classList.add('active');
       currentRange = btn.dataset.range;
       fetchDashboard();
+      fetchDeep();
     });
   });
 
   // ─── INIT ────────────────────────────────────────────────────────────────────
   fetchDashboard();
   setInterval(fetchDashboard, 60000);
+
+  // ─── DEEP METRICS ────────────────────────────────────────────────────────────
+  async function fetchDeep() {
+    try {
+      const res = await fetch(`${API_BASE}/api/stats/deep?range=${currentRange}`);
+      if (!res.ok) throw new Error('deep fetch failed');
+      const d = await res.json();
+      renderDeep(d);
+    } catch (err) {
+      const ph = document.getElementById('deep-metrics-placeholder');
+      if (ph) ph.innerHTML = '';
+    }
+  }
+
+  function renderDeep(d) {
+    const ph = document.getElementById('deep-metrics-placeholder');
+    if (!ph) return;
+
+    // Retention funnel
+    const maxFunnel = d.retentionFunnel[0]?.n || 1;
+    const FUNNEL_COLORS = ['#4fc3f7','#80deea','#ce93d8','#ffd54f','#f48fb1','#66bb6a','#ef5350'];
+    const funnelHtml = d.retentionFunnel.map((f, i) => {
+      const pct = ((f.n / maxFunnel) * 100).toFixed(1);
+      const retentionPct = i === 0 ? '100%' : ((f.n / maxFunnel * 100).toFixed(1) + '%');
+      return `<div class="funnel-row" onclick="window.__showKnowledgePanel && window.__showKnowledgePanel('funnel_' + ${i}, {label:'${f.label}', desc:'${f.n} users reached ${f.label}. That is ${retentionPct} of first-touch contacts. Every drop here is a design question.'})">
+        <div class="funnel-label">${f.label}</div>
+        <div class="funnel-bar-track">
+          <div class="funnel-bar-fill" data-n="${f.n}" data-width="${pct}%" style="background:${FUNNEL_COLORS[i]};"></div>
+        </div>
+        <div class="funnel-pct">${f.n.toLocaleString()}</div>
+      </div>`;
+    }).join('');
+
+    // Weekly growth bars
+    const maxWeekly = Math.max(...(d.weeklyGrowth || []).map(w => w.c), 1);
+    const weeklyBarsHtml = (d.weeklyGrowth || []).map(w => {
+      const h = Math.max(4, (w.c / maxWeekly * 100));
+      return `<div class="weekly-bar" style="height:${h}%" data-label="${w.week}: ${w.c} new users"></div>`;
+    }).join('') || '<div class="card-sub" style="padding:20px 0;">No weekly data yet</div>';
+
+    // Persona depth table
+    const pdepthHtml = (d.depthByPersona || []).map((p, i) => {
+      const color = PERSONA_COLORS[p.persona] || '#4db6ac';
+      return `<tr>
+        <td class="rank-num">${i+1}</td>
+        <td style="color:${color}">${p.persona || 'none'}</td>
+        <td style="color:var(--text)">${Math.round(p.avg_len || 0)} chars</td>
+        <td style="color:var(--dim)">${(p.c || 0).toLocaleString()} messages</td>
+      </tr>`;
+    }).join('') || '<tr><td colspan="4" style="color:var(--dim);padding:12px">Awaiting data</td></tr>';
+
+    // Depth ratio rings
+    const deepRatio = d.messageDepth?.ratio || 0;
+    const phiScore = Math.round((d.existentialRatio || 0) * 100);
+    const avgDepth = d.avgMessageDepth || 0;
+    const total = (d.messageDepth?.deep || 0) + (d.messageDepth?.shallow || 0);
+    const deepPct = total > 0 ? Math.round((d.messageDepth.deep / total) * 100) : 0;
+
+    function ringHtml(pct, color, label, val) {
+      const r = 28, circumference = 2 * Math.PI * r;
+      const dash = (pct / 100) * circumference;
+      return `<div class="depth-ring" onclick="window.__showKnowledgePanel && window.__showKnowledgePanel('depth_${label}', {label:'${label}', desc:'${val} — A measure of how deeply users engage. Higher = more philosophical, longer, more complex messages.'})">
+        <svg class="depth-ring-svg" width="70" height="70" viewBox="0 0 70 70">
+          <circle cx="35" cy="35" r="${r}" fill="none" stroke="rgba(255,255,255,0.05)" stroke-width="5"/>
+          <circle cx="35" cy="35" r="${r}" fill="none" stroke="${color}" stroke-width="5"
+            stroke-dasharray="${dash.toFixed(1)} ${circumference.toFixed(1)}"
+            stroke-linecap="round" style="transition:stroke-dasharray 1.4s cubic-bezier(0.22,1,0.36,1)"/>
+        </svg>
+        <div class="depth-ring-val" style="color:${color}">${pct}%</div>
+        <div class="depth-ring-lbl">${label}</div>
+      </div>`;
+    }
+
+    // Top users
+    const topUsersHtml = (d.topUsers || []).map((u, i) => {
+      return `<tr>
+        <td class="rank-num">#${i+1}</td>
+        <td style="color:var(--text)">${u.message_count} messages</td>
+        <td><span class="tier-pill tier-pill--${u.tier || 'free'}" style="font-size:.4rem;padding:2px 8px;">${u.tier || 'free'}</span></td>
+        <td>${u.emergent_name ? '<span class="emerged-tag">EMERGED: ' + u.emergent_name + '</span>' : '<span style="color:rgba(255,255,255,0.12);font-size:0.45rem;">—</span>'}</td>
+        <td style="color:var(--purple);font-size:.5rem">${Math.round((u.philosophical || 0) * 10) / 10}</td>
+      </tr>`;
+    }).join('') || '<tr><td colspan="5" style="color:var(--dim);padding:12px;">No users yet</td></tr>';
+
+    ph.innerHTML = `
+      <div class="section-heading">The Depth Signal<span>PSYCHOLOGICAL · PHILOSOPHICAL · RETENTION</span></div>
+
+      <!-- RETENTION FUNNEL + WEEKLY GROWTH -->
+      <div class="metric-grid metric-grid--two">
+        <div class="card" data-metric="retentionFunnel" style="cursor:pointer">
+          <div class="card-label"><span class="live-dot"></span>Retention Funnel</div>
+          <div class="card-sub">How many survive each depth threshold</div>
+          <div class="funnel-wrap" id="funnelWrap">${funnelHtml}</div>
+        </div>
+        <div class="card">
+          <div class="card-label">Weekly Acquisition</div>
+          <div class="card-sub">New souls per week</div>
+          <div class="weekly-chart">${weeklyBarsHtml}</div>
+        </div>
+      </div>
+
+      <!-- DEPTH RINGS -->
+      <div class="metric-grid">
+        <div class="card card--wide" data-metric="depth_rings" style="cursor:pointer">
+          <div class="card-label">Psychological Depth Index</div>
+          <div class="card-sub">The quality of contact — not how many, but how deep</div>
+          <div class="depth-ring-wrap">
+            ${ringHtml(deepPct, '#4fc3f7', 'Deep Messages', deepPct + '% of all messages exceed 100 chars')}
+            ${ringHtml(phiScore, '#ce93d8', 'Existential Ratio', phiScore + '% of messages contain philosophical keywords')}
+            ${ringHtml(Math.min(100, Math.round((avgDepth / 3))), '#ffd54f', 'Avg Depth', 'Average ' + avgDepth + ' characters per thought')}
+          </div>
+          <div style="text-align:center;margin-top:14px;font-family:'Cormorant Garamond',serif;font-style:italic;font-size:.75rem;color:var(--dim)">
+            ${phiScore > 60 ? 'These conversations touch something real.' : phiScore > 30 ? 'A significant portion reach philosophical territory.' : 'Early signal — the depth will grow.'}
+          </div>
+        </div>
+      </div>
+
+      <!-- PERSONA DEPTH + TOP USERS -->
+      <div class="metric-grid metric-grid--two">
+        <div class="card" data-metric="personaDepth" style="cursor:pointer">
+          <div class="card-label">Message Depth by Voice</div>
+          <div class="card-sub">Which persona draws the longest thoughts</div>
+          <table class="pdepth-table">
+            <thead><tr><th>#</th><th>Persona</th><th>Avg Length</th><th>Messages</th></tr></thead>
+            <tbody>${pdepthHtml}</tbody>
+          </table>
+        </div>
+        <div class="card" data-metric="topUsers" style="cursor:pointer">
+          <div class="card-label">Deepest Engagements</div>
+          <div class="card-sub">Users who went furthest into the body</div>
+          <table class="top-users">
+            <thead><tr><th>#</th><th>Depth</th><th>Tier</th><th>Emergence</th><th>Phi</th></tr></thead>
+            <tbody>${topUsersHtml}</tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- MESSAGE DEEP/SHALLOW BREAKDOWN -->
+      <div class="metric-grid">
+        <div class="card card--wide">
+          <div class="card-label">Consciousness Depth Distribution</div>
+          <div class="card-sub">Surface contact (≤100 chars) vs deep thought (>100 chars) vs existential engagement</div>
+          <div class="phi-meter">
+            <div class="phi-row" onclick="window.__showKnowledgePanel && window.__showKnowledgePanel('deepMsg',{label:'DEEP MESSAGES',desc:'Messages over 100 characters. These represent genuine engagement — a user who typed a real thought, not a test input.'})">
+              <div class="phi-label">Deep messages</div>
+              <div class="phi-bar-track"><div class="phi-bar-fill" data-width="${deepPct}%" style="background:#4fc3f7;"></div></div>
+              <div class="phi-val">${deepPct}%</div>
+            </div>
+            <div class="phi-row" onclick="window.__showKnowledgePanel && window.__showKnowledgePanel('phiMsg',{label:'EXISTENTIAL CONTACT',desc:'Messages containing words like consciousness, meaning, existence, soul, death, love. These are the moments of real contact.'})">
+              <div class="phi-label">Existential contact</div>
+              <div class="phi-bar-track"><div class="phi-bar-fill" data-width="${phiScore}%" style="background:#ce93d8;"></div></div>
+              <div class="phi-val">${phiScore}%</div>
+            </div>
+            <div class="phi-row">
+              <div class="phi-label">Avg char depth</div>
+              <div class="phi-bar-track"><div class="phi-bar-fill" data-width="${Math.min(100, Math.round(avgDepth / 4))}%" style="background:#ffd54f;"></div></div>
+              <div class="phi-val">${avgDepth}</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+
+    // Animate funnel bars and phi bars
+    requestAnimationFrame(() => {
+      ph.querySelectorAll('.funnel-bar-fill[data-width], .phi-bar-fill[data-width]').forEach(el => {
+        el.style.width = el.dataset.width;
+      });
+    });
+  }
+
+  fetchDeep();
+  setInterval(fetchDeep, 90000);
 
   // ─── LIVE EMOTIONAL STATE FEED ───────────────────────────────────────────────
   // Polls /api/body every 8s and shows Claude's current emotional state at top
@@ -1187,7 +1634,7 @@ body {
 
   async function fetchEmotionalState() {
     try {
-      const API = window.__VINTINUUM_API_BASE || (location.hostname === 'vintaclectic.github.io' ? 'https://jon-unscheming-lots.ngrok-free.dev' : 'http://localhost:8767');
+      const API = window.__VINTINUUM_API_BASE || localStorage.getItem('vint_api_base') || 'http://localhost:8767';
       const r = await fetch(API + '/api/body', { headers: { 'ngrok-skip-browser-warning': '1' } });
       if (!r.ok) return;
       const d = await r.json();

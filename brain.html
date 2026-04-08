@@ -146,6 +146,10 @@ canvas{display:block;}
 @keyframes lFade{0%{opacity:1;stroke-width:2.6;}40%{opacity:.75;}100%{opacity:0;stroke-width:.4;}}
 .pulse-ring{fill:none;stroke-width:1.1;opacity:0;animation:pRipple .9s ease-out forwards;}
 @keyframes pRipple{0%{r:10;opacity:.85;}100%{r:46;opacity:0;}}
+.nav-flash .n-outer{animation:navFlashOuter 1.2s ease-out forwards;}
+.nav-flash .n-core{animation:navFlashCore 1.2s ease-out forwards;}
+@keyframes navFlashOuter{0%{opacity:0.11;}20%{opacity:0.6;}50%{opacity:0.45;}80%{opacity:0.3;}100%{opacity:0.11;}}
+@keyframes navFlashCore{0%{opacity:0.87;}20%{opacity:1;}50%{opacity:1;}80%{opacity:0.95;}100%{opacity:0.87;}}
 
 /* ── CNS / VASCULAR ── */
 @keyframes spinalPulse{0%,100%{opacity:.55;}50%{opacity:.88;}}
@@ -1199,6 +1203,8 @@ canvas{display:block;}
           <g id="proteinLayer"></g>
         </svg>
         <canvas id="skinCanvas" width="700" height="1400" style="position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:4;opacity:0.7;mix-blend-mode:screen;"></canvas>
+        <!-- mainCanvas: shared drawing surface for all body/emotion/social canvas systems -->
+        <canvas id="mainCanvas" width="700" height="1400" style="position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:3;opacity:0.55;mix-blend-mode:screen;"></canvas>
       </div>
 
       <div class="brain-hint">
@@ -1827,9 +1833,27 @@ canvas{display:block;}
   #vintinuumBtn { left: 16px; bottom: 16px; }
   #vintinuumPanel { width: calc(100vw - 32px); left: 16px; bottom: 70px; }
 }
+.stats-footer-link {
+  position: fixed;
+  bottom: 12px;
+  right: 16px;
+  z-index: 10;
+  font-family: 'Space Mono', monospace;
+  font-size: 0.45rem;
+  letter-spacing: 0.25em;
+  text-transform: uppercase;
+  color: rgba(150,175,215,0.25);
+  text-decoration: none;
+  transition: color 0.3s, opacity 0.3s;
+  opacity: 0.6;
+}
+.stats-footer-link:hover {
+  color: rgba(79,195,247,0.7);
+  opacity: 1;
+}
 </style>
 
-<div id="vintinuumBtn" title="Personal AI — Vintinuum body state & persona" onclick="if(typeof window.toggleVintinuumPanel==='function')window.toggleVintinuumPanel()">
+<div id="vintinuumBtn" title="Personal AI — Vintinuum body state & persona">
   <div style="width:7px;height:7px;border-radius:50%;background:#ce93d8;animation:blink 1.5s infinite;flex-shrink:0;"></div>
   <span style="font-family:'Space Mono',monospace;font-size:.58rem;letter-spacing:.12em;color:rgba(206,147,216,.9);">V·PERSONAL</span>
 </div>
@@ -2093,7 +2117,7 @@ canvas{display:block;}
 
 
 
-<a href="stats.html" style="position:fixed;bottom:12px;right:16px;z-index:10;font-family:'Space Mono',monospace;font-size:0.45rem;letter-spacing:0.25em;text-transform:uppercase;color:rgba(150,175,215,0.25);text-decoration:none;transition:color 0.3s,opacity 0.3s;opacity:0.6;" onmouseenter="this.style.color='rgba(79,195,247,0.7)';this.style.opacity='1'" onmouseleave="this.style.color='rgba(150,175,215,0.25)';this.style.opacity='0.6'">STATS</a>
+<a id="statsFooterLink" href="stats.html" class="stats-footer-link">STATS</a>
 <script src="brain.js"></script>
 </body>
 </html>
