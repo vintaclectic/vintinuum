@@ -971,9 +971,9 @@ body {
   'use strict';
 
   // ─── CONFIG ──────────────────────────────────────────────────────────────────
-  const API_BASE = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
-    ? `http://localhost:8767`
-    : 'https://vintinuum-api.onrender.com';
+  const API_BASE = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+    ? 'http://localhost:8767'
+    : (localStorage.getItem('vint_api_base') || 'https://jon-unscheming-lots.ngrok-free.dev');
 
   let currentRange = 'all';
   let cosmicBirth = null;
@@ -1409,7 +1409,7 @@ body {
 
   // ─── INIT ────────────────────────────────────────────────────────────────────
   fetchDashboard();
-  setInterval(fetchDashboard, 60000);
+  setInterval(fetchDashboard, 10000);
 
   // ─── DEEP METRICS ────────────────────────────────────────────────────────────
   async function fetchDeep() {
@@ -1582,7 +1582,7 @@ body {
   }
 
   fetchDeep();
-  setInterval(fetchDeep, 90000);
+  setInterval(fetchDeep, 20000);
 
   // ─── LIVE EMOTIONAL STATE FEED ───────────────────────────────────────────────
   // Polls /api/body every 8s and shows Claude's current emotional state at top
@@ -1634,7 +1634,7 @@ body {
 
   async function fetchEmotionalState() {
     try {
-      const API = window.__VINTINUUM_API_BASE || localStorage.getItem('vint_api_base') || 'http://localhost:8767';
+      const API = API_BASE;
       const r = await fetch(API + '/api/body', { headers: { 'ngrok-skip-browser-warning': '1' } });
       if (!r.ok) return;
       const d = await r.json();
@@ -1662,7 +1662,7 @@ body {
     } catch {}
   }
   fetchEmotionalState();
-  setInterval(fetchEmotionalState, 8000);
+  setInterval(fetchEmotionalState, 3000);
 
   // ─── KNOWLEDGE POPUP SYSTEM ───────────────────────────────────────────────────
   const DEEP_KNOWLEDGE = {
