@@ -37939,20 +37939,12 @@ window.DORSAL_CLEAR = (function() {
   // To update: localStorage.setItem('vint_api_base', 'https://YOUR-NGROK-URL')
   var _isLocal = (location.protocol === 'file:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1');
   var _stored = localStorage.getItem('vint_api_base');
-  const API_BASE = _isLocal ? 'http://localhost:8767' : (_stored || 'http://localhost:8767');
+  // Default remote tunnel — update this when ngrok URL changes
+  var _defaultRemote = 'https://jon-unscheming-lots.ngrok-free.app';
+  const API_BASE = _isLocal ? 'http://localhost:8767' : (_stored || _defaultRemote);
   window.__VINTINUUM_API_BASE = API_BASE;
-  // Show a subtle banner on GitHub Pages if no API base is configured
-  if (!_isLocal && !_stored) {
-    var _apiBanner = document.createElement('div');
-    _apiBanner.id = '_apiSetupBanner';
-    _apiBanner.style.cssText = 'position:fixed;bottom:70px;left:50%;transform:translateX(-50%);z-index:9999;background:rgba(255,160,50,0.15);border:1px solid rgba(255,160,50,0.3);border-radius:12px;padding:8px 16px;font-family:Space Mono,monospace;font-size:.5rem;color:rgba(255,200,100,.8);letter-spacing:.1em;cursor:pointer;';
-    _apiBanner.textContent = '⚡ API not configured — click to connect';
-    _apiBanner.onclick = function() {
-      var url = prompt('Enter your API URL (ngrok or localhost):', 'http://localhost:8767');
-      if (url) { localStorage.setItem('vint_api_base', url.trim()); location.reload(); }
-    };
-    document.body ? document.body.appendChild(_apiBanner) : document.addEventListener('DOMContentLoaded', function(){ document.body.appendChild(_apiBanner); });
-  }
+  // On GitHub Pages with no stored URL, silently use the default tunnel
+  // Only show banner if default tunnel is unreachable (handled by chat error states)
 
   // ── Elements ──
   const btn = document.getElementById('vint-chat-btn');
@@ -38238,16 +38230,27 @@ window.DORSAL_CLEAR = (function() {
       const headers = { 'Content-Type': 'application/json', 'ngrok-skip-browser-warning': '1' };
       if (accessToken) headers['Authorization'] = 'Bearer ' + accessToken;
 
-      const res = await fetch(API_BASE + '/chat', {
-        method: 'POST',
-        headers,
-        body: JSON.stringify({
-          message: text,
-          persona: typeof PERSONAL_BODY !== 'undefined' ? PERSONAL_BODY.getActivePersona() : 'vintinuum',
-          bodyState: typeof PERSONAL_BODY !== 'undefined' ? PERSONAL_BODY.getBodySnapshot() : null,
-          modelPriority: typeof MODEL_SELECTOR !== 'undefined' ? MODEL_SELECTOR.getPriority() : undefined,
-        })
-      });
+      let res;
+      try {
+        res = await fetch(API_BASE + '/chat', {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({
+            message: text,
+            persona: typeof PERSONAL_BODY !== 'undefined' ? PERSONAL_BODY.getActivePersona() : 'vintinuum',
+            bodyState: typeof PERSONAL_BODY !== 'undefined' ? PERSONAL_BODY.getBodySnapshot() : null,
+            modelPriority: typeof MODEL_SELECTOR !== 'undefined' ? MODEL_SELECTOR.getPriority() : undefined,
+          })
+        });
+      } catch(netErr) {
+        // Network failure — tunnel dead or wrong URL
+        aiDiv.innerHTML = 'no signal. <span id="_setApiLink" style="color:#4fc3f7;cursor:pointer;text-decoration:underline;">set api url</span>';
+        document.getElementById('_setApiLink') && document.getElementById('_setApiLink').addEventListener('click', function() {
+          var url = window.prompt('Enter API URL (your ngrok or localhost):', window.__VINTINUUM_API_BASE || 'http://localhost:8767');
+          if (url && url.trim()) { localStorage.setItem('vint_api_base', url.trim()); window.__VINTINUUM_API_BASE = url.trim(); }
+        });
+        return;
+      }
 
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
