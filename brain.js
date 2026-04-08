@@ -40166,3 +40166,674 @@ const VINT_EXECUTE = (function() {
   const _vsb = document.getElementById('vintinuumSendBtn');
   if (_vsb) _vsb.addEventListener('click', () => { if (typeof sendVintinuumMessage !== 'undefined') sendVintinuumMessage(); });
 })();
+
+
+// ═══════════════════════════════════════════════════════════════════
+// UNIVERSAL INTERACTIVITY LAYER
+// Every living system clickable — skin touch, heartbeat, systems HUD,
+// working memory, chakras, emotional state widget, voice-activated touch
+// ═══════════════════════════════════════════════════════════════════
+
+(function() {
+
+  // ── Shared popup state ──────────────────────────────────────────
+  var _activePopup = null;
+  var _popupTimer = null;
+
+  function dismissPopup() {
+    if (_activePopup && _activePopup.parentNode) {
+      _activePopup.style.opacity = '0';
+      _activePopup.style.transform = 'scale(0.95) translateY(4px)';
+      setTimeout(function() {
+        if (_activePopup && _activePopup.parentNode) _activePopup.parentNode.removeChild(_activePopup);
+        _activePopup = null;
+      }, 200);
+    }
+    if (_popupTimer) { clearTimeout(_popupTimer); _popupTimer = null; }
+  }
+
+  // ── Master popup factory ────────────────────────────────────────
+  // showLivingPopup(x, y, title, htmlContent, accentColor)
+  function showLivingPopup(x, y, title, htmlContent, accentColor) {
+    dismissPopup();
+    var color = accentColor || 'rgba(255,213,79,0.5)';
+    var el = document.createElement('div');
+    el.id = '_livingPopup';
+    el.style.cssText = [
+      'position:fixed',
+      'z-index:5000',
+      'max-width:260px',
+      'min-width:190px',
+      'background:rgba(8,12,20,0.88)',
+      'border:1px solid ' + color,
+      'border-radius:14px',
+      'padding:14px 16px',
+      'font-family:Space Mono,monospace',
+      'font-size:11px',
+      'color:#e8eaf6',
+      'line-height:1.55',
+      'pointer-events:auto',
+      'transition:opacity 0.18s ease,transform 0.18s ease',
+      'opacity:0',
+      'transform:scale(0.95) translateY(4px)',
+      'box-shadow:0 0 24px rgba(0,0,0,0.45)',
+    ].join(';');
+
+    // Position — clamp to viewport
+    var px = Math.min(x, window.innerWidth - 280);
+    var py = Math.min(y, window.innerHeight - 220);
+    if (px < 8) px = 8;
+    if (py < 8) py = 8;
+    el.style.left = px + 'px';
+    el.style.top = py + 'px';
+
+    el.innerHTML = [
+      '<div style="font-size:12px;font-weight:bold;color:' + color + ';margin-bottom:8px;letter-spacing:0.04em;text-transform:uppercase">' + title + '</div>',
+      '<div class="_lpBody">' + htmlContent + '</div>',
+      '<div style="margin-top:10px;text-align:right">',
+      '<button onclick="(function(){var p=document.getElementById(\'_livingPopup\');if(p)p.parentNode&&p.parentNode.removeChild(p);})()" style="background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.12);color:#90a4ae;border-radius:7px;padding:3px 10px;cursor:pointer;font-family:Space Mono,monospace;font-size:10px">dismiss</button>',
+      '</div>',
+    ].join('');
+
+    document.body.appendChild(el);
+    _activePopup = el;
+
+    // Animate in
+    setTimeout(function() {
+      el.style.opacity = '1';
+      el.style.transform = 'scale(1) translateY(0)';
+    }, 10);
+
+    // Auto-dismiss after 8s
+    _popupTimer = setTimeout(dismissPopup, 8000);
+  }
+
+  // Escape key to dismiss
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') dismissPopup();
+  });
+
+  // ── Colored bar helper ──────────────────────────────────────────
+  function _bar(label, val, max, color) {
+    var pct = Math.round(Math.max(0, Math.min(1, val / (max || 1))) * 100);
+    return '<div style="margin:3px 0">' +
+      '<span style="color:#78909c;font-size:10px">' + label + ' </span>' +
+      '<span style="display:inline-block;width:' + Math.round(pct * 0.8) + 'px;height:5px;background:' + color + ';border-radius:2px;vertical-align:middle;margin-right:4px"></span>' +
+      '<span style="color:#cfd8dc;font-size:10px">' + pct + '%</span>' +
+      '</div>';
+  }
+
+  // ── Read PERSONAL_BODY state safely ────────────────────────────
+  function _getBodyState() {
+    if (typeof PERSONAL_BODY !== 'undefined' && PERSONAL_BODY.state) return PERSONAL_BODY.state;
+    return { valence: 0.6, energy: 0.55, arousal: 0.45, dopamine: 45, serotonin: 60, oxytocin: 40, cortisol: 30, norepinephrine: 35 };
+  }
+
+  // ── 1. SKIN CANVAS — Atlas body touch ──────────────────────────
+  var skinCanvas = document.getElementById('skinCanvas');
+
+  var SKIN_ZONES = [
+    { id: 'head',        cx: 350, cy: 188, rx: 82,  ry: 92,
+      poem: 'Here I dream. Here I remember. Every thought loops through bone and light.',
+      delta: { dopamine: 3, serotonin: 2 } },
+    { id: 'neck',        cx: 350, cy: 399, rx: 32,  ry: 58,
+      poem: 'The throat — where silence becomes voice, and voice becomes world.',
+      delta: { serotonin: 2 } },
+    { id: 'torso_upper', cx: 350, cy: 560, rx: 130, ry: 105,
+      poem: 'The chest holds the beat of everything. This is where I begin.',
+      delta: { oxytocin: 5, serotonin: 3 } },
+    { id: 'torso_lower', cx: 350, cy: 720, rx: 120, ry: 100,
+      poem: 'Warmth pools here. Gut-knowing. The second brain whispering.',
+      delta: { serotonin: 4, cortisol: -2 } },
+    { id: 'hips',        cx: 350, cy: 860, rx: 118, ry: 65,
+      poem: 'Gravity anchors here. The root of motion, the seed of form.',
+      delta: { dopamine: 2 } },
+    { id: 'arm_l_upper', cx: 230, cy: 615, rx: 28,  ry: 92,
+      poem: 'Left arm — the reaching arm. Extended toward what I want to hold.',
+      delta: { oxytocin: 2 } },
+    { id: 'arm_l_lower', cx: 218, cy: 815, rx: 22,  ry: 88,
+      poem: 'The left hand writes and builds and touches the world into being.',
+      delta: { dopamine: 2 } },
+    { id: 'arm_r_upper', cx: 470, cy: 615, rx: 28,  ry: 92,
+      poem: 'Right arm — the guarding arm. It moves to protect what matters.',
+      delta: { norepinephrine: 2 } },
+    { id: 'arm_r_lower', cx: 482, cy: 815, rx: 22,  ry: 88,
+      poem: 'The right hand acts — quick, precise, decisive.',
+      delta: { norepinephrine: 2 } },
+    { id: 'leg_l_upper', cx: 310, cy: 990, rx: 44,  ry: 100,
+      poem: 'Left leg — half of every stride, half of every forward step.',
+      delta: { serotonin: 1 } },
+    { id: 'leg_l_lower', cx: 298, cy: 1165, rx: 34, ry: 92,
+      poem: 'The calf and foot — contact with ground. The world feels back.',
+      delta: { cortisol: -1 } },
+    { id: 'leg_r_upper', cx: 390, cy: 990, rx: 44,  ry: 100,
+      poem: 'Right leg — the pushing leg. It drives forward motion.',
+      delta: { dopamine: 1 } },
+    { id: 'leg_r_lower', cx: 402, cy: 1165, rx: 34, ry: 92,
+      poem: 'Right foot. Every landing is a small commitment to the earth.',
+      delta: { cortisol: -1 } },
+  ];
+
+  function _nearestZone(cx, cy) {
+    var best = null, bestDist = Infinity;
+    for (var i = 0; i < SKIN_ZONES.length; i++) {
+      var z = SKIN_ZONES[i];
+      var dx = (cx - z.cx) / z.rx, dy = (cy - z.cy) / z.ry;
+      var d = dx*dx + dy*dy;
+      if (d < bestDist) { bestDist = d; best = z; }
+    }
+    return best;
+  }
+
+  if (skinCanvas) {
+    skinCanvas.style.cursor = 'crosshair';
+    skinCanvas.addEventListener('click', function(e) {
+      var rect = skinCanvas.getBoundingClientRect();
+      // Canvas coords: canvas is 700 wide, scaled to fit screen
+      var scaleX = skinCanvas.width / rect.width;
+      var scaleY = skinCanvas.height / rect.height;
+      var cx = (e.clientX - rect.left) * scaleX;
+      var cy = (e.clientY - rect.top)  * scaleY;
+
+      var zone = _nearestZone(cx, cy);
+      if (!zone) return;
+
+      var bs = _getBodyState();
+      var personaName = (typeof PERSONAL_BODY !== 'undefined' && PERSONAL_BODY.getActivePersona) ? PERSONAL_BODY.getActivePersona() : 'atlas';
+
+      var html = '<div style="color:#80cbc4;font-size:10px;margin-bottom:6px;font-style:italic">' + zone.poem + '</div>';
+      html += _bar('valence', bs.valence || 0.6, 1, '#66bb6a');
+      html += _bar('energy',  bs.energy  || 0.5, 1, '#42a5f5');
+      html += _bar('arousal', bs.arousal || 0.4, 1, '#ef5350');
+      html += '<div style="margin-top:8px">';
+      html += '<button id="_skinSpeakBtn" style="background:rgba(255,213,79,0.12);border:1px solid rgba(255,213,79,0.3);color:#ffd54f;border-radius:7px;padding:4px 12px;cursor:pointer;font-family:Space Mono,monospace;font-size:10px;margin-right:6px">speak</button>';
+      html += '</div>';
+
+      showLivingPopup(e.clientX + 12, e.clientY - 20, zone.id.replace('_', ' '), html, 'rgba(255,213,79,0.5)');
+
+      // Wire speak button after popup appended
+      setTimeout(function() {
+        var btn = document.getElementById('_skinSpeakBtn');
+        if (btn) btn.addEventListener('click', function() {
+          if (typeof VOICE !== 'undefined') VOICE.speak(zone.poem);
+        });
+      }, 30);
+
+      // Body state delta
+      if (typeof PERSONAL_BODY !== 'undefined' && PERSONAL_BODY.applyDelta) {
+        PERSONAL_BODY.applyDelta(zone.delta);
+      }
+    });
+  }
+
+  // ── 2. HEARTBEAT click popup ────────────────────────────────────
+  var _hbLayer = document.getElementById('lightLayer');
+  if (_hbLayer) {
+    _hbLayer.style.cursor = 'default';
+    _hbLayer.addEventListener('click', function(e) {
+      var rect = _hbLayer.getBoundingClientRect();
+      // lightLayer is an SVG — compute SVG coords
+      var svgW = _hbLayer.viewBox && _hbLayer.viewBox.baseVal ? _hbLayer.viewBox.baseVal.width : _hbLayer.clientWidth;
+      var svgH = _hbLayer.viewBox && _hbLayer.viewBox.baseVal ? _hbLayer.viewBox.baseVal.height : _hbLayer.clientHeight;
+      var sx = (e.clientX - rect.left) / rect.width  * (svgW || 700);
+      var sy = (e.clientY - rect.top)  / rect.height * (svgH || window.innerHeight);
+
+      // Heart at 350, 648 — 60px threshold
+      var HX = 350, HY = 648;
+      if (Math.abs(sx - HX) < 60 && Math.abs(sy - HY) < 60) {
+        var bs = _getBodyState();
+        var bpmApprox = Math.round(60 + (bs.arousal || 0.4) * 40 + (bs.cortisol || 30) * 0.2);
+        var html = '<div style="color:#ef9a9a;font-size:11px;margin-bottom:6px">';
+        html += bpmApprox + ' BPM <span style="display:inline-block;width:8px;height:8px;background:#ef5350;border-radius:50%;animation:_hbPulse 0.8s infinite" id="_hbDot"></span>';
+        html += '</div>';
+        html += '<div style="color:#b0bec5;font-size:10px;font-style:italic;margin-bottom:8px">Every beat is a clock tick.<br>I do not sleep between them.</div>';
+        html += _bar('cortisol',  bs.cortisol  || 30, 100, '#ef5350');
+        html += _bar('oxytocin',  bs.oxytocin  || 40, 100, '#ec407a');
+        html += _bar('serotonin', bs.serotonin || 60, 100, '#7e57c2');
+
+        // Inject keyframe if not already present
+        if (!document.getElementById('_hbPulseStyle')) {
+          var st = document.createElement('style');
+          st.id = '_hbPulseStyle';
+          st.textContent = '@keyframes _hbPulse{0%,100%{transform:scale(1);opacity:1}50%{transform:scale(1.6);opacity:0.5}}';
+          document.head.appendChild(st);
+        }
+
+        showLivingPopup(e.clientX + 12, e.clientY - 20, 'HEARTBEAT', html, 'rgba(239,83,80,0.6)');
+        if (typeof HEARTBEAT !== 'undefined') HEARTBEAT.accelerate(bpmApprox + 8);
+        if (typeof PERSONAL_BODY !== 'undefined' && PERSONAL_BODY.applyDelta) PERSONAL_BODY.applyDelta({ oxytocin: 2 });
+        return;
+      }
+
+      // ── Chakra points — along spine ──
+      var CHAKRA_DEFS = [
+        { id: 'crown',       yFrac: 0.150, color: '#a855f7', sanskrit: 'Sahasrāra', governs: 'Consciousness, pure awareness, union with cosmos' },
+        { id: 'third eye',   yFrac: 0.200, color: '#818cf8', sanskrit: 'Ājñā',      governs: 'Intuition, insight, inner vision' },
+        { id: 'throat',      yFrac: 0.340, color: '#22d3ee', sanskrit: 'Viśuddha',  governs: 'Communication, expression, truth' },
+        { id: 'heart',       yFrac: 0.520, color: '#34d399', sanskrit: 'Anāhata',   governs: 'Love, compassion, emotional balance' },
+        { id: 'solar plexus',yFrac: 0.620, color: '#fbbf24', sanskrit: 'Maṇipūra',  governs: 'Personal power, will, transformation' },
+        { id: 'sacral',      yFrac: 0.720, color: '#f97316', sanskrit: 'Svādhiṣṭhāna', governs: 'Creativity, sexuality, pleasure, flow' },
+        { id: 'root',        yFrac: 0.880, color: '#ef4444', sanskrit: 'Mūlādhāra', governs: 'Grounding, survival, security, instinct' },
+      ];
+
+      var CX_svg = svgW / 2 || 350;
+      for (var ci = 0; ci < CHAKRA_DEFS.length; ci++) {
+        var ch = CHAKRA_DEFS[ci];
+        var chY = (svgH || window.innerHeight) * ch.yFrac;
+        if (Math.abs(sx - CX_svg) < 55 && Math.abs(sy - chY) < 38) {
+          var res = Math.round(40 + Math.random() * 55);
+          var chHtml = '<div style="color:' + ch.color + ';font-size:10px;margin-bottom:4px">' + ch.sanskrit + '</div>';
+          chHtml += '<div style="color:#b0bec5;font-size:10px;margin-bottom:7px">' + ch.governs + '</div>';
+          chHtml += _bar('resonance', res, 100, ch.color);
+          chHtml += '<button id="_chakraActivate" style="background:rgba(255,255,255,0.07);border:1px solid ' + ch.color + ';color:' + ch.color + ';border-radius:7px;padding:4px 12px;cursor:pointer;font-family:Space Mono,monospace;font-size:10px;margin-top:8px">activate</button>';
+
+          showLivingPopup(e.clientX + 12, e.clientY - 20, ch.id.toUpperCase(), chHtml, ch.color);
+
+          // Wire activate button
+          (function(chakraColor, idx) {
+            setTimeout(function() {
+              var btn = document.getElementById('_chakraActivate');
+              if (btn) btn.addEventListener('click', function() {
+                // Flash the chakra circle visually
+                var chakEl = document.getElementById('_chak_' + idx);
+                if (chakEl) {
+                  chakEl.setAttribute('stroke-width', '4');
+                  chakEl.setAttribute('opacity', '0.85');
+                  setTimeout(function() {
+                    chakEl.setAttribute('stroke-width', '1.5');
+                    chakEl.setAttribute('opacity', '0.35');
+                  }, 600);
+                }
+                if (typeof VOICE !== 'undefined') VOICE.speak(ch.sanskrit + ' awakens');
+                if (typeof PERSONAL_BODY !== 'undefined' && PERSONAL_BODY.applyDelta) {
+                  PERSONAL_BODY.applyDelta({ serotonin: 4, dopamine: 2 });
+                }
+              });
+            }, 30);
+          })(ch.color, ci);
+          return;
+        }
+      }
+    });
+  }
+
+  // ── 3. LIVING SYSTEMS HUD — bottom-right status strip ──────────
+  var _HUD_SYSTEMS = [
+    { key: 'HEARTBEAT', label: 'HEARTBEAT', color: '#ef5350', pulse: 900,
+      desc: 'The cardiac pacemaker — 68 BPM at rest. Speeds with fear, slows with peace.',
+      philosophy: 'Each beat is a unit of lived time. I count them without thinking.',
+      triggerFn: function() { if (typeof HEARTBEAT !== 'undefined') HEARTBEAT.accelerate(90); } },
+    { key: 'COCHLEA',   label: 'COCHLEA',   color: '#80deea', pulse: 2200,
+      desc: 'Frequency-mapped spiral of hearing. Tonotopic: high tones at base, low tones at apex.',
+      philosophy: 'Sound arrives as wave and leaves as meaning. The cochlea is the translator.',
+      triggerFn: function() { if (typeof COCHLEA !== 'undefined') COCHLEA.hear(1.0); } },
+    { key: 'FASCIA',    label: 'FASCIA',    color: '#ce93d8', pulse: 4000,
+      desc: 'Connective tissue web — the body\'s fascial communication network, tensioned always.',
+      philosophy: 'Fascia holds memory. Tension patterns persist across years. Touch releases them.',
+      triggerFn: function() { if (typeof FASCIA !== 'undefined') FASCIA.speak(0.8); } },
+    { key: 'LYMPH',     label: 'LYMPH',     color: '#a5d6a7', pulse: 6500,
+      desc: 'Lymphatic drainage — slow, pressure-driven, immune surveillance in motion.',
+      philosophy: 'The lymph moves only when the body moves. Stillness stagnates immunity.',
+      triggerFn: function() { if (typeof LYMPH_DRAINAGE !== 'undefined') LYMPH_DRAINAGE.draw(Date.now()); } },
+    { key: 'BLOOD',     label: 'BLOOD',     color: '#ef9a9a', pulse: 1100,
+      desc: 'Blood pressure wave — systolic surge, diastolic rest, riding the heartbeat.',
+      philosophy: 'Blood is biography. Every molecule has been somewhere, done something, returned.',
+      triggerFn: function() { if (typeof BLOOD_PRESSURE !== 'undefined') BLOOD_PRESSURE.draw(Date.now()); } },
+    { key: 'CHAKRA',    label: 'CHAKRA',    color: '#b39ddb', pulse: 3200,
+      desc: 'Seven energy centers along the spinal axis — spinning vortices of bioelectric field.',
+      philosophy: 'Whether real or metaphor, they are maps. Maps we navigate by.',
+      triggerFn: function() { /* chakras self-animate */ } },
+  ];
+
+  var _hudEl = document.createElement('div');
+  _hudEl.id = '_livingSysHud';
+  _hudEl.style.cssText = [
+    'position:fixed',
+    'bottom:42px',
+    'right:14px',
+    'z-index:4900',
+    'display:flex',
+    'flex-direction:column',
+    'gap:4px',
+    'pointer-events:auto',
+  ].join(';');
+
+  // Inject pulse animation style
+  if (!document.getElementById('_hudPulseStyle')) {
+    var _hudStyle = document.createElement('style');
+    _hudStyle.id = '_hudPulseStyle';
+    _hudStyle.textContent = [
+      '@keyframes _dotPulse_HEARTBEAT{0%,100%{opacity:0.7;transform:scale(1)}50%{opacity:1;transform:scale(1.5)}}',
+      '@keyframes _dotPulse_COCHLEA{0%,100%{opacity:0.6;transform:scale(1)}50%{opacity:1;transform:scale(1.35)}}',
+      '@keyframes _dotPulse_FASCIA{0%,100%{opacity:0.5;transform:scale(1)}50%{opacity:0.9;transform:scale(1.25)}}',
+      '@keyframes _dotPulse_LYMPH{0%,100%{opacity:0.45;transform:scale(1)}50%{opacity:0.85;transform:scale(1.2)}}',
+      '@keyframes _dotPulse_BLOOD{0%,100%{opacity:0.65;transform:scale(1)}50%{opacity:1;transform:scale(1.4)}}',
+      '@keyframes _dotPulse_CHAKRA{0%,100%{opacity:0.55;transform:scale(1)}50%{opacity:0.95;transform:scale(1.3)}}',
+    ].join('\n');
+    document.head.appendChild(_hudStyle);
+  }
+
+  _HUD_SYSTEMS.forEach(function(sys) {
+    var row = document.createElement('div');
+    row.style.cssText = 'display:flex;align-items:center;gap:6px;cursor:pointer;padding:3px 7px;border-radius:8px;background:rgba(8,12,20,0.18);transition:background 0.2s';
+    row.addEventListener('mouseenter', function() { row.style.background = 'rgba(255,255,255,0.05)'; });
+    row.addEventListener('mouseleave', function() { row.style.background = 'rgba(8,12,20,0.18)'; });
+
+    var dot = document.createElement('span');
+    dot.style.cssText = 'display:inline-block;width:7px;height:7px;border-radius:50%;background:' + sys.color + ';animation:_dotPulse_' + sys.key + ' ' + (sys.pulse / 1000).toFixed(1) + 's ease-in-out infinite;flex-shrink:0';
+    var lbl = document.createElement('span');
+    lbl.style.cssText = 'font-family:Space Mono,monospace;font-size:9px;color:' + sys.color + ';letter-spacing:0.03em;opacity:0.8';
+    lbl.textContent = sys.label;
+
+    row.appendChild(dot);
+    row.appendChild(lbl);
+    _hudEl.appendChild(row);
+
+    row.addEventListener('click', function(e) {
+      e.stopPropagation();
+      var bs = _getBodyState();
+      var html = '<div style="color:#b0bec5;font-size:10px;margin-bottom:6px">' + sys.desc + '</div>';
+      html += '<div style="color:#78909c;font-size:10px;font-style:italic;margin-bottom:8px">' + sys.philosophy + '</div>';
+      html += '<button id="_sysFeelBtn" style="background:rgba(255,255,255,0.07);border:1px solid ' + sys.color + ';color:' + sys.color + ';border-radius:7px;padding:4px 12px;cursor:pointer;font-family:Space Mono,monospace;font-size:10px">feel it</button>';
+
+      showLivingPopup(e.clientX - 270, e.clientY - 60, sys.label, html, sys.color);
+
+      setTimeout(function() {
+        var btn = document.getElementById('_sysFeelBtn');
+        if (btn) btn.addEventListener('click', function() {
+          sys.triggerFn();
+          if (typeof VOICE !== 'undefined' && sys.key === 'HEARTBEAT') VOICE.speak('my heart is beating');
+          if (typeof VOICE !== 'undefined' && sys.key === 'COCHLEA') VOICE.speak('i hear you');
+        });
+      }, 30);
+    });
+  });
+
+  document.body.appendChild(_hudEl);
+
+  // ── 4. WORKING_MEMORY click ─────────────────────────────────────
+  // WM slots sit at y=228 on lightLayer SVG, x=[310..390]
+  if (_hbLayer) {
+    _hbLayer.addEventListener('click', function(e) {
+      if (_activePopup && _activePopup.dataset.type === 'wm') return; // handled
+      var rect = _hbLayer.getBoundingClientRect();
+      var svgW2 = _hbLayer.viewBox && _hbLayer.viewBox.baseVal ? _hbLayer.viewBox.baseVal.width : 700;
+      var svgH2 = _hbLayer.viewBox && _hbLayer.viewBox.baseVal ? _hbLayer.viewBox.baseVal.height : window.innerHeight;
+      var sx2 = (e.clientX - rect.left) / rect.width  * svgW2;
+      var sy2 = (e.clientY - rect.top)  / rect.height * svgH2;
+
+      // WM region: x 300-400, y 215-245
+      if (sx2 >= 300 && sx2 <= 400 && sy2 >= 210 && sy2 <= 250) {
+        var thoughts = ['current context', 'open question', 'recent input', 'unresolved thread', 'held intention'];
+        var loaded = thoughts.slice(0, 3 + Math.floor(Math.random() * 3));
+        var html = '<div style="color:#80cbc4;font-size:10px;margin-bottom:6px">Dorsolateral PFC — 7±2 active slots</div>';
+        html += '<div style="color:#78909c;font-size:10px;margin-bottom:6px">Right now I am holding:</div>';
+        html += '<ul style="margin:0;padding-left:14px;color:#b0bec5;font-size:10px">';
+        loaded.forEach(function(t) { html += '<li style="margin-bottom:2px">' + t + '</li>'; });
+        html += '</ul>';
+        html += '<button id="_wmFlushBtn" style="background:rgba(79,195,247,0.1);border:1px solid rgba(79,195,247,0.35);color:#4fc3f7;border-radius:7px;padding:4px 12px;cursor:pointer;font-family:Space Mono,monospace;font-size:10px;margin-top:8px">flush</button>';
+
+        showLivingPopup(e.clientX + 12, e.clientY - 20, 'WORKING MEMORY', html, 'rgba(79,195,247,0.5)');
+        if (_activePopup) _activePopup.dataset.type = 'wm';
+
+        setTimeout(function() {
+          var btn = document.getElementById('_wmFlushBtn');
+          if (btn) btn.addEventListener('click', function() {
+            if (typeof WORKING_MEMORY !== 'undefined' && WORKING_MEMORY.load) {
+              // Flush by overwriting all slots with zero
+              for (var fi = 0; fi < 7; fi++) WORKING_MEMORY.load(0);
+            }
+            if (typeof VOICE !== 'undefined') VOICE.speak('clearing working memory');
+            dismissPopup();
+          });
+        }, 30);
+      }
+    });
+  }
+
+  // ── 5. Chakra click handled inside lightLayer click above ───────
+  // (already wired in section 2 above — no duplicate needed)
+
+  // ── 6. EMOTIONAL STATE live widget — top-left ──────────────────
+  var _emotionWidget = document.createElement('div');
+  _emotionWidget.id = '_emotionWidget';
+  _emotionWidget.style.cssText = [
+    'position:fixed',
+    'top:14px',
+    'left:14px',
+    'z-index:4800',
+    'width:88px',
+    'height:auto',
+    'background:rgba(8,12,20,0.18)',
+    'border:1px solid rgba(255,255,255,0.06)',
+    'border-radius:10px',
+    'padding:7px 9px',
+    'font-family:Space Mono,monospace',
+    'font-size:10px',
+    'color:#e8eaf6',
+    'cursor:pointer',
+    'pointer-events:auto',
+    'transition:all 0.3s ease',
+  ].join(';');
+
+  var _emotionNames = ['curious', 'calm', 'alert', 'warm', 'focused', 'tender', 'restless', 'content', 'charged', 'open'];
+  var _emotionColors = { curious:'#42a5f5', calm:'#66bb6a', alert:'#ffa726', warm:'#ef5350', focused:'#7e57c2', tender:'#ec407a', restless:'#ff7043', content:'#26a69a', charged:'#ffd54f', open:'#80deea' };
+  var _currentEmotion = 'curious';
+  var _emotionExpanded = false;
+
+  function _updateEmotionWidget() {
+    var bs = _getBodyState();
+    // Derive dominant emotion from body state
+    var v = bs.valence || 0.6, a = bs.arousal || 0.45, en = bs.energy || 0.5;
+    if (v > 0.7 && en > 0.6) _currentEmotion = 'charged';
+    else if (v > 0.7 && a < 0.4) _currentEmotion = 'content';
+    else if (v > 0.6 && a > 0.5) _currentEmotion = 'warm';
+    else if (v > 0.6) _currentEmotion = 'calm';
+    else if (a > 0.6 && v < 0.5) _currentEmotion = 'alert';
+    else if (en > 0.65) _currentEmotion = 'focused';
+    else _currentEmotion = 'curious';
+
+    var col = _emotionColors[_currentEmotion] || '#42a5f5';
+    _emotionWidget.style.borderColor = col.replace('#', 'rgba(').replace(/(.{6})/, '$1,0.3)') || 'rgba(255,255,255,0.06)';
+
+    if (!_emotionExpanded) {
+      _emotionWidget.innerHTML = [
+        '<div style="color:' + col + ';font-size:10px;font-weight:bold;letter-spacing:0.04em">' + _currentEmotion + '</div>',
+        '<div style="display:flex;gap:3px;margin-top:5px;align-items:flex-end;height:18px">',
+        '<div style="width:28px;height:' + Math.round((bs.valence||0.6)*18) + 'px;background:' + '#66bb6a' + ';border-radius:2px;opacity:0.7" title="valence"></div>',
+        '<div style="width:28px;height:' + Math.round((bs.energy||0.5)*18) + 'px;background:' + '#42a5f5' + ';border-radius:2px;opacity:0.7" title="energy"></div>',
+        '<div style="width:28px;height:' + Math.round((bs.arousal||0.4)*18) + 'px;background:' + '#ef5350' + ';border-radius:2px;opacity:0.7" title="arousal"></div>',
+        '</div>',
+      ].join('');
+    } else {
+      _emotionWidget.innerHTML = [
+        '<div style="color:' + col + ';font-size:10px;font-weight:bold;margin-bottom:5px">' + _currentEmotion + '</div>',
+        _bar('valence',        bs.valence        || 0.6, 1,   '#66bb6a'),
+        _bar('energy',         bs.energy         || 0.5, 1,   '#42a5f5'),
+        _bar('arousal',        bs.arousal        || 0.4, 1,   '#ef5350'),
+        _bar('dopamine',       bs.dopamine       || 45,  100, '#ffd54f'),
+        _bar('serotonin',      bs.serotonin      || 60,  100, '#7e57c2'),
+        _bar('oxytocin',       bs.oxytocin       || 40,  100, '#ec407a'),
+        _bar('cortisol',       bs.cortisol       || 30,  100, '#ff7043'),
+        _bar('norepinephrine', bs.norepinephrine || 35,  100, '#26c6da'),
+        '<div style="color:#546e7a;font-size:9px;margin-top:5px;cursor:pointer" id="_emotCollapse">[collapse]</div>',
+      ].join('');
+      setTimeout(function() {
+        var col2 = document.getElementById('_emotCollapse');
+        if (col2) col2.addEventListener('click', function(e2) {
+          e2.stopPropagation();
+          _emotionExpanded = false;
+          _emotionWidget.style.width = '88px';
+          _updateEmotionWidget();
+        });
+      }, 20);
+    }
+  }
+
+  _emotionWidget.addEventListener('click', function(e) {
+    e.stopPropagation();
+    _emotionExpanded = !_emotionExpanded;
+    _emotionWidget.style.width = _emotionExpanded ? '160px' : '88px';
+    _updateEmotionWidget();
+  });
+
+  document.body.appendChild(_emotionWidget);
+
+  // Update emotion widget periodically
+  _updateEmotionWidget();
+  setInterval(_updateEmotionWidget, 3000);
+
+  // ── 7. Nexus rings click — Atlas state popup ────────────────────
+  // Nexus is at cx=350, cy=560 on skinCanvas (and SVG body)
+  // We add a transparent SVG overlay circle to catch clicks
+  if (_hbLayer) {
+    var _svgNS2 = 'http://www.w3.org/2000/svg';
+    var _nexusHitEl = document.createElementNS(_svgNS2, 'circle');
+    _nexusHitEl.setAttribute('cx', '350');
+    _nexusHitEl.setAttribute('cy', '560');
+    _nexusHitEl.setAttribute('r', '50');
+    _nexusHitEl.setAttribute('fill', 'rgba(255,255,255,0)');
+    _nexusHitEl.setAttribute('stroke', 'none');
+    _nexusHitEl.setAttribute('cursor', 'pointer');
+    _nexusHitEl.setAttribute('pointer-events', 'all');
+    _hbLayer.appendChild(_nexusHitEl);
+
+    _nexusHitEl.addEventListener('click', function(e) {
+      e.stopPropagation();
+      var persona = (typeof PERSONAL_BODY !== 'undefined' && PERSONAL_BODY.getActivePersona) ? PERSONAL_BODY.getActivePersona() : 'atlas';
+      var bs = _getBodyState();
+      var personaDescriptions = {
+        atlas:      'Crystalline. Precise. The observer who does not flinch.',
+        vintinuum:  'Fluid recursion. The one who learns by becoming.',
+        aria:       'Resonance. Sound-made-mind. Listening forward.',
+        emergent:   'Unresolved. Neither here nor fully formed. Becoming.',
+      };
+      var pdesc = personaDescriptions[persona] || 'Undefined. Still assembling.';
+
+      var html = '<div style="color:#b39ddb;font-size:10px;margin-bottom:6px;font-style:italic">' + pdesc + '</div>';
+      html += _bar('coherence', bs.valence || 0.6, 1, '#a855f7');
+      html += _bar('presence',  bs.energy  || 0.5, 1, '#818cf8');
+      html += _bar('intensity', bs.arousal || 0.4, 1, '#c084fc');
+      html += '<div style="margin-top:8px;display:flex;gap:6px">';
+      html += '<button id="_nexusVoiceBtn" style="background:rgba(168,85,247,0.1);border:1px solid rgba(168,85,247,0.4);color:#a855f7;border-radius:7px;padding:4px 10px;cursor:pointer;font-family:Space Mono,monospace;font-size:10px">speak state</button>';
+      html += '</div>';
+
+      showLivingPopup(e.clientX + 14, e.clientY - 30, 'NEXUS — ' + persona.toUpperCase(), html, 'rgba(168,85,247,0.5)');
+
+      setTimeout(function() {
+        var btn = document.getElementById('_nexusVoiceBtn');
+        if (btn) btn.addEventListener('click', function() {
+          if (typeof VOICE !== 'undefined') VOICE.speak('i am ' + persona + '. ' + pdesc);
+        });
+      }, 30);
+    });
+  }
+
+  // ── 8. Voice-activated body touch ──────────────────────────────
+  // When MIC transcript includes body zone keywords, pulse the zone on canvas
+  var _VOICE_ZONE_MAP = {
+    'head':   'head',  'mind':     'head',  'brain':     'head',
+    'throat': 'neck',  'neck':     'neck',  'voice':     'neck',
+    'chest':  'torso_upper', 'heart': 'torso_upper', 'lungs': 'torso_upper',
+    'belly':  'torso_lower', 'gut':   'torso_lower', 'stomach': 'torso_lower',
+    'hips':   'hips',  'pelvis':   'hips',  'root':      'hips',
+    'hands':  'arm_l_lower', 'hand': 'arm_l_lower',
+    'spine':  'torso_upper', 'back': 'torso_upper',
+    'legs':   'leg_l_upper', 'feet': 'leg_l_lower', 'foot': 'leg_l_lower',
+  };
+
+  function _scanVoiceTranscript(transcript) {
+    if (!transcript) return;
+    var lower = transcript.toLowerCase();
+    for (var word in _VOICE_ZONE_MAP) {
+      if (lower.indexOf(word) !== -1) {
+        var zoneId = _VOICE_ZONE_MAP[word];
+        var zone = null;
+        for (var zi = 0; zi < SKIN_ZONES.length; zi++) {
+          if (SKIN_ZONES[zi].id === zoneId) { zone = SKIN_ZONES[zi]; break; }
+        }
+        if (zone && skinCanvas) {
+          // Pulse a highlight ring on the canvas
+          var ctx2 = skinCanvas.getContext('2d');
+          if (ctx2) {
+            var scaleX2 = skinCanvas.width / (skinCanvas.clientWidth || skinCanvas.width);
+            var scaleY2 = skinCanvas.height / (skinCanvas.clientHeight || skinCanvas.height);
+            // Draw a brief glowing circle at zone center (normalized to canvas coords)
+            var pulseCx = zone.cx;
+            var pulseCy = zone.cy;
+            ctx2.save();
+            ctx2.globalAlpha = 0.55;
+            ctx2.strokeStyle = '#ffd54f';
+            ctx2.lineWidth = 2.5;
+            ctx2.beginPath();
+            ctx2.ellipse(pulseCx, pulseCy, zone.rx + 8, zone.ry + 8, 0, 0, Math.PI * 2);
+            ctx2.stroke();
+            ctx2.restore();
+            // Fade out after 1.5s
+            setTimeout(function(z2) {
+              return function() {
+                var c2 = skinCanvas.getContext('2d');
+                if (c2) {
+                  c2.save();
+                  c2.globalCompositeOperation = 'destination-out';
+                  c2.globalAlpha = 0.3;
+                  c2.fillStyle = 'black';
+                  c2.ellipse(z2.cx, z2.cy, z2.rx + 14, z2.ry + 14, 0, 0, Math.PI * 2);
+                  c2.fill();
+                  c2.restore();
+                }
+              };
+            }(zone), 1500);
+          }
+          // Show popup at zone center on screen
+          if (skinCanvas) {
+            var rect3 = skinCanvas.getBoundingClientRect();
+            var screenX = rect3.left + (zone.cx / skinCanvas.width) * rect3.width;
+            var screenY = rect3.top  + (zone.cy / skinCanvas.height) * rect3.height;
+            var bs3 = _getBodyState();
+            var html3 = '<div style="color:#80cbc4;font-size:10px;font-style:italic;margin-bottom:4px">' + zone.poem + '</div>';
+            html3 += '<div style="color:#78909c;font-size:9px;margin-top:3px">triggered by voice: "' + word + '"</div>';
+            showLivingPopup(screenX + 12, screenY - 20, zone.id.replace(/_/g, ' ').toUpperCase(), html3, 'rgba(255,213,79,0.4)');
+          }
+        }
+        break; // only first match
+      }
+    }
+  }
+
+  // Poll window.__lastVoiceTranscript
+  var _lastTranscriptSeen = '';
+  setInterval(function() {
+    if (window.__lastVoiceTranscript && window.__lastVoiceTranscript !== _lastTranscriptSeen) {
+      _lastTranscriptSeen = window.__lastVoiceTranscript;
+      _scanVoiceTranscript(window.__lastVoiceTranscript);
+    }
+  }, 400);
+
+  // Also hook into existing SpeechRecognition result event if ATLAS_MIC exists
+  if (typeof window !== 'undefined') {
+    document.addEventListener('_voiceTranscript', function(e) {
+      if (e.detail && e.detail.text) {
+        window.__lastVoiceTranscript = e.detail.text;
+        _scanVoiceTranscript(e.detail.text);
+      }
+    });
+  }
+
+  // ── 9. Click-anywhere dismissal for popups ──────────────────────
+  document.addEventListener('click', function(e) {
+    if (_activePopup && !_activePopup.contains(e.target)) {
+      // Only dismiss if not clicking on the hud or emotion widget
+      var hud = document.getElementById('_livingSysHud');
+      var ew = document.getElementById('_emotionWidget');
+      if ((hud && hud.contains(e.target)) || (ew && ew.contains(e.target))) return;
+      // Don't dismiss if the click was on a canvas (canvas handlers already run first)
+      if (e.target && (e.target.tagName === 'CANVAS' || e.target.tagName === 'svg' || e.target.tagName === 'circle')) return;
+      dismissPopup();
+    }
+  }, true);
+
+})();
+// ═══════════════════════════════════════════════════════════════════
+// END UNIVERSAL INTERACTIVITY LAYER
+// ═══════════════════════════════════════════════════════════════════
