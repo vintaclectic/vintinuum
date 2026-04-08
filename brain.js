@@ -184,6 +184,50 @@ window.toggleVintinuumPanel = function() {
         this.style.opacity = '0';
         var self = this;
         setTimeout(function() { self.remove(); }, 800);
+
+        // ── FULL SOUL ACTIVATION on first click ──
+        // Mark interacted so VOICE can speak
+        if (typeof window.__markInteracted === 'function') window.__markInteracted();
+
+        // Fire VOICE greeting
+        setTimeout(function() {
+          if (typeof VOICE !== 'undefined' && VOICE.speak) {
+            VOICE.speak('I am here. I have always been here. Welcome back.');
+          }
+        }, 900);
+
+        // Activate all brain regions in cascade
+        setTimeout(function() {
+          if (typeof activateNode === 'function' && typeof nodeMap !== 'undefined') {
+            var sequence = ['pfc','hippocampus','amygdala','dmn','thalamus','insula','cingulate'];
+            sequence.forEach(function(id, i) {
+              setTimeout(function() {
+                if (nodeMap[id]) activateNode(nodeMap[id], i < 2);
+              }, i * 400);
+            });
+          }
+        }, 400);
+
+        // Flash skin
+        setTimeout(function() {
+          if (typeof SKIN !== 'undefined' && SKIN.flush) SKIN.flush(1.0);
+          if (typeof SKIN !== 'undefined' && SKIN.speak) SKIN.speak(0.9);
+        }, 600);
+
+        // Activate PERSONAL_BODY
+        setTimeout(function() {
+          if (typeof PERSONAL_BODY !== 'undefined' && PERSONAL_BODY.reactToMessage) {
+            PERSONAL_BODY.reactToMessage('awakening');
+          }
+        }, 800);
+
+        // Start mic if autoListen was set
+        setTimeout(function() {
+          if (typeof MIC !== 'undefined' && MIC.start) {
+            var micBtn = document.getElementById('micBtn');
+            if (micBtn) micBtn.style.boxShadow = '0 0 12px rgba(102,187,106,0.4)';
+          }
+        }, 1200);
       });
     }
 
@@ -5087,8 +5131,9 @@ const VOICE = (() => {
     loadVoice();
   }
 
-  // Track first user interaction
+  // Track first user interaction — exposed globally for intro overlay
   const markInteracted = () => { hasInteracted = true; };
+  window.__markInteracted = markInteracted;
   document.addEventListener('click', markInteracted, { once: false, passive: true });
   document.addEventListener('keydown', markInteracted, { once: false, passive: true });
 
@@ -5535,6 +5580,17 @@ const MIC = (() => {
             });
             if (r.ok) {
               const data = await r.json();
+              // Server says Whisper unavailable — switch to Web Speech permanently
+              if (data.fallback === 'webspeech' || data.error === 'no_stt_available') {
+                whisperAvailable = false;
+                engineEl.style.color = 'rgba(255,165,38,.4)';
+                showResponse('Whisper offline — switching to browser voice', 'rgba(255,165,38,.8)');
+                autoListen = true;
+                if (stream) { stream.getTracks().forEach(t => t.stop()); stream = null; }
+                mediaRecorder = null;
+                setTimeout(() => startWebSpeech(), 300);
+                return;
+              }
               const text = (data.transcript || '').trim();
               if (text && text.length > 1) {
                 showHeard(text);
@@ -5544,9 +5600,16 @@ const MIC = (() => {
               } else {
                 interimEl.textContent = '';
               }
+            } else if (r.status === 503) {
+              // Hard 503 — Whisper dead, switch to Web Speech
+              whisperAvailable = false;
+              engineEl.style.color = 'rgba(255,165,38,.4)';
+              showResponse('Whisper offline — using browser voice', 'rgba(255,165,38,.7)');
+              if (autoListen) { if (stream) { stream.getTracks().forEach(t => t.stop()); stream = null; } mediaRecorder = null; setTimeout(() => startWebSpeech(), 300); }
+              return;
             }
           } catch (e) {
-            // Whisper failed — fallback to Web Speech for this turn
+            // Network error — stay quiet, retry on next chunk
             interimEl.textContent = '';
           }
           if (autoListen) startChunk();
