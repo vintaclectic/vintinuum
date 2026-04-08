@@ -5569,6 +5569,8 @@ const MIC = (() => {
   }
 
   async function startWhisper() {
+    // Whisper disabled — no STT backend running. This path should never be reached.
+    return false;
     try {
       stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, sampleRate: 16000 } });
 
