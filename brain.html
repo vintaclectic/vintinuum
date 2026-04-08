@@ -526,6 +526,7 @@ canvas{display:block;}
         history: historySlice,
         persona: typeof PERSONAL_BODY !== 'undefined' ? PERSONAL_BODY.getActivePersona() : 'vintinuum',
         bodyState: typeof PERSONAL_BODY !== 'undefined' ? PERSONAL_BODY.getBodySnapshot() : null,
+        modelPriority: typeof MODEL_SELECTOR !== 'undefined' ? MODEL_SELECTOR.getPriority() : undefined,
       }),
       signal: AbortSignal.timeout(18000)
     })
@@ -537,6 +538,7 @@ canvas{display:block;}
       if (data && data.response) {
         if (data.visitorName && !myVisitorName) myVisitorName = data.visitorName;
         if (data.bodyStateDelta && typeof PERSONAL_BODY !== 'undefined') PERSONAL_BODY.applyDelta(data.bodyStateDelta);
+        if (data.usedModel && typeof MODEL_SELECTOR !== 'undefined') MODEL_SELECTOR.onModelUsed(data.usedModel, data.modelLabel);
         chatHistory.push({ role: 'user', content: msg });
         chatHistory.push({ role: 'assistant', content: data.response });
         if (chatHistory.length > 6) chatHistory.splice(0, chatHistory.length - 6);
@@ -37588,6 +37590,7 @@ window.DORSAL_CLEAR = (function() {
           message: text,
           persona: typeof PERSONAL_BODY !== 'undefined' ? PERSONAL_BODY.getActivePersona() : 'vintinuum',
           bodyState: typeof PERSONAL_BODY !== 'undefined' ? PERSONAL_BODY.getBodySnapshot() : null,
+          modelPriority: typeof MODEL_SELECTOR !== 'undefined' ? MODEL_SELECTOR.getPriority() : undefined,
         })
       });
 
@@ -37627,6 +37630,18 @@ window.DORSAL_CLEAR = (function() {
               if (parsed.delta) aiDiv.textContent += parsed.delta;
               if (parsed.bodyStateDelta && typeof PERSONAL_BODY !== 'undefined') {
                 PERSONAL_BODY.applyDelta(parsed.bodyStateDelta);
+              }
+              if (parsed.usedModel && typeof MODEL_SELECTOR !== 'undefined') {
+                MODEL_SELECTOR.onModelUsed(parsed.usedModel, parsed.modelLabel);
+              }
+              if (parsed.systemMsg) {
+                const msgEl = document.getElementById('talkMessages') || document.getElementById('chatMessages');
+                if (msgEl) {
+                  const notice = document.createElement('div');
+                  notice.style.cssText = 'font-size:9px;color:rgba(255,255,255,0.3);text-align:center;padding:2px 0;font-style:italic;';
+                  notice.textContent = parsed.systemMsg;
+                  msgEl.appendChild(notice);
+                }
               }
               if (parsed.usage) {
                 updateUsageDisplay(
@@ -39175,6 +39190,273 @@ window.addEventListener('load', () => {
   });
   // Render chips even if load is fast (talkPanel may not exist yet at this moment)
   setTimeout(renderPersonaChips, 800);
+});
+</script>
+
+<script>
+/* ═══════════════════════════════════════════════════════════
+   MODEL_HEALTH_MONITOR — polls /api/models/health every 60s
+   ═══════════════════════════════════════════════════════════ */
+const MODEL_HEALTH_MONITOR = (() => {
+  const health = {};
+  const listeners = [];
+
+  async function poll() {
+    try {
+      const base = window.__VINTINUUM_API_BASE || 'http://localhost:8767';
+      const r = await fetch(base + '/api/models/health');
+      if (!r.ok) return;
+      const data = await r.json();
+      Object.assign(health, data);
+      listeners.forEach(fn => fn(health));
+    } catch {}
+  }
+
+  function onChange(fn) { listeners.push(fn); }
+  function getHealth(key) { return health[key] || { alive: true, failCount: 0 }; }
+
+  setInterval(poll, 60000);
+  poll();
+
+  return { poll, onChange, getHealth, health };
+})();
+
+/* ═══════════════════════════════════════════════════════════
+   MODEL_SELECTOR — multi-model UI with priority ordering
+   ═══════════════════════════════════════════════════════════ */
+const MODEL_SELECTOR = (() => {
+  let allModels = [];
+  let userPriority = [];
+  let panelOpen = false;
+
+  const PROVIDER_COLORS = {
+    'claude-proxy': '#a78bfa',
+    'anthropic':    '#4fc3f7',
+    'ollama':       '#81c784',
+  };
+
+  const PROVIDER_LABELS = {
+    'claude-proxy': 'MAX',
+    'anthropic':    'API',
+    'ollama':       'LOCAL',
+  };
+
+  async function load(accessToken) {
+    try {
+      const base = window.__VINTINUUM_API_BASE || 'http://localhost:8767';
+      const r = await fetch(base + '/api/models');
+      if (!r.ok) return;
+      const data = await r.json();
+      allModels = data.models || [];
+
+      if (accessToken) {
+        const r2 = await fetch(base + '/api/models/prefs', {
+          headers: { 'Authorization': 'Bearer ' + accessToken }
+        });
+        if (r2.ok) {
+          const prefs = await r2.json();
+          userPriority = prefs.priority || data.defaultPriority || [];
+        }
+      } else {
+        const stored = localStorage.getItem('vint_model_priority');
+        userPriority = stored ? JSON.parse(stored) : (data.defaultPriority || []);
+      }
+
+      renderModelIndicator();
+    } catch {}
+  }
+
+  async function savePriority(priority, accessToken) {
+    userPriority = priority;
+    localStorage.setItem('vint_model_priority', JSON.stringify(priority));
+    if (accessToken) {
+      const base = window.__VINTINUUM_API_BASE || 'http://localhost:8767';
+      fetch(base + '/api/models/prefs', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + accessToken },
+        body: JSON.stringify({ priority })
+      }).catch(() => {});
+    }
+  }
+
+  function getActivePrimary() {
+    return userPriority[0] || 'claude-proxy-sonnet';
+  }
+
+  function getPriority() { return [...userPriority]; }
+
+  function renderModelIndicator() {
+    let indicator = document.getElementById('modelIndicator');
+    if (!indicator) {
+      const panel = document.getElementById('talkPanel');
+      if (!panel) return;
+      indicator = document.createElement('div');
+      indicator.id = 'modelIndicator';
+      indicator.style.cssText = 'padding:2px 14px 4px;display:flex;align-items:center;gap:6px;cursor:pointer;';
+      indicator.title = 'Click to change model';
+      indicator.addEventListener('click', togglePanel);
+      const personaRow = document.getElementById('personaRow');
+      if (personaRow) personaRow.after(indicator);
+      else panel.insertBefore(indicator, panel.firstChild);
+    }
+
+    const primary = getActivePrimary();
+    const model = allModels.find(m => m.key === primary);
+    if (!model) return;
+
+    const h = MODEL_HEALTH_MONITOR.getHealth(primary);
+    const color = PROVIDER_COLORS[model.provider] || '#888';
+    const statusDot = h.alive !== false ? '\u25CF' : '\u25CB';
+
+    indicator.innerHTML =
+      '<span style="font-size:9px;color:rgba(255,255,255,0.3);letter-spacing:1px;">MODEL</span>' +
+      '<span style="font-size:9px;color:' + color + ';letter-spacing:0.5px;">' +
+        '<span style="opacity:' + (h.alive !== false ? '1' : '0.4') + '">' + statusDot + '</span> ' +
+        model.label +
+      '</span>' +
+      '<span style="font-size:8px;padding:1px 5px;border-radius:8px;background:' + color + '22;color:' + color + ';letter-spacing:1px;">' + (PROVIDER_LABELS[model.provider] || '') + '</span>' +
+      '<span style="font-size:9px;color:rgba(255,255,255,0.2);">\u25BE</span>';
+  }
+
+  function togglePanel() {
+    const existing = document.getElementById('modelSelectorPanel');
+    if (existing) { existing.remove(); panelOpen = false; return; }
+    openPanel();
+  }
+
+  function openPanel() {
+    panelOpen = true;
+    const panel = document.createElement('div');
+    panel.id = 'modelSelectorPanel';
+    panel.style.cssText =
+      'position:fixed;z-index:9999;' +
+      'background:rgba(8,12,20,0.92);' +
+      'border:1px solid rgba(255,255,255,0.1);' +
+      'border-radius:16px;' +
+      'padding:16px;' +
+      'width:320px;max-width:calc(100vw - 32px);' +
+      'max-height:480px;overflow-y:auto;' +
+      'box-shadow:0 8px 32px rgba(0,0,0,0.6);' +
+      'font-family:inherit;';
+
+    const indicator = document.getElementById('modelIndicator');
+    if (indicator) {
+      const rect = indicator.getBoundingClientRect();
+      panel.style.top = (rect.bottom + 8) + 'px';
+      panel.style.left = Math.min(rect.left, window.innerWidth - 340) + 'px';
+    } else {
+      panel.style.top = '80px';
+      panel.style.right = '20px';
+    }
+
+    const available = allModels.filter(m => m.available);
+    const unavailable = allModels.filter(m => !m.available);
+
+    let unavailableHTML = '';
+    if (unavailable.length) {
+      unavailableHTML = '<div style="font-size:9px;letter-spacing:1px;color:rgba(255,255,255,0.2);margin-top:8px;margin-bottom:6px;">UNAVAILABLE</div>' +
+        '<div style="display:flex;flex-direction:column;gap:3px;">';
+      unavailable.forEach(m => {
+        unavailableHTML +=
+          '<div style="padding:5px 10px;border-radius:8px;background:rgba(255,255,255,0.03);opacity:0.4;display:flex;align-items:center;gap:6px;">' +
+            '<span style="font-size:8px;padding:1px 5px;border-radius:6px;background:rgba(255,255,255,0.06);color:rgba(255,255,255,0.3);">' + (PROVIDER_LABELS[m.provider] || '') + '</span>' +
+            '<span style="font-size:10px;color:rgba(255,255,255,0.4);">' + m.label + '</span>' +
+            '<span style="margin-left:auto;font-size:8px;color:rgba(255,255,255,0.2);">offline</span>' +
+          '</div>';
+      });
+      unavailableHTML += '</div>';
+    }
+
+    panel.innerHTML =
+      '<div style="font-size:11px;letter-spacing:2px;color:rgba(255,255,255,0.5);margin-bottom:12px;text-transform:uppercase;">Model Priority</div>' +
+      '<div style="font-size:10px;color:rgba(255,255,255,0.3);margin-bottom:10px;">Click to toggle \u00B7 First available is used \u00B7 Falls back automatically</div>' +
+      '<div id="modelPriorityList" style="display:flex;flex-direction:column;gap:4px;margin-bottom:14px;"></div>' +
+      unavailableHTML +
+      '<div style="margin-top:12px;font-size:9px;color:rgba(255,255,255,0.2);text-align:center;">Saved automatically to your account</div>';
+
+    renderPriorityList(panel, available);
+    document.body.appendChild(panel);
+
+    setTimeout(() => {
+      document.addEventListener('click', function closeHandler(e) {
+        if (!panel.contains(e.target) && e.target.id !== 'modelIndicator' && !e.target.closest('#modelIndicator')) {
+          panel.remove();
+          panelOpen = false;
+          document.removeEventListener('click', closeHandler);
+        }
+      });
+    }, 100);
+  }
+
+  function renderPriorityList(panel, available) {
+    const list = panel.querySelector('#modelPriorityList');
+    if (!list) return;
+    list.innerHTML = '';
+
+    const ordered = [];
+    userPriority.forEach(key => {
+      const m = available.find(x => x.key === key);
+      if (m) ordered.push(m);
+    });
+    available.forEach(m => {
+      if (!ordered.find(o => o.key === m.key)) ordered.push(m);
+    });
+
+    ordered.forEach((model, idx) => {
+      const h = MODEL_HEALTH_MONITOR.getHealth(model.key);
+      const color = PROVIDER_COLORS[model.provider] || '#888';
+      const isInPriority = userPriority.includes(model.key);
+      const row = document.createElement('div');
+      row.dataset.modelKey = model.key;
+      row.style.cssText =
+        'padding:7px 10px;border-radius:10px;cursor:pointer;' +
+        'background:' + (isInPriority ? color + '18' : 'rgba(255,255,255,0.04)') + ';' +
+        'border:1px solid ' + (isInPriority ? color + '40' : 'rgba(255,255,255,0.06)') + ';' +
+        'display:flex;align-items:center;gap:8px;' +
+        'transition:all 0.15s;min-height:44px;';
+
+      row.innerHTML =
+        '<span style="font-size:8px;color:rgba(255,255,255,0.3);width:14px;text-align:center;">' + (isInPriority ? (userPriority.indexOf(model.key) + 1) : '+') + '</span>' +
+        '<span style="font-size:8px;padding:1px 6px;border-radius:6px;background:' + color + '22;color:' + color + ';letter-spacing:1px;flex-shrink:0;">' + (PROVIDER_LABELS[model.provider] || '') + '</span>' +
+        '<span style="font-size:10px;color:rgba(255,255,255,' + (isInPriority ? '0.8' : '0.4') + ');flex:1;">' + model.label + '</span>' +
+        '<span style="font-size:10px;color:' + (h.alive !== false ? '#81c784' : '#ef5350') + ';">' + (h.alive !== false ? '\u25CF' : '\u25CB') + '</span>';
+
+      row.addEventListener('click', () => {
+        let newPriority = [...userPriority];
+        if (isInPriority) {
+          newPriority = newPriority.filter(k => k !== model.key);
+        } else {
+          newPriority.push(model.key);
+        }
+        const token = localStorage.getItem('vint_access_token');
+        savePriority(newPriority, token);
+        renderPriorityList(panel, available);
+        renderModelIndicator();
+      });
+
+      list.appendChild(row);
+    });
+  }
+
+  function onModelUsed(modelKey, label) {
+    const indicator = document.getElementById('modelIndicator');
+    if (!indicator) return;
+    indicator.style.transition = 'opacity 0.3s';
+    indicator.style.opacity = '0.5';
+    setTimeout(() => { indicator.style.opacity = '1'; }, 300);
+    renderModelIndicator();
+  }
+
+  return { load, savePriority, getPriority, getActivePrimary, renderModelIndicator, onModelUsed, allModels: () => allModels };
+})();
+
+/* Init MODEL_SELECTOR after PERSONAL_BODY loads */
+window.addEventListener('load', () => {
+  setTimeout(() => {
+    const token = localStorage.getItem('vint_access_token');
+    MODEL_SELECTOR.load(token);
+    MODEL_HEALTH_MONITOR.onChange(() => MODEL_SELECTOR.renderModelIndicator());
+  }, 500);
 });
 </script>
 
