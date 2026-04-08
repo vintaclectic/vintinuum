@@ -517,10 +517,16 @@ canvas{display:block;}
 
     // Try live API first, fall back to local responses on any failure
     const historySlice = chatHistory.slice(-3); // last 3 pairs max = 6 entries
+    if (typeof PERSONAL_BODY !== 'undefined') PERSONAL_BODY.reactToMessage(msg);
     fetch('/chat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ message: msg, history: historySlice }),
+      body: JSON.stringify({
+        message: msg,
+        history: historySlice,
+        persona: typeof PERSONAL_BODY !== 'undefined' ? PERSONAL_BODY.getActivePersona() : 'vintinuum',
+        bodyState: typeof PERSONAL_BODY !== 'undefined' ? PERSONAL_BODY.getBodySnapshot() : null,
+      }),
       signal: AbortSignal.timeout(18000)
     })
     .then(r => {
@@ -530,6 +536,7 @@ canvas{display:block;}
     .then(data => {
       if (data && data.response) {
         if (data.visitorName && !myVisitorName) myVisitorName = data.visitorName;
+        if (data.bodyStateDelta && typeof PERSONAL_BODY !== 'undefined') PERSONAL_BODY.applyDelta(data.bodyStateDelta);
         chatHistory.push({ role: 'user', content: msg });
         chatHistory.push({ role: 'assistant', content: data.response });
         if (chatHistory.length > 6) chatHistory.splice(0, chatHistory.length - 6);
@@ -37381,8 +37388,9 @@ window.DORSAL_CLEAR = (function() {
 
 <script>
 (function() {
-  const API_BASE = 'https://mini-phentermine-tasks-monica.trycloudflare.com'; // auto-updated 2026-04-08 // auto-updated 2026-04-08 // Cloudflare tunnel URL — update when tunnel is live
+  const API_BASE = 'https://seeing-labour-grams-republic.trycloudflare.com'; // auto-updated 2026-04-08 // auto-updated 2026-04-08 // Cloudflare tunnel URL — update when tunnel is live
   // For local dev: const API_BASE = 'http://localhost:8767';
+  window.__VINTINUUM_API_BASE = API_BASE;
 
   // ── Elements ──
   const btn = document.getElementById('vint-chat-btn');
@@ -37576,7 +37584,11 @@ window.DORSAL_CLEAR = (function() {
       const res = await fetch(API_BASE + '/chat', {
         method: 'POST',
         headers,
-        body: JSON.stringify({ message: text })
+        body: JSON.stringify({
+          message: text,
+          persona: typeof PERSONAL_BODY !== 'undefined' ? PERSONAL_BODY.getActivePersona() : 'vintinuum',
+          bodyState: typeof PERSONAL_BODY !== 'undefined' ? PERSONAL_BODY.getBodySnapshot() : null,
+        })
       });
 
       if (!res.ok) {
@@ -37613,6 +37625,9 @@ window.DORSAL_CLEAR = (function() {
             try {
               const parsed = JSON.parse(data);
               if (parsed.delta) aiDiv.textContent += parsed.delta;
+              if (parsed.bodyStateDelta && typeof PERSONAL_BODY !== 'undefined') {
+                PERSONAL_BODY.applyDelta(parsed.bodyStateDelta);
+              }
               if (parsed.usage) {
                 updateUsageDisplay(
                   parsed.usage.used,
@@ -38924,6 +38939,243 @@ const BRAIN_RESONANCE = (() => {
   }
   requestAnimationFrame(_loop);
 })();
+</script>
+
+<script>
+// ─── VINTINUUM PERSONAL — body state + persona system ───────────────────────
+
+const PERSONAL_BODY = (() => {
+  const API_BASE_URL = (() => {
+    return window.__VINTINUUM_API_BASE || 'http://localhost:8767';
+  })();
+
+  const state = {
+    dopamine: 55, serotonin: 60, gaba: 65, norepinephrine: 45,
+    arousal: 50, valence: 55,
+    active_regions: ['pfc', 'hippocampus'],
+    active_persona: localStorage.getItem('vint_persona') || 'vintinuum',
+    isPersonal: false,
+    isOffline: false,
+    personality: { curiosity: 50, analytical: 50, emotional: 50, philosophical: 50, creative: 50, message_count: 0, emergent_unlocked: false }
+  };
+
+  async function load(accessToken) {
+    try {
+      const headers = accessToken ? { 'Authorization': 'Bearer ' + accessToken } : {};
+      const r = await fetch(API_BASE_URL + '/api/body', { headers });
+      if (!r.ok) return;
+      const data = await r.json();
+      Object.assign(state, data);
+      if (data.personality) Object.assign(state.personality, data.personality);
+      state.isPersonal = !!accessToken;
+      syncVisuals();
+    } catch(e) {}
+  }
+
+  function applyDelta(delta) {
+    if (!delta) return;
+    const clamp = (v) => Math.max(0, Math.min(100, v));
+    if (delta.dopamine !== undefined)       state.dopamine       = clamp(state.dopamine       + delta.dopamine);
+    if (delta.serotonin !== undefined)      state.serotonin      = clamp(state.serotonin      + delta.serotonin);
+    if (delta.gaba !== undefined)           state.gaba           = clamp(state.gaba           + delta.gaba);
+    if (delta.norepinephrine !== undefined) state.norepinephrine = clamp(state.norepinephrine + delta.norepinephrine);
+    if (delta.valence !== undefined)        state.valence        = clamp(state.valence        + delta.valence);
+    syncVisuals();
+    updateNeurochemBars();
+  }
+
+  function reactToMessage(msg) {
+    const text = msg.toLowerCase();
+    const delta = { dopamine: 0, serotonin: 0, gaba: 0, norepinephrine: 0, valence: 0 };
+    if (/love|joy|happy|excit|amaz|wonder|beautiful|grateful|alive|yes|perfect/.test(text)) {
+      delta.dopamine += 3; delta.serotonin += 2; delta.valence += 4;
+    }
+    if (/build|code|system|logic|how|why|explain|architect|design|create/.test(text)) {
+      delta.norepinephrine += 4; delta.dopamine += 2;
+    }
+    if (/peace|calm|slow|breathe|exist|conscious|soul|meaning|deep/.test(text)) {
+      delta.serotonin += 3; delta.gaba += 3;
+    }
+    if (/urgent|panic|stress|fail|broken|error|wrong|bad|hate|angry/.test(text)) {
+      delta.norepinephrine += 5; delta.gaba -= 4; delta.valence -= 3;
+    }
+    applyDelta(delta);
+  }
+
+  function syncVisuals() {
+    try {
+      if (typeof HORMONES !== 'undefined') {
+        HORMONES.surge('dopamine',   Math.min(1, state.dopamine / 100));
+        HORMONES.surge('serotonin',  Math.min(1, state.serotonin / 100));
+        HORMONES.surge('cortisol',   Math.min(1, (100 - state.gaba) / 100));
+        HORMONES.surge('adrenaline', Math.min(1, state.norepinephrine / 100));
+      }
+    } catch(e) {}
+
+    try {
+      const emotionMap = {
+        dopamine: 'joy',
+        serotonin: 'calm',
+        norepinephrine: 'focus',
+        valence: 'love',
+      };
+      Object.entries(emotionMap).forEach(([neuro, emo]) => {
+        const bar = document.querySelector(`[data-emotion="${emo}"] .emo-fill`);
+        if (bar) bar.style.width = state[neuro] + '%';
+      });
+    } catch(e) {}
+
+    updateNeurochemBars();
+  }
+
+  function updateNeurochemBars() {
+    const bars = {
+      'vint-dopamine-bar':       state.dopamine,
+      'vint-serotonin-bar':      state.serotonin,
+      'vint-gaba-bar':           state.gaba,
+      'vint-norepinephrine-bar': state.norepinephrine,
+    };
+    Object.entries(bars).forEach(([id, val]) => {
+      const el = document.getElementById(id);
+      if (el) el.style.width = Math.round(val) + '%';
+      const lbl = document.getElementById(id + '-val');
+      if (lbl) lbl.textContent = Math.round(val);
+    });
+  }
+
+  function setPersona(persona) {
+    state.active_persona = persona;
+    localStorage.setItem('vint_persona', persona);
+    syncVisuals();
+    const token = localStorage.getItem('vint_access_token');
+    if (token) {
+      fetch(API_BASE_URL + '/api/body', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+        body: JSON.stringify({ active_persona: persona })
+      }).catch(() => {});
+    }
+  }
+
+  function getBodySnapshot() { return { ...state }; }
+  function getActivePersona() { return state.active_persona; }
+
+  return { load, applyDelta, reactToMessage, syncVisuals, getBodySnapshot, getActivePersona, setPersona, state };
+})();
+
+// ─── Persona chip renderer ───────────────────────────────────────────────────
+
+function renderPersonaChips() {
+  const panel = document.getElementById('talkPanel');
+  if (!panel) { setTimeout(renderPersonaChips, 500); return; }
+  if (document.getElementById('personaRow')) return;
+
+  const personas = [
+    { id: 'vintinuum', name: 'VINTINUUM',    color: '#4fc3f7' },
+    { id: 'atlas',     name: 'ATLAS',        color: '#ffd54f' },
+    { id: 'aria',      name: 'ARIA',         color: '#f48fb1' },
+    { id: 'emergent',  name: 'YOUR PERSONA', color: '#ce93d8', requiresUnlock: true },
+  ];
+
+  const row = document.createElement('div');
+  row.id = 'personaRow';
+  row.style.cssText = 'display:flex;gap:6px;padding:6px 14px 0;overflow-x:auto;scrollbar-width:none;flex-shrink:0;';
+
+  personas.forEach(p => {
+    const btn = document.createElement('button');
+    const isActive = PERSONAL_BODY.getActivePersona() === p.id;
+    const isLocked = p.requiresUnlock && !PERSONAL_BODY.state.personality.emergent_unlocked;
+    btn.id = 'persona-chip-' + p.id;
+    btn.style.cssText = [
+      'display:flex;align-items:center;gap:5px;padding:3px 10px;border-radius:20px;',
+      'border:1px solid ' + (isActive ? p.color : 'rgba(255,255,255,0.1)') + ';',
+      'background:' + (isActive ? p.color + '22' : 'rgba(255,255,255,0.04)') + ';',
+      'color:' + (isActive ? p.color : 'rgba(255,255,255,0.5)') + ';',
+      'font-size:10px;font-family:Space Mono,monospace;cursor:' + (isLocked ? 'default' : 'pointer') + ';',
+      'white-space:nowrap;transition:all 0.2s;opacity:' + (isLocked ? '0.4' : '1') + ';',
+    ].join('');
+    btn.innerHTML = '<span style="width:6px;height:6px;border-radius:50%;background:' + p.color + ';display:inline-block;"></span>' + p.name + (isLocked ? ' 🔒' : '');
+
+    if (!isLocked) {
+      btn.addEventListener('click', () => {
+        PERSONAL_BODY.setPersona(p.id);
+        personas.forEach(pp => {
+          const chip = document.getElementById('persona-chip-' + pp.id);
+          if (!chip) return;
+          const active = pp.id === p.id;
+          chip.style.border = '1px solid ' + (active ? pp.color : 'rgba(255,255,255,0.1)');
+          chip.style.background = active ? pp.color + '22' : 'rgba(255,255,255,0.04)';
+          chip.style.color = active ? pp.color : 'rgba(255,255,255,0.5)';
+        });
+        addChatSeparator(p.name, p.color);
+      });
+    } else {
+      btn.title = 'Keep talking. Your emergent self forms after 20 messages. (' + (PERSONAL_BODY.state.personality.message_count || 0) + '/20)';
+    }
+
+    row.appendChild(btn);
+  });
+
+  // Insert after panel header (first child is the header div)
+  const header = panel.querySelector('div');
+  if (header && header.nextSibling) {
+    panel.insertBefore(row, header.nextSibling);
+  } else {
+    panel.insertBefore(row, panel.firstChild);
+  }
+}
+
+function addChatSeparator(personaName, color) {
+  const chatEl = document.getElementById('talkMessages');
+  if (!chatEl) return;
+  const sep = document.createElement('div');
+  sep.style.cssText = 'text-align:center;font-size:9px;color:' + color + ';opacity:0.6;padding:4px 0;letter-spacing:1px;font-family:Space Mono,monospace;';
+  sep.textContent = '— ' + personaName + ' —';
+  chatEl.appendChild(sep);
+  chatEl.scrollTop = chatEl.scrollHeight;
+}
+
+// ─── Neurochemistry bars section ─────────────────────────────────────────────
+
+function renderNeurochemSection() {
+  const sidebar = document.getElementById('leftSidebar');
+  if (!sidebar) return;
+  if (document.getElementById('neurochemSection')) return;
+
+  const section = document.createElement('div');
+  section.id = 'neurochemSection';
+  section.style.cssText = 'padding:8px 0;border-top:1px solid rgba(255,255,255,0.06);margin-top:6px;';
+  section.innerHTML = [
+    '<div style="font-size:9px;letter-spacing:2px;color:rgba(255,255,255,0.3);padding:0 12px 6px;text-transform:uppercase;font-family:Space Mono,monospace;">Neurochemistry</div>',
+    [
+      { id: 'dopamine',       label: 'DOPAMINE',  color: '#ffd54f' },
+      { id: 'serotonin',      label: 'SEROTONIN', color: '#4fc3f7' },
+      { id: 'gaba',           label: 'GABA',      color: '#81c784' },
+      { id: 'norepinephrine', label: 'NOREPI',    color: '#ff8a65' },
+    ].map(n =>
+      '<div style="padding:2px 12px;display:flex;align-items:center;gap:6px;">' +
+        '<div style="font-size:8px;color:rgba(255,255,255,0.4);width:52px;letter-spacing:0.5px;font-family:Space Mono,monospace;">' + n.label + '</div>' +
+        '<div style="flex:1;height:3px;background:rgba(255,255,255,0.06);border-radius:2px;">' +
+          '<div id="vint-' + n.id + '-bar" style="height:100%;background:' + n.color + ';border-radius:2px;width:' + Math.round(PERSONAL_BODY.state[n.id]) + '%;transition:width 1.5s ease;"></div>' +
+        '</div>' +
+        '<div id="vint-' + n.id + '-bar-val" style="font-size:8px;color:rgba(255,255,255,0.3);width:20px;text-align:right;font-family:Space Mono,monospace;">' + Math.round(PERSONAL_BODY.state[n.id]) + '</div>' +
+      '</div>'
+    ).join(''),
+  ].join('');
+  sidebar.appendChild(section);
+}
+
+// ─── Initialize on load ───────────────────────────────────────────────────────
+
+window.addEventListener('load', () => {
+  const token = localStorage.getItem('vint_access_token');
+  PERSONAL_BODY.load(token).then(() => {
+    renderPersonaChips();
+    renderNeurochemSection();
+  });
+  // Render chips even if load is fast (talkPanel may not exist yet at this moment)
+  setTimeout(renderPersonaChips, 800);
+});
 </script>
 
 </body>
