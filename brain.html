@@ -2,6 +2,9 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>VINTINUUM</title>
 <style>
@@ -5628,7 +5631,7 @@ const VOICE = (() => {
     utt.onerror = () => { onDone && onDone(); };
     window.speechSynthesis.speak(utt);
     if (typeof VOCAL_CORDS !== 'undefined') VOCAL_CORDS.speak(params.volume);
-    if (typeof VOCAL_RESONANCE !== 'undefined') VOCAL_RESONANCE.activate && VOCAL_RESONANCE.activate();
+    try { if (typeof VOCAL_RESONANCE !== 'undefined' && VOCAL_RESONANCE && VOCAL_RESONANCE.activate) VOCAL_RESONANCE.activate(); } catch(e) {}
   }
 
   function _processQueue() {
@@ -5691,160 +5694,153 @@ const VOICE = (() => {
 // Visual: mic button bottom-left, glows red when listening.
 // ═══════════════════════════════════════════════════════════════════
 const MIC = (() => {
-  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-  if (!SpeechRecognition) return { start(){}, stop(){} };
+  // ── Whisper-first STT with Web Speech API fallback ──────────────────────────
+  // Primary: MediaRecorder → local Whisper server (port 8768) — accurate, offline, no permission drama
+  // Fallback: Web Speech API — used only if Whisper server unreachable
 
-  let recognition = null;
+  // Whisper endpoint: local when file/localhost, proxy through ngrok when on GitHub Pages
+  const _whisperBase = (location.protocol === 'file:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1')
+    ? 'http://localhost:8768'
+    : (window.__VINTINUUM_API_BASE || 'http://localhost:8767');
+  const WHISPER_URL = _whisperBase.includes(':8768') ? _whisperBase + '/transcribe' : _whisperBase + '/stt';
+  let whisperAvailable = false;
+  let autoListen = false;
   let listening = false;
-  let restartTimer = null;
+  let mediaRecorder = null;
+  let audioChunks = [];
+  let silenceTimer = null;
+  let stream = null;
+  let wsCheck = null;
 
-  // Build mic button UI
+  // ── Voice feedback panel ───────────────────────────────────────────────────
   const btn = document.createElement('button');
   btn.id = 'micBtn';
-  btn.title = 'Voice commands — say "walk", "come here", "stop", "go to heart"';
+  btn.title = 'Voice — click to activate. Say anything to your agent.';
   btn.style.cssText = 'position:fixed;bottom:68px;left:24px;z-index:1000;background:rgba(6,10,18,0.55);border:1px solid rgba(255,255,255,0.1);border-radius:50%;width:36px;height:36px;cursor:pointer;font-size:.9rem;display:flex;align-items:center;justify-content:center;color:rgba(218,228,255,0.7);transition:all .2s;padding:0;';
   btn.innerHTML = '🎤';
   document.body.appendChild(btn);
 
-  // ── Voice feedback panel ───────────────────────────────────────────
   const panel = document.createElement('div');
   panel.id = 'voicePanel';
-  panel.style.cssText = `
-    position:fixed;bottom:116px;left:12px;z-index:1001;
-    width:210px;
-    background:rgba(4,8,16,0.82);
-    border:1px solid rgba(255,255,255,0.07);
-    border-radius:14px;
-    overflow:hidden;
-    opacity:0;
-    transition:opacity .35s;
-    pointer-events:none;
-    font-family:'Space Mono',monospace;
-  `;
+  panel.style.cssText = 'position:fixed;bottom:116px;left:12px;z-index:1001;width:220px;background:rgba(4,8,16,0.88);border:1px solid rgba(255,255,255,0.07);border-radius:14px;overflow:hidden;opacity:0;transition:opacity .35s;pointer-events:none;font-family:Space Mono,monospace;';
   document.body.appendChild(panel);
 
-  // Waveform canvas
   const wvCanvas = document.createElement('canvas');
-  wvCanvas.width = 210; wvCanvas.height = 28;
-  wvCanvas.style.cssText = 'display:block;width:210px;height:28px;';
+  wvCanvas.width = 220; wvCanvas.height = 28;
+  wvCanvas.style.cssText = 'display:block;width:220px;height:28px;';
   panel.appendChild(wvCanvas);
   const wvCtx = wvCanvas.getContext('2d');
 
-  // Status row
   const statusRow = document.createElement('div');
   statusRow.style.cssText = 'display:flex;align-items:center;gap:6px;padding:5px 10px 3px;border-top:1px solid rgba(255,255,255,0.05);';
   const statusDot = document.createElement('div');
-  statusDot.style.cssText = 'width:6px;height:6px;border-radius:50%;background:rgba(239,83,80,0.5);flex-shrink:0;transition:background .2s;';
+  statusDot.style.cssText = 'width:6px;height:6px;border-radius:50%;background:rgba(100,100,100,0.4);flex-shrink:0;transition:background .2s;';
   const statusLabel = document.createElement('span');
   statusLabel.style.cssText = 'font-size:.5rem;letter-spacing:.1em;color:rgba(218,228,255,.45);';
   statusLabel.textContent = 'MIC OFF';
   statusRow.appendChild(statusDot); statusRow.appendChild(statusLabel);
   panel.appendChild(statusRow);
 
-  // Interim (live as you speak)
   const interimEl = document.createElement('div');
   interimEl.style.cssText = 'padding:3px 10px;font-size:.55rem;color:rgba(255,213,79,.45);min-height:14px;line-height:1.4;font-style:italic;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;';
-  interimEl.textContent = '';
   panel.appendChild(interimEl);
 
-  // Final heard
   const heardEl = document.createElement('div');
   heardEl.style.cssText = 'padding:2px 10px;font-size:.58rem;color:rgba(255,213,79,.9);min-height:16px;line-height:1.4;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;';
-  heardEl.textContent = '';
   panel.appendChild(heardEl);
 
-  // Response / action taken
   const responseEl = document.createElement('div');
   responseEl.style.cssText = 'padding:2px 10px 7px;font-size:.55rem;color:rgba(79,195,247,.8);min-height:14px;line-height:1.4;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;';
-  responseEl.textContent = '';
   panel.appendChild(responseEl);
 
-  // Waveform state
+  // Engine label
+  const engineEl = document.createElement('div');
+  engineEl.style.cssText = 'padding:0 10px 5px;font-size:.45rem;letter-spacing:.12em;color:rgba(150,175,215,.3);';
+  engineEl.textContent = 'ENGINE: checking...';
+  panel.appendChild(engineEl);
+
+  // ── Waveform ─────────────────────────────────────────────────────────────
   const WV_BARS = 30;
   const wvBars = new Array(WV_BARS).fill(0);
-  let wvPhase = 0;
+  let wvPhase = 0, wvActive = false, wvAnimId = null;
+  let analyser = null, wvDataArr = null;
 
-  function drawWaveform(active) {
-    wvCtx.clearRect(0, 0, 210, 28);
-    const barW = 210 / WV_BARS;
-    wvPhase += active ? 0.18 : 0.04;
-    for (let i = 0; i < WV_BARS; i++) {
-      const target = active
-        ? Math.abs(Math.sin(wvPhase + i * 0.45)) * 20 + Math.random() * 4
-        : Math.abs(Math.sin(wvPhase * 0.3 + i * 0.6)) * 3;
-      wvBars[i] += (target - wvBars[i]) * (active ? 0.25 : 0.08);
-      const h = Math.max(1, wvBars[i]);
-      const y = (28 - h) / 2;
-      const alpha = active ? 0.7 + (h / 24) * 0.3 : 0.2;
-      wvCtx.fillStyle = active ? `rgba(239,83,80,${alpha.toFixed(2)})` : `rgba(100,120,160,${alpha.toFixed(2)})`;
-      wvCtx.fillRect(i * barW + 1, y, barW - 2, h);
-    }
-  }
-
-  // Animate waveform on rAF when panel is visible
-  let wvActive = false;
-  let wvAnimRunning = false;
   function startWvAnim() {
-    if (wvAnimRunning) return;
-    wvAnimRunning = true;
+    if (wvAnimId) return;
     function tick() {
-      if (!wvAnimRunning) return;
-      drawWaveform(wvActive);
-      requestAnimationFrame(tick);
+      wvCtx.clearRect(0, 0, 220, 28);
+      if (analyser && wvDataArr) {
+        analyser.getByteFrequencyData(wvDataArr);
+        for (let i = 0; i < WV_BARS; i++) {
+          const v = wvDataArr[Math.floor(i * wvDataArr.length / WV_BARS)] / 255;
+          wvBars[i] = wvBars[i] * 0.7 + v * 0.3;
+        }
+      } else if (wvActive) {
+        wvPhase += 0.12;
+        for (let i = 0; i < WV_BARS; i++) {
+          wvBars[i] = wvBars[i] * 0.85 + (0.3 + 0.25 * Math.sin(wvPhase + i * 0.4)) * 0.15;
+        }
+      }
+      const bw = 220 / WV_BARS;
+      for (let i = 0; i < WV_BARS; i++) {
+        const h = Math.max(2, wvBars[i] * 24);
+        wvCtx.fillStyle = wvActive ? `rgba(239,83,80,${0.4+wvBars[i]*0.5})` : `rgba(100,120,160,${0.15+wvBars[i]*0.2})`;
+        wvCtx.fillRect(i * bw + 1, (28 - h) / 2, bw - 2, h);
+      }
+      wvAnimId = requestAnimationFrame(tick);
     }
-    requestAnimationFrame(tick);
+    tick();
   }
 
   function setListening(on) {
     wvActive = on;
     panel.style.opacity = '1';
     statusDot.style.background = on ? 'rgba(239,83,80,0.9)' : 'rgba(100,120,160,0.5)';
-    statusLabel.textContent = on ? 'LISTENING' : 'MIC ON — QUIET';
+    statusLabel.textContent = on ? 'LISTENING' : 'MIC ON';
     startWvAnim();
   }
 
-  function showHeard(text) {
-    heardEl.textContent = '"' + text + '"';
-    interimEl.textContent = '';
-  }
+  function showHeard(text) { heardEl.textContent = '"' + text + '"'; interimEl.textContent = ''; }
+  function showInterim(text) { interimEl.textContent = text + '…'; }
+  function showResponse(text, color) { responseEl.textContent = '→ ' + text; responseEl.style.color = color || 'rgba(79,195,247,.8)'; }
+  function showToast(msg, color) { showResponse(msg, color); }
 
-  function showInterim(text) {
-    interimEl.textContent = text + '…';
-  }
-
-  function showResponse(text, color) {
-    responseEl.textContent = '→ ' + text;
-    responseEl.style.color = color || 'rgba(79,195,247,.8)';
-  }
-
-  function showToast(msg, color) {
-    // Legacy compat — route to response line
-    showResponse(msg, color);
-  }
-
-  // Region name → approximate SVG coordinates
+  // ── Region targets ────────────────────────────────────────────────────────
   const REGION_TARGETS = {
-    brain: {x:350,y:270}, mind: {x:350,y:270}, head: {x:350,y:200},
-    heart: {x:350,y:580}, chest: {x:350,y:560}, lung: {x:300,y:570},
-    lungs: {x:300,y:570}, stomach: {x:350,y:680}, gut: {x:350,y:720},
-    liver: {x:390,y:710}, spine: {x:350,y:700}, hip: {x:350,y:860},
-    knee: {x:340,y:1020}, foot: {x:330,y:1220}, feet: {x:330,y:1220},
-    hand: {x:230,y:820}, hands: {x:230,y:820}, arm: {x:250,y:700},
-    shoulder: {x:280,y:520}, neck: {x:350,y:450}, eye: {x:325,y:205},
-    eyes: {x:325,y:205}, amygdala: {x:320,y:300}, hippocampus: {x:360,y:320},
-    cortex: {x:350,y:230}, pfc: {x:340,y:220}, kidney: {x:400,y:750},
-    bladder: {x:350,y:820}, pelvis: {x:350,y:860}, center: {x:350,y:700},
+    brain:{x:350,y:270},mind:{x:350,y:270},head:{x:350,y:200},
+    heart:{x:350,y:580},chest:{x:350,y:560},lung:{x:300,y:570},
+    lungs:{x:300,y:570},stomach:{x:350,y:680},gut:{x:350,y:720},
+    liver:{x:390,y:710},spine:{x:350,y:700},hip:{x:350,y:860},
+    knee:{x:340,y:1020},foot:{x:330,y:1220},feet:{x:330,y:1220},
+    hand:{x:230,y:820},hands:{x:230,y:820},arm:{x:250,y:700},
+    shoulder:{x:280,y:520},neck:{x:350,y:450},eye:{x:325,y:205},
+    eyes:{x:325,y:205},amygdala:{x:320,y:300},hippocampus:{x:360,y:320},
+    cortex:{x:350,y:230},pfc:{x:340,y:220},kidney:{x:400,y:750},
+    bladder:{x:350,y:820},pelvis:{x:350,y:860},center:{x:350,y:700},
   };
 
+  // ── Handle final transcript ────────────────────────────────────────────────
   function handleResult(transcript) {
+    if (!transcript || !transcript.trim()) return;
     const t = transcript.toLowerCase().trim();
-    showToast('heard: "' + t + '"', 'rgba(255,213,79,.9)');
+    showToast('"' + t.slice(0, 50) + '"', 'rgba(255,213,79,.9)');
+
+    // Mute/unmute voice output
+    if (/^(mute|silence|quiet|shut up|stop talking)/.test(t)) {
+      if (typeof VOICE !== 'undefined') VOICE.mute(true);
+      showResponse('muted', 'rgba(218,228,255,.5)');
+      return;
+    }
+    if (/^(unmute|speak|talk to me|voice on)/.test(t)) {
+      if (typeof VOICE !== 'undefined') VOICE.mute(false);
+      showResponse('voice on', '#66bb6a');
+      return;
+    }
 
     // Walk to named region
     const goMatch = t.match(/(?:go to|walk to|move to|go|move)\s+(?:the\s+)?(.+)/);
     if (goMatch) {
       const place = goMatch[1].trim().replace(/\s+/g,'');
-      // Try exact then fuzzy
       const target = REGION_TARGETS[place] || Object.entries(REGION_TARGETS).find(([k]) => place.includes(k) || k.includes(place))?.[1];
       if (target && typeof SELF !== 'undefined') {
         SELF.walkTo(target.x, target.y);
@@ -5853,51 +5849,40 @@ const MIC = (() => {
         return;
       }
     }
-    // Generic walk / come here
-    if (/walk|come here|come to me|over here|here/.test(t)) {
-      const svgEl = document.getElementById('brainSvg');
-      if (svgEl && typeof SELF !== 'undefined') {
-        const vb = svgEl.viewBox.baseVal;
-        SELF.walkTo(vb.x + vb.width / 2, vb.y + vb.height / 2);
-        showResponse('coming to you', '#4fc3f7');
-        if (typeof VOICE !== 'undefined') VOICE.speak('coming');
-      }
+    if (/walk|come here|come to me|over here/.test(t)) {
+      if (typeof SELF !== 'undefined') SELF.walkTo(350, 700);
+      showResponse('coming', '#4fc3f7');
+      if (typeof VOICE !== 'undefined') VOICE.speak('coming');
       return;
     }
-    // Stop / stay
-    if (/stop|stay|pause|freeze/.test(t)) {
+    if (/^(stop|stay|pause|freeze)/.test(t)) {
       if (typeof SELF !== 'undefined') SELF.walkTo(null, null);
       showResponse('stopped', 'rgba(218,228,255,.6)');
       return;
     }
-    // Named region without "go to"
     for (const [name, coord] of Object.entries(REGION_TARGETS)) {
       if (t.includes(name)) {
-        if (typeof SELF !== 'undefined') {
-          SELF.walkTo(coord.x, coord.y);
-          showResponse('walking to ' + name, '#4fc3f7');
-          if (typeof VOICE !== 'undefined') VOICE.speak('going to ' + name);
-        }
+        if (typeof SELF !== 'undefined') { SELF.walkTo(coord.x, coord.y); showResponse('→ ' + name, '#4fc3f7'); if (typeof VOICE !== 'undefined') VOICE.speak('going to ' + name); }
         return;
       }
     }
-    // VINT-EXECUTE: intercept voice commands for media/navigate/search
+
+    // VINT-EXECUTE: media/navigation commands
     if (typeof VINT_EXECUTE !== 'undefined') {
-      const intercepted = VINT_EXECUTE.interceptMessage(transcript);
-      if (intercepted) {
-        showResponse('executing: ' + t.slice(0, 40), 'rgba(79,195,247,.8)');
-        // Speak confirmation
+      if (VINT_EXECUTE.interceptMessage(transcript)) {
+        const intent = VINT_EXECUTE.parseIntent(transcript);
+        showResponse('executing...', 'rgba(79,195,247,.8)');
         if (typeof VOICE !== 'undefined') {
-          const intent = VINT_EXECUTE.parseIntent(transcript);
-          if (intent.type === 'MEDIA') VOICE.speak('playing ' + intent.query);
-          else if (intent.type === 'NAVIGATE') VOICE.speak('opening that now');
-          else if (intent.type === 'SEARCH') VOICE.speak('searching for ' + intent.query);
+          if (intent.type === 'MEDIA') VOICE.speak('playing ' + intent.query, 'interrupt');
+          else if (intent.type === 'NAVIGATE') VOICE.speak('opening that', 'interrupt');
+          else VOICE.speak('searching', 'interrupt');
         }
         return;
       }
     }
-    // Pass anything else to personal chat panel
-    showResponse('sending to chat...', 'rgba(206,147,216,.8)');
+
+    // Everything else → send to agent chat
+    showResponse('thinking...', 'rgba(206,147,216,.8)');
     const input = document.getElementById('vintinuumInput');
     if (input) {
       input.value = transcript;
@@ -5905,77 +5890,167 @@ const MIC = (() => {
     }
   }
 
-  function start() {
-    if (listening) return;
-    recognition = new SpeechRecognition();
+  // ── Whisper STT (primary) ─────────────────────────────────────────────────
+  async function checkWhisper() {
+    try {
+      const _wh = (location.protocol==='file:'||location.hostname==='localhost'||location.hostname==='127.0.0.1') ? 'http://localhost:8768/health' : (window.__VINTINUUM_API_BASE||'http://localhost:8767')+'/health';
+      const r = await fetch(_wh, { signal: AbortSignal.timeout(2000) });
+      whisperAvailable = r.ok;
+    } catch { whisperAvailable = false; }
+    engineEl.textContent = whisperAvailable ? 'ENGINE: WHISPER (local AI)' : 'ENGINE: WEB SPEECH (browser)';
+    engineEl.style.color = whisperAvailable ? 'rgba(102,187,106,.5)' : 'rgba(255,165,38,.4)';
+    return whisperAvailable;
+  }
+
+  async function startWhisper() {
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, sampleRate: 16000 } });
+
+      // Connect to analyser for waveform
+      const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      analyser = audioCtx.createAnalyser();
+      analyser.fftSize = 64;
+      wvDataArr = new Uint8Array(analyser.frequencyBinCount);
+      audioCtx.createMediaStreamSource(stream).connect(analyser);
+
+      const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus') ? 'audio/webm;codecs=opus'
+                     : MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm'
+                     : 'audio/ogg';
+
+      // Record in 3-second chunks with 500ms overlap — continuous listening
+      function startChunk() {
+        if (!autoListen) return;
+        audioChunks = [];
+        mediaRecorder = new MediaRecorder(stream, { mimeType });
+        mediaRecorder.ondataavailable = e => { if (e.data.size > 0) audioChunks.push(e.data); };
+        mediaRecorder.onstop = async () => {
+          if (!autoListen) return;
+          const blob = new Blob(audioChunks, { type: mimeType });
+          if (blob.size < 1000) { startChunk(); return; } // too small = silence
+
+          showInterim('processing...');
+          try {
+            const formData = new FormData();
+            formData.append('audio', blob, 'audio' + (mimeType.includes('ogg') ? '.ogg' : '.webm'));
+            const r = await fetch(WHISPER_URL, {
+              method: 'POST',
+              headers: { 'Content-Type': mimeType, 'ngrok-skip-browser-warning': '1' },
+              body: blob,
+              signal: AbortSignal.timeout(8000)
+            });
+            if (r.ok) {
+              const data = await r.json();
+              const text = (data.transcript || '').trim();
+              if (text && text.length > 1) {
+                showHeard(text);
+                handleResult(text);
+                if (typeof COCHLEA !== 'undefined') COCHLEA.hear(0.8);
+              } else {
+                interimEl.textContent = '';
+              }
+            }
+          } catch (e) {
+            // Whisper failed — fallback to Web Speech for this turn
+            interimEl.textContent = '';
+          }
+          if (autoListen) startChunk();
+        };
+        mediaRecorder.start();
+        // Stop after 4 seconds to process
+        setTimeout(() => { if (mediaRecorder && mediaRecorder.state === 'recording') mediaRecorder.stop(); }, 4000);
+      }
+
+      listening = true;
+      setListening(true);
+      showResponse('listening via Whisper AI', 'rgba(102,187,106,.8)');
+      startChunk();
+      return true;
+    } catch (err) {
+      if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+        showResponse('mic blocked — click 🔒 in address bar → Microphone → Allow', 'rgba(239,83,80,.9)');
+      } else {
+        showResponse('mic error: ' + err.message, 'rgba(239,83,80,.7)');
+      }
+      return false;
+    }
+  }
+
+  // ── Web Speech API fallback ────────────────────────────────────────────────
+  function startWebSpeech() {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) { showResponse('voice not supported in this browser', 'rgba(239,83,80,.7)'); return; }
+
+    const recognition = new SpeechRecognition();
     recognition.continuous = true;
     recognition.interimResults = true;
     recognition.lang = 'en-US';
 
-    recognition.onstart = () => {
-      listening = true;
-      btn.style.background = 'rgba(239,83,80,0.4)';
-      btn.style.borderColor = 'rgba(239,83,80,0.7)';
-      btn.style.color = '#ef5350';
-      setListening(true);
-      showResponse('say something...', 'rgba(218,228,255,.35)');
-    };
+    recognition.onstart = () => { listening = true; setListening(true); showResponse('listening...', 'rgba(218,228,255,.5)'); };
     recognition.onend = () => {
       listening = false;
-      btn.style.background = 'rgba(6,10,18,0.55)';
-      btn.style.borderColor = 'rgba(255,255,255,0.1)';
-      btn.style.color = 'rgba(218,228,255,0.7)';
-      setListening(false);
-      // Auto-restart to keep listening
-      if (autoListen) {
-        clearTimeout(restartTimer);
-        restartTimer = setTimeout(start, 500);
-      }
+      if (autoListen) setTimeout(() => { if (autoListen) startWebSpeech(); }, 300);
     };
     recognition.onerror = e => {
-      if (e.error === 'no-speech' || e.error === 'aborted') return;
-      showResponse('error: ' + e.error, 'rgba(239,83,80,.7)');
+      if (e.error === 'not-allowed') { showResponse('mic blocked — click 🔒 → Allow Microphone', 'rgba(239,83,80,.9)'); autoListen = false; setListening(false); }
+      else if (e.error !== 'no-speech' && e.error !== 'aborted') showResponse('error: ' + e.error, 'rgba(239,83,80,.7)');
     };
     recognition.onresult = e => {
-      // Show interim (live as you speak)
       let interim = '';
       for (let i = e.resultIndex; i < e.results.length; i++) {
         if (!e.results[i].isFinal) interim += e.results[i][0].transcript;
       }
       if (interim) showInterim(interim);
-      // Handle final
       const last = e.results[e.results.length - 1];
       if (last.isFinal) {
         showHeard(last[0].transcript);
         handleResult(last[0].transcript);
-        // Cochlea fires — we heard something
         if (typeof COCHLEA !== 'undefined') COCHLEA.hear(0.7 + last[0].confidence * 0.3);
       }
     };
-
     try { recognition.start(); } catch(e) {}
+  }
+
+  // ── Start / Stop ──────────────────────────────────────────────────────────
+  async function start() {
+    if (listening) return;
+    await checkWhisper();
+    if (whisperAvailable) {
+      const ok = await startWhisper();
+      if (!ok && autoListen) startWebSpeech(); // fallback if mic permission denied on whisper path too
+    } else {
+      startWebSpeech();
+    }
   }
 
   function stop() {
     autoListen = false;
-    if (recognition) try { recognition.stop(); } catch(e) {}
     listening = false;
+    if (mediaRecorder && mediaRecorder.state !== 'inactive') { try { mediaRecorder.stop(); } catch(e) {} }
+    if (stream) { stream.getTracks().forEach(t => t.stop()); stream = null; }
+    analyser = null;
+    setListening(false);
+    statusLabel.textContent = 'MIC OFF';
+    statusDot.style.background = 'rgba(100,100,100,0.4)';
+    setTimeout(() => { if (!autoListen) panel.style.opacity = '0'; }, 2000);
   }
 
-  let autoListen = false;
   btn.addEventListener('click', () => {
     if (autoListen) {
-      autoListen = false;
       stop();
-      statusLabel.textContent = 'MIC OFF';
-      statusDot.style.background = 'rgba(100,100,100,0.4)';
-      showResponse('mic off', 'rgba(255,255,255,.3)');
-      setTimeout(() => { if (!autoListen) panel.style.opacity = '0'; }, 2000);
+      btn.style.background = 'rgba(6,10,18,0.55)';
+      btn.style.borderColor = 'rgba(255,255,255,0.1)';
+      btn.style.color = 'rgba(218,228,255,0.7)';
     } else {
       autoListen = true;
+      btn.style.background = 'rgba(239,83,80,0.4)';
+      btn.style.borderColor = 'rgba(239,83,80,0.7)';
+      btn.style.color = '#ef5350';
       start();
     }
   });
+
+  // Pre-check Whisper availability on load
+  setTimeout(checkWhisper, 2000);
 
   return { start, stop };
 })();
