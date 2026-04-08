@@ -240,7 +240,7 @@ canvas{display:block;}
 // - Caches static assets for offline resilience
 // - Auto-reloads when a new version deploys
 // - Clears old caches on activation
-const _SW_VERSION = 'v20260408-1432';
+const _SW_VERSION = 'v20260408-1434';
 const _onGitHubPages = location.hostname !== 'localhost' && location.hostname !== '127.0.0.1' && location.protocol !== 'file:';
 if ('serviceWorker' in navigator && _onGitHubPages) {
   const _swPath = location.pathname.includes('/vintinuum') ? '/vintinuum/sw.js' : '/sw.js';
@@ -2018,16 +2018,26 @@ if ('serviceWorker' in navigator && _onGitHubPages) {
 #vint-execute-overlay.open { display: flex; }
 
 #vint-execute-modal {
-  width: min(820px, 94vw);
-  max-height: 90vh; overflow-y: auto;
+  width: min(820px, 96vw);
+  max-height: 92vh; overflow-y: auto;
   background: rgba(12, 16, 26, 0.85);
   border: 1px solid rgba(255,255,255,0.07);
   border-radius: 28px;
   position: absolute;
   transform-origin: center;
-  /* Drag + resize enabled via JS */
   cursor: default;
   animation: vex-modal-in 0.4s cubic-bezier(0.34,1.56,0.64,1) forwards;
+}
+@media (max-width: 600px) {
+  #vint-execute-modal {
+    width: 100vw; max-height: 100vh;
+    border-radius: 0; top: 0 !important; left: 0 !important;
+    border-left: none; border-right: none;
+  }
+  .vex-header { padding: 14px 16px 12px; }
+  .vex-media { padding: 0 12px 8px; }
+  .vex-comment { padding: 0 12px 6px; }
+  .vex-footer { padding: 12px 16px 16px; }
 }
 @keyframes vex-modal-in {
   from { opacity:0; transform: scale(0.95) translateY(12px); }
@@ -2312,6 +2322,6 @@ if ('serviceWorker' in navigator && _onGitHubPages) {
 })();
 </script>
 
-<script src="brain.js?v=v20260408-1432"></script>
+<script src="brain.js?v=v20260408-1434"></script>
 </body>
 </html>

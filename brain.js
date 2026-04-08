@@ -40487,8 +40487,9 @@ const VINT_EXECUTE = (function() {
       currentWatchUrl = result.watchUrl || `https://www.youtube.com/watch?v=${result.videoId}`;
 
       setTimeout(() => {
-        const embedUrl = result.embedUrl || `https://www.youtube.com/embed/${result.videoId}?autoplay=1&rel=0`;
-        mediaFrame.innerHTML = `<iframe src="${embedUrl}" allow="autoplay; encrypted-media" allowfullscreen></iframe>`;
+        const vid = result.videoId;
+        const embedUrl = `https://www.youtube.com/embed/${vid}?autoplay=1&rel=0&playsinline=1&enablejsapi=1`;
+        mediaFrame.innerHTML = `<iframe src="${embedUrl}" allow="autoplay; encrypted-media; fullscreen" allowfullscreen loading="eager"></iframe>`;
         media.classList.add('active');
         npTitle.textContent = result.title || query;
         setStatus('complete');
