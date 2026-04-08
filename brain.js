@@ -40336,7 +40336,7 @@ const VINT_EXECUTE = (function() {
 
   // ── Server fallback YouTube search ──────────────────────────────────────
   async function serverSearch(query) {
-    const base = window.__VINTINUUM_API_BASE || 'http://localhost:8767';
+    const base = window.__VINTINUUM_API_BASE || localStorage.getItem('vint_api_base') || 'http://localhost:8767';
     const token = localStorage.getItem('vint_access_token');
     const headers = { 'Content-Type': 'application/json', 'ngrok-skip-browser-warning': '1' };
     if (token) headers['Authorization'] = 'Bearer ' + token;
@@ -40351,13 +40351,24 @@ const VINT_EXECUTE = (function() {
   // ── Intent parser ────────────────────────────────────────────────────────
   function parseIntent(text) {
     const lo = text.toLowerCase().trim();
-    const mediaP = [
-      /^play\s+(.+?)(?:\s+on\s+youtube)?$/i,
-      /^find\s+(.+?)\s+on\s+youtube$/i,
-      /^search\s+(?:for\s+)?(.+?)\s+on\s+youtube$/i,
-      /^youtube\s+(.+)$/i, /^put\s+on\s+(.+)$/i, /^listen\s+to\s+(.+)$/i,
+
+    // Mid-sentence patterns — catch "i need you to play X", "can you play X first", etc.
+    const mediaAnywhere = [
+      /(?:^|\s)play\s+(.+?)(?:\s+(?:on\s+youtube|for\s+me|now|first|please))*\s*$/i,
+      /(?:put\s+on|queue up|throw\s+on|throw on)\s+(.+?)(?:\s+(?:on\s+youtube|for\s+me|now|first|please))*\s*$/i,
+      /(?:listen\s+to|i\s+want\s+to\s+(?:hear|listen\s+to))\s+(.+?)(?:\s+(?:on\s+youtube|for\s+me|now|first|please))*\s*$/i,
+      /(?:find|search\s+for|look\s+up)\s+(.+?)\s+on\s+youtube/i,
+      /^youtube\s+(.+)$/i,
     ];
-    for (const p of mediaP) { const m = lo.match(p); if (m) return { type:'MEDIA', query:m[1].trim() }; }
+    for (const p of mediaAnywhere) {
+      const m = lo.match(p);
+      if (m) {
+        // Strip trailing filler words from the query
+        const q = m[1].trim().replace(/\s+(?:on youtube|for me|now|first|please|by the way)$/i, '').trim();
+        if (q.length > 1) return { type:'MEDIA', query: q };
+      }
+    }
+
     const navP = [/^(?:open|go\s+to|navigate\s+to|visit)\s+(https?:\/\/.+)$/i, /^(?:open|go\s+to|navigate\s+to|visit)\s+([\w.-]+\.\w{2,}(?:\/\S*)?)$/i];
     for (const p of navP) { const m = text.match(p); if (m) { let u=m[1]; if(!u.startsWith('http'))u='https://'+u; return {type:'NAVIGATE',url:u}; } }
     const srchP = /^(?:search\s+(?:for\s+)?|look\s+up\s+|google\s+)(.+)$/i;
