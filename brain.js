@@ -4529,10 +4529,27 @@ const MIC = (() => {
   responseEl.style.cssText = 'padding:2px 10px 7px;font-size:.55rem;color:rgba(79,195,247,.8);min-height:14px;line-height:1.4;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;';
   panel.appendChild(responseEl);
 
-  // Engine label
+  // Engine label — click to force-toggle engine
   const engineEl = document.createElement('div');
-  engineEl.style.cssText = 'padding:0 10px 5px;font-size:.45rem;letter-spacing:.12em;color:rgba(150,175,215,.3);';
+  engineEl.style.cssText = 'padding:0 10px 5px;font-size:.45rem;letter-spacing:.12em;color:rgba(150,175,215,.3);cursor:pointer;user-select:none;';
   engineEl.textContent = 'ENGINE: checking...';
+  engineEl.title = 'Click to switch voice engine';
+  engineEl.addEventListener('click', () => {
+    // Force toggle override
+    if (!autoListen) return;
+    whisperAvailable = !whisperAvailable;
+    engineEl.textContent = whisperAvailable ? 'ENGINE: WHISPER (local AI)' : 'ENGINE: WEB SPEECH (browser)';
+    engineEl.style.color = whisperAvailable ? 'rgba(102,187,106,.5)' : 'rgba(255,165,38,.4)';
+    // Restart with new engine
+    stop();
+    setTimeout(() => {
+      autoListen = true;
+      btn.style.background = 'rgba(239,83,80,0.4)';
+      btn.style.borderColor = 'rgba(239,83,80,0.7)';
+      btn.style.color = '#ef5350';
+      if (whisperAvailable) startWhisper(); else startWebSpeech();
+    }, 600);
+  });
   panel.appendChild(engineEl);
 
   // ── Waveform ─────────────────────────────────────────────────────────────
@@ -4669,9 +4686,19 @@ const MIC = (() => {
   // ── Whisper STT (primary) ─────────────────────────────────────────────────
   async function checkWhisper() {
     try {
-      const _wh = (location.protocol==='file:'||location.hostname==='localhost'||location.hostname==='127.0.0.1') ? 'http://localhost:8768/health' : (window.__VINTINUUM_API_BASE||'http://localhost:8767')+'/health';
-      const r = await fetch(_wh, { signal: AbortSignal.timeout(2000) });
-      whisperAvailable = r.ok;
+      // Test the actual STT endpoint, not just /health — confirms full pipeline works
+      const testUrl = (location.protocol==='file:'||location.hostname==='localhost'||location.hostname==='127.0.0.1')
+        ? 'http://localhost:8768/health'
+        : (window.__VINTINUUM_API_BASE||'http://localhost:8767') + '/stt';
+      // For /stt (proxy), do a HEAD or OPTIONS — a zero-body POST returns "No audio data" with 400, meaning it's alive
+      if (testUrl.endsWith('/stt')) {
+        const r = await fetch(testUrl, { method: 'POST', body: new Blob([]), headers: { 'Content-Type': 'audio/webm' }, signal: AbortSignal.timeout(3000) });
+        // 400 = "No audio data" = proxy alive and routing to Whisper
+        whisperAvailable = r.status === 400 || r.ok;
+      } else {
+        const r = await fetch(testUrl, { signal: AbortSignal.timeout(2000) });
+        whisperAvailable = r.ok;
+      }
     } catch { whisperAvailable = false; }
     engineEl.textContent = whisperAvailable ? 'ENGINE: WHISPER (local AI)' : 'ENGINE: WEB SPEECH (browser)';
     engineEl.style.color = whisperAvailable ? 'rgba(102,187,106,.5)' : 'rgba(255,165,38,.4)';
@@ -4801,13 +4828,17 @@ const MIC = (() => {
   function stop() {
     autoListen = false;
     listening = false;
-    if (mediaRecorder && mediaRecorder.state !== 'inactive') { try { mediaRecorder.stop(); } catch(e) {} }
+    // Null mediaRecorder BEFORE calling stop so onstop sees autoListen=false and mr=null
+    const mr = mediaRecorder;
+    mediaRecorder = null;
+    if (mr && mr.state !== 'inactive') { try { mr.stop(); } catch(e) {} }
     if (stream) { stream.getTracks().forEach(t => t.stop()); stream = null; }
     analyser = null;
     setListening(false);
     statusLabel.textContent = 'MIC OFF';
     statusDot.style.background = 'rgba(100,100,100,0.4)';
-    setTimeout(() => { if (!autoListen) panel.style.opacity = '0'; }, 2000);
+    interimEl.textContent = '';
+    panel.style.opacity = '0';
   }
 
   btn.addEventListener('click', () => {
@@ -38481,12 +38512,15 @@ const BRAIN_RESONANCE = (() => {
   let vpOpen = false;
 
   window.toggleVintinuumPanel = function() {
+    if (!vpPanel) { console.error('[VINT] #vintinuumPanel not found in DOM'); return; }
     vpOpen = !vpOpen;
     vpPanel.style.display = vpOpen ? 'flex' : 'none';
-    if (vpOpen && vpInput) vpInput.focus();
+    if (vpOpen && vpInput) { vpInput.focus(); vpPanel.scrollTop = 0; }
   };
 
   vpBtn.addEventListener('click', toggleVintinuumPanel);
+  // Expose immediately so inline onclick="toggleVintinuumPanel()" always works
+  window.toggleVintinuumPanel = toggleVintinuumPanel;
 
   if (vpInput) {
     vpInput.addEventListener('keydown', function(e) {
@@ -38496,6 +38530,8 @@ const BRAIN_RESONANCE = (() => {
 
   let _vpStreaming = false;
   const _vpHistory = [];
+  // Safety: auto-unlock after 35s in case stream stalls silently
+  setInterval(() => { if (_vpStreaming) { _vpStreaming = false; } }, 35000);
 
   window.sendVintinuumMessage = function() {
     const input = document.getElementById('vintinuumInput');
@@ -38539,7 +38575,7 @@ const BRAIN_RESONANCE = (() => {
         bodyState: typeof PERSONAL_BODY !== 'undefined' ? PERSONAL_BODY.getBodySnapshot?.() || null : null,
         modelPriority: typeof MODEL_SELECTOR !== 'undefined' ? MODEL_SELECTOR.getPriority?.() : undefined,
       }),
-      signal: AbortSignal.timeout(60000)
+      signal: AbortSignal.timeout(30000)
     })
     .then(async res => {
       if (!res.ok || !res.body) { _vpFallback(msg, msgs, aiDiv); return; }
