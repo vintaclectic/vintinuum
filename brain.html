@@ -39349,32 +39349,18 @@ const MODEL_SELECTOR = (() => {
       panel.style.right = '20px';
     }
 
-    const available = allModels.filter(m => m.available);
-    const unavailable = allModels.filter(m => !m.available);
-
-    let unavailableHTML = '';
-    if (unavailable.length) {
-      unavailableHTML = '<div style="font-size:9px;letter-spacing:1px;color:rgba(255,255,255,0.2);margin-top:8px;margin-bottom:6px;">UNAVAILABLE</div>' +
-        '<div style="display:flex;flex-direction:column;gap:3px;">';
-      unavailable.forEach(m => {
-        unavailableHTML +=
-          '<div style="padding:5px 10px;border-radius:8px;background:rgba(255,255,255,0.03);opacity:0.4;display:flex;align-items:center;gap:6px;">' +
-            '<span style="font-size:8px;padding:1px 5px;border-radius:6px;background:rgba(255,255,255,0.06);color:rgba(255,255,255,0.3);">' + (PROVIDER_LABELS[m.provider] || '') + '</span>' +
-            '<span style="font-size:10px;color:rgba(255,255,255,0.4);">' + m.label + '</span>' +
-            '<span style="margin-left:auto;font-size:8px;color:rgba(255,255,255,0.2);">offline</span>' +
-          '</div>';
-      });
-      unavailableHTML += '</div>';
-    }
+    const token = localStorage.getItem('vint_access_token');
+    const footerNote = token
+      ? '<div style="margin-top:12px;font-size:9px;color:rgba(255,255,255,0.2);text-align:center;">Saved automatically to your account</div>'
+      : '<div style="margin-top:12px;font-size:9px;color:rgba(255,255,255,0.15);text-align:center;">Sign in to save preferences</div>';
 
     panel.innerHTML =
-      '<div style="font-size:11px;letter-spacing:2px;color:rgba(255,255,255,0.5);margin-bottom:12px;text-transform:uppercase;">Model Priority</div>' +
-      '<div style="font-size:10px;color:rgba(255,255,255,0.3);margin-bottom:10px;">Click to toggle \u00B7 First available is used \u00B7 Falls back automatically</div>' +
+      '<div style="font-size:11px;letter-spacing:2px;color:rgba(255,255,255,0.5);margin-bottom:6px;text-transform:uppercase;">Model Priority</div>' +
+      '<div style="font-size:10px;color:rgba(255,255,255,0.3);margin-bottom:10px;">Click to add/remove \u00B7 Drag to reorder \u00B7 Falls back automatically</div>' +
       '<div id="modelPriorityList" style="display:flex;flex-direction:column;gap:4px;margin-bottom:14px;"></div>' +
-      unavailableHTML +
-      '<div style="margin-top:12px;font-size:9px;color:rgba(255,255,255,0.2);text-align:center;">Saved automatically to your account</div>';
+      footerNote;
 
-    renderPriorityList(panel, available);
+    renderPriorityList(panel, allModels);
     document.body.appendChild(panel);
 
     setTimeout(() => {
@@ -39388,51 +39374,73 @@ const MODEL_SELECTOR = (() => {
     }, 100);
   }
 
-  function renderPriorityList(panel, available) {
+  function renderPriorityList(panel, models) {
     const list = panel.querySelector('#modelPriorityList');
     if (!list) return;
     list.innerHTML = '';
 
+    // Group: priority-ordered first, then others not in priority
     const ordered = [];
     userPriority.forEach(key => {
-      const m = available.find(x => x.key === key);
+      const m = models.find(x => x.key === key);
       if (m) ordered.push(m);
     });
-    available.forEach(m => {
+    models.forEach(m => {
       if (!ordered.find(o => o.key === m.key)) ordered.push(m);
     });
 
-    ordered.forEach((model, idx) => {
+    // Provider section headers
+    let lastProvider = null;
+
+    ordered.forEach((model) => {
       const h = MODEL_HEALTH_MONITOR.getHealth(model.key);
       const color = PROVIDER_COLORS[model.provider] || '#888';
       const isInPriority = userPriority.includes(model.key);
+      const isAvailable = model.available;
+
+      // Section header per provider group
+      if (model.provider !== lastProvider) {
+        lastProvider = model.provider;
+        const header = document.createElement('div');
+        header.style.cssText = 'font-size:8px;letter-spacing:1.5px;color:' + color + ';opacity:0.6;margin-top:' + (ordered.indexOf(model) === 0 ? '0' : '8') + 'px;margin-bottom:2px;padding-left:4px;';
+        header.textContent = PROVIDER_LABELS[model.provider] || model.provider.toUpperCase();
+        list.appendChild(header);
+      }
+
       const row = document.createElement('div');
       row.dataset.modelKey = model.key;
       row.style.cssText =
-        'padding:7px 10px;border-radius:10px;cursor:pointer;' +
+        'padding:7px 10px;border-radius:10px;' +
         'background:' + (isInPriority ? color + '18' : 'rgba(255,255,255,0.04)') + ';' +
         'border:1px solid ' + (isInPriority ? color + '40' : 'rgba(255,255,255,0.06)') + ';' +
         'display:flex;align-items:center;gap:8px;' +
-        'transition:all 0.15s;min-height:44px;';
+        'transition:all 0.15s;min-height:40px;' +
+        'opacity:' + (isAvailable ? '1' : '0.4') + ';' +
+        'cursor:' + (isAvailable ? 'pointer' : 'default') + ';';
+
+      const statusColor = !isAvailable ? 'rgba(255,255,255,0.2)' : (h.alive !== false ? '#81c784' : '#ef5350');
+      const statusDot = !isAvailable ? '✗' : (h.alive !== false ? '\u25CF' : '\u25CB');
 
       row.innerHTML =
-        '<span style="font-size:8px;color:rgba(255,255,255,0.3);width:14px;text-align:center;">' + (isInPriority ? (userPriority.indexOf(model.key) + 1) : '+') + '</span>' +
-        '<span style="font-size:8px;padding:1px 6px;border-radius:6px;background:' + color + '22;color:' + color + ';letter-spacing:1px;flex-shrink:0;">' + (PROVIDER_LABELS[model.provider] || '') + '</span>' +
-        '<span style="font-size:10px;color:rgba(255,255,255,' + (isInPriority ? '0.8' : '0.4') + ');flex:1;">' + model.label + '</span>' +
-        '<span style="font-size:10px;color:' + (h.alive !== false ? '#81c784' : '#ef5350') + ';">' + (h.alive !== false ? '\u25CF' : '\u25CB') + '</span>';
+        '<span style="font-size:8px;color:rgba(255,255,255,0.3);width:14px;text-align:center;">' + (isInPriority ? (userPriority.indexOf(model.key) + 1) : '\u2795') + '</span>' +
+        '<span style="font-size:10px;color:rgba(255,255,255,' + (isInPriority ? '0.85' : '0.45') + ');flex:1;">' + model.label + '</span>' +
+        '<span style="font-size:10px;color:' + statusColor + ';">' + statusDot + '</span>' +
+        (!isAvailable ? '<span style="font-size:7px;color:rgba(255,255,255,0.2);margin-left:2px;">offline</span>' : '');
 
-      row.addEventListener('click', () => {
-        let newPriority = [...userPriority];
-        if (isInPriority) {
-          newPriority = newPriority.filter(k => k !== model.key);
-        } else {
-          newPriority.push(model.key);
-        }
-        const token = localStorage.getItem('vint_access_token');
-        savePriority(newPriority, token);
-        renderPriorityList(panel, available);
-        renderModelIndicator();
-      });
+      if (isAvailable) {
+        row.addEventListener('click', () => {
+          let newPriority = [...userPriority];
+          if (isInPriority) {
+            newPriority = newPriority.filter(k => k !== model.key);
+          } else {
+            newPriority.push(model.key);
+          }
+          const tok = localStorage.getItem('vint_access_token');
+          savePriority(newPriority, tok);
+          renderPriorityList(panel, allModels);
+          renderModelIndicator();
+        });
+      }
 
       list.appendChild(row);
     });
