@@ -5726,12 +5726,23 @@ const MIC = (() => {
   }
 
   // ── Start / Stop ──────────────────────────────────────────────────────────
+  const _onLocalhost = location.hostname === 'localhost' || location.hostname === '127.0.0.1' || location.protocol === 'file:';
+
   async function start() {
     if (listening) return;
+    // On GitHub Pages / remote — skip Whisper probe entirely, go straight to Web Speech
+    // Whisper is a local service, unreachable from the public internet
+    if (!_onLocalhost) {
+      whisperAvailable = false;
+      engineEl.textContent = 'ENGINE: WEB SPEECH (browser)';
+      engineEl.style.color = 'rgba(255,165,38,.4)';
+      startWebSpeech();
+      return;
+    }
     await checkWhisper();
     if (whisperAvailable) {
       const ok = await startWhisper();
-      if (!ok && autoListen) startWebSpeech(); // fallback if mic permission denied on whisper path too
+      if (!ok && autoListen) startWebSpeech();
     } else {
       startWebSpeech();
     }
@@ -5848,7 +5859,8 @@ const MIC = (() => {
   }
 
   // Pre-check Whisper availability on load
-  setTimeout(checkWhisper, 2000);
+  // Only probe Whisper on localhost — on GitHub Pages it's unreachable and just spams console
+  if (_onLocalhost) setTimeout(checkWhisper, 2000);
 
   return { start, stop };
 })();
