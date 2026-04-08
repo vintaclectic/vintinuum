@@ -37945,7 +37945,7 @@ window.DORSAL_CLEAR = (function() {
   var _isLocal = (location.protocol === 'file:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1');
   var _stored = localStorage.getItem('vint_api_base');
   // Default remote tunnel — update this when ngrok URL changes
-  var _defaultRemote = 'https://jon-unscheming-lots.ngrok-free.app';
+  var _defaultRemote = 'https://jon-unscheming-lots.ngrok-free.dev';
   const API_BASE = _isLocal ? 'http://localhost:8767' : (_stored || _defaultRemote);
   window.__VINTINUUM_API_BASE = API_BASE;
   // On GitHub Pages with no stored URL, silently use the default tunnel
