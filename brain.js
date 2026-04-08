@@ -5570,9 +5570,10 @@ const MIC = (() => {
       const testUrl = _freshBase.includes(':8768') ? _freshBase + '/health' : _freshBase + '/stt';
       // For /stt (proxy), do a HEAD or OPTIONS — a zero-body POST returns "No audio data" with 400, meaning it's alive
       if (testUrl.endsWith('/stt')) {
-        const r = await fetch(testUrl, { method: 'POST', body: new Blob([]), headers: { 'Content-Type': 'audio/webm' }, signal: AbortSignal.timeout(3000) });
-        // 400 = "No audio data" = proxy alive and routing to Whisper
-        whisperAvailable = r.status === 400 || r.ok;
+        // Use HEAD to avoid the 400 noise in console — just need to know the endpoint exists
+        const r = await fetch(testUrl, { method: 'HEAD', signal: AbortSignal.timeout(3000) }).catch(() => null);
+        // HEAD returns 200 or 405 (method not allowed) — both mean server is alive
+        whisperAvailable = r ? (r.ok || r.status === 405 || r.status === 400) : false;
       } else {
         const r = await fetch(testUrl, { signal: AbortSignal.timeout(2000) });
         whisperAvailable = r.ok;
