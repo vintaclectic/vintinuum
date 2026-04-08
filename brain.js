@@ -4707,8 +4707,7 @@ const MIC = (() => {
           const { done, value } = await reader.read();
           if (done) break;
           buf += dec.decode(value, { stream: true });
-          const lines = buf.split('
-'); buf = lines.pop();
+          const lines = buf.split('\n'); buf = lines.pop();
           for (const line of lines) {
             if (!line.startsWith('data: ')) continue;
             const raw = line.slice(6).trim();
