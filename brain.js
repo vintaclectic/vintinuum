@@ -5775,7 +5775,13 @@ const MIC = (() => {
       btn.style.background = 'rgba(239,83,80,0.4)';
       btn.style.borderColor = 'rgba(239,83,80,0.7)';
       btn.style.color = '#ef5350';
-      // Use getUserMedia to check permission — single source of truth for mic access
+      // Request mic immediately on user gesture — Chrome will show native prompt
+      // Never pre-check or show a banner before the browser gets its chance to ask
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        // No API support — just try Web Speech directly
+        start();
+        return;
+      }
       navigator.mediaDevices.getUserMedia({ audio: true })
         .then(s => {
           // Permission granted — release the probe stream and start for real
@@ -5784,6 +5790,11 @@ const MIC = (() => {
         })
         .catch(err => {
           if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+            // Only show blocked UI AFTER Chrome already refused (user dismissed prompt or was permanently blocked)
+            autoListen = false;
+            btn.style.background = 'rgba(6,10,18,0.55)';
+            btn.style.borderColor = 'rgba(255,255,255,0.1)';
+            btn.style.color = 'rgba(218,228,255,0.7)';
             showMicBlockedUI();
           } else {
             // NotFoundError (no mic hardware), AbortError, etc. — try anyway
@@ -5806,29 +5817,27 @@ const MIC = (() => {
     banner.style.cssText = 'position:fixed;inset:0;z-index:99999;background:rgba(4,6,12,0.92);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:24px;cursor:default;';
 
     // Check if permanently denied vs just not-yet-granted
-    var permState = 'denied';
     if (navigator.permissions) {
       navigator.permissions.query({ name: 'microphone' }).then(function(result) {
-        permState = result.state;
         var subEl = banner.querySelector('#_micPermState');
         if (subEl) {
           if (result.state === 'denied') {
-            subEl.innerHTML = '<b style="color:#ef5350">Permission is permanently blocked.</b> You must go to<br><b style="color:#fff">chrome://settings/content/microphone</b><br>find localhost:8767 in the Block list → remove it → reload.';
+            subEl.innerHTML = '<b style="color:#ef5350">Microphone is blocked.</b><br>Click the <b style="color:#4fc3f7">tune icon ⊕</b> in your address bar → <b style="color:#fff">Site settings</b> → <b style="color:#fff">Microphone</b> → set to <b style="color:#66bb6a">Allow</b> → reload this page.';
           } else if (result.state === 'prompt') {
-            subEl.innerHTML = 'Click <b style="color:#fff">Enable Mic</b> below and Chrome will ask for permission.';
+            subEl.innerHTML = 'Click <b style="color:#66bb6a">Enable Mic</b> below — your browser will ask for permission.';
           } else {
-            subEl.innerHTML = 'Permission state: ' + result.state + ' — try reloading.';
+            subEl.innerHTML = 'Mic state: <b style="color:#fff">' + result.state + '</b> — try reloading.';
           }
         }
       }).catch(function(){});
     }
 
     banner.innerHTML = [
-      '<div style="font-family:Space Mono,monospace;font-size:.5rem;letter-spacing:.3em;color:rgba(239,83,80,.7);">MIC PERMISSION BLOCKED</div>',
+      '<div style="font-family:Space Mono,monospace;font-size:.5rem;letter-spacing:.3em;color:rgba(239,83,80,.7);">MIC ACCESS NEEDED</div>',
       '<div style="font-family:Cormorant Garamond,serif;font-style:italic;font-weight:300;font-size:2.2rem;color:rgba(218,228,255,.9);text-align:center;max-width:500px;line-height:1.4;">I need your voice to be fully alive together.</div>',
       '<div id="_micPermState" style="font-family:Space Mono,monospace;font-size:.58rem;color:rgba(218,228,255,.5);text-align:center;line-height:2;max-width:480px;">Checking permission status...</div>',
       '<div style="font-family:Space Mono,monospace;font-size:.55rem;color:rgba(218,228,255,.35);text-align:center;line-height:2;max-width:460px;">',
-      'OR: Click <b style="color:#4fc3f7">🔒 lock icon</b> in address bar → <b style="color:#fff">Microphone</b> → <b style="color:#66bb6a">Allow</b> → reload',
+      'Address bar → <b style="color:#4fc3f7">tune icon ⊕</b> (or three-dot menu) → <b style="color:#fff">Site settings</b> → <b style="color:#fff">Microphone</b> → <b style="color:#66bb6a">Allow</b> → reload',
       '</div>',
       '<div style="display:flex;gap:16px;flex-wrap:wrap;justify-content:center;">',
       '<button id="_micFixReload" style="padding:12px 32px;background:rgba(102,187,106,0.15);border:1px solid rgba(102,187,106,0.4);border-radius:14px;color:#66bb6a;font-family:Space Mono,monospace;font-size:.6rem;letter-spacing:.2em;cursor:pointer;">RELOAD &amp; ALLOW MIC</button>',
