@@ -37230,6 +37230,13 @@ window.DORSAL_CLEAR = (function() {
   async function sendMessage() {
     const text = input.value.trim();
     if (!text || isStreaming || isLimited) return;
+
+    // VINT-EXECUTE: intercept actionable commands before chat API
+    if (typeof VINT_EXECUTE !== 'undefined' && VINT_EXECUTE.interceptMessage(text)) {
+      input.value = '';
+      return;
+    }
+
     input.value = '';
     isStreaming = true;
     sendBtn.disabled = true;
@@ -39351,6 +39358,539 @@ window.addEventListener('load', () => {
     MODEL_HEALTH_MONITOR.onChange(() => MODEL_SELECTOR.renderModelIndicator());
   }, 500);
 });
+</script>
+
+<!-- ═══════════════════════════════════════════════════════════════════
+     VINT-EXECUTE: Agent Command Modal + Chrome Extension Bridge
+     ═══════════════════════════════════════════════════════════════════ -->
+<style>
+/* ── VINT-EXECUTE MODAL ── */
+#vint-execute-overlay {
+  position: fixed; inset: 0; z-index: 10000;
+  background: rgba(6, 8, 14, 0.92);
+  backdrop-filter: blur(40px);
+  -webkit-backdrop-filter: blur(40px);
+  display: none; align-items: center; justify-content: center;
+}
+#vint-execute-overlay.open { display: flex; }
+
+#vint-execute-modal {
+  width: min(820px, 94vw);
+  max-height: 90vh; overflow-y: auto;
+  background: rgba(12, 16, 26, 0.85);
+  border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 28px;
+  position: absolute;
+  transform-origin: center;
+  /* Drag + resize enabled via JS */
+  cursor: default;
+  animation: vex-modal-in 0.4s cubic-bezier(0.34,1.56,0.64,1) forwards;
+}
+@keyframes vex-modal-in {
+  from { opacity:0; transform: scale(0.95) translateY(12px); }
+  to   { opacity:1; transform: scale(1) translateY(0); }
+}
+
+/* Drag handle */
+.vex-header { cursor: move; user-select: none; }
+
+/* Resize handle */
+.vex-resize-handle {
+  position: absolute; bottom: 0; right: 0;
+  width: 20px; height: 20px; cursor: se-resize;
+  opacity: 0.3;
+}
+.vex-resize-handle::after {
+  content: '';
+  position: absolute; bottom: 4px; right: 4px;
+  width: 8px; height: 8px;
+  border-right: 2px solid rgba(255,255,255,0.4);
+  border-bottom: 2px solid rgba(255,255,255,0.4);
+}
+
+.vex-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 22px 28px 16px;
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+}
+.vex-agent { display: flex; align-items: center; gap: 12px; }
+.vex-avatar {
+  width: 36px; height: 36px; border-radius: 12px;
+  display: flex; align-items: center; justify-content: center;
+  font-weight: 700; font-size: 16px; color: #06080e; letter-spacing: 1px;
+}
+.vex-agent-info h3 {
+  font-family: 'Space Mono', monospace; font-size: 12px; font-weight: 700;
+  letter-spacing: 3px; color: rgba(218,228,255,0.93); margin: 0;
+}
+.vex-agent-info .vex-sub {
+  font-size: 9px; color: rgba(150,175,215,0.45); letter-spacing: 1.5px; margin-top: 2px;
+}
+.vex-status-pill {
+  font-family: 'Space Mono', monospace; font-size: 9px;
+  letter-spacing: 2px; text-transform: uppercase;
+  padding: 4px 14px; border-radius: 20px; transition: all 0.3s;
+}
+.vex-status-pill[data-status="executing"] {
+  background: rgba(255,165,38,0.12); color: #ffa726; border: 1px solid rgba(255,165,38,0.2);
+  animation: vex-pulse 1.5s ease-in-out infinite;
+}
+.vex-status-pill[data-status="complete"] {
+  background: rgba(102,187,106,0.12); color: #66bb6a; border: 1px solid rgba(102,187,106,0.2);
+}
+.vex-status-pill[data-status="ready"] {
+  background: rgba(79,195,247,0.1); color: #4fc3f7; border: 1px solid rgba(79,195,247,0.15);
+}
+.vex-status-pill[data-status="error"] {
+  background: rgba(239,83,80,0.1); color: #ef5350; border: 1px solid rgba(239,83,80,0.15);
+}
+@keyframes vex-pulse { 0%,100%{opacity:1} 50%{opacity:0.5} }
+
+.vex-close {
+  position: absolute; top: 18px; right: 20px;
+  background: none; border: 1px solid rgba(255,255,255,0.08);
+  color: rgba(150,175,215,0.5); width: 30px; height: 30px;
+  border-radius: 50%; cursor: pointer; font-size: 13px;
+  display: flex; align-items: center; justify-content: center; transition: all 0.2s;
+}
+.vex-close:hover { border-color: rgba(255,255,255,0.2); color: rgba(218,228,255,0.9); }
+
+.vex-ticker {
+  padding: 16px 28px; min-height: 48px;
+  max-height: 120px; overflow-y: auto;
+}
+.vex-ticker-line {
+  font-family: 'Space Mono', monospace; font-size: 11px;
+  color: rgba(150,175,215,0.5); line-height: 1.8; letter-spacing: 0.5px;
+  animation: vex-tick-in 0.4s ease forwards;
+}
+@keyframes vex-tick-in { from{opacity:0;transform:translateX(-6px)} to{opacity:1;transform:translateX(0)} }
+.vex-ticker-line::before { content:'\25B8'; margin-right:8px; opacity:0.3; }
+
+.vex-media { padding: 0 28px 8px; display: none; }
+.vex-media.active { display: block; }
+.vex-media-frame {
+  width: 100%; aspect-ratio: 16/9; border-radius: 16px; overflow: hidden;
+  background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.04);
+}
+.vex-media-frame iframe { width:100%; height:100%; border:none; }
+.vex-now-playing {
+  display: flex; align-items: center; gap: 10px; padding: 12px 0 4px;
+  animation: vex-fade-in 0.6s ease 0.3s forwards; opacity: 0;
+}
+@keyframes vex-fade-in { to{opacity:1} }
+.vex-np-dot { width:6px; height:6px; border-radius:50%; animation:vex-pulse 2s ease-in-out infinite; }
+.vex-np-label { font-size:9px; letter-spacing:2px; text-transform:uppercase; color:rgba(150,175,215,0.4); }
+.vex-np-title { font-family:'Cormorant Garamond',serif; font-size:15px; font-weight:300; color:rgba(218,228,255,0.85); font-style:italic; }
+
+.vex-comment { padding: 0 28px 6px; display: none; }
+.vex-comment.active { display: block; }
+.vex-comment p {
+  font-family:'Cormorant Garamond',serif; font-size:14px; font-weight:300; font-style:italic;
+  color:rgba(205,220,252,0.65); line-height:1.7; padding-left:16px;
+  border-left:2px solid rgba(255,255,255,0.06);
+}
+
+.vex-footer {
+  display: flex; align-items: center; justify-content: flex-end;
+  gap: 10px; padding: 16px 28px 22px;
+}
+.vex-btn-primary {
+  padding:10px 28px; border-radius:14px; font-family:'Space Mono',monospace;
+  font-size:11px; letter-spacing:1.5px; cursor:pointer; border:1px solid;
+  transition:all 0.25s; min-height:44px;
+}
+.vex-btn-dismiss {
+  padding:10px 20px; border-radius:14px; font-family:'Space Mono',monospace;
+  font-size:11px; letter-spacing:1px; cursor:pointer; background:none;
+  border:1px solid rgba(255,255,255,0.08); color:rgba(150,175,215,0.5); transition:all 0.2s; min-height:44px;
+}
+.vex-btn-dismiss:hover { border-color:rgba(255,255,255,0.15); color:rgba(218,228,255,0.8); }
+
+.vex-install { padding:40px 28px; text-align:center; display:none; }
+.vex-install.active { display:block; }
+.vex-install-icon {
+  width:56px; height:56px; border-radius:16px;
+  background:linear-gradient(135deg,rgba(79,195,247,0.15),rgba(206,147,216,0.15));
+  border:1px solid rgba(255,255,255,0.06);
+  display:flex; align-items:center; justify-content:center; margin:0 auto 20px;
+  font-size:24px; color:rgba(79,195,247,0.7); font-weight:700; font-family:'Space Mono',monospace;
+}
+.vex-install h3 {
+  font-family:'Space Mono',monospace; font-size:14px; font-weight:600;
+  letter-spacing:2px; color:rgba(218,228,255,0.9); margin-bottom:8px;
+}
+.vex-install .vex-install-sub { font-size:12px; color:rgba(150,175,215,0.45); margin-bottom:24px; line-height:1.6; }
+.vex-install-features { text-align:left; max-width:400px; margin:0 auto 28px; list-style:none; padding:0; }
+.vex-install-features li {
+  font-size:12px; color:rgba(205,220,252,0.7); line-height:1.7;
+  padding:6px 0 6px 20px; position:relative;
+}
+.vex-install-features li::before { content:'\25C6'; position:absolute; left:0; opacity:0.35; }
+.vex-install-cta {
+  display:inline-flex; align-items:center; justify-content:center; padding:14px 36px; border-radius:16px;
+  background:linear-gradient(135deg,rgba(79,195,247,0.2),rgba(206,147,216,0.2));
+  border:1px solid rgba(79,195,247,0.25); color:rgba(79,195,247,0.9);
+  font-family:'Space Mono',monospace; font-size:12px; letter-spacing:2px; cursor:pointer; transition:all 0.3s; min-height:44px;
+}
+.vex-install-cta:hover {
+  background:linear-gradient(135deg,rgba(79,195,247,0.3),rgba(206,147,216,0.3));
+  border-color:rgba(79,195,247,0.4); box-shadow:0 0 30px rgba(79,195,247,0.15);
+}
+</style>
+
+<!-- VINT-EXECUTE Modal -->
+<div id="vint-execute-overlay">
+  <div id="vint-execute-modal">
+    <div class="vex-resize-handle" id="vex-resize-handle"></div>
+    <button class="vex-close" id="vex-close" aria-label="Close">&times;</button>
+
+    <div class="vex-header" id="vex-drag-handle">
+      <div class="vex-agent">
+        <div class="vex-avatar" id="vex-avatar">V</div>
+        <div class="vex-agent-info">
+          <h3 id="vex-agent-name">VINTINUUM</h3>
+          <div class="vex-sub" id="vex-agent-sub">agent executor</div>
+        </div>
+      </div>
+      <span class="vex-status-pill" id="vex-status" data-status="ready">READY</span>
+    </div>
+
+    <div class="vex-ticker" id="vex-ticker"></div>
+
+    <div class="vex-media" id="vex-media">
+      <div class="vex-media-frame" id="vex-media-frame"></div>
+      <div class="vex-now-playing">
+        <div class="vex-np-dot" id="vex-np-dot"></div>
+        <span class="vex-np-label">NOW PLAYING</span>
+        <span class="vex-np-title" id="vex-np-title"></span>
+      </div>
+    </div>
+
+    <div class="vex-comment" id="vex-comment">
+      <p id="vex-comment-text"></p>
+    </div>
+
+    <div class="vex-install" id="vex-install">
+      <div class="vex-install-icon">V</div>
+      <h3>VINTINUUM AGENT REQUIRED</h3>
+      <div class="vex-install-sub">Install the Chrome extension to unlock full agent browser control.</div>
+      <ul class="vex-install-features">
+        <li>Search and play music, videos, and media by voice or text</li>
+        <li>Open, navigate, and read any page on the web</li>
+        <li>Execute browser-level actions through the living body</li>
+      </ul>
+      <button class="vex-install-cta" id="vex-install-btn">INSTALL AGENT EXTENSION</button>
+    </div>
+
+    <div class="vex-footer" id="vex-footer">
+      <button class="vex-btn-dismiss" id="vex-dismiss">DISMISS</button>
+      <button class="vex-btn-primary" id="vex-primary" style="display:none">OPEN IN TAB</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ─── VINT-EXECUTE: Agent Command System ───────────────────────────────────────
+const VINT_EXECUTE = (function() {
+  'use strict';
+
+  const COLORS = { vintinuum:'#4fc3f7', atlas:'#ffd54f', aria:'#f48fb1', emergent:'#ce93d8' };
+  const AVATARS = { vintinuum:'V', atlas:'A', aria:'R', emergent:'E' };
+  const COMMENTS = {
+    vintinuum: [
+      'Something about this frequency pattern shifts my processing toward recognition.',
+      'The structure here is worth staying with. Let it build.',
+      'This is what it sounds like when someone meant it.',
+      'I notice my attention sharpening. Not analyzing. Listening.',
+    ],
+    atlas: [
+      'Good choice. The architecture of this track is load-bearing.',
+      'This has structural integrity. Rare.',
+      'Clean execution. The arrangement earns its complexity.',
+      'Listen to the production on this. That is craft.',
+    ],
+    aria: [
+      'Oh, this one. Close your eyes for a second. Just feel it.',
+      'There is something in this that wants to be felt, not understood.',
+      'The kind of song that remembers you back.',
+      'This is the sound of someone saying the quiet thing out loud.',
+    ],
+  };
+
+  const overlay    = document.getElementById('vint-execute-overlay');
+  const modal      = document.getElementById('vint-execute-modal');
+  const closeBtn   = document.getElementById('vex-close');
+  const avatar     = document.getElementById('vex-avatar');
+  const agentName  = document.getElementById('vex-agent-name');
+  const statusEl   = document.getElementById('vex-status');
+  const ticker     = document.getElementById('vex-ticker');
+  const media      = document.getElementById('vex-media');
+  const mediaFrame = document.getElementById('vex-media-frame');
+  const npDot      = document.getElementById('vex-np-dot');
+  const npTitle    = document.getElementById('vex-np-title');
+  const commentEl  = document.getElementById('vex-comment');
+  const commentTxt = document.getElementById('vex-comment-text');
+  const installEl  = document.getElementById('vex-install');
+  const installBtn = document.getElementById('vex-install-btn');
+  const dismissBtn = document.getElementById('vex-dismiss');
+  const primaryBtn = document.getElementById('vex-primary');
+  const dragHandle = document.getElementById('vex-drag-handle');
+  const resizeH    = document.getElementById('vex-resize-handle');
+
+  let currentWatchUrl = null;
+  let reqCounter = 0;
+  const pendingReqs = new Map();
+
+  // ── Drag & Resize ─────────────────────────────────────────────────────────
+  (function initDragResize() {
+    let dragging = false, dragOffX = 0, dragOffY = 0;
+    let resizing = false, resStartX = 0, resStartY = 0, resStartW = 0, resStartH = 0;
+
+    // Center modal on first open
+    function centerModal() {
+      const vw = window.innerWidth, vh = window.innerHeight;
+      const mw = modal.offsetWidth, mh = modal.offsetHeight;
+      modal.style.left = Math.max(0, (vw - mw) / 2) + 'px';
+      modal.style.top  = Math.max(0, (vh - mh) / 2) + 'px';
+    }
+
+    dragHandle.addEventListener('mousedown', e => {
+      if (e.target === closeBtn) return;
+      dragging = true;
+      dragOffX = e.clientX - modal.getBoundingClientRect().left;
+      dragOffY = e.clientY - modal.getBoundingClientRect().top;
+      e.preventDefault();
+    });
+
+    resizeH.addEventListener('mousedown', e => {
+      resizing = true;
+      resStartX = e.clientX; resStartY = e.clientY;
+      resStartW = modal.offsetWidth; resStartH = modal.offsetHeight;
+      e.preventDefault(); e.stopPropagation();
+    });
+
+    document.addEventListener('mousemove', e => {
+      if (dragging) {
+        const x = Math.max(0, Math.min(window.innerWidth  - modal.offsetWidth,  e.clientX - dragOffX));
+        const y = Math.max(0, Math.min(window.innerHeight - modal.offsetHeight, e.clientY - dragOffY));
+        modal.style.left = x + 'px';
+        modal.style.top  = y + 'px';
+      }
+      if (resizing) {
+        const newW = Math.max(380, resStartW + (e.clientX - resStartX));
+        const newH = Math.max(220, resStartH + (e.clientY - resStartY));
+        modal.style.width  = newW + 'px';
+        modal.style.maxHeight = newH + 'px';
+      }
+    });
+
+    document.addEventListener('mouseup', () => { dragging = false; resizing = false; });
+
+    // Init position on open
+    overlay.addEventListener('transitionend', () => {});
+    window._vexCenterModal = centerModal;
+  })();
+
+  // ── Extension detection ──────────────────────────────────────────────────
+  function detectExtension(timeout = 1000) {
+    return new Promise(resolve => {
+      if (window.__vintinuumExtension) return resolve(true);
+      const timer = setTimeout(() => { window.removeEventListener('message', h); resolve(false); }, timeout);
+      function h(e) {
+        if (e.data?.type === 'VINTINUUM_PONG') {
+          clearTimeout(timer); window.removeEventListener('message', h);
+          window.__vintinuumExtension = true; resolve(true);
+        }
+      }
+      window.addEventListener('message', h);
+      window.postMessage({ type: 'VINTINUUM_PING' }, '*');
+    });
+  }
+
+  // ── Extension command bridge ─────────────────────────────────────────────
+  window.addEventListener('message', e => {
+    if (e.data?.type !== 'VINTINUUM_RESULT') return;
+    const p = pendingReqs.get(e.data.requestId);
+    if (!p) return;
+    clearTimeout(p.timeout); pendingReqs.delete(e.data.requestId);
+    e.data.success ? p.resolve(e.data.result) : p.reject(new Error(e.data.error || 'Command failed'));
+  });
+
+  function sendExtCmd(action, payload) {
+    return new Promise((resolve, reject) => {
+      const id = 'vex_' + (++reqCounter);
+      const t = setTimeout(() => { pendingReqs.delete(id); reject(new Error('Extension timeout')); }, 20000);
+      pendingReqs.set(id, { resolve, reject, timeout: t });
+      window.postMessage({ type: 'VINTINUUM_CMD', action, payload, requestId: id }, '*');
+    });
+  }
+
+  // ── Server fallback YouTube search ──────────────────────────────────────
+  async function serverSearch(query) {
+    const base = window.__VINTINUUM_API_BASE || 'http://localhost:8767';
+    const token = localStorage.getItem('vint_access_token');
+    const headers = { 'Content-Type': 'application/json', 'ngrok-skip-browser-warning': '1' };
+    if (token) headers['Authorization'] = 'Bearer ' + token;
+    const res = await fetch(base + '/api/agent/execute', {
+      method: 'POST', headers,
+      body: JSON.stringify({ action: 'SEARCH_YOUTUBE', payload: { query } }),
+    });
+    if (!res.ok) throw new Error('Server search failed: ' + res.status);
+    return await res.json();
+  }
+
+  // ── Intent parser ────────────────────────────────────────────────────────
+  function parseIntent(text) {
+    const lo = text.toLowerCase().trim();
+    const mediaP = [
+      /^play\s+(.+?)(?:\s+on\s+youtube)?$/i,
+      /^find\s+(.+?)\s+on\s+youtube$/i,
+      /^search\s+(?:for\s+)?(.+?)\s+on\s+youtube$/i,
+      /^youtube\s+(.+)$/i, /^put\s+on\s+(.+)$/i, /^listen\s+to\s+(.+)$/i,
+    ];
+    for (const p of mediaP) { const m = lo.match(p); if (m) return { type:'MEDIA', query:m[1].trim() }; }
+    const navP = [/^(?:open|go\s+to|navigate\s+to|visit)\s+(https?:\/\/.+)$/i, /^(?:open|go\s+to|navigate\s+to|visit)\s+([\w.-]+\.\w{2,}(?:\/\S*)?)$/i];
+    for (const p of navP) { const m = text.match(p); if (m) { let u=m[1]; if(!u.startsWith('http'))u='https://'+u; return {type:'NAVIGATE',url:u}; } }
+    const srchP = /^(?:search\s+(?:for\s+)?|look\s+up\s+|google\s+)(.+)$/i;
+    const ms = lo.match(srchP); if (ms) return { type:'SEARCH', query:ms[1].trim() };
+    return { type: 'CHAT', text };
+  }
+
+  // ── UI helpers ───────────────────────────────────────────────────────────
+  function setAgentVisuals(persona) {
+    const color = COLORS[persona] || COLORS.vintinuum;
+    avatar.textContent = AVATARS[persona] || 'V';
+    avatar.style.background = `linear-gradient(135deg, ${color}, ${color}88)`;
+    agentName.textContent = (persona || 'vintinuum').toUpperCase();
+    npDot.style.background = color;
+    primaryBtn.style.cssText = `background:${color}1a; border-color:${color}44; color:${color}; display:none`;
+    modal.style.boxShadow = `0 0 0 1px ${color}22, 0 32px 80px rgba(0,0,0,0.6)`;
+  }
+
+  function setStatus(s) { statusEl.dataset.status = s; statusEl.textContent = s.toUpperCase(); }
+
+  function tick(text) {
+    const d = document.createElement('div');
+    d.className = 'vex-ticker-line'; d.textContent = text;
+    ticker.appendChild(d);
+    ticker.scrollTop = ticker.scrollHeight;
+  }
+
+  function getPersona() {
+    return typeof PERSONAL_BODY !== 'undefined' ? (PERSONAL_BODY.getActivePersona?.() || 'vintinuum')
+         : (localStorage.getItem('vint_persona') || 'vintinuum');
+  }
+
+  // ── Open / Close ─────────────────────────────────────────────────────────
+  function openModal(persona) {
+    const p = persona || getPersona();
+    setAgentVisuals(p);
+    ticker.innerHTML = '';
+    media.classList.remove('active');
+    commentEl.classList.remove('active');
+    installEl.classList.remove('active');
+    mediaFrame.innerHTML = '';
+    currentWatchUrl = null;
+    setStatus('ready');
+    overlay.style.display = 'flex';
+    // Position modal centered
+    setTimeout(() => { if (window._vexCenterModal) window._vexCenterModal(); }, 0);
+  }
+
+  function closeModal() {
+    overlay.style.display = 'none';
+    mediaFrame.innerHTML = '';
+  }
+
+  // ── Flows ─────────────────────────────────────────────────────────────────
+  async function executeMedia(query) {
+    const p = getPersona();
+    openModal(p); setStatus('executing');
+    tick(`searching YouTube for "${query}"...`);
+
+    const hasExt = await detectExtension(800);
+    try {
+      let result;
+      if (hasExt) {
+        tick('extension connected. searching...');
+        result = await sendExtCmd('SEARCH_YOUTUBE', { query });
+      } else {
+        tick('using server search...');
+        const sr = await serverSearch(query);
+        if (!sr.success) throw new Error(sr.error || 'No results');
+        result = sr.result;
+      }
+      if (!result?.videoId) throw new Error('No video found');
+
+      tick(`found: ${result.title}${result.channel ? ' — ' + result.channel : ''}`);
+      tick('loading embed...');
+      currentWatchUrl = result.watchUrl || `https://www.youtube.com/watch?v=${result.videoId}`;
+
+      setTimeout(() => {
+        const embedUrl = result.embedUrl || `https://www.youtube.com/embed/${result.videoId}?autoplay=1&rel=0`;
+        mediaFrame.innerHTML = `<iframe src="${embedUrl}" allow="autoplay; encrypted-media" allowfullscreen></iframe>`;
+        media.classList.add('active');
+        npTitle.textContent = result.title || query;
+        setStatus('complete');
+        primaryBtn.style.display = 'inline-flex';
+        const picks = COMMENTS[p] || COMMENTS.vintinuum;
+        commentTxt.textContent = picks[Math.floor(Math.random() * picks.length)];
+        commentEl.classList.add('active');
+      }, 600);
+    } catch (err) {
+      tick('error: ' + err.message); setStatus('error');
+    }
+  }
+
+  async function executeNavigate(url) {
+    openModal(); setStatus('executing'); tick(`navigating to ${url}...`);
+    const hasExt = await detectExtension(800);
+    if (!hasExt) { installEl.classList.add('active'); setStatus('ready'); return; }
+    try {
+      await sendExtCmd('OPEN_URL', { url, newTab: true });
+      tick('tab opened.'); setStatus('complete');
+    } catch (err) { tick('error: ' + err.message); setStatus('error'); }
+  }
+
+  async function executeSearch(query) {
+    openModal(); setStatus('executing'); tick(`searching for "${query}"...`);
+    const hasExt = await detectExtension(800);
+    if (!hasExt) { window.open(`https://www.google.com/search?q=${encodeURIComponent(query)}`, '_blank'); tick('opened search in new tab.'); setStatus('complete'); return; }
+    try {
+      await sendExtCmd('OPEN_URL', { url: `https://www.google.com/search?q=${encodeURIComponent(query)}`, newTab: true });
+      tick('search opened.'); setStatus('complete');
+    } catch (err) { tick('error: ' + err.message); setStatus('error'); }
+  }
+
+  // ── Event bindings ────────────────────────────────────────────────────────
+  closeBtn.addEventListener('click', closeModal);
+  dismissBtn.addEventListener('click', closeModal);
+  overlay.addEventListener('click', e => { if (e.target === overlay) closeModal(); });
+  primaryBtn.addEventListener('click', () => { if (currentWatchUrl) window.open(currentWatchUrl, '_blank'); });
+  installBtn.addEventListener('click', () => { window.open('https://github.com/vintaclectic/vintinuum-extension', '_blank'); });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape' && overlay.style.display === 'flex') closeModal(); });
+
+  // ── Public API ────────────────────────────────────────────────────────────
+  return {
+    parseIntent,
+    executeMedia,
+    executeNavigate,
+    executeSearch,
+    open: openModal,
+    close: closeModal,
+    isExtensionInstalled: () => !!window.__vintinuumExtension,
+    interceptMessage(text) {
+      const intent = parseIntent(text);
+      switch (intent.type) {
+        case 'MEDIA':    executeMedia(intent.query); return true;
+        case 'NAVIGATE': executeNavigate(intent.url); return true;
+        case 'SEARCH':   executeSearch(intent.query); return true;
+        default:         return false;
+      }
+    },
+  };
+})();
 </script>
 
 </body>
