@@ -185,6 +185,48 @@ canvas{display:block;}
   .header h1 { font-size: clamp(1.8rem,8vw,3rem); }
 }
 </style>
+<script>
+// ── VINTINUUM FAUX SERVER ─────────────────────────────────────────────────────
+// Service worker acts as a local proxy on GitHub Pages:
+// - Always fetches fresh brain.js (never serves stale)
+// - Caches static assets for offline resilience
+// - Auto-reloads when a new version deploys
+// - Clears old caches on activation
+const _SW_VERSION = 'v20260408-004';
+if ('serviceWorker' in navigator) {
+  const _swPath = location.pathname.includes('/vintinuum') ? '/vintinuum/sw.js' : '/sw.js';
+  const _swScope = location.pathname.includes('/vintinuum') ? '/vintinuum/' : '/';
+  navigator.serviceWorker.register(_swPath, { scope: _swScope, updateViaCache: 'none' })
+    .then(reg => {
+      // Poll for updates every 30s — catches new deploys fast
+      setInterval(() => reg.update(), 30000);
+      reg.addEventListener('updatefound', () => {
+        const nw = reg.installing;
+        if (!nw) return;
+        nw.addEventListener('statechange', () => {
+          if (nw.state === 'activated' && navigator.serviceWorker.controller) {
+            console.log('[VINTINUUM SW] New version live — pulling fresh brain.js');
+            window.location.reload();
+          }
+        });
+      });
+    })
+    .catch(e => console.warn('[VINTINUUM SW] failed:', e.message));
+
+  // When SW controller changes (new SW took over), reload to get fresh assets
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    window.location.reload();
+  });
+
+  // Expose manual cache clear for debugging: window.__vintClearCache()
+  window.__vintClearCache = () => {
+    if (navigator.serviceWorker.controller) {
+      navigator.serviceWorker.controller.postMessage('CLEAR_CACHE');
+      setTimeout(() => window.location.reload(), 500);
+    }
+  };
+}
+</script>
 </head>
 <body>
 
