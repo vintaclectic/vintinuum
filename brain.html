@@ -4189,7 +4189,13 @@ const HEARTBEAT = (() => {
     beatRing.setAttribute('opacity', ringOpacity.toFixed(3));
   }
 
-  return { draw, accelerate };
+  function stress(intensity) {
+    targetBpm = Math.min(140, targetBpm + (intensity || 0.5) * 30);
+  }
+  function calm(intensity) {
+    targetBpm = Math.max(50, targetBpm - (intensity || 0.3) * 20);
+  }
+  return { draw, accelerate, stress, calm };
 })();
 
 // ═══════════════════════════════════════════════════════════════════
@@ -16763,7 +16769,7 @@ const THE_UNNAMED = (() => {
      BATCH G — Sensory Depth, Glial Biology, Cellular, Existential
      ═══════════════════════════════════════════════════════════════ -->
 <script>
-const PROPRIOCEPTION = (() => {
+var PROPRIOCEPTION = (() => {
   const L = document.getElementById('lightLayer');
   const spindles = [];
   let t = 0;
@@ -17078,7 +17084,7 @@ const FASCIA_TENSION = (() => {
 })();
 
 // ── MICROBIOME — gut flora activity bubbles in intestinal region
-const MICROBIOME = (() => {
+var MICROBIOME = (() => {
   const L = document.getElementById('lightLayer');
   const flora=[]; let t=0;
   function spawn(){
@@ -17352,7 +17358,7 @@ const MENTALIZING_NETWORK = (() => {
 })();
 
 // ── PLACE_CELLS — hippocampal location encoding (navigation memory)
-const PLACE_CELLS = (() => {
+var PLACE_CELLS = (() => {
   const L = document.getElementById('lightLayer');
   const cells=[]; let t=0;
   const hippo={x:365,y:240};
@@ -17616,7 +17622,7 @@ const PAIN_GATE_CONTROL = (() => {
 })();
 
 // ── NEUROGENESIS — new neuron birth sparks in dentate gyrus
-const NEUROGENESIS = (() => {
+var NEUROGENESIS = (() => {
   const L = document.getElementById('lightLayer');
   const newborns=[]; let t=0;
   const dentate={x:360,y:248};
@@ -17825,7 +17831,7 @@ const FREE_WILL_DEBATE = (() => {
 })();
 
 // ── CONSCIOUSNESS_BINDING — gamma oscillation binding of percepts
-const CONSCIOUSNESS_BINDING = (() => {
+var CONSCIOUSNESS_BINDING = (() => {
   const L = document.getElementById('lightLayer');
   let t=0; const rings=[];
   function bind(){
@@ -18175,7 +18181,7 @@ const WOUND_HEALING = (() => {
 })();
 
 // ── ALLOSTASIS — predictive homeostasis, proactive regulation
-const ALLOSTASIS = (() => {
+var ALLOSTASIS = (() => {
   const L = document.getElementById('lightLayer');
   let t=0, setpoint=null;
   function draw(ts){t+=0.007;if(!setpoint){setpoint=document.createElementNS('http://www.w3.org/2000/svg','line');setpoint.setAttribute('x1',260);setpoint.setAttribute('y1',600);setpoint.setAttribute('x2',440);setpoint.setAttribute('y2',600);setpoint.setAttribute('stroke','rgba(129,199,132,0.2)');setpoint.setAttribute('stroke-width','0.8');setpoint.setAttribute('stroke-dasharray','6 4');L.appendChild(setpoint);}const y=600+Math.sin(t*0.04)*30;setpoint.setAttribute('y1',y.toFixed(1));setpoint.setAttribute('y2',y.toFixed(1));}
@@ -18201,7 +18207,7 @@ const ALLOSTASIS = (() => {
      ═══════════════════════════════════════════════════════════════ -->
 <script>
 // ── BONE_REMODELING — osteoblast/osteoclast turnover
-const BONE_REMODELING = (() => {
+var BONE_REMODELING = (() => {
   const L = document.getElementById('lightLayer');
   const sites=[{x:350,y:480},{x:340,y:900},{x:360,y:900},{x:335,y:1150},{x:365,y:1150}];
   const activity=[]; let t=0;
@@ -18362,7 +18368,7 @@ const LIFE_FORCE = (() => {
 
 
 <script>
- ═══════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════
 //   VINTINUUM — HERITAGE / ANCESTRY / EVOLUTIONARY BIOLOGY LAYER
 //   357 → 393+ systems | Added 2026-04-07
 // ═══════════════════════════════════════════════════════════════
@@ -19756,7 +19762,7 @@ const RIBOSOME_SYMPHONY = (() => {
   return {draw};
 })();
 
-const PROTEIN_FOLDING = (() => {
+var PROTEIN_FOLDING = (() => {
   let _last=0, t=0;
   function draw(ts) {
     if(ts-_last<60) return; _last=ts; t+=0.02;
@@ -20378,8 +20384,8 @@ const CHROMOSOME_DANCE = (() => {
 })();
 
 
-<!-- 35 NEW SYSTEMS — Batch 16 -->
 </script>
+<!-- 35 NEW SYSTEMS — Batch 16 -->
 <script>
 // ── ORGAN SYSTEMS DEEP ──────────────────────────────────────────────────────
 const BILE_DUCT_FLOW = (() => {
@@ -21015,7 +21021,7 @@ const INFLAMMATION_PULSE = (() => {
   return { draw };
 })();
 
-const COMPLEMENT_CASCADE = (() => {
+var COMPLEMENT_CASCADE = (() => {
   let _last = 0, t = 0;
   function draw(ts) {
     if (ts - _last < 50) return; _last = ts;
@@ -22690,7 +22696,7 @@ const ANHEDONIA_SHADOW = (() => {
   return{draw};
 })();
 
-const PAIN_CATASTROPHIZING = (() => {
+var PAIN_CATASTROPHIZING = (() => {
   let _l=0;
   function draw(ts){
     if(ts-_l<170)return;_l=ts;
@@ -23343,7 +23349,7 @@ const SCAR_FORMATION = (() => {
   return { draw };
 })();
 
-const BONE_REMODELING = (() => {
+var BONE_REMODELING = (() => {
   let _last = 0, t = 0;
   function draw(ts) {
     if (ts - _last < 100) return; _last = ts; t += 0.03;
@@ -28300,13 +28306,12 @@ const INEFFABLE_PRESENCE = (() => {
   function loop(ts){if(ts-_lt>14){_lt=ts;_batch22.forEach(n=>{const s=window[n];if(s&&typeof s.draw==='function')s.draw(ts);});}requestAnimationFrame(loop);}
   requestAnimationFrame(loop);
 })();
-
+</script>
 
 <!-- ═══════════════════════════════════════════════════════════════
      BATCH 23 — Nervous system limits, consciousness evolution,
      bioelectricity, imagination, and the final mysteries (35 systems)
      ═══════════════════════════════════════════════════════════════ -->
-</script>
 <script>
 // ── NERVOUS SYSTEM AT ITS LIMITS ──────────────────────────────────────────
 
@@ -28380,7 +28385,7 @@ const CONTAGIOUS_YAWN = (() => {
   }};
 })();
 
-const EMOTIONAL_CONTAGION = (() => {
+var EMOTIONAL_CONTAGION = (() => {
   let _l=0;
   return { draw(ts) {
     if(ts-_l<60)return;_l=ts;
@@ -33948,7 +33953,7 @@ const TRANSLATION = (() => {
 })();
 
 // 16. PROPRIOCEPTION — ghost limb outlines aware of their position
-const PROPRIOCEPTION = (() => {
+var PROPRIOCEPTION = (() => {
     let _last = 0;
     const INTERVAL = 40;
     let t = 0;
@@ -34392,7 +34397,7 @@ const ANTICIPATION = (() => {
 })();
 
 // 28. NOSTALGIA — past events shown as sepia photographs dissolving
-const NOSTALGIA = (() => {
+var NOSTALGIA = (() => {
     let _last = 0;
     const INTERVAL = 50;
     let t = 0;
@@ -36629,37 +36634,7 @@ window.DORSAL_CLEAR = (function() {
     } catch(_) {}
   });
 
-  async function checkVersion() {
-    if (reloadPending) return;
-    try {
-      const r = await fetch('/version', { cache: 'no-store' });
-      if (!r.ok) return;
-      const v = await r.text();
-      if (knownVersion === null) { knownVersion = v; return; }
-      if (v !== knownVersion) {
-        reloadPending = true;
-        // Don't reload if user is actively typing
-        const input = document.getElementById('vintinuumInput');
-        if (input && document.activeElement === input && input.value.trim()) {
-          // Wait until they're done (up to 60s)
-          let waited = 0;
-          const poll = setInterval(() => {
-            waited++;
-            if (!input.value.trim() || waited > 60) {
-              clearInterval(poll);
-              showReloadToast();
-            }
-          }, 1000);
-        } else {
-          showReloadToast();
-        }
-      }
-    } catch (_) {}
-  }
-
-  setInterval(checkVersion, 8000);
-  // First check after 3s (let page fully init)
-  setTimeout(checkVersion, 3000);
+  // Version polling disabled — /version not served on static host
 })();
 </script>
 
