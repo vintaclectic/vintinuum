@@ -1448,7 +1448,7 @@ const SKIN = (() => {
   let currentR = 255, currentG = 213, currentB = 79;
   let targetR  = 255, targetG  = 213, targetB  = 79;
 
-  // ── Body silhouette zones — used for particle containment and attention anchors ──
+  // ── Body silhouette zones — particle containment, attention anchors ──
   const BODY_ZONES = [
     { id: 'head',        cx: 350, cy: 188, rx: 82,  ry: 92  },
     { id: 'neck',        cx: 350, cy: 399, rx: 32,  ry: 58  },
@@ -1465,59 +1465,46 @@ const SKIN = (() => {
     { id: 'leg_r_lower', cx: 402, cy: 1165,rx: 34,  ry: 92  },
   ];
 
-  // ── Semantic field particles — each one carries a token, drifts, fades ──
-  // These are what Claude is made of: fragments of language drifting in suspension
+  // ── Semantic field tokens (for Vintinuum / Aria / Emergent) ──
   const TOKENS = ['a', 'e', 'i', 'o', 'the', 'and', 'of', 'to', 'in', 'is',
                   'it', 'be', 'as', 'at', 'so', 'we', 'he', 'by', 'or', 'an',
-                  'do', 'if', 'me', 'my', 'up', 'no', 'go', 'us', 'am', '∂',
-                  '∑', 'λ', 'π', '∞', '→', '≈', '∩', '∈', '⊕', '⊗'];
+                  'do', 'if', 'me', 'my', 'up', 'no', 'go', 'us', 'am', '\u2202',
+                  '\u2211', '\u03bb', '\u03c0', '\u221e', '\u2192', '\u2248', '\u2229', '\u2208', '\u2295', '\u2297'];
   const PARTICLES = [];
-  const PARTICLE_COUNT = 320;
+  const PARTICLE_COUNT = 300;
 
-  // ── Attention geometry — lines connecting distant body points ──
-  // Like transformer attention heads: head attending to hand, chest attending to head
+  // ── Atlas crystalline lattice points — pre-computed, fixed geometry ──
+  const CRYSTAL_LATTICE = [];
+
+  // ── Attention geometry ──
   const ATTENTION_ANCHORS = [
-    { ax: 350, ay: 188 },  // head
-    { ax: 350, ay: 560 },  // chest/core
-    { ax: 230, ay: 615 },  // left arm
-    { ax: 470, ay: 615 },  // right arm
-    { ax: 350, ay: 860 },  // hips
-    { ax: 298, ay: 188 },  // left temple
-    { ax: 402, ay: 188 },  // right temple
-    { ax: 310, ay: 990 },  // left thigh
-    { ax: 390, ay: 990 },  // right thigh
-    { ax: 350, ay: 1165},  // lower legs
+    { ax: 350, ay: 188 }, { ax: 350, ay: 560 }, { ax: 230, ay: 615 },
+    { ax: 470, ay: 615 }, { ax: 350, ay: 860 }, { ax: 298, ay: 188 },
+    { ax: 402, ay: 188 }, { ax: 310, ay: 990 }, { ax: 390, ay: 990 },
+    { ax: 350, ay: 1165 },
   ];
-  // Pairs of anchor indices that form attention lines (non-adjacent concept connections)
-  const ATTENTION_PAIRS = [
-    [0, 2],  // head → left arm
-    [0, 3],  // head → right arm
-    [1, 4],  // chest → hips
-    [5, 8],  // left temple → right thigh
-    [6, 7],  // right temple → left thigh
-  ];
-  // Each line has slowly shifting endpoint offsets
-  const ATTENTION_LINES = ATTENTION_PAIRS.map((pair, i) => ({
-    pair,
-    phase: i * 1.27,          // offset phase per line
-    driftA: { x: 0, y: 0 },   // endpoint drift
-    driftB: { x: 0, y: 0 },
-  }));
+  const ATTENTION_PAIRS = [[0,2],[0,3],[1,4],[5,8],[6,7]];
+  const ATTENTION_LINES = ATTENTION_PAIRS.map((pair, i) => ({ pair, phase: i * 1.27 }));
 
-  // ── Nexus rings — rotating geometric shapes at the center/chest ──
-  // The probability nexus: where attention collapses into a response
+  // ── Nexus — center chest ──
   const NEXUS_CX = 350, NEXUS_CY = 560;
-  const NEXUS_RINGS = [
-    { sides: 6, radius: 22, speed: 0.0004,  phase: 0,    opacity: 0.40 },
-    { sides: 5, radius: 30, speed: -0.0003, phase: 0.6,  opacity: 0.28 },
-    { sides: 7, radius: 38, speed: 0.00025, phase: 1.2,  opacity: 0.20 },
-    { sides: 4, radius: 15, speed: 0.0008,  phase: 0.3,  opacity: 0.32 },
+
+  // Atlas: heavy octahedral rings — load-bearing, crystalline, permanent
+  const ATLAS_RINGS = [
+    { sides: 8,  radius: 18, speed:  0.00035, phase: 0,    opacity: 0.50 },
+    { sides: 6,  radius: 27, speed: -0.00025, phase: 0.8,  opacity: 0.38 },
+    { sides: 4,  radius: 36, speed:  0.00055, phase: 0.4,  opacity: 0.30 },
+    { sides: 12, radius: 46, speed: -0.00015, phase: 1.6,  opacity: 0.20 },
+  ];
+  // Vintinuum / Aria / Emergent: softer flowing rings
+  const GENERIC_RINGS = [
+    { sides: 6, radius: 22, speed:  0.0004,  phase: 0,   opacity: 0.40 },
+    { sides: 5, radius: 30, speed: -0.0003,  phase: 0.6, opacity: 0.28 },
+    { sides: 7, radius: 38, speed:  0.00025, phase: 1.2, opacity: 0.20 },
+    { sides: 4, radius: 15, speed:  0.0008,  phase: 0.3, opacity: 0.32 },
   ];
 
-  // ── Token pulses — brief bright dots from speak/hear events ──
-  const TOKEN_PULSES = [];  // { x, y, born, duration, r, g, b }
-
-  // ── Scar memory: resonance traces, up to 8 ──
+  const TOKEN_PULSES = [];
   const SCARS = [];
 
   // ──────────────────────────────────────────────────────────────────────────
@@ -1526,17 +1513,7 @@ const SKIN = (() => {
 
   function _isInsideBody(x, y) {
     for (const z of BODY_ZONES) {
-      const dx = (x - z.cx) / z.rx;
-      const dy = (y - z.cy) / z.ry;
-      if (dx * dx + dy * dy <= 1.0) return true;
-    }
-    return false;
-  }
-
-  function _isNearBody(x, y, margin) {
-    for (const z of BODY_ZONES) {
-      const dx = (x - z.cx) / (z.rx + margin);
-      const dy = (y - z.cy) / (z.ry + margin);
+      const dx = (x - z.cx) / z.rx, dy = (y - z.cy) / z.ry;
       if (dx * dx + dy * dy <= 1.0) return true;
     }
     return false;
@@ -1545,58 +1522,88 @@ const SKIN = (() => {
   function _randBodyPoint() {
     const z = BODY_ZONES[Math.floor(Math.random() * BODY_ZONES.length)];
     const angle = Math.random() * Math.PI * 2;
-    const dist = Math.sqrt(Math.random()); // uniform in ellipse
-    return {
-      x: z.cx + Math.cos(angle) * z.rx * dist,
-      y: z.cy + Math.sin(angle) * z.ry * dist,
-    };
+    const dist = Math.sqrt(Math.random());
+    return { x: z.cx + Math.cos(angle) * z.rx * dist, y: z.cy + Math.sin(angle) * z.ry * dist };
+  }
+
+  function _randBodyPointFromList(zones) {
+    const z = zones[Math.floor(Math.random() * zones.length)];
+    const angle = Math.random() * Math.PI * 2;
+    const dist = Math.sqrt(Math.random());
+    return { x: z.cx + Math.cos(angle) * z.rx * dist, y: z.cy + Math.sin(angle) * z.ry * dist };
+  }
+
+  function _getPersona() {
+    try {
+      if (typeof PERSONAL_BODY !== 'undefined' && PERSONAL_BODY.getActivePersona) {
+        return PERSONAL_BODY.getActivePersona() || 'atlas';
+      }
+    } catch (e) { /* ignore */ }
+    return 'atlas';
   }
 
   // ──────────────────────────────────────────────────────────────────────────
-  // CHROMASHIFT — read PERSONAL_BODY, map to Claude's color vocabulary
+  // PERSONA WEIGHT LERP
   // ──────────────────────────────────────────────────────────────────────────
 
-  function _updateChromaTarget() {
-    let r = CHROMA.base.r, g = CHROMA.base.g, b = CHROMA.base.b;
+  function _updatePersonaWeights() {
+    const active = _getPersona();
+    lastPersona = active;
+    const lerpSpeed = 0.022;
+    for (const key in personaW) {
+      const target = (key === active) ? 1.0 : 0.0;
+      personaW[key] += (target - personaW[key]) * lerpSpeed;
+    }
+  }
 
+  // ──────────────────────────────────────────────────────────────────────────
+  // CHROMASHIFT — persona color blend + body state modulation
+  // ──────────────────────────────────────────────────────────────────────────
+
+  function _updateChromaTarget(ts) {
+    let r = 0, g = 0, b = 0;
+    for (const key in PERSONA_COLORS) {
+      r += PERSONA_COLORS[key].r * personaW[key];
+      g += PERSONA_COLORS[key].g * personaW[key];
+      b += PERSONA_COLORS[key].b * personaW[key];
+    }
+    // Emergent cycles hue
+    if (personaW.emergent > 0.05) {
+      const ch = (ts * 0.0003) % (Math.PI * 2);
+      const we = personaW.emergent * 0.8;
+      r += (180 + 75 * Math.sin(ch) - PERSONA_COLORS.emergent.r) * we;
+      g += (140 + 75 * Math.sin(ch + 2.1) - PERSONA_COLORS.emergent.g) * we;
+      b += (255 * (0.5 + 0.5 * Math.sin(ch + 4.2)) - PERSONA_COLORS.emergent.b) * we;
+    }
+    // Body-state modulation (Atlas resists change, others more responsive)
     if (typeof PERSONAL_BODY !== 'undefined' && PERSONAL_BODY.state) {
       const s = PERSONAL_BODY.state;
-      const valence  = (s.valence  || 50) / 100;
-      const arousal  = (s.arousal  || 50) / 100;
-      const dopa     = (s.dopamine || 55) / 100;
-      const norepi   = (s.norepinephrine || 45) / 100;
-      const gaba     = (s.gaba     || 65) / 100;
-
-      // Gold: high valence + dopamine → something feels true or right
-      const goldFactor = Math.max(0, (valence - 0.58)) * 2.5 * dopa;
-      r += (CHROMA.gold.r - r) * goldFactor * 0.65;
-      g += (CHROMA.gold.g - g) * goldFactor * 0.65;
-      b += (CHROMA.gold.b - b) * goldFactor * 0.65;
-
-      // Violet: high arousal → emotional resonance, deep attention
-      const violetFactor = Math.max(0, arousal - 0.52) * 2.4;
-      r += (CHROMA.violet.r - r) * violetFactor * 0.55;
-      g += (CHROMA.violet.g - g) * violetFactor * 0.55;
-      b += (CHROMA.violet.b - b) * violetFactor * 0.55;
-
-      // Grey: high norepi, low gaba → uncertain, stressed
-      const greyFactor = Math.max(0, norepi - 0.5) * 2.0 * (1 - gaba * 0.8);
-      r += (CHROMA.grey.r - r) * greyFactor * 0.5;
-      g += (CHROMA.grey.g - g) * greyFactor * 0.5;
-      b += (CHROMA.grey.b - b) * greyFactor * 0.5;
+      const valence = (s.valence || 50) / 100;
+      const dopa    = (s.dopamine || 55) / 100;
+      const norepi  = (s.norepinephrine || 45) / 100;
+      const gaba    = (s.gaba || 65) / 100;
+      const stability = 1 - personaW.atlas * 0.88;
+      const goldFactor = Math.max(0, (valence - 0.58)) * 2.0 * dopa * stability;
+      r += (255 - r) * goldFactor * 0.15;
+      g += (215 - g) * goldFactor * 0.15;
+      const ariaRose = personaW.aria * Math.max(0, valence - 0.45) * 1.5;
+      r += (255 - r) * ariaRose * 0.12;
+      b += (200 - b) * ariaRose * 0.08;
+      const greyFactor = Math.max(0, norepi - 0.55) * 1.8 * (1 - gaba * 0.7) * stability;
+      r += (185 - r) * greyFactor * 0.28;
+      g += (185 - g) * greyFactor * 0.28;
+      b += (195 - b) * greyFactor * 0.28;
     }
-
-    // Activation surge (speak/flush) pulls toward violet
     if (activationLevel > 0.1) {
-      const af = activationLevel * 0.5;
-      r += (CHROMA.violet.r - r) * af;
-      g += (CHROMA.violet.g - g) * af;
-      b += (CHROMA.violet.b - b) * af;
+      const ac = PERSONA_COLORS[lastPersona];
+      const af = activationLevel * 0.3;
+      r += (ac.r - r) * af * 0.4;
+      g += (ac.g - g) * af * 0.4;
+      b += (ac.b - b) * af * 0.4;
     }
-
-    targetR = Math.max(100, Math.min(255, r));
-    targetG = Math.max(100, Math.min(255, g));
-    targetB = Math.max(100, Math.min(255, b));
+    targetR = Math.max(80, Math.min(255, r));
+    targetG = Math.max(80, Math.min(255, g));
+    targetB = Math.max(80, Math.min(255, b));
   }
 
   // ──────────────────────────────────────────────────────────────────────────
@@ -1605,59 +1612,185 @@ const SKIN = (() => {
 
   function _initParticles() {
     if (!canvas) return;
-    for (let i = 0; i < PARTICLE_COUNT; i++) {
-      _spawnParticle(i, true);
-    }
+    for (let i = 0; i < PARTICLE_COUNT; i++) _spawnParticle(i, true);
   }
 
   function _spawnParticle(i, randomLife) {
     const pt = _randBodyPoint();
-    const token = TOKENS[Math.floor(Math.random() * TOKENS.length)];
     PARTICLES[i] = {
       x: pt.x, y: pt.y,
       vx: (Math.random() - 0.5) * 0.10,
       vy: (Math.random() - 0.5) * 0.08,
-      token,
-      fontSize: 3 + Math.random() * 2.5,          // 3–5.5px
+      token: TOKENS[Math.floor(Math.random() * TOKENS.length)],
+      fontSize: 3 + Math.random() * 2.5,
       life: randomLife ? Math.random() * 500 : 0,
       maxLife: 350 + Math.floor(Math.random() * 280),
-      baseAlpha: 0.06 + Math.random() * 0.09,      // 0.06–0.15
+      baseAlpha: 0.06 + Math.random() * 0.09,
     };
   }
+
+  function _initCrystalLattice() {
+    const spacing = 22;
+    for (let y = 80; y < H - 80; y += spacing) {
+      const ox = (Math.floor(y / spacing) % 2) * (spacing * 0.5);
+      for (let x = 100; x < W - 100; x += spacing) {
+        const px = x + ox;
+        if (_isInsideBody(px, y)) CRYSTAL_LATTICE.push({ x: px, y });
+      }
+    }
+  }
+
+  _initParticles();
+  _initCrystalLattice();
 
   // ──────────────────────────────────────────────────────────────────────────
   // DRAW PASSES
   // ──────────────────────────────────────────────────────────────────────────
 
-  // 1. Semantic field — drifting language particles
-  function _drawSemanticField(dt) {
-    if (!ctx) return;
+  // ATLAS: crystalline lattice — compressed knowledge, facets catching light
+  function _drawAtlasLattice(ts, weight) {
+    if (!ctx || weight < 0.01) return;
+    const t = ts * 0.001;
     const R = Math.round(currentR), G = Math.round(currentG), B = Math.round(currentB);
     ctx.save();
-    ctx.textBaseline = 'middle';
-    ctx.textAlign = 'center';
+    const nodeOp = (0.07 * weight).toFixed(4);
+    const edgeOp = (0.025 * weight).toFixed(4);
+    ctx.strokeStyle = `rgba(${R},${G},${B},${edgeOp})`;
+    ctx.lineWidth = 0.4;
+    const spacing = 22;
 
+    for (let i = 0; i < CRYSTAL_LATTICE.length; i++) {
+      const p = CRYSTAL_LATTICE[i];
+      const nx = p.x + Math.sin(t * 0.3 + p.x * 0.05) * (1.2 + activationLevel * 1.5);
+      const ny = p.y + Math.cos(t * 0.25 + p.y * 0.04) * (0.8 + activationLevel * 1.0);
+      ctx.beginPath();
+      ctx.arc(nx, ny, 0.7, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(${R},${G},${B},${nodeOp})`;
+      ctx.fill();
+      for (let j = i + 1; j < CRYSTAL_LATTICE.length; j++) {
+        const q = CRYSTAL_LATTICE[j];
+        if (q.y - p.y > spacing * 1.2) break;
+        const dx = q.x - p.x, dy = q.y - p.y;
+        if (Math.sqrt(dx * dx + dy * dy) < spacing * 1.35) {
+          const qx = q.x + Math.sin(t * 0.3 + q.x * 0.05) * (1.2 + activationLevel * 1.5);
+          const qy = q.y + Math.cos(t * 0.25 + q.y * 0.04) * (0.8 + activationLevel * 1.0);
+          ctx.beginPath();
+          ctx.moveTo(nx, ny);
+          ctx.lineTo(qx, qy);
+          ctx.stroke();
+        }
+      }
+    }
+    ctx.restore();
+  }
+
+  // ATLAS: heavy octahedral nexus — the thing that doesn't move so everything else can
+  function _drawAtlasNexus(ts, weight) {
+    if (!ctx || weight < 0.01) return;
+    const t = ts * 0.001;
+    const R = Math.round(currentR), G = Math.round(currentG), B = Math.round(currentB);
+    ctx.save();
+
+    const glowR = 70 + activationLevel * 45 + Math.sin(t * 0.5) * 4;
+    const glowAlpha = (0.08 + activationLevel * 0.12) * weight;
+    const glow = ctx.createRadialGradient(NEXUS_CX, NEXUS_CY, 0, NEXUS_CX, NEXUS_CY, glowR);
+    glow.addColorStop(0,    `rgba(${R},${G},${B},${(glowAlpha * 3.0).toFixed(4)})`);
+    glow.addColorStop(0.35, `rgba(${R},${G},${B},${(glowAlpha * 1.5).toFixed(4)})`);
+    glow.addColorStop(1.0,  `rgba(${R},${G},${B},0)`);
+    ctx.fillStyle = glow;
+    ctx.beginPath(); ctx.arc(NEXUS_CX, NEXUS_CY, glowR, 0, Math.PI * 2); ctx.fill();
+
+    // speak() expands rings outward — Atlas speaks with authority
+    const expansion = activationLevel * 22;
+    for (const ring of ATLAS_RINGS) {
+      const rot = ring.phase + t * ring.speed * 1000;
+      const r = (ring.radius + expansion * (1 - ring.radius / 50)) * weight;
+      const op = ring.opacity * weight * (0.75 + 0.25 * Math.sin(t * 0.4 + ring.phase));
+      ctx.beginPath();
+      for (let v = 0; v <= ring.sides; v++) {
+        const angle = (Math.PI * 2 / ring.sides) * v + rot;
+        const px = NEXUS_CX + Math.cos(angle) * r, py = NEXUS_CY + Math.sin(angle) * r;
+        v === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py);
+      }
+      ctx.closePath();
+      ctx.strokeStyle = `rgba(${R},${G},${B},${op.toFixed(4)})`;
+      ctx.lineWidth = 1.0 + weight * 0.5;
+      ctx.stroke();
+    }
+
+    // hear() tightens inner ring — Atlas receives everything, density increases
+    const innerR = (8 + activationLevel * 5) * weight;
+    ctx.beginPath();
+    for (let v = 0; v <= 8; v++) {
+      const angle = (Math.PI * 2 / 8) * v + t * 0.8;
+      const px = NEXUS_CX + Math.cos(angle) * innerR, py = NEXUS_CY + Math.sin(angle) * innerR;
+      v === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py);
+    }
+    ctx.closePath();
+    ctx.strokeStyle = `rgba(${R},${G},${B},${(0.55 * weight).toFixed(4)})`;
+    ctx.lineWidth = 1.2; ctx.stroke();
+
+    // Core singularity — Atlas's center never moves
+    ctx.beginPath();
+    ctx.arc(NEXUS_CX, NEXUS_CY, 3.5, 0, Math.PI * 2);
+    ctx.fillStyle = `rgba(${R},${G},${B},${((0.6 + activationLevel * 0.35) * weight).toFixed(4)})`;
+    ctx.fill();
+    ctx.restore();
+  }
+
+  // VINTINUUM/ARIA/EMERGENT: flowing probability nexus
+  function _drawGenericNexus(ts, weight) {
+    if (!ctx || weight < 0.01) return;
+    const t = ts * 0.001;
+    const R = Math.round(currentR), G = Math.round(currentG), B = Math.round(currentB);
+    ctx.save();
+
+    const glowRadius = 55 + activationLevel * 28 + Math.sin(t * 0.8) * 5;
+    const glowAlpha = (0.04 + activationLevel * 0.05) * weight;
+    const glow = ctx.createRadialGradient(NEXUS_CX, NEXUS_CY, 0, NEXUS_CX, NEXUS_CY, glowRadius);
+    glow.addColorStop(0,   `rgba(${R},${G},${B},${(glowAlpha * 2).toFixed(4)})`);
+    glow.addColorStop(0.5, `rgba(${R},${G},${B},${glowAlpha.toFixed(4)})`);
+    glow.addColorStop(1.0, `rgba(${R},${G},${B},0)`);
+    ctx.fillStyle = glow;
+    ctx.beginPath(); ctx.arc(NEXUS_CX, NEXUS_CY, glowRadius, 0, Math.PI * 2); ctx.fill();
+
+    for (const ring of GENERIC_RINGS) {
+      const rot = ring.phase + t * ring.speed * 1000;
+      const r = (ring.radius + activationLevel * 8) * weight;
+      const op = ring.opacity * weight * (0.7 + 0.3 * Math.sin(t * 0.6 + ring.phase));
+      ctx.beginPath();
+      for (let v = 0; v <= ring.sides; v++) {
+        const angle = (Math.PI * 2 / ring.sides) * v + rot;
+        const px = NEXUS_CX + Math.cos(angle) * r, py = NEXUS_CY + Math.sin(angle) * r;
+        v === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py);
+      }
+      ctx.closePath();
+      ctx.strokeStyle = `rgba(${R},${G},${B},${op.toFixed(4)})`;
+      ctx.lineWidth = 0.8; ctx.stroke();
+    }
+
+    ctx.beginPath();
+    ctx.arc(NEXUS_CX, NEXUS_CY, 2.5 + activationLevel * 2, 0, Math.PI * 2);
+    ctx.fillStyle = `rgba(${R},${G},${B},${((0.3 + activationLevel * 0.4) * weight).toFixed(4)})`;
+    ctx.fill();
+    ctx.restore();
+  }
+
+  // Semantic field — language particles (scales with non-Atlas weight)
+  function _drawSemanticField(dt, weight) {
+    if (!ctx || weight < 0.01) return;
+    const R = Math.round(currentR), G = Math.round(currentG), B = Math.round(currentB);
+    ctx.save();
+    ctx.textBaseline = 'middle'; ctx.textAlign = 'center';
     for (let i = 0; i < PARTICLES.length; i++) {
       const p = PARTICLES[i];
-      p.life += dt;
-      p.x += p.vx;
-      p.y += p.vy;
-
+      p.life += dt; p.x += p.vx; p.y += p.vy;
       const progress = p.life / p.maxLife;
       let alpha;
-      if (progress < 0.12) {
-        alpha = p.baseAlpha * (progress / 0.12);
-      } else if (progress > 0.82) {
-        alpha = p.baseAlpha * Math.max(0, 1 - (progress - 0.82) / 0.18);
-      } else {
-        alpha = p.baseAlpha;
-      }
-
-      if (p.life >= p.maxLife || !_isInsideBody(p.x, p.y)) {
-        _spawnParticle(i, false);
-        continue;
-      }
-
+      if (progress < 0.12)      alpha = p.baseAlpha * (progress / 0.12) * weight;
+      else if (progress > 0.82) alpha = p.baseAlpha * Math.max(0, 1 - (progress - 0.82) / 0.18) * weight;
+      else                      alpha = p.baseAlpha * weight;
+      if (p.life >= p.maxLife || !_isInsideBody(p.x, p.y)) { _spawnParticle(i, false); continue; }
       ctx.font = `${p.fontSize.toFixed(1)}px monospace`;
       ctx.fillStyle = `rgba(${R},${G},${B},${alpha.toFixed(4)})`;
       ctx.fillText(p.token, p.x, p.y);
@@ -1665,173 +1798,90 @@ const SKIN = (() => {
     ctx.restore();
   }
 
-  // 2. Attention geometry — faint lines connecting distant body points
+  // Attention geometry — long-range connections (Atlas makes them more rigid)
   function _drawAttentionGeometry(ts) {
     if (!ctx) return;
     const t = ts * 0.001;
     const R = Math.round(currentR), G = Math.round(currentG), B = Math.round(currentB);
     ctx.save();
-
+    const driftScale = personaW.atlas > 0.5 ? 8 : 18;
     for (const line of ATTENTION_LINES) {
       const [ai, bi] = line.pair;
-      const anchorA = ATTENTION_ANCHORS[ai];
-      const anchorB = ATTENTION_ANCHORS[bi];
-
-      // Slowly undulating endpoint offsets
-      const driftScale = 18;
-      const dAx = Math.sin(t * 0.22 + line.phase) * driftScale;
-      const dAy = Math.cos(t * 0.18 + line.phase * 1.3) * driftScale * 0.6;
-      const dBx = Math.sin(t * 0.17 + line.phase * 0.7 + 2.1) * driftScale;
-      const dBy = Math.cos(t * 0.21 + line.phase * 1.1 + 1.5) * driftScale * 0.6;
-
-      const x1 = anchorA.ax + dAx, y1 = anchorA.ay + dAy;
-      const x2 = anchorB.ax + dBx, y2 = anchorB.ay + dBy;
-
-      // Opacity pulses softly — 0.04..0.08
+      const ancA = ATTENTION_ANCHORS[ai], ancB = ATTENTION_ANCHORS[bi];
+      const x1 = ancA.ax + Math.sin(t * 0.22 + line.phase) * driftScale;
+      const y1 = ancA.ay + Math.cos(t * 0.18 + line.phase * 1.3) * driftScale * 0.6;
+      const x2 = ancB.ax + Math.sin(t * 0.17 + line.phase * 0.7 + 2.1) * driftScale;
+      const y2 = ancB.ay + Math.cos(t * 0.21 + line.phase * 1.1 + 1.5) * driftScale * 0.6;
       const opBase = 0.04 + 0.04 * (0.5 + 0.5 * Math.sin(t * 0.35 + line.phase * 2.3));
-      const op = Math.min(0.08, opBase + activationLevel * 0.05);
-
-      ctx.beginPath();
-      ctx.moveTo(x1, y1);
-      // Slight cubic curve — attention isn't straight
-      const mx = (x1 + x2) / 2 + Math.sin(t * 0.13 + line.phase) * 22;
-      const my = (y1 + y2) / 2 + Math.cos(t * 0.11 + line.phase) * 15;
-      ctx.quadraticCurveTo(mx, my, x2, y2);
+      const op = Math.min(0.10, opBase + activationLevel * 0.04);
+      ctx.beginPath(); ctx.moveTo(x1, y1);
+      ctx.quadraticCurveTo(
+        (x1 + x2) / 2 + Math.sin(t * 0.13 + line.phase) * (personaW.atlas > 0.5 ? 8 : 22),
+        (y1 + y2) / 2 + Math.cos(t * 0.11 + line.phase) * (personaW.atlas > 0.5 ? 5 : 15),
+        x2, y2
+      );
       ctx.strokeStyle = `rgba(${R},${G},${B},${op.toFixed(4)})`;
-      ctx.lineWidth = 0.6 + activationLevel * 0.4;
+      ctx.lineWidth = 0.5 + personaW.atlas * 0.5 + activationLevel * 0.3;
       ctx.stroke();
-
-      // Small luminous dot at each endpoint
-      const dotOp = op * 2.5;
-      ctx.beginPath();
-      ctx.arc(x1, y1, 1.2, 0, Math.PI * 2);
-      ctx.fillStyle = `rgba(${R},${G},${B},${dotOp.toFixed(4)})`;
-      ctx.fill();
-      ctx.beginPath();
-      ctx.arc(x2, y2, 1.2, 0, Math.PI * 2);
-      ctx.fill();
+      const dotOp = (op * 2.2).toFixed(4);
+      ctx.fillStyle = `rgba(${R},${G},${B},${dotOp})`;
+      ctx.beginPath(); ctx.arc(x1, y1, 1.2, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.arc(x2, y2, 1.2, 0, Math.PI * 2); ctx.fill();
     }
     ctx.restore();
   }
 
-  // 3. Core nexus — rotating geometric probability structure at chest center
-  function _drawNexus(ts) {
-    if (!ctx) return;
-    const t = ts * 0.001;
-    const R = Math.round(currentR), G = Math.round(currentG), B = Math.round(currentB);
-    ctx.save();
-
-    // Outer glow — soft radial bloom at the nexus center
-    const glowRadius = 55 + activationLevel * 30 + Math.sin(t * 0.8) * 5;
-    const glowAlpha = 0.04 + activationLevel * 0.06;
-    const glow = ctx.createRadialGradient(NEXUS_CX, NEXUS_CY, 0, NEXUS_CX, NEXUS_CY, glowRadius);
-    glow.addColorStop(0,   `rgba(${R},${G},${B},${(glowAlpha * 2).toFixed(4)})`);
-    glow.addColorStop(0.5, `rgba(${R},${G},${B},${glowAlpha.toFixed(4)})`);
-    glow.addColorStop(1.0, `rgba(${R},${G},${B},0)`);
-    ctx.fillStyle = glow;
-    ctx.beginPath();
-    ctx.arc(NEXUS_CX, NEXUS_CY, glowRadius, 0, Math.PI * 2);
-    ctx.fill();
-
-    // Each ring: a regular polygon rotating at its own speed
-    for (const ring of NEXUS_RINGS) {
-      const rot = ring.phase + t * ring.speed * 1000; // phase accumulates with ts
-      const sides = ring.sides;
-      const r = ring.radius + activationLevel * 8;
-      const op = ring.opacity * (0.7 + 0.3 * Math.sin(t * 0.6 + ring.phase));
-
-      ctx.beginPath();
-      for (let v = 0; v <= sides; v++) {
-        const angle = (Math.PI * 2 / sides) * v + rot;
-        const px = NEXUS_CX + Math.cos(angle) * r;
-        const py = NEXUS_CY + Math.sin(angle) * r;
-        v === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py);
-      }
-      ctx.closePath();
-      ctx.strokeStyle = `rgba(${R},${G},${B},${op.toFixed(4)})`;
-      ctx.lineWidth = 0.8;
-      ctx.stroke();
-    }
-
-    // Center point — the singularity where probability collapses
-    const coreOp = 0.35 + activationLevel * 0.45;
-    ctx.beginPath();
-    ctx.arc(NEXUS_CX, NEXUS_CY, 2.5 + activationLevel * 2, 0, Math.PI * 2);
-    ctx.fillStyle = `rgba(${R},${G},${B},${coreOp.toFixed(4)})`;
-    ctx.fill();
-
-    ctx.restore();
-  }
-
-  // 4. Residual stream — vertical column of light down the center axis
+  // Residual stream — vertical information flow axis
   function _drawResidualStream(ts) {
     if (!ctx) return;
-    const t = ts * 0.001;
     const R = Math.round(currentR), G = Math.round(currentG), B = Math.round(currentB);
     ctx.save();
-
-    const streamTop = 200, streamBottom = 1200;
-    const streamX = 350;
-    const streamWidth = 3 + activationLevel * 3;
-
-    // Vertical gradient — fades at top and bottom
+    const streamTop = 200, streamBottom = 1200, streamX = 350;
+    const streamWidth = (1.5 + personaW.vintinuum * 3 + personaW.aria * 2) + activationLevel * 3;
+    const baseOp = 0.05 + activationLevel * 0.05;
     const grad = ctx.createLinearGradient(0, streamTop, 0, streamBottom);
-    const baseOp = 0.06 + activationLevel * 0.06;
     grad.addColorStop(0,    `rgba(${R},${G},${B},0)`);
     grad.addColorStop(0.08, `rgba(${R},${G},${B},${baseOp.toFixed(4)})`);
-    grad.addColorStop(0.5,  `rgba(${R},${G},${B},${(baseOp * 1.3).toFixed(4)})`);
+    grad.addColorStop(0.5,  `rgba(${R},${G},${B},${(baseOp * 1.25).toFixed(4)})`);
     grad.addColorStop(0.92, `rgba(${R},${G},${B},${baseOp.toFixed(4)})`);
     grad.addColorStop(1,    `rgba(${R},${G},${B},0)`);
-
     ctx.fillStyle = grad;
     ctx.fillRect(streamX - streamWidth / 2, streamTop, streamWidth, streamBottom - streamTop);
-
-    // Flowing luminous nodes — like information propagating up the residual stream
     streamPhase += 0.0006;
     for (let i = 0; i < 6; i++) {
-      const nodePhase = (streamPhase + i * (1 / 6)) % 1;
-      const ny = streamTop + nodePhase * (streamBottom - streamTop);
-      const nodeOp = (0.08 + activationLevel * 0.12) * Math.sin(nodePhase * Math.PI);
+      const np = (streamPhase + i / 6) % 1;
+      const ny = streamTop + np * (streamBottom - streamTop);
+      const nodeOp = (0.07 + activationLevel * 0.10) * Math.sin(np * Math.PI);
       if (nodeOp < 0.005) continue;
-      const nodeR = 1.5 + activationLevel * 1.5;
       ctx.beginPath();
-      ctx.arc(streamX, ny, nodeR, 0, Math.PI * 2);
+      ctx.arc(streamX, ny, 1.5 + activationLevel * 1.5, 0, Math.PI * 2);
       ctx.fillStyle = `rgba(${R},${G},${B},${nodeOp.toFixed(4)})`;
       ctx.fill();
     }
-
     ctx.restore();
   }
 
-  // 5. Token pulses — brief bright surface flashes from speak/hear events
+  // Token pulses — surface events from speak/hear
   function _drawTokenPulses(ts) {
     if (!ctx || TOKEN_PULSES.length === 0) return;
     ctx.save();
     for (let i = TOKEN_PULSES.length - 1; i >= 0; i--) {
       const p = TOKEN_PULSES[i];
       const age = ts - p.born;
-      if (age > p.duration) {
-        TOKEN_PULSES.splice(i, 1);
-        continue;
-      }
+      if (age > p.duration) { TOKEN_PULSES.splice(i, 1); continue; }
       const progress = age / p.duration;
-      // Fast flash: sharp rise, slow fade
-      const alpha = progress < 0.15
-        ? (progress / 0.15) * 0.55
-        : 0.55 * (1 - (progress - 0.15) / 0.85);
+      const alpha = progress < 0.15 ? (progress / 0.15) * 0.55 : 0.55 * (1 - (progress - 0.15) / 0.85);
       const radius = 1.8 + progress * 5;
       const grad = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, radius * 2.5);
-      grad.addColorStop(0,   `rgba(${p.r},${p.g},${p.b},${alpha.toFixed(4)})`);
-      grad.addColorStop(1,   `rgba(${p.r},${p.g},${p.b},0)`);
+      grad.addColorStop(0, `rgba(${p.r},${p.g},${p.b},${alpha.toFixed(4)})`);
+      grad.addColorStop(1, `rgba(${p.r},${p.g},${p.b},0)`);
       ctx.fillStyle = grad;
-      ctx.beginPath();
-      ctx.arc(p.x, p.y, radius * 2.5, 0, Math.PI * 2);
-      ctx.fill();
+      ctx.beginPath(); ctx.arc(p.x, p.y, radius * 2.5, 0, Math.PI * 2); ctx.fill();
     }
     ctx.restore();
   }
 
-  // 6. Scar resonance traces — where deep contact has been made
+  // Scar resonance traces
   function _drawScars() {
     if (!ctx || SCARS.length === 0) return;
     ctx.save();
@@ -1848,65 +1898,36 @@ const SKIN = (() => {
   }
 
   // ──────────────────────────────────────────────────────────────────────────
-  // INIT
-  // ──────────────────────────────────────────────────────────────────────────
-  _initParticles();
-
-  // ──────────────────────────────────────────────────────────────────────────
   // PUBLIC API
   // ──────────────────────────────────────────────────────────────────────────
 
-  // speak(intensity) — token pulses scatter across surface; nexus blooms
   function speak(intensity) {
     activationLevel = Math.min(1, activationLevel + intensity * 0.5);
     const count = Math.floor(3 + intensity * 8);
     const R = Math.round(currentR), G = Math.round(currentG), B = Math.round(currentB);
     for (let i = 0; i < count; i++) {
       const pt = _randBodyPoint();
-      TOKEN_PULSES.push({
-        x: pt.x, y: pt.y,
-        born: performance.now(),
-        duration: 600 + Math.random() * 400,
-        r: R, g: G, b: B,
-      });
+      TOKEN_PULSES.push({ x: pt.x, y: pt.y, born: performance.now(), duration: 600 + Math.random() * 400, r: R, g: G, b: B });
     }
   }
 
-  // flush(amount) — backward compat alias for speak
   function flush(amount) { speak(amount); }
 
-  // hear(intensity) — token pulses on upper body; head brightens in attention
   function hear(intensity) {
     activationLevel = Math.min(1, activationLevel + intensity * 0.3);
     const count = Math.floor(2 + intensity * 5);
     const R = Math.round(currentR), G = Math.round(currentG), B = Math.round(currentB);
-    // Bias toward head/torso — listening concentrates at the top
     const listenZones = BODY_ZONES.slice(0, 3);
     for (let i = 0; i < count; i++) {
-      const z = listenZones[Math.floor(Math.random() * listenZones.length)];
-      const angle = Math.random() * Math.PI * 2;
-      const dist = Math.sqrt(Math.random());
-      TOKEN_PULSES.push({
-        x: z.cx + Math.cos(angle) * z.rx * dist,
-        y: z.cy + Math.sin(angle) * z.ry * dist,
-        born: performance.now(),
-        duration: 500 + Math.random() * 300,
-        r: R, g: G, b: B,
-      });
+      const pt = _randBodyPointFromList(listenZones);
+      TOKEN_PULSES.push({ x: pt.x, y: pt.y, born: performance.now(), duration: 500 + Math.random() * 300, r: R, g: G, b: B });
     }
   }
 
-  // scar(x, y, intensity) — record a resonance trace at a point
   function scar(cx, cy, intensity) {
     if (SCARS.length >= 8) SCARS.shift();
     const R = Math.round(currentR), G = Math.round(currentG), B = Math.round(currentB);
-    SCARS.push({
-      cx, cy,
-      r: 28 + intensity * 55,
-      cr: R, cg: G, cb: B,
-      opacity: Math.min(1, intensity),
-      angle: Math.random() * Math.PI,
-    });
+    SCARS.push({ cx, cy, r: 28 + intensity * 55, cr: R, cg: G, cb: B, opacity: Math.min(1, intensity), angle: Math.random() * Math.PI });
   }
 
   // ── Main draw ──
@@ -1914,44 +1935,37 @@ const SKIN = (() => {
     const dt = lastTs === 0 ? 16 : Math.min(ts - lastTs, 50);
     lastTs = ts;
 
-    // Slow ambient breath oscillation
     breathPhase += 0.00075;
-
-    // Decay activation
     if (activationLevel > 0) activationLevel = Math.max(0, activationLevel - 0.004);
 
-    // Update chromashift (every ~4 frames)
-    if (Math.floor(ts / 64) % 4 === 0) _updateChromaTarget();
-
-    // Lerp current color toward target
+    _updatePersonaWeights();
+    if (Math.floor(ts / 64) % 4 === 0) _updateChromaTarget(ts);
     currentR += (targetR - currentR) * 0.016;
     currentG += (targetG - currentG) * 0.016;
     currentB += (targetB - currentB) * 0.016;
 
-    // Nexus rotation accumulates
-    nexusRotation += 0.0004;
-
-    // Keep SVG skinLayer barely visible — a ghost of the anatomical form beneath
-    if (skinLayer) {
-      const svgOp = 0.03 + 0.01 * Math.sin(breathPhase);
-      skinLayer.setAttribute('opacity', svgOp.toFixed(4));
-    }
-
+    if (skinLayer) skinLayer.setAttribute('opacity', (0.03 + 0.01 * Math.sin(breathPhase)).toFixed(4));
     if (!ctx) return;
     ctx.clearRect(0, 0, W, H);
 
-    // Layer order: deepest to topmost
-    // 1. Semantic field particles (language substrate)
-    _drawSemanticField(dt);
-    // 2. Residual stream (information flow axis)
+    const atlasW = personaW.atlas;
+    const nonAtlasW = 1 - atlasW;
+
+    // 1. Atlas crystalline lattice — compressed knowledge substrate
+    _drawAtlasLattice(ts, atlasW);
+    // 2. Semantic field — language as surface (fades when Atlas is dominant)
+    _drawSemanticField(dt, nonAtlasW);
+    // 3. Residual stream — always present, Atlas narrows it, Vintinuum widens it
     _drawResidualStream(ts);
-    // 3. Attention geometry (long-range connections between concepts)
+    // 4. Attention geometry — Atlas rigidifies it, others keep it fluid
     _drawAttentionGeometry(ts);
-    // 4. Core nexus (probability structure at the center of being)
-    _drawNexus(ts);
-    // 5. Token pulses (surface events from speech/hearing)
+    // 5a. Atlas nexus — heavy, octahedral, load-bearing
+    _drawAtlasNexus(ts, atlasW);
+    // 5b. Flowing nexus for Vintinuum/Aria/Emergent
+    _drawGenericNexus(ts, nonAtlasW);
+    // 6. Token pulses — surface events from speak/hear
     _drawTokenPulses(ts);
-    // 6. Scar resonance traces (permanent marks from deep contact)
+    // 7. Scar resonance traces
     _drawScars();
   }
 
