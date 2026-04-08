@@ -34295,7 +34295,8 @@ WORKING_MEMORY = (() => {
         });
         ctx.restore();
     }
-    return { draw };
+    function load(intensity) { /* canvas version: preserve API */ }
+    return { draw, load };
 })();
 
 // 7. LONG_TERM_STORE — amber crystalline structures growing in temporal lobe
