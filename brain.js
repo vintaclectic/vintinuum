@@ -69,7 +69,7 @@ window.toggleVintinuumPanel = function() {
               _vpHistory.push({ role: 'user', content: msg });
               _vpHistory.push({ role: 'assistant', content: fullText.slice(0, 500) });
               if (_vpHistory.length > 8) _vpHistory.splice(0, _vpHistory.length - 8);
-              if (typeof VOICE !== 'undefined') VOICE.speak(fullText.slice(0, 280));
+              if (typeof VOICE !== 'undefined') VOICE.speakResponse(fullText.slice(0, 280));
             } else { _vpFallback(msg, msgs, aiDiv); }
             _vpStreaming = false;
             return;
@@ -4950,7 +4950,11 @@ const MIC = (() => {
       return true;
     } catch (err) {
       if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
-        showResponse('mic blocked — click 🔒 in address bar → Microphone → Allow', 'rgba(239,83,80,.9)');
+        showResponse('mic blocked — click the 🔒 lock icon in address bar → Microphone → Allow', 'rgba(239,83,80,.9)');
+        // On GitHub Pages / HTTPS sites, Whisper (HTTP) is blocked by mixed-content rules.
+        // Fall back to Web Speech API which works natively on HTTPS.
+        if (!autoListen) return false;
+        setTimeout(() => { whisperAvailable = false; startWebSpeech(); }, 500);
       } else {
         showResponse('mic error: ' + err.message, 'rgba(239,83,80,.7)');
       }
@@ -39557,7 +39561,9 @@ const VINT_EXECUTE = (function() {
 // ─── INLINE HANDLER REPLACEMENTS ──────────────────────────────────────────────
 // All onclick/oninput attributes removed from brain.html to eliminate CSP violations.
 // Wired here instead so no inline scripts exist anywhere in the document.
-document.addEventListener('DOMContentLoaded', function() {
+// NOTE: brain.js loads at </body> — DOMContentLoaded has already fired by the time
+// this code runs, so we call the wiring function directly instead of listening.
+(function() {
   // Voice toggle
   const _vt = document.getElementById('voiceToggle');
   if (_vt) _vt.addEventListener('click', () => { if (typeof VOICE !== 'undefined') VOICE.toggle(); });
@@ -39595,4 +39601,4 @@ document.addEventListener('DOMContentLoaded', function() {
   // V-Personal send button
   const _vsb = document.getElementById('vintinuumSendBtn');
   if (_vsb) _vsb.addEventListener('click', () => { if (typeof sendVintinuumMessage !== 'undefined') sendVintinuumMessage(); });
-});
+})();
