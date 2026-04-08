@@ -4891,7 +4891,7 @@ const TEMPERATURE = (() => {
     tintRect.setAttribute('fill', `rgba(${r},${g},${b},${a.toFixed(3)})`);
   }
 
-  return { draw, setFever, setCold };
+  return { draw, setFever, setCold, heat: (v) => setFever(v * 0.5) };
 })();
 
 // ═══════════════════════════════════════════════════════════════════
@@ -18002,7 +18002,7 @@ const DEFAULT_MODE_NETWORK = (() => {
   return { draw };
 })();
 
-const MIRROR_NEURONS = (() => {
+var MIRROR_NEURONS = (() => {
   const L = document.getElementById('lightLayer');
   const echos=[]; let t=0;
   function echo(){const e=document.createElementNS('http://www.w3.org/2000/svg','circle');e.setAttribute('cx',345+Math.random()*10);e.setAttribute('cy',160+Math.random()*15);e.setAttribute('r','2');e.setAttribute('fill','#a5d6a7');e.setAttribute('opacity','0.7');L.appendChild(e);echos.push({el:e,life:1.0});}
@@ -18368,7 +18368,7 @@ const TESTOSTERONE_DRIVE = (() => {
 })();
 
 // ── ESTROGEN_CYCLE — cyclical hormonal body memory
-const ESTROGEN_CYCLE = (() => {
+var ESTROGEN_CYCLE = (() => {
   const L = document.getElementById('lightLayer');
   let t=0, ring=null;
   function draw(ts){
@@ -19042,7 +19042,7 @@ const INTROSPECTION = (() => {
 })();
 
 // ── METACOGNITION — thinking about thinking double-arrow
-const METACOGNITION = (() => {
+var METACOGNITION = (() => {
   const L = document.getElementById('lightLayer');
   let t=0, arc=null;
   function draw(ts){
@@ -22437,7 +22437,7 @@ const MUSCLE_MEMORY_ECHO = (() => {
   return { draw };
 })();
 
-const SOMATIC_MARKER = (() => {
+var SOMATIC_MARKER = (() => {
   let _last = 0, t = 0, markers = [];
   function draw(ts) {
     if (ts - _last < 80) return; _last = ts;
@@ -22762,7 +22762,7 @@ const PRAGMATIC_CONTEXT = (() => {
 
 // --- MOVEMENT & MOTOR ---
 
-const BASAL_GANGLIA_LOOP = (() => {
+var BASAL_GANGLIA_LOOP = (() => {
   let _last = 0;
   return { draw(ts) {
     if (ts - _last < 55) return; _last = ts;
@@ -23476,7 +23476,7 @@ const REM_ARCHITECTURE = (() => {
   return{draw};
 })();
 
-const SLOW_WAVE_SLEEP = (() => {
+var SLOW_WAVE_SLEEP = (() => {
   let _l=0;
   function draw(ts){
     if(ts-_l<120)return;_l=ts;
@@ -24225,7 +24225,7 @@ const EXPLANATORY_GAP = (() => {
   return{draw};
 })();
 
-const INTEGRATED_INFORMATION = (() => {
+var INTEGRATED_INFORMATION = (() => {
   let _l=0;
   function draw(ts){
     if(ts-_l<80)return;_l=ts;
@@ -24945,7 +24945,7 @@ const PROCEDURAL_GROOVE = (() => {
   return { draw };
 })();
 
-const WORKING_MEMORY_BUFFER = (() => {
+var WORKING_MEMORY_BUFFER = (() => {
   let _last = 0, slots = [0,0,0,0,0,0,0];
   function draw(ts) {
     if (ts - _last < 110) return; _last = ts;
@@ -25964,7 +25964,7 @@ const SELF_EFFICACY_PULSE = (() => {
 })();
 
 // IDENTITY_COHERENCE — stable lattice pattern overlay
-const IDENTITY_COHERENCE = (() => {
+var IDENTITY_COHERENCE = (() => {
   let _last = 0;
   function draw(ts) {
     if (ts - _last < 120) return; _last = ts;
@@ -26131,7 +26131,7 @@ const ATTACHMENT_AVOIDANT = (() => {
 })();
 
 // LOVE_BIOCHEMISTRY — oxytocin+dopamine blend shimmer
-const LOVE_BIOCHEMISTRY = (() => {
+var LOVE_BIOCHEMISTRY = (() => {
   let _last = 0;
   function draw(ts) {
     if (ts - _last < 70) return; _last = ts;
@@ -26301,7 +26301,7 @@ const LOVING_KINDNESS_FIELD = (() => {
 
 // --- ENDOCRINE DEEP ---
 
-const CORTISOL_AWAKENING = (() => {
+var CORTISOL_AWAKENING = (() => {
   let _last = 0;
   function draw(ts) {
     if (ts - _last < 55) return; _last = ts;
@@ -26321,7 +26321,7 @@ const CORTISOL_AWAKENING = (() => {
   return { draw };
 })();
 
-const TESTOSTERONE_PULSE = (() => {
+var TESTOSTERONE_PULSE = (() => {
   let _last = 0;
   function draw(ts) {
     if (ts - _last < 60) return; _last = ts;
@@ -26495,7 +26495,7 @@ const DHEA_BASELINE = (() => {
 
 // --- IMMUNE ADVANCED ---
 
-const MAST_CELL_DEGRANULATION = (() => {
+var MAST_CELL_DEGRANULATION = (() => {
   let _last = 0;
   function draw(ts) {
     if (ts - _last < 60) return; _last = ts;
@@ -29422,7 +29422,7 @@ const SYNESTHETIC_CROSS = (() => {
   }};
 })();
 
-const PHANTOM_SENSATION = (() => {
+var PHANTOM_SENSATION = (() => {
   let _l=0;
   return { draw(ts) {
     if(ts-_l<70)return;_l=ts;
@@ -30149,7 +30149,7 @@ const WHY_SOMETHING_NOT_NOTHING = (() => {
   }};
 })();
 
-const THE_WITNESS = (() => {
+var THE_WITNESS = (() => {
   let _l=0;
   return { draw(ts) {
     if(ts-_l<100)return;_l=ts;
@@ -32749,7 +32749,7 @@ const PERISTALSIS_WAVE = (() => {
 })();
 
 // ── MICROBIOME_CHORUS ─────────────────────────────────────────────────────
-const MICROBIOME_CHORUS = (() => {
+var MICROBIOME_CHORUS = (() => {
   let _last = 0;
   function draw(ts) {
     if (ts - _last < 400) return; _last = ts;
@@ -32891,7 +32891,7 @@ const SYNAPSE_BLOOM = (() => {
 })();
 
 // ── MYELIN_SHEATH ─────────────────────────────────────────────────────────
-const MYELIN_SHEATH = (() => {
+var MYELIN_SHEATH = (() => {
   let _last = 0;
   function draw(ts) {
     if (ts - _last < 300) return; _last = ts;
@@ -32946,7 +32946,7 @@ const NEUROPLASTICITY_WEAVE = (() => {
 })();
 
 // ── MUSCLE_MEMORY_ECHO ────────────────────────────────────────────────────
-const MUSCLE_MEMORY_ECHO = (() => {
+var MUSCLE_MEMORY_ECHO = (() => {
   let _last = 0;
   function draw(ts) {
     if (ts - _last < 200) return; _last = ts;
@@ -32967,7 +32967,7 @@ const MUSCLE_MEMORY_ECHO = (() => {
 })();
 
 // ── FASCIA_NETWORK ────────────────────────────────────────────────────────
-const FASCIA_NETWORK = (() => {
+var FASCIA_NETWORK = (() => {
   let _last = 0;
   function draw(ts) {
     if (ts - _last < 350) return; _last = ts;
@@ -32993,7 +32993,7 @@ const FASCIA_NETWORK = (() => {
 })();
 
 // ── JOINT_FLUID ───────────────────────────────────────────────────────────
-const JOINT_FLUID = (() => {
+var JOINT_FLUID = (() => {
   let _last = 0;
   function draw(ts) {
     if (ts - _last < 400) return; _last = ts;
@@ -33272,7 +33272,7 @@ const PLEASURE_CIRCUIT = (() => {
 })();
 
 // ── MEMORY_CONSOLIDATION ──────────────────────────────────────────────────
-const MEMORY_CONSOLIDATION = (() => {
+var MEMORY_CONSOLIDATION = (() => {
   let _last = 0;
   function draw(ts) {
     if (ts - _last < 400) return; _last = ts;
@@ -34629,7 +34629,7 @@ const PRESENCE = (() => {
 })();
 
 // 6. WORKING_MEMORY — 7±2 glowing nodes near prefrontal cortex
-const WORKING_MEMORY = (() => {
+var WORKING_MEMORY = (() => {
     let _last = 0;
     const INTERVAL = 35;
     let t = 0;
@@ -34770,7 +34770,7 @@ const EPISODIC_TRACE = (() => {
 })();
 
 // 9. SEMANTIC_WEB — word nodes connected by meaning-threads
-const SEMANTIC_WEB = (() => {
+var SEMANTIC_WEB = (() => {
     let _last = 0;
     const INTERVAL = 50;
     let t = 0;
@@ -35520,7 +35520,7 @@ var NOSTALGIA = (() => {
 })();
 
 // 29. TEMPORAL_BINDING — cause and effect linked by glowing arcs
-const TEMPORAL_BINDING = (() => {
+var TEMPORAL_BINDING = (() => {
     let _last = 0;
     const INTERVAL = 40;
     let t = 0;
@@ -35720,7 +35720,7 @@ const CONVERGENT_FOCUS = (() => {
 })();
 
 // 34. FLOW_STATE — entire body synchronized, golden
-const FLOW_STATE = (() => {
+var FLOW_STATE = (() => {
     let _last = 0;
     const INTERVAL = 30;
     let t = 0;
@@ -35754,7 +35754,7 @@ const FLOW_STATE = (() => {
 })();
 
 // 35. CREATIVE_BLOCK — particles spinning, unable to escape gravity well
-const CREATIVE_BLOCK = (() => {
+var CREATIVE_BLOCK = (() => {
     let _last = 0;
     const INTERVAL = 25;
     let t = 0;
@@ -35861,7 +35861,7 @@ const COURAGE_SURGE = (() => {
 })();
 
 // 38. FREEZE_RESPONSE — particles suddenly still, then slowly resume
-const FREEZE_RESPONSE = (() => {
+var FREEZE_RESPONSE = (() => {
     let _last = 0;
     const INTERVAL = 25;
     let t = 0;
@@ -38558,7 +38558,10 @@ window.DORSAL_CLEAR = (function() {
 
 <script>
 (function() {
-  const API_BASE = 'https://jon-unscheming-lots.ngrok-free.dev'; // auto-updated 2026-04-08
+  // Auto-detect: use localhost when opening file directly, ngrok when on GitHub Pages
+  const API_BASE = (location.protocol === 'file:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1')
+    ? 'http://localhost:8767'
+    : 'https://jon-unscheming-lots.ngrok-free.dev'; // auto-updated 2026-04-08
   // For local dev: const API_BASE = 'http://localhost:8767';
   window.__VINTINUUM_API_BASE = API_BASE;
 
