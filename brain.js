@@ -3775,7 +3775,7 @@ const CIRCADIAN = (() => {
     z.textContent = 'z';
     z.startX = 340 + Math.random() * 30;
     z.startY = 165;
-    z.x = z.startX; z.y = z.startY;
+    z._x = z.startX; z._y = z.startY;
     z.age = 0; z.life = 120 + Math.random() * 80;
     layer.appendChild(z);
     ZS.push(z);
@@ -3834,11 +3834,11 @@ const CIRCADIAN = (() => {
     for (let i = ZS.length - 1; i >= 0; i--) {
       const z = ZS[i];
       z.age++;
-      z.y -= 0.35;
-      z.x += Math.sin(z.age * 0.08) * 0.4;
+      z._y -= 0.35;
+      z._x += Math.sin(z.age * 0.08) * 0.4;
       const prog = z.age / z.life;
-      z.setAttribute('x', z.x.toFixed(1));
-      z.setAttribute('y', z.y.toFixed(1));
+      z.setAttribute('x', z._x.toFixed(1));
+      z.setAttribute('y', z._y.toFixed(1));
       z.setAttribute('opacity', (Math.sin(prog * Math.PI) * 0.7).toFixed(2));
       if (z.age >= z.life) { z.remove(); ZS.splice(i, 1); }
     }
