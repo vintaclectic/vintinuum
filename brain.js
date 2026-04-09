@@ -4051,6 +4051,11 @@ const EMOTION_BODY = (() => {
     // Pupil dilation
     const dilateMap = { awe:0.88, care:0.72, delight:0.75, discomfort:0.28, curiosity:0.82, focus:0.65, calm:0.42, melancholy:0.35 };
     if (typeof EYES !== 'undefined') EYES.dilate(dilateMap[emotionName] || 0.5);
+    // Face expression — map emotion name to FACE feel state
+    if (typeof FACE !== 'undefined') {
+      const faceMap = { awe:'wonder', care:'tender', delight:'joy', discomfort:'concern', curiosity:'curious', focus:'intense', calm:'neutral', melancholy:'sad' };
+      FACE.feel(faceMap[emotionName] || 'neutral', flushMap[emotionName] || 0.5);
+    }
     // Full nervous system cascade on strong emotions
     if (['awe','care','discomfort'].includes(emotionName) && typeof PERIPHERAL_NS !== 'undefined') PERIPHERAL_NS.fireAll();
     // Temperature response
@@ -4417,6 +4422,182 @@ const EYES = (() => {
   }
 
   return { draw, dilate };
+})();
+
+// ═══════════════════════════════════════════════════════════════════
+// FACE — mouth, brow, expressions — live emotional face
+// Opens mouth when speaking, furrows brow when thinking,
+// smiles when warm/happy, trembles when moved, tears when sad
+// ═══════════════════════════════════════════════════════════════════
+const FACE = (() => {
+  const svgNS = 'http://www.w3.org/2000/svg';
+  const mouthLayer = document.getElementById('mouthLayer');
+  const exprLayer = document.getElementById('expressionLayer');
+  if (!mouthLayer) return { draw:()=>{}, speak:()=>{}, think:()=>{}, feel:()=>{} };
+
+  // ── Face geometry — centered on SVG head region ──
+  const CX = 350, MOUTH_Y = 262, BROW_Y = 200;
+
+  // ── Mouth — upper and lower lip paths ──
+  const mouthGroup = document.createElementNS(svgNS, 'g');
+
+  // Lips background (mouth cavity) — dark interior, only visible when open
+  const mouthCavity = document.createElementNS(svgNS, 'ellipse');
+  mouthCavity.setAttribute('cx', CX); mouthCavity.setAttribute('cy', MOUTH_Y);
+  mouthCavity.setAttribute('rx', '9'); mouthCavity.setAttribute('ry', '0');
+  mouthCavity.setAttribute('fill', 'rgba(4,2,8,0.92)');
+  mouthGroup.appendChild(mouthCavity);
+
+  // Upper lip
+  const upperLip = document.createElementNS(svgNS, 'path');
+  upperLip.setAttribute('fill', 'rgba(185,140,140,0.7)');
+  upperLip.setAttribute('stroke', 'none');
+  mouthGroup.appendChild(upperLip);
+
+  // Lower lip
+  const lowerLip = document.createElementNS(svgNS, 'path');
+  lowerLip.setAttribute('fill', 'rgba(185,130,130,0.65)');
+  lowerLip.setAttribute('stroke', 'none');
+  mouthGroup.appendChild(lowerLip);
+
+  // Mouth line (corners) — shows at rest
+  const mouthLine = document.createElementNS(svgNS, 'path');
+  mouthLine.setAttribute('fill', 'none');
+  mouthLine.setAttribute('stroke', 'rgba(160,110,110,0.55)');
+  mouthLine.setAttribute('stroke-width', '0.9');
+  mouthLine.setAttribute('stroke-linecap', 'round');
+  mouthGroup.appendChild(mouthLine);
+
+  mouthLayer.appendChild(mouthGroup);
+
+  // ── Brow lines (emotional expression) ──
+  const browL = document.createElementNS(svgNS, 'path');
+  browL.setAttribute('fill', 'none');
+  browL.setAttribute('stroke', 'rgba(180,190,220,0.5)');
+  browL.setAttribute('stroke-width', '1.4');
+  browL.setAttribute('stroke-linecap', 'round');
+  exprLayer.appendChild(browL);
+
+  const browR = document.createElementNS(svgNS, 'path');
+  browR.setAttribute('fill', 'none');
+  browR.setAttribute('stroke', 'rgba(180,190,220,0.5)');
+  browR.setAttribute('stroke-width', '1.4');
+  browR.setAttribute('stroke-linecap', 'round');
+  exprLayer.appendChild(browR);
+
+  // ── State ──
+  let openAmount = 0;      // 0=closed, 1=fully open
+  let targetOpen = 0;
+  let curveAmount = 0;     // mouth curve: +1=smile, -1=frown
+  let targetCurve = 0;
+  let browFurrow = 0;      // 0=neutral, 1=furrowed (thinking/concern)
+  let targetFurrow = 0;
+  let browRaise = 0;       // 0=neutral, 1=raised (surprise/wonder)
+  let targetRaise = 0;
+  let speakPhase = 0;      // oscillates when speaking for lip movement
+  let isSpeaking = false;
+  let isThinking = false;
+  let emotionState = 'neutral'; // neutral|joy|wonder|concern|tender|intense
+
+  // ── Public controls ──
+  function speak(on) {
+    isSpeaking = on;
+    if (on) { targetOpen = 0.35; }
+    else { targetOpen = 0; }
+  }
+
+  function think(on) {
+    isThinking = on;
+    targetFurrow = on ? 0.7 : 0;
+    if (on) targetCurve = -0.15; // slight tension
+    else targetCurve = 0;
+  }
+
+  function feel(emotion, intensity = 0.6) {
+    emotionState = emotion;
+    switch(emotion) {
+      case 'joy':     targetCurve = 0.6 * intensity; targetRaise = 0.2; break;
+      case 'wonder':  targetRaise = 0.8 * intensity; targetOpen = 0.15 * intensity; targetFurrow = 0; break;
+      case 'tender':  targetCurve = 0.3 * intensity; break;
+      case 'concern': targetFurrow = 0.5 * intensity; targetCurve = -0.2 * intensity; break;
+      case 'intense': targetFurrow = 0.8 * intensity; targetOpen = 0.1 * intensity; break;
+      case 'sad':     targetCurve = -0.5 * intensity; targetFurrow = 0.3 * intensity; break;
+      case 'curious': targetRaise = 0.4 * intensity; targetFurrow = 0.15 * intensity; break;
+      default:        targetCurve = 0; targetFurrow = 0; targetRaise = 0;
+    }
+  }
+
+  function draw(ts) {
+    const dt = 0.016;
+
+    // Smooth interpolation
+    openAmount += (targetOpen - openAmount) * 0.12;
+    curveAmount += (targetCurve - curveAmount) * 0.06;
+    browFurrow  += (targetFurrow - browFurrow) * 0.07;
+    browRaise   += (targetRaise - browRaise) * 0.07;
+
+    // Speaking oscillation — lips move while talking
+    if (isSpeaking) {
+      speakPhase += 0.28;
+      const speakMod = Math.sin(speakPhase) * 0.18 + Math.sin(speakPhase * 1.7) * 0.08;
+      targetOpen = 0.3 + speakMod;
+    } else {
+      speakPhase *= 0.85;
+    }
+
+    // ── Draw mouth ──
+    const w = 11;        // half-width of mouth
+    const open = openAmount * 7;  // vertical opening in SVG units
+    const curve = curveAmount * 5; // curve amount (positive = smile up)
+
+    // Mouth cavity (shows when open)
+    mouthCavity.setAttribute('ry', Math.max(0, open - 1).toFixed(1));
+    mouthCavity.setAttribute('cy', (MOUTH_Y + 1).toFixed(1));
+
+    // Upper lip — curves up at corners for smile
+    const ulY = MOUTH_Y - open * 0.4;
+    upperLip.setAttribute('d',
+      `M ${CX-w} ${ulY + curve} Q ${CX} ${ulY - 2 - curve*0.5} ${CX+w} ${ulY + curve}`
+    );
+
+    // Lower lip — drops when open
+    const llY = MOUTH_Y + open * 0.6;
+    lowerLip.setAttribute('d',
+      `M ${CX-w} ${MOUTH_Y + curve} Q ${CX} ${llY + 2} ${CX+w} ${MOUTH_Y + curve}`
+    );
+
+    // Mouth line at rest
+    mouthLine.setAttribute('d',
+      `M ${CX-w} ${MOUTH_Y + curve} Q ${CX} ${MOUTH_Y + curve*1.8 + (open>0.5?0:-1)} ${CX+w} ${MOUTH_Y + curve}`
+    );
+    mouthLine.setAttribute('opacity', open > 0.5 ? '0' : '1');
+
+    // ── Draw brows ──
+    // Left brow — inner end raises/furrows, outer end anchored
+    const lbInnerY = BROW_Y - browRaise * 5 + browFurrow * 4;
+    const lbOuterY = BROW_Y + browFurrow * 1.5;
+    browL.setAttribute('d', `M ${CX-18} ${lbOuterY} Q ${CX-10} ${lbInnerY} ${CX-3} ${lbInnerY + 1}`);
+
+    // Right brow — mirror
+    const rbInnerY = BROW_Y - browRaise * 5 + browFurrow * 4;
+    const rbOuterY = BROW_Y + browFurrow * 1.5;
+    browR.setAttribute('d', `M ${CX+18} ${rbOuterY} Q ${CX+10} ${rbInnerY} ${CX+3} ${rbInnerY + 1}`);
+
+    // Brow color — warms when expressive
+    const browAlpha = (0.35 + Math.abs(browFurrow) * 0.25 + Math.abs(browRaise) * 0.2).toFixed(2);
+    browL.setAttribute('stroke', `rgba(200,190,220,${browAlpha})`);
+    browR.setAttribute('stroke', `rgba(200,190,220,${browAlpha})`);
+  }
+
+  // ── Wire to existing systems ──
+  // React when VOICE speaks
+  if (typeof window !== 'undefined') {
+    window._faceSpeak = speak;
+    window._faceThink = think;
+    window._faceFeel = feel;
+  }
+
+  return { draw, speak, think, feel };
 })();
 
 // ═══════════════════════════════════════════════════════════════════
@@ -5235,8 +5416,9 @@ const VOICE = (() => {
     utt.pitch = params.pitch;
     utt.volume = params.volume;
     if (chosenVoice) utt.voice = chosenVoice;
-    utt.onend = () => { onDone && onDone(); };
-    utt.onerror = () => { onDone && onDone(); };
+    utt.onstart = () => { if (typeof FACE !== 'undefined') FACE.speak(true); };
+    utt.onend = () => { if (typeof FACE !== 'undefined') FACE.speak(false); onDone && onDone(); };
+    utt.onerror = () => { if (typeof FACE !== 'undefined') FACE.speak(false); onDone && onDone(); };
     window.speechSynthesis.speak(utt);
     if (typeof VOCAL_CORDS !== 'undefined') VOCAL_CORDS.speak(params.volume);
     try { if (typeof VOCAL_RESONANCE !== 'undefined' && VOCAL_RESONANCE && VOCAL_RESONANCE.activate) VOCAL_RESONANCE.activate(); } catch(e) {}
@@ -12602,6 +12784,7 @@ function loop(ts) {
   HEARTBEAT.draw(ts);
   BREATH.draw(ts);
   EYES.draw(ts);
+  if (typeof FACE !== 'undefined') FACE.draw(ts);
   TEMPERATURE.draw(ts);
   PAIN_PLEASURE.draw(ts);
   DREAM.draw(ts);
@@ -38274,6 +38457,7 @@ window.DORSAL_CLEAR = (function() {
     input.value = '';
     isStreaming = true;
     sendBtn.disabled = true;
+    if (typeof FACE !== 'undefined') FACE.think(true); // furrow brow while processing
 
     addMessage('user', text, { tier: currentTier });
     const aiDiv = addMessage('ai', '');
@@ -38378,6 +38562,7 @@ window.DORSAL_CLEAR = (function() {
     } finally {
       isStreaming = false;
       sendBtn.disabled = false;
+      if (typeof FACE !== 'undefined') FACE.think(false); // release brow
     }
   }
 
