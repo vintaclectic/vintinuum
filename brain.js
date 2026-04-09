@@ -40501,7 +40501,7 @@ function renderNeurochemSection() {
 
   const section = document.createElement('div');
   section.id = 'neurochemSection';
-  section.style.cssText = 'padding:8px 0;border-top:1px solid rgba(255,255,255,0.06);margin-top:6px;';
+  section.style.cssText = 'padding:8px 0;border-top:1px solid rgba(255,255,255,0.06);margin-top:6px;flex-shrink:0;';
   section.innerHTML = [
     '<div style="font-size:9px;letter-spacing:2px;color:rgba(255,255,255,0.3);padding:0 12px 6px;text-transform:uppercase;font-family:Space Mono,monospace;">Neurochemistry</div>',
     [
@@ -41730,27 +41730,25 @@ const VINT_EXECUTE = (function() {
   // ── 5. Chakra click handled inside lightLayer click above ───────
   // (already wired in section 2 above — no duplicate needed)
 
-  // ── 6. EMOTIONAL STATE live widget — top-left ──────────────────
+  // ── 6. EMOTIONAL STATE live widget — INSIDE left sidebar (not floating) ──
   var _emotionWidget = document.createElement('div');
   _emotionWidget.id = '_emotionWidget';
-  var _isMobileEmotion = window.innerWidth <= 600;
   _emotionWidget.style.cssText = [
-    'position:fixed',
-    'top:' + (_isMobileEmotion ? '48' : '14') + 'px',
-    'left:' + (_isMobileEmotion ? '8' : '14') + 'px',
-    'z-index:4800',
-    'width:' + (_isMobileEmotion ? '78' : '88') + 'px',
+    'width:100%',
     'height:auto',
     'background:rgba(8,12,20,0.18)',
     'border:1px solid rgba(255,255,255,0.06)',
     'border-radius:10px',
-    'padding:' + (_isMobileEmotion ? '5px 7px' : '7px 9px'),
+    'padding:7px 9px',
     'font-family:Space Mono,monospace',
-    'font-size:' + (_isMobileEmotion ? '9' : '10') + 'px',
+    'font-size:10px',
     'color:#e8eaf6',
     'cursor:pointer',
     'pointer-events:auto',
     'transition:all 0.3s ease',
+    'margin-bottom:10px',
+    'flex-shrink:0',
+    'box-sizing:border-box',
   ].join(';');
 
   var _emotionNames = ['curious', 'calm', 'alert', 'warm', 'focused', 'tender', 'restless', 'content', 'charged', 'open'];
@@ -41800,7 +41798,7 @@ const VINT_EXECUTE = (function() {
         if (col2) col2.addEventListener('click', function(e2) {
           e2.stopPropagation();
           _emotionExpanded = false;
-          _emotionWidget.style.width = '88px';
+          _emotionWidget.style.width = '100%';
           _updateEmotionWidget();
         });
       }, 20);
@@ -41810,11 +41808,22 @@ const VINT_EXECUTE = (function() {
   _emotionWidget.addEventListener('click', function(e) {
     e.stopPropagation();
     _emotionExpanded = !_emotionExpanded;
-    _emotionWidget.style.width = _emotionExpanded ? '160px' : '88px';
+    _emotionWidget.style.width = '100%'; // always fill sidebar width
     _updateEmotionWidget();
   });
 
-  document.body.appendChild(_emotionWidget);
+  // Insert into left sidebar instead of floating over everything
+  var _leftSidebar = document.getElementById('leftSidebar');
+  if (_leftSidebar) {
+    var _sidebarTitle = _leftSidebar.querySelector('.sidebar-title');
+    if (_sidebarTitle && _sidebarTitle.nextSibling) {
+      _leftSidebar.insertBefore(_emotionWidget, _sidebarTitle.nextSibling);
+    } else {
+      _leftSidebar.appendChild(_emotionWidget);
+    }
+  } else {
+    document.body.appendChild(_emotionWidget); // fallback
+  }
 
   // Update emotion widget periodically
   _updateEmotionWidget();

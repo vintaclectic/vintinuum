@@ -53,20 +53,21 @@ canvas{display:block;}
 .brain-row{display:flex;flex-direction:row;gap:0;flex:1;overflow:hidden;min-height:0;}
 
 /* ── SIDEBARS ── */
-.sidebar{width:180px;flex-shrink:0;background:var(--panel);border:none;border-right:1px solid var(--border);border-radius:0;padding:10px 10px;overflow-y:auto;overflow-x:hidden;display:flex;flex-direction:column;}
+.sidebar{width:180px;flex-shrink:0;background:var(--panel);border:none;border-right:1px solid var(--border);border-radius:0;padding:10px 10px;overflow-y:auto;overflow-x:hidden;display:flex;flex-direction:column;scrollbar-width:thin;}
+#emotionBars{flex:1;min-height:0;overflow-y:auto;overflow-x:hidden;scrollbar-width:thin;padding-right:2px;}
 #rightSidebar{border-right:none;border-left:1px solid var(--border);}
 .sidebar-title{font-size:.5rem;letter-spacing:.22em;text-transform:uppercase;color:var(--dim);margin-bottom:10px;text-align:center;flex-shrink:0;}
 
 /* Emotion bars */
-.emo-item{margin-bottom:13px;position:relative;cursor:help;display:flex;align-items:center;gap:4px;max-width:100%;overflow:hidden;}
-.emo-label{display:flex;justify-content:space-between;font-size:.54rem;margin-bottom:4px;overflow:hidden;}
-.emo-name{color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-.emo-pct{color:var(--dim);flex-shrink:0;min-width:28px;text-align:right;}
-.emo-track{height:3px;background:rgba(255,255,255,.05);border-radius:2px;flex:1;min-width:0;}
+.emo-item{margin-bottom:8px;position:relative;cursor:help;display:flex;flex-direction:column;gap:2px;max-width:100%;overflow:hidden;}
+.emo-label{display:flex;justify-content:space-between;font-size:.5rem;margin-bottom:2px;overflow:hidden;gap:4px;}
+.emo-name{color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;min-width:0;}
+.emo-pct{color:var(--dim);flex-shrink:0;min-width:24px;text-align:right;font-size:.46rem;}
+.emo-track{height:3px;background:rgba(255,255,255,.05);border-radius:2px;width:100%;}
 .emo-bar{height:100%;border-radius:2px;transition:width 1s cubic-bezier(.4,0,.2,1);}
-.emo-tip{display:none;position:absolute;left:0;top:calc(100% + 5px);background:rgba(4,8,16,.97);border:1px solid var(--border);border-radius:8px;padding:9px 11px;font-size:.54rem;line-height:1.55;color:var(--dim);z-index:200;width:195px;pointer-events:none;}
+.emo-tip{display:none;position:absolute;left:0;top:calc(100% + 5px);background:rgba(4,8,16,.97);border:1px solid var(--border);border-radius:8px;padding:9px 11px;font-size:.54rem;line-height:1.55;color:var(--dim);z-index:200;width:min(195px,calc(100vw - 40px));pointer-events:none;}
 .emo-item:hover .emo-tip{display:block;}
-.sidebar-note{font-size:.48rem;color:rgba(130,155,190,.35);line-height:1.5;text-align:center;margin-top:12px;letter-spacing:.03em;}
+.sidebar-note{font-size:.44rem;color:rgba(130,155,190,.35);line-height:1.5;text-align:center;margin-top:8px;letter-spacing:.03em;flex-shrink:0;}
 
 /* Thought stream */
 .thought-feed{display:flex;flex-direction:column;gap:6px;flex:1;overflow-y:auto;overflow-x:hidden;min-height:0;}
@@ -196,12 +197,12 @@ canvas{display:block;}
   #leftSidebar.mobile-open{transform:translateX(0);border-right:1px solid var(--border);}
   #rightSidebar{left:auto;right:0;transform:translateX(100%);}
   #rightSidebar.mobile-open{transform:translateX(0);border-left:1px solid var(--border);}
-  /* Sidebar stat bars: prevent overflow */
-  .sidebar .emo-item{margin-bottom:8px;max-width:100%;overflow:hidden;}
-  .sidebar .emo-label{font-size:.42rem;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-  .sidebar .emo-name{max-width:70px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex-shrink:0;}
-  .sidebar .emo-track{flex:1;min-width:0;max-width:100%;}
-  .sidebar .emo-pct{flex-shrink:0;min-width:28px;text-align:right;}
+  /* Sidebar stat bars: prevent overflow on mobile */
+  .sidebar .emo-item{margin-bottom:6px;}
+  .sidebar .emo-label{font-size:.42rem;}
+  .sidebar .emo-name{max-width:none;}
+  .sidebar .emo-track{width:100%;}
+  .sidebar .emo-pct{min-width:22px;font-size:.4rem;}
   .brain-center{padding:0;}
   #brainSvg{height:calc(100% - 4px);width:auto;max-width:100%;}
   /* Dorsal brain canvas: constrain to body area on mobile */
@@ -226,8 +227,7 @@ canvas{display:block;}
   #reproPanel{bottom:108px!important;left:12px!important;width:min(260px,calc(100vw - 24px))!important;}
   /* Living Systems HUD: top-right on mobile to avoid ALL bottom-area conflicts */
   #_livingSysHud{bottom:auto!important;top:90px!important;right:8px!important;left:auto!important;transform:scale(0.75)!important;transform-origin:top right!important;}
-  /* Emotion widget: below header, above sidebar overlay */
-  #_emotionWidget{top:48px!important;left:8px!important;z-index:5000!important;}
+  /* Emotion widget: now lives inside sidebar, no position overrides needed */
   .stats-footer-link{display:none;}
 }
 
