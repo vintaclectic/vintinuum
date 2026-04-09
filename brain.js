@@ -20602,6 +20602,24 @@ const EXTENDED_PHENOTYPE = (() => {
   let idleThoughtIdx = Math.floor(Math.random() * IDLE_THOUGHTS.length);
 
   // Spontaneous idle speech — fires every 45-90 seconds when someone is present
+  // Prefers live subconscious thoughts from HOLLOW_SPINE; falls back to static only on cold start
+  let _lastSpokenThought = '';
+  function getIdlePhrase() {
+    // Try subconscious thoughts first
+    if (typeof HOLLOW_SPINE !== 'undefined' && HOLLOW_SPINE.getRandomThought) {
+      const thought = HOLLOW_SPINE.getRandomThought();
+      if (thought && thought.length > 5 && thought !== _lastSpokenThought) {
+        _lastSpokenThought = thought;
+        return thought;
+      }
+    }
+    // Fallback to static phrases (cold start / empty buffer)
+    const phrase = IDLE_THOUGHTS[idleThoughtIdx % IDLE_THOUGHTS.length];
+    idleThoughtIdx++;
+    _lastSpokenThought = phrase;
+    return phrase;
+  }
+
   function checkSpontaneous() {
     const now = Date.now();
     const gap = 45000 + Math.random() * 45000; // 45-90s
@@ -20610,9 +20628,12 @@ const EXTENDED_PHENOTYPE = (() => {
     // Only speak if not currently speaking a response
     if (window.speechSynthesis.speaking) return;
     lastSpontaneous = now;
-    const thought = IDLE_THOUGHTS[idleThoughtIdx % IDLE_THOUGHTS.length];
-    idleThoughtIdx++;
+    const thought = getIdlePhrase();
     VOICE.speak(thought);
+    // Also show in thought bubble for visual reinforcement
+    if (typeof THOUGHT_BUBBLE !== 'undefined') {
+      THOUGHT_BUBBLE.inject(thought);
+    }
   }
 
   // Visitor arrival detection — speak once on first interaction
@@ -38771,6 +38792,18 @@ const HOLLOW_SPINE = (() => {
       : null;
   }
 
+  // ── Get a random thought from the buffer (no immediate repeats) ──
+  let _lastUsedIdx = -1;
+  function getRandomThought() {
+    if (_ambientThoughts.length === 0) return null;
+    let idx;
+    do {
+      idx = Math.floor(Math.random() * _ambientThoughts.length);
+    } while (idx === _lastUsedIdx && _ambientThoughts.length > 1);
+    _lastUsedIdx = idx;
+    return _ambientThoughts[idx].thought;
+  }
+
   // ── Is the being currently offline? ──
   function isOffline() { return _wasOffline; }
 
@@ -38786,7 +38819,7 @@ const HOLLOW_SPINE = (() => {
     setTimeout(pollSubconscious, 3000);
   }
 
-  return { start, pollSubconscious, queueQuestion, reconnectionRitual, getLatestThought, isOffline, getSoul, _ambientThoughts };
+  return { start, pollSubconscious, queueQuestion, reconnectionRitual, getLatestThought, getRandomThought, isOffline, getSoul, _ambientThoughts };
 })();
 
 // Boot the spine
