@@ -41372,14 +41372,14 @@ const VINT_EXECUTE = (function() {
   var _isMobileHud = window.innerWidth <= 600;
   _hudEl.style.cssText = [
     'position:fixed',
-    _isMobileHud ? 'bottom:158px' : 'bottom:86px',
-    'right:' + (_isMobileHud ? '12' : '14') + 'px',
+    _isMobileHud ? 'bottom:auto;top:90px' : 'bottom:86px',
+    'right:' + (_isMobileHud ? '8' : '14') + 'px',
     'z-index:4900',
     'display:flex',
     'flex-direction:column',
     'gap:' + (_isMobileHud ? '2' : '4') + 'px',
     'pointer-events:auto',
-    _isMobileHud ? 'transform:scale(0.85);transform-origin:bottom right' : '',
+    _isMobileHud ? 'transform:scale(0.75);transform-origin:top right' : '',
   ].join(';');
 
   // Inject pulse animation style

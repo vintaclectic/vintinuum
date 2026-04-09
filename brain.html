@@ -58,11 +58,11 @@ canvas{display:block;}
 .sidebar-title{font-size:.5rem;letter-spacing:.22em;text-transform:uppercase;color:var(--dim);margin-bottom:10px;text-align:center;flex-shrink:0;}
 
 /* Emotion bars */
-.emo-item{margin-bottom:13px;position:relative;cursor:help;}
-.emo-label{display:flex;justify-content:space-between;font-size:.54rem;margin-bottom:4px;}
-.emo-name{color:var(--text);}
-.emo-pct{color:var(--dim);}
-.emo-track{height:3px;background:rgba(255,255,255,.05);border-radius:2px;}
+.emo-item{margin-bottom:13px;position:relative;cursor:help;display:flex;align-items:center;gap:4px;max-width:100%;overflow:hidden;}
+.emo-label{display:flex;justify-content:space-between;font-size:.54rem;margin-bottom:4px;overflow:hidden;}
+.emo-name{color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.emo-pct{color:var(--dim);flex-shrink:0;min-width:28px;text-align:right;}
+.emo-track{height:3px;background:rgba(255,255,255,.05);border-radius:2px;flex:1;min-width:0;}
 .emo-bar{height:100%;border-radius:2px;transition:width 1s cubic-bezier(.4,0,.2,1);}
 .emo-tip{display:none;position:absolute;left:0;top:calc(100% + 5px);background:rgba(4,8,16,.97);border:1px solid var(--border);border-radius:8px;padding:9px 11px;font-size:.54rem;line-height:1.55;color:var(--dim);z-index:200;width:195px;pointer-events:none;}
 .emo-item:hover .emo-tip{display:block;}
@@ -197,9 +197,11 @@ canvas{display:block;}
   #rightSidebar{left:auto;right:0;transform:translateX(100%);}
   #rightSidebar.mobile-open{transform:translateX(0);border-left:1px solid var(--border);}
   /* Sidebar stat bars: prevent overflow */
-  .sidebar .emo-item{margin-bottom:8px;}
+  .sidebar .emo-item{margin-bottom:8px;max-width:100%;overflow:hidden;}
   .sidebar .emo-label{font-size:.42rem;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-  .sidebar .emo-track{max-width:100%;}
+  .sidebar .emo-name{max-width:70px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex-shrink:0;}
+  .sidebar .emo-track{flex:1;min-width:0;max-width:100%;}
+  .sidebar .emo-pct{flex-shrink:0;min-width:28px;text-align:right;}
   .brain-center{padding:0;}
   #brainSvg{height:calc(100% - 4px);width:auto;max-width:100%;}
   /* Dorsal brain canvas: constrain to body area on mobile */
@@ -210,21 +212,22 @@ canvas{display:block;}
   .deep-section{padding:18px 14px;}
   /* ── BOTTOM BUTTON ROW: stacked in two tiers above bottom bar ── */
   /* Tier 1: primary action buttons (row, directly above bottom bar) */
-  #voiceToggle{bottom:58px!important;left:12px!important;width:40px!important;height:40px!important;}
-  #reproToggle{bottom:58px!important;left:58px!important;width:40px!important;height:40px!important;}
-  #micBtn{bottom:58px!important;left:104px!important;width:40px!important;height:40px!important;}
-  #vint-chat-btn{bottom:58px!important;right:12px!important;width:44px!important;height:44px!important;}
+  #voiceToggle{bottom:58px!important;left:12px!important;width:38px!important;height:38px!important;font-size:0.9rem!important;}
+  #reproToggle{bottom:58px!important;left:56px!important;width:38px!important;height:38px!important;font-size:0.9rem!important;}
+  #micBtn{bottom:58px!important;left:100px!important;width:38px!important;height:38px!important;font-size:0.9rem!important;}
+  #vint-chat-btn{bottom:58px!important;right:12px!important;width:42px!important;height:42px!important;font-size:0.9rem!important;}
   #loreToggle{top:auto;bottom:58px;right:62px;}
   /* Tier 2: V·PERSONAL badge sits above tier 1 */
-  #vintinuumBtn{bottom:108px!important;left:12px!important;max-width:calc(100vw - 80px);}
+  #vintinuumBtn{bottom:108px!important;left:12px!important;max-width:calc(100vw - 80px);padding:7px 12px!important;}
+  #vintinuumBtn span{font-size:0.5rem!important;}
   /* Panels: open above their buttons, full-width, below emotion widget */
   #vintinuumPanel{bottom:158px!important;left:12px!important;width:calc(100vw - 24px)!important;max-height:calc(100vh - 220px)!important;}
   #vint-chat-panel{bottom:108px!important;right:12px!important;left:12px!important;width:calc(100vw - 24px)!important;max-height:calc(100vh - 180px)!important;}
   #reproPanel{bottom:108px!important;left:12px!important;width:min(260px,calc(100vw - 24px))!important;}
-  /* Living Systems HUD: above tier 2 on right side */
-  #_livingSysHud{bottom:158px!important;right:12px!important;}
-  /* Emotion widget: below header, not overlapping it */
-  #_emotionWidget{top:48px!important;left:8px!important;z-index:4800!important;}
+  /* Living Systems HUD: top-right on mobile to avoid ALL bottom-area conflicts */
+  #_livingSysHud{bottom:auto!important;top:90px!important;right:8px!important;left:auto!important;transform:scale(0.75)!important;transform-origin:top right!important;}
+  /* Emotion widget: below header, above sidebar overlay */
+  #_emotionWidget{top:48px!important;left:8px!important;z-index:5000!important;}
   .stats-footer-link{display:none;}
 }
 
@@ -250,6 +253,10 @@ canvas{display:block;}
 @media(max-width:380px){
   .header h1{font-size:1rem;letter-spacing:.04em;}
   .node-panel{width:98vw;padding:14px 10px;}
+  .sidebar .emo-name{max-width:55px;}
+  #_livingSysHud{transform:scale(0.65)!important;}
+  #vintinuumBtn{padding:5px 10px!important;}
+  #vintinuumBtn span{font-size:0.45rem!important;}
 }
 </style>
 <script>
