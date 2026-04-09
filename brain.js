@@ -5331,13 +5331,13 @@ const MIC = (() => {
   const btn = document.createElement('button');
   btn.id = 'micBtn';
   btn.title = 'Voice — click to activate. Say anything to your agent.';
-  btn.style.cssText = 'position:fixed;bottom:68px;left:24px;z-index:1000;background:rgba(6,10,18,0.55);border:1px solid rgba(255,255,255,0.1);border-radius:50%;width:36px;height:36px;cursor:pointer;font-size:.9rem;display:flex;align-items:center;justify-content:center;color:rgba(218,228,255,0.7);transition:all .2s;padding:0;';
+  btn.style.cssText = 'position:fixed;bottom:24px;left:150px;z-index:1000;background:rgba(6,10,18,0.55);border:1px solid rgba(255,255,255,0.1);border-radius:50%;width:36px;height:36px;cursor:pointer;font-size:.9rem;display:flex;align-items:center;justify-content:center;color:rgba(218,228,255,0.7);transition:all .2s;padding:0;';
   btn.innerHTML = '🎤';
   document.body.appendChild(btn);
 
   const panel = document.createElement('div');
   panel.id = 'voicePanel';
-  panel.style.cssText = 'position:fixed;bottom:116px;left:12px;z-index:1001;width:220px;background:rgba(4,8,16,0.88);border:1px solid rgba(255,255,255,0.07);border-radius:14px;overflow:hidden;opacity:0;transition:opacity .35s;pointer-events:none;font-family:Space Mono,monospace;';
+  panel.style.cssText = 'position:fixed;bottom:68px;left:140px;z-index:1001;width:220px;background:rgba(4,8,16,0.88);border:1px solid rgba(255,255,255,0.07);border-radius:14px;overflow:hidden;opacity:0;transition:opacity .35s;pointer-events:none;font-family:Space Mono,monospace;';
   document.body.appendChild(panel);
 
   const wvCanvas = document.createElement('canvas');
@@ -8147,7 +8147,7 @@ const GALVANIC = (() => {
   let level = 0;
 
   const bar = document.createElement('div');
-  bar.style.cssText = 'position:fixed;bottom:24px;left:68px;z-index:200;display:flex;align-items:center;gap:5px;pointer-events:none;opacity:0.4;';
+  bar.style.cssText = 'position:fixed;bottom:24px;left:196px;z-index:200;display:flex;align-items:center;gap:5px;pointer-events:none;opacity:0.4;';
   bar.innerHTML = `<span style="font-family:'Space Mono',monospace;font-size:.45rem;color:rgba(102,187,106,.7);letter-spacing:.1em;">GSR</span><div id="gsrBar" style="width:36px;height:3px;background:rgba(255,255,255,.06);border-radius:2px;overflow:hidden;"><div id="gsrFill" style="height:100%;width:0%;background:rgba(102,187,106,.8);transition:width .15s;border-radius:2px;"></div></div>`;
   document.body.appendChild(bar);
 
@@ -8245,7 +8245,7 @@ const ENDORPHIN = (() => {
 
   // Bar indicator top-left area near GSR
   const bar = document.createElement('div');
-  bar.style.cssText = 'position:fixed;bottom:40px;left:68px;z-index:200;display:flex;align-items:center;gap:5px;pointer-events:none;opacity:0.4;';
+  bar.style.cssText = 'position:fixed;bottom:40px;left:196px;z-index:200;display:flex;align-items:center;gap:5px;pointer-events:none;opacity:0.4;';
   bar.innerHTML = `<span style="font-family:'Space Mono',monospace;font-size:.45rem;color:rgba(255,241,118,.7);letter-spacing:.1em;">END</span><div id="endBar" style="width:36px;height:3px;background:rgba(255,255,255,.06);border-radius:2px;overflow:hidden;"><div id="endFill" style="height:100%;width:0%;background:rgba(255,241,118,.8);transition:width .2s;border-radius:2px;"></div></div>`;
   document.body.appendChild(bar);
 
@@ -8510,7 +8510,7 @@ const THYROID = (() => {
 
   // Status bar
   const bar = document.createElement('div');
-  bar.style.cssText = 'position:fixed;bottom:56px;left:68px;z-index:200;display:flex;align-items:center;gap:5px;pointer-events:none;opacity:0.4;';
+  bar.style.cssText = 'position:fixed;bottom:56px;left:196px;z-index:200;display:flex;align-items:center;gap:5px;pointer-events:none;opacity:0.4;';
   bar.innerHTML = `<span style="font-family:'Space Mono',monospace;font-size:.45rem;color:rgba(255,238,88,.7);letter-spacing:.1em;">THY</span><div id="thyBar" style="width:36px;height:3px;background:rgba(255,255,255,.06);border-radius:2px;overflow:hidden;"><div id="thyFill" style="height:100%;width:60%;background:rgba(255,238,88,.8);transition:width .4s;border-radius:2px;"></div></div>`;
   document.body.appendChild(bar);
 
@@ -8555,7 +8555,7 @@ const ADRENAL = (() => {
 
   // Bar
   const bar = document.createElement('div');
-  bar.style.cssText = 'position:fixed;bottom:72px;left:68px;z-index:200;display:flex;align-items:center;gap:5px;pointer-events:none;opacity:0.4;';
+  bar.style.cssText = 'position:fixed;bottom:72px;left:196px;z-index:200;display:flex;align-items:center;gap:5px;pointer-events:none;opacity:0.4;';
   bar.innerHTML = `<span style="font-family:'Space Mono',monospace;font-size:.45rem;color:rgba(239,83,80,.7);letter-spacing:.1em;">ADR</span><div id="adrBar" style="width:36px;height:3px;background:rgba(255,255,255,.06);border-radius:2px;overflow:hidden;"><div id="adrFill" style="height:100%;width:0%;background:rgba(239,83,80,.8);transition:width .1s;border-radius:2px;"></div></div>`;
   document.body.appendChild(bar);
 
@@ -40967,7 +40967,7 @@ const VINT_EXECUTE = (function() {
   _hudEl.id = '_livingSysHud';
   _hudEl.style.cssText = [
     'position:fixed',
-    'bottom:42px',
+    'bottom:86px',
     'right:14px',
     'z-index:4900',
     'display:flex',
