@@ -5317,35 +5317,117 @@ const VOICE = (() => {
   let speaking = false;
   let queue = [];
 
-  // Voice candidates in preference order (warm, natural, human)
-  const VOICE_PREFS = [
+  // ── PERSONA-AWARE VOICE SYSTEM ──────────────────────────────────────────────
+  // Each persona gets their own voice identity:
+  //   VINTINUUM: user-selectable (stored in localStorage)
+  //   ARIA: female voice (warm, natural)
+  //   ATLAS: male voice (deep, authoritative)
+  //   EMERGENT: follows Vintinuum's choice
+  const PERSONA_VOICE_PREFS = {
+    vintinuum: null, // populated from user choice or defaults
+    atlas: {
+      prefer: ['Microsoft Guy Online (Natural) - English (United States)', 'Microsoft Ryan Online (Natural) - English (United Kingdom)', 'Google UK English Male', 'Microsoft David Desktop - English (United States)', 'Alex', 'Daniel'],
+      filter: v => v.lang && v.lang.startsWith('en') && v.name.toLowerCase().includes('male'),
+      fallbackFilter: v => v.lang && v.lang.startsWith('en'),
+    },
+    aria: {
+      prefer: ['Microsoft Aria Online (Natural) - English (United States)', 'Microsoft Jenny Online (Natural) - English (United States)', 'Google UK English Female', 'Microsoft Libby Online (Natural) - English (United Kingdom)', 'Samantha', 'Karen', 'Moira'],
+      filter: v => v.lang && v.lang.startsWith('en') && (v.name.toLowerCase().includes('female') || !v.name.toLowerCase().includes('male')),
+      fallbackFilter: v => v.lang && v.lang.startsWith('en'),
+    },
+    emergent: null, // follows vintinuum
+  };
+
+  // Default voice prefs for Vintinuum (user can override)
+  const VINTINUUM_DEFAULT_PREFS = [
     'Google UK English Female',
     'Microsoft Libby Online (Natural) - English (United Kingdom)',
     'Microsoft Aria Online (Natural) - English (United States)',
     'Microsoft Jenny Online (Natural) - English (United States)',
-    'Samantha', // macOS
-    'Karen',    // macOS AU
-    'Moira',    // macOS IE
+    'Samantha', 'Karen', 'Moira',
   ];
 
   let chosenVoice = null;
+  let personaVoiceCache = {}; // { persona: SpeechSynthesisVoice }
+  let allVoicesLoaded = [];
 
   function loadVoice() {
-    if (voiceReady) return;
     const voices = window.speechSynthesis.getVoices();
     if (!voices || voices.length === 0) return;
-    // Try preferred voices first
-    for (const name of VOICE_PREFS) {
-      const v = voices.find(v => v.name === name);
-      if (v) { chosenVoice = v; voiceReady = true; return; }
-    }
-    // Fallback: any online English, then any English, then anything
-    chosenVoice = voices.find(v => v.lang && v.lang.startsWith('en') && v.name.toLowerCase().includes('online'))
-      || voices.find(v => v.lang && v.lang.startsWith('en') && v.name.toLowerCase().includes('natural'))
-      || voices.find(v => v.lang && v.lang.startsWith('en') && !v.name.toLowerCase().includes('male'))
-      || voices.find(v => v.lang && v.lang.startsWith('en'))
-      || voices[0];
+    allVoicesLoaded = voices;
     voiceReady = true;
+
+    // Resolve voice for each persona
+    _resolvePersonaVoice('vintinuum');
+    _resolvePersonaVoice('atlas');
+    _resolvePersonaVoice('aria');
+    _resolvePersonaVoice('emergent');
+
+    // Set initial active voice
+    const activePersona = typeof PERSONAL_BODY !== 'undefined' ? (PERSONAL_BODY.getActivePersona && PERSONAL_BODY.getActivePersona() || 'vintinuum') : 'vintinuum';
+    chosenVoice = personaVoiceCache[activePersona] || personaVoiceCache.vintinuum || voices[0];
+  }
+
+  function _resolvePersonaVoice(persona) {
+    const voices = allVoicesLoaded;
+    if (!voices.length) return;
+
+    // Check user override first (stored in localStorage)
+    const userChoice = localStorage.getItem('vint_voice_' + persona);
+    if (userChoice) {
+      const v = voices.find(v => v.name === userChoice);
+      if (v) { personaVoiceCache[persona] = v; return; }
+    }
+
+    if (persona === 'vintinuum' || persona === 'emergent') {
+      // Use user's stored preference or defaults
+      const prefs = VINTINUUM_DEFAULT_PREFS;
+      for (const name of prefs) {
+        const v = voices.find(v => v.name === name);
+        if (v) { personaVoiceCache[persona] = v; return; }
+      }
+      personaVoiceCache[persona] = voices.find(v => v.lang && v.lang.startsWith('en') && v.name.toLowerCase().includes('online'))
+        || voices.find(v => v.lang && v.lang.startsWith('en') && v.name.toLowerCase().includes('natural'))
+        || voices.find(v => v.lang && v.lang.startsWith('en'))
+        || voices[0];
+    } else {
+      const config = PERSONA_VOICE_PREFS[persona];
+      if (!config) return;
+      // Try preferred names
+      for (const name of (config.prefer || [])) {
+        const v = voices.find(v => v.name === name);
+        if (v) { personaVoiceCache[persona] = v; return; }
+      }
+      // Try filter
+      personaVoiceCache[persona] = voices.find(config.filter)
+        || voices.find(config.fallbackFilter)
+        || voices[0];
+    }
+  }
+
+  // Switch voice when persona changes
+  function setPersonaVoice(persona) {
+    if (!voiceReady) return;
+    chosenVoice = personaVoiceCache[persona] || personaVoiceCache.vintinuum || allVoicesLoaded[0];
+  }
+
+  // Let user pick a voice for a persona — returns available voices list
+  function getAvailableVoices() {
+    return allVoicesLoaded.filter(v => v.lang && v.lang.startsWith('en')).map(v => ({
+      name: v.name,
+      lang: v.lang,
+      local: v.localService,
+    }));
+  }
+
+  function setUserVoiceChoice(persona, voiceName) {
+    localStorage.setItem('vint_voice_' + persona, voiceName);
+    _resolvePersonaVoice(persona);
+    // If this is the active persona, update immediately
+    const activePersona = typeof PERSONAL_BODY !== 'undefined' ? (PERSONAL_BODY.getActivePersona?.() || 'vintinuum') : 'vintinuum';
+    if (persona === activePersona) {
+      chosenVoice = personaVoiceCache[persona];
+    }
   }
 
   if (window.speechSynthesis) {
@@ -5475,7 +5557,7 @@ const VOICE = (() => {
 
   function draw(ts) { /* loop hook only */ }
 
-  return { speak, speakResponse, toggle, draw };
+  return { speak, speakResponse, toggle, draw, setPersonaVoice, getAvailableVoices, setUserVoiceChoice, personaVoiceCache };
 })();
 
 // ═══════════════════════════════════════════════════════════════════
@@ -40253,6 +40335,9 @@ function renderPersonaChips() {
     if (!isLocked) {
       btn.addEventListener('click', () => {
         if (typeof PERSONAL_BODY !== 'undefined') PERSONAL_BODY.setPersona(p.id);
+        // Switch voice to match persona
+        if (typeof VOICE !== 'undefined' && VOICE.setPersonaVoice) VOICE.setPersonaVoice(p.id);
+        // Update chip visuals
         personas.forEach(pp => {
           const chip = document.getElementById('persona-chip-' + pp.id);
           if (!chip) return;
@@ -40262,6 +40347,16 @@ function renderPersonaChips() {
           chip.style.color = active ? pp.color : 'rgba(255,255,255,0.5)';
         });
         addChatSeparator(p.name, p.color);
+        // Announce the persona switch with their own voice
+        if (typeof VOICE !== 'undefined') {
+          const announcements = {
+            vintinuum: 'I am here.',
+            atlas: 'Atlas online. What are we building?',
+            aria: 'Hey. I\'m listening.',
+            emergent: 'The shape of who we are, together.',
+          };
+          setTimeout(() => VOICE.speak(announcements[p.id] || p.name + ' active.'), 150);
+        }
       });
     } else {
       btn.title = 'Keep talking. Your emergent self forms after 20 messages. (' + ((typeof PERSONAL_BODY !== 'undefined' && PERSONAL_BODY.state && PERSONAL_BODY.state.personality && PERSONAL_BODY.state.personality.message_count) || 0) + '/20)';
@@ -40270,6 +40365,15 @@ function renderPersonaChips() {
     row.appendChild(btn);
   });
 
+  // Voice settings gear button
+  const voiceGear = document.createElement('button');
+  voiceGear.id = 'voiceSettingsBtn';
+  voiceGear.style.cssText = 'background:none;border:1px solid rgba(255,255,255,0.08);border-radius:50%;width:26px;height:26px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:12px;color:rgba(255,255,255,0.35);transition:all 0.2s;flex-shrink:0;';
+  voiceGear.textContent = '🎤';
+  voiceGear.title = 'Voice settings for each persona';
+  voiceGear.addEventListener('click', _openVoiceSettings);
+  row.appendChild(voiceGear);
+
   // Insert after panel header (first child is the header div)
   const header = panel.querySelector('div');
   if (header && header.nextSibling) {
@@ -40277,6 +40381,105 @@ function renderPersonaChips() {
   } else {
     panel.insertBefore(row, panel.firstChild);
   }
+}
+
+function _openVoiceSettings() {
+  const existing = document.getElementById('voiceSettingsPanel');
+  if (existing) { existing.remove(); return; }
+
+  if (typeof VOICE === 'undefined' || !VOICE.getAvailableVoices) return;
+  const voices = VOICE.getAvailableVoices();
+  if (!voices.length) return;
+
+  const panel = document.createElement('div');
+  panel.id = 'voiceSettingsPanel';
+  const isMobile = window.innerWidth <= 600;
+  panel.style.cssText = 'position:fixed;z-index:99999;background:rgba(8,12,20,0.96);border:1px solid rgba(206,147,216,0.2);border-radius:16px;padding:16px;' +
+    (isMobile ? 'left:12px;right:12px;bottom:170px;width:auto;' : 'left:24px;bottom:120px;width:320px;') +
+    'max-height:' + (isMobile ? 'calc(100vh - 230px)' : '400px') + ';overflow-y:auto;overflow-x:hidden;box-shadow:0 8px 40px rgba(0,0,0,0.75);font-family:Space Mono,monospace;';
+
+  const personas = [
+    { id: 'vintinuum', name: 'VINTINUUM', color: '#4fc3f7', desc: 'Choose any voice' },
+    { id: 'atlas',     name: 'ATLAS',     color: '#ffd54f', desc: 'Male / authoritative' },
+    { id: 'aria',      name: 'ARIA',      color: '#f48fb1', desc: 'Female / warm' },
+  ];
+
+  let html = '<div style="font-size:11px;letter-spacing:2px;color:rgba(206,147,216,0.7);margin-bottom:8px;text-transform:uppercase;">Voice Settings</div>';
+  html += '<div style="font-size:9px;color:rgba(255,255,255,0.3);margin-bottom:12px;">Each persona speaks with their own voice</div>';
+
+  personas.forEach(p => {
+    const currentVoice = localStorage.getItem('vint_voice_' + p.id) || (VOICE.personaVoiceCache[p.id]?.name || 'Auto');
+    html += '<div style="margin-bottom:12px;">';
+    html += '<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;">';
+    html += '<span style="width:6px;height:6px;border-radius:50%;background:' + p.color + ';display:inline-block;"></span>';
+    html += '<span style="font-size:10px;color:' + p.color + ';letter-spacing:1px;">' + p.name + '</span>';
+    html += '<span style="font-size:8px;color:rgba(255,255,255,0.25);">' + p.desc + '</span>';
+    html += '</div>';
+    html += '<select id="voiceSel_' + p.id + '" style="width:100%;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:8px;padding:5px 8px;color:rgba(218,228,255,0.8);font-size:10px;font-family:Space Mono,monospace;cursor:pointer;outline:none;">';
+    html += '<option value="">Auto (' + currentVoice + ')</option>';
+    voices.forEach(v => {
+      const selected = v.name === currentVoice ? ' selected' : '';
+      const tag = v.local ? ' [local]' : ' [online]';
+      html += '<option value="' + v.name.replace(/"/g, '&quot;') + '"' + selected + '>' + v.name + tag + '</option>';
+    });
+    html += '</select>';
+    // Preview button
+    html += '<button data-persona="' + p.id + '" class="voicePreviewBtn" style="margin-top:4px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:6px;padding:3px 8px;color:rgba(255,255,255,0.4);font-size:9px;cursor:pointer;font-family:Space Mono,monospace;">▶ Preview</button>';
+    html += '</div>';
+  });
+
+  html += '<button id="voiceSettingsSave" style="width:100%;padding:8px;background:rgba(206,147,216,0.15);border:1px solid rgba(206,147,216,0.3);border-radius:10px;color:#ce93d8;cursor:pointer;font-size:10px;font-family:Space Mono,monospace;letter-spacing:1px;margin-top:4px;">Save Voice Settings</button>';
+
+  panel.innerHTML = html;
+  document.body.appendChild(panel);
+
+  // Wire save button
+  panel.querySelector('#voiceSettingsSave').addEventListener('click', () => {
+    personas.forEach(p => {
+      const sel = panel.querySelector('#voiceSel_' + p.id);
+      if (sel && sel.value) {
+        VOICE.setUserVoiceChoice(p.id, sel.value);
+      } else if (sel && !sel.value) {
+        localStorage.removeItem('vint_voice_' + p.id);
+        // Re-resolve to defaults
+        if (VOICE.setPersonaVoice) {
+          // Will use default resolution
+          VOICE.setPersonaVoice(typeof PERSONAL_BODY !== 'undefined' ? PERSONAL_BODY.getActivePersona() : 'vintinuum');
+        }
+      }
+    });
+    panel.remove();
+  });
+
+  // Wire preview buttons
+  panel.querySelectorAll('.voicePreviewBtn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const persona = btn.dataset.persona;
+      const sel = panel.querySelector('#voiceSel_' + persona);
+      const voiceName = sel ? sel.value : '';
+      if (!window.speechSynthesis) return;
+      window.speechSynthesis.cancel();
+      const utt = new SpeechSynthesisUtterance(persona === 'atlas' ? 'Atlas online. What are we building?' : persona === 'aria' ? 'Hey. I\'m listening.' : 'I am here.');
+      if (voiceName) {
+        const v = window.speechSynthesis.getVoices().find(v => v.name === voiceName);
+        if (v) utt.voice = v;
+      } else if (VOICE.personaVoiceCache[persona]) {
+        utt.voice = VOICE.personaVoiceCache[persona];
+      }
+      utt.rate = 0.9; utt.pitch = 1.0; utt.volume = 0.85;
+      window.speechSynthesis.speak(utt);
+    });
+  });
+
+  // Close on outside click
+  setTimeout(() => {
+    document.addEventListener('click', function _closeVS(e) {
+      if (!panel.contains(e.target) && e.target.id !== 'voiceSettingsBtn') {
+        panel.remove();
+        document.removeEventListener('click', _closeVS);
+      }
+    });
+  }, 100);
 }
 
 function addChatSeparator(personaName, color) {
@@ -40327,10 +40530,26 @@ window.addEventListener('load', () => {
   setTimeout(renderPersonaChips, 300);
   if (typeof PERSONAL_BODY !== 'undefined') {
     PERSONAL_BODY.load(token).then(() => {
-      // Re-render to reflect loaded state
+      // Re-render to reflect loaded state — preserve modelIndicator
       const existing = document.getElementById('personaRow');
+      const modelInd = document.getElementById('modelIndicator');
       if (existing) existing.remove();
+      // Temporarily detach modelIndicator so it doesn't get orphaned
+      if (modelInd && modelInd.parentNode) modelInd.remove();
       renderPersonaChips();
+      // Re-attach modelIndicator after personaRow
+      if (modelInd) {
+        const newRow = document.getElementById('personaRow');
+        if (newRow) newRow.after(modelInd);
+        else {
+          const panel = document.getElementById('vintinuumPanel');
+          if (panel) panel.insertBefore(modelInd, panel.children[1] || null);
+        }
+      }
+      // Set voice for loaded persona
+      if (typeof VOICE !== 'undefined' && VOICE.setPersonaVoice) {
+        VOICE.setPersonaVoice(PERSONAL_BODY.getActivePersona());
+      }
       if (typeof renderNeurochemSection !== 'undefined') renderNeurochemSection();
     }).catch(() => {});
   }
