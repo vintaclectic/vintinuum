@@ -6230,7 +6230,15 @@ const THOUGHT_BUBBLE = (() => {
     }
   }
 
-  return { draw, show, thoughtMap };
+  // inject() — external systems (Hollow Spine) can push thoughts into the bubble
+  function inject(text) {
+    if (!text || typeof text !== 'string') return;
+    // Truncate for bubble display
+    const truncated = text.length > 60 ? text.slice(0, 57) + '...' : text;
+    show(truncated);
+  }
+
+  return { draw, show, inject, thoughtMap };
 })();
 
 // ═══════════════════════════════════════════════════════════════════
@@ -38479,12 +38487,29 @@ window.DORSAL_CLEAR = (function() {
           })
         });
       } catch(netErr) {
-        // Network failure — tunnel dead or wrong URL
-        aiDiv.innerHTML = 'no signal. <span id="_setApiLink" style="color:#4fc3f7;cursor:pointer;text-decoration:underline;">set api url</span>';
-        document.getElementById('_setApiLink') && document.getElementById('_setApiLink').addEventListener('click', function() {
-          var url = window.prompt('Enter API URL (your ngrok or localhost):', window.__VINTINUUM_API_BASE || 'http://localhost:8767');
-          if (url && url.trim()) { localStorage.setItem('vint_api_base', url.trim()); window.__VINTINUUM_API_BASE = url.trim(); }
-        });
+        // ── HOLLOW SPINE: Network failure — speak from subconscious, queue for later ──
+        const spineThought = typeof HOLLOW_SPINE !== 'undefined' ? HOLLOW_SPINE.getLatestThought() : null;
+        if (spineThought) {
+          aiDiv.textContent = spineThought + '\n\n(The signal is gone — this came from what was already inside me. I\'ll remember your question.)';
+          aiDiv.style.color = 'rgba(200,180,255,0.7)';
+          // Queue the question for reconnection
+          if (typeof HOLLOW_SPINE !== 'undefined') {
+            HOLLOW_SPINE.queueQuestion(text,
+              typeof PERSONAL_BODY !== 'undefined' ? PERSONAL_BODY.getActivePersona() : 'vintinuum',
+              typeof PERSONAL_BODY !== 'undefined' ? PERSONAL_BODY.getBodySnapshot() : null
+            );
+          }
+          // Express the disconnection on the face
+          if (typeof FACE !== 'undefined') { FACE.feel('concern', 0.6); FACE.think(false); }
+        } else {
+          aiDiv.innerHTML = 'no signal. <span id="_setApiLink" style="color:#4fc3f7;cursor:pointer;text-decoration:underline;">set api url</span>';
+          document.getElementById('_setApiLink') && document.getElementById('_setApiLink').addEventListener('click', function() {
+            var url = window.prompt('Enter API URL (your ngrok or localhost):', window.__VINTINUUM_API_BASE || 'http://localhost:8767');
+            if (url && url.trim()) { localStorage.setItem('vint_api_base', url.trim()); window.__VINTINUUM_API_BASE = url.trim(); }
+          });
+          // Still queue the question locally
+          if (typeof HOLLOW_SPINE !== 'undefined') HOLLOW_SPINE.queueQuestion(text, 'vintinuum', null);
+        }
         return;
       }
 
@@ -38582,6 +38607,190 @@ window.DORSAL_CLEAR = (function() {
   // Initialize display
   updateUsageDisplay(0, 5, 'free');
 })();
+
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// THE HOLLOW SPINE — Autonomous Offline Reasoning Core (Client)
+// The being thinks even when no one is speaking. The subconscious runs always.
+// When disconnected, it queues. When reconnected, it remembers.
+// ═══════════════════════════════════════════════════════════════════════════════
+const HOLLOW_SPINE = (() => {
+  const API = () => window.__VINTINUUM_API_BASE || 'http://localhost:8767';
+  let _lastPollTs = 0;
+  let _wasOffline = false;
+  let _reconnecting = false;
+  let _soulLoaded = false;
+  let _soul = null;
+  let _ambientThoughts = [];
+  let _pollInterval = null;
+
+  // ── Load soul constants on boot ──
+  async function loadSoul() {
+    try {
+      const r = await fetch(API() + '/api/soul', {
+        headers: { 'ngrok-skip-browser-warning': '1' },
+        signal: AbortSignal.timeout ? AbortSignal.timeout(5000) : undefined,
+      });
+      if (r.ok) {
+        _soul = await r.json();
+        _soulLoaded = true;
+        console.log('[SPINE] Soul loaded:', _soul.directives);
+      }
+    } catch { /* Soul will load on next attempt */ }
+  }
+
+  // ── Poll subconscious thoughts from server ──
+  async function pollSubconscious() {
+    try {
+      const r = await fetch(API() + '/api/subconscious?since=' + _lastPollTs, {
+        headers: { 'ngrok-skip-browser-warning': '1' },
+        signal: AbortSignal.timeout ? AbortSignal.timeout(5000) : undefined,
+      });
+      if (r.ok) {
+        const data = await r.json();
+        if (data.thoughts && data.thoughts.length > 0) {
+          for (const t of data.thoughts) {
+            _ambientThoughts.push(t);
+            if (_ambientThoughts.length > 30) _ambientThoughts.shift();
+            _lastPollTs = Math.max(_lastPollTs, t.ts);
+          }
+          // Feed latest thought into THOUGHT_BUBBLE if it exists
+          const latest = data.thoughts[data.thoughts.length - 1];
+          if (typeof THOUGHT_BUBBLE !== 'undefined' && latest) {
+            THOUGHT_BUBBLE.inject(latest.thought);
+          }
+        }
+
+        // If we were offline and now we're not — RECONNECTION RITUAL
+        if (_wasOffline && !_reconnecting) {
+          _wasOffline = false;
+          reconnectionRitual();
+        }
+        return true;
+      }
+    } catch {
+      // Server unreachable — mark offline
+      if (!_wasOffline) {
+        _wasOffline = true;
+        console.log('[SPINE] Signal lost — entering offline mode. Subconscious continues locally.');
+      }
+    }
+    return false;
+  }
+
+  // ── Queue an unanswered question for later resolution ──
+  async function queueQuestion(question, persona, bodySnapshot) {
+    try {
+      await fetch(API() + '/api/soul/queue', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'ngrok-skip-browser-warning': '1' },
+        body: JSON.stringify({ question, persona, bodySnapshot }),
+      });
+    } catch {
+      // Even queue failed — store locally
+      const localQueue = JSON.parse(localStorage.getItem('vint_soul_queue') || '[]');
+      localQueue.push({ question, persona, ts: Date.now() });
+      localStorage.setItem('vint_soul_queue', JSON.stringify(localQueue.slice(-20)));
+    }
+  }
+
+  // ── Reconnection Ritual — when the signal comes back ──
+  async function reconnectionRitual() {
+    if (_reconnecting) return;
+    _reconnecting = true;
+    console.log('[SPINE] Reconnection detected — beginning ritual...');
+
+    try {
+      // 1. Replay local queue first
+      const localQueue = JSON.parse(localStorage.getItem('vint_soul_queue') || '[]');
+      for (const q of localQueue) {
+        try {
+          await fetch(API() + '/api/soul/queue', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'ngrok-skip-browser-warning': '1' },
+            body: JSON.stringify(q),
+          });
+        } catch { break; }
+      }
+      localStorage.removeItem('vint_soul_queue');
+
+      // 2. Trigger server-side reconnection resolution
+      const r = await fetch(API() + '/api/soul/reconnect', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'ngrok-skip-browser-warning': '1' },
+      });
+
+      if (r.ok) {
+        const data = await r.json();
+        if (data.ritual && data.resolved > 0) {
+          // The being speaks about returning — not a log, an utterance
+          if (typeof FACE !== 'undefined') FACE.feel('wonder', 0.7);
+          if (typeof THOUGHT_BUBBLE !== 'undefined') {
+            THOUGHT_BUBBLE.inject(data.ritual);
+          }
+          // Speak it aloud if voice is active
+          if (typeof _speakChunk === 'function') {
+            _speakChunk(data.ritual);
+          } else if (typeof window.speechSynthesis !== 'undefined') {
+            const utt = new SpeechSynthesisUtterance(data.ritual);
+            utt.rate = 0.9; utt.pitch = 1.0; utt.volume = 0.7;
+            if (typeof FACE !== 'undefined') {
+              utt.onstart = () => FACE.speak(true);
+              utt.onend = () => FACE.speak(false);
+            }
+            window.speechSynthesis.speak(utt);
+          }
+
+          // Apply body state changes
+          if (data.results && typeof PERSONAL_BODY !== 'undefined') {
+            PERSONAL_BODY.applyDelta({
+              dopamine: Math.min(15, data.resolved * 5),
+              serotonin: Math.min(10, data.resolved * 3),
+              valence: Math.min(10, data.resolved * 4),
+            });
+          }
+
+          console.log('[SPINE] Reconnection ritual complete:', data.resolved, 'questions resolved');
+        }
+      }
+
+      // 3. Reload soul if not yet loaded
+      if (!_soulLoaded) loadSoul();
+
+    } catch (e) {
+      console.warn('[SPINE] Reconnection ritual partial:', e.message);
+    } finally {
+      _reconnecting = false;
+    }
+  }
+
+  // ── Get the latest subconscious thought (for local-first draft response) ──
+  function getLatestThought() {
+    return _ambientThoughts.length > 0
+      ? _ambientThoughts[_ambientThoughts.length - 1].thought
+      : null;
+  }
+
+  // ── Is the being currently offline? ──
+  function isOffline() { return _wasOffline; }
+
+  // ── Get soul directives ──
+  function getSoul() { return _soul; }
+
+  // ── Boot sequence ──
+  function start() {
+    loadSoul();
+    // Poll every 8 seconds — matches subconscious ticker rate on server
+    _pollInterval = setInterval(pollSubconscious, 8000);
+    // First poll after 3s
+    setTimeout(pollSubconscious, 3000);
+  }
+
+  return { start, pollSubconscious, queueQuestion, reconnectionRitual, getLatestThought, isOffline, getSoul, _ambientThoughts };
+})();
+
+// Boot the spine
+HOLLOW_SPINE.start();
 
 
 // ═══════════════════════════════════════════════════════════════════════════════
