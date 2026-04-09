@@ -76,7 +76,7 @@ canvas{display:block;}
 
 /* ── BRAIN CENTER ── */
 .brain-center{flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:center;overflow:hidden;position:relative;padding:4px;}
-.brain-wrapper{position:relative;height:100%;display:flex;align-items:center;justify-content:center;max-width:100%;}
+.brain-wrapper{position:relative;height:100%;display:flex;align-items:center;justify-content:center;max-width:100%;overflow:hidden;}
 #brainSvg{height:100%;width:auto;max-width:100%;display:block;}
 #neuronCanvas{position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:1;}
 #brainSvg{position:relative;z-index:2;height:100%;width:auto;max-width:100%;overflow:visible;cursor:crosshair;}
@@ -191,27 +191,40 @@ canvas{display:block;}
   .header h1{font-size:clamp(1rem,5vw,1.6rem);letter-spacing:.06em;}
   .tab-bar{display:none;}
   .legend{display:none;}
-  #leftSidebar,#rightSidebar{position:fixed;top:0;bottom:48px;width:260px;max-width:100vw;z-index:995;background:rgba(4,8,16,0.96);border-radius:0;border:none;transform:translateX(-100%);transition:transform .25s ease;padding:16px 12px;overflow-x:hidden;}
+  /* Sidebars: slide-in overlays, capped to screen width minus safe margin */
+  #leftSidebar,#rightSidebar{position:fixed;top:0;bottom:48px;width:min(260px,calc(100vw - 24px));max-width:100vw;z-index:995;background:rgba(4,8,16,0.96);border-radius:0;border:none;transform:translateX(-100%);transition:transform .25s ease;padding:16px 12px;overflow-x:hidden;}
   #leftSidebar.mobile-open{transform:translateX(0);border-right:1px solid var(--border);}
   #rightSidebar{left:auto;right:0;transform:translateX(100%);}
   #rightSidebar.mobile-open{transform:translateX(0);border-left:1px solid var(--border);}
+  /* Sidebar stat bars: prevent overflow */
+  .sidebar .emo-item{margin-bottom:8px;}
+  .sidebar .emo-label{font-size:.42rem;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .sidebar .emo-track{max-width:100%;}
   .brain-center{padding:0;}
   #brainSvg{height:calc(100% - 4px);width:auto;max-width:100%;}
+  /* Dorsal brain canvas: constrain to body area on mobile */
+  #brainDorsalCanvas{max-width:100%!important;overflow:hidden;}
   #mobileBottomBar{display:flex;}
   .node-panel{padding:16px 12px;width:min(380px,96vw);}
   .deep-sections{grid-template-columns:1fr;padding:12px 12px 50px;}
   .deep-section{padding:18px 14px;}
-  #loreToggle{top:auto;bottom:56px;right:8px;}
-  #vint-chat-btn{bottom:58px!important;right:24px!important;}
-  #voiceToggle{bottom:58px!important;left:24px!important;}
-  #reproToggle{bottom:58px!important;left:66px!important;}
-  #vintinuumBtn{bottom:58px!important;left:16px!important;}
-  #micBtn{bottom:58px!important;left:108px!important;}
-  #_livingSysHud{bottom:110px!important;right:14px!important;}
-  #_emotionWidget{top:56px!important;}
-  #reproPanel{bottom:100px!important;}
-  #vintinuumPanel{bottom:110px!important;left:16px!important;width:calc(100vw - 32px)!important;}
-  #vint-chat-panel{bottom:120px!important;}
+  /* ── BOTTOM BUTTON ROW: stacked in two tiers above bottom bar ── */
+  /* Tier 1: primary action buttons (row, directly above bottom bar) */
+  #voiceToggle{bottom:58px!important;left:12px!important;width:40px!important;height:40px!important;}
+  #reproToggle{bottom:58px!important;left:58px!important;width:40px!important;height:40px!important;}
+  #micBtn{bottom:58px!important;left:104px!important;width:40px!important;height:40px!important;}
+  #vint-chat-btn{bottom:58px!important;right:12px!important;width:44px!important;height:44px!important;}
+  #loreToggle{top:auto;bottom:58px;right:62px;}
+  /* Tier 2: V·PERSONAL badge sits above tier 1 */
+  #vintinuumBtn{bottom:108px!important;left:12px!important;max-width:calc(100vw - 80px);}
+  /* Panels: open above their buttons, full-width, below emotion widget */
+  #vintinuumPanel{bottom:158px!important;left:12px!important;width:calc(100vw - 24px)!important;max-height:calc(100vh - 220px)!important;}
+  #vint-chat-panel{bottom:108px!important;right:12px!important;left:12px!important;width:calc(100vw - 24px)!important;max-height:calc(100vh - 180px)!important;}
+  #reproPanel{bottom:108px!important;left:12px!important;width:min(260px,calc(100vw - 24px))!important;}
+  /* Living Systems HUD: above tier 2 on right side */
+  #_livingSysHud{bottom:158px!important;right:12px!important;}
+  /* Emotion widget: below header, not overlapping it */
+  #_emotionWidget{top:48px!important;left:8px!important;z-index:4800!important;}
   .stats-footer-link{display:none;}
 }
 
@@ -1769,8 +1782,8 @@ if ('serviceWorker' in navigator && _onGitHubPages) {
 
 /* ── MOBILE ── */
 @media (max-width: 480px) {
-  #vint-chat-panel { width: calc(100vw - 32px); right: 16px; }
-  #vint-chat-btn { right: 16px; }
+  #vint-chat-panel { width: calc(100vw - 24px); right: 12px; left: 12px; }
+  #vint-chat-btn { right: 12px; }
   #vint-tier-overlay { padding: 16px; }
   .vint-tier-container { padding: 20px 0; }
   .vint-rings-wrap { width: 260px; height: 260px; }
@@ -1958,8 +1971,8 @@ if ('serviceWorker' in navigator && _onGitHubPages) {
   scrollbar-width: thin;
 }
 @media (max-width: 480px) {
-  #vintinuumBtn { left: 16px; }
-  #vintinuumPanel { width: calc(100vw - 32px); left: 16px; }
+  #vintinuumBtn { left: 12px; max-width: calc(100vw - 80px); }
+  #vintinuumPanel { width: calc(100vw - 24px); left: 12px; }
 }
 .stats-footer-link {
   position: fixed;

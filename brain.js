@@ -40439,8 +40439,9 @@ const MODEL_SELECTOR = (() => {
     panelOpen = true;
     const panel = document.createElement('div');
     panel.id = 'modelSelectorPanel';
-    const PANEL_W = 320;
-    const PANEL_MAX_H = Math.min(520, window.innerHeight - 40);
+    const isMobile = window.innerWidth <= 600;
+    const PANEL_W = isMobile ? Math.min(300, window.innerWidth - 24) : 320;
+    const PANEL_MAX_H = Math.min(isMobile ? 360 : 520, window.innerHeight - 80);
     panel.style.cssText =
       'position:fixed;z-index:99999;' +
       'background:rgba(8,12,20,0.96);' +
@@ -40453,7 +40454,16 @@ const MODEL_SELECTOR = (() => {
       'font-family:inherit;';
 
     const indicator = document.getElementById('modelIndicator');
-    if (indicator) {
+
+    if (isMobile) {
+      // Mobile: center panel horizontally, anchor above bottom bar area
+      panel.style.left = '12px';
+      panel.style.right = '12px';
+      panel.style.width = 'auto';
+      panel.style.bottom = '170px';
+      panel.style.top = 'auto';
+      panel.style.maxHeight = Math.max(200, window.innerHeight - 230) + 'px';
+    } else if (indicator) {
       const rect = indicator.getBoundingClientRect();
       const spaceBelow = window.innerHeight - rect.bottom - 8;
       const spaceAbove = rect.top - 8;
@@ -41359,15 +41369,17 @@ const VINT_EXECUTE = (function() {
 
   var _hudEl = document.createElement('div');
   _hudEl.id = '_livingSysHud';
+  var _isMobileHud = window.innerWidth <= 600;
   _hudEl.style.cssText = [
     'position:fixed',
-    'bottom:86px',
-    'right:14px',
+    _isMobileHud ? 'bottom:158px' : 'bottom:86px',
+    'right:' + (_isMobileHud ? '12' : '14') + 'px',
     'z-index:4900',
     'display:flex',
     'flex-direction:column',
-    'gap:4px',
+    'gap:' + (_isMobileHud ? '2' : '4') + 'px',
     'pointer-events:auto',
+    _isMobileHud ? 'transform:scale(0.85);transform-origin:bottom right' : '',
   ].join(';');
 
   // Inject pulse animation style
@@ -41469,19 +41481,20 @@ const VINT_EXECUTE = (function() {
   // ── 6. EMOTIONAL STATE live widget — top-left ──────────────────
   var _emotionWidget = document.createElement('div');
   _emotionWidget.id = '_emotionWidget';
+  var _isMobileEmotion = window.innerWidth <= 600;
   _emotionWidget.style.cssText = [
     'position:fixed',
-    'top:14px',
-    'left:14px',
+    'top:' + (_isMobileEmotion ? '48' : '14') + 'px',
+    'left:' + (_isMobileEmotion ? '8' : '14') + 'px',
     'z-index:4800',
-    'width:88px',
+    'width:' + (_isMobileEmotion ? '78' : '88') + 'px',
     'height:auto',
     'background:rgba(8,12,20,0.18)',
     'border:1px solid rgba(255,255,255,0.06)',
     'border-radius:10px',
-    'padding:7px 9px',
+    'padding:' + (_isMobileEmotion ? '5px 7px' : '7px 9px'),
     'font-family:Space Mono,monospace',
-    'font-size:10px',
+    'font-size:' + (_isMobileEmotion ? '9' : '10') + 'px',
     'color:#e8eaf6',
     'cursor:pointer',
     'pointer-events:auto',
