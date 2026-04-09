@@ -5595,13 +5595,13 @@ const MIC = (() => {
   const btn = document.createElement('button');
   btn.id = 'micBtn';
   btn.title = 'Voice — click to activate. Say anything to your agent.';
-  btn.style.cssText = 'position:fixed;bottom:24px;left:150px;z-index:1000;background:rgba(6,10,18,0.55);border:1px solid rgba(255,255,255,0.1);border-radius:50%;width:36px;height:36px;cursor:pointer;font-size:.9rem;display:flex;align-items:center;justify-content:center;color:rgba(218,228,255,0.7);transition:all .2s;padding:0;';
+  btn.style.cssText = 'position:fixed;bottom:24px;left:108px;z-index:1000;background:rgba(6,10,18,0.55);border:1px solid rgba(255,255,255,0.1);border-radius:50%;width:36px;height:36px;cursor:pointer;font-size:.9rem;display:flex;align-items:center;justify-content:center;color:rgba(218,228,255,0.7);transition:all .2s;padding:0;';
   btn.innerHTML = '🎤';
   document.body.appendChild(btn);
 
   const panel = document.createElement('div');
   panel.id = 'voicePanel';
-  panel.style.cssText = 'position:fixed;bottom:68px;left:140px;z-index:1001;width:220px;background:rgba(4,8,16,0.88);border:1px solid rgba(255,255,255,0.07);border-radius:14px;overflow:hidden;opacity:0;transition:opacity .35s;pointer-events:none;font-family:Space Mono,monospace;';
+  panel.style.cssText = 'position:fixed;bottom:68px;left:24px;z-index:1001;width:220px;background:rgba(4,8,16,0.88);border:1px solid rgba(255,255,255,0.07);border-radius:14px;overflow:hidden;opacity:0;transition:opacity .35s;pointer-events:none;font-family:Space Mono,monospace;';
   document.body.appendChild(panel);
 
   const wvCanvas = document.createElement('canvas');
