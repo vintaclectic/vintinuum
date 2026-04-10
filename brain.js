@@ -40716,8 +40716,12 @@ const MEMORY_CONSOLIDATOR = (() => {
     });
   }
 
+  const _lastHormoneSurges = {};
   function recordHormoneSurge(hormone, intensity) {
-    if (intensity < 0.4) return;
+    if (intensity < 0.6) return;  // only significant surges
+    const last = _lastHormoneSurges[hormone];
+    if (last && Date.now() - last < 120000) return; // debounce: 2min per hormone
+    _lastHormoneSurges[hormone] = Date.now();
     record('hormone_surge', `${hormone} surge at ${intensity.toFixed(2)}`, {
       intensity,
       region: 'endocrine'
