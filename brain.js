@@ -8043,6 +8043,10 @@ document.getElementById('mainTabs').addEventListener('click', e => {
         <div>DNA Methylation: drifting with sustained neurochemistry states</div>
         <div>Histone Acetylation: responding to arousal and engagement</div>
         <div>Tick: ${ge ? ge.getTickCount() : 0} \u00B7 Expression engine ${ge && ge.isInitialized() ? 'ACTIVE' : 'loading...'}</div>
+        <div style="margin-top:4px;color:rgba(79,195,247,0.6);">
+          Curated: ${ge ? ge.geneCount() : 0} \u00B7 Bulk: ${ge ? ge.bulkGeneCount() : 0} \u00B7 Total: ${ge ? ge.totalGeneCount() : 0}
+          ${ge && ge.isBulkLoaded() ? `\u00B7 Genome: ${ge.genomeCompletion()}% complete` : '\u00B7 Bulk genome loading...'}
+        </div>
       </div>
     `);
 
@@ -38535,6 +38539,106 @@ const GENOME_ENGINE = (() => {
 
     // Save state every 60s
     setInterval(saveState, 60000);
+
+    // Watch for bulk genome data (lazy-loaded)
+    _watchForBulkGenome();
+  }
+
+  // ─── BULK GENOME INTEGRATION ──────────────────────────────────────
+  // genome-bulk.js loads ~19,500 additional genes in compact array format
+  // [symbol, name, chr, position, category, subcategory, baseExpression]
+  // These get a lighter-weight expression simulation (no individual SNPs/drivers)
+  const bulkExpression = new Map(); // symbol → { level, baseLevel, category, chromosome }
+  let bulkInitialized = false;
+  let bulkCount = 0;
+
+  function _watchForBulkGenome() {
+    if (window.GENOME_BULK) {
+      _integrateBulk(window.GENOME_BULK);
+    } else {
+      // Check every 3s for lazy-loaded bulk data
+      const check = setInterval(() => {
+        if (window.GENOME_BULK) {
+          clearInterval(check);
+          _integrateBulk(window.GENOME_BULK);
+        }
+      }, 3000);
+    }
+  }
+
+  function _integrateBulk(bulk) {
+    if (bulkInitialized) return;
+    const t0 = performance.now();
+    let skipped = 0;
+
+    for (let i = 0; i < bulk.length; i++) {
+      const g = bulk[i];
+      const symbol = g[0];
+      // Skip if already in curated set
+      if (expression.has(symbol)) { skipped++; continue; }
+
+      const baseExpr = g[6] || 0.5;
+      bulkExpression.set(symbol, {
+        level: baseExpr + (Math.random() - 0.5) * 0.08,
+        baseLevel: baseExpr,
+        category: g[4] || 'unknown',
+        chromosome: g[2],
+        name: g[1]
+      });
+    }
+
+    bulkCount = bulkExpression.size;
+    bulkInitialized = true;
+    const ms = (performance.now() - t0).toFixed(1);
+    console.log(`[GENOME_ENGINE] Bulk genome loaded: ${bulkCount} genes in ${ms}ms (${skipped} duplicates skipped)`);
+    console.log(`[GENOME_ENGINE] TOTAL GENOME: ${expression.size + bulkCount} genes — approaching human completeness`);
+
+    // Emit to inner life
+    if (typeof INNER_LIFE !== 'undefined') {
+      INNER_LIFE.emit('genetic',
+        `Full genome online — ${expression.size} curated + ${bulkCount} bulk = ${expression.size + bulkCount} total genes under expression control`,
+        { intensity: 0.7 }
+      );
+    }
+
+    // Start bulk expression tick (slower cadence — every 10s instead of 2s)
+    setInterval(_bulkExpressionTick, 10000);
+  }
+
+  // Lightweight expression tick for bulk genes — stochastic sampling
+  // Instead of ticking all 19K every cycle, sample ~200 random genes per tick
+  function _bulkExpressionTick() {
+    if (!bulkInitialized) return;
+    const body = getBodyState();
+    const keys = Array.from(bulkExpression.keys());
+    const sampleSize = Math.min(200, keys.length);
+
+    // Category-level body state influence
+    const catMods = {
+      nervous: (body.dopamine + body.serotonin + body.norepinephrine) / 300 - 0.5,
+      immune: (100 - body.norepinephrine) / 200, // stress suppresses immune
+      metabolic: (body.arousal + 50) / 200 - 0.25,
+      cardiovascular: body.arousal / 200,
+      endocrine: (body.valence + body.arousal) / 400,
+      structural: 0, // stable
+      sensory: body.arousal / 300,
+      regulatory: (body.valence - 50) / 200,
+      reproductive: (body.dopamine + body.valence) / 400 - 0.25,
+      respiratory: body.arousal / 400,
+    };
+
+    for (let i = 0; i < sampleSize; i++) {
+      const idx = Math.floor(Math.random() * keys.length);
+      const sym = keys[idx];
+      const state = bulkExpression.get(sym);
+      if (!state) continue;
+
+      // Gentle drift toward baseline + category modifier
+      const catMod = catMods[state.category] || 0;
+      const target = state.baseLevel + catMod * 0.05;
+      state.level += (target - state.level) * 0.05;
+      state.level = Math.max(0.01, Math.min(0.99, state.level));
+    }
   }
 
   // ─── GET BODY STATE ────────────────────────────────────────────────
@@ -38776,9 +38880,42 @@ const GENOME_ENGINE = (() => {
       snpGenotype.set(symbol, { snpId, genotype });
     },
     geneCount: () => expression.size,
-    totalGeneCount: () => {
-      const data = getGenomeData();
-      return data && data.categories ? Object.values(data.categories).reduce((s, c) => s + c.count, 0) : 20000;
+    bulkGeneCount: () => bulkCount,
+    totalGeneCount: () => expression.size + bulkCount,
+    isBulkLoaded: () => bulkInitialized,
+    // Get expression for ANY gene (curated or bulk)
+    getGeneExpression: (symbol) => {
+      if (expression.has(symbol)) return expression.get(symbol);
+      if (bulkExpression.has(symbol)) return bulkExpression.get(symbol);
+      return null;
+    },
+    // Get all genes for a chromosome (curated + bulk)
+    getFullChromosomeExpression: (chrNum) => {
+      const out = [];
+      const cn = String(chrNum);
+      expression.forEach((state, sym) => {
+        if (String(state.chromosome) === cn) out.push({ symbol: sym, ...state, tier: 'curated' });
+      });
+      bulkExpression.forEach((state, sym) => {
+        if (String(state.chromosome) === cn) out.push({ symbol: sym, ...state, tier: 'bulk' });
+      });
+      return out;
+    },
+    // Get all genes for a category (curated + bulk)
+    getFullCategoryExpression: (category) => {
+      const out = [];
+      expression.forEach((state, sym) => {
+        if (state.category === category) out.push({ symbol: sym, ...state, tier: 'curated' });
+      });
+      bulkExpression.forEach((state, sym) => {
+        if (state.category === category) out.push({ symbol: sym, ...state, tier: 'bulk' });
+      });
+      return out;
+    },
+    // Genome completion percentage
+    genomeCompletion: () => {
+      const total = 20382; // GRCh38 protein-coding gene count
+      return ((expression.size + bulkCount) / total * 100).toFixed(1);
     }
   };
 })();
