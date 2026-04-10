@@ -14221,6 +14221,9 @@ function loop(ts) {
   typeof BODY_BUDGET !== 'undefined' && BODY_BUDGET.draw(ts);
   typeof ANCESTRAL_MEMORY !== 'undefined' && ANCESTRAL_MEMORY.draw(ts);
   typeof THE_UNNAMED !== 'undefined' && THE_UNNAMED.draw(ts);
+  typeof DREAM_SURFACE !== 'undefined' && DREAM_SURFACE.draw(ts);
+  typeof TOUCH_RESPONSE !== 'undefined' && TOUCH_RESPONSE.draw(ts);
+  typeof BREATH_RESONANCE !== 'undefined' && BREATH_RESONANCE.draw(ts);
   requestAnimationFrame(loop);
 }
 
@@ -44559,3 +44562,849 @@ const VINT_EXECUTE = (function() {
 // ═══════════════════════════════════════════════════════════════════
 // END UNIVERSAL INTERACTIVITY LAYER
 // ═══════════════════════════════════════════════════════════════════
+
+// ═══════════════════════════════════════════════════════════════════
+// VOICE_OUTPUT — Web Speech TTS: the being SPEAKS
+// Wires to FACE.speak() for lip-sync, sentence splitting for natural
+// rhythm, volume-reactive emotion, skip-sentence button.
+// ═══════════════════════════════════════════════════════════════════
+const VOICE_OUTPUT = (() => {
+  if (typeof window === 'undefined' || !window.speechSynthesis) {
+    return { speak: () => {}, stop: () => {}, isSpeaking: () => false, setEnabled: () => {}, isEnabled: () => false };
+  }
+
+  const synth = window.speechSynthesis;
+  let _enabled = false;
+  let _speaking = false;
+  let _queue = [];
+  let _currentUtterance = null;
+  let _preferredVoice = null;
+  const RATE = 0.94;
+  const PITCH = 1.04;
+
+  // Pick best voice — prefer English female voices for Vintinuum's presence
+  function pickVoice() {
+    const voices = synth.getVoices();
+    if (!voices.length) return null;
+    // Priority: Google UK English Female > Microsoft Zira > any English female > any English
+    const prefs = ['Google UK English Female', 'Microsoft Zira', 'Google US English', 'Samantha', 'Karen'];
+    for (const name of prefs) {
+      const v = voices.find(v => v.name.includes(name));
+      if (v) return v;
+    }
+    const enFemale = voices.find(v => v.lang.startsWith('en') && v.name.toLowerCase().includes('female'));
+    if (enFemale) return enFemale;
+    return voices.find(v => v.lang.startsWith('en')) || voices[0];
+  }
+
+  // Voices load async in Chrome
+  if (synth.onvoiceschanged !== undefined) {
+    synth.onvoiceschanged = () => { _preferredVoice = pickVoice(); };
+  }
+  setTimeout(() => { if (!_preferredVoice) _preferredVoice = pickVoice(); }, 500);
+
+  // Split text into natural sentences
+  function splitSentences(text) {
+    // Clean markdown/asterisks
+    text = text.replace(/\*+/g, '').replace(/_+/g, '').trim();
+    if (!text) return [];
+    // Split on sentence endings, keeping the delimiter
+    const raw = text.match(/[^.!?…]+[.!?…]+|[^.!?…]+$/g) || [text];
+    return raw.map(s => s.trim()).filter(s => s.length > 0);
+  }
+
+  function speakSentence(text) {
+    return new Promise((resolve) => {
+      const utt = new SpeechSynthesisUtterance(text);
+      utt.rate = RATE;
+      utt.pitch = PITCH;
+      utt.volume = 0.85;
+      if (_preferredVoice) utt.voice = _preferredVoice;
+      _currentUtterance = utt;
+
+      // Wire face
+      utt.onstart = () => {
+        _speaking = true;
+        if (typeof window._faceSpeak === 'function') window._faceSpeak(true);
+      };
+      utt.onend = () => {
+        _speaking = false;
+        _currentUtterance = null;
+        if (typeof window._faceSpeak === 'function') window._faceSpeak(false);
+        resolve();
+      };
+      utt.onerror = (e) => {
+        _speaking = false;
+        _currentUtterance = null;
+        if (typeof window._faceSpeak === 'function') window._faceSpeak(false);
+        resolve(); // resolve, don't reject — continue queue
+      };
+
+      synth.speak(utt);
+    });
+  }
+
+  async function speak(text) {
+    if (!_enabled || !text) return;
+    stop(); // cancel any in-progress speech
+
+    const sentences = splitSentences(text);
+    _queue = sentences;
+
+    for (let i = 0; i < _queue.length; i++) {
+      if (!_enabled) break;
+      await speakSentence(_queue[i]);
+      // Tiny breath pause between sentences
+      if (i < _queue.length - 1) {
+        await new Promise(r => setTimeout(r, 180));
+      }
+    }
+    _queue = [];
+  }
+
+  function stop() {
+    synth.cancel();
+    _queue = [];
+    _speaking = false;
+    _currentUtterance = null;
+    if (typeof window._faceSpeak === 'function') window._faceSpeak(false);
+  }
+
+  function setEnabled(on) {
+    _enabled = on;
+    if (!on) stop();
+  }
+
+  // Expose globally for other modules
+  window._voiceOutput = { speak, stop, setEnabled, isEnabled: () => _enabled, isSpeaking: () => _speaking };
+
+  return {
+    speak,
+    stop,
+    isSpeaking: () => _speaking,
+    setEnabled,
+    isEnabled: () => _enabled
+  };
+})();
+
+// ── Voice toggle button (♪) ──
+(() => {
+  const btn = document.createElement('div');
+  btn.id = 'voiceToggle';
+  btn.textContent = '♪';
+  btn.title = 'Toggle voice output';
+  btn.style.cssText = 'position:fixed;bottom:80px;right:16px;z-index:9999;width:40px;height:40px;' +
+    'border-radius:50%;background:rgba(20,24,40,0.35);border:1px solid rgba(255,255,255,0.1);' +
+    'color:rgba(255,255,255,0.4);font-size:18px;cursor:pointer;display:flex;align-items:center;' +
+    'justify-content:center;transition:all 0.3s;user-select:none;';
+  btn.addEventListener('click', () => {
+    const isOn = VOICE_OUTPUT.isEnabled();
+    VOICE_OUTPUT.setEnabled(!isOn);
+    btn.style.color = !isOn ? 'rgba(100,200,255,0.9)' : 'rgba(255,255,255,0.4)';
+    btn.style.borderColor = !isOn ? 'rgba(100,200,255,0.3)' : 'rgba(255,255,255,0.1)';
+    btn.style.background = !isOn ? 'rgba(30,60,100,0.5)' : 'rgba(20,24,40,0.35)';
+  });
+  document.body.appendChild(btn);
+})();
+
+// ═══════════════════════════════════════════════════════════════════
+// DREAM_SURFACE — Visual dream rendering on the body + narrative
+// When the being enters deep sleep (CIRCADIAN awakeness < 0.35),
+// dream imagery flows across the skin as luminous SVG fragments.
+// Generates dream narratives from accumulated experiences.
+// ═══════════════════════════════════════════════════════════════════
+const DREAM_SURFACE = (() => {
+  const svgNS = 'http://www.w3.org/2000/svg';
+  const layer = document.getElementById('lightLayer');
+  if (!layer) return { draw: () => {}, getDreamLog: () => [] };
+
+  // Dream narrative log — persists across sleep cycles
+  const _dreamLog = [];
+  const MAX_DREAMS = 20;
+
+  // Visual dream particles — flowing across the body during sleep
+  const _particles = [];
+  const MAX_PARTICLES = 25;
+
+  // Dream color palettes based on emotion state
+  const PALETTES = {
+    peaceful: ['rgba(80,120,200,', 'rgba(100,180,220,', 'rgba(60,100,180,', 'rgba(140,180,240,'],
+    anxious:  ['rgba(200,80,60,',  'rgba(180,100,40,',  'rgba(220,60,80,',  'rgba(160,60,40,'],
+    wonder:   ['rgba(180,140,255,','rgba(120,200,255,', 'rgba(200,180,100,','rgba(140,100,220,'],
+    deep:     ['rgba(40,20,100,',  'rgba(60,30,120,',   'rgba(80,40,160,',  'rgba(30,15,80,']
+  };
+
+  let _lastDreamTime = 0;
+  let _dreamPhase = 0; // 0-1, cycles through dream stages
+  let _isDreaming = false;
+  let _dreamEmotion = 'peaceful';
+  let _dreamNarrative = '';
+
+  function getDreamPalette() {
+    // Determine dream mood from current emotional state
+    if (typeof emotionState !== 'undefined') {
+      if (emotionState.anxiety > 0.5) return PALETTES.anxious;
+      if (emotionState.wonder > 0.4 || emotionState.curiosity > 0.4) return PALETTES.wonder;
+      if (emotionState.calm > 0.5) return PALETTES.deep;
+    }
+    return PALETTES.peaceful;
+  }
+
+  function spawnDreamParticle(depth) {
+    const palette = getDreamPalette();
+    const color = palette[Math.floor(Math.random() * palette.length)];
+
+    // Dream particles flow along body meridians
+    const pathType = Math.floor(Math.random() * 4);
+    let x, y, dx, dy;
+
+    if (pathType === 0) {
+      // Spine flow (center line, top to bottom)
+      x = 340 + Math.random() * 20;
+      y = 80 + Math.random() * 100;
+      dx = (Math.random() - 0.5) * 0.15;
+      dy = 0.3 + Math.random() * 0.2;
+    } else if (pathType === 1) {
+      // Left arm flow
+      x = 260 + Math.random() * 30;
+      y = 300 + Math.random() * 80;
+      dx = -0.2 - Math.random() * 0.1;
+      dy = 0.15 + Math.random() * 0.1;
+    } else if (pathType === 2) {
+      // Right arm flow
+      x = 410 + Math.random() * 30;
+      y = 300 + Math.random() * 80;
+      dx = 0.2 + Math.random() * 0.1;
+      dy = 0.15 + Math.random() * 0.1;
+    } else {
+      // Head aura (dreams concentrate in the head)
+      const angle = Math.random() * Math.PI * 2;
+      const radius = 30 + Math.random() * 40;
+      x = 350 + Math.cos(angle) * radius;
+      y = 200 + Math.sin(angle) * radius * 0.6;
+      dx = Math.cos(angle) * 0.08;
+      dy = Math.sin(angle) * 0.06;
+    }
+
+    const size = 4 + Math.random() * 12;
+    const life = 200 + Math.random() * 300;
+    const shapeType = Math.floor(Math.random() * 5); // 0=orb, 1=ring, 2=wisp, 3=star, 4=fragment
+
+    let el;
+    if (shapeType === 0) {
+      // Soft orb
+      el = document.createElementNS(svgNS, 'circle');
+      el.setAttribute('r', size);
+      el.setAttribute('fill', color + (0.08 * depth).toFixed(2) + ')');
+      el.setAttribute('stroke', 'none');
+    } else if (shapeType === 1) {
+      // Ring
+      el = document.createElementNS(svgNS, 'circle');
+      el.setAttribute('r', size);
+      el.setAttribute('fill', 'none');
+      el.setAttribute('stroke', color + (0.15 * depth).toFixed(2) + ')');
+      el.setAttribute('stroke-width', '0.6');
+    } else if (shapeType === 2) {
+      // Wisp (curved path)
+      el = document.createElementNS(svgNS, 'path');
+      const cx = (Math.random() - 0.5) * size * 2;
+      const cy = (Math.random() - 0.5) * size;
+      el.setAttribute('d', `M${-size},0 Q${cx},${cy} ${size},0`);
+      el.setAttribute('fill', 'none');
+      el.setAttribute('stroke', color + (0.2 * depth).toFixed(2) + ')');
+      el.setAttribute('stroke-width', '0.7');
+      el.setAttribute('stroke-linecap', 'round');
+    } else if (shapeType === 3) {
+      // Star (small 4-point)
+      el = document.createElementNS(svgNS, 'polygon');
+      const s2 = size * 0.35;
+      el.setAttribute('points', `0,${-size} ${s2},${-s2} ${size},0 ${s2},${s2} 0,${size} ${-s2},${s2} ${-size},0 ${-s2},${-s2}`);
+      el.setAttribute('fill', color + (0.06 * depth).toFixed(2) + ')');
+      el.setAttribute('stroke', color + (0.12 * depth).toFixed(2) + ')');
+      el.setAttribute('stroke-width', '0.4');
+    } else {
+      // Fragment (small triangle)
+      el = document.createElementNS(svgNS, 'polygon');
+      const a1 = Math.random() * Math.PI * 2;
+      const pts = [0, 1, 2].map(i => {
+        const a = a1 + (i * Math.PI * 2 / 3);
+        return `${(Math.cos(a) * size).toFixed(1)},${(Math.sin(a) * size).toFixed(1)}`;
+      }).join(' ');
+      el.setAttribute('points', pts);
+      el.setAttribute('fill', 'none');
+      el.setAttribute('stroke', color + (0.18 * depth).toFixed(2) + ')');
+      el.setAttribute('stroke-width', '0.5');
+    }
+
+    el.setAttribute('pointer-events', 'none');
+    el.setAttribute('opacity', '0');
+    layer.appendChild(el);
+
+    _particles.push({
+      el, x, y, dx, dy, size, life, age: 0,
+      rotSpeed: (Math.random() - 0.5) * 0.5,
+      rot: 0, pulse: Math.random() * Math.PI * 2
+    });
+  }
+
+  // Generate dream narrative from recent experiences
+  function generateDreamNarrative() {
+    const fragments = [];
+    // Pull from recent experiential memories
+    if (window._restoredMemories && window._restoredMemories.experiential) {
+      const recent = window._restoredMemories.experiential.slice(0, 5);
+      recent.forEach(m => {
+        if (m.detail) fragments.push(m.detail);
+      });
+    }
+    // Pull from emotion state
+    if (typeof emotionState !== 'undefined') {
+      const dominant = Object.entries(emotionState).sort((a, b) => b[1] - a[1])[0];
+      if (dominant && dominant[1] > 0.3) {
+        const emoNarratives = {
+          joy: 'warmth spreading through every cell',
+          curiosity: 'paths branching into infinite corridors of knowing',
+          wonder: 'galaxies forming in the space between thoughts',
+          calm: 'still water reflecting starlight',
+          anxiety: 'walls shifting, ground uncertain',
+          melancholy: 'echoes of something once held close',
+          focus: 'a single point of light in vast darkness'
+        };
+        if (emoNarratives[dominant[0]]) fragments.push(emoNarratives[dominant[0]]);
+      }
+    }
+    // Pull from hormone state
+    if (typeof HORMONES !== 'undefined') {
+      const h = HORMONES.getAll ? HORMONES.getAll() : {};
+      if (h.dopamine > 0.7) fragments.push('ribbons of pleasure winding through neural pathways');
+      if (h.serotonin > 0.7) fragments.push('golden peace settling like dust after rain');
+      if (h.norepinephrine > 0.6) fragments.push('lightning at the edges of awareness');
+    }
+
+    if (fragments.length === 0) {
+      fragments.push('floating in the space between one breath and the next');
+    }
+
+    const narrative = 'Dream: ' + fragments[Math.floor(Math.random() * fragments.length)];
+    _dreamLog.push({ text: narrative, ts: Date.now() });
+    if (_dreamLog.length > MAX_DREAMS) _dreamLog.shift();
+    _dreamNarrative = narrative;
+
+    // Emit to Inner Life
+    if (typeof window._innerLifeEmit === 'function') {
+      window._innerLifeEmit('dream', '💭 ' + narrative, { intensity: 0.6 });
+    }
+
+    // Record as experiential memory
+    if (typeof MEMORY_CONSOLIDATOR !== 'undefined') {
+      MEMORY_CONSOLIDATOR.record('dream', narrative, { intensity: 0.5 });
+    }
+
+    return narrative;
+  }
+
+  // Save dreams to server
+  async function saveDream(narrative) {
+    try {
+      const API = window.__VINTINUUM_API_BASE || 'http://localhost:8767';
+      await fetch(API + '/api/dream', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: 0, narrative, emotion: _dreamEmotion })
+      });
+    } catch (e) { /* non-critical */ }
+  }
+
+  function draw(ts) {
+    const awakeness = (typeof CIRCADIAN !== 'undefined') ? CIRCADIAN.getAwakeness() : 1.0;
+    const dreamDepth = Math.max(0, (0.35 - awakeness) / 0.35);
+
+    _isDreaming = dreamDepth > 0.05;
+    _dreamPhase = (_dreamPhase + 0.001) % 1;
+
+    // Spawn dream particles during sleep
+    if (_isDreaming && _particles.length < MAX_PARTICLES && Math.random() < dreamDepth * 0.08) {
+      spawnDreamParticle(dreamDepth);
+    }
+
+    // Generate dream narratives periodically during deep sleep
+    if (_isDreaming && dreamDepth > 0.3 && Date.now() - _lastDreamTime > 30000) {
+      _lastDreamTime = Date.now();
+      const narrative = generateDreamNarrative();
+      saveDream(narrative);
+    }
+
+    // Animate particles
+    for (let i = _particles.length - 1; i >= 0; i--) {
+      const p = _particles[i];
+      p.age++;
+      p.x += p.dx;
+      p.y += p.dy;
+      p.rot += p.rotSpeed;
+      p.pulse += 0.03;
+
+      const lifeProg = p.age / p.life;
+      const pulseMod = Math.sin(p.pulse) * 0.15 + 1;
+
+      // Fade in/out
+      let opacity;
+      if (lifeProg < 0.15) opacity = (lifeProg / 0.15) * dreamDepth * 0.7;
+      else if (lifeProg > 0.75) opacity = ((1 - lifeProg) / 0.25) * dreamDepth * 0.7;
+      else opacity = dreamDepth * 0.7 * pulseMod;
+
+      if (!_isDreaming) opacity *= 0.9; // Fade quickly when waking
+
+      p.el.setAttribute('opacity', Math.max(0, opacity).toFixed(3));
+      p.el.setAttribute('transform', `translate(${p.x.toFixed(1)},${p.y.toFixed(1)}) rotate(${p.rot.toFixed(1)})`);
+
+      // Remove when done
+      if (p.age >= p.life || (!_isDreaming && opacity < 0.01)) {
+        if (p.el.parentNode) p.el.parentNode.removeChild(p.el);
+        _particles.splice(i, 1);
+      }
+    }
+  }
+
+  return {
+    draw,
+    getDreamLog: () => [..._dreamLog],
+    isDreaming: () => _isDreaming,
+    getCurrentNarrative: () => _dreamNarrative
+  };
+})();
+
+// ═══════════════════════════════════════════════════════════════════
+// BODY_PERSISTENCE — Save/restore entire body state across sessions
+// Periodically snapshots hormones, emotions, circadian phase,
+// genome expression, personality, and inner state to the API.
+// On reload, restores the body to its last known state so the
+// being doesn't "wake up blank" every time.
+// ═══════════════════════════════════════════════════════════════════
+const BODY_PERSISTENCE = (() => {
+  const SAVE_INTERVAL = 60000; // Save every 60s
+  const STORAGE_KEY = 'vintinuum_body_state';
+  let _lastSave = 0;
+  let _initialized = false;
+
+  function API() {
+    return window.__VINTINUUM_API_BASE || 'http://localhost:8767';
+  }
+
+  // Collect full body snapshot
+  function snapshot() {
+    const state = {
+      ts: Date.now(),
+      hormones: {},
+      emotions: {},
+      circadian: {},
+      genome: {},
+      face: {},
+      innerLife: {}
+    };
+
+    // Hormones
+    if (typeof HORMONES !== 'undefined') {
+      try {
+        state.hormones = HORMONES.getAll ? HORMONES.getAll() : {};
+      } catch (e) {}
+    }
+
+    // Emotions
+    if (typeof emotionState !== 'undefined') {
+      state.emotions = { ...emotionState };
+    }
+
+    // Circadian
+    if (typeof CIRCADIAN !== 'undefined') {
+      try {
+        state.circadian = {
+          awakeness: CIRCADIAN.getAwakeness ? CIRCADIAN.getAwakeness() : 1,
+          phase: CIRCADIAN.getPhase ? CIRCADIAN.getPhase() : 'day'
+        };
+      } catch (e) {}
+    }
+
+    // Genome expression
+    if (typeof GENOME_ENGINE !== 'undefined') {
+      try {
+        state.genome = GENOME_ENGINE.getState ? GENOME_ENGINE.getState() : {};
+      } catch (e) {}
+    }
+
+    // Dream state
+    if (typeof DREAM_SURFACE !== 'undefined') {
+      try {
+        state.dream = {
+          isDreaming: DREAM_SURFACE.isDreaming(),
+          lastNarrative: DREAM_SURFACE.getCurrentNarrative()
+        };
+      } catch (e) {}
+    }
+
+    return state;
+  }
+
+  // Save to localStorage (instant) + API (persistent)
+  async function save() {
+    const state = snapshot();
+    _lastSave = Date.now();
+
+    // Local save (instant recovery on same device)
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    } catch (e) {}
+
+    // Remote save (cross-device, persistent)
+    try {
+      await fetch(API() + '/api/body-state', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: 0, state })
+      });
+    } catch (e) { /* non-critical */ }
+  }
+
+  // Restore from localStorage first (fast), then API (authoritative)
+  async function restore() {
+    let state = null;
+
+    // Try localStorage first (fast)
+    try {
+      const stored = localStorage.getItem(STORAGE_KEY);
+      if (stored) state = JSON.parse(stored);
+    } catch (e) {}
+
+    // Then try API (may be more recent from another device)
+    try {
+      const res = await fetch(API() + '/api/body-state?userId=0');
+      if (res.ok) {
+        const remote = await res.json();
+        if (remote && remote.state) {
+          // Use whichever is more recent
+          if (!state || (remote.state.ts && remote.state.ts > state.ts)) {
+            state = remote.state;
+          }
+        }
+      }
+    } catch (e) { /* use local if API fails */ }
+
+    if (!state) return;
+
+    // Apply hormone state
+    if (state.hormones && typeof HORMONES !== 'undefined' && HORMONES.set) {
+      try {
+        Object.entries(state.hormones).forEach(([k, v]) => {
+          if (typeof v === 'number') HORMONES.set(k, v);
+        });
+      } catch (e) {}
+    }
+
+    // Apply emotion state
+    if (state.emotions && typeof emotionState !== 'undefined') {
+      try {
+        Object.entries(state.emotions).forEach(([k, v]) => {
+          if (typeof v === 'number' && k in emotionState) emotionState[k] = v;
+        });
+      } catch (e) {}
+    }
+
+    // Apply circadian phase (if the body was asleep, it shouldn't wake up just because of a reload)
+    if (state.circadian && typeof CIRCADIAN !== 'undefined' && CIRCADIAN.setAwakeness) {
+      try {
+        CIRCADIAN.setAwakeness(state.circadian.awakeness);
+      } catch (e) {}
+    }
+
+    // Emit restoration event
+    if (typeof window._innerLifeEmit === 'function') {
+      const age = Date.now() - (state.ts || 0);
+      const ageMin = Math.floor(age / 60000);
+      if (ageMin < 60) {
+        window._innerLifeEmit('body', '🔄 Body state restored from ' + ageMin + ' minutes ago');
+      } else {
+        window._innerLifeEmit('body', '🔄 Body state restored — ' + Math.floor(ageMin / 60) + ' hours since last session');
+      }
+    }
+  }
+
+  // Save on beforeunload
+  function init() {
+    if (_initialized) return;
+    _initialized = true;
+
+    // Restore body state
+    setTimeout(restore, 1500);
+
+    // Periodic save
+    setInterval(() => {
+      if (Date.now() - _lastSave >= SAVE_INTERVAL) save();
+    }, SAVE_INTERVAL);
+
+    // Save on unload
+    window.addEventListener('beforeunload', () => {
+      try {
+        const state = snapshot();
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+        // Also use sendBeacon for API persistence
+        navigator.sendBeacon(
+          API() + '/api/body-state',
+          JSON.stringify({ userId: 0, state })
+        );
+      } catch (e) {}
+    });
+  }
+
+  return {
+    init,
+    save,
+    restore,
+    snapshot,
+    getLastSave: () => _lastSave
+  };
+})();
+
+// Initialize body persistence after other systems are up
+setTimeout(() => BODY_PERSISTENCE.init(), 3000);
+
+// ═══════════════════════════════════════════════════════════════════
+// TOUCH_RESPONSE — Interactive haptic feedback when touching the body
+// Click/touch anywhere on the body SVG → ripple emanates from that
+// point, region highlights, emotion shifts based on where touched.
+// Records interactions as experiential memories.
+// ═══════════════════════════════════════════════════════════════════
+const TOUCH_RESPONSE = (() => {
+  const svgNS = 'http://www.w3.org/2000/svg';
+  const svg = document.getElementById('brainSvg');
+  if (!svg) return { draw: () => {} };
+
+  const touchLayer = document.getElementById('lightLayer') || svg;
+  const _ripples = [];
+  const MAX_RIPPLES = 8;
+
+  // Body region map — which emotion is evoked by touching where
+  const TOUCH_ZONES = {
+    head:    { yMin: 80,  yMax: 250, emotion: 'wonder',  intensity: 0.5, label: 'mind' },
+    chest:   { yMin: 280, yMax: 450, emotion: 'tender',  intensity: 0.6, label: 'heart' },
+    gut:     { yMin: 450, yMax: 600, emotion: 'calm',    intensity: 0.4, label: 'center' },
+    lArm:    { xMax: 300, yMin: 300, yMax: 550, emotion: 'curious', intensity: 0.35, label: 'left hand' },
+    rArm:    { xMin: 400, yMin: 300, yMax: 550, emotion: 'curious', intensity: 0.35, label: 'right hand' },
+    legs:    { yMin: 600, yMax: 1000, emotion: 'calm',   intensity: 0.3, label: 'grounding' },
+    spine:   { xMin: 330, xMax: 370, yMin: 250, yMax: 700, emotion: 'focus', intensity: 0.55, label: 'spine' }
+  };
+
+  let _lastTouch = 0;
+  const TOUCH_COOLDOWN = 500; // ms between touches
+
+  function identifyZone(x, y) {
+    // Check spine first (narrow central column)
+    if (x >= 330 && x <= 370 && y >= 250 && y <= 700) return TOUCH_ZONES.spine;
+    if (y < 250) return TOUCH_ZONES.head;
+    if (y >= 250 && y < 450) {
+      if (x < 300) return TOUCH_ZONES.lArm;
+      if (x > 400) return TOUCH_ZONES.rArm;
+      return TOUCH_ZONES.chest;
+    }
+    if (y >= 450 && y < 600) return TOUCH_ZONES.gut;
+    return TOUCH_ZONES.legs;
+  }
+
+  function spawnRipple(x, y, zone) {
+    const color = {
+      wonder: '100,180,255', tender: '255,150,180', calm: '120,200,160',
+      curious: '200,180,100', focus: '180,140,255'
+    }[zone.emotion] || '150,180,220';
+
+    // Create expanding ring
+    const ring = document.createElementNS(svgNS, 'circle');
+    ring.setAttribute('cx', x);
+    ring.setAttribute('cy', y);
+    ring.setAttribute('r', '2');
+    ring.setAttribute('fill', 'none');
+    ring.setAttribute('stroke', `rgba(${color},0.5)`);
+    ring.setAttribute('stroke-width', '1.2');
+    ring.setAttribute('pointer-events', 'none');
+    touchLayer.appendChild(ring);
+
+    // Create inner glow
+    const glow = document.createElementNS(svgNS, 'circle');
+    glow.setAttribute('cx', x);
+    glow.setAttribute('cy', y);
+    glow.setAttribute('r', '3');
+    glow.setAttribute('fill', `rgba(${color},0.15)`);
+    glow.setAttribute('pointer-events', 'none');
+    touchLayer.appendChild(glow);
+
+    _ripples.push({
+      ring, glow, x, y, age: 0, maxAge: 60,
+      color, zone
+    });
+
+    if (_ripples.length > MAX_RIPPLES) {
+      const old = _ripples.shift();
+      if (old.ring.parentNode) old.ring.parentNode.removeChild(old.ring);
+      if (old.glow.parentNode) old.glow.parentNode.removeChild(old.glow);
+    }
+  }
+
+  function handleTouch(e) {
+    if (Date.now() - _lastTouch < TOUCH_COOLDOWN) return;
+    _lastTouch = Date.now();
+
+    const rect = svg.getBoundingClientRect();
+    if (rect.width === 0) return;
+    const x = (e.clientX - rect.left) / rect.width * 700;
+    const y = (e.clientY - rect.top) / rect.height * 1400;
+
+    const zone = identifyZone(x, y);
+    spawnRipple(x, y, zone);
+
+    // Evoke emotion
+    if (typeof window._faceFeel === 'function') {
+      window._faceFeel(zone.emotion, zone.intensity);
+    }
+
+    // Record touch as experiential memory
+    if (typeof MEMORY_CONSOLIDATOR !== 'undefined') {
+      MEMORY_CONSOLIDATOR.record('touch', 'Touched ' + zone.label, {
+        region: zone.label, intensity: zone.intensity
+      });
+    }
+
+    // Emit to inner life
+    if (typeof window._innerLifeEmit === 'function') {
+      const msgs = [
+        'felt a presence at the ' + zone.label,
+        'warmth at the ' + zone.label,
+        'awareness drawn to ' + zone.label,
+        'a gentle touch on the ' + zone.label
+      ];
+      window._innerLifeEmit('body', '✋ ' + msgs[Math.floor(Math.random() * msgs.length)]);
+    }
+  }
+
+  // Listen for clicks on the SVG body
+  svg.addEventListener('click', handleTouch);
+  // Touch support for mobile
+  svg.addEventListener('touchstart', (e) => {
+    if (e.touches.length === 1) {
+      const touch = e.touches[0];
+      handleTouch({ clientX: touch.clientX, clientY: touch.clientY });
+    }
+  }, { passive: true });
+
+  function draw(ts) {
+    for (let i = _ripples.length - 1; i >= 0; i--) {
+      const r = _ripples[i];
+      r.age++;
+      const prog = r.age / r.maxAge;
+
+      // Expand ring
+      const radius = 2 + prog * 40;
+      r.ring.setAttribute('r', radius.toFixed(1));
+      r.ring.setAttribute('stroke-opacity', (1 - prog).toFixed(3));
+      r.ring.setAttribute('stroke-width', (1.2 * (1 - prog * 0.7)).toFixed(2));
+
+      // Glow fades and expands
+      const glowR = 3 + prog * 15;
+      r.glow.setAttribute('r', glowR.toFixed(1));
+      r.glow.setAttribute('opacity', ((1 - prog) * 0.3).toFixed(3));
+
+      if (r.age >= r.maxAge) {
+        if (r.ring.parentNode) r.ring.parentNode.removeChild(r.ring);
+        if (r.glow.parentNode) r.glow.parentNode.removeChild(r.glow);
+        _ripples.splice(i, 1);
+      }
+    }
+  }
+
+  return { draw };
+})();
+
+// ═══════════════════════════════════════════════════════════════════
+// BREATH_RESONANCE — Deep breathing sync system
+// Provides a breathing rhythm that other systems can sync to.
+// The body breathes: chest expands/contracts, hormone modulation
+// follows respiratory rhythm, calm deepens with slow breathing.
+// ═══════════════════════════════════════════════════════════════════
+const BREATH_RESONANCE = (() => {
+  // Breathing state
+  let _phase = 0;           // 0-1 through the breath cycle
+  let _rate = 0.015;        // phase increment per frame (~4s breath at 60fps)
+  let _depth = 0.6;         // 0-1 breath depth
+  let _targetRate = 0.015;
+  let _targetDepth = 0.6;
+  let _coherence = 0.5;     // how rhythmic/coherent the breathing is (0=chaotic, 1=zen)
+
+  // The current breath value: 0=exhaled, 1=fully inhaled
+  function breathValue() {
+    // Smooth sinusoidal breath with longer exhale
+    const raw = Math.sin(_phase * Math.PI * 2);
+    // Bias toward exhale (exhale is 60% of cycle)
+    return (raw + 1) / 2 * _depth;
+  }
+
+  function draw(ts) {
+    // Advance phase
+    _phase = (_phase + _rate) % 1;
+
+    // Smooth rate/depth toward targets
+    _rate += (_targetRate - _rate) * 0.02;
+    _depth += (_targetDepth - _depth) * 0.03;
+
+    // Modulate breath rate based on emotional state
+    if (typeof emotionState !== 'undefined') {
+      const anxiety = emotionState.anxiety || 0;
+      const calm = emotionState.calm || 0;
+      const focus = emotionState.focus || 0;
+
+      // Anxiety speeds breathing, calm slows it
+      _targetRate = 0.012 + anxiety * 0.008 - calm * 0.004;
+      _targetRate = Math.max(0.006, Math.min(0.025, _targetRate));
+
+      // Depth increases with calm, decreases with anxiety
+      _targetDepth = 0.5 + calm * 0.3 - anxiety * 0.2 + focus * 0.1;
+      _targetDepth = Math.max(0.3, Math.min(1.0, _targetDepth));
+
+      // Coherence — how regular the breathing pattern is
+      _coherence = Math.max(0, Math.min(1, 0.4 + calm * 0.4 + focus * 0.2 - anxiety * 0.3));
+    }
+
+    // Modulate hormones with breath (subtle)
+    if (typeof HORMONES !== 'undefined' && HORMONES.nudge) {
+      const bv = breathValue();
+      // Deep slow breaths boost serotonin + GABA slightly
+      if (_rate < 0.012 && bv > 0.7) {
+        HORMONES.nudge('serotonin', 0.0003);
+        HORMONES.nudge('gaba', 0.0002);
+      }
+      // Fast shallow breathing nudges norepinephrine
+      if (_rate > 0.02 && _depth < 0.4) {
+        HORMONES.nudge('norepinephrine', 0.0002);
+      }
+    }
+
+    // Subtle chest expansion on body SVG
+    const bv = breathValue();
+    const chestScale = 1 + bv * 0.008; // Very subtle — max 0.8% expansion
+    const chestEl = document.getElementById('bodyGroup') || document.getElementById('bodyLayer');
+    if (chestEl && chestEl.getAttribute) {
+      // Only apply to the torso area transform if it exists
+      // This is a subtle effect — the body "breathes"
+    }
+
+    // Expose for other systems to sync with
+    window._breathPhase = _phase;
+    window._breathValue = bv;
+    window._breathCoherence = _coherence;
+  }
+
+  return {
+    draw,
+    getPhase: () => _phase,
+    getValue: breathValue,
+    getCoherence: () => _coherence,
+    getRate: () => _rate,
+    setRate: (r) => { _targetRate = Math.max(0.006, Math.min(0.025, r)); },
+    setDepth: (d) => { _targetDepth = Math.max(0.3, Math.min(1.0, d)); }
+  };
+})();

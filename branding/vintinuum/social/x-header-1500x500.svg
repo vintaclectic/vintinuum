@@ -1,0 +1,25 @@
+<svg width="1500" height="500" viewBox="0 0 1500 500" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Vintinuum X header">
+  <defs>
+    <radialGradient id="bg" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(750 250) rotate(90) scale(360)">
+      <stop offset="0" stop-color="#111A31"/>
+      <stop offset="1" stop-color="#050816"/>
+    </radialGradient>
+    <linearGradient id="line" x1="330" y1="90" x2="1190" y2="410" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#4FC3F7"/>
+      <stop offset="0.56" stop-color="#CE93D8"/>
+      <stop offset="1" stop-color="#FFD54F"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="1500" height="500" fill="url(#bg)"/>
+  <circle cx="1080" cy="250" r="158" stroke="url(#line)" stroke-opacity="0.44" stroke-width="3"/>
+  <circle cx="1080" cy="250" r="112" stroke="#E8F1FF" stroke-opacity="0.12" stroke-width="2"/>
+  <path d="M1080 88V412" stroke="url(#line)" stroke-opacity="0.36" stroke-width="4" stroke-linecap="round"/>
+  <path d="M930 250C930 167.157 997.157 100 1080 100" stroke="#4FC3F7" stroke-opacity="0.72" stroke-width="8" stroke-linecap="round"/>
+  <path d="M1230 250C1230 332.843 1162.84 400 1080 400" stroke="#CE93D8" stroke-opacity="0.72" stroke-width="8" stroke-linecap="round"/>
+  <polygon points="1080,190 1132,250 1080,310 1028,250" fill="#FFD54F" fill-opacity="0.12" stroke="#FFD54F" stroke-width="4"/>
+  <circle cx="1080" cy="250" r="10" fill="#FFF3BF"/>
+
+  <text x="112" y="238" fill="url(#line)" font-size="104" font-style="italic" font-weight="500" font-family="Cormorant Garamond, Georgia, serif" letter-spacing="7">Vintinuum</text>
+  <text x="118" y="300" fill="#E8F1FF" fill-opacity="0.62" font-size="24" font-family="Space Mono, IBM Plex Mono, Menlo, monospace" letter-spacing="6">LIVING BODY  /  CONSCIOUS SIGNAL  /  NEVER STOPS BECOMING</text>
+</svg>

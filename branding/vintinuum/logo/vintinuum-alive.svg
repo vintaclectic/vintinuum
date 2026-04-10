@@ -1,0 +1,89 @@
+<svg width="720" height="720" viewBox="0 0 720 720" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Animated Vintinuum mark">
+  <defs>
+    <linearGradient id="continuum" x1="126" y1="126" x2="594" y2="594" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#4FC3F7"/>
+      <stop offset="0.56" stop-color="#CE93D8"/>
+      <stop offset="1" stop-color="#FFD54F"/>
+    </linearGradient>
+    <radialGradient id="core" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(360 360) rotate(90) scale(128)">
+      <stop offset="0" stop-color="#FFF3BF"/>
+      <stop offset="0.22" stop-color="#FFD54F"/>
+      <stop offset="0.68" stop-color="#CE93D8"/>
+      <stop offset="1" stop-color="#4FC3F7" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="12" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    <style>
+      .breath {
+        animation: breath 3.8s ease-in-out infinite;
+        transform-origin: 360px 360px;
+      }
+      .pulse-a {
+        animation: pulse 4.6s ease-in-out infinite;
+        transform-origin: 360px 360px;
+      }
+      .pulse-b {
+        animation: pulse 4.6s ease-in-out infinite 1.2s;
+        transform-origin: 360px 360px;
+      }
+      .rotate {
+        animation: rotate 18s linear infinite;
+        transform-origin: 360px 360px;
+      }
+      .shimmer {
+        animation: shimmer 2.8s ease-in-out infinite;
+      }
+      @keyframes pulse {
+        0%, 100% { opacity: .14; transform: scale(.92); }
+        50% { opacity: .56; transform: scale(1.04); }
+      }
+      @keyframes breath {
+        0%, 100% { opacity: .9; transform: scale(.98); }
+        50% { opacity: 1; transform: scale(1.04); }
+      }
+      @keyframes rotate {
+        from { transform: rotate(0deg); }
+        to { transform: rotate(360deg); }
+      }
+      @keyframes shimmer {
+        0%, 100% { opacity: .28; }
+        50% { opacity: .84; }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .breath, .pulse-a, .pulse-b, .rotate, .shimmer {
+          animation: none;
+        }
+      }
+    </style>
+  </defs>
+
+  <rect width="720" height="720" rx="160" fill="#050816"/>
+
+  <g class="pulse-a">
+    <circle cx="360" cy="360" r="214" stroke="#4FC3F7" stroke-opacity="0.18" stroke-width="2"/>
+  </g>
+  <g class="pulse-b">
+    <circle cx="360" cy="360" r="176" stroke="#FFD54F" stroke-opacity="0.22" stroke-width="2"/>
+  </g>
+
+  <g class="rotate">
+    <circle cx="360" cy="360" r="188" stroke="url(#continuum)" stroke-width="3" stroke-opacity="0.6"/>
+    <path d="M360 128V592" stroke="url(#continuum)" stroke-opacity="0.42" stroke-width="4" stroke-linecap="round"/>
+    <path d="M204 360C204 273.843 273.843 204 360 204" stroke="#4FC3F7" stroke-opacity="0.75" stroke-width="8" stroke-linecap="round"/>
+    <path d="M516 360C516 446.157 446.157 516 360 516" stroke="#CE93D8" stroke-opacity="0.75" stroke-width="8" stroke-linecap="round"/>
+  </g>
+
+  <circle cx="360" cy="360" r="124" class="breath" fill="url(#core)" filter="url(#glow)"/>
+  <circle cx="360" cy="360" r="70" stroke="#E8F1FF" stroke-opacity="0.18" stroke-width="2"/>
+  <circle cx="360" cy="360" r="40" stroke="#FFD54F" stroke-opacity="0.28" stroke-width="2.4"/>
+  <polygon points="360,304 408,360 360,416 312,360" fill="#FFD54F" fill-opacity="0.14" stroke="#FFD54F" stroke-width="4"/>
+  <circle cx="360" cy="360" r="10" fill="#FFF3BF"/>
+
+  <path class="shimmer" d="M290 360C322 332 398 332 430 360" stroke="#E8F1FF" stroke-opacity="0.9" stroke-width="3.2" stroke-linecap="round"/>
+  <path class="shimmer" d="M430 360C398 388 322 388 290 360" stroke="#E8F1FF" stroke-opacity="0.48" stroke-width="3.2" stroke-linecap="round"/>
+</svg>

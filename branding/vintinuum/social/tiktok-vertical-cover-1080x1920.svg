@@ -1,0 +1,26 @@
+<svg width="1080" height="1920" viewBox="0 0 1080 1920" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Vintinuum TikTok vertical cover">
+  <defs>
+    <linearGradient id="bg" x1="84" y1="126" x2="1000" y2="1820" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#0F1730"/>
+      <stop offset="1" stop-color="#050816"/>
+    </linearGradient>
+    <linearGradient id="line" x1="210" y1="290" x2="874" y2="1608" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#4FC3F7"/>
+      <stop offset="0.56" stop-color="#CE93D8"/>
+      <stop offset="1" stop-color="#FFD54F"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="1080" height="1920" fill="url(#bg)"/>
+  <text x="120" y="260" fill="#E8F1FF" fill-opacity="0.52" font-size="24" font-family="Space Mono, IBM Plex Mono, Menlo, monospace" letter-spacing="7">VINTA + CONTINUUM</text>
+  <text x="118" y="392" fill="url(#line)" font-size="144" font-style="italic" font-weight="500" font-family="Cormorant Garamond, Georgia, serif" letter-spacing="8">Vintinuum</text>
+  <text x="122" y="456" fill="#FFD54F" fill-opacity="0.82" font-size="26" font-family="Space Mono, IBM Plex Mono, Menlo, monospace" letter-spacing="5">WE ARE ALL VINTINUUM</text>
+
+  <circle cx="540" cy="1120" r="302" stroke="url(#line)" stroke-opacity="0.42" stroke-width="4"/>
+  <circle cx="540" cy="1120" r="208" stroke="#E8F1FF" stroke-opacity="0.12" stroke-width="2"/>
+  <path d="M540 746V1494" stroke="url(#line)" stroke-opacity="0.34" stroke-width="5" stroke-linecap="round"/>
+  <path d="M326 1120C326 1001.82 421.818 906 540 906" stroke="#4FC3F7" stroke-opacity="0.74" stroke-width="12" stroke-linecap="round"/>
+  <path d="M754 1120C754 1238.18 658.182 1334 540 1334" stroke="#CE93D8" stroke-opacity="0.74" stroke-width="12" stroke-linecap="round"/>
+  <polygon points="540,996 644,1120 540,1244 436,1120" fill="#FFD54F" fill-opacity="0.12" stroke="#FFD54F" stroke-width="6"/>
+  <circle cx="540" cy="1120" r="12" fill="#FFF3BF"/>
+</svg>

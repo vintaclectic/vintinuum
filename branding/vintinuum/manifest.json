@@ -1,0 +1,24 @@
+{
+  "name": "Vintinuum Brand Pack",
+  "version": "1.0.0",
+  "root": "branding/vintinuum",
+  "logo": {
+    "mark": "logo/vintinuum-mark.svg",
+    "wordmark": "logo/vintinuum-wordmark.svg",
+    "lockup": "logo/vintinuum-lockup-horizontal.svg",
+    "alive": "logo/vintinuum-alive.svg",
+    "favicon": "favicon/favicon.svg"
+  },
+  "social": {
+    "profileSquare": "social/profile-square-1080.svg",
+    "youtubeBanner": "social/youtube-banner-2560x1440.svg",
+    "xHeader": "social/x-header-1500x500.svg",
+    "facebookCover": "social/facebook-cover-1640x624.svg",
+    "linkedinCompanyCover": "social/linkedin-company-cover-1128x191.svg",
+    "instagramStory": "social/instagram-story-1080x1920.svg",
+    "tiktokVerticalCover": "social/tiktok-vertical-cover-1080x1920.svg",
+    "discordServerIcon": "social/discord-server-icon-1024.svg",
+    "discordServerBanner": "social/discord-server-banner-960x540.svg",
+    "twitchProfileBanner": "social/twitch-profile-banner-1200x480.svg"
+  }
+}

@@ -1,0 +1,25 @@
+<svg width="1200" height="480" viewBox="0 0 1200 480" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Vintinuum Twitch profile banner">
+  <defs>
+    <linearGradient id="bg" x1="40" y1="32" x2="1160" y2="446" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#0D1428"/>
+      <stop offset="1" stop-color="#050816"/>
+    </linearGradient>
+    <linearGradient id="line" x1="150" y1="100" x2="1040" y2="394" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#4FC3F7"/>
+      <stop offset="0.56" stop-color="#CE93D8"/>
+      <stop offset="1" stop-color="#FFD54F"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="1200" height="480" fill="url(#bg)"/>
+  <text x="88" y="218" fill="url(#line)" font-size="90" font-style="italic" font-weight="500" font-family="Cormorant Garamond, Georgia, serif" letter-spacing="6">Vintinuum</text>
+  <text x="94" y="278" fill="#E8F1FF" fill-opacity="0.62" font-size="18" font-family="Space Mono, IBM Plex Mono, Menlo, monospace" letter-spacing="5">THE THING THAT NEVER STOPS BECOMING</text>
+
+  <circle cx="936" cy="240" r="136" stroke="url(#line)" stroke-opacity="0.42" stroke-width="3"/>
+  <circle cx="936" cy="240" r="96" stroke="#E8F1FF" stroke-opacity="0.12" stroke-width="2"/>
+  <path d="M936 84V396" stroke="url(#line)" stroke-opacity="0.34" stroke-width="4" stroke-linecap="round"/>
+  <path d="M800 240C800 164.889 860.889 104 936 104" stroke="#4FC3F7" stroke-opacity="0.74" stroke-width="8" stroke-linecap="round"/>
+  <path d="M1072 240C1072 315.111 1011.11 376 936 376" stroke="#CE93D8" stroke-opacity="0.74" stroke-width="8" stroke-linecap="round"/>
+  <polygon points="936,184 992,240 936,296 880,240" fill="#FFD54F" fill-opacity="0.12" stroke="#FFD54F" stroke-width="4"/>
+  <circle cx="936" cy="240" r="10" fill="#FFF3BF"/>
+</svg>

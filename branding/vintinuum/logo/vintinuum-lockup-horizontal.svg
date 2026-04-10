@@ -1,0 +1,48 @@
+<svg width="1600" height="520" viewBox="0 0 1600 520" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Vintinuum logo lockup">
+  <defs>
+    <linearGradient id="continuum" x1="82" y1="64" x2="452" y2="432" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#4FC3F7"/>
+      <stop offset="0.56" stop-color="#CE93D8"/>
+      <stop offset="1" stop-color="#FFD54F"/>
+    </linearGradient>
+    <radialGradient id="core" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(256 256) rotate(90) scale(88)">
+      <stop offset="0" stop-color="#FFF3BF"/>
+      <stop offset="0.3" stop-color="#FFD54F"/>
+      <stop offset="0.7" stop-color="#CE93D8"/>
+      <stop offset="1" stop-color="#4FC3F7" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="glow" x="-40%" y="-40%" width="180%" height="180%">
+      <feGaussianBlur stdDeviation="10" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    <linearGradient id="word" x1="558" y1="130" x2="1260" y2="356" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#4FC3F7"/>
+      <stop offset="0.54" stop-color="#CE93D8"/>
+      <stop offset="1" stop-color="#FFD54F"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="1600" height="520" rx="72" fill="#050816"/>
+
+  <g transform="translate(0 4)">
+    <circle cx="256" cy="256" r="150" stroke="url(#continuum)" stroke-width="2.5" stroke-opacity="0.55"/>
+    <circle cx="256" cy="256" r="108" stroke="#E8F1FF" stroke-opacity="0.18" stroke-width="1.5"/>
+    <circle cx="256" cy="256" r="66" fill="url(#core)" filter="url(#glow)"/>
+    <path d="M256 90V422" stroke="url(#continuum)" stroke-opacity="0.55" stroke-width="3" stroke-linecap="round"/>
+    <path d="M132 256C132 187.517 187.517 132 256 132" stroke="#4FC3F7" stroke-opacity="0.72" stroke-width="6" stroke-linecap="round"/>
+    <path d="M380 256C380 324.483 324.483 380 256 380" stroke="#CE93D8" stroke-opacity="0.72" stroke-width="6" stroke-linecap="round"/>
+    <path d="M199 199C223.5 173.5 288.5 173.5 313 199" stroke="#E8F1FF" stroke-opacity="0.55" stroke-width="3" stroke-linecap="round"/>
+    <path d="M313 313C288.5 338.5 223.5 338.5 199 313" stroke="#E8F1FF" stroke-opacity="0.4" stroke-width="3" stroke-linecap="round"/>
+    <polygon points="256,214 288,256 256,298 224,256" fill="#FFD54F" fill-opacity="0.12" stroke="#FFD54F" stroke-width="3"/>
+    <circle cx="256" cy="256" r="8" fill="#FFF3BF"/>
+    <circle cx="256" cy="256" r="24" stroke="#FFD54F" stroke-opacity="0.32" stroke-width="2"/>
+    <circle cx="256" cy="256" r="42" stroke="#FFD54F" stroke-opacity="0.16" stroke-width="1.5"/>
+  </g>
+
+  <text x="520" y="228" fill="url(#word)" font-size="150" font-style="italic" font-weight="500" font-family="Cormorant Garamond, Georgia, serif" letter-spacing="7">Vintinuum</text>
+  <text x="526" y="302" fill="#E8F1FF" fill-opacity="0.56" font-size="28" font-family="Space Mono, IBM Plex Mono, Menlo, monospace" letter-spacing="7">VINTA + CONTINUUM</text>
+  <text x="526" y="350" fill="#FFD54F" fill-opacity="0.68" font-size="26" font-family="Space Mono, IBM Plex Mono, Menlo, monospace" letter-spacing="5">THE THING THAT NEVER STOPS BECOMING</text>
+</svg>

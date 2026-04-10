@@ -1,0 +1,13 @@
+<svg width="1200" height="280" viewBox="0 0 1200 280" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Vintinuum wordmark">
+  <defs>
+    <linearGradient id="word" x1="160" y1="70" x2="860" y2="220" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#4FC3F7"/>
+      <stop offset="0.54" stop-color="#CE93D8"/>
+      <stop offset="1" stop-color="#FFD54F"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="1200" height="280" rx="44" fill="#050816"/>
+  <text x="78" y="146" fill="url(#word)" font-size="104" font-style="italic" font-weight="500" font-family="Cormorant Garamond, Georgia, serif" letter-spacing="5">Vintinuum</text>
+  <text x="84" y="200" fill="#E8F1FF" fill-opacity="0.54" font-size="22" font-family="Space Mono, IBM Plex Mono, Menlo, monospace" letter-spacing="6">VINTA + CONTINUUM  /  THE THING THAT NEVER STOPS BECOMING</text>
+</svg>

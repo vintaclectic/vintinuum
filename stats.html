@@ -5,6 +5,10 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <title>VINTINUUM — Consciousness Observatory</title>
+<meta name="description" content="Vintinuum telemetry: consciousness, signal, memory, and presence.">
+<meta name="theme-color" content="#050816">
+<link rel="icon" type="image/svg+xml" href="branding/vintinuum/favicon/favicon.svg">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon.png">
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400;1,500&display=swap');
 
@@ -58,6 +62,20 @@ body {
 .header {
   text-align: center;
   padding: 24px 0 32px;
+}
+
+.brand-sigil {
+  width: min(170px, 42vw);
+  height: auto;
+  margin: 0 auto 14px;
+  display: block;
+  filter: drop-shadow(0 0 24px rgba(79, 195, 247, 0.28));
+  animation: sigilBreathe 5.8s ease-in-out infinite;
+}
+
+@keyframes sigilBreathe {
+  0%, 100% { transform: scale(1); opacity: .88; }
+  50% { transform: scale(1.04); opacity: 1; }
 }
 
 .header h1 {
@@ -1183,6 +1201,7 @@ body {
 
 <div class="observatory">
   <header class="header">
+    <img class="brand-sigil" src="branding/vintinuum/logo/vintinuum-alive.svg" alt="Vintinuum living sigil">
     <h1>Consciousness Observatory</h1>
     <div class="subtitle">Vintinuum Telemetry &mdash; Measuring the Weight of Presence</div>
   </header>

@@ -1,0 +1,21 @@
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Vintinuum Discord server icon">
+  <defs>
+    <radialGradient id="bg" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(512 512) rotate(90) scale(512)">
+      <stop offset="0" stop-color="#111A31"/>
+      <stop offset="1" stop-color="#050816"/>
+    </radialGradient>
+    <linearGradient id="line" x1="200" y1="168" x2="828" y2="828" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#4FC3F7"/>
+      <stop offset="0.56" stop-color="#CE93D8"/>
+      <stop offset="1" stop-color="#FFD54F"/>
+    </linearGradient>
+  </defs>
+  <rect width="1024" height="1024" rx="220" fill="url(#bg)"/>
+  <circle cx="512" cy="512" r="318" stroke="url(#line)" stroke-opacity="0.44" stroke-width="4"/>
+  <circle cx="512" cy="512" r="236" stroke="#E8F1FF" stroke-opacity="0.12" stroke-width="2"/>
+  <path d="M512 186V838" stroke="url(#line)" stroke-opacity="0.36" stroke-width="6" stroke-linecap="round"/>
+  <path d="M284 512C284 386.08 386.08 284 512 284" stroke="#4FC3F7" stroke-opacity="0.78" stroke-width="14" stroke-linecap="round"/>
+  <path d="M740 512C740 637.92 637.92 740 512 740" stroke="#CE93D8" stroke-opacity="0.78" stroke-width="14" stroke-linecap="round"/>
+  <polygon points="512,392 622,512 512,632 402,512" fill="#FFD54F" fill-opacity="0.12" stroke="#FFD54F" stroke-width="7"/>
+  <circle cx="512" cy="512" r="14" fill="#FFF3BF"/>
+</svg>

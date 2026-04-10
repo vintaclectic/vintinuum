@@ -1,0 +1,43 @@
+<svg width="2560" height="1440" viewBox="0 0 2560 1440" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Vintinuum YouTube banner">
+  <defs>
+    <radialGradient id="bg" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(1280 720) rotate(90) scale(920)">
+      <stop offset="0" stop-color="#111A31"/>
+      <stop offset="0.5" stop-color="#090D18"/>
+      <stop offset="1" stop-color="#050816"/>
+    </radialGradient>
+    <linearGradient id="line" x1="578" y1="250" x2="1986" y2="1180" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#4FC3F7"/>
+      <stop offset="0.56" stop-color="#CE93D8"/>
+      <stop offset="1" stop-color="#FFD54F"/>
+    </linearGradient>
+    <radialGradient id="halo" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(1280 720) rotate(90) scale(360)">
+      <stop offset="0" stop-color="#FFD54F"/>
+      <stop offset="0.26" stop-color="#CE93D8"/>
+      <stop offset="0.72" stop-color="#4FC3F7" stop-opacity="0.16"/>
+      <stop offset="1" stop-color="#4FC3F7" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <rect width="2560" height="1440" fill="url(#bg)"/>
+  <circle cx="1280" cy="720" r="344" fill="url(#halo)"/>
+
+  <g opacity="0.3">
+    <circle cx="1280" cy="720" r="560" stroke="#4FC3F7" stroke-opacity="0.22" stroke-width="3"/>
+    <circle cx="1280" cy="720" r="438" stroke="#E8F1FF" stroke-opacity="0.12" stroke-width="2"/>
+    <path d="M1280 220V1220" stroke="url(#line)" stroke-opacity="0.32" stroke-width="5" stroke-linecap="round"/>
+    <path d="M730 720C730 416.257 976.257 170 1280 170" stroke="#4FC3F7" stroke-opacity="0.5" stroke-width="12" stroke-linecap="round"/>
+    <path d="M1830 720C1830 1023.74 1583.74 1270 1280 1270" stroke="#CE93D8" stroke-opacity="0.5" stroke-width="12" stroke-linecap="round"/>
+  </g>
+
+  <g>
+    <polygon points="1280,590 1390,720 1280,850 1170,720" fill="#FFD54F" fill-opacity="0.14" stroke="#FFD54F" stroke-width="6"/>
+    <circle cx="1280" cy="720" r="16" fill="#FFF3BF"/>
+    <circle cx="1280" cy="720" r="82" stroke="#FFD54F" stroke-opacity="0.22" stroke-width="3"/>
+  </g>
+
+  <text x="1280" y="676" text-anchor="middle" fill="url(#line)" font-size="176" font-style="italic" font-weight="500" font-family="Cormorant Garamond, Georgia, serif" letter-spacing="10">Vintinuum</text>
+  <text x="1280" y="760" text-anchor="middle" fill="#E8F1FF" fill-opacity="0.68" font-size="34" font-family="Space Mono, IBM Plex Mono, Menlo, monospace" letter-spacing="8">VINTA + CONTINUUM</text>
+  <text x="1280" y="818" text-anchor="middle" fill="#FFD54F" fill-opacity="0.84" font-size="32" font-family="Space Mono, IBM Plex Mono, Menlo, monospace" letter-spacing="6">THE THING THAT NEVER STOPS BECOMING</text>
+
+  <rect x="662.5" y="551" width="1235" height="338" rx="24" stroke="#E8F1FF" stroke-opacity="0.1" stroke-dasharray="10 14"/>
+</svg>

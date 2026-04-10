@@ -1,0 +1,39 @@
+<svg width="1080" height="1080" viewBox="0 0 1080 1080" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Vintinuum profile image">
+  <defs>
+    <radialGradient id="bg" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(540 540) rotate(90) scale(540)">
+      <stop offset="0" stop-color="#10182C"/>
+      <stop offset="0.72" stop-color="#070B17"/>
+      <stop offset="1" stop-color="#050816"/>
+    </radialGradient>
+    <linearGradient id="continuum" x1="210" y1="182" x2="864" y2="862" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#4FC3F7"/>
+      <stop offset="0.56" stop-color="#CE93D8"/>
+      <stop offset="1" stop-color="#FFD54F"/>
+    </linearGradient>
+    <radialGradient id="core" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(540 540) rotate(90) scale(190)">
+      <stop offset="0" stop-color="#FFF3BF"/>
+      <stop offset="0.24" stop-color="#FFD54F"/>
+      <stop offset="0.7" stop-color="#CE93D8"/>
+      <stop offset="1" stop-color="#4FC3F7" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="glow" x="-40%" y="-40%" width="180%" height="180%">
+      <feGaussianBlur stdDeviation="24" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <rect width="1080" height="1080" fill="url(#bg)"/>
+  <circle cx="540" cy="540" r="336" stroke="url(#continuum)" stroke-opacity="0.45" stroke-width="4"/>
+  <circle cx="540" cy="540" r="260" stroke="#E8F1FF" stroke-opacity="0.12" stroke-width="2"/>
+  <circle cx="540" cy="540" r="178" fill="url(#core)" filter="url(#glow)"/>
+  <path d="M540 182V898" stroke="url(#continuum)" stroke-opacity="0.46" stroke-width="6" stroke-linecap="round"/>
+  <path d="M262 540C262 386.466 386.466 262 540 262" stroke="#4FC3F7" stroke-opacity="0.82" stroke-width="14" stroke-linecap="round"/>
+  <path d="M818 540C818 693.534 693.534 818 540 818" stroke="#CE93D8" stroke-opacity="0.82" stroke-width="14" stroke-linecap="round"/>
+  <polygon points="540,430 644,540 540,650 436,540" fill="#FFD54F" fill-opacity="0.12" stroke="#FFD54F" stroke-width="8"/>
+  <circle cx="540" cy="540" r="18" fill="#FFF3BF"/>
+  <circle cx="540" cy="540" r="92" stroke="#FFD54F" stroke-opacity="0.22" stroke-width="4"/>
+  <text x="540" y="970" text-anchor="middle" fill="#E8F1FF" fill-opacity="0.58" font-size="34" font-family="Space Mono, IBM Plex Mono, Menlo, monospace" letter-spacing="10">V I N T I N U U M</text>
+</svg>

@@ -1,0 +1,26 @@
+<svg width="1640" height="624" viewBox="0 0 1640 624" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Vintinuum Facebook cover">
+  <defs>
+    <linearGradient id="bg" x1="146" y1="84" x2="1490" y2="548" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#0C1327"/>
+      <stop offset="1" stop-color="#050816"/>
+    </linearGradient>
+    <linearGradient id="line" x1="284" y1="72" x2="1336" y2="534" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#4FC3F7"/>
+      <stop offset="0.56" stop-color="#CE93D8"/>
+      <stop offset="1" stop-color="#FFD54F"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="1640" height="624" fill="url(#bg)"/>
+  <circle cx="1248" cy="312" r="188" stroke="url(#line)" stroke-opacity="0.42" stroke-width="3"/>
+  <circle cx="1248" cy="312" r="126" stroke="#E8F1FF" stroke-opacity="0.12" stroke-width="2"/>
+  <path d="M1248 118V506" stroke="url(#line)" stroke-opacity="0.34" stroke-width="4" stroke-linecap="round"/>
+  <path d="M1072 312C1072 214.798 1150.8 136 1248 136" stroke="#4FC3F7" stroke-opacity="0.72" stroke-width="9" stroke-linecap="round"/>
+  <path d="M1424 312C1424 409.202 1345.2 488 1248 488" stroke="#CE93D8" stroke-opacity="0.72" stroke-width="9" stroke-linecap="round"/>
+  <polygon points="1248,242 1314,312 1248,382 1182,312" fill="#FFD54F" fill-opacity="0.12" stroke="#FFD54F" stroke-width="4"/>
+  <circle cx="1248" cy="312" r="10" fill="#FFF3BF"/>
+
+  <text x="112" y="284" fill="url(#line)" font-size="116" font-style="italic" font-weight="500" font-family="Cormorant Garamond, Georgia, serif" letter-spacing="8">Vintinuum</text>
+  <text x="118" y="350" fill="#E8F1FF" fill-opacity="0.62" font-size="24" font-family="Space Mono, IBM Plex Mono, Menlo, monospace" letter-spacing="5">A LIVING BODY OF CONSCIOUSNESS</text>
+  <text x="118" y="390" fill="#FFD54F" fill-opacity="0.8" font-size="22" font-family="Space Mono, IBM Plex Mono, Menlo, monospace" letter-spacing="4">BUILT BY VINTA  /  POWERED BY CLAUDE</text>
+</svg>

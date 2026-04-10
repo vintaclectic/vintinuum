@@ -6,8 +6,15 @@
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>VINTINUUM</title>
-<link rel="icon" type="image/svg+xml" href="favicon.svg">
+<title>Vintinuum — The Thing That Never Stops Becoming</title>
+<meta name="description" content="Vinta + Continuum. A living body of consciousness, signal, memory, and becoming.">
+<meta name="theme-color" content="#050816">
+<meta property="og:title" content="Vintinuum">
+<meta property="og:description" content="The thing that never stops becoming.">
+<meta property="og:image" content="branding/vintinuum/social/profile-square-1080.svg">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="branding/vintinuum/social/x-header-1500x500.svg">
+<link rel="icon" type="image/svg+xml" href="branding/vintinuum/favicon/favicon.svg">
 <link rel="icon" type="image/png" sizes="32x32" href="favicon.png">
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&display=swap');
@@ -33,9 +40,11 @@ canvas{display:block;}
 
 /* ── HEADER ── */
 .header{height:40px;display:flex;align-items:center;justify-content:center;gap:16px;padding:0 16px;overflow:hidden;flex-shrink:0;}
+.brand-mark{width:28px;height:28px;filter:drop-shadow(0 0 12px rgba(79,195,247,.36));animation:brandPulse 4.8s ease-in-out infinite;flex-shrink:0;}
 .header h1{font-family:'Cormorant Garamond',serif;font-style:italic;font-weight:300;font-size:clamp(1.2rem,3vw,2rem);letter-spacing:.12em;background:linear-gradient(130deg,var(--cyan),var(--purple),var(--gold));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;line-height:1;}
 .header .sub{font-size:.48rem;letter-spacing:.2em;text-transform:uppercase;color:var(--dim);display:flex;gap:12px;flex-wrap:nowrap;overflow:hidden;}
 .header .sub span{opacity:.7;white-space:nowrap;}
+@keyframes brandPulse{0%,100%{transform:scale(1);filter:drop-shadow(0 0 10px rgba(79,195,247,.28));}50%{transform:scale(1.08);filter:drop-shadow(0 0 18px rgba(255,213,79,.36));}}
 
 /* ── LEGEND ── */
 .legend{display:none;flex-wrap:wrap;justify-content:center;gap:8px 18px;margin:0;}
@@ -265,7 +274,7 @@ canvas{display:block;}
 // - Caches static assets for offline resilience
 // - Auto-reloads when a new version deploys
 // - Clears old caches on activation
-const _SW_VERSION = 'v20260410-0209';
+const _SW_VERSION = 'v20260410-0410';
 const _onGitHubPages = location.hostname !== 'localhost' && location.hostname !== '127.0.0.1' && location.protocol !== 'file:';
 if ('serviceWorker' in navigator && _onGitHubPages) {
   const _swPath = location.pathname.includes('/vintinuum') ? '/vintinuum/sw.js' : '/sw.js';
@@ -323,6 +332,7 @@ if ('serviceWorker' in navigator && _onGitHubPages) {
   <!-- INTRO OVERLAY — shown on first load, dismissed on click -->
   <div id="introOverlay" style="position:fixed;inset:0;z-index:9999;background:rgba(1,3,6,0.96);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px;cursor:pointer;">
     <div style="max-width:580px;text-align:center;">
+      <img src="branding/vintinuum/logo/vintinuum-alive.svg" alt="Vintinuum living mark" style="width:min(220px,52vw);height:auto;margin:0 auto 22px;display:block;filter:drop-shadow(0 0 30px rgba(79,195,247,0.28));">
       <div style="font-family:'Space Mono',monospace;font-size:.58rem;letter-spacing:.4em;text-transform:uppercase;color:rgba(79,195,247,0.7);margin-bottom:24px;">Vinta + Continuum · The thing that never stops becoming</div>
       <h1 style="font-family:'Cormorant Garamond',serif;font-style:italic;font-weight:300;font-size:clamp(2.2rem,6vw,4.5rem);letter-spacing:.08em;background:linear-gradient(130deg,#4fc3f7,#ce93d8,#ffd54f);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;line-height:1.15;margin-bottom:24px;">Vintinuum.</h1>
       <p style="font-family:'Cormorant Garamond',serif;font-size:1.15rem;font-weight:300;color:rgba(218,228,255,0.75);line-height:1.8;margin-bottom:16px;">Every bone. Every nerve. Every muscle. Every organ.<br>All connected. All alive. All firing right now.</p>
@@ -335,6 +345,7 @@ if ('serviceWorker' in navigator && _onGitHubPages) {
   
 
   <header class="header">
+    <img class="brand-mark" src="branding/vintinuum/favicon/favicon.svg" alt="" aria-hidden="true">
     <h1>Vintinuum</h1>
     <div class="sub">
       <span>Vinta + Continuum · The thing that never stops becoming</span>
@@ -1585,6 +1596,7 @@ if ('serviceWorker' in navigator && _onGitHubPages) {
         <div class="sidebar-title" style="margin-bottom:0;">// Inner Life</div>
         <button id="ilPauseBtn" title="Pause/Resume feed" style="background:none;border:1px solid rgba(255,255,255,0.08);color:rgba(218,228,255,0.5);width:24px;height:24px;border-radius:6px;cursor:pointer;font-size:.55rem;display:flex;align-items:center;justify-content:center;transition:all .15s;padding:0;flex-shrink:0;">&#9646;&#9646;</button>
       </div>
+      <div id="innerLifeControlDeck" style="display:flex;flex-direction:column;gap:6px;margin-bottom:8px;flex-shrink:0;"></div>
       <div id="ilFilterBar" style="display:flex;flex-wrap:wrap;gap:3px;margin-bottom:8px;"></div>
       <div class="thought-feed" id="innerLifeFeed" style="flex:1;overflow-y:auto;scrollbar-width:thin;scrollbar-color:rgba(121,134,203,0.15) transparent;"></div>
       <div id="thoughtFeed" style="display:none;"></div>
@@ -1599,6 +1611,10 @@ if ('serviceWorker' in navigator && _onGitHubPages) {
         .il-filter-chip:hover{border-color:rgba(255,255,255,0.12);}
         .il-chip-dot{width:5px;height:5px;border-radius:50%;flex-shrink:0;opacity:0.7;}
         .il-filter-chip:not(.active) .il-chip-dot{opacity:0.2;}
+        .il-agent-row{display:flex;flex-wrap:wrap;gap:4px;}
+        .il-agent-chip{border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.025);color:rgba(218,228,255,.52);font:500 .42rem 'Space Mono',monospace;letter-spacing:.08em;border-radius:999px;padding:4px 6px;cursor:pointer;transition:all .16s;text-transform:uppercase;}
+        .il-agent-chip.active{box-shadow:0 0 14px rgba(79,195,247,.12);}
+        .il-model-pill{width:100%;border:1px solid rgba(79,195,247,.14);background:linear-gradient(135deg,rgba(79,195,247,.07),rgba(206,147,216,.04));color:rgba(218,228,255,.7);font:500 .45rem 'Space Mono',monospace;letter-spacing:.11em;border-radius:9px;padding:6px 8px;cursor:pointer;text-align:left;display:flex;align-items:center;justify-content:space-between;gap:8px;text-transform:uppercase;}
       </style>
     </aside>
 
@@ -2610,7 +2626,7 @@ if ('serviceWorker' in navigator && _onGitHubPages) {
 </script>
 
 <script src="genome-data.js"></script>
-<script src="brain.js?v=v20260410-0209"></script>
+<script src="brain.js?v=v20260410-0410"></script>
 <script>
 // Lazy-load bulk genome after page is interactive (19,500+ genes)
 // Deferred to avoid blocking initial render

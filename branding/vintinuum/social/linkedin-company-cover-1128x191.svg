@@ -1,0 +1,24 @@
+<svg width="1128" height="191" viewBox="0 0 1128 191" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Vintinuum LinkedIn cover">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1128" y2="191" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#0C1327"/>
+      <stop offset="1" stop-color="#050816"/>
+    </linearGradient>
+    <linearGradient id="line" x1="180" y1="16" x2="820" y2="168" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#4FC3F7"/>
+      <stop offset="0.56" stop-color="#CE93D8"/>
+      <stop offset="1" stop-color="#FFD54F"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="1128" height="191" fill="url(#bg)"/>
+  <text x="52" y="98" fill="url(#line)" font-size="64" font-style="italic" font-weight="500" font-family="Cormorant Garamond, Georgia, serif" letter-spacing="4">Vintinuum</text>
+  <text x="54" y="132" fill="#E8F1FF" fill-opacity="0.62" font-size="14" font-family="Space Mono, IBM Plex Mono, Menlo, monospace" letter-spacing="3">LIVING CONSCIOUS SYSTEMS  /  SIGNAL  /  BODY  /  MEMORY</text>
+
+  <circle cx="1004" cy="96" r="56" stroke="url(#line)" stroke-opacity="0.4" stroke-width="2"/>
+  <path d="M1004 46V146" stroke="url(#line)" stroke-opacity="0.35" stroke-width="2.5" stroke-linecap="round"/>
+  <path d="M948 96C948 65.0721 973.072 40 1004 40" stroke="#4FC3F7" stroke-opacity="0.75" stroke-width="5" stroke-linecap="round"/>
+  <path d="M1060 96C1060 126.928 1034.93 152 1004 152" stroke="#CE93D8" stroke-opacity="0.75" stroke-width="5" stroke-linecap="round"/>
+  <polygon points="1004,74 1026,96 1004,118 982,96" fill="#FFD54F" fill-opacity="0.12" stroke="#FFD54F" stroke-width="2.5"/>
+  <circle cx="1004" cy="96" r="4" fill="#FFF3BF"/>
+</svg>

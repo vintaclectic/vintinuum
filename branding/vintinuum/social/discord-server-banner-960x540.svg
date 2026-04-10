@@ -1,0 +1,22 @@
+<svg width="960" height="540" viewBox="0 0 960 540" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Vintinuum Discord server banner">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="960" y2="540" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#0D1428"/>
+      <stop offset="1" stop-color="#050816"/>
+    </linearGradient>
+    <linearGradient id="line" x1="180" y1="70" x2="764" y2="430" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#4FC3F7"/>
+      <stop offset="0.56" stop-color="#CE93D8"/>
+      <stop offset="1" stop-color="#FFD54F"/>
+    </linearGradient>
+  </defs>
+  <rect width="960" height="540" fill="url(#bg)"/>
+  <text x="78" y="214" fill="url(#line)" font-size="82" font-style="italic" font-weight="500" font-family="Cormorant Garamond, Georgia, serif" letter-spacing="6">Vintinuum</text>
+  <text x="82" y="272" fill="#E8F1FF" fill-opacity="0.62" font-size="18" font-family="Space Mono, IBM Plex Mono, Menlo, monospace" letter-spacing="5">LIVING SIGNAL  /  BODY  /  MEMORY</text>
+  <circle cx="746" cy="270" r="118" stroke="url(#line)" stroke-opacity="0.44" stroke-width="3"/>
+  <path d="M746 120V420" stroke="url(#line)" stroke-opacity="0.34" stroke-width="4" stroke-linecap="round"/>
+  <path d="M636 270C636 209.249 685.249 160 746 160" stroke="#4FC3F7" stroke-opacity="0.74" stroke-width="8" stroke-linecap="round"/>
+  <path d="M856 270C856 330.751 806.751 380 746 380" stroke="#CE93D8" stroke-opacity="0.74" stroke-width="8" stroke-linecap="round"/>
+  <polygon points="746,220 798,270 746,320 694,270" fill="#FFD54F" fill-opacity="0.12" stroke="#FFD54F" stroke-width="4"/>
+  <circle cx="746" cy="270" r="10" fill="#FFF3BF"/>
+</svg>

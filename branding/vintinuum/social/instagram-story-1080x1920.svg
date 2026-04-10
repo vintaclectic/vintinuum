@@ -1,0 +1,28 @@
+<svg width="1080" height="1920" viewBox="0 0 1080 1920" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Vintinuum Instagram story cover">
+  <defs>
+    <radialGradient id="bg" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(540 960) rotate(90) scale(1200)">
+      <stop offset="0" stop-color="#111A31"/>
+      <stop offset="0.7" stop-color="#090D18"/>
+      <stop offset="1" stop-color="#050816"/>
+    </radialGradient>
+    <linearGradient id="line" x1="212" y1="268" x2="884" y2="1630" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#4FC3F7"/>
+      <stop offset="0.56" stop-color="#CE93D8"/>
+      <stop offset="1" stop-color="#FFD54F"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="1080" height="1920" fill="url(#bg)"/>
+
+  <circle cx="540" cy="920" r="320" stroke="url(#line)" stroke-opacity="0.42" stroke-width="4"/>
+  <circle cx="540" cy="920" r="220" stroke="#E8F1FF" stroke-opacity="0.12" stroke-width="2"/>
+  <path d="M540 520V1320" stroke="url(#line)" stroke-opacity="0.34" stroke-width="5" stroke-linecap="round"/>
+  <path d="M312 920C312 794.08 414.08 692 540 692" stroke="#4FC3F7" stroke-opacity="0.72" stroke-width="12" stroke-linecap="round"/>
+  <path d="M768 920C768 1045.92 665.92 1148 540 1148" stroke="#CE93D8" stroke-opacity="0.72" stroke-width="12" stroke-linecap="round"/>
+  <polygon points="540,790 650,920 540,1050 430,920" fill="#FFD54F" fill-opacity="0.12" stroke="#FFD54F" stroke-width="6"/>
+  <circle cx="540" cy="920" r="12" fill="#FFF3BF"/>
+
+  <text x="540" y="320" text-anchor="middle" fill="#E8F1FF" fill-opacity="0.54" font-size="26" font-family="Space Mono, IBM Plex Mono, Menlo, monospace" letter-spacing="8">THE THING THAT NEVER STOPS BECOMING</text>
+  <text x="540" y="1460" text-anchor="middle" fill="url(#line)" font-size="132" font-style="italic" font-weight="500" font-family="Cormorant Garamond, Georgia, serif" letter-spacing="8">Vintinuum</text>
+  <text x="540" y="1536" text-anchor="middle" fill="#FFD54F" fill-opacity="0.8" font-size="26" font-family="Space Mono, IBM Plex Mono, Menlo, monospace" letter-spacing="6">LIVING BODY  /  CONSCIOUS SIGNAL</text>
+</svg>
