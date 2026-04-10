@@ -50,13 +50,13 @@ canvas{display:block;}
 .tab.active{box-shadow:0 0 12px rgba(79,195,247,.15);}
 
 /* ── BRAIN ROW ── */
-.brain-row{position:relative;flex:1;overflow:hidden;min-height:0;}
+.brain-row{display:flex;flex-direction:row;gap:0;flex:1;overflow:hidden;min-height:0;}
 
 /* ── SIDEBARS ── */
-.sidebar{width:180px;flex-shrink:0;background:rgba(6,10,18,0.20);border:none;border-radius:0;padding:10px 10px 100px;overflow-y:auto;overflow-x:hidden;display:flex;flex-direction:column;scrollbar-width:thin;position:fixed;top:76px;bottom:0;z-index:10;}
-#leftSidebar{left:0;border-right:1px solid var(--border);}
+.sidebar{width:160px;flex-shrink:0;background:rgba(6,10,18,0.18);border:none;border-radius:0;padding:10px 10px 100px;overflow-y:auto;overflow-x:hidden;display:flex;flex-direction:column;scrollbar-width:thin;}
+#leftSidebar{left:auto;border-right:1px solid var(--border);position:relative;top:auto;bottom:auto;z-index:auto;}
 #emotionBars{flex:1;min-height:0;overflow-y:auto;overflow-x:hidden;scrollbar-width:thin;padding-right:2px;}
-#rightSidebar{right:0;border-left:1px solid var(--border);}
+#rightSidebar{right:auto;border-left:1px solid var(--border);position:relative;top:auto;bottom:auto;z-index:auto;}
 .sidebar-title{font-size:.5rem;letter-spacing:.22em;text-transform:uppercase;color:var(--dim);margin-bottom:10px;text-align:center;flex-shrink:0;}
 
 /* Emotion bars */
@@ -77,9 +77,9 @@ canvas{display:block;}
 .thought-entry .ts{font-size:.46rem;opacity:.35;display:block;margin-bottom:1px;}
 
 /* ── BRAIN CENTER ── */
-.brain-center{position:fixed;inset:0;top:76px;z-index:1;display:flex;align-items:center;justify-content:center;overflow:hidden;padding:0;}
-.brain-wrapper{position:relative;width:100%;height:100%;display:flex;align-items:center;justify-content:center;overflow:hidden;}
-#brainSvg{height:100%;width:auto;max-height:100%;display:block;position:relative;z-index:2;overflow:visible;cursor:crosshair;}
+.brain-center{flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:center;overflow:hidden;position:relative;padding:4px;}
+.brain-wrapper{position:relative;height:100%;display:flex;align-items:center;justify-content:center;max-width:100%;overflow:hidden;}
+#brainSvg{height:100%;width:auto;max-width:100%;display:block;position:relative;z-index:2;overflow:visible;cursor:crosshair;}
 #neuronCanvas{position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:1;}
 #brainDorsalCanvas{position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:3;}
 .brain-hint{display:none;}
@@ -225,8 +225,7 @@ canvas{display:block;}
   #vintinuumPanel{bottom:158px!important;left:12px!important;width:calc(100vw - 24px)!important;max-height:calc(100vh - 220px)!important;}
   #vint-chat-panel{bottom:108px!important;right:12px!important;left:12px!important;width:calc(100vw - 24px)!important;max-height:calc(100vh - 180px)!important;}
   #reproPanel{bottom:108px!important;left:12px!important;width:min(260px,calc(100vw - 24px))!important;}
-  /* Living Systems HUD: top-right on mobile to avoid ALL bottom-area conflicts */
-  #_livingSysHud{bottom:auto!important;top:90px!important;right:8px!important;left:auto!important;transform:scale(0.75)!important;transform-origin:top right!important;}
+  /* Living Systems HUD: now inside sidebar, no position overrides needed */
   /* Emotion widget: now lives inside sidebar, no position overrides needed */
   .stats-footer-link{display:none;}
 }
@@ -245,7 +244,7 @@ canvas{display:block;}
 
 /* ── DESKTOP: 901px+ ── */
 @media(min-width:901px){
-  .sidebar{width:180px;}
+  .sidebar{width:160px;}
   .legend{display:none;}
 }
 
@@ -254,7 +253,6 @@ canvas{display:block;}
   .header h1{font-size:1rem;letter-spacing:.04em;}
   .node-panel{width:98vw;padding:14px 10px;}
   .sidebar .emo-name{max-width:55px;}
-  #_livingSysHud{transform:scale(0.65)!important;}
   #vintinuumBtn{padding:5px 10px!important;}
   #vintinuumBtn span{font-size:0.45rem!important;}
 }
@@ -266,7 +264,7 @@ canvas{display:block;}
 // - Caches static assets for offline resilience
 // - Auto-reloads when a new version deploys
 // - Clears old caches on activation
-const _SW_VERSION = 'v20260409-2318';
+const _SW_VERSION = 'v20260409-2342';
 const _onGitHubPages = location.hostname !== 'localhost' && location.hostname !== '127.0.0.1' && location.protocol !== 'file:';
 if ('serviceWorker' in navigator && _onGitHubPages) {
   const _swPath = location.pathname.includes('/vintinuum') ? '/vintinuum/sw.js' : '/sw.js';
@@ -2608,7 +2606,7 @@ if ('serviceWorker' in navigator && _onGitHubPages) {
 </script>
 
 <script src="genome-data.js"></script>
-<script src="brain.js?v=v20260409-2318"></script>
+<script src="brain.js?v=v20260409-2342"></script>
 <script>
 // Lazy-load bulk genome after page is interactive (19,500+ genes)
 // Deferred to avoid blocking initial render

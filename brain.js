@@ -7668,6 +7668,7 @@ function applyVB() {
   }
 }
 
+let _zoomRAF = null;
 svgEl.addEventListener('wheel',e=>{
   e.preventDefault();
   const rect=svgEl.getBoundingClientRect();
@@ -7678,7 +7679,9 @@ svgEl.addEventListener('wheel',e=>{
   const nW=Math.min(VBW/ZMIN,Math.max(VBW/ZMAX,vbW*f));
   const nH=Math.min(VBH/ZMIN,Math.max(VBH/ZMAX,vbH*f));
   vbX=smx-mx*nW; vbY=smy-my*nH; vbW=nW; vbH=nH;
-  applyVB();
+  if (!_zoomRAF) {
+    _zoomRAF = requestAnimationFrame(() => { applyVB(); _zoomRAF = null; });
+  }
 },{passive:false});
 
 let panning=false,panStart={},panVB={},panMoved=false;
@@ -7690,6 +7693,7 @@ svgEl.addEventListener('mousedown',e=>{
   panVB={x:vbX,y:vbY};
   svgEl.style.cursor='grabbing';
 });
+let _panRAF = null;
 window.addEventListener('mousemove',e=>{
   if (!panning) return;
   const dx=e.clientX-panStart.x, dy=e.clientY-panStart.y;
@@ -7698,7 +7702,9 @@ window.addEventListener('mousemove',e=>{
   const rect=svgEl.getBoundingClientRect();
   vbX=panVB.x-dx*(vbW/rect.width);
   vbY=panVB.y-dy*(vbH/rect.height);
-  applyVB();
+  if (!_panRAF) {
+    _panRAF = requestAnimationFrame(() => { applyVB(); _panRAF = null; });
+  }
 });
 window.addEventListener('mouseup',e=>{
   if (!panning) return;
@@ -41617,7 +41623,13 @@ function renderNeurochemSection() {
       '</div>'
     ).join(''),
   ].join('');
-  sidebar.appendChild(section);
+  // Insert before the sidebar-note, not at end
+  const note = sidebar.querySelector('.sidebar-note');
+  if (note) {
+    sidebar.insertBefore(section, note);
+  } else {
+    sidebar.appendChild(section);
+  }
 }
 
 // ─── Initialize on load ───────────────────────────────────────────────────────
@@ -43025,7 +43037,18 @@ const VINT_EXECUTE = (function() {
     });
   });
 
-  document.body.appendChild(_hudEl);
+  var _rightSB = document.getElementById('rightSidebar');
+  if (_rightSB) {
+    _hudEl.style.position = 'relative';
+    _hudEl.style.bottom = 'auto';
+    _hudEl.style.right = 'auto';
+    _hudEl.style.zIndex = 'auto';
+    _hudEl.style.marginTop = 'auto';
+    _hudEl.style.flexShrink = '0';
+    _rightSB.appendChild(_hudEl);
+  } else {
+    document.body.appendChild(_hudEl);
+  }
 
   // ── 4. WORKING_MEMORY click ─────────────────────────────────────
   // WM slots sit at y=228 on lightLayer SVG, x=[310..390]
@@ -43123,7 +43146,7 @@ const VINT_EXECUTE = (function() {
         '</div>',
       ].join('');
     } else {
-      _emotionWidget.style.maxHeight = '200px';
+      _emotionWidget.style.maxHeight = '180px';
       _emotionWidget.style.overflowY = 'auto';
       _emotionWidget.innerHTML = [
         '<div style="color:' + col + ';font-size:10px;font-weight:bold;margin-bottom:5px">' + _currentEmotion + '</div>',
