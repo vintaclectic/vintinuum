@@ -42598,12 +42598,12 @@ function _openVoiceSettings() {
     html += '<span style="font-size:10px;color:' + p.color + ';letter-spacing:1px;">' + p.name + '</span>';
     html += '<span style="font-size:8px;color:rgba(255,255,255,0.25);">' + p.desc + '</span>';
     html += '</div>';
-    html += '<select id="voiceSel_' + p.id + '" style="width:100%;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:8px;padding:5px 8px;color:rgba(218,228,255,0.8);font-size:10px;font-family:Space Mono,monospace;cursor:pointer;outline:none;">';
-    html += '<option value="">Auto (' + currentVoice + ')</option>';
+    html += '<select id="voiceSel_' + p.id + '" style="width:100%;background:#0c1018;border:1px solid rgba(255,255,255,0.12);border-radius:8px;padding:5px 8px;color:rgba(218,228,255,0.85);font-size:10px;font-family:Space Mono,monospace;cursor:pointer;outline:none;-webkit-appearance:none;appearance:none;">';
+    html += '<option value="" style="background:#0c1018;color:rgba(218,228,255,0.85);">Auto (' + currentVoice + ')</option>';
     voices.forEach(v => {
       const selected = v.name === currentVoice ? ' selected' : '';
       const tag = v.local ? ' [local]' : ' [online]';
-      html += '<option value="' + v.name.replace(/"/g, '&quot;') + '"' + selected + '>' + v.name + tag + '</option>';
+      html += '<option value="' + v.name.replace(/"/g, '&quot;') + '"' + selected + ' style="background:#0c1018;color:rgba(218,228,255,0.85);">' + v.name + tag + '</option>';
     });
     html += '</select>';
     // Preview button
@@ -42783,24 +42783,29 @@ const MODEL_SELECTOR = (() => {
 
   const PROVIDER_COLORS = {
     'claude-proxy': '#a78bfa',
+    'claude-max':   '#a78bfa',
     'anthropic':    '#4fc3f7',
     'ollama':       '#81c784',
   };
 
   const PROVIDER_LABELS = {
     'claude-proxy': 'MAX',
+    'claude-max':   'MAX',
     'anthropic':    'API',
     'ollama':       'LOCAL',
   };
 
   // Fallback models when API is unreachable
   const FALLBACK_MODELS = [
-    { key: 'claude-proxy-sonnet', label: 'Claude Sonnet', provider: 'claude-proxy' },
-    { key: 'claude-proxy-opus', label: 'Claude Opus', provider: 'claude-proxy' },
-    { key: 'claude-proxy-haiku', label: 'Claude Haiku', provider: 'claude-proxy' },
-    { key: 'ollama-qwen', label: 'Qwen 2.5 (Local)', provider: 'ollama' },
+    { key: 'qwen-local', label: 'Qwen 0.5B (Local)', provider: 'ollama', available: true, local: true },
+    { key: 'llama3.2', label: 'Llama 3.2 (Local)', provider: 'ollama', available: true, local: true },
+    { key: 'mistral', label: 'Mistral (Local)', provider: 'ollama', available: true, local: true },
+    { key: 'claude-haiku', label: 'Claude Haiku 4.5', provider: 'anthropic', available: true },
+    { key: 'claude-sonnet', label: 'Claude Sonnet 4.6', provider: 'anthropic', available: true },
+    { key: 'claude-max-haiku', label: 'Claude Haiku (Max)', provider: 'claude-max', available: false },
+    { key: 'claude-max-sonnet', label: 'Claude Sonnet (Max)', provider: 'claude-max', available: false },
   ];
-  const FALLBACK_PRIORITY = ['claude-proxy-sonnet','claude-proxy-opus','ollama-qwen','claude-proxy-haiku'];
+  const FALLBACK_PRIORITY = ['qwen-local','llama3.2','mistral','claude-haiku','claude-sonnet'];
 
   async function load(accessToken) {
     try {
@@ -45892,10 +45897,10 @@ const SOUL_AUTH = (() => {
       _indicator.title = 'Soul bonded as ' + _user.email + ' (' + (_user.tier || 'free') + ')';
     } else {
       _indicator.textContent = '\u00B7';
-      _indicator.style.opacity = '0.4';
-      _indicator.style.background = 'rgba(255,255,255,0.05)';
-      _indicator.style.borderColor = 'rgba(255,255,255,0.1)';
-      _indicator.title = 'Not bonded — click to sign in';
+      _indicator.style.opacity = '0.55';
+      _indicator.style.background = 'rgba(80,200,255,0.06)';
+      _indicator.style.borderColor = 'rgba(80,200,255,0.15)';
+      _indicator.title = 'Soul bond — click to sign in (optional, keeps your identity across sessions)';
     }
   }
 
