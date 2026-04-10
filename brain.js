@@ -39674,7 +39674,7 @@ const GENOME_ENGINE = (() => {
     snpGenotype.forEach((geno, symbol) => { snpObj[symbol] = geno; });
 
     try {
-      const API = window.__VINT_API_BASE || '';
+      const API = window.__VINTINUUM_API_BASE || 'http://localhost:8767';
       await fetch(API + '/api/genome', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
@@ -39691,7 +39691,7 @@ const GENOME_ENGINE = (() => {
 
   async function loadState() {
     try {
-      const API = window.__VINT_API_BASE || '';
+      const API = window.__VINTINUUM_API_BASE || 'http://localhost:8767';
       const res = await fetch(API + '/api/genome?userId=0');
       if (!res.ok) return;
       const data = await res.json();
@@ -39869,7 +39869,7 @@ const INNER_LIFE = (() => {
     // Log significant events to server (fire and forget, 1 in 5)
     if (Math.random() < 0.2) {
       try {
-        const API = window.__VINT_API_BASE || '';
+        const API = window.__VINTINUUM_API_BASE || 'http://localhost:8767';
         fetch(API + '/api/inner-life/event', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
