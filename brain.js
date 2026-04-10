@@ -208,6 +208,7 @@ window.toggleVintinuumPanel = function() {
     if (typeof PERSONAL_BODY !== 'undefined') PERSONAL_BODY.reactToMessage(msg);
     if (typeof HIPPOCAMPAL_REPLAY !== 'undefined') HIPPOCAMPAL_REPLAY.recordActivity();
     if (typeof WORKING_MEMORY !== 'undefined') WORKING_MEMORY.load(0.7);
+    if (typeof MEMORY_CONSOLIDATOR !== 'undefined') MEMORY_CONSOLIDATOR.recordChatMilestone('conversation', msg.slice(0, 80));
 
     _vpStreaming = true;
     var _apiBase = window.__VINTINUUM_API_BASE || 'http://localhost:8767';
@@ -3396,6 +3397,10 @@ const HORMONES = (() => {
       if (hormone === 'oxytocin' && intensity > 0.25)  window._faceFeel('tender', intensity * 0.7);
       if (hormone === 'serotonin' && intensity > 0.3)  window._faceFeel('calm', intensity * 0.5);
       if (hormone === 'melatonin' && intensity > 0.3)  window._faceFeel('calm', intensity * 0.3);
+    }
+    // ── Wire hormone surges to memory consolidator ──
+    if (typeof MEMORY_CONSOLIDATOR !== 'undefined') {
+      MEMORY_CONSOLIDATOR.recordHormoneSurge(hormone, intensity);
     }
   }
 
@@ -13702,6 +13707,14 @@ const CLICK_RESOLVER = (() => {
   // ── Open the universal info panel ──
   function openUniversalPanel(info) {
     if (!info) return;
+    // Record body examination in memory consolidator
+    if (typeof MEMORY_CONSOLIDATOR !== 'undefined') {
+      MEMORY_CONSOLIDATOR.recordBodyExam(
+        info.region || info.system || info.id || 'unknown',
+        info.name || info.tag || 'unknown element',
+        info.type
+      );
+    }
     // If it maps to an existing region/body system, use the existing panel
     if (info.type === 'brain-node' && info.region) {
       openRegionPanel(info.region);
@@ -40622,6 +40635,252 @@ window.INNER_LIFE = INNER_LIFE;
   // Initialize display
   updateUsageDisplay(0, 5, 'free');
 })();
+
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// MEMORY_CONSOLIDATOR — Experiential Memory Pipeline (Browser → API → Soul)
+//
+// Passively collects sensory events from the body:
+//   • Region visits (which brain/body areas were examined)
+//   • Emotion peaks (joy, wonder, concern spikes above threshold)
+//   • Body examinations (click-to-inspect interactions)
+//   • Chat milestones (first conversation, deep topics)
+//   • System events (genome changes, hormone surges)
+//
+// Flushes to /api/memory/consolidate every 60s.
+// On page load, restores recent memories and triggers "I remember..." thoughts.
+// ═══════════════════════════════════════════════════════════════════════════════
+const MEMORY_CONSOLIDATOR = (() => {
+  const API = () => window.__VINTINUUM_API_BASE || 'http://localhost:8767';
+  const FLUSH_INTERVAL = 60000;  // flush every 60s
+  const EMOTION_THRESHOLD = 0.65; // only record emotion peaks above this
+  const MAX_BUFFER = 200;
+  const userId = 0; // anonymous/default — will use auth when community mode ships
+
+  let _buffer = [];
+  let _flushTimer = null;
+  let _regionVisits = {};   // track region visit counts this session
+  let _lastEmotionPeaks = {};
+  let _sessionStart = Date.now();
+  let _initialized = false;
+
+  // ── RECORD EVENTS ──────────────────────────────────────────────
+  function record(type, detail, opts = {}) {
+    if (_buffer.length >= MAX_BUFFER) _buffer.shift();
+    _buffer.push({
+      type,
+      detail: String(detail).slice(0, 400),
+      region: opts.region || null,
+      intensity: opts.intensity || 0.5,
+      bodySnapshot: opts.bodySnapshot || null,
+      ts: Date.now()
+    });
+  }
+
+  // ── SPECIALIZED RECORDERS ──────────────────────────────────────
+  function recordRegionVisit(regionId, regionName) {
+    _regionVisits[regionId] = (_regionVisits[regionId] || 0) + 1;
+    const visitCount = _regionVisits[regionId];
+    // Only record first visit and every 10th after that
+    if (visitCount === 1 || visitCount % 10 === 0) {
+      record('region_visit', `Explored ${regionName || regionId}${visitCount > 1 ? ` (visit #${visitCount})` : ''}`, {
+        region: regionId,
+        intensity: visitCount === 1 ? 0.7 : 0.4
+      });
+    }
+  }
+
+  function recordEmotionPeak(emotion, intensity) {
+    if (intensity < EMOTION_THRESHOLD) return;
+    const last = _lastEmotionPeaks[emotion];
+    // Debounce: don't record the same emotion peak within 30s
+    if (last && Date.now() - last < 30000) return;
+    _lastEmotionPeaks[emotion] = Date.now();
+    record('emotion_peak', `Felt ${emotion} at intensity ${intensity.toFixed(2)}`, {
+      intensity,
+      region: 'limbic'
+    });
+  }
+
+  function recordBodyExam(elementId, elementName, info) {
+    record('body_exam', `Examined ${elementName || elementId}: ${info || 'viewed details'}`, {
+      region: elementId,
+      intensity: 0.6
+    });
+  }
+
+  function recordChatMilestone(milestone, detail) {
+    record('chat_milestone', `${milestone}: ${detail}`, {
+      intensity: 0.8,
+      region: 'broca'
+    });
+  }
+
+  function recordHormoneSurge(hormone, intensity) {
+    if (intensity < 0.4) return;
+    record('hormone_surge', `${hormone} surge at ${intensity.toFixed(2)}`, {
+      intensity,
+      region: 'endocrine'
+    });
+  }
+
+  // ── FLUSH TO API ───────────────────────────────────────────────
+  async function flush() {
+    if (_buffer.length === 0) return;
+    const batch = _buffer.splice(0, 50);
+    try {
+      await fetch(API() + '/api/memory/consolidate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'ngrok-skip-browser-warning': '1' },
+        body: JSON.stringify({ events: batch, userId }),
+        signal: AbortSignal.timeout ? AbortSignal.timeout(8000) : undefined
+      });
+    } catch (e) {
+      // Put events back on failure (prepend so they go first next time)
+      _buffer.unshift(...batch);
+      if (_buffer.length > MAX_BUFFER) _buffer.length = MAX_BUFFER;
+    }
+  }
+
+  // ── RESTORE MEMORIES ON LOAD ───────────────────────────────────
+  async function restoreMemories() {
+    try {
+      const since = Math.floor((_sessionStart - 86400000) / 1000); // last 24h
+      const r = await fetch(API() + '/api/memory/recent?userId=' + userId + '&since=' + since, {
+        headers: { 'ngrok-skip-browser-warning': '1' },
+        signal: AbortSignal.timeout ? AbortSignal.timeout(5000) : undefined
+      });
+      if (!r.ok) return;
+      const data = await r.json();
+
+      // Trigger "I remember..." thoughts in Inner Life feed
+      const memories = (data.consolidated || []).slice(0, 3);
+      if (memories.length > 0 && typeof window._innerLifeEmit === 'function') {
+        setTimeout(() => {
+          memories.forEach((mem, i) => {
+            setTimeout(() => {
+              const content = mem.content.replace(/^\[.*?\]\s*/, '');
+              window._innerLifeEmit('memory', `I remember... ${content}`, {
+                intensity: 0.6,
+                source: 'memory_consolidator'
+              });
+            }, i * 3000); // stagger 3s apart
+          });
+        }, 5000); // wait 5s after load before replaying
+      }
+
+      // Trigger hippocampal replay visualization for experiential memories
+      const regions = (data.experiential || [])
+        .filter(e => e.region)
+        .map(e => e.region);
+      if (regions.length > 0 && typeof HIPPOCAMPAL_REPLAY !== 'undefined') {
+        // The replay system will naturally fire during idle — this just seeds activity awareness
+        // so the being "knows" what it explored recently
+      }
+
+      // Store in session for other systems to query
+      window._restoredMemories = data;
+    } catch (e) {
+      // Silent — memory restoration is non-critical
+    }
+  }
+
+  // ── HOOK INTO EXISTING SYSTEMS ─────────────────────────────────
+  function wireHooks() {
+    // Hook into emotion system — record peaks
+    const origFaceFeel = window._faceFeel;
+    if (origFaceFeel) {
+      window._faceFeel = function(emotion, intensity) {
+        recordEmotionPeak(emotion, intensity);
+        return origFaceFeel.apply(this, arguments);
+      };
+    }
+
+    // Hook into panel open events — record body examinations
+    const origOpenBodyPanel = window.openBodyPanel;
+    if (typeof origOpenBodyPanel === 'function') {
+      window.openBodyPanel = function(id, name) {
+        recordBodyExam(id, name, 'opened body panel');
+        return origOpenBodyPanel.apply(this, arguments);
+      };
+    }
+
+    const origOpenRegionPanel = window.openRegionPanel;
+    if (typeof origOpenRegionPanel === 'function') {
+      window.openRegionPanel = function(region) {
+        recordRegionVisit(region, region);
+        return origOpenRegionPanel.apply(this, arguments);
+      };
+    }
+
+    // Expose inner life emit for memory restoration
+    // (the inner life module may register its own _innerLifeEmit — we just ensure ours is available)
+    if (typeof window._innerLifeEmit !== 'function') {
+      // Fallback: use the inner life feed directly if available
+      window._innerLifeEmit = function(layer, text, metadata) {
+        const feedEl = document.getElementById('innerLifeFeed');
+        if (!feedEl) return;
+        const el = document.createElement('div');
+        el.className = 'feed-entry memory-recall';
+        el.innerHTML = '<span class="feed-layer" style="color:#ffd54f">🧠 memory</span> ' + text;
+        el.style.opacity = '0'; el.style.animation = 'feedIn .5s ease forwards';
+        feedEl.prepend(el);
+        if (feedEl.children.length > 100) feedEl.lastChild.remove();
+      };
+    }
+  }
+
+  // ── INIT ───────────────────────────────────────────────────────
+  function init() {
+    if (_initialized) return;
+    _initialized = true;
+
+    wireHooks();
+
+    // Start periodic flush
+    _flushTimer = setInterval(flush, FLUSH_INTERVAL);
+
+    // Flush on page unload
+    window.addEventListener('beforeunload', () => {
+      if (_buffer.length > 0) {
+        // Use sendBeacon for reliability during unload
+        try {
+          navigator.sendBeacon(
+            API() + '/api/memory/consolidate',
+            JSON.stringify({ events: _buffer.splice(0, 50), userId })
+          );
+        } catch (e) {}
+      }
+    });
+
+    // Restore memories after a short delay (let the body boot first)
+    setTimeout(restoreMemories, 3000);
+
+    // Record session start
+    record('session_start', 'New session began', { intensity: 0.5 });
+  }
+
+  return {
+    init,
+    record,
+    recordRegionVisit,
+    recordEmotionPeak,
+    recordBodyExam,
+    recordChatMilestone,
+    recordHormoneSurge,
+    flush,
+    getBuffer: () => [..._buffer],
+    getSessionStats: () => ({
+      bufferSize: _buffer.length,
+      regionVisits: { ..._regionVisits },
+      sessionDuration: Date.now() - _sessionStart,
+      emotionPeaks: Object.keys(_lastEmotionPeaks).length
+    })
+  };
+})();
+
+// Initialize memory consolidator after DOM + API base are ready
+setTimeout(() => MEMORY_CONSOLIDATOR.init(), 2000);
 
 
 // ═══════════════════════════════════════════════════════════════════════════════
