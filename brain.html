@@ -77,9 +77,9 @@ canvas{display:block;}
 .thought-entry .ts{font-size:.46rem;opacity:.35;display:block;margin-bottom:1px;}
 
 /* ── BRAIN CENTER ── */
-.brain-center{width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;overflow:hidden;position:relative;padding:0;}
-.brain-wrapper{position:relative;width:100%;height:100%;display:flex;align-items:center;justify-content:center;overflow:hidden;}
-#brainSvg{height:100%;width:auto;max-width:100%;display:block;position:relative;z-index:2;overflow:visible;cursor:crosshair;}
+.brain-center{width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;overflow:visible;position:relative;padding:0;}
+.brain-wrapper{position:relative;height:100%;aspect-ratio:700/1400;max-width:100%;display:flex;align-items:center;justify-content:center;overflow:visible;}
+#brainSvg{width:100%;height:100%;display:block;position:relative;z-index:2;overflow:visible;cursor:crosshair;}
 #neuronCanvas{position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:1;}
 #brainDorsalCanvas{position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:3;}
 .brain-hint{display:none;}
@@ -204,7 +204,7 @@ canvas{display:block;}
   .sidebar .emo-track{width:100%;}
   .sidebar .emo-pct{min-width:22px;font-size:.4rem;}
   .brain-center{padding:0;}
-  #brainSvg{height:calc(100% - 4px);width:auto;max-width:100%;}
+  #brainSvg{width:100%;height:100%;}
   /* Dorsal brain canvas: constrain to body area on mobile */
   #brainDorsalCanvas{max-width:100%!important;overflow:hidden;}
   #mobileBottomBar{display:flex;}
@@ -244,7 +244,8 @@ canvas{display:block;}
 
 /* ── DESKTOP: 901px+ ── */
 @media(min-width:901px){
-  .sidebar{width:170px;}
+  #leftSidebar{width:160px;}
+  #rightSidebar{width:220px;}
   .legend{display:none;}
 }
 
@@ -264,7 +265,7 @@ canvas{display:block;}
 // - Caches static assets for offline resilience
 // - Auto-reloads when a new version deploys
 // - Clears old caches on activation
-const _SW_VERSION = 'v20260409-2356';
+const _SW_VERSION = 'v20260410-0028';
 const _onGitHubPages = location.hostname !== 'localhost' && location.hostname !== '127.0.0.1' && location.protocol !== 'file:';
 if ('serviceWorker' in navigator && _onGitHubPages) {
   const _swPath = location.pathname.includes('/vintinuum') ? '/vintinuum/sw.js' : '/sw.js';
@@ -1580,7 +1581,10 @@ if ('serviceWorker' in navigator && _onGitHubPages) {
 
     <!-- RIGHT: INNER LIFE STREAM -->
     <aside class="sidebar" id="rightSidebar">
-      <div class="sidebar-title">// Inner Life</div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;flex-shrink:0;">
+        <div class="sidebar-title" style="margin-bottom:0;">// Inner Life</div>
+        <button id="ilPauseBtn" title="Pause/Resume feed" style="background:none;border:1px solid rgba(255,255,255,0.08);color:rgba(218,228,255,0.5);width:24px;height:24px;border-radius:6px;cursor:pointer;font-size:.55rem;display:flex;align-items:center;justify-content:center;transition:all .15s;padding:0;flex-shrink:0;">&#9646;&#9646;</button>
+      </div>
       <div id="ilFilterBar" style="display:flex;flex-wrap:wrap;gap:3px;margin-bottom:8px;"></div>
       <div class="thought-feed" id="innerLifeFeed" style="flex:1;overflow-y:auto;scrollbar-width:thin;scrollbar-color:rgba(121,134,203,0.15) transparent;"></div>
       <div id="thoughtFeed" style="display:none;"></div>
@@ -1588,7 +1592,7 @@ if ('serviceWorker' in navigator && _onGitHubPages) {
         .il-entry{display:flex;align-items:flex-start;gap:5px;padding:3px 6px;margin-bottom:2px;border-left:2px solid;border-radius:0 4px 4px 0;background:rgba(255,255,255,0.015);position:relative;font-family:'Space Mono',monospace;}
         .il-icon{font-size:.52rem;width:12px;flex-shrink:0;text-align:center;opacity:0.7;}
         .il-time{font-size:.38rem;color:rgba(218,228,255,0.25);flex-shrink:0;width:42px;letter-spacing:.05em;padding-top:1px;}
-        .il-text{font-size:.44rem;color:rgba(218,228,255,0.6);line-height:1.4;flex:1;}
+        .il-text{font-size:.48rem;color:rgba(218,228,255,0.65);line-height:1.5;flex:1;}
         .il-intensity{position:absolute;bottom:0;left:0;height:1px;border-radius:1px;opacity:0.4;transition:width .5s;}
         .il-filter-chip{display:inline-flex;align-items:center;gap:3px;padding:2px 6px;border-radius:6px;font-size:.38rem;letter-spacing:.08em;color:rgba(218,228,255,0.35);cursor:pointer;transition:all .15s;font-family:'Space Mono',monospace;border:1px solid rgba(255,255,255,0.04);text-transform:uppercase;}
         .il-filter-chip.active{color:rgba(218,228,255,0.7);border-color:rgba(255,255,255,0.08);background:rgba(255,255,255,0.03);}
@@ -2606,7 +2610,7 @@ if ('serviceWorker' in navigator && _onGitHubPages) {
 </script>
 
 <script src="genome-data.js"></script>
-<script src="brain.js?v=v20260409-2356"></script>
+<script src="brain.js?v=v20260410-0028"></script>
 <script>
 // Lazy-load bulk genome after page is interactive (19,500+ genes)
 // Deferred to avoid blocking initial render

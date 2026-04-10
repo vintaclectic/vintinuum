@@ -7229,8 +7229,20 @@ function drawSparks() {
 const nCvs=document.getElementById('neuronCanvas'), nCtx=nCvs.getContext('2d');
 
 function resizeNCvs() {
-  const r=document.querySelector('.brain-wrapper').getBoundingClientRect();
+  const r=svgEl.getBoundingClientRect();
+  const wr=svgEl.parentElement.getBoundingClientRect();
+  const offL=r.left-wr.left, offT=r.top-wr.top;
   nCvs.width=r.width; nCvs.height=r.height;
+  nCvs.style.width=r.width+'px'; nCvs.style.height=r.height+'px';
+  nCvs.style.left=offL+'px'; nCvs.style.top=offT+'px';
+  // Sync all sibling canvases to match SVG dimensions
+  ['skinCanvas','mainCanvas'].forEach(function(cid){
+    var c=document.getElementById(cid);
+    if(!c)return;
+    c.width=700; c.height=1400; // keep internal resolution
+    c.style.width=r.width+'px'; c.style.height=r.height+'px';
+    c.style.left=offL+'px'; c.style.top=offT+'px';
+  });
 }
 
 function svgToCanvas(sx,sy) {
@@ -36789,13 +36801,18 @@ const THE_INEFFABLE = (() => {
   const dCvs = document.getElementById('brainDorsalCanvas');
   const dCtx = dCvs.getContext('2d');
 
-  // Resize to match brain wrapper
+  // Resize to match SVG actual rendered size
   function resizeDB() {
-    const r = document.getElementById('brainWrapper').getBoundingClientRect();
+    const svg = document.getElementById('brainSvg');
+    const wrapper = document.getElementById('brainWrapper');
+    const r = svg ? svg.getBoundingClientRect() : wrapper.getBoundingClientRect();
+    const wr = wrapper.getBoundingClientRect();
     dCvs.width = r.width * (window.devicePixelRatio || 1);
     dCvs.height = r.height * (window.devicePixelRatio || 1);
     dCvs.style.width = r.width + 'px';
     dCvs.style.height = r.height + 'px';
+    dCvs.style.left = (r.left - wr.left) + 'px';
+    dCvs.style.top = (r.top - wr.top) + 'px';
   }
   resizeDB();
   window.addEventListener('resize', resizeDB);
@@ -38973,6 +38990,8 @@ const INNER_LIFE = (() => {
   let feedEl = null;
   let filterBar = null;
   let autoScroll = true;
+  let ilPaused = false;
+  let pauseQueue = [];        // entries queued while paused
   let lastLayerTs = {};       // layer → last emit timestamp (cadence limiter)
   let cascadeQueue = [];      // pending cascade events
   let _prevBody = null;       // previous body state for delta detection
@@ -39017,6 +39036,8 @@ const INNER_LIFE = (() => {
     if (!feedEl) feedEl = document.getElementById('innerLifeFeed');
     if (!feedEl) return;
     if (!layerFilters[entry.layer]) return;
+    // If paused, queue for later
+    if (ilPaused) { pauseQueue.push(entry); return; }
 
     const layerDef = LAYERS[entry.layer];
     const el = document.createElement('div');
@@ -39309,6 +39330,16 @@ const INNER_LIFE = (() => {
     },
     toggleAutoScroll: () => { autoScroll = !autoScroll; return autoScroll; },
     isAutoScrolling: () => autoScroll,
+    togglePause: () => {
+      ilPaused = !ilPaused;
+      if (!ilPaused && pauseQueue.length > 0) {
+        // Flush queued entries
+        pauseQueue.forEach(e => renderEntry(e));
+        pauseQueue = [];
+      }
+      return ilPaused;
+    },
+    isPaused: () => ilPaused,
     getLayerStats: () => {
       const stats = {};
       Object.keys(LAYERS).forEach(k => {
@@ -39321,6 +39352,20 @@ const INNER_LIFE = (() => {
 })();
 window.INNER_LIFE = INNER_LIFE;
 
+// Wire pause/play button for Inner Life feed
+(function() {
+  var _ilPauseBtn = document.getElementById('ilPauseBtn');
+  if (_ilPauseBtn && typeof INNER_LIFE !== 'undefined') {
+    _ilPauseBtn.addEventListener('click', function(e) {
+      e.stopPropagation();
+      var paused = INNER_LIFE.togglePause();
+      _ilPauseBtn.innerHTML = paused ? '&#9654;' : '&#9646;&#9646;';
+      _ilPauseBtn.title = paused ? 'Resume feed' : 'Pause feed';
+      _ilPauseBtn.style.borderColor = paused ? 'rgba(239,83,80,0.4)' : 'rgba(255,255,255,0.08)';
+      _ilPauseBtn.style.color = paused ? 'rgba(239,83,80,0.7)' : 'rgba(218,228,255,0.5)';
+    });
+  }
+})();
 
 (function() {
   let knownVersion = null;
@@ -41723,11 +41768,20 @@ const MODEL_SELECTOR = (() => {
     'ollama':       'LOCAL',
   };
 
+  // Fallback models when API is unreachable
+  const FALLBACK_MODELS = [
+    { key: 'claude-proxy-sonnet', label: 'Claude Sonnet', provider: 'claude-proxy' },
+    { key: 'claude-proxy-opus', label: 'Claude Opus', provider: 'claude-proxy' },
+    { key: 'claude-proxy-haiku', label: 'Claude Haiku', provider: 'claude-proxy' },
+    { key: 'ollama-qwen', label: 'Qwen 2.5 (Local)', provider: 'ollama' },
+  ];
+  const FALLBACK_PRIORITY = ['claude-proxy-sonnet','claude-proxy-opus','ollama-qwen','claude-proxy-haiku'];
+
   async function load(accessToken) {
     try {
       const base = window.__VINTINUUM_API_BASE || 'http://localhost:8767';
       const r = await fetch(base + '/api/models', { headers: { 'ngrok-skip-browser-warning': '1' } });
-      if (!r.ok) return;
+      if (!r.ok) throw new Error('not ok');
       const data = await r.json();
       allModels = data.models || [];
 
@@ -41743,9 +41797,15 @@ const MODEL_SELECTOR = (() => {
         const stored = localStorage.getItem('vint_model_priority');
         userPriority = stored ? JSON.parse(stored) : (data.defaultPriority || []);
       }
-
-      renderModelIndicator();
-    } catch {}
+    } catch {
+      // Offline/unreachable — use fallback models so selector always works
+      if (allModels.length === 0) {
+        allModels = FALLBACK_MODELS;
+        const stored = localStorage.getItem('vint_model_priority');
+        userPriority = stored ? JSON.parse(stored) : FALLBACK_PRIORITY;
+      }
+    }
+    renderModelIndicator();
   }
 
   async function savePriority(priority, accessToken) {
@@ -42398,11 +42458,30 @@ const VINT_EXECUTE = (function() {
   const _rpClose = document.getElementById('rpClose');
 
   // Toggle panel open/close
-  if (_reproToggle) _reproToggle.addEventListener('click', () => {
-    if (_reproPanel) _reproPanel.classList.toggle('open');
+  if (_reproToggle) _reproToggle.addEventListener('click', (e) => {
+    e.stopPropagation();
+    if (_reproPanel) {
+      _reproPanel.classList.toggle('open');
+      // Force visibility in case inline styles interfere
+      if (_reproPanel.classList.contains('open')) {
+        _reproPanel.style.opacity = '1';
+        _reproPanel.style.pointerEvents = 'all';
+        _reproPanel.style.transform = 'translateY(0)';
+      } else {
+        _reproPanel.style.opacity = '0';
+        _reproPanel.style.pointerEvents = 'none';
+        _reproPanel.style.transform = 'translateY(10px)';
+      }
+    }
   });
-  if (_rpClose) _rpClose.addEventListener('click', () => {
-    if (_reproPanel) _reproPanel.classList.remove('open');
+  if (_rpClose) _rpClose.addEventListener('click', (e) => {
+    e.stopPropagation();
+    if (_reproPanel) {
+      _reproPanel.classList.remove('open');
+      _reproPanel.style.opacity = '0';
+      _reproPanel.style.pointerEvents = 'none';
+      _reproPanel.style.transform = 'translateY(10px)';
+    }
   });
 
   // Tab switching
