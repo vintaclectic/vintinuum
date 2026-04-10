@@ -2075,8 +2075,9 @@ const SKIN = (() => {
       if (age > p.duration) { TOKEN_PULSES.splice(i, 1); continue; }
       const progress = age / p.duration;
       const alpha = progress < 0.15 ? (progress / 0.15) * 0.55 : 0.55 * (1 - (progress - 0.15) / 0.85);
-      const radius = 1.8 + progress * 5;
-      const grad = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, radius * 2.5);
+      const radius = Math.max(0.1, 1.8 + progress * 5);
+      const outerR = Math.max(0.2, radius * 2.5);
+      const grad = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, outerR);
       grad.addColorStop(0, `rgba(${p.r},${p.g},${p.b},${alpha.toFixed(4)})`);
       grad.addColorStop(1, `rgba(${p.r},${p.g},${p.b},0)`);
       ctx.fillStyle = grad;
@@ -45838,13 +45839,43 @@ const SOUL_AUTH = (() => {
   function getUser()   { return _user; }
   function isLoggedIn(){ return !!_accessToken && !!_user; }
 
-  // ── Fetch monkeypatch — auto-attach auth + auto-refresh on 401 ──
+  // ── Fetch monkeypatch — auto-attach auth + auto-refresh on 401 + offline circuit breaker ──
   const _origFetch = window.fetch;
   window._soulAuthOrigFetch = _origFetch; // keep pristine ref for _apiFetch
+
+  // Circuit breaker state — prevents console flood when API is unreachable
+  let _apiOffline = false;
+  let _offlineSince = 0;
+  let _offlineBackoff = 10000;       // start at 10s, doubles up to 5min
+  const _MAX_BACKOFF = 300000;       // 5 minutes max
+  let _offlineLogCount = 0;
+  let _lastOfflineProbe = 0;
+
+  window._vintApiOffline = () => _apiOffline; // expose for other modules to check
+
   window.fetch = async function(url, opts) {
     const apiBase = API();
     const isApi = typeof url === 'string' && (url.startsWith(apiBase) || url.startsWith('/api/'));
     const isAuthRoute = typeof url === 'string' && url.includes('/auth/');
+
+    // Circuit breaker: if API is offline, silently drop non-auth API calls
+    // except periodic probes to detect recovery
+    if (isApi && _apiOffline && !isAuthRoute) {
+      const now = Date.now();
+      const timeSinceProbe = now - _lastOfflineProbe;
+      if (timeSinceProbe < _offlineBackoff) {
+        // Silently reject — no console spam
+        return new Response(JSON.stringify({ error: 'API offline (circuit open)' }), {
+          status: 503, headers: { 'Content-Type': 'application/json' }
+        });
+      }
+      // Time for a probe — let this one through
+      _lastOfflineProbe = now;
+      if (_offlineLogCount < 3) {
+        console.log('[SOUL_AUTH] Probing API...', apiBase);
+        _offlineLogCount++;
+      }
+    }
 
     // Auto-attach token to API calls
     if (isApi && _accessToken) {
@@ -45855,20 +45886,44 @@ const SOUL_AUTH = (() => {
       }
     }
 
-    const res = await _origFetch.call(window, url, opts);
+    try {
+      const res = await _origFetch.call(window, url, opts);
 
-    // Auto-refresh on 401 (skip auth routes to avoid loops)
-    if (res.status === 401 && isApi && !isAuthRoute && _refreshToken) {
-      try {
-        await refresh();
-        opts = opts || {};
-        opts.headers = opts.headers || {};
-        opts.headers['Authorization'] = 'Bearer ' + _accessToken;
-        return _origFetch.call(window, url, opts);
-      } catch(_) {} // refresh failed, return original 401
+      // Successful API response — mark API as online
+      if (isApi && _apiOffline) {
+        _apiOffline = false;
+        _offlineBackoff = 10000;
+        _offlineLogCount = 0;
+        console.log('[SOUL_AUTH] ✓ API back online');
+      }
+
+      // Auto-refresh on 401 (skip auth routes to avoid loops)
+      if (res.status === 401 && isApi && !isAuthRoute && _refreshToken) {
+        try {
+          await refresh();
+          opts = opts || {};
+          opts.headers = opts.headers || {};
+          opts.headers['Authorization'] = 'Bearer ' + _accessToken;
+          return _origFetch.call(window, url, opts);
+        } catch(_) {} // refresh failed, return original 401
+      }
+
+      return res;
+    } catch (err) {
+      // Network error on API call — enter offline mode
+      if (isApi) {
+        if (!_apiOffline) {
+          _apiOffline = true;
+          _offlineSince = Date.now();
+          _offlineLogCount = 0;
+          console.warn('[SOUL_AUTH] API unreachable — entering offline mode. Will probe every', (_offlineBackoff / 1000) + 's');
+        } else {
+          // Increase backoff on repeated failures
+          _offlineBackoff = Math.min(_offlineBackoff * 1.5, _MAX_BACKOFF);
+        }
+      }
+      throw err;
     }
-
-    return res;
   };
 
   // ── Soul bond indicator — living, pulsing soul orb ──────────────
