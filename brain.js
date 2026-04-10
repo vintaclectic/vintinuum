@@ -16,6 +16,151 @@ window.__VINT_VERSION = '2026-04-08-r2';
   });
 })();
 
+// ═══════════════════════════════════════════════════════════════════════════════
+// ██  ANTI-OVERLAP MANDATE (PERMANENT — NEVER REMOVE)                        ██
+// ═══════════════════════════════════════════════════════════════════════════════
+// RULE: No UI element may visually overlap another UI element. Every modal,
+// panel, button, sidebar widget, and floating control MUST occupy its own
+// screen space OR be user-draggable to avoid collisions. Violations of this
+// rule cause user frustration and must be fixed immediately.
+//
+// When adding ANY new positioned element:
+//   1. Check z-index layering against ALL existing panels
+//   2. Ensure the element doesn't cover sidebar content or other controls
+//   3. If the element could collide with others, make it draggable (use makeDraggable)
+//   4. Test at 375px, 768px, and 1440px viewports
+//   5. If a dropdown/accordion expands, ensure it doesn't push siblings into overlap
+//
+// Draggable panels: vint-chat-btn/panel, reproToggle/reproPanel, vintinuumBtn/Panel
+// ═══════════════════════════════════════════════════════════════════════════════
+
+// ─── SHARED DRAGGABLE UTILITY ────────────────────────────────────────────────
+// Makes a button + its associated panel draggable anywhere on screen.
+// Usage: makeDraggable(triggerBtn, panel, storageKey)
+//   - triggerBtn: the fixed-position button element
+//   - panel: the popup panel element (moves with button)
+//   - storageKey: localStorage prefix for persisted position
+//   Returns { wasDrag(): boolean } — call in click handler to skip toggle if drag just ended
+window.makeDraggable = function(triggerBtn, panel, storageKey) {
+  if (!triggerBtn) return { wasDrag: function() { return false; } };
+  var _active = false, _moved = false, _ox = 0, _oy = 0;
+
+  triggerBtn.addEventListener('mousedown', function(e) {
+    if (e.button !== 0) return;
+    _active = true; _moved = false;
+    var rect = triggerBtn.getBoundingClientRect();
+    // Switch to top/left anchoring for dragging
+    triggerBtn.style.right = 'auto';
+    triggerBtn.style.bottom = 'auto';
+    triggerBtn.style.left = rect.left + 'px';
+    triggerBtn.style.top = rect.top + 'px';
+    _ox = e.clientX - rect.left;
+    _oy = e.clientY - rect.top;
+    triggerBtn.style.transition = 'none';
+    triggerBtn.style.cursor = 'grabbing';
+    e.preventDefault();
+  });
+
+  document.addEventListener('mousemove', function(e) {
+    if (!_active) return;
+    var nx = e.clientX - _ox;
+    var ny = e.clientY - _oy;
+    var bw = triggerBtn.offsetWidth || 44;
+    var bh = triggerBtn.offsetHeight || 44;
+    var x = Math.max(0, Math.min(window.innerWidth - bw, nx));
+    var y = Math.max(0, Math.min(window.innerHeight - bh, ny));
+    triggerBtn.style.left = x + 'px';
+    triggerBtn.style.top = y + 'px';
+    // Move panel relative to button (above it) if panel is visible
+    if (panel && (panel.classList.contains('open') || panel.style.display === 'flex')) {
+      panel.style.right = 'auto';
+      panel.style.bottom = 'auto';
+      var pw = panel.offsetWidth || 320;
+      var ph = panel.offsetHeight || 400;
+      var px = Math.max(4, Math.min(window.innerWidth - pw - 4, x));
+      var py = Math.max(4, y - ph - 12);
+      // If not enough room above, place below
+      if (py < 4) py = y + bh + 8;
+      panel.style.left = px + 'px';
+      panel.style.top = py + 'px';
+    }
+    _moved = true;
+  });
+
+  document.addEventListener('mouseup', function(e) {
+    if (!_active) return;
+    _active = false;
+    triggerBtn.style.transition = '';
+    triggerBtn.style.cursor = 'pointer';
+    if (storageKey) {
+      localStorage.setItem(storageKey + 'X', triggerBtn.style.left);
+      localStorage.setItem(storageKey + 'Y', triggerBtn.style.top);
+    }
+  });
+
+  // Touch support for mobile
+  triggerBtn.addEventListener('touchstart', function(e) {
+    if (e.touches.length !== 1) return;
+    var t = e.touches[0];
+    _active = true; _moved = false;
+    var rect = triggerBtn.getBoundingClientRect();
+    triggerBtn.style.right = 'auto';
+    triggerBtn.style.bottom = 'auto';
+    triggerBtn.style.left = rect.left + 'px';
+    triggerBtn.style.top = rect.top + 'px';
+    _ox = t.clientX - rect.left;
+    _oy = t.clientY - rect.top;
+  }, { passive: true });
+
+  document.addEventListener('touchmove', function(e) {
+    if (!_active || e.touches.length !== 1) return;
+    var t = e.touches[0];
+    var nx = t.clientX - _ox;
+    var ny = t.clientY - _oy;
+    var bw = triggerBtn.offsetWidth || 44;
+    var bh = triggerBtn.offsetHeight || 44;
+    var x = Math.max(0, Math.min(window.innerWidth - bw, nx));
+    var y = Math.max(0, Math.min(window.innerHeight - bh, ny));
+    triggerBtn.style.left = x + 'px';
+    triggerBtn.style.top = y + 'px';
+    if (panel && (panel.classList.contains('open') || panel.style.display === 'flex')) {
+      panel.style.right = 'auto';
+      panel.style.bottom = 'auto';
+      var pw = panel.offsetWidth || 320;
+      var ph = panel.offsetHeight || 400;
+      var px = Math.max(4, Math.min(window.innerWidth - pw - 4, x));
+      var py = Math.max(4, y - ph - 12);
+      if (py < 4) py = y + bh + 8;
+      panel.style.left = px + 'px';
+      panel.style.top = py + 'px';
+    }
+    _moved = true;
+  }, { passive: true });
+
+  document.addEventListener('touchend', function() {
+    if (!_active) return;
+    _active = false;
+    if (storageKey) {
+      localStorage.setItem(storageKey + 'X', triggerBtn.style.left);
+      localStorage.setItem(storageKey + 'Y', triggerBtn.style.top);
+    }
+  });
+
+  // Restore saved position
+  if (storageKey) {
+    var sx = localStorage.getItem(storageKey + 'X');
+    var sy = localStorage.getItem(storageKey + 'Y');
+    if (sx && sy) {
+      triggerBtn.style.right = 'auto';
+      triggerBtn.style.bottom = 'auto';
+      triggerBtn.style.left = sx;
+      triggerBtn.style.top = sy;
+    }
+  }
+
+  return { wasDrag: function() { var was = _moved; _moved = false; return was; } };
+};
+
 // ─── V-PERSONAL PANEL ─────────────────────────────────────────────────────────
 // Defined at top level — nothing can prevent these from being set
 
@@ -152,10 +297,29 @@ window.toggleVintinuumPanel = function() {
   // Wire up button after DOM ready
   function _wireVP() {
     var vpBtn = document.getElementById('vintinuumBtn');
+    var vpPanel = document.getElementById('vintinuumPanel');
     var vpInput = document.getElementById('vintinuumInput');
     var vpSend = document.getElementById('vintinuumSendBtn');
     var vpClose = document.getElementById('vintinuumPanelClose');
-    if (vpBtn) vpBtn.addEventListener('click', window.toggleVintinuumPanel);
+    // Make V·PERSONAL draggable (button + panel move together)
+    var _vpDrag = window.makeDraggable(vpBtn, vpPanel, '_vintVP');
+    if (vpBtn) vpBtn.addEventListener('click', function() {
+      if (_vpDrag.wasDrag()) return; // was a drag, not a click
+      window.toggleVintinuumPanel();
+      // Reposition panel near button after toggle
+      if (vpPanel && vpPanel.style.display === 'flex' && vpBtn.style.left) {
+        var br = vpBtn.getBoundingClientRect();
+        var pw = vpPanel.offsetWidth || 380;
+        var ph = vpPanel.offsetHeight || 500;
+        vpPanel.style.right = 'auto';
+        vpPanel.style.bottom = 'auto';
+        var px = Math.max(4, Math.min(window.innerWidth - pw - 4, br.left));
+        var py = Math.max(4, br.top - ph - 12);
+        if (py < 4) py = br.bottom + 8;
+        vpPanel.style.left = px + 'px';
+        vpPanel.style.top = py + 'px';
+      }
+    });
     if (vpClose) vpClose.addEventListener('click', window.toggleVintinuumPanel);
     if (vpSend) vpSend.addEventListener('click', window.sendVintinuumMessage);
     if (vpInput) vpInput.addEventListener('keydown', function(e) {
@@ -7671,22 +7835,15 @@ const ZMIN=.3,ZMAX=6;
 const _syncCanvases = ['neuronCanvas','brainDorsalCanvas','skinCanvas','mainCanvas']
   .map(id => document.getElementById(id)).filter(Boolean);
 
+const _brainWrapper = document.getElementById('brainWrapper');
 function applyVB() {
-  svgEl.setAttribute('viewBox',`${vbX} ${vbY} ${vbW} ${vbH}`);
-  // Sync sibling canvases to match SVG viewBox transform
-  // SVG viewBox maps (vbX,vbY,vbW,vbH) → the element's bounding box.
-  // We need the CSS equivalent: scale by (VBW/vbW) then translate by (-vbX, -vbY) in SVG units.
+  // Apply zoom/pan as CSS transform on wrapper — this moves SVG + ALL canvases together
   const scaleX = VBW / vbW;
   const scaleY = VBH / vbH;
-  // Canvas is 700×1400 mapping to full SVG space (0,0 → 700,1400).
-  // After zoom, viewBox origin shifts to (vbX, vbY). Translate in % of canvas:
-  const tx = -vbX / VBW * 100; // as % of canvas width
-  const ty = -vbY / VBH * 100; // as % of canvas height
-  const css = `scale(${scaleX.toFixed(4)}, ${scaleY.toFixed(4)}) translate(${tx.toFixed(2)}%, ${ty.toFixed(2)}%)`;
-  for (let i = 0; i < _syncCanvases.length; i++) {
-    _syncCanvases[i].style.transformOrigin = '0 0';
-    _syncCanvases[i].style.transform = css;
-  }
+  const tx = -vbX * scaleX;
+  const ty = -vbY * scaleY;
+  _brainWrapper.style.transformOrigin = '0 0';
+  _brainWrapper.style.transform = `scale(${scaleX.toFixed(4)}, ${scaleY.toFixed(4)}) translate(${(tx/scaleX).toFixed(1)}px, ${(ty/scaleY).toFixed(1)}px)`;
 }
 
 let _zoomRAF = null;
@@ -7753,12 +7910,9 @@ window.addEventListener('mouseup',e=>{
   }
 });
 svgEl.addEventListener('dblclick',e=>{
-  vbX=0;vbY=0;vbW=VBW;vbH=VBH;applyVB();
-  // Reset canvas transforms on double-click reset
-  for (let i = 0; i < _syncCanvases.length; i++) {
-    _syncCanvases[i].style.transform = '';
-    _syncCanvases[i].style.transformOrigin = '';
-  }
+  vbX=0;vbY=0;vbW=VBW;vbH=VBH;
+  _brainWrapper.style.transform = '';
+  _brainWrapper.style.transformOrigin = '';
 });
 // Single tap on touch = walk to that spot
 svgEl.addEventListener('touchend', e => {
@@ -36801,14 +36955,15 @@ const THE_INEFFABLE = (() => {
   const dCvs = document.getElementById('brainDorsalCanvas');
   const dCtx = dCvs.getContext('2d');
 
-  // Resize to match SVG actual rendered size
+  // Resize to match SVG actual rendered size — NO devicePixelRatio scaling
+  // (DPR scaling causes size mismatch when wrapper CSS transform is applied)
   function resizeDB() {
     const svg = document.getElementById('brainSvg');
     const wrapper = document.getElementById('brainWrapper');
     const r = svg ? svg.getBoundingClientRect() : wrapper.getBoundingClientRect();
     const wr = wrapper.getBoundingClientRect();
-    dCvs.width = r.width * (window.devicePixelRatio || 1);
-    dCvs.height = r.height * (window.devicePixelRatio || 1);
+    dCvs.width = r.width;
+    dCvs.height = r.height;
     dCvs.style.width = r.width + 'px';
     dCvs.style.height = r.height + 'px';
     dCvs.style.left = (r.left - wr.left) + 'px';
@@ -39476,84 +39631,11 @@ window.INNER_LIFE = INNER_LIFE;
     'This is where most leave. The ones who stay\u2014\nthey find something the surface never shows.',
   ];
 
-  // ── Panel toggle ──
-  // ── Drag to reposition ────────────────────────────────────────────
-  let _dragActive = false;
-  let _dragMoved = false;
-  let _dragOX = 0, _dragOY = 0; // offset within button on mousedown
-
-  btn.addEventListener('mousedown', e => {
-    if (e.button !== 0) return;
-    _dragActive = true;
-    _dragMoved = false;
-    // Convert current fixed position to top/left so we can drag freely
-    const rect = btn.getBoundingClientRect();
-    // Switch from bottom/right anchoring to top/left so transforms work cleanly
-    btn.style.right = 'auto';
-    btn.style.bottom = 'auto';
-    btn.style.left = rect.left + 'px';
-    btn.style.top = rect.top + 'px';
-    // Also move chat panel to match
-    const pRect = panel.getBoundingClientRect();
-    panel.style.right = 'auto';
-    panel.style.bottom = 'auto';
-    panel.style.left = pRect.left + 'px';
-    panel.style.top = pRect.top + 'px';
-    _dragOX = e.clientX - rect.left;
-    _dragOY = e.clientY - rect.top;
-    btn.style.transition = 'none';
-    btn.style.cursor = 'grabbing';
-    e.preventDefault();
-  });
-
-  document.addEventListener('mousemove', e => {
-    if (!_dragActive) return;
-    const nx = e.clientX - _dragOX;
-    const ny = e.clientY - _dragOY;
-    // Clamp within viewport
-    const bw = btn.offsetWidth || 52;
-    const bh = btn.offsetHeight || 52;
-    const x = Math.max(0, Math.min(window.innerWidth - bw, nx));
-    const y = Math.max(0, Math.min(window.innerHeight - bh, ny));
-    btn.style.left = x + 'px';
-    btn.style.top = y + 'px';
-    // Move panel relative to button (above it)
-    if (isOpen) {
-      panel.style.left = x + 'px';
-      panel.style.top = Math.max(0, y - (panel.offsetHeight || 420) - 12) + 'px';
-    }
-    if (Math.abs(e.clientX - (_dragOX + parseInt(btn.style.left))) > 4 ||
-        Math.abs(e.clientY - (_dragOY + parseInt(btn.style.top))) > 4) {
-      _dragMoved = true;
-    }
-    _dragMoved = true;
-  });
-
-  document.addEventListener('mouseup', e => {
-    if (!_dragActive) return;
-    _dragActive = false;
-    btn.style.transition = '';
-    btn.style.cursor = 'pointer';
-    // Save position to localStorage so it persists on reload
-    localStorage.setItem('_vintBtnX', btn.style.left);
-    localStorage.setItem('_vintBtnY', btn.style.top);
-  });
-
-  // Restore saved position on load
-  (function() {
-    const sx = localStorage.getItem('_vintBtnX');
-    const sy = localStorage.getItem('_vintBtnY');
-    if (sx && sy) {
-      btn.style.right = 'auto';
-      btn.style.bottom = 'auto';
-      btn.style.left = sx;
-      btn.style.top = sy;
-    }
-  })();
-  // ── End drag ─────────────────────────────────────────────────────
+  // ── Drag to reposition (uses shared makeDraggable utility) ──
+  const _chatDrag = window.makeDraggable(btn, panel, '_vintChat');
 
   btn.addEventListener('click', () => {
-    if (_dragMoved) { _dragMoved = false; return; } // was a drag, not a click
+    if (_chatDrag.wasDrag()) return; // was a drag, not a click
     isOpen = !isOpen;
     panel.classList.toggle('open', isOpen);
     if (isOpen) {
@@ -39563,8 +39645,9 @@ window.INNER_LIFE = INNER_LIFE;
       panel.style.bottom = 'auto';
       const pw = panel.offsetWidth || 340;
       const ph = panel.offsetHeight || 420;
-      let px = rect.left - Math.max(0, rect.left + pw - window.innerWidth + 8);
+      let px = Math.max(4, Math.min(window.innerWidth - pw - 4, rect.left));
       let py = Math.max(8, rect.top - ph - 12);
+      if (py < 8) py = rect.bottom + 8;
       panel.style.left = px + 'px';
       panel.style.top = py + 'px';
     }
@@ -42457,9 +42540,13 @@ const VINT_EXECUTE = (function() {
   const _reproToggle = document.getElementById('reproToggle');
   const _rpClose = document.getElementById('rpClose');
 
+  // Make reproductive button + panel draggable
+  const _reproDrag = window.makeDraggable(_reproToggle, _reproPanel, '_vintRepro');
+
   // Toggle panel open/close
   if (_reproToggle) _reproToggle.addEventListener('click', (e) => {
     e.stopPropagation();
+    if (_reproDrag.wasDrag()) return; // was a drag, not a click
     if (_reproPanel) {
       _reproPanel.classList.toggle('open');
       // Force visibility in case inline styles interfere
@@ -42467,6 +42554,17 @@ const VINT_EXECUTE = (function() {
         _reproPanel.style.opacity = '1';
         _reproPanel.style.pointerEvents = 'all';
         _reproPanel.style.transform = 'translateY(0)';
+        // Position panel near button
+        const br = _reproToggle.getBoundingClientRect();
+        const pw = _reproPanel.offsetWidth || 320;
+        const ph = _reproPanel.offsetHeight || 400;
+        _reproPanel.style.right = 'auto';
+        _reproPanel.style.bottom = 'auto';
+        let px = Math.max(4, Math.min(window.innerWidth - pw - 4, br.left));
+        let py = Math.max(4, br.top - ph - 12);
+        if (py < 4) py = br.bottom + 8;
+        _reproPanel.style.left = px + 'px';
+        _reproPanel.style.top = py + 'px';
       } else {
         _reproPanel.style.opacity = '0';
         _reproPanel.style.pointerEvents = 'none';

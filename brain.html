@@ -265,7 +265,7 @@ canvas{display:block;}
 // - Caches static assets for offline resilience
 // - Auto-reloads when a new version deploys
 // - Clears old caches on activation
-const _SW_VERSION = 'v20260410-0028';
+const _SW_VERSION = 'v20260410-0046';
 const _onGitHubPages = location.hostname !== 'localhost' && location.hostname !== '127.0.0.1' && location.protocol !== 'file:';
 if ('serviceWorker' in navigator && _onGitHubPages) {
   const _swPath = location.pathname.includes('/vintinuum') ? '/vintinuum/sw.js' : '/sw.js';
@@ -362,7 +362,7 @@ if ('serviceWorker' in navigator && _onGitHubPages) {
   <!-- REPRODUCTIVE CONTROL PANEL -->
   <button id="reproToggle" title="Reproductive System Controls" style="position:fixed;bottom:24px;left:66px;z-index:1004;background:rgba(6,10,18,0.55);border:1px solid rgba(206,147,216,0.3);border-radius:50%;width:36px;height:36px;cursor:pointer;font-size:1rem;display:flex;align-items:center;justify-content:center;color:rgba(206,147,216,0.7);transition:all .2s;padding:0;">💜</button>
 
-  <div id="reproPanel" style="position:fixed;bottom:66px;left:24px;z-index:1005;background:rgba(8,12,22,0.40);border:1px solid rgba(206,147,216,0.18);border-radius:20px;padding:0;width:320px;max-height:min(580px,calc(100vh - 90px));opacity:0;pointer-events:none;transition:opacity .25s, transform .25s;transform:translateY(10px);overflow:hidden;">
+  <div id="reproPanel" style="position:fixed;bottom:66px;left:24px;z-index:1005;background:rgba(7,11,17,0.88);border:1px solid rgba(206,147,216,0.25);border-radius:20px;padding:0;width:320px;max-height:min(580px,calc(100vh - 90px));opacity:0;pointer-events:none;transition:opacity .25s, transform .25s;transform:translateY(10px);overflow:hidden;">
     <style>
       #reproPanel.open { opacity:1; pointer-events:all; transform:translateY(0); }
       /* Header */
@@ -2610,7 +2610,7 @@ if ('serviceWorker' in navigator && _onGitHubPages) {
 </script>
 
 <script src="genome-data.js"></script>
-<script src="brain.js?v=v20260410-0028"></script>
+<script src="brain.js?v=v20260410-0046"></script>
 <script>
 // Lazy-load bulk genome after page is interactive (19,500+ genes)
 // Deferred to avoid blocking initial render
