@@ -403,7 +403,7 @@ const chromosomes = [
 
 
 // ─── CURATED GENES ───────────────────────────────────────────────────────────
-// ~300 genes across all body systems with real positions, SNPs, and expression wiring
+// ~502 genes across all body systems with real positions, SNPs, and expression wiring
 
 const curatedGenes = {};
 
@@ -412,7 +412,7 @@ function G(obj) { curatedGenes[obj.symbol] = obj; }
 
 
 // ═══════════════════════════════════════════════════════════════════════════════
-//  NERVOUS SYSTEM — neurotransmitters, receptors, synaptic machinery (~55 genes)
+//  NERVOUS SYSTEM — neurotransmitters, receptors, synaptic machinery (~103 genes)
 // ═══════════════════════════════════════════════════════════════════════════════
 
 G({
@@ -1338,7 +1338,7 @@ G({ symbol: 'GBA2', name: 'Non-lysosomal glucosylceramidase', chromosome: 9, pos
 
 
 // ═══════════════════════════════════════════════════════════════════════════════
-//  IMMUNE SYSTEM (~25 genes)
+//  IMMUNE SYSTEM (~46 genes)
 // ═══════════════════════════════════════════════════════════════════════════════
 
 G({
@@ -1519,7 +1519,7 @@ G({ symbol: 'TMPRSS2', name: 'Transmembrane serine protease 2', chromosome: 21, 
 
 
 // ═══════════════════════════════════════════════════════════════════════════════
-//  CARDIOVASCULAR SYSTEM (~20 genes)
+//  CARDIOVASCULAR SYSTEM (~31 genes)
 // ═══════════════════════════════════════════════════════════════════════════════
 
 G({
@@ -1610,7 +1610,7 @@ G({ symbol: 'PDGFB', name: 'Platelet-derived growth factor subunit B', chromosom
 
 
 // ═══════════════════════════════════════════════════════════════════════════════
-//  METABOLIC / DIGESTIVE (~25 genes)
+//  METABOLIC / DIGESTIVE (~73 genes)
 // ═══════════════════════════════════════════════════════════════════════════════
 
 G({ symbol: 'INS', name: 'Insulin', chromosome: 11, position: 2159779, category: 'metabolic', subcategory: 'glucose', description: 'The glucose-lowering hormone — secreted by beta cells, enables glucose uptake into cells. Without it: type 1 diabetes', baseExpression: 0.65, bodySystemLinks: ['glucose', 'pancreas', 'metabolism'], snps: [], expressionDrivers: [{ trigger: 'arousal', threshold: 55, direction: 'up', magnitude: 0.01 }], expressionOutputs: [{ target: 'arousal', weight: -0.05 }] });
@@ -1719,7 +1719,7 @@ G({ symbol: 'HAMP', name: 'Hepcidin antimicrobial peptide', chromosome: 19, posi
 
 
 // ═══════════════════════════════════════════════════════════════════════════════
-//  ENDOCRINE SYSTEM (~15 genes)
+//  ENDOCRINE SYSTEM (~34 genes)
 // ═══════════════════════════════════════════════════════════════════════════════
 
 G({ symbol: 'GH1', name: 'Growth hormone 1', chromosome: 17, position: 63917549, category: 'endocrine', subcategory: 'growth', description: 'Pituitary growth hormone — drives linear growth in childhood, maintains muscle and bone mass in adults', baseExpression: 0.55, bodySystemLinks: ['growth', 'pituitary', 'igf1_axis'], snps: [], expressionDrivers: [{ trigger: 'gaba', threshold: 60, direction: 'up', magnitude: 0.01 }], expressionOutputs: [{ target: 'arousal', weight: 0.03 }] });
@@ -1779,7 +1779,7 @@ G({ symbol: 'CALCA', name: 'Calcitonin/calcitonin gene-related peptide', chromos
 
 
 // ═══════════════════════════════════════════════════════════════════════════════
-//  STRUCTURAL — bones, connective tissue, muscle (~15 genes)
+//  STRUCTURAL — bones, connective tissue, muscle (~41 genes)
 // ═══════════════════════════════════════════════════════════════════════════════
 
 G({ symbol: 'COL1A1', name: 'Collagen type I alpha 1', chromosome: 17, position: 50183289, category: 'structural', subcategory: 'connective_tissue', description: 'Most abundant protein in the human body — forms bones, skin, tendons, ligaments. Mutations cause osteogenesis imperfecta (brittle bone disease)', baseExpression: 0.75, bodySystemLinks: ['bone', 'skin', 'tendon', 'connective_tissue'], snps: [{ id: 'Sp1', rs: 'rs1800012', alleles: ['G', 'T'], frequencies: [0.82, 0.18], effects: { 'G/G': { bone_density: 0.05, label: 'Normal collagen production' }, 'G/T': { bone_density: -0.05, label: 'Mildly reduced bone density' }, 'T/T': { bone_density: -0.15, label: 'Lower bone density — increased osteoporosis and fracture risk' } } }], expressionDrivers: [], expressionOutputs: [] });
@@ -1845,7 +1845,7 @@ G({ symbol: 'SPP1', name: 'Osteopontin (secreted phosphoprotein 1)', chromosome:
 
 
 // ═══════════════════════════════════════════════════════════════════════════════
-//  SENSORY SYSTEM — vision, hearing, taste, touch, pigmentation (~20 genes)
+//  SENSORY SYSTEM — vision, hearing, taste, touch, pigmentation (~34 genes)
 // ═══════════════════════════════════════════════════════════════════════════════
 
 G({ symbol: 'OPN1LW', name: 'Long-wave sensitive opsin (red)', chromosome: 'X', position: 154182596, category: 'sensory', subcategory: 'vision', description: 'Red cone photopigment — absorbs ~564nm. Located on X chromosome, explaining why red-green colorblindness is male-predominant', baseExpression: 0.70, bodySystemLinks: ['vision', 'color', 'retina', 'cone'], snps: [], expressionDrivers: [], expressionOutputs: [] });
@@ -1901,7 +1901,7 @@ G({ symbol: 'OR7D4', name: 'Olfactory receptor family 7 subfamily D member 4', c
 
 
 // ═══════════════════════════════════════════════════════════════════════════════
-//  REGULATORY / DNA REPAIR / TUMOR SUPPRESSORS (~15 genes)
+//  REGULATORY / DNA REPAIR / TUMOR SUPPRESSORS (~115 genes)
 // ═══════════════════════════════════════════════════════════════════════════════
 
 G({ symbol: 'TP53', name: 'Tumor protein p53', chromosome: 17, position: 7661779, category: 'regulatory', subcategory: 'tumor_suppressor', description: 'Guardian of the genome — mutated in >50% of all cancers. Activates DNA repair, arrests cell cycle, or triggers apoptosis', baseExpression: 0.55, bodySystemLinks: ['dna_repair', 'apoptosis', 'cell_cycle', 'cancer'], snps: [{ id: 'Pro72Arg', rs: 'rs1042522', alleles: ['C', 'G'], frequencies: [0.60, 0.40], effects: { 'C/C': { apoptosis_efficiency: -0.05, label: 'Pro72 — better DNA repair, weaker apoptosis' }, 'C/G': { apoptosis_efficiency: 0, label: 'Intermediate' }, 'G/G': { apoptosis_efficiency: 0.1, label: 'Arg72 — stronger apoptosis induction, better cancer killing but faster aging' } } }], expressionDrivers: [{ trigger: 'norepinephrine', threshold: 70, direction: 'up', magnitude: 0.01 }], expressionOutputs: [] });
@@ -2075,7 +2075,7 @@ G({ symbol: 'BRAF', name: 'B-Raf proto-oncogene, serine/threonine kinase', chrom
 
 
 // ═══════════════════════════════════════════════════════════════════════════════
-//  REPRODUCTIVE SYSTEM (~15 genes)
+//  REPRODUCTIVE SYSTEM (~15 genes, 502 total)
 // ═══════════════════════════════════════════════════════════════════════════════
 
 G({ symbol: 'SRY', name: 'Sex-determining region Y', chromosome: 'Y', position: 2786855, category: 'reproductive', subcategory: 'sex_determination', description: 'The master switch for male development — a single transcription factor on the Y chromosome that turns the bipotential gonad into a testis', baseExpression: 0.45, bodySystemLinks: ['testis', 'sex_determination', 'development'], snps: [], expressionDrivers: [], expressionOutputs: [] });
@@ -2318,6 +2318,121 @@ G({ symbol: 'ABL1', name: 'ABL proto-oncogene 1, non-receptor tyrosine kinase', 
 G({ symbol: 'RAF1', name: 'Raf-1 proto-oncogene, serine/threonine kinase', chromosome: 3, position: 12583706, category: 'regulatory', subcategory: 'signaling', description: 'MAPK cascade kinase downstream of RAS — germline mutations cause Noonan syndrome (short stature, heart defects, distinctive face)', baseExpression: 0.55, bodySystemLinks: ['mapk_pathway', 'ras', 'cell_growth'], snps: [], expressionDrivers: [], expressionOutputs: [] });
 
 G({ symbol: 'MAP2K1', name: 'Mitogen-activated protein kinase kinase 1 (MEK1)', chromosome: 15, position: 66386843, category: 'regulatory', subcategory: 'signaling', description: 'MEK1 in the MAPK cascade — activates ERK1/2, target of trametinib for melanoma. Germline mutations cause cardiofaciocutaneous syndrome', baseExpression: 0.55, bodySystemLinks: ['mapk_pathway', 'cell_growth', 'melanoma'], snps: [], expressionDrivers: [], expressionOutputs: [] });
+
+// Missing requested genes
+G({ symbol: 'CCNA1', name: 'Cyclin A1', chromosome: 13, position: 36434112, category: 'regulatory', subcategory: 'cell_cycle', description: 'Meiotic cyclin expressed in testis and leukemia cells — essential for spermatogenesis, dispensable for somatic cell division', baseExpression: 0.35, bodySystemLinks: ['cell_cycle', 'meiosis', 'spermatogenesis'], snps: [], expressionDrivers: [], expressionOutputs: [] });
+
+G({ symbol: 'FGF1', name: 'Fibroblast growth factor 1 (acidic FGF)', chromosome: 5, position: 142592177, category: 'endocrine', subcategory: 'growth_factor', description: 'The only FGF that binds all four FGF receptors — potent angiogenic factor, also improves insulin sensitivity in preclinical models', baseExpression: 0.45, bodySystemLinks: ['angiogenesis', 'wound_healing', 'insulin_sensitivity'], snps: [], expressionDrivers: [], expressionOutputs: [] });
+
+// Additional nervous system genes for depth
+G({ symbol: 'GRIA1', name: 'Glutamate ionotropic receptor AMPA type subunit 1', chromosome: 5, position: 153489615, category: 'nervous', subcategory: 'glutamate', description: 'AMPA receptor subunit mediating fast excitatory transmission — trafficking of GluA1 to synapses is the molecular basis of LTP (memory)', baseExpression: 0.65, bodySystemLinks: ['glutamate', 'ampa', 'memory', 'ltp'], snps: [{ id: 'rs548294', rs: 'rs548294', alleles: ['C', 'T'], frequencies: [0.82, 0.18], effects: { 'C/C': { ampa_function: 0.05, label: 'Normal AMPA receptor trafficking' }, 'C/T': { ampa_function: 0, label: 'Intermediate' }, 'T/T': { ampa_function: -0.05, label: 'Altered AMPA dynamics — memory variation' } } }], expressionDrivers: [{ trigger: 'arousal', threshold: 50, direction: 'up', magnitude: 0.01 }], expressionOutputs: [{ target: 'arousal', weight: 0.05 }] });
+
+G({ symbol: 'GRIA2', name: 'Glutamate ionotropic receptor AMPA type subunit 2', chromosome: 4, position: 157336975, category: 'nervous', subcategory: 'glutamate', description: 'AMPA receptor subunit that determines calcium impermeability — RNA editing of Q/R site is 99.9% efficient, failure causes motor neuron death', baseExpression: 0.70, bodySystemLinks: ['glutamate', 'ampa', 'calcium_gating'], snps: [], expressionDrivers: [], expressionOutputs: [] });
+
+G({ symbol: 'SYP', name: 'Synaptophysin', chromosome: 'X', position: 49057381, category: 'nervous', subcategory: 'synapse', description: 'Most abundant synaptic vesicle protein — gold standard marker for synapses in neuropathology, loss quantifies synapse degeneration in Alzheimer', baseExpression: 0.70, bodySystemLinks: ['synapse', 'vesicle', 'marker'], snps: [], expressionDrivers: [], expressionOutputs: [] });
+
+G({ symbol: 'SLC1A1', name: 'Excitatory amino acid transporter 3 (EAAT3)', chromosome: 9, position: 4490170, category: 'nervous', subcategory: 'glutamate', description: 'Neuronal glutamate transporter — genetic association with obsessive-compulsive disorder, also transports cysteine for glutathione synthesis', baseExpression: 0.60, bodySystemLinks: ['glutamate', 'ocd', 'cysteine', 'antioxidant'], snps: [{ id: 'rs301430', rs: 'rs301430', alleles: ['C', 'T'], frequencies: [0.73, 0.27], effects: { 'C/C': { glutamate_clearance: 0.05, label: 'Normal EAAT3 function' }, 'C/T': { glutamate_clearance: 0, label: 'Intermediate' }, 'T/T': { glutamate_clearance: -0.05, ocd_risk: 0.05, label: 'Altered EAAT3 — OCD susceptibility' } } }], expressionDrivers: [], expressionOutputs: [] });
+
+G({ symbol: 'PVALB', name: 'Parvalbumin', chromosome: 22, position: 36629517, category: 'nervous', subcategory: 'interneuron', description: 'Calcium-binding protein marking fast-spiking inhibitory interneurons — reduced in schizophrenia, essential for gamma oscillations and cognition', baseExpression: 0.55, bodySystemLinks: ['gaba', 'interneuron', 'gamma_oscillation', 'cognition'], snps: [], expressionDrivers: [{ trigger: 'gaba', threshold: 50, direction: 'up', magnitude: 0.01 }], expressionOutputs: [{ target: 'gaba', weight: 0.05 }] });
+
+G({ symbol: 'SST', name: 'Somatostatin', chromosome: 3, position: 187669130, category: 'nervous', subcategory: 'interneuron', description: 'Inhibitory neuropeptide marking dendrite-targeting interneurons — also inhibits growth hormone, insulin, and glucagon secretion', baseExpression: 0.50, bodySystemLinks: ['gaba', 'interneuron', 'growth_hormone_inhibition'], snps: [], expressionDrivers: [], expressionOutputs: [{ target: 'gaba', weight: 0.05 }, { target: 'arousal', weight: -0.03 }] });
+
+// Additional metabolic — energy metabolism
+G({ symbol: 'AMPK', name: 'AMP-activated protein kinase (PRKAA1)', chromosome: 5, position: 40754880, category: 'metabolic', subcategory: 'energy_sensing', description: 'Master cellular energy sensor — activated when ATP drops, switches from anabolic to catabolic metabolism. Metformin target', baseExpression: 0.65, bodySystemLinks: ['energy_sensing', 'glucose', 'fatty_acid', 'exercise'], snps: [], expressionDrivers: [{ trigger: 'arousal', threshold: 55, direction: 'up', magnitude: 0.01 }], expressionOutputs: [] });
+
+G({ symbol: 'SIRT1', name: 'Sirtuin 1', chromosome: 10, position: 67884656, category: 'metabolic', subcategory: 'longevity', description: 'NAD-dependent deacetylase — mediates caloric restriction benefits, deacetylates p53 and PGC-1alpha. The longevity gene', baseExpression: 0.55, bodySystemLinks: ['longevity', 'caloric_restriction', 'nad', 'metabolism'], snps: [], expressionDrivers: [], expressionOutputs: [] });
+
+G({ symbol: 'PPARGC1A', name: 'PPARG coactivator 1 alpha (PGC-1alpha)', chromosome: 4, position: 23791516, category: 'metabolic', subcategory: 'mitochondria', description: 'Master regulator of mitochondrial biogenesis — activated by exercise and cold, increases oxidative capacity and brown fat thermogenesis', baseExpression: 0.50, bodySystemLinks: ['mitochondria', 'exercise', 'thermogenesis', 'brown_fat'], snps: [{ id: 'Gly482Ser', rs: 'rs8192678', alleles: ['C', 'T'], frequencies: [0.65, 0.35], effects: { 'C/C': { mitochondrial_biogenesis: 0.05, label: 'Normal PGC-1alpha — good mitochondrial capacity' }, 'C/T': { mitochondrial_biogenesis: 0, label: 'Intermediate' }, 'T/T': { mitochondrial_biogenesis: -0.1, label: 'Reduced PGC-1alpha — lower exercise capacity, type 2 diabetes risk' } } }], expressionDrivers: [{ trigger: 'norepinephrine', threshold: 55, direction: 'up', magnitude: 0.01 }], expressionOutputs: [] });
+
+G({ symbol: 'PDK1', name: 'Pyruvate dehydrogenase kinase 1', chromosome: 2, position: 172555374, category: 'metabolic', subcategory: 'energy', description: 'Inhibits pyruvate dehydrogenase to shift from oxidative to glycolytic metabolism — upregulated by HIF-1alpha in hypoxia and in cancer (Warburg effect)', baseExpression: 0.55, bodySystemLinks: ['glycolysis', 'mitochondria', 'warburg_effect'], snps: [], expressionDrivers: [], expressionOutputs: [] });
+
+// Additional cardiovascular
+G({ symbol: 'MTHFR', name: 'Methylenetetrahydrofolate reductase', chromosome: 1, position: 11785723, category: 'cardiovascular', subcategory: 'homocysteine', description: 'Converts 5,10-methyleneTHF to 5-methylTHF for homocysteine remethylation — C677T is the most studied SNP in nutrigenomics', baseExpression: 0.60, bodySystemLinks: ['folate', 'homocysteine', 'methylation', 'neural_tube'], snps: [{ id: 'C677T', rs: 'rs1801133', alleles: ['C', 'T'], frequencies: [0.63, 0.37], effects: { 'C/C': { mthfr_activity: 0.1, label: 'Full MTHFR activity — normal folate metabolism' }, 'C/T': { mthfr_activity: -0.05, label: 'Intermediate — 65% activity, mildly elevated homocysteine' }, 'T/T': { mthfr_activity: -0.2, label: '30% activity — elevated homocysteine, higher NTD risk without folate supplementation' } } }], expressionDrivers: [], expressionOutputs: [] });
+
+G({ symbol: 'FXIII', name: 'Coagulation factor XIII A chain (F13A1)', chromosome: 6, position: 6144204, category: 'cardiovascular', subcategory: 'coagulation', description: 'Transglutaminase that cross-links fibrin — the final step in clot stabilization, deficiency causes delayed bleeding after surgery', baseExpression: 0.55, bodySystemLinks: ['coagulation', 'fibrin', 'clot_stabilization'], snps: [{ id: 'Val34Leu', rs: 'rs5985', alleles: ['G', 'T'], frequencies: [0.75, 0.25], effects: { 'G/G': { clot_stability: 0.05, label: 'Normal FXIII — standard clot cross-linking' }, 'G/T': { clot_stability: -0.03, label: 'Faster activation — slightly looser clot structure' }, 'T/T': { clot_stability: -0.08, label: 'Faster FXIII activation — more porous clots, modest protection against thrombosis' } } }], expressionDrivers: [], expressionOutputs: [] });
+
+// Additional endocrine
+G({ symbol: 'INSL3', name: 'Insulin-like 3', chromosome: 19, position: 17687754, category: 'endocrine', subcategory: 'testicular', description: 'Leydig cell hormone — essential for testicular descent during development, deficiency causes cryptorchidism (undescended testes)', baseExpression: 0.40, bodySystemLinks: ['testis', 'testicular_descent', 'leydig_cell'], snps: [], expressionDrivers: [], expressionOutputs: [] });
+
+G({ symbol: 'LEPR', name: 'Leptin receptor', chromosome: 1, position: 65420652, category: 'endocrine', subcategory: 'adipokine', description: 'Hypothalamic receptor for the satiety hormone leptin — mediates appetite suppression and energy expenditure. Most obese humans are leptin resistant', baseExpression: 0.60, bodySystemLinks: ['appetite', 'hypothalamus', 'energy_expenditure', 'obesity'], snps: [{ id: 'Gln223Arg', rs: 'rs1137101', alleles: ['A', 'G'], frequencies: [0.54, 0.46], effects: { 'A/A': { leptin_sensitivity: 0.05, label: 'Normal LEPR — standard satiety signaling' }, 'A/G': { leptin_sensitivity: 0, label: 'Intermediate' }, 'G/G': { leptin_sensitivity: -0.05, label: 'Reduced leptin sensitivity — modest obesity susceptibility' } } }], expressionDrivers: [], expressionOutputs: [] });
+
+// Additional sensory
+G({ symbol: 'CNGA3', name: 'Cyclic nucleotide-gated channel alpha 3', chromosome: 2, position: 98346676, category: 'sensory', subcategory: 'vision', description: 'Cone photoreceptor transduction channel — mutations cause complete achromatopsia (total color blindness, light sensitivity)', baseExpression: 0.60, bodySystemLinks: ['vision', 'cone', 'color_vision', 'phototransduction'], snps: [], expressionDrivers: [], expressionOutputs: [] });
+
+G({ symbol: 'USH2A', name: 'Usherin', chromosome: 1, position: 215622891, category: 'sensory', subcategory: 'hearing', description: 'Largest gene for Usher syndrome — combined hearing loss and retinitis pigmentosa. Most common cause of combined deaf-blindness', baseExpression: 0.55, bodySystemLinks: ['hearing', 'retina', 'stereocilia', 'photoreceptor'], snps: [], expressionDrivers: [], expressionOutputs: [] });
+
+G({ symbol: 'OTOF', name: 'Otoferlin', chromosome: 2, position: 26457985, category: 'sensory', subcategory: 'hearing', description: 'Calcium sensor for synaptic vesicle fusion at inner hair cell ribbon synapses — auditory synaptopathy causes hearing loss with normal OAEs', baseExpression: 0.55, bodySystemLinks: ['hearing', 'hair_cell', 'synaptic_vesicle'], snps: [], expressionDrivers: [], expressionOutputs: [] });
+
+// Additional structural — diverse connective tissue
+G({ symbol: 'COMP', name: 'Cartilage oligomeric matrix protein', chromosome: 19, position: 18766594, category: 'structural', subcategory: 'cartilage', description: 'Pentameric matrix protein — mutations cause pseudoachondroplasia and multiple epiphyseal dysplasia (short stature, joint problems)', baseExpression: 0.60, bodySystemLinks: ['cartilage', 'tendon', 'extracellular_matrix'], snps: [], expressionDrivers: [], expressionOutputs: [] });
+
+G({ symbol: 'BGLAP', name: 'Osteocalcin (bone gamma-carboxyglutamic acid protein)', chromosome: 1, position: 156211753, category: 'structural', subcategory: 'bone', description: 'Bone-specific protein — also acts as a hormone improving glucose metabolism, testosterone production, and cognitive function', baseExpression: 0.55, bodySystemLinks: ['bone', 'osteoblast', 'glucose_metabolism', 'endocrine_bone'], snps: [], expressionDrivers: [], expressionOutputs: [] });
+
+G({ symbol: 'ALPL', name: 'Alkaline phosphatase, biomineralization associated', chromosome: 1, position: 21508981, category: 'structural', subcategory: 'bone', description: 'Hydrolyzes pyrophosphate to allow bone mineralization — deficiency causes hypophosphatasia (soft bones, lost teeth, now treatable with asfotase alfa)', baseExpression: 0.60, bodySystemLinks: ['bone', 'mineralization', 'phosphate'], snps: [], expressionDrivers: [], expressionOutputs: [] });
+
+// Additional immune — innate pattern recognition
+G({ symbol: 'TLR7', name: 'Toll-like receptor 7', chromosome: 'X', position: 12887198, category: 'immune', subcategory: 'innate', description: 'Endosomal sensor of single-stranded viral RNA — X-linked, biallelic expression in some female cells may explain autoimmune sex bias', baseExpression: 0.50, bodySystemLinks: ['innate_immunity', 'antiviral', 'interferon', 'autoimmunity'], snps: [], expressionDrivers: [], expressionOutputs: [] });
+
+G({ symbol: 'TLR9', name: 'Toll-like receptor 9', chromosome: 3, position: 52230232, category: 'immune', subcategory: 'innate', description: 'Recognizes bacterial and viral CpG DNA — basis of CpG adjuvants in vaccines, agonists used in cancer immunotherapy', baseExpression: 0.50, bodySystemLinks: ['innate_immunity', 'dna_sensing', 'interferon', 'vaccine_adjuvant'], snps: [], expressionDrivers: [], expressionOutputs: [] });
+
+G({ symbol: 'CASP1', name: 'Caspase 1 (interleukin-1 converting enzyme)', chromosome: 11, position: 104942866, category: 'immune', subcategory: 'inflammasome', description: 'Processes IL-1beta and IL-18 to active forms — the executioner of the inflammasome, also triggers pyroptosis (inflammatory cell death)', baseExpression: 0.50, bodySystemLinks: ['inflammasome', 'il1', 'pyroptosis', 'innate_immunity'], snps: [], expressionDrivers: [], expressionOutputs: [] });
+
+// Additional regulatory — chromatin and RNA processing
+G({ symbol: 'ARID1A', name: 'AT-rich interaction domain 1A', chromosome: 1, position: 26696063, category: 'regulatory', subcategory: 'chromatin', description: 'SWI/SNF chromatin remodeling subunit — mutated in 50% of ovarian clear cell carcinomas and many other cancers. Fourth most mutated gene in cancer', baseExpression: 0.60, bodySystemLinks: ['chromatin_remodeling', 'tumor_suppression', 'transcription'], snps: [], expressionDrivers: [], expressionOutputs: [] });
+
+G({ symbol: 'DICER1', name: 'Dicer 1, ribonuclease III', chromosome: 14, position: 95086227, category: 'regulatory', subcategory: 'rna_processing', description: 'Endoribonuclease processing pre-miRNAs to mature miRNAs — essential for microRNA biogenesis, germline mutations cause pleuropulmonary blastoma', baseExpression: 0.60, bodySystemLinks: ['microrna', 'rna_processing', 'gene_silencing'], snps: [], expressionDrivers: [], expressionOutputs: [] });
+
+G({ symbol: 'AGO2', name: 'Argonaute RISC catalytic component 2', chromosome: 8, position: 141035087, category: 'regulatory', subcategory: 'rna_processing', description: 'Core component of RNA-induced silencing complex (RISC) — the slicer that executes microRNA-guided mRNA cleavage and translational repression', baseExpression: 0.60, bodySystemLinks: ['microrna', 'rna_silencing', 'risc'], snps: [], expressionDrivers: [], expressionOutputs: [] });
+
+G({ symbol: 'DROSHA', name: 'Drosha ribonuclease III', chromosome: 5, position: 31400550, category: 'regulatory', subcategory: 'rna_processing', description: 'Nuclear RNase III that initiates microRNA processing — cleaves pri-miRNAs to pre-miRNAs in the Microprocessor complex with DGCR8', baseExpression: 0.60, bodySystemLinks: ['microrna', 'rna_processing', 'nucleus'], snps: [], expressionDrivers: [], expressionOutputs: [] });
+
+// Circadian rhythm expansion
+G({ symbol: 'BMAL1', name: 'Brain and muscle ARNT-like 1 (ARNTL)', chromosome: 11, position: 13278023, category: 'nervous', subcategory: 'circadian', description: 'Core positive limb of the circadian clock — heterodimerizes with CLOCK to drive expression of PER and CRY genes every 24 hours', baseExpression: 0.60, bodySystemLinks: ['circadian', 'metabolism', 'sleep', 'immune'], snps: [{ id: 'rs2278749', rs: 'rs2278749', alleles: ['C', 'T'], frequencies: [0.78, 0.22], effects: { 'C/C': { circadian_robustness: 0.05, label: 'Strong circadian rhythm' }, 'C/T': { circadian_robustness: 0, label: 'Intermediate' }, 'T/T': { circadian_robustness: -0.05, label: 'Slightly weaker circadian drive — metabolic risk' } } }], expressionDrivers: [], expressionOutputs: [{ target: 'arousal', weight: 0.03 }, { target: 'gaba', weight: 0.02 }] });
+
+G({ symbol: 'CRY2', name: 'Cryptochrome circadian regulator 2', chromosome: 11, position: 45830485, category: 'nervous', subcategory: 'circadian', description: 'Negative feedback arm of the circadian clock — CRY2 represses CLOCK/BMAL1 to complete the 24-hour oscillation cycle', baseExpression: 0.55, bodySystemLinks: ['circadian', 'sleep', 'clock_repressor'], snps: [{ id: 'rs10838524', rs: 'rs10838524', alleles: ['A', 'G'], frequencies: [0.70, 0.30], effects: { 'A/A': { morning_preference: 0.05, label: 'Morning chronotype tendency' }, 'A/G': { morning_preference: 0, label: 'Intermediate' }, 'G/G': { morning_preference: -0.05, label: 'Evening chronotype tendency' } } }], expressionDrivers: [], expressionOutputs: [] });
+
+// Pain and temperature sensing expansion
+G({ symbol: 'TRPV3', name: 'Transient receptor potential cation channel V3', chromosome: 17, position: 3500476, category: 'sensory', subcategory: 'temperature', description: 'Warm temperature sensor activated 31-39C — also important for hair follicle development and keratinocyte differentiation', baseExpression: 0.50, bodySystemLinks: ['warm_sensing', 'skin', 'keratinocyte'], snps: [], expressionDrivers: [], expressionOutputs: [] });
+
+G({ symbol: 'TRPV4', name: 'Transient receptor potential cation channel V4', chromosome: 12, position: 109788760, category: 'sensory', subcategory: 'mechanosensation', description: 'Osmotic/mechanical sensor — detects cell swelling, shear stress, and moderate warmth. Mutations cause skeletal dysplasias and neuropathies', baseExpression: 0.55, bodySystemLinks: ['osmosensing', 'mechanotransduction', 'bone', 'cartilage'], snps: [], expressionDrivers: [], expressionOutputs: [] });
+
+// Additional chromosome 18
+G({ symbol: 'LAMA3', name: 'Laminin subunit alpha 3', chromosome: 18, position: 21413433, category: 'structural', subcategory: 'basement_membrane', description: 'Component of laminin-332 in skin and mucosal basement membranes — mutations cause junctional epidermolysis bullosa (severe skin blistering)', baseExpression: 0.60, bodySystemLinks: ['basement_membrane', 'skin', 'epithelium'], snps: [], expressionDrivers: [], expressionOutputs: [] });
+
+G({ symbol: 'DTNA', name: 'Dystrobrevin alpha', chromosome: 18, position: 34416795, category: 'structural', subcategory: 'muscle', description: 'Dystrophin-associated protein — links dystrophin to signaling molecules, mutations cause left ventricular noncompaction cardiomyopathy', baseExpression: 0.55, bodySystemLinks: ['muscle', 'dystrophin_complex', 'heart'], snps: [], expressionDrivers: [], expressionOutputs: [] });
+
+// Additional chromosome 20
+G({ symbol: 'SNAI1', name: 'Snail family transcriptional repressor 1', chromosome: 20, position: 49983595, category: 'regulatory', subcategory: 'development', description: 'Master transcription factor for epithelial-to-mesenchymal transition (EMT) — enables cancer cells to invade and metastasize, also critical in embryogenesis', baseExpression: 0.40, bodySystemLinks: ['emt', 'development', 'cancer_metastasis', 'neural_crest'], snps: [], expressionDrivers: [], expressionOutputs: [] });
+
+// Additional chromosome 22
+G({ symbol: 'SOX10', name: 'SRY-box transcription factor 10', chromosome: 22, position: 38368432, category: 'regulatory', subcategory: 'development', description: 'Master regulator of neural crest — drives melanocyte, Schwann cell, and enteric neuron differentiation. Mutations cause Waardenburg syndrome type 4', baseExpression: 0.50, bodySystemLinks: ['neural_crest', 'melanocyte', 'schwann_cell', 'enteric_nervous_system'], snps: [], expressionDrivers: [], expressionOutputs: [] });
+
+G({ symbol: 'EWSR1', name: 'EWS RNA binding protein 1', chromosome: 22, position: 29268169, category: 'regulatory', subcategory: 'oncogene', description: 'RNA-binding protein — EWSR1-FLI1 fusion defines Ewing sarcoma, the second most common bone cancer in children', baseExpression: 0.55, bodySystemLinks: ['rna_binding', 'transcription', 'sarcoma'], snps: [], expressionDrivers: [], expressionOutputs: [] });
+
+// Final gap-fill to reach 500+
+G({ symbol: 'PTCH1', name: 'Patched 1', chromosome: 9, position: 95440144, category: 'regulatory', subcategory: 'development', description: 'Hedgehog receptor and tumor suppressor — normally represses Smoothened. Mutations cause Gorlin syndrome (hundreds of basal cell carcinomas)', baseExpression: 0.55, bodySystemLinks: ['hedgehog_pathway', 'development', 'skin_cancer'], snps: [], expressionDrivers: [], expressionOutputs: [] });
+
+G({ symbol: 'SMO', name: 'Smoothened, frizzled class receptor', chromosome: 7, position: 129188346, category: 'regulatory', subcategory: 'development', description: 'Hedgehog pathway activator — released from Patched inhibition when SHH binds. Target of vismodegib for basal cell carcinoma', baseExpression: 0.50, bodySystemLinks: ['hedgehog_pathway', 'development', 'cancer'], snps: [], expressionDrivers: [], expressionOutputs: [] });
+
+G({ symbol: 'NF1', name: 'Neurofibromin 1', chromosome: 17, position: 31094927, category: 'regulatory', subcategory: 'tumor_suppressor', description: 'RAS-GAP tumor suppressor — inactivates RAS signaling. Mutations cause neurofibromatosis type 1 (cafe-au-lait spots, neurofibromas, learning disability)', baseExpression: 0.60, bodySystemLinks: ['ras_pathway', 'tumor_suppression', 'schwann_cell', 'learning'], snps: [], expressionDrivers: [], expressionOutputs: [] });
+
+G({ symbol: 'VHL', name: 'Von Hippel-Lindau tumor suppressor', chromosome: 3, position: 10141788, category: 'regulatory', subcategory: 'tumor_suppressor', description: 'E3 ubiquitin ligase targeting HIF-alpha for destruction — loss stabilizes HIF causing kidney cancer, hemangioblastoma, and pheochromocytoma', baseExpression: 0.60, bodySystemLinks: ['oxygen_sensing', 'hif_pathway', 'kidney', 'tumor_suppression'], snps: [], expressionDrivers: [], expressionOutputs: [] });
+
+G({ symbol: 'WT1', name: 'WT1 transcription factor', chromosome: 11, position: 32365754, category: 'regulatory', subcategory: 'tumor_suppressor', description: 'Wilms tumor suppressor and kidney development master gene — also critical for gonadal development and hematopoiesis', baseExpression: 0.50, bodySystemLinks: ['kidney', 'gonad', 'development', 'tumor_suppression'], snps: [], expressionDrivers: [], expressionOutputs: [] });
+
+G({ symbol: 'TSC1', name: 'TSC complex subunit 1 (hamartin)', chromosome: 9, position: 132891349, category: 'regulatory', subcategory: 'tumor_suppressor', description: 'Partners with TSC2 to inhibit mTOR — mutations cause tuberous sclerosis with cortical tubers, cardiac rhabdomyomas, and renal angiomyolipomas', baseExpression: 0.60, bodySystemLinks: ['mtor_pathway', 'tumor_suppression', 'brain', 'heart', 'kidney'], snps: [], expressionDrivers: [], expressionOutputs: [] });
+
+G({ symbol: 'IDH1', name: 'Isocitrate dehydrogenase 1', chromosome: 2, position: 208236227, category: 'metabolic', subcategory: 'tca_cycle', description: 'TCA cycle enzyme — R132H mutation produces oncometabolite 2-hydroxyglutarate that blocks cell differentiation, mutated in glioma and AML', baseExpression: 0.60, bodySystemLinks: ['tca_cycle', 'metabolism', 'epigenetics', 'glioma'], snps: [], expressionDrivers: [], expressionOutputs: [] });
+
+G({ symbol: 'KCNJ11', name: 'Potassium inwardly-rectifying channel subfamily J member 11', chromosome: 11, position: 17385245, category: 'metabolic', subcategory: 'glucose', description: 'ATP-sensitive potassium channel in beta cells — couples glucose metabolism to insulin secretion. Mutations cause neonatal diabetes treatable with sulfonylureas', baseExpression: 0.60, bodySystemLinks: ['pancreas', 'insulin_secretion', 'potassium', 'glucose_sensing'], snps: [{ id: 'E23K', rs: 'rs5219', alleles: ['C', 'T'], frequencies: [0.65, 0.35], effects: { 'C/C': { insulin_secretion: 0.05, label: 'Normal KATP channel — good insulin secretion' }, 'C/T': { insulin_secretion: 0, label: 'Intermediate' }, 'T/T': { insulin_secretion: -0.05, label: 'K23 variant — slightly impaired insulin secretion, T2D risk' } } }], expressionDrivers: [], expressionOutputs: [] });
+
+G({ symbol: 'SLC6A11', name: 'GABA transporter 3 (GAT-3)', chromosome: 3, position: 10840649, category: 'nervous', subcategory: 'inhibition', description: 'Astrocytic GABA transporter — clears GABA from extrasynaptic space, modulating tonic inhibition. Upregulated in epilepsy', baseExpression: 0.55, bodySystemLinks: ['gaba', 'astrocyte', 'tonic_inhibition'], snps: [], expressionDrivers: [], expressionOutputs: [{ target: 'gaba', weight: -0.1 }] });
+
+G({ symbol: 'GRM5', name: 'Glutamate metabotropic receptor 5', chromosome: 11, position: 88160283, category: 'nervous', subcategory: 'glutamate', description: 'Group I metabotropic glutamate receptor — excess signaling drives fragile X syndrome features, negative allosteric modulators tested for anxiety/depression', baseExpression: 0.55, bodySystemLinks: ['glutamate', 'plasticity', 'fragile_x'], snps: [], expressionDrivers: [{ trigger: 'arousal', threshold: 55, direction: 'up', magnitude: 0.01 }], expressionOutputs: [{ target: 'arousal', weight: 0.03 }] });
+
+G({ symbol: 'FOXP2', name: 'Forkhead box P2', chromosome: 7, position: 113726369, category: 'nervous', subcategory: 'language', description: 'The "language gene" — first gene linked to a speech/language disorder. FOXP2 mutations cause developmental verbal dyspraxia (inability to coordinate speech)', baseExpression: 0.55, bodySystemLinks: ['speech', 'language', 'basal_ganglia', 'cerebellum'], snps: [], expressionDrivers: [], expressionOutputs: [] });
+
+G({ symbol: 'MECP2', name: 'Methyl-CpG binding protein 2', chromosome: 'X', position: 154021573, category: 'nervous', subcategory: 'epigenetic', description: 'Reads DNA methylation to regulate gene expression — loss-of-function causes Rett syndrome (regression of speech and hand skills in girls at 6-18 months)', baseExpression: 0.65, bodySystemLinks: ['epigenetics', 'methylation', 'synaptic_plasticity', 'neurodevelopment'], snps: [], expressionDrivers: [], expressionOutputs: [{ target: 'gaba', weight: 0.03 }] });
 
 
 // ═══════════════════════════════════════════════════════════════════════════════
