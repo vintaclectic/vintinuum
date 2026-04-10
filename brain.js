@@ -40288,8 +40288,8 @@ window.INNER_LIFE = INNER_LIFE;
   // To update: localStorage.setItem('vint_api_base', 'https://YOUR-NGROK-URL')
   var _isLocal = (location.protocol === 'file:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1');
   var _stored = localStorage.getItem('vint_api_base');
-  // Default remote tunnel — update this when ngrok URL changes
-  var _defaultRemote = 'https://jon-unscheming-lots.ngrok-free.dev';
+  // Default remote tunnel — Cloudflare Tunnel (ISP-safe, no ngrok SSL issues)
+  var _defaultRemote = 'https://society-happened-installing-pumps.trycloudflare.com';
   const API_BASE = _isLocal ? 'http://localhost:8767' : (_stored || _defaultRemote);
   window.__VINTINUUM_API_BASE = API_BASE;
   // On GitHub Pages with no stored URL, silently use the default tunnel

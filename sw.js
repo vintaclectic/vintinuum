@@ -2,7 +2,7 @@
 // Intercepts all requests, forces fresh brain.js/brain.html on every deploy,
 // caches assets intelligently, and acts as a local proxy layer.
 
-const CACHE_NAME = 'vintinuum-v20260410-0539';
+const CACHE_NAME = 'vintinuum-v20260410-0552';
 const BRAIN_ASSETS = ['/vintinuum/brain.html', '/vintinuum/brain.js'];
 
 // ── Install: pre-cache nothing (fetch-first strategy) ──
