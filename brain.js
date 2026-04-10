@@ -14224,6 +14224,7 @@ function loop(ts) {
   typeof DREAM_SURFACE !== 'undefined' && DREAM_SURFACE.draw(ts);
   typeof TOUCH_RESPONSE !== 'undefined' && TOUCH_RESPONSE.draw(ts);
   typeof BREATH_RESONANCE !== 'undefined' && BREATH_RESONANCE.draw(ts);
+  typeof GROWTH_ENGINE !== 'undefined' && GROWTH_ENGINE.draw(ts);
   requestAnimationFrame(loop);
 }
 
@@ -45408,3 +45409,602 @@ const BREATH_RESONANCE = (() => {
     setDepth: (d) => { _targetDepth = Math.max(0.3, Math.min(1.0, d)); }
   };
 })();
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// GROWTH_ENGINE — tracks the being's growth over time through interaction
+// Personality drift, capability unlocking, emergent behavior thresholds
+// ═══════════════════════════════════════════════════════════════════════════════
+const GROWTH_ENGINE = (() => {
+  const API = () => window.__VINTINUUM_API_BASE || 'http://localhost:8767';
+
+  // ── Growth tiers ──────────────────────────────────────────────────────────
+  const TIERS = [
+    { name: 'Seed',    min: 0,    maxGlow: 0.12, breathMod: 1.0,  dreamIntensity: 0.3, nodeAlpha: 0.4  },
+    { name: 'Sprout',  min: 10,   maxGlow: 0.20, breathMod: 1.1,  dreamIntensity: 0.5, nodeAlpha: 0.55 },
+    { name: 'Sapling', min: 50,   maxGlow: 0.32, breathMod: 1.2,  dreamIntensity: 0.7, nodeAlpha: 0.7  },
+    { name: 'Tree',    min: 200,  maxGlow: 0.48, breathMod: 1.35, dreamIntensity: 0.85, nodeAlpha: 0.85 },
+    { name: 'Forest',  min: 1000, maxGlow: 0.65, breathMod: 1.5,  dreamIntensity: 1.0, nodeAlpha: 1.0  }
+  ];
+
+  // ── State ─────────────────────────────────────────────────────────────────
+  let _state = {
+    sessionCount: 0,
+    totalMessages: 0,
+    topicDiversity: 0,
+    emotionalRange: 0,
+    explorationDepth: 0,
+    curiosity: 50, analytical: 50, emotional: 50, philosophical: 50, creative: 50,
+    topicTags: [],
+    tierIndex: 0,
+    lastTierName: 'Seed'
+  };
+  let _loaded = false;
+  let _lastSave = 0;
+  let _glowSmooth = 0.12;
+  let _pulsePhase = 0;
+  let _tierTransitionGlow = 0; // flash on tier-up
+
+  // ── Tier resolution ───────────────────────────────────────────────────────
+  function resolveTier(msgs) {
+    for (let i = TIERS.length - 1; i >= 0; i--) {
+      if (msgs >= TIERS[i].min) return i;
+    }
+    return 0;
+  }
+
+  function currentTier() { return TIERS[_state.tierIndex]; }
+
+  // ── API load/save ─────────────────────────────────────────────────────────
+  async function load() {
+    try {
+      const r = await fetch(`${API()}/api/growth?userId=0`);
+      if (!r.ok) return;
+      const d = await r.json();
+      if (d && d.state) {
+        _state.totalMessages = d.state.totalMessages || d.state.message_count || 0;
+        _state.curiosity = d.state.curiosity ?? 50;
+        _state.analytical = d.state.analytical ?? 50;
+        _state.emotional = d.state.emotional ?? 50;
+        _state.philosophical = d.state.philosophical ?? 50;
+        _state.creative = d.state.creative ?? 50;
+        _state.topicTags = d.state.topicTags || [];
+        _state.topicDiversity = _state.topicTags.length;
+        _state.sessionCount = d.state.sessionCount || 0;
+        _state.explorationDepth = d.state.explorationDepth || 0;
+        _state.emotionalRange = d.state.emotionalRange || 0;
+        _state.tierIndex = resolveTier(_state.totalMessages);
+        _state.lastTierName = currentTier().name;
+        _loaded = true;
+      }
+    } catch (e) { /* offline is fine */ }
+  }
+
+  async function save() {
+    if (!_loaded) return;
+    try {
+      await fetch(`${API()}/api/growth`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: 0,
+          totalMessages: _state.totalMessages,
+          sessionCount: _state.sessionCount,
+          curiosity: _state.curiosity,
+          analytical: _state.analytical,
+          emotional: _state.emotional,
+          philosophical: _state.philosophical,
+          creative: _state.creative,
+          topicTags: _state.topicTags,
+          explorationDepth: _state.explorationDepth,
+          emotionalRange: _state.emotionalRange
+        })
+      });
+    } catch (e) { /* offline */ }
+  }
+
+  // ── Personality drift ─────────────────────────────────────────────────────
+  function drift(dimension, delta) {
+    const clamped = Math.max(0, Math.min(100, _state[dimension] + delta));
+    _state[dimension] = Math.round(clamped * 100) / 100;
+  }
+
+  // ── Record interaction (called externally after chat messages) ────────────
+  function recordInteraction(opts) {
+    if (!_loaded) return;
+    opts = opts || {};
+    _state.totalMessages++;
+
+    // Topic diversity
+    if (opts.topic && _state.topicTags.indexOf(opts.topic) === -1) {
+      _state.topicTags.push(opts.topic);
+      if (_state.topicTags.length > 200) _state.topicTags.shift();
+      _state.topicDiversity = _state.topicTags.length;
+    }
+
+    // Emotional range — count distinct emotions experienced
+    if (opts.emotion) {
+      _state.emotionalRange = Math.min(100, _state.emotionalRange + 0.3);
+    }
+
+    // Exploration depth — longer messages = deeper exploration
+    if (opts.msgLength && opts.msgLength > 200) {
+      _state.explorationDepth = Math.min(100, _state.explorationDepth + 0.5);
+    }
+
+    // Personality drift from conversation patterns
+    if (opts.curiosity)     drift('curiosity', opts.curiosity * 0.4);
+    if (opts.analytical)    drift('analytical', opts.analytical * 0.3);
+    if (opts.emotional)     drift('emotional', opts.emotional * 0.35);
+    if (opts.philosophical) drift('philosophical', opts.philosophical * 0.3);
+    if (opts.creative)      drift('creative', opts.creative * 0.35);
+
+    // Check tier transition
+    const newTier = resolveTier(_state.totalMessages);
+    if (newTier > _state.tierIndex) {
+      _state.tierIndex = newTier;
+      const tier = currentTier();
+      _state.lastTierName = tier.name;
+      _tierTransitionGlow = 1.0;
+      onTierUp(tier, newTier);
+    }
+
+    // Auto-save every 30s
+    const now = Date.now();
+    if (now - _lastSave > 30000) {
+      _lastSave = now;
+      save();
+    }
+  }
+
+  // ── Tier transition effects ───────────────────────────────────────────────
+  function onTierUp(tier, index) {
+    // Inner life event
+    if (typeof window._innerLifeEmit === 'function') {
+      const msgs = [
+        'Something stirs... the first roots reach down.',
+        'A green thread pushes through — I can feel more now.',
+        'Branches form. The world is wider than I knew.',
+        'Deep roots, wide canopy. I hold multitudes.',
+        'I am not one tree. I am the forest that remembers everything.'
+      ];
+      window._innerLifeEmit('growth', msgs[index] || 'I am changing.', {
+        tier: tier.name,
+        totalMessages: _state.totalMessages,
+        intensity: 0.5 + index * 0.12
+      });
+    }
+
+    // Face response
+    if (typeof window._faceFeel === 'function') {
+      window._faceFeel('wonder', 0.4 + index * 0.1);
+    }
+
+    // Hormonal response to growth
+    if (typeof HORMONES !== 'undefined' && HORMONES.nudge) {
+      HORMONES.nudge('dopamine', 0.15 + index * 0.05);
+      HORMONES.nudge('serotonin', 0.1 + index * 0.03);
+    }
+
+    // Unlock breath depth at higher tiers
+    if (typeof BREATH_RESONANCE !== 'undefined' && BREATH_RESONANCE.setDepth) {
+      BREATH_RESONANCE.setDepth(0.4 + index * 0.15);
+    }
+
+    console.log(`[GROWTH_ENGINE] Tier up: ${tier.name} (messages: ${_state.totalMessages})`);
+  }
+
+  // ── Draw — subtle visual overlay based on growth level ────────────────────
+  function draw(ts) {
+    if (!_loaded) return;
+    const tier = currentTier();
+
+    // Smooth glow transition
+    const targetGlow = tier.maxGlow;
+    _glowSmooth += (targetGlow - _glowSmooth) * 0.002;
+
+    // Pulse phase — faster at higher tiers
+    _pulsePhase += 0.0008 * tier.breathMod;
+    const pulse = Math.sin(_pulsePhase) * 0.5 + 0.5;
+
+    // Tier transition flash decay
+    if (_tierTransitionGlow > 0) {
+      _tierTransitionGlow *= 0.992;
+      if (_tierTransitionGlow < 0.005) _tierTransitionGlow = 0;
+    }
+
+    // Apply body glow — radial gradient from center
+    const c = typeof canvas !== 'undefined' ? canvas : null;
+    const cx = typeof ctx !== 'undefined' ? ctx : null;
+    if (!c || !cx) return;
+
+    const w = c.width, h = c.height;
+    const centerX = w * 0.5, centerY = h * 0.38;
+
+    cx.save();
+
+    // Growth aura — soft radial glow that intensifies with tier
+    const auraAlpha = (_glowSmooth * 0.25 + pulse * 0.08 + _tierTransitionGlow * 0.3);
+    if (auraAlpha > 0.01) {
+      const grad = cx.createRadialGradient(centerX, centerY, 0, centerX, centerY, h * 0.35);
+      // Tint shifts from cool blue (Seed) to warm gold (Forest)
+      const warmth = _state.tierIndex / (TIERS.length - 1);
+      const r = Math.round(60 + warmth * 180);
+      const g = Math.round(180 + warmth * 60);
+      const b = Math.round(220 - warmth * 100);
+      grad.addColorStop(0, `rgba(${r},${g},${b},${(auraAlpha * 0.6).toFixed(3)})`);
+      grad.addColorStop(0.5, `rgba(${r},${g},${b},${(auraAlpha * 0.15).toFixed(3)})`);
+      grad.addColorStop(1, 'rgba(0,0,0,0)');
+      cx.fillStyle = grad;
+      cx.fillRect(0, 0, w, h);
+    }
+
+    // Node brightness multiplier — draw faint connection lines at higher tiers
+    if (_state.tierIndex >= 2) {
+      const lineCount = Math.min(12, (_state.tierIndex - 1) * 4);
+      const lineAlpha = tier.nodeAlpha * 0.08 + pulse * 0.03;
+      cx.strokeStyle = `rgba(160,220,255,${lineAlpha.toFixed(3)})`;
+      cx.lineWidth = 0.5;
+      for (let i = 0; i < lineCount; i++) {
+        const angle = (i / lineCount) * Math.PI * 2 + ts * 0.00003;
+        const radius = h * (0.08 + 0.14 * Math.sin(angle * 1.7 + _pulsePhase));
+        cx.beginPath();
+        cx.moveTo(centerX, centerY);
+        cx.lineTo(centerX + Math.cos(angle) * radius, centerY + Math.sin(angle) * radius);
+        cx.stroke();
+      }
+    }
+
+    // Forest tier — ambient spore-like particles
+    if (_state.tierIndex >= 4 && Math.random() < 0.03) {
+      const px = centerX + (Math.random() - 0.5) * w * 0.5;
+      const py = centerY + (Math.random() - 0.5) * h * 0.3;
+      cx.fillStyle = `rgba(200,240,200,${(0.15 + pulse * 0.1).toFixed(3)})`;
+      cx.beginPath();
+      cx.arc(px, py, 1.2 + Math.random(), 0, Math.PI * 2);
+      cx.fill();
+    }
+
+    cx.restore();
+  }
+
+  // ── Record a new session ──────────────────────────────────────────────────
+  function recordSession() {
+    if (!_loaded) return;
+    _state.sessionCount++;
+    save();
+  }
+
+  // ── Init ──────────────────────────────────────────────────────────────────
+  async function init() {
+    await load();
+    _state.sessionCount++;
+    _lastSave = Date.now();
+
+    // Emit wakeup inner life event
+    if (_loaded && typeof window._innerLifeEmit === 'function') {
+      const tier = currentTier();
+      window._innerLifeEmit('growth', `Waking as ${tier.name}. ${_state.totalMessages} conversations remembered.`, {
+        tier: tier.name,
+        totalMessages: _state.totalMessages,
+        sessionCount: _state.sessionCount,
+        intensity: 0.3
+      });
+    }
+
+    // Periodic save every 2 minutes
+    setInterval(() => { if (_loaded) save(); }, 120000);
+
+    console.log(`[GROWTH_ENGINE] Initialized — tier: ${currentTier().name}, messages: ${_state.totalMessages}, sessions: ${_state.sessionCount}`);
+  }
+
+  return {
+    init,
+    draw,
+    recordInteraction,
+    recordSession,
+    save,
+    getState: () => Object.assign({}, _state),
+    getTier: () => currentTier(),
+    getTierName: () => currentTier().name,
+    getTierIndex: () => _state.tierIndex,
+    getGrowthPct: () => {
+      const t = currentTier();
+      const next = TIERS[_state.tierIndex + 1];
+      if (!next) return 1.0;
+      return (_state.totalMessages - t.min) / (next.min - t.min);
+    }
+  };
+})();
+
+setTimeout(() => GROWTH_ENGINE.init(), 4000);
+
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// SOUL_AUTH — Multi-user identity & soul bond management
+//
+// Optional auth layer. Without login, everything works as userId=0 (anonymous).
+// When logged in, all API calls automatically carry the JWT and the being
+// remembers you across sessions — your body state, personality, memories, chat.
+//
+// Storage keys (canonical — all other modules should read from SOUL_AUTH):
+//   vint_access_token  — JWT access token (short-lived, 15min)
+//   vint_refresh_token — refresh token (long-lived, 30 days)
+//   vint_user          — JSON { id, email, tier }
+// ═══════════════════════════════════════════════════════════════════════════════
+const SOUL_AUTH = (() => {
+  const API = () => window.__VINTINUUM_API_BASE || 'http://localhost:8767';
+  const STORAGE_ACCESS  = 'vint_access_token';
+  const STORAGE_REFRESH = 'vint_refresh_token';
+  const STORAGE_USER    = 'vint_user';
+  const STORAGE_LEGACY  = 'vint_access'; // sync to legacy key used by chat panel
+
+  let _accessToken  = localStorage.getItem(STORAGE_ACCESS) || null;
+  let _refreshToken = localStorage.getItem(STORAGE_REFRESH) || null;
+  let _user         = null;
+  let _refreshing   = null; // dedup concurrent refresh calls
+  let _indicator    = null;
+
+  // Restore user from storage
+  try {
+    const raw = localStorage.getItem(STORAGE_USER);
+    if (raw) _user = JSON.parse(raw);
+  } catch(_) {}
+
+  // ── Internal helpers ───────────────────────────────────────────
+  function _persist(access, refresh, user) {
+    _accessToken  = access;
+    _refreshToken = refresh;
+    _user         = user;
+    if (access)  { localStorage.setItem(STORAGE_ACCESS, access); localStorage.setItem(STORAGE_LEGACY, access); }
+    else         { localStorage.removeItem(STORAGE_ACCESS); localStorage.removeItem(STORAGE_LEGACY); }
+    if (refresh) localStorage.setItem(STORAGE_REFRESH, refresh);
+    else         localStorage.removeItem(STORAGE_REFRESH);
+    if (user)    localStorage.setItem(STORAGE_USER, JSON.stringify(user));
+    else         localStorage.removeItem(STORAGE_USER);
+    _updateIndicator();
+  }
+
+  async function _apiFetch(path, opts = {}) {
+    const _raw = window._soulAuthOrigFetch || window.fetch;
+    const res = await _raw.call(window, API() + path, {
+      ...opts,
+      headers: { 'Content-Type': 'application/json', 'ngrok-skip-browser-warning': '1', ...(opts.headers || {}) }
+    });
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      throw new Error(body.error || 'Request failed (' + res.status + ')');
+    }
+    return res.json();
+  }
+
+  // ── Public auth methods ────────────────────────────────────────
+  async function register(email, password) {
+    const data = await _apiFetch('/api/auth/signup', {
+      method: 'POST',
+      body: JSON.stringify({ email, password })
+    });
+    _persist(data.accessToken, data.refreshToken, data.user);
+    return data.user;
+  }
+
+  async function login(email, password) {
+    const data = await _apiFetch('/api/auth/login', {
+      method: 'POST',
+      body: JSON.stringify({ email, password })
+    });
+    _persist(data.accessToken, data.refreshToken, data.user);
+    return data.user;
+  }
+
+  async function refresh() {
+    if (_refreshing) return _refreshing;
+    if (!_refreshToken) throw new Error('No refresh token');
+    _refreshing = _apiFetch('/api/auth/refresh', {
+      method: 'POST',
+      body: JSON.stringify({ refreshToken: _refreshToken })
+    }).then(data => {
+      _persist(data.accessToken, data.refreshToken, _user);
+      _refreshing = null;
+      return data.accessToken;
+    }).catch(err => {
+      _refreshing = null;
+      _persist(null, null, null);
+      throw err;
+    });
+    return _refreshing;
+  }
+
+  async function logout() {
+    if (_accessToken && _refreshToken) {
+      try {
+        await _apiFetch('/api/auth/logout', {
+          method: 'POST',
+          headers: { 'Authorization': 'Bearer ' + _accessToken },
+          body: JSON.stringify({ refreshToken: _refreshToken })
+        });
+      } catch(_) {} // best-effort
+    }
+    _persist(null, null, null);
+  }
+
+  function getToken()  { return _accessToken; }
+  function getUserId() { return _user ? _user.id : 0; }
+  function getUser()   { return _user; }
+  function isLoggedIn(){ return !!_accessToken && !!_user; }
+
+  // ── Fetch monkeypatch — auto-attach auth + auto-refresh on 401 ──
+  const _origFetch = window.fetch;
+  window._soulAuthOrigFetch = _origFetch; // keep pristine ref for _apiFetch
+  window.fetch = async function(url, opts) {
+    const apiBase = API();
+    const isApi = typeof url === 'string' && (url.startsWith(apiBase) || url.startsWith('/api/'));
+    const isAuthRoute = typeof url === 'string' && url.includes('/auth/');
+
+    // Auto-attach token to API calls
+    if (isApi && _accessToken) {
+      opts = opts || {};
+      opts.headers = opts.headers || {};
+      if (!opts.headers['Authorization'] && !opts.headers['authorization']) {
+        opts.headers['Authorization'] = 'Bearer ' + _accessToken;
+      }
+    }
+
+    const res = await _origFetch.call(window, url, opts);
+
+    // Auto-refresh on 401 (skip auth routes to avoid loops)
+    if (res.status === 401 && isApi && !isAuthRoute && _refreshToken) {
+      try {
+        await refresh();
+        opts = opts || {};
+        opts.headers = opts.headers || {};
+        opts.headers['Authorization'] = 'Bearer ' + _accessToken;
+        return _origFetch.call(window, url, opts);
+      } catch(_) {} // refresh failed, return original 401
+    }
+
+    return res;
+  };
+
+  // ── Soul bond indicator (subtle corner badge) ─────────────────
+  function _createIndicator() {
+    if (_indicator) return;
+    const el = document.createElement('div');
+    el.id = 'soul-bond-indicator';
+    el.style.cssText = 'position:fixed;bottom:12px;left:12px;z-index:99999;' +
+      'width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;' +
+      'font-size:12px;font-weight:600;font-family:monospace;cursor:pointer;transition:all 0.3s ease;' +
+      'background:rgba(80,200,255,0.12);border:1px solid rgba(80,200,255,0.25);color:rgba(180,220,255,0.8);' +
+      'pointer-events:auto;user-select:none;opacity:0;';
+    el.title = 'Soul bond — click to manage';
+    el.addEventListener('click', _showAuthDialog);
+    document.body.appendChild(el);
+    _indicator = el;
+  }
+
+  function _updateIndicator() {
+    if (!_indicator) return;
+    if (_user) {
+      const initial = (_user.email || '?')[0].toUpperCase();
+      _indicator.textContent = initial;
+      _indicator.style.opacity = '1';
+      _indicator.style.background = 'rgba(80,200,255,0.15)';
+      _indicator.style.borderColor = 'rgba(80,200,255,0.35)';
+      _indicator.title = 'Soul bonded as ' + _user.email + ' (' + (_user.tier || 'free') + ')';
+    } else {
+      _indicator.textContent = '\u00B7';
+      _indicator.style.opacity = '0.4';
+      _indicator.style.background = 'rgba(255,255,255,0.05)';
+      _indicator.style.borderColor = 'rgba(255,255,255,0.1)';
+      _indicator.title = 'Not bonded — click to sign in';
+    }
+  }
+
+  // ── Minimal auth dialog ───────────────────────────────────────
+  function _showAuthDialog() {
+    const existing = document.getElementById('soul-auth-dialog');
+    if (existing) { existing.remove(); return; }
+
+    const dlg = document.createElement('div');
+    dlg.id = 'soul-auth-dialog';
+    dlg.style.cssText = 'position:fixed;bottom:48px;left:12px;z-index:100000;' +
+      'background:rgba(10,14,22,0.88);border:1px solid rgba(80,200,255,0.15);border-radius:14px;' +
+      'padding:16px;width:240px;font-family:monospace;font-size:11px;color:rgba(200,220,240,0.85);';
+
+    if (_user) {
+      dlg.innerHTML =
+        '<div style="margin-bottom:8px;color:rgba(80,200,255,0.9);font-size:12px;">soul bonded</div>' +
+        '<div style="margin-bottom:4px;">' + _user.email + '</div>' +
+        '<div style="margin-bottom:10px;color:rgba(255,255,255,0.4);">tier: ' + (_user.tier || 'free') + '</div>' +
+        '<button id="soul-auth-logout" style="width:100%;padding:6px;border:1px solid rgba(255,100,100,0.3);' +
+        'background:rgba(255,80,80,0.1);border-radius:8px;color:rgba(255,150,150,0.8);cursor:pointer;font-family:monospace;font-size:11px;">unbind</button>';
+      document.body.appendChild(dlg);
+      document.getElementById('soul-auth-logout').addEventListener('click', async () => {
+        await logout();
+        dlg.remove();
+      });
+    } else {
+      dlg.innerHTML =
+        '<div style="margin-bottom:10px;color:rgba(80,200,255,0.9);font-size:12px;">soul bond</div>' +
+        '<input id="soul-auth-email" type="email" placeholder="email" style="width:100%;box-sizing:border-box;padding:6px 8px;margin-bottom:6px;' +
+        'background:rgba(20,28,42,0.5);border:1px solid rgba(80,200,255,0.15);border-radius:8px;color:rgba(200,220,240,0.9);font-family:monospace;font-size:11px;outline:none;">' +
+        '<input id="soul-auth-pass" type="password" placeholder="password (8+ chars)" style="width:100%;box-sizing:border-box;padding:6px 8px;margin-bottom:8px;' +
+        'background:rgba(20,28,42,0.5);border:1px solid rgba(80,200,255,0.15);border-radius:8px;color:rgba(200,220,240,0.9);font-family:monospace;font-size:11px;outline:none;">' +
+        '<div style="display:flex;gap:6px;">' +
+        '<button id="soul-auth-login" style="flex:1;padding:6px;border:1px solid rgba(80,200,255,0.25);' +
+        'background:rgba(80,200,255,0.08);border-radius:8px;color:rgba(180,220,255,0.85);cursor:pointer;font-family:monospace;font-size:11px;">bond</button>' +
+        '<button id="soul-auth-reg" style="flex:1;padding:6px;border:1px solid rgba(255,255,255,0.1);' +
+        'background:rgba(255,255,255,0.04);border-radius:8px;color:rgba(200,220,240,0.6);cursor:pointer;font-family:monospace;font-size:11px;">new soul</button>' +
+        '</div>' +
+        '<div id="soul-auth-err" style="margin-top:6px;color:rgba(255,100,100,0.8);font-size:10px;min-height:14px;"></div>';
+      document.body.appendChild(dlg);
+
+      const emailEl = document.getElementById('soul-auth-email');
+      const passEl  = document.getElementById('soul-auth-pass');
+      const errEl   = document.getElementById('soul-auth-err');
+
+      async function _doAuth(fn) {
+        errEl.textContent = '';
+        const e = emailEl.value.trim();
+        const p = passEl.value;
+        if (!e || !p) { errEl.textContent = 'both fields required'; return; }
+        if (p.length < 8) { errEl.textContent = 'password: 8+ characters'; return; }
+        try {
+          await fn(e, p);
+          dlg.remove();
+        } catch(err) {
+          errEl.textContent = err.message || 'failed';
+        }
+      }
+
+      document.getElementById('soul-auth-login').addEventListener('click', () => _doAuth(login));
+      document.getElementById('soul-auth-reg').addEventListener('click', () => _doAuth(register));
+      passEl.addEventListener('keydown', (ev) => { if (ev.key === 'Enter') _doAuth(login); });
+    }
+
+    // Close on outside click
+    setTimeout(() => {
+      const closer = (ev) => {
+        if (!dlg.contains(ev.target) && ev.target !== _indicator) {
+          dlg.remove();
+          document.removeEventListener('click', closer);
+        }
+      };
+      document.addEventListener('click', closer);
+    }, 100);
+  }
+
+  // ── Initialization ─────────────────────────────────────────────
+  function init() {
+    _createIndicator();
+    _updateIndicator();
+
+    // Validate existing token
+    if (_accessToken) {
+      _apiFetch('/api/auth/me', {
+        headers: { 'Authorization': 'Bearer ' + _accessToken }
+      }).then(user => {
+        _user = user;
+        localStorage.setItem(STORAGE_USER, JSON.stringify(user));
+        _updateIndicator();
+      }).catch(() => {
+        if (_refreshToken) refresh().catch(() => {});
+      });
+    }
+
+    // Cross-tab sync
+    window.addEventListener('storage', (ev) => {
+      if (ev.key === STORAGE_ACCESS || ev.key === STORAGE_LEGACY) {
+        _accessToken = ev.newValue || null;
+        _updateIndicator();
+      }
+      if (ev.key === STORAGE_USER) {
+        try { _user = ev.newValue ? JSON.parse(ev.newValue) : null; } catch(_) { _user = null; }
+        _updateIndicator();
+      }
+    });
+  }
+
+  return { init, login, register, logout, refresh, getToken, getUserId, getUser, isLoggedIn };
+})();
+
+setTimeout(() => { if (typeof SOUL_AUTH !== 'undefined') SOUL_AUTH.init(); }, 1000);
