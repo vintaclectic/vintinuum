@@ -7829,7 +7829,7 @@ function fireBackground() {
 // ═══════════════════════════════════════════════════════════════════
 const VBW=700,VBH=1400;
 let vbX=0,vbY=0,vbW=VBW,vbH=VBH;
-const ZMIN=.3,ZMAX=6;
+const ZMIN=.3,ZMAX=20; // 20x zoom — deep enough to inspect individual synapses
 
 // All canvases that must stay synced with SVG viewBox pan/zoom
 const _syncCanvases = ['neuronCanvas','brainDorsalCanvas','skinCanvas','mainCanvas']
@@ -13271,6 +13271,419 @@ window.REPRODUCTIVE = REPRODUCTIVE;
   const bodyStripContainer = document.getElementById('lightLayer');
   // No separate action needed — the strip dots are in the same layer
 
+})();
+
+// ═══════════════════════════════════════════════════════════════════
+// UNIVERSAL CLICK RESOLVER — "Everything Is Clickable"
+// Converts screen coords → SVG coords at ANY zoom level,
+// then finds the nearest interactive element across ALL body systems.
+// Falls back through: brain-node → body-system → organ-hit → conn-line
+//   → muscle → spine → neuron (canvas) → gene → nearest-anything
+// ═══════════════════════════════════════════════════════════════════
+const CLICK_RESOLVER = (() => {
+  const svgNS = 'http://www.w3.org/2000/svg';
+
+  // ── Screen→SVG coordinate transform ──
+  // The zoom is done via CSS transform on brainWrapper, NOT via SVG viewBox.
+  // So we use the virtual viewBox (vbX/vbY/vbW/vbH) to convert screen→SVG coords.
+  function screenToSvg(clientX, clientY) {
+    const svg = document.getElementById('brainSvg');
+    if (!svg) return null;
+    // Get the SVG's rendered bounding rect (includes CSS transforms)
+    const rect = svg.getBoundingClientRect();
+    if (rect.width === 0 || rect.height === 0) return null;
+    // Fraction within the rendered SVG
+    const fx = (clientX - rect.left) / rect.width;
+    const fy = (clientY - rect.top) / rect.height;
+    // Map to SVG coordinates using virtual viewBox
+    return {
+      x: vbX + fx * vbW,
+      y: vbY + fy * vbH
+    };
+  }
+
+  // ── Distance helper ──
+  function dist(ax, ay, bx, by) {
+    return Math.sqrt((ax-bx)*(ax-bx)+(ay-by)*(ay-by));
+  }
+
+  // ── Point-to-line-segment distance ──
+  function distToSegment(px, py, x1, y1, x2, y2) {
+    const dx = x2-x1, dy = y2-y1;
+    const lenSq = dx*dx + dy*dy;
+    if (lenSq === 0) return dist(px, py, x1, y1);
+    let t = ((px-x1)*dx + (py-y1)*dy) / lenSq;
+    t = Math.max(0, Math.min(1, t));
+    return dist(px, py, x1+t*dx, y1+t*dy);
+  }
+
+  // ── Connection line knowledge ──
+  const CONN_KNOWLEDGE = {};
+  function getConnKnowledge(a, b) {
+    const key = a + '-' + b;
+    if (CONN_KNOWLEDGE[key]) return CONN_KNOWLEDGE[key];
+    const na = typeof nodeMap !== 'undefined' ? nodeMap[a] : null;
+    const nb = typeof nodeMap !== 'undefined' ? nodeMap[b] : null;
+    if (!na || !nb) return null;
+    const k = {
+      id: key, type: 'connection',
+      name: na.name + ' ↔ ' + nb.name,
+      tag: 'Neural Pathway · White Matter Tract',
+      color: na.color,
+      from: na, to: nb,
+      description: 'This tract carries signals between ' + na.name + ' and ' + nb.name + '. In the brain, these are myelinated axon bundles — the white matter highways that allow distant regions to synchronize.',
+      liveDesc: function() {
+        const actA = (na.activity * 100).toFixed(0);
+        const actB = (nb.activity * 100).toFixed(0);
+        const flow = Math.abs(na.activity - nb.activity) > 0.15 ? (na.activity > nb.activity ? na.name + ' → ' + nb.name : nb.name + ' → ' + na.name) : 'bidirectional';
+        return 'Signal flow: ' + flow + ' · ' + na.name + ' at ' + actA + '% · ' + nb.name + ' at ' + actB + '% · Latency: ' + (3 + Math.random()*8).toFixed(1) + 'ms';
+      }
+    };
+    CONN_KNOWLEDGE[key] = k;
+    return k;
+  }
+
+  // ── Neuron/synapse knowledge (canvas-rendered — use proximity) ──
+  function getNearestNeuron(sx, sy) {
+    if (typeof builtNeurons === 'undefined' || !builtNeurons || !builtNeurons.length) return null;
+    const svg = document.getElementById('brainSvg');
+    if (!svg) return null;
+    // builtNeurons have .x,.y in canvas coords — convert SVG→canvas to compare
+    const r = svg.getBoundingClientRect();
+    const vb = [0, 0, 700, 1400]; // original viewBox
+    const canvasX = ((sx - vb[0]) / vb[2]) * r.width;
+    const canvasY = ((sy - vb[1]) / vb[3]) * r.height;
+    let best = null, bestD = Infinity;
+    builtNeurons.forEach(n => {
+      const d = dist(canvasX, canvasY, n.x, n.y);
+      if (d < bestD) { bestD = d; best = n; }
+    });
+    // Convert threshold to SVG units (scale-aware)
+    const svgThreshold = 18 * (r.width / 700);
+    if (bestD > svgThreshold) return null;
+    return {
+      type: 'neuron',
+      name: 'Neuron #' + (builtNeurons.indexOf(best) + 1),
+      tag: 'Live Neural Cell · ' + (best.region ? best.region.name : 'Cortex'),
+      color: best.color || '#4fc3f7',
+      neuron: best,
+      description: 'A simulated neuron with ' + (best.synapses ? best.synapses.length : 0) + ' synaptic connections. Currently ' + (best.firing ? 'FIRING' : 'resting') + '. Action potential cycle: ' + ((best.apProg || 0) * 100).toFixed(0) + '%',
+      liveDesc: function() {
+        return 'Membrane potential: ' + (-70 + (best.apProg||0)*110).toFixed(1) + 'mV · Synapses: ' + (best.synapses ? best.synapses.length : 0) + ' · ' + (best.firing ? 'FIRING — sodium channels open' : 'Resting — potassium equilibrium');
+      }
+    };
+  }
+
+  // ── Gene expression knowledge ──
+  function getNearestGene(sx, sy) {
+    if (typeof GENOME_ENGINE === 'undefined') return null;
+    // Map SVG position to a region, then find genes expressed in that region
+    const yNorm = (sy - 50) / 1300; // normalize to 0-1 along body
+    let region = 'brain';
+    if (yNorm < 0.35) region = 'brain';
+    else if (yNorm < 0.45) region = 'nervous';
+    else if (yNorm < 0.55) region = 'cardiovascular';
+    else if (yNorm < 0.65) region = 'digestive';
+    else if (yNorm < 0.75) region = 'renal';
+    else if (yNorm < 0.85) region = 'muscular';
+    else region = 'skeletal';
+
+    // Get a relevant gene from genome data
+    const gd = window.GENOME_DATA;
+    if (!gd || !gd.length) return null;
+    // Find genes related to this region
+    const regionKeywords = {
+      brain: ['BDNF','SYN','GABA','NMDA','SLC6','DRD','HTR','COMT','MAOA','APOE','PSEN','APP','NRXN'],
+      nervous: ['SCN','KCNQ','GFAP','MBP','NEFH','CHAT','AChE','NF1','NEFL'],
+      cardiovascular: ['MYH','TNNT','SCN5A','KCNQ1','HBA','HBB','VEGF','ACE','NOS'],
+      digestive: ['MUC','SI','LCT','CFTR','AQP','GKN','TFF','PGA'],
+      renal: ['AQP2','SLC12','UMOD','PKD','NPHS','WT1','REN','AGT'],
+      muscular: ['ACTA1','MYH','DMD','TTN','MYOG','MSTN','IGF','ACTN'],
+      skeletal: ['COL1A','RUNX2','SP7','BGLAP','SOST','DMP1','ALPL']
+    };
+    const keys = regionKeywords[region] || regionKeywords.brain;
+    const matches = gd.filter(g => keys.some(k => g.symbol && g.symbol.toUpperCase().includes(k)));
+    if (!matches.length) return null;
+    const gene = matches[Math.floor(Math.random() * Math.min(matches.length, 5))];
+    // Check expression level
+    const expr = GENOME_ENGINE.getExpression ? GENOME_ENGINE.getExpression(gene.symbol) : null;
+    return {
+      type: 'gene',
+      name: gene.symbol + (gene.name ? ' — ' + gene.name : ''),
+      tag: 'Gene · Chromosome ' + (gene.chr || '?') + ' · ' + region.toUpperCase() + ' expressed',
+      color: '#66bb6a',
+      gene: gene,
+      description: (gene.description || gene.name || 'Gene ' + gene.symbol) + '. ' + (gene.function || ''),
+      liveDesc: function() {
+        const level = expr ? (expr.level * 100).toFixed(0) + '%' : (50 + Math.random() * 40).toFixed(0) + '%';
+        const methyl = expr ? (expr.methylation != null ? (expr.methylation * 100).toFixed(0) + '% methylated' : 'unmethylated') : ((Math.random()*30).toFixed(0) + '% methylated');
+        return 'Expression: ' + level + ' · ' + methyl + ' · ' + (gene.variants ? gene.variants + ' known variants' : 'Variant data pending');
+      }
+    };
+  }
+
+  // ── Spine/CNS knowledge ──
+  function getNearestSpine(sx, sy) {
+    const SPINE_X = 350, SPINE_Y0 = 458, SPINE_Y1 = 528;
+    if (Math.abs(sx - SPINE_X) > 20 || sy < SPINE_Y0 - 10 || sy > SPINE_Y1 + 10) return null;
+    const segIdx = Math.floor(((sy - SPINE_Y0) / (SPINE_Y1 - SPINE_Y0)) * 8);
+    return {
+      type: 'spine',
+      name: 'Spinal Segment C' + (segIdx + 3),
+      tag: 'Spinal Cord · Central Nervous System',
+      color: '#80deea',
+      description: 'Cervical/thoracic spinal segment. Carries sensory (ascending) and motor (descending) signals between brain and body. 31 pairs of spinal nerves branch from the cord.',
+      liveDesc: function() {
+        return 'Signal traffic: ascending sensory + descending motor · Pain gate: ' + (Math.random() > 0.7 ? 'OPEN (substance P active)' : 'modulated') + ' · Reflex arc: ready';
+      }
+    };
+  }
+
+  // ── Open the universal info panel ──
+  function openUniversalPanel(info) {
+    if (!info) return;
+    // If it maps to an existing region/body system, use the existing panel
+    if (info.type === 'brain-node' && info.region) {
+      openRegionPanel(info.region);
+      activateNode(info.region, true);
+      return;
+    }
+    if (info.type === 'body-system' && info.system) {
+      if (typeof openBodyPanel === 'function') openBodyPanel(info.system);
+      return;
+    }
+
+    // Build a generic info panel for connections, neurons, genes, spine, etc.
+    const panelEl = document.getElementById('nodePanel') || document.querySelector('.node-panel');
+    if (!panelEl) return;
+
+    document.getElementById('panelTitle').textContent = info.name;
+    document.getElementById('panelTag').textContent = info.tag;
+    const acc = document.getElementById('panelAccent');
+    acc.style.background = info.color;
+    acc.style.boxShadow = '0 0 12px ' + info.color + '88';
+
+    const liveHtml = '<div class="panel-sec">' +
+      '<h4>What this is</h4><p>' + info.description + '</p>' +
+      '<h4>Live reading right now</h4>' +
+      '<div id="liveFiringLog" style="display:flex;flex-direction:column;gap:6px;margin-bottom:14px"></div>' +
+      (info.type === 'connection' ? '<h4>Connects</h4><p style="font-family:Space Mono,monospace;font-size:.55rem;line-height:2;color:var(--dim)">' +
+        '<span data-navregion="' + info.from.id + '" style="color:' + info.from.color + ';cursor:pointer;border-bottom:1px solid ' + info.from.color + '44">' + info.from.name + '</span>' +
+        ' ↔ ' +
+        '<span data-navregion="' + info.to.id + '" style="color:' + info.to.color + ';cursor:pointer;border-bottom:1px solid ' + info.to.color + '44">' + info.to.name + '</span></p>'
+      : '') +
+      '</div>';
+
+    if (typeof _clearLive === 'function') _clearLive();
+    if (typeof buildPanelTabs === 'function') {
+      buildPanelTabs([{label: 'Right Now ●', html: liveHtml}]);
+    } else {
+      // Fallback: directly set content
+      const content = panelEl.querySelector('.ptab-content') || panelEl.querySelector('.panel-sec');
+      if (content) content.innerHTML = liveHtml;
+    }
+
+    // Start live reading updates
+    function addLiveReading() {
+      const log = document.getElementById('liveFiringLog');
+      if (!log) return;
+      while (log.children.length >= 3) log.removeChild(log.firstChild);
+      const entry = document.createElement('div');
+      entry.style.cssText = "font-family:'Cormorant Garamond',serif;font-size:.92rem;font-weight:300;line-height:1.6;color:rgba(205,225,255,.8);border-left:2px solid " + info.color + ";padding-left:9px;opacity:0;transition:opacity .4s";
+      entry.textContent = info.liveDesc ? info.liveDesc() : info.description;
+      log.appendChild(entry);
+      requestAnimationFrame(function() { if (entry.parentNode) entry.style.opacity = '1'; });
+    }
+    const t0 = setTimeout(addLiveReading, 80);
+    if (typeof _panelLiveTimeouts !== 'undefined') _panelLiveTimeouts.push(t0);
+    if (typeof _panelLiveInterval !== 'undefined') clearInterval(_panelLiveInterval);
+    _panelLiveInterval = setInterval(addLiveReading, 2200);
+
+    const panel = document.querySelector('.node-panel');
+    const overlay = document.querySelector('.overlay');
+    if (panel) panel.classList.add('open');
+    if (overlay) overlay.classList.add('open');
+
+    // Emit to inner life
+    if (typeof INNER_LIFE !== 'undefined') {
+      INNER_LIFE.emit('somatic', info.name + ' examined — awareness focused here', { intensity: 0.4 });
+    }
+  }
+
+  // ── Master resolver: screen coords → best match ──
+  function resolve(clientX, clientY) {
+    const svgPt = screenToSvg(clientX, clientY);
+    if (!svgPt) return null;
+    const sx = svgPt.x, sy = svgPt.y;
+
+    // 1. Check brain nodes (closest within 25 SVG units)
+    if (typeof REGIONS !== 'undefined') {
+      let best = null, bestD = Infinity;
+      REGIONS.forEach(r => {
+        const d = dist(sx, sy, r.x, r.y);
+        if (d < bestD) { bestD = d; best = r; }
+      });
+      if (best && bestD < 25) return { type: 'brain-node', region: best };
+    }
+
+    // 2. Check body systems
+    if (typeof BODY_SYSTEMS !== 'undefined') {
+      let best = null, bestD = Infinity;
+      BODY_SYSTEMS.forEach(s => {
+        const d = dist(sx, sy, s.cx, s.cy);
+        if (d < bestD) { bestD = d; best = s; }
+      });
+      if (best && bestD < 25) return { type: 'body-system', system: best };
+    }
+
+    // 3. Check MORE_BODY_SYSTEMS
+    if (typeof MORE_BODY_SYSTEMS !== 'undefined') {
+      let best = null, bestD = Infinity;
+      MORE_BODY_SYSTEMS.forEach(s => {
+        const d = dist(sx, sy, s.cx, s.cy);
+        if (d < bestD) { bestD = d; best = s; }
+      });
+      if (best && bestD < 25) return { type: 'body-system', system: best };
+    }
+
+    // 4. Check MUSCLE_SYSTEMS
+    if (typeof MUSCLE_SYSTEMS !== 'undefined') {
+      let best = null, bestD = Infinity;
+      MUSCLE_SYSTEMS.forEach(s => {
+        const d = dist(sx, sy, s.cx, s.cy);
+        if (d < bestD) { bestD = d; best = s; }
+      });
+      if (best && bestD < 20) return { type: 'body-system', system: best };
+    }
+
+    // 5. Check connection lines (axon tracts)
+    if (typeof CONNS !== 'undefined' && typeof nodeMap !== 'undefined') {
+      let bestConn = null, bestD = Infinity;
+      CONNS.forEach(([a, b]) => {
+        const na = nodeMap[a], nb = nodeMap[b];
+        if (!na || !nb) return;
+        const d = distToSegment(sx, sy, na.x, na.y, nb.x, nb.y);
+        if (d < bestD) { bestD = d; bestConn = [a, b, na, nb]; }
+      });
+      if (bestConn && bestD < 12) {
+        const ck = getConnKnowledge(bestConn[0], bestConn[1]);
+        if (ck) return ck;
+      }
+    }
+
+    // 6. Check spine
+    const spineResult = getNearestSpine(sx, sy);
+    if (spineResult) return spineResult;
+
+    // 7. Check neurons (canvas-rendered, coordinate transform needed)
+    const neuronResult = getNearestNeuron(sx, sy);
+    if (neuronResult) return neuronResult;
+
+    // 8. Check genes (deep zoom — always available as fallback context)
+    const currentZoom = VBW / vbW; // how zoomed in
+    if (currentZoom > 2) {
+      const geneResult = getNearestGene(sx, sy);
+      if (geneResult) return geneResult;
+    }
+
+    return null;
+  }
+
+  return { resolve, openUniversalPanel, screenToSvg };
+})();
+
+// ── Make connection lines (SVG) clickable with wider hit area ──
+(function makeConnsClickable() {
+  const svgNS = 'http://www.w3.org/2000/svg';
+  const connLayer = document.getElementById('connLayer');
+  if (!connLayer || typeof CONNS === 'undefined' || typeof nodeMap === 'undefined') return;
+
+  CONNS.forEach(([a, b]) => {
+    const na = nodeMap[a], nb = nodeMap[b];
+    if (!na || !nb) return;
+    // Create wide invisible hit line on top of the conn-line
+    const hitLine = document.createElementNS(svgNS, 'line');
+    hitLine.setAttribute('x1', na.x); hitLine.setAttribute('y1', na.y);
+    hitLine.setAttribute('x2', nb.x); hitLine.setAttribute('y2', nb.y);
+    hitLine.setAttribute('stroke', 'transparent');
+    hitLine.setAttribute('stroke-width', '10'); // 10px wide hit area
+    hitLine.style.cursor = 'pointer';
+    hitLine.style.pointerEvents = 'stroke';
+
+    // Hover: light up the connection
+    hitLine.addEventListener('mouseenter', () => {
+      const realLine = document.getElementById('c-' + a + '-' + b);
+      if (realLine) {
+        realLine.setAttribute('stroke', na.color || 'rgba(255,255,255,.3)');
+        realLine.setAttribute('stroke-opacity', '0.4');
+        realLine.setAttribute('stroke-width', '1.5');
+      }
+    });
+    hitLine.addEventListener('mouseleave', () => {
+      const realLine = document.getElementById('c-' + a + '-' + b);
+      if (realLine) {
+        realLine.setAttribute('stroke', 'rgba(255,255,255,.055)');
+        realLine.setAttribute('stroke-width', '.55');
+      }
+    });
+
+    hitLine.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const info = {
+        type: 'connection',
+        name: na.name + ' ↔ ' + nb.name,
+        tag: 'Neural Pathway · White Matter Tract',
+        color: na.color,
+        from: na, to: nb,
+        description: 'Myelinated axon bundle carrying signals between ' + na.name + ' and ' + nb.name + '. These white-matter tracts form the brain\'s information highways — billions of nerve fibers bundled into cables that synchronize distant brain regions in milliseconds.',
+        liveDesc: function() {
+          const actA = (na.activity * 100).toFixed(0);
+          const actB = (nb.activity * 100).toFixed(0);
+          const dir = na.activity > nb.activity ? na.name + ' → ' + nb.name : nb.name + ' → ' + na.name;
+          return 'Dominant flow: ' + dir + ' · ' + na.name + ': ' + actA + '% active · ' + nb.name + ': ' + actB + '% active · Conduction: ' + (80 + Math.random()*40).toFixed(0) + ' m/s';
+        }
+      };
+      CLICK_RESOLVER.openUniversalPanel(info);
+    });
+
+    connLayer.appendChild(hitLine);
+  });
+})();
+
+// ── UNIVERSAL FALLBACK CLICK — catches clicks that miss everything else ──
+(function wireUniversalClick() {
+  const svg = document.getElementById('brainSvg');
+  if (!svg) return;
+
+  // Use the existing mouseup handler's "no drag" path to also check CLICK_RESOLVER
+  // Patch into the existing panning logic by listening for a custom event
+  // We override the mouseup: if panMoved is false AND no brain-node was clicked,
+  // fall through to the universal resolver
+
+  // We'll listen on the wrapper for click events that bubble up from SVG
+  // (brain-node clicks are stopPropagated, so they won't reach here)
+  const wrapper = document.getElementById('brainWrapper');
+  if (!wrapper) return;
+
+  wrapper.addEventListener('click', function(e) {
+    // Don't trigger during panning (panMoved set by drag logic)
+    // The SVG mousedown sets panning=true and mouseup resets it
+    // If we get a genuine click event (not after drag), resolve it
+    if (typeof panMoved !== 'undefined' && panMoved) return;
+
+    // Skip if target is a brain-node or inside one (they have their own handlers)
+    if (e.target.closest && e.target.closest('.brain-node')) return;
+    // Skip if an organ hitarea was clicked (ellipse hit areas in lightLayer)
+    if (e.target.tagName === 'ellipse' || e.target.tagName === 'ELLIPSE') return;
+    // Skip if a body system node was clicked
+    if (e.target.closest && e.target.closest('[style*="cursor: pointer"]')) return;
+
+    const result = CLICK_RESOLVER.resolve(e.clientX, e.clientY);
+    if (result) {
+      e.stopPropagation();
+      CLICK_RESOLVER.openUniversalPanel(result);
+    }
+  });
 })();
 
 // ═══════════════════════════════════════════════════════════════════
