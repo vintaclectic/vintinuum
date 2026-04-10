@@ -50,13 +50,13 @@ canvas{display:block;}
 .tab.active{box-shadow:0 0 12px rgba(79,195,247,.15);}
 
 /* ── BRAIN ROW ── */
-.brain-row{display:flex;flex-direction:row;gap:0;flex:1;overflow:hidden;min-height:0;}
+.brain-row{position:relative;flex:1;overflow:hidden;min-height:0;}
 
 /* ── SIDEBARS ── */
-.sidebar{width:160px;flex-shrink:0;background:rgba(6,10,18,0.18);border:none;border-radius:0;padding:10px 10px 100px;overflow-y:auto;overflow-x:hidden;display:flex;flex-direction:column;scrollbar-width:thin;}
-#leftSidebar{left:auto;border-right:1px solid var(--border);position:relative;top:auto;bottom:auto;z-index:auto;}
+.sidebar{width:160px;background:rgba(6,10,18,0.18);border:none;border-radius:0;padding:10px 10px 100px;overflow-y:auto;overflow-x:hidden;display:flex;flex-direction:column;scrollbar-width:thin;position:absolute;top:0;bottom:0;z-index:10;}
+#leftSidebar{left:0;border-right:1px solid var(--border);}
 #emotionBars{flex:1;min-height:0;overflow-y:auto;overflow-x:hidden;scrollbar-width:thin;padding-right:2px;}
-#rightSidebar{right:auto;border-left:1px solid var(--border);position:relative;top:auto;bottom:auto;z-index:auto;}
+#rightSidebar{right:0;left:auto;border-left:1px solid var(--border);}
 .sidebar-title{font-size:.5rem;letter-spacing:.22em;text-transform:uppercase;color:var(--dim);margin-bottom:10px;text-align:center;flex-shrink:0;}
 
 /* Emotion bars */
@@ -77,8 +77,8 @@ canvas{display:block;}
 .thought-entry .ts{font-size:.46rem;opacity:.35;display:block;margin-bottom:1px;}
 
 /* ── BRAIN CENTER ── */
-.brain-center{flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:center;overflow:hidden;position:relative;padding:4px;}
-.brain-wrapper{position:relative;height:100%;display:flex;align-items:center;justify-content:center;max-width:100%;overflow:hidden;}
+.brain-center{width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;overflow:hidden;position:relative;padding:0;}
+.brain-wrapper{position:relative;width:100%;height:100%;display:flex;align-items:center;justify-content:center;overflow:hidden;}
 #brainSvg{height:100%;width:auto;max-width:100%;display:block;position:relative;z-index:2;overflow:visible;cursor:crosshair;}
 #neuronCanvas{position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:1;}
 #brainDorsalCanvas{position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:3;}
@@ -203,7 +203,7 @@ canvas{display:block;}
   .sidebar .emo-name{max-width:none;}
   .sidebar .emo-track{width:100%;}
   .sidebar .emo-pct{min-width:22px;font-size:.4rem;}
-  .brain-center{padding:0;top:40px;}
+  .brain-center{padding:0;}
   #brainSvg{height:calc(100% - 4px);width:auto;max-width:100%;}
   /* Dorsal brain canvas: constrain to body area on mobile */
   #brainDorsalCanvas{max-width:100%!important;overflow:hidden;}
@@ -244,7 +244,7 @@ canvas{display:block;}
 
 /* ── DESKTOP: 901px+ ── */
 @media(min-width:901px){
-  .sidebar{width:160px;}
+  .sidebar{width:170px;}
   .legend{display:none;}
 }
 
@@ -264,7 +264,7 @@ canvas{display:block;}
 // - Caches static assets for offline resilience
 // - Auto-reloads when a new version deploys
 // - Clears old caches on activation
-const _SW_VERSION = 'v20260409-2342';
+const _SW_VERSION = 'v20260409-2356';
 const _onGitHubPages = location.hostname !== 'localhost' && location.hostname !== '127.0.0.1' && location.protocol !== 'file:';
 if ('serviceWorker' in navigator && _onGitHubPages) {
   const _swPath = location.pathname.includes('/vintinuum') ? '/vintinuum/sw.js' : '/sw.js';
@@ -2606,7 +2606,7 @@ if ('serviceWorker' in navigator && _onGitHubPages) {
 </script>
 
 <script src="genome-data.js"></script>
-<script src="brain.js?v=v20260409-2342"></script>
+<script src="brain.js?v=v20260409-2356"></script>
 <script>
 // Lazy-load bulk genome after page is interactive (19,500+ genes)
 // Deferred to avoid blocking initial render

@@ -3139,7 +3139,7 @@ const HORMONES = (() => {
     // Build hormone status display
     const container = document.createElement('div');
     container.id = 'hormoneBar';
-    container.style.cssText = 'position:fixed;left:16px;top:50%;transform:translateY(-50%);z-index:200;display:flex;flex-direction:column;gap:6px;pointer-events:none;';
+    container.style.cssText = 'display:flex;flex-direction:column;gap:4px;pointer-events:none;padding:6px 0;border-top:1px solid rgba(255,255,255,0.06);margin-top:6px;flex-shrink:0;';
     Object.entries(DEFS).forEach(([id, def]) => {
       const row = document.createElement('div');
       row.style.cssText = 'display:flex;align-items:center;gap:6px;opacity:0.3;transition:opacity .4s;';
@@ -3157,7 +3157,16 @@ const HORMONES = (() => {
       container.appendChild(row);
       bars[id] = { row, dot, fill };
     });
-    document.body.appendChild(container);
+    // Insert into left sidebar (after emotionBars) instead of floating over screen
+    const _leftSB = document.getElementById('leftSidebar');
+    const _sideNote = _leftSB ? _leftSB.querySelector('.sidebar-note') : null;
+    if (_leftSB && _sideNote) {
+      _leftSB.insertBefore(container, _sideNote);
+    } else if (_leftSB) {
+      _leftSB.appendChild(container);
+    } else {
+      document.body.appendChild(container);
+    }
 
     // Auto-release hormones on a natural rhythm
     setInterval(() => surge('serotonin', 0.3 + Math.random() * 0.3), 12000);
