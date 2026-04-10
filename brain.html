@@ -266,7 +266,7 @@ canvas{display:block;}
 // - Caches static assets for offline resilience
 // - Auto-reloads when a new version deploys
 // - Clears old caches on activation
-const _SW_VERSION = 'v20260409-0721';
+const _SW_VERSION = 'v20260409-2243';
 const _onGitHubPages = location.hostname !== 'localhost' && location.hostname !== '127.0.0.1' && location.protocol !== 'file:';
 if ('serviceWorker' in navigator && _onGitHubPages) {
   const _swPath = location.pathname.includes('/vintinuum') ? '/vintinuum/sw.js' : '/sw.js';
@@ -2608,7 +2608,7 @@ if ('serviceWorker' in navigator && _onGitHubPages) {
 </script>
 
 <script src="genome-data.js"></script>
-<script src="brain.js?v=v20260410-fullgenome"></script>
+<script src="brain.js?v=v20260409-2243"></script>
 <script>
 // Lazy-load bulk genome after page is interactive (19,500+ genes)
 // Deferred to avoid blocking initial render
