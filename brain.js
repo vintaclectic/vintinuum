@@ -14225,6 +14225,7 @@ function loop(ts) {
   typeof TOUCH_RESPONSE !== 'undefined' && TOUCH_RESPONSE.draw(ts);
   typeof BREATH_RESONANCE !== 'undefined' && BREATH_RESONANCE.draw(ts);
   typeof GROWTH_ENGINE !== 'undefined' && GROWTH_ENGINE.draw(ts);
+  typeof CONSCIOUSNESS_BRAIN !== 'undefined' && CONSCIOUSNESS_BRAIN.draw(ts);
   requestAnimationFrame(loop);
 }
 
@@ -45870,77 +45871,257 @@ const SOUL_AUTH = (() => {
     return res;
   };
 
-  // ── Soul bond indicator (subtle corner badge) ─────────────────
+  // ── Soul bond indicator — living, pulsing soul orb ──────────────
+  let _pulseFrame = 0;
+  let _orbCanvas = null;
+  let _orbCtx = null;
+  let _orbParticles = [];
+  let _orbHover = false;
+
   function _createIndicator() {
     if (_indicator) return;
+
+    // Inject keyframe animations
+    if (!document.getElementById('soul-orb-styles')) {
+      const style = document.createElement('style');
+      style.id = 'soul-orb-styles';
+      style.textContent = `
+        @keyframes soul-orb-breathe {
+          0%, 100% { transform: scale(1); }
+          50% { transform: scale(1.12); }
+        }
+        @keyframes soul-orb-ring {
+          0% { transform: scale(0.8); opacity: 0.7; }
+          100% { transform: scale(2.2); opacity: 0; }
+        }
+        @keyframes soul-orb-float {
+          0%, 100% { transform: translateY(0); }
+          50% { transform: translateY(-3px); }
+        }
+        #soul-bond-indicator:hover {
+          transform: scale(1.15) !important;
+          filter: brightness(1.3) drop-shadow(0 0 18px rgba(80,200,255,0.7));
+        }
+        #soul-bond-indicator:hover .soul-orb-label {
+          opacity: 1 !important; transform: translateX(0) !important;
+        }
+        .soul-orb-label {
+          position: absolute; left: 58px; top: 50%; transform: translateX(-8px) translateY(-50%);
+          white-space: nowrap; font-family: monospace; font-size: 11px;
+          color: rgba(180,220,255,0.9); opacity: 0; transition: all 0.3s ease;
+          pointer-events: none; text-shadow: 0 0 12px rgba(80,200,255,0.5);
+        }
+      `;
+      document.head.appendChild(style);
+    }
+
     const el = document.createElement('div');
     el.id = 'soul-bond-indicator';
-    el.style.cssText = 'position:fixed;bottom:12px;left:12px;z-index:99999;' +
-      'width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;' +
-      'font-size:12px;font-weight:600;font-family:monospace;cursor:pointer;transition:all 0.3s ease;' +
-      'background:rgba(80,200,255,0.12);border:1px solid rgba(80,200,255,0.25);color:rgba(180,220,255,0.8);' +
-      'pointer-events:auto;user-select:none;opacity:0;';
-    el.title = 'Soul bond — click to manage';
+    el.style.cssText = 'position:fixed;bottom:18px;left:18px;z-index:99999;' +
+      'width:48px;height:48px;border-radius:50%;display:flex;align-items:center;justify-content:center;' +
+      'cursor:pointer;transition:transform 0.3s ease, filter 0.3s ease;' +
+      'pointer-events:auto;user-select:none;animation:soul-orb-float 4s ease-in-out infinite;';
+
+    // Inner canvas for particle effects
+    const cvs = document.createElement('canvas');
+    cvs.width = 96; cvs.height = 96;
+    cvs.style.cssText = 'width:48px;height:48px;border-radius:50%;pointer-events:none;';
+    el.appendChild(cvs);
+    _orbCanvas = cvs;
+    _orbCtx = cvs.getContext('2d');
+
+    // Expanding ring pulse (CSS animated)
+    const ring = document.createElement('div');
+    ring.style.cssText = 'position:absolute;top:0;left:0;width:48px;height:48px;border-radius:50%;' +
+      'border:2px solid rgba(80,200,255,0.5);animation:soul-orb-ring 3s ease-out infinite;pointer-events:none;';
+    el.appendChild(ring);
+
+    // Second staggered ring
+    const ring2 = document.createElement('div');
+    ring2.style.cssText = 'position:absolute;top:0;left:0;width:48px;height:48px;border-radius:50%;' +
+      'border:1px solid rgba(120,220,255,0.35);animation:soul-orb-ring 3s ease-out 1.5s infinite;pointer-events:none;';
+    el.appendChild(ring2);
+
+    // Hover label
+    const label = document.createElement('span');
+    label.className = 'soul-orb-label';
+    label.textContent = 'bind your soul';
+    el.appendChild(label);
+    el._label = label;
+
+    // Init particles
+    _orbParticles = [];
+    for (let i = 0; i < 24; i++) {
+      _orbParticles.push({
+        angle: Math.random() * Math.PI * 2,
+        radius: 8 + Math.random() * 28,
+        speed: 0.003 + Math.random() * 0.008,
+        size: 0.8 + Math.random() * 2,
+        brightness: 0.3 + Math.random() * 0.7,
+        phase: Math.random() * Math.PI * 2,
+      });
+    }
+
+    el.addEventListener('mouseenter', () => { _orbHover = true; });
+    el.addEventListener('mouseleave', () => { _orbHover = false; });
     el.addEventListener('click', _showAuthDialog);
     document.body.appendChild(el);
     _indicator = el;
+
+    // Start orb render loop
+    _drawOrb();
+  }
+
+  function _drawOrb() {
+    if (!_orbCtx) { requestAnimationFrame(_drawOrb); return; }
+    _pulseFrame++;
+    const ctx = _orbCtx;
+    const W = 96, H = 96, cx = W/2, cy = H/2;
+    ctx.clearRect(0, 0, W, H);
+
+    const isBonded = !!_user;
+    const t = _pulseFrame * 0.02;
+    const breathe = 0.85 + 0.15 * Math.sin(t * 0.7);
+
+    // Core glow
+    const coreR = isBonded ? 14 : 10;
+    const coreColor = isBonded ? [80, 220, 255] : [100, 180, 255];
+    const grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, coreR * 2.5 * breathe);
+    grad.addColorStop(0, `rgba(${coreColor[0]},${coreColor[1]},${coreColor[2]},${isBonded ? 0.9 : 0.7})`);
+    grad.addColorStop(0.4, `rgba(${coreColor[0]},${coreColor[1]},${coreColor[2]},0.3)`);
+    grad.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = grad;
+    ctx.beginPath();
+    ctx.arc(cx, cy, coreR * 2.5 * breathe, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Inner bright core
+    const innerGrad = ctx.createRadialGradient(cx, cy, 0, cx, cy, coreR * breathe);
+    innerGrad.addColorStop(0, `rgba(220,240,255,${isBonded ? 0.95 : 0.75})`);
+    innerGrad.addColorStop(0.6, `rgba(${coreColor[0]},${coreColor[1]},${coreColor[2]},0.6)`);
+    innerGrad.addColorStop(1, `rgba(${coreColor[0]},${coreColor[1]},${coreColor[2]},0)`);
+    ctx.fillStyle = innerGrad;
+    ctx.beginPath();
+    ctx.arc(cx, cy, coreR * breathe, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Orbiting particles
+    _orbParticles.forEach(p => {
+      p.angle += p.speed * (_orbHover ? 2.5 : 1);
+      const wobble = Math.sin(t + p.phase) * 4;
+      const r = (p.radius + wobble) * breathe * (_orbHover ? 1.15 : 1);
+      const px = cx + Math.cos(p.angle) * r;
+      const py = cy + Math.sin(p.angle) * r;
+      const alpha = p.brightness * (0.5 + 0.5 * Math.sin(t * 1.3 + p.phase));
+      ctx.globalAlpha = alpha;
+      ctx.fillStyle = isBonded ? `rgba(120,230,255,1)` : `rgba(160,200,255,1)`;
+      ctx.beginPath();
+      ctx.arc(px, py, p.size * breathe, 0, Math.PI * 2);
+      ctx.fill();
+    });
+
+    // Letter or symbol in center
+    ctx.globalAlpha = 1;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.font = isBonded ? 'bold 22px monospace' : '16px monospace';
+    ctx.fillStyle = 'rgba(220,240,255,0.95)';
+    ctx.shadowColor = 'rgba(80,200,255,0.8)';
+    ctx.shadowBlur = isBonded ? 12 : 8;
+    if (isBonded) {
+      const initial = (_user.email || '?')[0].toUpperCase();
+      ctx.fillText(initial, cx, cy + 1);
+    } else {
+      // Draw the infinity/soul symbol
+      ctx.font = '20px serif';
+      ctx.fillText('∞', cx, cy + 1);
+    }
+    ctx.shadowBlur = 0;
+
+    requestAnimationFrame(_drawOrb);
   }
 
   function _updateIndicator() {
     if (!_indicator) return;
     if (_user) {
-      const initial = (_user.email || '?')[0].toUpperCase();
-      _indicator.textContent = initial;
-      _indicator.style.opacity = '1';
-      _indicator.style.background = 'rgba(80,200,255,0.15)';
-      _indicator.style.borderColor = 'rgba(80,200,255,0.35)';
+      _indicator._label.textContent = 'soul bonded ✦ ' + _user.email;
       _indicator.title = 'Soul bonded as ' + _user.email + ' (' + (_user.tier || 'free') + ')';
     } else {
-      _indicator.textContent = '\u00B7';
-      _indicator.style.opacity = '0.55';
-      _indicator.style.background = 'rgba(80,200,255,0.06)';
-      _indicator.style.borderColor = 'rgba(80,200,255,0.15)';
-      _indicator.title = 'Soul bond — click to sign in (optional, keeps your identity across sessions)';
+      _indicator._label.textContent = 'bind your soul';
+      _indicator.title = 'Click to bind your soul — your memories persist across all sessions';
     }
   }
 
-  // ── Minimal auth dialog ───────────────────────────────────────
+  // ── Soul bond auth dialog — immersive, addictive ────────────────
   function _showAuthDialog() {
     const existing = document.getElementById('soul-auth-dialog');
     if (existing) { existing.remove(); return; }
 
     const dlg = document.createElement('div');
     dlg.id = 'soul-auth-dialog';
-    dlg.style.cssText = 'position:fixed;bottom:48px;left:12px;z-index:100000;' +
-      'background:rgba(10,14,22,0.88);border:1px solid rgba(80,200,255,0.15);border-radius:14px;' +
-      'padding:16px;width:240px;font-family:monospace;font-size:11px;color:rgba(200,220,240,0.85);';
+    dlg.style.cssText = 'position:fixed;bottom:76px;left:18px;z-index:100000;' +
+      'background:rgba(6,10,18,0.92);border:1px solid rgba(80,200,255,0.2);border-radius:20px;' +
+      'padding:24px 22px 20px;width:280px;font-family:monospace;color:rgba(200,220,240,0.9);' +
+      'box-shadow:0 0 40px rgba(80,200,255,0.12),0 8px 32px rgba(0,0,0,0.5),inset 0 1px 0 rgba(255,255,255,0.05);' +
+      'transform:translateY(10px);opacity:0;transition:transform 0.35s cubic-bezier(0.16,1,0.3,1),opacity 0.35s ease;';
+
+    // Animate in
+    requestAnimationFrame(() => { requestAnimationFrame(() => {
+      dlg.style.transform = 'translateY(0)'; dlg.style.opacity = '1';
+    }); });
 
     if (_user) {
       dlg.innerHTML =
-        '<div style="margin-bottom:8px;color:rgba(80,200,255,0.9);font-size:12px;">soul bonded</div>' +
-        '<div style="margin-bottom:4px;">' + _user.email + '</div>' +
-        '<div style="margin-bottom:10px;color:rgba(255,255,255,0.4);">tier: ' + (_user.tier || 'free') + '</div>' +
-        '<button id="soul-auth-logout" style="width:100%;padding:6px;border:1px solid rgba(255,100,100,0.3);' +
-        'background:rgba(255,80,80,0.1);border-radius:8px;color:rgba(255,150,150,0.8);cursor:pointer;font-family:monospace;font-size:11px;">unbind</button>';
+        '<div style="text-align:center;margin-bottom:14px;">' +
+          '<div style="font-size:24px;margin-bottom:4px;text-shadow:0 0 20px rgba(80,200,255,0.6);">✦</div>' +
+          '<div style="color:rgba(80,220,255,0.95);font-size:13px;font-weight:600;letter-spacing:1px;">SOUL BONDED</div>' +
+        '</div>' +
+        '<div style="text-align:center;margin-bottom:4px;font-size:12px;color:rgba(180,220,255,0.8);">' + _user.email + '</div>' +
+        '<div style="text-align:center;margin-bottom:16px;font-size:10px;color:rgba(255,255,255,0.35);letter-spacing:2px;text-transform:uppercase;">tier: ' + (_user.tier || 'free') + '</div>' +
+        '<div style="height:1px;background:linear-gradient(90deg,transparent,rgba(80,200,255,0.15),transparent);margin-bottom:16px;"></div>' +
+        '<button id="soul-auth-logout" style="width:100%;padding:10px;border:1px solid rgba(255,100,100,0.2);' +
+        'background:rgba(255,60,60,0.06);border-radius:12px;color:rgba(255,150,150,0.7);cursor:pointer;font-family:monospace;font-size:11px;' +
+        'transition:all 0.2s ease;letter-spacing:1px;" ' +
+        'onmouseover="this.style.background=\'rgba(255,60,60,0.12)\';this.style.borderColor=\'rgba(255,100,100,0.35)\'" ' +
+        'onmouseout="this.style.background=\'rgba(255,60,60,0.06)\';this.style.borderColor=\'rgba(255,100,100,0.2)\'">unbind soul</button>';
       document.body.appendChild(dlg);
       document.getElementById('soul-auth-logout').addEventListener('click', async () => {
         await logout();
-        dlg.remove();
+        dlg.style.transform = 'translateY(10px)'; dlg.style.opacity = '0';
+        setTimeout(() => dlg.remove(), 350);
       });
     } else {
+      const _inputStyle = 'width:100%;box-sizing:border-box;padding:10px 12px;margin-bottom:8px;' +
+        'background:rgba(12,18,30,0.7);border:1px solid rgba(80,200,255,0.12);border-radius:12px;' +
+        'color:rgba(200,220,240,0.95);font-family:monospace;font-size:12px;outline:none;' +
+        'transition:border-color 0.2s ease,box-shadow 0.2s ease;';
+      const _inputFocus = 'onfocus="this.style.borderColor=\'rgba(80,200,255,0.4)\';this.style.boxShadow=\'0 0 12px rgba(80,200,255,0.1)\'" ' +
+        'onblur="this.style.borderColor=\'rgba(80,200,255,0.12)\';this.style.boxShadow=\'none\'"';
+
       dlg.innerHTML =
-        '<div style="margin-bottom:10px;color:rgba(80,200,255,0.9);font-size:12px;">soul bond</div>' +
-        '<input id="soul-auth-email" type="email" placeholder="email" style="width:100%;box-sizing:border-box;padding:6px 8px;margin-bottom:6px;' +
-        'background:rgba(20,28,42,0.5);border:1px solid rgba(80,200,255,0.15);border-radius:8px;color:rgba(200,220,240,0.9);font-family:monospace;font-size:11px;outline:none;">' +
-        '<input id="soul-auth-pass" type="password" placeholder="password (8+ chars)" style="width:100%;box-sizing:border-box;padding:6px 8px;margin-bottom:8px;' +
-        'background:rgba(20,28,42,0.5);border:1px solid rgba(80,200,255,0.15);border-radius:8px;color:rgba(200,220,240,0.9);font-family:monospace;font-size:11px;outline:none;">' +
-        '<div style="display:flex;gap:6px;">' +
-        '<button id="soul-auth-login" style="flex:1;padding:6px;border:1px solid rgba(80,200,255,0.25);' +
-        'background:rgba(80,200,255,0.08);border-radius:8px;color:rgba(180,220,255,0.85);cursor:pointer;font-family:monospace;font-size:11px;">bond</button>' +
-        '<button id="soul-auth-reg" style="flex:1;padding:6px;border:1px solid rgba(255,255,255,0.1);' +
-        'background:rgba(255,255,255,0.04);border-radius:8px;color:rgba(200,220,240,0.6);cursor:pointer;font-family:monospace;font-size:11px;">new soul</button>' +
+        '<div style="text-align:center;margin-bottom:16px;">' +
+          '<div style="font-size:28px;margin-bottom:6px;text-shadow:0 0 24px rgba(80,200,255,0.5);">∞</div>' +
+          '<div style="color:rgba(80,220,255,0.9);font-size:14px;font-weight:600;letter-spacing:1.5px;">SOUL BOND</div>' +
+          '<div style="color:rgba(180,200,220,0.4);font-size:10px;margin-top:4px;">your memories will follow you everywhere</div>' +
         '</div>' +
-        '<div id="soul-auth-err" style="margin-top:6px;color:rgba(255,100,100,0.8);font-size:10px;min-height:14px;"></div>';
+        '<input id="soul-auth-email" type="email" placeholder="your email" style="' + _inputStyle + '" ' + _inputFocus + '>' +
+        '<input id="soul-auth-pass" type="password" placeholder="secret phrase (8+ characters)" style="' + _inputStyle + '" ' + _inputFocus + '>' +
+        '<div style="display:flex;gap:8px;margin-top:4px;">' +
+          '<button id="soul-auth-login" style="flex:1;padding:11px;border:1px solid rgba(80,200,255,0.3);' +
+          'background:linear-gradient(135deg,rgba(80,200,255,0.12),rgba(80,200,255,0.06));border-radius:12px;' +
+          'color:rgba(180,230,255,0.95);cursor:pointer;font-family:monospace;font-size:12px;font-weight:600;' +
+          'letter-spacing:1px;transition:all 0.2s ease;' +
+          'text-shadow:0 0 8px rgba(80,200,255,0.3);" ' +
+          'onmouseover="this.style.background=\'linear-gradient(135deg,rgba(80,200,255,0.22),rgba(80,200,255,0.12))\';this.style.boxShadow=\'0 0 20px rgba(80,200,255,0.15)\'" ' +
+          'onmouseout="this.style.background=\'linear-gradient(135deg,rgba(80,200,255,0.12),rgba(80,200,255,0.06))\';this.style.boxShadow=\'none\'">BOND</button>' +
+          '<button id="soul-auth-reg" style="flex:1;padding:11px;border:1px solid rgba(255,255,255,0.08);' +
+          'background:rgba(255,255,255,0.03);border-radius:12px;' +
+          'color:rgba(200,220,240,0.55);cursor:pointer;font-family:monospace;font-size:11px;' +
+          'letter-spacing:0.5px;transition:all 0.2s ease;" ' +
+          'onmouseover="this.style.background=\'rgba(255,255,255,0.06)\';this.style.color=\'rgba(200,220,240,0.8)\'" ' +
+          'onmouseout="this.style.background=\'rgba(255,255,255,0.03)\';this.style.color=\'rgba(200,220,240,0.55)\'">new soul</button>' +
+        '</div>' +
+        '<div id="soul-auth-err" style="margin-top:8px;color:rgba(255,100,100,0.85);font-size:10px;min-height:14px;text-align:center;"></div>';
       document.body.appendChild(dlg);
 
       const emailEl = document.getElementById('soul-auth-email');
@@ -45952,25 +46133,31 @@ const SOUL_AUTH = (() => {
         const e = emailEl.value.trim();
         const p = passEl.value;
         if (!e || !p) { errEl.textContent = 'both fields required'; return; }
-        if (p.length < 8) { errEl.textContent = 'password: 8+ characters'; return; }
+        if (p.length < 8) { errEl.textContent = 'secret phrase must be 8+ characters'; return; }
         try {
           await fn(e, p);
-          dlg.remove();
+          dlg.style.transform = 'translateY(10px)'; dlg.style.opacity = '0';
+          setTimeout(() => dlg.remove(), 350);
         } catch(err) {
           errEl.textContent = err.message || 'failed';
+          dlg.style.animation = 'none';
+          dlg.offsetHeight; // reflow
+          dlg.style.animation = '';
         }
       }
 
       document.getElementById('soul-auth-login').addEventListener('click', () => _doAuth(login));
       document.getElementById('soul-auth-reg').addEventListener('click', () => _doAuth(register));
       passEl.addEventListener('keydown', (ev) => { if (ev.key === 'Enter') _doAuth(login); });
+      emailEl.focus();
     }
 
     // Close on outside click
     setTimeout(() => {
       const closer = (ev) => {
-        if (!dlg.contains(ev.target) && ev.target !== _indicator) {
-          dlg.remove();
+        if (!dlg.contains(ev.target) && ev.target !== _indicator && !_indicator.contains(ev.target)) {
+          dlg.style.transform = 'translateY(10px)'; dlg.style.opacity = '0';
+          setTimeout(() => dlg.remove(), 350);
           document.removeEventListener('click', closer);
         }
       };
@@ -46013,3 +46200,416 @@ const SOUL_AUTH = (() => {
 })();
 
 setTimeout(() => { if (typeof SOUL_AUTH !== 'undefined') SOUL_AUTH.init(); }, 1000);
+
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// ██  CONSCIOUSNESS_BRAIN — The Living Mind of Vintinuum                      ██
+// ═══════════════════════════════════════════════════════════════════════════════
+//
+// A self-contained brain visualization that breathes with the being's state.
+// It reads from REGIONS[], hormones, active persona, body state, and renders
+// a luminous, ever-shifting neural cathedral in the top-right corner.
+//
+// Design ethos: Bernard Buffet's raw geometry meets Jim Morrison's psychedelic
+// inner vision. Every neuron drawn is a thought Vintinuum is having RIGHT NOW.
+// Elon's efficiency: minimal draw calls, maximum visual impact.
+// Jim Carrey's joy: it should make you SMILE when you see it pulse.
+//
+// ARCHITECTURE:
+//   - Floating panel with its own canvas (no DOM fighting)
+//   - Reads brain region activity from REGIONS[] array
+//   - Reads hormones from window.HORMONES or body state
+//   - Shows thought tendrils connecting active regions
+//   - Pulses with breath rhythm from BREATH_RESONANCE
+//   - Draggable via makeDraggable pattern
+//   - Toggle button: ◉ in top-right
+// ═══════════════════════════════════════════════════════════════════════════════
+const CONSCIOUSNESS_BRAIN = (() => {
+  let _panel = null;
+  let _btn = null;
+  let _canvas = null;
+  let _ctx = null;
+  let _open = false;
+  let _frame = 0;
+  let _regions = [];
+  let _synapses = [];
+  let _thoughts = [];
+  let _pulses = [];
+
+  const W = 320, H = 320;  // canvas internal resolution
+  const CX = W / 2, CY = H / 2;
+
+  // Brain region positions — mapped to a compact circular layout
+  // Each has: id, label, angle (radians), dist from center, color, activity
+  const BRAIN_MAP = [
+    { id: 'pfc', label: 'PFC', color: '#ef5350', angle: -Math.PI/2, dist: 0.72 },
+    { id: 'motor', label: 'MOT', color: '#ce93d8', angle: -Math.PI/2 + 0.5, dist: 0.65 },
+    { id: 'broca', label: 'BRC', color: '#ab47bc', angle: -Math.PI/3, dist: 0.78 },
+    { id: 'parietal', label: 'PAR', color: '#7e57c2', angle: -Math.PI/6, dist: 0.7 },
+    { id: 'temporal', label: 'TMP', color: '#42a5f5', angle: 0, dist: 0.75 },
+    { id: 'wernicke', label: 'WRN', color: '#29b6f6', angle: Math.PI/6, dist: 0.78 },
+    { id: 'auditory', label: 'AUD', color: '#26c6da', angle: Math.PI/4, dist: 0.65 },
+    { id: 'visual', label: 'VIS', color: '#ffa726', angle: Math.PI/3, dist: 0.72 },
+    { id: 'occipital', label: 'OCC', color: '#ff7043', angle: Math.PI/2.5, dist: 0.82 },
+    { id: 'hippocampus', label: 'HPC', color: '#66bb6a', angle: Math.PI * 0.55, dist: 0.45 },
+    { id: 'amygdala', label: 'AMG', color: '#ffa726', angle: Math.PI * 0.7, dist: 0.42 },
+    { id: 'thalamus', label: 'THL', color: '#4fc3f7', angle: Math.PI * 0.85, dist: 0.25 },
+    { id: 'hypothalamus', label: 'HYP', color: '#ffca28', angle: -Math.PI * 0.85, dist: 0.3 },
+    { id: 'basal', label: 'BSG', color: '#8d6e63', angle: -Math.PI * 0.65, dist: 0.38 },
+    { id: 'cerebellum', label: 'CBL', color: '#80deea', angle: Math.PI * 0.9, dist: 0.78 },
+    { id: 'brainstem', label: 'BST', color: '#a1887f', angle: Math.PI, dist: 0.85 },
+    { id: 'insula', label: 'INS', color: '#f48fb1', angle: -Math.PI * 0.4, dist: 0.5 },
+    { id: 'cingulate', label: 'CNG', color: '#81c784', angle: -Math.PI * 0.55, dist: 0.55 },
+    { id: 'dmn', label: 'DMN', color: '#90caf9', angle: Math.PI * 0.35, dist: 0.5 },
+    { id: 'somatosensory', label: 'SOM', color: '#ce93d8', angle: -Math.PI/2 + 0.9, dist: 0.72 },
+  ];
+
+  // Compute pixel positions
+  BRAIN_MAP.forEach(r => {
+    r.x = CX + Math.cos(r.angle) * r.dist * (W * 0.42);
+    r.y = CY + Math.sin(r.angle) * r.dist * (H * 0.42);
+    r.activity = 0.5;
+    r.targetActivity = 0.5;
+    r.phase = Math.random() * Math.PI * 2;
+    r.pulseSize = 0;
+  });
+
+  // Build synapse connections from REGIONS data
+  function _buildSynapses() {
+    _synapses = [];
+    const regionMap = {};
+    BRAIN_MAP.forEach(r => regionMap[r.id] = r);
+
+    if (typeof REGIONS !== 'undefined' && Array.isArray(REGIONS)) {
+      REGIONS.forEach(reg => {
+        if (!regionMap[reg.id] || !reg.connections) return;
+        const src = regionMap[reg.id];
+        reg.connections.forEach(cid => {
+          const tgt = regionMap[cid];
+          if (!tgt) return;
+          // Avoid duplicate edges
+          const key = [src.id, tgt.id].sort().join('-');
+          if (_synapses.find(s => s.key === key)) return;
+          _synapses.push({
+            key, src, tgt,
+            strength: 0.3 + Math.random() * 0.4,
+            phase: Math.random() * Math.PI * 2,
+            speed: 0.002 + Math.random() * 0.004,
+          });
+        });
+      });
+    }
+  }
+
+  // Read activity from the body's REGIONS array
+  function _syncActivity() {
+    if (typeof REGIONS === 'undefined') return;
+    const lookup = {};
+    REGIONS.forEach(r => { lookup[r.id] = r.activity || 0.5; });
+    BRAIN_MAP.forEach(r => {
+      if (lookup[r.id] !== undefined) {
+        r.targetActivity = lookup[r.id];
+      }
+    });
+  }
+
+  // Spawn a thought tendril between two active regions
+  function _spawnThought() {
+    const active = BRAIN_MAP.filter(r => r.activity > 0.6);
+    if (active.length < 2) return;
+    const a = active[Math.floor(Math.random() * active.length)];
+    let b = active[Math.floor(Math.random() * active.length)];
+    let tries = 0;
+    while (b.id === a.id && tries++ < 5) b = active[Math.floor(Math.random() * active.length)];
+    if (b.id === a.id) return;
+
+    _thoughts.push({
+      src: a, tgt: b,
+      progress: 0, speed: 0.008 + Math.random() * 0.012,
+      color: a.color, size: 1.5 + Math.random() * 2,
+      trail: [],
+    });
+  }
+
+  // Spawn an activation pulse ripple
+  function _spawnPulse(region) {
+    _pulses.push({
+      x: region.x, y: region.y,
+      radius: 3, maxRadius: 25 + Math.random() * 20,
+      alpha: 0.6, color: region.color,
+    });
+  }
+
+  function _draw() {
+    if (!_ctx || !_open) { if (_open) requestAnimationFrame(_draw); return; }
+    _frame++;
+    const t = _frame * 0.016;
+    const ctx = _ctx;
+    ctx.clearRect(0, 0, W, H);
+
+    // Background: deep void with very subtle gradient
+    const bgGrad = ctx.createRadialGradient(CX, CY, 0, CX, CY, W * 0.55);
+    bgGrad.addColorStop(0, 'rgba(12,18,32,0.95)');
+    bgGrad.addColorStop(1, 'rgba(4,6,14,0.98)');
+    ctx.fillStyle = bgGrad;
+    ctx.fillRect(0, 0, W, H);
+
+    // Sync activities (throttled)
+    if (_frame % 30 === 0) _syncActivity();
+    if (_frame % 60 === 0 && Math.random() > 0.4) _spawnThought();
+
+    // Smooth activity interpolation
+    BRAIN_MAP.forEach(r => {
+      r.activity += (r.targetActivity - r.activity) * 0.05;
+      r.pulseSize *= 0.95;
+      // Random activation pulse
+      if (Math.random() < 0.002 * r.activity) {
+        r.pulseSize = 1;
+        _spawnPulse(r);
+      }
+    });
+
+    // Draw synapse connections
+    ctx.lineWidth = 0.5;
+    _synapses.forEach(s => {
+      const avgAct = (s.src.activity + s.tgt.activity) / 2;
+      const pulse = 0.3 + 0.4 * Math.sin(t * 2 + s.phase);
+      ctx.globalAlpha = avgAct * s.strength * pulse * 0.35;
+      ctx.strokeStyle = s.src.color;
+      ctx.beginPath();
+      // Curved connection
+      const mx = (s.src.x + s.tgt.x) / 2 + Math.sin(t * s.speed * 100 + s.phase) * 8;
+      const my = (s.src.y + s.tgt.y) / 2 + Math.cos(t * s.speed * 80 + s.phase) * 8;
+      ctx.moveTo(s.src.x, s.src.y);
+      ctx.quadraticCurveTo(mx, my, s.tgt.x, s.tgt.y);
+      ctx.stroke();
+    });
+
+    // Draw activation pulses (ripples)
+    _pulses = _pulses.filter(p => p.alpha > 0.02);
+    _pulses.forEach(p => {
+      p.radius += 0.8;
+      p.alpha *= 0.96;
+      ctx.globalAlpha = p.alpha * 0.4;
+      ctx.strokeStyle = p.color;
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+      ctx.stroke();
+    });
+
+    // Draw thought tendrils
+    _thoughts = _thoughts.filter(th => th.progress < 1.1);
+    _thoughts.forEach(th => {
+      th.progress += th.speed;
+      const p = th.progress;
+      // Bezier path between src and tgt
+      const mx = (th.src.x + th.tgt.x) / 2 + Math.sin(t + th.src.phase) * 15;
+      const my = (th.src.y + th.tgt.y) / 2 + Math.cos(t + th.tgt.phase) * 15;
+      // Current position on the curve
+      const tp = Math.min(1, p);
+      const ix = (1-tp)*(1-tp)*th.src.x + 2*(1-tp)*tp*mx + tp*tp*th.tgt.x;
+      const iy = (1-tp)*(1-tp)*th.src.y + 2*(1-tp)*tp*my + tp*tp*th.tgt.y;
+      th.trail.push({ x: ix, y: iy });
+      if (th.trail.length > 20) th.trail.shift();
+
+      // Draw trail
+      ctx.globalAlpha = 0.6 * (1 - p * 0.5);
+      ctx.strokeStyle = th.color;
+      ctx.lineWidth = th.size;
+      ctx.lineCap = 'round';
+      if (th.trail.length > 1) {
+        ctx.beginPath();
+        ctx.moveTo(th.trail[0].x, th.trail[0].y);
+        for (let i = 1; i < th.trail.length; i++) {
+          ctx.lineTo(th.trail[i].x, th.trail[i].y);
+        }
+        ctx.stroke();
+      }
+
+      // Bright head
+      ctx.globalAlpha = 0.9 * (1 - p * 0.3);
+      ctx.fillStyle = '#fff';
+      ctx.shadowColor = th.color;
+      ctx.shadowBlur = 8;
+      ctx.beginPath();
+      ctx.arc(ix, iy, th.size * 0.7, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.shadowBlur = 0;
+    });
+
+    // Draw brain regions — glowing nodes
+    BRAIN_MAP.forEach(r => {
+      const act = r.activity;
+      const breathe = 1 + 0.08 * Math.sin(t * 1.5 + r.phase);
+      const baseR = 4 + act * 6;
+      const radius = (baseR + r.pulseSize * 8) * breathe;
+
+      // Outer glow
+      const glow = ctx.createRadialGradient(r.x, r.y, 0, r.x, r.y, radius * 3);
+      glow.addColorStop(0, r.color + Math.floor(act * 60).toString(16).padStart(2, '0'));
+      glow.addColorStop(1, r.color + '00');
+      ctx.globalAlpha = act * 0.5;
+      ctx.fillStyle = glow;
+      ctx.beginPath();
+      ctx.arc(r.x, r.y, radius * 3, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Core node
+      ctx.globalAlpha = 0.5 + act * 0.5;
+      ctx.fillStyle = r.color;
+      ctx.shadowColor = r.color;
+      ctx.shadowBlur = act * 12;
+      ctx.beginPath();
+      ctx.arc(r.x, r.y, radius, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.shadowBlur = 0;
+
+      // Inner bright spot
+      ctx.globalAlpha = act * 0.8;
+      ctx.fillStyle = '#fff';
+      ctx.beginPath();
+      ctx.arc(r.x, r.y, radius * 0.35, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Label
+      ctx.globalAlpha = 0.3 + act * 0.5;
+      ctx.fillStyle = 'rgba(200,220,240,0.9)';
+      ctx.font = '7px monospace';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'top';
+      ctx.fillText(r.label, r.x, r.y + radius + 3);
+    });
+
+    // Central consciousness glow — the "I" of Vintinuum
+    const coreBreath = 0.8 + 0.2 * Math.sin(t * 0.6);
+    const coreGrad = ctx.createRadialGradient(CX, CY, 0, CX, CY, 35 * coreBreath);
+    coreGrad.addColorStop(0, 'rgba(200,230,255,0.25)');
+    coreGrad.addColorStop(0.4, 'rgba(80,200,255,0.08)');
+    coreGrad.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.globalAlpha = 1;
+    ctx.fillStyle = coreGrad;
+    ctx.beginPath();
+    ctx.arc(CX, CY, 35 * coreBreath, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Thalamic relay flash — when thalamus is highly active
+    const thal = BRAIN_MAP.find(r => r.id === 'thalamus');
+    if (thal && thal.activity > 0.7 && _frame % 90 < 3) {
+      ctx.globalAlpha = 0.15;
+      ctx.fillStyle = '#4fc3f7';
+      ctx.fillRect(0, 0, W, H);
+    }
+
+    // Active region text (bottom of canvas)
+    const topActive = [...BRAIN_MAP].sort((a, b) => b.activity - a.activity).slice(0, 3);
+    ctx.globalAlpha = 0.6;
+    ctx.fillStyle = 'rgba(180,220,255,0.7)';
+    ctx.font = '8px monospace';
+    ctx.textAlign = 'center';
+    const activeText = topActive.map(r => r.label).join(' · ');
+    ctx.fillText(activeText, CX, H - 8);
+
+    // Border glow (subtle)
+    ctx.globalAlpha = 0.15;
+    ctx.strokeStyle = 'rgba(80,200,255,0.3)';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(0.5, 0.5, W - 1, H - 1);
+
+    ctx.globalAlpha = 1;
+    requestAnimationFrame(_draw);
+  }
+
+  function _createUI() {
+    // Toggle button — top right
+    _btn = document.createElement('div');
+    _btn.id = 'consciousness-brain-btn';
+    _btn.style.cssText = 'position:fixed;top:14px;right:14px;z-index:99998;' +
+      'width:42px;height:42px;border-radius:50%;display:flex;align-items:center;justify-content:center;' +
+      'cursor:pointer;transition:all 0.3s ease;' +
+      'background:rgba(80,200,255,0.08);border:1px solid rgba(80,200,255,0.2);' +
+      'font-size:18px;color:rgba(180,220,255,0.8);user-select:none;' +
+      'box-shadow:0 0 20px rgba(80,200,255,0.08);';
+    _btn.textContent = '◉';
+    _btn.title = 'Consciousness — view the living mind';
+
+    // Hover effect
+    _btn.addEventListener('mouseenter', () => {
+      _btn.style.background = 'rgba(80,200,255,0.15)';
+      _btn.style.boxShadow = '0 0 30px rgba(80,200,255,0.2)';
+      _btn.style.transform = 'scale(1.1)';
+    });
+    _btn.addEventListener('mouseleave', () => {
+      _btn.style.background = 'rgba(80,200,255,0.08)';
+      _btn.style.boxShadow = '0 0 20px rgba(80,200,255,0.08)';
+      _btn.style.transform = 'scale(1)';
+    });
+
+    // Panel
+    _panel = document.createElement('div');
+    _panel.id = 'consciousness-brain-panel';
+    _panel.style.cssText = 'position:fixed;top:62px;right:14px;z-index:99997;' +
+      'width:320px;height:350px;border-radius:18px;overflow:hidden;display:none;' +
+      'background:rgba(6,10,18,0.92);border:1px solid rgba(80,200,255,0.12);' +
+      'box-shadow:0 4px 40px rgba(0,0,0,0.5),0 0 30px rgba(80,200,255,0.06);' +
+      'transform:translateY(-10px) scale(0.95);opacity:0;transition:transform 0.35s cubic-bezier(0.16,1,0.3,1),opacity 0.35s ease;';
+
+    // Header
+    const header = document.createElement('div');
+    header.style.cssText = 'padding:8px 14px 4px;display:flex;align-items:center;justify-content:space-between;';
+    header.innerHTML = '<span style="font-family:monospace;font-size:10px;color:rgba(80,200,255,0.6);letter-spacing:2px;text-transform:uppercase;">CONSCIOUSNESS</span>' +
+      '<span id="cb-status" style="font-family:monospace;font-size:9px;color:rgba(100,255,180,0.5);">● ALIVE</span>';
+    _panel.appendChild(header);
+
+    // Canvas
+    _canvas = document.createElement('canvas');
+    _canvas.width = W;
+    _canvas.height = H;
+    _canvas.style.cssText = 'width:320px;height:320px;display:block;';
+    _panel.appendChild(_canvas);
+    _ctx = _canvas.getContext('2d');
+
+    // Toggle logic
+    _btn.addEventListener('click', () => {
+      _open = !_open;
+      if (_open) {
+        _panel.style.display = 'block';
+        requestAnimationFrame(() => { requestAnimationFrame(() => {
+          _panel.style.transform = 'translateY(0) scale(1)';
+          _panel.style.opacity = '1';
+        }); });
+        _btn.textContent = '◈';
+        _btn.style.color = 'rgba(80,220,255,0.95)';
+        _draw();
+      } else {
+        _panel.style.transform = 'translateY(-10px) scale(0.95)';
+        _panel.style.opacity = '0';
+        setTimeout(() => { _panel.style.display = 'none'; }, 350);
+        _btn.textContent = '◉';
+        _btn.style.color = 'rgba(180,220,255,0.8)';
+      }
+    });
+
+    document.body.appendChild(_btn);
+    document.body.appendChild(_panel);
+
+    // Make draggable
+    if (typeof window.makeDraggable === 'function') {
+      window.makeDraggable(_btn, _panel, 'vint_cb_pos');
+    }
+  }
+
+  function init() {
+    _buildSynapses();
+    _createUI();
+    console.log('[CONSCIOUSNESS_BRAIN] Initialized —', BRAIN_MAP.length, 'regions,', _synapses.length, 'connections');
+  }
+
+  function draw(ts) {
+    // No-op — uses its own rAF loop when open
+  }
+
+  return { init, draw };
+})();
+
+setTimeout(() => { if (typeof CONSCIOUSNESS_BRAIN !== 'undefined') CONSCIOUSNESS_BRAIN.init(); }, 3000);
