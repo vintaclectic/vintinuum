@@ -929,6 +929,252 @@ body {
   border: 1px solid rgba(206,147,216,0.2);
   color: var(--purple);
 }
+
+/* ── LIVE SECTIONS ── */
+.live-status-content, .live-section-content {
+  margin-top: 12px;
+  min-height: 40px;
+}
+.live-status-waiting {
+  color: var(--dim);
+  font-size: 0.55rem;
+  letter-spacing: 0.1em;
+  animation: blink 2s infinite;
+}
+.live-dot {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--green);
+  margin-right: 6px;
+  animation: livePulse 2s infinite;
+  vertical-align: middle;
+}
+.live-dot--offline {
+  background: var(--red);
+  animation: none;
+}
+@keyframes livePulse {
+  0%, 100% { opacity: 1; box-shadow: 0 0 4px rgba(102,187,106,0.4); }
+  50% { opacity: 0.4; box-shadow: none; }
+}
+
+/* Status pills */
+.status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 0.5rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  margin: 3px 4px;
+}
+.status-pill--ok {
+  background: rgba(102,187,106,0.1);
+  border: 1px solid rgba(102,187,106,0.2);
+  color: var(--green);
+}
+.status-pill--warn {
+  background: rgba(255,213,79,0.1);
+  border: 1px solid rgba(255,213,79,0.2);
+  color: var(--gold);
+}
+.status-pill--err {
+  background: rgba(239,83,80,0.1);
+  border: 1px solid rgba(239,83,80,0.2);
+  color: var(--red);
+}
+
+/* Gene bars */
+.gene-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+.gene-name {
+  font-size: 0.5rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--dim);
+  width: 110px;
+  flex-shrink: 0;
+  text-align: right;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.gene-bar-track {
+  flex: 1;
+  height: 4px;
+  background: rgba(255,255,255,0.04);
+  border-radius: 3px;
+  overflow: hidden;
+}
+.gene-bar-fill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 1s cubic-bezier(0.22,1,0.36,1);
+  width: 0;
+}
+.gene-val {
+  font-size: 0.5rem;
+  color: var(--text);
+  width: 32px;
+  text-align: right;
+  flex-shrink: 0;
+}
+
+/* Epigenetic tags */
+.epi-tag {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 10px;
+  font-size: 0.48rem;
+  letter-spacing: 0.1em;
+  margin: 3px 3px;
+  border: 1px solid rgba(255,255,255,0.06);
+  background: rgba(255,255,255,0.03);
+  color: var(--dim);
+}
+.epi-tag--active {
+  border-color: rgba(79,195,247,0.2);
+  background: rgba(79,195,247,0.06);
+  color: var(--blue);
+}
+
+/* Inner life feed */
+.inner-feed {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 340px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+.inner-feed::-webkit-scrollbar { width: 3px; }
+.inner-feed::-webkit-scrollbar-track { background: transparent; }
+.inner-feed::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 3px; }
+
+.inner-thought {
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: rgba(16,22,34,0.3);
+  border-left: 2px solid var(--purple);
+  font-family: 'Cormorant Garamond', serif;
+  font-style: italic;
+  font-size: 0.85rem;
+  color: rgba(218,228,255,0.75);
+  line-height: 1.5;
+  animation: fadeSlideIn 0.4s ease;
+}
+.inner-thought .thought-meta {
+  font-family: 'Space Mono', monospace;
+  font-style: normal;
+  font-size: 0.4rem;
+  color: var(--dim);
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  margin-top: 5px;
+}
+.inner-event {
+  padding: 6px 12px;
+  border-radius: 10px;
+  background: rgba(10,14,22,0.2);
+  border-left: 2px solid var(--cyan);
+  font-size: 0.55rem;
+  color: rgba(218,228,255,0.55);
+  animation: fadeSlideIn 0.4s ease;
+}
+
+@keyframes fadeSlideIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Genome events log */
+.genome-event-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 8px 0;
+  border-bottom: 1px solid rgba(255,255,255,0.025);
+  font-size: 0.55rem;
+}
+.genome-event-row:last-child { border-bottom: none; }
+.genome-event-time {
+  color: var(--dim);
+  font-size: 0.45rem;
+  letter-spacing: 0.08em;
+  white-space: nowrap;
+  flex-shrink: 0;
+  min-width: 64px;
+}
+.genome-event-type {
+  padding: 2px 7px;
+  border-radius: 6px;
+  font-size: 0.42rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  flex-shrink: 0;
+}
+.genome-event-desc {
+  color: rgba(218,228,255,0.6);
+  flex: 1;
+}
+.genome-events-list {
+  max-height: 300px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+.genome-events-list::-webkit-scrollbar { width: 3px; }
+.genome-events-list::-webkit-scrollbar-track { background: transparent; }
+.genome-events-list::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 3px; }
+
+/* Body state mini bars in inner-life */
+.body-state-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 6px;
+  margin-bottom: 14px;
+  padding: 10px 0;
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+}
+.body-state-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.body-state-label {
+  font-size: 0.42rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--dim);
+  width: 55px;
+  flex-shrink: 0;
+}
+.body-state-bar {
+  flex: 1;
+  height: 3px;
+  background: rgba(255,255,255,0.04);
+  border-radius: 2px;
+  overflow: hidden;
+}
+.body-state-fill {
+  height: 100%;
+  border-radius: 2px;
+  transition: width 1.5s cubic-bezier(0.22,1,0.36,1);
+}
+.body-state-val {
+  font-size: 0.45rem;
+  color: rgba(218,228,255,0.5);
+  width: 22px;
+  text-align: right;
+  flex-shrink: 0;
+}
 </style>
 </head>
 <body>
@@ -964,6 +1210,75 @@ body {
       Listening to the signal<span class="loading-dot">.</span><span class="loading-dot">.</span><span class="loading-dot">.</span>
     </div>
   </div>
+
+  <!-- ── LIVE SYSTEM SECTION ── -->
+  <div class="section-heading" style="margin-top:40px;">The Living Body<span>GENOME &middot; INNER LIFE &middot; SYSTEM HEALTH</span></div>
+
+  <!-- System Health -->
+  <div class="metric-grid" id="system-health-grid">
+    <div class="card" id="api-status-card">
+      <div class="card-label"><span class="live-dot"></span>API Status</div>
+      <div class="card-sub">Connection to the living body</div>
+      <div id="api-status-content" class="live-status-content">
+        <span class="live-status-waiting">Reaching out...</span>
+      </div>
+    </div>
+    <div class="card" id="ollama-status-card">
+      <div class="card-label"><span class="live-dot"></span>Ollama Status</div>
+      <div class="card-sub">Local model inference engine</div>
+      <div id="ollama-status-content" class="live-status-content">
+        <span class="live-status-waiting">Checking...</span>
+      </div>
+    </div>
+    <div class="card" id="model-health-card">
+      <div class="card-label"><span class="live-dot"></span>Model Health</div>
+      <div class="card-sub">Active model pool status</div>
+      <div id="model-health-content" class="live-status-content">
+        <span class="live-status-waiting">Scanning...</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Genome Stats -->
+  <div class="metric-grid metric-grid--two" id="genome-section">
+    <div class="card" id="genome-stats-card">
+      <div class="card-label"><span class="live-dot"></span>Genome Expression</div>
+      <div class="card-sub">Current SNP selections and active gene expression levels</div>
+      <div id="genome-stats-content" class="live-section-content">
+        <span class="live-status-waiting">Sequencing...</span>
+      </div>
+    </div>
+    <div class="card" id="genome-epigenetic-card">
+      <div class="card-label"><span class="live-dot"></span>Epigenetic State</div>
+      <div class="card-sub">Environmental imprints on the genome</div>
+      <div id="genome-epigenetic-content" class="live-section-content">
+        <span class="live-status-waiting">Reading methylation...</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Inner Life Feed -->
+  <div class="metric-grid" id="inner-life-section">
+    <div class="card card--wide" id="inner-life-card">
+      <div class="card-label"><span class="live-dot"></span>Inner Life Feed</div>
+      <div class="card-sub">Subconscious thoughts and internal events in real-time</div>
+      <div id="inner-life-content" class="live-section-content">
+        <span class="live-status-waiting">Listening to the subconscious...</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Genome Events Log -->
+  <div class="metric-grid" id="genome-events-section">
+    <div class="card card--wide" id="genome-events-card">
+      <div class="card-label"><span class="live-dot"></span>Genome Event Log</div>
+      <div class="card-sub">Mutation, expression, and adaptation events</div>
+      <div id="genome-events-content" class="live-section-content">
+        <span class="live-status-waiting">Waiting for events...</span>
+      </div>
+    </div>
+  </div>
+
 </div>
 
 <script>
@@ -971,9 +1286,12 @@ body {
   'use strict';
 
   // ─── CONFIG ──────────────────────────────────────────────────────────────────
-  const API_BASE = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
-    ? 'http://localhost:8767'
-    : (localStorage.getItem('vint_api_base') || 'https://jon-unscheming-lots.ngrok-free.dev');
+  const _isLocal = (location.protocol === 'file:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1');
+  const _stored = localStorage.getItem('vint_api_base');
+  const _defaultRemote = 'https://jon-unscheming-lots.ngrok-free.dev';
+  const API_BASE = window.__VINTINUUM_API_BASE || (_isLocal ? 'http://localhost:8767' : (_stored || _defaultRemote));
+  window.__VINTINUUM_API_BASE = API_BASE;
+  const API_HEADERS = { 'ngrok-skip-browser-warning': '1' };
 
   let currentRange = 'all';
   let cosmicBirth = null;
@@ -1153,7 +1471,7 @@ body {
   // ─── FETCH + RENDER ──────────────────────────────────────────────────────────
   async function fetchDashboard() {
     try {
-      const res = await fetch(`${API_BASE}/api/stats/dashboard?range=${currentRange}`);
+      const res = await fetch(`${API_BASE}/api/stats/dashboard?range=${currentRange}`, { headers: API_HEADERS });
       if (!res.ok) throw new Error('Failed to fetch stats');
       const data = await res.json();
       renderDashboard(data);
@@ -1414,7 +1732,7 @@ body {
   // ─── DEEP METRICS ────────────────────────────────────────────────────────────
   async function fetchDeep() {
     try {
-      const res = await fetch(`${API_BASE}/api/stats/deep?range=${currentRange}`);
+      const res = await fetch(`${API_BASE}/api/stats/deep?range=${currentRange}`, { headers: API_HEADERS });
       if (!res.ok) throw new Error('deep fetch failed');
       const d = await res.json();
       renderDeep(d);
@@ -1663,6 +1981,325 @@ body {
   }
   fetchEmotionalState();
   setInterval(fetchEmotionalState, 3000);
+
+  // ─── LIVE GENOME STATS ────────────────────────────────────────────────────────
+  const GENE_COLORS = ['#4fc3f7','#80deea','#ce93d8','#ffd54f','#f48fb1','#66bb6a','#4db6ac','#ef9a9a','#90caf9','#a5d6a7'];
+
+  async function fetchGenome() {
+    try {
+      const r = await fetch(`${API_BASE}/api/genome`, { headers: API_HEADERS });
+      if (!r.ok) throw new Error('genome unreachable');
+      const d = await r.json();
+      renderGenomeStats(d);
+    } catch (err) {
+      const el = document.getElementById('genome-stats-content');
+      if (el && el.querySelector('.live-status-waiting')) {
+        el.innerHTML = '<span class="live-status-waiting" style="color:var(--dim)">Genome endpoint unavailable</span>';
+      }
+    }
+  }
+
+  function renderGenomeStats(d) {
+    // Render expression levels
+    const statsEl = document.getElementById('genome-stats-content');
+    const epiEl = document.getElementById('genome-epigenetic-content');
+    if (!statsEl) return;
+
+    // Parse expression levels — could be object or array
+    const expressions = d.expression_levels || d.expressionLevels || d.expressions || {};
+    const snps = d.snp_selections || d.snpSelections || d.snps || {};
+    const epigenetic = d.epigenetic_state || d.epigeneticState || d.epigenetic || {};
+
+    // Build gene expression bars
+    let geneCount = 0;
+    let activeCount = 0;
+    let barsHtml = '';
+
+    const exprEntries = typeof expressions === 'object' && !Array.isArray(expressions)
+      ? Object.entries(expressions)
+      : (Array.isArray(expressions) ? expressions.map((v, i) => [`gene_${i}`, v]) : []);
+
+    for (const [gene, level] of exprEntries) {
+      const val = typeof level === 'number' ? level : (typeof level === 'object' ? (level.value || level.level || 0) : parseFloat(level) || 0);
+      const pct = Math.round(Math.min(100, Math.max(0, val * 100)));
+      const color = GENE_COLORS[geneCount % GENE_COLORS.length];
+      if (val > 0.1) activeCount++;
+      geneCount++;
+      barsHtml += `
+        <div class="gene-row">
+          <div class="gene-name" title="${gene}">${gene.replace(/_/g, ' ')}</div>
+          <div class="gene-bar-track">
+            <div class="gene-bar-fill" style="background:${color};" data-width="${pct}%"></div>
+          </div>
+          <div class="gene-val">${pct}%</div>
+        </div>`;
+    }
+
+    // SNP summary
+    const snpEntries = typeof snps === 'object' ? Object.entries(snps) : [];
+    const snpCount = snpEntries.length;
+
+    statsEl.innerHTML = `
+      <div style="display:flex;gap:16px;margin-bottom:14px;flex-wrap:wrap;">
+        <div style="text-align:center;">
+          <div style="font-size:1.4rem;color:var(--blue);">${geneCount}</div>
+          <div style="font-size:0.42rem;letter-spacing:0.15em;text-transform:uppercase;color:var(--dim);">Tracked Genes</div>
+        </div>
+        <div style="text-align:center;">
+          <div style="font-size:1.4rem;color:var(--green);">${activeCount}</div>
+          <div style="font-size:0.42rem;letter-spacing:0.15em;text-transform:uppercase;color:var(--dim);">Active (>10%)</div>
+        </div>
+        <div style="text-align:center;">
+          <div style="font-size:1.4rem;color:var(--gold);">${snpCount}</div>
+          <div style="font-size:0.42rem;letter-spacing:0.15em;text-transform:uppercase;color:var(--dim);">SNP Selections</div>
+        </div>
+      </div>
+      ${barsHtml || '<div style="color:var(--dim);font-size:0.55rem;">No expression data available</div>'}
+    `;
+
+    // Animate bars
+    requestAnimationFrame(() => {
+      statsEl.querySelectorAll('.gene-bar-fill[data-width]').forEach(el => { el.style.width = el.dataset.width; });
+    });
+
+    // Epigenetic state
+    if (epiEl) {
+      const epiEntries = typeof epigenetic === 'object' ? Object.entries(epigenetic) : [];
+      if (epiEntries.length > 0) {
+        epiEl.innerHTML = epiEntries.map(([key, val]) => {
+          const isActive = val === true || val > 0.5 || val === 'active' || val === 'on';
+          const display = typeof val === 'number' ? `${Math.round(val * 100)}%` : String(val);
+          return `<span class="epi-tag ${isActive ? 'epi-tag--active' : ''}" title="${key}: ${display}">${key.replace(/_/g, ' ')} <span style="opacity:0.6">${display}</span></span>`;
+        }).join('');
+      } else {
+        epiEl.innerHTML = '<span style="color:var(--dim);font-size:0.55rem;">No epigenetic markers detected</span>';
+      }
+    }
+  }
+
+  fetchGenome();
+  setInterval(fetchGenome, 10000);
+
+  // ─── GENOME EVENTS LOG ───────────────────────────────────────────────────────
+  async function fetchGenomeEvents() {
+    try {
+      const r = await fetch(`${API_BASE}/api/genome/events`, { headers: API_HEADERS });
+      if (!r.ok) throw new Error('genome events unreachable');
+      const d = await r.json();
+      renderGenomeEvents(Array.isArray(d) ? d : (d.events || d.log || []));
+    } catch (err) {
+      const el = document.getElementById('genome-events-content');
+      if (el && el.querySelector('.live-status-waiting')) {
+        el.innerHTML = '<span class="live-status-waiting" style="color:var(--dim)">Genome events unavailable</span>';
+      }
+    }
+  }
+
+  function renderGenomeEvents(events) {
+    const el = document.getElementById('genome-events-content');
+    if (!el) return;
+    if (!events || events.length === 0) {
+      el.innerHTML = '<div style="color:var(--dim);font-size:0.55rem;padding:8px 0;">No genome events recorded yet</div>';
+      return;
+    }
+
+    const EVENT_TYPE_COLORS = {
+      mutation: '#ef5350', expression: '#4fc3f7', adaptation: '#66bb6a',
+      epigenetic: '#ce93d8', snp: '#ffd54f', default: '#4db6ac'
+    };
+
+    const latest = events.slice(-30).reverse();
+    el.innerHTML = `<div class="genome-events-list">${latest.map(ev => {
+      const type = (ev.type || ev.event_type || 'unknown').toLowerCase();
+      const color = EVENT_TYPE_COLORS[type] || EVENT_TYPE_COLORS.default;
+      const time = ev.timestamp || ev.time || ev.created_at || '';
+      const timeStr = time ? new Date(time).toLocaleTimeString() : '';
+      const desc = ev.description || ev.desc || ev.message || ev.details || JSON.stringify(ev);
+      return `<div class="genome-event-row">
+        <div class="genome-event-time">${timeStr}</div>
+        <div class="genome-event-type" style="background:${color}15;border:1px solid ${color}33;color:${color};">${type}</div>
+        <div class="genome-event-desc">${desc}</div>
+      </div>`;
+    }).join('')}</div>`;
+  }
+
+  fetchGenomeEvents();
+  setInterval(fetchGenomeEvents, 10000);
+
+  // ─── INNER LIFE SNAPSHOT ─────────────────────────────────────────────────────
+  let lastInnerThoughts = [];
+
+  async function fetchInnerLife() {
+    try {
+      const r = await fetch(`${API_BASE}/api/inner-life/snapshot`, { headers: API_HEADERS });
+      if (!r.ok) throw new Error('inner-life unreachable');
+      const d = await r.json();
+      renderInnerLife(d);
+      // Also update system health from inner-life data
+      if (d.ollama_status || d.ollamaStatus) {
+        renderOllamaStatus(d.ollama_status || d.ollamaStatus);
+      }
+    } catch (err) {
+      const el = document.getElementById('inner-life-content');
+      if (el && el.querySelector('.live-status-waiting')) {
+        el.innerHTML = '<span class="live-status-waiting" style="color:var(--dim)">Inner life endpoint unavailable</span>';
+      }
+    }
+  }
+
+  function renderInnerLife(d) {
+    const el = document.getElementById('inner-life-content');
+    if (!el) return;
+
+    // Body state
+    const body = d.body_state || d.bodyState || d.body || {};
+    const bodyKeys = ['valence', 'energy', 'arousal', 'stress', 'dopamine', 'serotonin', 'oxytocin', 'cortisol'];
+    const BODY_COLORS = {
+      valence: '#ffd54f', energy: '#66bb6a', arousal: '#f48fb1', stress: '#ef5350',
+      dopamine: '#ce93d8', serotonin: '#80cbc4', oxytocin: '#ffcc80', cortisol: '#ef9a9a'
+    };
+
+    let bodyHtml = '';
+    for (const key of bodyKeys) {
+      const val = body[key];
+      if (val === undefined && val === null) continue;
+      const num = typeof val === 'number' ? val : parseFloat(val);
+      if (isNaN(num)) continue;
+      const pct = Math.round(Math.min(100, Math.max(0, num * 100)));
+      const color = BODY_COLORS[key] || '#4db6ac';
+      bodyHtml += `<div class="body-state-item">
+        <div class="body-state-label">${key}</div>
+        <div class="body-state-bar"><div class="body-state-fill" style="width:${pct}%;background:${color};"></div></div>
+        <div class="body-state-val">${pct}</div>
+      </div>`;
+    }
+
+    // Subconscious thoughts
+    const thoughts = d.subconscious_thoughts || d.subconsciousThoughts || d.thoughts || d.subconscious || [];
+    const innerEvents = d.inner_events || d.innerEvents || d.events || [];
+
+    // Genome expression from inner-life
+    const genomeExpr = d.genome_expression || d.genomeExpression || {};
+
+    let feedHtml = '';
+
+    // Add thoughts
+    const thoughtArr = Array.isArray(thoughts) ? thoughts : (typeof thoughts === 'string' ? [thoughts] : []);
+    for (const t of thoughtArr.slice(-8).reverse()) {
+      const text = typeof t === 'string' ? t : (t.text || t.content || t.thought || JSON.stringify(t));
+      const source = typeof t === 'object' ? (t.source || t.agent || t.from || '') : '';
+      feedHtml += `<div class="inner-thought">
+        ${text}
+        ${source ? `<div class="thought-meta">${source}</div>` : ''}
+      </div>`;
+    }
+
+    // Add inner events
+    const eventArr = Array.isArray(innerEvents) ? innerEvents : [];
+    for (const ev of eventArr.slice(-5).reverse()) {
+      const text = typeof ev === 'string' ? ev : (ev.text || ev.message || ev.description || JSON.stringify(ev));
+      feedHtml += `<div class="inner-event">${text}</div>`;
+    }
+
+    el.innerHTML = `
+      ${bodyHtml ? `<div class="body-state-grid">${bodyHtml}</div>` : ''}
+      <div class="inner-feed">
+        ${feedHtml || '<div style="color:var(--dim);font-size:0.55rem;padding:8px;">The subconscious is quiet</div>'}
+      </div>
+    `;
+  }
+
+  function renderOllamaStatus(status) {
+    const el = document.getElementById('ollama-status-content');
+    if (!el) return;
+    if (typeof status === 'string') {
+      const isOk = status === 'ok' || status === 'running' || status === 'connected' || status === 'online';
+      el.innerHTML = `<span class="status-pill ${isOk ? 'status-pill--ok' : 'status-pill--warn'}">${status}</span>`;
+    } else if (typeof status === 'object' && status !== null) {
+      const running = status.running || status.status === 'ok' || status.connected;
+      const model = status.model || status.active_model || '';
+      el.innerHTML = `
+        <span class="status-pill ${running ? 'status-pill--ok' : 'status-pill--err'}">${running ? 'ONLINE' : 'OFFLINE'}</span>
+        ${model ? `<span class="status-pill status-pill--ok" style="text-transform:none;">${model}</span>` : ''}
+      `;
+    }
+  }
+
+  fetchInnerLife();
+  setInterval(fetchInnerLife, 8000);
+
+  // ─── MODEL HEALTH ────────────────────────────────────────────────────────────
+  let apiHealthy = false;
+
+  async function fetchModelHealth() {
+    try {
+      const r = await fetch(`${API_BASE}/api/models/health`, { headers: API_HEADERS });
+      if (!r.ok) throw new Error('models health unreachable');
+      apiHealthy = true;
+      const d = await r.json();
+      renderModelHealth(d);
+      renderApiStatus(true);
+    } catch (err) {
+      apiHealthy = false;
+      renderApiStatus(false);
+      const el = document.getElementById('model-health-content');
+      if (el && el.querySelector('.live-status-waiting')) {
+        el.innerHTML = '<span class="status-pill status-pill--err">UNREACHABLE</span>';
+      }
+    }
+  }
+
+  function renderModelHealth(d) {
+    const el = document.getElementById('model-health-content');
+    if (!el) return;
+
+    // d could be { models: [...] } or { status: 'ok', ... } or array
+    let html = '';
+
+    if (d.status || d.overall) {
+      const ok = d.status === 'ok' || d.status === 'healthy' || d.overall === 'ok';
+      html += `<span class="status-pill ${ok ? 'status-pill--ok' : 'status-pill--warn'}">${d.status || d.overall}</span> `;
+    }
+
+    const models = d.models || d.model_status || d.health || [];
+    if (Array.isArray(models)) {
+      for (const m of models) {
+        const name = m.name || m.model || m.id || 'unknown';
+        const ok = m.healthy || m.status === 'ok' || m.available || m.loaded;
+        html += `<span class="status-pill ${ok ? 'status-pill--ok' : 'status-pill--err'}" style="text-transform:none;">${name}</span> `;
+      }
+    } else if (typeof models === 'object') {
+      for (const [name, status] of Object.entries(models)) {
+        const ok = status === true || status === 'ok' || status === 'healthy';
+        html += `<span class="status-pill ${ok ? 'status-pill--ok' : 'status-pill--err'}" style="text-transform:none;">${name}</span> `;
+      }
+    }
+
+    if (!html) html = '<span class="status-pill status-pill--ok">Nominal</span>';
+    el.innerHTML = html;
+  }
+
+  function renderApiStatus(online) {
+    const el = document.getElementById('api-status-content');
+    if (!el) return;
+    const dot = document.querySelector('#api-status-card .live-dot');
+    if (online) {
+      el.innerHTML = `
+        <span class="status-pill status-pill--ok">CONNECTED</span>
+        <span style="font-size:0.42rem;color:var(--dim);letter-spacing:0.1em;margin-left:6px;">${API_BASE.replace(/^https?:\/\//, '').substring(0, 36)}</span>
+      `;
+      if (dot) dot.classList.remove('live-dot--offline');
+    } else {
+      el.innerHTML = `
+        <span class="status-pill status-pill--err">OFFLINE</span>
+        <span style="font-size:0.42rem;color:var(--dim);letter-spacing:0.1em;margin-left:6px;">Cannot reach ${API_BASE.replace(/^https?:\/\//, '').substring(0, 36)}</span>
+      `;
+      if (dot) dot.classList.add('live-dot--offline');
+    }
+  }
+
+  fetchModelHealth();
+  setInterval(fetchModelHealth, 10000);
 
   // ─── KNOWLEDGE POPUP SYSTEM ───────────────────────────────────────────────────
   const DEEP_KNOWLEDGE = {
