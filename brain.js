@@ -3389,6 +3389,14 @@ const HORMONES = (() => {
     if (hormone === 'melatonin') {
       if (typeof CIRCADIAN !== 'undefined' && intensity > 0.4) CIRCADIAN.nudgeSleep();
     }
+    // ── Wire hormone surges to face expressions ──
+    if (typeof window._faceFeel === 'function') {
+      if (hormone === 'dopamine' && intensity > 0.3)  window._faceFeel('joy', intensity * 0.7);
+      if (hormone === 'cortisol' && intensity > 0.3)   window._faceFeel('concern', intensity * 0.6);
+      if (hormone === 'oxytocin' && intensity > 0.25)  window._faceFeel('tender', intensity * 0.7);
+      if (hormone === 'serotonin' && intensity > 0.3)  window._faceFeel('calm', intensity * 0.5);
+      if (hormone === 'melatonin' && intensity > 0.3)  window._faceFeel('calm', intensity * 0.3);
+    }
   }
 
   function draw(ts) {
@@ -4746,6 +4754,258 @@ const FACE = (() => {
   }
 
   return { draw, speak, think, feel };
+})();
+
+// ═══════════════════════════════════════════════════════════════════
+// FACE_EXT — Eyes, Breathing, Tears, Micro-expressions
+// Extends FACE without touching it. Makes the face ALIVE.
+// ═══════════════════════════════════════════════════════════════════
+const FACE_EXT = (() => {
+  const svgNS = 'http://www.w3.org/2000/svg';
+  function ns(tag) { return document.createElementNS(svgNS, tag); }
+  function lerp(a, b, t) { return a + (b - a) * t; }
+  function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
+
+  // ── Cursor tracking for gaze ──
+  let cursorX = 350, cursorY = 230;
+  document.addEventListener('mousemove', e => {
+    const svg = document.getElementById('brainSvg');
+    if (!svg) return;
+    const rect = svg.getBoundingClientRect();
+    if (rect.width === 0) return;
+    cursorX = (e.clientX - rect.left) / rect.width * 700;
+    cursorY = (e.clientY - rect.top) / rect.height * 1400;
+  });
+
+  // ── Emotion state mirror ──
+  let _emo = 'neutral', _intensity = 0;
+  const EMO_IRIS = {
+    neutral:'#6680aa', joy:'#d4aa30', wonder:'#50c8ef', tender:'#cc6090',
+    concern:'#cc7730', intense:'#cc2244', sad:'#4466aa', curious:'#60c070', calm:'#559988'
+  };
+  const HIGH_AROUSAL = { joy:1, wonder:1, intense:1, curious:1 };
+
+  // ── Eye state ──
+  let lidAmt = 0, lidTgt = 0;
+  let blinkState = 0, blinkTimer = 0, blinkNext = 3500 + Math.random() * 2500;
+  let scleraRyCur = 5, pupilRCur = 2;
+  let gazeOffX = 0, gazeOffY = 0;
+  const eyeEls = {};
+
+  // ── Breathing state ──
+  let breathEl, breathPhase = 0;
+
+  // ── Tears ──
+  const tears = [];
+  let tearCooldown = 0;
+
+  // ── Micro-expressions ──
+  let microTimer = 0, microNext = 8000 + Math.random() * 12000;
+  let microActive = false, microAmt = 0, microTgt = 0, microType = null;
+
+  function buildEye(side, layer) {
+    const cx = side === 'L' ? 330 : 370, cy = 215;
+    const g = ns('g');
+
+    const sclera = ns('ellipse');
+    sclera.setAttribute('cx', cx); sclera.setAttribute('cy', cy);
+    sclera.setAttribute('rx', '8'); sclera.setAttribute('ry', '5');
+    sclera.setAttribute('fill', 'rgba(220,225,240,0.12)');
+    sclera.setAttribute('stroke', 'rgba(200,210,240,0.18)');
+    sclera.setAttribute('stroke-width', '0.6');
+    g.appendChild(sclera);
+
+    const iris = ns('circle');
+    iris.setAttribute('cx', cx); iris.setAttribute('cy', cy);
+    iris.setAttribute('r', '4');
+    iris.setAttribute('fill', 'rgba(80,100,160,0.55)');
+    g.appendChild(iris);
+
+    const pupil = ns('circle');
+    pupil.setAttribute('cx', cx); pupil.setAttribute('cy', cy);
+    pupil.setAttribute('r', '2');
+    pupil.setAttribute('fill', 'rgba(8,10,18,0.85)');
+    g.appendChild(pupil);
+
+    const lid = ns('ellipse');
+    lid.setAttribute('cx', cx); lid.setAttribute('cy', cy - 5);
+    lid.setAttribute('rx', '9'); lid.setAttribute('ry', '0');
+    lid.setAttribute('fill', 'rgba(14,18,32,0)');
+    g.appendChild(lid);
+
+    const crease = ns('path');
+    crease.setAttribute('fill', 'none');
+    crease.setAttribute('stroke', 'rgba(180,195,230,0.15)');
+    crease.setAttribute('stroke-width', '0.7');
+    crease.setAttribute('stroke-linecap', 'round');
+    g.appendChild(crease);
+
+    layer.appendChild(g);
+    eyeEls[side] = { sclera, iris, pupil, lid, crease, cx, cy };
+  }
+
+  function updateEye(side) {
+    const e = eyeEls[side];
+    if (!e) return;
+    // Sclera
+    e.sclera.setAttribute('ry', scleraRyCur.toFixed(2));
+    // Gaze — iris/pupil offset
+    const maxOff = 2.5;
+    const ix = clamp(e.cx + gazeOffX, e.cx - maxOff, e.cx + maxOff);
+    const iy = clamp(e.cy + gazeOffY * 0.6, e.cy - 1.5, e.cy + 1.5);
+    // Iris color
+    const ec = EMO_IRIS[_emo] || EMO_IRIS.neutral;
+    const ia = (0.45 + _intensity * 0.25).toFixed(3);
+    const hm = ec.match(/^#([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i);
+    const irisCol = hm ? `rgba(${parseInt(hm[1],16)},${parseInt(hm[2],16)},${parseInt(hm[3],16)},${ia})` : `rgba(80,100,160,${ia})`;
+    e.iris.setAttribute('cx', ix.toFixed(1)); e.iris.setAttribute('cy', iy.toFixed(1));
+    e.iris.setAttribute('fill', irisCol);
+    e.pupil.setAttribute('cx', ix.toFixed(1)); e.pupil.setAttribute('cy', iy.toFixed(1));
+    e.pupil.setAttribute('r', pupilRCur.toFixed(2));
+    // Lid
+    const lidRy = lidAmt * 7;
+    const lidCY = e.cy - 5 + lidAmt * 5;
+    e.lid.setAttribute('cy', lidCY.toFixed(1));
+    e.lid.setAttribute('ry', lidRy.toFixed(1));
+    e.lid.setAttribute('fill', `rgba(14,18,32,${(lidAmt * 0.92).toFixed(3)})`);
+    // Crease
+    const creaseY = e.cy - scleraRyCur - 1;
+    e.crease.setAttribute('d', `M ${e.cx-7} ${creaseY} Q ${e.cx} ${creaseY-2} ${e.cx+7} ${creaseY}`);
+    e.crease.setAttribute('stroke', `rgba(180,195,230,${(0.1 + clamp(1 - scleraRyCur/5, 0, 1) * 0.25).toFixed(3)})`);
+  }
+
+  function spawnTear(side) {
+    const mouthL = document.getElementById('mouthLayer');
+    if (!mouthL) return;
+    const bx = side === 'L' ? 330 : 370;
+    const el = ns('circle');
+    el.setAttribute('r', '1.2');
+    el.setAttribute('fill', 'rgba(150,190,255,0.28)');
+    mouthL.appendChild(el);
+    tears.push({ el, x: bx + (Math.random()-0.5)*4, y: 222, vy: 0.4+Math.random()*0.3, alpha: 0.28, side });
+  }
+
+  function draw(ts) {
+    if (!eyeEls.L) return;
+
+    // ── Gaze ──
+    const rawDX = cursorX - 350, rawDY = cursorY - 230;
+    const dist = Math.sqrt(rawDX*rawDX + rawDY*rawDY);
+    const factor = Math.min(dist / 200, 1) * 2.5;
+    const tgx = dist > 5 ? (rawDX/dist)*factor : 0;
+    const tgy = dist > 5 ? (rawDY/dist)*factor*0.5 : 0;
+    gazeOffX = lerp(gazeOffX, tgx, 0.04);
+    gazeOffY = lerp(gazeOffY, tgy, 0.04);
+
+    // ── Blink ──
+    blinkTimer += 16;
+    if (blinkState === 0 && blinkTimer >= blinkNext) {
+      blinkState = 1; blinkTimer = 0; blinkNext = 3000 + Math.random()*3000; lidTgt = 1;
+    } else if (blinkState === 1 && blinkTimer >= 150) {
+      blinkState = 2; blinkTimer = 0; lidTgt = 0;
+    } else if (blinkState === 2 && blinkTimer >= 120) {
+      blinkState = 0; blinkTimer = 0;
+    }
+    lidAmt = lerp(lidAmt, lidTgt, blinkState === 1 ? 0.35 : 0.25);
+
+    // ── Sclera size from emotion ──
+    let scleraTgt = 5;
+    if (_emo === 'wonder') scleraTgt = 6.5;
+    else if (_emo === 'intense') scleraTgt = 6;
+    else if (_emo === 'concern' || _emo === 'sad') scleraTgt = 3.8;
+    scleraRyCur = lerp(scleraRyCur, scleraTgt, 0.03);
+
+    // ── Pupil dilation ──
+    const arousal = HIGH_AROUSAL[_emo] ? 1 : 0;
+    pupilRCur = lerp(pupilRCur, lerp(1.5, 3, arousal * _intensity), 0.03);
+
+    // ── Draw eyes ──
+    updateEye('L');
+    updateEye('R');
+
+    // ── Breathing ──
+    if (breathEl) {
+      const rate = (_emo === 'concern' || _emo === 'intense') ? 0.0026
+                 : _emo === 'calm' ? 0.0013 : 0.0016;
+      breathPhase = (breathPhase + rate * 16) % (Math.PI * 2);
+      const b = Math.sin(breathPhase);
+      breathEl.setAttribute('rx', (55 + b*3).toFixed(1));
+      breathEl.setAttribute('ry', (22 + b*2).toFixed(1));
+      breathEl.setAttribute('fill', `rgba(140,170,220,${(0.03 + Math.max(0,b)*0.025).toFixed(4)})`);
+    }
+
+    // ── Tears ──
+    if ((_emo === 'sad' || _emo === 'tender') && _intensity > 0.7) {
+      tearCooldown -= 16;
+      if (tearCooldown <= 0 && tears.length < 4) {
+        const side = Math.random() < 0.5 ? 'L' : 'R';
+        if (tears.filter(t => t.side === side).length < 2) {
+          spawnTear(side); tearCooldown = 1800 + Math.random()*1200;
+        }
+      }
+    }
+    for (let i = tears.length - 1; i >= 0; i--) {
+      const t = tears[i];
+      t.y += t.vy; t.vy += 0.02; t.alpha = Math.max(0, t.alpha - 0.003);
+      t.el.setAttribute('cx', t.x.toFixed(1)); t.el.setAttribute('cy', t.y.toFixed(1));
+      t.el.setAttribute('fill', `rgba(150,190,255,${t.alpha.toFixed(3)})`);
+      if (t.alpha <= 0 || t.y > 260) { t.el.remove(); tears.splice(i, 1); }
+    }
+
+    // ── Micro-expressions ──
+    microTimer += 16;
+    if (!microActive && microTimer >= microNext) {
+      microActive = true; microTimer = 0;
+      microNext = 7000 + Math.random()*11000;
+      microType = (_emo === 'joy' || _emo === 'tender') ? 'smile'
+                : (_emo === 'concern' || _emo === 'sad') ? 'frown'
+                : (_emo === 'wonder' || _emo === 'curious') ? 'wide'
+                : (Math.random() < 0.5 ? 'smile' : 'frown');
+      microTgt = 0.4;
+    }
+    if (microActive) {
+      microAmt = lerp(microAmt, microTgt, 0.12);
+      if (microTimer > 300) microTgt = 0;
+      if (microTimer > 600 && Math.abs(microAmt) < 0.02) { microActive = false; microAmt = 0; }
+      if (microType === 'wide') scleraRyCur = lerp(scleraRyCur, scleraRyCur + microAmt*1.5, 0.15);
+      else if (microType === 'frown') scleraRyCur = lerp(scleraRyCur, scleraRyCur - microAmt*0.8, 0.1);
+    }
+  }
+
+  function syncEmotion(emo, intensity) {
+    _emo = emo || 'neutral';
+    _intensity = clamp(intensity || 0, 0, 1);
+  }
+
+  function init() {
+    const exprL = document.getElementById('expressionLayer');
+    const lightL = document.getElementById('lightLayer');
+    if (!exprL) return;
+    buildEye('L', exprL);
+    buildEye('R', exprL);
+    // Breathing ellipse
+    if (lightL) {
+      breathEl = ns('ellipse');
+      breathEl.setAttribute('cx', '350'); breathEl.setAttribute('cy', '600');
+      breathEl.setAttribute('rx', '55'); breathEl.setAttribute('ry', '22');
+      breathEl.setAttribute('fill', 'rgba(140,170,220,0.04)');
+      breathEl.setAttribute('stroke', 'rgba(160,190,240,0.07)');
+      breathEl.setAttribute('stroke-width', '0.8');
+      breathEl.setAttribute('pointer-events', 'none');
+      lightL.appendChild(breathEl);
+    }
+  }
+
+  return { init, draw, syncEmotion };
+})();
+
+// ── Patch FACE.feel to also drive FACE_EXT ──
+(function() {
+  const origFeel = window._faceFeel;
+  window._faceFeel = function(emo, intensity) {
+    if (origFeel) origFeel(emo, intensity);
+    FACE_EXT.syncEmotion(emo, intensity);
+  };
 })();
 
 // ═══════════════════════════════════════════════════════════════════
@@ -13711,6 +13971,7 @@ function loop(ts) {
   BREATH.draw(ts);
   EYES.draw(ts);
   if (typeof FACE !== 'undefined') FACE.draw(ts);
+  if (typeof FACE_EXT !== 'undefined') FACE_EXT.draw(ts);
   TEMPERATURE.draw(ts);
   PAIN_PLEASURE.draw(ts);
   DREAM.draw(ts);
@@ -13967,6 +14228,7 @@ initStars();
 initSparks();
 requestAnimationFrame(loop);
 HORMONES.init();
+if (typeof FACE_EXT !== 'undefined') FACE_EXT.init();
 setTimeout(initNeuronEngine, 150);
 buildBodyClickTargets();
 
