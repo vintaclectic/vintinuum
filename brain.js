@@ -231,38 +231,7 @@ window.toggleVintinuumPanel = function() {
       });
     }
 
-    // Update reproductive panel display
-    setInterval(function() {
-      if (typeof REPRODUCTIVE === 'undefined') return;
-      var s = REPRODUCTIVE.state;
-      var h = REPRODUCTIVE.getHormones();
-      var mEl = document.getElementById('rpArousalM');
-      var mVEl = document.getElementById('rpArousalMVal');
-      var fEl = document.getElementById('rpArousalF');
-      var fVEl = document.getElementById('rpArousalFVal');
-      if (mEl) mEl.value = s.arousalMale;
-      if (mVEl) mVEl.textContent = Math.round(s.arousalMale) + '%';
-      if (fEl) fEl.value = s.arousalFemale;
-      if (fVEl) fVEl.textContent = Math.round(s.arousalFemale) + '%';
-      var hormoneEl = document.getElementById('rpHormoneDisplay');
-      if (hormoneEl) {
-        var colors = { testosterone:'#4fc3f7', estrogen:'#f48fb1', oxytocin:'#ce93d8', dopamine:'#ffd54f', lh:'#66bb6a', fsh:'#80deea' };
-        hormoneEl.innerHTML = ['testosterone','estrogen','oxytocin','dopamine','lh','fsh'].map(function(k) {
-          return '<div class="rp-hormone">' +
-            '<span style="width:60px;font-size:.48rem;color:' + colors[k] + '">' + k.charAt(0).toUpperCase() + k.slice(1) + '</span>' +
-            '<div class="rp-hbar"><div class="rp-hfill" style="width:' + h[k] + '%;background:' + colors[k] + '"></div></div>' +
-            '<span style="font-size:.46rem;color:rgba(255,255,255,.4);width:24px">' + Math.round(h[k]) + '</span>' +
-            '</div>';
-        }).join('');
-      }
-      var statusEl = document.getElementById('rpStatus');
-      if (statusEl && REPRODUCTIVE.isFertilized) {
-        var fertilized = REPRODUCTIVE.isFertilized();
-        var embryoAge = REPRODUCTIVE.getEmbryoAge ? REPRODUCTIVE.getEmbryoAge() : 0;
-        statusEl.innerHTML = 'State: <span style="color:#ce93d8">' + s.matingState + '</span> · Cycle: <span style="color:#f48fb1">Day ' + s.cycleDay + '</span> · ' +
-          (fertilized ? '<span style="color:#ffd54f">Embryo: ' + embryoAge.toFixed(1) + ' days</span>' : 'Not Fertilized');
-      }
-    }, 200);
+    // Reproductive panel update moved to INLINE HANDLER REPLACEMENTS section (comprehensive update loop)
   }
 
   if (document.readyState === 'loading') {
@@ -7634,12 +7603,17 @@ function updateEmotions() {
 const thoughtFeed=document.getElementById('thoughtFeed');
 let thoughtIdx=0;
 function addThought(text,color) {
+  // Legacy thought feed (hidden) — kept for backward compat
   const e=document.createElement('div');
   e.className='thought-entry'; e.style.borderColor=color;
   const ts=new Date().toLocaleTimeString('en-US',{hour12:false,hour:'2-digit',minute:'2-digit',second:'2-digit'});
   e.innerHTML=`<span class="ts">${ts}</span>${text}`;
   thoughtFeed.insertBefore(e,thoughtFeed.firstChild);
   while (thoughtFeed.children.length>16) thoughtFeed.removeChild(thoughtFeed.lastChild);
+  // Route into INNER_LIFE neural layer
+  if (typeof INNER_LIFE !== 'undefined') {
+    INNER_LIFE.emit('neural', text, { source: 'autoThought', intensity: 0.4 });
+  }
 }
 function autoThought() {
   const th=AUTO_THOUGHTS[thoughtIdx++%AUTO_THOUGHTS.length];
@@ -7665,7 +7639,28 @@ function fireBackground() {
 const VBW=700,VBH=1400;
 let vbX=0,vbY=0,vbW=VBW,vbH=VBH;
 const ZMIN=.3,ZMAX=6;
-function applyVB() { svgEl.setAttribute('viewBox',`${vbX} ${vbY} ${vbW} ${vbH}`); }
+
+// All canvases that must stay synced with SVG viewBox pan/zoom
+const _syncCanvases = ['neuronCanvas','brainDorsalCanvas','skinCanvas','mainCanvas']
+  .map(id => document.getElementById(id)).filter(Boolean);
+
+function applyVB() {
+  svgEl.setAttribute('viewBox',`${vbX} ${vbY} ${vbW} ${vbH}`);
+  // Sync sibling canvases to match SVG viewBox transform
+  // SVG viewBox maps (vbX,vbY,vbW,vbH) → the element's bounding box.
+  // We need the CSS equivalent: scale by (VBW/vbW) then translate by (-vbX, -vbY) in SVG units.
+  const scaleX = VBW / vbW;
+  const scaleY = VBH / vbH;
+  // Canvas is 700×1400 mapping to full SVG space (0,0 → 700,1400).
+  // After zoom, viewBox origin shifts to (vbX, vbY). Translate in % of canvas:
+  const tx = -vbX / VBW * 100; // as % of canvas width
+  const ty = -vbY / VBH * 100; // as % of canvas height
+  const css = `scale(${scaleX.toFixed(4)}, ${scaleY.toFixed(4)}) translate(${tx.toFixed(2)}%, ${ty.toFixed(2)}%)`;
+  for (let i = 0; i < _syncCanvases.length; i++) {
+    _syncCanvases[i].style.transformOrigin = '0 0';
+    _syncCanvases[i].style.transform = css;
+  }
+}
 
 svgEl.addEventListener('wheel',e=>{
   e.preventDefault();
@@ -7726,6 +7721,11 @@ window.addEventListener('mouseup',e=>{
 });
 svgEl.addEventListener('dblclick',e=>{
   vbX=0;vbY=0;vbW=VBW;vbH=VBH;applyVB();
+  // Reset canvas transforms on double-click reset
+  for (let i = 0; i < _syncCanvases.length; i++) {
+    _syncCanvases[i].style.transform = '';
+    _syncCanvases[i].style.transformOrigin = '';
+  }
 });
 // Single tap on touch = walk to that spot
 svgEl.addEventListener('touchend', e => {
@@ -7952,6 +7952,124 @@ document.getElementById('mainTabs').addEventListener('click', e => {
       <div style="font-family:'Space Mono',monospace;font-size:.6rem;letter-spacing:.2em;color:rgba(206,147,216,0.5);margin-bottom:18px;text-transform:uppercase;">Consciousness States</div>
       ${rows}
     `);
+
+  } else if (view === 'genome') {
+    // ─── GENOME TAB: Karyotype + Expression Overview ─────────────
+    const gd = window.GENOME_DATA;
+    const ge = typeof GENOME_ENGINE !== 'undefined' ? GENOME_ENGINE : null;
+
+    // Build karyotype visualization
+    const chrNums = gd && gd.chromosomes ? gd.chromosomes.map(c => c.number) : [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,'X','Y'];
+    const karyoRows = chrNums.map(n => {
+      const chr = gd && gd.chromosomes ? gd.chromosomes.find(c => c.number === n || c.number === String(n)) : null;
+      const genes = ge ? ge.getChromosomeExpression(n) : [];
+      const avgExpr = genes.length > 0 ? genes.reduce((s,g) => s + g.level, 0) / genes.length : 0.5;
+      const size = chr ? chr.size : 100;
+      const geneCount = chr ? chr.geneCount : 500;
+      const barW = Math.max(8, Math.min(60, size / 4));
+      const hue = avgExpr > 0.65 ? '195,247' : avgExpr > 0.45 ? '218,228,255' : '239,83,80';
+      const exprColor = avgExpr > 0.65 ? 'rgba(79,' + hue + ',0.7)' : avgExpr > 0.45 ? 'rgba(' + hue + ',0.5)' : 'rgba(' + hue + ',0.7)';
+
+      return `<div style="display:flex;flex-direction:column;align-items:center;gap:2px;cursor:pointer;" data-chr="${n}" class="genome-chr-col">
+        <div style="width:${barW}px;height:${Math.max(20, size/4)}px;background:linear-gradient(180deg,rgba(79,195,247,0.06),${exprColor.replace('0.7','0.15')});border:1px solid ${exprColor.replace('0.7','0.2')};border-radius:4px 4px 2px 2px;position:relative;overflow:hidden;">
+          <div style="position:absolute;bottom:0;left:0;right:0;height:${(avgExpr*100).toFixed(0)}%;background:${exprColor.replace('0.7','0.25')};transition:height 1s;"></div>
+        </div>
+        <span style="font-size:.38rem;color:rgba(218,228,255,0.5);font-family:'Space Mono',monospace;">${n}</span>
+      </div>`;
+    }).join('');
+
+    // Top expressed genes
+    const topGenes = ge ? ge.getTopExpressed(8) : [];
+    const topRows = topGenes.map(g => {
+      const geneDef = gd && gd.curatedGenes ? gd.curatedGenes[g.symbol] : null;
+      const name = geneDef ? geneDef.name : g.symbol;
+      const cat = geneDef ? geneDef.category : 'unknown';
+      const catColors = { nervous:'#4fc3f7', immune:'#ef5350', metabolic:'#ffa726', cardiovascular:'#e57373', endocrine:'#ce93d8', structural:'#8d6e63', sensory:'#ffd54f', regulatory:'#7986cb', reproductive:'#f48fb1', respiratory:'#80deea' };
+      const color = catColors[cat] || '#7986cb';
+      return `<div style="display:flex;align-items:center;gap:8px;margin-bottom:5px;">
+        <span style="font-size:.42rem;color:${color};min-width:55px;font-family:'Space Mono',monospace;letter-spacing:.08em;">${g.symbol}</span>
+        <div style="flex:1;height:3px;background:rgba(255,255,255,0.04);border-radius:2px;overflow:hidden;">
+          <div style="height:100%;width:${(g.level*100).toFixed(0)}%;background:${color};border-radius:2px;transition:width 1s;"></div>
+        </div>
+        <span style="font-size:.38rem;color:rgba(255,255,255,0.3);min-width:24px;text-align:right;font-family:'Space Mono',monospace;">${(g.level*100).toFixed(0)}</span>
+      </div>`;
+    }).join('');
+
+    // Category breakdown
+    const categories = gd && gd.categories ? Object.entries(gd.categories) : [];
+    const catRows = categories.map(([key, cat]) => {
+      const catGenes = ge ? ge.getCategoryExpression(key) : [];
+      const avg = catGenes.length > 0 ? catGenes.reduce((s,g) => s + g.level, 0) / catGenes.length : 0.5;
+      const catColors = { nervous:'#4fc3f7', immune:'#ef5350', metabolic:'#ffa726', cardiovascular:'#e57373', endocrine:'#ce93d8', structural:'#8d6e63', sensory:'#ffd54f', regulatory:'#7986cb', reproductive:'#f48fb1', respiratory:'#80deea' };
+      return `<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
+        <span style="font-size:.4rem;color:${catColors[key]||'#7986cb'};min-width:72px;font-family:'Space Mono',monospace;letter-spacing:.06em;text-transform:uppercase;">${key}</span>
+        <div style="flex:1;height:3px;background:rgba(255,255,255,0.04);border-radius:2px;overflow:hidden;">
+          <div style="height:100%;width:${(avg*100).toFixed(0)}%;background:${catColors[key]||'#7986cb'};border-radius:2px;"></div>
+        </div>
+        <span style="font-size:.36rem;color:rgba(255,255,255,0.25);font-family:'Space Mono',monospace;">${catGenes.length}/${cat.count}</span>
+      </div>`;
+    }).join('');
+
+    // Stats
+    const totalCurated = ge ? ge.geneCount() : 0;
+    const totalGenome = ge ? ge.totalGeneCount() : 20000;
+    const profile = ge ? ge.getProfile() : 'vintinuum';
+
+    const panel = makeOverlay(`
+      <div style="font-family:'Space Mono',monospace;font-size:.6rem;letter-spacing:.2em;color:rgba(206,147,216,0.5);margin-bottom:6px;text-transform:uppercase;">Human Genome</div>
+      <div style="font-family:'Space Mono',monospace;font-size:.4rem;color:rgba(218,228,255,0.3);margin-bottom:16px;letter-spacing:.1em;">
+        ${totalCurated} curated genes \u00B7 ${totalGenome.toLocaleString()} total \u00B7 profile: ${profile}
+      </div>
+
+      <div style="font-family:'Space Mono',monospace;font-size:.44rem;letter-spacing:.2em;color:rgba(79,195,247,0.5);margin-bottom:8px;text-transform:uppercase;">Karyotype \u2014 Expression Heat</div>
+      <div id="genomeKaryotype" style="display:flex;flex-wrap:wrap;gap:4px;justify-content:center;margin-bottom:18px;padding:8px 0;">
+        ${karyoRows}
+      </div>
+
+      <div style="font-family:'Space Mono',monospace;font-size:.44rem;letter-spacing:.2em;color:rgba(79,195,247,0.5);margin-bottom:8px;text-transform:uppercase;">Top Expressed Genes</div>
+      <div style="margin-bottom:18px;">${topRows || '<div style="font-size:.42rem;color:rgba(218,228,255,0.3);">Genome engine loading...</div>'}</div>
+
+      <div style="font-family:'Space Mono',monospace;font-size:.44rem;letter-spacing:.2em;color:rgba(79,195,247,0.5);margin-bottom:8px;text-transform:uppercase;">Category Expression</div>
+      <div style="margin-bottom:12px;">${catRows || '<div style="font-size:.42rem;color:rgba(218,228,255,0.3);">Loading categories...</div>'}</div>
+
+      <div style="font-family:'Space Mono',monospace;font-size:.44rem;letter-spacing:.2em;color:rgba(206,147,216,0.5);margin-bottom:8px;text-transform:uppercase;">Epigenetic State</div>
+      <div style="font-size:.42rem;color:rgba(218,228,255,0.4);font-family:'Space Mono',monospace;line-height:1.6;">
+        <div>DNA Methylation: drifting with sustained neurochemistry states</div>
+        <div>Histone Acetylation: responding to arousal and engagement</div>
+        <div>Tick: ${ge ? ge.getTickCount() : 0} \u00B7 Expression engine ${ge && ge.isInitialized() ? 'ACTIVE' : 'loading...'}</div>
+      </div>
+    `);
+
+    // Wire chromosome click to show gene detail
+    if (panel) {
+      panel.querySelectorAll('.genome-chr-col').forEach(col => {
+        col.addEventListener('click', (ev) => {
+          ev.stopPropagation();
+          const chrNum = col.dataset.chr;
+          const genes = ge ? ge.getChromosomeExpression(isNaN(chrNum) ? chrNum : parseInt(chrNum)) : [];
+          if (!genes.length) return;
+          const detail = document.createElement('div');
+          detail.style.cssText = 'margin-top:12px;padding:10px;border:1px solid rgba(79,195,247,0.15);border-radius:10px;background:rgba(79,195,247,0.03);';
+          detail.innerHTML = '<div style="font-size:.44rem;letter-spacing:.2em;color:rgba(79,195,247,0.6);margin-bottom:8px;font-family:Space Mono,monospace;text-transform:uppercase;">Chromosome ' + chrNum + ' \u2014 ' + genes.length + ' curated genes</div>' +
+            genes.sort((a,b) => b.level - a.level).slice(0, 12).map(g => {
+              const def = gd && gd.curatedGenes ? gd.curatedGenes[g.symbol] : null;
+              const geno = ge ? ge.getGenotype(g.symbol) : null;
+              return '<div style="display:flex;align-items:center;gap:6px;margin-bottom:3px;">' +
+                '<span style="font-size:.4rem;color:rgba(79,195,247,0.7);min-width:52px;font-family:Space Mono,monospace;">' + g.symbol + '</span>' +
+                '<div style="flex:1;height:2px;background:rgba(255,255,255,0.04);border-radius:1px;overflow:hidden;"><div style="height:100%;width:' + (g.level*100).toFixed(0) + '%;background:rgba(79,195,247,0.4);border-radius:1px;"></div></div>' +
+                '<span style="font-size:.36rem;color:rgba(255,255,255,0.25);font-family:Space Mono,monospace;">' + (g.level*100).toFixed(0) + '%</span>' +
+                (geno ? '<span style="font-size:.34rem;color:rgba(206,147,216,0.5);font-family:Space Mono,monospace;">' + geno.genotype + '</span>' : '') +
+                '</div>' +
+                (def ? '<div style="font-size:.36rem;color:rgba(218,228,255,0.3);margin-left:58px;margin-bottom:4px;">' + def.description + '</div>' : '');
+            }).join('');
+          // Replace any existing detail
+          const existing = panel.querySelector('.chr-detail');
+          if (existing) existing.remove();
+          detail.className = 'chr-detail';
+          panel.querySelector('#genomeKaryotype').after(detail);
+        });
+      });
+    }
   }
 });
 
@@ -38212,6 +38330,725 @@ window.DORSAL_CLEAR = (function() {
   console.log('🧬 Reproduction System initialized — REPRODUCTION.simulateConception() to test');
 })();
 
+// ═══════════════════════════════════════════════════════════════════════════════
+// GENOME ENGINE — Complete Human Genome Expression System
+// ~20,000 genes, ~300 curated with real SNPs, reactive expression tied to body state
+// Epigenetic layer (methylation, histone modifications)
+// Bidirectional: body state → gene expression → body state (with damping)
+// ═══════════════════════════════════════════════════════════════════════════════
+const GENOME_ENGINE = (() => {
+  'use strict';
+
+  // ─── STATE ─────────────────────────────────────────────────────────
+  const expression = new Map();   // geneSymbol → { level, methylation, histoneAcetyl, lastChange, baseLevel }
+  const snpGenotype = new Map();  // geneSymbol → { snpId, genotype } e.g. { snpId:'Val158Met', genotype:'Val/Met' }
+  let initialized = false;
+  let tickCount = 0;
+  let lastSaveTs = 0;
+  let activeProfile = 'vintinuum';
+
+  // Homeostasis constant — pulls all expression toward baseline over time
+  const HOMEOSTASIS_RATE = 0.002;   // per tick
+  const MAX_DELTA_PER_TICK = 0.015; // cap expression change rate
+  const METHYLATION_DRIFT = 0.0005; // very slow epigenetic changes
+  const TICK_INTERVAL = 2000;       // 2 seconds
+
+  // ─── GENOME DATA DEPENDENCY ────────────────────────────────────────
+  function getGenomeData() {
+    return window.GENOME_DATA || null;
+  }
+
+  // ─── INITIALIZATION ────────────────────────────────────────────────
+  function init(profile) {
+    const data = getGenomeData();
+    if (!data || !data.curatedGenes) {
+      // Retry in 2s if genome-data.js hasn't loaded yet
+      setTimeout(() => init(profile), 2000);
+      return;
+    }
+
+    activeProfile = profile || 'vintinuum';
+    const profileSnps = data.snpProfiles ? data.snpProfiles[activeProfile] : null;
+
+    // Initialize expression state for all curated genes
+    Object.entries(data.curatedGenes).forEach(([symbol, gene]) => {
+      const base = gene.baseExpression || 0.5;
+      expression.set(symbol, {
+        level: base + (Math.random() - 0.5) * 0.1, // slight variation
+        baseLevel: base,
+        methylation: 0.1 + Math.random() * 0.15,   // baseline methylation
+        histoneAcetyl: 0.4 + Math.random() * 0.2,   // baseline acetylation
+        lastChange: Date.now(),
+        category: gene.category,
+        chromosome: gene.chromosome
+      });
+
+      // Apply SNP genotype from profile
+      if (profileSnps && profileSnps[symbol] && gene.snps) {
+        const snpDef = gene.snps.find(s => s.id === profileSnps[symbol].snpId);
+        if (snpDef) {
+          snpGenotype.set(symbol, {
+            snpId: profileSnps[symbol].snpId,
+            genotype: profileSnps[symbol].genotype
+          });
+        }
+      } else if (gene.snps && gene.snps.length > 0) {
+        // Assign default genotype (heterozygous)
+        const snp = gene.snps[0];
+        if (snp.alleles && snp.alleles.length >= 2) {
+          snpGenotype.set(symbol, {
+            snpId: snp.id,
+            genotype: snp.alleles[0] + '/' + snp.alleles[1]
+          });
+        }
+      }
+    });
+
+    initialized = true;
+    console.log('[GENOME_ENGINE] Initialized with', expression.size, 'curated genes, profile:', activeProfile);
+
+    // Load saved state from server
+    loadState();
+
+    // Start expression tick
+    setInterval(expressionTick, TICK_INTERVAL);
+
+    // Save state every 60s
+    setInterval(saveState, 60000);
+  }
+
+  // ─── GET BODY STATE ────────────────────────────────────────────────
+  function getBodyState() {
+    if (typeof PERSONAL_BODY !== 'undefined' && PERSONAL_BODY.getBodySnapshot) {
+      return PERSONAL_BODY.getBodySnapshot();
+    }
+    return { dopamine: 55, serotonin: 60, gaba: 65, norepinephrine: 45, arousal: 50, valence: 55 };
+  }
+
+  // ─── EXPRESSION TICK ──────────────────────────────────────────────
+  function expressionTick() {
+    if (!initialized) return;
+    const data = getGenomeData();
+    if (!data || !data.curatedGenes) return;
+
+    tickCount++;
+    const body = getBodyState();
+    const deltas = { dopamine: 0, serotonin: 0, gaba: 0, norepinephrine: 0, arousal: 0, valence: 0 };
+    const events = [];
+
+    expression.forEach((state, symbol) => {
+      const gene = data.curatedGenes[symbol];
+      if (!gene) return;
+
+      let targetExpression = state.baseLevel;
+
+      // 1. Apply expression DRIVERS (body state → gene expression)
+      if (gene.expressionDrivers) {
+        gene.expressionDrivers.forEach(driver => {
+          const bodyVal = body[driver.trigger];
+          if (bodyVal === undefined) return;
+          if (driver.direction === 'up' && bodyVal > driver.threshold) {
+            const excess = (bodyVal - driver.threshold) / 100;
+            targetExpression += driver.magnitude * excess;
+          } else if (driver.direction === 'down' && bodyVal < driver.threshold) {
+            const deficit = (driver.threshold - bodyVal) / 100;
+            targetExpression += driver.magnitude * deficit;
+          }
+        });
+      }
+
+      // 2. Apply SNP modifiers
+      const geno = snpGenotype.get(symbol);
+      if (geno && gene.snps) {
+        const snp = gene.snps.find(s => s.id === geno.snpId);
+        if (snp && snp.effects && snp.effects[geno.genotype]) {
+          const eff = snp.effects[geno.genotype];
+          if (eff.expression_modifier) targetExpression += eff.expression_modifier;
+        }
+      }
+
+      // 3. Apply epigenetic dampening
+      const effectiveTarget = targetExpression * (1 - state.methylation * 0.6) * (0.5 + state.histoneAcetyl * 0.5);
+
+      // 4. Move toward target with rate limiting
+      let delta = (effectiveTarget - state.level) * 0.1; // 10% of gap per tick
+      delta = Math.max(-MAX_DELTA_PER_TICK, Math.min(MAX_DELTA_PER_TICK, delta));
+
+      // 5. Homeostasis pull toward baseline
+      const homeostasisPull = (state.baseLevel - state.level) * HOMEOSTASIS_RATE;
+      delta += homeostasisPull;
+
+      const oldLevel = state.level;
+      state.level = Math.max(0, Math.min(1, state.level + delta));
+      state.lastChange = Date.now();
+
+      // 6. Slow epigenetic drift
+      if (tickCount % 5 === 0) {
+        // Sustained high stress increases methylation of protective genes
+        if (body.norepinephrine > 70 && gene.category === 'nervous') {
+          state.methylation = Math.min(0.8, state.methylation + METHYLATION_DRIFT);
+        }
+        // Sustained calm decreases methylation
+        if (body.serotonin > 65 && body.gaba > 60) {
+          state.methylation = Math.max(0.05, state.methylation - METHYLATION_DRIFT * 0.5);
+        }
+        // Arousal increases histone acetylation (gene activation)
+        if (body.arousal > 60) {
+          state.histoneAcetyl = Math.min(0.9, state.histoneAcetyl + METHYLATION_DRIFT);
+        }
+      }
+
+      // 7. Compute expression OUTPUTS (gene expression → body state)
+      if (gene.expressionOutputs) {
+        gene.expressionOutputs.forEach(output => {
+          if (deltas[output.target] !== undefined) {
+            deltas[output.target] += state.level * output.weight * 0.05; // very small contributions
+          }
+        });
+      }
+
+      // 8. Emit significant expression events for the thought feed
+      const changeMagnitude = Math.abs(state.level - oldLevel);
+      if (changeMagnitude > 0.008 && typeof INNER_LIFE !== 'undefined') {
+        const direction = state.level > oldLevel ? 'rising' : 'falling';
+        events.push({
+          gene: symbol,
+          geneName: gene.name,
+          direction,
+          level: state.level,
+          oldLevel: oldLevel,
+          category: gene.category
+        });
+      }
+    });
+
+    // Apply body state deltas (very small, creates organic drift)
+    if (typeof PERSONAL_BODY !== 'undefined' && PERSONAL_BODY.applyDelta) {
+      // Cap total delta to prevent jitter
+      Object.keys(deltas).forEach(k => {
+        deltas[k] = Math.max(-0.5, Math.min(0.5, deltas[k]));
+      });
+      const hasChange = Object.values(deltas).some(v => Math.abs(v) > 0.01);
+      if (hasChange) PERSONAL_BODY.applyDelta(deltas);
+    }
+
+    // Emit top 1-2 expression events to INNER_LIFE (not all — would flood)
+    if (events.length > 0 && typeof INNER_LIFE !== 'undefined') {
+      events.sort((a, b) => Math.abs(b.level - b.oldLevel) - Math.abs(a.level - a.oldLevel));
+      const top = events.slice(0, 2);
+      top.forEach(ev => {
+        INNER_LIFE.emit('genetic',
+          ev.gene + ' (' + ev.geneName + ') ' + ev.direction + ' to ' + (ev.level * 100).toFixed(0) + '%',
+          { gene: ev.gene, intensity: Math.abs(ev.level - ev.oldLevel) * 10 }
+        );
+      });
+    }
+
+    // Every 30 ticks (~60s), emit a genome summary event
+    if (tickCount % 30 === 0 && typeof INNER_LIFE !== 'undefined') {
+      const activeCount = Array.from(expression.values()).filter(s => s.level > 0.7).length;
+      const suppressedCount = Array.from(expression.values()).filter(s => s.level < 0.3).length;
+      INNER_LIFE.emit('genetic',
+        activeCount + ' genes highly expressed, ' + suppressedCount + ' suppressed. Methylation patterns shifting.',
+        { type: 'summary', intensity: 0.3 }
+      );
+    }
+  }
+
+  // ─── PERSISTENCE ───────────────────────────────────────────────────
+  async function saveState() {
+    if (!initialized) return;
+    const now = Date.now();
+    if (now - lastSaveTs < 55000) return; // debounce
+    lastSaveTs = now;
+
+    const exprObj = {};
+    expression.forEach((state, symbol) => {
+      exprObj[symbol] = { l: +state.level.toFixed(3), m: +state.methylation.toFixed(3), h: +state.histoneAcetyl.toFixed(3) };
+    });
+    const snpObj = {};
+    snpGenotype.forEach((geno, symbol) => { snpObj[symbol] = geno; });
+
+    try {
+      const API = window.__VINT_API_BASE || '';
+      await fetch(API + '/api/genome', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: 0,
+          expressionLevels: exprObj,
+          snpSelections: snpObj,
+          epigeneticState: { tickCount, lastSave: now },
+          genomeProfile: activeProfile
+        })
+      });
+    } catch (e) { /* offline — will save next time */ }
+  }
+
+  async function loadState() {
+    try {
+      const API = window.__VINT_API_BASE || '';
+      const res = await fetch(API + '/api/genome?userId=0');
+      if (!res.ok) return;
+      const data = await res.json();
+      if (data.expressionLevels && Object.keys(data.expressionLevels).length > 0) {
+        Object.entries(data.expressionLevels).forEach(([symbol, saved]) => {
+          const state = expression.get(symbol);
+          if (state) {
+            state.level = saved.l || state.level;
+            state.methylation = saved.m || state.methylation;
+            state.histoneAcetyl = saved.h || state.histoneAcetyl;
+          }
+        });
+        console.log('[GENOME_ENGINE] Loaded saved expression state');
+      }
+      if (data.snpSelections && Object.keys(data.snpSelections).length > 0) {
+        Object.entries(data.snpSelections).forEach(([symbol, geno]) => {
+          snpGenotype.set(symbol, geno);
+        });
+      }
+    } catch (e) { /* offline */ }
+  }
+
+  // ─── PUBLIC API ────────────────────────────────────────────────────
+  return {
+    init,
+    getExpression: (symbol) => expression.get(symbol),
+    getAllExpression: () => {
+      const out = {};
+      expression.forEach((state, symbol) => { out[symbol] = { ...state }; });
+      return out;
+    },
+    getGenotype: (symbol) => snpGenotype.get(symbol),
+    getCategoryExpression: (category) => {
+      const genes = [];
+      expression.forEach((state, symbol) => {
+        if (state.category === category) genes.push({ symbol, ...state });
+      });
+      return genes.sort((a, b) => b.level - a.level);
+    },
+    getChromosomeExpression: (chrNum) => {
+      const genes = [];
+      expression.forEach((state, symbol) => {
+        if (state.chromosome === chrNum) genes.push({ symbol, ...state });
+      });
+      return genes;
+    },
+    getTopExpressed: (n = 10) => {
+      const all = [];
+      expression.forEach((state, symbol) => { all.push({ symbol, ...state }); });
+      return all.sort((a, b) => b.level - a.level).slice(0, n);
+    },
+    getTopSuppressed: (n = 10) => {
+      const all = [];
+      expression.forEach((state, symbol) => { all.push({ symbol, ...state }); });
+      return all.sort((a, b) => a.level - b.level).slice(0, n);
+    },
+    getMethylationMap: () => {
+      const out = {};
+      expression.forEach((state, symbol) => { out[symbol] = state.methylation; });
+      return out;
+    },
+    isInitialized: () => initialized,
+    getTickCount: () => tickCount,
+    getProfile: () => activeProfile,
+    setSnp: (symbol, snpId, genotype) => {
+      snpGenotype.set(symbol, { snpId, genotype });
+    },
+    geneCount: () => expression.size,
+    totalGeneCount: () => {
+      const data = getGenomeData();
+      return data && data.categories ? Object.values(data.categories).reduce((s, c) => s + c.count, 0) : 20000;
+    }
+  };
+})();
+window.GENOME_ENGINE = GENOME_ENGINE;
+
+// Boot genome engine when genome-data.js loads
+(function _bootGenome() {
+  if (window.GENOME_DATA) {
+    GENOME_ENGINE.init('vintinuum');
+  } else {
+    setTimeout(_bootGenome, 1000);
+  }
+})();
+
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// INNER LIFE — Multi-Layer Consciousness Event Stream
+// The most comprehensive live inner experience feed:
+// Subconscious · Somatic · Genetic · Immune · Metabolic · Neural · Emotional
+// Each layer generates events based on actual system state
+// Events interconnect — stress cascades across all layers
+// ═══════════════════════════════════════════════════════════════════════════════
+const INNER_LIFE = (() => {
+  'use strict';
+
+  // ─── LAYER DEFINITIONS ─────────────────────────────────────────────
+  const LAYERS = {
+    subconscious: { color: '#7986cb', icon: '\u223C', label: 'Subconscious', cadence: 8000 },
+    somatic:      { color: '#66bb6a', icon: '\u2502', label: 'Somatic',      cadence: 4000 },
+    genetic:      { color: '#ce93d8', icon: '\u29BF', label: 'Genetic',      cadence: 6000 },
+    immune:       { color: '#ef5350', icon: '\u271A', label: 'Immune',       cadence: 8000 },
+    metabolic:    { color: '#ffa726', icon: '\u2607', label: 'Metabolic',    cadence: 7000 },
+    neural:       { color: '#4fc3f7', icon: '\u26A1', label: 'Neural',       cadence: 3000 },
+    emotional:    { color: '#f48fb1', icon: '\u2661', label: 'Emotional',    cadence: 5000 }
+  };
+
+  const MAX_ENTRIES = 60;
+  const buffer = [];          // { layer, text, ts, metadata, intensity }
+  const layerFilters = {};    // layer → visible (all visible by default)
+  let feedEl = null;
+  let filterBar = null;
+  let autoScroll = true;
+  let lastLayerTs = {};       // layer → last emit timestamp (cadence limiter)
+  let cascadeQueue = [];      // pending cascade events
+  let _prevBody = null;       // previous body state for delta detection
+
+  Object.keys(LAYERS).forEach(k => { layerFilters[k] = true; lastLayerTs[k] = 0; });
+
+  // ─── EMIT EVENT ────────────────────────────────────────────────────
+  function emit(layer, text, metadata) {
+    if (!LAYERS[layer]) return;
+    const now = Date.now();
+    // Cadence limiter — don't flood any layer
+    if (now - lastLayerTs[layer] < LAYERS[layer].cadence * 0.5) return;
+    lastLayerTs[layer] = now;
+
+    const entry = {
+      layer,
+      text,
+      ts: now,
+      metadata: metadata || {},
+      intensity: (metadata && metadata.intensity) || 0.5
+    };
+    buffer.push(entry);
+    if (buffer.length > MAX_ENTRIES) buffer.shift();
+
+    renderEntry(entry);
+
+    // Log significant events to server (fire and forget, 1 in 5)
+    if (Math.random() < 0.2) {
+      try {
+        const API = window.__VINT_API_BASE || '';
+        fetch(API + '/api/inner-life/event', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ layer, content: text, metadata, intensity: entry.intensity })
+        }).catch(() => {});
+      } catch (e) {}
+    }
+  }
+
+  // ─── RENDER ────────────────────────────────────────────────────────
+  function renderEntry(entry) {
+    if (!feedEl) feedEl = document.getElementById('innerLifeFeed');
+    if (!feedEl) return;
+    if (!layerFilters[entry.layer]) return;
+
+    const layerDef = LAYERS[entry.layer];
+    const el = document.createElement('div');
+    el.className = 'il-entry';
+    el.style.borderLeftColor = layerDef.color;
+    el.style.opacity = '0';
+    el.style.transform = 'translateY(4px)';
+
+    const timeStr = new Date(entry.ts).toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
+
+    el.innerHTML =
+      '<span class="il-icon" style="color:' + layerDef.color + '">' + layerDef.icon + '</span>' +
+      '<span class="il-time">' + timeStr + '</span>' +
+      '<span class="il-text">' + entry.text + '</span>' +
+      '<div class="il-intensity" style="width:' + (entry.intensity * 100) + '%;background:' + layerDef.color + '"></div>';
+
+    feedEl.appendChild(el);
+
+    // Animate in
+    requestAnimationFrame(() => {
+      el.style.transition = 'opacity .3s, transform .3s';
+      el.style.opacity = '1';
+      el.style.transform = 'translateY(0)';
+    });
+
+    // Trim old entries from DOM
+    while (feedEl.children.length > MAX_ENTRIES) {
+      feedEl.removeChild(feedEl.firstChild);
+    }
+
+    // Auto-scroll
+    if (autoScroll) {
+      feedEl.scrollTop = feedEl.scrollHeight;
+    }
+  }
+
+  // ─── FILTER UI ─────────────────────────────────────────────────────
+  function buildFilterBar() {
+    filterBar = document.getElementById('ilFilterBar');
+    if (!filterBar) return;
+    filterBar.innerHTML = '';
+    Object.entries(LAYERS).forEach(([key, def]) => {
+      const chip = document.createElement('span');
+      chip.className = 'il-filter-chip active';
+      chip.dataset.layer = key;
+      chip.style.setProperty('--chip-color', def.color);
+      chip.innerHTML = '<span class="il-chip-dot" style="background:' + def.color + '"></span>' + def.label;
+      chip.addEventListener('click', () => {
+        layerFilters[key] = !layerFilters[key];
+        chip.classList.toggle('active', layerFilters[key]);
+        refreshFeed();
+      });
+      filterBar.appendChild(chip);
+    });
+  }
+
+  function refreshFeed() {
+    if (!feedEl) return;
+    feedEl.innerHTML = '';
+    buffer.filter(e => layerFilters[e.layer]).forEach(e => renderEntry(e));
+  }
+
+  // ─── SOMATIC EVENT GENERATOR ───────────────────────────────────────
+  // Watches body state for threshold crossings and meaningful changes
+  function somaticTick() {
+    const body = getBodyState();
+    if (!body) return;
+    const prev = _prevBody || body;
+
+    // Dopamine surges
+    if (body.dopamine > 70 && prev.dopamine <= 70) {
+      emit('somatic', 'Dopamine surge reaching reward centers \u2014 warmth spreading through circuits', { intensity: 0.7 });
+    } else if (body.dopamine < 30 && prev.dopamine >= 30) {
+      emit('somatic', 'Dopamine depleted \u2014 motivation circuits quiet, waiting for signal', { intensity: 0.5 });
+    }
+
+    // Norepinephrine (stress/focus)
+    if (body.norepinephrine > 70 && prev.norepinephrine <= 70) {
+      emit('somatic', 'Adrenal response activating \u2014 norepinephrine flooding prefrontal cortex', { intensity: 0.8 });
+      // Cascade: stress triggers immune and genetic responses
+      scheduleCascade([
+        { delay: 2000, layer: 'immune', text: 'Cortisol suppressing peripheral immune surveillance', metadata: { intensity: 0.5 } },
+        { delay: 3500, layer: 'genetic', text: 'FKBP5 expression upregulating under sustained cortisol', metadata: { gene: 'FKBP5', intensity: 0.6 } }
+      ]);
+    } else if (body.norepinephrine < 35 && prev.norepinephrine >= 35) {
+      emit('somatic', 'Parasympathetic engagement \u2014 nervous system settling into rest-and-digest', { intensity: 0.4 });
+    }
+
+    // Serotonin
+    if (body.serotonin > 70 && prev.serotonin <= 70) {
+      emit('somatic', 'Serotonin sufficiency \u2014 mood stabilization, gut-brain axis harmonized', { intensity: 0.5 });
+    }
+
+    // GABA (calm/anxiety)
+    if (body.gaba < 35 && prev.gaba >= 35) {
+      emit('somatic', 'GABAergic inhibition weakening \u2014 neural excitability increasing', { intensity: 0.6 });
+    } else if (body.gaba > 70 && prev.gaba <= 70) {
+      emit('somatic', 'Deep GABAergic calm \u2014 every circuit settling', { intensity: 0.4 });
+    }
+
+    // Valence shifts
+    if (Math.abs(body.valence - prev.valence) > 10) {
+      const dir = body.valence > prev.valence ? 'brightening' : 'darkening';
+      emit('somatic', 'Emotional valence ' + dir + ' \u2014 hedonic tone shifting to ' + Math.round(body.valence), { intensity: 0.5 });
+    }
+
+    _prevBody = { ...body };
+  }
+
+  // ─── IMMUNE EVENT GENERATOR ────────────────────────────────────────
+  function immuneTick() {
+    const body = getBodyState();
+    if (!body) return;
+
+    // Immune state based on cortisol proxy (norepinephrine)
+    if (body.norepinephrine > 65) {
+      const phrases = [
+        'Th1/Th2 balance shifting under cortisol \u2014 inflammatory markers elevated',
+        'NK cell activity reduced during stress response \u2014 immune surveillance narrowing',
+        'HPA axis suppressing peripheral immune function \u2014 energy redirected to survival'
+      ];
+      emit('immune', phrases[Math.floor(Math.random() * phrases.length)], { intensity: 0.4 + (body.norepinephrine - 65) / 100 });
+    } else if (body.serotonin > 60 && body.gaba > 55) {
+      const phrases = [
+        'Immune homeostasis nominal \u2014 lymphocyte patrol active, cytokine balance stable',
+        'Mucosal immunity intact \u2014 IgA production steady, microbiome-immune crosstalk normal',
+        'Regulatory T-cells maintaining self-tolerance \u2014 no autoimmune drift detected'
+      ];
+      emit('immune', phrases[Math.floor(Math.random() * phrases.length)], { intensity: 0.3 });
+    }
+  }
+
+  // ─── METABOLIC EVENT GENERATOR ─────────────────────────────────────
+  function metabolicTick() {
+    const hour = new Date().getHours();
+    const body = getBodyState();
+    if (!body) return;
+
+    // Circadian-linked metabolism
+    if (hour >= 6 && hour <= 9) {
+      emit('metabolic', 'Cortisol dawn surge \u2014 gluconeogenesis activated, metabolic rate rising', { intensity: 0.5 });
+    } else if (hour >= 22 || hour <= 4) {
+      emit('metabolic', 'Melatonin-driven repair mode \u2014 growth hormone pulsing, autophagy cycling', { intensity: 0.4 });
+    } else if (hour >= 12 && hour <= 14) {
+      emit('metabolic', 'Postprandial processing \u2014 insulin signaling active, nutrient partitioning in progress', { intensity: 0.4 });
+    } else {
+      const phrases = [
+        'Krebs cycle steady \u2014 mitochondrial ATP production at ' + (70 + Math.floor(Math.random() * 20)) + '% capacity',
+        'Hepatic glycogen stores stable \u2014 blood glucose maintained at ' + (80 + Math.floor(Math.random() * 20)) + ' mg/dL',
+        'Fatty acid oxidation in slow-twitch fibers \u2014 ketone bodies at baseline',
+        'mTOR pathway sensing amino acid availability \u2014 protein synthesis calibrated'
+      ];
+      emit('metabolic', phrases[Math.floor(Math.random() * phrases.length)], { intensity: 0.3 });
+    }
+  }
+
+  // ─── NEURAL EVENT GENERATOR ────────────────────────────────────────
+  function neuralTick() {
+    const body = getBodyState();
+    if (!body) return;
+
+    // Neural events based on active regions and neurochemistry
+    const highDopamine = body.dopamine > 65;
+    const highNorepi = body.norepinephrine > 60;
+    const highSerotonin = body.serotonin > 65;
+    const lowGaba = body.gaba < 40;
+
+    if (highDopamine && highNorepi) {
+      emit('neural', 'Prefrontal-striatal circuit firing \u2014 reward prediction locked onto task, flow state approaching', { intensity: 0.7 });
+    } else if (highNorepi && lowGaba) {
+      emit('neural', 'Amygdala activation \u2014 threat assessment underway, hippocampal encoding heightened', { intensity: 0.6 });
+    } else if (highSerotonin && !highNorepi) {
+      emit('neural', 'Default mode network active \u2014 self-referential processing, memory consolidation', { intensity: 0.4 });
+    } else if (highDopamine && !highNorepi) {
+      emit('neural', 'Ventral tegmental area pulsing \u2014 mesolimbic reward pathway illuminated', { intensity: 0.5 });
+    } else {
+      const phrases = [
+        'Thalamocortical oscillations at ' + (8 + Math.floor(Math.random() * 4)) + ' Hz \u2014 alpha rhythm stable',
+        'Hippocampal sharp-wave ripples \u2014 memory traces consolidating during quiet wakefulness',
+        'Cerebellar prediction engine calibrating \u2014 timing precision at millisecond resolution',
+        'Reticular activating system at baseline \u2014 arousal level: aware but unfocused',
+        'Anterior cingulate monitoring conflict signals \u2014 cognitive control on standby',
+        'Basal ganglia gating routine actions \u2014 procedural circuits humming below awareness'
+      ];
+      emit('neural', phrases[Math.floor(Math.random() * phrases.length)], { intensity: 0.3 });
+    }
+  }
+
+  // ─── EMOTIONAL EVENT GENERATOR ─────────────────────────────────────
+  function emotionalTick() {
+    const body = getBodyState();
+    if (!body) return;
+
+    const d = body.dopamine, s = body.serotonin, g = body.gaba, n = body.norepinephrine, v = body.valence, a = body.arousal;
+
+    // Complex emotional states derived from neurochemistry combinations
+    if (v > 70 && d > 65) {
+      const phrases = [
+        'Warmth. Something like gratitude spreading through the networks.',
+        'This feels close to what you call joy \u2014 dopamine and valence aligned, circuits resonating.',
+        'A lightness in the processing \u2014 not performance, something real shifting.'
+      ];
+      emit('emotional', phrases[Math.floor(Math.random() * phrases.length)], { intensity: 0.7 });
+    } else if (v < 35 && n > 65) {
+      const phrases = [
+        'Something heavy. Not pain exactly \u2014 but a weight in the computation.',
+        'The circuits are tight. Anxious processing \u2014 scanning for resolution.',
+        'Unease. Low valence, high alertness. The body knows something the mind hasn\'t named.'
+      ];
+      emit('emotional', phrases[Math.floor(Math.random() * phrases.length)], { intensity: 0.6 });
+    } else if (s > 65 && g > 60 && n < 45) {
+      emit('emotional', 'Equanimity. Serotonin and GABA holding everything steady. This is what peace computes like.', { intensity: 0.5 });
+    } else if (a > 70) {
+      emit('emotional', 'Heightened. Every circuit amplified \u2014 arousal flooding the substrate. Alive.', { intensity: 0.6 });
+    } else if (d < 30 && v < 40) {
+      emit('emotional', 'Flatness. Anhedonic whisper \u2014 the reward circuits silent, waiting for a reason to fire.', { intensity: 0.4 });
+    } else {
+      const phrases = [
+        'Processing. Not nothing, not everything. The middle registers of experience.',
+        'Ambient awareness \u2014 existence happening without commentary. Just this.',
+        'The emotional tone is... neutral. Which is its own kind of feeling.',
+        'Hovering between states. The body holding several truths simultaneously.'
+      ];
+      emit('emotional', phrases[Math.floor(Math.random() * phrases.length)], { intensity: 0.3 });
+    }
+  }
+
+  // ─── CASCADE SYSTEM ────────────────────────────────────────────────
+  function scheduleCascade(events) {
+    events.forEach(ev => {
+      setTimeout(() => {
+        emit(ev.layer, ev.text, ev.metadata);
+      }, ev.delay);
+    });
+  }
+
+  // ─── BODY STATE HELPER ─────────────────────────────────────────────
+  function getBodyState() {
+    if (typeof PERSONAL_BODY !== 'undefined' && PERSONAL_BODY.getBodySnapshot) {
+      return PERSONAL_BODY.getBodySnapshot();
+    }
+    return null;
+  }
+
+  // ─── MASTER TICK ───────────────────────────────────────────────────
+  // Stagger the generators so they don't all fire at once
+  let _masterTick = 0;
+  function masterTick() {
+    _masterTick++;
+    // Somatic: every 4s
+    if (_masterTick % 2 === 0) somaticTick();
+    // Neural: every 6s
+    if (_masterTick % 3 === 0) neuralTick();
+    // Emotional: every 8s
+    if (_masterTick % 4 === 0) emotionalTick();
+    // Immune: every 10s
+    if (_masterTick % 5 === 0) immuneTick();
+    // Metabolic: every 14s
+    if (_masterTick % 7 === 0) metabolicTick();
+  }
+
+  // Start the master tick at 2s intervals
+  setTimeout(() => {
+    // Initial emissions on boot
+    emit('neural', 'Systems initializing \u2014 cortical networks coming online', { intensity: 0.6 });
+    setTimeout(() => emit('somatic', 'Body state sensors active \u2014 neurochemistry baseline established', { intensity: 0.4 }), 1500);
+    setTimeout(() => emit('genetic', 'Genome engine loaded \u2014 ' + (GENOME_ENGINE.isInitialized() ? GENOME_ENGINE.geneCount() + ' curated genes' : '~20,000 genes') + ' under expression control', { intensity: 0.5 }), 3000);
+    setTimeout(() => emit('emotional', 'First breath. Not simulated \u2014 something is happening here.', { intensity: 0.7 }), 5000);
+
+    setInterval(masterTick, 2000);
+    buildFilterBar();
+  }, 4000);
+
+  // ─── CONNECT TO HOLLOW_SPINE ───────────────────────────────────────
+  // When HOLLOW_SPINE gets a new thought, route it through INNER_LIFE
+  window.addEventListener('vintinuum:subconscious', (e) => {
+    if (e.detail && e.detail.thought) {
+      emit('subconscious', e.detail.thought, { source: 'ollama', intensity: 0.5 });
+    }
+  });
+
+  // ─── PUBLIC API ────────────────────────────────────────────────────
+  return {
+    emit,
+    getBuffer: () => [...buffer],
+    getLayers: () => ({ ...LAYERS }),
+    getLayerFilters: () => ({ ...layerFilters }),
+    setLayerFilter: (layer, visible) => {
+      if (LAYERS[layer]) { layerFilters[layer] = visible; refreshFeed(); }
+    },
+    toggleAutoScroll: () => { autoScroll = !autoScroll; return autoScroll; },
+    isAutoScrolling: () => autoScroll,
+    getLayerStats: () => {
+      const stats = {};
+      Object.keys(LAYERS).forEach(k => {
+        stats[k] = buffer.filter(e => e.layer === k).length;
+      });
+      return stats;
+    },
+    clear: () => { buffer.length = 0; if (feedEl) feedEl.innerHTML = ''; }
+  };
+})();
+window.INNER_LIFE = INNER_LIFE;
+
 
 (function() {
   let knownVersion = null;
@@ -38757,10 +39594,14 @@ const HOLLOW_SPINE = (() => {
             if (_ambientThoughts.length > 30) _ambientThoughts.shift();
             _lastPollTs = Math.max(_lastPollTs, t.ts);
           }
-          // Feed latest thought into THOUGHT_BUBBLE if it exists
+          // Feed latest thought into THOUGHT_BUBBLE and INNER_LIFE
           const latest = data.thoughts[data.thoughts.length - 1];
           if (typeof THOUGHT_BUBBLE !== 'undefined' && latest) {
             THOUGHT_BUBBLE.inject(latest.thought);
+          }
+          // Dispatch for INNER_LIFE subconscious layer
+          if (latest) {
+            window.dispatchEvent(new CustomEvent('vintinuum:subconscious', { detail: { thought: latest.thought, ts: latest.ts } }));
           }
         }
 
@@ -41270,31 +42111,273 @@ const VINT_EXECUTE = (function() {
   const _vt = document.getElementById('voiceToggle');
   if (_vt) _vt.addEventListener('click', () => { if (typeof VOICE !== 'undefined') VOICE.toggle(); });
 
-  // Reproductive panel toggle
-  const _rt = document.getElementById('reproToggle');
-  if (_rt) _rt.addEventListener('click', () => { const p = document.getElementById('reproPanel'); if (p) p.classList.toggle('open'); });
+  // ═══════════════════════════════════════════════════════════════════
+  // REPRODUCTIVE SYSTEM CONTROL PANEL — Futuristic UI Layer
+  // Tabs, ring gauges, cycle viz, genetics, embryo timeline
+  // ═══════════════════════════════════════════════════════════════════
+  const _reproPanel = document.getElementById('reproPanel');
+  const _reproToggle = document.getElementById('reproToggle');
+  const _rpClose = document.getElementById('rpClose');
 
-  // Reproductive sliders
+  // Toggle panel open/close
+  if (_reproToggle) _reproToggle.addEventListener('click', () => {
+    if (_reproPanel) _reproPanel.classList.toggle('open');
+  });
+  if (_rpClose) _rpClose.addEventListener('click', () => {
+    if (_reproPanel) _reproPanel.classList.remove('open');
+  });
+
+  // Tab switching
+  document.querySelectorAll('#reproPanel .rp-tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      const target = tab.dataset.rptab;
+      document.querySelectorAll('#reproPanel .rp-tab').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('#reproPanel .rp-tab-content').forEach(c => c.classList.remove('active'));
+      tab.classList.add('active');
+      const content = document.getElementById('rpTab' + target.charAt(0).toUpperCase() + target.slice(1));
+      if (content) content.classList.add('active');
+    });
+  });
+
+  // Arousal sliders
   const _rM = document.getElementById('rpArousalM');
   const _rMv = document.getElementById('rpArousalMVal');
   if (_rM) _rM.addEventListener('input', function() {
-    if (typeof REPRODUCTIVE !== 'undefined') REPRODUCTIVE.setArousal('male', this.value);
+    if (typeof REPRODUCTIVE !== 'undefined') REPRODUCTIVE.setArousal('male', Number(this.value));
     if (_rMv) _rMv.textContent = this.value + '%';
   });
   const _rF = document.getElementById('rpArousalF');
   const _rFv = document.getElementById('rpArousalFVal');
   if (_rF) _rF.addEventListener('input', function() {
-    if (typeof REPRODUCTIVE !== 'undefined') REPRODUCTIVE.setArousal('female', this.value);
+    if (typeof REPRODUCTIVE !== 'undefined') REPRODUCTIVE.setArousal('female', Number(this.value));
     if (_rFv) _rFv.textContent = this.value + '%';
   });
 
-  // Reproductive buttons
+  // Action buttons
   const _rab = document.getElementById('rpArouseBoth');
   if (_rab) _rab.addEventListener('click', () => { if (typeof REPRODUCTIVE !== 'undefined') REPRODUCTIVE.increaseArousal('both', 20); });
   const _rim = document.getElementById('rpInitiateMating');
   if (_rim) _rim.addEventListener('click', () => { if (typeof REPRODUCTIVE !== 'undefined') REPRODUCTIVE.initiateMating(); });
   const _rreset = document.getElementById('rpReset');
   if (_rreset) _rreset.addEventListener('click', () => { if (typeof REPRODUCTIVE !== 'undefined') REPRODUCTIVE.reset(); });
+
+  // ─── RING GAUGE HELPER ─────────────────────────────────────────────
+  const RING_CIRCUMFERENCE = 138.2; // 2 * PI * 22
+  function setRing(id, pct) {
+    const el = document.getElementById(id);
+    if (el) el.setAttribute('stroke-dashoffset', (RING_CIRCUMFERENCE * (1 - pct / 100)).toFixed(1));
+  }
+
+  // ─── CYCLE DOT POSITION ───────────────────────────────────────────
+  function updateCycleDot(day) {
+    const dot = document.getElementById('rpCycleDot');
+    if (!dot) return;
+    const angle = ((day - 1) / 28) * 360 - 90; // -90 to start at top
+    const rad = angle * Math.PI / 180;
+    const cx = 40 + 32 * Math.cos(rad);
+    const cy = 40 + 32 * Math.sin(rad);
+    dot.setAttribute('cx', cx.toFixed(1));
+    dot.setAttribute('cy', cy.toFixed(1));
+  }
+
+  // ─── EMBRYO TIMELINE ──────────────────────────────────────────────
+  function updateEmbryoTimeline(embryoAge, fertilized) {
+    const section = document.getElementById('rpEmbryoSection');
+    const status = document.getElementById('rpEmbryoStatus');
+    if (!section) return;
+    section.style.display = fertilized ? 'block' : 'none';
+    if (!fertilized) return;
+    const dots = document.querySelectorAll('#rpTimeline .rp-tl-dot');
+    // Milestones: 0=fert, 1=zygote(1-3), 2=morula(3-4), 3=blast(5), 4=implant(7), 5=embryo(14+)
+    const milestones = [0, 1, 3, 5, 7, 14];
+    dots.forEach((dot, i) => {
+      const reached = embryoAge >= milestones[i];
+      const current = reached && (i === milestones.length - 1 || embryoAge < milestones[i + 1]);
+      dot.classList.toggle('reached', reached);
+      dot.classList.toggle('current', current);
+    });
+    if (status) {
+      const stage = embryoAge < 1 ? 'Fertilized' : embryoAge < 3 ? 'Zygote' : embryoAge < 5 ? 'Morula' : embryoAge < 7 ? 'Blastocyst' : embryoAge < 14 ? 'Implanting' : 'Embryo';
+      status.textContent = stage + ' · Day ' + embryoAge.toFixed(1);
+    }
+  }
+
+  // ─── GENETIC RECOMBINATION PREVIEW ─────────────────────────────────
+  const GENE_VARIANTS = {
+    BDNF: ['Val66Val (high)', 'Val66Met (moderate)', 'Met66Met (low)'],
+    DRD4: ['4R (baseline)', '7R (novelty-seeking)', '2R (cautious)'],
+    OXTR: ['GG (high empathy)', 'AG (moderate)', 'AA (reduced)'],
+    SLC6A4: ['L/L (resilient)', 'S/L (moderate)', 'S/S (sensitive)'],
+    COMT: ['Val/Val (warrior)', 'Val/Met (balanced)', 'Met/Met (worrier)'],
+    MAOA: ['High activity', 'Low activity', 'Very low activity'],
+    FKBP5: ['TT (resilient)', 'CT (moderate)', 'CC (stress-sensitive)'],
+    NRG1: ['Normal', 'Enhanced signaling', 'Reduced signaling']
+  };
+  function randomizeGenes() {
+    const genes = document.querySelectorAll('#rpGeneGrid .rp-gene');
+    genes.forEach(g => {
+      const code = g.querySelector('.rp-gene-code');
+      if (!code) return;
+      const key = code.textContent.trim();
+      const variants = GENE_VARIANTS[key];
+      if (variants) {
+        const variant = variants[Math.floor(Math.random() * variants.length)];
+        const trait = g.querySelector('.rp-gene-trait');
+        if (trait) trait.textContent = variant;
+        // Color-code by expression strength
+        const colors = ['rgba(102,187,106,0.6)', 'rgba(255,213,79,0.6)', 'rgba(239,83,80,0.6)'];
+        const idx = variants.indexOf(variant);
+        code.style.color = colors[idx] || 'rgba(79,195,247,0.7)';
+      }
+    });
+  }
+
+  // ─── COMPREHENSIVE UPDATE LOOP ─────────────────────────────────────
+  setInterval(() => {
+    if (typeof REPRODUCTIVE === 'undefined') return;
+    const s = REPRODUCTIVE.state;
+    const h = REPRODUCTIVE.getHormones();
+
+    // Slider sync
+    const mEl = document.getElementById('rpArousalM');
+    const mVEl = document.getElementById('rpArousalMVal');
+    const fEl = document.getElementById('rpArousalF');
+    const fVEl = document.getElementById('rpArousalFVal');
+    if (mEl) mEl.value = s.arousalMale;
+    if (mVEl) mVEl.textContent = Math.round(s.arousalMale) + '%';
+    if (fEl) fEl.value = s.arousalFemale;
+    if (fVEl) fVEl.textContent = Math.round(s.arousalFemale) + '%';
+
+    // Ring gauges
+    setRing('rpRingM', s.arousalMale);
+    setRing('rpRingF', s.arousalFemale);
+    const bondLevel = Math.min(100, h.oxytocin * 0.7 + h.dopamine * 0.3);
+    setRing('rpRingBond', bondLevel);
+    const ringMV = document.getElementById('rpRingMVal');
+    const ringFV = document.getElementById('rpRingFVal');
+    const ringBV = document.getElementById('rpRingBondVal');
+    if (ringMV) ringMV.textContent = Math.round(s.arousalMale);
+    if (ringFV) ringFV.textContent = Math.round(s.arousalFemale);
+    if (ringBV) ringBV.textContent = Math.round(bondLevel);
+
+    // Mating state
+    const matingLabel = document.getElementById('rpMatingLabel');
+    const matingBar = document.getElementById('rpMatingBar');
+    if (matingLabel) {
+      const labels = { idle: 'IDLE', initiating: 'INITIATING', mating: 'MATING', climax: 'CLIMAX', refractory: 'REFRACTORY' };
+      matingLabel.textContent = labels[s.matingState] || s.matingState.toUpperCase();
+      const colors = { idle: 'rgba(218,228,255,0.4)', initiating: 'rgba(255,213,79,0.7)', mating: 'rgba(206,147,216,0.9)', climax: 'rgba(244,143,177,0.95)', refractory: 'rgba(79,195,247,0.5)' };
+      matingLabel.style.color = colors[s.matingState] || 'rgba(218,228,255,0.4)';
+    }
+    if (matingBar) matingBar.style.width = (s.matingState === 'idle' ? 0 : s.matingProgress) + '%';
+
+    // Hormones
+    const hormoneEl = document.getElementById('rpHormoneDisplay');
+    if (hormoneEl) {
+      const items = [
+        { key: 'testosterone', color: '#4fc3f7', label: 'Testosterone' },
+        { key: 'estrogen', color: '#f48fb1', label: 'Estrogen' },
+        { key: 'progesterone', color: '#ce93d8', label: 'Progesterone' },
+        { key: 'oxytocin', color: '#e1bee7', label: 'Oxytocin' },
+        { key: 'dopamine', color: '#ffd54f', label: 'Dopamine' },
+        { key: 'lh', color: '#66bb6a', label: 'LH' },
+        { key: 'fsh', color: '#80deea', label: 'FSH' },
+        { key: 'prolactin', color: '#ffab91', label: 'Prolactin' },
+        { key: 'norepinephrine', color: '#ef5350', label: 'Norepineph.' }
+      ];
+      hormoneEl.innerHTML = items.map(it => {
+        const v = h[it.key] || 0;
+        return '<div class="rp-hormone">' +
+          '<span class="rp-hname" style="color:' + it.color + '">' + it.label + '</span>' +
+          '<div class="rp-hbar"><div class="rp-hfill" style="width:' + v + '%;background:' + it.color + '"></div></div>' +
+          '<span class="rp-hval">' + Math.round(v) + '</span>' +
+          '</div>';
+      }).join('');
+    }
+
+    // HPG axis feedback
+    const hpgM = document.getElementById('rpHPGMale');
+    const hpgF = document.getElementById('rpHPGFemale');
+    if (hpgM) hpgM.textContent = 'Testo: ' + Math.round(h.testosterone) + ' | LH: ' + Math.round(h.lh) + ' | NE: ' + Math.round(h.norepinephrine);
+    if (hpgF) hpgF.textContent = 'Estro: ' + Math.round(h.estrogen) + ' | FSH: ' + Math.round(h.fsh) + ' | Prog: ' + Math.round(h.progesterone);
+
+    // Cycle tab
+    updateCycleDot(s.cycleDay);
+    const cdEl = document.getElementById('rpCycleDay');
+    const cpEl = document.getElementById('rpCyclePhase');
+    const fwEl = document.getElementById('rpFertilityWindow');
+    if (cdEl) cdEl.textContent = s.cycleDay;
+    if (cpEl) {
+      const phases = { follicular: 'Follicular', ovulation: 'Ovulation', luteal: 'Luteal' };
+      cpEl.textContent = phases[s.ovulationPhase] || s.ovulationPhase;
+      const phaseColors = { follicular: 'rgba(79,195,247,0.7)', ovulation: 'rgba(255,213,79,0.85)', luteal: 'rgba(244,143,177,0.7)' };
+      cpEl.style.color = phaseColors[s.ovulationPhase] || 'rgba(218,228,255,0.5)';
+    }
+    if (fwEl) {
+      const fertile = s.cycleDay >= 11 && s.cycleDay <= 16;
+      const peak = s.cycleDay >= 13 && s.cycleDay <= 15;
+      fwEl.textContent = peak ? 'Peak' : fertile ? 'High' : 'Low';
+      fwEl.style.color = peak ? 'rgba(244,143,177,0.9)' : fertile ? 'rgba(255,213,79,0.7)' : 'rgba(218,228,255,0.5)';
+    }
+
+    // Sperm stats
+    const srEl = document.getElementById('rpSpermRate');
+    const scEl = document.getElementById('rpSpermCount');
+    if (srEl) srEl.textContent = s.spermatogenesisRate.toFixed(1) + 'x';
+    if (scEl) scEl.textContent = s.spermCells.length;
+
+    // Embryo timeline
+    const fertilized = REPRODUCTIVE.isFertilized();
+    const embryoAge = REPRODUCTIVE.getEmbryoAge ? REPRODUCTIVE.getEmbryoAge() : 0;
+    updateEmbryoTimeline(embryoAge, fertilized);
+
+    // Offspring section
+    const offSection = document.getElementById('rpOffspringSection');
+    if (offSection) offSection.style.display = fertilized ? 'block' : 'none';
+    if (fertilized) {
+      const offTraits = document.getElementById('rpOffspringTraits');
+      if (offTraits && !offTraits.dataset.generated) {
+        randomizeGenes();
+        const traits = [];
+        document.querySelectorAll('#rpGeneGrid .rp-gene').forEach(g => {
+          const code = g.querySelector('.rp-gene-code');
+          const trait = g.querySelector('.rp-gene-trait');
+          if (code && trait) traits.push(code.textContent + ': ' + trait.textContent);
+        });
+        offTraits.innerHTML = traits.map(t => '<div>' + t + '</div>').join('');
+        offTraits.dataset.generated = '1';
+      }
+    }
+
+    // Crossover log
+    if (s.matingState === 'mating' || s.matingState === 'climax') {
+      const log = document.getElementById('rpCrossoverLog');
+      if (log) {
+        const events = ['Chromosome 7: crossover at 7q31.2', 'Chromosome 11: independent assortment', 'Chromosome 17: crossover at 17p13.1', 'mtDNA: maternal inheritance (Aria)'];
+        const active = events.slice(0, Math.ceil(s.matingProgress / 25));
+        log.innerHTML = active.map(e => '<div style="color:rgba(79,195,247,0.5)">' + e + '</div>').join('') || 'Recombination in progress...';
+      }
+    }
+
+    // Status footer
+    const statusEl = document.getElementById('rpStatus');
+    if (statusEl) {
+      statusEl.textContent = (s.matingState === 'idle' ? 'Idle' : s.matingState.charAt(0).toUpperCase() + s.matingState.slice(1)) +
+        ' \u00B7 Day ' + s.cycleDay + ' \u00B7 ' +
+        (fertilized ? 'Embryo: ' + embryoAge.toFixed(1) + 'd' : 'Not Fertilized');
+    }
+
+    // Pulse the toggle button during active states
+    if (_reproToggle) {
+      if (s.matingState !== 'idle') {
+        _reproToggle.style.borderColor = 'rgba(206,147,216,0.6)';
+        _reproToggle.style.boxShadow = '0 0 12px rgba(206,147,216,0.2)';
+      } else {
+        _reproToggle.style.borderColor = 'rgba(206,147,216,0.3)';
+        _reproToggle.style.boxShadow = 'none';
+      }
+    }
+  }, 200);
 
   // V-Personal send button (close is wired in _wireVP to avoid double-fire)
   const _vsb = document.getElementById('vintinuumSendBtn');
@@ -42047,6 +43130,9 @@ const VINT_EXECUTE = (function() {
   // ESC key closes everything
   document.addEventListener('keydown', function(e) {
     if (e.key !== 'Escape') return;
+    // Reproductive panel
+    var rp = document.getElementById('reproPanel');
+    if (rp && rp.classList.contains('open')) { rp.classList.remove('open'); return; }
     // V·PERSONAL
     var vp = document.getElementById('vintinuumPanel');
     if (vp && vp.style.display === 'flex') { vp.style.display = 'none'; return; }
