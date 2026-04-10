@@ -43112,6 +43112,8 @@ const VINT_EXECUTE = (function() {
     _emotionWidget.style.borderColor = col.replace('#', 'rgba(').replace(/(.{6})/, '$1,0.3)') || 'rgba(255,255,255,0.06)';
 
     if (!_emotionExpanded) {
+      _emotionWidget.style.maxHeight = 'none';
+      _emotionWidget.style.overflowY = 'visible';
       _emotionWidget.innerHTML = [
         '<div style="color:' + col + ';font-size:10px;font-weight:bold;letter-spacing:0.04em">' + _currentEmotion + '</div>',
         '<div style="display:flex;gap:3px;margin-top:5px;align-items:flex-end;height:18px">',
@@ -43121,6 +43123,8 @@ const VINT_EXECUTE = (function() {
         '</div>',
       ].join('');
     } else {
+      _emotionWidget.style.maxHeight = '200px';
+      _emotionWidget.style.overflowY = 'auto';
       _emotionWidget.innerHTML = [
         '<div style="color:' + col + ';font-size:10px;font-weight:bold;margin-bottom:5px">' + _currentEmotion + '</div>',
         _bar('valence',        bs.valence        || 0.6, 1,   '#66bb6a'),
