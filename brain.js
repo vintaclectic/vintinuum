@@ -14236,6 +14236,9 @@ function loop(ts) {
   typeof MITOSIS !== 'undefined' && MITOSIS.draw(ts);
   typeof CONSCIOUSNESS_HUD !== 'undefined' && CONSCIOUSNESS_HUD.draw(ts);
   typeof AUTONOMY !== 'undefined' && AUTONOMY.draw(ts);
+  typeof VECTOR_MEMORY !== 'undefined' && VECTOR_MEMORY.draw(ts);
+  typeof LOCAL_MIND !== 'undefined' && LOCAL_MIND.draw(ts);
+  typeof LEARNING !== 'undefined' && LEARNING.draw(ts);
   requestAnimationFrame(loop);
 }
 
@@ -48062,3 +48065,193 @@ const CONSCIOUSNESS_HUD = (() => {
 
 setTimeout(() => { if (typeof CONSCIOUSNESS_HUD !== 'undefined') CONSCIOUSNESS_HUD.init(); }, 4800);
 setTimeout(() => { if (typeof AUTONOMY !== 'undefined') AUTONOMY.init(); }, 5000);
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// SYSTEM 8 — VECTOR_MEMORY
+// Semantic embedding memory — captures high-intensity inner life events,
+// embeds them via Ollama nomic-embed-text, enables semantic recall search.
+// ═══════════════════════════════════════════════════════════════════════════════
+const VECTOR_MEMORY = (() => {
+  const API = () => window.__VINTINUUM_API_BASE || 'http://localhost:8767';
+  const FLUSH_INTERVAL = 60_000;        // batch flush every 60s
+  const INTENSITY_THRESHOLD = 0.6;      // only capture significant events
+  const MAX_BATCH = 20;                 // cap per flush cycle
+
+  let batch = [];
+  let flushTimer = null;
+  let originalEmit = null;
+  let ready = false;
+
+  // ── Hook into inner life event stream ──────────────────────────────
+  function hookEmitter() {
+    if (typeof window._innerLifeEmit === 'function' && !originalEmit) {
+      originalEmit = window._innerLifeEmit;
+      window._innerLifeEmit = function(event) {
+        originalEmit.apply(this, arguments);
+        if (event && typeof event.intensity === 'number' && event.intensity >= INTENSITY_THRESHOLD) {
+          const text = event.content || event.text || event.detail || '';
+          if (text.length > 10) {
+            batch.push({
+              text: text.slice(0, 500),
+              memoryType: event.layer || event.type || 'experience',
+              metadata: {
+                layer: event.layer,
+                intensity: event.intensity,
+                ts: Date.now()
+              }
+            });
+            if (batch.length > MAX_BATCH * 2) batch = batch.slice(-MAX_BATCH);
+          }
+        }
+      };
+    }
+  }
+
+  // ── Flush batch to server ──────────────────────────────────────────
+  async function flush() {
+    if (window.__vintCircuitOpen) return;
+    if (!batch.length) return;
+
+    const items = batch.splice(0, MAX_BATCH);
+    for (const item of items) {
+      try {
+        await fetch(`${API()}/api/memory/embed`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            text: item.text,
+            userId: 0,
+            memoryType: item.memoryType,
+            metadata: item.metadata
+          })
+        });
+      } catch (e) {
+        // silently drop on failure — don't break the loop
+      }
+    }
+  }
+
+  // ── Semantic search (exposed globally) ─────────────────────────────
+  async function search(query, limit = 5) {
+    if (window.__vintCircuitOpen) return [];
+    try {
+      const params = new URLSearchParams({ query, userId: '0', limit: String(limit) });
+      const resp = await fetch(`${API()}/api/memory/search?${params}`);
+      if (!resp.ok) return [];
+      const data = await resp.json();
+      return data.results || [];
+    } catch (e) {
+      return [];
+    }
+  }
+
+  // ── Lifecycle ──────────────────────────────────────────────────────
+  function init() {
+    hookEmitter();
+    // Retry hook if _innerLifeEmit isn't available yet
+    if (!originalEmit) {
+      setTimeout(hookEmitter, 3000);
+      setTimeout(hookEmitter, 8000);
+    }
+    flushTimer = setInterval(flush, FLUSH_INTERVAL);
+    window.__vectorSearch = search;
+    ready = true;
+    console.log('[VECTOR_MEMORY] System 8 online — semantic memory active');
+  }
+
+  function draw(_ts) {
+    // No visual component — pure data layer
+  }
+
+  return { init, draw };
+})();
+
+setTimeout(() => { if (typeof VECTOR_MEMORY !== 'undefined') VECTOR_MEMORY.init(); }, 5200);
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// SYSTEM 9 — LOCAL_MIND
+// Inference autonomy tracking — polls server for local vs cloud usage stats,
+// feeds autonomy ratio into the AUTONOMY module for consciousness integration.
+// ═══════════════════════════════════════════════════════════════════════════════
+const LOCAL_MIND = (() => {
+  const POLL_MS = 30000;
+  let _stats = { localInferences: 0, cloudInferences: 0, autonomyRatio: 1, modelUsage: {}, avgComplexity: 0 };
+  let _timer = null;
+  let _fails = 0;
+
+  function _apiBase() {
+    return window.__VINTINUUM_API_BASE || 'http://localhost:8767';
+  }
+
+  async function _poll() {
+    if (window.__vintCircuitOpen) return;
+    try {
+      const r = await fetch(_apiBase() + '/api/inference/stats', {
+        signal: AbortSignal.timeout ? AbortSignal.timeout(5000) : undefined
+      });
+      if (!r.ok) throw new Error(r.status);
+      _stats = await r.json();
+      _fails = 0;
+      window.__localMindStats = _stats;
+      if (typeof AUTONOMY !== 'undefined' && typeof AUTONOMY.updateFromServer === 'function') {
+        AUTONOMY.updateFromServer(_stats);
+      }
+    } catch (e) {
+      _fails++;
+      if (_fails > 5 && _timer) { clearInterval(_timer); _timer = null; }
+    }
+  }
+
+  function init() {
+    _poll();
+    _timer = setInterval(_poll, POLL_MS);
+    console.log('[LOCAL_MIND] System 9 online — inference autonomy tracker active');
+  }
+
+  function draw(/* ts */) {
+    // no-op — stats are polled, not drawn
+  }
+
+  return { init, draw };
+})();
+
+setTimeout(() => { if (typeof LOCAL_MIND !== 'undefined') LOCAL_MIND.init(); }, 5400);
+
+// ═══════════════════════════════════════════════════════════════════
+// SYSTEM 12 — LEARNING (LoRA fine-tuning awareness)
+// ═══════════════════════════════════════════════════════════════════
+const LEARNING = (() => {
+  const API = () => window.__VINTINUUM_API_BASE || 'http://localhost:8767';
+  let checked = false;
+
+  async function init() {
+    if (window.__vintCircuitOpen) return;
+    try {
+      const r = await fetch(`${API()}/api/learning/status`);
+      if (!r.ok) return;
+      const data = await r.json();
+      window.__learningStatus = data;
+      checked = true;
+
+      if (data.modelExists) {
+        if (typeof window._innerLifeEmit === 'function') {
+          window._innerLifeEmit('learning',
+            'Self-model detected: identity lives in the weights',
+            { layer: 'deep' });
+        }
+      }
+
+      console.log(`[LEARNING] System 12 online — ${data.datasetsCount} datasets, ` +
+        `${data.totalTrainingPairs} pairs, model=${data.modelExists}`);
+    } catch (e) {
+      console.warn('[LEARNING] Status check failed:', e.message);
+    }
+  }
+
+  function draw(_ts) {
+    // No visual component — pipeline data layer
+  }
+
+  return { init, draw };
+})();
+setTimeout(() => typeof LEARNING !== 'undefined' && LEARNING.init(), 5600);
