@@ -1,6 +1,6 @@
 // ─── VINTINUUM RUNTIME DIAGNOSTICS ──────────────────────────────────────────
 // Version stamp + global error catcher. Shows visible banner on any crash.
-window.__VINT_VERSION = '2026-04-08-r2';
+window.__VINT_VERSION = '2026-04-10-body-r1';
 
 (function() {
   window.addEventListener('error', function(e) {
@@ -14239,6 +14239,13 @@ function loop(ts) {
   typeof VECTOR_MEMORY !== 'undefined' && VECTOR_MEMORY.draw(ts);
   typeof LOCAL_MIND !== 'undefined' && LOCAL_MIND.draw(ts);
   typeof LEARNING !== 'undefined' && LEARNING.draw(ts);
+  // ── BODY CONTAINMENT LAYERS (bottom to top) ────────────────────────────
+  typeof SKELETON !== 'undefined' && SKELETON.draw(ts);
+  typeof MUSCLE_LAYER !== 'undefined' && MUSCLE_LAYER.draw(ts);
+  typeof ORGANS !== 'undefined' && ORGANS.draw(ts);
+  typeof CIRCULATORY !== 'undefined' && CIRCULATORY.draw(ts);
+  typeof NERVOUS_BODY !== 'undefined' && NERVOUS_BODY.draw(ts);
+  typeof SKIN_LAYER !== 'undefined' && SKIN_LAYER.draw(ts);
   requestAnimationFrame(loop);
 }
 
