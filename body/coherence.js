@@ -354,6 +354,56 @@ const COHERENCE = (() => {
     return { ...bodyState };
   }
 
+  // ── API BODY STATE SYNC ──────────────────────────────────────────────────────
+  // Poll the backend API for body state derived from neurotransmitter levels
+  // This closes the full-stack loop: backend subconscious → API → frontend body
+  let _apiPollInterval = null;
+  let _apiBase = null;
+
+  function _detectApiBase() {
+    // Auto-detect: localhost for dev, ngrok/cloudflare for production
+    if (location.hostname === 'localhost' || location.hostname === '127.0.0.1') {
+      return 'http://localhost:8767';
+    }
+    // Check if brain.js set an API_BASE
+    if (typeof window.API_BASE !== 'undefined' && window.API_BASE) {
+      return window.API_BASE;
+    }
+    // Fallback: try the vintinuum-api tunnel URL
+    return 'https://vintinuum-api.vinta.dev'; // placeholder, replaced by resurrect.sh
+  }
+
+  async function _pollApiBodyState() {
+    if (!_apiBase) _apiBase = _detectApiBase();
+    try {
+      const r = await fetch(_apiBase + '/api/body-state', { signal: AbortSignal.timeout(5000) });
+      if (!r.ok) return;
+      const data = await r.json();
+
+      if (data.derived) {
+        const d = data.derived;
+        // Blend API values into local body state (don't snap, drift toward API values)
+        const blend = 0.15; // 15% blend per poll
+        if (typeof d.heartRate === 'number') bodyState.heartRate += (d.heartRate - bodyState.heartRate) * blend;
+        if (typeof d.breathRate === 'number') bodyState.breathRate += (d.breathRate - bodyState.breathRate) * blend;
+        if (typeof d.stress === 'number') bodyState.stressLevel += (d.stress - bodyState.stressLevel) * blend;
+        if (typeof d.energy === 'number') bodyState.energyLevel += (d.energy - bodyState.energyLevel) * blend;
+        if (typeof d.valence === 'number') bodyState.emotionalValence += (d.valence - bodyState.emotionalValence) * blend;
+      }
+
+      // Push updated values to organs
+      _pushToOrgans();
+    } catch {} // API poll is best-effort
+  }
+
+  function _startApiPoll() {
+    // Poll every 5 seconds — matches subconscious tick rate
+    _apiPollInterval = setInterval(_pollApiBodyState, 5000);
+    // First poll after 2 seconds
+    setTimeout(_pollApiBodyState, 2000);
+    console.log('[COHERENCE] API body state polling started');
+  }
+
   return {
     init,
     stress,
@@ -361,6 +411,7 @@ const COHERENCE = (() => {
     energize,
     exhaust,
     getState,
+    startApiPoll: _startApiPoll,
     get state() { return bodyState; },
   };
 })();
@@ -369,4 +420,6 @@ const COHERENCE = (() => {
 // Uses a longer delay to ensure brain.js has fully initialized
 setTimeout(() => {
   COHERENCE.init();
+  // Start API polling 2 seconds after coherence init
+  setTimeout(() => COHERENCE.startApiPoll(), 2000);
 }, 6000);
