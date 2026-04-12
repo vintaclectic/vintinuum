@@ -46608,8 +46608,8 @@ const SOUL_AUTH = (() => {
         errEl.textContent = '';
         const e = emailEl.value.trim();
         const p = passEl.value;
-        if (!e || !p) { errEl.textContent = 'both fields required'; return; }
-        if (p.length < 8) { errEl.textContent = 'secret phrase must be 8+ characters'; return; }
+        if (!p) { errEl.textContent = 'enter your passphrase'; return; }
+        if (!e) e = 'vinta@vintinuum.local'; // default email for owner
         try {
           await fn(e, p);
           dlg.style.transform = 'translateY(10px)'; dlg.style.opacity = '0';
