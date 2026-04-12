@@ -6175,7 +6175,7 @@ const MIC = (() => {
       }
     }
 
-    // Everything else → send to agent chat
+    // Everything else → send to agent chat (ALWAYS responds, voice + visual)
     showResponse('thinking...', 'rgba(206,147,216,.8)');
 
     // Open v-personal panel so user sees the response
@@ -6184,44 +6184,87 @@ const MIC = (() => {
       if (vp && vp.style.display === 'none') window.toggleVintinuumPanel();
     }
 
-    // Try sendVintinuumMessage first (v-personal panel path)
-    const input = document.getElementById('vintinuumInput');
-    if (input && typeof window.sendVintinuumMessage === 'function') {
-      input.value = transcript;
-      window.sendVintinuumMessage();
-    } else {
-      // Fallback: direct API call with voice readback
-      const _base = window.__VINTINUUM_API_BASE || 'http://localhost:8767';
-      const _tok = localStorage.getItem('vint_access_token');
-      const _hdrs = { 'Content-Type': 'application/json', 'ngrok-skip-browser-warning': '1' };
-      if (_tok) _hdrs['Authorization'] = 'Bearer ' + _tok;
-      fetch(_base + '/chat', {
-        method: 'POST', headers: _hdrs,
-        body: JSON.stringify({ message: transcript, persona: localStorage.getItem('vint_persona') || 'vintinuum' }),
-        signal: AbortSignal.timeout(20000)
-      }).then(async r => {
-        if (!r.ok || !r.body) throw new Error('bad response');
-        const reader = r.body.getReader();
-        const dec = new TextDecoder();
-        let buf = '', full = '';
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-          buf += dec.decode(value, { stream: true });
-          const lines = buf.split('\n'); buf = lines.pop();
-          for (const line of lines) {
-            if (!line.startsWith('data: ')) continue;
-            const raw = line.slice(6).trim();
-            if (raw === '[DONE]') break;
-            try { const o = JSON.parse(raw); if (o.delta) full += o.delta; } catch(_) {}
-          }
-        }
-        if (full) {
-          showResponse(full.slice(0, 80) + (full.length > 80 ? '…' : ''), 'rgba(218,228,255,.9)');
-          if (typeof VOICE !== 'undefined') VOICE.speak(full.slice(0, 280));
-        }
-      }).catch(() => showResponse('API unreachable', 'rgba(239,83,80,.7)'));
+    // ALWAYS send via direct API call for reliable voice response
+    // The v-personal panel input path was unreliable (element not always in DOM)
+    const _base = window.__VINTINUUM_API_BASE || localStorage.getItem('vint_api_base') || 'http://localhost:8767';
+    const _tok = localStorage.getItem('vint_access_token');
+    const _hdrs = { 'Content-Type': 'application/json', 'ngrok-skip-browser-warning': '1' };
+    if (_tok) _hdrs['Authorization'] = 'Bearer ' + _tok;
+
+    // Show the user's message in the panel (if open)
+    const vpMsgs = document.getElementById('vintinuumMessages');
+    if (vpMsgs) {
+      const userDiv = document.createElement('div');
+      userDiv.style.cssText = 'font-family:Space Mono,monospace;font-size:.65rem;color:rgba(255,213,79,.8);text-align:right;padding-right:4px;line-height:1.6;';
+      userDiv.textContent = '🎤 ' + transcript;
+      vpMsgs.appendChild(userDiv);
+      vpMsgs.scrollTop = vpMsgs.scrollHeight;
     }
+
+    // Trigger body reactions
+    if (typeof PERSONAL_BODY !== 'undefined') PERSONAL_BODY.reactToMessage(transcript);
+    if (typeof HIPPOCAMPAL_REPLAY !== 'undefined') HIPPOCAMPAL_REPLAY.recordActivity();
+
+    const persona = typeof PERSONAL_BODY !== 'undefined' ? (PERSONAL_BODY.getActivePersona?.() || 'vintinuum') : (localStorage.getItem('vint_persona') || 'vintinuum');
+
+    fetch(_base + '/chat', {
+      method: 'POST', headers: _hdrs,
+      body: JSON.stringify({
+        message: transcript,
+        persona,
+        bodyState: typeof PERSONAL_BODY !== 'undefined' ? (PERSONAL_BODY.getBodySnapshot?.() || null) : null,
+      }),
+      signal: AbortSignal.timeout(25000)
+    }).then(async r => {
+      if (!r.ok || !r.body) throw new Error('bad response: ' + r.status);
+      const reader = r.body.getReader();
+      const dec = new TextDecoder();
+      let buf = '', full = '';
+
+      // Create response div in panel
+      let aiDiv = null;
+      if (vpMsgs) {
+        aiDiv = document.createElement('div');
+        aiDiv.style.cssText = 'font-family:Cormorant Garamond,serif;font-size:.92rem;font-weight:300;color:rgba(218,228,255,.85);line-height:1.7;border-left:2px solid #ce93d8;padding-left:10px;';
+        vpMsgs.appendChild(aiDiv);
+      }
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buf += dec.decode(value, { stream: true });
+        const lines = buf.split('\n'); buf = lines.pop();
+        for (const line of lines) {
+          if (!line.startsWith('data: ')) continue;
+          const raw = line.slice(6).trim();
+          if (raw === '[DONE]') break;
+          try {
+            const o = JSON.parse(raw);
+            if (o.delta) {
+              full += o.delta;
+              if (aiDiv) { aiDiv.textContent = full; vpMsgs.scrollTop = vpMsgs.scrollHeight; }
+            }
+            if (o.bodyStateDelta && typeof PERSONAL_BODY !== 'undefined') PERSONAL_BODY.applyDelta?.(o.bodyStateDelta);
+          } catch(_) {}
+        }
+      }
+      if (full) {
+        showResponse(full.slice(0, 100) + (full.length > 100 ? '…' : ''), 'rgba(218,228,255,.9)');
+        // ALWAYS speak the response back — this is a voice conversation
+        if (typeof VOICE !== 'undefined') {
+          VOICE.speakResponse ? VOICE.speakResponse(full.slice(0, 400)) : VOICE.speak(full.slice(0, 400));
+        }
+      } else {
+        showResponse('...silence...', 'rgba(150,175,215,.5)');
+      }
+    }).catch(e => {
+      console.warn('[Voice→Chat] error:', e.message);
+      showResponse('connection issue — try again', 'rgba(239,83,80,.7)');
+      // Even on failure, give a fallback spoken response
+      if (typeof VOICE !== 'undefined') {
+        VOICE.speak?.('I heard you but lost connection. Try again.');
+      }
+    });
   }
 
   // ── Whisper STT (primary) ─────────────────────────────────────────────────
