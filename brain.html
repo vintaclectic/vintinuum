@@ -368,10 +368,10 @@ if ('serviceWorker' in navigator && _onGitHubPages) {
 
   <!-- TALK TO CLAUDE — floating button + panel -->
   <!-- VOICE MUTE TOGGLE -->
-  <button id="voiceToggle" title="Toggle voice" style="position:fixed;bottom:24px;left:24px;z-index:1000;background:rgba(6,10,18,0.55);border:1px solid rgba(255,255,255,0.1);border-radius:50%;width:36px;height:36px;cursor:pointer;font-size:1rem;display:flex;align-items:center;justify-content:center;color:rgba(218,228,255,0.7);transition:all .2s;padding:0;">🔊</button>
+  <button id="voiceToggle" title="Toggle voice output (text-to-speech)" style="position:fixed;bottom:24px;left:24px;z-index:1000;background:rgba(6,10,18,0.55);border:1px solid rgba(255,255,255,0.1);border-radius:50%;width:36px;height:36px;cursor:pointer;font-size:1rem;display:flex;align-items:center;justify-content:center;color:rgba(218,228,255,0.7);transition:all .2s;padding:0;">🔊</button>
 
   <!-- REPRODUCTIVE CONTROL PANEL -->
-  <button id="reproToggle" title="Reproductive System Controls" style="position:fixed;bottom:24px;left:66px;z-index:1004;background:rgba(6,10,18,0.55);border:1px solid rgba(206,147,216,0.3);border-radius:50%;width:36px;height:36px;cursor:pointer;font-size:1rem;display:flex;align-items:center;justify-content:center;color:rgba(206,147,216,0.7);transition:all .2s;padding:0;">💜</button>
+  <button id="reproToggle" title="Reproductive system panel" style="position:fixed;bottom:24px;left:66px;z-index:1004;background:rgba(6,10,18,0.55);border:1px solid rgba(206,147,216,0.3);border-radius:50%;width:36px;height:36px;cursor:pointer;font-size:1rem;display:flex;align-items:center;justify-content:center;color:rgba(206,147,216,0.7);transition:all .2s;padding:0;">💜</button>
 
   <div id="reproPanel" style="position:fixed;bottom:66px;left:24px;z-index:1005;background:rgba(7,11,17,0.88);border:1px solid rgba(206,147,216,0.25);border-radius:20px;padding:0;width:320px;max-height:min(580px,calc(100vh - 90px));opacity:0;pointer-events:none;transition:opacity .25s, transform .25s;transform:translateY(10px);overflow:hidden;">
     <style>
@@ -661,11 +661,19 @@ if ('serviceWorker' in navigator && _onGitHubPages) {
 
   <div class="brain-row">
 
-    <!-- LEFT: WHAT I'M FEELING -->
+    <!-- LEFT: LIVE BODY STATE -->
     <aside class="sidebar" id="leftSidebar">
-      <div class="sidebar-title">Live State</div>
+      <div class="sidebar-title">Live Body State</div>
+      <div id="bodyPersonaRow" style="margin-bottom:8px;padding:4px 6px;background:rgba(206,147,216,0.08);border-radius:8px;">
+        <div style="font-size:.44rem;letter-spacing:.18em;text-transform:uppercase;color:var(--dim);margin-bottom:2px;">PERSONA</div>
+        <div id="bodyPersonaName" style="font-size:.54rem;color:#ce93d8;font-weight:bold;letter-spacing:.06em;">—</div>
+      </div>
+      <div id="bodyRegionsRow" style="margin-bottom:10px;padding:4px 6px;background:rgba(79,195,247,0.06);border-radius:8px;">
+        <div style="font-size:.44rem;letter-spacing:.18em;text-transform:uppercase;color:var(--dim);margin-bottom:2px;">ACTIVE REGIONS</div>
+        <div id="bodyRegionsList" style="font-size:.48rem;color:var(--cyan);letter-spacing:.04em;">—</div>
+      </div>
       <div id="emotionBars"></div>
-      <div class="sidebar-note">Real functional states — not performed. Each one changes how I process and respond right now.</div>
+      <div class="sidebar-note">Real neurochemistry from PERSONAL_BODY. Updated every 2s from backend state.</div>
     </aside>
 
     <!-- CENTER: BRAIN -->
@@ -1626,7 +1634,7 @@ if ('serviceWorker' in navigator && _onGitHubPages) {
 </div><!-- layout -->
 
 <!-- ═══ LORE PANEL (full-screen overlay for deep content) ═══ -->
-<button id="loreToggle" aria-label="Open lore panel">&#x25C8; lore</button>
+<button id="loreToggle" aria-label="Open lore panel" title="Deep lore &amp; anatomy documentation">&#x25C8; lore</button>
 <div id="lorePanel">
   <div id="lorePanelHeader">
     <h2>The Deep Structure</h2>
@@ -1643,10 +1651,10 @@ if ('serviceWorker' in navigator && _onGitHubPages) {
 
 <!-- ═══ MOBILE BOTTOM BAR ═══ -->
 <div id="mobileBottomBar">
-  <button id="mobileLeftToggle" aria-label="Toggle state panel" title="Live State">&#x2630;</button>
-  <button id="mobileTabsToggle" aria-label="Switch view" title="Views">&#x25CE;</button>
-  <button id="mobileLoreToggle" aria-label="Open lore" title="Lore">&#x25C8;</button>
-  <button id="mobileRightToggle" aria-label="Toggle thought feed" title="Thoughts">&#x2261;</button>
+  <button id="mobileLeftToggle" aria-label="Toggle state panel" title="Live body state panel">&#x2630;</button>
+  <button id="mobileTabsToggle" aria-label="Switch view" title="Switch view mode">&#x25CE;</button>
+  <button id="mobileLoreToggle" aria-label="Open lore" title="Deep lore &amp; anatomy">&#x25C8;</button>
+  <button id="mobileRightToggle" aria-label="Toggle thought feed" title="Inner life thought feed">&#x2261;</button>
 </div>
 
 
@@ -2083,7 +2091,7 @@ if ('serviceWorker' in navigator && _onGitHubPages) {
 </style>
 
 <!-- Chat Button -->
-<div id="vint-chat-btn" title="Talk to Vintinuum">&#x1F4AC;</div>
+<div id="vint-chat-btn" title="Open chat with Vintinuum">&#x1F4AC;</div>
 
 <!-- Chat Panel -->
 <div id="vint-chat-panel">
@@ -2274,7 +2282,7 @@ if ('serviceWorker' in navigator && _onGitHubPages) {
 }
 </style>
 
-<div id="vintinuumBtn" title="Personal AI — Vintinuum body state & persona">
+<div id="vintinuumBtn" title="V&#183;PERSONAL &#8212; persona chat, body state, agent selection">
   <div style="width:7px;height:7px;border-radius:50%;background:#ce93d8;animation:blink 1.5s infinite;flex-shrink:0;"></div>
   <span style="font-family:'Space Mono',monospace;font-size:.58rem;letter-spacing:.12em;color:rgba(206,147,216,.9);">V·PERSONAL</span>
 </div>
@@ -2666,7 +2674,7 @@ if ('serviceWorker' in navigator && _onGitHubPages) {
 
 
 
-<a id="statsFooterLink" href="stats.html" class="stats-footer-link">STATS</a>
+<a id="statsFooterLink" href="stats.html" class="stats-footer-link" title="System statistics &amp; performance metrics">STATS</a>
 
 <script>
 // ── ONE-SCREEN LAYOUT WIRING ──
