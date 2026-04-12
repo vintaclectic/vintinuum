@@ -5774,7 +5774,7 @@ const VOICE = (() => {
     _resolvePersonaVoice('emergent');
 
     // Set initial active voice
-    const activePersona = typeof PERSONAL_BODY !== 'undefined' ? (PERSONAL_BODY.getActivePersona && PERSONAL_BODY.getActivePersona() || 'vintinuum') : 'vintinuum';
+    const activePersona = (window.PERSONAL_BODY && window.PERSONAL_BODY.getActivePersona) ? (window.PERSONAL_BODY.getActivePersona() || 'vintinuum') : 'vintinuum';
     chosenVoice = personaVoiceCache[activePersona] || personaVoiceCache.vintinuum || voices[0];
   }
 
@@ -8074,10 +8074,14 @@ setInterval(tickFloats,16);
 // ═══════════════════════════════════════════════════════════════════
 // EMOTION BARS
 // ═══════════════════════════════════════════════════════════════════
-// Build real body-state bars from BODY_METRICS + PERSONAL_BODY.state
+// Build real body-state bars from BODY_METRICS
+// PERSONAL_BODY is defined later (~line 42484) — use defaults here, updateEmotions() will fill live data
 const emoContainer=document.getElementById('emotionBars');
+// Try restoring cached body state for initial render
+let _cachedBody = { dopamine:55, serotonin:60, gaba:65, norepinephrine:45, valence:55, arousal:50 };
+try { const c = localStorage.getItem('vint_body_state'); if (c) Object.assign(_cachedBody, JSON.parse(c)); } catch(e) {}
 BODY_METRICS.forEach((m,i) => {
-  const val = (typeof PERSONAL_BODY !== 'undefined' && PERSONAL_BODY.state) ? (PERSONAL_BODY.state[m.key] || 0) : 50;
+  const val = _cachedBody[m.key] || 50;
   const w=document.createElement('div');
   w.className='emo-item';
   w.innerHTML=`<div class="emo-label"><span class="emo-name">${m.name}</span><span class="emo-pct" id="bp${i}">${Math.round(val)}%</span></div>
@@ -8086,17 +8090,9 @@ BODY_METRICS.forEach((m,i) => {
   emoContainer.appendChild(w);
 });
 
-// Restore body state from localStorage before API finishes
-try {
-  const cached = localStorage.getItem('vint_body_state');
-  if (cached && typeof PERSONAL_BODY !== 'undefined') {
-    const parsed = JSON.parse(cached);
-    Object.assign(PERSONAL_BODY.state, parsed);
-  }
-} catch(e) {}
-
 function updateEmotions() {
-  const bs = (typeof PERSONAL_BODY !== 'undefined' && PERSONAL_BODY.state) ? PERSONAL_BODY.state : {};
+  // Safe access — PERSONAL_BODY may not be initialized yet on first few ticks
+  const bs = (window.PERSONAL_BODY && window.PERSONAL_BODY.state) ? window.PERSONAL_BODY.state : _cachedBody;
   BODY_METRICS.forEach((m,i)=>{
     const val = Math.max(0, Math.min(100, bs[m.key] || 0));
     const b=document.getElementById(`bb${i}`), p=document.getElementById(`bp${i}`);
@@ -8111,7 +8107,7 @@ function updateEmotions() {
     const regions = bs.active_regions;
     regionsEl.textContent = (Array.isArray(regions) && regions.length) ? regions.join(', ') : 'none';
   }
-  // Persist to localStorage
+  // Persist to localStorage for next load
   try { localStorage.setItem('vint_body_state', JSON.stringify(bs)); } catch(e) {}
 }
 

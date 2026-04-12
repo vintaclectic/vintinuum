@@ -197,7 +197,7 @@ const COHERENCE = (() => {
   }
 
   function _readMetabolism() {
-    if (typeof METABOLISM !== 'undefined' && METABOLISM.getState) {
+    if (window.METABOLISM && window.METABOLISM.getState) {
       const ms = METABOLISM.getState();
       if (ms) {
         bodyState.metabolicZone = ms.zone || bodyState.metabolicZone;
