@@ -43855,35 +43855,60 @@ const VINT_EXECUTE = (function() {
     }
   }
 
+  // Guess type from file extension when item.type is missing or generic
+  const EXT_TYPE_MAP = {
+    video: ['mp4','mkv','avi','mov','wmv','flv','webm','m4v','ts','mpg','mpeg'],
+    audio: ['mp3','flac','wav','ogg','aac','m4a','wma','opus','aiff'],
+    image: ['jpg','jpeg','png','gif','webp','bmp','svg','tiff','ico'],
+    ebook: ['pdf','epub','mobi','azw3','djvu','cbr','cbz'],
+    document: ['txt','nfo','srt','sub','ass','html','htm','md','doc','docx'],
+  };
+  function guessType(item) {
+    if (item.type && item.type !== 'other' && item.type !== 'file') return item.type;
+    const ext = (item.extension || item.url?.split('.').pop()?.split('?')[0] || '').toLowerCase();
+    for (const [type, exts] of Object.entries(EXT_TYPE_MAP)) {
+      if (exts.includes(ext)) return type;
+    }
+    return item.type || 'video';
+  }
+
   async function playArchiveItem(item) {
     currentMediaItem = item;
-    tick(`loading ${item.type || 'media'}: ${item.name}...`);
+    const effectiveType = guessType(item);
+    tick(`loading ${effectiveType}: ${item.name}...`);
     setStatus('executing');
+    currentWatchUrl = item.url;
 
+    // For images: open directly — no resolve needed, they're direct links from open directories
+    if (effectiveType === 'image') {
+      tick('opening image directly...');
+      showImage(item, { playbackUrl: item.url });
+      return;
+    }
+
+    // For all other types: try resolve, fall back to direct URL if resolve fails
+    let resolved;
     try {
-      const resolved = await resolveMedia(item.url, item.type);
+      resolved = await resolveMedia(item.url, effectiveType);
       tick(`resolved via ${resolved.source} (${resolved.kind})`);
-      currentWatchUrl = item.url;
-      primaryBtn.style.display = 'inline-flex';
-
-      switch (resolved.kind) {
-        case 'hls':
-        case 'direct':
-          if (item.type === 'audio') return playAudio(item, resolved);
-          return playVideo(item, resolved);
-        case 'audio':
-          return playAudio(item, resolved);
-        case 'image':
-          return showImage(item, resolved);
-        case 'ebook':
-        case 'document':
-          return showDocument(item, resolved);
-        default:
-          return playVideo(item, resolved);
-      }
     } catch (err) {
-      tick('playback error: ' + err.message);
-      setStatus('error');
+      tick(`resolve failed (${err.message}) — using direct URL`);
+      // Fall back to direct URL — still works for most open directory files
+      resolved = { playbackUrl: item.url, kind: effectiveType === 'audio' ? 'audio' : 'direct', source: 'direct' };
+    }
+
+    primaryBtn.style.display = 'inline-flex';
+
+    switch (effectiveType) {
+      case 'audio':
+        return playAudio(item, resolved);
+      case 'ebook':
+      case 'document':
+        return showDocument(item, resolved);
+      default:
+        // video or unknown — play as video
+        if (resolved.kind === 'hls' || resolved.kind === 'direct') return playVideo(item, resolved);
+        return playVideo(item, resolved);
     }
   }
 
