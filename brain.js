@@ -6158,12 +6158,10 @@ window.MIC = (() => {
     [/\bvinda\b/gi, 'Vinta'],
     [/\bvinta\b/gi, 'Vinta'],
     // Real English words speech API might substitute
-    [/\bvintage\b/gi, 'Vinta'],
-    [/\bvindow\b/gi, 'Vinta'],
-    [/\bpinta\b/gi, 'Vinta'],
-    [/\bfinder\b/gi, 'Vinta'],
-    [/\bvender\b/gi, 'Vinta'],
-    [/\bvendor\b/gi, 'Vinta'],
+    // "vintage" left alone — it's a real word. Only corrected in compound forms below.
+    // "vindow" left alone
+    // "pinta" left alone — real word
+    // "finder", "vender", "vendor" left alone — real words
     // Possessive forms
     [/\bventa'?s\b/gi, "Vinta's"],
     [/\bventas\b/gi, "Vinta's"],
@@ -6192,7 +6190,7 @@ window.MIC = (() => {
     [/\bvintage ?new ?um\b/gi, 'Vintinuum'],
     [/\bvintage ?noom\b/gi, 'Vintinuum'],
     [/\bvint ?a ?nuum\b/gi, 'Vintinuum'],
-    [/\bcontinuum\b/gi, 'Vintinuum'],
+    // "continuum" left alone — real word
     [/\bvint continuum\b/gi, 'Vintinuum'],
     [/\bvin continuum\b/gi, 'Vintinuum'],
     // Dropped/extra syllables
