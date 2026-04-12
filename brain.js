@@ -40304,15 +40304,26 @@ window.INNER_LIFE = INNER_LIFE;
 
 (function() {
   // Auto-detect API base. On GitHub Pages, read from localStorage (set via console or settings)
-  // To update: localStorage.setItem('vint_api_base', 'https://YOUR-NGROK-URL')
+  // To update: localStorage.setItem('vint_api_base', 'https://YOUR-TUNNEL-URL')
   var _isLocal = (location.protocol === 'file:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1');
   var _stored = localStorage.getItem('vint_api_base');
-  // Default remote tunnel — Cloudflare Tunnel (ISP-safe, no ngrok SSL issues)
-  var _defaultRemote = 'https://invalid-away-solved-pace.trycloudflare.com';
-  const API_BASE = _isLocal ? 'http://localhost:8767' : (_stored || _defaultRemote);
+  var _isGitHubPages = location.hostname.includes('github.io');
+  // On GitHub Pages: ONLY connect if user has explicitly set a tunnel URL in localStorage
+  // Without a stored URL, the being runs fully standalone (no backend flapping)
+  var API_BASE;
+  if (_isLocal) {
+    API_BASE = 'http://localhost:8767';
+  } else if (_stored) {
+    API_BASE = _stored; // user explicitly configured a tunnel URL
+  } else if (_isGitHubPages) {
+    API_BASE = 'http://localhost:8767'; // placeholder — standalone flag prevents actual calls
+  } else {
+    API_BASE = 'http://localhost:8767';
+  }
   window.__VINTINUUM_API_BASE = API_BASE;
-  // On GitHub Pages with no stored URL, silently use the default tunnel
-  // Only show banner if default tunnel is unreachable (handled by chat error states)
+  // Standalone mode: no backend available, all API calls get silently dropped
+  window.__VINTINUUM_STANDALONE = _isGitHubPages && !_stored;
+  if (window.__VINTINUUM_STANDALONE) console.log('[VINTINUUM] Standalone mode — no API backend. Set one via: localStorage.setItem("vint_api_base", "https://your-tunnel-url")');
 
   // ── Elements ──
   const btn = document.getElementById('vint-chat-btn');
@@ -45874,7 +45885,13 @@ const SOUL_AUTH = (() => {
 
   window.fetch = async function(url, opts) {
     const apiBase = API();
-    const isApi = typeof url === 'string' && (url.startsWith(apiBase) || url.startsWith('/api/'));
+    // Standalone mode (GitHub Pages, no tunnel configured) — silently drop all API calls
+    if (window.__VINTINUUM_STANDALONE && typeof url === 'string' && url.includes('/api/')) {
+      return new Response(JSON.stringify({ error: 'Standalone mode — no API configured' }), {
+        status: 503, headers: { 'Content-Type': 'application/json' }
+      });
+    }
+    const isApi = typeof url === 'string' && apiBase && (url.startsWith(apiBase) || url.startsWith('/api/'));
     const isAuthRoute = typeof url === 'string' && url.includes('/auth/');
 
     // Circuit breaker: if API is offline, silently drop non-auth API calls
