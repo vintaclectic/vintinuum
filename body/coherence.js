@@ -361,28 +361,24 @@ const COHERENCE = (() => {
   let _apiBase = null;
 
   function _detectApiBase() {
-    // Auto-detect: localhost for dev, ngrok/cloudflare for production
-    if (location.hostname === 'localhost' || location.hostname === '127.0.0.1') {
-      return 'http://localhost:8767';
-    }
-    // Check if brain.js set an API_BASE
-    if (typeof window.API_BASE !== 'undefined' && window.API_BASE) {
-      return window.API_BASE;
-    }
-    // On GitHub Pages with no API configured — disable polling
-    if (location.hostname.includes('github.io')) {
-      return null; // no API available on static hosting
-    }
-    // Fallback: try the vintinuum-api tunnel URL
-    return 'https://vintinuum-api.vinta.dev';
+    // Use brain.js auto-discovered API base (handles tunnel discovery, standalone mode, etc.)
+    if (window.__VINTINUUM_STANDALONE) return null;
+    if (window.__VINTINUUM_API_BASE) return window.__VINTINUUM_API_BASE;
+    if (location.hostname === 'localhost' || location.hostname === '127.0.0.1') return 'http://localhost:8767';
+    return null;
   }
 
   let _apiFailCount = 0;
-  const API_MAX_FAILS = 3; // stop polling after 3 consecutive failures
+  const API_MAX_FAILS = 5; // stop polling after 5 consecutive failures (auto-discovery may fix it)
 
   async function _pollApiBodyState() {
-    if (!_apiBase) return; // no API available (e.g. GitHub Pages)
-    if (_apiFailCount >= API_MAX_FAILS) return; // backed off, stop spamming
+    // Re-check API base each poll (tunnel auto-discovery may have found a new URL)
+    _apiBase = _detectApiBase();
+    if (!_apiBase) return; // no API available (e.g. standalone mode)
+    if (_apiFailCount >= API_MAX_FAILS) {
+      // Periodically retry after max fails (in case discovery found a new tunnel)
+      _apiFailCount = 0; // reset to allow one probe
+    }
 
     try {
       const r = await fetch(_apiBase + '/api/body-state', { signal: AbortSignal.timeout(5000) });

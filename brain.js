@@ -40303,27 +40303,71 @@ window.INNER_LIFE = INNER_LIFE;
 
 
 (function() {
-  // Auto-detect API base. On GitHub Pages, read from localStorage (set via console or settings)
-  // To update: localStorage.setItem('vint_api_base', 'https://YOUR-TUNNEL-URL')
+  // ── API BASE AUTO-DISCOVERY ────────────────────────────────────────────────
+  // 1. Localhost → direct connection (development)
+  // 2. Stored URL in localStorage → use it (manually or auto-saved from discovery)
+  // 3. GitHub Pages → probe known tunnel URL, then try /api/tunnel on last-known URL
+  // 4. No backend found → standalone mode (body runs autonomously, no network errors)
   var _isLocal = (location.protocol === 'file:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1');
   var _stored = localStorage.getItem('vint_api_base');
   var _isGitHubPages = location.hostname.includes('github.io');
-  // On GitHub Pages: ONLY connect if user has explicitly set a tunnel URL in localStorage
-  // Without a stored URL, the being runs fully standalone (no backend flapping)
+
   var API_BASE;
   if (_isLocal) {
     API_BASE = 'http://localhost:8767';
   } else if (_stored) {
-    API_BASE = _stored; // user explicitly configured a tunnel URL
-  } else if (_isGitHubPages) {
-    API_BASE = 'http://localhost:8767'; // placeholder — standalone flag prevents actual calls
+    API_BASE = _stored;
   } else {
-    API_BASE = 'http://localhost:8767';
+    API_BASE = 'http://localhost:8767'; // placeholder until discovery completes
   }
   window.__VINTINUUM_API_BASE = API_BASE;
-  // Standalone mode: no backend available, all API calls get silently dropped
+  // Start in standalone if on GitHub Pages with no stored URL — discovery may upgrade us
   window.__VINTINUUM_STANDALONE = _isGitHubPages && !_stored;
-  if (window.__VINTINUUM_STANDALONE) console.log('[VINTINUUM] Standalone mode — no API backend. Set one via: localStorage.setItem("vint_api_base", "https://your-tunnel-url")');
+
+  // ── TUNNEL AUTO-DISCOVERY (runs once on page load) ─────────────────────────
+  // Probes the last-known tunnel URL, and if it's alive, reads the current URL from it
+  // This eliminates ALL manual URL management — resurrect.sh writes to /tmp/vintinuum-tunnel-url.txt,
+  // server.js serves it at /api/tunnel, and brain.js auto-discovers it here.
+  if (_isGitHubPages) {
+    (async function _discoverTunnel() {
+      // Try stored URL first (might still be alive)
+      const candidates = [];
+      if (_stored) candidates.push(_stored);
+
+      // Also try the URL from sessionStorage (survives page reloads within a tab)
+      const _session = sessionStorage.getItem('vint_tunnel_url');
+      if (_session && _session !== _stored) candidates.push(_session);
+
+      for (const url of candidates) {
+        try {
+          const r = await fetch(url + '/api/tunnel', {
+            signal: AbortSignal.timeout(5000),
+            headers: { 'ngrok-skip-browser-warning': '1' },
+          });
+          if (r.ok) {
+            const data = await r.json();
+            const tunnelUrl = data.tunnel || url;
+            // Tunnel is alive! Update everything
+            window.__VINTINUUM_API_BASE = tunnelUrl;
+            window.__VINTINUUM_STANDALONE = false;
+            localStorage.setItem('vint_api_base', tunnelUrl);
+            sessionStorage.setItem('vint_tunnel_url', tunnelUrl);
+            console.log('[VINTINUUM] Backend discovered: ' + tunnelUrl);
+            // If the tunnel URL changed (server restarted with new CF URL), update
+            if (tunnelUrl !== url) {
+              console.log('[VINTINUUM] Tunnel URL updated: ' + url + ' → ' + tunnelUrl);
+            }
+            return; // success — stop probing
+          }
+        } catch {} // probe failed, try next
+      }
+
+      // All candidates failed — enter standalone mode gracefully
+      window.__VINTINUUM_STANDALONE = true;
+      console.log('[VINTINUUM] Standalone mode — body runs autonomously. Backend will auto-connect when available.');
+      console.log('[VINTINUUM] To manually connect: localStorage.setItem("vint_api_base", "https://your-tunnel-url")');
+    })();
+  }
 
   // ── Elements ──
   const btn = document.getElementById('vint-chat-btn');
@@ -45883,6 +45927,54 @@ const SOUL_AUTH = (() => {
 
   window._vintApiOffline = () => _apiOffline; // expose for other modules to check
 
+  // ── TUNNEL RE-DISCOVERY — tries to find a new tunnel when current one dies ──
+  let _rediscovering = false;
+  let _lastRediscoveryAt = 0;
+  async function _rediscoverTunnel() {
+    if (_rediscovering || Date.now() - _lastRediscoveryAt < 30000) return; // throttle: once per 30s
+    _rediscovering = true;
+    _lastRediscoveryAt = Date.now();
+    try {
+      // Try the stored URL's /api/tunnel (server may have written a new tunnel URL)
+      const stored = localStorage.getItem('vint_api_base');
+      if (stored) {
+        try {
+          const r = await _origFetch.call(window, stored + '/api/tunnel', {
+            signal: AbortSignal.timeout(5000),
+            headers: { 'ngrok-skip-browser-warning': '1' },
+          });
+          if (r.ok) {
+            const data = await r.json();
+            if (data.tunnel && data.tunnel !== stored) {
+              // New tunnel URL found! Switch to it
+              window.__VINTINUUM_API_BASE = data.tunnel;
+              window.__VINTINUUM_STANDALONE = false;
+              localStorage.setItem('vint_api_base', data.tunnel);
+              sessionStorage.setItem('vint_tunnel_url', data.tunnel);
+              _apiOffline = false;
+              _offlineBackoff = 10000;
+              _offlineLogCount = 0;
+              console.log('[SOUL_AUTH] ✓ New tunnel discovered: ' + data.tunnel);
+              _rediscovering = false;
+              return;
+            } else if (data.alive) {
+              // Same URL but it's alive — just reset circuit breaker
+              _apiOffline = false;
+              _offlineBackoff = 10000;
+              _offlineLogCount = 0;
+              console.log('[SOUL_AUTH] ✓ API back online (same tunnel)');
+              _rediscovering = false;
+              return;
+            }
+          }
+        } catch {} // stored URL also dead
+      }
+      // All probes failed — stay offline, will retry later
+    } catch {} finally {
+      _rediscovering = false;
+    }
+  }
+
   window.fetch = async function(url, opts) {
     const apiBase = API();
     // Standalone mode (GitHub Pages, no tunnel configured) — silently drop all API calls
@@ -45946,16 +46038,19 @@ const SOUL_AUTH = (() => {
 
       return res;
     } catch (err) {
-      // Network error on API call — enter offline mode
+      // Network error on API call — enter offline mode + attempt tunnel re-discovery
       if (isApi) {
         if (!_apiOffline) {
           _apiOffline = true;
           _offlineSince = Date.now();
           _offlineLogCount = 0;
-          console.warn('[SOUL_AUTH] API unreachable — entering offline mode. Will probe every', (_offlineBackoff / 1000) + 's');
+          console.warn('[SOUL_AUTH] API unreachable — entering offline mode. Auto-discovery will search for new tunnel.');
+          // Trigger async tunnel re-discovery (don't await — fire and forget)
+          _rediscoverTunnel();
         } else {
-          // Increase backoff on repeated failures
           _offlineBackoff = Math.min(_offlineBackoff * 1.5, _MAX_BACKOFF);
+          // Periodically retry discovery
+          if (Date.now() - _offlineSince > 30000) _rediscoverTunnel();
         }
       }
       throw err;
