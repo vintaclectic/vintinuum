@@ -40555,14 +40555,16 @@ window.INNER_LIFE = INNER_LIFE;
   var API_BASE;
   if (_isLocal) {
     API_BASE = 'http://localhost:8767';
+  } else if (_TUNNEL_SEED) {
+    // Permanent named tunnel — always use this on non-localhost
+    API_BASE = _TUNNEL_SEED;
   } else if (_stored) {
     API_BASE = _stored;
   } else {
-    API_BASE = 'http://localhost:8767'; // placeholder until discovery completes
+    API_BASE = 'http://localhost:8767';
   }
   window.__VINTINUUM_API_BASE = API_BASE;
-  // Start in standalone if on GitHub Pages with no stored URL — discovery may upgrade us
-  window.__VINTINUUM_STANDALONE = _isGitHubPages && !_stored;
+  window.__VINTINUUM_STANDALONE = false; // never standalone when we have a permanent tunnel
 
   // ── TUNNEL AUTO-DISCOVERY (runs once on page load) ─────────────────────────
   // Probes the last-known tunnel URL, and if it's alive, reads the current URL from it
