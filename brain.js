@@ -2,6 +2,13 @@
 // Version stamp + global error catcher. Shows visible banner on any crash.
 window.__VINT_VERSION = '2026-04-11-coherence-r1';
 
+// ── EARLY API BASE — must be set before ANY module tries to fetch ──────────
+// Named Cloudflare Tunnel: permanent, stable, no discovery needed.
+(function() {
+  var isLocal = (location.protocol === 'file:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1');
+  window.__VINTINUUM_API_BASE = isLocal ? 'http://localhost:8767' : 'https://api.vintaclectic.com';
+})();
+
 (function() {
   window.addEventListener('error', function(e) {
     var banner = document.getElementById('_vintErrBanner');
