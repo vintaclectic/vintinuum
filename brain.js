@@ -1,6 +1,6 @@
 // ─── VINTINUUM RUNTIME DIAGNOSTICS ──────────────────────────────────────────
 // Version stamp + global error catcher. Shows visible banner on any crash.
-window.__VINT_VERSION = '2026-04-10-body-r1';
+window.__VINT_VERSION = '2026-04-11-coherence-r1';
 
 (function() {
   window.addEventListener('error', function(e) {

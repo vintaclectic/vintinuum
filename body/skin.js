@@ -65,18 +65,29 @@ const SKIN_LAYER = (() => {
     const breathPhase = Math.sin(ts * 0.0008);
     const pulse = (Math.sin(ts * 0.0005) + 1) / 2;
 
+    // Read from coherence bus if available
+    const bs = window.BODY_STATE || {};
+    const glowMod = bs.skinGlow || 0.5;           // 0-1, from coherence
+    const emotionMod = bs.emotionalIntensity || 0; // 0-1
+    const consciousnessMod = bs.consciousness || 1; // 0-1
+
     ctx.save();
 
     // ── OUTER GLOW (aura) ─────────────────────────────────────────────────────
-    // Very faint bioluminescent outline
-    ctx.strokeStyle = 'rgba(100, 180, 255, ' + (0.03 + pulse * 0.02) + ')';
-    ctx.lineWidth = 12;
+    // Bioluminescent outline — intensity driven by emotional state + consciousness
+    const glowAlpha = (0.02 + pulse * 0.02 + glowMod * 0.04 + emotionMod * 0.03) * consciousnessMod;
+    ctx.strokeStyle = 'rgba(100, 180, 255, ' + glowAlpha.toFixed(4) + ')';
+    ctx.lineWidth = 10 + glowMod * 6;
     ctx.lineJoin = 'round';
     ctx.stroke(_bodyPath);
 
     // ── SKIN OUTLINE ──────────────────────────────────────────────────────────
-    // Main body boundary — ethereal, translucent
-    ctx.strokeStyle = 'rgba(180, 200, 230, ' + (0.12 + pulse * 0.04) + ')';
+    // Main body boundary — color shifts with emotional valence
+    const valence = bs.emotionalValence || 0;
+    const r = Math.round(180 + valence * -30);  // Negative valence = warmer (more red)
+    const g = Math.round(200 + valence * 20);   // Positive valence = cooler (more green-blue)
+    const b = Math.round(230 + valence * 25);
+    ctx.strokeStyle = 'rgba(' + r + ', ' + g + ', ' + b + ', ' + ((0.12 + pulse * 0.04) * consciousnessMod).toFixed(4) + ')';
     ctx.lineWidth = 2;
     ctx.stroke(_bodyPath);
 
