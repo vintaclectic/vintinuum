@@ -40775,10 +40775,17 @@ window.INNER_LIFE = INNER_LIFE;
     const text = input.value.trim();
     if (!text || isStreaming || isLimited) return;
 
-    // VINT-EXECUTE: intercept actionable commands before chat API
-    if (typeof VINT_EXECUTE !== 'undefined' && VINT_EXECUTE.interceptMessage(text)) {
-      input.value = '';
-      return;
+    // VINT-EXECUTE: intercept navigation/search commands before chat API
+    // Media commands (ARCHIVE/MEDIA) are NOT intercepted — they go to the server
+    // so that mediaAction triggers the real DirRM player via SSE response.
+    if (typeof VINT_EXECUTE !== 'undefined') {
+      const intent = VINT_EXECUTE.parseIntent(text);
+      if (intent.type === 'NAVIGATE' || intent.type === 'SEARCH') {
+        VINT_EXECUTE.interceptMessage(text);
+        input.value = '';
+        return;
+      }
+      // ARCHIVE/MEDIA fall through to chat endpoint → server searchDirHaven → DirRM
     }
 
     input.value = '';
