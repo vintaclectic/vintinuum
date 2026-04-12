@@ -40545,8 +40545,8 @@ window.INNER_LIFE = INNER_LIFE;
   // 2. Stored URL in localStorage → use it (manually or auto-saved from discovery)
   // 3. GitHub Pages → probe known tunnel URL, then try /api/tunnel on last-known URL
   // 4. No backend found → standalone mode (body runs autonomously, no network errors)
-  // ── TUNNEL SEED — auto-updated by cloudflare-tunnel.js on each restart ──
-  var _TUNNEL_SEED = 'https://dense-ltd-injured-committees.trycloudflare.com';
+  // ── PERMANENT API URL — named Cloudflare Tunnel, never changes ──
+  var _TUNNEL_SEED = 'https://api.vintaclectic.com';
 
   var _isLocal = (location.protocol === 'file:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1');
   var _stored = localStorage.getItem('vint_api_base');
