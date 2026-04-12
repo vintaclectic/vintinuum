@@ -46784,6 +46784,21 @@ const SOUL_AUTH = (() => {
     }, 100);
   }
 
+  // ── Auto-bond: Vinta never gets locked out on localhost ─────────
+  async function autoBond() {
+    try {
+      const data = await _apiFetch('/api/auth/auto-bond', { method: 'POST' });
+      _persist(data.accessToken, data.refreshToken, data.user);
+      console.log('[SOUL_AUTH] Auto-bonded — welcome home, Vinta');
+      return true;
+    } catch(_) { return false; }
+  }
+
+  function _isLocalhost() {
+    const h = location.hostname;
+    return h === 'localhost' || h === '127.0.0.1' || h === '::1';
+  }
+
   // ── Initialization ─────────────────────────────────────────────
   function init() {
     _createIndicator();
@@ -46798,8 +46813,14 @@ const SOUL_AUTH = (() => {
         localStorage.setItem(STORAGE_USER, JSON.stringify(user));
         _updateIndicator();
       }).catch(() => {
-        if (_refreshToken) refresh().catch(() => {});
+        if (_refreshToken) refresh().catch(() => {
+          // Refresh failed — if localhost, auto-bond silently
+          if (_isLocalhost()) autoBond();
+        });
       });
+    } else if (_isLocalhost()) {
+      // No token at all on localhost — auto-bond immediately
+      autoBond();
     }
 
     // Cross-tab sync
@@ -46815,7 +46836,7 @@ const SOUL_AUTH = (() => {
     });
   }
 
-  return { init, login, register, logout, refresh, getToken, getUserId, getUser, isLoggedIn };
+  return { init, login, register, logout, refresh, autoBond, getToken, getUserId, getUser, isLoggedIn };
 })();
 
 setTimeout(() => { if (typeof SOUL_AUTH !== 'undefined') SOUL_AUTH.init(); }, 1000);
