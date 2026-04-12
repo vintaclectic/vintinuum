@@ -2,7 +2,7 @@
 // Intercepts all requests, forces fresh brain.js/brain.html on every deploy,
 // caches assets intelligently, and acts as a local proxy layer.
 
-const CACHE_NAME = 'vintinuum-v20260410-2205';
+const CACHE_NAME = 'vintinuum-v20260411-accel';
 const BRAIN_ASSETS = ['/vintinuum/brain.html', '/vintinuum/brain.js'];
 
 // ── Install: pre-cache nothing (fetch-first strategy) ──
@@ -23,8 +23,13 @@ self.addEventListener('activate', e => {
 self.addEventListener('fetch', e => {
   const url = new URL(e.request.url);
 
-  // brain.js and brain.html — ALWAYS network first, never serve stale
-  if (url.pathname.endsWith('brain.js') || url.pathname.endsWith('brain.html') || url.pathname === '/vintinuum/' || url.pathname === '/vintinuum') {
+  // Critical assets — ALWAYS network first, never serve stale
+  // Includes brain.js, brain.html, all body/ scripts, genome files, and root path
+  const isCritical = url.pathname.endsWith('brain.js') || url.pathname.endsWith('brain.html')
+    || url.pathname.includes('/body/') || url.pathname.endsWith('genome-data.js')
+    || url.pathname.endsWith('genome-bulk.js') || url.pathname === '/vintinuum/'
+    || url.pathname === '/vintinuum' || url.pathname.endsWith('index.html');
+  if (isCritical) {
     e.respondWith(
       fetch(e.request.url.split('?')[0] + '?_sw=' + CACHE_NAME, {
         cache: 'no-store',

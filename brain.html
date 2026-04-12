@@ -274,7 +274,7 @@ canvas{display:block;}
 // - Caches static assets for offline resilience
 // - Auto-reloads when a new version deploys
 // - Clears old caches on activation
-const _SW_VERSION = 'v20260410-2205';
+const _SW_VERSION = 'v20260411-accel';
 const _onGitHubPages = location.hostname !== 'localhost' && location.hostname !== '127.0.0.1' && location.protocol !== 'file:';
 if ('serviceWorker' in navigator && _onGitHubPages) {
   const _swPath = location.pathname.includes('/vintinuum') ? '/vintinuum/sw.js' : '/sw.js';
@@ -2634,7 +2634,7 @@ if ('serviceWorker' in navigator && _onGitHubPages) {
 <script src="body/circulatory.js?v=1"></script>
 <script src="body/nervous.js?v=1"></script>
 <script src="body/skin.js?v=1"></script>
-<script src="brain.js?v=v20260410-2205"></script>
+<script src="brain.js?v=v20260411-accel"></script>
 <!-- Coherence bus — loads AFTER brain.js to hook into HORMONES, METABOLISM, etc. -->
 <script src="body/coherence.js?v=1"></script>
 <!-- Zoom navigation — smooth animated body exploration -->
