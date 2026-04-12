@@ -6254,11 +6254,17 @@ window.MIC = (() => {
         showResponse('...silence...', 'rgba(150,175,215,.5)');
       }
     }).catch(e => {
-      console.warn('[Voice→Chat] error:', e.message);
-      showResponse('connection issue — try again', 'rgba(239,83,80,.7)');
-      // Even on failure, give a fallback spoken response
-      if (typeof VOICE !== 'undefined') {
-        VOICE.speak?.('I heard you but lost connection. Try again.');
+      console.warn('[Voice→Chat] error:', e.message, e);
+      const isTimeout = e.name === 'TimeoutError' || e.message?.includes('timeout');
+      const isNetwork = e.name === 'TypeError' || e.message?.includes('Failed to fetch') || e.message?.includes('NetworkError');
+      if (isNetwork) {
+        const apiUrl = window.__VINTINUUM_API_BASE || 'localhost:8767';
+        showResponse('API unreachable (' + apiUrl.slice(0, 40) + ')', 'rgba(239,83,80,.7)');
+        if (typeof VOICE !== 'undefined') VOICE.speak?.('Backend is offline. Check the server.');
+      } else if (isTimeout) {
+        showResponse('response timed out — server may be busy', 'rgba(255,165,38,.7)');
+      } else {
+        showResponse('error: ' + (e.message || 'unknown').slice(0, 60), 'rgba(239,83,80,.7)');
       }
     });
   }
