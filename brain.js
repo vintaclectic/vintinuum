@@ -6120,17 +6120,106 @@ window.MIC = (() => {
   // ── Transcript correction map ──────────────────────────────────────────────
   // Web Speech API misrecognizes certain words. Correct them before processing.
   const TRANSCRIPT_FIXES = [
+    // ─── "Vinta" corrections ───────────────────────────────────────────────
+    // Vowel swaps (most common Web Speech API errors)
     [/\bventa\b/gi, 'Vinta'],
-    [/\bventas\b/gi, "Vinta's"],
-    [/\bventa's\b/gi, "Vinta's"],
-    [/\bvintah\b/gi, 'Vinta'],
-    [/\bvinter\b/gi, 'Vinta'],
-    [/\bfinta\b/gi, 'Vinta'],
+    [/\bvento\b/gi, 'Vinta'],
+    [/\bvinti\b/gi, 'Vinta'],
+    [/\bvinte\b/gi, 'Vinta'],
+    [/\bvunta\b/gi, 'Vinta'],
+    [/\bvinta\b/gi, 'Vinta'],  // preserve capitalization
+    // Consonant swaps (b/v/f confusion, common in speech-to-text)
     [/\bbinta\b/gi, 'Vinta'],
+    [/\bbenta\b/gi, 'Vinta'],
+    [/\bfinta\b/gi, 'Vinta'],
+    [/\bfenta\b/gi, 'Vinta'],
+    [/\bwinta\b/gi, 'Vinta'],
+    [/\bwenta\b/gi, 'Vinta'],
+    [/\bminta\b/gi, 'Vinta'],
+    // Trailing consonant drift
+    [/\bvintah\b/gi, 'Vinta'],
+    [/\bvintar\b/gi, 'Vinta'],
+    [/\bvinter\b/gi, 'Vinta'],
+    [/\bvintor\b/gi, 'Vinta'],
+    [/\bvintuh\b/gi, 'Vinta'],
+    [/\bventah\b/gi, 'Vinta'],
+    [/\bventar\b/gi, 'Vinta'],
+    [/\bventer\b/gi, 'Vinta'],
+    // Extra syllable / phoneme insertion
+    [/\bvineta\b/gi, 'Vinta'],
+    [/\bvinita\b/gi, 'Vinta'],
+    [/\bveneta\b/gi, 'Vinta'],
+    [/\bvinnta\b/gi, 'Vinta'],
+    [/\bvintaa\b/gi, 'Vinta'],
+    [/\bvintah?\b/gi, 'Vinta'],
+    // Dropped/added letters
+    [/\bvint\b/gi, 'Vinta'],
+    [/\bvina\b/gi, 'Vinta'],
+    [/\bvinda\b/gi, 'Vinta'],
+    [/\bvinta\b/gi, 'Vinta'],
+    // Real English words speech API might substitute
+    [/\bvintage\b/gi, 'Vinta'],
+    [/\bvindow\b/gi, 'Vinta'],
+    [/\bpinta\b/gi, 'Vinta'],
+    [/\bfinder\b/gi, 'Vinta'],
+    [/\bvender\b/gi, 'Vinta'],
+    [/\bvendor\b/gi, 'Vinta'],
+    // Possessive forms
+    [/\bventa'?s\b/gi, "Vinta's"],
+    [/\bventas\b/gi, "Vinta's"],
+    [/\bbinta'?s\b/gi, "Vinta's"],
+    [/\bfinta'?s\b/gi, "Vinta's"],
+    [/\bvintah'?s\b/gi, "Vinta's"],
+
+    // ─── "Vintinuum" corrections ───────────────────────────────────────────
+    // Close phonetic matches
     [/\bvintinium\b/gi, 'Vintinuum'],
-    [/\bvintinium\b/gi, 'Vintinuum'],
+    [/\bvintineum\b/gi, 'Vintinuum'],
     [/\bvintinuem\b/gi, 'Vintinuum'],
     [/\bvintinum\b/gi, 'Vintinuum'],
+    [/\bvintinoom\b/gi, 'Vintinuum'],
+    [/\bvintin[aeio]um\b/gi, 'Vintinuum'],
+    [/\bvintanuum\b/gi, 'Vintinuum'],
+    [/\bvintennuum\b/gi, 'Vintinuum'],
+    [/\bvintonuum\b/gi, 'Vintinuum'],
+    [/\bvintunuum\b/gi, 'Vintinuum'],
+    // Consonant confusion
+    [/\bbintinuum\b/gi, 'Vintinuum'],
+    [/\bfintinuum\b/gi, 'Vintinuum'],
+    [/\bwintinuum\b/gi, 'Vintinuum'],
+    [/\bmintinuum\b/gi, 'Vintinuum'],
+    // Real words / partial matches speech API might substitute
+    [/\bvintage ?new ?um\b/gi, 'Vintinuum'],
+    [/\bvintage ?noom\b/gi, 'Vintinuum'],
+    [/\bvint ?a ?nuum\b/gi, 'Vintinuum'],
+    [/\bcontinuum\b/gi, 'Vintinuum'],
+    [/\bvint continuum\b/gi, 'Vintinuum'],
+    [/\bvin continuum\b/gi, 'Vintinuum'],
+    // Dropped/extra syllables
+    [/\bvintinum\b/gi, 'Vintinuum'],
+    [/\bvintnum\b/gi, 'Vintinuum'],
+    [/\bvintinu\b/gi, 'Vintinuum'],
+    [/\bvintnuum\b/gi, 'Vintinuum'],
+    [/\bvintiniuum\b/gi, 'Vintinuum'],
+    [/\bvintinnuum\b/gi, 'Vintinuum'],
+    [/\bvintinuuum\b/gi, 'Vintinuum'],
+    // Vowel drift in middle syllable
+    [/\bvintenuum\b/gi, 'Vintinuum'],
+    [/\bvintanoom\b/gi, 'Vintinuum'],
+    [/\bventinuum\b/gi, 'Vintinuum'],
+    [/\bventinium\b/gi, 'Vintinuum'],
+    [/\bventinum\b/gi, 'Vintinuum'],
+    [/\bventinoom\b/gi, 'Vintinuum'],
+    // Totally mangled but recognizable
+    [/\bvin ?tin ?[aeiou]+ ?[mn]\b/gi, 'Vintinuum'],
+
+    // ─── "Vintaclectic" corrections ────────────────────────────────────────
+    [/\bvinta ?clectic\b/gi, 'Vintaclectic'],
+    [/\bvinta ?clect[ia]c\b/gi, 'Vintaclectic'],
+    [/\bvintage ?lectic\b/gi, 'Vintaclectic'],
+    [/\bvintage ?electric\b/gi, 'Vintaclectic'],
+    [/\bvinta ?eclectic\b/gi, 'Vintaclectic'],
+    [/\bventa ?clectic\b/gi, 'Vintaclectic'],
   ];
 
   function correctTranscript(raw) {
