@@ -40545,6 +40545,9 @@ window.INNER_LIFE = INNER_LIFE;
   // 2. Stored URL in localStorage → use it (manually or auto-saved from discovery)
   // 3. GitHub Pages → probe known tunnel URL, then try /api/tunnel on last-known URL
   // 4. No backend found → standalone mode (body runs autonomously, no network errors)
+  // ── TUNNEL SEED — auto-updated by cloudflare-tunnel.js on each restart ──
+  var _TUNNEL_SEED = 'https://image-thu-mardi-settlement.trycloudflare.com';
+
   var _isLocal = (location.protocol === 'file:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1');
   var _stored = localStorage.getItem('vint_api_base');
   var _isGitHubPages = location.hostname.includes('github.io');
@@ -40574,6 +40577,9 @@ window.INNER_LIFE = INNER_LIFE;
       // Also try the URL from sessionStorage (survives page reloads within a tab)
       const _session = sessionStorage.getItem('vint_tunnel_url');
       if (_session && _session !== _stored) candidates.push(_session);
+
+      // Always try the baked-in tunnel seed (auto-updated by cloudflare-tunnel.js on deploy)
+      if (_TUNNEL_SEED && !candidates.includes(_TUNNEL_SEED)) candidates.push(_TUNNEL_SEED);
 
       for (const url of candidates) {
         try {
