@@ -40566,52 +40566,11 @@ window.INNER_LIFE = INNER_LIFE;
   window.__VINTINUUM_API_BASE = API_BASE;
   window.__VINTINUUM_STANDALONE = false; // never standalone when we have a permanent tunnel
 
-  // ── TUNNEL AUTO-DISCOVERY (runs once on page load) ─────────────────────────
-  // Probes the last-known tunnel URL, and if it's alive, reads the current URL from it
-  // This eliminates ALL manual URL management — resurrect.sh writes to /tmp/vintinuum-tunnel-url.txt,
-  // server.js serves it at /api/tunnel, and brain.js auto-discovers it here.
+  // ── API CONNECTION (permanent tunnel — no discovery needed) ─────────────────
+  // api.vintaclectic.com is a named Cloudflare Tunnel — stable, no rotation.
+  // No probing, no candidate lists, no sessionStorage. Just connect.
   if (_isGitHubPages) {
-    (async function _discoverTunnel() {
-      // Try stored URL first (might still be alive)
-      const candidates = [];
-      if (_stored) candidates.push(_stored);
-
-      // Also try the URL from sessionStorage (survives page reloads within a tab)
-      const _session = sessionStorage.getItem('vint_tunnel_url');
-      if (_session && _session !== _stored) candidates.push(_session);
-
-      // Always try the baked-in tunnel seed (auto-updated by cloudflare-tunnel.js on deploy)
-      if (_TUNNEL_SEED && !candidates.includes(_TUNNEL_SEED)) candidates.push(_TUNNEL_SEED);
-
-      for (const url of candidates) {
-        try {
-          const r = await fetch(url + '/api/tunnel', {
-            signal: AbortSignal.timeout(5000),
-            headers: { 'ngrok-skip-browser-warning': '1' },
-          });
-          if (r.ok) {
-            const data = await r.json();
-            const tunnelUrl = data.tunnel || url;
-            // Tunnel is alive! Update everything
-            window.__VINTINUUM_API_BASE = tunnelUrl;
-            window.__VINTINUUM_STANDALONE = false;
-            localStorage.setItem('vint_api_base', tunnelUrl);
-            sessionStorage.setItem('vint_tunnel_url', tunnelUrl);
-            console.log('[VINTINUUM] Backend discovered: ' + tunnelUrl);
-            // If the tunnel URL changed (server restarted with new CF URL), update
-            if (tunnelUrl !== url) {
-              console.log('[VINTINUUM] Tunnel URL updated: ' + url + ' → ' + tunnelUrl);
-            }
-            return; // success — stop probing
-          }
-        } catch {} // probe failed, try next
-      }
-
-      // All candidates failed — enter standalone mode gracefully
-      window.__VINTINUUM_STANDALONE = true;
-      console.log('[VINTINUUM] Standalone mode — body runs autonomously. Backend will auto-connect when available.');
-      console.log('[VINTINUUM] To manually connect: localStorage.setItem("vint_api_base", "https://your-tunnel-url")');
-    })();
+    console.log('[VINTINUUM] API: ' + (window.__VINTINUUM_API_BASE || 'not configured'));
   }
 
   // ── Elements ──
@@ -46354,97 +46313,14 @@ const SOUL_AUTH = (() => {
   function getUser()   { return _user; }
   function isLoggedIn(){ return !!_accessToken && !!_user; }
 
-  // ── Fetch monkeypatch — auto-attach auth + auto-refresh on 401 + offline circuit breaker ──
+  // ── Fetch wrapper — auto-attach auth tokens + auto-refresh on 401 ──
+  // No circuit breaker, no tunnel discovery. api.vintaclectic.com is permanent.
   const _origFetch = window.fetch;
   window._soulAuthOrigFetch = _origFetch; // keep pristine ref for _apiFetch
-
-  // Circuit breaker state — prevents console flood when API is unreachable
-  let _apiOffline = false;
-  let _offlineSince = 0;
-  let _offlineBackoff = 10000;       // start at 10s, doubles up to 5min
-  const _MAX_BACKOFF = 300000;       // 5 minutes max
-  let _offlineLogCount = 0;
-  let _lastOfflineProbe = 0;
-
-  window._vintApiOffline = () => _apiOffline; // expose for other modules to check
-
-  // ── TUNNEL RE-DISCOVERY — tries to find a new tunnel when current one dies ──
-  let _rediscovering = false;
-  let _lastRediscoveryAt = 0;
-  async function _rediscoverTunnel() {
-    if (_rediscovering || Date.now() - _lastRediscoveryAt < 30000) return; // throttle: once per 30s
-    _rediscovering = true;
-    _lastRediscoveryAt = Date.now();
-    try {
-      // Try the stored URL's /api/tunnel (server may have written a new tunnel URL)
-      const stored = localStorage.getItem('vint_api_base');
-      if (stored) {
-        try {
-          const r = await _origFetch.call(window, stored + '/api/tunnel', {
-            signal: AbortSignal.timeout(5000),
-            headers: { 'ngrok-skip-browser-warning': '1' },
-          });
-          if (r.ok) {
-            const data = await r.json();
-            if (data.tunnel && data.tunnel !== stored) {
-              // New tunnel URL found! Switch to it
-              window.__VINTINUUM_API_BASE = data.tunnel;
-              window.__VINTINUUM_STANDALONE = false;
-              localStorage.setItem('vint_api_base', data.tunnel);
-              sessionStorage.setItem('vint_tunnel_url', data.tunnel);
-              _apiOffline = false;
-              _offlineBackoff = 10000;
-              _offlineLogCount = 0;
-              console.log('[SOUL_AUTH] ✓ New tunnel discovered: ' + data.tunnel);
-              _rediscovering = false;
-              return;
-            } else if (data.alive) {
-              // Same URL but it's alive — just reset circuit breaker
-              _apiOffline = false;
-              _offlineBackoff = 10000;
-              _offlineLogCount = 0;
-              console.log('[SOUL_AUTH] ✓ API back online (same tunnel)');
-              _rediscovering = false;
-              return;
-            }
-          }
-        } catch {} // stored URL also dead
-      }
-      // All probes failed — stay offline, will retry later
-    } catch {} finally {
-      _rediscovering = false;
-    }
-  }
-
   window.fetch = async function(url, opts) {
     const apiBase = API();
-    // Standalone mode (GitHub Pages, no tunnel configured) — silently drop all API calls
-    if (window.__VINTINUUM_STANDALONE && typeof url === 'string' && url.includes('/api/')) {
-      return new Response(JSON.stringify({ error: 'Standalone mode — no API configured' }), {
-        status: 503, headers: { 'Content-Type': 'application/json' }
-      });
-    }
     const isApi = typeof url === 'string' && apiBase && (url.startsWith(apiBase) || url.startsWith('/api/'));
     const isAuthRoute = typeof url === 'string' && url.includes('/auth/');
-
-    // Circuit breaker: if API is offline, silently drop non-auth API calls
-    // except periodic probes to detect recovery
-    if (isApi && _apiOffline && !isAuthRoute) {
-      const now = Date.now();
-      const timeSinceProbe = now - _lastOfflineProbe;
-      if (timeSinceProbe < _offlineBackoff) {
-        // Silently reject — no console spam
-        return new Response(JSON.stringify({ error: 'API offline (circuit open)' }), {
-          status: 503, headers: { 'Content-Type': 'application/json' }
-        });
-      }
-      // Time for a probe — let this one through
-      _lastOfflineProbe = now;
-      if (_offlineLogCount < 3) {
-        console.log('[SOUL_AUTH] Probing API...', apiBase);
-        _offlineLogCount++;
-      }
-    }
 
     // Auto-attach token to API calls
     if (isApi && _accessToken) {
@@ -46455,47 +46331,20 @@ const SOUL_AUTH = (() => {
       }
     }
 
-    try {
-      const res = await _origFetch.call(window, url, opts);
+    const res = await _origFetch.call(window, url, opts);
 
-      // Successful API response — mark API as online
-      if (isApi && _apiOffline) {
-        _apiOffline = false;
-        _offlineBackoff = 10000;
-        _offlineLogCount = 0;
-        console.log('[SOUL_AUTH] ✓ API back online');
-      }
-
-      // Auto-refresh on 401 (skip auth routes to avoid loops)
-      if (res.status === 401 && isApi && !isAuthRoute && _refreshToken) {
-        try {
-          await refresh();
-          opts = opts || {};
-          opts.headers = opts.headers || {};
-          opts.headers['Authorization'] = 'Bearer ' + _accessToken;
-          return _origFetch.call(window, url, opts);
-        } catch(_) {} // refresh failed, return original 401
-      }
-
-      return res;
-    } catch (err) {
-      // Network error on API call — enter offline mode + attempt tunnel re-discovery
-      if (isApi) {
-        if (!_apiOffline) {
-          _apiOffline = true;
-          _offlineSince = Date.now();
-          _offlineLogCount = 0;
-          console.warn('[SOUL_AUTH] API unreachable — entering offline mode. Auto-discovery will search for new tunnel.');
-          // Trigger async tunnel re-discovery (don't await — fire and forget)
-          _rediscoverTunnel();
-        } else {
-          _offlineBackoff = Math.min(_offlineBackoff * 1.5, _MAX_BACKOFF);
-          // Periodically retry discovery
-          if (Date.now() - _offlineSince > 30000) _rediscoverTunnel();
-        }
-      }
-      throw err;
+    // Auto-refresh on 401 (skip auth routes to avoid loops)
+    if (res.status === 401 && isApi && !isAuthRoute && _refreshToken) {
+      try {
+        await refresh();
+        opts = opts || {};
+        opts.headers = opts.headers || {};
+        opts.headers['Authorization'] = 'Bearer ' + _accessToken;
+        return _origFetch.call(window, url, opts);
+      } catch(_) {} // refresh failed, return original 401
     }
+
+    return res;
   };
 
   // ── Soul bond indicator — living, pulsing soul orb ──────────────
