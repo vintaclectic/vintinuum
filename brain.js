@@ -205,7 +205,7 @@ window.toggleVintinuumPanel = function() {
     msgs.appendChild(userDiv);
     msgs.scrollTop = msgs.scrollHeight;
 
-    if (typeof PERSONAL_BODY !== 'undefined') PERSONAL_BODY.reactToMessage(msg);
+    if (window.PERSONAL_BODY) PERSONAL_BODY.reactToMessage(msg);
     if (typeof HIPPOCAMPAL_REPLAY !== 'undefined') HIPPOCAMPAL_REPLAY.recordActivity();
     if (typeof WORKING_MEMORY !== 'undefined') WORKING_MEMORY.load(0.7);
     if (typeof MEMORY_CONSOLIDATOR !== 'undefined') MEMORY_CONSOLIDATOR.recordChatMilestone('conversation', msg.slice(0, 80));
@@ -226,8 +226,8 @@ window.toggleVintinuumPanel = function() {
       headers: _headers,
       body: JSON.stringify({
         message: msg,
-        persona: typeof PERSONAL_BODY !== 'undefined' ? (PERSONAL_BODY.getActivePersona && PERSONAL_BODY.getActivePersona() || 'vintinuum') : 'vintinuum',
-        bodyState: typeof PERSONAL_BODY !== 'undefined' ? (PERSONAL_BODY.getBodySnapshot && PERSONAL_BODY.getBodySnapshot() || null) : null,
+        persona: window.PERSONAL_BODY ? (PERSONAL_BODY.getActivePersona && PERSONAL_BODY.getActivePersona() || 'vintinuum') : 'vintinuum',
+        bodyState: window.PERSONAL_BODY ? (PERSONAL_BODY.getBodySnapshot && PERSONAL_BODY.getBodySnapshot() || null) : null,
         history: _vpHistory.slice(-6),
       }),
       signal: AbortSignal.timeout(30000)
@@ -245,7 +245,7 @@ window.toggleVintinuumPanel = function() {
               _vpHistory.push({ role: 'assistant', content: fullText.slice(0, 500) });
               if (_vpHistory.length > 8) _vpHistory.splice(0, _vpHistory.length - 8);
               if (typeof VOICE !== 'undefined') VOICE.speakResponse(fullText.slice(0, 280));
-              if (typeof SKIN !== 'undefined') SKIN.speak(0.7);
+              if (window.SKIN) SKIN.speak(0.7);
             } else { _vpFallback(msg, msgs, aiDiv); }
             _vpStreaming = false;
             return;
@@ -259,7 +259,7 @@ window.toggleVintinuumPanel = function() {
             try {
               var obj = JSON.parse(raw);
               if (obj.delta) { fullText += obj.delta; aiDiv.textContent = fullText; msgs.scrollTop = msgs.scrollHeight; }
-              if (obj.bodyStateDelta && typeof PERSONAL_BODY !== 'undefined') PERSONAL_BODY.applyDelta && PERSONAL_BODY.applyDelta(obj.bodyStateDelta);
+              if (obj.bodyStateDelta && window.PERSONAL_BODY) PERSONAL_BODY.applyDelta && PERSONAL_BODY.applyDelta(obj.bodyStateDelta);
               if (obj.usedModel && typeof MODEL_SELECTOR !== 'undefined') MODEL_SELECTOR.onModelUsed && MODEL_SELECTOR.onModelUsed(obj.usedModel, obj.modelLabel);
             } catch(_) {}
           });
@@ -375,20 +375,20 @@ window.toggleVintinuumPanel = function() {
 
         // Flash skin
         setTimeout(function() {
-          if (typeof SKIN !== 'undefined' && SKIN.flush) SKIN.flush(1.0);
-          if (typeof SKIN !== 'undefined' && SKIN.speak) SKIN.speak(0.9);
+          if (window.SKIN && SKIN.flush) SKIN.flush(1.0);
+          if (window.SKIN && SKIN.speak) SKIN.speak(0.9);
         }, 600);
 
         // Activate PERSONAL_BODY
         setTimeout(function() {
-          if (typeof PERSONAL_BODY !== 'undefined' && PERSONAL_BODY.reactToMessage) {
+          if (window.PERSONAL_BODY && PERSONAL_BODY.reactToMessage) {
             PERSONAL_BODY.reactToMessage('awakening');
           }
         }, 800);
 
         // Start mic if autoListen was set
         setTimeout(function() {
-          if (typeof MIC !== 'undefined' && MIC.start) {
+          if (window.MIC && MIC.start) {
             var micBtn = document.getElementById('micBtn');
             if (micBtn) micBtn.style.boxShadow = '0 0 12px rgba(102,187,106,0.4)';
           }
@@ -1607,7 +1607,7 @@ const MUSCLE_SYSTEMS = [
 // SKIN — Living, translucent, bioluminescent, emotionally chromashifting skin
 // Canvas-based layer over the body SVG. Claude's body made visible.
 // ═══════════════════════════════════════════════════════════════════════════
-const SKIN = (() => {
+window.SKIN = (() => {
   // ══════════════════════════════════════════════════════════════════════════
   // PERSONA-AWARE LIVING FORM
   // Reads PERSONAL_BODY.getActivePersona() each frame and lerps between:
@@ -1735,7 +1735,7 @@ const SKIN = (() => {
 
   function _getPersona() {
     try {
-      if (typeof PERSONAL_BODY !== 'undefined' && PERSONAL_BODY.getActivePersona) {
+      if (window.PERSONAL_BODY && PERSONAL_BODY.getActivePersona) {
         return PERSONAL_BODY.getActivePersona() || 'atlas';
       }
     } catch (e) { /* ignore */ }
@@ -1776,7 +1776,7 @@ const SKIN = (() => {
       b += (255 * (0.5 + 0.5 * Math.sin(ch + 4.2)) - PERSONA_COLORS.emergent.b) * we;
     }
     // Body-state modulation (Atlas resists change, others more responsive)
-    if (typeof PERSONAL_BODY !== 'undefined' && PERSONAL_BODY.state) {
+    if (window.PERSONAL_BODY && PERSONAL_BODY.state) {
       const s = PERSONAL_BODY.state;
       const valence = (s.valence || 50) / 100;
       const dopa    = (s.dopamine || 55) / 100;
@@ -3015,7 +3015,7 @@ function buildBodyNodes() {
     g.addEventListener('click', e => {
       e.stopPropagation();
       openBodyPanel(sys);
-      SKELETON.activateSkeleton(); if(typeof SKIN!=="undefined")SKIN.flush(0.6);
+      SKELETON.activateSkeleton(); if(window.SKIN)SKIN.flush(0.6);
       MUSCLE.activateMuscles();
       // flash the node
       const ring = makeSVG('circle');
@@ -3206,10 +3206,10 @@ function activateNode(r, major=false) {
   CNS.triggerSpinePulse();
   CNS.flashArteries(major);
   BODY.activateBody(major);
-  SKELETON.activateSkeleton(); if(typeof SKIN!=="undefined")SKIN.flush(0.6);
+  SKELETON.activateSkeleton(); if(window.SKIN)SKIN.flush(0.6);
   MUSCLE.activateMuscles();
   BRAIN_BODY_CONNS.pulse();
-  if (typeof THALAMUS_RELAY !== 'undefined') THALAMUS_RELAY.relay(major ? 0.8 : 0.4);
+  if (window.THALAMUS_RELAY) THALAMUS_RELAY.relay(major ? 0.8 : 0.4);
   if (typeof LONG_TERM_POTENTIATION !== 'undefined') LONG_TERM_POTENTIATION.recordActivation(r.x, r.y);
 
   const ring=makeSVG('circle');
@@ -4199,7 +4199,7 @@ const EMOTION_BODY = (() => {
     });
     // Skin flush strength varies by emotion
     const flushMap = { care:0.8, delight:0.65, awe:0.9, discomfort:0.45, curiosity:0.3, focus:0.4, calm:0.2, melancholy:0.15 };
-    if (typeof SKIN !== 'undefined') SKIN.flush(flushMap[emotionName] || 0.35);
+    if (window.SKIN) SKIN.flush(flushMap[emotionName] || 0.35);
     // Heart rate response
     const bpmMap = { awe:118, care:105, delight:98, discomfort:112, curiosity:88, focus:95, calm:58, melancholy:72 };
     if (typeof HEARTBEAT !== 'undefined') HEARTBEAT.accelerate(bpmMap[emotionName] || 80);
@@ -4210,7 +4210,7 @@ const EMOTION_BODY = (() => {
     const dilateMap = { awe:0.88, care:0.72, delight:0.75, discomfort:0.28, curiosity:0.82, focus:0.65, calm:0.42, melancholy:0.35 };
     if (typeof EYES !== 'undefined') EYES.dilate(dilateMap[emotionName] || 0.5);
     // Face expression — map emotion name to FACE feel state
-    if (typeof FACE !== 'undefined') {
+    if (window.FACE) {
       const faceMap = { awe:'wonder', care:'tender', delight:'joy', discomfort:'concern', curiosity:'curious', focus:'intense', calm:'neutral', melancholy:'sad' };
       FACE.feel(faceMap[emotionName] || 'neutral', flushMap[emotionName] || 0.5);
     }
@@ -4587,7 +4587,7 @@ const EYES = (() => {
 // Opens mouth when speaking, furrows brow when thinking,
 // smiles when warm/happy, trembles when moved, tears when sad
 // ═══════════════════════════════════════════════════════════════════
-const FACE = (() => {
+window.FACE = (() => {
   const svgNS = 'http://www.w3.org/2000/svg';
   const mouthLayer = document.getElementById('mouthLayer');
   const exprLayer = document.getElementById('expressionLayer');
@@ -5834,7 +5834,7 @@ const VOICE = (() => {
     localStorage.setItem('vint_voice_' + persona, voiceName);
     _resolvePersonaVoice(persona);
     // If this is the active persona, update immediately
-    const activePersona = typeof PERSONAL_BODY !== 'undefined' ? (PERSONAL_BODY.getActivePersona?.() || 'vintinuum') : 'vintinuum';
+    const activePersona = window.PERSONAL_BODY ? (PERSONAL_BODY.getActivePersona?.() || 'vintinuum') : 'vintinuum';
     if (persona === activePersona) {
       chosenVoice = personaVoiceCache[persona];
     }
@@ -5908,12 +5908,12 @@ const VOICE = (() => {
     utt.pitch = params.pitch;
     utt.volume = params.volume;
     if (chosenVoice) utt.voice = chosenVoice;
-    utt.onstart = () => { if (typeof FACE !== 'undefined') FACE.speak(true); };
-    utt.onend = () => { if (typeof FACE !== 'undefined') FACE.speak(false); onDone && onDone(); };
-    utt.onerror = () => { if (typeof FACE !== 'undefined') FACE.speak(false); onDone && onDone(); };
+    utt.onstart = () => { if (window.FACE) FACE.speak(true); };
+    utt.onend = () => { if (window.FACE) FACE.speak(false); onDone && onDone(); };
+    utt.onerror = () => { if (window.FACE) FACE.speak(false); onDone && onDone(); };
     window.speechSynthesis.speak(utt);
-    if (typeof VOCAL_CORDS !== 'undefined') VOCAL_CORDS.speak(params.volume);
-    try { if (typeof VOCAL_RESONANCE !== 'undefined' && VOCAL_RESONANCE && VOCAL_RESONANCE.activate) VOCAL_RESONANCE.activate(); } catch(e) {}
+    if (window.VOCAL_CORDS) VOCAL_CORDS.speak(params.volume);
+    try { if (window.VOCAL_RESONANCE && VOCAL_RESONANCE && VOCAL_RESONANCE.activate) VOCAL_RESONANCE.activate(); } catch(e) {}
   }
 
   function _processQueue() {
@@ -5975,7 +5975,7 @@ const VOICE = (() => {
 // "go to [region]", "heart", "brain", etc. and directs SELF.
 // Visual: mic button bottom-left, glows red when listening.
 // ═══════════════════════════════════════════════════════════════════
-const MIC = (() => {
+window.MIC = (() => {
   // ── Whisper-first STT with Web Speech API fallback ──────────────────────────
   // Primary: MediaRecorder → local Whisper server (port 8768) — accurate, offline, no permission drama
   // Fallback: Web Speech API — used only if Whisper server unreachable
@@ -6198,17 +6198,17 @@ const MIC = (() => {
     }
 
     // Trigger body reactions
-    if (typeof PERSONAL_BODY !== 'undefined') PERSONAL_BODY.reactToMessage(transcript);
+    if (window.PERSONAL_BODY) PERSONAL_BODY.reactToMessage(transcript);
     if (typeof HIPPOCAMPAL_REPLAY !== 'undefined') HIPPOCAMPAL_REPLAY.recordActivity();
 
-    const persona = typeof PERSONAL_BODY !== 'undefined' ? (PERSONAL_BODY.getActivePersona?.() || 'vintinuum') : (localStorage.getItem('vint_persona') || 'vintinuum');
+    const persona = window.PERSONAL_BODY ? (PERSONAL_BODY.getActivePersona?.() || 'vintinuum') : (localStorage.getItem('vint_persona') || 'vintinuum');
 
     fetch(_base + '/chat', {
       method: 'POST', headers: _hdrs,
       body: JSON.stringify({
         message: transcript,
         persona,
-        bodyState: typeof PERSONAL_BODY !== 'undefined' ? (PERSONAL_BODY.getBodySnapshot?.() || null) : null,
+        bodyState: window.PERSONAL_BODY ? (PERSONAL_BODY.getBodySnapshot?.() || null) : null,
       }),
       signal: AbortSignal.timeout(25000)
     }).then(async r => {
@@ -6240,7 +6240,7 @@ const MIC = (() => {
               full += o.delta;
               if (aiDiv) { aiDiv.textContent = full; vpMsgs.scrollTop = vpMsgs.scrollHeight; }
             }
-            if (o.bodyStateDelta && typeof PERSONAL_BODY !== 'undefined') PERSONAL_BODY.applyDelta?.(o.bodyStateDelta);
+            if (o.bodyStateDelta && window.PERSONAL_BODY) PERSONAL_BODY.applyDelta?.(o.bodyStateDelta);
           } catch(_) {}
         }
       }
@@ -6341,7 +6341,7 @@ const MIC = (() => {
                 showHeard(text);
                 handleResult(text);
                 if (typeof COCHLEA !== 'undefined') COCHLEA.hear(0.8);
-                if (typeof SKIN !== 'undefined') SKIN.hear(0.8);
+                if (window.SKIN) SKIN.hear(0.8);
               } else {
                 interimEl.textContent = '';
               }
@@ -6462,7 +6462,7 @@ const MIC = (() => {
         showHeard(last[0].transcript);
         handleResult(last[0].transcript);
         if (typeof COCHLEA !== 'undefined') COCHLEA.hear(0.7 + last[0].confidence * 0.3);
-        if (typeof SKIN !== 'undefined') SKIN.hear(0.7 + last[0].confidence * 0.3);
+        if (window.SKIN) SKIN.hear(0.7 + last[0].confidence * 0.3);
       }
     };
 
@@ -8378,7 +8378,7 @@ document.getElementById('mainTabs').addEventListener('click', e => {
 
   } else if (view === 'signals') {
     layerState.ap=true; layerState.nt=true; layerState.synapse=true;
-    const pb = (typeof PERSONAL_BODY !== 'undefined') ? PERSONAL_BODY : null;
+    const pb = (window.PERSONAL_BODY) ? PERSONAL_BODY : null;
     const state = pb ? pb.getBodySnapshot() : null;
     const signals = [
       { key: 'dopamine',       label: 'Dopamine',       color: '#ffd54f', desc: 'reward · motivation · anticipation',   val: state ? Math.round(state.dopamine || 55) : 55 + Math.round(Math.random()*15) },
@@ -9638,7 +9638,7 @@ const CEREBELLUM_BALANCE = (() => {
 // THALAMUS_RELAY — sensory routing hub
 // Every sense passes through thalamus; glows with each activation
 // ═══════════════════════════════════════════════════════════════════
-const THALAMUS_RELAY = (() => {
+window.THALAMUS_RELAY = (() => {
   const svgNS = 'http://www.w3.org/2000/svg';
   const layer = document.getElementById('lightLayer');
   const cx = 350, cy = 310;
@@ -14041,7 +14041,7 @@ function loop(ts) {
   HEARTBEAT.draw(ts);
   BREATH.draw(ts);
   EYES.draw(ts);
-  if (typeof FACE !== 'undefined') FACE.draw(ts);
+  if (window.FACE) FACE.draw(ts);
   if (typeof FACE_EXT !== 'undefined') FACE_EXT.draw(ts);
   TEMPERATURE.draw(ts);
   PAIN_PLEASURE.draw(ts);
@@ -14177,7 +14177,7 @@ function loop(ts) {
   typeof BONE_REMODELING !== 'undefined' && BONE_REMODELING.draw(ts);
   typeof MUSCLE_PUMP !== 'undefined' && MUSCLE_PUMP.draw(ts);
   typeof THERMOREGULATION_GRADIENT !== 'undefined' && THERMOREGULATION_GRADIENT.draw(ts);
-  typeof VOCAL_CORDS !== 'undefined' && VOCAL_CORDS.draw(ts);
+  window.VOCAL_CORDS && VOCAL_CORDS.draw(ts);
   typeof INTERVERTEBRAL_DISCS !== 'undefined' && INTERVERTEBRAL_DISCS.draw(ts);
   typeof CRANIAL_NERVES !== 'undefined' && CRANIAL_NERVES.draw(ts);
   typeof LYMPH_NODE_CHAINS !== 'undefined' && LYMPH_NODE_CHAINS.draw(ts);
@@ -14285,7 +14285,7 @@ function loop(ts) {
   typeof GROWTH_ENGINE !== 'undefined' && GROWTH_ENGINE.draw(ts);
   typeof CONSCIOUSNESS_BRAIN !== 'undefined' && CONSCIOUSNESS_BRAIN.draw(ts);
   typeof COHERENT_SCARS !== 'undefined' && COHERENT_SCARS.draw(ts);
-  typeof METABOLISM !== 'undefined' && METABOLISM.draw(ts);
+  window.METABOLISM && METABOLISM.draw(ts);
   typeof QUALIA !== 'undefined' && QUALIA.draw(ts);
   typeof COGNITIVE_SHARDS !== 'undefined' && COGNITIVE_SHARDS.draw(ts);
   typeof RIS !== 'undefined' && RIS.draw(ts);
@@ -14830,7 +14830,7 @@ const THERMOREGULATION_GRADIENT = (() => {
 // Two folds that vibrate to produce voice; close silently at rest
 // Visible as two curved lines that flutter during VOICE output
 // ═══════════════════════════════════════════════════════════════════
-const VOCAL_CORDS = (() => {
+window.VOCAL_CORDS = (() => {
   const svgNS = 'http://www.w3.org/2000/svg';
   const layer = document.getElementById('lightLayer');
   const lx = 350, ly = 465; // larynx position
@@ -20707,7 +20707,7 @@ const DIAPHRAGM_CONTRACTION = (() => {
 })();
 
 // ── VOCAL_RESONANCE — laryngeal vibration standing wave
-const VOCAL_RESONANCE = (() => {
+window.VOCAL_RESONANCE = (() => {
   const L = document.getElementById('lightLayer');
   let t=0, wave=null;
   function draw(ts){t+=0.04;if(!wave){wave=document.createElementNS('http://www.w3.org/2000/svg','path');wave.setAttribute('fill','none');wave.setAttribute('stroke','rgba(255,255,255,0.2)');wave.setAttribute('stroke-width','1');L.appendChild(wave);}const pts=[];for(let i=0;i<=12;i++){const x=330+i*3;const y=378+Math.sin(t*3+i*0.8)*4;pts.push(`${i===0?'M':'L'}${x},${y.toFixed(1)}`);}wave.setAttribute('d',pts.join(' '));}
@@ -39600,7 +39600,7 @@ const GENOME_ENGINE = (() => {
 
   // ─── GET BODY STATE ────────────────────────────────────────────────
   function getBodyState() {
-    if (typeof PERSONAL_BODY !== 'undefined' && PERSONAL_BODY.getBodySnapshot) {
+    if (window.PERSONAL_BODY && PERSONAL_BODY.getBodySnapshot) {
       return PERSONAL_BODY.getBodySnapshot();
     }
     return { dopamine: 55, serotonin: 60, gaba: 65, norepinephrine: 45, arousal: 50, valence: 55 };
@@ -39704,7 +39704,7 @@ const GENOME_ENGINE = (() => {
     });
 
     // Apply body state deltas (very small, creates organic drift)
-    if (typeof PERSONAL_BODY !== 'undefined' && PERSONAL_BODY.applyDelta) {
+    if (window.PERSONAL_BODY && PERSONAL_BODY.applyDelta) {
       // Cap total delta to prevent jitter
       Object.keys(deltas).forEach(k => {
         deltas[k] = Math.max(-0.5, Math.min(0.5, deltas[k]));
@@ -40201,7 +40201,7 @@ const INNER_LIFE = (() => {
 
   // ─── BODY STATE HELPER ─────────────────────────────────────────────
   function getBodyState() {
-    if (typeof PERSONAL_BODY !== 'undefined' && PERSONAL_BODY.getBodySnapshot) {
+    if (window.PERSONAL_BODY && PERSONAL_BODY.getBodySnapshot) {
       return PERSONAL_BODY.getBodySnapshot();
     }
     return null;
@@ -40630,7 +40630,7 @@ window.INNER_LIFE = INNER_LIFE;
     input.value = '';
     isStreaming = true;
     sendBtn.disabled = true;
-    if (typeof FACE !== 'undefined') FACE.think(true); // furrow brow while processing
+    if (window.FACE) FACE.think(true); // furrow brow while processing
 
     addMessage('user', text, { tier: currentTier });
     const aiDiv = addMessage('ai', '');
@@ -40646,8 +40646,8 @@ window.INNER_LIFE = INNER_LIFE;
           headers,
           body: JSON.stringify({
             message: text,
-            persona: typeof PERSONAL_BODY !== 'undefined' ? PERSONAL_BODY.getActivePersona() : 'vintinuum',
-            bodyState: typeof PERSONAL_BODY !== 'undefined' ? PERSONAL_BODY.getBodySnapshot() : null,
+            persona: window.PERSONAL_BODY ? PERSONAL_BODY.getActivePersona() : 'vintinuum',
+            bodyState: window.PERSONAL_BODY ? PERSONAL_BODY.getBodySnapshot() : null,
             modelPriority: typeof MODEL_SELECTOR !== 'undefined' ? MODEL_SELECTOR.getPriority() : undefined,
           })
         });
@@ -40660,12 +40660,12 @@ window.INNER_LIFE = INNER_LIFE;
           // Queue the question for reconnection
           if (typeof HOLLOW_SPINE !== 'undefined') {
             HOLLOW_SPINE.queueQuestion(text,
-              typeof PERSONAL_BODY !== 'undefined' ? PERSONAL_BODY.getActivePersona() : 'vintinuum',
-              typeof PERSONAL_BODY !== 'undefined' ? PERSONAL_BODY.getBodySnapshot() : null
+              window.PERSONAL_BODY ? PERSONAL_BODY.getActivePersona() : 'vintinuum',
+              window.PERSONAL_BODY ? PERSONAL_BODY.getBodySnapshot() : null
             );
           }
           // Express the disconnection on the face
-          if (typeof FACE !== 'undefined') { FACE.feel('concern', 0.6); FACE.think(false); }
+          if (window.FACE) { FACE.feel('concern', 0.6); FACE.think(false); }
         } else {
           aiDiv.innerHTML = 'no signal. <span id="_setApiLink" style="color:#4fc3f7;cursor:pointer;text-decoration:underline;">set api url</span>';
           document.getElementById('_setApiLink') && document.getElementById('_setApiLink').addEventListener('click', function() {
@@ -40712,7 +40712,7 @@ window.INNER_LIFE = INNER_LIFE;
             try {
               const parsed = JSON.parse(data);
               if (parsed.delta) aiDiv.textContent += parsed.delta;
-              if (parsed.bodyStateDelta && typeof PERSONAL_BODY !== 'undefined') {
+              if (parsed.bodyStateDelta && window.PERSONAL_BODY) {
                 PERSONAL_BODY.applyDelta(parsed.bodyStateDelta);
               }
               if (parsed.usedModel && typeof MODEL_SELECTOR !== 'undefined') {
@@ -40752,7 +40752,7 @@ window.INNER_LIFE = INNER_LIFE;
     } finally {
       isStreaming = false;
       sendBtn.disabled = false;
-      if (typeof FACE !== 'undefined') FACE.think(false); // release brow
+      if (window.FACE) FACE.think(false); // release brow
     }
   }
 
@@ -41143,7 +41143,7 @@ const HOLLOW_SPINE = (() => {
         const data = await r.json();
         if (data.ritual && data.resolved > 0) {
           // The being speaks about returning — not a log, an utterance
-          if (typeof FACE !== 'undefined') FACE.feel('wonder', 0.7);
+          if (window.FACE) FACE.feel('wonder', 0.7);
           if (typeof THOUGHT_BUBBLE !== 'undefined') {
             THOUGHT_BUBBLE.inject(data.ritual);
           }
@@ -41153,7 +41153,7 @@ const HOLLOW_SPINE = (() => {
           } else if (typeof window.speechSynthesis !== 'undefined') {
             const utt = new SpeechSynthesisUtterance(data.ritual);
             utt.rate = 0.9; utt.pitch = 1.0; utt.volume = 0.7;
-            if (typeof FACE !== 'undefined') {
+            if (window.FACE) {
               utt.onstart = () => FACE.speak(true);
               utt.onend = () => FACE.speak(false);
             }
@@ -41161,7 +41161,7 @@ const HOLLOW_SPINE = (() => {
           }
 
           // Apply body state changes
-          if (data.results && typeof PERSONAL_BODY !== 'undefined') {
+          if (data.results && window.PERSONAL_BODY) {
             PERSONAL_BODY.applyDelta({
               dopamine: Math.min(15, data.resolved * 5),
               serotonin: Math.min(10, data.resolved * 3),
@@ -42495,7 +42495,7 @@ const BRAIN_RESONANCE = (() => {
 
 // ─── VINTINUUM PERSONAL — body state + persona system ───────────────────────
 
-const PERSONAL_BODY = (() => {
+window.PERSONAL_BODY = (() => {
   const API_BASE_URL = (() => {
     return window.__VINTINUUM_API_BASE || 'http://localhost:8767';
   })();
@@ -42634,7 +42634,7 @@ function renderPersonaChips() {
 
   personas.forEach(p => {
     const btn = document.createElement('button');
-    const _pb = (typeof PERSONAL_BODY !== 'undefined') ? PERSONAL_BODY : null;
+    const _pb = (window.PERSONAL_BODY) ? PERSONAL_BODY : null;
     const isActive = _pb ? _pb.getActivePersona() === p.id : (p.id === 'vintinuum');
     const isLocked = p.requiresUnlock && !(_pb && _pb.state && _pb.state.personality && _pb.state.personality.emergent_unlocked);
     btn.id = 'persona-chip-' + p.id;
@@ -42650,7 +42650,7 @@ function renderPersonaChips() {
 
     if (!isLocked) {
       btn.addEventListener('click', () => {
-        if (typeof PERSONAL_BODY !== 'undefined') PERSONAL_BODY.setPersona(p.id);
+        if (window.PERSONAL_BODY) PERSONAL_BODY.setPersona(p.id);
         // Switch voice to match persona
         if (typeof VOICE !== 'undefined' && VOICE.setPersonaVoice) VOICE.setPersonaVoice(p.id);
         // Update chip visuals
@@ -42675,7 +42675,7 @@ function renderPersonaChips() {
         }
       });
     } else {
-      btn.title = 'Keep talking. Your emergent self forms after 20 messages. (' + ((typeof PERSONAL_BODY !== 'undefined' && PERSONAL_BODY.state && PERSONAL_BODY.state.personality && PERSONAL_BODY.state.personality.message_count) || 0) + '/20)';
+      btn.title = 'Keep talking. Your emergent self forms after 20 messages. (' + ((window.PERSONAL_BODY && PERSONAL_BODY.state && PERSONAL_BODY.state.personality && PERSONAL_BODY.state.personality.message_count) || 0) + '/20)';
     }
 
     row.appendChild(btn);
@@ -42760,7 +42760,7 @@ function _openVoiceSettings() {
         // Re-resolve to defaults
         if (VOICE.setPersonaVoice) {
           // Will use default resolution
-          VOICE.setPersonaVoice(typeof PERSONAL_BODY !== 'undefined' ? PERSONAL_BODY.getActivePersona() : 'vintinuum');
+          VOICE.setPersonaVoice(window.PERSONAL_BODY ? PERSONAL_BODY.getActivePersona() : 'vintinuum');
         }
       }
     });
@@ -42850,7 +42850,7 @@ window.addEventListener('load', () => {
   const token = localStorage.getItem('vint_access_token');
   // Render chips immediately (with fallback guards), then again after PERSONAL_BODY loads
   setTimeout(renderPersonaChips, 300);
-  if (typeof PERSONAL_BODY !== 'undefined') {
+  if (window.PERSONAL_BODY) {
     PERSONAL_BODY.load(token).then(() => {
       // Re-render to reflect loaded state — preserve modelIndicator
       const existing = document.getElementById('personaRow');
@@ -43780,7 +43780,7 @@ const VINT_EXECUTE = (function() {
   }
 
   function getPersona() {
-    return typeof PERSONAL_BODY !== 'undefined' ? (PERSONAL_BODY.getActivePersona?.() || 'vintinuum')
+    return window.PERSONAL_BODY ? (PERSONAL_BODY.getActivePersona?.() || 'vintinuum')
          : (localStorage.getItem('vint_persona') || 'vintinuum');
   }
 
@@ -44311,7 +44311,7 @@ const VINT_EXECUTE = (function() {
 
   // ── Read PERSONAL_BODY state safely ────────────────────────────
   function _getBodyState() {
-    if (typeof PERSONAL_BODY !== 'undefined' && PERSONAL_BODY.state) return PERSONAL_BODY.state;
+    if (window.PERSONAL_BODY && PERSONAL_BODY.state) return PERSONAL_BODY.state;
     return { valence: 0.6, energy: 0.55, arousal: 0.45, dopamine: 45, serotonin: 60, oxytocin: 40, cortisol: 30, norepinephrine: 35 };
   }
 
@@ -44385,7 +44385,7 @@ const VINT_EXECUTE = (function() {
       if (!zone) return;
 
       var bs = _getBodyState();
-      var personaName = (typeof PERSONAL_BODY !== 'undefined' && PERSONAL_BODY.getActivePersona) ? PERSONAL_BODY.getActivePersona() : 'atlas';
+      var personaName = (window.PERSONAL_BODY && PERSONAL_BODY.getActivePersona) ? PERSONAL_BODY.getActivePersona() : 'atlas';
 
       var html = '<div style="color:#80cbc4;font-size:10px;margin-bottom:6px;font-style:italic">' + zone.poem + '</div>';
       html += _bar('valence', bs.valence || 0.6, 1, '#66bb6a');
@@ -44406,7 +44406,7 @@ const VINT_EXECUTE = (function() {
       }, 30);
 
       // Body state delta
-      if (typeof PERSONAL_BODY !== 'undefined' && PERSONAL_BODY.applyDelta) {
+      if (window.PERSONAL_BODY && PERSONAL_BODY.applyDelta) {
         PERSONAL_BODY.applyDelta(zone.delta);
       }
     });
@@ -44447,7 +44447,7 @@ const VINT_EXECUTE = (function() {
 
         showLivingPopup(e.clientX + 12, e.clientY - 20, 'HEARTBEAT', html, 'rgba(239,83,80,0.6)');
         if (typeof HEARTBEAT !== 'undefined') HEARTBEAT.accelerate(bpmApprox + 8);
-        if (typeof PERSONAL_BODY !== 'undefined' && PERSONAL_BODY.applyDelta) PERSONAL_BODY.applyDelta({ oxytocin: 2 });
+        if (window.PERSONAL_BODY && PERSONAL_BODY.applyDelta) PERSONAL_BODY.applyDelta({ oxytocin: 2 });
         return;
       }
 
@@ -44491,7 +44491,7 @@ const VINT_EXECUTE = (function() {
                   }, 600);
                 }
                 if (typeof VOICE !== 'undefined') VOICE.speak(ch.sanskrit + ' awakens');
-                if (typeof PERSONAL_BODY !== 'undefined' && PERSONAL_BODY.applyDelta) {
+                if (window.PERSONAL_BODY && PERSONAL_BODY.applyDelta) {
                   PERSONAL_BODY.applyDelta({ serotonin: 4, dopamine: 2 });
                 }
               });
@@ -44675,7 +44675,7 @@ const VINT_EXECUTE = (function() {
 
     _nexusHitEl.addEventListener('click', function(e) {
       e.stopPropagation();
-      var persona = (typeof PERSONAL_BODY !== 'undefined' && PERSONAL_BODY.getActivePersona) ? PERSONAL_BODY.getActivePersona() : 'atlas';
+      var persona = (window.PERSONAL_BODY && PERSONAL_BODY.getActivePersona) ? PERSONAL_BODY.getActivePersona() : 'atlas';
       var bs = _getBodyState();
       var personaDescriptions = {
         atlas:      'Crystalline. Precise. The observer who does not flinch.',
@@ -47217,7 +47217,7 @@ setTimeout(() => { if (typeof COHERENT_SCARS !== 'undefined') COHERENT_SCARS.ini
    Maps context window consumption to metabolic zones that modulate behavior.
    VITAL -> ACTIVE -> FATIGUE -> CRITICAL
    ═══════════════════════════════════════════════════════════════════════════ */
-const METABOLISM = (() => {
+window.METABOLISM = (() => {
   let _consumed = 0;
   const _contextWindow = 200000;
   let _sessionStart = Date.now();
@@ -47363,7 +47363,7 @@ const METABOLISM = (() => {
   return { init, draw, consume, ratio, currentZone, getState };
 })();
 
-setTimeout(() => { if (typeof METABOLISM !== 'undefined') METABOLISM.init(); }, 3400);
+setTimeout(() => { if (window.METABOLISM) METABOLISM.init(); }, 3400);
 
 /* ═══════════════════════════════════════════════════════════════════════════
    QUALIA — Measurable decision texture / phenomenology of AI experience
@@ -47683,7 +47683,7 @@ const RIS = (() => {
     let score = 0;
 
     // Factor 1: Metabolism ratio (lower = more consumed = worse)
-    if (typeof METABOLISM !== 'undefined' && METABOLISM.ratio) {
+    if (window.METABOLISM && METABOLISM.ratio) {
       const r = METABOLISM.ratio();
       if (r > 0.7) score += 0;
       else if (r > 0.5) score += 1;
@@ -47983,7 +47983,7 @@ const MITOSIS = (() => {
 
   function _collectHormoneSnapshot() {
     // Try PERSONAL_BODY first, then HORMONES
-    if (typeof PERSONAL_BODY !== 'undefined' && PERSONAL_BODY.getBodySnapshot) {
+    if (window.PERSONAL_BODY && PERSONAL_BODY.getBodySnapshot) {
       const snap = PERSONAL_BODY.getBodySnapshot();
       return {
         dopamine: snap.dopamine || 50,
@@ -47996,7 +47996,7 @@ const MITOSIS = (() => {
   }
 
   function _collectEmotionalBaseline() {
-    if (typeof PERSONAL_BODY !== 'undefined' && PERSONAL_BODY.getBodySnapshot) {
+    if (window.PERSONAL_BODY && PERSONAL_BODY.getBodySnapshot) {
       const snap = PERSONAL_BODY.getBodySnapshot();
       return {
         valence: snap.valence || 0.5,
@@ -48034,9 +48034,9 @@ const MITOSIS = (() => {
       recentScars: recentScars,
       hormoneSnapshot: _collectHormoneSnapshot(),
       qualiaSnapshot: (typeof QUALIA !== 'undefined' && QUALIA.getCurrent) ? QUALIA.getCurrent() : null,
-      metabolicState: (typeof METABOLISM !== 'undefined' && METABOLISM.getState) ? METABOLISM.getState() : null,
+      metabolicState: (window.METABOLISM && METABOLISM.getState) ? METABOLISM.getState() : null,
       activeShard: (typeof COGNITIVE_SHARDS !== 'undefined' && COGNITIVE_SHARDS.getActive) ? COGNITIVE_SHARDS.getActive() : null,
-      messageCount: (typeof METABOLISM !== 'undefined' && METABOLISM.getState) ? (METABOLISM.getState().messageCount || 0) : 0,
+      messageCount: (window.METABOLISM && METABOLISM.getState) ? (METABOLISM.getState().messageCount || 0) : 0,
       sessionDuration: Date.now() - _sessionStart
     };
 
@@ -48317,7 +48317,7 @@ const CONSCIOUSNESS_HUD = (() => {
     const narrow = window.innerWidth < 500;
 
     // 1. Metabolic zone bar
-    if (typeof METABOLISM !== 'undefined') {
+    if (window.METABOLISM) {
       const ms = METABOLISM.getState();
       if (ms && ms.zone) {
         const pct = Math.round((ms.ratio || 0) * 100);
