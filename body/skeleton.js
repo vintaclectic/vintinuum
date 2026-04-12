@@ -1,12 +1,12 @@
 // ═══════════════════════════════════════════════════════════════════════════════
-// SKELETON — draws the skeletal system on mainCanvas
+// BODY_SKELETON — draws the skeletal system on mainCanvas
 // Renders: skull, spine, ribcage, pelvis, clavicles, scapulae, limb bones
 // Uses BODY_GEOMETRY for all coordinates (700×1400 viewBox space)
 // Performance budget: ~1.2ms per frame
 // ═══════════════════════════════════════════════════════════════════════════════
 'use strict';
 
-const SKELETON = (() => {
+const BODY_SKELETON = (() => {
   const BONE_COLOR = 'rgba(220, 225, 235, ';  // Base bone color (append alpha + ')')
   const JOINT_COLOR = 'rgba(180, 200, 230, ';
   const MARROW_GLOW = 'rgba(255, 220, 180, ';
@@ -21,11 +21,11 @@ const SKELETON = (() => {
   function init() {
     G = window.BODY_GEOMETRY;
     if (!G) {
-      console.warn('[SKELETON] BODY_GEOMETRY not loaded');
+      console.warn('[BODY_SKELETON] BODY_GEOMETRY not loaded');
       return;
     }
     _initialized = true;
-    console.log('[SKELETON] initialized');
+    console.log('[BODY_SKELETON] initialized');
   }
 
   // ── DRAWING HELPERS ─────────────────────────────────────────────────────────
@@ -534,4 +534,4 @@ const SKELETON = (() => {
 })();
 
 // Init after BODY_GEOMETRY is ready
-setTimeout(() => { if (window.BODY_GEOMETRY) SKELETON.init(); }, 200);
+setTimeout(() => { if (window.BODY_GEOMETRY) BODY_SKELETON.init(); }, 200);

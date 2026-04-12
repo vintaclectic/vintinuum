@@ -14240,7 +14240,7 @@ function loop(ts) {
   typeof LOCAL_MIND !== 'undefined' && LOCAL_MIND.draw(ts);
   typeof LEARNING !== 'undefined' && LEARNING.draw(ts);
   // ── BODY CONTAINMENT LAYERS (bottom to top) ────────────────────────────
-  typeof SKELETON !== 'undefined' && SKELETON.draw(ts);
+  typeof BODY_SKELETON !== 'undefined' && BODY_SKELETON.draw(ts);
   typeof MUSCLE_LAYER !== 'undefined' && MUSCLE_LAYER.draw(ts);
   typeof ORGANS !== 'undefined' && ORGANS.draw(ts);
   typeof CIRCULATORY !== 'undefined' && CIRCULATORY.draw(ts);

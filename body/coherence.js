@@ -369,15 +369,25 @@ const COHERENCE = (() => {
     if (typeof window.API_BASE !== 'undefined' && window.API_BASE) {
       return window.API_BASE;
     }
+    // On GitHub Pages with no API configured — disable polling
+    if (location.hostname.includes('github.io')) {
+      return null; // no API available on static hosting
+    }
     // Fallback: try the vintinuum-api tunnel URL
-    return 'https://vintinuum-api.vinta.dev'; // placeholder, replaced by resurrect.sh
+    return 'https://vintinuum-api.vinta.dev';
   }
 
+  let _apiFailCount = 0;
+  const API_MAX_FAILS = 3; // stop polling after 3 consecutive failures
+
   async function _pollApiBodyState() {
-    if (!_apiBase) _apiBase = _detectApiBase();
+    if (!_apiBase) return; // no API available (e.g. GitHub Pages)
+    if (_apiFailCount >= API_MAX_FAILS) return; // backed off, stop spamming
+
     try {
       const r = await fetch(_apiBase + '/api/body-state', { signal: AbortSignal.timeout(5000) });
-      if (!r.ok) return;
+      if (!r.ok) { _apiFailCount++; return; }
+      _apiFailCount = 0; // reset on success
       const data = await r.json();
 
       if (data.derived) {
@@ -393,15 +403,24 @@ const COHERENCE = (() => {
 
       // Push updated values to organs
       _pushToOrgans();
-    } catch {} // API poll is best-effort
+    } catch {
+      _apiFailCount++;
+      if (_apiFailCount >= API_MAX_FAILS) {
+        console.log('[COHERENCE] API unreachable — body runs autonomously (no backend sync)');
+      }
+    }
   }
 
   function _startApiPoll() {
+    if (!_apiBase) {
+      console.log('[COHERENCE] No API backend detected — body runs in standalone mode');
+      return;
+    }
     // Poll every 5 seconds — matches subconscious tick rate
     _apiPollInterval = setInterval(_pollApiBodyState, 5000);
     // First poll after 2 seconds
     setTimeout(_pollApiBodyState, 2000);
-    console.log('[COHERENCE] API body state polling started');
+    console.log('[COHERENCE] API body state polling started → ' + _apiBase);
   }
 
   return {
