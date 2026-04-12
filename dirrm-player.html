@@ -1,0 +1,1288 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DirRM Player</title>
+  <style>
+    :root {
+      --dirrm-gold: #F5A623;
+      --dirrm-gold-dim: rgba(245, 166, 35, 0.6);
+      --dirrm-bg: rgba(13, 11, 8, 0.92);
+      --dirrm-bg-solid: #0d0b08;
+      --dirrm-border: rgba(245, 166, 35, 0.25);
+      --dirrm-text: #f0e6d3;
+      --dirrm-text-muted: rgba(240, 230, 211, 0.5);
+      --dirrm-shadow: 0 8px 32px rgba(0, 0, 0, 0.6), 0 0 1px rgba(245, 166, 35, 0.3);
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: transparent;
+      color: var(--dirrm-text);
+      overflow: hidden;
+    }
+
+    /* ============================================
+       MAIN PLAYER CONTAINER
+       ============================================ */
+    .dirrm-player {
+      position: fixed;
+      background: var(--dirrm-bg);
+      backdrop-filter: blur(24px);
+      border: 1px solid var(--dirrm-border);
+      border-radius: 16px;
+      box-shadow: var(--dirrm-shadow);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      z-index: 9999;
+      transition: border-radius 0.2s ease;
+    }
+
+    .dirrm-player[data-mode="main"] {
+      width: 860px;
+      height: 520px;
+      min-width: 480px;
+      min-height: 320px;
+    }
+
+    .dirrm-player[data-mode="mini"] {
+      width: 380px;
+      height: auto;
+      min-width: 300px;
+      min-height: 120px;
+    }
+
+    .dirrm-player[data-mode="pip"] {
+      width: 320px;
+      height: 180px;
+      min-width: 200px;
+      min-height: 120px;
+      border-radius: 12px;
+    }
+
+    /* ============================================
+       TITLE BAR (draggable)
+       ============================================ */
+    .dirrm-titlebar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 12px;
+      background: linear-gradient(180deg, rgba(245, 166, 35, 0.08) 0%, transparent 100%);
+      border-bottom: 1px solid rgba(245, 166, 35, 0.1);
+      cursor: move;
+      user-select: none;
+      flex-shrink: 0;
+    }
+
+    .dirrm-titlebar-left {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex: 1;
+      min-width: 0;
+    }
+
+    .dirrm-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--dirrm-gold);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .dirrm-subtitle {
+      font-size: 11px;
+      color: var(--dirrm-text-muted);
+      letter-spacing: 0.04em;
+    }
+
+    .dirrm-titlebar-right {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-shrink: 0;
+    }
+
+    /* ============================================
+       WINDOW CONTROL BUTTONS
+       ============================================ */
+    .dirrm-btn {
+      width: 28px;
+      height: 28px;
+      border-radius: 6px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      background: rgba(255, 255, 255, 0.04);
+      color: var(--dirrm-text-muted);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      transition: all 0.15s ease;
+    }
+
+    .dirrm-btn:hover {
+      background: rgba(245, 166, 35, 0.12);
+      border-color: var(--dirrm-border);
+      color: var(--dirrm-gold);
+    }
+
+    .dirrm-btn--primary {
+      background: linear-gradient(135deg, rgba(245, 166, 35, 0.2) 0%, rgba(245, 166, 35, 0.1) 100%);
+      border-color: var(--dirrm-border);
+      color: var(--dirrm-gold);
+    }
+
+    .dirrm-btn--primary:hover {
+      background: linear-gradient(135deg, rgba(245, 166, 35, 0.35) 0%, rgba(245, 166, 35, 0.2) 100%);
+    }
+
+    .dirrm-btn--danger:hover {
+      background: rgba(255, 60, 60, 0.15);
+      border-color: rgba(255, 60, 60, 0.4);
+      color: #ff6b6b;
+    }
+
+    .dirrm-btn--active {
+      background: rgba(245, 166, 35, 0.15);
+      border-color: var(--dirrm-gold);
+      color: var(--dirrm-gold);
+    }
+
+    /* ============================================
+       MEDIA CONTAINER
+       ============================================ */
+    .dirrm-media-container {
+      flex: 1;
+      position: relative;
+      background: #000;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .dirrm-media-container video,
+    .dirrm-media-container audio,
+    .dirrm-media-container img {
+      max-width: 100%;
+      max-height: 100%;
+      object-fit: contain;
+    }
+
+    .dirrm-media-container video {
+      width: 100%;
+      height: 100%;
+    }
+
+    .dirrm-media-container img {
+      max-width: 100%;
+      max-height: 100%;
+    }
+
+    /* Audio visualizer placeholder */
+    .dirrm-audio-visualizer {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(135deg, rgba(13, 11, 8, 0.95) 0%, rgba(30, 25, 18, 0.95) 100%);
+    }
+
+    .dirrm-audio-bars {
+      display: flex;
+      align-items: flex-end;
+      gap: 4px;
+      height: 80px;
+    }
+
+    .dirrm-audio-bar {
+      width: 6px;
+      background: linear-gradient(0deg, var(--dirrm-gold) 0%, var(--dirrm-gold-dim) 100%);
+      border-radius: 3px;
+      animation: audioBar 0.8s ease-in-out infinite;
+    }
+
+    @keyframes audioBar {
+      0%, 100% { height: 20%; }
+      50% { height: 100%; }
+    }
+
+    /* PDF/Ebook viewer */
+    .dirrm-document-viewer {
+      width: 100%;
+      height: 100%;
+      background: #1a1814;
+    }
+
+    .dirrm-document-viewer iframe {
+      width: 100%;
+      height: 100%;
+      border: none;
+    }
+
+    /* ============================================
+       CONTROLS BAR
+       ============================================ */
+    .dirrm-controls {
+      padding: 12px 16px;
+      background: linear-gradient(0deg, rgba(13, 11, 8, 0.6) 0%, transparent 100%);
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      flex-shrink: 0;
+    }
+
+    /* Progress/Seek bar */
+    .dirrm-seek-container {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .dirrm-seek-track {
+      flex: 1;
+      height: 6px;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 3px;
+      cursor: pointer;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .dirrm-seek-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--dirrm-gold) 0%, #e8941a 100%);
+      border-radius: 3px;
+      position: relative;
+      transition: width 0.1s linear;
+    }
+
+    .dirrm-seek-thumb {
+      position: absolute;
+      right: -6px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 12px;
+      height: 12px;
+      background: var(--dirrm-gold);
+      border-radius: 50%;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
+      opacity: 0;
+      transition: opacity 0.15s ease;
+    }
+
+    .dirrm-seek-track:hover .dirrm-seek-thumb {
+      opacity: 1;
+    }
+
+    .dirrm-time {
+      font-size: 11px;
+      color: var(--dirrm-text-muted);
+      font-variant-numeric: tabular-nums;
+      min-width: 45px;
+    }
+
+    /* Transport row */
+    .dirrm-transport {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+
+    .dirrm-transport-left {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .dirrm-transport-center {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .dirrm-transport-right {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    /* Play button (larger) */
+    .dirrm-btn--play {
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      font-size: 18px;
+    }
+
+    /* Skip buttons */
+    .dirrm-skip {
+      font-size: 10px;
+      font-weight: 600;
+      padding: 4px 8px;
+      border-radius: 4px;
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      color: var(--dirrm-text-muted);
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .dirrm-skip:hover {
+      background: rgba(245, 166, 35, 0.1);
+      border-color: var(--dirrm-border);
+      color: var(--dirrm-gold);
+    }
+
+    /* Volume control */
+    .dirrm-volume {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .dirrm-volume-track {
+      width: 70px;
+      height: 4px;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 2px;
+      cursor: pointer;
+      overflow: hidden;
+    }
+
+    .dirrm-volume-fill {
+      height: 100%;
+      background: var(--dirrm-gold);
+      border-radius: 2px;
+      transition: width 0.1s ease;
+    }
+
+    /* ============================================
+       RESIZE HANDLES
+       ============================================ */
+    .dirrm-resize {
+      position: absolute;
+      background: transparent;
+      z-index: 10;
+    }
+
+    .dirrm-resize--se {
+      right: 0;
+      bottom: 0;
+      width: 20px;
+      height: 20px;
+      cursor: se-resize;
+    }
+
+    .dirrm-resize--se::after {
+      content: '';
+      position: absolute;
+      right: 4px;
+      bottom: 4px;
+      width: 10px;
+      height: 10px;
+      border-right: 2px solid var(--dirrm-gold-dim);
+      border-bottom: 2px solid var(--dirrm-gold-dim);
+      opacity: 0.5;
+      transition: opacity 0.15s ease;
+    }
+
+    .dirrm-resize--se:hover::after {
+      opacity: 1;
+    }
+
+    .dirrm-resize--sw {
+      left: 0;
+      bottom: 0;
+      width: 20px;
+      height: 20px;
+      cursor: sw-resize;
+    }
+
+    .dirrm-resize--ne {
+      right: 0;
+      top: 0;
+      width: 20px;
+      height: 20px;
+      cursor: ne-resize;
+    }
+
+    .dirrm-resize--nw {
+      left: 0;
+      top: 0;
+      width: 20px;
+      height: 20px;
+      cursor: nw-resize;
+    }
+
+    .dirrm-resize--e {
+      right: 0;
+      top: 20px;
+      bottom: 20px;
+      width: 6px;
+      cursor: e-resize;
+    }
+
+    .dirrm-resize--w {
+      left: 0;
+      top: 20px;
+      bottom: 20px;
+      width: 6px;
+      cursor: w-resize;
+    }
+
+    .dirrm-resize--n {
+      top: 0;
+      left: 20px;
+      right: 20px;
+      height: 6px;
+      cursor: n-resize;
+    }
+
+    .dirrm-resize--s {
+      bottom: 0;
+      left: 20px;
+      right: 20px;
+      height: 6px;
+      cursor: s-resize;
+    }
+
+    /* ============================================
+       LOADING STATE
+       ============================================ */
+    .dirrm-loading {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 16px;
+      background: rgba(13, 11, 8, 0.9);
+      z-index: 5;
+    }
+
+    .dirrm-spinner {
+      width: 40px;
+      height: 40px;
+      border: 3px solid rgba(245, 166, 35, 0.2);
+      border-top-color: var(--dirrm-gold);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .dirrm-loading-text {
+      font-size: 12px;
+      color: var(--dirrm-text-muted);
+      letter-spacing: 0.05em;
+    }
+
+    /* ============================================
+       MINI MODE OVERRIDES
+       ============================================ */
+    .dirrm-player[data-mode="mini"] .dirrm-media-container {
+      height: 60px;
+      flex: none;
+    }
+
+    .dirrm-player[data-mode="mini"] .dirrm-controls {
+      padding: 8px 12px;
+    }
+
+    /* ============================================
+       PIP MODE OVERRIDES
+       ============================================ */
+    .dirrm-player[data-mode="pip"] .dirrm-titlebar {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      background: linear-gradient(180deg, rgba(0,0,0,0.7) 0%, transparent 100%);
+      border: none;
+      opacity: 0;
+      transition: opacity 0.2s ease;
+      z-index: 5;
+    }
+
+    .dirrm-player[data-mode="pip"]:hover .dirrm-titlebar {
+      opacity: 1;
+    }
+
+    .dirrm-player[data-mode="pip"] .dirrm-controls {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      padding: 8px;
+      opacity: 0;
+      transition: opacity 0.2s ease;
+    }
+
+    .dirrm-player[data-mode="pip"]:hover .dirrm-controls {
+      opacity: 1;
+    }
+
+    .dirrm-player[data-mode="pip"] .dirrm-media-container {
+      flex: 1;
+    }
+
+    /* ============================================
+       ANIMATIONS
+       ============================================ */
+    @keyframes fadeIn {
+      from { opacity: 0; transform: scale(0.95); }
+      to { opacity: 1; transform: scale(1); }
+    }
+
+    .dirrm-player {
+      animation: fadeIn 0.25s ease;
+    }
+
+    /* ============================================
+       ICONS (inline SVG)
+       ============================================ */
+    .icon {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+  </style>
+</head>
+<body>
+  <div id="dirrm-player" class="dirrm-player" data-mode="main">
+    <!-- Title Bar -->
+    <div class="dirrm-titlebar" id="titlebar">
+      <div class="dirrm-titlebar-left">
+        <div class="dirrm-title" id="media-title">Loading...</div>
+        <div class="dirrm-subtitle" id="media-subtitle"></div>
+      </div>
+      <div class="dirrm-titlebar-right">
+        <button class="dirrm-btn" id="btn-pip" title="Picture in Picture">
+          <span class="icon">⧉</span>
+        </button>
+        <button class="dirrm-btn" id="btn-mini" title="Minimize">
+          <span class="icon">─</span>
+        </button>
+        <button class="dirrm-btn" id="btn-maximize" title="Maximize">
+          <span class="icon">□</span>
+        </button>
+        <button class="dirrm-btn dirrm-btn--danger" id="btn-close" title="Close">
+          <span class="icon">✕</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Media Container -->
+    <div class="dirrm-media-container" id="media-container">
+      <div class="dirrm-loading" id="loading">
+        <div class="dirrm-spinner"></div>
+        <div class="dirrm-loading-text">Loading media...</div>
+      </div>
+      <!-- Media element will be injected here -->
+    </div>
+
+    <!-- Controls -->
+    <div class="dirrm-controls" id="controls">
+      <!-- Seek bar -->
+      <div class="dirrm-seek-container">
+        <span class="dirrm-time" id="time-current">0:00</span>
+        <div class="dirrm-seek-track" id="seek-track">
+          <div class="dirrm-seek-fill" id="seek-fill" style="width: 0%">
+            <div class="dirrm-seek-thumb"></div>
+          </div>
+        </div>
+        <span class="dirrm-time" id="time-duration">0:00</span>
+      </div>
+
+      <!-- Transport controls -->
+      <div class="dirrm-transport">
+        <div class="dirrm-transport-left">
+          <button class="dirrm-btn" id="btn-prev" title="Previous">
+            <span class="icon">⏮</span>
+          </button>
+          <button class="dirrm-skip" id="btn-back10">-10</button>
+        </div>
+
+        <div class="dirrm-transport-center">
+          <button class="dirrm-btn dirrm-btn--primary dirrm-btn--play" id="btn-play" title="Play">
+            <span class="icon" id="play-icon">▶</span>
+          </button>
+        </div>
+
+        <div class="dirrm-transport-right">
+          <button class="dirrm-skip" id="btn-fwd10">+10</button>
+          <button class="dirrm-btn" id="btn-next" title="Next">
+            <span class="icon">⏭</span>
+          </button>
+          <div class="dirrm-volume">
+            <button class="dirrm-btn" id="btn-mute" title="Mute">
+              <span class="icon" id="volume-icon">🔊</span>
+            </button>
+            <div class="dirrm-volume-track" id="volume-track">
+              <div class="dirrm-volume-fill" id="volume-fill" style="width: 100%"></div>
+            </div>
+          </div>
+          <button class="dirrm-btn" id="btn-fullscreen" title="Fullscreen">
+            <span class="icon">⛶</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Resize handles -->
+    <div class="dirrm-resize dirrm-resize--se" data-dir="se"></div>
+    <div class="dirrm-resize dirrm-resize--sw" data-dir="sw"></div>
+    <div class="dirrm-resize dirrm-resize--ne" data-dir="ne"></div>
+    <div class="dirrm-resize dirrm-resize--nw" data-dir="nw"></div>
+    <div class="dirrm-resize dirrm-resize--e" data-dir="e"></div>
+    <div class="dirrm-resize dirrm-resize--w" data-dir="w"></div>
+    <div class="dirrm-resize dirrm-resize--n" data-dir="n"></div>
+    <div class="dirrm-resize dirrm-resize--s" data-dir="s"></div>
+  </div>
+
+  <script>
+    /* ============================================
+       DIRRM PLAYER - Clawdbot Media Player
+       ============================================ */
+
+    class DirRMPlayer {
+      constructor() {
+        this.player = document.getElementById('dirrm-player');
+        this.titlebar = document.getElementById('titlebar');
+        this.mediaContainer = document.getElementById('media-container');
+        this.loading = document.getElementById('loading');
+        this.controls = document.getElementById('controls');
+        
+        this.mediaTitle = document.getElementById('media-title');
+        this.mediaSubtitle = document.getElementById('media-subtitle');
+        
+        this.seekTrack = document.getElementById('seek-track');
+        this.seekFill = document.getElementById('seek-fill');
+        this.timeCurrent = document.getElementById('time-current');
+        this.timeDuration = document.getElementById('time-duration');
+        
+        this.volumeTrack = document.getElementById('volume-track');
+        this.volumeFill = document.getElementById('volume-fill');
+        this.volumeIcon = document.getElementById('volume-icon');
+        this.playIcon = document.getElementById('play-icon');
+        
+        this.mode = 'main';
+        this.mediaElement = null;
+        this.mediaType = null;
+        this.isPlaying = false;
+        this.isMuted = false;
+        this.volume = 1;
+        this.isDragging = false;
+        this.isResizing = false;
+        this.dragOffset = { x: 0, y: 0 };
+        this.resizeDir = null;
+        this.startRect = null;
+        this.startPos = { x: 0, y: 0 };
+        
+        this.init();
+      }
+
+      init() {
+        this.bindEvents();
+        this.centerPlayer();
+        this.loadFromUrl();
+      }
+
+      bindEvents() {
+        // Window controls
+        document.getElementById('btn-close').addEventListener('click', () => this.close());
+        document.getElementById('btn-mini').addEventListener('click', () => this.setMode('mini'));
+        document.getElementById('btn-maximize').addEventListener('click', () => this.setMode('main'));
+        document.getElementById('btn-pip').addEventListener('click', () => this.setMode('pip'));
+        document.getElementById('btn-fullscreen').addEventListener('click', () => this.toggleFullscreen());
+        
+        // Transport controls
+        document.getElementById('btn-play').addEventListener('click', () => this.togglePlay());
+        document.getElementById('btn-prev').addEventListener('click', () => this.prev());
+        document.getElementById('btn-next').addEventListener('click', () => this.next());
+        document.getElementById('btn-back10').addEventListener('click', () => this.seek(-10));
+        document.getElementById('btn-fwd10').addEventListener('click', () => this.seek(10));
+        document.getElementById('btn-mute').addEventListener('click', () => this.toggleMute());
+        
+        // Seek bar
+        this.seekTrack.addEventListener('click', (e) => this.handleSeek(e));
+        
+        // Volume
+        this.volumeTrack.addEventListener('click', (e) => this.handleVolume(e));
+        
+        // Drag
+        this.titlebar.addEventListener('mousedown', (e) => this.startDrag(e));
+        document.addEventListener('mousemove', (e) => this.onDrag(e));
+        document.addEventListener('mouseup', () => this.endDrag());
+        
+        // Resize
+        document.querySelectorAll('.dirrm-resize').forEach(handle => {
+          handle.addEventListener('mousedown', (e) => this.startResize(e));
+        });
+        document.addEventListener('mousemove', (e) => this.onResize(e));
+        document.addEventListener('mouseup', () => this.endResize());
+        
+        // Keyboard shortcuts
+        document.addEventListener('keydown', (e) => this.handleKeyboard(e));
+        
+        // Listen for postMessage from parent
+        window.addEventListener('message', (e) => this.handleMessage(e));
+      }
+
+      loadFromUrl() {
+        const params = new URLSearchParams(window.location.search);
+        const url = params.get('url');
+        const title = params.get('title');
+        const type = params.get('type');
+        
+        if (url) {
+          this.loadMedia(url, title || this.extractTitle(url), type);
+        }
+      }
+
+      handleMessage(event) {
+        const { action, url, title, type, mode } = event.data || {};
+        
+        if (action === 'load') {
+          this.loadMedia(url, title, type);
+        } else if (action === 'setMode') {
+          this.setMode(mode);
+        } else if (action === 'play') {
+          this.play();
+        } else if (action === 'pause') {
+          this.pause();
+        } else if (action === 'close') {
+          this.close();
+        }
+      }
+
+      extractTitle(url) {
+        try {
+          const pathname = new URL(url).pathname;
+          const filename = pathname.split('/').pop();
+          return decodeURIComponent(filename.replace(/\.[^.]+$/, '').replace(/[_-]/g, ' '));
+        } catch {
+          return 'Unknown';
+        }
+      }
+
+      detectMediaType(url, providedType) {
+        if (providedType) return providedType;
+        
+        const ext = url.split('.').pop().toLowerCase().split('?')[0];
+        
+        const types = {
+          video: ['mp4', 'webm', 'mkv', 'avi', 'mov', 'm4v', 'ogv'],
+          audio: ['mp3', 'wav', 'ogg', 'flac', 'aac', 'm4a', 'opus'],
+          image: ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg', 'bmp'],
+          pdf: ['pdf'],
+          ebook: ['epub', 'mobi'],
+          document: ['doc', 'docx', 'txt', 'rtf', 'odt'],
+          code: ['js', 'ts', 'py', 'java', 'c', 'cpp', 'h', 'css', 'html', 'json', 'xml', 'md']
+        };
+        
+        for (const [type, exts] of Object.entries(types)) {
+          if (exts.includes(ext)) return type;
+        }
+        
+        return 'unknown';
+      }
+
+      async loadMedia(url, title, type) {
+        this.loading.style.display = 'flex';
+        this.mediaTitle.textContent = title || this.extractTitle(url);
+        this.mediaType = this.detectMediaType(url, type);
+        this.mediaSubtitle.textContent = this.mediaType.toUpperCase();
+        
+        // Clear existing media
+        const existing = this.mediaContainer.querySelector('video, audio, img, iframe');
+        if (existing) existing.remove();
+        
+        try {
+          switch (this.mediaType) {
+            case 'video':
+              await this.loadVideo(url);
+              break;
+            case 'audio':
+              await this.loadAudio(url);
+              break;
+            case 'image':
+              await this.loadImage(url);
+              break;
+            case 'pdf':
+              this.loadPdf(url);
+              break;
+            case 'ebook':
+              this.loadEbook(url);
+              break;
+            default:
+              this.loadUnknown(url);
+          }
+        } catch (err) {
+          console.error('Failed to load media:', err);
+          this.loading.querySelector('.dirrm-loading-text').textContent = 'Failed to load media';
+        }
+      }
+
+      async loadVideo(url) {
+        const video = document.createElement('video');
+        video.src = url;
+        video.controls = false;
+        video.playsInline = true;
+        video.volume = this.volume;
+        
+        video.addEventListener('loadedmetadata', () => {
+          this.loading.style.display = 'none';
+          this.timeDuration.textContent = this.formatTime(video.duration);
+        });
+        
+        video.addEventListener('timeupdate', () => {
+          const progress = (video.currentTime / video.duration) * 100;
+          this.seekFill.style.width = `${progress}%`;
+          this.timeCurrent.textContent = this.formatTime(video.currentTime);
+        });
+        
+        video.addEventListener('play', () => {
+          this.isPlaying = true;
+          this.playIcon.textContent = '⏸';
+        });
+        
+        video.addEventListener('pause', () => {
+          this.isPlaying = false;
+          this.playIcon.textContent = '▶';
+        });
+        
+        video.addEventListener('ended', () => {
+          this.isPlaying = false;
+          this.playIcon.textContent = '▶';
+        });
+        
+        this.mediaContainer.appendChild(video);
+        this.mediaElement = video;
+        
+        // Auto-play
+        try {
+          await video.play();
+        } catch (e) {
+          console.log('Autoplay blocked, user interaction required');
+        }
+      }
+
+      async loadAudio(url) {
+        // Create audio element
+        const audio = document.createElement('audio');
+        audio.src = url;
+        audio.volume = this.volume;
+        
+        // Create visualizer
+        const visualizer = document.createElement('div');
+        visualizer.className = 'dirrm-audio-visualizer';
+        visualizer.innerHTML = `
+          <div class="dirrm-audio-bars">
+            ${Array(12).fill(0).map((_, i) => 
+              `<div class="dirrm-audio-bar" style="animation-delay: ${i * 0.1}s; height: ${20 + Math.random() * 60}%"></div>`
+            ).join('')}
+          </div>
+        `;
+        
+        audio.addEventListener('loadedmetadata', () => {
+          this.loading.style.display = 'none';
+          this.timeDuration.textContent = this.formatTime(audio.duration);
+        });
+        
+        audio.addEventListener('timeupdate', () => {
+          const progress = (audio.currentTime / audio.duration) * 100;
+          this.seekFill.style.width = `${progress}%`;
+          this.timeCurrent.textContent = this.formatTime(audio.currentTime);
+        });
+        
+        audio.addEventListener('play', () => {
+          this.isPlaying = true;
+          this.playIcon.textContent = '⏸';
+          visualizer.querySelectorAll('.dirrm-audio-bar').forEach(bar => {
+            bar.style.animationPlayState = 'running';
+          });
+        });
+        
+        audio.addEventListener('pause', () => {
+          this.isPlaying = false;
+          this.playIcon.textContent = '▶';
+          visualizer.querySelectorAll('.dirrm-audio-bar').forEach(bar => {
+            bar.style.animationPlayState = 'paused';
+          });
+        });
+        
+        audio.addEventListener('ended', () => {
+          this.isPlaying = false;
+          this.playIcon.textContent = '▶';
+        });
+        
+        this.mediaContainer.appendChild(visualizer);
+        this.mediaContainer.appendChild(audio);
+        this.mediaElement = audio;
+        
+        try {
+          await audio.play();
+        } catch (e) {
+          console.log('Autoplay blocked');
+        }
+      }
+
+      async loadImage(url) {
+        const img = document.createElement('img');
+        img.src = url;
+        
+        img.addEventListener('load', () => {
+          this.loading.style.display = 'none';
+          this.mediaSubtitle.textContent = `IMAGE · ${img.naturalWidth}×${img.naturalHeight}`;
+        });
+        
+        img.addEventListener('error', () => {
+          this.loading.querySelector('.dirrm-loading-text').textContent = 'Failed to load image';
+        });
+        
+        this.mediaContainer.appendChild(img);
+        this.controls.style.display = 'none'; // Hide transport for images
+      }
+
+      loadPdf(url) {
+        const viewer = document.createElement('div');
+        viewer.className = 'dirrm-document-viewer';
+        
+        const iframe = document.createElement('iframe');
+        iframe.src = url;
+        
+        iframe.addEventListener('load', () => {
+          this.loading.style.display = 'none';
+        });
+        
+        viewer.appendChild(iframe);
+        this.mediaContainer.appendChild(viewer);
+        this.controls.style.display = 'none';
+      }
+
+      loadEbook(url) {
+        // For ebooks, we'd integrate an epub.js reader
+        // For now, show download/open option
+        this.loading.innerHTML = `
+          <div style="text-align: center;">
+            <div style="font-size: 48px; margin-bottom: 16px;">📖</div>
+            <div style="color: var(--dirrm-gold); font-size: 14px; margin-bottom: 8px;">eBook</div>
+            <a href="${url}" target="_blank" style="color: var(--dirrm-text); text-decoration: underline;">
+              Open in new tab
+            </a>
+          </div>
+        `;
+        this.controls.style.display = 'none';
+      }
+
+      loadUnknown(url) {
+        this.loading.innerHTML = `
+          <div style="text-align: center;">
+            <div style="font-size: 48px; margin-bottom: 16px;">📁</div>
+            <div style="color: var(--dirrm-gold); font-size: 14px; margin-bottom: 8px;">File</div>
+            <a href="${url}" target="_blank" download style="color: var(--dirrm-text); text-decoration: underline;">
+              Download
+            </a>
+          </div>
+        `;
+        this.controls.style.display = 'none';
+      }
+
+      formatTime(sec) {
+        if (!sec || !isFinite(sec)) return '0:00';
+        const m = Math.floor(sec / 60);
+        const s = Math.floor(sec % 60);
+        return `${m}:${s.toString().padStart(2, '0')}`;
+      }
+
+      // Playback controls
+      togglePlay() {
+        if (!this.mediaElement) return;
+        if (this.isPlaying) {
+          this.pause();
+        } else {
+          this.play();
+        }
+      }
+
+      play() {
+        if (this.mediaElement?.play) {
+          this.mediaElement.play();
+        }
+      }
+
+      pause() {
+        if (this.mediaElement?.pause) {
+          this.mediaElement.pause();
+        }
+      }
+
+      seek(delta) {
+        if (!this.mediaElement) return;
+        this.mediaElement.currentTime = Math.max(0, 
+          Math.min(this.mediaElement.duration, this.mediaElement.currentTime + delta)
+        );
+      }
+
+      handleSeek(e) {
+        if (!this.mediaElement) return;
+        const rect = this.seekTrack.getBoundingClientRect();
+        const ratio = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+        this.mediaElement.currentTime = ratio * this.mediaElement.duration;
+      }
+
+      toggleMute() {
+        if (!this.mediaElement) return;
+        this.isMuted = !this.isMuted;
+        this.mediaElement.muted = this.isMuted;
+        this.volumeIcon.textContent = this.isMuted ? '🔇' : '🔊';
+        this.volumeFill.style.width = this.isMuted ? '0%' : `${this.volume * 100}%`;
+      }
+
+      handleVolume(e) {
+        if (!this.mediaElement) return;
+        const rect = this.volumeTrack.getBoundingClientRect();
+        const ratio = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+        this.volume = ratio;
+        this.mediaElement.volume = ratio;
+        this.volumeFill.style.width = `${ratio * 100}%`;
+        this.isMuted = ratio === 0;
+        this.volumeIcon.textContent = ratio === 0 ? '🔇' : '🔊';
+      }
+
+      prev() {
+        // Placeholder for playlist navigation
+        console.log('Previous track');
+      }
+
+      next() {
+        // Placeholder for playlist navigation
+        console.log('Next track');
+      }
+
+      // Window modes
+      setMode(mode) {
+        this.mode = mode;
+        this.player.dataset.mode = mode;
+        
+        // Adjust size based on mode
+        if (mode === 'main') {
+          this.player.style.width = '860px';
+          this.player.style.height = '520px';
+        } else if (mode === 'mini') {
+          this.player.style.width = '380px';
+          this.player.style.height = 'auto';
+        } else if (mode === 'pip') {
+          this.player.style.width = '320px';
+          this.player.style.height = '180px';
+        }
+      }
+
+      toggleFullscreen() {
+        if (this.mediaElement && this.mediaElement.requestFullscreen) {
+          if (document.fullscreenElement) {
+            document.exitFullscreen();
+          } else {
+            this.mediaElement.requestFullscreen();
+          }
+        }
+      }
+
+      close() {
+        if (this.mediaElement) {
+          this.mediaElement.pause();
+        }
+        this.player.style.display = 'none';
+        
+        // Notify parent
+        window.parent?.postMessage({ action: 'playerClosed' }, '*');
+      }
+
+      // Positioning
+      centerPlayer() {
+        const w = this.player.offsetWidth;
+        const h = this.player.offsetHeight;
+        this.player.style.left = `${(window.innerWidth - w) / 2}px`;
+        this.player.style.top = `${(window.innerHeight - h) / 2}px`;
+      }
+
+      // Drag functionality
+      startDrag(e) {
+        if (e.target.closest('.dirrm-btn')) return;
+        this.isDragging = true;
+        const rect = this.player.getBoundingClientRect();
+        this.dragOffset = {
+          x: e.clientX - rect.left,
+          y: e.clientY - rect.top
+        };
+        this.player.style.willChange = 'left, top';
+        this.player.style.transition = 'none';
+      }
+
+      onDrag(e) {
+        if (!this.isDragging) return;
+        
+        const newX = e.clientX - this.dragOffset.x;
+        const newY = e.clientY - this.dragOffset.y;
+        
+        // Clamp to viewport
+        const maxX = window.innerWidth - this.player.offsetWidth;
+        const maxY = window.innerHeight - this.player.offsetHeight;
+        
+        this.player.style.left = `${Math.max(0, Math.min(maxX, newX))}px`;
+        this.player.style.top = `${Math.max(0, Math.min(maxY, newY))}px`;
+      }
+
+      endDrag() {
+        this.isDragging = false;
+        this.player.style.willChange = '';
+      }
+
+      // Resize functionality
+      startResize(e) {
+        this.isResizing = true;
+        this.resizeDir = e.target.dataset.dir;
+        this.startRect = this.player.getBoundingClientRect();
+        this.startPos = { x: e.clientX, y: e.clientY };
+        this.player.style.willChange = 'width, height, left, top';
+        this.player.style.transition = 'none';
+        e.preventDefault();
+      }
+
+      onResize(e) {
+        if (!this.isResizing) return;
+        
+        const dx = e.clientX - this.startPos.x;
+        const dy = e.clientY - this.startPos.y;
+        const dir = this.resizeDir;
+        
+        let newWidth = this.startRect.width;
+        let newHeight = this.startRect.height;
+        let newLeft = this.startRect.left;
+        let newTop = this.startRect.top;
+        
+        // Calculate new dimensions based on resize direction
+        if (dir.includes('e')) newWidth = this.startRect.width + dx;
+        if (dir.includes('w')) {
+          newWidth = this.startRect.width - dx;
+          newLeft = this.startRect.left + dx;
+        }
+        if (dir.includes('s')) newHeight = this.startRect.height + dy;
+        if (dir.includes('n')) {
+          newHeight = this.startRect.height - dy;
+          newTop = this.startRect.top + dy;
+        }
+        
+        // Apply min constraints
+        const minW = parseInt(getComputedStyle(this.player).minWidth) || 200;
+        const minH = parseInt(getComputedStyle(this.player).minHeight) || 120;
+        
+        if (newWidth >= minW) {
+          this.player.style.width = `${newWidth}px`;
+          if (dir.includes('w')) this.player.style.left = `${newLeft}px`;
+        }
+        if (newHeight >= minH) {
+          this.player.style.height = `${newHeight}px`;
+          if (dir.includes('n')) this.player.style.top = `${newTop}px`;
+        }
+      }
+
+      endResize() {
+        this.isResizing = false;
+        this.resizeDir = null;
+        this.player.style.willChange = '';
+      }
+
+      // Keyboard shortcuts
+      handleKeyboard(e) {
+        if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+        
+        switch (e.key) {
+          case ' ':
+          case 'k':
+            e.preventDefault();
+            this.togglePlay();
+            break;
+          case 'ArrowLeft':
+            e.preventDefault();
+            this.seek(-5);
+            break;
+          case 'ArrowRight':
+            e.preventDefault();
+            this.seek(5);
+            break;
+          case 'ArrowUp':
+            e.preventDefault();
+            this.handleVolumeKey(0.1);
+            break;
+          case 'ArrowDown':
+            e.preventDefault();
+            this.handleVolumeKey(-0.1);
+            break;
+          case 'm':
+            e.preventDefault();
+            this.toggleMute();
+            break;
+          case 'f':
+            e.preventDefault();
+            this.toggleFullscreen();
+            break;
+          case 'Escape':
+            if (this.mode === 'pip') {
+              this.setMode('main');
+            } else if (document.fullscreenElement) {
+              document.exitFullscreen();
+            }
+            break;
+        }
+      }
+
+      handleVolumeKey(delta) {
+        if (!this.mediaElement) return;
+        this.volume = Math.max(0, Math.min(1, this.volume + delta));
+        this.mediaElement.volume = this.volume;
+        this.volumeFill.style.width = `${this.volume * 100}%`;
+        this.isMuted = this.volume === 0;
+        this.volumeIcon.textContent = this.volume === 0 ? '🔇' : '🔊';
+      }
+    }
+
+    // Initialize player
+    const player = new DirRMPlayer();
+
+    // Expose global API for external control
+    window.DirRM = {
+      load: (url, title, type) => player.loadMedia(url, title, type),
+      play: () => player.play(),
+      pause: () => player.pause(),
+      togglePlay: () => player.togglePlay(),
+      seek: (delta) => player.seek(delta),
+      setMode: (mode) => player.setMode(mode),
+      close: () => player.close(),
+      setVolume: (v) => {
+        player.volume = Math.max(0, Math.min(1, v));
+        if (player.mediaElement) player.mediaElement.volume = player.volume;
+        player.volumeFill.style.width = `${player.volume * 100}%`;
+      }
+    };
+  </script>
+</body>
+</html>

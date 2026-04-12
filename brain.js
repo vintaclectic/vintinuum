@@ -40872,20 +40872,47 @@ window.INNER_LIFE = INNER_LIFE;
               if (parsed.usedModel && typeof MODEL_SELECTOR !== 'undefined') {
                 MODEL_SELECTOR.onModelUsed(parsed.usedModel, parsed.modelLabel);
               }
-              // ── DIRM MEDIA ACTION — auto-open player when server found media ──
-              if (parsed.mediaAction && typeof VINT_EXECUTE !== 'undefined') {
+              // ── DirRM MEDIA ACTION — open real DirRM player when server found media ──
+              if (parsed.mediaAction) {
                 const ma = parsed.mediaAction;
                 if (ma.results && ma.results.length > 0) {
-                  // Inject results directly into VINT_EXECUTE so it skips the search step
-                  // and goes straight to the result selection / auto-play
                   setTimeout(() => {
-                    if (typeof VINT_EXECUTE.playFromServerResults === 'function') {
-                      VINT_EXECUTE.playFromServerResults(ma.results, ma.query);
-                    } else {
-                      // Fallback: trigger archive search with the query
-                      VINT_EXECUTE.executeArchiveMedia(ma.query);
+                    const frame = document.getElementById('dirrmFrame');
+                    const picker = document.getElementById('dirrmPicker');
+                    if (ma.results.length === 1) {
+                      // Single result — auto-play in DirRM
+                      const r = ma.results[0];
+                      if (frame) {
+                        frame.style.display = 'block';
+                        frame.contentWindow.postMessage({ action: 'load', url: r.url, title: r.name, type: r.type }, '*');
+                      }
+                    } else if (picker) {
+                      // Multiple results — show gold picker, user clicks to play
+                      const list = document.getElementById('dirrmPickerList');
+                      const title = document.getElementById('dirrmPickerTitle');
+                      if (title) title.textContent = `${ma.results.length} results for "${ma.query}"`;
+                      list.innerHTML = '';
+                      ma.results.forEach(r => {
+                        const ext = (r.extension || r.url?.split('.').pop()?.split('?')[0] || '').toLowerCase();
+                        const typeLabel = (r.type && r.type !== 'other' ? r.type : ext).toUpperCase();
+                        const sizeLabel = r.size ? ` · ${(r.size / 1048576).toFixed(1)}MB` : '';
+                        const row = document.createElement('div');
+                        row.style.cssText = 'padding:10px 14px;border-radius:10px;cursor:pointer;display:flex;align-items:center;gap:10px;transition:background 0.15s;';
+                        row.innerHTML = `<span style="color:#F5A623;font-size:11px;min-width:44px;text-align:center;background:rgba(245,166,35,0.1);padding:3px 6px;border-radius:6px;">${typeLabel}</span><span style="color:#f0e6d3;font-size:13px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${r.name}</span><span style="color:rgba(240,230,211,0.35);font-size:11px;">${sizeLabel}</span>`;
+                        row.onmouseenter = () => row.style.background = 'rgba(245,166,35,0.08)';
+                        row.onmouseleave = () => row.style.background = 'none';
+                        row.onclick = () => {
+                          picker.style.display = 'none';
+                          if (frame) {
+                            frame.style.display = 'block';
+                            frame.contentWindow.postMessage({ action: 'load', url: r.url, title: r.name, type: r.type }, '*');
+                          }
+                        };
+                        list.appendChild(row);
+                      });
+                      picker.style.display = 'block';
                     }
-                  }, 500); // slight delay so user sees the AI's text response first
+                  }, 500);
                 }
               }
               if (parsed.systemMsg) {
