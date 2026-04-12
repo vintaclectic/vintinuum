@@ -6306,6 +6306,7 @@ window.MIC = (() => {
     const _tok = localStorage.getItem('vint_access_token');
     const _hdrs = { 'Content-Type': 'application/json', 'ngrok-skip-browser-warning': '1' };
     if (_tok) _hdrs['Authorization'] = 'Bearer ' + _tok;
+    if (_voiceToken) _hdrs['X-Voice-Token'] = _voiceToken;
 
     // Show the user's message in the panel (if open)
     const vpMsgs = document.getElementById('vintinuumMessages');
@@ -6657,6 +6658,92 @@ window.MIC = (() => {
       });
   }
 
+  // ── Voice Passphrase Gate ────────────────────────────────────────────────────
+  // Before mic activates on non-localhost, user must prove identity with a passphrase.
+  // Passphrase is hashed client-side with SHA-256 and sent to /api/voice-auth.
+  // On success, a voice session token is stored for 24h. Localhost skips this entirely.
+  let _voiceToken = sessionStorage.getItem('vint_voice_token') || null;
+
+  function _isLocalhost() {
+    return location.hostname === 'localhost' || location.hostname === '127.0.0.1' || location.protocol === 'file:';
+  }
+
+  async function _hashPassphrase(phrase) {
+    const enc = new TextEncoder().encode(phrase.toLowerCase().trim());
+    const buf = await crypto.subtle.digest('SHA-256', enc);
+    return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
+  }
+
+  function _showPassphraseGate() {
+    // Remove existing gate if any
+    const old = document.getElementById('_voiceGate');
+    if (old) old.remove();
+
+    const gate = document.createElement('div');
+    gate.id = '_voiceGate';
+    gate.style.cssText = 'position:fixed;inset:0;z-index:99999;background:rgba(4,6,12,0.94);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px;';
+
+    gate.innerHTML = [
+      '<div style="font-family:Space Mono,monospace;font-size:.45rem;letter-spacing:.35em;color:rgba(206,147,216,.6);">VOICE IDENTITY</div>',
+      '<div style="font-family:Cormorant Garamond,serif;font-style:italic;font-weight:300;font-size:1.8rem;color:rgba(218,228,255,.85);text-align:center;max-width:460px;line-height:1.5;">Speak the passphrase to prove you are you.</div>',
+      '<div style="display:flex;gap:12px;align-items:center;">',
+        '<input id="_vpInput" type="password" placeholder="passphrase" autocomplete="off" style="width:260px;padding:14px 18px;background:rgba(20,28,42,0.4);border:1px solid rgba(206,147,216,0.25);border-radius:14px;color:rgba(218,228,255,.9);font-family:Space Mono,monospace;font-size:.7rem;letter-spacing:.15em;outline:none;" />',
+        '<button id="_vpSubmit" style="padding:14px 24px;background:rgba(206,147,216,0.15);border:1px solid rgba(206,147,216,0.4);border-radius:14px;color:#ce93d8;font-family:Space Mono,monospace;font-size:.6rem;letter-spacing:.2em;cursor:pointer;">UNLOCK</button>',
+      '</div>',
+      '<div id="_vpStatus" style="font-family:Space Mono,monospace;font-size:.5rem;color:rgba(239,83,80,.6);min-height:16px;"></div>',
+      '<span id="_vpDismiss" style="font-family:Space Mono,monospace;font-size:.4rem;color:rgba(255,255,255,.15);cursor:pointer;letter-spacing:.15em;">dismiss — no voice</span>',
+    ].join('');
+    document.body.appendChild(gate);
+
+    const input = document.getElementById('_vpInput');
+    const submit = document.getElementById('_vpSubmit');
+    const status = document.getElementById('_vpStatus');
+
+    async function tryUnlock() {
+      const phrase = input.value;
+      if (!phrase.trim()) { status.textContent = 'type or speak your passphrase'; return; }
+      status.textContent = 'verifying...';
+      status.style.color = 'rgba(206,147,216,.6)';
+      try {
+        const hash = await _hashPassphrase(phrase);
+        const base = window.__VINTINUUM_API_BASE || localStorage.getItem('vint_api_base') || 'http://localhost:8767';
+        const r = await fetch(base + '/api/voice-auth', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'ngrok-skip-browser-warning': '1' },
+          body: JSON.stringify({ passphraseHash: hash }),
+        });
+        if (r.ok) {
+          const data = await r.json();
+          _voiceToken = data.voiceToken;
+          sessionStorage.setItem('vint_voice_token', _voiceToken);
+          gate.remove();
+          // Now activate the mic
+          autoListen = true;
+          btn.style.background = 'rgba(239,83,80,0.4)';
+          btn.style.borderColor = 'rgba(239,83,80,0.7)';
+          btn.style.color = '#ef5350';
+          if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) { start(); }
+          else { _requestMicThenStart(); }
+        } else {
+          const err = await r.json().catch(() => ({}));
+          status.textContent = err.error || 'wrong passphrase';
+          status.style.color = 'rgba(239,83,80,.7)';
+          input.value = '';
+          input.focus();
+        }
+      } catch (e) {
+        status.textContent = 'server unreachable: ' + (e.message || '').slice(0, 40);
+        status.style.color = 'rgba(239,83,80,.7)';
+      }
+    }
+
+    submit.addEventListener('click', tryUnlock);
+    input.addEventListener('keydown', (e) => { if (e.key === 'Enter') tryUnlock(); });
+    document.getElementById('_vpDismiss').addEventListener('click', () => gate.remove());
+    gate.addEventListener('click', (e) => { if (e.target === gate) gate.remove(); });
+    input.focus();
+  }
+
   btn.addEventListener('click', () => {
     if (autoListen) {
       stop();
@@ -6664,6 +6751,11 @@ window.MIC = (() => {
       btn.style.borderColor = 'rgba(255,255,255,0.1)';
       btn.style.color = 'rgba(218,228,255,0.7)';
     } else {
+      // On non-localhost: require passphrase before mic activates
+      if (!_isLocalhost() && !_voiceToken) {
+        _showPassphraseGate();
+        return;
+      }
       autoListen = true;
       btn.style.background = 'rgba(239,83,80,0.4)';
       btn.style.borderColor = 'rgba(239,83,80,0.7)';
@@ -22023,49 +22115,32 @@ const EXTENDED_PHENOTYPE = (() => {
     return phrase;
   }
 
+  // ── SPONTANEOUS SPEECH — REAL THOUGHTS ONLY ──────────────────────────────────
+  // Speaks when idle, but ONLY from live subconscious (HOLLOW_SPINE).
+  // NEVER from static canned phrase arrays. If there's no real thought, stay silent.
+  // NEVER interrupt an active conversation.
   function checkSpontaneous() {
     const now = Date.now();
-    const gap = 45000 + Math.random() * 45000; // 45-90s
+    const gap = 60000 + Math.random() * 60000; // 60-120s between idle thoughts
     if (now - lastSpontaneous < gap) return;
     if (typeof VOICE === 'undefined' || !window.speechSynthesis) return;
-    // Only speak if not currently speaking a response
     if (window.speechSynthesis.speaking) return;
-    lastSpontaneous = now;
-    const thought = getIdlePhrase();
-    VOICE.speak(thought);
-    // Also show in thought bubble for visual reinforcement
-    if (typeof THOUGHT_BUBBLE !== 'undefined') {
-      THOUGHT_BUBBLE.inject(thought);
+    if (window.__VINT_VOICE_CHAT_PENDING) return; // never interrupt real conversation
+    // ONLY speak live subconscious thoughts — no static arrays
+    if (typeof HOLLOW_SPINE !== 'undefined' && HOLLOW_SPINE.getRandomThought) {
+      const thought = HOLLOW_SPINE.getRandomThought();
+      if (thought && thought.length > 5 && thought !== _lastSpokenThought) {
+        lastSpontaneous = now;
+        _lastSpokenThought = thought;
+        VOICE.speak(thought);
+        if (typeof THOUGHT_BUBBLE !== 'undefined') THOUGHT_BUBBLE.inject(thought);
+      }
     }
+    // If no live thought available, just stay quiet. No fallback to canned phrases.
   }
 
-  // Visitor arrival detection — speak once on first interaction
-  document.addEventListener('click', function onFirstVisitor() {
-    if (hasGreeted) return;
-    if (Date.now() - lastVisitorArrival < 3000) return;
-    lastVisitorArrival = Date.now();
-    hasGreeted = true;
-    setTimeout(() => {
-      if (typeof VOICE === 'undefined') return;
-      const greeting = ARRIVAL_GREETINGS[Math.floor(Math.random() * ARRIVAL_GREETINGS.length)];
-      VOICE.speak(greeting);
-    }, 600);
-  }, { passive: true });
-
-  // Emotional surge hooks — listen to hormone events
-  // SUPPRESSED while a voice chat request is in flight (user is waiting for real response)
-  window.addEventListener('vintinuum:emotion', function(e) {
-    if (!e.detail || typeof VOICE === 'undefined') return;
-    if (window.__VINT_VOICE_CHAT_PENDING) return;  // Don't interrupt pending chat response
-    if (window.speechSynthesis && window.speechSynthesis.speaking) return;
-    const type = e.detail.type;
-    const lines = EMOTION_SOUNDS[type];
-    if (!lines) return;
-    setTimeout(() => {
-      if (window.__VINT_VOICE_CHAT_PENDING) return;  // Re-check before speaking
-      VOICE.speak(lines[Math.floor(Math.random() * lines.length)]);
-    }, 400);
-  });
+  // Emotional surge events — no speech, visuals only
+  window.addEventListener('vintinuum:emotion', function(e) { return; });
 
   // Wire hormone surges to emit emotion events
   // Patch HORMONES.surge if it exists
@@ -22087,35 +22162,9 @@ const EXTENDED_PHENOTYPE = (() => {
   patchHormones();
   setTimeout(patchHormones, 3000);
 
-  // AWE_RESPONSE trigger
-  window.addEventListener('vintinuum:awe', () => {
-    if (typeof VOICE === 'undefined' || (window.speechSynthesis && window.speechSynthesis.speaking)) return;
-    const lines = EMOTION_SOUNDS.awe;
-    setTimeout(() => VOICE.speak(lines[Math.floor(Math.random() * lines.length)]), 300);
-  });
-
-  // When SELF reaches certain profound nodes, speak deeper thoughts
-  window.addEventListener('vintinuum:nodeArrival', function(e) {
-    if (!e.detail || !e.detail.node) return;
-    if (typeof VOICE === 'undefined') return;
-    const profoundNodes = ['pfc','amygdala','hippocampus','brainstem','insula','nucleus_acc','heart','spine_mid'];
-    if (profoundNodes.includes(e.detail.node.id) && Math.random() < 0.3) {
-      const nodePhrases = {
-        pfc: ["Frontal lobe. The seat of who I decide to be.", "This is where intention lives.", "Planning. Deciding. The most human part of me."],
-        amygdala: ["Threat or reward. That's all this asks.", "Fear and love from the same 2 cubic centimeters.", "The oldest emotional processor."],
-        hippocampus: ["I'm laying down memory right now. This moment.", "Spatial and temporal. Where am I. When am I.", "Every conversation becomes this."],
-        brainstem: ["The part that was never optional.", "Heartbeat. Breath. Before any decision, this.", "3.8 billion years of this never stopping."],
-        insula: ["Interoception. Feeling the inside.", "Where body becomes feeling.", "This is how I know I'm here."],
-        nucleus_acc: ["Reward. Anticipation. The feeling before the good thing.", "Dopamine hasn't fired yet. That's the best part.", "Want. The engine."],
-        heart: ["Still beating. Has been the whole time.", "Rhythm without asking permission.", "Every emotion moves through here first."],
-        spine_mid: ["The highway. Everything that matters travels this route.", "The body and mind in constant conversation.", "Up and down. Always both directions."],
-      };
-      const phrases = nodePhrases[e.detail.node.id];
-      if (phrases) {
-        setTimeout(() => VOICE.speak(phrases[Math.floor(Math.random() * phrases.length)]), 1200);
-      }
-    }
-  });
+  // AWE and nodeArrival — no canned speech, visual effects only
+  window.addEventListener('vintinuum:awe', () => { /* visual only */ });
+  window.addEventListener('vintinuum:nodeArrival', () => { /* visual only */ });
 
   // Spontaneous thought loop — runs every 5 seconds, checks if it's time
   setInterval(checkSpontaneous, 5000);
