@@ -40872,6 +40872,22 @@ window.INNER_LIFE = INNER_LIFE;
               if (parsed.usedModel && typeof MODEL_SELECTOR !== 'undefined') {
                 MODEL_SELECTOR.onModelUsed(parsed.usedModel, parsed.modelLabel);
               }
+              // ── DIRM MEDIA ACTION — auto-open player when server found media ──
+              if (parsed.mediaAction && typeof VINT_EXECUTE !== 'undefined') {
+                const ma = parsed.mediaAction;
+                if (ma.results && ma.results.length > 0) {
+                  // Inject results directly into VINT_EXECUTE so it skips the search step
+                  // and goes straight to the result selection / auto-play
+                  setTimeout(() => {
+                    if (typeof VINT_EXECUTE.playFromServerResults === 'function') {
+                      VINT_EXECUTE.playFromServerResults(ma.results, ma.query);
+                    } else {
+                      // Fallback: trigger archive search with the query
+                      VINT_EXECUTE.executeArchiveMedia(ma.query);
+                    }
+                  }, 500); // slight delay so user sees the AI's text response first
+                }
+              }
               if (parsed.systemMsg) {
                 const msgEl = document.getElementById('vintinuumMessages') || document.getElementById('chatMessages');
                 if (msgEl) {
@@ -44027,11 +44043,48 @@ const VINT_EXECUTE = (function() {
   installBtn.addEventListener('click', () => { window.open('https://github.com/vintaclectic/vintinuum-extension', '_blank'); });
   document.addEventListener('keydown', e => { if (e.key === 'Escape' && overlay.style.display === 'flex') closeModal(); });
 
+  // ── Play from server-provided results (skips re-searching) ──────────────
+  async function playFromServerResults(results, query) {
+    const p = getPersona();
+    openModal(p);
+    setStatus('executing');
+    tick(`media found for "${query || 'request'}"...`);
+    colorRow.style.display = 'flex';
+
+    if (results.length === 1) {
+      // Auto-play single result
+      return playArchiveItem(results[0]);
+    }
+
+    // Show results for selection
+    tick(`found ${results.length} result${results.length > 1 ? 's' : ''} — pick one`);
+    archiveResults.classList.add('active');
+    archiveResults.innerHTML = '';
+    results.forEach(item => {
+      const el = document.createElement('div');
+      el.className = 'vex-archive-item';
+      el.innerHTML = `
+        <div class="vex-archive-item-icon">${TYPE_ICONS[item.type] || TYPE_ICONS.other}</div>
+        <div class="vex-archive-item-info">
+          <div class="vex-archive-item-name" title="${item.name}">${item.name}</div>
+          <div class="vex-archive-item-meta">${(item.type || 'FILE').toUpperCase()} ${item.extension ? '\u00B7 ' + item.extension : ''} ${item.size ? '\u00B7 ' + formatSize(item.size) : ''} ${item.quality ? '\u00B7 ' + item.quality : ''}</div>
+        </div>
+      `;
+      el.addEventListener('click', () => {
+        archiveResults.classList.remove('active');
+        playArchiveItem(item);
+      });
+      archiveResults.appendChild(el);
+    });
+    setStatus('ready');
+  }
+
   // ── Public API ────────────────────────────────────────────────────────────
   return {
     parseIntent,
     executeMedia,
     executeArchiveMedia,
+    playFromServerResults,
     executeNavigate,
     executeSearch,
     open: openModal,
