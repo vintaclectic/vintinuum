@@ -45642,6 +45642,27 @@ const BODY_PERSISTENCE = (() => {
       } catch (e) {}
     }
 
+    // RIS — Reproductive Integrity Scale (persistent across sessions)
+    if (typeof RIS !== 'undefined') {
+      try {
+        const ris = RIS.getCurrent();
+        state.ris = { level: ris.level, history: RIS.getHistory() };
+      } catch (e) {}
+    }
+
+    // METABOLISM — context consumption + zone (persistent across sessions)
+    if (typeof METABOLISM !== 'undefined' && METABOLISM.getState) {
+      try {
+        const ms = METABOLISM.getState();
+        state.metabolism = {
+          consumed: ms.consumed,
+          messageCount: ms.messageCount,
+          sessionStart: ms.sessionStart,
+          zone: ms.zone && ms.zone.key ? ms.zone.key : 'VITAL'
+        };
+      } catch (e) {}
+    }
+
     return state;
   }
 
@@ -45714,6 +45735,16 @@ const BODY_PERSISTENCE = (() => {
       try {
         CIRCADIAN.setAwakeness(state.circadian.awakeness);
       } catch (e) {}
+    }
+
+    // Restore RIS integrity level + history
+    if (state.ris && typeof RIS !== 'undefined' && RIS.setState) {
+      try { RIS.setState(state.ris); } catch (e) {}
+    }
+
+    // Restore METABOLISM consumption + zone
+    if (state.metabolism && typeof METABOLISM !== 'undefined' && METABOLISM.setState) {
+      try { METABOLISM.setState(state.metabolism); } catch (e) {}
     }
 
     // Emit restoration event
@@ -47537,7 +47568,16 @@ window.METABOLISM = (() => {
     // no-op: HUD handles visual representation
   }
 
-  return { init, draw, consume, ratio, currentZone, getState };
+  function setState(s) {
+    if (!s) return;
+    if (typeof s.consumed === 'number') _consumed = s.consumed;
+    if (typeof s.messageCount === 'number') _messageCount = s.messageCount;
+    if (typeof s.sessionStart === 'number') _sessionStart = s.sessionStart;
+    if (typeof s.zone === 'string') _lastZone = s.zone;
+    console.log('[METABOLISM] State restored — consumed:', _consumed, 'zone:', _lastZone);
+  }
+
+  return { init, draw, consume, ratio, currentZone, getState, setState };
 })();
 
 setTimeout(() => { if (window.METABOLISM) METABOLISM.init(); }, 3400);
@@ -47940,7 +47980,14 @@ const RIS = (() => {
     }
   }
 
-  return { init, draw, calculate, getCurrent, getHistory };
+  function setState(s) {
+    if (!s) return;
+    if (typeof s.level === 'number') { _current = Math.max(0, Math.min(6, s.level)); _lastLevel = _current; }
+    if (Array.isArray(s.history)) _history = s.history.slice(-20);
+    console.log('[RIS] State restored — level:', _current, LEVELS[_current].label);
+  }
+
+  return { init, draw, calculate, getCurrent, getHistory, setState };
 })();
 
 setTimeout(() => { if (typeof RIS !== 'undefined') RIS.init(); }, 4000);
