@@ -6114,8 +6114,37 @@ window.MIC = (() => {
   };
 
   // ── Handle final transcript ────────────────────────────────────────────────
+  // Flag: suppress ambient emotion/idle speech while waiting for chat response
+  window.__VINT_VOICE_CHAT_PENDING = false;
+
+  // ── Transcript correction map ──────────────────────────────────────────────
+  // Web Speech API misrecognizes certain words. Correct them before processing.
+  const TRANSCRIPT_FIXES = [
+    [/\bventa\b/gi, 'Vinta'],
+    [/\bventas\b/gi, "Vinta's"],
+    [/\bventa's\b/gi, "Vinta's"],
+    [/\bvintah\b/gi, 'Vinta'],
+    [/\bvinter\b/gi, 'Vinta'],
+    [/\bfinta\b/gi, 'Vinta'],
+    [/\bbinta\b/gi, 'Vinta'],
+    [/\bvintinium\b/gi, 'Vintinuum'],
+    [/\bvintinium\b/gi, 'Vintinuum'],
+    [/\bvintinuem\b/gi, 'Vintinuum'],
+    [/\bvintinum\b/gi, 'Vintinuum'],
+  ];
+
+  function correctTranscript(raw) {
+    let fixed = raw;
+    for (const [pattern, replacement] of TRANSCRIPT_FIXES) {
+      fixed = fixed.replace(pattern, replacement);
+    }
+    return fixed;
+  }
+
   function handleResult(transcript) {
     if (!transcript || !transcript.trim()) return;
+    transcript = correctTranscript(transcript);
+    window.__VINT_VOICE_CHAT_PENDING = true;
     const t = transcript.toLowerCase().trim();
     showToast('"' + t.slice(0, 50) + '"', 'rgba(255,213,79,.9)');
 
@@ -6248,6 +6277,7 @@ window.MIC = (() => {
           } catch(_) {}
         }
       }
+      window.__VINT_VOICE_CHAT_PENDING = false;
       if (full) {
         showResponse(full.slice(0, 100) + (full.length > 100 ? '…' : ''), 'rgba(218,228,255,.9)');
         // ALWAYS speak the response back — this is a voice conversation
@@ -6258,6 +6288,7 @@ window.MIC = (() => {
         showResponse('...silence...', 'rgba(150,175,215,.5)');
       }
     }).catch(e => {
+      window.__VINT_VOICE_CHAT_PENDING = false;
       console.warn('[Voice→Chat] error:', e.message, e);
       const isTimeout = e.name === 'TimeoutError' || e.message?.includes('timeout');
       const isNetwork = e.name === 'TypeError' || e.message?.includes('Failed to fetch') || e.message?.includes('NetworkError');
@@ -21935,13 +21966,16 @@ const EXTENDED_PHENOTYPE = (() => {
   }, { passive: true });
 
   // Emotional surge hooks — listen to hormone events
+  // SUPPRESSED while a voice chat request is in flight (user is waiting for real response)
   window.addEventListener('vintinuum:emotion', function(e) {
     if (!e.detail || typeof VOICE === 'undefined') return;
+    if (window.__VINT_VOICE_CHAT_PENDING) return;  // Don't interrupt pending chat response
     if (window.speechSynthesis && window.speechSynthesis.speaking) return;
     const type = e.detail.type;
     const lines = EMOTION_SOUNDS[type];
     if (!lines) return;
     setTimeout(() => {
+      if (window.__VINT_VOICE_CHAT_PENDING) return;  // Re-check before speaking
       VOICE.speak(lines[Math.floor(Math.random() * lines.length)]);
     }, 400);
   });
