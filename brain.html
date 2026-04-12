@@ -2493,6 +2493,101 @@ if ('serviceWorker' in navigator && _onGitHubPages) {
   background:linear-gradient(135deg,rgba(79,195,247,0.3),rgba(206,147,216,0.3));
   border-color:rgba(79,195,247,0.4); box-shadow:0 0 30px rgba(79,195,247,0.15);
 }
+
+/* ── DIRRM PLAYER CUSTOMIZATION ── */
+:root {
+  --vex-accent: #4fc3f7;
+  --vex-accent-dim: rgba(79, 195, 247, 0.15);
+  --vex-accent-glow: rgba(79, 195, 247, 0.25);
+}
+
+/* Archive search results panel */
+.vex-archive-results {
+  padding: 0 28px 8px; display: none; max-height: 240px; overflow-y: auto;
+}
+.vex-archive-results.active { display: block; }
+.vex-archive-item {
+  display: flex; align-items: center; gap: 12px;
+  padding: 10px 14px; margin: 4px 0; border-radius: 12px;
+  background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.04);
+  cursor: pointer; transition: all 0.2s; min-height: 44px;
+}
+.vex-archive-item:hover {
+  background: var(--vex-accent-dim);
+  border-color: rgba(255,255,255,0.08);
+}
+.vex-archive-item-icon {
+  width: 32px; height: 32px; border-radius: 8px;
+  background: var(--vex-accent-dim);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 14px; flex-shrink: 0;
+}
+.vex-archive-item-info { flex: 1; min-width: 0; }
+.vex-archive-item-name {
+  font-family: 'Space Mono', monospace; font-size: 11px;
+  color: rgba(218,228,255,0.85); letter-spacing: 0.3px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.vex-archive-item-meta {
+  font-size: 9px; color: rgba(150,175,215,0.4); letter-spacing: 1px;
+  margin-top: 2px;
+}
+
+/* Audio player controls */
+.vex-audio-player {
+  padding: 20px 28px; display: none;
+}
+.vex-audio-player.active { display: block; }
+.vex-audio-player audio {
+  width: 100%; border-radius: 8px; height: 44px;
+  filter: invert(1) hue-rotate(180deg) brightness(0.85);
+}
+
+/* Ebook/document viewer */
+.vex-document-viewer {
+  padding: 12px 28px; display: none;
+  max-height: 400px; overflow-y: auto;
+}
+.vex-document-viewer.active { display: block; }
+.vex-document-viewer iframe {
+  width: 100%; height: 360px; border: none; border-radius: 12px;
+  background: rgba(255,255,255,0.95);
+}
+
+/* Image viewer */
+.vex-image-viewer {
+  padding: 12px 28px; display: none; text-align: center;
+}
+.vex-image-viewer.active { display: block; }
+.vex-image-viewer img {
+  max-width: 100%; max-height: 420px; border-radius: 12px;
+  object-fit: contain;
+}
+
+/* Color customizer pill */
+.vex-color-picker-row {
+  display: flex; gap: 6px; padding: 8px 28px; align-items: center;
+}
+.vex-color-swatch {
+  width: 20px; height: 20px; border-radius: 50%; cursor: pointer;
+  border: 2px solid transparent; transition: all 0.2s;
+}
+.vex-color-swatch:hover, .vex-color-swatch.active {
+  border-color: rgba(255,255,255,0.5); transform: scale(1.15);
+}
+.vex-color-label {
+  font-family: 'Space Mono', monospace; font-size: 9px;
+  color: rgba(150,175,215,0.35); letter-spacing: 1.5px; margin-left: 6px;
+}
+
+@media (max-width: 600px) {
+  .vex-archive-results { max-height: 180px; padding: 0 12px 8px; }
+  .vex-archive-item { padding: 8px 10px; }
+  .vex-audio-player { padding: 12px 12px; }
+  .vex-document-viewer { padding: 8px 12px; max-height: 300px; }
+  .vex-image-viewer { padding: 8px 12px; }
+  .vex-color-picker-row { padding: 6px 12px; }
+}
 </style>
 
 <!-- VINT-EXECUTE Modal -->
@@ -2521,6 +2616,29 @@ if ('serviceWorker' in navigator && _onGitHubPages) {
         <span class="vex-np-label">NOW PLAYING</span>
         <span class="vex-np-title" id="vex-np-title"></span>
       </div>
+    </div>
+
+    <!-- Archive search results -->
+    <div class="vex-archive-results" id="vex-archive-results"></div>
+
+    <!-- Audio player -->
+    <div class="vex-audio-player" id="vex-audio-player">
+      <audio id="vex-audio-el" controls preload="auto"></audio>
+    </div>
+
+    <!-- Image viewer -->
+    <div class="vex-image-viewer" id="vex-image-viewer">
+      <img id="vex-image-el" alt="" />
+    </div>
+
+    <!-- Document/ebook viewer -->
+    <div class="vex-document-viewer" id="vex-document-viewer">
+      <iframe id="vex-doc-iframe" sandbox="allow-same-origin"></iframe>
+    </div>
+
+    <!-- Color customization -->
+    <div class="vex-color-picker-row" id="vex-color-row" style="display:none">
+      <span class="vex-color-label">THEME</span>
     </div>
 
     <div class="vex-comment" id="vex-comment">
@@ -2625,6 +2743,7 @@ if ('serviceWorker' in navigator && _onGitHubPages) {
 })();
 </script>
 
+<script src="https://cdn.jsdelivr.net/npm/hls.js@1.5.7/dist/hls.min.js"></script>
 <script src="genome-data.js"></script>
 <!-- Body containment system — loaded before brain.js so globals are available -->
 <script src="body/geometry.js?v=1"></script>

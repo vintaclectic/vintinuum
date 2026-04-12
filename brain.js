@@ -43278,7 +43278,17 @@ const VINT_EXECUTE = (function() {
   const primaryBtn = document.getElementById('vex-primary');
   const dragHandle = document.getElementById('vex-drag-handle');
   const resizeH    = document.getElementById('vex-resize-handle');
+  const archiveResults = document.getElementById('vex-archive-results');
+  const audioPlayer    = document.getElementById('vex-audio-player');
+  const audioEl        = document.getElementById('vex-audio-el');
+  const imageViewer    = document.getElementById('vex-image-viewer');
+  const imageEl        = document.getElementById('vex-image-el');
+  const docViewer      = document.getElementById('vex-document-viewer');
+  const docIframe      = document.getElementById('vex-doc-iframe');
+  const colorRow       = document.getElementById('vex-color-row');
 
+  let hlsInstance = null;
+  let currentMediaItem = null;
   let currentWatchUrl = null;
   let reqCounter = 0;
   const pendingReqs = new Map();
@@ -43381,9 +43391,292 @@ const VINT_EXECUTE = (function() {
     return await res.json();
   }
 
+  // ── Color customization ───────────────────────────────────────────────────
+  const ACCENT_COLORS = [
+    { name: 'Ice',      hex: '#4fc3f7' },
+    { name: 'Violet',   hex: '#ce93d8' },
+    { name: 'Gold',     hex: '#ffd54f' },
+    { name: 'Rose',     hex: '#f48fb1' },
+    { name: 'Emerald',  hex: '#66bb6a' },
+    { name: 'Coral',    hex: '#ff8a65' },
+    { name: 'White',    hex: '#e0e0e0' },
+  ];
+
+  function initColorPicker() {
+    colorRow.innerHTML = '<span class="vex-color-label">THEME</span>';
+    const saved = localStorage.getItem('vex_accent') || '#4fc3f7';
+    applyAccent(saved);
+    ACCENT_COLORS.forEach(c => {
+      const swatch = document.createElement('div');
+      swatch.className = 'vex-color-swatch' + (c.hex === saved ? ' active' : '');
+      swatch.style.background = c.hex;
+      swatch.title = c.name;
+      swatch.addEventListener('click', () => {
+        colorRow.querySelectorAll('.vex-color-swatch').forEach(s => s.classList.remove('active'));
+        swatch.classList.add('active');
+        applyAccent(c.hex);
+        localStorage.setItem('vex_accent', c.hex);
+      });
+      colorRow.appendChild(swatch);
+    });
+  }
+
+  function applyAccent(hex) {
+    document.documentElement.style.setProperty('--vex-accent', hex);
+    document.documentElement.style.setProperty('--vex-accent-dim', hex + '26');
+    document.documentElement.style.setProperty('--vex-accent-glow', hex + '40');
+    // Update avatar and dot colors
+    npDot.style.background = hex;
+    avatar.style.background = `linear-gradient(135deg, ${hex}, ${hex}88)`;
+  }
+
+  initColorPicker();
+
+  const TYPE_ICONS = { video: '\uD83C\uDFAC', audio: '\uD83C\uDFB5', image: '\uD83D\uDDBC\uFE0F', ebook: '\uD83D\uDCD6', document: '\uD83D\uDCC4', other: '\uD83D\uDCC1' };
+
+  // ── DirRM media helpers ─────────────────────────────────────────────────
+  function getApiBase() {
+    return window.__VINTINUUM_API_BASE || localStorage.getItem('vint_api_base') || 'http://localhost:8767';
+  }
+
+  function formatSize(bytes) {
+    if (!bytes) return '';
+    const units = ['B', 'KB', 'MB', 'GB'];
+    let i = 0;
+    let size = bytes;
+    while (size >= 1024 && i < units.length - 1) { size /= 1024; i++; }
+    return size.toFixed(i > 0 ? 1 : 0) + ' ' + units[i];
+  }
+
+  function resetAllPanels() {
+    media.classList.remove('active');
+    archiveResults.classList.remove('active');
+    audioPlayer.classList.remove('active');
+    imageViewer.classList.remove('active');
+    docViewer.classList.remove('active');
+    commentEl.classList.remove('active');
+    installEl.classList.remove('active');
+    archiveResults.innerHTML = '';
+    mediaFrame.innerHTML = '';
+    if (hlsInstance) { hlsInstance.destroy(); hlsInstance = null; }
+    if (audioEl) { audioEl.pause(); audioEl.src = ''; }
+    currentMediaItem = null;
+    currentWatchUrl = null;
+  }
+
+  // ── Archive search & resolve ────────────────────────────────────────────
+  async function searchArchive(query) {
+    const base = getApiBase();
+    const headers = { 'ngrok-skip-browser-warning': '1' };
+    const token = localStorage.getItem('vint_access_token');
+    if (token) headers['Authorization'] = 'Bearer ' + token;
+
+    const res = await fetch(`${base}/api/media/search?q=${encodeURIComponent(query)}&limit=15`, { headers });
+    if (!res.ok) throw new Error('Archive search failed: ' + res.status);
+    return await res.json();
+  }
+
+  async function resolveMedia(url, type, quality) {
+    const base = getApiBase();
+    const headers = { 'ngrok-skip-browser-warning': '1' };
+    const token = localStorage.getItem('vint_access_token');
+    if (token) headers['Authorization'] = 'Bearer ' + token;
+
+    const params = new URLSearchParams({ url });
+    if (type) params.set('type', type);
+    if (quality) params.set('quality', quality);
+
+    const res = await fetch(`${base}/api/media/resolve?${params}`, { headers });
+    if (!res.ok) throw new Error('Media resolve failed: ' + res.status);
+    return await res.json();
+  }
+
+  // ── Playback functions ──────────────────────────────────────────────────
+  async function playVideo(item, resolved) {
+    media.classList.add('active');
+    npTitle.textContent = item.name || 'Video';
+
+    if (resolved.kind === 'hls' && window.Hls) {
+      // HLS playback via hls.js
+      const video = document.createElement('video');
+      video.controls = true;
+      video.autoplay = true;
+      video.style.cssText = 'width:100%;height:100%;border-radius:12px;background:#000';
+      mediaFrame.innerHTML = '';
+      mediaFrame.appendChild(video);
+
+      if (Hls.isSupported()) {
+        hlsInstance = new Hls({
+          maxBufferLength: 30,
+          maxMaxBufferLength: 60,
+          startLevel: -1,
+        });
+        hlsInstance.loadSource(resolved.playbackUrl);
+        hlsInstance.attachMedia(video);
+        hlsInstance.on(Hls.Events.MANIFEST_PARSED, () => video.play().catch(() => {}));
+        hlsInstance.on(Hls.Events.ERROR, (_, data) => {
+          if (data.fatal) {
+            tick('HLS error, falling back to direct...');
+            hlsInstance.destroy(); hlsInstance = null;
+            video.src = getApiBase() + '/api/media/proxy?url=' + encodeURIComponent(item.url);
+            video.play().catch(() => {});
+          }
+        });
+      } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+        // Safari native HLS
+        video.src = resolved.playbackUrl;
+        video.play().catch(() => {});
+      }
+    } else {
+      // Direct playback
+      const video = document.createElement('video');
+      video.controls = true;
+      video.autoplay = true;
+      video.style.cssText = 'width:100%;height:100%;border-radius:12px;background:#000';
+      video.src = resolved.playbackUrl;
+      mediaFrame.innerHTML = '';
+      mediaFrame.appendChild(video);
+      video.play().catch(() => {});
+    }
+    setStatus('complete');
+    showComment();
+  }
+
+  function playAudio(item, resolved) {
+    audioPlayer.classList.add('active');
+    audioEl.src = resolved.playbackUrl;
+    audioEl.play().catch(() => {});
+    npTitle.textContent = item.name || 'Audio';
+    // Show now-playing in media section too
+    media.classList.add('active');
+    mediaFrame.innerHTML = `<div style="display:flex;align-items:center;justify-content:center;height:100%;flex-direction:column;gap:16px">
+      <div style="font-size:48px">${TYPE_ICONS.audio}</div>
+      <div style="font-family:'Cormorant Garamond',serif;font-size:18px;color:rgba(218,228,255,0.7);text-align:center;padding:0 20px">${item.name || 'Audio'}</div>
+    </div>`;
+    setStatus('complete');
+    showComment();
+  }
+
+  function showImage(item, resolved) {
+    imageViewer.classList.add('active');
+    imageEl.src = resolved.playbackUrl;
+    imageEl.alt = item.name || 'Image';
+    npTitle.textContent = item.name || 'Image';
+    setStatus('complete');
+  }
+
+  function showDocument(item, resolved) {
+    docViewer.classList.add('active');
+    docIframe.src = resolved.playbackUrl;
+    npTitle.textContent = item.name || 'Document';
+    setStatus('complete');
+  }
+
+  function showComment() {
+    const p = getPersona();
+    const picks = COMMENTS[p] || COMMENTS.vintinuum;
+    commentTxt.textContent = picks[Math.floor(Math.random() * picks.length)];
+    commentEl.classList.add('active');
+  }
+
+  // ── Archive media execution ─────────────────────────────────────────────
+  async function executeArchiveMedia(query) {
+    const p = getPersona();
+    openModal(p);
+    setStatus('executing');
+    tick(`searching archive for "${query}"...`);
+    colorRow.style.display = 'flex';
+
+    try {
+      const data = await searchArchive(query);
+      if (!data.results || data.results.length === 0) {
+        tick('nothing found in archive, trying YouTube...');
+        return executeMedia(query);
+      }
+
+      tick(`found ${data.results.length} result${data.results.length > 1 ? 's' : ''} in archive`);
+
+      if (data.results.length === 1) {
+        // Auto-play single result
+        return playArchiveItem(data.results[0]);
+      }
+
+      // Show results for selection
+      archiveResults.classList.add('active');
+      archiveResults.innerHTML = '';
+      data.results.forEach(item => {
+        const el = document.createElement('div');
+        el.className = 'vex-archive-item';
+        el.innerHTML = `
+          <div class="vex-archive-item-icon">${TYPE_ICONS[item.type] || TYPE_ICONS.other}</div>
+          <div class="vex-archive-item-info">
+            <div class="vex-archive-item-name" title="${item.name}">${item.name}</div>
+            <div class="vex-archive-item-meta">${item.type?.toUpperCase() || 'FILE'} ${item.extension ? '\u00B7 ' + item.extension : ''} ${item.size ? '\u00B7 ' + formatSize(item.size) : ''}</div>
+          </div>
+        `;
+        el.addEventListener('click', () => {
+          archiveResults.classList.remove('active');
+          playArchiveItem(item);
+        });
+        archiveResults.appendChild(el);
+      });
+      setStatus('ready');
+    } catch (err) {
+      tick('archive search failed: ' + err.message);
+      tick('falling back to YouTube...');
+      return executeMedia(query);
+    }
+  }
+
+  async function playArchiveItem(item) {
+    currentMediaItem = item;
+    tick(`loading ${item.type || 'media'}: ${item.name}...`);
+    setStatus('executing');
+
+    try {
+      const resolved = await resolveMedia(item.url, item.type);
+      tick(`resolved via ${resolved.source} (${resolved.kind})`);
+      currentWatchUrl = item.url;
+      primaryBtn.style.display = 'inline-flex';
+
+      switch (resolved.kind) {
+        case 'hls':
+        case 'direct':
+          if (item.type === 'audio') return playAudio(item, resolved);
+          return playVideo(item, resolved);
+        case 'audio':
+          return playAudio(item, resolved);
+        case 'image':
+          return showImage(item, resolved);
+        case 'ebook':
+        case 'document':
+          return showDocument(item, resolved);
+        default:
+          return playVideo(item, resolved);
+      }
+    } catch (err) {
+      tick('playback error: ' + err.message);
+      setStatus('error');
+    }
+  }
+
   // ── Intent parser ────────────────────────────────────────────────────────
   function parseIntent(text) {
     const lo = text.toLowerCase().trim();
+
+    // Archive patterns — "play from archive", "read [book]", "open [file]", "show me [image]"
+    const archivePatterns = [
+      /(?:play|open|read|show|view)\s+(?:from\s+)?(?:archive|library|collection)\s+(.+)/i,
+      /(?:^|\s)read\s+(.+?)(?:\s+(?:for\s+me|now|please))*\s*$/i,
+      /(?:^|\s)(?:show|view|display)\s+(?:me\s+)?(.+?)(?:\s+(?:image|photo|picture|for\s+me|now|please))*\s*$/i,
+    ];
+    for (const p of archivePatterns) {
+      const m = lo.match(p);
+      if (m) {
+        const q = m[1].trim().replace(/\s+(?:for me|now|please)$/i, '').trim();
+        if (q.length > 1) return { type: 'ARCHIVE', query: q };
+      }
+    }
 
     // Mid-sentence patterns — catch "i need you to play X", "can you play X first", etc.
     const mediaAnywhere = [
@@ -43439,11 +43732,8 @@ const VINT_EXECUTE = (function() {
     const p = persona || getPersona();
     setAgentVisuals(p);
     ticker.innerHTML = '';
-    media.classList.remove('active');
-    commentEl.classList.remove('active');
-    installEl.classList.remove('active');
-    mediaFrame.innerHTML = '';
-    currentWatchUrl = null;
+    resetAllPanels();
+    colorRow.style.display = 'none';
     setStatus('ready');
     overlay.style.display = 'flex';
     // Position modal centered
@@ -43452,6 +43742,8 @@ const VINT_EXECUTE = (function() {
 
   function closeModal() {
     overlay.style.display = 'none';
+    if (hlsInstance) { hlsInstance.destroy(); hlsInstance = null; }
+    if (audioEl) { audioEl.pause(); audioEl.src = ''; }
     mediaFrame.innerHTML = '';
   }
 
@@ -43528,6 +43820,7 @@ const VINT_EXECUTE = (function() {
   return {
     parseIntent,
     executeMedia,
+    executeArchiveMedia,
     executeNavigate,
     executeSearch,
     open: openModal,
@@ -43536,7 +43829,8 @@ const VINT_EXECUTE = (function() {
     interceptMessage(text) {
       const intent = parseIntent(text);
       switch (intent.type) {
-        case 'MEDIA':    executeMedia(intent.query); return true;
+        case 'ARCHIVE':  executeArchiveMedia(intent.query); return true;
+        case 'MEDIA':    executeArchiveMedia(intent.query); return true;  // Try archive first for ALL media
         case 'NAVIGATE': executeNavigate(intent.url); return true;
         case 'SEARCH':   executeSearch(intent.query); return true;
         default:         return false;
