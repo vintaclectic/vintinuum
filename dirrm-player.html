@@ -68,6 +68,16 @@
       border-radius: 12px;
     }
 
+    .dirrm-player[data-mode="theater"] {
+      width: 100vw;
+      height: 100vh;
+      min-width: 100vw;
+      min-height: 100vh;
+      border-radius: 0;
+      top: 0 !important;
+      left: 0 !important;
+    }
+
     /* ============================================
        TITLE BAR (draggable)
        ============================================ */
@@ -580,8 +590,11 @@
         <button class="dirrm-btn" id="btn-mini" title="Minimize">
           <span class="icon">─</span>
         </button>
-        <button class="dirrm-btn" id="btn-maximize" title="Maximize">
+        <button class="dirrm-btn" id="btn-maximize" title="Main View">
           <span class="icon">□</span>
+        </button>
+        <button class="dirrm-btn" id="btn-theater" title="Theater Mode">
+          <span class="icon">▣</span>
         </button>
         <button class="dirrm-btn dirrm-btn--danger" id="btn-close" title="Close">
           <span class="icon">✕</span>
@@ -711,6 +724,7 @@
         document.getElementById('btn-mini').addEventListener('click', () => this.setMode('mini'));
         document.getElementById('btn-maximize').addEventListener('click', () => this.setMode('main'));
         document.getElementById('btn-pip').addEventListener('click', () => this.setMode('pip'));
+        document.getElementById('btn-theater').addEventListener('click', () => this.setMode('theater'));
         document.getElementById('btn-fullscreen').addEventListener('click', () => this.toggleFullscreen());
         
         // Transport controls
@@ -1082,7 +1096,7 @@
       setMode(mode) {
         this.mode = mode;
         this.player.dataset.mode = mode;
-        
+
         // Adjust size based on mode
         if (mode === 'main') {
           this.player.style.width = '860px';
@@ -1093,7 +1107,13 @@
         } else if (mode === 'pip') {
           this.player.style.width = '320px';
           this.player.style.height = '180px';
+        } else if (mode === 'theater') {
+          this.player.style.width = '100vw';
+          this.player.style.height = '100vh';
         }
+
+        // Notify parent frame so it can resize the iframe to match
+        window.parent?.postMessage({ action: 'modeChanged', mode: mode }, '*');
       }
 
       toggleFullscreen() {
