@@ -1307,10 +1307,40 @@ body {
   // ─── CONFIG ──────────────────────────────────────────────────────────────────
   const _isLocal = (location.protocol === 'file:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1');
   const _stored = localStorage.getItem('vint_api_base');
-  const _defaultRemote = 'https://jon-unscheming-lots.ngrok-free.dev';
-  const API_BASE = window.__VINTINUUM_API_BASE || (_isLocal ? 'http://localhost:8767' : (_stored || _defaultRemote));
+  const _session = sessionStorage.getItem('vint_tunnel_url');
+  let API_BASE = window.__VINTINUUM_API_BASE || (_isLocal ? 'http://localhost:8767' : (_stored || _session || 'http://localhost:8767'));
   window.__VINTINUUM_API_BASE = API_BASE;
   const API_HEADERS = { 'ngrok-skip-browser-warning': '1' };
+
+  // ── TUNNEL AUTO-DISCOVERY (GitHub Pages) ────────────────────────────────────
+  // Probes stored tunnel URL → reads /api/tunnel → gets current URL
+  if (!_isLocal) {
+    (async function _discoverTunnel() {
+      const candidates = [_stored, _session].filter(Boolean);
+      for (const url of candidates) {
+        try {
+          const r = await fetch(url + '/api/tunnel', {
+            signal: AbortSignal.timeout(5000),
+            headers: { 'ngrok-skip-browser-warning': '1' },
+          });
+          if (r.ok) {
+            const data = await r.json();
+            const tunnelUrl = data.tunnel || url;
+            API_BASE = tunnelUrl;
+            window.__VINTINUUM_API_BASE = tunnelUrl;
+            localStorage.setItem('vint_api_base', tunnelUrl);
+            sessionStorage.setItem('vint_tunnel_url', tunnelUrl);
+            console.log('[Stats] Backend discovered: ' + tunnelUrl);
+            // Re-trigger initial data load now that we have the URL
+            if (typeof fetchDashboard === 'function') fetchDashboard();
+            return;
+          }
+        } catch {}
+      }
+      // No stored URL worked — show connection UI
+      console.warn('[Stats] No backend discovered. Use brain.html first to connect, or set URL manually.');
+    })();
+  }
 
   let currentRange = 'all';
   let cosmicBirth = null;
