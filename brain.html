@@ -2827,5 +2827,210 @@ setTimeout(function() {
   document.body.appendChild(s);
 }, 5000); // 5s delay — let curated genome initialize first
 </script>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     UNIVERSAL DRAG SYSTEM — makes all floating buttons & panels draggable
+     Supports mouse + touch. Saves positions to localStorage.
+     ═══════════════════════════════════════════════════════════════ -->
+<script>
+(function() {
+  'use strict';
+
+  // Elements to make draggable: [id, saveKey, isDragHandle (false = whole element is handle)]
+  const DRAGGABLE_CONFIG = [
+    { id: 'voiceToggle',      key: 'drag_voiceToggle',   panel: null },
+    { id: 'reproToggle',      key: 'drag_reproToggle',   panel: null },
+    { id: 'vintinuumBtn',     key: 'drag_vintinuumBtn',  panel: null },
+    { id: 'vint-chat-btn',    key: 'drag_chatBtn',       panel: 'vint-chat-panel', panelKey: 'drag_chatPanel' },
+    { id: 'vint-chat-panel',  key: 'drag_chatPanel',     handle: 'vint-chat-header' },
+    { id: 'reproPanel',       key: 'drag_reproPanel',    handle: null },
+  ];
+
+  function clamp(v, min, max) { return Math.max(min, Math.min(max, v)); }
+
+  function savePos(key, x, y) {
+    try { localStorage.setItem(key, JSON.stringify({x, y})); } catch {}
+  }
+
+  function loadPos(key) {
+    try {
+      const s = localStorage.getItem(key);
+      return s ? JSON.parse(s) : null;
+    } catch { return null; }
+  }
+
+  function applyPos(el, x, y) {
+    el.style.left   = x + 'px';
+    el.style.top    = y + 'px';
+    el.style.right  = 'auto';
+    el.style.bottom = 'auto';
+    el.style.position = 'fixed';
+  }
+
+  function restorePos(el, key) {
+    const pos = loadPos(key);
+    if (!pos) return;
+    // Clamp to viewport
+    const rect = el.getBoundingClientRect();
+    const w = rect.width || 52;
+    const h = rect.height || 52;
+    const x = clamp(pos.x, 0, window.innerWidth - w);
+    const y = clamp(pos.y, 0, window.innerHeight - h);
+    applyPos(el, x, y);
+  }
+
+  function makeDraggable(el, key, handleEl) {
+    if (!el) return;
+    const handle = handleEl || el;
+    handle.style.cursor = 'grab';
+
+    let startX, startY, startLeft, startTop, dragging = false;
+
+    function getLeft() {
+      const style = window.getComputedStyle(el);
+      if (el.style.left && el.style.left !== 'auto') return parseFloat(el.style.left);
+      const right = parseFloat(style.right);
+      if (!isNaN(right) && style.right !== 'auto') {
+        return window.innerWidth - el.offsetWidth - right;
+      }
+      return el.getBoundingClientRect().left;
+    }
+
+    function getTop() {
+      const style = window.getComputedStyle(el);
+      if (el.style.top && el.style.top !== 'auto') return parseFloat(el.style.top);
+      const bottom = parseFloat(style.bottom);
+      if (!isNaN(bottom) && style.bottom !== 'auto') {
+        return window.innerHeight - el.offsetHeight - bottom;
+      }
+      return el.getBoundingClientRect().top;
+    }
+
+    function onStart(clientX, clientY) {
+      dragging = true;
+      startX = clientX;
+      startY = clientY;
+      startLeft = getLeft();
+      startTop  = getTop();
+      handle.style.cursor = 'grabbing';
+      el.style.transition = 'none';
+      // Prevent text selection during drag
+      document.body.style.userSelect = 'none';
+    }
+
+    function onMove(clientX, clientY) {
+      if (!dragging) return;
+      const dx = clientX - startX;
+      const dy = clientY - startY;
+      const newX = clamp(startLeft + dx, 0, window.innerWidth  - el.offsetWidth);
+      const newY = clamp(startTop  + dy, 0, window.innerHeight - el.offsetHeight);
+      applyPos(el, newX, newY);
+    }
+
+    function onEnd(clientX, clientY) {
+      if (!dragging) return;
+      dragging = false;
+      handle.style.cursor = 'grab';
+      document.body.style.userSelect = '';
+      const x = parseFloat(el.style.left) || 0;
+      const y = parseFloat(el.style.top)  || 0;
+      savePos(key, x, y);
+    }
+
+    // Mouse
+    handle.addEventListener('mousedown', (e) => {
+      // Don't intercept clicks on buttons/inputs inside the handle
+      if (e.target !== handle && e.target.closest('button,input,select,a,textarea')) return;
+      e.preventDefault();
+      onStart(e.clientX, e.clientY);
+    });
+    document.addEventListener('mousemove', (e) => onMove(e.clientX, e.clientY));
+    document.addEventListener('mouseup',   (e) => onEnd(e.clientX, e.clientY));
+
+    // Touch
+    handle.addEventListener('touchstart', (e) => {
+      if (e.target !== handle && e.target.closest('button,input,select,a,textarea')) return;
+      const t = e.touches[0];
+      onStart(t.clientX, t.clientY);
+    }, { passive: true });
+    document.addEventListener('touchmove', (e) => {
+      if (!dragging) return;
+      e.preventDefault();
+      const t = e.touches[0];
+      onMove(t.clientX, t.clientY);
+    }, { passive: false });
+    document.addEventListener('touchend', (e) => {
+      if (!dragging) return;
+      const t = e.changedTouches[0];
+      onEnd(t.clientX, t.clientY);
+    });
+  }
+
+  // Initialize after DOM ready (slight delay to let all elements render)
+  function initDraggables() {
+    DRAGGABLE_CONFIG.forEach(cfg => {
+      const el = document.getElementById(cfg.id);
+      if (!el) return;
+
+      // Restore saved position
+      restorePos(el, cfg.key);
+
+      // Determine drag handle
+      let handleEl = null;
+      if (cfg.handle) {
+        handleEl = document.getElementById(cfg.handle);
+      }
+
+      makeDraggable(el, cfg.key, handleEl);
+    });
+
+    // Also make the VEX modal draggable by its header
+    const vexModal = document.querySelector('.vex-modal');
+    const vexHandle = document.getElementById('vex-drag-handle');
+    if (vexModal && vexHandle) {
+      makeDraggable(vexModal, 'drag_vexModal', vexHandle);
+    }
+
+    // Make DirRM player draggable
+    const dirrmFrame = document.getElementById('dirrmFrame');
+    if (dirrmFrame) {
+      makeDraggable(dirrmFrame, 'drag_dirrmFrame', null);
+    }
+
+    // Make DirRM picker draggable
+    const dirrmPicker = document.getElementById('dirrmPicker');
+    if (dirrmPicker) {
+      makeDraggable(dirrmPicker, 'drag_dirrmPicker', null);
+    }
+  }
+
+  // Reset positions button — double-tap voiceToggle resets all to defaults
+  let voiceToggleTaps = 0;
+  document.addEventListener('DOMContentLoaded', () => {
+    setTimeout(initDraggables, 300);
+
+    const vt = document.getElementById('voiceToggle');
+    if (vt) {
+      vt.addEventListener('dblclick', () => {
+        const keys = DRAGGABLE_CONFIG.map(c => c.key);
+        keys.push('drag_vexModal','drag_dirrmFrame','drag_dirrmPicker');
+        keys.forEach(k => { try { localStorage.removeItem(k); } catch {} });
+        location.reload();
+      });
+    }
+  });
+
+  // Re-clamp positions on resize
+  window.addEventListener('resize', () => {
+    DRAGGABLE_CONFIG.forEach(cfg => {
+      const el = document.getElementById(cfg.id);
+      if (!el || !el.style.left) return;
+      const x = clamp(parseFloat(el.style.left), 0, window.innerWidth  - el.offsetWidth);
+      const y = clamp(parseFloat(el.style.top),  0, window.innerHeight - el.offsetHeight);
+      applyPos(el, x, y);
+    });
+  });
+})();
+</script>
 </body>
 </html>
