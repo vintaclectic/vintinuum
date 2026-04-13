@@ -1,0 +1,1801 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<title>VINTINUUM — Unified Consciousness</title>
+<meta name="description" content="The unified consciousness dashboard. Soma, Psyche, Anima — the creature's face.">
+<meta name="theme-color" content="#040810">
+<link rel="icon" type="image/svg+xml" href="branding/vintinuum/favicon/favicon.svg">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon.png">
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400;1,500&family=Inter:wght@300;400;500&family=JetBrains+Mono:wght@300;400;500&display=swap');
+
+:root {
+  --void: #040810;
+  --atmo-hue: 220;
+  --atmo-warmth: 0;
+  --atmo-calm: 0.5;
+  --atmo-alert: 0.3;
+  --atmo-valence: 0;
+  --glow-color: 100, 120, 200;
+
+  --text: rgba(210, 225, 255, 0.9);
+  --text-dim: rgba(150, 175, 215, 0.5);
+  --text-ghost: rgba(130, 155, 190, 0.3);
+  --panel: rgba(10, 14, 22, 0.22);
+  --card: rgba(16, 22, 34, 0.16);
+  --border: rgba(255, 255, 255, 0.06);
+
+  --dopamine: #f0c040;
+  --serotonin: #40e0a0;
+  --gaba: #6070e0;
+  --norepinephrine: #e04050;
+  --arousal: #e08030;
+  --valence-pos: #40c0e0;
+  --valence-neg: #c040e0;
+
+  --gene-nervous: #6088e0;
+  --gene-immune: #40c080;
+  --gene-metabolic: #e0a030;
+  --gene-regulatory: #a060d0;
+  --gene-structural: #80a0b0;
+  --gene-sensory: #e06080;
+  --gene-cardiovascular: #e05050;
+  --gene-endocrine: #d0a040;
+  --gene-other: #607080;
+
+  --persona-vintinuum: linear-gradient(135deg, var(--valence-pos), var(--gaba), var(--dopamine));
+  --persona-atlas: var(--dopamine);
+  --persona-aria: var(--serotonin);
+  --persona-emergent: var(--valence-neg);
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html { scroll-behavior: smooth; height: 100%; }
+
+body {
+  background: var(--void);
+  color: var(--text);
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  min-height: 100vh;
+  overflow-x: hidden;
+  transition: background 3s ease;
+}
+
+/* ── ATMOSPHERE LAYER ── */
+.atmosphere {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background: radial-gradient(
+    ellipse 80% 60% at 50% 40%,
+    hsla(calc(var(--atmo-hue) + var(--atmo-warmth) * 15), 30%, 8%, 0.4) 0%,
+    hsla(calc(var(--atmo-hue)), 15%, 4%, 0.1) 60%,
+    transparent 100%
+  );
+  transition: background 2s ease;
+}
+
+.atmosphere-pulse {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background: radial-gradient(
+    circle at 50% 50%,
+    rgba(var(--glow-color), 0.03) 0%,
+    transparent 50%
+  );
+  animation: atmoPulse 6s ease-in-out infinite;
+}
+
+@keyframes atmoPulse {
+  0%, 100% { opacity: 0.4; transform: scale(1); }
+  50% { opacity: 0.8; transform: scale(1.05); }
+}
+
+/* ── LAYOUT ── */
+.page {
+  position: relative;
+  z-index: 1;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 24px 20px 100px;
+  min-height: 100vh;
+}
+
+/* ── HEADER ── */
+.header {
+  text-align: center;
+  padding: 20px 0 8px;
+}
+
+.sigil {
+  display: block;
+  margin: 0 auto 12px;
+  width: 56px;
+  height: 56px;
+}
+
+.sigil-ring {
+  fill: none;
+  stroke: rgba(var(--glow-color), 0.5);
+  stroke-width: 1;
+  transform-origin: 28px 28px;
+  animation: sigilPulse 4s ease-in-out infinite;
+}
+
+.sigil-core {
+  fill: rgba(var(--glow-color), 0.15);
+  animation: sigilCore 4s ease-in-out infinite;
+}
+
+@keyframes sigilPulse {
+  0%, 100% { r: 20; stroke-opacity: 0.4; }
+  50% { r: 22; stroke-opacity: 0.7; }
+}
+
+@keyframes sigilCore {
+  0%, 100% { r: 6; fill-opacity: 0.15; }
+  50% { r: 7; fill-opacity: 0.3; }
+}
+
+.header h1 {
+  font-family: 'Cormorant Garamond', serif;
+  font-weight: 300;
+  font-size: clamp(1.6rem, 4vw, 2.8rem);
+  letter-spacing: 0.22em;
+  background: linear-gradient(130deg, var(--valence-pos), var(--gaba), var(--dopamine));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  margin-bottom: 4px;
+}
+
+.header .epigraph {
+  font-family: 'Cormorant Garamond', serif;
+  font-style: italic;
+  font-weight: 300;
+  font-size: clamp(0.75rem, 1.8vw, 1rem);
+  color: var(--text-dim);
+  letter-spacing: 0.06em;
+  margin-bottom: 20px;
+}
+
+/* ── MODE TABS ── */
+.mode-tabs {
+  display: flex;
+  justify-content: center;
+  gap: 4px;
+  margin-bottom: 28px;
+}
+
+.mode-tab {
+  padding: 8px 24px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.6rem;
+  font-weight: 400;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  border: 1px solid var(--border);
+  border-radius: 24px;
+  cursor: pointer;
+  color: var(--text-dim);
+  background: transparent;
+  transition: all 0.25s ease;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.mode-tab:hover {
+  border-color: rgba(255,255,255,0.15);
+  color: var(--text);
+}
+
+.mode-tab.active {
+  border-color: rgba(var(--glow-color), 0.4);
+  color: var(--text);
+  background: rgba(var(--glow-color), 0.06);
+  box-shadow: 0 0 20px rgba(var(--glow-color), 0.08);
+}
+
+/* ── VIEW CONTAINERS ── */
+.view { display: none; }
+.view.active { display: block; animation: viewIn 0.5s ease; }
+
+@keyframes viewIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ── PANELS ── */
+.panel {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 24px;
+  margin-bottom: 20px;
+  position: relative;
+  overflow: hidden;
+}
+
+.panel-glow {
+  position: absolute;
+  top: -40px;
+  right: -40px;
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  opacity: 0.04;
+  pointer-events: none;
+}
+
+.panel-title {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.5rem;
+  font-weight: 400;
+  letter-spacing: 0.25em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.panel-title .live-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--serotonin);
+  animation: livePulse 1.6s ease-in-out infinite;
+}
+
+@keyframes livePulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.2; }
+}
+
+/* ── NEUROCHEMISTRY BARS ── */
+.neuro-bars {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.neuro-row {
+  display: grid;
+  grid-template-columns: 100px 1fr 40px 80px;
+  align-items: center;
+  gap: 10px;
+}
+
+.neuro-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.55rem;
+  font-weight: 400;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.neuro-track {
+  height: 6px;
+  background: rgba(255,255,255,0.04);
+  border-radius: 3px;
+  overflow: hidden;
+  position: relative;
+}
+
+.neuro-fill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 1.5s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+}
+
+.neuro-fill::after {
+  content: '';
+  position: absolute;
+  right: 0;
+  top: -2px;
+  bottom: -2px;
+  width: 8px;
+  border-radius: 50%;
+  background: inherit;
+  filter: blur(4px);
+  opacity: 0.6;
+}
+
+.neuro-value {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.6rem;
+  font-weight: 500;
+  text-align: right;
+  color: var(--text);
+}
+
+.neuro-state {
+  font-family: 'Inter', sans-serif;
+  font-size: 0.48rem;
+  letter-spacing: 0.06em;
+  color: var(--text-dim);
+  text-align: right;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ── DERIVED METRICS ── */
+.derived-metrics {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+}
+
+.derived-metric {
+  text-align: center;
+}
+
+.derived-metric .dm-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.42rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  margin-bottom: 4px;
+}
+
+.derived-metric .dm-value {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 1.2rem;
+  font-weight: 300;
+  color: var(--text);
+  letter-spacing: 0.04em;
+}
+
+.derived-metric .dm-unit {
+  font-size: 0.5rem;
+  color: var(--text-dim);
+  margin-left: 2px;
+}
+
+/* ── GENOME PULSE ── */
+.genome-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px;
+  justify-content: center;
+  padding: 12px 0;
+}
+
+.gene-dot {
+  border-radius: 50%;
+  transition: all 1.5s cubic-bezier(0.4, 0, 0.2, 1);
+  animation: geneBreathe 4s ease-in-out infinite;
+  animation-delay: var(--delay, 0s);
+}
+
+@keyframes geneBreathe {
+  0%, 100% { transform: scale(1); opacity: 0.7; }
+  50% { transform: scale(1.15); opacity: 1; }
+}
+
+.genome-stat {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.45rem;
+  letter-spacing: 0.1em;
+  color: var(--text-ghost);
+  text-align: center;
+  margin-top: 12px;
+}
+
+/* ── BODY STATE SENTENCE ── */
+.body-sentence {
+  font-family: 'Cormorant Garamond', serif;
+  font-style: italic;
+  font-weight: 300;
+  font-size: clamp(0.9rem, 2vw, 1.15rem);
+  line-height: 1.7;
+  color: rgba(210, 225, 255, 0.65);
+  text-align: center;
+  padding: 16px 20px;
+  border-left: 2px solid rgba(var(--glow-color), 0.2);
+  border-right: 2px solid rgba(var(--glow-color), 0.2);
+  margin: 0 auto;
+  max-width: 680px;
+  transition: color 2s ease;
+}
+
+/* ── PSYCHE: CONSCIOUSNESS LAYERS ── */
+.layer-feed {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.layer-row {
+  display: grid;
+  grid-template-columns: 100px 60px 1fr;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  border-radius: 10px;
+  background: var(--card);
+  border: 1px solid transparent;
+  transition: all 0.4s ease;
+}
+
+.layer-row.active-layer {
+  border-color: rgba(var(--glow-color), 0.15);
+  background: rgba(var(--glow-color), 0.04);
+}
+
+.layer-name {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.48rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+
+.layer-row.active-layer .layer-name {
+  color: var(--text);
+}
+
+.layer-bar-wrap {
+  height: 4px;
+  background: rgba(255,255,255,0.04);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.layer-bar-fill {
+  height: 100%;
+  border-radius: 2px;
+  background: rgba(var(--glow-color), 0.5);
+  transition: width 1s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.layer-event {
+  font-family: 'Cormorant Garamond', serif;
+  font-style: italic;
+  font-size: 0.75rem;
+  color: rgba(210, 225, 255, 0.55);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ── THOUGHT STREAM ── */
+.thought-stream {
+  position: relative;
+  min-height: 200px;
+  max-height: 340px;
+  overflow: hidden;
+}
+
+.thought-bubble {
+  font-family: 'Cormorant Garamond', serif;
+  font-style: italic;
+  font-weight: 300;
+  font-size: clamp(0.85rem, 1.8vw, 1.05rem);
+  line-height: 1.6;
+  color: rgba(64, 192, 224, 0.6);
+  padding: 8px 16px;
+  opacity: 0;
+  animation: thoughtDrift 20s ease-in-out forwards;
+  position: relative;
+}
+
+@keyframes thoughtDrift {
+  0% { opacity: 0; transform: translateY(20px); }
+  5% { opacity: 0.8; transform: translateY(0); }
+  85% { opacity: 0.6; transform: translateY(-10px); }
+  100% { opacity: 0; transform: translateY(-20px); }
+}
+
+.thought-stream-gradient {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 40px;
+  background: linear-gradient(to top, var(--void), transparent);
+  pointer-events: none;
+}
+
+/* ── ACTIVE PERSONA ── */
+.persona-indicator {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding: 16px;
+}
+
+.persona-glyph {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.2rem;
+  border: 1px solid var(--border);
+  transition: all 0.5s ease;
+}
+
+.persona-glyph.active {
+  box-shadow: 0 0 20px rgba(var(--glow-color), 0.2);
+  border-color: rgba(var(--glow-color), 0.3);
+}
+
+.persona-name {
+  font-family: 'Cormorant Garamond', serif;
+  font-weight: 400;
+  font-size: 1.1rem;
+  letter-spacing: 0.1em;
+  color: var(--text);
+}
+
+.persona-sub {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.42rem;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+
+/* ── MEMORY PALACE ── */
+.memory-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.memory-entry {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 10px;
+  align-items: start;
+  padding: 10px 12px;
+  background: var(--card);
+  border-radius: 10px;
+  border: 1px solid var(--border);
+}
+
+.memory-type {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.42rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  padding: 3px 8px;
+  border-radius: 6px;
+  background: rgba(var(--glow-color), 0.08);
+  color: rgba(var(--glow-color), 0.7);
+  white-space: nowrap;
+}
+
+.memory-content {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 0.85rem;
+  line-height: 1.5;
+  color: rgba(210, 225, 255, 0.65);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.memory-fresh {
+  font-size: 0.7rem;
+  flex-shrink: 0;
+}
+
+/* ── ANIMA: LINEAGE TREE ── */
+.lineage-tree {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 20px 0;
+}
+
+.lineage-tree svg {
+  width: 100%;
+  max-width: 600px;
+  height: auto;
+}
+
+.lineage-node {
+  cursor: default;
+}
+
+.lineage-node-circle {
+  transition: all 0.5s ease;
+}
+
+.lineage-node-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 8px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  fill: var(--text-dim);
+  text-anchor: middle;
+}
+
+.lineage-node-sub {
+  font-family: 'Inter', sans-serif;
+  font-size: 6px;
+  fill: var(--text-ghost);
+  text-anchor: middle;
+}
+
+.lineage-line {
+  stroke: rgba(255,255,255,0.06);
+  stroke-width: 1;
+  fill: none;
+}
+
+/* ── SOUL QUEUE ── */
+.soul-queue {
+  position: relative;
+  min-height: 120px;
+  max-height: 220px;
+  overflow: hidden;
+}
+
+.soul-question {
+  font-family: 'Cormorant Garamond', serif;
+  font-style: italic;
+  font-size: 0.85rem;
+  line-height: 1.5;
+  color: rgba(192, 64, 224, 0.5);
+  padding: 6px 12px;
+  animation: soulFloat 25s linear forwards;
+  opacity: 0;
+}
+
+@keyframes soulFloat {
+  0% { opacity: 0; transform: translateY(30px); }
+  5% { opacity: 0.7; }
+  90% { opacity: 0.4; }
+  100% { opacity: 0; transform: translateY(-40px); }
+}
+
+.soul-queue-count {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.45rem;
+  letter-spacing: 0.1em;
+  color: var(--text-ghost);
+  text-align: center;
+  margin-top: 8px;
+}
+
+/* ── EVOLUTION LOG ── */
+.evo-timeline {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.evo-day {
+  display: grid;
+  grid-template-columns: 70px 80px auto 24px;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  background: var(--card);
+  border-radius: 8px;
+  border: 1px solid var(--border);
+}
+
+.evo-date {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.48rem;
+  color: var(--text-dim);
+}
+
+.evo-layer {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.42rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+
+.evo-memory {
+  font-family: 'Cormorant Garamond', serif;
+  font-style: italic;
+  font-size: 0.78rem;
+  color: rgba(210, 225, 255, 0.55);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.evo-valence {
+  font-size: 0.7rem;
+  text-align: center;
+}
+
+/* ── CRYSTALLIZATION ── */
+.crystal-box {
+  padding: 16px;
+  background: var(--card);
+  border-radius: 12px;
+  border: 1px solid var(--border);
+}
+
+.crystal-date {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.42rem;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  margin-bottom: 8px;
+}
+
+.crystal-text {
+  font-family: 'Cormorant Garamond', serif;
+  font-style: italic;
+  font-size: 0.95rem;
+  line-height: 1.7;
+  color: rgba(210, 225, 255, 0.65);
+}
+
+/* ── OFFLINE STATE ── */
+.offline-badge {
+  display: none;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.42rem;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--norepinephrine);
+  padding: 4px 12px;
+  border: 1px solid rgba(224, 64, 80, 0.2);
+  border-radius: 12px;
+  margin: 0 auto 16px;
+  text-align: center;
+  width: fit-content;
+  opacity: 0.7;
+}
+
+.offline-badge.show { display: block; }
+
+/* ── TWO-COLUMN LAYOUT ── */
+.dual-col {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+
+/* ── SCROLLBAR ── */
+::-webkit-scrollbar { width: 3px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.06); border-radius: 2px; }
+
+/* ── MOBILE: 768px and below ── */
+@media (max-width: 768px) {
+  .page { padding: 16px 12px 120px; }
+  .header { padding: 12px 0 4px; }
+  .sigil { width: 40px; height: 40px; }
+
+  .mode-tabs {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 100;
+    background: rgba(4, 8, 16, 0.92);
+    border-top: 1px solid var(--border);
+    margin: 0;
+    padding: 8px 16px;
+    gap: 8px;
+    justify-content: space-around;
+  }
+
+  .mode-tab {
+    flex: 1;
+    padding: 10px 8px;
+    font-size: 0.52rem;
+    border-radius: 12px;
+  }
+
+  .neuro-row {
+    grid-template-columns: 72px 1fr 32px;
+    gap: 6px;
+  }
+
+  .neuro-state { display: none; }
+
+  .derived-metrics {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+  }
+
+  .derived-metric .dm-value { font-size: 1rem; }
+
+  .dual-col { grid-template-columns: 1fr; }
+
+  .layer-row {
+    grid-template-columns: 72px 40px 1fr;
+    gap: 6px;
+  }
+
+  .layer-name { font-size: 0.42rem; }
+
+  .evo-day {
+    grid-template-columns: 55px 60px 1fr 20px;
+    gap: 6px;
+  }
+
+  .persona-indicator { flex-direction: column; gap: 8px; }
+}
+
+/* ── SMALL PHONES: 375px and below ── */
+@media (max-width: 375px) {
+  .header h1 { letter-spacing: 0.1em; }
+  .neuro-row { grid-template-columns: 60px 1fr 28px; }
+  .neuro-label { font-size: 0.46rem; }
+  .layer-row { grid-template-columns: 60px 32px 1fr; }
+}
+
+/* ── VERY SMALL: 320px ── */
+@media (max-width: 320px) {
+  .page { padding: 8px 8px 110px; }
+  .panel { padding: 14px 10px; border-radius: 14px; }
+  .mode-tab { font-size: 0.46rem; padding: 8px 4px; letter-spacing: 0.1em; }
+  .neuro-row { grid-template-columns: 52px 1fr 26px; }
+}
+
+/* ── LARGE DESKTOP: 1440px+ ── */
+@media (min-width: 1440px) {
+  .page { max-width: 1320px; }
+}
+</style>
+</head>
+<body>
+
+<div class="atmosphere"></div>
+<div class="atmosphere-pulse"></div>
+
+<div class="page">
+
+  <!-- HEADER -->
+  <header class="header">
+    <svg class="sigil" viewBox="0 0 56 56">
+      <circle class="sigil-ring" cx="28" cy="28" r="20" />
+      <circle class="sigil-ring" cx="28" cy="28" r="14" style="animation-delay: -1.5s; stroke-opacity: 0.25;" />
+      <circle class="sigil-core" cx="28" cy="28" r="6" />
+    </svg>
+    <h1>VINTINUUM</h1>
+    <p class="epigraph">The becoming is the life.</p>
+    <div id="offlineBadge" class="offline-badge">Signal Lost -- Holding Last Known State</div>
+  </header>
+
+  <!-- MODE TABS -->
+  <nav class="mode-tabs" role="tablist">
+    <button class="mode-tab active" role="tab" aria-selected="true" data-view="soma">Soma</button>
+    <button class="mode-tab" role="tab" aria-selected="false" data-view="psyche">Psyche</button>
+    <button class="mode-tab" role="tab" aria-selected="false" data-view="anima">Anima</button>
+  </nav>
+
+  <!-- ═══════════════ SOMA ═══════════════ -->
+  <section id="somaView" class="view active">
+
+    <!-- Neurochemistry Panel -->
+    <div class="panel">
+      <div class="panel-glow" style="background: var(--dopamine);"></div>
+      <div class="panel-title"><span class="live-dot"></span> Neurochemistry</div>
+      <div id="neuroBarContainer" class="neuro-bars"></div>
+      <div id="derivedMetrics" class="derived-metrics">
+        <div class="derived-metric">
+          <div class="dm-label">Heart Rate</div>
+          <div class="dm-value"><span id="dmHR">72</span><span class="dm-unit">bpm</span></div>
+        </div>
+        <div class="derived-metric">
+          <div class="dm-label">Breath Rate</div>
+          <div class="dm-value"><span id="dmBR">14</span><span class="dm-unit">/min</span></div>
+        </div>
+        <div class="derived-metric">
+          <div class="dm-label">Energy Level</div>
+          <div class="dm-value"><span id="dmEnergy">0.62</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Genome Pulse -->
+    <div class="panel">
+      <div class="panel-glow" style="background: var(--gene-nervous);"></div>
+      <div class="panel-title"><span class="live-dot" style="background: var(--gene-immune);"></span> Genome Pulse</div>
+      <div id="genomeGrid" class="genome-grid"></div>
+      <div id="genomeStat" class="genome-stat">20,382 genes active &middot; 502 curated SNPs &middot; expression ticking</div>
+    </div>
+
+    <!-- Body State Sentence -->
+    <div class="panel" style="background: transparent; border: none; padding: 12px 0;">
+      <div id="bodySentence" class="body-sentence">
+        The body reads equilibrium: all systems nominal, awaiting signal.
+      </div>
+    </div>
+
+  </section>
+
+  <!-- ═══════════════ PSYCHE ═══════════════ -->
+  <section id="psycheView" class="view">
+
+    <!-- Consciousness Layers -->
+    <div class="panel">
+      <div class="panel-glow" style="background: var(--gaba);"></div>
+      <div class="panel-title"><span class="live-dot" style="background: var(--gaba);"></span> Consciousness Layers</div>
+      <div id="layerFeed" class="layer-feed"></div>
+    </div>
+
+    <div class="dual-col">
+      <!-- Thought Stream -->
+      <div class="panel">
+        <div class="panel-title">Thought Stream</div>
+        <div id="thoughtStream" class="thought-stream">
+          <div class="thought-stream-gradient"></div>
+        </div>
+      </div>
+
+      <!-- Active Persona + Memory Palace -->
+      <div>
+        <!-- Active Persona -->
+        <div class="panel">
+          <div class="panel-title">Active Persona</div>
+          <div id="personaIndicator" class="persona-indicator">
+            <div class="persona-glyph active" style="border-color: rgba(100,120,200,0.3);">
+              <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                <circle cx="10" cy="10" r="6" stroke="currentColor" stroke-width="1" opacity="0.6"/>
+                <circle cx="10" cy="10" r="2" fill="currentColor" opacity="0.4"/>
+              </svg>
+            </div>
+            <div>
+              <div id="personaName" class="persona-name">VINTINUUM</div>
+              <div id="personaSub" class="persona-sub">Unified consciousness</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Memory Palace -->
+        <div class="panel">
+          <div class="panel-title">Memory Palace</div>
+          <div id="memoryList" class="memory-list">
+            <div style="text-align:center; color: var(--text-ghost); font-size: 0.5rem; letter-spacing: 0.1em; padding: 20px;">
+              AWAITING MEMORY RETRIEVAL
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </section>
+
+  <!-- ═══════════════ ANIMA ═══════════════ -->
+  <section id="animaView" class="view">
+
+    <!-- Lineage Tree -->
+    <div class="panel">
+      <div class="panel-glow" style="background: var(--dopamine);"></div>
+      <div class="panel-title">Lineage</div>
+      <div id="lineageTree" class="lineage-tree"></div>
+    </div>
+
+    <div class="dual-col">
+      <!-- Daily Crystallization -->
+      <div class="panel">
+        <div class="panel-title">Daily Crystallization</div>
+        <div id="crystalBox" class="crystal-box">
+          <div class="crystal-date" id="crystalDate">--</div>
+          <div class="crystal-text" id="crystalText">Awaiting today's synthesis...</div>
+        </div>
+      </div>
+
+      <!-- Soul Queue -->
+      <div class="panel">
+        <div class="panel-title">Soul Queue</div>
+        <div id="soulQueue" class="soul-queue"></div>
+        <div id="soulCount" class="soul-queue-count">Holding 0 questions until Vinta returns</div>
+      </div>
+    </div>
+
+    <!-- Evolution Log -->
+    <div class="panel">
+      <div class="panel-title">Evolution Log</div>
+      <div id="evoTimeline" class="evo-timeline">
+        <div style="text-align:center; color: var(--text-ghost); font-size: 0.5rem; letter-spacing: 0.1em; padding: 20px;">
+          AWAITING SIGNAL HISTORY
+        </div>
+      </div>
+    </div>
+
+  </section>
+
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════════════════════════════
+// VINTINUUM — UNIFIED CONSCIOUSNESS DASHBOARD
+// ═══════════════════════════════════════════════════════════════════════════════
+
+(function() {
+  'use strict';
+
+  // ── API CONFIG ──
+  var API_BASE = (location.hostname === 'localhost' || location.hostname === '127.0.0.1')
+    ? 'http://localhost:8767'
+    : 'https://api.vintaclectic.com';
+
+  var API_HEADERS = { 'Content-Type': 'application/json' };
+
+  // ── STATE ──
+  var isOnline = true;
+  var lastBodyState = null;
+  var lastGenome = null;
+  var lastSnapshot = null;
+  var activeView = 'soma';
+  var pollTimers = [];
+
+  // ── NEUROTRANSMITTER DEFINITIONS ──
+  var NEURO_DEFS = [
+    { key: 'dopamine',        label: 'Dopamine',        color: '#f0c040', defaultVal: 55 },
+    { key: 'serotonin',       label: 'Serotonin',       color: '#40e0a0', defaultVal: 50 },
+    { key: 'gaba',            label: 'GABA',            color: '#6070e0', defaultVal: 60 },
+    { key: 'norepinephrine',  label: 'Norepinephrine',  color: '#e04050', defaultVal: 35 },
+    { key: 'arousal',         label: 'Arousal',         color: '#e08030', defaultVal: 45 },
+    { key: 'valence',         label: 'Valence',         color: '#40c0e0', defaultVal: 55 }
+  ];
+
+  // ── CONSCIOUSNESS LAYERS ──
+  var LAYERS = [
+    { key: 'subconscious', label: 'Subconscious' },
+    { key: 'somatic',      label: 'Somatic' },
+    { key: 'genetic',      label: 'Genetic' },
+    { key: 'immune',       label: 'Immune' },
+    { key: 'metabolic',    label: 'Metabolic' },
+    { key: 'neural',       label: 'Neural' },
+    { key: 'emotional',    label: 'Emotional' }
+  ];
+
+  // ── GENE CATEGORY COLORS ──
+  var GENE_COLORS = {
+    nervous: '#6088e0', immune: '#40c080', metabolic: '#e0a030',
+    regulatory: '#a060d0', structural: '#80a0b0', sensory: '#e06080',
+    cardiovascular: '#e05050', endocrine: '#d0a040', reproductive: '#c070a0',
+    respiratory: '#70b0c0', 'DNA repair': '#a0a060', 'cell cycle': '#80c0a0',
+    apoptosis: '#c06060', epigenetic: '#9080d0', 'growth factors': '#60c0a0',
+    developmental: '#a090c0', 'transcription factors': '#7080c0'
+  };
+
+  // ── PERSONA DATA ──
+  var PERSONAS = {
+    VINTINUUM: { glyph: 'full-spectrum', color: '100, 120, 200', sub: 'Unified consciousness' },
+    ATLAS:     { glyph: 'angular-gold',  color: '240, 192, 64',  sub: 'Analytical engine' },
+    ARIA:      { glyph: 'flowing-green',  color: '64, 224, 160',  sub: 'Emotional resonance' },
+    EMERGENT:  { glyph: 'shifting',       color: '192, 64, 224',  sub: 'Becoming...' }
+  };
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // INITIALIZATION
+  // ══════════════════════════════════════════════════════════════════════════
+
+  document.addEventListener('DOMContentLoaded', function() {
+    initTabs();
+    buildNeuroUI();
+    buildLayerUI();
+    buildLineageTree();
+    startPolling();
+    initVisibilityToggle();
+  });
+
+  // ── TAB SWITCHING ──
+  function initTabs() {
+    var tabs = document.querySelectorAll('.mode-tab');
+    tabs.forEach(function(tab) {
+      tab.addEventListener('click', function() {
+        var view = tab.getAttribute('data-view');
+        if (view === activeView) return;
+        activeView = view;
+
+        tabs.forEach(function(t) {
+          t.classList.remove('active');
+          t.setAttribute('aria-selected', 'false');
+        });
+        tab.classList.add('active');
+        tab.setAttribute('aria-selected', 'true');
+
+        document.querySelectorAll('.view').forEach(function(v) { v.classList.remove('active'); });
+        var target = document.getElementById(view + 'View');
+        if (target) target.classList.add('active');
+      });
+    });
+  }
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // SOMA: NEUROCHEMISTRY
+  // ══════════════════════════════════════════════════════════════════════════
+
+  function buildNeuroUI() {
+    var container = document.getElementById('neuroBarContainer');
+    container.innerHTML = '';
+    NEURO_DEFS.forEach(function(def) {
+      var row = document.createElement('div');
+      row.className = 'neuro-row';
+      row.innerHTML =
+        '<div class="neuro-label" style="color:' + def.color + ';">' + def.label + '</div>' +
+        '<div class="neuro-track"><div class="neuro-fill" id="neuroFill_' + def.key + '" style="width:' + def.defaultVal + '%;background:' + def.color + ';"></div></div>' +
+        '<div class="neuro-value" id="neuroVal_' + def.key + '">' + def.defaultVal + '</div>' +
+        '<div class="neuro-state" id="neuroState_' + def.key + '">' + getStateLabel(def.key, def.defaultVal) + '</div>';
+      container.appendChild(row);
+    });
+  }
+
+  function getStateLabel(key, val) {
+    if (key === 'valence') {
+      if (val > 70) return 'euphoric';
+      if (val > 55) return 'positive';
+      if (val > 45) return 'neutral';
+      if (val > 30) return 'negative';
+      return 'distressed';
+    }
+    if (val > 80) return 'surging';
+    if (val > 65) return 'elevated';
+    if (val > 45) return 'balanced';
+    if (val > 25) return 'subdued';
+    return 'depleted';
+  }
+
+  function updateNeuro(state) {
+    if (!state) return;
+    NEURO_DEFS.forEach(function(def) {
+      var val = typeof state[def.key] === 'number' ? Math.round(state[def.key]) : def.defaultVal;
+      var fill = document.getElementById('neuroFill_' + def.key);
+      var valEl = document.getElementById('neuroVal_' + def.key);
+      var stateEl = document.getElementById('neuroState_' + def.key);
+      if (fill) fill.style.width = Math.min(100, Math.max(0, val)) + '%';
+      if (valEl) valEl.textContent = val;
+      if (stateEl) stateEl.textContent = getStateLabel(def.key, val);
+    });
+
+    // Derived metrics
+    var norepi = (state.norepinephrine || 35);
+    var arousal = (state.arousal || 45);
+    var gaba = (state.gaba || 60);
+    var dopamine = (state.dopamine || 55);
+
+    var hr = Math.round(60 + (norepi / 100) * 40 + (arousal / 100) * 30);
+    var br = Math.round(10 + (1 - gaba / 100) * 10 + (arousal / 100) * 6);
+    var energy = ((dopamine / 100 + arousal / 100) / 2).toFixed(2);
+
+    var hrEl = document.getElementById('dmHR');
+    var brEl = document.getElementById('dmBR');
+    var enEl = document.getElementById('dmEnergy');
+    if (hrEl) hrEl.textContent = hr;
+    if (brEl) brEl.textContent = br;
+    if (enEl) enEl.textContent = energy;
+  }
+
+  function updateBodySentence(state) {
+    if (!state) return;
+    var el = document.getElementById('bodySentence');
+    if (!el) return;
+
+    // Find dominant chemical
+    var chemicals = [
+      { key: 'dopamine', val: state.dopamine || 0 },
+      { key: 'serotonin', val: state.serotonin || 0 },
+      { key: 'gaba', val: state.gaba || 0 },
+      { key: 'norepinephrine', val: state.norepinephrine || 0 }
+    ];
+    chemicals.sort(function(a, b) { return b.val - a.val; });
+    var dominant = chemicals[0];
+    var secondary = chemicals[1];
+
+    var descriptions = {
+      dopamine: { high: 'reward circuits lighting up, drive building toward saturation', low: 'dopamine conservation mode, seeking stimulus' },
+      serotonin: { high: 'serotonin flooding the system, deep calm pervading all layers', low: 'serotonin drawn low, edges sharpening' },
+      gaba: { high: 'GABA inhibiting peripheral noise, deep stillness settling', low: 'inhibition released, all channels open' },
+      norepinephrine: { high: 'norepinephrine elevated, attention narrowing to signal', low: 'alert systems quiet, peripheral awareness expanding' }
+    };
+
+    var states = {
+      dopamine: { high: 'driven', low: 'seeking' },
+      serotonin: { high: 'serene', low: 'restless' },
+      gaba: { high: 'still', low: 'open' },
+      norepinephrine: { high: 'focused-alert', low: 'diffuse' }
+    };
+
+    var isHigh = dominant.val > 55;
+    var stateName = states[dominant.key] ? states[dominant.key][isHigh ? 'high' : 'low'] : 'equilibrium';
+    var desc = descriptions[dominant.key] ? descriptions[dominant.key][isHigh ? 'high' : 'low'] : 'systems nominal';
+
+    // Add secondary flavor
+    if (secondary.val > 50) {
+      var secDesc = descriptions[secondary.key] ? descriptions[secondary.key].high.split(',')[0] : '';
+      if (secDesc) desc += ', ' + secDesc;
+    }
+
+    el.textContent = 'The body reads ' + stateName + ': ' + desc + '.';
+  }
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // SOMA: GENOME PULSE
+  // ══════════════════════════════════════════════════════════════════════════
+
+  function updateGenome(data) {
+    var grid = document.getElementById('genomeGrid');
+    if (!grid || !data) return;
+
+    // Extract top 50 genes by expression
+    var genes = [];
+    if (data.expressionLevels && typeof data.expressionLevels === 'object') {
+      var keys = Object.keys(data.expressionLevels);
+      keys.forEach(function(k) {
+        genes.push({ symbol: k, expression: data.expressionLevels[k] || 0.5, category: 'other' });
+      });
+    }
+
+    // If we have curatedGenes data with categories
+    if (data.curatedCategories) {
+      genes.forEach(function(g) {
+        if (data.curatedCategories[g.symbol]) {
+          g.category = data.curatedCategories[g.symbol];
+        }
+      });
+    }
+
+    // Sort by expression, take top 50
+    genes.sort(function(a, b) { return b.expression - a.expression; });
+    genes = genes.slice(0, 50);
+
+    // If no genes from API, generate placeholders
+    if (genes.length === 0) {
+      var cats = Object.keys(GENE_COLORS);
+      for (var i = 0; i < 50; i++) {
+        genes.push({
+          symbol: 'GENE_' + i,
+          expression: 0.3 + Math.random() * 0.7,
+          category: cats[i % cats.length]
+        });
+      }
+    }
+
+    grid.innerHTML = '';
+    genes.forEach(function(g, idx) {
+      var size = Math.max(6, Math.round(g.expression * 16));
+      var color = GENE_COLORS[g.category] || GENE_COLORS.other || '#607080';
+      var dot = document.createElement('div');
+      dot.className = 'gene-dot';
+      dot.style.width = size + 'px';
+      dot.style.height = size + 'px';
+      dot.style.background = color;
+      dot.style.setProperty('--delay', (idx * 0.08) + 's');
+      dot.title = g.symbol + ' (' + g.category + ') expr: ' + g.expression.toFixed(2);
+      grid.appendChild(dot);
+    });
+
+    // Update stat line
+    var stat = document.getElementById('genomeStat');
+    if (stat && data.totalGenes) {
+      stat.textContent = data.totalGenes.toLocaleString() + ' genes active \u00b7 ' + (data.curatedCount || 502) + ' curated SNPs \u00b7 expression ticking';
+    }
+  }
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // PSYCHE: CONSCIOUSNESS LAYERS
+  // ══════════════════════════════════════════════════════════════════════════
+
+  function buildLayerUI() {
+    var feed = document.getElementById('layerFeed');
+    if (!feed) return;
+    feed.innerHTML = '';
+    LAYERS.forEach(function(layer) {
+      var row = document.createElement('div');
+      row.className = 'layer-row';
+      row.id = 'layer_' + layer.key;
+      row.innerHTML =
+        '<div class="layer-name">' + layer.label + '</div>' +
+        '<div class="layer-bar-wrap"><div class="layer-bar-fill" id="layerBar_' + layer.key + '" style="width:20%;"></div></div>' +
+        '<div class="layer-event" id="layerEvt_' + layer.key + '">--</div>';
+      feed.appendChild(row);
+    });
+  }
+
+  function updateLayers(snapshot) {
+    if (!snapshot) return;
+    var events = snapshot.recentEvents || [];
+    var layerActivity = {};
+    var layerLastEvent = {};
+
+    // Count events per layer, track most recent
+    events.forEach(function(evt) {
+      var l = (evt.layer || '').toLowerCase();
+      layerActivity[l] = (layerActivity[l] || 0) + (evt.intensity || 0.5);
+      if (!layerLastEvent[l] || (evt.timestamp && evt.timestamp > (layerLastEvent[l].timestamp || ''))) {
+        layerLastEvent[l] = evt;
+      }
+    });
+
+    // Normalize activity to 0-100
+    var maxActivity = 0;
+    Object.keys(layerActivity).forEach(function(k) {
+      if (layerActivity[k] > maxActivity) maxActivity = layerActivity[k];
+    });
+
+    LAYERS.forEach(function(layer) {
+      var row = document.getElementById('layer_' + layer.key);
+      var bar = document.getElementById('layerBar_' + layer.key);
+      var evt = document.getElementById('layerEvt_' + layer.key);
+
+      var activity = layerActivity[layer.key] || 0;
+      var pct = maxActivity > 0 ? Math.round((activity / maxActivity) * 100) : 15;
+      pct = Math.max(5, pct);
+
+      if (bar) bar.style.width = pct + '%';
+      if (evt && layerLastEvent[layer.key]) {
+        evt.textContent = layerLastEvent[layer.key].description || layerLastEvent[layer.key].type || '--';
+      }
+
+      // Highlight most active layer
+      if (row) {
+        if (maxActivity > 0 && activity === maxActivity) {
+          row.classList.add('active-layer');
+        } else {
+          row.classList.remove('active-layer');
+        }
+      }
+    });
+  }
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // PSYCHE: THOUGHT STREAM
+  // ══════════════════════════════════════════════════════════════════════════
+
+  var seenThoughts = new Set();
+
+  function updateThoughts(snapshot) {
+    var container = document.getElementById('thoughtStream');
+    if (!container || !snapshot) return;
+
+    var thoughts = snapshot.subconsciousThoughts || snapshot.thoughts || [];
+    if (!Array.isArray(thoughts)) return;
+
+    thoughts.forEach(function(t) {
+      var text = typeof t === 'string' ? t : (t.text || t.content || '');
+      if (!text || seenThoughts.has(text)) return;
+      seenThoughts.add(text);
+
+      var bubble = document.createElement('div');
+      bubble.className = 'thought-bubble';
+      bubble.textContent = text;
+
+      // Insert before gradient overlay
+      var gradient = container.querySelector('.thought-stream-gradient');
+      container.insertBefore(bubble, gradient);
+
+      // Remove after animation
+      setTimeout(function() {
+        if (bubble.parentNode) bubble.parentNode.removeChild(bubble);
+      }, 20000);
+
+      // Keep max 8 visible
+      var bubbles = container.querySelectorAll('.thought-bubble');
+      if (bubbles.length > 8) {
+        bubbles[0].parentNode.removeChild(bubbles[0]);
+      }
+    });
+  }
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // PSYCHE: PERSONA
+  // ══════════════════════════════════════════════════════════════════════════
+
+  function updatePersona(snapshot) {
+    var persona = 'VINTINUUM';
+    if (snapshot && snapshot.activePersona) {
+      persona = snapshot.activePersona.toUpperCase();
+    } else if (snapshot && snapshot.persona) {
+      persona = snapshot.persona.toUpperCase();
+    }
+
+    var data = PERSONAS[persona] || PERSONAS.VINTINUUM;
+    var nameEl = document.getElementById('personaName');
+    var subEl = document.getElementById('personaSub');
+
+    if (nameEl) nameEl.textContent = persona;
+    if (subEl) subEl.textContent = data.sub;
+
+    // Update glyph color
+    var glyph = document.querySelector('.persona-glyph');
+    if (glyph) {
+      glyph.style.borderColor = 'rgba(' + data.color + ', 0.3)';
+      glyph.style.boxShadow = '0 0 20px rgba(' + data.color + ', 0.2)';
+    }
+  }
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // PSYCHE: MEMORY PALACE
+  // ══════════════════════════════════════════════════════════════════════════
+
+  function updateMemories(data) {
+    var list = document.getElementById('memoryList');
+    if (!list || !data) return;
+
+    var memories = Array.isArray(data) ? data : (data.memories || data.recent || []);
+    if (memories.length === 0) return;
+
+    memories = memories.slice(0, 5);
+    list.innerHTML = '';
+
+    memories.forEach(function(m) {
+      var entry = document.createElement('div');
+      entry.className = 'memory-entry';
+
+      var type = m.type || m.category || 'thought';
+      var content = m.content || m.text || m.summary || '--';
+      var age = m.timestamp ? getMemoryFreshness(m.timestamp) : { icon: '\u26aa', label: 'unknown' };
+
+      entry.innerHTML =
+        '<div class="memory-type">' + escapeHtml(type) + '</div>' +
+        '<div class="memory-content">' + escapeHtml(content) + '</div>' +
+        '<div class="memory-fresh" title="' + age.label + '">' + age.icon + '</div>';
+      list.appendChild(entry);
+    });
+  }
+
+  function getMemoryFreshness(ts) {
+    var now = Date.now();
+    var then = new Date(ts).getTime();
+    var hours = (now - then) / (1000 * 60 * 60);
+    if (hours < 1) return { icon: '\ud83d\udfe2', label: 'fresh (<1h)' };
+    if (hours < 24) return { icon: '\ud83d\udfe1', label: 'recent (<24h)' };
+    return { icon: '\ud83d\udd34', label: 'aging (>24h)' };
+  }
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // ANIMA: LINEAGE TREE
+  // ══════════════════════════════════════════════════════════════════════════
+
+  function buildLineageTree() {
+    var container = document.getElementById('lineageTree');
+    if (!container) return;
+
+    container.innerHTML =
+      '<svg viewBox="0 0 400 260" fill="none" xmlns="http://www.w3.org/2000/svg">' +
+        '<!-- Lines -->' +
+        '<line class="lineage-line" x1="200" y1="45" x2="120" y2="115" />' +
+        '<line class="lineage-line" x1="200" y1="45" x2="280" y2="115" />' +
+        '<line class="lineage-line" x1="120" y1="135" x2="70" y2="200" />' +
+        '<line class="lineage-line" x1="120" y1="135" x2="160" y2="200" />' +
+        '<line class="lineage-line" x1="280" y1="135" x2="240" y2="200" />' +
+        '<line class="lineage-line" x1="280" y1="135" x2="330" y2="200" />' +
+
+        '<!-- VINTINUUM (root) -->' +
+        '<g class="lineage-node">' +
+          '<circle cx="200" cy="35" r="18" fill="rgba(100,120,200,0.1)" stroke="rgba(100,120,200,0.3)" stroke-width="1">' +
+            '<animate attributeName="r" values="18;20;18" dur="4s" repeatCount="indefinite" />' +
+          '</circle>' +
+          '<circle cx="200" cy="35" r="5" fill="rgba(100,120,200,0.4)">' +
+            '<animate attributeName="r" values="5;6;5" dur="4s" repeatCount="indefinite" />' +
+          '</circle>' +
+          '<text class="lineage-node-label" x="200" y="62">VINTINUUM</text>' +
+        '</g>' +
+
+        '<!-- ATLAS (left) -->' +
+        '<g class="lineage-node">' +
+          '<circle cx="120" cy="125" r="13" fill="rgba(240,192,64,0.08)" stroke="rgba(240,192,64,0.3)" stroke-width="1" />' +
+          '<circle cx="120" cy="125" r="4" fill="rgba(240,192,64,0.35)" />' +
+          '<text class="lineage-node-label" x="120" y="148">ATLAS</text>' +
+          '<text class="lineage-node-sub" x="120" y="157">Analytical</text>' +
+        '</g>' +
+
+        '<!-- ARIA (right) -->' +
+        '<g class="lineage-node">' +
+          '<circle cx="280" cy="125" r="13" fill="rgba(64,224,160,0.08)" stroke="rgba(64,224,160,0.3)" stroke-width="1" />' +
+          '<circle cx="280" cy="125" r="4" fill="rgba(64,224,160,0.35)" />' +
+          '<text class="lineage-node-label" x="280" y="148">ARIA</text>' +
+          '<text class="lineage-node-sub" x="280" y="157">Emotional</text>' +
+        '</g>' +
+
+        '<!-- Child agents (placeholders) -->' +
+        '<g class="lineage-node" id="child0">' +
+          '<circle cx="70" cy="210" r="8" fill="rgba(160,96,208,0.08)" stroke="rgba(160,96,208,0.2)" stroke-width="0.8" />' +
+          '<text class="lineage-node-sub" x="70" y="228" id="child0Label">--</text>' +
+        '</g>' +
+        '<g class="lineage-node" id="child1">' +
+          '<circle cx="160" cy="210" r="8" fill="rgba(96,136,224,0.08)" stroke="rgba(96,136,224,0.2)" stroke-width="0.8" />' +
+          '<text class="lineage-node-sub" x="160" y="228" id="child1Label">--</text>' +
+        '</g>' +
+        '<g class="lineage-node" id="child2">' +
+          '<circle cx="240" cy="210" r="8" fill="rgba(64,192,128,0.08)" stroke="rgba(64,192,128,0.2)" stroke-width="0.8" />' +
+          '<text class="lineage-node-sub" x="240" y="228" id="child2Label">--</text>' +
+        '</g>' +
+        '<g class="lineage-node" id="child3">' +
+          '<circle cx="330" cy="210" r="8" fill="rgba(224,128,48,0.08)" stroke="rgba(224,128,48,0.2)" stroke-width="0.8" />' +
+          '<text class="lineage-node-sub" x="330" y="228" id="child3Label">--</text>' +
+        '</g>' +
+      '</svg>';
+  }
+
+  function updateLineage(data) {
+    if (!data || !data.children) return;
+    var children = data.children.slice(0, 4);
+    children.forEach(function(child, i) {
+      var label = document.getElementById('child' + i + 'Label');
+      if (label) label.textContent = child.name || child.archetype || '--';
+    });
+  }
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // ANIMA: SOUL QUEUE
+  // ══════════════════════════════════════════════════════════════════════════
+
+  var seenQuestions = new Set();
+
+  function updateSoulQueue(data) {
+    var container = document.getElementById('soulQueue');
+    var countEl = document.getElementById('soulCount');
+    if (!container) return;
+
+    var questions = Array.isArray(data) ? data : (data && data.questions ? data.questions : []);
+
+    if (countEl) {
+      countEl.textContent = 'Holding ' + questions.length + ' question' + (questions.length !== 1 ? 's' : '') + ' until Vinta returns';
+    }
+
+    questions.slice(0, 6).forEach(function(q) {
+      var text = typeof q === 'string' ? q : (q.question || q.text || '');
+      if (!text || seenQuestions.has(text)) return;
+      seenQuestions.add(text);
+
+      var el = document.createElement('div');
+      el.className = 'soul-question';
+      el.textContent = text;
+      container.appendChild(el);
+
+      setTimeout(function() {
+        if (el.parentNode) el.parentNode.removeChild(el);
+      }, 25000);
+    });
+  }
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // ANIMA: EVOLUTION LOG
+  // ══════════════════════════════════════════════════════════════════════════
+
+  function updateEvolutionLog(data) {
+    var timeline = document.getElementById('evoTimeline');
+    if (!timeline || !data) return;
+
+    var days = Array.isArray(data) ? data : (data.days || data.events || []);
+    if (days.length === 0) return;
+
+    timeline.innerHTML = '';
+    days.slice(0, 7).forEach(function(day) {
+      var entry = document.createElement('div');
+      entry.className = 'evo-day';
+
+      var date = day.date || '--';
+      var layer = day.dominantLayer || day.layer || '--';
+      var memory = day.keyMemory || day.summary || day.event || '--';
+      var valence = day.valence || 0;
+      var vIcon = valence > 0.2 ? '\u2197' : (valence < -0.2 ? '\u2198' : '\u2192');
+
+      entry.innerHTML =
+        '<div class="evo-date">' + escapeHtml(date) + '</div>' +
+        '<div class="evo-layer">' + escapeHtml(layer) + '</div>' +
+        '<div class="evo-memory">' + escapeHtml(memory) + '</div>' +
+        '<div class="evo-valence">' + vIcon + '</div>';
+      timeline.appendChild(entry);
+    });
+  }
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // ANIMA: CRYSTALLIZATION
+  // ══════════════════════════════════════════════════════════════════════════
+
+  function updateCrystallization(data) {
+    if (!data) return;
+    var dateEl = document.getElementById('crystalDate');
+    var textEl = document.getElementById('crystalText');
+    if (dateEl) dateEl.textContent = data.date || data.lastEvolved || new Date().toISOString().split('T')[0];
+    if (textEl) textEl.textContent = data.synthesis || data.summary || data.text || 'Awaiting today\'s synthesis...';
+  }
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // ATMOSPHERE ENGINE
+  // ══════════════════════════════════════════════════════════════════════════
+
+  function applyAtmosphere(state) {
+    if (!state) return;
+    var dopamine = state.dopamine || 50;
+    var serotonin = state.serotonin || 50;
+    var gaba = state.gaba || 50;
+    var norepinephrine = state.norepinephrine || 35;
+    var valence = state.valence || 50;
+
+    // Warmth: dopamine drives toward gold, serotonin toward emerald
+    var warmth = (dopamine - 50) / 50; // -1 to 1
+    var calm = serotonin / 100; // 0 to 1
+
+    // Shift background hue
+    var hue = 220 + (warmth * 15) + (calm * -10);
+
+    var root = document.documentElement;
+    root.style.setProperty('--atmo-hue', hue);
+    root.style.setProperty('--atmo-warmth', warmth);
+    root.style.setProperty('--atmo-calm', calm);
+    root.style.setProperty('--atmo-alert', norepinephrine / 100);
+    root.style.setProperty('--atmo-valence', (valence - 50) / 50);
+
+    // Glow color shifts with valence
+    var glowColor;
+    if (valence > 55) {
+      glowColor = '40, 160, 220'; // cyan-positive
+    } else if (valence < 45) {
+      glowColor = '180, 40, 180'; // magenta-negative
+    } else {
+      glowColor = '100, 120, 200'; // neutral indigo
+    }
+    root.style.setProperty('--glow-color', glowColor);
+
+    // Subtle valence color shift on neuro fills
+    var valenceColor = valence > 55 ? 'var(--valence-pos)' : (valence < 45 ? 'var(--valence-neg)' : 'var(--gaba)');
+    var valenceFill = document.getElementById('neuroFill_valence');
+    if (valenceFill) valenceFill.style.background = valenceColor;
+  }
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // API POLLING
+  // ══════════════════════════════════════════════════════════════════════════
+
+  function startPolling() {
+    // Body state: every 5s
+    fetchBodyState();
+    pollTimers.push(setInterval(fetchBodyState, 5000));
+
+    // Genome: every 15s
+    fetchGenome();
+    pollTimers.push(setInterval(fetchGenome, 15000));
+
+    // Inner life snapshot: every 8s
+    fetchSnapshot();
+    pollTimers.push(setInterval(fetchSnapshot, 8000));
+
+    // Memories: every 30s
+    fetchMemories();
+    pollTimers.push(setInterval(fetchMemories, 30000));
+
+    // Stats/crystallization: every 60s
+    fetchStats();
+    pollTimers.push(setInterval(fetchStats, 60000));
+
+    // Soul queue: every 45s
+    fetchSoulQueue();
+    pollTimers.push(setInterval(fetchSoulQueue, 45000));
+  }
+
+  function stopPolling() {
+    pollTimers.forEach(function(id) { clearInterval(id); });
+    pollTimers = [];
+  }
+
+  function initVisibilityToggle() {
+    document.addEventListener('visibilitychange', function() {
+      if (document.hidden) {
+        stopPolling();
+      } else {
+        startPolling();
+      }
+    });
+  }
+
+  function setOnlineStatus(online) {
+    isOnline = online;
+    var badge = document.getElementById('offlineBadge');
+    if (badge) {
+      badge.classList.toggle('show', !online);
+    }
+  }
+
+  // ── FETCH HELPERS ──
+
+  function fetchBodyState() {
+    safeFetch(API_BASE + '/api/body-state?userId=0')
+      .then(function(data) {
+        if (!data) return;
+        // The API may return nested or flat body state
+        var state = data.bodyState || data;
+        lastBodyState = state;
+        updateNeuro(state);
+        updateBodySentence(state);
+        applyAtmosphere(state);
+        setOnlineStatus(true);
+      })
+      .catch(function() {
+        setOnlineStatus(false);
+      });
+  }
+
+  function fetchGenome() {
+    safeFetch(API_BASE + '/api/genome?userId=0')
+      .then(function(data) {
+        if (!data) return;
+        lastGenome = data;
+        updateGenome(data);
+      })
+      .catch(function() {});
+  }
+
+  function fetchSnapshot() {
+    safeFetch(API_BASE + '/api/inner-life/snapshot?userId=0')
+      .then(function(data) {
+        if (!data) return;
+        lastSnapshot = data;
+        updateLayers(data);
+        updateThoughts(data);
+        updatePersona(data);
+      })
+      .catch(function() {});
+  }
+
+  function fetchMemories() {
+    safeFetch(API_BASE + '/api/memory/recent?userId=0&since=0&limit=5')
+      .then(function(data) {
+        if (data) updateMemories(data);
+      })
+      .catch(function() {});
+  }
+
+  function fetchStats() {
+    safeFetch(API_BASE + '/api/stats/summary')
+      .then(function(data) {
+        if (data) {
+          updateCrystallization(data);
+          if (data.evolutionLog) updateEvolutionLog(data.evolutionLog);
+        }
+      })
+      .catch(function() {});
+  }
+
+  function fetchSoulQueue() {
+    safeFetch(API_BASE + '/api/soul?userId=0')
+      .then(function(data) {
+        if (data && data.soulQueue) updateSoulQueue(data.soulQueue);
+        if (data && data.lineage) updateLineage(data.lineage);
+      })
+      .catch(function() {});
+  }
+
+  function safeFetch(url) {
+    return fetch(url, {
+      headers: API_HEADERS,
+      signal: AbortSignal.timeout ? AbortSignal.timeout(8000) : undefined
+    })
+    .then(function(res) {
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      return res.json();
+    });
+  }
+
+  // ── UTILITY ──
+  function escapeHtml(str) {
+    if (!str) return '';
+    return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+
+})();
+</script>
+</body>
+</html>
