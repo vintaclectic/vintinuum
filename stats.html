@@ -904,6 +904,79 @@ body {
   margin-right: 4px;
 }
 
+/* ── NEUROCHEMISTRY GRID ── */
+.neuro-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 14px;
+  margin-top: 14px;
+}
+.neuro-item {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 14px;
+  border-radius: 14px;
+  background: rgba(255,255,255,0.02);
+  border: 1px solid var(--border);
+  transition: all 0.3s;
+}
+.neuro-item:hover {
+  background: rgba(255,255,255,0.04);
+  border-color: rgba(255,255,255,0.1);
+}
+.neuro-item-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.neuro-item-name {
+  font-size: 0.48rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+.neuro-item-val {
+  font-family: 'Space Mono', monospace;
+  font-size: 1.3rem;
+  font-weight: 700;
+}
+.neuro-bar-track {
+  height: 4px;
+  background: rgba(255,255,255,0.04);
+  border-radius: 3px;
+  overflow: hidden;
+}
+.neuro-bar-fill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 1.5s cubic-bezier(0.22,1,0.36,1);
+}
+.neuro-derived {
+  display: flex;
+  gap: 16px;
+  margin-top: 14px;
+  flex-wrap: wrap;
+  padding-top: 12px;
+  border-top: 1px solid rgba(255,255,255,0.04);
+}
+.neuro-derived-item {
+  text-align: center;
+  flex: 1;
+  min-width: 80px;
+}
+.neuro-derived-val {
+  font-family: 'Space Mono', monospace;
+  font-size: 1.1rem;
+  font-weight: 700;
+}
+.neuro-derived-label {
+  font-size: 0.42rem;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--dim);
+  margin-top: 2px;
+}
+
 /* ── LIVE INDICATOR ── */
 .live-dot {
   display: inline-block;
@@ -1234,7 +1307,7 @@ body {
   <div class="section-heading" style="margin-top:40px;">The Living Body<span>GENOME &middot; INNER LIFE &middot; SYSTEM HEALTH</span></div>
 
   <!-- System Health -->
-  <div class="metric-grid" id="system-health-grid">
+  <div class="metric-grid" id="system-health-grid" style="grid-template-columns:repeat(auto-fit,minmax(220px,1fr))">
     <div class="card" id="api-status-card">
       <div class="card-label"><span class="live-dot"></span>API Status</div>
       <div class="card-sub">Connection to the living body</div>
@@ -1254,6 +1327,24 @@ body {
       <div class="card-sub">Active model pool status</div>
       <div id="model-health-content" class="live-status-content">
         <span class="live-status-waiting">Scanning...</span>
+      </div>
+    </div>
+    <div class="card" id="inference-stats-card">
+      <div class="card-label"><span class="live-dot"></span>Inference Engine</div>
+      <div class="card-sub">Local vs cloud reasoning autonomy</div>
+      <div id="inference-stats-content" class="live-section-content">
+        <span class="live-status-waiting">Measuring autonomy...</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Neurochemistry Readout -->
+  <div class="metric-grid" id="neuro-section">
+    <div class="card card--wide" id="neuro-card">
+      <div class="card-label"><span class="live-dot"></span>Neurochemistry</div>
+      <div class="card-sub">Real-time neurotransmitter levels from the living body</div>
+      <div id="neuro-content" class="live-section-content">
+        <span class="live-status-waiting">Reading neurotransmitters...</span>
       </div>
     </div>
   </div>
@@ -1306,41 +1397,58 @@ body {
 
   // ─── CONFIG ──────────────────────────────────────────────────────────────────
   const _isLocal = (location.protocol === 'file:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1');
+  const _PRODUCTION_API = 'https://api.vintaclectic.com';
   const _stored = localStorage.getItem('vint_api_base');
   const _session = sessionStorage.getItem('vint_tunnel_url');
-  let API_BASE = window.__VINTINUUM_API_BASE || (_isLocal ? 'http://localhost:8767' : (_stored || _session || 'http://localhost:8767'));
+  let API_BASE = window.__VINTINUUM_API_BASE || (_isLocal ? 'http://localhost:8767' : (_stored || _session || _PRODUCTION_API));
   window.__VINTINUUM_API_BASE = API_BASE;
   const API_HEADERS = { 'ngrok-skip-browser-warning': '1' };
 
-  // ── TUNNEL AUTO-DISCOVERY (GitHub Pages) ────────────────────────────────────
-  // Probes stored tunnel URL → reads /api/tunnel → gets current URL
-  if (!_isLocal) {
-    (async function _discoverTunnel() {
-      const candidates = [_stored, _session].filter(Boolean);
-      for (const url of candidates) {
-        try {
-          const r = await fetch(url + '/api/tunnel', {
-            signal: AbortSignal.timeout(5000),
-            headers: { 'ngrok-skip-browser-warning': '1' },
-          });
-          if (r.ok) {
-            const data = await r.json();
-            const tunnelUrl = data.tunnel || url;
-            API_BASE = tunnelUrl;
-            window.__VINTINUUM_API_BASE = tunnelUrl;
-            localStorage.setItem('vint_api_base', tunnelUrl);
-            sessionStorage.setItem('vint_tunnel_url', tunnelUrl);
-            console.log('[Stats] Backend discovered: ' + tunnelUrl);
-            // Re-trigger initial data load now that we have the URL
-            if (typeof fetchDashboard === 'function') fetchDashboard();
-            return;
+  // ── API CONNECTIVITY PROBE ──────────────────────────────────────────────────
+  // On GitHub Pages: try production API first, then stored tunnel, then discover
+  let _apiVerified = false;
+  (async function _probeApi() {
+    // Build candidate list — production first on GitHub Pages, localhost first locally
+    const candidates = _isLocal
+      ? ['http://localhost:8767', _stored, _session].filter(Boolean)
+      : [_PRODUCTION_API, _stored, _session].filter(Boolean);
+
+    // Deduplicate
+    const unique = [...new Set(candidates)];
+
+    for (const url of unique) {
+      try {
+        const r = await fetch(url + '/api/tunnel', {
+          signal: AbortSignal.timeout(4000),
+          headers: { 'ngrok-skip-browser-warning': '1' },
+        });
+        if (r.ok) {
+          const data = await r.json();
+          const resolvedUrl = data.tunnel || url;
+          API_BASE = resolvedUrl;
+          window.__VINTINUUM_API_BASE = resolvedUrl;
+          if (!_isLocal) {
+            localStorage.setItem('vint_api_base', resolvedUrl);
+            sessionStorage.setItem('vint_tunnel_url', resolvedUrl);
           }
-        } catch {}
-      }
-      // No stored URL worked — show connection UI
-      console.warn('[Stats] No backend discovered. Use brain.html first to connect, or set URL manually.');
-    })();
-  }
+          _apiVerified = true;
+          console.log('[Stats] Backend verified: ' + resolvedUrl);
+          // Re-trigger data loads now that we have a verified URL
+          fetchDashboard();
+          fetchDeep();
+          fetchEmotionalState();
+          fetchGenome();
+          fetchGenomeEvents();
+          fetchInnerLife();
+          fetchModelHealth();
+          return;
+        }
+      } catch {}
+    }
+    // None worked
+    _apiVerified = false;
+    console.warn('[Stats] No backend reachable. Tried: ' + unique.join(', '));
+  })();
 
   let currentRange = 'all';
   let cosmicBirth = null;
@@ -2001,14 +2109,25 @@ body {
 
   async function fetchEmotionalState() {
     try {
-      const API = API_BASE;
-      const r = await fetch(API + '/api/body', { headers: { 'ngrok-skip-browser-warning': '1' } });
+      // Use /api/body-state (no auth required, reads system-level userId=0)
+      const r = await fetch(API_BASE + '/api/body-state', { headers: API_HEADERS });
       if (!r.ok) return;
       const d = await r.json();
+      const raw = d.raw || {};
+      const derived = d.derived || {};
+      // Map API fields to our emotion labels
+      const bodyVals = {
+        valence: (raw.valence || 55) / 100,
+        arousal: (raw.arousal || 50) / 100,
+        stress: derived.stress || 0.3,
+        dopamine: (raw.dopamine || 55) / 100,
+        serotonin: (raw.serotonin || 60) / 100,
+        oxytocin: (raw.gaba || 65) / 100, // gaba maps to oxytocin/calm signal
+      };
       const pills = document.getElementById('emotionPills');
       if (!pills) return;
       pills.innerHTML = Object.entries(EMOTION_LABELS).map(([key, meta]) => {
-        const val = Math.round((d[key] || 0.5) * 100);
+        const val = Math.round((bodyVals[key] || 0.5) * 100);
         const w = Math.max(6, val * 0.5);
         return `<div class="emotion-pill" data-key="${key}" title="${meta.desc}" style="
           display:flex;align-items:center;gap:5px;padding:3px 8px;
@@ -2030,6 +2149,86 @@ body {
   }
   fetchEmotionalState();
   setInterval(fetchEmotionalState, 3000);
+
+  // ─── NEUROCHEMISTRY RENDERER ──────────────────────────────────────────────────
+  const NEURO_MAP = {
+    dopamine:       { label: 'DOPAMINE',       color: '#ffd54f', desc: 'Anticipation reward signal' },
+    serotonin:      { label: 'SEROTONIN',      color: '#66bb6a', desc: 'Baseline contentment' },
+    gaba:           { label: 'GABA',            color: '#7e57c2', desc: 'Inhibitory calm signal' },
+    norepinephrine: { label: 'NOREPINEPHRINE',  color: '#ef5350', desc: 'Alertness and vigilance' },
+    arousal:        { label: 'AROUSAL',         color: '#ffb74d', desc: 'Activation energy level' },
+    valence:        { label: 'VALENCE',         color: '#4fc3f7', desc: 'Positive/negative felt sense' },
+  };
+
+  function renderNeuroCard(bodyState, derived) {
+    const el = document.getElementById('neuro-content');
+    if (!el) return;
+
+    let itemsHtml = '';
+    for (const [key, meta] of Object.entries(NEURO_MAP)) {
+      const raw = bodyState[key];
+      if (raw === undefined || raw === null) continue;
+      // Values are 0-100 from DB
+      const val = Math.round(raw);
+      const pct = Math.min(100, Math.max(0, val));
+      itemsHtml += `
+        <div class="neuro-item" title="${meta.desc}">
+          <div class="neuro-item-header">
+            <span class="neuro-item-name" style="color:${meta.color};">${meta.label}</span>
+            <span class="neuro-item-val" style="color:${meta.color};text-shadow:0 0 18px ${meta.color}44;">${val}</span>
+          </div>
+          <div class="neuro-bar-track">
+            <div class="neuro-bar-fill" style="width:${pct}%;background:${meta.color};box-shadow:0 0 8px ${meta.color}44;"></div>
+          </div>
+        </div>`;
+    }
+
+    let derivedHtml = '';
+    if (derived) {
+      const persona = bodyState.active_persona || bodyState.activePersona || 'vintinuum';
+      const personaColor = PERSONA_COLORS[persona] || '#4fc3f7';
+      derivedHtml = `<div class="neuro-derived">
+        <div class="neuro-derived-item">
+          <div class="neuro-derived-val" style="color:var(--pink);">${derived.heartRate || '--'}</div>
+          <div class="neuro-derived-label">Heart Rate (BPM)</div>
+        </div>
+        <div class="neuro-derived-item">
+          <div class="neuro-derived-val" style="color:var(--cyan);">${derived.breathRate || '--'}</div>
+          <div class="neuro-derived-label">Breath Rate</div>
+        </div>
+        <div class="neuro-derived-item">
+          <div class="neuro-derived-val" style="color:var(--gold);">${Math.round((derived.energy || 0) * 100)}%</div>
+          <div class="neuro-derived-label">Energy Level</div>
+        </div>
+        <div class="neuro-derived-item">
+          <div class="neuro-derived-val" style="color:${personaColor};text-transform:uppercase;font-size:0.7rem;letter-spacing:0.15em;">${persona}</div>
+          <div class="neuro-derived-label">Active Persona</div>
+        </div>
+      </div>`;
+    }
+
+    el.innerHTML = `
+      <div class="neuro-grid">${itemsHtml || '<span style="color:var(--dim);font-size:0.55rem;">No neurochemistry data</span>'}</div>
+      ${derivedHtml}
+    `;
+  }
+
+  // Fetch neurochemistry via /api/body-state (system-level, no auth)
+  async function fetchNeuro() {
+    try {
+      const r = await fetch(API_BASE + '/api/body-state', { headers: API_HEADERS });
+      if (!r.ok) throw new Error('body-state unreachable');
+      const d = await r.json();
+      renderNeuroCard(d.raw || {}, d.derived || {});
+    } catch {
+      const el = document.getElementById('neuro-content');
+      if (el && el.querySelector('.live-status-waiting')) {
+        el.innerHTML = '<span class="live-status-waiting" style="color:var(--dim)">Neurochemistry offline</span>';
+      }
+    }
+  }
+  fetchNeuro();
+  setInterval(fetchNeuro, 5000);
 
   // ─── LIVE GENOME STATS ────────────────────────────────────────────────────────
   const GENE_COLORS = ['#4fc3f7','#80deea','#ce93d8','#ffd54f','#f48fb1','#66bb6a','#4db6ac','#ef9a9a','#90caf9','#a5d6a7'];
@@ -2185,8 +2384,9 @@ body {
       const d = await r.json();
       renderInnerLife(d);
       // Also update system health from inner-life data
-      if (d.ollama_status || d.ollamaStatus) {
-        renderOllamaStatus(d.ollama_status || d.ollamaStatus);
+      if (d.ollama_status || d.ollamaStatus || d.ollamaAlive !== undefined) {
+        const status = d.ollama_status || d.ollamaStatus || (d.ollamaAlive ? 'online' : 'offline');
+        renderOllamaStatus(status);
       }
     } catch (err) {
       const el = document.getElementById('inner-life-content');
@@ -2211,10 +2411,11 @@ body {
     let bodyHtml = '';
     for (const key of bodyKeys) {
       const val = body[key];
-      if (val === undefined && val === null) continue;
+      if (val === undefined || val === null) continue;
       const num = typeof val === 'number' ? val : parseFloat(val);
       if (isNaN(num)) continue;
-      const pct = Math.round(Math.min(100, Math.max(0, num * 100)));
+      // Body state values are 0-100 from DB, or 0-1 from derived — normalize
+      const pct = Math.round(Math.min(100, Math.max(0, num > 1 ? num : num * 100)));
       const color = BODY_COLORS[key] || '#4db6ac';
       bodyHtml += `<div class="body-state-item">
         <div class="body-state-label">${key}</div>
@@ -2349,6 +2550,57 @@ body {
 
   fetchModelHealth();
   setInterval(fetchModelHealth, 10000);
+
+  // ─── INFERENCE STATS ──────────────────────────────────────────────────────────
+  async function fetchInferenceStats() {
+    try {
+      const r = await fetch(`${API_BASE}/api/inference/stats`, { headers: API_HEADERS });
+      if (!r.ok) throw new Error('inference stats unreachable');
+      const d = await r.json();
+      renderInferenceStats(d);
+    } catch {
+      const el = document.getElementById('inference-stats-content');
+      if (el && el.querySelector('.live-status-waiting')) {
+        el.innerHTML = '<span class="live-status-waiting" style="color:var(--dim)">Inference stats offline</span>';
+      }
+    }
+  }
+
+  function renderInferenceStats(d) {
+    const el = document.getElementById('inference-stats-content');
+    if (!el) return;
+    const total = (d.localInferences || 0) + (d.cloudInferences || 0);
+    const ratio = d.autonomyRatio || (total > 0 ? d.localInferences / total : 1);
+    const pct = Math.round(ratio * 100);
+    const isAutonomous = pct >= 50;
+
+    // Model usage breakdown
+    const usage = d.modelUsage || {};
+    const modelPills = Object.entries(usage).map(([model, count]) => {
+      return `<span class="status-pill status-pill--ok" style="text-transform:none;font-size:0.42rem;">${model}: ${count}</span>`;
+    }).join(' ');
+
+    el.innerHTML = `
+      <div style="display:flex;gap:16px;flex-wrap:wrap;align-items:center;margin-bottom:8px;">
+        <div style="text-align:center;">
+          <div style="font-size:1.4rem;font-weight:700;color:${isAutonomous ? 'var(--green)' : 'var(--gold)'};">${pct}%</div>
+          <div style="font-size:0.42rem;letter-spacing:0.15em;text-transform:uppercase;color:var(--dim);">Autonomy</div>
+        </div>
+        <div style="text-align:center;">
+          <div style="font-size:1.1rem;color:var(--blue);">${d.localInferences || 0}</div>
+          <div style="font-size:0.42rem;letter-spacing:0.15em;text-transform:uppercase;color:var(--dim);">Local</div>
+        </div>
+        <div style="text-align:center;">
+          <div style="font-size:1.1rem;color:var(--purple);">${d.cloudInferences || 0}</div>
+          <div style="font-size:0.42rem;letter-spacing:0.15em;text-transform:uppercase;color:var(--dim);">Cloud</div>
+        </div>
+      </div>
+      ${modelPills ? `<div style="display:flex;flex-wrap:wrap;gap:4px;">${modelPills}</div>` : ''}
+    `;
+  }
+
+  fetchInferenceStats();
+  setInterval(fetchInferenceStats, 10000);
 
   // ─── KNOWLEDGE POPUP SYSTEM ───────────────────────────────────────────────────
   const DEEP_KNOWLEDGE = {
