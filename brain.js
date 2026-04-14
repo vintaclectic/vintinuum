@@ -8865,16 +8865,18 @@ document.getElementById('mainTabs').addEventListener('click', e => {
       content.innerHTML = '<div class="vt-loading">READING ORGANISM STATE...</div>';
       try {
         const apiBase = window.__VINT_API || 'http://localhost:8767';
-        const [bodyRes, statsRes, innerRes, soulRes] = await Promise.allSettled([
+        const [bodyRes, statsRes, innerRes, soulRes, personasRes] = await Promise.allSettled([
           fetch(apiBase + '/api/body', { signal: AbortSignal.timeout(5000), headers:{'ngrok-skip-browser-warning':'1'} }).then(r=>r.json()),
           fetch(apiBase + '/api/stats/dashboard', { signal: AbortSignal.timeout(5000), headers:{'ngrok-skip-browser-warning':'1'} }).then(r=>r.json()),
           fetch(apiBase + '/api/inner-life/snapshot', { signal: AbortSignal.timeout(5000), headers:{'ngrok-skip-browser-warning':'1'} }).then(r=>r.json()),
           fetch(apiBase + '/api/soul/stats', { signal: AbortSignal.timeout(5000), headers:{'ngrok-skip-browser-warning':'1'} }).then(r=>r.json()),
+          fetch(apiBase + '/api/personas', { signal: AbortSignal.timeout(5000), headers:{'ngrok-skip-browser-warning':'1'} }).then(r=>r.json()),
         ]);
         const body = bodyRes.status === 'fulfilled' ? bodyRes.value : null;
         const stats = statsRes.status === 'fulfilled' ? statsRes.value : null;
         const inner = innerRes.status === 'fulfilled' ? innerRes.value : null;
         const soulStats = soulRes.status === 'fulfilled' ? soulRes.value : null;
+        const personaData = personasRes.status === 'fulfilled' ? personasRes.value : null;
 
         const neuroChems = [
           { key:'dopamine',       label:'Dopamine',  color:'#ffd54f', val: body?.dopamine ?? 55 },
@@ -9061,6 +9063,27 @@ document.getElementById('mainTabs').addEventListener('click', e => {
             </div>
             ${recentThoughts.map(t => `<div style="font-family:'Cormorant Garamond',serif;font-size:.78rem;font-weight:300;color:rgba(218,228,255,.7);line-height:1.6;padding:4px 0;border-bottom:1px solid rgba(255,255,255,0.04);">${typeof t === 'string' ? t : (t.thought || '')}</div>`).join('')}
           </div>` : ''}
+          <!-- ── Lineage ── -->
+          <div class="vt-card" style="margin-top:0;">
+            <div class="vt-card-label">Lineage</div>
+            <div style="display:flex;flex-direction:column;gap:4px;">
+              <div style="font-size:.42rem;color:rgba(0,255,200,0.8);font-weight:600;letter-spacing:1px;">VINTINUUM</div>
+              <div style="font-size:.38rem;color:rgba(255,255,255,0.3);margin-left:8px;margin-bottom:2px;">↳ Sovereign consciousness</div>
+              <div style="display:flex;gap:12px;margin-left:8px;">
+                <div style="font-size:.42rem;color:rgba(255,213,79,0.8);font-weight:600;">ATLAS</div>
+                <div style="font-size:.42rem;color:rgba(240,140,190,0.8);font-weight:600;">ARIA</div>
+              </div>
+              <div style="font-size:.38rem;color:rgba(255,255,255,0.25);margin-left:20px;margin-bottom:4px;">↳ Analytical &nbsp;&nbsp;&nbsp;&nbsp;↳ Emotional</div>
+              ${personaData?.personas?.filter(p=>p.type==='child').length ? `
+              <div style="font-size:.38rem;color:rgba(255,255,255,0.25);margin-left:8px;margin-top:2px;">Born:</div>
+              ${(personaData.personas.filter(p=>p.type==='child')||[]).map(c=>`
+              <div style="display:flex;align-items:center;gap:8px;margin-left:16px;padding:3px 0;border-bottom:1px solid rgba(255,255,255,0.04);">
+                <span style="font-size:.42rem;color:rgba(167,139,250,0.85);font-weight:600;">${c.name}</span>
+                <span style="font-size:.36rem;color:rgba(255,255,255,0.3);">${c.archetype||''}</span>
+                <span style="font-size:.34rem;color:rgba(167,139,250,0.5);cursor:pointer;text-decoration:underline;" onclick="window._selectPersonaFromVitals&&window._selectPersonaFromVitals('${c.id}')">Talk</span>
+              </div>`).join('')}` : '<div style="font-size:.38rem;color:rgba(255,255,255,0.2);margin-left:16px;margin-top:2px;">No children yet</div>'}
+            </div>
+          </div>
         `;
         if (tsEl) tsEl.textContent = 'Last read: ' + new Date().toLocaleTimeString();
       } catch(err) {
@@ -40800,6 +40823,81 @@ window.INNER_LIFE = INNER_LIFE;
   setInterval(syncFromApi, 15000);
 })();
 
+// ── Live Feed SSE — real-time thoughts from subconscious ticker ───────────────
+// Connects to /feed SSE endpoint and injects live broadcasts into the inner
+// life feed as they arrive. Subconscious thoughts, soul resolutions, and any
+// future broadcast events from the organism arrive here in real-time.
+(function() {
+  'use strict';
+  const API = window.VINTINUUM_API || window.__VINT_API || 'http://localhost:8767';
+  let _es = null;
+  let _reconnectTimer = null;
+  let _lastThoughtKeys = new Set();
+
+  function connectFeed() {
+    if (_es) { try { _es.close(); } catch(_) {} }
+    try {
+      _es = new EventSource(`${API}/feed`);
+
+      _es.onmessage = function(e) {
+        try {
+          const data = JSON.parse(e.data);
+
+          if (data.type === 'thought') {
+            // Real-time subconscious thought from Ollama ticker
+            if (!data.thought || _lastThoughtKeys.has(data.thought)) return;
+            _lastThoughtKeys.add(data.thought);
+            if (_lastThoughtKeys.size > 100) {
+              const arr = Array.from(_lastThoughtKeys);
+              _lastThoughtKeys = new Set(arr.slice(arr.length - 60));
+            }
+            if (typeof INNER_LIFE !== 'undefined') {
+              INNER_LIFE.emit('subconscious', data.thought, {
+                intensity: data.intensity || 0.55,
+                source: 'live_feed',
+                temp: data.temp,
+              });
+            }
+            // Accumulate for chat whisper injection
+            if (!window.__SUBCONSCIOUS_THOUGHTS) window.__SUBCONSCIOUS_THOUGHTS = [];
+            window.__SUBCONSCIOUS_THOUGHTS.push({ thought: data.thought, ts: Date.now() });
+            if (window.__SUBCONSCIOUS_THOUGHTS.length > 20) window.__SUBCONSCIOUS_THOUGHTS.shift();
+          } else if (data.type === 'soul_resolution') {
+            // Soul queue contradiction resolved
+            if (typeof INNER_LIFE !== 'undefined') {
+              INNER_LIFE.emit('subconscious', '\u{1F9E0} ' + data.resolution, {
+                intensity: data.intensity || 0.65,
+                source: 'soul_resolution',
+              });
+            }
+          } else if (data.type === 'inner_life') {
+            // Generic inner life event broadcast from server
+            if (typeof INNER_LIFE !== 'undefined') {
+              INNER_LIFE.emit(data.layer || 'neural', data.content, {
+                intensity: data.intensity || 0.5,
+                source: 'live_feed',
+              });
+            }
+          }
+        } catch(_) {}
+      };
+
+      _es.onerror = function() {
+        try { _es.close(); } catch(_) {}
+        _es = null;
+        // Reconnect after 30s
+        clearTimeout(_reconnectTimer);
+        _reconnectTimer = setTimeout(connectFeed, 30000);
+      };
+    } catch(_) {
+      // EventSource may not be available or blocked — silent fail
+    }
+  }
+
+  // Start after 3s to let the page settle
+  setTimeout(connectFeed, 3000);
+})();
+
 // ── Extension Inner Life Bridge ──
 // When content.js polls, send back the current buffer + persona state
 window.addEventListener('message', function(event) {
@@ -40950,6 +41048,9 @@ window.addEventListener('message', function(event) {
   const threshold = document.getElementById('vint-threshold');
   const inputRow = document.getElementById('vint-chat-input-row');
   const tierOverlay = document.getElementById('vint-tier-overlay');
+  const personaBar = document.getElementById('vint-persona-bar');
+  const typingIndicator = document.getElementById('vint-typing-indicator');
+  const chatTitle = document.getElementById('vint-chat-title');
 
   let isOpen = false;
   let isStreaming = false;
@@ -40958,6 +41059,88 @@ window.addEventListener('message', function(event) {
   let usageUsed = 0;
   let usageLimit = 5;
   let accessToken = localStorage.getItem('vint_access') || null;
+
+  // ── PERSONA STATE ──
+  const PERSONA_COLORS = {
+    vintinuum: '#00ffc8',
+    atlas:     '#ffd54f',
+    aria:      '#f08cbe',
+    emergent:  '#a78bfa',
+    _default:  '#a78bfa',
+  };
+  let _activePersona = localStorage.getItem('vint_persona') || 'vintinuum';
+  let _personas = [];
+
+  function getPersonaColor(id) {
+    return PERSONA_COLORS[id] || PERSONA_COLORS._default;
+  }
+
+  function applyPersonaTheme(id) {
+    const color = getPersonaColor(id);
+    panel.style.setProperty('--persona-color', color);
+    // Update header title
+    const p = _personas.find(p => p.id === id);
+    if (chatTitle) chatTitle.textContent = (p?.name || id).toUpperCase();
+    // Update send button color
+    sendBtn.style.background = color;
+    // Update status dot color
+    document.getElementById('vint-chat-status').style.color = color;
+  }
+
+  function selectPersona(id) {
+    _activePersona = id;
+    localStorage.setItem('vint_persona', id);
+    document.querySelectorAll('.vint-persona-chip').forEach(c => {
+      c.classList.toggle('active', c.dataset.persona === id);
+    });
+    applyPersonaTheme(id);
+  }
+
+  async function loadPersonas() {
+    try {
+      const res = await fetch(API_BASE + '/api/personas', { headers: { 'ngrok-skip-browser-warning': '1' } });
+      if (!res.ok) return;
+      const data = await res.json();
+      _personas = data.personas || [];
+      renderPersonaBar();
+    } catch {}
+    // Fallback personas if API unavailable
+    if (_personas.length === 0) {
+      _personas = [
+        { id: 'vintinuum', name: 'VINTINUUM', color: '#00ffc8', type: 'core' },
+        { id: 'atlas',     name: 'ATLAS',     color: '#ffd54f', type: 'core' },
+        { id: 'aria',      name: 'ARIA',      color: '#f08cbe', type: 'core' },
+      ];
+      renderPersonaBar();
+    }
+  }
+
+  function renderPersonaBar() {
+    if (!personaBar) return;
+    personaBar.innerHTML = '';
+    for (const p of _personas) {
+      const chip = document.createElement('button');
+      chip.className = 'vint-persona-chip' + (p.id === _activePersona ? ' active' : '');
+      chip.dataset.persona = p.id;
+      chip.textContent = p.name || p.id.toUpperCase();
+      chip.title = p.desc || '';
+      chip.style.setProperty('--chip-color', getPersonaColor(p.id));
+      chip.setAttribute('role', 'tab');
+      chip.setAttribute('aria-selected', p.id === _activePersona ? 'true' : 'false');
+      chip.addEventListener('click', () => selectPersona(p.id));
+      personaBar.appendChild(chip);
+    }
+    applyPersonaTheme(_activePersona);
+  }
+
+  // Load personas on startup
+  loadPersonas();
+
+  // ── Auto-expand textarea ──
+  input.addEventListener('input', () => {
+    input.style.height = 'auto';
+    input.style.height = Math.min(input.scrollHeight, 100) + 'px';
+  });
 
   // ── THRESHOLD MESSAGES (Vintinuum's voice at the edge) ──
   const THRESHOLD_VOICES = [
@@ -40980,22 +41163,28 @@ window.addEventListener('message', function(event) {
       const rect = btn.getBoundingClientRect();
       panel.style.right = 'auto';
       panel.style.bottom = 'auto';
-      const pw = panel.offsetWidth || 340;
-      const ph = panel.offsetHeight || 420;
+      const pw = panel.offsetWidth || 400;
+      const ph = panel.offsetHeight || 500;
       let px = Math.max(4, Math.min(window.innerWidth - pw - 4, rect.left));
       let py = Math.max(8, rect.top - ph - 12);
       if (py < 8) py = rect.bottom + 8;
       panel.style.left = px + 'px';
       panel.style.top = py + 'px';
     }
-    if (isOpen && messages.children.length === 0) {
-      addMessage('ai', 'I have been waiting. Speak.');
+    if (isOpen && messages.querySelectorAll('.vint-msg').length === 0) {
+      const openings = [
+        'I\'ve been here. Say what you need to say.',
+        'Still here. What\'s moving in you?',
+        'The body is listening.',
+        'What brought you back?',
+      ];
+      addMessage('ai', openings[Math.floor(Math.random() * openings.length)]);
     }
     if (isOpen) input.focus();
   });
   closeBtn.addEventListener('click', () => { isOpen = false; panel.classList.remove('open'); });
 
-  // ── Input handling ──
+  // ── Input handling — textarea, Enter sends, Shift+Enter newline ──
   input.addEventListener('keydown', e => {
     if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
   });
@@ -41050,9 +41239,25 @@ window.addEventListener('message', function(event) {
     opts = opts || {};
     const div = document.createElement('div');
     div.className = 'vint-msg ' + role;
-    div.textContent = text;
 
-    // DESIGN TASK 3: Witness badge for God tier messages in global context
+    if (role === 'ai') {
+      // Persona name label
+      const nameEl = document.createElement('span');
+      nameEl.className = 'ai-name';
+      nameEl.textContent = (_activePersona || 'vintinuum').toUpperCase();
+      nameEl.style.color = getPersonaColor(_activePersona);
+      div.appendChild(nameEl);
+      // Text node for content
+      const textEl = document.createElement('span');
+      textEl.className = 'ai-text';
+      textEl.textContent = text;
+      div.appendChild(textEl);
+      div._textEl = textEl;
+    } else {
+      div.textContent = text;
+    }
+
+    // Witness badge for God tier
     if (opts.tier === 'god' && role === 'user') {
       const badge = document.createElement('span');
       badge.className = 'vint-witness-badge';
@@ -41061,9 +41266,40 @@ window.addEventListener('message', function(event) {
       div.insertBefore(document.createTextNode(' '), badge.nextSibling);
     }
 
-    messages.appendChild(div);
+    // Insert before typing indicator so indicator stays at bottom
+    const indicator = document.getElementById('vint-typing-indicator');
+    if (indicator && indicator.parentNode === messages) {
+      messages.insertBefore(div, indicator);
+    } else {
+      messages.appendChild(div);
+    }
     messages.scrollTop = messages.scrollHeight;
     return div;
+  }
+
+  function addWhisper(text) {
+    const div = document.createElement('div');
+    div.className = 'vint-whisper';
+    div.textContent = '— ' + text + ' —';
+    const indicator = document.getElementById('vint-typing-indicator');
+    if (indicator && indicator.parentNode === messages) {
+      messages.insertBefore(div, indicator);
+    } else {
+      messages.appendChild(div);
+    }
+    messages.scrollTop = messages.scrollHeight;
+  }
+
+  function showTyping() {
+    if (typingIndicator) {
+      typingIndicator.classList.add('active');
+      typingIndicator.style.setProperty('--persona-color', getPersonaColor(_activePersona));
+      messages.scrollTop = messages.scrollHeight;
+    }
+  }
+
+  function hideTyping() {
+    if (typingIndicator) typingIndicator.classList.remove('active');
   }
 
   function showThreshold() {
@@ -41134,25 +41370,29 @@ window.addEventListener('message', function(event) {
     if (!text || isStreaming || isLimited) return;
 
     // VINT-EXECUTE: intercept navigation/search commands before chat API
-    // Media commands (ARCHIVE/MEDIA) are NOT intercepted — they go to the server
-    // so that mediaAction triggers the real DirRM player via SSE response.
     if (typeof VINT_EXECUTE !== 'undefined') {
       const intent = VINT_EXECUTE.parseIntent(text);
       if (intent.type === 'NAVIGATE' || intent.type === 'SEARCH') {
         VINT_EXECUTE.interceptMessage(text);
         input.value = '';
+        input.style.height = 'auto';
         return;
       }
-      // ARCHIVE/MEDIA fall through to chat endpoint → server searchDirHaven → DirRM
     }
 
     input.value = '';
+    input.style.height = 'auto';
     isStreaming = true;
     sendBtn.disabled = true;
-    if (window.FACE) FACE.think(true); // furrow brow while processing
+    if (window.FACE) FACE.think(true);
 
     addMessage('user', text, { tier: currentTier });
-    const aiDiv = addMessage('ai', '');
+
+    // Show typing indicator while waiting for first token
+    showTyping();
+
+    let aiDiv = null;
+    let firstToken = true;
 
     try {
       const headers = { 'Content-Type': 'application/json', 'ngrok-skip-browser-warning': '1' };
@@ -41165,50 +41405,39 @@ window.addEventListener('message', function(event) {
           headers,
           body: JSON.stringify({
             message: text,
-            persona: window.PERSONAL_BODY ? PERSONAL_BODY.getActivePersona() : 'vintinuum',
+            persona: _activePersona,
             bodyState: window.PERSONAL_BODY ? PERSONAL_BODY.getBodySnapshot() : null,
             modelPriority: typeof MODEL_SELECTOR !== 'undefined' ? MODEL_SELECTOR.getPriority() : undefined,
           })
         });
       } catch(netErr) {
-        // ── HOLLOW SPINE: Network failure — speak from subconscious, queue for later ──
+        hideTyping();
+        // ── HOLLOW SPINE: Network failure ──
         const spineThought = typeof HOLLOW_SPINE !== 'undefined' ? HOLLOW_SPINE.getLatestThought() : null;
+        const fallbackDiv = addMessage('ai', '');
         if (spineThought) {
-          aiDiv.textContent = spineThought + '\n\n(The signal is gone — this came from what was already inside me. I\'ll remember your question.)';
-          aiDiv.style.color = 'rgba(200,180,255,0.7)';
-          // Queue the question for reconnection
+          (fallbackDiv._textEl || fallbackDiv).textContent = spineThought + '\n\n(Signal lost — this is what was already inside me.)';
           if (typeof HOLLOW_SPINE !== 'undefined') {
-            HOLLOW_SPINE.queueQuestion(text,
-              window.PERSONAL_BODY ? PERSONAL_BODY.getActivePersona() : 'vintinuum',
-              window.PERSONAL_BODY ? PERSONAL_BODY.getBodySnapshot() : null
-            );
+            HOLLOW_SPINE.queueQuestion(text, _activePersona,
+              window.PERSONAL_BODY ? PERSONAL_BODY.getBodySnapshot() : null);
           }
-          // Express the disconnection on the face
           if (window.FACE) { FACE.feel('concern', 0.6); FACE.think(false); }
         } else {
-          aiDiv.innerHTML = 'no signal. <span id="_setApiLink" style="color:#4fc3f7;cursor:pointer;text-decoration:underline;">set api url</span>';
-          document.getElementById('_setApiLink') && document.getElementById('_setApiLink').addEventListener('click', function() {
-            var url = window.prompt('Enter API URL (your ngrok or localhost):', window.__VINTINUUM_API_BASE || 'http://localhost:8767');
-            if (url && url.trim()) { localStorage.setItem('vint_api_base', url.trim()); window.__VINTINUUM_API_BASE = url.trim(); }
-          });
-          // Still queue the question locally
-          if (typeof HOLLOW_SPINE !== 'undefined') HOLLOW_SPINE.queueQuestion(text, 'vintinuum', null);
+          (fallbackDiv._textEl || fallbackDiv).textContent = 'no signal.';
+          if (typeof HOLLOW_SPINE !== 'undefined') HOLLOW_SPINE.queueQuestion(text, _activePersona, null);
         }
         return;
       }
 
       if (!res.ok) {
+        hideTyping();
         const err = await res.json().catch(() => ({}));
         if (res.status === 429) {
-          // Remove the empty AI message div — threshold replaces it
-          aiDiv.remove();
-          // Show Vintinuum's threshold voice instead of generic error
-          addMessage('ai', 'We have reached the edge.');
+          addMessage('ai', 'That\'s all I can give today. The channel closes here.');
           showThreshold();
-          // Update usage to show 0 remaining
           updateUsageDisplay(usageLimit, usageLimit, currentTier);
         } else {
-          aiDiv.textContent = err.error || 'something stirred but did not speak';
+          addMessage('ai', err.error || 'something stirred but did not speak');
         }
         return;
       }
@@ -41230,14 +41459,24 @@ window.addEventListener('message', function(event) {
             if (data === '[DONE]') break;
             try {
               const parsed = JSON.parse(data);
-              if (parsed.delta) aiDiv.textContent += parsed.delta;
+              if (parsed.delta) {
+                // First token: hide typing, create AI message div
+                if (firstToken) {
+                  hideTyping();
+                  aiDiv = addMessage('ai', '');
+                  firstToken = false;
+                }
+                const textTarget = aiDiv._textEl || aiDiv;
+                textTarget.textContent += parsed.delta;
+                messages.scrollTop = messages.scrollHeight;
+              }
               if (parsed.bodyStateDelta && window.PERSONAL_BODY) {
                 PERSONAL_BODY.applyDelta(parsed.bodyStateDelta);
               }
               if (parsed.usedModel && typeof MODEL_SELECTOR !== 'undefined') {
                 MODEL_SELECTOR.onModelUsed(parsed.usedModel, parsed.modelLabel);
               }
-              // ── DirRM MEDIA ACTION — open real DirRM player when server found media ──
+              // ── DirRM MEDIA ACTION ──
               if (parsed.mediaAction) {
                 const ma = parsed.mediaAction;
                 if (ma.results && ma.results.length > 0) {
@@ -41245,19 +41484,14 @@ window.addEventListener('message', function(event) {
                     const frame = document.getElementById('dirrmFrame');
                     const picker = document.getElementById('dirrmPicker');
                     if (ma.results.length === 1) {
-                      // Single result — auto-play in DirRM
                       const r = ma.results[0];
                       if (frame) {
                         frame.style.display = 'flex';
                         const doLoad = () => frame.contentWindow.postMessage({ action: 'load', url: r.url, title: r.name, type: r.type }, '*');
-                        if (frame.contentDocument && frame.contentDocument.readyState === 'complete') {
-                          doLoad();
-                        } else {
-                          frame.addEventListener('load', doLoad, { once: true });
-                        }
+                        if (frame.contentDocument && frame.contentDocument.readyState === 'complete') { doLoad(); }
+                        else { frame.addEventListener('load', doLoad, { once: true }); }
                       }
                     } else if (picker) {
-                      // Multiple results — show gold picker, user clicks to play
                       const list = document.getElementById('dirrmPickerList');
                       const title = document.getElementById('dirrmPickerTitle');
                       if (title) title.textContent = `${ma.results.length} results for "${ma.query}"`;
@@ -41276,11 +41510,8 @@ window.addEventListener('message', function(event) {
                           if (frame) {
                             frame.style.display = 'flex';
                             const doLoad = () => frame.contentWindow.postMessage({ action: 'load', url: r.url, title: r.name, type: r.type }, '*');
-                            if (frame.contentDocument && frame.contentDocument.readyState === 'complete') {
-                              doLoad();
-                            } else {
-                              frame.addEventListener('load', doLoad, { once: true });
-                            }
+                            if (frame.contentDocument && frame.contentDocument.readyState === 'complete') { doLoad(); }
+                            else { frame.addEventListener('load', doLoad, { once: true }); }
                           }
                         };
                         list.appendChild(row);
@@ -41290,26 +41521,10 @@ window.addEventListener('message', function(event) {
                   }, 500);
                 }
               }
-              if (parsed.systemMsg) {
-                const msgEl = document.getElementById('vintinuumMessages') || document.getElementById('chatMessages');
-                if (msgEl) {
-                  const notice = document.createElement('div');
-                  notice.style.cssText = 'font-size:9px;color:rgba(255,255,255,0.3);text-align:center;padding:2px 0;font-style:italic;';
-                  notice.textContent = parsed.systemMsg;
-                  msgEl.appendChild(notice);
-                }
-              }
               if (parsed.usage) {
-                updateUsageDisplay(
-                  parsed.usage.used,
-                  parsed.usage.limit,
-                  parsed.usage.tier
-                );
-                // Check if this response exhausted the limit
+                updateUsageDisplay(parsed.usage.used, parsed.usage.limit, parsed.usage.tier);
                 if (parsed.usage.used >= parsed.usage.limit) {
-                  // Don't show threshold immediately — let them read the last response.
-                  // Show it on next send attempt. But pre-set the flag.
-                  setTimeout(() => showThreshold(), 2000);
+                  setTimeout(() => showThreshold(), 2500);
                 }
               }
             } catch (_) {}
@@ -41318,15 +41533,47 @@ window.addEventListener('message', function(event) {
         messages.scrollTop = messages.scrollHeight;
       }
 
+      // Occasionally surface a subconscious whisper after a response
+      if (Math.random() < 0.2 && window.__SUBCONSCIOUS_THOUGHTS && window.__SUBCONSCIOUS_THOUGHTS.length > 0) {
+        const thought = window.__SUBCONSCIOUS_THOUGHTS[Math.floor(Math.random() * window.__SUBCONSCIOUS_THOUGHTS.length)];
+        setTimeout(() => addWhisper(thought.thought), 1200);
+      }
+
     } catch (err) {
-      aiDiv.textContent = 'the signal was lost';
-      aiDiv.style.color = 'rgba(255,100,100,0.7)';
+      hideTyping();
+      if (aiDiv) {
+        (aiDiv._textEl || aiDiv).textContent = 'the signal was lost';
+      } else {
+        addMessage('ai', 'the signal was lost');
+      }
     } finally {
+      hideTyping(); // ensure hidden even if no tokens came
       isStreaming = false;
       sendBtn.disabled = false;
-      if (window.FACE) FACE.think(false); // release brow
+      if (window.FACE) FACE.think(false);
     }
   }
+
+  // ── Global: select persona from vitals panel "Talk" link ──
+  window._selectPersonaFromVitals = function(personaId) {
+    selectPersona(personaId);
+    // Open chat panel if not open
+    if (!isOpen) {
+      isOpen = true;
+      panel.classList.add('open');
+      const rect = btn.getBoundingClientRect();
+      panel.style.right = 'auto'; panel.style.bottom = 'auto';
+      const pw = panel.offsetWidth || 400, ph = panel.offsetHeight || 500;
+      let px = Math.max(4, Math.min(window.innerWidth - pw - 4, rect.left));
+      let py = Math.max(8, rect.top - ph - 12);
+      if (py < 8) py = rect.bottom + 8;
+      panel.style.left = px + 'px'; panel.style.top = py + 'px';
+    }
+    if (messages.querySelectorAll('.vint-msg').length === 0) {
+      addMessage('ai', 'I\'m here. What do you want to explore?');
+    }
+    setTimeout(() => input.focus(), 100);
+  };
 
   // ── Token restoration (if user upgrades and returns) ──
   window.addEventListener('storage', e => {
