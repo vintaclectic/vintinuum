@@ -40705,10 +40705,33 @@ const INNER_LIFE = (() => {
       });
       return stats;
     },
-    clear: () => { buffer.length = 0; if (feedEl) feedEl.innerHTML = ''; }
+    clear: () => { buffer.length = 0; if (feedEl) feedEl.innerHTML = ''; },
+    getBuffer: () => buffer.slice()
   };
 })();
 window.INNER_LIFE = INNER_LIFE;
+
+// ── Extension Inner Life Bridge ──
+// When content.js polls, send back the current buffer + persona state
+window.addEventListener('message', function(event) {
+  if (event.source !== window) return;
+  if (event.data?.type !== 'VINTINUUM_IL_POLL') return;
+  try {
+    const buf = (typeof INNER_LIFE !== 'undefined' && INNER_LIFE.getBuffer) ? INNER_LIFE.getBuffer() : [];
+    const pb = window.PERSONAL_BODY ? PERSONAL_BODY.getBodySnapshot() : null;
+    const persona = pb?.active_persona || window.__VINTINUUM_ACTIVE_PERSONA || 'vintinuum';
+    const model = window.__VINTINUUM_LAST_MODEL || 'detecting...';
+    window.postMessage({
+      type: 'VINTINUUM_IL_DATA',
+      payload: {
+        entries: (buf || []).slice(-15).reverse(),
+        persona,
+        model,
+        ts: Date.now()
+      }
+    }, '*');
+  } catch(e) {}
+});
 
 // Wire pause/play button for Inner Life feed
 (function() {
