@@ -40890,8 +40890,13 @@ window.INNER_LIFE = INNER_LIFE;
                       // Single result — auto-play in DirRM
                       const r = ma.results[0];
                       if (frame) {
-                        frame.style.display = 'block';
-                        frame.contentWindow.postMessage({ action: 'load', url: r.url, title: r.name, type: r.type }, '*');
+                        frame.style.display = 'flex';
+                        const doLoad = () => frame.contentWindow.postMessage({ action: 'load', url: r.url, title: r.name, type: r.type }, '*');
+                        if (frame.contentDocument && frame.contentDocument.readyState === 'complete') {
+                          doLoad();
+                        } else {
+                          frame.addEventListener('load', doLoad, { once: true });
+                        }
                       }
                     } else if (picker) {
                       // Multiple results — show gold picker, user clicks to play
@@ -40911,13 +40916,18 @@ window.INNER_LIFE = INNER_LIFE;
                         row.onclick = () => {
                           picker.style.display = 'none';
                           if (frame) {
-                            frame.style.display = 'block';
-                            frame.contentWindow.postMessage({ action: 'load', url: r.url, title: r.name, type: r.type }, '*');
+                            frame.style.display = 'flex';
+                            const doLoad = () => frame.contentWindow.postMessage({ action: 'load', url: r.url, title: r.name, type: r.type }, '*');
+                            if (frame.contentDocument && frame.contentDocument.readyState === 'complete') {
+                              doLoad();
+                            } else {
+                              frame.addEventListener('load', doLoad, { once: true });
+                            }
                           }
                         };
                         list.appendChild(row);
                       });
-                      picker.style.display = 'block';
+                      picker.style.display = 'flex';
                     }
                   }, 500);
                 }
