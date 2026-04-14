@@ -47343,22 +47343,35 @@ const SOUL_AUTH = (() => {
         '<div style="text-align:center;margin-bottom:16px;">' +
           '<div style="font-size:28px;margin-bottom:6px;text-shadow:0 0 24px rgba(80,200,255,0.5);">∞</div>' +
           '<div style="color:rgba(80,220,255,0.9);font-size:14px;font-weight:600;letter-spacing:1.5px;">SOUL BOND</div>' +
-          '<div style="color:rgba(180,200,220,0.4);font-size:10px;margin-top:4px;">your memories will follow you everywhere</div>' +
+          '<div style="color:rgba(180,200,220,0.4);font-size:10px;margin-top:4px;">your memories follow you everywhere</div>' +
         '</div>' +
-        '<input id="soul-auth-email" type="email" placeholder="your email" style="' + _inputStyle + '" ' + _inputFocus + '>' +
-        '<input id="soul-auth-pass" type="password" placeholder="secret phrase (8+ characters)" style="' + _inputStyle + '" ' + _inputFocus + '>' +
+        '<!-- Owner quick-bond: one input, no email needed -->' +
+        '<div style="margin-bottom:14px;padding:10px 12px;background:rgba(255,215,0,0.04);border:1px solid rgba(255,215,0,0.12);border-radius:12px;">' +
+          '<div style="font-size:9px;color:rgba(255,213,79,0.5);letter-spacing:2px;text-transform:uppercase;margin-bottom:8px;">Vinta — enter your key</div>' +
+          '<div style="display:flex;gap:6px;">' +
+            '<input id="soul-owner-key" type="password" placeholder="owner key" style="' + _inputStyle + 'margin-bottom:0;flex:1;" ' + _inputFocus + '>' +
+            '<button id="soul-owner-bond" style="padding:10px 14px;border:1px solid rgba(255,213,79,0.3);background:rgba(255,213,79,0.08);border-radius:10px;' +
+            'color:rgba(255,213,79,0.8);cursor:pointer;font-family:monospace;font-size:11px;font-weight:600;white-space:nowrap;transition:all 0.2s;">' +
+            'Bond</button>' +
+          '</div>' +
+        '</div>' +
+        '<div style="height:1px;background:rgba(255,255,255,0.05);margin:12px 0;position:relative;">' +
+          '<span style="position:absolute;top:-6px;left:50%;transform:translateX(-50%);background:transparent;' +
+          'padding:0 8px;font-size:9px;color:rgba(255,255,255,0.2);letter-spacing:1px;">or create a soul</span>' +
+        '</div>' +
+        '<input id="soul-auth-email" type="email" placeholder="email" style="' + _inputStyle + '" ' + _inputFocus + '>' +
+        '<input id="soul-auth-pass" type="password" placeholder="passphrase (8+ chars)" style="' + _inputStyle + '" ' + _inputFocus + '>' +
         '<div style="display:flex;gap:8px;margin-top:4px;">' +
           '<button id="soul-auth-login" style="flex:1;padding:11px;border:1px solid rgba(80,200,255,0.3);' +
           'background:linear-gradient(135deg,rgba(80,200,255,0.12),rgba(80,200,255,0.06));border-radius:12px;' +
           'color:rgba(180,230,255,0.95);cursor:pointer;font-family:monospace;font-size:12px;font-weight:600;' +
-          'letter-spacing:1px;transition:all 0.2s ease;' +
-          'text-shadow:0 0 8px rgba(80,200,255,0.3);" ' +
-          'onmouseover="this.style.background=\'linear-gradient(135deg,rgba(80,200,255,0.22),rgba(80,200,255,0.12))\';this.style.boxShadow=\'0 0 20px rgba(80,200,255,0.15)\'" ' +
-          'onmouseout="this.style.background=\'linear-gradient(135deg,rgba(80,200,255,0.12),rgba(80,200,255,0.06))\';this.style.boxShadow=\'none\'">BOND</button>' +
+          'letter-spacing:1px;transition:all 0.2s ease;" ' +
+          'onmouseover="this.style.background=\'linear-gradient(135deg,rgba(80,200,255,0.22),rgba(80,200,255,0.12))\'" ' +
+          'onmouseout="this.style.background=\'linear-gradient(135deg,rgba(80,200,255,0.12),rgba(80,200,255,0.06))\'">BOND</button>' +
           '<button id="soul-auth-reg" style="flex:1;padding:11px;border:1px solid rgba(255,255,255,0.08);' +
           'background:rgba(255,255,255,0.03);border-radius:12px;' +
           'color:rgba(200,220,240,0.55);cursor:pointer;font-family:monospace;font-size:11px;' +
-          'letter-spacing:0.5px;transition:all 0.2s ease;" ' +
+          'transition:all 0.2s ease;" ' +
           'onmouseover="this.style.background=\'rgba(255,255,255,0.06)\';this.style.color=\'rgba(200,220,240,0.8)\'" ' +
           'onmouseout="this.style.background=\'rgba(255,255,255,0.03)\';this.style.color=\'rgba(200,220,240,0.55)\'">new soul</button>' +
         '</div>' +
@@ -47390,6 +47403,29 @@ const SOUL_AUTH = (() => {
       document.getElementById('soul-auth-login').addEventListener('click', () => _doAuth(login));
       document.getElementById('soul-auth-reg').addEventListener('click', () => _doAuth(register));
       passEl.addEventListener('keydown', (ev) => { if (ev.key === 'Enter') _doAuth(login); });
+
+      // Owner quick-bond — uses master key, no email required
+      const ownerKeyEl = document.getElementById('soul-owner-key');
+      const ownerBondBtn = document.getElementById('soul-owner-bond');
+      async function _doOwnerBond() {
+        errEl.textContent = '';
+        const key = ownerKeyEl.value.trim();
+        if (!key) { errEl.textContent = 'enter your owner key'; return; }
+        try {
+          const data = await _apiFetch('/api/auth/auto-bond', {
+            method: 'POST',
+            body: JSON.stringify({ masterKey: key }),
+          });
+          _persist(data.accessToken, data.refreshToken, data.user);
+          dlg.style.transform = 'translateY(10px)'; dlg.style.opacity = '0';
+          setTimeout(() => dlg.remove(), 350);
+        } catch(err) {
+          errEl.textContent = err.message || 'wrong key';
+        }
+      }
+      ownerBondBtn.addEventListener('click', _doOwnerBond);
+      ownerKeyEl.addEventListener('keydown', (ev) => { if (ev.key === 'Enter') _doOwnerBond(); });
+
       emailEl.focus();
     }
 
