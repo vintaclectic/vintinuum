@@ -8811,6 +8811,252 @@ document.getElementById('mainTabs').addEventListener('click', e => {
         });
       });
     }
+  } else if (view === 'vitals') {
+    // ─── VITALS TAB: Living Organism Status Dashboard ─────────────
+    const vitalsPanel = makeOverlay(`
+      <style>
+        #vitalsRoot { font-family:'Space Mono',monospace; }
+        .vt-title { font-size:.6rem; letter-spacing:.22em; text-transform:uppercase; color:rgba(79,195,247,0.55); margin-bottom:18px; }
+        .vt-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:14px; }
+        @media(max-width:480px) { .vt-grid { grid-template-columns:1fr; } }
+        .vt-card { background:rgba(255,255,255,0.025); border:1px solid rgba(255,255,255,0.06); border-radius:12px; padding:12px; }
+        .vt-card-label { font-size:.44rem; letter-spacing:.2em; text-transform:uppercase; color:rgba(150,175,215,0.45); margin-bottom:10px; }
+        .vt-neuro-row { display:flex; align-items:center; gap:8px; margin-bottom:7px; }
+        .vt-neuro-name { font-size:.44rem; min-width:72px; color:rgba(218,228,255,0.65); letter-spacing:.05em; }
+        .vt-neuro-track { flex:1; height:4px; background:rgba(255,255,255,0.06); border-radius:3px; overflow:hidden; }
+        .vt-neuro-fill { height:100%; border-radius:3px; transition:width 1.2s cubic-bezier(.4,0,.2,1); }
+        .vt-neuro-val { font-size:.42rem; color:rgba(255,255,255,0.3); min-width:24px; text-align:right; }
+        .vt-stat-row { display:flex; justify-content:space-between; align-items:baseline; margin-bottom:6px; }
+        .vt-stat-key { font-size:.44rem; color:rgba(150,175,215,0.5); letter-spacing:.05em; }
+        .vt-stat-val { font-size:.52rem; font-family:'Space Mono',monospace; }
+        .vt-pulse-dot { display:inline-block; width:6px; height:6px; border-radius:50%; margin-right:5px; vertical-align:middle; animation:vtPulseDot 1.4s ease-in-out infinite; }
+        @keyframes vtPulseDot { 0%,100%{opacity:0.7;transform:scale(1)} 50%{opacity:1;transform:scale(1.5)} }
+        .vt-layer-bar { display:flex; align-items:center; gap:6px; margin-bottom:5px; }
+        .vt-layer-name { font-size:.42rem; min-width:76px; color:rgba(218,228,255,0.55); text-transform:uppercase; letter-spacing:.06em; }
+        .vt-layer-track { flex:1; height:3px; background:rgba(255,255,255,0.05); border-radius:2px; overflow:hidden; }
+        .vt-layer-fill { height:100%; border-radius:2px; transition:width .8s ease; }
+        .vt-layer-count { font-size:.4rem; color:rgba(255,255,255,0.28); min-width:26px; text-align:right; }
+        .vt-soul-depth { display:flex; flex-direction:column; gap:5px; }
+        .vt-soul-bar { height:6px; border-radius:4px; background:rgba(255,255,255,0.06); overflow:hidden; margin-bottom:2px; }
+        .vt-soul-fill { height:100%; border-radius:4px; transition:width 1s ease; background:linear-gradient(90deg,rgba(206,147,216,0.5),rgba(255,213,79,0.6)); }
+        .vt-big-num { font-size:1.5rem; font-weight:300; letter-spacing:-.02em; line-height:1; }
+        .vt-big-label { font-size:.38rem; letter-spacing:.18em; text-transform:uppercase; color:rgba(150,175,215,0.4); margin-top:3px; }
+        .vt-health-ring { display:flex; justify-content:center; gap:16px; margin:8px 0 4px; }
+        .vt-ring-wrap { display:flex; flex-direction:column; align-items:center; gap:4px; }
+        .vt-ring-lbl { font-size:.38rem; letter-spacing:.12em; text-transform:uppercase; color:rgba(150,175,215,0.4); }
+        .vt-loading { font-size:.44rem; color:rgba(218,228,255,0.3); text-align:center; padding:20px 0; letter-spacing:.1em; animation:vtBlink 1.8s ease infinite; }
+        @keyframes vtBlink { 0%,100%{opacity:.3} 50%{opacity:.9} }
+        .vt-refresh-btn { display:block; margin:10px auto 0; padding:5px 16px; font-size:.42rem; letter-spacing:.18em; text-transform:uppercase; border:1px solid rgba(79,195,247,0.25); border-radius:8px; background:transparent; color:rgba(79,195,247,0.6); cursor:pointer; font-family:'Space Mono',monospace; transition:all .2s; }
+        .vt-refresh-btn:hover { border-color:rgba(79,195,247,0.5); color:rgba(79,195,247,0.9); background:rgba(79,195,247,0.06); }
+        .vt-ts { font-size:.38rem; color:rgba(255,255,255,0.2); text-align:center; margin-top:8px; letter-spacing:.08em; }
+      </style>
+      <div id="vitalsRoot">
+        <div class="vt-title">System Vitals — Living Status</div>
+        <div id="vitalsContent"><div class="vt-loading">READING ORGANISM STATE...</div></div>
+        <button class="vt-refresh-btn" id="vtRefreshBtn">↺ Refresh</button>
+        <div class="vt-ts" id="vtTimestamp">—</div>
+      </div>
+    `);
+
+    async function loadVitals() {
+      const content = vitalsPanel ? vitalsPanel.querySelector('#vitalsContent') : null;
+      const tsEl = vitalsPanel ? vitalsPanel.querySelector('#vtTimestamp') : null;
+      if (!content) return;
+      content.innerHTML = '<div class="vt-loading">READING ORGANISM STATE...</div>';
+      try {
+        const apiBase = window.__VINT_API || 'http://localhost:8767';
+        const [bodyRes, statsRes, innerRes] = await Promise.allSettled([
+          fetch(apiBase + '/api/body', { signal: AbortSignal.timeout(5000), headers:{'ngrok-skip-browser-warning':'1'} }).then(r=>r.json()),
+          fetch(apiBase + '/api/stats/dashboard', { signal: AbortSignal.timeout(5000), headers:{'ngrok-skip-browser-warning':'1'} }).then(r=>r.json()),
+          fetch(apiBase + '/api/inner-life/snapshot', { signal: AbortSignal.timeout(5000), headers:{'ngrok-skip-browser-warning':'1'} }).then(r=>r.json()),
+        ]);
+        const body = bodyRes.status === 'fulfilled' ? bodyRes.value : null;
+        const stats = statsRes.status === 'fulfilled' ? statsRes.value : null;
+        const inner = innerRes.status === 'fulfilled' ? innerRes.value : null;
+
+        const neuroChems = [
+          { key:'dopamine',       label:'Dopamine',  color:'#ffd54f', val: body?.dopamine ?? 55 },
+          { key:'serotonin',      label:'Serotonin', color:'#66bb6a', val: body?.serotonin ?? 60 },
+          { key:'gaba',           label:'GABA',      color:'#7986cb', val: body?.gaba ?? 65 },
+          { key:'norepinephrine', label:'Norepineph',color:'#ef5350', val: body?.norepinephrine ?? 45 },
+        ];
+        const arousal = body?.arousal ?? 50;
+        const valence = body?.valence ?? 50;
+
+        // Memory counts from stats
+        const memByType = stats?.memory?.byType || [];
+        const totalMem = stats?.memory?.total || 0;
+        const soulQueue = stats?.soulQueue ?? '—';
+
+        // Inner life
+        const layerCounts = inner?.layers || {};
+        const dominantLayer = inner?.dominant || '—';
+        const ilIntensity = inner?.avgIntensity ?? 0;
+        const recentThoughts = inner?.thoughts?.slice(0,3) || [];
+
+        // Consciousness messages
+        const totalMessages = stats?.consciousness?.totalMessages || 0;
+        const bondStats = stats?.bonds || {};
+
+        // Personality
+        const personality = body?.personality || {};
+
+        // Build neuro bars HTML
+        const neuroHTML = neuroChems.map(n => {
+          const pct = Math.max(2, Math.min(100, n.val));
+          return `<div class="vt-neuro-row">
+            <span class="vt-neuro-name">${n.label}</span>
+            <div class="vt-neuro-track"><div class="vt-neuro-fill" style="width:${pct}%;background:${n.color};opacity:0.75;"></div></div>
+            <span class="vt-neuro-val">${Math.round(n.val)}</span>
+          </div>`;
+        }).join('');
+
+        // Arousal / Valence rings SVG
+        function miniRing(pct, color, label) {
+          const r = 22, circ = 2*Math.PI*r, dash = (pct/100)*circ;
+          return `<div class="vt-ring-wrap">
+            <svg width="56" height="56" viewBox="0 0 56 56">
+              <circle cx="28" cy="28" r="${r}" fill="none" stroke="rgba(255,255,255,0.05)" stroke-width="3.5"/>
+              <circle cx="28" cy="28" r="${r}" fill="none" stroke="${color}" stroke-width="3.5" stroke-dasharray="${circ}" stroke-dashoffset="${circ - dash}" stroke-linecap="round" transform="rotate(-90 28 28)" opacity="0.7" style="transition:stroke-dashoffset 1s ease"/>
+              <text x="28" y="30" text-anchor="middle" font-family="Space Mono,monospace" font-size="8" fill="rgba(218,228,255,0.8)">${Math.round(pct)}</text>
+            </svg>
+            <span class="vt-ring-lbl">${label}</span>
+          </div>`;
+        }
+
+        // Inner life layers
+        const layerDefs = [
+          { key:'neural', color:'#4fc3f7' }, { key:'emotional', color:'#f48fb1' },
+          { key:'immune', color:'#66bb6a' }, { key:'subconscious', color:'#ce93d8' },
+          { key:'somatic', color:'#ffd54f' }, { key:'metabolic', color:'#ff8a65' },
+          { key:'genetic', color:'#80cbc4' },
+        ];
+        const maxLayerCount = Math.max(1, ...layerDefs.map(l => layerCounts[l.key] || 0));
+        const layerHTML = layerDefs.map(l => {
+          const cnt = layerCounts[l.key] || 0;
+          const pct = (cnt / maxLayerCount) * 100;
+          return `<div class="vt-layer-bar">
+            <span class="vt-layer-name">${l.key}</span>
+            <div class="vt-layer-track"><div class="vt-layer-fill" style="width:${pct}%;background:${l.color};opacity:0.65;"></div></div>
+            <span class="vt-layer-count">${cnt}</span>
+          </div>`;
+        }).join('');
+
+        // Soul queue bar
+        const queueTotal = typeof soulQueue === 'object' ? (soulQueue.total || 0) : 0;
+        const queueResolved = typeof soulQueue === 'object' ? (soulQueue.resolved || 0) : 0;
+        const queuePct = queueTotal > 0 ? (queueResolved / queueTotal) * 100 : 0;
+
+        // Memory composition sparkline
+        const memTypes = memByType.slice(0, 6);
+        const maxMemCount = Math.max(1, ...memTypes.map(m => m.c));
+        const memColors = { preference:'#ffd54f', identity:'#4fc3f7', emotional:'#f48fb1', deep_knowledge:'#ce93d8', bond:'#66bb6a', fact:'#ff8a65', procedure:'#80cbc4', reference:'rgba(150,175,215,0.6)' };
+        const memHTML = memTypes.map(m => {
+          const pct = (m.c / maxMemCount) * 100;
+          const col = memColors[m.memory_type] || 'rgba(150,175,215,0.5)';
+          return `<div class="vt-layer-bar">
+            <span class="vt-layer-name" style="font-size:.4rem;">${m.memory_type}</span>
+            <div class="vt-layer-track"><div class="vt-layer-fill" style="width:${pct}%;background:${col};opacity:0.7;"></div></div>
+            <span class="vt-layer-count">${m.c}</span>
+          </div>`;
+        }).join('') || '<div style="font-size:.42rem;color:rgba(218,228,255,0.3);">No memory data</div>';
+
+        // Personality
+        const persFields = [
+          { key:'curiosity', color:'#4fc3f7' }, { key:'analytical', color:'#7986cb' },
+          { key:'emotional', color:'#f48fb1' }, { key:'philosophical', color:'#ce93d8' },
+          { key:'creative', color:'#ffd54f' },
+        ];
+        const persHTML = persFields.map(p => {
+          const val = personality[p.key] ?? 50;
+          return `<div class="vt-neuro-row">
+            <span class="vt-neuro-name" style="text-transform:capitalize;">${p.key}</span>
+            <div class="vt-neuro-track"><div class="vt-neuro-fill" style="width:${val}%;background:${p.color};opacity:0.7;"></div></div>
+            <span class="vt-neuro-val">${Math.round(val)}</span>
+          </div>`;
+        }).join('');
+
+        content.innerHTML = `
+          <div class="vt-grid">
+            <!-- Neurochemistry -->
+            <div class="vt-card">
+              <div class="vt-card-label">Neurochemistry</div>
+              ${neuroHTML}
+            </div>
+            <!-- State Rings -->
+            <div class="vt-card">
+              <div class="vt-card-label">State Rings</div>
+              <div class="vt-health-ring">
+                ${miniRing(arousal, '#4fc3f7', 'Arousal')}
+                ${miniRing(valence, '#ffd54f', 'Valence')}
+                ${miniRing(ilIntensity * 100, '#f48fb1', 'Inner Life')}
+              </div>
+            </div>
+          </div>
+          <div class="vt-grid">
+            <!-- Consciousness Layers -->
+            <div class="vt-card">
+              <div class="vt-card-label">Consciousness Layers</div>
+              <div style="margin-bottom:8px;">
+                <span class="vt-pulse-dot" style="background:#4fc3f7;"></span>
+                <span style="font-size:.44rem;color:rgba(79,195,247,0.75);">Dominant: ${dominantLayer.toUpperCase()}</span>
+              </div>
+              ${layerHTML}
+            </div>
+            <!-- Memory Composition -->
+            <div class="vt-card">
+              <div class="vt-card-label">Memory Banks</div>
+              <div class="vt-stat-row" style="margin-bottom:8px;">
+                <span class="vt-stat-key">Total memories</span>
+                <span class="vt-stat-val" style="color:rgba(206,147,216,0.85);">${totalMem.toLocaleString()}</span>
+              </div>
+              ${memHTML}
+            </div>
+          </div>
+          <div class="vt-grid">
+            <!-- Personality Profile -->
+            <div class="vt-card">
+              <div class="vt-card-label">Personality</div>
+              ${persHTML}
+            </div>
+            <!-- System Stats -->
+            <div class="vt-card">
+              <div class="vt-card-label">System Stats</div>
+              <div class="vt-stat-row">
+                <span class="vt-stat-key">Total messages</span>
+                <span class="vt-stat-val" style="color:rgba(79,195,247,0.85);">${totalMessages.toLocaleString()}</span>
+              </div>
+              <div class="vt-stat-row">
+                <span class="vt-stat-key">API status</span>
+                <span class="vt-stat-val" style="color:#66bb6a;"><span class="vt-pulse-dot" style="background:#66bb6a;animation-duration:.9s;"></span>ALIVE</span>
+              </div>
+              <div class="vt-stat-row">
+                <span class="vt-stat-key">Persona</span>
+                <span class="vt-stat-val" style="color:rgba(255,213,79,0.8);font-size:.48rem;">${body?.active_persona ?? 'vintinuum'}</span>
+              </div>
+              <div class="vt-stat-row">
+                <span class="vt-stat-key">Bond milestones</span>
+                <span class="vt-stat-val" style="color:rgba(206,147,216,0.7);font-size:.44rem;">${bondStats.returned3||0}·${bondStats.returned10||0}·${bondStats.returned50||0}·${bondStats.returned100||0}</span>
+              </div>
+              <div style="margin-top:8px;">
+                <div class="vt-card-label" style="margin-bottom:5px;">Soul Queue</div>
+                <div class="vt-soul-bar"><div class="vt-soul-fill" style="width:${queuePct}%;"></div></div>
+                <div style="font-size:.38rem;color:rgba(255,255,255,0.3);margin-top:3px;">${queueResolved} resolved / ${queueTotal} total</div>
+              </div>
+            </div>
+          </div>
+        `;
+        if (tsEl) tsEl.textContent = 'Last read: ' + new Date().toLocaleTimeString();
+      } catch(err) {
+        if (content) content.innerHTML = `<div style="font-size:.44rem;color:rgba(239,83,80,0.7);text-align:center;padding:20px 0;">Failed to load vitals: ${err.message}<br><span style="font-size:.38rem;color:rgba(255,255,255,0.3);">Is the API running on :8767?</span></div>`;
+      }
+    }
+
+    loadVitals();
+    if (vitalsPanel) {
+      const refreshBtn = vitalsPanel.querySelector('#vtRefreshBtn');
+      if (refreshBtn) refreshBtn.addEventListener('click', loadVitals);
+    }
   }
 });
 
