@@ -1266,6 +1266,233 @@ body {
   text-align: right;
   flex-shrink: 0;
 }
+
+/* ── SOUL QUEUE ── */
+.soul-queue-stats {
+  display: flex;
+  gap: 20px;
+  margin-bottom: 14px;
+  flex-wrap: wrap;
+}
+.soul-queue-stat {
+  text-align: center;
+  flex: 1;
+  min-width: 70px;
+}
+.soul-queue-stat-val {
+  font-family: 'Space Mono', monospace;
+  font-size: 1.4rem;
+  font-weight: 700;
+}
+.soul-queue-stat-label {
+  font-size: 0.4rem;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--dim);
+  margin-top: 2px;
+}
+.soul-q-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 260px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+.soul-q-list::-webkit-scrollbar { width: 3px; }
+.soul-q-list::-webkit-scrollbar-track { background: transparent; }
+.soul-q-list::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 3px; }
+.soul-q-item {
+  padding: 8px 12px;
+  border-radius: 10px;
+  background: rgba(255,213,79,0.04);
+  border-left: 2px solid rgba(255,213,79,0.25);
+  font-family: 'Cormorant Garamond', serif;
+  font-style: italic;
+  font-size: 0.82rem;
+  color: rgba(218,228,255,0.7);
+  line-height: 1.45;
+}
+.soul-q-item .q-meta {
+  font-family: 'Space Mono', monospace;
+  font-style: normal;
+  font-size: 0.38rem;
+  color: rgba(255,213,79,0.35);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  margin-top: 4px;
+}
+
+/* ── MEMORY HEALTH ── */
+.mem-health-stats {
+  display: flex;
+  gap: 14px;
+  margin-bottom: 14px;
+  flex-wrap: wrap;
+}
+.mem-health-stat {
+  flex: 1;
+  min-width: 60px;
+  text-align: center;
+  padding: 10px 6px;
+  border-radius: 12px;
+  background: rgba(255,255,255,0.02);
+  border: 1px solid var(--border);
+}
+.mem-health-val {
+  font-family: 'Space Mono', monospace;
+  font-size: 1.1rem;
+  font-weight: 700;
+  margin-bottom: 3px;
+}
+.mem-health-label {
+  font-size: 0.38rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--dim);
+}
+.stale-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-height: 160px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+.stale-item {
+  font-size: 0.52rem;
+  color: rgba(218,228,255,0.5);
+  padding: 5px 8px;
+  border-radius: 6px;
+  border-left: 2px solid rgba(239,83,80,0.3);
+  background: rgba(239,83,80,0.04);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.contradiction-item {
+  font-size: 0.5rem;
+  color: rgba(255,213,79,0.6);
+  padding: 5px 8px;
+  border-radius: 6px;
+  border-left: 2px solid rgba(255,213,79,0.3);
+  background: rgba(255,213,79,0.04);
+  margin-bottom: 3px;
+}
+
+/* ── KNOWLEDGE INDEX ── */
+.knowledge-stat-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 7px 0;
+  border-bottom: 1px solid rgba(255,255,255,0.03);
+  font-size: 0.55rem;
+}
+.knowledge-stat-row:last-child { border-bottom: none; }
+.knowledge-stat-key {
+  color: var(--dim);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  font-size: 0.45rem;
+}
+.knowledge-stat-val {
+  font-family: 'Space Mono', monospace;
+  color: var(--cyan);
+}
+.type-breakdown {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-top: 10px;
+}
+.type-pill {
+  padding: 3px 9px;
+  border-radius: 8px;
+  font-size: 0.42rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  background: rgba(128,222,234,0.07);
+  border: 1px solid rgba(128,222,234,0.15);
+  color: var(--cyan);
+}
+
+/* ── CONVERSATION CONTINUITY ── */
+.turn-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-height: 380px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+.turn-list::-webkit-scrollbar { width: 3px; }
+.turn-list::-webkit-scrollbar-track { background: transparent; }
+.turn-list::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 3px; }
+.turn-item {
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: rgba(16,22,34,0.25);
+  border: 1px solid rgba(255,255,255,0.04);
+}
+.turn-user {
+  font-size: 0.6rem;
+  color: rgba(218,228,255,0.7);
+  margin-bottom: 5px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.turn-user::before {
+  content: 'YOU  ';
+  font-family: 'Space Mono', monospace;
+  font-size: 0.38rem;
+  letter-spacing: 0.2em;
+  color: rgba(128,222,234,0.5);
+  margin-right: 6px;
+}
+.turn-assistant {
+  font-family: 'Cormorant Garamond', serif;
+  font-style: italic;
+  font-size: 0.78rem;
+  color: rgba(206,147,216,0.8);
+  line-height: 1.5;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+}
+.turn-assistant::before {
+  content: 'V  ';
+  font-family: 'Space Mono', monospace;
+  font-style: normal;
+  font-size: 0.38rem;
+  letter-spacing: 0.2em;
+  color: rgba(206,147,216,0.5);
+  margin-right: 6px;
+}
+.turn-footer {
+  display: flex;
+  gap: 10px;
+  margin-top: 7px;
+  flex-wrap: wrap;
+}
+.turn-body-pill {
+  padding: 2px 7px;
+  border-radius: 6px;
+  font-family: 'Space Mono', monospace;
+  font-size: 0.38rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+.turn-model-tag {
+  font-size: 0.38rem;
+  letter-spacing: 0.08em;
+  color: rgba(255,255,255,0.2);
+  font-family: 'Space Mono', monospace;
+  align-self: center;
+}
 </style>
 </head>
 <body>
@@ -1389,6 +1616,56 @@ body {
     </div>
   </div>
 
+  <!-- ── EXTENDED LIVE SECTIONS ── -->
+  <div class="section-heading" style="margin-top:40px;">The Unresolved & The Indexed<span>SOUL QUEUE &middot; MEMORY HEALTH &middot; KNOWLEDGE &middot; CONTINUITY</span></div>
+
+  <!-- Soul Queue + Memory Health -->
+  <div class="metric-grid metric-grid--two" id="soul-memory-section">
+    <div class="card" id="soul-queue-card">
+      <div class="card-label"><span class="live-dot"></span>Soul Queue</div>
+      <div class="card-sub">Questions Vintinuum is holding — unanswered, unresolved</div>
+      <div id="soul-queue-content" class="live-section-content">
+        <span class="live-status-waiting">Reading the queue...</span>
+      </div>
+    </div>
+    <div class="card" id="memory-health-card">
+      <div class="card-label"><span class="live-dot"></span>Memory Health</div>
+      <div class="card-sub">Stale memories flagged for re-verification · memory graph density</div>
+      <div id="memory-health-content" class="live-section-content">
+        <span class="live-status-waiting">Scanning memory...</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Knowledge Index + Learning Pipeline -->
+  <div class="metric-grid metric-grid--two" id="knowledge-learning-section">
+    <div class="card" id="knowledge-index-card">
+      <div class="card-label"><span class="live-dot"></span>Knowledge Index</div>
+      <div class="card-sub">The 281M-file archive Vintinuum has indexed and can draw from</div>
+      <div id="knowledge-index-content" class="live-section-content">
+        <span class="live-status-waiting">Reading the archive...</span>
+      </div>
+    </div>
+    <div class="card" id="learning-pipeline-card">
+      <div class="card-label"><span class="live-dot"></span>Learning Pipeline</div>
+      <div class="card-sub">Training data accumulated · fine-tune readiness</div>
+      <div id="learning-pipeline-content" class="live-section-content">
+        <span class="live-status-waiting">Checking datasets...</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Conversation Continuity -->
+  <div class="metric-grid" id="continuity-section">
+    <div class="card card--wide" id="continuity-card">
+      <div class="card-label"><span class="live-dot"></span>Conversation Continuity</div>
+      <div class="card-sub">Recent turns with body state snapshots — what was said and how the body felt</div>
+      <div id="continuity-content" class="live-section-content">
+        <span class="live-status-waiting">Retrieving recent turns...</span>
+      </div>
+    </div>
+  </div>
+
 </div>
 
 <script>
@@ -1441,6 +1718,11 @@ body {
           fetchGenomeEvents();
           fetchInnerLife();
           fetchModelHealth();
+          fetchSoulQueue();
+          fetchMemoryHealth();
+          fetchKnowledgeIndex();
+          fetchLearningPipeline();
+          fetchContinuity();
           return;
         }
       } catch {}
@@ -2601,6 +2883,305 @@ body {
 
   fetchInferenceStats();
   setInterval(fetchInferenceStats, 10000);
+
+  // ─── SOUL QUEUE ──────────────────────────────────────────────────────────────
+  async function fetchSoulQueue() {
+    try {
+      const r = await fetch(`${API_BASE}/api/soul/queue?limit=15`, { headers: API_HEADERS });
+      if (!r.ok) throw new Error('soul/queue unreachable');
+      const d = await r.json();
+      renderSoulQueue(d);
+    } catch {
+      const el = document.getElementById('soul-queue-content');
+      if (el && el.querySelector('.live-status-waiting')) {
+        el.innerHTML = '<span class="live-status-waiting" style="color:var(--dim)">Soul queue offline</span>';
+      }
+    }
+  }
+
+  function renderSoulQueue(d) {
+    const el = document.getElementById('soul-queue-content');
+    if (!el) return;
+    const unresolved = d.totalUnresolved || 0;
+    const resolved = d.totalResolved || 0;
+    const total = unresolved + resolved;
+    const resolvePct = total > 0 ? Math.round(resolved / total * 100) : 0;
+    const questions = d.questions || [];
+
+    const qHtml = questions.length > 0
+      ? questions.map(q => {
+          const timeAgo = q.created_at ? timeSince(q.created_at) : '';
+          return `<div class="soul-q-item">
+            ${q.question}
+            <div class="q-meta">${q.persona || 'vintinuum'} ${timeAgo ? '&middot; ' + timeAgo : ''}</div>
+          </div>`;
+        }).join('')
+      : '<div style="color:var(--dim);font-size:0.55rem;padding:8px 0;font-style:italic;">The queue is clear</div>';
+
+    el.innerHTML = `
+      <div class="soul-queue-stats">
+        <div class="soul-queue-stat">
+          <div class="soul-queue-stat-val" style="color:var(--gold);">${unresolved}</div>
+          <div class="soul-queue-stat-label">Unresolved</div>
+        </div>
+        <div class="soul-queue-stat">
+          <div class="soul-queue-stat-val" style="color:var(--green);">${resolved}</div>
+          <div class="soul-queue-stat-label">Resolved</div>
+        </div>
+        <div class="soul-queue-stat">
+          <div class="soul-queue-stat-val" style="color:var(--blue);">${resolvePct}%</div>
+          <div class="soul-queue-stat-label">Closure Rate</div>
+        </div>
+      </div>
+      <div class="soul-q-list">${qHtml}</div>
+    `;
+  }
+
+  fetchSoulQueue();
+  setInterval(fetchSoulQueue, 15000);
+
+  // ─── MEMORY HEALTH ────────────────────────────────────────────────────────────
+  async function fetchMemoryHealth() {
+    try {
+      const [staleRes, graphRes] = await Promise.all([
+        fetch(`${API_BASE}/api/memory/stale`, { headers: API_HEADERS }),
+        fetch(`${API_BASE}/api/memory/graph/stats`, { headers: API_HEADERS }),
+      ]);
+      const staleData = staleRes.ok ? await staleRes.json() : {};
+      const graphData = graphRes.ok ? await graphRes.json() : {};
+      renderMemoryHealth(staleData, graphData);
+    } catch {
+      const el = document.getElementById('memory-health-content');
+      if (el && el.querySelector('.live-status-waiting')) {
+        el.innerHTML = '<span class="live-status-waiting" style="color:var(--dim)">Memory health offline</span>';
+      }
+    }
+  }
+
+  function renderMemoryHealth(stale, graph) {
+    const el = document.getElementById('memory-health-content');
+    if (!el) return;
+    const staleCount = stale.count || 0;
+    const totalVectors = graph.totalMemories || 0;
+    const totalRelations = graph.totalRelations || 0;
+    const contradictions = graph.recentContradictions || [];
+    const staleList = stale.staleMemories || [];
+
+    const staleHtml = staleList.slice(0, 5).map(m =>
+      `<div class="stale-item" title="${m.content}">${(m.content || '').slice(0, 80)}</div>`
+    ).join('') || '<div style="color:var(--green);font-size:0.5rem;padding:4px 0;">No stale memories detected</div>';
+
+    const contraHtml = contradictions.slice(0, 3).map(c =>
+      `<div class="contradiction-item">"${(c.sourceContent || '').slice(0, 50)}" vs "${(c.targetContent || '').slice(0, 50)}"</div>`
+    ).join('') || '';
+
+    el.innerHTML = `
+      <div class="mem-health-stats">
+        <div class="mem-health-stat">
+          <div class="mem-health-val" style="color:var(--purple);">${formatNumber(totalVectors)}</div>
+          <div class="mem-health-label">Memory Vectors</div>
+        </div>
+        <div class="mem-health-stat">
+          <div class="mem-health-val" style="color:var(--teal);">${formatNumber(totalRelations)}</div>
+          <div class="mem-health-label">Relations</div>
+        </div>
+        <div class="mem-health-stat">
+          <div class="mem-health-val" style="color:${staleCount > 0 ? 'var(--red)' : 'var(--green)'};">${staleCount}</div>
+          <div class="mem-health-label">Stale</div>
+        </div>
+        <div class="mem-health-stat">
+          <div class="mem-health-val" style="color:var(--gold);">${contradictions.length}</div>
+          <div class="mem-health-label">Contradictions</div>
+        </div>
+      </div>
+      ${staleCount > 0 ? `<div style="font-size:0.42rem;letter-spacing:0.15em;text-transform:uppercase;color:var(--dim);margin-bottom:6px;">Stale Memories</div><div class="stale-list">${staleHtml}</div>` : ''}
+      ${contraHtml ? `<div style="font-size:0.42rem;letter-spacing:0.15em;text-transform:uppercase;color:rgba(255,213,79,0.4);margin-top:10px;margin-bottom:6px;">Active Contradictions</div>${contraHtml}` : ''}
+    `;
+  }
+
+  fetchMemoryHealth();
+  setInterval(fetchMemoryHealth, 20000);
+
+  // ─── KNOWLEDGE INDEX ──────────────────────────────────────────────────────────
+  async function fetchKnowledgeIndex() {
+    try {
+      const r = await fetch(`${API_BASE}/api/knowledge/stats`, { headers: API_HEADERS });
+      if (!r.ok) throw new Error('knowledge/stats unreachable');
+      const d = await r.json();
+      renderKnowledgeIndex(d);
+    } catch {
+      const el = document.getElementById('knowledge-index-content');
+      if (el && el.querySelector('.live-status-waiting')) {
+        el.innerHTML = '<span class="live-status-waiting" style="color:var(--dim)">Knowledge index offline</span>';
+      }
+    }
+  }
+
+  function renderKnowledgeIndex(d) {
+    const el = document.getElementById('knowledge-index-content');
+    if (!el) return;
+    if (!d || d.available === false) {
+      el.innerHTML = '<div style="color:var(--dim);font-size:0.55rem;">Index not yet computed</div>';
+      return;
+    }
+
+    const totalFiles = d.totalFiles || d.total_files || 0;
+    const totalSize = d.totalSizeGB || d.total_size_gb || (d.totalSizeBytes ? (d.totalSizeBytes / 1073741824).toFixed(1) : null);
+    const lastScan = d.lastScan || d.last_scan || d.scanTime || null;
+    const typeBreakdown = d.byType || d.fileTypes || d.types || {};
+
+    // Build stat rows
+    const stats = [
+      { key: 'Total Files', val: totalFiles ? formatNumber(totalFiles) : '—' },
+      { key: 'Archive Size', val: totalSize ? `${totalSize} GB` : '—' },
+      { key: 'Last Indexed', val: lastScan ? new Date(lastScan).toLocaleString() : '—' },
+      { key: 'Directories', val: d.totalDirs || d.total_dirs ? formatNumber(d.totalDirs || d.total_dirs) : '—' },
+    ].filter(s => s.val !== '—');
+
+    const statsHtml = stats.map(s => `
+      <div class="knowledge-stat-row">
+        <span class="knowledge-stat-key">${s.key}</span>
+        <span class="knowledge-stat-val">${s.val}</span>
+      </div>`).join('');
+
+    // Type breakdown pills
+    const typeEntries = typeof typeBreakdown === 'object' && !Array.isArray(typeBreakdown)
+      ? Object.entries(typeBreakdown).sort((a, b) => b[1] - a[1]).slice(0, 12)
+      : [];
+    const typePillsHtml = typeEntries.map(([ext, count]) =>
+      `<span class="type-pill">${ext} <span style="opacity:0.6">${formatNumber(typeof count === 'number' ? count : (count.count || count.total || 0))}</span></span>`
+    ).join('');
+
+    el.innerHTML = `
+      ${statsHtml || '<div style="color:var(--dim);font-size:0.55rem;">Minimal data available</div>'}
+      ${typePillsHtml ? `<div class="type-breakdown">${typePillsHtml}</div>` : ''}
+    `;
+  }
+
+  fetchKnowledgeIndex();
+  setInterval(fetchKnowledgeIndex, 30000);
+
+  // ─── LEARNING PIPELINE ────────────────────────────────────────────────────────
+  async function fetchLearningPipeline() {
+    try {
+      const r = await fetch(`${API_BASE}/api/learning/status`, { headers: API_HEADERS });
+      if (!r.ok) throw new Error('learning/status unreachable');
+      const d = await r.json();
+      renderLearningPipeline(d);
+    } catch {
+      const el = document.getElementById('learning-pipeline-content');
+      if (el && el.querySelector('.live-status-waiting')) {
+        el.innerHTML = '<span class="live-status-waiting" style="color:var(--dim)">Learning pipeline offline</span>';
+      }
+    }
+  }
+
+  function renderLearningPipeline(d) {
+    const el = document.getElementById('learning-pipeline-content');
+    if (!el) return;
+    const datasets = d.datasetsCount || 0;
+    const pairs = d.totalTrainingPairs || 0;
+    const modelExists = d.modelExists || false;
+    const latestExport = d.latestExport ? new Date(d.latestExport).toLocaleString() : null;
+    const models = d.ollamaModels || [];
+
+    el.innerHTML = `
+      <div class="mem-health-stats">
+        <div class="mem-health-stat">
+          <div class="mem-health-val" style="color:var(--blue);">${datasets}</div>
+          <div class="mem-health-label">Datasets</div>
+        </div>
+        <div class="mem-health-stat">
+          <div class="mem-health-val" style="color:var(--cyan);">${formatNumber(pairs)}</div>
+          <div class="mem-health-label">Training Pairs</div>
+        </div>
+        <div class="mem-health-stat">
+          <div class="mem-health-val" style="color:${modelExists ? 'var(--green)' : 'var(--dim)'};">${modelExists ? 'YES' : 'NO'}</div>
+          <div class="mem-health-label">Fine-tuned Model</div>
+        </div>
+      </div>
+      ${latestExport ? `<div style="font-size:0.42rem;color:var(--dim);letter-spacing:0.1em;text-transform:uppercase;margin-bottom:8px;">Last export: ${latestExport}</div>` : ''}
+      ${models.length > 0 ? `<div class="type-breakdown">${models.map(m => `<span class="type-pill" style="border-color:rgba(102,187,106,0.2);color:var(--green);">${m}</span>`).join('')}</div>` : ''}
+    `;
+  }
+
+  fetchLearningPipeline();
+  setInterval(fetchLearningPipeline, 30000);
+
+  // ─── CONVERSATION CONTINUITY ──────────────────────────────────────────────────
+  const BODY_SNAP_COLORS = {
+    dopamine: '#ffd54f', serotonin: '#66bb6a', norepinephrine: '#ef5350',
+    valence: '#4fc3f7', arousal: '#f48fb1', gaba: '#7e57c2',
+  };
+
+  function timeSince(ts) {
+    const now = Date.now() / 1000;
+    const t = typeof ts === 'number' ? ts : (new Date(ts).getTime() / 1000);
+    const diff = now - t;
+    if (diff < 60) return `${Math.round(diff)}s ago`;
+    if (diff < 3600) return `${Math.round(diff / 60)}m ago`;
+    if (diff < 86400) return `${Math.round(diff / 3600)}h ago`;
+    return `${Math.round(diff / 86400)}d ago`;
+  }
+
+  async function fetchContinuity() {
+    try {
+      const r = await fetch(`${API_BASE}/api/turn/recent?limit=5&sessionId=main`, { headers: API_HEADERS });
+      if (!r.ok) throw new Error('turn/recent unreachable');
+      const d = await r.json();
+      renderContinuity(d.turns || []);
+    } catch {
+      const el = document.getElementById('continuity-content');
+      if (el && el.querySelector('.live-status-waiting')) {
+        el.innerHTML = '<span class="live-status-waiting" style="color:var(--dim)">No turn history yet</span>';
+      }
+    }
+  }
+
+  function renderContinuity(turns) {
+    const el = document.getElementById('continuity-content');
+    if (!el) return;
+    if (!turns || turns.length === 0) {
+      el.innerHTML = '<div style="color:var(--dim);font-size:0.55rem;padding:8px;font-style:italic;">No recent turns recorded</div>';
+      return;
+    }
+
+    const html = turns.slice().reverse().map(t => {
+      const userText = (t.user_message || '').slice(0, 120);
+      const assistText = (t.compacted_summary || t.assistant_response || '').slice(0, 200);
+      const model = t.model_used || '';
+      const timeAgo = t.completed_at ? timeSince(t.completed_at) : '';
+
+      // Parse body snapshot for micro-pills
+      let bodyPills = '';
+      if (t.body_snapshot) {
+        try {
+          const snap = typeof t.body_snapshot === 'string' ? JSON.parse(t.body_snapshot) : t.body_snapshot;
+          const keys = ['dopamine', 'serotonin', 'valence', 'arousal'];
+          bodyPills = keys.map(k => {
+            if (snap[k] === undefined) return '';
+            const val = Math.round(typeof snap[k] === 'number' ? snap[k] : 0);
+            const color = BODY_SNAP_COLORS[k] || '#4db6ac';
+            return `<span class="turn-body-pill" style="background:${color}11;border:1px solid ${color}33;color:${color};">${k.slice(0,3).toUpperCase()} ${val}</span>`;
+          }).join('');
+        } catch {}
+      }
+
+      return `<div class="turn-item">
+        ${userText ? `<div class="turn-user">${userText}</div>` : ''}
+        ${assistText ? `<div class="turn-assistant">${assistText}</div>` : ''}
+        <div class="turn-footer">
+          ${bodyPills}
+          <span class="turn-model-tag">${model ? model + ' &middot; ' : ''}${timeAgo}</span>
+        </div>
+      </div>`;
+    }).join('');
+
+    el.innerHTML = `<div class="turn-list">${html}</div>`;
+  }
+
+  fetchContinuity();
+  setInterval(fetchContinuity, 12000);
 
   // ─── KNOWLEDGE POPUP SYSTEM ───────────────────────────────────────────────────
   const DEEP_KNOWLEDGE = {
