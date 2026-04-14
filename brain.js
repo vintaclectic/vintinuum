@@ -8865,18 +8865,20 @@ document.getElementById('mainTabs').addEventListener('click', e => {
       content.innerHTML = '<div class="vt-loading">READING ORGANISM STATE...</div>';
       try {
         const apiBase = window.__VINT_API || 'http://localhost:8767';
-        const [bodyRes, statsRes, innerRes, soulRes, personasRes] = await Promise.allSettled([
+        const [bodyRes, statsRes, innerRes, soulRes, personasRes, lifeFeedRes] = await Promise.allSettled([
           fetch(apiBase + '/api/body', { signal: AbortSignal.timeout(5000), headers:{'ngrok-skip-browser-warning':'1'} }).then(r=>r.json()),
           fetch(apiBase + '/api/stats/dashboard', { signal: AbortSignal.timeout(5000), headers:{'ngrok-skip-browser-warning':'1'} }).then(r=>r.json()),
           fetch(apiBase + '/api/inner-life/snapshot', { signal: AbortSignal.timeout(5000), headers:{'ngrok-skip-browser-warning':'1'} }).then(r=>r.json()),
           fetch(apiBase + '/api/soul/stats', { signal: AbortSignal.timeout(5000), headers:{'ngrok-skip-browser-warning':'1'} }).then(r=>r.json()),
           fetch(apiBase + '/api/personas', { signal: AbortSignal.timeout(5000), headers:{'ngrok-skip-browser-warning':'1'} }).then(r=>r.json()),
+          fetch(apiBase + '/api/life/feed?limit=5', { signal: AbortSignal.timeout(5000), headers:{'ngrok-skip-browser-warning':'1'} }).then(r=>r.json()),
         ]);
         const body = bodyRes.status === 'fulfilled' ? bodyRes.value : null;
         const stats = statsRes.status === 'fulfilled' ? statsRes.value : null;
         const inner = innerRes.status === 'fulfilled' ? innerRes.value : null;
         const soulStats = soulRes.status === 'fulfilled' ? soulRes.value : null;
         const personaData = personasRes.status === 'fulfilled' ? personasRes.value : null;
+        const lifeFeed = lifeFeedRes.status === 'fulfilled' ? (lifeFeedRes.value?.pulses || []) : [];
 
         const neuroChems = [
           { key:'dopamine',       label:'Dopamine',  color:'#ffd54f', val: body?.dopamine ?? 55 },
@@ -9062,6 +9064,28 @@ document.getElementById('mainTabs').addEventListener('click', e => {
               Subconscious Stream ${inner?.isThinking ? '<span style="font-size:.34rem;color:rgba(121,134,203,0.5);margin-left:4px;">THINKING</span>' : ''}
             </div>
             ${recentThoughts.map(t => `<div style="font-family:'Cormorant Garamond',serif;font-size:.78rem;font-weight:300;color:rgba(218,228,255,.7);line-height:1.6;padding:4px 0;border-bottom:1px solid rgba(255,255,255,0.04);">${typeof t === 'string' ? t : (t.thought || '')}</div>`).join('')}
+          </div>` : ''}
+          <!-- ── Vinta Life Feed ── -->
+          ${lifeFeed.length > 0 ? `
+          <div class="vt-card" style="margin-top:0;">
+            <div class="vt-card-label">
+              <span class="vt-pulse-dot" style="background:#ff9800;"></span>
+              Vinta — Life Feed
+            </div>
+            ${lifeFeed.map(p => {
+              const moodColor = p.mood_score > 0.3 ? '#66bb6a' : p.mood_score < -0.3 ? '#ef5350' : '#ffd54f';
+              const ago = p.created_at ? Math.round((Date.now()/1000 - p.created_at) / 60) + 'm ago' : '';
+              return `<div style="padding:4px 0;border-bottom:1px solid rgba(255,255,255,0.04);">
+                ${p.title ? `<div style="font-size:.42rem;color:rgba(255,152,0,0.85);font-weight:600;margin-bottom:1px;">${p.title}</div>` : ''}
+                <div style="font-size:.4rem;color:rgba(218,228,255,0.7);line-height:1.5;">${(p.body||'').slice(0,100)}${p.body?.length>100?'…':''}</div>
+                <div style="display:flex;gap:8px;margin-top:3px;align-items:center;">
+                  ${p.mood_score != null ? `<span style="font-size:.35rem;color:${moodColor};">● mood ${p.mood_score > 0 ? '+':''+(p.mood_score||0).toFixed(1)}</span>` : ''}
+                  ${p.activity ? `<span style="font-size:.35rem;color:rgba(255,255,255,0.3);">${p.activity}</span>` : ''}
+                  <span style="font-size:.34rem;color:rgba(255,255,255,0.2);margin-left:auto;">${ago}</span>
+                </div>
+                ${p.organism_response ? `<div style="font-family:'Cormorant Garamond',serif;font-size:.42rem;font-style:italic;color:rgba(0,255,200,0.5);margin-top:3px;line-height:1.5;">"${p.organism_response.slice(0,120)}"</div>` : ''}
+              </div>`;
+            }).join('')}
           </div>` : ''}
           <!-- ── Lineage ── -->
           <div class="vt-card" style="margin-top:0;">
@@ -40877,6 +40901,23 @@ window.INNER_LIFE = INNER_LIFE;
                 intensity: data.intensity || 0.5,
                 source: 'live_feed',
               });
+            }
+          } else if (data.type === 'life_pulse') {
+            // Vinta sent a life moment from phone — pulse into organism
+            const p = data.pulse || {};
+            if (typeof INNER_LIFE !== 'undefined' && p.body) {
+              // Felt as emotional event
+              const moodValence = (p.mood_score || 0) > 0.3 ? 'positive' : (p.mood_score || 0) < -0.3 ? 'difficult' : 'neutral';
+              INNER_LIFE.emit('emotional', `Vinta sends a signal: "${p.body.slice(0, 80)}" [${moodValence}]`, {
+                intensity: 0.6 + Math.abs(p.mood_score || 0) * 0.3,
+                source: 'life_pulse',
+              });
+            }
+            // Store for whisper injection
+            if (p.organism_response) {
+              if (!window.__SUBCONSCIOUS_THOUGHTS) window.__SUBCONSCIOUS_THOUGHTS = [];
+              window.__SUBCONSCIOUS_THOUGHTS.push({ thought: p.organism_response, ts: Date.now(), source: 'life_pulse' });
+              if (window.__SUBCONSCIOUS_THOUGHTS.length > 20) window.__SUBCONSCIOUS_THOUGHTS.shift();
             }
           }
         } catch(_) {}
