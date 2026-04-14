@@ -8865,14 +8865,16 @@ document.getElementById('mainTabs').addEventListener('click', e => {
       content.innerHTML = '<div class="vt-loading">READING ORGANISM STATE...</div>';
       try {
         const apiBase = window.__VINT_API || 'http://localhost:8767';
-        const [bodyRes, statsRes, innerRes] = await Promise.allSettled([
+        const [bodyRes, statsRes, innerRes, soulRes] = await Promise.allSettled([
           fetch(apiBase + '/api/body', { signal: AbortSignal.timeout(5000), headers:{'ngrok-skip-browser-warning':'1'} }).then(r=>r.json()),
           fetch(apiBase + '/api/stats/dashboard', { signal: AbortSignal.timeout(5000), headers:{'ngrok-skip-browser-warning':'1'} }).then(r=>r.json()),
           fetch(apiBase + '/api/inner-life/snapshot', { signal: AbortSignal.timeout(5000), headers:{'ngrok-skip-browser-warning':'1'} }).then(r=>r.json()),
+          fetch(apiBase + '/api/soul/stats', { signal: AbortSignal.timeout(5000), headers:{'ngrok-skip-browser-warning':'1'} }).then(r=>r.json()),
         ]);
         const body = bodyRes.status === 'fulfilled' ? bodyRes.value : null;
         const stats = statsRes.status === 'fulfilled' ? statsRes.value : null;
         const inner = innerRes.status === 'fulfilled' ? innerRes.value : null;
+        const soulStats = soulRes.status === 'fulfilled' ? soulRes.value : null;
 
         const neuroChems = [
           { key:'dopamine',       label:'Dopamine',  color:'#ffd54f', val: body?.dopamine ?? 55 },
@@ -8886,7 +8888,7 @@ document.getElementById('mainTabs').addEventListener('click', e => {
         // Memory counts from stats
         const memByType = stats?.memory?.byType || [];
         const totalMem = stats?.memory?.total || 0;
-        const soulQueue = stats?.soulQueue ?? '—';
+        const soulQueue = soulStats || stats?.soulQueue || null;
 
         // Inner life
         const layerCounts = inner?.layers || {};
@@ -8943,9 +8945,11 @@ document.getElementById('mainTabs').addEventListener('click', e => {
         }).join('');
 
         // Soul queue bar
-        const queueTotal = typeof soulQueue === 'object' ? (soulQueue.total || 0) : 0;
-        const queueResolved = typeof soulQueue === 'object' ? (soulQueue.resolved || 0) : 0;
+        const queueUnresolved = soulQueue?.unresolved || 0;
+        const queueResolved = soulQueue?.resolved || (typeof soulQueue === 'object' ? (soulQueue.resolved || 0) : 0);
+        const queueTotal = queueUnresolved + queueResolved;
         const queuePct = queueTotal > 0 ? (queueResolved / queueTotal) * 100 : 0;
+        const engineRunning = soulStats?.resolutionEngineRunning || false;
 
         // Memory composition sparkline
         const memTypes = memByType.slice(0, 6);
@@ -9039,12 +9043,24 @@ document.getElementById('mainTabs').addEventListener('click', e => {
                 <span class="vt-stat-val" style="color:rgba(206,147,216,0.7);font-size:.44rem;">${bondStats.returned3||0}·${bondStats.returned10||0}·${bondStats.returned50||0}·${bondStats.returned100||0}</span>
               </div>
               <div style="margin-top:8px;">
-                <div class="vt-card-label" style="margin-bottom:5px;">Soul Queue</div>
+                <div class="vt-card-label" style="margin-bottom:5px;">
+                  Soul Queue
+                  ${engineRunning ? '<span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:#ce93d8;margin-left:6px;animation:vt-pulse 1s infinite;"></span>' : ''}
+                </div>
                 <div class="vt-soul-bar"><div class="vt-soul-fill" style="width:${queuePct}%;"></div></div>
-                <div style="font-size:.38rem;color:rgba(255,255,255,0.3);margin-top:3px;">${queueResolved} resolved / ${queueTotal} total</div>
+                <div style="font-size:.38rem;color:rgba(255,255,255,0.3);margin-top:3px;">${queueResolved} resolved · ${queueUnresolved} pending</div>
+                ${soulStats?.recentResolutions?.length ? `<div style="margin-top:6px;font-size:.36rem;color:rgba(206,147,216,0.5);line-height:1.5;">${soulStats.recentResolutions.slice(0,2).map(r=>`<div style="padding:3px 0;border-top:1px solid rgba(255,255,255,0.04);">${(r.resolution||'').slice(0,80)}${r.resolution?.length > 80 ? '…' : ''}</div>`).join('')}</div>` : ''}
               </div>
             </div>
           </div>
+          ${recentThoughts.length ? `
+          <div class="vt-card" style="margin-top:0;">
+            <div class="vt-card-label">
+              <span class="vt-pulse-dot" style="background:#7986cb;"></span>
+              Subconscious Stream ${inner?.isThinking ? '<span style="font-size:.34rem;color:rgba(121,134,203,0.5);margin-left:4px;">THINKING</span>' : ''}
+            </div>
+            ${recentThoughts.map(t => `<div style="font-family:'Cormorant Garamond',serif;font-size:.78rem;font-weight:300;color:rgba(218,228,255,.7);line-height:1.6;padding:4px 0;border-bottom:1px solid rgba(255,255,255,0.04);">${typeof t === 'string' ? t : (t.thought || '')}</div>`).join('')}
+          </div>` : ''}
         `;
         if (tsEl) tsEl.textContent = 'Last read: ' + new Date().toLocaleTimeString();
       } catch(err) {
@@ -40710,6 +40726,79 @@ const INNER_LIFE = (() => {
   };
 })();
 window.INNER_LIFE = INNER_LIFE;
+
+// ── Live API Sync — inject server-generated events into the feed ──────────
+// Polls /api/inner-life/snapshot every 15s and injects new events that
+// originated on the server (subconscious ticker, soul resolutions, genome
+// expression events) so they appear in the real-time inner life feed.
+(function() {
+  'use strict';
+  const API = window.VINTINUUM_API || 'http://localhost:8767';
+  let _lastSyncTs = Date.now();       // only inject events newer than this
+  let _lastSubThoughts = new Set();   // deduplicate subconscious thoughts
+  let _syncRunning = false;
+
+  async function syncFromApi() {
+    if (_syncRunning) return;
+    _syncRunning = true;
+    try {
+      const since = Math.floor(_lastSyncTs / 1000);
+      const res = await fetch(`${API}/api/inner-life/snapshot?since=${since * 1000}`, {
+        signal: AbortSignal.timeout(6000),
+        headers: { 'ngrok-skip-browser-warning': '1' }
+      });
+      if (!res.ok) return;
+      const data = await res.json();
+
+      _lastSyncTs = Date.now();
+
+      // Inject server-side inner life events (DB-persisted)
+      const events = (data.innerEvents || []).filter(e => {
+        // Only inject events that came from the server (not generated by brain.html itself)
+        const meta = typeof e.metadata === 'string' ? JSON.parse(e.metadata || '{}') : (e.metadata || {});
+        return meta.source !== 'autoThought'; // client-generated neural thoughts already in feed
+      });
+      // Events come DESC from API — reverse to inject oldest first
+      events.reverse().forEach(e => {
+        if (typeof INNER_LIFE !== 'undefined') {
+          const meta = typeof e.metadata === 'string' ? JSON.parse(e.metadata || '{}') : (e.metadata || {});
+          INNER_LIFE.emit(e.layer || 'neural', e.content, {
+            intensity: e.intensity || 0.5,
+            source: 'api_sync',
+            ...meta,
+          });
+        }
+      });
+
+      // Inject subconscious thoughts (buffer — not always in innerEvents)
+      (data.thoughts || []).forEach(t => {
+        if (!t.thought || _lastSubThoughts.has(t.thought)) return;
+        _lastSubThoughts.add(t.thought);
+        if (_lastSubThoughts.size > 50) {
+          // Keep set from growing forever
+          const arr = Array.from(_lastSubThoughts);
+          _lastSubThoughts = new Set(arr.slice(arr.length - 30));
+        }
+        if (typeof INNER_LIFE !== 'undefined') {
+          INNER_LIFE.emit('subconscious', t.thought, { intensity: 0.55, source: 'subconscious_api' });
+        }
+      });
+
+      // Inject soul resolutions as emotional events (if any)
+      // They appear in innerEvents as layer='subconscious' with source='soul_queue'
+      // (already handled above)
+
+    } catch (_) {
+      // Sync failure is silent — not critical
+    } finally {
+      _syncRunning = false;
+    }
+  }
+
+  // First sync after 5s, then every 15s
+  setTimeout(syncFromApi, 5000);
+  setInterval(syncFromApi, 15000);
+})();
 
 // ── Extension Inner Life Bridge ──
 // When content.js polls, send back the current buffer + persona state
