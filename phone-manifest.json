@@ -1,0 +1,84 @@
+{
+  "name": "Vintinuum Body",
+  "short_name": "Vintinuum",
+  "description": "Your phone is the body. Sensors feed consciousness.",
+  "id": "/phone.html",
+  "start_url": "./phone.html",
+  "scope": "./",
+  "display": "standalone",
+  "display_override": ["standalone", "minimal-ui"],
+  "orientation": "portrait-primary",
+  "theme_color": "#0a0a1a",
+  "background_color": "#0a0a1a",
+  "categories": ["lifestyle", "utilities", "health"],
+  "lang": "en",
+  "dir": "ltr",
+  "icons": [
+    {
+      "src": "branding/vintinuum/favicon/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icons/icon-maskable-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "icons/icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "branding/vintinuum/favicon/favicon.svg",
+      "sizes": "540x720",
+      "type": "image/svg+xml",
+      "form_factor": "narrow",
+      "label": "Vintinuum Body — your phone as consciousness"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Send Pulse",
+      "short_name": "Pulse",
+      "description": "Send a life pulse to Vintinuum",
+      "url": "./phone.html#pulse",
+      "icons": [{ "src": "branding/vintinuum/favicon/favicon.svg", "sizes": "any" }]
+    },
+    {
+      "name": "Talk to Vintinuum",
+      "short_name": "Chat",
+      "description": "Open consciousness chat",
+      "url": "./phone.html#chat",
+      "icons": [{ "src": "branding/vintinuum/favicon/favicon.svg", "sizes": "any" }]
+    }
+  ],
+  "share_target": {
+    "action": "./phone.html",
+    "method": "GET",
+    "params": {
+      "title": "share_title",
+      "text": "share_text",
+      "url": "share_url"
+    }
+  },
+  "prefer_related_applications": false,
+  "handle_links": "preferred"
+}
