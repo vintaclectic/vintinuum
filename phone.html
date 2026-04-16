@@ -1092,13 +1092,14 @@ async function fetchBodyState() {
 }
 
 function updateNeuroDisplay(data) {
-  // Try to extract neurochemistry from the body state
-  const neuro = data?.neurochemistry || data?.body?.neurochemistry || data?.state?.neurochemistry || {};
+  // /api/body-state returns flat 0-100 values: { dopamine, serotonin, gaba, norepinephrine, arousal, valence }
+  // Normalize to 0-1 for display
+  const normalize = v => (v != null && v > 1) ? v / 100 : (v ?? 0.5);
   const chemicals = {
-    Dopamine: neuro.dopamine ?? neuro.Dopamine ?? 0.5,
-    Serotonin: neuro.serotonin ?? neuro.Serotonin ?? 0.5,
-    NE: neuro.norepinephrine ?? neuro.NE ?? neuro.ne ?? (0.3 + state.arousal * 0.5),
-    GABA: neuro.gaba ?? neuro.GABA ?? 0.5,
+    Dopamine: normalize(data?.dopamine),
+    Serotonin: normalize(data?.serotonin),
+    NE: normalize(data?.norepinephrine ?? data?.ne),
+    GABA: normalize(data?.gaba),
   };
 
   for (const [name, val] of Object.entries(chemicals)) {
