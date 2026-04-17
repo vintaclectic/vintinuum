@@ -47426,13 +47426,48 @@ const SOUL_AUTH = (() => {
         '</div>' +
         '<div style="text-align:center;margin-bottom:4px;font-size:12px;color:rgba(180,220,255,0.8);">' + _user.email + '</div>' +
         '<div style="text-align:center;margin-bottom:16px;font-size:10px;color:rgba(255,255,255,0.35);letter-spacing:2px;text-transform:uppercase;">tier: ' + (_user.tier || 'free') + '</div>' +
-        '<div style="height:1px;background:linear-gradient(90deg,transparent,rgba(80,200,255,0.15),transparent);margin-bottom:16px;"></div>' +
+        '<div style="height:1px;background:linear-gradient(90deg,transparent,rgba(80,200,255,0.15),transparent);margin-bottom:14px;"></div>' +
+        '<button id="soul-ext-copy" style="width:100%;padding:11px;margin-bottom:8px;border:1px solid rgba(79,195,247,0.35);' +
+        'background:rgba(79,195,247,0.1);border-radius:12px;color:rgba(79,195,247,0.95);cursor:pointer;font-family:monospace;font-size:11px;' +
+        'font-weight:600;letter-spacing:1px;transition:all 0.2s ease;" ' +
+        'onmouseover="this.style.background=\'rgba(79,195,247,0.2)\'" ' +
+        'onmouseout="this.style.background=\'rgba(79,195,247,0.1)\'">⇡ SEND TOKEN TO EXTENSION</button>' +
         '<button id="soul-auth-logout" style="width:100%;padding:10px;border:1px solid rgba(255,100,100,0.2);' +
         'background:rgba(255,60,60,0.06);border-radius:12px;color:rgba(255,150,150,0.7);cursor:pointer;font-family:monospace;font-size:11px;' +
         'transition:all 0.2s ease;letter-spacing:1px;" ' +
         'onmouseover="this.style.background=\'rgba(255,60,60,0.12)\';this.style.borderColor=\'rgba(255,100,100,0.35)\'" ' +
         'onmouseout="this.style.background=\'rgba(255,60,60,0.06)\';this.style.borderColor=\'rgba(255,100,100,0.2)\'">unbind soul</button>';
       document.body.appendChild(dlg);
+
+      // ── Extension token bridge ─────────────────────────────────────────────
+      // Writes token to a well-known key AND fires storage event so the popup
+      // can grab it via executeScript without any timing issues.
+      document.getElementById('soul-ext-copy').addEventListener('click', () => {
+        const tok = _accessToken;
+        const btn = document.getElementById('soul-ext-copy');
+        if (!tok) { if (btn) btn.textContent = '✗ NO TOKEN — log in first'; return; }
+        // Write to extension bridge key (popup grabs this)
+        try { localStorage.setItem('vint_ext_bridge', tok); } catch(_) {}
+        // Also ensure the primary key is fresh
+        try { localStorage.setItem('vint_access_token', tok); } catch(_) {}
+        // postMessage so content script can relay it to the extension
+        window.postMessage({ type: 'VINT_TOKEN_BRIDGE', token: tok }, '*');
+        if (btn) {
+          btn.textContent = '✓ SENT — hit Grab in popup';
+          btn.style.borderColor = 'rgba(83,232,119,0.5)';
+          btn.style.color = '#53e877';
+          btn.style.background = 'rgba(83,232,119,0.08)';
+          setTimeout(() => {
+            if (btn) {
+              btn.textContent = '⇡ SEND TOKEN TO EXTENSION';
+              btn.style.borderColor = 'rgba(79,195,247,0.35)';
+              btn.style.color = 'rgba(79,195,247,0.95)';
+              btn.style.background = 'rgba(79,195,247,0.1)';
+            }
+          }, 3000);
+        }
+      });
+
       document.getElementById('soul-auth-logout').addEventListener('click', async () => {
         await logout();
         dlg.style.transform = 'translateY(10px)'; dlg.style.opacity = '0';
