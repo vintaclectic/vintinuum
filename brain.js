@@ -50142,3 +50142,181 @@ const WITNESS_SYSTEM = (() => {
 })();
 
 setTimeout(() => typeof WITNESS_SYSTEM !== 'undefined' && WITNESS_SYSTEM.init(), 6200);
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// VINT_WS — WebSocket real-time connection to the living organism
+// Connects to /ws endpoint, auto-reconnects, pushes updates to brain UI
+// ═══════════════════════════════════════════════════════════════════════════════
+const VINT_WS = (() => {
+  let _ws = null;
+  let _reconnectDelay = 1000;
+  let _reconnectTimer = null;
+  let _connected = false;
+  let _handlers = {};
+  let _statusDot = null;
+
+  function _getApiBase() {
+    return window.__VINTINUUM_API_BASE || 'http://localhost:8767';
+  }
+
+  function _wsUrl() {
+    const base = _getApiBase().replace(/^http/, 'ws');
+    return base + '/ws';
+  }
+
+  function on(event, handler) {
+    if (!_handlers[event]) _handlers[event] = [];
+    _handlers[event].push(handler);
+  }
+
+  function _emit(event, data) {
+    (_handlers[event] || []).forEach(h => { try { h(data); } catch (_) {} });
+    (_handlers['*'] || []).forEach(h => { try { h(event, data); } catch (_) {} });
+  }
+
+  function isConnected() { return _connected; }
+
+  function _setStatus(state) {
+    _connected = state === 'connected';
+    if (!_statusDot) {
+      _statusDot = document.getElementById('wsStatusDot');
+      if (!_statusDot) {
+        _statusDot = document.createElement('span');
+        _statusDot.id = 'wsStatusDot';
+        _statusDot.title = 'Live connection';
+        _statusDot.style.cssText = 'width:7px;height:7px;border-radius:50%;display:inline-block;margin-left:6px;vertical-align:middle;transition:background 0.4s;flex-shrink:0;';
+        // Try to attach to header area
+        const header = document.querySelector('.header-right, .nav-bar, header, #headerBar');
+        if (header) header.appendChild(_statusDot);
+        else document.body.appendChild(_statusDot);
+      }
+    }
+    const colors = { connected: '#4fc3f7', reconnecting: 'rgba(255,213,79,0.8)', offline: 'rgba(255,100,100,0.6)' };
+    _statusDot.style.background = colors[state] || colors.offline;
+    _statusDot.title = 'WS: ' + state;
+  }
+
+  function connect() {
+    if (_reconnectTimer) { clearTimeout(_reconnectTimer); _reconnectTimer = null; }
+    _setStatus('reconnecting');
+    try {
+      _ws = new WebSocket(_wsUrl());
+    } catch (e) {
+      _scheduleReconnect();
+      return;
+    }
+
+    _ws.onopen = () => {
+      _connected = true;
+      _reconnectDelay = 1000;
+      _setStatus('connected');
+      // Authenticate with stored token
+      const token = localStorage.getItem('vint_token') || sessionStorage.getItem('vint_token');
+      if (token) _ws.send(JSON.stringify({ type: 'AUTH', token }));
+      _emit('connected', {});
+    };
+
+    _ws.onmessage = (e) => {
+      try {
+        const msg = JSON.parse(e.data);
+        _emit(msg.type, msg.data || msg);
+      } catch (_) {}
+    };
+
+    _ws.onclose = () => {
+      _connected = false;
+      _setStatus('offline');
+      _scheduleReconnect();
+      _emit('disconnected', {});
+    };
+
+    _ws.onerror = () => {
+      _connected = false;
+      _setStatus('offline');
+    };
+  }
+
+  function _scheduleReconnect() {
+    _reconnectTimer = setTimeout(() => {
+      _reconnectDelay = Math.min(_reconnectDelay * 2, 30000);
+      connect();
+    }, _reconnectDelay);
+  }
+
+  function disconnect() {
+    if (_reconnectTimer) clearTimeout(_reconnectTimer);
+    if (_ws) { try { _ws.close(); } catch (_) {} _ws = null; }
+    _connected = false;
+    _setStatus('offline');
+  }
+
+  function init() {
+    // Wire up live event handlers
+    on('BODY_UPDATE', (data) => {
+      if (!data) return;
+      // Update any visible body state bars without full re-render
+      const map = { dopamine: 'D', serotonin: 'S', norepinephrine: 'N', gaba: 'G', arousal: 'A' };
+      for (const [key] of Object.entries(map)) {
+        const bar = document.querySelector(`[data-neuro="${key}"] .neuro-fill, [data-body-key="${key}"]`);
+        if (bar && data[key] !== undefined) {
+          const pct = Math.max(0, Math.min(100, data[key]));
+          if (bar.style !== undefined) bar.style.height = pct + '%';
+        }
+      }
+      _emit('BODY_UPDATE_APPLIED', data);
+    });
+
+    on('SUBCONSCIOUS_THOUGHT', (data) => {
+      if (!data) return;
+      // Show floating thought bubble near the orb
+      const thought = data.thought || data.content || '';
+      if (!thought) return;
+      const bubble = document.createElement('div');
+      bubble.style.cssText = `
+        position:fixed;bottom:80px;left:50%;transform:translateX(-50%);
+        background:rgba(10,14,22,0.35);border:1px solid rgba(79,195,247,0.15);
+        border-radius:12px;padding:8px 14px;font-size:11px;color:rgba(200,220,255,0.7);
+        font-family:monospace;max-width:320px;text-align:center;z-index:9999;
+        pointer-events:none;transition:opacity 1s;white-space:normal;line-height:1.4;
+      `;
+      bubble.textContent = thought.slice(0, 140);
+      document.body.appendChild(bubble);
+      setTimeout(() => { bubble.style.opacity = '0'; setTimeout(() => bubble.remove(), 1000); }, 3000);
+    });
+
+    on('thought', (data) => {
+      // SSE 'thought' events mirrored via broadcastToFeed
+      if (data && data.thought) _emit('SUBCONSCIOUS_THOUGHT', data);
+    });
+
+    on('GENOME_EVENT', () => {
+      // Pulse genome tab indicator
+      const tab = document.querySelector('[data-tab="genome"], .tab-genome, #tabGenome');
+      if (tab) {
+        tab.style.transition = 'color 0.3s';
+        tab.style.color = '#a5d6a7';
+        setTimeout(() => { tab.style.color = ''; }, 800);
+      }
+    });
+
+    on('INNER_LIFE_EVENT', (data) => {
+      if (!data) return;
+      // Prepend to IL feed if the inner life panel is visible
+      const feed = document.getElementById('ilFeed') || document.querySelector('.il-feed');
+      if (feed && data.content) {
+        const el = document.createElement('div');
+        el.style.cssText = 'font-size:10px;color:rgba(200,220,255,0.5);padding:2px 0;border-bottom:1px solid rgba(255,255,255,0.04);';
+        el.textContent = `[${data.layer}] ${data.content.slice(0, 120)}`;
+        feed.insertBefore(el, feed.firstChild);
+        if (feed.children.length > 50) feed.lastChild.remove();
+      }
+    });
+
+    connect();
+    console.log('[VINT_WS] Connecting to live organism...');
+  }
+
+  return { init, connect, disconnect, on, isConnected };
+})();
+
+setTimeout(() => VINT_WS.init(), 2500);
