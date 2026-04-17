@@ -1641,7 +1641,7 @@ window.SKIN = (() => {
 
   // ── Persona lerp state — smooth transitions between identities ──
   // Weights sum to 1 (approximately)
-  const personaW = { atlas: 1.0, vintinuum: 0.0, aria: 0.0, emergent: 0.0 };
+  const personaW = { atlas: 1.0, vintinuum: 0.0, aria: 0.0, emergent: 0.0, lunex: 0.0 };
   let lastPersona = 'atlas';
 
   // Per-persona color palettes (base R,G,B for the luminous surface)
@@ -1757,6 +1757,8 @@ window.SKIN = (() => {
   function _updatePersonaWeights() {
     const active = _getPersona();
     lastPersona = active;
+    // Dynamically register any new persona not yet in the weight map
+    if (active && !(active in personaW)) personaW[active] = 0.0;
     const lerpSpeed = 0.022;
     for (const key in personaW) {
       const target = (key === active) ? 1.0 : 0.0;
@@ -1771,9 +1773,11 @@ window.SKIN = (() => {
   function _updateChromaTarget(ts) {
     let r = 0, g = 0, b = 0;
     for (const key in PERSONA_COLORS) {
-      r += PERSONA_COLORS[key].r * personaW[key];
-      g += PERSONA_COLORS[key].g * personaW[key];
-      b += PERSONA_COLORS[key].b * personaW[key];
+      const w = personaW[key] || 0;
+      if (!w) continue;
+      r += PERSONA_COLORS[key].r * w;
+      g += PERSONA_COLORS[key].g * w;
+      b += PERSONA_COLORS[key].b * w;
     }
     // Emergent cycles hue
     if (personaW.emergent > 0.05) {
