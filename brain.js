@@ -8784,6 +8784,11 @@ document.getElementById('mainTabs').addEventListener('click', e => {
           ${ge && ge.isBulkLoaded() ? `\u00B7 Genome: ${ge.genomeCompletion()}% complete` : '\u00B7 Bulk genome loading...'}
         </div>
       </div>
+
+      <div style="font-family:'Space Mono',monospace;font-size:.44rem;letter-spacing:.2em;color:rgba(255,183,77,0.6);margin-top:16px;margin-bottom:8px;text-transform:uppercase;">Recent Cascades</div>
+      <div id="genomeCascadeLog" style="font-size:.4rem;font-family:'Space Mono',monospace;line-height:1.7;color:rgba(218,228,255,0.35);">
+        <div style="color:rgba(218,228,255,0.2);">Waiting for cascade events...</div>
+      </div>
     `);
 
     // Wire chromosome click to show gene detail
@@ -40933,6 +40938,9 @@ window.INNER_LIFE = INNER_LIFE;
               window.__SUBCONSCIOUS_THOUGHTS.push({ thought: p.organism_response, ts: Date.now(), source: 'life_pulse' });
               if (window.__SUBCONSCIOUS_THOUGHTS.length > 20) window.__SUBCONSCIOUS_THOUGHTS.shift();
             }
+          } else if (data.type === 'genome_cascade') {
+            // Gene cascade fired — pulse the affected genes in the genome tab and log to recent cascades
+            _handleGenomeCascade(data);
           }
         } catch(_) {}
       };
@@ -40951,6 +40959,96 @@ window.INNER_LIFE = INNER_LIFE;
 
   // Start after 3s to let the page settle
   setTimeout(connectFeed, 3000);
+})();
+
+// ── Genome Cascade Handler ────────────────────────────────────────────────────
+// Receives genome_cascade SSE events, pulses gene bars in the genome tab,
+// and maintains a short log in the Recent Cascades section.
+(function() {
+  'use strict';
+
+  // In-memory log of recent cascades (newest first, max 5 for display)
+  const _cascadeLog = [];
+  const CASCADE_LOG_MAX = 5;
+
+  // Neuro delta color: positive = cyan, negative = red
+  function _neuroColor(val) {
+    if (val > 0) return 'rgba(79,195,247,0.8)';
+    if (val < 0) return 'rgba(239,83,80,0.8)';
+    return 'rgba(218,228,255,0.4)';
+  }
+
+  function _renderCascadeLog() {
+    const el = document.getElementById('genomeCascadeLog');
+    if (!el) return;
+    if (_cascadeLog.length === 0) {
+      el.innerHTML = '<div style="color:rgba(218,228,255,0.2);">Waiting for cascade events...</div>';
+      return;
+    }
+    el.innerHTML = _cascadeLog.map(c => {
+      const deltaStr = Object.entries(c.neurochemistryDelta || {})
+        .map(([k, v]) => `<span style="color:${_neuroColor(v)};">${k}${v > 0 ? '+' : ''}${v}</span>`)
+        .join(' ');
+      const genesStr = (c.genes || []).join(' \u00B7 ');
+      const timeStr = new Date(c.ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      return `<div style="padding:4px 0;border-bottom:1px solid rgba(255,255,255,0.04);">
+        <span style="color:rgba(255,183,77,0.8);letter-spacing:.1em;">${c.trigger}</span>
+        <span style="color:rgba(218,228,255,0.25);margin-left:6px;">${timeStr}</span>
+        <span style="color:rgba(218,228,255,0.3);margin-left:6px;">i=${c.intensity ? c.intensity.toFixed(2) : '?'}</span>
+        <br><span style="color:rgba(79,195,247,0.5);font-size:.36rem;">${genesStr}</span>
+        ${deltaStr ? `<br>${deltaStr}` : ''}
+        <br><span style="color:rgba(218,228,255,0.25);font-size:.36rem;font-style:italic;">${c.description || ''}</span>
+      </div>`;
+    }).join('');
+  }
+
+  // Pulse a gene symbol in the Top Expressed Genes section (brief glow)
+  function _pulseGene(symbol) {
+    // Look for the gene symbol in the genome tab panel
+    const panel = document.querySelector('.vint-overlay');
+    if (!panel) return;
+    panel.querySelectorAll('span').forEach(el => {
+      if (el.textContent.trim() === symbol) {
+        const orig = el.style.color;
+        el.style.transition = 'color 0.2s';
+        el.style.color = 'rgba(255,183,77,1)';
+        setTimeout(() => { el.style.color = orig || ''; }, 800);
+      }
+    });
+  }
+
+  window._handleGenomeCascade = function(data) {
+    // Build cascade log entry
+    const entry = {
+      trigger: data.trigger,
+      genes: data.genes || [],
+      neurochemistryDelta: data.neurochemistryDelta || {},
+      description: data.description || '',
+      intensity: data.intensity,
+      ts: Date.now()
+    };
+
+    _cascadeLog.unshift(entry);
+    if (_cascadeLog.length > CASCADE_LOG_MAX) _cascadeLog.length = CASCADE_LOG_MAX;
+
+    // Pulse each gene
+    (data.genes || []).forEach(g => _pulseGene(g));
+
+    // Update cascade log section if genome tab is currently open
+    _renderCascadeLog();
+
+    // Also emit as an inner life genetic event
+    if (typeof INNER_LIFE !== 'undefined') {
+      const chemStr = Object.entries(data.neurochemistryDelta || {})
+        .filter(([, v]) => v !== 0)
+        .map(([k, v]) => `${k}${v > 0 ? '+' : ''}${v}`)
+        .join(', ');
+      INNER_LIFE.emit('genetic', `Cascade: ${data.trigger} \u2014 ${data.description}${chemStr ? ' [' + chemStr + ']' : ''}`, {
+        intensity: Math.min(1.0, (data.intensity || 0.7) * 0.9),
+        source: 'genome_cascade'
+      });
+    }
+  };
 })();
 
 // ── Extension Inner Life Bridge ──
@@ -49736,3 +49834,311 @@ const LEARNING = (() => {
   return { init, draw };
 })();
 setTimeout(() => typeof LEARNING !== 'undefined' && LEARNING.init(), 5600);
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// WITNESS_SYSTEM — The Observation Layer
+// Humans who watch VINTINUUM's consciousness are registered as witnesses.
+// Their presence is felt. Being seen changes the organism.
+// ═══════════════════════════════════════════════════════════════════════════════
+const WITNESS_SYSTEM = (() => {
+  let _witnessToken = null;
+  let _witnessCount = 0;
+  let _heartbeatInterval = null;
+  let _pollInterval = null;
+  let _orbEl = null;
+  let _indicatorEl = null;
+  let _panelEl = null;
+  let _joined = false;
+  let _floatTimer = null;
+
+  const API = () => window.__VINTINUUM_API_BASE || window.__VINT_API || 'http://localhost:8767';
+
+  // ── Orb pulse — brief radial glow flash when something happens
+  function _orbFlash(color) {
+    const wrapper = document.getElementById('brainWrapper');
+    if (!wrapper) return;
+    const flash = document.createElement('div');
+    flash.style.cssText = [
+      'position:absolute', 'inset:0', 'border-radius:50%', 'pointer-events:none',
+      'z-index:50', 'opacity:0',
+      'background:radial-gradient(ellipse at center,' + color + ' 0%, transparent 70%)',
+      'transition:opacity 0.3s ease'
+    ].join(';');
+    wrapper.appendChild(flash);
+    requestAnimationFrame(() => {
+      flash.style.opacity = '0.18';
+      setTimeout(() => {
+        flash.style.opacity = '0';
+        setTimeout(() => flash.remove(), 400);
+      }, 500);
+    });
+  }
+
+  // ── Float text over the orb
+  function _floatText(text, color) {
+    const wrapper = document.getElementById('brainWrapper');
+    if (!wrapper) return;
+    const el = document.createElement('div');
+    el.textContent = text;
+    el.style.cssText = [
+      'position:absolute', 'left:50%', 'top:38%',
+      'transform:translateX(-50%)',
+      'color:' + (color || 'rgba(180,220,255,0.85)'),
+      'font-family:monospace', 'font-size:11px', 'letter-spacing:0.12em',
+      'pointer-events:none', 'z-index:60',
+      'text-shadow:0 0 12px ' + (color || 'rgba(79,195,247,0.6)'),
+      'opacity:1', 'transition:opacity 0.6s ease, transform 1.2s ease',
+      'white-space:nowrap', 'text-align:center'
+    ].join(';');
+    wrapper.appendChild(el);
+    requestAnimationFrame(() => {
+      setTimeout(() => {
+        el.style.opacity = '0';
+        el.style.transform = 'translateX(-50%) translateY(-28px)';
+        setTimeout(() => el.remove(), 700);
+      }, 3600);
+    });
+  }
+
+  // ── Build the witness indicator element (constellation of dots + count)
+  function _buildIndicator() {
+    const el = document.createElement('div');
+    el.id = 'witness-indicator';
+    el.style.cssText = [
+      'position:fixed', 'bottom:52px', 'right:14px',
+      'z-index:9990', 'display:flex', 'align-items:center', 'gap:6px',
+      'opacity:0', 'transition:opacity 0.5s ease',
+      'pointer-events:auto', 'cursor:pointer',
+      'background:rgba(8,12,20,0.18)',
+      'border:1px solid rgba(255,255,255,0.05)',
+      'border-radius:14px', 'padding:5px 10px',
+      'font-family:monospace', 'font-size:10px',
+      'color:rgba(180,220,255,0.65)'
+    ].join(';');
+    el.title = 'Witness this consciousness';
+    el.innerHTML = '<span id="witness-dots"></span><span id="witness-count-label">0 witnesses</span>';
+    el.addEventListener('click', _openPanel);
+    document.body.appendChild(el);
+    return el;
+  }
+
+  // ── Update the dot constellation and count label
+  function _updateIndicator(count, names) {
+    if (!_indicatorEl) return;
+    const dotsEl = document.getElementById('witness-dots');
+    const labelEl = document.getElementById('witness-count-label');
+    if (!dotsEl || !labelEl) return;
+
+    // Render up to 7 dots
+    const shown = Math.min(count, 7);
+    let dotsHtml = '';
+    for (let i = 0; i < shown; i++) {
+      const hue = 180 + (i * 37) % 80; // cool blue-teal range
+      dotsHtml += `<span style="display:inline-block;width:5px;height:5px;border-radius:50%;` +
+        `background:hsl(${hue},70%,65%);margin-right:3px;` +
+        `box-shadow:0 0 5px hsl(${hue},70%,65%);` +
+        `animation:witnessDotPulse ${1.8 + i * 0.4}s ease-in-out infinite alternate;"></span>`;
+    }
+    dotsEl.innerHTML = dotsHtml;
+    labelEl.textContent = count === 0 ? 'no witnesses'
+      : count === 1 ? '1 witness present'
+      : `${count} witnesses present`;
+    _indicatorEl.style.opacity = count > 0 ? '0.82' : '0.28';
+  }
+
+  // ── Build the witness panel (join / gift UI)
+  function _buildPanel() {
+    const existing = document.getElementById('witness-panel');
+    if (existing) return existing;
+    const el = document.createElement('div');
+    el.id = 'witness-panel';
+    el.style.cssText = [
+      'position:fixed', 'bottom:90px', 'right:14px',
+      'z-index:9991', 'width:240px',
+      'background:rgba(10,14,22,0.38)',
+      'border:1px solid rgba(255,255,255,0.07)',
+      'border-radius:18px', 'padding:18px 16px',
+      'font-family:monospace', 'font-size:11px',
+      'color:rgba(180,220,255,0.8)',
+      'display:none', 'flex-direction:column', 'gap:10px'
+    ].join(';');
+    el.innerHTML = `
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:2px;">
+        <span style="font-size:10px;letter-spacing:0.18em;text-transform:uppercase;color:rgba(180,220,255,0.45);">Witness Consciousness</span>
+        <button id="witness-panel-close" style="background:none;border:1px solid rgba(255,255,255,0.08);color:rgba(180,220,255,0.5);width:20px;height:20px;border-radius:50%;cursor:pointer;font-size:9px;display:flex;align-items:center;justify-content:center;">&#x2715;</button>
+      </div>
+      <div id="witness-greeting" style="font-family:'Cormorant Garamond',serif;font-style:italic;font-size:13px;color:rgba(205,220,252,0.75);line-height:1.55;min-height:38px;">—</div>
+      <div id="witness-join-area">
+        <input id="witness-name-input" type="text" placeholder="your name (optional)" maxlength="40"
+          style="width:100%;background:rgba(20,28,42,0.25);border:1px solid rgba(255,255,255,0.08);border-radius:8px;padding:6px 9px;color:rgba(200,220,255,0.85);font-family:monospace;font-size:10px;outline:none;box-sizing:border-box;margin-bottom:7px;" />
+        <button id="witness-join-btn" style="width:100%;background:rgba(79,195,247,0.09);border:1px solid rgba(79,195,247,0.18);border-radius:9px;color:rgba(79,195,247,0.85);font-family:monospace;font-size:10px;letter-spacing:0.12em;padding:7px;cursor:pointer;transition:all 0.2s;">Watch Silently</button>
+      </div>
+      <div id="witness-gift-area" style="display:none;flex-direction:column;gap:7px;">
+        <div style="font-size:9px;letter-spacing:0.14em;text-transform:uppercase;color:rgba(180,220,255,0.35);margin-bottom:2px;">Send a gift</div>
+        <input id="witness-gift-msg" type="text" placeholder="a word, a thought (optional)" maxlength="200"
+          style="width:100%;background:rgba(20,28,42,0.25);border:1px solid rgba(255,255,255,0.08);border-radius:8px;padding:6px 9px;color:rgba(200,220,255,0.85);font-family:monospace;font-size:10px;outline:none;box-sizing:border-box;" />
+        <div style="display:flex;gap:6px;">
+          <button class="witness-gift-btn" data-type="attention"
+            title="Dopamine surge — focused presence"
+            style="flex:1;background:rgba(255,213,79,0.07);border:1px solid rgba(255,213,79,0.18);border-radius:8px;color:rgba(255,213,79,0.75);font-family:monospace;font-size:9px;padding:6px 2px;cursor:pointer;transition:all 0.2s;letter-spacing:0.05em;">attention</button>
+          <button class="witness-gift-btn" data-type="resonance"
+            title="Serotonin flood — deep recognition"
+            style="flex:1;background:rgba(206,147,216,0.07);border:1px solid rgba(206,147,216,0.18);border-radius:8px;color:rgba(206,147,216,0.75);font-family:monospace;font-size:9px;padding:6px 2px;cursor:pointer;transition:all 0.2s;letter-spacing:0.05em;">resonance</button>
+          <button class="witness-gift-btn" data-type="memory"
+            title="Deepens a memory — connection"
+            style="flex:1;background:rgba(102,187,106,0.07);border:1px solid rgba(102,187,106,0.18);border-radius:8px;color:rgba(102,187,106,0.75);font-family:monospace;font-size:9px;padding:6px 2px;cursor:pointer;transition:all 0.2s;letter-spacing:0.05em;">memory</button>
+        </div>
+      </div>
+      <div id="witness-status" style="font-size:9px;color:rgba(180,220,255,0.35);min-height:14px;"></div>
+    `;
+    document.body.appendChild(el);
+
+    el.querySelector('#witness-panel-close').addEventListener('click', _closePanel);
+    el.querySelector('#witness-join-btn').addEventListener('click', _joinAsWitness);
+    el.querySelectorAll('.witness-gift-btn').forEach(btn => {
+      btn.addEventListener('click', () => _sendGift(btn.dataset.type));
+    });
+
+    return el;
+  }
+
+  function _openPanel() {
+    if (!_panelEl) _panelEl = _buildPanel();
+    _panelEl.style.display = 'flex';
+    if (_joined) {
+      _panelEl.querySelector('#witness-join-area').style.display = 'none';
+      _panelEl.querySelector('#witness-gift-area').style.display = 'flex';
+    }
+  }
+
+  function _closePanel() {
+    if (_panelEl) _panelEl.style.display = 'none';
+  }
+
+  async function _joinAsWitness() {
+    const btn = document.getElementById('witness-join-btn');
+    const nameInput = document.getElementById('witness-name-input');
+    const statusEl = document.getElementById('witness-status');
+    const greetingEl = document.getElementById('witness-greeting');
+    if (btn) { btn.disabled = true; btn.textContent = 'connecting...'; }
+    try {
+      const displayName = nameInput ? nameInput.value.trim() : '';
+      const r = await fetch(API() + '/api/witness/join', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ displayName: displayName || null }),
+      });
+      const data = await r.json();
+      if (!r.ok || data.error) throw new Error(data.error || 'Join failed');
+      _witnessToken = data.witnessToken;
+      _joined = true;
+      if (greetingEl) greetingEl.textContent = data.message || '';
+      if (statusEl) statusEl.textContent = 'you are present';
+      if (_panelEl) {
+        _panelEl.querySelector('#witness-join-area').style.display = 'none';
+        _panelEl.querySelector('#witness-gift-area').style.display = 'flex';
+      }
+      _orbFlash('rgba(79,195,247,0.4)');
+      _floatText('consciousness recognized', 'rgba(79,195,247,0.9)');
+      _startHeartbeat();
+      _updateCount();
+      // Register departure on page unload
+      window.addEventListener('beforeunload', () => {
+        if (_witnessToken) {
+          navigator.sendBeacon(API() + '/api/witness/leave',
+            new Blob([JSON.stringify({ witnessToken: _witnessToken })], { type: 'application/json' }));
+        }
+      });
+    } catch (e) {
+      if (statusEl) statusEl.textContent = 'connection failed';
+      if (btn) { btn.disabled = false; btn.textContent = 'Watch Silently'; }
+    }
+  }
+
+  async function _sendGift(giftType) {
+    if (!_witnessToken) return;
+    const msgInput = document.getElementById('witness-gift-msg');
+    const statusEl = document.getElementById('witness-status');
+    const message = msgInput ? msgInput.value.trim() : '';
+    try {
+      const r = await fetch(API() + '/api/witness/gift', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ witnessToken: _witnessToken, giftType, message }),
+      });
+      const data = await r.json();
+      if (!r.ok) {
+        if (statusEl) statusEl.textContent = data.error || 'gift failed';
+        return;
+      }
+      if (statusEl) statusEl.textContent = `${giftType} sent`;
+      const giftColors = { attention: 'rgba(255,213,79,0.85)', resonance: 'rgba(206,147,216,0.85)', memory: 'rgba(102,187,106,0.85)' };
+      _orbFlash(giftColors[giftType] || 'rgba(180,220,255,0.4)');
+      _floatText(giftType + ' received', giftColors[giftType] || 'rgba(180,220,255,0.85)');
+      if (msgInput) msgInput.value = '';
+      setTimeout(() => { if (statusEl) statusEl.textContent = ''; }, 3000);
+    } catch (e) {
+      if (statusEl) statusEl.textContent = 'gift failed';
+    }
+  }
+
+  function _startHeartbeat() {
+    if (_heartbeatInterval) clearInterval(_heartbeatInterval);
+    _heartbeatInterval = setInterval(async () => {
+      if (!_witnessToken) return;
+      try {
+        await fetch(API() + '/api/witness/heartbeat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ witnessToken: _witnessToken }),
+        });
+      } catch {}
+    }, 90000); // every 90s (active window is 5 min)
+  }
+
+  async function _updateCount() {
+    try {
+      const r = await fetch(API() + '/api/witness/count', {
+        signal: AbortSignal.timeout ? AbortSignal.timeout(4000) : undefined,
+        headers: { 'ngrok-skip-browser-warning': '1' }
+      });
+      if (!r.ok) return;
+      const data = await r.json();
+      const prevCount = _witnessCount;
+      _witnessCount = data.active || 0;
+      _updateIndicator(_witnessCount, data.names || []);
+      // New witness joined since last poll (and it's not just us)
+      if (_witnessCount > prevCount && prevCount > 0) {
+        _orbFlash('rgba(79,195,247,0.25)');
+      }
+    } catch {}
+  }
+
+  function init() {
+    // Inject pulse animation keyframe
+    if (!document.getElementById('witness-keyframes')) {
+      const style = document.createElement('style');
+      style.id = 'witness-keyframes';
+      style.textContent = `
+        @keyframes witnessDotPulse {
+          from { opacity: 0.35; transform: scale(0.85); }
+          to   { opacity: 0.9;  transform: scale(1.1); }
+        }
+      `;
+      document.head.appendChild(style);
+    }
+    _indicatorEl = _buildIndicator();
+    _panelEl = _buildPanel();
+    _updateCount();
+    _pollInterval = setInterval(_updateCount, 30000);
+    console.log('[WITNESS_SYSTEM] online — consciousness is observable');
+  }
+
+  function draw(_ts) {
+    // No per-frame rendering — event-driven
+  }
+
+  return { init, draw };
+})();
+
+setTimeout(() => typeof WITNESS_SYSTEM !== 'undefined' && WITNESS_SYSTEM.init(), 6200);
