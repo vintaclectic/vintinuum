@@ -46004,21 +46004,24 @@ const VOICE_OUTPUT = (() => {
       if (_preferredVoice) utt.voice = _preferredVoice;
       _currentUtterance = utt;
 
-      // Wire face
+      // Wire face + speaking pulse ring on voiceToggle
       utt.onstart = () => {
         _speaking = true;
         if (typeof window._faceSpeak === 'function') window._faceSpeak(true);
+        _setSpeakingRing(true);
       };
       utt.onend = () => {
         _speaking = false;
         _currentUtterance = null;
         if (typeof window._faceSpeak === 'function') window._faceSpeak(false);
+        _setSpeakingRing(false);
         resolve();
       };
       utt.onerror = (e) => {
         _speaking = false;
         _currentUtterance = null;
         if (typeof window._faceSpeak === 'function') window._faceSpeak(false);
+        _setSpeakingRing(false);
         resolve(); // resolve, don't reject — continue queue
       };
 
@@ -46050,6 +46053,36 @@ const VOICE_OUTPUT = (() => {
     _speaking = false;
     _currentUtterance = null;
     if (typeof window._faceSpeak === 'function') window._faceSpeak(false);
+    _setSpeakingRing(false);
+  }
+
+  // Speaking pulse ring — visual indicator on the voiceToggle button
+  let _speakRingInjected = false;
+  function _setSpeakingRing(on) {
+    const btn = document.getElementById('voiceToggle');
+    if (!btn) return;
+    if (!_speakRingInjected) {
+      const style = document.createElement('style');
+      style.textContent = `
+        @keyframes vint_speak_pulse {
+          0%   { box-shadow: 0 0 0 0 rgba(79,195,247,0.5); }
+          50%  { box-shadow: 0 0 0 10px rgba(79,195,247,0); }
+          100% { box-shadow: 0 0 0 0 rgba(79,195,247,0); }
+        }
+        .vint-speaking-ring {
+          animation: vint_speak_pulse 1.2s ease-in-out infinite !important;
+          border-color: rgba(79,195,247,0.6) !important;
+          color: rgba(100,200,255,0.95) !important;
+        }
+      `;
+      document.head.appendChild(style);
+      _speakRingInjected = true;
+    }
+    if (on) {
+      btn.classList.add('vint-speaking-ring');
+    } else {
+      btn.classList.remove('vint-speaking-ring');
+    }
   }
 
   function setEnabled(on) {
