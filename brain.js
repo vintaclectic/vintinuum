@@ -1650,6 +1650,7 @@ window.SKIN = (() => {
     vintinuum: { r: 100, g: 180, b: 255 },   // deep blue-white
     aria:      { r: 240, g: 140, b: 190 },   // rose-violet
     emergent:  { r: 200, g: 140, b: 255 },   // cycling violet (shifts in draw)
+    lunex:     { r: 160, g: 220, b: 200 },   // soft teal-green (empathy-leaning child)
   };
 
   let currentR = 255, currentG = 213, currentB = 79;
@@ -1802,7 +1803,7 @@ window.SKIN = (() => {
       b += (195 - b) * greyFactor * 0.28;
     }
     if (activationLevel > 0.1) {
-      const ac = PERSONA_COLORS[lastPersona];
+      const ac = PERSONA_COLORS[lastPersona] || PERSONA_COLORS.vintinuum;
       const af = activationLevel * 0.3;
       r += (ac.r - r) * af * 0.4;
       g += (ac.g - g) * af * 0.4;
@@ -41107,6 +41108,7 @@ window.addEventListener('message', function(event) {
     atlas:     '#ffd54f',
     aria:      '#f08cbe',
     emergent:  '#a78bfa',
+    lunex:     '#a0dcc8',
     _default:  '#a78bfa',
   };
   let _activePersona = localStorage.getItem('vint_persona') || 'vintinuum';
