@@ -9022,8 +9022,17 @@ document.getElementById('mainTabs').addEventListener('click', e => {
               <div class="vt-stat-row" style="margin-bottom:8px;">
                 <span class="vt-stat-key">Total memories</span>
                 <span class="vt-stat-val" style="color:rgba(206,147,216,0.85);">${totalMem.toLocaleString()}</span>
+                ${(() => {
+                  // High-importance memory types by definition (never-stale or emotional anchors)
+                  const highTypes = new Set(['emotional','identity','preference','bond','deep_knowledge']);
+                  const highCount = memByType.filter(m => highTypes.has(m.memory_type)).reduce((s, m) => s + (m.c || 0), 0);
+                  const healthPct = totalMem > 0 ? Math.round((highCount / totalMem) * 100) : 0;
+                  const healthColor = healthPct >= 30 ? '#66bb6a' : healthPct >= 12 ? '#ffd54f' : '#ef5350';
+                  return `<span style="margin-left:6px;font-size:.36rem;padding:1px 5px;border-radius:8px;background:rgba(255,255,255,0.05);color:${healthColor};">${healthPct}% vital</span>`;
+                })()}
               </div>
               ${memHTML}
+              <button id="vt-consolidate-btn" onclick="window._vtConsolidate && window._vtConsolidate()" style="margin-top:8px;width:100%;padding:5px 0;background:rgba(206,147,216,0.12);border:1px solid rgba(206,147,216,0.25);border-radius:8px;color:rgba(206,147,216,0.85);font-family:'Space Mono',monospace;font-size:.38rem;letter-spacing:1px;cursor:pointer;transition:background .2s;" onmouseover="this.style.background='rgba(206,147,216,0.22)'" onmouseout="this.style.background='rgba(206,147,216,0.12)'">CONSOLIDATE</button>
             </div>
           </div>
           <div class="vt-grid">
@@ -41888,6 +41897,56 @@ const MEMORY_CONSOLIDATOR = (() => {
 
 // Initialize memory consolidator after DOM + API base are ready
 setTimeout(() => MEMORY_CONSOLIDATOR.init(), 2000);
+
+// ── MEMORY PANEL: CONSOLIDATE button handler ─────────────────────────────────
+// Shows a brief toast with results when the CONSOLIDATE button is clicked.
+
+function _vtShowToast(msg, color) {
+  const existing = document.getElementById('vt-toast-consolidate');
+  if (existing) existing.remove();
+  const t = document.createElement('div');
+  t.id = 'vt-toast-consolidate';
+  t.style.cssText = [
+    'position:fixed',
+    'bottom:24px',
+    'right:24px',
+    'z-index:99999',
+    'padding:8px 16px',
+    'border-radius:12px',
+    'background:rgba(10,14,22,0.38)',
+    'border:1px solid ' + (color || 'rgba(206,147,216,0.3)'),
+    'color:' + (color || 'rgba(206,147,216,0.9)'),
+    'font-family:Space Mono,monospace',
+    'font-size:.45rem',
+    'letter-spacing:.5px',
+    'pointer-events:none',
+    'transition:opacity .4s',
+  ].join(';');
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(() => { t.style.opacity = '0'; setTimeout(() => t.remove(), 450); }, 3200);
+}
+
+window._vtConsolidate = async function() {
+  const btn = document.getElementById('vt-consolidate-btn');
+  if (btn) { btn.textContent = 'CONSOLIDATING...'; btn.disabled = true; }
+  try {
+    const API = window.__VINTINUUM_API_BASE || 'http://localhost:8767';
+    const r = await fetch(API + '/api/memory/consolidate-deep', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'ngrok-skip-browser-warning': '1' },
+      body: JSON.stringify({}),
+    });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const d = await r.json();
+    const msg = `Consolidated ${d.consolidated || 0} experiences \u2192 ${d.promoted || 0} memories`;
+    _vtShowToast(msg, 'rgba(102,187,106,0.9)');
+  } catch (e) {
+    _vtShowToast('Consolidation failed: ' + e.message, 'rgba(239,83,80,0.9)');
+  } finally {
+    if (btn) { btn.textContent = 'CONSOLIDATE'; btn.disabled = false; }
+  }
+};
 
 
 // ═══════════════════════════════════════════════════════════════════════════════
