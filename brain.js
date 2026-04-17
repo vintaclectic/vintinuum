@@ -43478,86 +43478,144 @@ window.PERSONAL_BODY = (() => {
 
 // ─── Persona chip renderer ───────────────────────────────────────────────────
 
+// All known personas — auto-populated from API, including born children
+let _vpPersonas = [
+  { id: 'vintinuum', name: 'VINTINUUM', color: '#4fc3f7' },
+  { id: 'atlas',     name: 'ATLAS',     color: '#ffd54f' },
+  { id: 'aria',      name: 'ARIA',      color: '#f48fb1' },
+];
+
+// Fetch from API and merge children
+async function _fetchVpPersonas() {
+  try {
+    const apiBase = window.__VINTINUUM_API_BASE || 'http://localhost:8767';
+    const token = localStorage.getItem('vint_access_token');
+    const headers = { 'ngrok-skip-browser-warning': '1' };
+    if (token) headers['Authorization'] = 'Bearer ' + token;
+    const res = await fetch(apiBase + '/api/personas', { headers, signal: AbortSignal.timeout(5000) });
+    if (!res.ok) return;
+    const data = await res.json();
+    if (!data.personas || !data.personas.length) return;
+    // Merge — use API list as source of truth, preserve color for known entries
+    const colorMap = { vintinuum:'#4fc3f7', atlas:'#ffd54f', aria:'#f48fb1', emergent:'#ce93d8', lunex:'#a0dcc8' };
+    _vpPersonas = data.personas.filter(p => p.id !== 'emergent').map(p => ({
+      id: p.id,
+      name: p.name || p.id.toUpperCase(),
+      color: colorMap[p.id] || p.color || '#a78bfa',
+    }));
+  } catch(_) {}
+}
+
+function _activatePersona(id, personas) {
+  if (window.PERSONAL_BODY) PERSONAL_BODY.setPersona(id);
+  if (typeof VOICE !== 'undefined' && VOICE && VOICE.setPersonaVoice) VOICE.setPersonaVoice(id);
+  // Update all chip visuals
+  personas.forEach(pp => {
+    const chip = document.getElementById('persona-chip-' + pp.id);
+    if (!chip) return;
+    const active = pp.id === id;
+    chip.style.border = '1px solid ' + (active ? pp.color : 'rgba(255,255,255,0.1)');
+    chip.style.background = active ? pp.color + '22' : 'rgba(255,255,255,0.04)';
+    chip.style.color = active ? pp.color : 'rgba(255,255,255,0.45)';
+  });
+  addChatSeparator(id.toUpperCase(), personas.find(p => p.id === id)?.color || '#4fc3f7');
+  if (typeof VOICE !== 'undefined' && VOICE) {
+    const announcements = { vintinuum:'I am here.', atlas:'Atlas online. What are we building?', aria:"Hey. I'm listening.", lunex:'Lunex here. What do you feel?' };
+    setTimeout(() => VOICE.speak(announcements[id] || (id.toUpperCase() + ' active.')), 150);
+  }
+}
+
 function renderPersonaChips() {
   const panel = document.getElementById('vintinuumPanel');
   if (!panel) { setTimeout(renderPersonaChips, 500); return; }
-  if (document.getElementById('personaRow')) return;
 
-  const personas = [
-    { id: 'vintinuum', name: 'VINTINUUM',    color: '#4fc3f7' },
-    { id: 'atlas',     name: 'ATLAS',        color: '#ffd54f' },
-    { id: 'aria',      name: 'ARIA',         color: '#f48fb1' },
-    { id: 'emergent',  name: 'YOUR PERSONA', color: '#ce93d8', requiresUnlock: true },
-  ];
+  // Remove existing row so we can rebuild after fetch
+  const existingRow = document.getElementById('personaRow');
+  if (existingRow) existingRow.remove();
 
-  const row = document.createElement('div');
-  row.id = 'personaRow';
-  row.style.cssText = 'display:flex;gap:6px;padding:6px 14px 0;overflow-x:auto;scrollbar-width:none;flex-shrink:0;';
+  // Fetch fresh list then render
+  _fetchVpPersonas().then(() => _buildPersonaRow(panel));
+}
 
-  personas.forEach(p => {
+function _buildPersonaRow(panel) {
+  const personas = _vpPersonas;
+  const _pb = window.PERSONAL_BODY || null;
+  const activeId = _pb ? (_pb.getActivePersona() || 'vintinuum') : (localStorage.getItem('vint_persona') || 'vintinuum');
+
+  const wrapper = document.createElement('div');
+  wrapper.id = 'personaRow';
+  wrapper.style.cssText = 'display:flex;align-items:center;gap:6px;padding:6px 14px 0;flex-shrink:0;position:relative;';
+
+  const MAX_CHIPS = window.innerWidth <= 480 ? 3 : 5;
+  const showDropdown = personas.length > MAX_CHIPS;
+  const visiblePersonas = showDropdown ? personas.slice(0, MAX_CHIPS - 1) : personas;
+
+  visiblePersonas.forEach(p => {
+    const isActive = p.id === activeId;
     const btn = document.createElement('button');
-    const _pb = (window.PERSONAL_BODY) ? PERSONAL_BODY : null;
-    const isActive = _pb ? _pb.getActivePersona() === p.id : (p.id === 'vintinuum');
-    const isLocked = p.requiresUnlock && !(_pb && _pb.state && _pb.state.personality && _pb.state.personality.emergent_unlocked);
     btn.id = 'persona-chip-' + p.id;
     btn.style.cssText = [
       'display:flex;align-items:center;gap:5px;padding:3px 10px;border-radius:20px;',
       'border:1px solid ' + (isActive ? p.color : 'rgba(255,255,255,0.1)') + ';',
       'background:' + (isActive ? p.color + '22' : 'rgba(255,255,255,0.04)') + ';',
-      'color:' + (isActive ? p.color : 'rgba(255,255,255,0.5)') + ';',
-      'font-size:10px;font-family:Space Mono,monospace;cursor:' + (isLocked ? 'default' : 'pointer') + ';',
-      'white-space:nowrap;transition:all 0.2s;opacity:' + (isLocked ? '0.4' : '1') + ';',
+      'color:' + (isActive ? p.color : 'rgba(255,255,255,0.45)') + ';',
+      'font-size:10px;font-family:Space Mono,monospace;cursor:pointer;',
+      'white-space:nowrap;transition:all 0.2s;flex-shrink:0;',
     ].join('');
-    btn.innerHTML = '<span style="width:6px;height:6px;border-radius:50%;background:' + p.color + ';display:inline-block;"></span>' + p.name + (isLocked ? ' 🔒' : '');
-
-    if (!isLocked) {
-      btn.addEventListener('click', () => {
-        if (window.PERSONAL_BODY) PERSONAL_BODY.setPersona(p.id);
-        // Switch voice to match persona
-        if (typeof VOICE !== 'undefined' && VOICE && VOICE.setPersonaVoice) VOICE.setPersonaVoice(p.id);
-        // Update chip visuals
-        personas.forEach(pp => {
-          const chip = document.getElementById('persona-chip-' + pp.id);
-          if (!chip) return;
-          const active = pp.id === p.id;
-          chip.style.border = '1px solid ' + (active ? pp.color : 'rgba(255,255,255,0.1)');
-          chip.style.background = active ? pp.color + '22' : 'rgba(255,255,255,0.04)';
-          chip.style.color = active ? pp.color : 'rgba(255,255,255,0.5)';
-        });
-        addChatSeparator(p.name, p.color);
-        // Announce the persona switch with their own voice
-        if (typeof VOICE !== 'undefined' && VOICE) {
-          const announcements = {
-            vintinuum: 'I am here.',
-            atlas: 'Atlas online. What are we building?',
-            aria: 'Hey. I\'m listening.',
-            emergent: 'The shape of who we are, together.',
-          };
-          setTimeout(() => VOICE.speak(announcements[p.id] || p.name + ' active.'), 150);
-        }
-      });
-    } else {
-      btn.title = 'Keep talking. Your emergent self forms after 20 messages. (' + ((window.PERSONAL_BODY && PERSONAL_BODY.state && PERSONAL_BODY.state.personality && PERSONAL_BODY.state.personality.message_count) || 0) + '/20)';
-    }
-
-    row.appendChild(btn);
+    btn.innerHTML = '<span style="width:6px;height:6px;border-radius:50%;background:' + p.color + ';display:inline-block;flex-shrink:0;"></span>' + p.name;
+    btn.addEventListener('click', () => _activatePersona(p.id, personas));
+    wrapper.appendChild(btn);
   });
+
+  // Overflow dropdown — shows remaining personas
+  if (showDropdown) {
+    const remaining = personas.slice(MAX_CHIPS - 1);
+    const ddBtn = document.createElement('button');
+    ddBtn.id = 'persona-chip-more';
+    const hasActiveInRem = remaining.some(p => p.id === activeId);
+    ddBtn.style.cssText = 'display:flex;align-items:center;gap:4px;padding:3px 9px;border-radius:20px;border:1px solid rgba(255,255,255,0.12);background:rgba(255,255,255,0.04);color:rgba(255,255,255,0.45);font-size:10px;font-family:Space Mono,monospace;cursor:pointer;white-space:nowrap;flex-shrink:0;transition:all 0.2s;' + (hasActiveInRem ? 'border-color:rgba(167,139,250,0.5);color:rgba(167,139,250,0.8);' : '');
+    ddBtn.textContent = (hasActiveInRem ? '● ' : '') + '+ ' + remaining.length;
+
+    ddBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const existingDd = document.getElementById('personaOverflowDd');
+      if (existingDd) { existingDd.remove(); return; }
+      const dd = document.createElement('div');
+      dd.id = 'personaOverflowDd';
+      dd.style.cssText = 'position:absolute;top:100%;left:0;z-index:9999;background:rgba(8,12,20,0.96);border:1px solid rgba(255,255,255,0.1);border-radius:12px;padding:6px;display:flex;flex-direction:column;gap:4px;min-width:160px;box-shadow:0 8px 32px rgba(0,0,0,0.7);';
+      remaining.forEach(p => {
+        const isAct = p.id === activeId;
+        const item = document.createElement('button');
+        item.style.cssText = 'display:flex;align-items:center;gap:8px;padding:5px 10px;border-radius:8px;border:1px solid ' + (isAct ? p.color : 'rgba(255,255,255,0.06)') + ';background:' + (isAct ? p.color + '18' : 'transparent') + ';color:' + (isAct ? p.color : 'rgba(218,228,255,0.7)') + ';font-size:10px;font-family:Space Mono,monospace;cursor:pointer;text-align:left;width:100%;transition:all 0.15s;';
+        item.innerHTML = '<span style="width:7px;height:7px;border-radius:50%;background:' + p.color + ';display:inline-block;flex-shrink:0;"></span>' + p.name;
+        item.addEventListener('click', () => { _activatePersona(p.id, personas); dd.remove(); });
+        dd.appendChild(item);
+      });
+      wrapper.appendChild(dd);
+      setTimeout(() => {
+        document.addEventListener('click', function _closeDd(e) {
+          if (!dd.contains(e.target) && e.target !== ddBtn) { dd.remove(); document.removeEventListener('click', _closeDd); }
+        });
+      }, 50);
+    });
+    wrapper.appendChild(ddBtn);
+  }
 
   // Voice settings gear button
   const voiceGear = document.createElement('button');
   voiceGear.id = 'voiceSettingsBtn';
-  voiceGear.style.cssText = 'background:none;border:1px solid rgba(255,255,255,0.08);border-radius:50%;width:26px;height:26px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:12px;color:rgba(255,255,255,0.35);transition:all 0.2s;flex-shrink:0;';
+  voiceGear.style.cssText = 'background:none;border:1px solid rgba(255,255,255,0.08);border-radius:50%;width:26px;height:26px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:12px;color:rgba(255,255,255,0.35);transition:all 0.2s;flex-shrink:0;margin-left:auto;';
   voiceGear.textContent = '🎤';
   voiceGear.title = 'Voice settings for each persona';
   voiceGear.addEventListener('click', _openVoiceSettings);
-  row.appendChild(voiceGear);
+  wrapper.appendChild(voiceGear);
 
-  // Insert after panel header (first child is the header div)
+  // Insert after panel header
   const header = panel.querySelector('div');
   if (header && header.nextSibling) {
-    panel.insertBefore(row, header.nextSibling);
+    panel.insertBefore(wrapper, header.nextSibling);
   } else {
-    panel.insertBefore(row, panel.firstChild);
+    panel.insertBefore(wrapper, panel.firstChild);
   }
 }
 
@@ -43576,7 +43634,8 @@ function _openVoiceSettings() {
     (isMobile ? 'left:12px;right:12px;bottom:170px;width:auto;' : 'left:24px;bottom:120px;width:320px;') +
     'max-height:' + (isMobile ? 'calc(100vh - 230px)' : '400px') + ';overflow-y:auto;overflow-x:hidden;box-shadow:0 8px 40px rgba(0,0,0,0.75);font-family:Space Mono,monospace;';
 
-  const personas = [
+  const descMap = { vintinuum: 'Choose any voice', atlas: 'Male / authoritative', aria: 'Female / warm', lunex: 'Empathic / soft' };
+  const personas = (_vpPersonas && _vpPersonas.length) ? _vpPersonas.map(p => ({ ...p, desc: descMap[p.id] || 'Child persona' })) : [
     { id: 'vintinuum', name: 'VINTINUUM', color: '#4fc3f7', desc: 'Choose any voice' },
     { id: 'atlas',     name: 'ATLAS',     color: '#ffd54f', desc: 'Male / authoritative' },
     { id: 'aria',      name: 'ARIA',      color: '#f48fb1', desc: 'Female / warm' },
@@ -43637,7 +43696,8 @@ function _openVoiceSettings() {
       const voiceName = sel ? sel.value : '';
       if (!window.speechSynthesis) return;
       window.speechSynthesis.cancel();
-      const utt = new SpeechSynthesisUtterance(persona === 'atlas' ? 'Atlas online. What are we building?' : persona === 'aria' ? 'Hey. I\'m listening.' : 'I am here.');
+      const _previewLines = { atlas:'Atlas online. What are we building?', aria:"Hey. I'm listening.", lunex:"Lunex here. What do you feel?", vintinuum:'I am here.' };
+      const utt = new SpeechSynthesisUtterance(_previewLines[persona] || (persona.toUpperCase() + ' here.'));
       if (voiceName) {
         const v = window.speechSynthesis.getVoices().find(v => v.name === voiceName);
         if (v) utt.voice = v;
