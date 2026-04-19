@@ -47849,18 +47849,48 @@ setTimeout(() => { if (typeof SOUL_AUTH !== 'undefined') SOUL_AUTH.init(); }, 10
 // ── Auto-send token to extension on load ─────────────────────────────────────
 // If we already have a token when brain.html loads, immediately fire the bridge
 // so the popup/content.js picks it up without the user clicking SEND manually.
+// Also handles VINT_REQUEST_TOKEN from the extension — refreshes first if needed.
 (function _autoTokenBridge() {
-  function _trySend() {
-    const tok = localStorage.getItem('vint_access_token') || localStorage.getItem('vint_access');
+  function _isExpired(tok) {
+    try {
+      const payload = JSON.parse(atob(tok.split('.')[1].replace(/-/g,'+').replace(/_/g,'/')));
+      return payload.exp && (payload.exp * 1000) < Date.now();
+    } catch(_) { return true; }
+  }
+
+  async function _trySend() {
+    let tok = localStorage.getItem('vint_access_token') || localStorage.getItem('vint_access');
     if (!tok) return;
+    // If expired, try to refresh via SOUL_AUTH before sending
+    if (_isExpired(tok)) {
+      console.log('[VINTINUUM] token expired — attempting refresh before bridge');
+      try {
+        if (typeof SOUL_AUTH !== 'undefined' && SOUL_AUTH.refresh) {
+          await SOUL_AUTH.refresh();
+          tok = localStorage.getItem('vint_access_token') || localStorage.getItem('vint_access');
+        }
+      } catch(_) {}
+    }
+    if (!tok || _isExpired(tok)) {
+      console.log('[VINTINUUM] no valid token to bridge — user needs to log in');
+      return;
+    }
     try { localStorage.setItem('vint_ext_bridge', tok); } catch(_) {}
     window.postMessage({ type: 'VINT_TOKEN_BRIDGE', token: tok }, '*');
     console.log('[VINTINUUM] auto-bridged token to extension');
   }
+
   // Fire immediately (covers already-logged-in case)
   setTimeout(_trySend, 1500);
   // Also fire after SOUL_AUTH finishes (covers fresh login)
   setTimeout(_trySend, 3000);
+
+  // Listen for extension requesting a fresh token
+  window.addEventListener('message', (e) => {
+    if (e.data && e.data.__vint_cmd && e.data.cmd === 'REQUEST_TOKEN') {
+      _trySend();
+    }
+  });
 })();
 
 
