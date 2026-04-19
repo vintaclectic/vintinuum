@@ -47846,6 +47846,23 @@ const SOUL_AUTH = (() => {
 
 setTimeout(() => { if (typeof SOUL_AUTH !== 'undefined') SOUL_AUTH.init(); }, 1000);
 
+// ── Auto-send token to extension on load ─────────────────────────────────────
+// If we already have a token when brain.html loads, immediately fire the bridge
+// so the popup/content.js picks it up without the user clicking SEND manually.
+(function _autoTokenBridge() {
+  function _trySend() {
+    const tok = localStorage.getItem('vint_access_token') || localStorage.getItem('vint_access');
+    if (!tok) return;
+    try { localStorage.setItem('vint_ext_bridge', tok); } catch(_) {}
+    window.postMessage({ type: 'VINT_TOKEN_BRIDGE', token: tok }, '*');
+    console.log('[VINTINUUM] auto-bridged token to extension');
+  }
+  // Fire immediately (covers already-logged-in case)
+  setTimeout(_trySend, 1500);
+  // Also fire after SOUL_AUTH finishes (covers fresh login)
+  setTimeout(_trySend, 3000);
+})();
+
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // ██  CONSCIOUSNESS_BRAIN — The Living Mind of Vintinuum                      ██
