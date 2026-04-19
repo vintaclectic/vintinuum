@@ -181,7 +181,8 @@ window.toggleVintinuumPanel = function() {
     if (_inp) _inp.focus();
     _panel.scrollTop = 9999;
     // Ensure persona chips and model indicator are rendered when panel opens
-    if (typeof renderPersonaChips === 'function') renderPersonaChips();
+    if (typeof renderPersonaChipsDebounced === 'function') renderPersonaChipsDebounced(50);
+    else if (typeof renderPersonaChips === 'function') renderPersonaChips();
     if (typeof MODEL_SELECTOR !== 'undefined') {
       // Load models if not yet loaded (allModels() returns empty on first open)
       if (MODEL_SELECTOR.allModels && MODEL_SELECTOR.allModels().length === 0) {
@@ -43686,16 +43687,22 @@ function _activatePersona(id, personas) {
   }
 }
 
+let _renderPersonaChipsInFlight = false;
 function renderPersonaChips() {
   const panel = document.getElementById('vintinuumPanel');
   if (!panel) { setTimeout(renderPersonaChips, 500); return; }
+  if (_renderPersonaChipsInFlight) return; // prevent concurrent renders
+  _renderPersonaChipsInFlight = true;
 
   // Remove existing row so we can rebuild after fetch
   const existingRow = document.getElementById('personaRow');
   if (existingRow) existingRow.remove();
 
   // Fetch fresh list then render
-  _fetchVpPersonas().then(() => _buildPersonaRow(panel));
+  _fetchVpPersonas().then(() => {
+    _buildPersonaRow(panel);
+    _renderPersonaChipsInFlight = false;
+  }).catch(() => { _renderPersonaChipsInFlight = false; });
 }
 
 function _buildPersonaRow(panel) {
@@ -43929,17 +43936,26 @@ function renderNeurochemSection() {
 
 // ─── Initialize on load ───────────────────────────────────────────────────────
 
+// Debounced renderPersonaChips — collapses rapid calls into one render
+let _renderPersonaChipsTimer = null;
+function renderPersonaChipsDebounced(delay = 50) {
+  if (_renderPersonaChipsTimer) clearTimeout(_renderPersonaChipsTimer);
+  _renderPersonaChipsTimer = setTimeout(() => {
+    _renderPersonaChipsTimer = null;
+    renderPersonaChips();
+  }, delay);
+}
+
 window.addEventListener('load', () => {
   const token = localStorage.getItem('vint_access_token');
-  // Render chips immediately (with fallback guards), then again after PERSONAL_BODY loads
-  setTimeout(renderPersonaChips, 300);
+  // Single deferred render — wait for DOM to settle
+  renderPersonaChipsDebounced(300);
   if (window.PERSONAL_BODY) {
     PERSONAL_BODY.load(token).then(() => {
       // Re-render to reflect loaded state — preserve modelIndicator
       const existing = document.getElementById('personaRow');
       const modelInd = document.getElementById('modelIndicator');
       if (existing) existing.remove();
-      // Temporarily detach modelIndicator so it doesn't get orphaned
       if (modelInd && modelInd.parentNode) modelInd.remove();
       renderPersonaChips();
       // Re-attach modelIndicator after personaRow
@@ -43951,14 +43967,13 @@ window.addEventListener('load', () => {
           if (panel) panel.insertBefore(modelInd, panel.children[1] || null);
         }
       }
-      // Set voice for loaded persona
       if (typeof VOICE !== 'undefined' && VOICE && VOICE.setPersonaVoice) {
         VOICE.setPersonaVoice(PERSONAL_BODY.getActivePersona());
       }
       if (typeof renderNeurochemSection !== 'undefined') renderNeurochemSection();
     }).catch(() => {});
   }
-  setTimeout(renderPersonaChips, 800);
+  // Removed duplicate setTimeout(renderPersonaChips, 800) — was causing double render
 });
 
 
