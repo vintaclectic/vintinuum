@@ -781,8 +781,14 @@ input[type="range"]::-moz-range-thumb {
 'use strict';
 
 // ── Config ──
-const API_BASE = window.__VINTINUUM_API_BASE || window.location.origin;
-const TOKEN = () => localStorage.getItem('vint_access_token') || '';
+// API base: prefer saved setting, then try known endpoints, never use page origin
+// (page is served from GitHub Pages which is NOT the API)
+const API_BASES = [
+  'https://api.vintaclectic.com',
+  'http://localhost:8767'
+];
+let API_BASE = localStorage.getItem('vint_phone_api') || API_BASES[0];
+const TOKEN = () => localStorage.getItem('vint_access_token') || localStorage.getItem('vint_token') || '';
 const PULSE_INTERVAL = 15 * 60 * 1000; // 15 min
 const BODY_POLL_INTERVAL = 30 * 1000;   // 30 sec
 
@@ -869,20 +875,26 @@ document.querySelectorAll('.nav-btn').forEach(btn => {
 
 // ── Connection Check ──
 async function checkConnection() {
-  try {
-    const res = await fetch(API_BASE + '/api/health', {
-      headers: authHeaders(),
-      signal: AbortSignal.timeout(5000)
-    });
-    const ok = res.ok;
-    state.connected = ok;
-    connDot.classList.toggle('offline', !ok);
-    connLabel.textContent = ok ? 'connected' : 'error';
-  } catch {
-    state.connected = false;
-    connDot.classList.add('offline');
-    connLabel.textContent = 'offline';
+  // Try each API base until one responds
+  for (const base of [API_BASE, ...API_BASES.filter(b => b !== API_BASE)]) {
+    try {
+      const res = await fetch(base + '/api/body-state', {
+        headers: { ...authHeaders(), 'ngrok-skip-browser-warning': '1' },
+        signal: AbortSignal.timeout(5000)
+      });
+      if (res.ok) {
+        state.connected = true;
+        API_BASE = base;
+        localStorage.setItem('vint_phone_api', base);
+        connDot.classList.remove('offline');
+        connLabel.textContent = 'connected';
+        return;
+      }
+    } catch { /* try next */ }
   }
+  state.connected = false;
+  connDot.classList.add('offline');
+  connLabel.textContent = 'offline';
 }
 
 // ── Battery Sensor ──
@@ -1081,7 +1093,7 @@ async function fetchBodyState() {
   if (!state.connected) return;
   try {
     const res = await fetch(API_BASE + '/api/body-state', {
-      headers: authHeaders(),
+      headers: { ...authHeaders(), 'ngrok-skip-browser-warning': '1' },
       signal: AbortSignal.timeout(8000)
     });
     if (!res.ok) return;
@@ -1177,7 +1189,7 @@ pulseSendBtn.addEventListener('click', async () => {
   try {
     const res = await fetch(API_BASE + '/api/life/pulse', {
       method: 'POST',
-      headers: authHeaders(),
+      headers: { ...authHeaders(), 'ngrok-skip-browser-warning': '1' },
       body: JSON.stringify(payload)
     });
     if (res.ok) {
@@ -1235,7 +1247,7 @@ async function sendAutoPulse(type, title, body, mood, energy) {
   try {
     await fetch(API_BASE + '/api/life/pulse', {
       method: 'POST',
-      headers: authHeaders(),
+      headers: { ...authHeaders(), 'ngrok-skip-browser-warning': '1' },
       body: JSON.stringify(payload)
     });
     state.lastPulseTime = Date.now();
@@ -1313,14 +1325,14 @@ async function sendChatMessage() {
     const systemPrompt = personaSystemPrompts[state.currentPersona] +
       `\n\nCurrent body state from phone sensors:\n${sensorContext}`;
 
-    const res = await fetch(API_BASE + '/api/chat', {
+    const res = await fetch(API_BASE + '/chat', {
       method: 'POST',
-      headers: authHeaders(),
+      headers: { ...authHeaders(), 'ngrok-skip-browser-warning': '1' },
       body: JSON.stringify({
         message: msg,
         history: state.chatHistory.slice(-20),
         system: systemPrompt,
-        persona: state.currentPersona
+        persona: state.currentPersona.toLowerCase() === 'v' ? 'vintinuum' : state.currentPersona.toLowerCase()
       })
     });
 
@@ -1346,10 +1358,10 @@ async function sendChatMessage() {
         if (data === '[DONE]') continue;
         try {
           const parsed = JSON.parse(data);
-          if (parsed.text) {
-            fullText += parsed.text;
+          const chunk = parsed.delta || parsed.text || '';
+          if (chunk) {
+            fullText += chunk;
             // Update displayed text (preserve cursor)
-            const textNode = document.createTextNode('');
             assistantEl.textContent = fullText;
             assistantEl.appendChild(cursor);
             chatMessages.scrollTop = chatMessages.scrollHeight;

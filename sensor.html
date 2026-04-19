@@ -114,7 +114,7 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
     'http://localhost:8767'
   ];
   let apiBase = localStorage.getItem('vint_sensor_api') || API_BASES[0];
-  const token = localStorage.getItem('vint_token');
+  const token = localStorage.getItem('vint_token') || localStorage.getItem('vint_access_token');
 
   // ── DOM refs ──
   const orb = document.getElementById('orb');
