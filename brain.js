@@ -7386,10 +7386,13 @@ window.MIC = (() => {
 // AURA LAYER — faint colored aura around body, shifts with emotion
 // ═══════════════════════════════════════════════════════════════════
 const AURA = (() => {
+  // AURA facade: shift(hex, intensity) is the public contract.
+  // Internal renderer is swappable via _render assignment. See Phase 1
+  // Convergence step 6 for the breath-field renderer that replaces the ellipse.
   const svgNS = 'http://www.w3.org/2000/svg';
   const layer = document.getElementById('lightLayer');
 
-  // The persistent aura ellipse — inserted once, updated each frame
+  // The persistent aura ellipse — inserted once, updated each frame (legacy renderer)
   const auraEl = document.createElementNS(svgNS, 'ellipse');
   auraEl.setAttribute('cx', '350');
   auraEl.setAttribute('cy', '700');
@@ -7413,13 +7416,15 @@ const AURA = (() => {
     return `${r},${g},${b}`;
   }
 
+  // ── Public API — do not change signature. 6 call sites rely on this. ──
   function shift(hexColor, intensity) {
     targetColor = parseRgb(hexColor);
     targetOpacity = intensity;
     shiftTimer = 180; // hold for 3 seconds at 60fps
   }
 
-  function draw(ts) {
+  // ── Legacy renderer: single luminous ellipse in #lightLayer ────────────
+  function _legacyEllipseRender(ts) {
     const t = ts * 0.001;
     // Gentle breath wave
     const breathe = 0.006 * Math.sin(t * 0.35);
@@ -7446,7 +7451,33 @@ const AURA = (() => {
     auraEl.setAttribute('ry', ry.toFixed(1));
   }
 
-  return { draw, shift };
+  // Swappable renderer hook — default points at legacy ellipse. Step 6 swaps
+  // this to the breath-field renderer bound to #skinOutline.
+  let _render = _legacyEllipseRender;
+
+  function draw(ts) {
+    _render(ts);
+  }
+
+  // Expose internals for step-6 swap and debugging. Do not call shift/draw
+  // consumers via these handles — they remain the public API.
+  return {
+    draw,
+    shift,
+    _legacyEllipseRender,
+    get _render() { return _render; },
+    set _render(fn) { _render = (typeof fn === 'function') ? fn : _legacyEllipseRender; },
+    // Internal refs exposed for the step-6 breath-field renderer only.
+    _internals: {
+      get auraEl() { return auraEl; },
+      get shiftTimer() { return shiftTimer; },
+      set shiftTimer(v) { shiftTimer = v; },
+      get targetColor() { return targetColor; },
+      set targetColor(v) { targetColor = v; },
+      get targetOpacity() { return targetOpacity; },
+      set targetOpacity(v) { targetOpacity = v; },
+    },
+  };
 })();
 
 // ═══════════════════════════════════════════════════════════════════
