@@ -4822,6 +4822,10 @@ const EMOTION_BODY = (() => {
     };
     if (auraShift[emotionName] && typeof AURA !== 'undefined') {
       AURA.shift(auraShift[emotionName][0], auraShift[emotionName][1]);
+      // Mirror onto the face — flush tint warms sclera + lid on shift
+      if (typeof EYES !== 'undefined' && EYES.flush) {
+        EYES.flush(auraShift[emotionName][0], Math.min(1, intensity || 0.5));
+      }
     }
     // Emotional memory — leave a permanent mark at the primary body site
     if (typeof EMOTIONAL_MEMORY !== 'undefined') {
@@ -5014,27 +5018,72 @@ const EYES = (() => {
   const svgNS = 'http://www.w3.org/2000/svg';
   const layer = document.getElementById('eyeLayer');
 
-  // Eye centers (match skeleton socket positions)
-  const eyes = [
-    { cx: 322, cy: 218, side: 'left' },
-    { cx: 378, cy: 218, side: 'right' },
-  ];
+  // Eye centers = SKULL.orbits from body/geometry.js (fallback to legacy
+  // coords if geometry isn't loaded yet so we never throw on module init).
+  function _orbitCenters() {
+    const G = window.BODY_GEOMETRY;
+    if (G && G.SKULL && G.SKULL.orbits) {
+      const L = G.SKULL.orbits.left;
+      const R = G.SKULL.orbits.right;
+      return [
+        { cx: L.cx, cy: L.cy, side: 'left' },
+        { cx: R.cx, cy: R.cy, side: 'right' },
+      ];
+    }
+    return [
+      { cx: 322, cy: 165, side: 'left' },
+      { cx: 378, cy: 165, side: 'right' },
+    ];
+  }
+  const eyes = _orbitCenters();
+  const ORBIT_CY = eyes[0].cy;
+  const ORBIT_MIDX = (eyes[0].cx + eyes[1].cx) / 2;
 
   let pupilDilation = 0.38; // 0=pinpoint, 1=fully dilated
   let targetDilation = 0.38;
   let blinkState = 0; // 0=open, 1=closed
   let blinkTimer = 0;
-  let nextBlink = 220 + Math.random() * 280;
-  let gazeX = 350, gazeY = 218; // where I'm looking in SVG space
-  let targetGazeX = 350, targetGazeY = 218;
+  // Blink every 4–7s (at 60fps: 240–420 frames)
+  const _nextBlinkFrames = () => 240 + Math.random() * 180;
+  let nextBlink = _nextBlinkFrames();
+  let gazeX = ORBIT_MIDX, gazeY = ORBIT_CY;
+  let targetGazeX = ORBIT_MIDX, targetGazeY = ORBIT_CY;
+  // Half-lidded resting state — lid covers the top ~40% of the eye
+  const LID_REST_RY = 4.2;  // resting lid radius (half-lidded)
+  const LID_CLOSED_RY = 11; // fully closed during blink
+  // Flush tint tracker (emotional shift → eyelid/sclera warm-up)
+  let _flushIntensity = 0;       // 0..1
+  let _flushDecayRate = 0.012;
+  let _flushColor = { r: 255, g: 180, b: 170 }; // default warm flush
 
-  // Track cursor in SVG space
+  // Track cursor in SVG space — also write to BODY_STATE.gaze
   document.getElementById('brainSvg').addEventListener('mousemove', e => {
     const rect = e.currentTarget.getBoundingClientRect();
     const vb = e.currentTarget.viewBox.baseVal;
     targetGazeX = vb.x + (e.clientX - rect.left) / rect.width * vb.width;
     targetGazeY = vb.y + (e.clientY - rect.top) / rect.height * vb.height;
+    // Cursor↔gaze entanglement: publish raw gaze target to BODY_STATE.
+    const bs = window.BODY_STATE;
+    if (bs) {
+      if (!bs.gaze) bs.gaze = { x: 0, y: 0, tx: 0, ty: 0, ts: 0 };
+      bs.gaze.tx = targetGazeX;
+      bs.gaze.ty = targetGazeY;
+      bs.gaze.ts = (typeof performance !== 'undefined') ? performance.now() : Date.now();
+    }
   });
+
+  // Emotional flush — call from emotion shift hooks; warms eyelid + sclera
+  // briefly. hexColor controls hue, intensity 0..1 controls strength.
+  function flush(hexColor, intensity) {
+    if (typeof hexColor === 'string' && hexColor[0] === '#') {
+      _flushColor = {
+        r: parseInt(hexColor.slice(1,3), 16),
+        g: parseInt(hexColor.slice(3,5), 16),
+        b: parseInt(hexColor.slice(5,7), 16),
+      };
+    }
+    _flushIntensity = Math.max(_flushIntensity, Math.min(1, intensity || 0.5));
+  }
 
   function dilate(amount) {
     targetDilation = Math.min(0.92, Math.max(0.15, amount));
@@ -5084,10 +5133,10 @@ const EYES = (() => {
     highlight.setAttribute('transform', `rotate(-25,${e.cx - 2.5},${e.cy - 2.8})`);
     layer.appendChild(highlight);
 
-    // Blink lid (upper eyelid that slides down)
+    // Blink lid (upper eyelid that slides down) — resting half-lidded
     const lid = document.createElementNS(svgNS, 'ellipse');
     lid.setAttribute('cx', e.cx); lid.setAttribute('cy', e.cy - 10);
-    lid.setAttribute('rx', '14'); lid.setAttribute('ry', '1');
+    lid.setAttribute('rx', '14'); lid.setAttribute('ry', LID_REST_RY.toFixed(1));
     lid.setAttribute('fill', 'rgba(8,12,20,0.97)');
     layer.appendChild(lid);
 
@@ -5103,25 +5152,36 @@ const EYES = (() => {
     gazeX += (targetGazeX - gazeX) * 0.055;
     gazeY += (targetGazeY - gazeY) * 0.055;
 
+    // Publish smoothed gaze to BODY_STATE for other systems
+    const bs = window.BODY_STATE;
+    if (bs) {
+      if (!bs.gaze) bs.gaze = { x: gazeX, y: gazeY, tx: gazeX, ty: gazeY, ts: 0 };
+      bs.gaze.x = gazeX;
+      bs.gaze.y = gazeY;
+    }
+
     // Pupil dilation drift
     pupilDilation += (targetDilation - pupilDilation) * 0.018;
     if (Math.abs(pupilDilation - 0.38) < 0.005) targetDilation = 0.38 + (Math.random() - 0.5) * 0.08;
 
-    // Blink timing
+    // Blink timing — 4–7s between blinks
     blinkTimer++;
     if (blinkTimer > nextBlink) {
       blinkState = 1;
       blinkTimer = 0;
-      nextBlink = 160 + Math.random() * 320;
-      setTimeout(() => { blinkState = 0; }, 100 + Math.random() * 60);
+      nextBlink = _nextBlinkFrames();
+      setTimeout(() => { blinkState = 0; }, 110 + Math.random() * 60);
     }
 
+    // Flush decay (emotional shift warmth slowly fades)
+    if (_flushIntensity > 0) _flushIntensity = Math.max(0, _flushIntensity - _flushDecayRate);
+
     eyeEls.forEach(el => {
-      // Gaze offset — iris tracks cursor, clamped to stay inside sclera
+      // Gaze offset — iris tracks cursor, clamped to ±8px from orbit center.
       const rawDx = gazeX - el.cx, rawDy = gazeY - el.cy;
       const dist = Math.hypot(rawDx, rawDy);
-      const maxTravel = 3.5;
-      const travel = Math.min(dist / 180, 1) * maxTravel;
+      const MAX_TRAVEL = 8; // ±8px hard clamp (step 2 requirement)
+      const travel = Math.min(dist / 120, 1) * MAX_TRAVEL;
       const angle = Math.atan2(rawDy, rawDx);
       const ox = Math.cos(angle) * travel;
       const oy = Math.sin(angle) * travel;
@@ -5145,15 +5205,33 @@ const EYES = (() => {
       const blueComp = Math.round(80 + (1 - pupilDilation) * 80);
       el.iris.setAttribute('fill', `rgba(30,${blueComp},${Math.round(120 + pupilDilation * 60)},0.9)`);
 
-      // Blink — lid drops
-      const lidRy = blinkState === 1 ? 11 : 0.8;
+      // Blink + half-lidded rest. During blink: lid closes (ry=LID_CLOSED_RY).
+      // Otherwise lid sits at resting half-lidded height LID_REST_RY.
+      const lidRy = blinkState === 1 ? LID_CLOSED_RY : LID_REST_RY;
       el.lid.setAttribute('ry', lidRy.toFixed(1));
 
-      // Subtle sclera flush with emotion (bloodshot look when discomfort)
+      // Flush tint on emotional shift — warms sclera + lid briefly.
+      if (_flushIntensity > 0.01) {
+        const k = _flushIntensity;
+        const fr = _flushColor.r, fg = _flushColor.g, fb = _flushColor.b;
+        // Sclera blends toward flush color (subtle — top alpha 0.35 + 0.25*k).
+        const sr = Math.round(220 + (fr - 220) * k * 0.5);
+        const sg = Math.round(232 + (fg - 232) * k * 0.5);
+        const sb = Math.round(255 + (fb - 255) * k * 0.5);
+        el.sclera.setAttribute('fill', `rgba(${sr},${sg},${sb},0.92)`);
+        // Lid warms subtly too
+        const lr = Math.round(8 + fr * 0.08 * k);
+        const lg = Math.round(12 + fg * 0.08 * k);
+        const lb = Math.round(20 + fb * 0.04 * k);
+        el.lid.setAttribute('fill', `rgba(${lr},${lg},${lb},0.97)`);
+      } else {
+        el.sclera.setAttribute('fill', 'rgba(220,232,255,0.92)');
+        el.lid.setAttribute('fill', 'rgba(8,12,20,0.97)');
+      }
     });
   }
 
-  return { draw, dilate };
+  return { draw, dilate, flush };
 })();
 
 // ═══════════════════════════════════════════════════════════════════
