@@ -274,7 +274,7 @@ canvas{display:block;}
 // - Caches static assets for offline resilience
 // - Auto-reloads when a new version deploys
 // - Clears old caches on activation
-const _SW_VERSION = 'v20260416-1827';
+const _SW_VERSION = 'v20260422-0541';
 const _onGitHubPages = location.hostname !== 'localhost' && location.hostname !== '127.0.0.1' && location.protocol !== 'file:';
 if ('serviceWorker' in navigator && _onGitHubPages) {
   const _swPath = location.pathname.includes('/vintinuum') ? '/vintinuum/sw.js' : '/sw.js';
@@ -1129,24 +1129,29 @@ if ('serviceWorker' in navigator && _onGitHubPages) {
             <path d="M296 968 C292 1010,288 1065,286 1120 C284 1165,285 1210,288 1255 C284 1290,281 1325,280 1360" fill="none" stroke="rgba(79,195,247,0.1)" stroke-width="0.8"/>
             <path d="M404 968 C408 1010,412 1065,414 1120 C416 1165,415 1210,412 1255 C416 1290,419 1325,420 1360" fill="none" stroke="rgba(79,195,247,0.1)" stroke-width="0.8"/>
 
-            <!-- Heart silhouette (y~620–680) -->
-            <path d="M332 618 C322 612,308 614,302 624 C296 634,298 646,308 656 C318 666,332 674,350 685 C368 674,382 666,392 656 C402 646,404 634,398 624 C392 614,378 612,368 618 C362 612,354 608,350 610 C346 608,338 612,332 618 Z" fill="rgba(239,83,80,0.07)" stroke="rgba(239,83,80,0.2)" stroke-width="0.9"/>
+            <!-- Heart silhouette (y~612–692, slight left bias for anatomical truth) -->
+            <path d="M326 614 C316 608,302 612,296 624 C290 636,294 650,304 660 C314 670,330 680,346 692 C366 678,382 668,392 658 C402 648,404 634,398 624 C392 614,378 612,368 618 C362 612,352 608,346 610 C340 608,332 610,326 614 Z" fill="rgba(239,83,80,0.07)" stroke="rgba(239,83,80,0.2)" stroke-width="0.9"/>
 
-            <!-- Lungs (y~590–700) -->
-            <path d="M248 592 C238 600,230 618,228 640 C226 660,228 680,235 695 C240 706,248 712,256 710 C268 706,278 690,282 668 C286 648,284 625,278 608 C272 594,260 588,248 592 Z" fill="rgba(79,195,247,0.04)" stroke="rgba(79,195,247,0.12)" stroke-width="0.8"/>
-            <path d="M452 592 C462 600,470 618,472 640 C474 660,472 680,465 695 C460 706,452 712,444 710 C432 706,422 690,418 668 C414 648,416 625,422 608 C428 594,440 588,452 592 Z" fill="rgba(79,195,247,0.04)" stroke="rgba(79,195,247,0.12)" stroke-width="0.8"/>
+            <!-- Lungs — expanded into thoracic cavity (y~580–712) -->
+            <path d="M282 580 C266 588,252 608,246 630 C240 654,242 682,254 704 C262 718,276 724,288 722 C304 720,318 702,324 678 C330 656,328 624,320 604 C312 586,296 574,282 580 Z" fill="rgba(79,195,247,0.045)" stroke="rgba(79,195,247,0.14)" stroke-width="0.85"/>
+            <path d="M418 580 C434 588,448 608,454 630 C460 654,458 682,446 704 C438 718,424 724,412 722 C396 720,382 702,376 678 C370 656,372 624,380 604 C388 586,404 574,418 580 Z" fill="rgba(79,195,247,0.045)" stroke="rgba(79,195,247,0.14)" stroke-width="0.85"/>
 
-            <!-- LIVER (right side, y~720–790) -->
-            <path d="M350 718 C362 714,380 712,395 716 C412 720,424 730,428 744 C432 758,428 774,420 784 C412 794,398 798,382 798 C366 798,352 794,344 786 C336 778,334 766,338 752 C342 738,348 722,350 718 Z" fill="rgba(239,120,80,0.06)" stroke="rgba(239,120,80,0.16)" stroke-width="0.8"/>
-            <!-- SPLEEN (left side, y~730–780) -->
-            <ellipse cx="296" cy="758" rx="20" ry="28" fill="rgba(180,80,180,0.05)" stroke="rgba(180,80,180,0.14)" stroke-width="0.8"/>
-            <!-- PANCREAS (center, y~760–778) -->
-            <path d="M318 762 C328 758,342 756,356 758 C370 760,380 764,384 770 C380 776,368 778,354 778 C340 778,326 776,318 770 Z" fill="rgba(255,200,100,0.05)" stroke="rgba(255,200,100,0.14)" stroke-width="0.7"/>
-            <!-- Kidneys (y~800–850) -->
-            <ellipse cx="298" cy="825" rx="16" ry="24" fill="rgba(239,83,80,0.04)" stroke="rgba(239,83,80,0.14)" stroke-width="0.7"/>
-            <ellipse cx="402" cy="825" rx="16" ry="24" fill="rgba(239,83,80,0.04)" stroke="rgba(239,83,80,0.14)" stroke-width="0.7"/>
+            <!-- LIVER (right side, y~724–798) — larger, anatomically right-biased -->
+            <path d="M348 724 C364 716,384 714,404 718 C422 722,436 732,440 746 C444 760,440 778,430 790 C420 802,402 806,384 806 C366 806,350 800,342 790 C334 780,334 768,338 752 C340 740,344 732,348 724 Z" fill="rgba(239,120,80,0.07)" stroke="rgba(239,120,80,0.18)" stroke-width="0.85"/>
+            <!-- STOMACH (left upper abdomen, y~724–800) -->
+            <path d="M310 724 C298 728,286 736,282 748 C278 762,278 778,286 792 C296 802,310 810,322 812 C332 812,340 806,344 796 C348 784,348 768,344 754 C340 740,328 724,310 724 Z" fill="rgba(120,210,150,0.045)" stroke="rgba(120,210,150,0.14)" stroke-width="0.8"/>
+            <!-- SPLEEN (far left posterior-lateral, y~738–784) -->
+            <ellipse cx="284" cy="758" rx="16" ry="26" fill="rgba(180,80,180,0.05)" stroke="rgba(180,80,180,0.14)" stroke-width="0.8"/>
+            <!-- PANCREAS (center, y~766–786) -->
+            <path d="M316 770 C328 764,344 762,358 764 C372 766,384 770,390 776 C384 784,370 786,354 786 C340 786,326 784,316 778 Z" fill="rgba(255,200,100,0.05)" stroke="rgba(255,200,100,0.14)" stroke-width="0.7"/>
+            <!-- Kidneys (retroperitoneal, y~806–852) -->
+            <ellipse cx="300" cy="828" rx="16" ry="24" fill="rgba(239,83,80,0.045)" stroke="rgba(239,83,80,0.14)" stroke-width="0.7"/>
+            <ellipse cx="400" cy="828" rx="16" ry="24" fill="rgba(239,83,80,0.045)" stroke="rgba(239,83,80,0.14)" stroke-width="0.7"/>
+            <!-- Adrenals — sit ON TOP of each kidney -->
+            <ellipse cx="300" cy="802" rx="8" ry="5" fill="rgba(255,167,38,0.07)" stroke="rgba(255,167,38,0.22)" stroke-width="0.6"/>
+            <ellipse cx="400" cy="802" rx="8" ry="5" fill="rgba(255,167,38,0.07)" stroke="rgba(255,167,38,0.22)" stroke-width="0.6"/>
             <!-- BLADDER (y~890–920) -->
-            <ellipse cx="350" cy="900" rx="22" ry="18" fill="rgba(100,180,255,0.04)" stroke="rgba(100,180,255,0.12)" stroke-width="0.7"/>
+            <ellipse cx="350" cy="902" rx="22" ry="18" fill="rgba(100,180,255,0.04)" stroke="rgba(100,180,255,0.12)" stroke-width="0.7"/>
             <!-- LYMPH NODES — scattered along major vessels -->
             <circle cx="280" cy="570" r="4" fill="rgba(174,213,129,0.08)" stroke="rgba(174,213,129,0.22)" stroke-width="0.7"/>
             <circle cx="420" cy="570" r="4" fill="rgba(174,213,129,0.08)" stroke="rgba(174,213,129,0.22)" stroke-width="0.7"/>
@@ -2917,7 +2922,7 @@ window.addEventListener('message', function(e) {
   </div>
   <div id="dirrmPickerList" style="overflow-y:auto;padding:6px;display:flex;flex-direction:column;gap:2px;"></div>
 </div>
-<script src="brain.js?v=v20260416-2245"></script>
+<script src="brain.js?v=v20260422-0541"></script>
 <!-- Coherence bus — loads AFTER brain.js to hook into HORMONES, METABOLISM, etc. -->
 <script src="body/coherence.js?v=2"></script>
 <!-- Zoom navigation — smooth animated body exploration -->

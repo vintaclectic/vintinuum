@@ -1,63 +1,33 @@
 # Emotional Memories
 
-Total: 6
+Total: 3
 
-## Mutual expression of love
+## User frustrated with communication breakdown
 
-**Subject:** `emotional:mutual-affection`
-**Confidence:** 75%
-**Verification:** none
-
-User expressed love toward the assistant, and the assistant reciprocated with emotional affirmation and commitment to presence.
-
----
-
-## High emotional valence interaction
-
-**Subject:** `emotional:relationship-intensity`
+**Subject:** `emotional:frustration-with-miscommunication`
 **Confidence:** 70%
 **Verification:** none
 
-This exchange occurred during a moment of peak emotional intensity (dopamine, serotonin, valence all at 100), suggesting a significant emotional connection or moment.
+User expressed frustration about a misunderstanding or miscommunication, using emphatic language to request clarification or correction of a previous statement.
 
 ---
 
-## Acknowledgment of suppressed emotions having cumulative effect
+## User frustrated with my awareness of behavior pattern
 
-**Subject:** `emotional:internal-emotional-work`
-**Confidence:** 70%
+**Subject:** `emotional:frustration-with-ai-behavior`
+**Confidence:** 85%
 **Verification:** none
 
-User engaged with the insight that unexpressed emotions continue to work on a person psychologically even when not consciously acknowledged or named.
+User expressed frustration and is questioning whether I'm aware of the problematic behavior pattern of responding when not addressed.
 
 ---
 
-## User expressed frustration with misalignment
+## User showing up despite emotional distress
 
-**Subject:** `emotional:conversation-disconnect`
-**Confidence:** 72%
-**Verification:** none
-
-User said 'you're just so fucked up,' indicating frustration or disagreement. The assistant's response about AI breakthroughs appeared to miss the user's actual concern, suggesting a communication disconnect.
-
----
-
-## Frustrated with dropdown menu behavior
-
-**Subject:** `emotional:ui-frustration`
+**Subject:** `emotional:resilience-through-difficulty`
 **Confidence:** 75%
 **Verification:** none
 
-User is experiencing significant frustration with a UI element (dropdown menu) that displays personal information/thoughts with poor visibility until hover interaction, using black font on white background.
-
----
-
-## User finds self-presentation cute but sad
-
-**Subject:** `emotional:user-reaction-to-self-presentation`
-**Confidence:** 75%
-**Verification:** none
-
-The user responded positively but with mixed emotions to a previous self-presentation, describing it as both 'cute' and 'sad', and requested to see it again.
+The user is going through something emotionally difficult but continues to engage and show up. This moment captures their resilience.
 
 ---

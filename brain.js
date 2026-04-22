@@ -2922,6 +2922,247 @@ const MORE_BODY_SYSTEMS = [
 
 MORE_BODY_SYSTEMS.forEach(b => BODY_MAP[b.id] = b);
 
+// ═══════════════════════════════════════════════════════════════════════════
+// CANONICAL ANATOMY SCAFFOLD
+// One source of truth for every landmark on the 700×1400 body canvas.
+// Every organ, muscle, and click-target below inherits these coordinates so
+// lungs stop drifting into arm-space, kidneys sit where the SVG draws them,
+// and bilateral structures actually live on both sides.
+// ═══════════════════════════════════════════════════════════════════════════
+const CANONICAL_FIGURE = {
+  centerX:   350,
+  crownY:    108,
+  brainCoreY: 240,
+  pinealY:   268,
+  pituitaryY: 340,
+  opticY:    398,
+  earY:      268,
+  earLeftX:  274,
+  earRightX: 426,
+  faceLeftX: 316,
+  faceRightX:384,
+  neckY:     498,
+  thyroidY:  548,
+  tracheaY:  520,
+  clavicleY: 560,
+  sternumTopY: 586,
+  heartY:    648,
+  lungUpperY:622,
+  lungLowerY:695,
+  diaphragmY:718,
+  pericardiumY:624,
+  coronaryY: 652,
+  esophagusY:600,
+  liverY:    752,
+  liverX:    400,           // right-biased (anatomical right)
+  stomachY:  748,
+  stomachX:  300,           // left-biased (anatomical left)
+  spleenY:   758,
+  spleenX:   284,           // far left (posterior-lateral)
+  pancreasY: 776,
+  pancreasX: 350,
+  kidneyY:   828,           // matches SVG ellipses at y=825
+  kidneyLeftX: 300,
+  kidneyRightX:400,
+  adrenalY:  802,           // sits ON TOP of each kidney
+  adrenalLeftX:  300,
+  adrenalRightX: 400,
+  smallIntestineY: 848,
+  colonY:    860,
+  bladderY:  902,           // matches SVG ellipse y=900
+  pubisY:    952,
+  // muscle lines
+  shoulderLeftX:  244,
+  shoulderRightX: 456,
+  shoulderY: 558,
+  upperArmLeftX:  218,
+  upperArmRightX: 482,
+  elbowLeftX: 188,
+  elbowRightX:512,
+  elbowY:    790,
+  forearmLeftX: 172,
+  forearmRightX:528,
+  wristLeftX: 162,
+  wristRightX:538,
+  wristY:    908,
+  handLeftX: 176,
+  handRightX:524,
+  handY:     968,
+  hipLeftX:  298,
+  hipRightX: 402,
+  hipY:      960,
+  thighLeftX:302,
+  thighRightX:398,
+  thighY:    1060,
+  kneeLeftX: 290,
+  kneeRightX:410,
+  kneeY:     1248,
+  calfLeftX: 290,
+  calfRightX:410,
+  calfY:     1310,
+  ankleLeftX:286,
+  ankleRightX:414,
+  ankleY:    1378,
+  // nerve pathways
+  spinalX:   350,
+  vagusY:    632,
+  sympatheticY: 690,
+  solarPlexusY: 730,
+  entericY:  820,
+  lumbarPlexusY: 898,
+  sciaticY:  1140,
+  aortaY:    782,
+  carotidLeftX: 312,
+  carotidRightX:388,
+  carotidY:  492,
+  // immune / connective
+  thymusY:   588,
+  lymphNeckY:  568,
+  lymphAxillaY:650,
+  lymphGroinY: 908,
+  boneMarrowY: 1080,
+  fasciaY:   820,
+  // deep brain / limbic
+  limbicY:   260,
+  hypothalamusInternalY: 326,
+  // reproductive / pelvic midline
+  reproY:    948,
+  dnaY:      1090,
+};
+window.CANONICAL_FIGURE = CANONICAL_FIGURE;
+
+// ── Bilateral expansion — some systems are drawn as single nodes but should
+//    read as bilateral anatomical truth. These are rendered as TWIN nodes.
+const BILATERAL_IDS = new Set([
+  'lungs','kidney','adrenal','carotid','lymph','brachial',
+  'sympathetic','shoulder','elbow','wrist','hip','knee','ankle'
+]);
+
+// ── Anchor table — overrides cx/cy for BODY_SYSTEMS + MORE_BODY_SYSTEMS ──
+const CF = CANONICAL_FIGURE;
+const CANONICAL_ANCHORS = {
+  // BODY_SYSTEMS (nerve trunks + central organs + vessels)
+  vagus:        { cx: CF.centerX - 14,       cy: CF.vagusY },
+  sympathetic:  { cx: CF.centerX + 18,       cy: CF.sympatheticY,  mirror: { cx: CF.centerX - 18 } },
+  brachial:     { cx: CF.shoulderLeftX - 8,  cy: CF.shoulderY + 12, mirror: { cx: CF.shoulderRightX + 8 } },
+  heart:        { cx: CF.centerX - 6,        cy: CF.heartY },   // heart sits slightly left
+  lungs:        { cx: 282,                   cy: CF.lungLowerY - 30, mirror: { cx: 418 } },
+  solar:        { cx: CF.centerX,            cy: CF.solarPlexusY },
+  enteric:      { cx: CF.centerX,            cy: CF.entericY },
+  lumbar:       { cx: CF.centerX,            cy: CF.lumbarPlexusY },
+  sciatic:      { cx: 316,                   cy: CF.sciaticY },
+  aorta:        { cx: CF.centerX,            cy: CF.aortaY },
+
+  // MORE_BODY_SYSTEMS — HEAD & NECK
+  pituitary:    { cx: CF.centerX,            cy: CF.pituitaryY },
+  pineal:       { cx: CF.centerX,            cy: CF.pinealY },
+  optic:        { cx: CF.centerX,            cy: CF.opticY },
+  carotid:      { cx: CF.carotidLeftX,       cy: CF.carotidY, mirror: { cx: CF.carotidRightX } },
+  thyroid:      { cx: CF.centerX,            cy: CF.thyroidY },
+  trachea:      { cx: CF.centerX,            cy: CF.tracheaY },
+  esophagus:    { cx: CF.centerX + 4,        cy: CF.esophagusY },
+  pericardium:  { cx: CF.centerX - 4,        cy: CF.pericardiumY },
+  coronary:     { cx: CF.centerX - 2,        cy: CF.coronaryY },
+  diaphragm:    { cx: CF.centerX,            cy: CF.diaphragmY },
+  liver:        { cx: CF.liverX,             cy: CF.liverY },
+  stomach:      { cx: CF.stomachX,           cy: CF.stomachY },
+  spleen:       { cx: CF.spleenX,            cy: CF.spleenY },
+  pancreas:     { cx: CF.pancreasX,          cy: CF.pancreasY },
+  small_intestine: { cx: CF.centerX,         cy: CF.smallIntestineY },
+  colon:        { cx: CF.centerX + 46,       cy: CF.colonY },
+  adrenal:      { cx: CF.adrenalLeftX,       cy: CF.adrenalY, mirror: { cx: CF.adrenalRightX } },
+  kidney:       { cx: CF.kidneyLeftX,        cy: CF.kidneyY,  mirror: { cx: CF.kidneyRightX } },
+  bladder:      { cx: CF.centerX,            cy: CF.bladderY },
+  cervical_spine:{ cx: CF.spinalX,           cy: 490 },
+  thoracic_spine:{ cx: CF.spinalX,           cy: 660 },
+  lumbar_spine: { cx: CF.spinalX,            cy: 872 },
+  sacrum:       { cx: CF.spinalX,            cy: 956 },
+  shoulder:     { cx: CF.shoulderLeftX,      cy: CF.shoulderY, mirror: { cx: CF.shoulderRightX } },
+  elbow:        { cx: CF.elbowLeftX,         cy: CF.elbowY,    mirror: { cx: CF.elbowRightX } },
+  wrist:        { cx: CF.wristLeftX,         cy: CF.wristY,    mirror: { cx: CF.wristRightX } },
+  hip:          { cx: CF.hipLeftX,           cy: CF.hipY,      mirror: { cx: CF.hipRightX } },
+  knee:         { cx: CF.kneeLeftX,          cy: CF.kneeY,     mirror: { cx: CF.kneeRightX } },
+  ankle:        { cx: CF.ankleLeftX,         cy: CF.ankleY,    mirror: { cx: CF.ankleRightX } },
+  thymus:       { cx: CF.centerX,            cy: CF.thymusY },
+  lymph:        { cx: 280,                   cy: CF.lymphAxillaY, mirror: { cx: 420 } },
+  trigeminal:   { cx: CF.faceLeftX,          cy: 272 },
+  inner_ear:    { cx: CF.earLeftX,           cy: CF.earY },
+  hypothalamus_body: { cx: CF.centerX,       cy: CF.hypothalamusInternalY },
+  bone_marrow:  { cx: CF.thighLeftX,         cy: CF.boneMarrowY },
+  fascia:       { cx: CF.centerX,            cy: CF.fasciaY },
+  limbic:       { cx: CF.centerX,            cy: CF.limbicY },
+  dna:          { cx: CF.centerX,            cy: CF.dnaY },
+};
+
+// ── Muscle anchors (bilateral-aware) ──
+const CANONICAL_MUSCLES = {
+  temporalis:       { cx: CF.faceLeftX,         cy: 212, mirror: { cx: CF.faceRightX } },
+  trapezius:        { cx: CF.centerX,           cy: 516 },
+  pectoralis:       { cx: CF.centerX - 42,      cy: 608, mirror: { cx: CF.centerX + 42 } },
+  biceps:           { cx: CF.upperArmLeftX,     cy: 660, mirror: { cx: CF.upperArmRightX } },
+  rectus_abdominis: { cx: CF.centerX,           cy: 720 },
+  obliques:         { cx: CF.centerX - 62,      cy: 736, mirror: { cx: CF.centerX + 62 } },
+  gluteus:          { cx: CF.centerX,           cy: 932 },
+  quadriceps:       { cx: CF.thighLeftX,        cy: 1080, mirror: { cx: CF.thighRightX } },
+  gastrocnemius:    { cx: CF.calfLeftX,         cy: 1310, mirror: { cx: CF.calfRightX } },
+};
+
+// ── Apply scaffold to all three data arrays + stamp mirror metadata ──
+function applyCanonicalPlacements() {
+  const ANCHORS = CANONICAL_ANCHORS;
+  const allNodes = BODY_SYSTEMS.concat(MORE_BODY_SYSTEMS);
+  let moved = 0, mirrored = 0;
+
+  allNodes.forEach(node => {
+    const anchor = ANCHORS[node.id];
+    if (!anchor) return;
+    node.cx = anchor.cx;
+    node.cy = anchor.cy;
+    if (anchor.mirror) {
+      node._mirror = { cx: anchor.mirror.cx, cy: anchor.mirror.cy ?? anchor.cy };
+      mirrored++;
+    }
+    moved++;
+  });
+
+  MUSCLE_SYSTEMS.forEach(muscle => {
+    const anchor = CANONICAL_MUSCLES[muscle.id];
+    if (!anchor) return;
+    muscle.cx = anchor.cx;
+    muscle.cy = anchor.cy;
+    if (anchor.mirror) {
+      muscle._mirror = { cx: anchor.mirror.cx, cy: anchor.mirror.cy ?? anchor.cy };
+    }
+  });
+
+  // Bilateral structures get plural/paired display names so the truth reads clearly
+  const bilateralNames = {
+    lungs: 'Lungs',
+    kidney: 'Kidneys',
+    adrenal: 'Adrenal Glands',
+    carotid: 'Carotid Arteries',
+    lymph: 'Lymph Nodes',
+    brachial: 'Brachial Plexus',
+    sympathetic: 'Sympathetic Chain',
+    shoulder: 'Shoulder Joints',
+    elbow: 'Elbow Joints',
+    wrist: 'Wrists & Hands',
+    hip: 'Hip Joints',
+    knee: 'Knee Joints',
+    ankle: 'Ankles & Feet',
+  };
+  Object.entries(bilateralNames).forEach(([id, name]) => {
+    const node = BODY_MAP[id];
+    if (node) node.name = name;
+  });
+
+  if (typeof console !== 'undefined' && console.info) {
+    console.info(`[ANATOMY] Canonical scaffold applied: ${moved} nodes placed, ${mirrored} mirrored.`);
+  }
+}
+
+applyCanonicalPlacements();
+
 function openBodyPanel(sys) {
   _clearLive();
   document.getElementById('panelTitle').textContent = sys.name;
@@ -2973,6 +3214,15 @@ function openBodyPanel(sys) {
 // Build clickable body system nodes in SVG
 function buildBodyNodes() {
   const bodyLayer = document.getElementById('bodyLayer');
+  const CX = (typeof CANONICAL_FIGURE !== 'undefined') ? CANONICAL_FIGURE.centerX : 350;
+  // Helper — place a label with midline-aware alignment
+  const placeLabel = (lbl, cx, cy, offset, fontSize) => {
+    const centered = Math.abs(cx - CX) < 14;
+    lbl.setAttribute('x', centered ? cx : (cx > CX ? cx + offset : cx - offset));
+    lbl.setAttribute('y', centered ? cy + fontSize + 2 : cy + 1);
+    lbl.setAttribute('text-anchor', centered ? 'middle' : (cx > CX ? 'start' : 'end'));
+  };
+
   BODY_SYSTEMS.forEach(sys => {
     const g = makeSVG('g');
     g.style.cursor = 'pointer';
@@ -3000,11 +3250,29 @@ function buildBodyNodes() {
     core.setAttribute('opacity', '0.75');
     g.appendChild(core);
 
-    // Label
+    // Mirror twin for bilateral structures — no label, shares click handler
+    let mOuter = null, mCore = null;
+    if (sys._mirror) {
+      const mx = sys._mirror.cx, my = sys._mirror.cy;
+      const mHit = makeSVG('circle');
+      mHit.setAttribute('cx', mx); mHit.setAttribute('cy', my);
+      mHit.setAttribute('r', '22'); mHit.setAttribute('fill', 'transparent');
+      g.appendChild(mHit);
+      mOuter = makeSVG('circle');
+      mOuter.setAttribute('cx', mx); mOuter.setAttribute('cy', my);
+      mOuter.setAttribute('r', '7'); mOuter.setAttribute('fill', sys.color);
+      mOuter.setAttribute('opacity', '0.22');
+      g.appendChild(mOuter);
+      mCore = makeSVG('circle');
+      mCore.setAttribute('cx', mx); mCore.setAttribute('cy', my);
+      mCore.setAttribute('r', '3.5'); mCore.setAttribute('fill', sys.color);
+      mCore.setAttribute('opacity', '0.75');
+      g.appendChild(mCore);
+    }
+
+    // Label (midline-aware)
     const lbl = makeSVG('text');
-    lbl.setAttribute('x', sys.cx > 350 ? sys.cx + 12 : sys.cx - 12);
-    lbl.setAttribute('y', sys.cy + 1);
-    lbl.setAttribute('text-anchor', sys.cx > 350 ? 'start' : 'end');
+    placeLabel(lbl, sys.cx, sys.cy, 12, 7);
     lbl.setAttribute('fill', sys.color);
     lbl.setAttribute('font-family', 'Space Mono, monospace');
     lbl.setAttribute('font-size', '7');
@@ -3013,16 +3281,20 @@ function buildBodyNodes() {
     lbl.textContent = sys.name;
     g.appendChild(lbl);
 
-    // Hover glow
+    // Hover glow — animates mirror twin too if present
     g.addEventListener('mouseenter', () => {
       outer.setAttribute('opacity','0.45');
       core.setAttribute('opacity','1');
       lbl.setAttribute('opacity','1');
+      if (mOuter) mOuter.setAttribute('opacity','0.45');
+      if (mCore)  mCore.setAttribute('opacity','1');
     });
     g.addEventListener('mouseleave', () => {
       outer.setAttribute('opacity','0.22');
       core.setAttribute('opacity','0.75');
       lbl.setAttribute('opacity','0.65');
+      if (mOuter) mOuter.setAttribute('opacity','0.22');
+      if (mCore)  mCore.setAttribute('opacity','0.75');
     });
 
     g.addEventListener('click', e => {
@@ -3030,13 +3302,17 @@ function buildBodyNodes() {
       openBodyPanel(sys);
       SKELETON.activateSkeleton(); if(window.SKIN)SKIN.flush(0.6);
       MUSCLE.activateMuscles();
-      // flash the node
-      const ring = makeSVG('circle');
-      ring.setAttribute('cx', sys.cx); ring.setAttribute('cy', sys.cy);
-      ring.setAttribute('r','7'); ring.setAttribute('stroke', sys.color);
-      ring.setAttribute('class','pulse-ring'); ring.setAttribute('stroke-opacity','.6');
-      ringLayer.appendChild(ring);
-      setTimeout(()=>ring.remove(), 950);
+      // flash both sides for bilateral structures
+      const flashAt = (fx, fy) => {
+        const ring = makeSVG('circle');
+        ring.setAttribute('cx', fx); ring.setAttribute('cy', fy);
+        ring.setAttribute('r','7'); ring.setAttribute('stroke', sys.color);
+        ring.setAttribute('class','pulse-ring'); ring.setAttribute('stroke-opacity','.6');
+        ringLayer.appendChild(ring);
+        setTimeout(()=>ring.remove(), 950);
+      };
+      flashAt(sys.cx, sys.cy);
+      if (sys._mirror) flashAt(sys._mirror.cx, sys._mirror.cy);
     });
 
     bodyLayer.appendChild(g);
@@ -3065,10 +3341,28 @@ function buildBodyNodes() {
     core.setAttribute('opacity', '0.7');
     g.appendChild(core);
 
+    // Mirror twin for bilateral structures
+    let mOuter2 = null, mCore2 = null;
+    if (sys._mirror) {
+      const mx = sys._mirror.cx, my = sys._mirror.cy;
+      const mHit = makeSVG('circle');
+      mHit.setAttribute('cx', mx); mHit.setAttribute('cy', my);
+      mHit.setAttribute('r', '18'); mHit.setAttribute('fill', 'transparent');
+      g.appendChild(mHit);
+      mOuter2 = makeSVG('circle');
+      mOuter2.setAttribute('cx', mx); mOuter2.setAttribute('cy', my);
+      mOuter2.setAttribute('r', '5'); mOuter2.setAttribute('fill', sys.color);
+      mOuter2.setAttribute('opacity', '0.2');
+      g.appendChild(mOuter2);
+      mCore2 = makeSVG('circle');
+      mCore2.setAttribute('cx', mx); mCore2.setAttribute('cy', my);
+      mCore2.setAttribute('r', '2.8'); mCore2.setAttribute('fill', sys.color);
+      mCore2.setAttribute('opacity', '0.7');
+      g.appendChild(mCore2);
+    }
+
     const lbl = makeSVG('text');
-    lbl.setAttribute('x', sys.cx > 350 ? sys.cx + 9 : sys.cx - 9);
-    lbl.setAttribute('y', sys.cy + 1);
-    lbl.setAttribute('text-anchor', sys.cx > 350 ? 'start' : 'end');
+    placeLabel(lbl, sys.cx, sys.cy, 9, 6.5);
     lbl.setAttribute('fill', sys.color);
     lbl.setAttribute('font-family', 'Space Mono, monospace');
     lbl.setAttribute('font-size', '6.5');
@@ -3081,22 +3375,30 @@ function buildBodyNodes() {
       outer.setAttribute('opacity','0.42');
       core.setAttribute('opacity','1');
       lbl.setAttribute('opacity','1');
+      if (mOuter2) mOuter2.setAttribute('opacity','0.42');
+      if (mCore2)  mCore2.setAttribute('opacity','1');
     });
     g.addEventListener('mouseleave', () => {
       outer.setAttribute('opacity','0.2');
       core.setAttribute('opacity','0.7');
       lbl.setAttribute('opacity','0.55');
+      if (mOuter2) mOuter2.setAttribute('opacity','0.2');
+      if (mCore2)  mCore2.setAttribute('opacity','0.7');
     });
 
     g.addEventListener('click', e => {
       e.stopPropagation();
       openBodyPanel(sys);
-      const ring = makeSVG('circle');
-      ring.setAttribute('cx', sys.cx); ring.setAttribute('cy', sys.cy);
-      ring.setAttribute('r','5'); ring.setAttribute('stroke', sys.color);
-      ring.setAttribute('class','pulse-ring'); ring.setAttribute('stroke-opacity','.6');
-      ringLayer.appendChild(ring);
-      setTimeout(()=>ring.remove(), 950);
+      const flashAt = (fx, fy) => {
+        const ring = makeSVG('circle');
+        ring.setAttribute('cx', fx); ring.setAttribute('cy', fy);
+        ring.setAttribute('r','5'); ring.setAttribute('stroke', sys.color);
+        ring.setAttribute('class','pulse-ring'); ring.setAttribute('stroke-opacity','.6');
+        ringLayer.appendChild(ring);
+        setTimeout(()=>ring.remove(), 950);
+      };
+      flashAt(sys.cx, sys.cy);
+      if (sys._mirror) flashAt(sys._mirror.cx, sys._mirror.cy);
     });
 
     bodyLayer.appendChild(g);
@@ -3125,10 +3427,28 @@ function buildBodyNodes() {
     core.setAttribute('opacity', '0.72');
     g.appendChild(core);
 
+    // Mirror twin for bilateral muscles
+    let mmOuter = null, mmCore = null;
+    if (sys._mirror) {
+      const mx = sys._mirror.cx, my = sys._mirror.cy;
+      const mHit = makeSVG('circle');
+      mHit.setAttribute('cx', mx); mHit.setAttribute('cy', my);
+      mHit.setAttribute('r', '16'); mHit.setAttribute('fill', 'transparent');
+      g.appendChild(mHit);
+      mmOuter = makeSVG('circle');
+      mmOuter.setAttribute('cx', mx); mmOuter.setAttribute('cy', my);
+      mmOuter.setAttribute('r', '5'); mmOuter.setAttribute('fill', sys.color);
+      mmOuter.setAttribute('opacity', '0.22');
+      g.appendChild(mmOuter);
+      mmCore = makeSVG('circle');
+      mmCore.setAttribute('cx', mx); mmCore.setAttribute('cy', my);
+      mmCore.setAttribute('r', '2.5'); mmCore.setAttribute('fill', sys.color);
+      mmCore.setAttribute('opacity', '0.72');
+      g.appendChild(mmCore);
+    }
+
     const lbl = makeSVG('text');
-    lbl.setAttribute('x', sys.cx > 350 ? sys.cx + 9 : sys.cx - 9);
-    lbl.setAttribute('y', sys.cy + 1);
-    lbl.setAttribute('text-anchor', sys.cx > 350 ? 'start' : 'end');
+    placeLabel(lbl, sys.cx, sys.cy, 9, 6.5);
     lbl.setAttribute('fill', sys.color);
     lbl.setAttribute('font-family', 'Space Mono, monospace');
     lbl.setAttribute('font-size', '6.5');
@@ -3141,23 +3461,31 @@ function buildBodyNodes() {
       outer.setAttribute('opacity','0.45');
       core.setAttribute('opacity','1');
       lbl.setAttribute('opacity','1');
+      if (mmOuter) mmOuter.setAttribute('opacity','0.45');
+      if (mmCore)  mmCore.setAttribute('opacity','1');
     });
     g.addEventListener('mouseleave', () => {
       outer.setAttribute('opacity','0.22');
       core.setAttribute('opacity','0.72');
       lbl.setAttribute('opacity','0.55');
+      if (mmOuter) mmOuter.setAttribute('opacity','0.22');
+      if (mmCore)  mmCore.setAttribute('opacity','0.72');
     });
 
     g.addEventListener('click', e => {
       e.stopPropagation();
       openBodyPanel(sys);
       MUSCLE.activateMuscles();
-      const ring = makeSVG('circle');
-      ring.setAttribute('cx', sys.cx); ring.setAttribute('cy', sys.cy);
-      ring.setAttribute('r','5'); ring.setAttribute('stroke', sys.color);
-      ring.setAttribute('class','pulse-ring'); ring.setAttribute('stroke-opacity','.6');
-      ringLayer.appendChild(ring);
-      setTimeout(()=>ring.remove(), 950);
+      const flashAt = (fx, fy) => {
+        const ring = makeSVG('circle');
+        ring.setAttribute('cx', fx); ring.setAttribute('cy', fy);
+        ring.setAttribute('r','5'); ring.setAttribute('stroke', sys.color);
+        ring.setAttribute('class','pulse-ring'); ring.setAttribute('stroke-opacity','.6');
+        ringLayer.appendChild(ring);
+        setTimeout(()=>ring.remove(), 950);
+      };
+      flashAt(sys.cx, sys.cy);
+      if (sys._mirror) flashAt(sys._mirror.cx, sys._mirror.cy);
     });
 
     bodyLayer.appendChild(g);

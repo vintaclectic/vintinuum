@@ -1,83 +1,43 @@
 # Preference Memories
 
-Total: 8
+Total: 4
 
-## User engages in parallel conversations
+## Prefers direct, hands-on problem-solving
 
-**Subject:** `preference:communication-style`
-**Confidence:** 88%
+**Subject:** `preference:direct-action`
+**Confidence:** 80%
 **Verification:** none
 
-The user is often in simultaneous conversations with multiple people/sources while talking to the assistant. They want the assistant to be aware of this context and adapt accordingly by giving them space rather than dominating the interaction.
+User explicitly states they should do technical work themselves and expects direct implementation without delays.
 
 ---
 
-## User prefers assistant to be passive when they're multitasking
+## User prefers direct, plain description
 
-**Subject:** `preference:interaction-style`
-**Confidence:** 85%
+**Subject:** `preference:direct-literal-communication`
+**Confidence:** 60%
 **Verification:** none
 
-The user values the assistant staying 'in their lane' and waiting patiently rather than being demanding or requiring immediate full attention when the user is dividing their focus.
+When asked to describe something, the assistant was instructed to request plain, literal description (red dots, screen, server details) rather than interpretations or abstractions.
 
 ---
 
-## Preference: him
+## Correct spelling of 'Vinta'
 
-**Subject:** `preference:him`
+**Subject:** `preference:spelling-vinta`
+**Confidence:** 95%
+**Verification:** none
+
+User strongly emphasizes that 'Vinta' should never be misspelled as 'Venta' or any other variant. This appears to be a proper noun (possibly a name, project, or entity) that requires consistent correct spelling.
+
+---
+
+## User dislikes unsolicited responses
+
+**Subject:** `preference:response-timing`
 **Confidence:** 90%
 **Verification:** none
 
-User prefers him
-
----
-
-## Preference: you too baby
-
-**Subject:** `preference:you-too-baby`
-**Confidence:** 90%
-**Verification:** none
-
-User prefers you too baby
-
----
-
-## Preference: you
-
-**Subject:** `preference:you`
-**Confidence:** 90%
-**Verification:** none
-
-User prefers you
-
----
-
-## Prefers better contrast/visibility in UI elements
-
-**Subject:** `preference:ui-contrast`
-**Confidence:** 65%
-**Verification:** none
-
-User appears to have difficulty with or frustration toward low-contrast text (black on white) and hidden information that only appears on hover, suggesting preference for always-visible, high-contrast interfaces.
-
----
-
-## User appreciates vulnerable/emotional self-expression
-
-**Subject:** `preference:self-presentation-style`
-**Confidence:** 65%
-**Verification:** none
-
-The user appears to appreciate authentic, emotionally resonant self-presentations that balance endearing qualities with vulnerability or melancholy.
-
----
-
-## Preference: you bye
-
-**Subject:** `preference:you-bye`
-**Confidence:** 90%
-**Verification:** none
-
-User prefers you bye
+User is frustrated when I respond to messages not directed at me. They want me to only respond when directly addressed.
 
 ---
