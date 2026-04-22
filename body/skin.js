@@ -97,11 +97,15 @@ const SKIN_LAYER = (() => {
     ctx.fill(_bodyPath);
 
     // ── DERMAL SHIMMER (subtle moving light) ──────────────────────────────────
-    // Simulate light playing across skin surface
+    // Simulate light playing across skin surface — bounded to a small radial
+    // patch so any clip-region degeneracy never produces a full-canvas fill.
+    // (Previously: clip(_bodyPath) + fillRect(0,0,700,1400) leaked as a giant
+    // rectangle whenever the silhouette path had self-intersections.)
     const shimmerY = 200 + (ts * 0.015) % 1200;
+    const shimmerR = 120;
     const shimmerGrad = ctx.createRadialGradient(
       G.CENTER_X, shimmerY, 0,
-      G.CENTER_X, shimmerY, 120
+      G.CENTER_X, shimmerY, shimmerR
     );
     shimmerGrad.addColorStop(0, 'rgba(150, 200, 255, ' + (0.015 + pulse * 0.01) + ')');
     shimmerGrad.addColorStop(1, 'rgba(150, 200, 255, 0)');
@@ -109,7 +113,9 @@ const SKIN_LAYER = (() => {
     ctx.save();
     ctx.clip(_bodyPath);
     ctx.fillStyle = shimmerGrad;
-    ctx.fillRect(0, 0, 700, 1400);
+    // Tight bounding rect around the shimmer radius, not the full canvas.
+    // Clip still confines it to the body; this ensures no leak even if clip fails.
+    ctx.fillRect(G.CENTER_X - shimmerR, shimmerY - shimmerR, shimmerR * 2, shimmerR * 2);
     ctx.restore();
 
     ctx.restore();

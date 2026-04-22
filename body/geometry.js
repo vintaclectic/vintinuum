@@ -197,110 +197,125 @@ const BODY_GEOMETRY = (() => {
   };
 
   // ── BODY SILHOUETTE (outline path for skin layer) ───────────────────────────
-  // Defined as a series of {x,y} points going clockwise from top of head
+  // Simple closed clockwise polygon — no self-intersections, no backtracking.
+  // Traversal: crown → right side of head → right shoulder → OUTSIDE of right
+  // arm → around right hand → INSIDE of right arm (armpit) → right torso →
+  // right hip → outside of right leg → around right foot → inside of right
+  // leg → crotch midpoint → inside of left leg → around left foot → outside
+  // of left leg → left hip → left torso → left armpit → INSIDE of left arm →
+  // around left hand → OUTSIDE of left arm → left shoulder → left side of
+  // head → crown close. Single continuous winding. No figure-8s.
   const SILHOUETTE = [
-    // Top of skull
-    { x: CENTER_X, y: 50 },
+    // Top of skull (start/end)
+    { x: CENTER_X,       y: 50  },
     // Right side of head
-    { x: CENTER_X + 60, y: 55 },
-    { x: CENTER_X + 90, y: 100 },
-    { x: CENTER_X + 95, y: 160 },
-    { x: CENTER_X + 85, y: 220 },
-    { x: CENTER_X + 70, y: 260 },
-    // Jaw to neck
-    { x: CENTER_X + 40, y: NECK.top },
-    { x: CENTER_X + 40, y: 290 },
-    // Right shoulder
-    { x: CENTER_X + 55, y: NECK.bottom },
+    { x: CENTER_X + 60,  y: 55  },
+    { x: CENTER_X + 90,  y: 100 },
+    { x: CENTER_X + 95,  y: 160 },
+    { x: CENTER_X + 85,  y: 220 },
+    { x: CENTER_X + 70,  y: 255 },
+    // Right jaw → neck
+    { x: CENTER_X + 45,  y: 270 },
+    { x: CENTER_X + 42,  y: 295 },
+    // Right shoulder (slope out to deltoid)
+    { x: CENTER_X + 60,  y: 310 },
     { x: CENTER_X + 175, y: 318 },
-    // Right arm
+    // OUTSIDE of right arm (shoulder → hand)
     { x: CENTER_X + 195, y: 400 },
     { x: CENTER_X + 215, y: 490 },
-    { x: CENTER_X + 230, y: 580 },
-    { x: CENTER_X + 240, y: 650 },
-    { x: CENTER_X + 245, y: 700 },
-    // Right hand back up
-    { x: CENTER_X + 220, y: 700 },
-    { x: CENTER_X + 210, y: 650 },
-    { x: CENTER_X + 195, y: 560 },
-    { x: CENTER_X + 185, y: 490 },
-    // Right torso
-    { x: CENTER_X + 170, y: 340 },
-    { x: CENTER_X + 160, y: 450 },
-    { x: CENTER_X + 130, y: 580 },
-    { x: CENTER_X + 120, y: 620 },
-    // Right hip
-    { x: CENTER_X + 135, y: 700 },
-    { x: CENTER_X + 130, y: 740 },
-    // Right leg
-    { x: CENTER_X + 115, y: 800 },
-    { x: CENTER_X + 100, y: 900 },
-    { x: CENTER_X + 95, y: 960 },
-    { x: CENTER_X + 90, y: 1060 },
-    { x: CENTER_X + 85, y: 1150 },
-    { x: CENTER_X + 80, y: 1190 },
-    // Right foot
-    { x: CENTER_X + 65, y: 1210 },
-    { x: CENTER_X + 40, y: 1220 },
-    // Inner right leg
-    { x: CENTER_X + 50, y: 1190 },
-    { x: CENTER_X + 55, y: 1100 },
-    { x: CENTER_X + 60, y: 960 },
-    { x: CENTER_X + 65, y: 850 },
-    { x: CENTER_X + 50, y: 750 },
-    // Crotch
-    { x: CENTER_X + 15, y: 740 },
-    { x: CENTER_X, y: 745 },
-    { x: CENTER_X - 15, y: 740 },
-    // Inner left leg
-    { x: CENTER_X - 50, y: 750 },
-    { x: CENTER_X - 65, y: 850 },
-    { x: CENTER_X - 60, y: 960 },
-    { x: CENTER_X - 55, y: 1100 },
-    { x: CENTER_X - 50, y: 1190 },
-    // Left foot
-    { x: CENTER_X - 40, y: 1220 },
-    { x: CENTER_X - 65, y: 1210 },
-    // Left leg outer
-    { x: CENTER_X - 80, y: 1190 },
-    { x: CENTER_X - 85, y: 1150 },
-    { x: CENTER_X - 90, y: 1060 },
-    { x: CENTER_X - 95, y: 960 },
-    { x: CENTER_X - 100, y: 900 },
-    { x: CENTER_X - 115, y: 800 },
-    // Left hip
-    { x: CENTER_X - 130, y: 740 },
-    { x: CENTER_X - 135, y: 700 },
-    // Left torso
-    { x: CENTER_X - 120, y: 620 },
-    { x: CENTER_X - 130, y: 580 },
-    { x: CENTER_X - 160, y: 450 },
-    { x: CENTER_X - 170, y: 340 },
-    // Left arm return
-    { x: CENTER_X - 185, y: 490 },
-    { x: CENTER_X - 195, y: 560 },
-    { x: CENTER_X - 210, y: 650 },
-    { x: CENTER_X - 220, y: 700 },
-    // Left hand
-    { x: CENTER_X - 245, y: 700 },
-    { x: CENTER_X - 240, y: 650 },
-    { x: CENTER_X - 230, y: 580 },
-    { x: CENTER_X - 215, y: 490 },
-    { x: CENTER_X - 195, y: 400 },
-    // Left shoulder
-    { x: CENTER_X - 175, y: 318 },
-    { x: CENTER_X - 55, y: NECK.bottom },
-    // Left neck
-    { x: CENTER_X - 40, y: 290 },
-    { x: CENTER_X - 40, y: NECK.top },
-    // Left jaw
-    { x: CENTER_X - 70, y: 260 },
-    { x: CENTER_X - 85, y: 220 },
-    { x: CENTER_X - 95, y: 160 },
-    { x: CENTER_X - 90, y: 100 },
-    { x: CENTER_X - 60, y: 55 },
-    // Close at top
-    { x: CENTER_X, y: 50 },
+    { x: CENTER_X + 225, y: 580 },
+    { x: CENTER_X + 232, y: 650 },
+    // Around right hand (fingertip loop — single pass)
+    { x: CENTER_X + 238, y: 695 },
+    { x: CENTER_X + 230, y: 715 },
+    { x: CENTER_X + 215, y: 720 },
+    { x: CENTER_X + 200, y: 712 },
+    // INSIDE of right arm (hand → armpit)
+    { x: CENTER_X + 195, y: 680 },
+    { x: CENTER_X + 185, y: 600 },
+    { x: CENTER_X + 175, y: 510 },
+    { x: CENTER_X + 160, y: 420 },
+    { x: CENTER_X + 150, y: 360 },  // armpit
+    // Right torso (ribcage → waist → hip)
+    { x: CENTER_X + 155, y: 440 },
+    { x: CENTER_X + 140, y: 540 },
+    { x: CENTER_X + 120, y: 620 },  // waist
+    { x: CENTER_X + 130, y: 700 },  // hip out
+    { x: CENTER_X + 132, y: 735 },  // iliac crest
+    // OUTSIDE of right leg (hip → ankle)
+    { x: CENTER_X + 118, y: 800 },
+    { x: CENTER_X + 108, y: 880 },
+    { x: CENTER_X + 98,  y: 960 },  // knee outer
+    { x: CENTER_X + 95,  y: 1020 },
+    { x: CENTER_X + 90,  y: 1100 }, // calf
+    { x: CENTER_X + 80,  y: 1180 }, // ankle outer
+    // Right foot top and toe
+    { x: CENTER_X + 70,  y: 1210 },
+    { x: CENTER_X + 45,  y: 1225 }, // toe tip
+    // Heel and instep (inside of right foot)
+    { x: CENTER_X + 25,  y: 1215 },
+    { x: CENTER_X + 35,  y: 1190 }, // ankle inside
+    // INSIDE of right leg (ankle → crotch)
+    { x: CENTER_X + 45,  y: 1100 },
+    { x: CENTER_X + 52,  y: 1000 },
+    { x: CENTER_X + 58,  y: 900  },
+    { x: CENTER_X + 55,  y: 820  },
+    { x: CENTER_X + 40,  y: 760  },
+    // Crotch midpoint (single apex — no V-dip)
+    { x: CENTER_X,       y: 748  },
+    // INSIDE of left leg (crotch → ankle)
+    { x: CENTER_X - 40,  y: 760  },
+    { x: CENTER_X - 55,  y: 820  },
+    { x: CENTER_X - 58,  y: 900  },
+    { x: CENTER_X - 52,  y: 1000 },
+    { x: CENTER_X - 45,  y: 1100 },
+    { x: CENTER_X - 35,  y: 1190 },
+    // Left heel and foot
+    { x: CENTER_X - 25,  y: 1215 },
+    { x: CENTER_X - 45,  y: 1225 }, // toe tip
+    { x: CENTER_X - 70,  y: 1210 },
+    // OUTSIDE of left leg (ankle → hip)
+    { x: CENTER_X - 80,  y: 1180 },
+    { x: CENTER_X - 90,  y: 1100 },
+    { x: CENTER_X - 95,  y: 1020 },
+    { x: CENTER_X - 98,  y: 960  },
+    { x: CENTER_X - 108, y: 880  },
+    { x: CENTER_X - 118, y: 800  },
+    // Left hip and torso
+    { x: CENTER_X - 132, y: 735  },
+    { x: CENTER_X - 130, y: 700  },
+    { x: CENTER_X - 120, y: 620  },
+    { x: CENTER_X - 140, y: 540  },
+    { x: CENTER_X - 155, y: 440  },
+    // Left armpit
+    { x: CENTER_X - 150, y: 360  },
+    // INSIDE of left arm (armpit → hand)
+    { x: CENTER_X - 160, y: 420  },
+    { x: CENTER_X - 175, y: 510  },
+    { x: CENTER_X - 185, y: 600  },
+    { x: CENTER_X - 195, y: 680  },
+    // Around left hand
+    { x: CENTER_X - 200, y: 712  },
+    { x: CENTER_X - 215, y: 720  },
+    { x: CENTER_X - 230, y: 715  },
+    { x: CENTER_X - 238, y: 695  },
+    // OUTSIDE of left arm (hand → shoulder)
+    { x: CENTER_X - 232, y: 650  },
+    { x: CENTER_X - 225, y: 580  },
+    { x: CENTER_X - 215, y: 490  },
+    { x: CENTER_X - 195, y: 400  },
+    { x: CENTER_X - 175, y: 318  },
+    // Left shoulder → neck → jaw → head
+    { x: CENTER_X - 60,  y: 310  },
+    { x: CENTER_X - 42,  y: 295  },
+    { x: CENTER_X - 45,  y: 270  },
+    { x: CENTER_X - 70,  y: 255  },
+    { x: CENTER_X - 85,  y: 220  },
+    { x: CENTER_X - 95,  y: 160  },
+    { x: CENTER_X - 90,  y: 100  },
+    { x: CENTER_X - 60,  y: 55   },
+    // Close at crown
+    { x: CENTER_X,       y: 50   },
   ];
 
   // ── ZOOM REGIONS ─────────────────────────────────────────────────────────────

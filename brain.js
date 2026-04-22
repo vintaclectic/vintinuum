@@ -3263,13 +3263,19 @@ function applyCanonicalPlacements() {
 applyCanonicalPlacements();
 
 // ═══════════════════════════════════════════════════════════════════
-// SILHOUETTE — derive body outline path from CANONICAL_FIGURE landmarks
-// Phase 1 Convergence step 4: the scaffold drives the visible body.
-// The silhouette is now a FUNCTION of the anchor table, not a hand-drawn
-// duplicate. Any future landmark edit re-shapes the visible outline via
-// SILHOUETTE.rebuild().
+// SILHOUETTE module removed.
+//
+// A parallel SVG silhouette builder lived here during Phase 1 exploration
+// but the actual visible body is rendered by body/skin.js onto #mainCanvas
+// using body/geometry.js SILHOUETTE (clockwise polygon). Keeping two
+// parallel silhouettes produced a ghost system that never drove pixels.
+//
+// Bilateral landmarks added to CANONICAL_FIGURE remain — they are useful
+// scaffolding for future face/gaze convergence work and for re-aligning
+// body/geometry.js SILHOUETTE from the canonical scaffold if we choose to.
 // ═══════════════════════════════════════════════════════════════════
-const SILHOUETTE = (() => {
+/* SILHOUETTE_BLOCK_REMOVED_BEGIN */
+const _SILHOUETTE_REMOVED_UNUSED = (() => {
   const svgNS = 'http://www.w3.org/2000/svg';
 
   // Smooth quadratic curve between two points with an outward-biased control.
@@ -3381,12 +3387,14 @@ const SILHOUETTE = (() => {
 
   function rebuild() { return build(); }
 
-  // Initial build after scaffold is applied
-  build();
-
+  // Initial build after scaffold is applied — DISABLED.
+  // The #silhouetteLayer was removed from brain.html; build() would warn and
+  // no-op. We keep the module body here as reference/revivable scaffolding
+  // but do not instantiate or expose it.
   return { build, rebuild, buildPath };
 })();
-window.SILHOUETTE = SILHOUETTE;
+// window.SILHOUETTE export removed — body/skin.js is the canonical renderer.
+/* SILHOUETTE_BLOCK_REMOVED_END */
 
 function openBodyPanel(sys) {
   _clearLive();
@@ -7593,10 +7601,12 @@ const AURA = (() => {
     shell.setAttribute('stroke-width', sw.toFixed(2));
   }
 
-  // Swappable renderer hook — step 6 swaps default to the breath-field
-  // renderer bound to #skinOutline. Falls back to legacy ellipse if the
-  // silhouette is missing.
-  let _render = _breathFieldRender;
+  // Swappable renderer hook. Default = legacy ellipse while the silhouette
+  // reconciliation is in progress (the SVG #skinOutline path was retired;
+  // body/skin.js + body/geometry.js SILHOUETTE is now the canonical body
+  // outline renderer). _breathFieldRender is preserved for future re-wire
+  // onto the body/geometry.js silhouette in a later phase.
+  let _render = _legacyEllipseRender;
 
   function draw(ts) {
     _render(ts);
