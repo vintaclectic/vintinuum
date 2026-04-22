@@ -3028,6 +3028,66 @@ const CANONICAL_FIGURE = {
   // reproductive / pelvic midline
   reproY:    948,
   dnaY:      1090,
+
+  // ── FACE LANDMARKS (Phase 1 Convergence scaffolding) ──────────────────────
+  // Y-rows: crown(108) → brainCore(240) → face(~170-340) → neck(498)
+  browY:        200,   // above eyes, aligns with eyebrow strokes at y=196-200
+  eyeY:         218,   // eye center row
+  noseBridgeY:  238,   // top of nose
+  noseTipY:     286,   // nose tip / nostril floor
+  philtrumY:    302,   // between nose and upper lip
+  lipUpperY:    315,   // upper lip line
+  lipLowerY:    326,   // lower lip line
+  chinY:        360,   // chin underside
+  // Face bilateral X-pairs (face is narrow — offsets ±12 to ±60 from centerX=350)
+  templeLeftX:       292, templeRightX:       408,  // outer skull at brow level
+  cheekboneLeftX:    308, cheekboneRightX:    392,  // cheek flush centers (match skin pores)
+  jawLeftX:          322, jawRightX:          378,  // jaw line at chin height
+  eyeInnerLeftX:     332, eyeInnerRightX:     368,  // tear-duct side
+  eyeOuterLeftX:     314, eyeOuterRightX:     386,  // outer canthus
+  lipCornerLeftX:    334, lipCornerRightX:    366,  // mouth corners
+  nostrilLeftX:      342, nostrilRightX:      358,  // nostril centers
+
+  // ── OUTLINE BILATERAL (for future silhouette path) ────────────────────────
+  // Derived from existing skinLayer torso/limb path edges.
+  neckLeftX:              322, neckRightX:              378,  // neck at y~340-458
+  clavicleOuterLeftX:     258, clavicleOuterRightX:     442,  // clavicle lateral tip
+  deltoidOuterLeftX:      238, deltoidOuterRightX:      462,  // shoulder skin edge
+  bicepOuterLeftX:        216, bicepOuterRightX:        484,  // upper arm outer
+  elbowOuterLeftX:        205, elbowOuterRightX:        495,  // elbow outer
+  forearmOuterLeftX:      205, forearmOuterRightX:      495,  // forearm outer
+  wristOuterLeftX:        196, wristOuterRightX:        504,  // wrist outer
+  hipOuterLeftX:          215, hipOuterRightX:          485,  // hip skin edge at y~910
+  thighOuterLeftX:        272, thighOuterRightX:        428,  // thigh outer
+  kneeOuterLeftX:         278, kneeOuterRightX:         422,  // knee outer
+  calfOuterLeftX:         278, calfOuterRightX:         422,  // calf outer
+  ankleOuterLeftX:        282, ankleOuterRightX:        418,  // ankle outer
+
+  // ── HAND DIGITS (shared Y-rows per phalanx depth, X-pairs per finger) ─────
+  // wristY=908 → handY=968 → fingers extend above wrist in existing drawing (y=876-905)
+  metacarpalY:   898,  // knuckle row (metacarpophalangeal)
+  pipY:          888,  // proximal interphalangeal
+  dipY:          880,  // distal interphalangeal
+  fingertipY:    874,  // fingertip row
+  // X pairs for each finger tip (left hand lateral → medial, mirror on right)
+  thumbTipLeftX:    199, thumbTipRightX:   501,
+  indexTipLeftX:    206, indexTipRightX:   494,
+  middleTipLeftX:   213, middleTipRightX:  487,
+  ringTipLeftX:     220, ringTipRightX:    480,
+  pinkyTipLeftX:    227, pinkyTipRightX:   473,
+
+  // ── FOOT TOES (shared Y-rows, X-pairs per toe) ────────────────────────────
+  // ankleY=1378 → foot ellipse at y~1405 → toes extend to y~1417-1435
+  metatarsalY:  1412,  // ball of foot
+  toePipY:      1420,  // toe proximal joint
+  toeDipY:      1428,  // toe distal joint
+  toeTipY:      1435,  // toe tip
+  // X pairs — left foot big-toe is medial (near centerline), pinky is lateral
+  bigToeTipLeftX:   268, bigToeTipRightX:  432,
+  toe2TipLeftX:     275, toe2TipRightX:    425,
+  toe3TipLeftX:     281, toe3TipRightX:    419,
+  toe4TipLeftX:     287, toe4TipRightX:    413,
+  toe5TipLeftX:     294, toe5TipRightX:    406,
 };
 window.CANONICAL_FIGURE = CANONICAL_FIGURE;
 
