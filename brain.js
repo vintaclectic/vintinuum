@@ -15728,6 +15728,54 @@ window.addEventListener('resize',()=>{
 });
 
 // ═══════════════════════════════════════════════════════════════════
+// ASYMMETRY — derive a stable L/R deviation scalar from Vinta's ID.
+// Writes BODY_STATE.asymmetry ∈ [−1, +1]. Read by AURA's breath renderer
+// when building the Path2D so each Vinta is subtly asymmetric but the
+// same Vinta always gets the same body (hash is deterministic).
+// No identity? Use a per-browser fallback hash so anon visitors still get
+// a consistent asymmetry across their session.
+// ═══════════════════════════════════════════════════════════════════
+const ASYMMETRY = (() => {
+  // djb2 hash → 32-bit signed
+  function _djb2(str) {
+    let h = 5381;
+    for (let i = 0; i < str.length; i++) h = ((h << 5) + h) + str.charCodeAt(i);
+    return h | 0;
+  }
+
+  function _readIdentity() {
+    try {
+      const tok = localStorage.getItem('vint_access_token');
+      if (tok && tok.length > 4) return tok;
+    } catch(e) {}
+    // Fallback: per-browser stable hash
+    try {
+      let anon = localStorage.getItem('vint_anon_id');
+      if (!anon) {
+        anon = 'anon-' + Math.random().toString(36).slice(2) + '-' + Date.now().toString(36);
+        localStorage.setItem('vint_anon_id', anon);
+      }
+      return anon;
+    } catch(e) {}
+    return 'default';
+  }
+
+  function init() {
+    const id = _readIdentity();
+    const h = _djb2(id);
+    // Normalize to [−1, +1], then soften so deviation stays subtle.
+    const norm = (h / 2147483647); // ∈ [−1, +1]
+    const asym = Math.max(-1, Math.min(1, norm));
+    const bs = window.BODY_STATE;
+    if (bs) bs.asymmetry = asym;
+    return asym;
+  }
+
+  return { init };
+})();
+window.ASYMMETRY = ASYMMETRY;
+
+// ═══════════════════════════════════════════════════════════════════
 // RECOGNITION — localStorage-backed memory of prior visits.
 // First visit: subtle welcome pulse (read by AURA breath renderer).
 // Repeat visits: warmer baseline valence (softly pushed into BODY_STATE).
@@ -15780,9 +15828,10 @@ window.RECOGNITION = RECOGNITION;
 initStars();
 initSparks();
 requestAnimationFrame(loop);
-// Recognition runs after BODY_STATE is established by COHERENCE (6s init
-// delay); we fire earlier at 500ms because the bus declares BODY_STATE
-// synchronously at module load via window.BODY_STATE = bodyState.
+// Asymmetry hash runs first so the breath field path is built correctly
+// on its first render. Recognition runs next. Both fire after COHERENCE
+// has published window.BODY_STATE at module load.
+setTimeout(() => { try { ASYMMETRY.init(); } catch(e) { console.warn('[ASYMMETRY]', e); } }, 300);
 setTimeout(() => { try { RECOGNITION.init(); } catch(e) { console.warn('[RECOGNITION]', e); } }, 500);
 HORMONES.init();
 if (typeof FACE_EXT !== 'undefined') FACE_EXT.init();
