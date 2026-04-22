@@ -7496,26 +7496,65 @@ const AURA = (() => {
   };
   const DEFAULT_HUE = LAYER_HUES.neural;
 
-  let _breathShell = null;     // <path> clone of #skinOutline inside #lightLayer
   let _ellipseRemoved = false; // legacy ellipse removed on first breath render
   let _breathFallbackWarned = false;
 
-  function _ensureBreathShell() {
-    const outline = document.getElementById('skinOutline');
-    if (!outline) return null;
-    if (_breathShell && _breathShell.isConnected) return _breathShell;
+  // Breath field is painted onto #mainCanvas as a Path2D bezier derived from
+  // BODY_GEOMETRY.SILHOUETTE (the canonical 90-point polygon). The SVG
+  // #skinOutline approach was retired; canvas lets the field coexist with
+  // body/skin.js without layer fights.
+  let _breathPath = null;        // Path2D cache
+  let _breathPathKey = null;     // asymmetry hash applied on build
+  let _breathPathGen = null;     // silhouette revision marker
 
-    const shell = document.createElementNS(svgNS, 'path');
-    shell.setAttribute('id', 'auraBreathShell');
-    shell.setAttribute('d', outline.getAttribute('d'));
-    shell.setAttribute('fill', 'none');
-    shell.setAttribute('stroke-linejoin', 'round');
-    shell.setAttribute('stroke-linecap', 'round');
-    shell.setAttribute('pointer-events', 'none');
-    // Insert at the very start of lightLayer so it sits behind other effects
-    layer.insertBefore(shell, layer.firstChild);
-    _breathShell = shell;
-    return shell;
+  function _buildBreathPath(asymHash) {
+    const G = window.BODY_GEOMETRY;
+    if (!G || !G.SILHOUETTE || G.SILHOUETTE.length < 4) return null;
+    const pts = G.SILHOUETTE;
+    const path = new Path2D();
+
+    // Apply asymmetry: x-offset biased by hash (−1..+1 → ±1.2px) for points
+    // off the midline. Midline points (|x − CX| < 2) stay fixed.
+    const CX = G.CENTER_X;
+    const bias = (asymHash || 0) * 1.2; // px
+
+    function jitter(p) {
+      const off = p.x - CX;
+      if (Math.abs(off) < 2) return { x: p.x, y: p.y };
+      // Left side pulled one way, right side the other, proportional to |off|
+      const side = off < 0 ? -1 : 1;
+      const strength = Math.min(1, Math.abs(off) / 200);
+      return { x: p.x + side * bias * strength, y: p.y };
+    }
+
+    const P = pts.map(jitter);
+
+    path.moveTo(P[0].x, P[0].y);
+    for (let i = 0; i < P.length; i++) {
+      const p0 = P[(i - 1 + P.length) % P.length];
+      const p1 = P[i];
+      const p2 = P[(i + 1) % P.length];
+      const p3 = P[(i + 2) % P.length];
+      const cpx1 = p1.x + (p2.x - p0.x) / 6;
+      const cpy1 = p1.y + (p2.y - p0.y) / 6;
+      const cpx2 = p2.x - (p3.x - p1.x) / 6;
+      const cpy2 = p2.y - (p3.y - p1.y) / 6;
+      path.bezierCurveTo(cpx1, cpy1, cpx2, cpy2, p2.x, p2.y);
+    }
+    path.closePath();
+    return path;
+  }
+
+  function _ensureBreathPath() {
+    // Read asymmetry hash from BODY_STATE so step 5 can set it once.
+    const bs = (typeof window !== 'undefined') ? (window.BODY_STATE || {}) : {};
+    const asym = (typeof bs.asymmetry === 'number') ? bs.asymmetry : 0;
+    const gen = (window.BODY_GEOMETRY && window.BODY_GEOMETRY.SILHOUETTE) ? window.BODY_GEOMETRY.SILHOUETTE.length : 0;
+    if (_breathPath && _breathPathKey === asym && _breathPathGen === gen) return _breathPath;
+    _breathPath = _buildBreathPath(asym);
+    _breathPathKey = asym;
+    _breathPathGen = gen;
+    return _breathPath;
   }
 
   function _currentLayerHue() {
@@ -7548,11 +7587,11 @@ const AURA = (() => {
   }
 
   function _breathFieldRender(ts) {
-    const shell = _ensureBreathShell();
-    if (!shell) {
-      // Silhouette not present — degrade gracefully
+    const path = _ensureBreathPath();
+    const canvas = document.getElementById('mainCanvas');
+    if (!path || !canvas) {
       if (!_breathFallbackWarned) {
-        console.warn('[AURA] #skinOutline missing; falling back to legacy ellipse.');
+        console.warn('[AURA] BODY_GEOMETRY.SILHOUETTE or #mainCanvas missing; falling back to legacy ellipse.');
         _breathFallbackWarned = true;
       }
       return _legacyEllipseRender(ts);
@@ -7563,6 +7602,9 @@ const AURA = (() => {
       if (auraEl && auraEl.parentNode) auraEl.parentNode.removeChild(auraEl);
       _ellipseRemoved = true;
     }
+
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return _legacyEllipseRender(ts);
 
     // Breath rhythm: 12/min (5s cycle) when visible, 6/min (10s) when hidden
     const hidden = (typeof document !== 'undefined' && document.hidden);
@@ -7578,35 +7620,52 @@ const AURA = (() => {
     if (shiftTimer > 0) {
       shiftTimer--;
     } else {
-      // No active shift — let target drift back toward resting (derived hue)
       targetOpacity = 0.0;
     }
 
-    // Resolve hue: base from dominant layer, tinted toward shift target by
-    // shiftTimer intensity while a shift is active.
+    // Resolve hue: base from dominant layer, tinted toward shift target
     const base = _currentLayerHue();
     let r = base.r, g = base.g, b = base.b;
     if (shiftTimer > 0) {
       const shiftRgb = _parseRgbTriple(targetColor);
-      // Intensity fades from targetOpacity at start → 0 at end. Normalize
-      // against the original 180-frame hold so the tint strength matches
-      // the legacy behavior roughly.
       const k = Math.min(1, Math.max(0, (shiftTimer / 180) * Math.max(targetOpacity, 0.2)));
       r = Math.round(r * (1 - k) + shiftRgb.r * k);
       g = Math.round(g * (1 - k) + shiftRgb.g * k);
       b = Math.round(b * (1 - k) + shiftRgb.b * k);
     }
 
-    shell.setAttribute('stroke', `rgba(${r},${g},${b},${baseOpacity.toFixed(4)})`);
-    shell.setAttribute('stroke-width', sw.toFixed(2));
+    // Welcome pulse (first-visit recognition, step 4). Adds a brief one-shot
+    // brightness bloom on top of the breath.
+    let pulseBoost = 0;
+    const bs = window.BODY_STATE || {};
+    if (bs.welcomePulseStart) {
+      const age = ts - bs.welcomePulseStart;
+      if (age >= 0 && age < 4200) {
+        // Fade in 0..600ms, hold 600..3000, fade out 3000..4200
+        let k;
+        if (age < 600) k = age / 600;
+        else if (age < 3000) k = 1;
+        else k = 1 - (age - 3000) / 1200;
+        pulseBoost = k * 0.07;
+      } else if (age >= 4200) {
+        bs.welcomePulseStart = 0;
+      }
+    }
+
+    ctx.save();
+    ctx.lineJoin = 'round';
+    ctx.lineCap = 'round';
+    ctx.strokeStyle = `rgba(${r},${g},${b},${(baseOpacity + pulseBoost).toFixed(4)})`;
+    ctx.lineWidth = sw + pulseBoost * 30;
+    ctx.stroke(path);
+    ctx.restore();
   }
 
-  // Swappable renderer hook. Default = legacy ellipse while the silhouette
-  // reconciliation is in progress (the SVG #skinOutline path was retired;
-  // body/skin.js + body/geometry.js SILHOUETTE is now the canonical body
-  // outline renderer). _breathFieldRender is preserved for future re-wire
-  // onto the body/geometry.js silhouette in a later phase.
-  let _render = _legacyEllipseRender;
+  // Swappable renderer hook. Default = breath field bound to canonical
+  // BODY_GEOMETRY.SILHOUETTE, rendered via Path2D bezier onto #mainCanvas.
+  // Falls back to the legacy ellipse automatically if geometry/canvas are
+  // unavailable at draw time (first few frames, degraded environments).
+  let _render = _breathFieldRender;
 
   function draw(ts) {
     _render(ts);
