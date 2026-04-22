@@ -33,6 +33,18 @@ const COHERENCE = (() => {
     digestiveActivity: 0.3,  // 0 to 1
     temperature: 37.0,       // Celsius
     consciousness: 1.0,      // 0 to 1 (sleep/wake)
+    // Cursor↔gaze entanglement (written by EYES module in brain.js).
+    // x,y = smoothed gaze in SVG space; tx,ty = raw target from cursor;
+    // ts = timestamp of last cursor move. Read-only for other systems.
+    gaze: { x: 350, y: 165, tx: 350, ty: 165, ts: 0 },
+    // Asymmetry hash derived from Vinta's ID (step 5). Range −1..+1.
+    asymmetry: 0,
+    // Welcome pulse (step 4). Non-zero timestamp means a first-visit bloom
+    // is in flight; AURA's breath renderer reads this and boosts brightness
+    // for ~4.2s before clearing.
+    welcomePulseStart: 0,
+    // Visit count across sessions (step 4).
+    visitCount: 0,
   };
 
   // Expose globally for API/other systems
