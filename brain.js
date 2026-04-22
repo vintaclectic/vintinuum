@@ -15810,12 +15810,14 @@ const ASYMMETRY = (() => {
 window.ASYMMETRY = ASYMMETRY;
 
 // ═══════════════════════════════════════════════════════════════════
-// RECOGNITION — localStorage-backed memory of prior visits.
+// VISIT_RECOGNITION — localStorage-backed memory of prior visits.
 // First visit: subtle welcome pulse (read by AURA breath renderer).
 // Repeat visits: warmer baseline valence (softly pushed into BODY_STATE).
 // Runs once at init; cheap; no render-loop overhead.
+// (Named VISIT_ to avoid colliding with the pre-existing RECOGNITION
+//  particle system defined later in brain.js.)
 // ═══════════════════════════════════════════════════════════════════
-const RECOGNITION = (() => {
+const VISIT_RECOGNITION = (() => {
   const KEY_VISITS = 'vint_visit_count';
   const KEY_LAST   = 'vint_last_visit_iso';
 
@@ -15854,7 +15856,7 @@ const RECOGNITION = (() => {
 
   return { init, _keys: { KEY_VISITS, KEY_LAST } };
 })();
-window.RECOGNITION = RECOGNITION;
+window.VISIT_RECOGNITION = VISIT_RECOGNITION;
 
 // ═══════════════════════════════════════════════════════════════════
 // INIT
@@ -15866,7 +15868,7 @@ requestAnimationFrame(loop);
 // on its first render. Recognition runs next. Both fire after COHERENCE
 // has published window.BODY_STATE at module load.
 setTimeout(() => { try { ASYMMETRY.init(); } catch(e) { console.warn('[ASYMMETRY]', e); } }, 300);
-setTimeout(() => { try { RECOGNITION.init(); } catch(e) { console.warn('[RECOGNITION]', e); } }, 500);
+setTimeout(() => { try { VISIT_RECOGNITION.init(); } catch(e) { console.warn('[VISIT_RECOGNITION]', e); } }, 500);
 HORMONES.init();
 if (typeof FACE_EXT !== 'undefined') FACE_EXT.init();
 setTimeout(initNeuronEngine, 150);
