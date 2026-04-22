@@ -3364,12 +3364,12 @@ const SILHOUETTE = (() => {
     const path = document.createElementNS(svgNS, 'path');
     path.setAttribute('id', 'skinOutline');
     path.setAttribute('d', buildPath());
-    path.setAttribute('fill', 'rgba(232, 208, 188, 0.06)');
-    path.setAttribute('stroke', 'rgba(232, 208, 188, 0.32)');
-    path.setAttribute('stroke-width', '1.2');
+    path.setAttribute('fill', 'none');
+    path.setAttribute('stroke', 'rgba(232, 208, 188, 0.55)');
+    path.setAttribute('stroke-width', '1.4');
     path.setAttribute('stroke-linejoin', 'round');
     path.setAttribute('stroke-linecap', 'round');
-    path.setAttribute('fill-rule', 'evenodd');
+    path.setAttribute('fill-rule', 'nonzero');
     path.setAttribute('pointer-events', 'none');
     layer.appendChild(path);
 
