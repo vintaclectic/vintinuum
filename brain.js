@@ -3304,10 +3304,10 @@ const SILHOUETTE = (() => {
     // Curve under the left hand back in toward the hip (skipping finger detail)
     d += qCurve(CF.wristOuterLeftX, CF.wristY,  CF.hipOuterLeftX,      CF.hipY,        +1, 20); // curves inward
     // Down the LEFT leg: hip → thigh → knee → calf → ankle
-    d += qCurve(CF.hipOuterLeftX, CF.hipY,      CF.thighOuterLeftX,    CF.thighY,      -1, 6);  // thigh bulges
-    d += qCurve(CF.thighOuterLeftX, CF.thighY,  CF.kneeOuterLeftX,     CF.kneeY,       -1, 2);
-    d += qCurve(CF.kneeOuterLeftX, CF.kneeY,    CF.calfOuterLeftX,     CF.calfY,       -1, 5);  // calf bulges
-    d += qCurve(CF.calfOuterLeftX, CF.calfY,    CF.ankleOuterLeftX,    CF.ankleY,      -1, 2);
+    d += qCurve(CF.hipOuterLeftX, CF.hipY,      CF.thighOuterLeftX,    CF.thighY,      -1, 8);  // thigh bulges outward from hip
+    d += qCurve(CF.thighOuterLeftX, CF.thighY,  CF.kneeOuterLeftX,     CF.kneeY,       -1, 4);  // mid-thigh muscle bow
+    d += qCurve(CF.kneeOuterLeftX, CF.kneeY,    CF.calfOuterLeftX,     CF.calfY,       -1, 8);  // calf bulges
+    d += qCurve(CF.calfOuterLeftX, CF.calfY,    CF.ankleOuterLeftX,    CF.ankleY,      -1, 5);  // calf taper to ankle
 
     // Across the feet (ankle-L → ankle-R), with a downward bow so it reads as
     // ground contact. Control point biased DOWN by +20 in y, centered between ankles.
@@ -3315,10 +3315,10 @@ const SILHOUETTE = (() => {
     d += `Q ${feetMx.toFixed(1)} ${(CF.ankleY + 20).toFixed(1)} ${CF.ankleOuterRightX.toFixed(1)} ${CF.ankleY.toFixed(1)} `;
 
     // Up the RIGHT leg: ankle → calf → knee → thigh → hip
-    d += qCurve(CF.ankleOuterRightX, CF.ankleY, CF.calfOuterRightX,    CF.calfY,       +1, 2);
-    d += qCurve(CF.calfOuterRightX, CF.calfY,   CF.kneeOuterRightX,    CF.kneeY,       +1, 5);
-    d += qCurve(CF.kneeOuterRightX, CF.kneeY,   CF.thighOuterRightX,   CF.thighY,      +1, 2);
-    d += qCurve(CF.thighOuterRightX, CF.thighY, CF.hipOuterRightX,     CF.hipY,        +1, 6);
+    d += qCurve(CF.ankleOuterRightX, CF.ankleY, CF.calfOuterRightX,    CF.calfY,       +1, 5);  // calf taper from ankle
+    d += qCurve(CF.calfOuterRightX, CF.calfY,   CF.kneeOuterRightX,    CF.kneeY,       +1, 8);  // calf bulges
+    d += qCurve(CF.kneeOuterRightX, CF.kneeY,   CF.thighOuterRightX,   CF.thighY,      +1, 4);  // mid-thigh muscle bow
+    d += qCurve(CF.thighOuterRightX, CF.thighY, CF.hipOuterRightX,     CF.hipY,        +1, 8);  // thigh bulges outward from hip
 
     // Inward sweep hip → right wrist (skipping finger detail)
     d += qCurve(CF.hipOuterRightX, CF.hipY,     CF.wristOuterRightX,   CF.wristY,      -1, 20); // curves inward
