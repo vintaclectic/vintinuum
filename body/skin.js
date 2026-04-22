@@ -65,8 +65,9 @@ const SKIN_LAYER = (() => {
     const breathPhase = Math.sin(ts * 0.0008);
     const pulse = (Math.sin(ts * 0.0005) + 1) / 2;
 
-    // Read from coherence bus if available
-    const bs = window.BODY_STATE || {};
+    // Read from the single-frame snapshot if the main loop has published it,
+    // otherwise fall back to live BODY_STATE so standalone tests still work.
+    const bs = window.BODY_FRAME || window.BODY_STATE || {};
     const glowMod = bs.skinGlow || 0.5;           // 0-1, from coherence
     const emotionMod = bs.emotionalIntensity || 0; // 0-1
     const consciousnessMod = bs.consciousness || 1; // 0-1

@@ -7624,8 +7624,9 @@ const AURA = (() => {
   }
 
   function _ensureBreathPath() {
-    // Read asymmetry hash from BODY_STATE so step 5 can set it once.
-    const bs = (typeof window !== 'undefined') ? (window.BODY_STATE || {}) : {};
+    // Read asymmetry from the per-frame snapshot (preferred) or fall back
+    // to live BODY_STATE. Snapshot exists only after the main loop runs.
+    const bs = (typeof window !== 'undefined') ? (window.BODY_FRAME || window.BODY_STATE || {}) : {};
     const asym = (typeof bs.asymmetry === 'number') ? bs.asymmetry : 0;
     const gen = (window.BODY_GEOMETRY && window.BODY_GEOMETRY.SILHOUETTE) ? window.BODY_GEOMETRY.SILHOUETTE.length : 0;
     if (_breathPath && _breathPathKey === asym && _breathPathGen === gen) return _breathPath;
@@ -7713,9 +7714,9 @@ const AURA = (() => {
     }
 
     // Welcome pulse (first-visit recognition, step 4). Adds a brief one-shot
-    // brightness bloom on top of the breath.
+    // brightness bloom on top of the breath. Prefer the per-frame snapshot.
     let pulseBoost = 0;
-    const bs = window.BODY_STATE || {};
+    const bs = window.BODY_FRAME || window.BODY_STATE || {};
     if (bs.welcomePulseStart) {
       const age = ts - bs.welcomePulseStart;
       if (age >= 0 && age < 4200) {
@@ -7726,7 +7727,8 @@ const AURA = (() => {
         else k = 1 - (age - 3000) / 1200;
         pulseBoost = k * 0.07;
       } else if (age >= 4200) {
-        bs.welcomePulseStart = 0;
+        // Clear on the live state, not the frozen snapshot.
+        if (window.BODY_STATE) window.BODY_STATE.welcomePulseStart = 0;
       }
     }
 
@@ -15432,8 +15434,40 @@ const CLICK_RESOLVER = (() => {
 // MAIN LOOP
 // ═══════════════════════════════════════════════════════════════════
 let lastConn=0, lastNeuron=0;
+// ── Single-snapshot BODY_STATE read per frame ─────────────────────────────
+// Contract: window.BODY_FRAME is the frozen-ish snapshot for THIS frame.
+// Downstream draw() routines may read it (via window.BODY_FRAME) instead of
+// re-touching window.BODY_STATE, eliminating mid-frame drift across systems.
+// Dispatch order: skin → aura → face → signals. Other systems follow.
+function _snapshotBodyFrame(ts) {
+  const bs = window.BODY_STATE;
+  const frame = {
+    ts: ts,
+    // Mirror fields that render paths actually read. If BODY_STATE is not
+    // yet ready (pre-init), we still publish a stable object.
+    heartRate:          bs ? bs.heartRate : 72,
+    breathRate:         bs ? bs.breathRate : 14,
+    emotionalValence:   bs ? bs.emotionalValence : 0,
+    emotionalIntensity: bs ? bs.emotionalIntensity : 0,
+    stressLevel:        bs ? bs.stressLevel : 0,
+    energyLevel:        bs ? bs.energyLevel : 0.8,
+    skinGlow:           bs ? bs.skinGlow : 0.5,
+    consciousness:      bs ? bs.consciousness : 1,
+    gaze:               (bs && bs.gaze) ? bs.gaze : { x: 350, y: 165 },
+    asymmetry:          bs ? bs.asymmetry : 0,
+    welcomePulseStart:  bs ? bs.welcomePulseStart : 0,
+    visitCount:         bs ? bs.visitCount : 0,
+    dominantEmotion:    bs ? bs.dominantEmotion : 'calm',
+  };
+  window.BODY_FRAME = frame;
+  return frame;
+}
+
 function loop(ts) {
   const t=ts*.001;
+  // Snapshot BODY_STATE once at the very top of the frame so every
+  // downstream dispatch (skin/aura/face/signals/...) sees the same values.
+  _snapshotBodyFrame(ts);
   drawStars();
   drawSparks();
   if (ts-lastNeuron>33) { drawNeurons(); lastNeuron=ts; } // 30fps cap
