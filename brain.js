@@ -15728,11 +15728,62 @@ window.addEventListener('resize',()=>{
 });
 
 // ═══════════════════════════════════════════════════════════════════
+// RECOGNITION — localStorage-backed memory of prior visits.
+// First visit: subtle welcome pulse (read by AURA breath renderer).
+// Repeat visits: warmer baseline valence (softly pushed into BODY_STATE).
+// Runs once at init; cheap; no render-loop overhead.
+// ═══════════════════════════════════════════════════════════════════
+const RECOGNITION = (() => {
+  const KEY_VISITS = 'vint_visit_count';
+  const KEY_LAST   = 'vint_last_visit_iso';
+
+  function init() {
+    let visits = 0;
+    try { visits = parseInt(localStorage.getItem(KEY_VISITS) || '0', 10) || 0; } catch(e) { visits = 0; }
+    const isFirst = (visits === 0);
+
+    // Bump + persist
+    try {
+      localStorage.setItem(KEY_VISITS, String(visits + 1));
+      localStorage.setItem(KEY_LAST, new Date().toISOString());
+    } catch(e) { /* quota or private mode — non-fatal */ }
+
+    const bs = window.BODY_STATE;
+    if (!bs) return { visits, isFirst };
+    bs.visitCount = visits + 1;
+
+    if (isFirst) {
+      // First visit → subtle welcome pulse. AURA._breathFieldRender reads
+      // bs.welcomePulseStart and adds a 4.2s brightness bloom.
+      bs.welcomePulseStart = (typeof performance !== 'undefined') ? performance.now() : Date.now();
+      // Delay so the canvas/mainCanvas is ready
+      setTimeout(() => {
+        bs.welcomePulseStart = (typeof performance !== 'undefined') ? performance.now() : Date.now();
+      }, 900);
+    } else {
+      // Repeat visit → warmer baseline valence. Nudge toward +0.18, capped.
+      const WARMTH = 0.18;
+      bs.emotionalValence = Math.min(1, (bs.emotionalValence || 0) + WARMTH);
+      // Gentle skin glow lift so the warmth is visible, not just logical
+      bs.skinGlow = Math.min(1, (bs.skinGlow || 0.5) + 0.08);
+    }
+    return { visits, isFirst };
+  }
+
+  return { init, _keys: { KEY_VISITS, KEY_LAST } };
+})();
+window.RECOGNITION = RECOGNITION;
+
+// ═══════════════════════════════════════════════════════════════════
 // INIT
 // ═══════════════════════════════════════════════════════════════════
 initStars();
 initSparks();
 requestAnimationFrame(loop);
+// Recognition runs after BODY_STATE is established by COHERENCE (6s init
+// delay); we fire earlier at 500ms because the bus declares BODY_STATE
+// synchronously at module load via window.BODY_STATE = bodyState.
+setTimeout(() => { try { RECOGNITION.init(); } catch(e) { console.warn('[RECOGNITION]', e); } }, 500);
 HORMONES.init();
 if (typeof FACE_EXT !== 'undefined') FACE_EXT.init();
 setTimeout(initNeuronEngine, 150);
