@@ -3091,11 +3091,37 @@ const CANONICAL_FIGURE = {
 };
 window.CANONICAL_FIGURE = CANONICAL_FIGURE;
 
+// ── Bilateral pair() helper ───────────────────────────────────────────────
+// Returns { L, R } for any bilateral scalar group defined in CANONICAL_FIGURE.
+// Example: CANONICAL_FIGURE.pair('eyeOuter') → { L: 314, R: 386 }
+// Returns null if either the Left or Right value is undefined.
+// Purely additive — no current consumers, designed for future silhouette/face
+// convergence builders so they don't have to stitch baseName+'LeftX' manually.
+Object.defineProperty(CANONICAL_FIGURE, 'pair', {
+  value: function(baseName) {
+    const L = this[baseName + 'LeftX'];
+    const R = this[baseName + 'RightX'];
+    if (L === undefined || R === undefined) return null;
+    return { L: L, R: R };
+  },
+  enumerable: false,   // keep Object.keys() output clean — pair() is an API, not data
+  configurable: false,
+  writable: false,
+});
+
 // ── Bilateral expansion — some systems are drawn as single nodes but should
 //    read as bilateral anatomical truth. These are rendered as TWIN nodes.
 const BILATERAL_IDS = new Set([
   'lungs','kidney','adrenal','carotid','lymph','brachial',
-  'sympathetic','shoulder','elbow','wrist','hip','knee','ankle'
+  'sympathetic','shoulder','elbow','wrist','hip','knee','ankle',
+  // Phase 1 Convergence — newly scaffolded bilateral concepts. Named here so
+  // future consumers that iterate BILATERAL_IDS will recognize them as paired.
+  'temple','cheekbone','jaw','eyeInner','eyeOuter','lipCorner','nostril',
+  'neck','clavicleOuter','deltoidOuter','bicepOuter','elbowOuter',
+  'forearmOuter','wristOuter','hipOuter','thighOuter','kneeOuter',
+  'calfOuter','ankleOuter',
+  'thumbTip','indexTip','middleTip','ringTip','pinkyTip',
+  'bigToeTip','toe2Tip','toe3Tip','toe4Tip','toe5Tip'
 ]);
 
 // ── Anchor table — overrides cx/cy for BODY_SYSTEMS + MORE_BODY_SYSTEMS ──
