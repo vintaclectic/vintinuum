@@ -7451,9 +7451,133 @@ const AURA = (() => {
     auraEl.setAttribute('ry', ry.toFixed(1));
   }
 
-  // Swappable renderer hook — default points at legacy ellipse. Step 6 swaps
-  // this to the breath-field renderer bound to #skinOutline.
-  let _render = _legacyEllipseRender;
+  // ── Breath-field renderer: step 6 of Phase 1 Convergence ──────────────
+  // Clones #skinOutline into a shell inside #lightLayer and modulates
+  // stroke-width + opacity on a sine-wave breath cycle. Hue is derived from
+  // the dominant consciousness layer (via PERSONAL_BODY when available).
+  // Respects AURA.shift() by tinting the field toward the shift color for
+  // the existing decay window (preserving emotional-event behavior at all 6
+  // call sites).
+  const LAYER_HUES = {
+    neural:       { r: 124, g: 196, b: 255 }, // #7cc4ff
+    emotional:    { r: 255, g: 180, b: 124 }, // #ffb47c
+    subconscious: { r: 180, g: 124, b: 255 }, // #b47cff
+    somatic:      { r: 124, g: 255, b: 180 }, // #7cffb4
+    immune:       { r: 124, g: 255, b: 240 }, // #7cfff0
+    metabolic:    { r: 255, g: 224, b: 124 }, // #ffe07c
+    genetic:      { r: 255, g: 124, b: 180 }, // #ff7cb4
+  };
+  const DEFAULT_HUE = LAYER_HUES.neural;
+
+  let _breathShell = null;     // <path> clone of #skinOutline inside #lightLayer
+  let _ellipseRemoved = false; // legacy ellipse removed on first breath render
+  let _breathFallbackWarned = false;
+
+  function _ensureBreathShell() {
+    const outline = document.getElementById('skinOutline');
+    if (!outline) return null;
+    if (_breathShell && _breathShell.isConnected) return _breathShell;
+
+    const shell = document.createElementNS(svgNS, 'path');
+    shell.setAttribute('id', 'auraBreathShell');
+    shell.setAttribute('d', outline.getAttribute('d'));
+    shell.setAttribute('fill', 'none');
+    shell.setAttribute('stroke-linejoin', 'round');
+    shell.setAttribute('stroke-linecap', 'round');
+    shell.setAttribute('pointer-events', 'none');
+    // Insert at the very start of lightLayer so it sits behind other effects
+    layer.insertBefore(shell, layer.firstChild);
+    _breathShell = shell;
+    return shell;
+  }
+
+  function _currentLayerHue() {
+    try {
+      const pb = (typeof window !== 'undefined') ? window.PERSONAL_BODY : null;
+      if (pb && typeof pb.getBodySnapshot === 'function') {
+        const snap = pb.getBodySnapshot();
+        // Scatter-read: step 7 will centralize. For now, accept several shapes.
+        const key =
+          (snap && snap.dominantLayer) ||
+          (snap && snap.inner && snap.inner.dominant) ||
+          (snap && snap.layers && snap.layers.dominant) ||
+          null;
+        if (key && LAYER_HUES[key]) return LAYER_HUES[key];
+      }
+    } catch (e) { /* graceful default */ }
+    return DEFAULT_HUE;
+  }
+
+  function _hexToRgb(hex) {
+    const r = parseInt(hex.slice(1,3),16);
+    const g = parseInt(hex.slice(3,5),16);
+    const b = parseInt(hex.slice(5,7),16);
+    return { r, g, b };
+  }
+  function _parseRgbTriple(str) {
+    // accepts "r,g,b"
+    const p = str.split(',').map(n => parseInt(n, 10));
+    return { r: p[0] || 0, g: p[1] || 0, b: p[2] || 0 };
+  }
+
+  function _breathFieldRender(ts) {
+    const shell = _ensureBreathShell();
+    if (!shell) {
+      // Silhouette not present — degrade gracefully
+      if (!_breathFallbackWarned) {
+        console.warn('[AURA] #skinOutline missing; falling back to legacy ellipse.');
+        _breathFallbackWarned = true;
+      }
+      return _legacyEllipseRender(ts);
+    }
+
+    // Remove the legacy ellipse once the breath field is live
+    if (!_ellipseRemoved) {
+      if (auraEl && auraEl.parentNode) auraEl.parentNode.removeChild(auraEl);
+      _ellipseRemoved = true;
+    }
+
+    // Breath rhythm: 12/min (5s cycle) when visible, 6/min (10s) when hidden
+    const hidden = (typeof document !== 'undefined' && document.hidden);
+    const cycleMs = hidden ? 10000 : 5000;
+    const phase = ((ts % cycleMs) / cycleMs) * Math.PI * 2;
+    const wave = (Math.sin(phase) + 1) / 2; // 0..1, smooth
+
+    // Stroke-width 8→12, opacity 0.04→0.09 across the breath
+    const sw = 8 + wave * 4;
+    const baseOpacity = 0.04 + wave * 0.05;
+
+    // Decay shift timer exactly like legacy so public API parity holds
+    if (shiftTimer > 0) {
+      shiftTimer--;
+    } else {
+      // No active shift — let target drift back toward resting (derived hue)
+      targetOpacity = 0.0;
+    }
+
+    // Resolve hue: base from dominant layer, tinted toward shift target by
+    // shiftTimer intensity while a shift is active.
+    const base = _currentLayerHue();
+    let r = base.r, g = base.g, b = base.b;
+    if (shiftTimer > 0) {
+      const shiftRgb = _parseRgbTriple(targetColor);
+      // Intensity fades from targetOpacity at start → 0 at end. Normalize
+      // against the original 180-frame hold so the tint strength matches
+      // the legacy behavior roughly.
+      const k = Math.min(1, Math.max(0, (shiftTimer / 180) * Math.max(targetOpacity, 0.2)));
+      r = Math.round(r * (1 - k) + shiftRgb.r * k);
+      g = Math.round(g * (1 - k) + shiftRgb.g * k);
+      b = Math.round(b * (1 - k) + shiftRgb.b * k);
+    }
+
+    shell.setAttribute('stroke', `rgba(${r},${g},${b},${baseOpacity.toFixed(4)})`);
+    shell.setAttribute('stroke-width', sw.toFixed(2));
+  }
+
+  // Swappable renderer hook — step 6 swaps default to the breath-field
+  // renderer bound to #skinOutline. Falls back to legacy ellipse if the
+  // silhouette is missing.
+  let _render = _breathFieldRender;
 
   function draw(ts) {
     _render(ts);
