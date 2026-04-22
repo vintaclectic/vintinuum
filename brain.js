@@ -3249,6 +3249,126 @@ function applyCanonicalPlacements() {
 
 applyCanonicalPlacements();
 
+// ═══════════════════════════════════════════════════════════════════
+// SILHOUETTE — derive body outline path from CANONICAL_FIGURE landmarks
+// Phase 1 Convergence step 4: the scaffold drives the visible body.
+// The silhouette is now a FUNCTION of the anchor table, not a hand-drawn
+// duplicate. Any future landmark edit re-shapes the visible outline via
+// SILHOUETTE.rebuild().
+// ═══════════════════════════════════════════════════════════════════
+const SILHOUETTE = (() => {
+  const svgNS = 'http://www.w3.org/2000/svg';
+
+  // Smooth quadratic curve between two points with an outward-biased control.
+  // side: -1 for left (bias further left / smaller x), +1 for right (bias
+  // further right / larger x). bias is horizontal push magnitude.
+  function qCurve(x1, y1, x2, y2, side, bias) {
+    const mx = (x1 + x2) / 2 + (side * bias);
+    const my = (y1 + y2) / 2;
+    return `Q ${mx.toFixed(1)} ${my.toFixed(1)} ${x2.toFixed(1)} ${y2.toFixed(1)} `;
+  }
+
+  function buildPath() {
+    const CF = CANONICAL_FIGURE;
+    // Left-side Y progression (going DOWN from crown → left foot)
+    // For the outline we follow visible skin edge landmarks.
+    // NOTE: this pass skips finger/toe detail — wrist→hip and ankle→ankle
+    //       are rendered as smooth curves. Digit silhouettes can be added
+    //       as separate small paths in a later step (4b).
+
+    let d = '';
+
+    // Start at crown (top of skull, midline)
+    d += `M ${CF.centerX} ${CF.crownY} `;
+
+    // Down the LEFT side: crown → temple → cheekbone → jaw → neck →
+    //                     clavicle → deltoid → bicep → elbow → forearm → wrist
+    d += qCurve(CF.centerX, CF.crownY,          CF.templeLeftX,        CF.browY,       -1, 6);
+    d += qCurve(CF.templeLeftX, CF.browY,       CF.cheekboneLeftX,     CF.noseTipY,    -1, 4);
+    d += qCurve(CF.cheekboneLeftX, CF.noseTipY, CF.jawLeftX,           CF.chinY,       -1, 2);
+    d += qCurve(CF.jawLeftX, CF.chinY,          CF.neckLeftX,          CF.neckY,       +1, 4);  // neck tucks inward
+    d += qCurve(CF.neckLeftX, CF.neckY,         CF.clavicleOuterLeftX, CF.clavicleY,   -1, 8);
+    d += qCurve(CF.clavicleOuterLeftX, CF.clavicleY, CF.deltoidOuterLeftX, CF.shoulderY, -1, 6);
+    d += qCurve(CF.deltoidOuterLeftX, CF.shoulderY,  CF.bicepOuterLeftX,   660,            -1, 8);  // outward-biased bicep curve
+    d += qCurve(CF.bicepOuterLeftX, 660,        CF.elbowOuterLeftX,    CF.elbowY,      -1, 4);
+    d += qCurve(CF.elbowOuterLeftX, CF.elbowY,  CF.forearmOuterLeftX,  850,            -1, 4);
+    d += qCurve(CF.forearmOuterLeftX, 850,      CF.wristOuterLeftX,    CF.wristY,      -1, 2);
+
+    // Curve under the left hand back in toward the hip (skipping finger detail)
+    d += qCurve(CF.wristOuterLeftX, CF.wristY,  CF.hipOuterLeftX,      CF.hipY,        +1, 20); // curves inward
+    // Down the LEFT leg: hip → thigh → knee → calf → ankle
+    d += qCurve(CF.hipOuterLeftX, CF.hipY,      CF.thighOuterLeftX,    CF.thighY,      -1, 6);  // thigh bulges
+    d += qCurve(CF.thighOuterLeftX, CF.thighY,  CF.kneeOuterLeftX,     CF.kneeY,       -1, 2);
+    d += qCurve(CF.kneeOuterLeftX, CF.kneeY,    CF.calfOuterLeftX,     CF.calfY,       -1, 5);  // calf bulges
+    d += qCurve(CF.calfOuterLeftX, CF.calfY,    CF.ankleOuterLeftX,    CF.ankleY,      -1, 2);
+
+    // Across the feet (ankle-L → ankle-R), with a downward bow so it reads as
+    // ground contact. Control point biased DOWN by +20 in y, centered between ankles.
+    const feetMx = (CF.ankleOuterLeftX + CF.ankleOuterRightX) / 2;
+    d += `Q ${feetMx.toFixed(1)} ${(CF.ankleY + 20).toFixed(1)} ${CF.ankleOuterRightX.toFixed(1)} ${CF.ankleY.toFixed(1)} `;
+
+    // Up the RIGHT leg: ankle → calf → knee → thigh → hip
+    d += qCurve(CF.ankleOuterRightX, CF.ankleY, CF.calfOuterRightX,    CF.calfY,       +1, 2);
+    d += qCurve(CF.calfOuterRightX, CF.calfY,   CF.kneeOuterRightX,    CF.kneeY,       +1, 5);
+    d += qCurve(CF.kneeOuterRightX, CF.kneeY,   CF.thighOuterRightX,   CF.thighY,      +1, 2);
+    d += qCurve(CF.thighOuterRightX, CF.thighY, CF.hipOuterRightX,     CF.hipY,        +1, 6);
+
+    // Inward sweep hip → right wrist (skipping finger detail)
+    d += qCurve(CF.hipOuterRightX, CF.hipY,     CF.wristOuterRightX,   CF.wristY,      -1, 20); // curves inward
+    // Up the RIGHT arm: wrist → forearm → elbow → bicep → deltoid → clavicle
+    d += qCurve(CF.wristOuterRightX, CF.wristY, CF.forearmOuterRightX, 850,            +1, 2);
+    d += qCurve(CF.forearmOuterRightX, 850,     CF.elbowOuterRightX,   CF.elbowY,      +1, 4);
+    d += qCurve(CF.elbowOuterRightX, CF.elbowY, CF.bicepOuterRightX,   660,            +1, 4);
+    d += qCurve(CF.bicepOuterRightX, 660,       CF.deltoidOuterRightX, CF.shoulderY,   +1, 8);
+    d += qCurve(CF.deltoidOuterRightX, CF.shoulderY, CF.clavicleOuterRightX, CF.clavicleY, +1, 6);
+
+    // Up the RIGHT neck/face: clavicle → neck → jaw → cheekbone → temple → crown (close)
+    d += qCurve(CF.clavicleOuterRightX, CF.clavicleY, CF.neckRightX,     CF.neckY,       -1, 8);
+    d += qCurve(CF.neckRightX, CF.neckY,        CF.jawRightX,          CF.chinY,       +1, 4);
+    d += qCurve(CF.jawRightX, CF.chinY,         CF.cheekboneRightX,    CF.noseTipY,    +1, 2);
+    d += qCurve(CF.cheekboneRightX, CF.noseTipY, CF.templeRightX,      CF.browY,       +1, 4);
+    d += qCurve(CF.templeRightX, CF.browY,      CF.centerX,            CF.crownY,      +1, 6);
+
+    d += 'Z';
+    return d;
+  }
+
+  function build() {
+    const layer = document.getElementById('silhouetteLayer');
+    if (!layer) {
+      console.warn('[SILHOUETTE] #silhouetteLayer not found in DOM — no-op.');
+      return null;
+    }
+    // Clear any previous render
+    while (layer.firstChild) layer.removeChild(layer.firstChild);
+
+    const path = document.createElementNS(svgNS, 'path');
+    path.setAttribute('id', 'skinOutline');
+    path.setAttribute('d', buildPath());
+    path.setAttribute('fill', 'rgba(232, 208, 188, 0.06)');
+    path.setAttribute('stroke', 'rgba(232, 208, 188, 0.32)');
+    path.setAttribute('stroke-width', '1.2');
+    path.setAttribute('stroke-linejoin', 'round');
+    path.setAttribute('stroke-linecap', 'round');
+    path.setAttribute('fill-rule', 'evenodd');
+    path.setAttribute('pointer-events', 'none');
+    layer.appendChild(path);
+
+    if (typeof console !== 'undefined' && console.info) {
+      console.info('[SILHOUETTE] skinOutline built from CANONICAL_FIGURE landmarks.');
+    }
+    return path;
+  }
+
+  function rebuild() { return build(); }
+
+  // Initial build after scaffold is applied
+  build();
+
+  return { build, rebuild, buildPath };
+})();
+window.SILHOUETTE = SILHOUETTE;
+
 function openBodyPanel(sys) {
   _clearLive();
   document.getElementById('panelTitle').textContent = sys.name;
