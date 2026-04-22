@@ -7691,9 +7691,9 @@ const AURA = (() => {
     const phase = ((ts % cycleMs) / cycleMs) * Math.PI * 2;
     const wave = (Math.sin(phase) + 1) / 2; // 0..1, smooth
 
-    // Stroke-width 8→12, opacity 0.04→0.09 across the breath
-    const sw = 8 + wave * 4;
-    const baseOpacity = 0.04 + wave * 0.05;
+    // Stroke-width 12→18, opacity 0.28→0.52 across the breath — visible full-body form
+    const sw = 12 + wave * 6;
+    const baseOpacity = 0.28 + wave * 0.24;
 
     // Decay shift timer exactly like legacy so public API parity holds
     if (shiftTimer > 0) {
@@ -15747,10 +15747,11 @@ function loop(ts) {
   typeof ORGANS !== 'undefined' && ORGANS.draw(ts);
   typeof CIRCULATORY !== 'undefined' && CIRCULATORY.draw(ts);
   typeof NERVOUS_BODY !== 'undefined' && NERVOUS_BODY.draw(ts);
-  // SKIN_LAYER now driven by RENDER_HUB (body/loop.js) — do not call directly here.
+  // SKIN_LAYER + FACE_LAYER now driven by RENDER_HUB (body/loop.js) — do not call directly here.
   // Keep compatibility guard: if RENDER_HUB is absent for any reason, fall back.
   if (!window.RENDER_HUB) {
     typeof SKIN_LAYER !== 'undefined' && SKIN_LAYER.draw(ts);
+    typeof FACE_LAYER !== 'undefined' && FACE_LAYER.draw(ts);
   }
   requestAnimationFrame(loop);
 }

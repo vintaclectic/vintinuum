@@ -274,7 +274,7 @@ canvas{display:block;}
 // - Caches static assets for offline resilience
 // - Auto-reloads when a new version deploys
 // - Clears old caches on activation
-const _SW_VERSION = 'v20260422-phase1-convergence-done-peel-loop-face';
+const _SW_VERSION = 'v20260422-phase1-body-visible';
 const _onGitHubPages = location.hostname !== 'localhost' && location.hostname !== '127.0.0.1' && location.protocol !== 'file:';
 if ('serviceWorker' in navigator && _onGitHubPages) {
   const _swPath = location.pathname.includes('/vintinuum') ? '/vintinuum/sw.js' : '/sw.js';
@@ -1609,7 +1609,7 @@ if ('serviceWorker' in navigator && _onGitHubPages) {
         </svg>
         <canvas id="skinCanvas" width="700" height="1400" style="position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:4;opacity:0.7;mix-blend-mode:screen;"></canvas>
         <!-- mainCanvas: shared drawing surface for all body/emotion/social canvas systems -->
-        <canvas id="mainCanvas" width="700" height="1400" style="position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:3;opacity:0.55;mix-blend-mode:screen;"></canvas>
+        <canvas id="mainCanvas" width="700" height="1400" style="position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:3;opacity:0.90;mix-blend-mode:screen;"></canvas>
       </div>
 
       <div class="brain-hint">
@@ -2932,7 +2932,7 @@ window.addEventListener('message', function(e) {
   </div>
   <div id="dirrmPickerList" style="overflow-y:auto;padding:6px;display:flex;flex-direction:column;gap:2px;"></div>
 </div>
-<script src="brain.js?v=v20260422-phase1-convergence-done-peel-loop-face"></script>
+<script src="brain.js?v=v20260422-phase1-body-visible"></script>
 <!-- Coherence bus — loads AFTER brain.js to hook into HORMONES, METABOLISM, etc. -->
 <script src="body/coherence.js?v=3"></script>
 <!-- Zoom navigation — smooth animated body exploration -->
