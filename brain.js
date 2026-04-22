@@ -3057,11 +3057,18 @@ const CANONICAL_FIGURE = {
   elbowOuterLeftX:        205, elbowOuterRightX:        495,  // elbow outer
   forearmOuterLeftX:      205, forearmOuterRightX:      495,  // forearm outer
   wristOuterLeftX:        196, wristOuterRightX:        504,  // wrist outer
-  hipOuterLeftX:          215, hipOuterRightX:          485,  // hip skin edge at y~910
-  thighOuterLeftX:        272, thighOuterRightX:        428,  // thigh outer
-  kneeOuterLeftX:         278, kneeOuterRightX:         422,  // knee outer
-  calfOuterLeftX:         278, calfOuterRightX:         422,  // calf outer
-  ankleOuterLeftX:        282, ankleOuterRightX:        418,  // ankle outer
+  // Widened for anatomical proportion (hotfix H1). Reference: deltoidOuter
+  // width = 224 (±112 from centerX=350) is the figure's widest point.
+  //   hip    ~90% of shoulder  → ±100
+  //   thigh  ~95% of shoulder  → ±106 (slight outward bulge at upper thigh)
+  //   knee   ~66% of shoulder  → ±74  (narrower than thigh)
+  //   calf   ~76% of shoulder  → ±85  (bulges outward from knee)
+  //   ankle  ~36% of shoulder  → ±40  (narrowest point)
+  hipOuterLeftX:          250, hipOuterRightX:          450,  // hip skin edge at y~960
+  thighOuterLeftX:        244, thighOuterRightX:        456,  // thigh outer (slight bulge)
+  kneeOuterLeftX:         276, kneeOuterRightX:         424,  // knee outer (taper in)
+  calfOuterLeftX:         265, calfOuterRightX:         435,  // calf outer (second bulge)
+  ankleOuterLeftX:        310, ankleOuterRightX:        390,  // ankle outer (narrowest)
 
   // ── HAND DIGITS (shared Y-rows per phalanx depth, X-pairs per finger) ─────
   // wristY=908 → handY=968 → fingers extend above wrist in existing drawing (y=876-905)
