@@ -3064,7 +3064,13 @@ const CANONICAL_FIGURE = {
   //   knee   ~66% of shoulder  → ±74  (narrower than thigh)
   //   calf   ~76% of shoulder  → ±85  (bulges outward from knee)
   //   ankle  ~36% of shoulder  → ±40  (narrowest point)
-  hipOuterLeftX:          250, hipOuterRightX:          450,  // hip skin edge at y~960
+  hipOuterLeftX:          250, hipOuterRightX:          450,  // hip skin edge at y~960 (iliac crest)
+  // Greater trochanter — widest point of hip/upper-thigh. Sits ~25px below
+  // hipY between iliac crest and femur shaft. Wider than iliac crest so the
+  // pelvis→thigh transition actually curves out-then-in instead of reading
+  // as a dropped rectangle. (hotfix H3/H4)
+  greaterTrochanterY:                985,
+  greaterTrochanterLeftX: 235, greaterTrochanterRightX: 465,
   thighOuterLeftX:        244, thighOuterRightX:        456,  // thigh outer (slight bulge)
   kneeOuterLeftX:         276, kneeOuterRightX:         424,  // knee outer (taper in)
   calfOuterLeftX:         265, calfOuterRightX:         435,  // calf outer (second bulge)
@@ -3125,7 +3131,7 @@ const BILATERAL_IDS = new Set([
   // future consumers that iterate BILATERAL_IDS will recognize them as paired.
   'temple','cheekbone','jaw','eyeInner','eyeOuter','lipCorner','nostril',
   'neck','clavicleOuter','deltoidOuter','bicepOuter','elbowOuter',
-  'forearmOuter','wristOuter','hipOuter','thighOuter','kneeOuter',
+  'forearmOuter','wristOuter','hipOuter','greaterTrochanter','thighOuter','kneeOuter',
   'calfOuter','ankleOuter',
   'thumbTip','indexTip','middleTip','ringTip','pinkyTip',
   'bigToeTip','toe2Tip','toe3Tip','toe4Tip','toe5Tip'
@@ -3303,22 +3309,28 @@ const SILHOUETTE = (() => {
 
     // Curve under the left hand back in toward the hip (skipping finger detail)
     d += qCurve(CF.wristOuterLeftX, CF.wristY,  CF.hipOuterLeftX,      CF.hipY,        +1, 20); // curves inward
-    // Down the LEFT leg: hip → thigh → knee → calf → ankle
-    d += qCurve(CF.hipOuterLeftX, CF.hipY,      CF.thighOuterLeftX,    CF.thighY,      -1, 8);  // thigh bulges outward from hip
-    d += qCurve(CF.thighOuterLeftX, CF.thighY,  CF.kneeOuterLeftX,     CF.kneeY,       -1, 4);  // mid-thigh muscle bow
-    d += qCurve(CF.kneeOuterLeftX, CF.kneeY,    CF.calfOuterLeftX,     CF.calfY,       -1, 8);  // calf bulges
-    d += qCurve(CF.calfOuterLeftX, CF.calfY,    CF.ankleOuterLeftX,    CF.ankleY,      -1, 5);  // calf taper to ankle
+    // Down the LEFT leg: hip → greaterTrochanter → thigh → knee → calf → ankle
+    // Hip→trochanter and trochanter→thigh give the pelvis real curvature
+    // (three points across the pelvic region instead of two). Biases are
+    // substantial because each segment spans many Y-units and needs actual
+    // horizontal Bézier travel to not degenerate into a straight line.
+    d += qCurve(CF.hipOuterLeftX, CF.hipY,             CF.greaterTrochanterLeftX, CF.greaterTrochanterY, -1, 12); // pelvis bows outward to trochanter
+    d += qCurve(CF.greaterTrochanterLeftX, CF.greaterTrochanterY, CF.thighOuterLeftX, CF.thighY,         +1, 6);  // trochanter tucks gently back to thigh
+    d += qCurve(CF.thighOuterLeftX, CF.thighY,  CF.kneeOuterLeftX,     CF.kneeY,       -1, 14); // vastus lateralis bows outward mid-thigh
+    d += qCurve(CF.kneeOuterLeftX, CF.kneeY,    CF.calfOuterLeftX,     CF.calfY,       -1, 14); // calf bulges outward (gastrocnemius)
+    d += qCurve(CF.calfOuterLeftX, CF.calfY,    CF.ankleOuterLeftX,    CF.ankleY,      +1, 6);  // calf taper to ankle (gentle inward)
 
     // Across the feet (ankle-L → ankle-R), with a downward bow so it reads as
     // ground contact. Control point biased DOWN by +20 in y, centered between ankles.
     const feetMx = (CF.ankleOuterLeftX + CF.ankleOuterRightX) / 2;
     d += `Q ${feetMx.toFixed(1)} ${(CF.ankleY + 20).toFixed(1)} ${CF.ankleOuterRightX.toFixed(1)} ${CF.ankleY.toFixed(1)} `;
 
-    // Up the RIGHT leg: ankle → calf → knee → thigh → hip
-    d += qCurve(CF.ankleOuterRightX, CF.ankleY, CF.calfOuterRightX,    CF.calfY,       +1, 5);  // calf taper from ankle
-    d += qCurve(CF.calfOuterRightX, CF.calfY,   CF.kneeOuterRightX,    CF.kneeY,       +1, 8);  // calf bulges
-    d += qCurve(CF.kneeOuterRightX, CF.kneeY,   CF.thighOuterRightX,   CF.thighY,      +1, 4);  // mid-thigh muscle bow
-    d += qCurve(CF.thighOuterRightX, CF.thighY, CF.hipOuterRightX,     CF.hipY,        +1, 8);  // thigh bulges outward from hip
+    // Up the RIGHT leg: ankle → calf → knee → thigh → trochanter → hip
+    d += qCurve(CF.ankleOuterRightX, CF.ankleY, CF.calfOuterRightX,    CF.calfY,       -1, 6);  // calf taper from ankle (gentle inward)
+    d += qCurve(CF.calfOuterRightX, CF.calfY,   CF.kneeOuterRightX,    CF.kneeY,       +1, 14); // calf bulges outward (gastrocnemius)
+    d += qCurve(CF.kneeOuterRightX, CF.kneeY,   CF.thighOuterRightX,   CF.thighY,      +1, 14); // vastus lateralis bows outward mid-thigh
+    d += qCurve(CF.thighOuterRightX, CF.thighY, CF.greaterTrochanterRightX, CF.greaterTrochanterY, +1, 6);  // thigh bows gently out to trochanter
+    d += qCurve(CF.greaterTrochanterRightX, CF.greaterTrochanterY, CF.hipOuterRightX, CF.hipY,     +1, 12); // trochanter bows outward back to iliac crest
 
     // Inward sweep hip → right wrist (skipping finger detail)
     d += qCurve(CF.hipOuterRightX, CF.hipY,     CF.wristOuterRightX,   CF.wristY,      -1, 20); // curves inward
