@@ -1,0 +1,162 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+   VINTINUUM DESIGN TOKENS
+   Single source of truth for colors, typography, spacing, and layer aesthetics.
+   Imported by brain.html. All UI modules reference these custom properties.
+   Opacity discipline: no panel ever exceeds 0.25 for player-facing surfaces.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+:root {
+  /* ── Core void palette ──────────────────────────────────────────────── */
+  --bg-void:           #050810;
+  --bg-deep:           #080c14;
+  --bg-panel:          rgba(8, 12, 20, 0.20);
+  --bg-panel-card:     rgba(16, 22, 34, 0.18);
+  --bg-panel-hover:    rgba(20, 28, 42, 0.25);
+  --bg-footer:         rgba(10, 14, 22, 0.22);
+  --bg-input:          rgba(20, 28, 42, 0.22);
+  --bg-tooltip:        rgba(10, 14, 22, 0.38);
+
+  /* ── Borders ────────────────────────────────────────────────────────── */
+  --border-subtle:     rgba(255, 255, 255, 0.06);
+  --border-soft:       rgba(255, 255, 255, 0.10);
+  --border-accent:     rgba(124, 207, 255, 0.25);
+
+  /* ── Text ───────────────────────────────────────────────────────────── */
+  --text-primary:      rgba(220, 235, 255, 0.92);
+  --text-secondary:    rgba(180, 200, 230, 0.65);
+  --text-tertiary:     rgba(140, 160, 190, 0.45);
+  --text-accent:       #7ccfff;
+
+  /* ── Accent colors ──────────────────────────────────────────────────── */
+  --accent-cyan:       #7ccfff;
+  --accent-cyan-dim:   rgba(124, 207, 255, 0.45);
+  --accent-warm:       #ffb47c;
+  --accent-pulse:      #b47cff;
+  --accent-success:    #7cffb4;
+  --accent-warn:       #ffe07c;
+  --accent-danger:     #ff7c7c;
+
+  /* ── Seven consciousness layer colors ───────────────────────────────── */
+  --layer-neural:       #7cc4ff;
+  --layer-emotional:    #ffb47c;
+  --layer-subconscious: #b47cff;
+  --layer-somatic:      #7cffb4;
+  --layer-immune:       #7cfff0;
+  --layer-metabolic:    #ffe07c;
+  --layer-genetic:      #ff7cb4;
+
+  /* ── Seven chakra colors (aligned with seven layers, warmer spectrum) ─ */
+  --chakra-crown:       #b47cff;  /* violet    — crown */
+  --chakra-brow:        #7c8cff;  /* indigo    — third-eye */
+  --chakra-throat:      #7ccfff;  /* cyan      — throat */
+  --chakra-heart:       #7cffb4;  /* green     — heart */
+  --chakra-solar:       #ffe07c;  /* gold      — solar plexus */
+  --chakra-sacral:      #ff9b7c;  /* orange    — sacral */
+  --chakra-root:        #ff7c7c;  /* red       — root */
+
+  /* ── Typography ─────────────────────────────────────────────────────── */
+  --font-display:      'Space Grotesk', 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-body:         'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-mono:         'JetBrains Mono', 'Fira Code', ui-monospace, 'SF Mono', Consolas, monospace;
+
+  --fs-xs:   11px;
+  --fs-sm:   12px;
+  --fs-base: 13px;
+  --fs-md:   14px;
+  --fs-lg:   16px;
+  --fs-xl:   18px;
+  --fs-2xl:  22px;
+  --fs-3xl:  28px;
+
+  --fw-light:    300;
+  --fw-regular:  400;
+  --fw-medium:   500;
+  --fw-semibold: 600;
+  --fw-bold:     700;
+
+  --tracking-tight:  -0.01em;
+  --tracking-normal: 0;
+  --tracking-wide:   0.08em;
+  --tracking-wider:  0.18em;
+
+  /* ── Spacing scale ──────────────────────────────────────────────────── */
+  --space-0:  0;
+  --space-1:  4px;
+  --space-2:  8px;
+  --space-3:  12px;
+  --space-4:  16px;
+  --space-5:  20px;
+  --space-6:  24px;
+  --space-8:  32px;
+  --space-10: 40px;
+  --space-12: 48px;
+
+  /* ── Radii ──────────────────────────────────────────────────────────── */
+  --radius-xs:  4px;
+  --radius-sm:  8px;
+  --radius-md:  12px;
+  --radius-lg:  18px;
+  --radius-xl:  24px;
+  --radius-pill: 999px;
+
+  /* ── Layout widths ──────────────────────────────────────────────────── */
+  --sidebar-left-width:  280px;
+  --sidebar-right-width: 340px;
+  --footer-height:       52px;
+
+  /* ── Animation timing ───────────────────────────────────────────────── */
+  --ease-out:    cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-smooth: cubic-bezier(0.4, 0, 0.2, 1);
+  --dur-fast:    120ms;
+  --dur-med:     240ms;
+  --dur-slow:    480ms;
+
+  /* ── Z-layer stack ──────────────────────────────────────────────────── */
+  --z-background:  0;
+  --z-body:        10;
+  --z-panels:      50;
+  --z-footer:      60;
+  --z-nodes:       70;
+  --z-tooltips:    90;
+  --z-modal:      100;
+}
+
+/* Utility classes shared across UI modules */
+.vint-panel {
+  background: var(--bg-panel);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  color: var(--text-primary);
+  font-family: var(--font-body);
+  font-size: var(--fs-base);
+}
+
+.vint-card {
+  background: var(--bg-panel-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: var(--space-3) var(--space-4);
+}
+
+.vint-label {
+  font-family: var(--font-display);
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-medium);
+  letter-spacing: var(--tracking-wider);
+  text-transform: uppercase;
+  color: var(--text-tertiary);
+}
+
+.vint-value {
+  font-family: var(--font-mono);
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-regular);
+  color: var(--text-primary);
+}
+
+.vint-divider {
+  height: 1px;
+  background: var(--border-subtle);
+  border: none;
+  margin: var(--space-3) 0;
+}
