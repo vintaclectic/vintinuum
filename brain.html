@@ -274,7 +274,7 @@ canvas{display:block;}
 // - Caches static assets for offline resilience
 // - Auto-reloads when a new version deploys
 // - Clears old caches on activation
-const _SW_VERSION = 'v20260422-phase1-finish';
+const _SW_VERSION = 'v20260422-phase1-convergence-done';
 const _onGitHubPages = location.hostname !== 'localhost' && location.hostname !== '127.0.0.1' && location.protocol !== 'file:';
 if ('serviceWorker' in navigator && _onGitHubPages) {
   const _swPath = location.pathname.includes('/vintinuum') ? '/vintinuum/sw.js' : '/sw.js';
@@ -2877,7 +2877,7 @@ if ('serviceWorker' in navigator && _onGitHubPages) {
 <script src="body/organs.js?v=1"></script>
 <script src="body/circulatory.js?v=1"></script>
 <script src="body/nervous.js?v=1"></script>
-<script src="body/skin.js?v=reconcile"></script>
+<script src="body/skin.js?v=convergence-done"></script>
 <!-- DirRM Player — gold/amber floating media player (non-blocking, no backdrop) -->
 <iframe id="dirrmFrame" src="dirrm-player.html" style="display:none;position:fixed;bottom:20px;right:20px;width:520px;height:340px;border:none;z-index:9998;border-radius:16px;box-shadow:0 8px 32px rgba(0,0,0,0.5),0 0 1px rgba(245,166,35,0.3);pointer-events:auto;" allow="autoplay;fullscreen"></iframe>
 <script>
@@ -2927,9 +2927,9 @@ window.addEventListener('message', function(e) {
   </div>
   <div id="dirrmPickerList" style="overflow-y:auto;padding:6px;display:flex;flex-direction:column;gap:2px;"></div>
 </div>
-<script src="brain.js?v=v20260422-phase1-finish"></script>
+<script src="brain.js?v=v20260422-phase1-convergence-done"></script>
 <!-- Coherence bus — loads AFTER brain.js to hook into HORMONES, METABOLISM, etc. -->
-<script src="body/coherence.js?v=2"></script>
+<script src="body/coherence.js?v=3"></script>
 <!-- Zoom navigation — smooth animated body exploration -->
 <script src="body/zoom_nav.js?v=1"></script>
 <script>
