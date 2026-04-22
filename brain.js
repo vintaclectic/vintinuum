@@ -15747,7 +15747,11 @@ function loop(ts) {
   typeof ORGANS !== 'undefined' && ORGANS.draw(ts);
   typeof CIRCULATORY !== 'undefined' && CIRCULATORY.draw(ts);
   typeof NERVOUS_BODY !== 'undefined' && NERVOUS_BODY.draw(ts);
-  typeof SKIN_LAYER !== 'undefined' && SKIN_LAYER.draw(ts);
+  // SKIN_LAYER now driven by RENDER_HUB (body/loop.js) — do not call directly here.
+  // Keep compatibility guard: if RENDER_HUB is absent for any reason, fall back.
+  if (!window.RENDER_HUB) {
+    typeof SKIN_LAYER !== 'undefined' && SKIN_LAYER.draw(ts);
+  }
   requestAnimationFrame(loop);
 }
 
