@@ -47,6 +47,9 @@ const FACE_LAYER = (() => {
   // ── Asymmetry ────────────────────────────────────────────────────────────────
   let _asymX = 0;
 
+  // ── Mouth smoothing (speech sync) ────────────────────────────────────────────
+  let _mouthSmoothed = 0;
+
   // ── Saccade state (Phase 2 A3) ──────────────────────────────────────────────
   // Iris jitter ±3px every 400–900ms when dominantLayer is neural or
   // subconscious — mimics microsaccades during active cognition.
@@ -485,57 +488,140 @@ const FACE_LAYER = (() => {
       ctx.restore();
     }
 
-    // ── NOSE — centerline ridge, gives face its axis ────────────────────────
+    // ── NOSE — proper human nose with bridge, bulb, and nostrils ──────────
     {
       const mx = (_leftOrbit.cx + _rightOrbit.cx) / 2;
-      const topY = _leftOrbit.cy + 5;
-      const tipY = 210;
+      const topY = _leftOrbit.cy + 4;    // nose starts between the eyes
+      const tipY = 218;                   // bulb low
+      const width = 7;                    // BIGGER — 4→7 half-width
       ctx.save();
-      ctx.strokeStyle = 'rgba(80,50,42,0.35)';
-      ctx.lineWidth = 1.1;
+
+      // Soft shadow under nose bulb (flesh-tone deep)
+      const noseShadow = ctx.createRadialGradient(mx, tipY - 2, 1, mx, tipY - 2, 14);
+      noseShadow.addColorStop(0,   'rgba(90,55,44,0.32)');
+      noseShadow.addColorStop(0.6, 'rgba(90,55,44,0.12)');
+      noseShadow.addColorStop(1,   'rgba(90,55,44,0)');
+      ctx.fillStyle = noseShadow;
+      ctx.fillRect(mx - 14, tipY - 16, 28, 24);
+
+      // Nasal bridge — fuller than before, clear volume
+      ctx.strokeStyle = 'rgba(90,55,44,0.5)';
+      ctx.lineWidth = 1.4;
       ctx.lineCap = 'round';
-      // Left nasal ridge
+      // Left ridge
       ctx.beginPath();
       ctx.moveTo(mx - 2, topY);
-      ctx.quadraticCurveTo(mx - 3, (topY + tipY) / 2, mx - 4, tipY);
+      ctx.quadraticCurveTo(mx - 5, (topY + tipY) / 2, mx - width, tipY - 1);
       ctx.stroke();
-      // Right nasal ridge
+      // Right ridge
       ctx.beginPath();
       ctx.moveTo(mx + 2, topY);
-      ctx.quadraticCurveTo(mx + 3, (topY + tipY) / 2, mx + 4, tipY);
+      ctx.quadraticCurveTo(mx + 5, (topY + tipY) / 2, mx + width, tipY - 1);
       ctx.stroke();
-      // Tip/nostrils
-      ctx.strokeStyle = 'rgba(60,35,30,0.5)';
-      ctx.lineWidth = 0.9;
+
+      // Nose bulb (the tip)
+      const bulbGrad = ctx.createRadialGradient(mx, tipY - 2, 0, mx, tipY - 2, width + 1);
+      bulbGrad.addColorStop(0,   'rgba(230,195,170,0.9)');
+      bulbGrad.addColorStop(0.7, 'rgba(201,160,138,0.6)');
+      bulbGrad.addColorStop(1,   'rgba(150,100,82,0)');
+      ctx.fillStyle = bulbGrad;
       ctx.beginPath();
-      ctx.arc(mx - 3, tipY + 1, 1.4, 0.2, Math.PI - 0.2);
-      ctx.stroke();
+      ctx.ellipse(mx, tipY - 1, width, 5, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Nostrils — visible dark ovals
+      ctx.fillStyle = 'rgba(35,20,18,0.78)';
       ctx.beginPath();
-      ctx.arc(mx + 3, tipY + 1, 1.4, 0.2, Math.PI - 0.2);
+      ctx.ellipse(mx - 3.5, tipY + 1, 1.6, 1.1, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.ellipse(mx + 3.5, tipY + 1, 1.6, 1.1, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Septum highlight
+      ctx.strokeStyle = 'rgba(220,180,155,0.35)';
+      ctx.lineWidth = 0.7;
+      ctx.beginPath();
+      ctx.moveTo(mx, tipY - 2);
+      ctx.lineTo(mx, tipY + 2);
       ctx.stroke();
+
       ctx.restore();
     }
 
-    // ── MOUTH — soft closed line with subtle valence lift/dip ──────────────
+    // ── MOUTH — real lips, speech-synced, valence-responsive ──────────────
     {
       const mx = (_leftOrbit.cx + _rightOrbit.cx) / 2;
-      const my = 238;
+      const my = 242;
       const valenceLift = _clamp(((bs.emotionalValence || 0) * 0.04), -3, 3);
+      const lipW = 14;   // half-width of mouth (wider than before)
+
+      // Speech-sync openness: BODY_STATE.mouthOpen (0..1) drives jaw drop.
+      // Smoothed toward target so boundary punches don't snap.
+      const mouthTarget = (typeof bs.mouthOpen === 'number') ? _clamp(bs.mouthOpen, 0, 1) : 0;
+      _mouthSmoothed += (mouthTarget - _mouthSmoothed) * 0.28;
+      let speechOpen = _mouthSmoothed;
+      // Micro-oscillation for syllable rhythm while speaking
+      if (speechOpen > 0.05) {
+        speechOpen *= 0.72 + 0.28 * Math.abs(Math.sin(ts * 0.028));
+      }
+      const openGap = speechOpen * 8;  // pixel gap between upper/lower lip
+
       ctx.save();
-      ctx.strokeStyle = 'rgba(100,50,50,0.7)';
-      ctx.lineWidth = 1.3;
+
+      // Upper lip — shaped with philtrum peaks (cupid's bow)
+      ctx.fillStyle = 'rgba(140,70,70,0.72)';
+      ctx.beginPath();
+      ctx.moveTo(mx - lipW, my);
+      ctx.quadraticCurveTo(mx - lipW * 0.6, my - 2.5, mx - 3, my - 2.2);
+      ctx.quadraticCurveTo(mx - 1.5, my - 1.2, mx, my - 2);         // cupid bow dip
+      ctx.quadraticCurveTo(mx + 1.5, my - 1.2, mx + 3, my - 2.2);
+      ctx.quadraticCurveTo(mx + lipW * 0.6, my - 2.5, mx + lipW, my);
+      // Mouth line
+      ctx.quadraticCurveTo(mx, my - valenceLift, mx - lipW, my);
+      ctx.closePath();
+      ctx.fill();
+
+      // Inner mouth (shown when open for speech)
+      if (openGap > 0.5) {
+        ctx.fillStyle = 'rgba(35,18,20,0.85)';
+        ctx.beginPath();
+        ctx.ellipse(mx, my + openGap / 2, lipW * 0.7, openGap / 2, 0, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      // Lower lip — fuller, offset by openGap when speaking
+      const lowerY = my + openGap;
+      ctx.fillStyle = 'rgba(155,80,78,0.75)';
+      ctx.beginPath();
+      ctx.moveTo(mx - lipW, lowerY);
+      ctx.quadraticCurveTo(mx, lowerY + 4.5 - valenceLift * 0.3, mx + lipW, lowerY);
+      ctx.quadraticCurveTo(mx, lowerY + 1, mx - lipW, lowerY);
+      ctx.closePath();
+      ctx.fill();
+
+      // Upper lip highlight — subtle sheen
+      ctx.strokeStyle = 'rgba(220,170,160,0.35)';
+      ctx.lineWidth = 0.6;
+      ctx.beginPath();
+      ctx.moveTo(mx - lipW * 0.7, my - 1);
+      ctx.quadraticCurveTo(mx, my - 2.2, mx + lipW * 0.7, my - 1);
+      ctx.stroke();
+
+      // Lip outline — strong enough to sell them as real
+      ctx.strokeStyle = 'rgba(75,30,32,0.6)';
+      ctx.lineWidth = 0.8;
       ctx.lineCap = 'round';
+      // Mouth crease
       ctx.beginPath();
-      ctx.moveTo(mx - 11, my);
-      ctx.quadraticCurveTo(mx, my + 2 - valenceLift, mx + 11, my);
+      ctx.moveTo(mx - lipW, my);
+      if (openGap < 0.5) {
+        ctx.quadraticCurveTo(mx, my - valenceLift + 0.3, mx + lipW, my);
+      } else {
+        ctx.quadraticCurveTo(mx, my + openGap * 0.1, mx + lipW, my + openGap);
+      }
       ctx.stroke();
-      // Lower lip shadow
-      ctx.strokeStyle = 'rgba(60,30,30,0.28)';
-      ctx.lineWidth = 0.9;
-      ctx.beginPath();
-      ctx.moveTo(mx - 9, my + 3);
-      ctx.quadraticCurveTo(mx, my + 5, mx + 9, my + 3);
-      ctx.stroke();
+
       ctx.restore();
     }
 

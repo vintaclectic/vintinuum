@@ -242,13 +242,13 @@ const BODY_GEOMETRY = (() => {
     { x: CENTER_X + 120, y: 620 },  // waist
     { x: CENTER_X + 130, y: 700 },  // hip out
     { x: CENTER_X + 132, y: 735 },  // iliac crest
-    // OUTSIDE of right leg (hip → ankle)
-    { x: CENTER_X + 118, y: 800 },
-    { x: CENTER_X + 108, y: 880 },
-    { x: CENTER_X + 98,  y: 960 },  // knee outer
-    { x: CENTER_X + 95,  y: 1020 },
-    { x: CENTER_X + 90,  y: 1100 }, // calf
-    { x: CENTER_X + 80,  y: 1180 }, // ankle outer
+    // OUTSIDE of right leg (hip → ankle) — fuller, human proportions
+    { x: CENTER_X + 128, y: 800 },  // upper thigh
+    { x: CENTER_X + 118, y: 880 },  // mid thigh
+    { x: CENTER_X + 104, y: 960 },  // knee outer
+    { x: CENTER_X + 108, y: 1020 }, // upper calf (slight bulge)
+    { x: CENTER_X + 100, y: 1100 }, // calf gastrocnemius
+    { x: CENTER_X + 85,  y: 1180 }, // ankle outer
     // Right foot top and toe
     { x: CENTER_X + 70,  y: 1210 },
     { x: CENTER_X + 45,  y: 1225 }, // toe tip
@@ -256,31 +256,31 @@ const BODY_GEOMETRY = (() => {
     { x: CENTER_X + 25,  y: 1215 },
     { x: CENTER_X + 35,  y: 1190 }, // ankle inside
     // INSIDE of right leg (ankle → crotch)
-    { x: CENTER_X + 45,  y: 1100 },
-    { x: CENTER_X + 52,  y: 1000 },
-    { x: CENTER_X + 58,  y: 900  },
-    { x: CENTER_X + 55,  y: 820  },
-    { x: CENTER_X + 40,  y: 760  },
+    { x: CENTER_X + 42,  y: 1100 },
+    { x: CENTER_X + 48,  y: 1000 },
+    { x: CENTER_X + 45,  y: 900  },
+    { x: CENTER_X + 38,  y: 820  },
+    { x: CENTER_X + 22,  y: 760  },
     // Crotch midpoint (single apex — no V-dip)
     { x: CENTER_X,       y: 748  },
     // INSIDE of left leg (crotch → ankle)
-    { x: CENTER_X - 40,  y: 760  },
-    { x: CENTER_X - 55,  y: 820  },
-    { x: CENTER_X - 58,  y: 900  },
-    { x: CENTER_X - 52,  y: 1000 },
-    { x: CENTER_X - 45,  y: 1100 },
+    { x: CENTER_X - 22,  y: 760  },
+    { x: CENTER_X - 38,  y: 820  },
+    { x: CENTER_X - 45,  y: 900  },
+    { x: CENTER_X - 48,  y: 1000 },
+    { x: CENTER_X - 42,  y: 1100 },
     { x: CENTER_X - 35,  y: 1190 },
     // Left heel and foot
     { x: CENTER_X - 25,  y: 1215 },
     { x: CENTER_X - 45,  y: 1225 }, // toe tip
     { x: CENTER_X - 70,  y: 1210 },
-    // OUTSIDE of left leg (ankle → hip)
-    { x: CENTER_X - 80,  y: 1180 },
-    { x: CENTER_X - 90,  y: 1100 },
-    { x: CENTER_X - 95,  y: 1020 },
-    { x: CENTER_X - 98,  y: 960  },
-    { x: CENTER_X - 108, y: 880  },
-    { x: CENTER_X - 118, y: 800  },
+    // OUTSIDE of left leg (ankle → hip) — mirror fuller proportions
+    { x: CENTER_X - 85,  y: 1180 },
+    { x: CENTER_X - 100, y: 1100 },
+    { x: CENTER_X - 108, y: 1020 },
+    { x: CENTER_X - 104, y: 960  },
+    { x: CENTER_X - 118, y: 880  },
+    { x: CENTER_X - 128, y: 800  },
     // Left hip and torso
     { x: CENTER_X - 132, y: 735  },
     { x: CENTER_X - 130, y: 700  },

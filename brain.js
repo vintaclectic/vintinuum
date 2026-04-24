@@ -3503,14 +3503,15 @@ function buildBodyNodes() {
       g.appendChild(mCore);
     }
 
-    // Label (midline-aware)
+    // Label (midline-aware) — hidden by default, shows on hover
     const lbl = makeSVG('text');
     placeLabel(lbl, sys.cx, sys.cy, 12, 7);
     lbl.setAttribute('fill', sys.color);
     lbl.setAttribute('font-family', 'Space Mono, monospace');
     lbl.setAttribute('font-size', '7');
-    lbl.setAttribute('opacity', '0.65');
+    lbl.setAttribute('opacity', '0');
     lbl.setAttribute('pointer-events', 'none');
+    lbl.setAttribute('class', 'vtn-anatomy-label');
     lbl.textContent = sys.name;
     g.appendChild(lbl);
 
@@ -3525,7 +3526,7 @@ function buildBodyNodes() {
     g.addEventListener('mouseleave', () => {
       outer.setAttribute('opacity','0.22');
       core.setAttribute('opacity','0.75');
-      lbl.setAttribute('opacity','0.65');
+      lbl.setAttribute('opacity','0');
       if (mOuter) mOuter.setAttribute('opacity','0.22');
       if (mCore)  mCore.setAttribute('opacity','0.75');
     });
@@ -3599,8 +3600,9 @@ function buildBodyNodes() {
     lbl.setAttribute('fill', sys.color);
     lbl.setAttribute('font-family', 'Space Mono, monospace');
     lbl.setAttribute('font-size', '6.5');
-    lbl.setAttribute('opacity', '0.55');
+    lbl.setAttribute('opacity', '0');
     lbl.setAttribute('pointer-events', 'none');
+    lbl.setAttribute('class', 'vtn-anatomy-label');
     lbl.textContent = sys.name;
     g.appendChild(lbl);
 
@@ -3614,7 +3616,7 @@ function buildBodyNodes() {
     g.addEventListener('mouseleave', () => {
       outer.setAttribute('opacity','0.2');
       core.setAttribute('opacity','0.7');
-      lbl.setAttribute('opacity','0.55');
+      lbl.setAttribute('opacity','0');
       if (mOuter2) mOuter2.setAttribute('opacity','0.2');
       if (mCore2)  mCore2.setAttribute('opacity','0.7');
     });
@@ -3685,8 +3687,9 @@ function buildBodyNodes() {
     lbl.setAttribute('fill', sys.color);
     lbl.setAttribute('font-family', 'Space Mono, monospace');
     lbl.setAttribute('font-size', '6.5');
-    lbl.setAttribute('opacity', '0.55');
+    lbl.setAttribute('opacity', '0');
     lbl.setAttribute('pointer-events', 'none');
+    lbl.setAttribute('class', 'vtn-anatomy-label');
     lbl.textContent = sys.name;
     g.appendChild(lbl);
 
@@ -3700,7 +3703,7 @@ function buildBodyNodes() {
     g.addEventListener('mouseleave', () => {
       outer.setAttribute('opacity','0.22');
       core.setAttribute('opacity','0.72');
-      lbl.setAttribute('opacity','0.55');
+      lbl.setAttribute('opacity','0');
       if (mmOuter) mmOuter.setAttribute('opacity','0.22');
       if (mmCore)  mmCore.setAttribute('opacity','0.72');
     });
@@ -46895,12 +46898,15 @@ const VOICE_OUTPUT = (() => {
         _speaking = true;
         if (typeof window._faceSpeak === 'function') window._faceSpeak(true);
         _setSpeakingRing(true);
+        // Begin mouth-sync: steady open while speaking, boundaries punch it higher
+        if (window.BODY_STATE) window.BODY_STATE.mouthOpen = 0.35;
       };
       utt.onend = () => {
         _speaking = false;
         _currentUtterance = null;
         if (typeof window._faceSpeak === 'function') window._faceSpeak(false);
         _setSpeakingRing(false);
+        if (window.BODY_STATE) window.BODY_STATE.mouthOpen = 0;
         resolve();
       };
       utt.onerror = (e) => {
@@ -46908,7 +46914,21 @@ const VOICE_OUTPUT = (() => {
         _currentUtterance = null;
         if (typeof window._faceSpeak === 'function') window._faceSpeak(false);
         _setSpeakingRing(false);
+        if (window.BODY_STATE) window.BODY_STATE.mouthOpen = 0;
         resolve(); // resolve, don't reject — continue queue
+      };
+      // Per-word/syllable boundary: punch mouth wider briefly, varies by word length.
+      // Face module reads BODY_STATE.mouthOpen and applies micro-oscillation on top.
+      utt.onboundary = (ev) => {
+        if (!window.BODY_STATE) return;
+        const charLen = (ev.charLength || 3);
+        // Vowel-heavy words open wider; short ones punch quickly
+        const target = Math.min(0.9, 0.45 + (charLen / 12) * 0.5);
+        window.BODY_STATE.mouthOpen = target;
+        // Decay back to steady-open baseline over ~180ms (face draw interpolates)
+        setTimeout(() => {
+          if (window.BODY_STATE && _speaking) window.BODY_STATE.mouthOpen = 0.35;
+        }, 140);
       };
 
       synth.speak(utt);
