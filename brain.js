@@ -48093,10 +48093,13 @@ const SOUL_AUTH = (() => {
       if (stored) return stored.replace(/\/$/, '');
     } catch (_) {}
     const host = (location.hostname || '').toLowerCase();
-    const isPagesHost =
-      /github\.io$/i.test(host) ||
-      (host && host !== 'localhost' && host !== '127.0.0.1' && host !== '0.0.0.0');
-    return isPagesHost ? '' : 'http://localhost:8767';
+    const isLocal = !host || host === 'localhost' || host === '127.0.0.1' || host === '0.0.0.0';
+    // On any non-local host (Pages, custom domain, tunnel preview, etc.) fall
+    // back to the canonical public API. Previously this returned '' which made
+    // every auth call throw "no body link" when the in-memory base got nulled
+    // by a transient probe failure. The public hostname is permanent DNS → it
+    // is always the safest default.
+    return isLocal ? 'http://localhost:8767' : 'https://api.vintaclectic.com';
   };
   const STORAGE_ACCESS  = 'vint_access_token';
   const STORAGE_REFRESH = 'vint_refresh_token';
