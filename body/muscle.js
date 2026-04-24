@@ -94,15 +94,27 @@ const MUSCLE_LAYER = (() => {
   }
 
   function drawMuscle(ctx, m, alpha, ts) {
-    const baseAlpha = alpha * 0.08;
+    const baseAlpha = alpha * 0.10; // slight warmth lift — was 0.08
     const twitch = Math.sin(ts * 0.0003 + m.cx * 0.01) * 0.01;  // Micro-twitch
+
+    // Heartbeat sync — muscles flush warmer on systole (pulsePhase 0..~0.3),
+    // settle back on diastole. Hook into BODY_STATE.pulsePhase published by
+    // heartbeat.js. Pulse intensity: +red channel, +alpha on beat peak.
+    const pp = (window.BODY_STATE && typeof window.BODY_STATE.pulsePhase === 'number')
+      ? window.BODY_STATE.pulsePhase : 0.5;
+    const systole = pp < 0.3 ? (1 - pp / 0.3) : 0;
+    const flushR = systole * 25;
+    const flushA = systole * 0.025;
 
     ctx.save();
     ctx.translate(m.cx, m.cy);
     ctx.rotate(m.rot);
 
-    // Muscle body (elliptical fill)
-    ctx.fillStyle = `rgba(${m.color[0]}, ${m.color[1]}, ${m.color[2]}, ${baseAlpha + twitch})`;
+    // Muscle body (elliptical fill) — permanent +20 red warmth + heartbeat flush
+    const r = Math.min(255, m.color[0] + 20 + flushR);
+    const g = m.color[1];
+    const b = m.color[2];
+    ctx.fillStyle = `rgba(${r}, ${g}, ${b}, ${baseAlpha + twitch + flushA})`;
     ctx.beginPath();
     ctx.ellipse(0, 0, m.rx, m.ry, 0, 0, Math.PI * 2);
     ctx.fill();

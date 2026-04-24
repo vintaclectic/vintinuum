@@ -307,3 +307,28 @@ const NERVOUS_BODY = (() => {
 
 setTimeout(() => { if (window.BODY_GEOMETRY) NERVOUS_BODY.init(); }, 600);
 if (typeof window !== 'undefined') window.NERVOUS_BODY = NERVOUS_BODY;
+
+// ── Sciatic pulse autostart (Phase 2 b7 — grounding pass) ─────────
+// The sciatic is the body's largest nerve. In the live rendering it was
+// static line-art. This IIFE fires a bright signal down each sciatic on
+// alternating beats (~1.5s cadence) so the leg view feels like signal is
+// *traveling* rather than merely drawn. Intensity doubles during systole
+// via BODY_STATE.pulsePhase — the body fires harder when the heart does.
+(function _sciaticPulse() {
+  let _phase = 0;
+  function tick() {
+    if (!window.NERVOUS_BODY || typeof window.NERVOUS_BODY.fireNerve !== 'function') return;
+    // Respect global pause + layer visibility
+    if (window.VTN_PAUSED) return;
+    const pv = window.BODY_STATE && window.BODY_STATE.peelVisible;
+    if (pv && pv.nervous === false) return;
+    // Alternate left → right
+    const nerve = _phase % 2 === 0 ? 'leftSciatic' : 'rightSciatic';
+    try { window.NERVOUS_BODY.fireNerve(nerve); } catch (_) {}
+    _phase++;
+  }
+  // Start after nervous system has had time to init (600ms + buffer)
+  setTimeout(() => {
+    setInterval(tick, 1500);
+  }, 1200);
+})();
