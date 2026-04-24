@@ -450,3 +450,61 @@ setTimeout(() => {
   // Start API polling 2 seconds after coherence init
   setTimeout(() => COHERENCE.startApiPoll(), 2000);
 }, 6000);
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// BREATH PAUSES (Phase 2 A8)
+// Every 90–120s, briefly hold inhale for ~1.5s. Writes BODY_STATE._breathHold
+// which skin.js A1 reads to freeze the breath phase at its inhale peak, then
+// releases — a soft human pause mid-breath.
+// ═══════════════════════════════════════════════════════════════════════════════
+(function () {
+  'use strict';
+  const HOLD_DURATION_MS = 1500;
+  let _nextHoldAt = 0;
+  let _holdStart = 0;
+
+  function _rollNext(ts) {
+    _nextHoldAt = ts + 90000 + Math.random() * 30000; // 90..120s
+  }
+
+  function _tick(ts) {
+    if (!window.BODY_STATE) window.BODY_STATE = {};
+    if (_nextHoldAt === 0) _rollNext(ts);
+
+    if (_holdStart === 0 && ts >= _nextHoldAt) {
+      _holdStart = ts;
+    }
+
+    if (_holdStart > 0) {
+      const elapsed = ts - _holdStart;
+      if (elapsed >= HOLD_DURATION_MS) {
+        // Release hold
+        _holdStart = 0;
+        window.BODY_STATE._breathHold = 1;
+        _rollNext(ts);
+      } else {
+        // During hold: scale breath phase toward a frozen inhale peak.
+        // skin.js multiplies its sin wave by this factor, so reducing it
+        // toward a small positive value freezes the wave near +1 cosine
+        // peak. Simpler: hard-clamp multiplier to 0.05 with an ease-in/out
+        // around the hold window for natural entry/exit.
+        const u = elapsed / HOLD_DURATION_MS;       // 0..1 across hold
+        // ease: 1→0.05→1 smoothly
+        const ease = (u < 0.15)
+          ? (1 - (u / 0.15) * 0.95)
+          : (u > 0.85)
+            ? (0.05 + ((u - 0.85) / 0.15) * 0.95)
+            : 0.05;
+        window.BODY_STATE._breathHold = ease;
+      }
+    } else if (window.BODY_STATE._breathHold !== 1) {
+      window.BODY_STATE._breathHold = 1;
+    }
+
+    requestAnimationFrame(_tick);
+  }
+
+  if (typeof window !== 'undefined') {
+    requestAnimationFrame(_tick);
+  }
+})();
