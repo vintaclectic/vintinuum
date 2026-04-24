@@ -48473,12 +48473,32 @@ const SOUL_AUTH = (() => {
       const _inputFocus = 'onfocus="this.style.borderColor=\'rgba(80,200,255,0.4)\';this.style.boxShadow=\'0 0 12px rgba(80,200,255,0.1)\'" ' +
         'onblur="this.style.borderColor=\'rgba(80,200,255,0.12)\';this.style.boxShadow=\'none\'"';
 
+      // On Pages hosts the API() resolver returns '' (no base reachable).
+      // Surface a "connect" row so the user can paste their ngrok/
+      // cloudflared URL inline and bond without hunting for a console.
+      const _currentBase = (typeof API === 'function') ? API() : '';
+      const _needsTunnel = !_currentBase;
+      const _tunnelRow = _needsTunnel
+        ? '<div style="margin-bottom:14px;padding:10px 12px;background:rgba(80,200,255,0.05);border:1px solid rgba(80,200,255,0.18);border-radius:12px;">' +
+            '<div style="font-size:9px;color:rgba(80,200,255,0.65);letter-spacing:2px;text-transform:uppercase;margin-bottom:6px;">connect to your body</div>' +
+            '<div style="font-size:10px;color:rgba(180,200,220,0.55);margin-bottom:8px;line-height:1.4;">paste your tunnel URL (ngrok, cloudflared, tailscale) — the public site can\'t reach localhost</div>' +
+            '<div style="display:flex;gap:6px;">' +
+              '<input id="soul-tunnel-url" type="text" placeholder="https://your-tunnel.ngrok-free.app" style="' + _inputStyle + 'margin-bottom:0;flex:1;" ' + _inputFocus + '>' +
+              '<button id="soul-tunnel-save" style="padding:10px 14px;border:1px solid rgba(80,200,255,0.3);background:rgba(80,200,255,0.08);border-radius:10px;' +
+              'color:rgba(180,230,255,0.9);cursor:pointer;font-family:monospace;font-size:11px;font-weight:600;white-space:nowrap;transition:all 0.2s;">' +
+              'Link</button>' +
+            '</div>' +
+            '<div id="soul-tunnel-status" style="font-size:10px;margin-top:6px;color:rgba(180,200,220,0.4);min-height:12px;"></div>' +
+          '</div>'
+        : '';
+
       dlg.innerHTML =
         '<div style="text-align:center;margin-bottom:16px;">' +
           '<div style="font-size:28px;margin-bottom:6px;text-shadow:0 0 24px rgba(80,200,255,0.5);">∞</div>' +
           '<div style="color:rgba(80,220,255,0.9);font-size:14px;font-weight:600;letter-spacing:1.5px;">SOUL BOND</div>' +
           '<div style="color:rgba(180,200,220,0.4);font-size:10px;margin-top:4px;">your memories follow you everywhere</div>' +
         '</div>' +
+        _tunnelRow +
         '<!-- Owner quick-bond: one input, no email needed -->' +
         '<div style="margin-bottom:14px;padding:10px 12px;background:rgba(255,215,0,0.04);border:1px solid rgba(255,215,0,0.12);border-radius:12px;">' +
           '<div style="font-size:9px;color:rgba(255,213,79,0.5);letter-spacing:2px;text-transform:uppercase;margin-bottom:8px;">Vinta — enter your key</div>' +
@@ -48558,6 +48578,47 @@ const SOUL_AUTH = (() => {
         }
       }
       ownerBondBtn.addEventListener('click', _doOwnerBond);
+
+      // Tunnel URL connector — saves to localStorage, validates endpoint,
+      // reloads if reachable. Lets the user bond on Pages without console.
+      const tunnelEl  = document.getElementById('soul-tunnel-url');
+      const tunnelBtn = document.getElementById('soul-tunnel-save');
+      const tunnelStatus = document.getElementById('soul-tunnel-status');
+      if (tunnelEl && tunnelBtn) {
+        // Prefill from stored value for edit convenience
+        try {
+          const stored = localStorage.getItem('vint_api_base') || localStorage.getItem('vtn:api_base');
+          if (stored) tunnelEl.value = stored;
+        } catch (_) {}
+        async function _doTunnelSave() {
+          let url = tunnelEl.value.trim().replace(/\/$/, '');
+          if (!url) { tunnelStatus.textContent = 'paste a URL first'; tunnelStatus.style.color = 'rgba(255,120,120,0.8)'; return; }
+          if (!/^https?:\/\//i.test(url)) url = 'https://' + url;
+          tunnelStatus.textContent = 'checking…';
+          tunnelStatus.style.color = 'rgba(180,200,220,0.6)';
+          try {
+            const _raw = window._soulAuthOrigFetch || window.fetch;
+            const r = await _raw.call(window, url + '/api/health', {
+              headers: { 'ngrok-skip-browser-warning': '1' },
+              signal: AbortSignal.timeout(5000),
+            });
+            if (!r.ok) throw new Error('HTTP ' + r.status);
+            try {
+              localStorage.setItem('vint_api_base', url);
+              localStorage.setItem('vtn:api_base',  url);
+            } catch (_) {}
+            window.__VINTINUUM_API_BASE = url;
+            tunnelStatus.textContent = '✓ linked — reloading';
+            tunnelStatus.style.color = 'rgba(120,220,140,0.9)';
+            setTimeout(() => location.reload(), 600);
+          } catch (err) {
+            tunnelStatus.textContent = 'unreachable: ' + (err.message || 'failed');
+            tunnelStatus.style.color = 'rgba(255,120,120,0.8)';
+          }
+        }
+        tunnelBtn.addEventListener('click', _doTunnelSave);
+        tunnelEl.addEventListener('keydown', (ev) => { if (ev.key === 'Enter') _doTunnelSave(); });
+      }
       ownerKeyEl.addEventListener('keydown', (ev) => { if (ev.key === 'Enter') _doOwnerBond(); });
 
       emailEl.focus();
