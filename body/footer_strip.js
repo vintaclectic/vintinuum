@@ -13,13 +13,17 @@
 (function () {
   'use strict';
 
+  // Each layer maps to the window.* object exposed by its body/*.js module.
+  // If the module object is missing at click time, the toggle falls back to
+  // the BODY_STATE.peelVisible flag (draw modules also read that) and the
+  // button marks itself "Coming in Phase 3" via title.
   const PEEL_LAYERS = [
-    { key: 'skin',        label: 'Skin' },
-    { key: 'muscle',      label: 'Muscle' },
-    { key: 'skeleton',    label: 'Skeleton' },
-    { key: 'organs',      label: 'Organs' },
-    { key: 'circulatory', label: 'Circulatory' },
-    { key: 'nervous',     label: 'Nervous' },
+    { key: 'skin',        label: 'Skin',        global: 'SKIN_LAYER'    },
+    { key: 'muscle',      label: 'Muscle',      global: 'MUSCLE_LAYER'  },
+    { key: 'skeleton',    label: 'Skeleton',    global: 'BODY_SKELETON' },
+    { key: 'organs',      label: 'Organs',      global: 'ORGANS'        },
+    { key: 'circulatory', label: 'Circulatory', global: 'CIRCULATORY'   },
+    { key: 'nervous',     label: 'Nervous',     global: 'NERVOUS_BODY'  },
   ];
 
   const VIEW_PRESETS = [
@@ -64,17 +68,44 @@
     return window.BODY_STATE.peelVisible;
   }
 
+  // Get the body-layer module object from window by global name.
+  function _moduleFor(layer) {
+    if (!layer || !layer.global) return null;
+    return window[layer.global] || null;
+  }
+
+  function _applyVisibility(key, visible) {
+    // Single source of truth: write BODY_STATE.peelVisible[key] so any
+    // downstream draw module that reads it respects the flag, AND call
+    // setVisible(...) on the module itself (that's what _visible inside
+    // each body/*.js module actually gates draw() on).
+    const pv = _ensurePeelVisible();
+    pv[key] = !!visible;
+
+    const layer = PEEL_LAYERS.find(l => l.key === key);
+    const mod = _moduleFor(layer);
+    if (mod && typeof mod.setVisible === 'function') {
+      try { mod.setVisible(!!visible); } catch (e) { /* ignore */ }
+    }
+    // X-Ray preset wants the skeleton faint, not invisible. The preset
+    // handler sets _xray on BODY_STATE so skeleton.js can halve alpha.
+  }
+
   function _toggleLayer(key, btn) {
     const pv = _ensurePeelVisible();
-    pv[key] = !pv[key];
-    btn.classList.toggle('is-off', !pv[key]);
-    btn.setAttribute('aria-pressed', pv[key] ? 'true' : 'false');
+    const next = !pv[key];
+    _applyVisibility(key, next);
+    btn.classList.toggle('is-off', !next);
+    btn.setAttribute('aria-pressed', next ? 'true' : 'false');
   }
 
   function _applyPreset(preset, peelButtons) {
     const pv = _ensurePeelVisible();
-    Object.keys(preset.layers).forEach(k => { pv[k] = preset.layers[k]; });
-    // Reflect in peel button UI
+    // X-Ray tag so skeleton.js can render at reduced alpha (optional hook).
+    pv._xray = preset.key === 'xray';
+    Object.keys(preset.layers).forEach(k => {
+      _applyVisibility(k, preset.layers[k]);
+    });
     PEEL_LAYERS.forEach(l => {
       const btn = peelButtons[l.key];
       if (!btn) return;
@@ -102,9 +133,20 @@
   }
 
   function _togglePause(btn) {
-    if (!window.RENDER_HUB || typeof window.RENDER_HUB.setPaused !== 'function') return;
-    const paused = !window.RENDER_HUB.isPaused();
-    window.RENDER_HUB.setPaused(paused);
+    const hub = window.RENDER_HUB;
+    const current = hub && typeof hub.isPaused === 'function' ? hub.isPaused() : !!window.VTN_PAUSED;
+    const paused = !current;
+
+    // Halt RENDER_HUB-managed modules (skin, face, grid_floor, chakras,
+    // heartbeat, hair, radar).
+    if (hub && typeof hub.setPaused === 'function') {
+      hub.setPaused(paused);
+    }
+    // Global flag for brain.js loop and any other rAF consumer to honor.
+    // brain.js can read `window.VTN_PAUSED` at the top of its loop(); any
+    // module is free to short-circuit on it too.
+    window.VTN_PAUSED = paused;
+
     btn.innerHTML = paused ? _icon('play') : _icon('pause');
     btn.setAttribute('title', paused ? 'Resume' : 'Pause');
     btn.setAttribute('aria-pressed', paused ? 'true' : 'false');
@@ -153,11 +195,26 @@
     PEEL_LAYERS.forEach(l => {
       const btn = _makeBtn(l.key, l.label, 'vtn-ft-peel');
       btn.setAttribute('aria-pressed', 'true');
-      btn.addEventListener('click', () => _toggleLayer(l.key, btn));
+      // At build time the body modules may still be initializing via
+      // setTimeout chains (geometry@0ms, skin@300ms, organs@400ms, etc.).
+      // Re-check at click time rather than freezing availability now.
+      btn.addEventListener('click', () => {
+        const mod = _moduleFor(l);
+        if (!mod || typeof mod.setVisible !== 'function') {
+          // Module not wired — disable the button, but keep it visible.
+          btn.classList.add('is-off');
+          btn.setAttribute('disabled', 'disabled');
+          btn.setAttribute('title', l.label + ' — coming in Phase 3');
+          btn.setAttribute('aria-disabled', 'true');
+          return;
+        }
+        _toggleLayer(l.key, btn);
+      });
       peelGroup.appendChild(btn);
       peelButtons[l.key] = btn;
     });
     inner.appendChild(peelGroup);
+    _peelButtonsRef = peelButtons;
 
     inner.appendChild(_divider());
 
@@ -221,6 +278,25 @@
     return s;
   }
 
+  // After all body modules have had a chance to boot (the longest
+  // setTimeout in body/*.js is nervous.js @ 600ms), audit which peel
+  // buttons have a backing module — grey out the ones that don't.
+  function _auditPeelAvailability(peelButtons) {
+    PEEL_LAYERS.forEach(l => {
+      const btn = peelButtons && peelButtons[l.key];
+      if (!btn) return;
+      const mod = _moduleFor(l);
+      if (!mod || typeof mod.setVisible !== 'function') {
+        btn.classList.add('is-off');
+        btn.setAttribute('disabled', 'disabled');
+        btn.setAttribute('title', l.label + ' — coming in Phase 3');
+        btn.setAttribute('aria-disabled', 'true');
+      }
+    });
+  }
+
+  let _peelButtonsRef = null;
+
   function _init() {
     const root = document.getElementById('footerStrip');
     if (!root) {
@@ -228,6 +304,8 @@
       return;
     }
     _build(root);
+    // Wait past the slowest body module init (nervous @ 600ms), then audit.
+    setTimeout(() => _auditPeelAvailability(_peelButtonsRef), 900);
   }
 
   if (document.readyState === 'loading') {
