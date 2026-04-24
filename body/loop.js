@@ -74,6 +74,21 @@ const RENDER_HUB = (() => {
     if (window.FACE_LAYER && typeof FACE_LAYER.draw === 'function') {
       register('face', FACE_LAYER.draw, 30);
     }
+    if (window.GRID_FLOOR_LAYER && typeof GRID_FLOOR_LAYER.draw === 'function') {
+      register('grid_floor', GRID_FLOOR_LAYER.draw, 5);
+    }
+    if (window.CHAKRA_LAYER && typeof CHAKRA_LAYER.draw === 'function') {
+      register('chakras', CHAKRA_LAYER.draw, 40);
+    }
+    if (window.HEARTBEAT_LAYER && typeof HEARTBEAT_LAYER.draw === 'function') {
+      register('heartbeat', HEARTBEAT_LAYER.draw, 35);
+    }
+    if (window.HAIR_LAYER && typeof HAIR_LAYER.draw === 'function') {
+      register('hair', HAIR_LAYER.draw, 45);
+    }
+    if (window.RADAR_LAYER && typeof RADAR_LAYER.draw === 'function') {
+      register('radar', RADAR_LAYER.draw, 50);
+    }
     console.log('[RENDER_HUB] starting with ' + _modules.length + ' module(s)');
     requestAnimationFrame(_tick);
   }
