@@ -533,14 +533,33 @@
 }
 
 /* ═══════════════════════════════════════════════════════════════════
-   KILL LEGACY PHASE-1 UI — the old mobile bottom bar + lore toggle
-   target DOM ids (#leftSidebar, #rightSidebar, .tab-bar .tab) that
-   no longer exist. Their listeners silently no-op and their buttons
-   overlap the new BODY/MIND pills. Hide them completely at every size.
+   KILL LEGACY PHASE-1 UI — the brain.html file carries two generations
+   of shell stacked on top of each other. Phase-1: header, .tab-bar,
+   .sidebar (leftSidebar/rightSidebar), mobile bottom bar, lore toggle.
+   Phase-2 (current): .vtn-shell grid with #sidebarLeft/#sidebarRight/
+   #footerStrip. All Phase-1 handlers target dead ids or superseded
+   panels. Hide them so the user only sees what actually works.
    ═══════════════════════════════════════════════════════════════════ */
+.header,
+.tab-bar,
+#mainTabs,
+.legend,
+.sidebar,
+#leftSidebar,
+#rightSidebar,
+#leftSidebarOverlay,
+#rightSidebarOverlay,
 #mobileBottomBar,
-#loreToggle {
+#loreToggle,
+#lorePanel,
+#mobileLoreToggle {
   display: none !important;
+}
+
+/* The new Phase-2 shell must own the whole viewport now */
+.vtn-shell {
+  position: relative;
+  z-index: 5;
 }
 
 /* Style the dedicated SCAN button so its label is unmistakable */
