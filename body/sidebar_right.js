@@ -21,9 +21,38 @@
     { key: 'soul',      label: 'SOUL QUEUE',  endpoint: '/api/soul-queue/unresolved?limit=20', live: false },
   ];
 
-  // On Pages (github.io host) the API is unreachable from the static site
-  // anyway — force offline cards without even trying.
-  const IS_PRODUCTION = /github\.io$/i.test(location.hostname);
+  // ── API base resolution ──────────────────────────────────────────────
+  // Static Pages builds cannot reach http://localhost:3030. Let the user
+  // (or a tunnel) override the base via:
+  //   1. window.VTN_API_BASE   — highest priority (set by inline script)
+  //   2. localStorage 'vtn:api_base'
+  //   3. Default: http://localhost:3030 on local dev, '' (disabled) on Pages
+  function _resolveApiBase() {
+    try {
+      if (typeof window !== 'undefined' && window.VTN_API_BASE) {
+        return String(window.VTN_API_BASE).replace(/\/$/, '');
+      }
+      const stored = localStorage.getItem('vtn:api_base');
+      if (stored) return stored.replace(/\/$/, '');
+    } catch (e) { /* localStorage blocked */ }
+    const host = (location.hostname || '').toLowerCase();
+    const isPagesHost =
+      /github\.io$/i.test(host) ||
+      (host && host !== 'localhost' && host !== '127.0.0.1' && host !== '0.0.0.0');
+    if (isPagesHost) return ''; // no base → offline cards
+    return 'http://localhost:3030';
+  }
+
+  let _apiBase = _resolveApiBase();
+  const IS_OFFLINE_MODE = _apiBase === '';
+
+  // Public helper so the user can point at an ngrok/tunnel without editing code
+  function _setApiBase(url) {
+    try { localStorage.setItem('vtn:api_base', url || ''); } catch (e) { /* ignore */ }
+    _apiBase = (url || '').replace(/\/$/, '');
+    // Re-load active tab with new base
+    if (_cardList) _loadTab(_activeKey);
+  }
 
   let _root = null;
   let _activeKey = 'memory';
@@ -85,8 +114,10 @@
     while (_cardList.firstChild) _cardList.removeChild(_cardList.firstChild);
   }
 
-  function _renderOfflineCard(tabLabel) {
+  function _renderOfflineCard(tabLabel, reason) {
     _clearList();
+
+    // Polished explainer card — no "broken" feel.
     const card = document.createElement('div');
     card.className = 'vtn-card vtn-card-offline';
     const icon = document.createElement('div');
@@ -94,17 +125,94 @@
     icon.innerHTML = _icon('offline');
     const body = document.createElement('div');
     body.className = 'vtn-card-body';
+
     const title = document.createElement('div');
     title.className = 'vtn-card-title';
-    title.textContent = 'Offline — ' + tabLabel + ' unavailable';
+    title.textContent = tabLabel + ' · live link required';
+    body.appendChild(title);
+
     const sub = document.createElement('div');
     sub.className = 'vtn-card-sub';
-    sub.textContent = 'API unreachable or endpoint not deployed.';
-    body.appendChild(title);
+    if (IS_OFFLINE_MODE) {
+      sub.textContent =
+        'This view streams from the Vintinuum body running on your machine. ' +
+        'The public site can\u2019t reach it \u2014 expose the API via a tunnel and point this panel at it below.';
+    } else if (reason === 'notdeployed') {
+      sub.textContent =
+        'This feed is planned but not yet wired on the current API build.';
+    } else {
+      sub.textContent =
+        'API did not respond. Check that vintinuum-api is running on ' +
+        (_apiBase || 'localhost:3030') + '.';
+    }
     body.appendChild(sub);
+
     card.appendChild(icon);
     card.appendChild(body);
     _cardList.appendChild(card);
+
+    // Second card: persistent API-base selector, always offered when offline.
+    const connectCard = document.createElement('div');
+    connectCard.className = 'vtn-card';
+    connectCard.style.gridTemplateColumns = '1fr';
+
+    const ctitle = document.createElement('div');
+    ctitle.className = 'vtn-card-title';
+    ctitle.textContent = 'Connect to a local Vintinuum';
+    connectCard.appendChild(ctitle);
+
+    const chint = document.createElement('div');
+    chint.className = 'vtn-card-sub vtn-card-sub-dim';
+    chint.textContent = _apiBase
+      ? 'Current base: ' + _apiBase
+      : 'No base set. Paste an ngrok / cloudflared URL below.';
+    connectCard.appendChild(chint);
+
+    const row = document.createElement('div');
+    row.style.display = 'flex';
+    row.style.gap = '6px';
+    row.style.marginTop = '8px';
+
+    const input = document.createElement('input');
+    input.type = 'url';
+    input.placeholder = 'https://xxxx.ngrok.app';
+    input.value = _apiBase || '';
+    input.style.flex = '1';
+    input.style.minWidth = '0';
+    input.style.minHeight = '44px';
+    input.style.padding = '0 10px';
+    input.style.background = 'rgba(20,28,42,0.25)';
+    input.style.border = '1px solid rgba(255,255,255,0.06)';
+    input.style.borderRadius = '8px';
+    input.style.color = '#e8f0ff';
+    input.style.font = '500 11px/1 var(--font-ui, system-ui, sans-serif)';
+    input.style.outline = 'none';
+
+    const save = document.createElement('button');
+    save.type = 'button';
+    save.textContent = 'Save';
+    save.style.minHeight = '44px';
+    save.style.minWidth = '56px';
+    save.style.padding = '0 12px';
+    save.style.background = 'rgba(124, 196, 255, 0.14)';
+    save.style.border = '1px solid rgba(124, 196, 255, 0.28)';
+    save.style.borderRadius = '8px';
+    save.style.color = '#cfe2ff';
+    save.style.font = '600 10px/1 var(--font-ui, system-ui, sans-serif)';
+    save.style.letterSpacing = '0.14em';
+    save.style.cursor = 'pointer';
+    save.addEventListener('click', () => {
+      const v = (input.value || '').trim();
+      _setApiBase(v);
+    });
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') save.click();
+    });
+
+    row.appendChild(input);
+    row.appendChild(save);
+    connectCard.appendChild(row);
+    _cardList.appendChild(connectCard);
   }
 
   function _renderLoadingCard() {
@@ -252,13 +360,17 @@
     const tab = TABS.find(t => t.key === key);
     if (!tab) return;
 
-    if (IS_PRODUCTION || !tab.live) {
+    if (!tab.live) {
+      _renderOfflineCard(tab.label, 'notdeployed');
+      return;
+    }
+    if (!_apiBase) {
       _renderOfflineCard(tab.label);
       return;
     }
 
     _renderLoadingCard();
-    _fetchJSON(tab.endpoint)
+    _fetchJSON(_apiBase + tab.endpoint)
       .then(data => {
         if (key !== _activeKey) return; // user moved on
         if (key === 'memory') _renderCards('memory', _shapeMemory(data));
@@ -289,5 +401,10 @@
     _init();
   }
 
-  window.SIDEBAR_RIGHT = { setActive: _setActive, refresh: () => _loadTab(_activeKey) };
+  window.SIDEBAR_RIGHT = {
+    setActive: _setActive,
+    refresh: () => _loadTab(_activeKey),
+    setApiBase: _setApiBase,
+    getApiBase: () => _apiBase,
+  };
 })();
