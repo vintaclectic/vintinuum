@@ -29,18 +29,22 @@
   //   3. Default: http://localhost:3030 on local dev, '' (disabled) on Pages
   function _resolveApiBase() {
     try {
+      // Prefer the canonical SOUL_AUTH base so login + sidebar talk to the
+      // same backend — no more "sidebar is offline while login works" drift.
+      if (typeof window !== 'undefined' && window.__VINTINUUM_API_BASE) {
+        return String(window.__VINTINUUM_API_BASE).replace(/\/$/, '');
+      }
       if (typeof window !== 'undefined' && window.VTN_API_BASE) {
         return String(window.VTN_API_BASE).replace(/\/$/, '');
       }
-      const stored = localStorage.getItem('vtn:api_base');
+      const stored = localStorage.getItem('vtn:api_base') || localStorage.getItem('vint_api_base');
       if (stored) return stored.replace(/\/$/, '');
     } catch (e) { /* localStorage blocked */ }
     const host = (location.hostname || '').toLowerCase();
-    const isPagesHost =
-      /github\.io$/i.test(host) ||
-      (host && host !== 'localhost' && host !== '127.0.0.1' && host !== '0.0.0.0');
-    if (isPagesHost) return ''; // no base → offline cards
-    return 'http://localhost:3030';
+    const isLocal = !host || host === 'localhost' || host === '127.0.0.1' || host === '0.0.0.0';
+    // Public default mirrors SOUL_AUTH — never return '' for non-local hosts;
+    // that was what produced the "live link required / connected email" card.
+    return isLocal ? 'http://localhost:8767' : 'https://api.vintaclectic.com';
   }
 
   let _apiBase = _resolveApiBase();
