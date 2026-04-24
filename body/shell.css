@@ -245,6 +245,11 @@
   letter-spacing: 0.14em;
   cursor: pointer;
   transition: background .15s, color .15s;
+  /* Prevent SOUL QUEUE (or any two-word label) from wrapping behind the
+     tab-strip border and appearing to overlap adjacent tabs. */
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .vtn-right-tab:hover { color: #fff; background: rgba(255, 255, 255, 0.04); }
 .vtn-right-tab.is-active {
@@ -355,22 +360,226 @@
   padding: 0 10px;
 }
 
-/* Mobile collapse — below 900px stack vertically, hide right sidebar
-   (it reappears via a toggle wired up in sidebar_right.js later). */
-@media (max-width: 900px) {
+/* ═══════════════════════════════════════════════════════════════════
+   MOBILE LAYOUT — unified at 820px breakpoint
+   ───────────────────────────────────────────────────────────────────
+   Problems solved:
+   • sidebars + stage + footer stacking crushed everything
+   • 4-col right-tabs wrapped SOUL QUEUE behind the tab strip border
+   • LORE / footer buttons overlapped neighbours on narrow screens
+   • tapping one button often hit an adjacent one
+   ───────────────────────────────────────────────────────────────────
+   Mobile plan:
+   • stage = full viewport (body is the hero)
+   • sidebars become bottom-sheet drawers behind pill toggles
+   • each pill toggle sits alone with ≥16px clearance on every side
+   • right-sidebar tabs: 2×2 grid, full SOUL QUEUE label fits
+   • footer: two rows with wrap, ≥12px gap, no horizontal scroll
+   • every tap target ≥44×44 with 8px inter-target gutter
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* Sheet overlay shared surface — used for both drawers.
+   Bodies add .is-open; a JS hook toggles that class. */
+.vtn-sheet-scrim {
+  position: fixed;
+  inset: 0;
+  background: rgba(2, 4, 8, 0.55);
+  backdrop-filter: blur(3px);
+  z-index: 90;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.18s ease;
+}
+.vtn-sheet-scrim.is-open {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* Floating pill toggles — only on mobile, positioned so neighbours
+   can't touch them even with fat fingers. */
+.vtn-mobile-pill {
+  display: none; /* desktop hidden */
+  position: fixed;
+  z-index: 95;
+  min-width: 64px;
+  min-height: 44px;
+  padding: 0 14px;
+  background: rgba(12, 18, 28, 0.72);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(124, 196, 255, 0.28);
+  border-radius: 22px;
+  color: #cfe2ff;
+  font: 600 10px/1 var(--font-ui, system-ui, sans-serif);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  cursor: pointer;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.45);
+  -webkit-tap-highlight-color: transparent;
+}
+.vtn-mobile-pill.is-left  { left: 12px;  top: calc(env(safe-area-inset-top, 0px) + 10px); }
+.vtn-mobile-pill.is-right { right: 12px; top: calc(env(safe-area-inset-top, 0px) + 10px); }
+.vtn-mobile-pill:active { transform: scale(0.96); }
+
+@media (max-width: 820px) {
+  /* Shell becomes stage + footer only; sidebars detach into drawers */
   .vtn-shell {
     grid-template-columns: 1fr;
-    grid-template-rows: auto 1fr auto 52px;
+    grid-template-rows: 1fr auto;
     grid-template-areas:
-      "left"
       "stage"
-      "right"
       "footer";
+    min-height: 100vh;
+    min-height: 100svh;
   }
+
+  .vtn-mobile-pill { display: inline-flex; align-items: center; justify-content: center; }
+
+  /* Sidebars become bottom sheets, hidden by default, slide up when open */
   .vtn-sidebar-left,
   .vtn-sidebar-right {
-    max-height: 40vh;
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    max-height: 72vh;
+    max-height: 72svh;
+    min-height: 40vh;
+    background: rgba(10, 14, 22, 0.96);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-bottom: none;
+    border-top-left-radius: 18px;
+    border-top-right-radius: 18px;
+    transform: translateY(100%);
+    transition: transform 0.22s ease;
+    z-index: 100;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 18px);
   }
+  .vtn-sidebar-left.is-open,
+  .vtn-sidebar-right.is-open { transform: translateY(0); }
+
+  /* Drawer grab-handle hint */
+  .vtn-sidebar-left::before,
+  .vtn-sidebar-right::before {
+    content: '';
+    display: block;
+    width: 44px;
+    height: 4px;
+    border-radius: 2px;
+    background: rgba(255, 255, 255, 0.22);
+    margin: 10px auto 4px;
+  }
+
+  /* Stage fills the visible viewport; nothing else covers it */
+  .vtn-stage {
+    min-height: calc(100vh - 68px);
+    min-height: calc(100svh - 68px);
+  }
+
+  /* Footer: wrap to two rows, no scrollbar, big comfortable targets */
+  .vtn-footer {
+    height: auto;
+    min-height: 60px;
+    grid-area: footer;
+  }
+  .vtn-ft-inner {
+    flex-wrap: wrap;
+    justify-content: center;
+    overflow-x: visible;
+    gap: 8px 10px;
+    padding: 10px 12px calc(env(safe-area-inset-bottom, 0px) + 10px);
+  }
+  .vtn-ft-group { gap: 6px; flex-wrap: wrap; justify-content: center; }
+  .vtn-ft-spacer { display: none; } /* no push-apart on mobile — groups wrap naturally */
+  .vtn-ft-div    { display: none; } /* dividers just add overlap on wrap — hide on mobile */
+  .vtn-ft-btn {
+    min-width: 48px;
+    min-height: 44px;
+    padding: 0 10px;
+    flex: 0 0 auto;
+  }
+
+  /* Right sidebar tabs: 2×2 grid so SOUL QUEUE fits as one label */
+  .vtn-right-tabs {
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+  }
+  .vtn-right-tab {
+    min-height: 48px;
+    font-size: 10px;
+    letter-spacing: 0.12em;
+    padding: 0 8px;
+    white-space: nowrap;
+  }
+
+  /* Left sidebar tab row — 4 tiles fit tightly on narrow screens */
+  .vtn-tabs { gap: 8px; }
+  .vtn-tab  { min-height: 48px; }
+
+  /* Identity / chem / layer blocks compress gracefully */
+  .vtn-side-inner { gap: 14px; padding: 16px 14px 22px; }
+  .vtn-side-right-inner { gap: 10px; padding: 10px 12px 16px; max-height: none; }
+  .vtn-card-list { max-height: none; overflow-y: visible; }
+
+  .vtn-chem-row { grid-template-columns: 72px 1fr 30px; }
+}
+
+/* Very small phones — squeeze everything slightly more without overlap */
+@media (max-width: 380px) {
+  .vtn-ft-btn       { min-width: 44px; padding: 0 8px; font-size: 9px; }
+  .vtn-right-tab    { font-size: 9.5px; letter-spacing: 0.10em; }
+  .vtn-mobile-pill  { min-width: 54px; padding: 0 10px; font-size: 9px; }
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   MOBILE SAFE ZONES — keep other floating UI from colliding with the
+   BODY / MIND pills at the top, or the footer strip at the bottom.
+   Targets every known fixed overlay in the app.
+   ═══════════════════════════════════════════════════════════════════ */
+@media (max-width: 820px) {
+  /* Top center safe zone — push any floating top element below the pill row */
+  .vtn-sensor-btn,
+  #vtn-sensor,
+  #soul-auth-indicator,
+  #vtnAuthIndicator,
+  .vtn-auth-indicator,
+  .vtn-top-chip,
+  .vtn-top-hud {
+    top: calc(env(safe-area-inset-top, 0px) + 62px) !important;
+  }
+
+  /* DirRM floating player — lift above footer and clear of right pill */
+  #dirrmPlayer,
+  .dirrm-player,
+  .vtn-dirrm-player {
+    right: 10px !important;
+    bottom: calc(env(safe-area-inset-bottom, 0px) + 70px) !important;
+    max-width: calc(100vw - 20px) !important;
+  }
+
+  /* Peel tab (right edge info panel) — lives on right edge; hide behind
+     sheet when the MIND drawer is open so it can't poke through */
+  .vtn-peel-tab,
+  #vtnPeelTab {
+    top: calc(env(safe-area-inset-top, 0px) + 62px) !important;
+  }
+  body:has(.vtn-sidebar-right.is-open) .vtn-peel-tab,
+  body:has(.vtn-sidebar-right.is-open) #vtnPeelTab { visibility: hidden; }
+
+  /* Chat dock — lift above footer if present */
+  .vtn-chat-dock,
+  #vtnChatDock,
+  #chatDock {
+    bottom: calc(env(safe-area-inset-bottom, 0px) + 72px) !important;
+    right: 10px !important;
+    max-width: calc(100vw - 20px) !important;
+  }
+
+  /* Any .dir-* / .vtn- overlay we didn't explicitly name: if it uses
+     position:fixed top:0, the generic nudge won't reach it, but at least
+     ensure they can't overlap the pills — add a uniform tap buffer. */
+  .vtn-mobile-pill { pointer-events: auto; }
 }
 
 /* ═══════════════════════════════════════════════════════════════════
