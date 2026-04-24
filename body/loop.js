@@ -80,7 +80,8 @@ const RENDER_HUB = (() => {
       register('breath', BREATH_LAYER.draw, 10);
     }
     if (window.FACE_LAYER && typeof FACE_LAYER.draw === 'function') {
-      register('face', FACE_LAYER.draw, 30);
+      // Priority 55 — above skin (20), hair (45), chakras (40): eyes ALWAYS in front.
+      register('face', FACE_LAYER.draw, 55);
     }
     if (window.GRID_FLOOR_LAYER && typeof GRID_FLOOR_LAYER.draw === 'function') {
       register('grid_floor', GRID_FLOOR_LAYER.draw, 5);

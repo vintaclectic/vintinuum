@@ -274,13 +274,14 @@ const FACE_LAYER = (() => {
     const sinceMove = ts - _lastMouseMove;
     let targetMode = 'cursor';
     if (sinceMove > 4000 || _lastMouseMove === 0) {
-      // Idle drift: small wander centered at the face
-      targetMode = 'idle';
+      // Idle: HOLD GAZE FORWARD (toward viewer) with tiny breath-drift.
+      // The creature watches you even when you're not moving.
+      targetMode = 'forward';
       const t = ts * 0.0004 + _idleSeed;
       const midX = (_leftOrbit.cx + _rightOrbit.cx) / 2;
       const midY = (_leftOrbit.cy + _rightOrbit.cy) / 2;
-      _gazeTargetX = midX + Math.sin(t) * 3 + Math.cos(t * 1.3) * 2;
-      _gazeTargetY = midY + Math.cos(t * 0.7) * 3 + Math.sin(t * 1.1) * 2;
+      _gazeTargetX = midX + Math.sin(t) * 1.2;
+      _gazeTargetY = midY + Math.cos(t * 0.7) * 0.8;
     }
     // Saccade jitter (Phase 2 A3) — fire ±3px step every 400–900ms when
     // dominant cognitive layer suggests active attention.
@@ -379,25 +380,46 @@ const FACE_LAYER = (() => {
 
       const eyePath = _buildEyePath(cx, cy, rx, ry, lidT);
 
-      // Sclera fill
-      ctx.fillStyle = 'rgba(240,245,255,0.35)';
+      // Soft eye-socket shadow behind — gives depth against flesh
+      ctx.save();
+      const socketGrad = ctx.createRadialGradient(cx, cy + 1, 1, cx, cy + 1, rx + 4);
+      socketGrad.addColorStop(0,   'rgba(60,40,36,0.55)');
+      socketGrad.addColorStop(0.7, 'rgba(60,40,36,0.18)');
+      socketGrad.addColorStop(1,   'rgba(60,40,36,0)');
+      ctx.fillStyle = socketGrad;
+      ctx.fillRect(cx - rx - 6, cy - ry - 4, (rx + 6) * 2, (ry + 4) * 2);
+      ctx.restore();
+
+      // Sclera fill — OPAQUE so eyes read as eyes, not ghost smudges
+      ctx.fillStyle = 'rgba(248,250,255,0.96)';
       ctx.fill(eyePath);
 
       // Clip eye region while drawing iris/pupil so nothing leaks outside the lid
       ctx.save();
       ctx.clip(eyePath);
 
-      // Pupil offset from iris center — clamped to ±8 in both axes
-      const offX = _clamp(_gazeX - cx, -8, 8);
-      const offY = _clamp(_gazeY - cy, -8, 8);
+      // Pupil offset — clamped tight so eyes stay FORWARD-FACING.
+      // ±5px max keeps gaze "looking at you" even when cursor drifts far away.
+      const offX = _clamp((_gazeX - cx) * 0.4, -5, 5);
+      const offY = _clamp((_gazeY - cy) * 0.3, -3, 4);
       const ix = cx + offX;
       const iy = cy + offY;
 
-      // Iris
-      const baseIrisAlpha = _clamp(0.55 + warmth * 0.25 + welcomeBoost * 0.35, 0, 1);
+      // Iris — strong, readable color
+      const baseIrisAlpha = _clamp(0.88 + warmth * 0.1 + welcomeBoost * 0.1, 0, 1);
       ctx.fillStyle = `rgba(${irisRgb.r},${irisRgb.g},${irisRgb.b},${baseIrisAlpha.toFixed(3)})`;
       ctx.beginPath();
-      ctx.arc(ix, iy, 6, 0, Math.PI * 2);
+      ctx.arc(ix, iy, 5.5, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Iris radial detail — darker edge, brighter core (makes eyes feel alive)
+      const irisEdge = ctx.createRadialGradient(ix, iy, 1, ix, iy, 5.5);
+      irisEdge.addColorStop(0,   `rgba(${Math.min(255, irisRgb.r + 40)},${Math.min(255, irisRgb.g + 40)},${Math.min(255, irisRgb.b + 40)},0.65)`);
+      irisEdge.addColorStop(0.6, `rgba(${irisRgb.r},${irisRgb.g},${irisRgb.b},0.25)`);
+      irisEdge.addColorStop(1,   `rgba(${Math.max(0, irisRgb.r - 70)},${Math.max(0, irisRgb.g - 70)},${Math.max(0, irisRgb.b - 70)},0.75)`);
+      ctx.fillStyle = irisEdge;
+      ctx.beginPath();
+      ctx.arc(ix, iy, 5.5, 0, Math.PI * 2);
       ctx.fill();
 
       // Iris glow ring (welcome pulse + warmth)
@@ -410,28 +432,109 @@ const FACE_LAYER = (() => {
         ctx.stroke();
       }
 
-      // Pupil — 2.5 default, up to 4 under high arousal
-      let pupilR = 2.5;
+      // Pupil — 2.8 default, up to 4.5 under high arousal
+      let pupilR = 2.8;
       if (arousal > 70) {
-        pupilR = _lerp(2.5, 4, _clamp((arousal - 70) / 30, 0, 1));
+        pupilR = _lerp(2.8, 4.5, _clamp((arousal - 70) / 30, 0, 1));
       }
-      ctx.fillStyle = 'rgba(0,0,0,0.95)';
+      ctx.fillStyle = 'rgba(0,0,0,1)';
       ctx.beginPath();
       ctx.arc(ix, iy, pupilR, 0, Math.PI * 2);
       ctx.fill();
 
-      // Corneal highlight — small specular dot
-      ctx.fillStyle = 'rgba(255,255,255,0.65)';
+      // Corneal highlight — bright specular dot sells "living eye"
+      ctx.fillStyle = 'rgba(255,255,255,0.92)';
       ctx.beginPath();
-      ctx.arc(ix - 1.8, iy - 2.0, 0.9, 0, Math.PI * 2);
+      ctx.arc(ix - 1.8, iy - 2.0, 1.2, 0, Math.PI * 2);
+      ctx.fill();
+      // Secondary tiny highlight
+      ctx.fillStyle = 'rgba(255,255,255,0.55)';
+      ctx.beginPath();
+      ctx.arc(ix + 1.4, iy + 1.2, 0.5, 0, Math.PI * 2);
       ctx.fill();
 
       ctx.restore();
 
-      // Lid outline (subtle)
-      ctx.strokeStyle = 'rgba(180,200,230,0.28)';
-      ctx.lineWidth = 0.6;
+      // Lid outline — strong enough to define eye shape against flesh
+      ctx.strokeStyle = 'rgba(60,35,30,0.72)';
+      ctx.lineWidth = 1.1;
+      ctx.lineJoin = 'round';
       ctx.stroke(eyePath);
+
+      // Upper lash hint — top edge darker
+      ctx.save();
+      ctx.strokeStyle = 'rgba(40,25,22,0.85)';
+      ctx.lineWidth = 1.4;
+      ctx.beginPath();
+      ctx.moveTo(cx - rx, cy);
+      ctx.quadraticCurveTo(cx, cy - ry + lidT * ry * 2, cx + rx, cy);
+      ctx.stroke();
+      ctx.restore();
+
+      // Brow — subtle arch above orbit, anchors the face
+      ctx.save();
+      ctx.strokeStyle = 'rgba(55,32,26,0.55)';
+      ctx.lineWidth = 2.2;
+      ctx.lineCap = 'round';
+      ctx.beginPath();
+      ctx.moveTo(cx - rx - 1, cy - ry - 5);
+      ctx.quadraticCurveTo(cx, cy - ry - 8, cx + rx + 1, cy - ry - 5);
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    // ── NOSE — centerline ridge, gives face its axis ────────────────────────
+    {
+      const mx = (_leftOrbit.cx + _rightOrbit.cx) / 2;
+      const topY = _leftOrbit.cy + 5;
+      const tipY = 210;
+      ctx.save();
+      ctx.strokeStyle = 'rgba(80,50,42,0.35)';
+      ctx.lineWidth = 1.1;
+      ctx.lineCap = 'round';
+      // Left nasal ridge
+      ctx.beginPath();
+      ctx.moveTo(mx - 2, topY);
+      ctx.quadraticCurveTo(mx - 3, (topY + tipY) / 2, mx - 4, tipY);
+      ctx.stroke();
+      // Right nasal ridge
+      ctx.beginPath();
+      ctx.moveTo(mx + 2, topY);
+      ctx.quadraticCurveTo(mx + 3, (topY + tipY) / 2, mx + 4, tipY);
+      ctx.stroke();
+      // Tip/nostrils
+      ctx.strokeStyle = 'rgba(60,35,30,0.5)';
+      ctx.lineWidth = 0.9;
+      ctx.beginPath();
+      ctx.arc(mx - 3, tipY + 1, 1.4, 0.2, Math.PI - 0.2);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.arc(mx + 3, tipY + 1, 1.4, 0.2, Math.PI - 0.2);
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    // ── MOUTH — soft closed line with subtle valence lift/dip ──────────────
+    {
+      const mx = (_leftOrbit.cx + _rightOrbit.cx) / 2;
+      const my = 238;
+      const valenceLift = _clamp(((bs.emotionalValence || 0) * 0.04), -3, 3);
+      ctx.save();
+      ctx.strokeStyle = 'rgba(100,50,50,0.7)';
+      ctx.lineWidth = 1.3;
+      ctx.lineCap = 'round';
+      ctx.beginPath();
+      ctx.moveTo(mx - 11, my);
+      ctx.quadraticCurveTo(mx, my + 2 - valenceLift, mx + 11, my);
+      ctx.stroke();
+      // Lower lip shadow
+      ctx.strokeStyle = 'rgba(60,30,30,0.28)';
+      ctx.lineWidth = 0.9;
+      ctx.beginPath();
+      ctx.moveTo(mx - 9, my + 3);
+      ctx.quadraticCurveTo(mx, my + 5, mx + 9, my + 3);
+      ctx.stroke();
+      ctx.restore();
     }
 
     ctx.restore();
