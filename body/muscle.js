@@ -94,25 +94,26 @@ const MUSCLE_LAYER = (() => {
   }
 
   function drawMuscle(ctx, m, alpha, ts) {
-    const baseAlpha = alpha * 0.10; // slight warmth lift — was 0.08
-    const twitch = Math.sin(ts * 0.0003 + m.cx * 0.01) * 0.01;  // Micro-twitch
+    // Big alpha jump — muscle was invisible at 0.08. Going to 0.22 for
+    // real presence, then +15% on every heartbeat systole.
+    const baseAlpha = alpha * 0.22;
+    const twitch = Math.sin(ts * 0.0003 + m.cx * 0.01) * 0.015;
 
-    // Heartbeat sync — muscles flush warmer on systole (pulsePhase 0..~0.3),
-    // settle back on diastole. Hook into BODY_STATE.pulsePhase published by
-    // heartbeat.js. Pulse intensity: +red channel, +alpha on beat peak.
+    // Heartbeat sync — strong systolic flush. BODY_STATE.pulsePhase 0..1
+    // cycles once per beat; systole = sharp rise in first 25% of cycle.
     const pp = (window.BODY_STATE && typeof window.BODY_STATE.pulsePhase === 'number')
       ? window.BODY_STATE.pulsePhase : 0.5;
-    const systole = pp < 0.3 ? (1 - pp / 0.3) : 0;
-    const flushR = systole * 25;
-    const flushA = systole * 0.025;
+    const systole = pp < 0.25 ? (1 - pp / 0.25) : 0;
+    const flushR  = systole * 60;   // was 25 — now a real flush you can see
+    const flushA  = systole * 0.08; // was 0.025 — 3x stronger
 
     ctx.save();
     ctx.translate(m.cx, m.cy);
     ctx.rotate(m.rot);
 
-    // Muscle body (elliptical fill) — permanent +20 red warmth + heartbeat flush
-    const r = Math.min(255, m.color[0] + 20 + flushR);
-    const g = m.color[1];
+    // Muscle body — permanent +50 red warmth (was +20) + strong heartbeat flush
+    const r = Math.min(255, m.color[0] + 50 + flushR);
+    const g = Math.min(255, m.color[1] + 10);
     const b = m.color[2];
     ctx.fillStyle = `rgba(${r}, ${g}, ${b}, ${baseAlpha + twitch + flushA})`;
     ctx.beginPath();

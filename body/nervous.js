@@ -327,8 +327,67 @@ if (typeof window !== 'undefined') window.NERVOUS_BODY = NERVOUS_BODY;
     try { window.NERVOUS_BODY.fireNerve(nerve); } catch (_) {}
     _phase++;
   }
-  // Start after nervous system has had time to init (600ms + buffer)
+  // 350ms cadence — so 4-6 overlapping signals are traveling at once.
   setTimeout(() => {
-    setInterval(tick, 1500);
+    setInterval(tick, 350);
   }, 1200);
+})();
+
+// Bright sciatic overlay — independent rAF. Draws a GUARANTEED visible
+// glowing pulse traveling down each sciatic. The default signal render
+// is 2px at alpha 0.35 — too faint. This overlay is 18px radial glow
+// with a 3.5px white core, additive-blended so it pops on black.
+(function _sciaticGlowOverlay() {
+  let _phase = 0;
+  let _last = 0;
+  function tick(ts) {
+    requestAnimationFrame(tick);
+    if (window.VTN_PAUSED) return;
+    const pv = window.BODY_STATE && window.BODY_STATE.peelVisible;
+    if (pv && pv.nervous === false) return;
+    if (ts - _last < 33) return;
+    _last = ts;
+    _phase += 0.012;
+    if (_phase > 1) _phase = 0;
+
+    const canvas = document.getElementById('mainCanvas');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    const G = window.BODY_GEOMETRY;
+    if (!G) return;
+    const CX = G.CENTER_X;
+
+    const hipY = 680;
+    const ankY = 1180;
+
+    const lY = hipY + (ankY - hipY) * _phase;
+    const rPhase = (_phase + 0.5) % 1;
+    const rY = hipY + (ankY - hipY) * rPhase;
+
+    const lFade = Math.sin(_phase * Math.PI);
+    const rFade = Math.sin(rPhase * Math.PI);
+
+    _drawPulse(ctx, CX - 78, lY, lFade);
+    _drawPulse(ctx, CX + 78, rY, rFade);
+  }
+  function _drawPulse(ctx, x, y, fade) {
+    if (fade <= 0.02) return;
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    const grad = ctx.createRadialGradient(x, y, 0, x, y, 20);
+    grad.addColorStop(0,   'rgba(255, 240, 140, ' + (0.95 * fade).toFixed(3) + ')');
+    grad.addColorStop(0.4, 'rgba(255, 200, 80,  ' + (0.55 * fade).toFixed(3) + ')');
+    grad.addColorStop(1,   'rgba(255, 180, 40,  0)');
+    ctx.fillStyle = grad;
+    ctx.beginPath();
+    ctx.arc(x, y, 20, 0, Math.PI * 2);
+    ctx.fill();
+    // Bright white core
+    ctx.fillStyle = 'rgba(255, 255, 230, ' + (0.9 * fade).toFixed(3) + ')';
+    ctx.beginPath();
+    ctx.arc(x, y, 4, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+  setTimeout(() => requestAnimationFrame(tick), 1400);
 })();

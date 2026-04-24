@@ -42,19 +42,25 @@
     // Inverse: shadow deepest between beats (diastole), lifts on systole
     const breath = 1 - Math.abs(pulse - 0.5) * 0.6;
 
-    _drawShadow(ctx, leftX,  shadowY, 44, 9, 0.28 * breath);
-    _drawShadow(ctx, rightX, shadowY, 44, 9, 0.28 * breath);
+    // Ground light — glowing pad, not a shadow. Against a black stage a
+    // dark shadow is invisible. Instead: a warm teal/blue glow under each
+    // foot that says "this being stands on something that responds."
+    _drawGlow(ctx, leftX,  shadowY, 70, 16, 0.55 * breath);
+    _drawGlow(ctx, rightX, shadowY, 70, 16, 0.55 * breath);
   }
 
-  function _drawShadow(ctx, cx, cy, rx, ry, alpha) {
-    // Radial gradient — opaque center → transparent edge
+  function _drawGlow(ctx, cx, cy, rx, ry, alpha) {
+    // Radial gradient — warm teal core → blue midtone → transparent
+    // Uses additive blending against the dark stage so the ground reads
+    // as emissive. This is what made the legs float: no ground light.
     const grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, rx);
-    grad.addColorStop(0,   'rgba(0, 0, 0, ' + alpha.toFixed(3) + ')');
-    grad.addColorStop(0.6, 'rgba(0, 0, 0, ' + (alpha * 0.4).toFixed(3) + ')');
-    grad.addColorStop(1,   'rgba(0, 0, 0, 0)');
+    grad.addColorStop(0,    'rgba(124, 220, 255, ' + alpha.toFixed(3) + ')');
+    grad.addColorStop(0.35, 'rgba(100, 180, 240, ' + (alpha * 0.55).toFixed(3) + ')');
+    grad.addColorStop(0.7,  'rgba(70,  120, 200, ' + (alpha * 0.22).toFixed(3) + ')');
+    grad.addColorStop(1,    'rgba(0, 0, 0, 0)');
     ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
     ctx.fillStyle = grad;
-    // Squash vertically into an ellipse
     ctx.translate(cx, cy);
     ctx.scale(1, ry / rx);
     ctx.beginPath();
