@@ -93,8 +93,20 @@ const SKIN_LAYER = (() => {
     ctx.stroke(_bodyPath);
 
     // ── INNER SKIN GLOW ───────────────────────────────────────────────────────
-    // Soft fill to indicate the body volume
-    ctx.fillStyle = 'rgba(30, 50, 80, ' + (0.03 + breathPhase * 0.008) + ')';
+    // Soft fill to indicate the body volume.
+    // Phase 2 A4 — skin warming: fill hue interpolates from emotionalValence.
+    //   negative valence (-1..0): base cool slate   rgba(30, 50, 80)
+    //   positive valence (0..1):  warm rose-copper  rgba(80, 48, 48)
+    const warmAmt = Math.max(0, Math.min(1, valence));  // 0..1
+    const coolAmt = Math.max(0, Math.min(1, -valence)); // 0..1 (for cold)
+    const fR = 30 + warmAmt * 50 - coolAmt * 10;
+    const fG = 50 - warmAmt * 2  - coolAmt * 6;
+    const fB = 80 - warmAmt * 32 + coolAmt * 15;
+    ctx.fillStyle = 'rgba(' +
+      Math.round(fR) + ', ' +
+      Math.round(fG) + ', ' +
+      Math.round(fB) + ', ' +
+      (0.03 + breathPhase * 0.008).toFixed(4) + ')';
     ctx.fill(_bodyPath);
 
     // ── DERMAL SHIMMER (subtle moving light) ──────────────────────────────────
