@@ -130,8 +130,40 @@ const FACE_LAYER = (() => {
     }
   }
 
+  // Shannon entropy of BODY_STATE.layerDistribution (7 consciousness layers).
+  // 0 = fully concentrated on one layer, 1 = perfectly uniform across all.
+  function _layerEntropy() {
+    const bs = window.BODY_FRAME || window.BODY_STATE || {};
+    const ld = bs.layerDistribution;
+    if (!ld || typeof ld !== 'object') return 0.5; // default middling
+    const vals = [];
+    let sum = 0;
+    for (const k in ld) {
+      const v = +ld[k];
+      if (isFinite(v) && v > 0) { vals.push(v); sum += v; }
+    }
+    if (sum <= 0 || vals.length < 2) return 0;
+    let H = 0;
+    for (let i = 0; i < vals.length; i++) {
+      const p = vals[i] / sum;
+      if (p > 0) H -= p * Math.log2(p);
+    }
+    const Hmax = Math.log2(vals.length);
+    return Hmax > 0 ? H / Hmax : 0; // 0..1
+  }
+
   function _rollNextBlink(nowMs) {
-    const gap = 4000 + Math.random() * 3000; // 4–7s
+    // Phase 2 A7 — entropy-modulated interval.
+    // Baseline 4–7s. High entropy (dispersed attention) stretches the
+    // gap to feel more contemplative (+up to 3s). Low entropy (locked
+    // focus) compresses it (-up to 1.5s) for sharper reflex blinks.
+    const H = _layerEntropy(); // 0..1
+    const base = 4000 + Math.random() * 3000;          // 4000..7000
+    const modulation = (H - 0.5) * 3000 - (1 - H) * 1500;
+    // H=1.0 → +1500 (calmer pace)
+    // H=0.5 → 0
+    // H=0.0 → -1500 (faster reflex blinks)
+    const gap = Math.max(1800, base + modulation);
     _nextBlinkAt = nowMs + gap;
   }
 
