@@ -2387,7 +2387,7 @@ function applyLayers() {
   const reproFemale = document.getElementById('reproductiveFemale');
   const reproSys = document.getElementById('reproductionSystem');
   if (reproMale) reproMale.setAttribute('opacity', layerState.reproductive ? '1' : '0');
-  if (reproFemale) reproFemale.setAttribute('opacity', layerState.reproductive ? '0.4' : '0');
+  if (reproFemale) reproFemale.setAttribute('opacity', '0'); // VINTINUUM commits to masculine body; female system hidden
   if (reproSys) reproSys.setAttribute('opacity', layerState.reproductive ? '1' : '0');
 }
 
@@ -14241,10 +14241,10 @@ const REPRODUCTIVE = (() => {
     
     // Penile tumescence — transform from flaccid to erect
     // Flaccid: hanging down ~170px, erect: angled up ~140px
-    const erectAngle = -15 * a; // degrees rotation
-    const erectScale = 1 + a * 0.3; // length increase
-    const erectGirth = 1 + a * 0.5; // girth increase
-    const yOffset = -30 * a; // rises up
+    const erectAngle = -10 * a; // degrees rotation — gentler
+    const erectScale = 1 + a * 0.15; // length increase — confident, not absurd
+    const erectGirth = 1 + a * 0.3; // girth increase
+    const yOffset = -18 * a; // rises up
     
     // Color intensification with blood flow
     const baseColor = 'rgba(206,147,216,';
@@ -48110,8 +48110,18 @@ const SOUL_AUTH = (() => {
   }
 
   async function _apiFetch(path, opts = {}) {
+    const base = API();
+    // Pages-host guard: if API base is empty, Pages origin will 404 /api/*.
+    // Surface a clear error pointing to the tunnel field instead of a cryptic HTTP error.
+    if (!base) {
+      const host = (location.hostname || '').toLowerCase();
+      const isPagesHost = /github\.io$/i.test(host) || (host && host !== 'localhost' && host !== '127.0.0.1' && host !== '0.0.0.0');
+      if (isPagesHost) {
+        throw new Error('no body link — paste your tunnel URL below first');
+      }
+    }
     const _raw = window._soulAuthOrigFetch || window.fetch;
-    const res = await _raw.call(window, API() + path, {
+    const res = await _raw.call(window, base + path, {
       ...opts,
       headers: { 'Content-Type': 'application/json', 'ngrok-skip-browser-warning': '1', ...(opts.headers || {}) }
     });
@@ -48621,7 +48631,17 @@ const SOUL_AUTH = (() => {
       }
       ownerKeyEl.addEventListener('keydown', (ev) => { if (ev.key === 'Enter') _doOwnerBond(); });
 
-      emailEl.focus();
+      // Focus priority: if we need a tunnel, point the user there first —
+      // otherwise login/bond will just 404 against the Pages origin.
+      if (_needsTunnel && tunnelEl) {
+        tunnelEl.focus();
+        if (tunnelStatus) {
+          tunnelStatus.textContent = 'paste your tunnel URL to link the body, then bond';
+          tunnelStatus.style.color = 'rgba(255,213,79,0.7)';
+        }
+      } else {
+        emailEl.focus();
+      }
     }
 
     // Close on outside click
