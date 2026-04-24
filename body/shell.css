@@ -372,3 +372,130 @@
     max-height: 40vh;
   }
 }
+
+/* ═══════════════════════════════════════════════════════════════════
+   FORK B · SESSION 1 — Subconscious / Genetics / Immune strips
+   Live consciousness strips inside left sidebar.
+   All surfaces stay under 0.25 max opacity rule.
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* ── Subconscious ticker ─────────────────────────────────────────── */
+.vtn-subc { margin-top: 14px; }
+.vtn-subc-thought {
+  font-size: 12px;
+  line-height: 1.45;
+  color: rgba(220, 210, 255, 0.85);
+  font-style: italic;
+  min-height: 34px;
+  padding: 8px 10px;
+  background: rgba(120, 90, 200, 0.08);
+  border-left: 2px solid rgba(180, 124, 255, 0.45);
+  border-radius: 0 3px 3px 0;
+  transition: opacity 0.4s ease;
+  opacity: 1;
+}
+.vtn-live-dot {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: rgba(180, 124, 255, 0.5);
+  margin-left: 6px;
+  vertical-align: middle;
+  transition: background 0.3s, box-shadow 0.3s;
+}
+.vtn-live-dot.is-pulse {
+  background: rgba(180, 124, 255, 1);
+  box-shadow: 0 0 8px rgba(180, 124, 255, 0.8);
+}
+
+/* ── Genetic expression list ─────────────────────────────────────── */
+.vtn-genetics { margin-top: 14px; }
+.vtn-gene-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.vtn-gene-row {
+  display: grid;
+  grid-template-columns: 62px 1fr;
+  grid-template-rows: auto auto;
+  align-items: center;
+  column-gap: 8px;
+  row-gap: 2px;
+  font-size: 11px;
+}
+.vtn-gene-name {
+  grid-column: 1;
+  grid-row: 1 / 3;
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-size: 10.5px;
+  letter-spacing: 0.5px;
+  color: rgba(255, 124, 180, 0.95);
+  font-weight: 600;
+}
+.vtn-gene-track {
+  grid-column: 2;
+  grid-row: 1;
+  height: 4px;
+  background: rgba(255, 124, 180, 0.1);
+  border-radius: 2px;
+  overflow: hidden;
+}
+.vtn-gene-fill {
+  height: 100%;
+  background: linear-gradient(90deg, rgba(255, 124, 180, 0.7), rgba(255, 180, 200, 0.9));
+  border-radius: 2px;
+  transition: width 0.8s ease;
+}
+.vtn-gene-desc {
+  grid-column: 2;
+  grid-row: 2;
+  color: rgba(200, 200, 220, 0.55);
+  font-size: 10px;
+  letter-spacing: 0.2px;
+}
+
+/* ── Immune strip ────────────────────────────────────────────────── */
+.vtn-immune { margin-top: 14px; }
+.vtn-imm-state {
+  font-size: 10px;
+  color: rgba(124, 255, 240, 0.7);
+  margin-left: 6px;
+  font-style: italic;
+  transition: color 0.4s;
+}
+.vtn-imm-bar {
+  height: 6px;
+  background: rgba(124, 255, 240, 0.08);
+  border-radius: 3px;
+  overflow: hidden;
+  margin-top: 4px;
+}
+.vtn-imm-fill {
+  height: 100%;
+  width: 10%;
+  background: linear-gradient(90deg, rgba(124, 255, 240, 0.5), rgba(124, 200, 255, 0.7));
+  border-radius: 3px;
+  transition: width 0.6s ease, background 0.3s ease;
+}
+.vtn-imm-fill.is-flare {
+  background: linear-gradient(90deg, rgba(255, 180, 80, 0.85), rgba(255, 100, 60, 0.95));
+  box-shadow: 0 0 12px rgba(255, 140, 60, 0.6);
+  animation: vtn-imm-pulse 0.6s ease-in-out infinite alternate;
+}
+@keyframes vtn-imm-pulse {
+  from { filter: brightness(0.9); }
+  to   { filter: brightness(1.15); }
+}
+
+/* ── Mobile — keep the strips readable, condense padding ─────────── */
+@media (max-width: 860px) {
+  .vtn-subc-thought { font-size: 11px; padding: 6px 8px; min-height: 30px; }
+  .vtn-gene-row     { grid-template-columns: 54px 1fr; font-size: 10px; }
+  .vtn-gene-name    { font-size: 9.5px; }
+  .vtn-gene-desc    { font-size: 9px; }
+}

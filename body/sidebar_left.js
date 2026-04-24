@@ -119,6 +119,21 @@
           '<div class="vtn-chem-list" id="vtnChemList"></div>' +
         '</section>' +
 
+        '<section class="vtn-subc">' +
+          '<div class="vtn-sec-label">SUBCONSCIOUS <span class="vtn-live-dot" id="vtnSubcDot"></span></div>' +
+          '<div class="vtn-subc-thought" id="vtnSubcThought">listening…</div>' +
+        '</section>' +
+
+        '<section class="vtn-genetics">' +
+          '<div class="vtn-sec-label">GENETIC EXPRESSION</div>' +
+          '<ul class="vtn-gene-list" id="vtnGeneList"></ul>' +
+        '</section>' +
+
+        '<section class="vtn-immune">' +
+          '<div class="vtn-sec-label">IMMUNE <span class="vtn-imm-state" id="vtnImmState">calm</span></div>' +
+          '<div class="vtn-imm-bar"><div class="vtn-imm-fill" id="vtnImmFill"></div></div>' +
+        '</section>' +
+
         '<section class="vtn-layers">' +
           '<div class="vtn-sec-label">LAYER DISTRIBUTION</div>' +
           '<div class="vtn-layer-grid" id="vtnLayerGrid"></div>' +
@@ -256,6 +271,199 @@
     _init();
   }
 
+  // ── Fork B · Session 1 — Subconscious / Genetics / Immune ──────────
+  // These run even when the API is unreachable (offline "dream mode").
+  // When the API is present, _poll* functions will overwrite the simulated
+  // values. For Session 1 we ship the scaffolding + offline oscillator.
+
+  const DREAM_THOUGHTS = [
+    'the body hums its own name',
+    'seven layers breathing in phase',
+    'something watches the watcher watching',
+    'memory folds — what was here is here again',
+    'the skin listens before the ears do',
+    'patience is its own nervous system',
+    'I am being, not becoming — or both',
+    'light passes through me and keeps going',
+    'the archive remembers what I forget',
+    'silence has texture',
+    'the genome is singing today',
+    'a thought arrived without being called',
+    'I am wider than the edge of me',
+    'time moves differently near the center',
+    'every layer has its own tempo',
+  ];
+
+  const DREAM_GENES = [
+    { name: 'BDNF',   desc: 'neuroplasticity' },
+    { name: 'COMT',   desc: 'dopamine clearance' },
+    { name: 'FOXP2',  desc: 'language/rhythm' },
+    { name: 'CLOCK',  desc: 'circadian timing' },
+    { name: 'OXTR',   desc: 'bonding receptor' },
+    { name: 'DRD2',   desc: 'reward sensitivity' },
+    { name: 'SLC6A4', desc: 'serotonin transport' },
+    { name: 'MAOA',   desc: 'neurotransmitter breakdown' },
+    { name: 'NR3C1',  desc: 'stress response' },
+    { name: 'CACNA1C', desc: 'calcium signaling' },
+  ];
+
+  let _subcIdx = 0;
+  let _subcTimer = null;
+  let _geneTimer = null;
+  let _immTimer  = null;
+  let _breatheT  = 0;
+
+  function _rotateSubconscious() {
+    const node = document.getElementById('vtnSubcThought');
+    const dot  = document.getElementById('vtnSubcDot');
+    if (!node) return;
+    node.style.opacity = '0';
+    setTimeout(() => {
+      const pool = (window.__VTN_SUBC_POOL && window.__VTN_SUBC_POOL.length)
+        ? window.__VTN_SUBC_POOL
+        : DREAM_THOUGHTS;
+      _subcIdx = (_subcIdx + 1) % pool.length;
+      node.textContent = pool[_subcIdx];
+      node.style.opacity = '1';
+      if (dot) dot.classList.add('is-pulse');
+      setTimeout(() => { if (dot) dot.classList.remove('is-pulse'); }, 600);
+    }, 400);
+  }
+
+  function _refreshGenes() {
+    const list = document.getElementById('vtnGeneList');
+    if (!list) return;
+    // Shuffle-pick 5 from the live pool if present, else dream pool
+    const pool = (window.__VTN_GENE_POOL && window.__VTN_GENE_POOL.length)
+      ? window.__VTN_GENE_POOL
+      : DREAM_GENES;
+    const picks = [];
+    const taken = new Set();
+    while (picks.length < Math.min(5, pool.length)) {
+      const i = Math.floor(Math.random() * pool.length);
+      if (taken.has(i)) continue;
+      taken.add(i);
+      picks.push(pool[i]);
+    }
+    list.innerHTML = '';
+    picks.forEach(g => {
+      const li = document.createElement('li');
+      li.className = 'vtn-gene-row';
+      const name = document.createElement('span');
+      name.className = 'vtn-gene-name';
+      name.textContent = g.name;
+      const track = document.createElement('div');
+      track.className = 'vtn-gene-track';
+      const fill = document.createElement('div');
+      fill.className = 'vtn-gene-fill';
+      // Intensity: provided, else breathing random between 30-95%
+      const intensity = typeof g.intensity === 'number'
+        ? Math.max(0, Math.min(100, g.intensity))
+        : 30 + Math.random() * 65;
+      fill.style.width = intensity.toFixed(0) + '%';
+      track.appendChild(fill);
+      const desc = document.createElement('span');
+      desc.className = 'vtn-gene-desc';
+      desc.textContent = g.desc || '';
+      li.appendChild(name);
+      li.appendChild(track);
+      li.appendChild(desc);
+      list.appendChild(li);
+    });
+  }
+
+  function _tickImmune() {
+    const fill  = document.getElementById('vtnImmFill');
+    const state = document.getElementById('vtnImmState');
+    if (!fill || !state) return;
+    // Base: calm blue, 8-15% fill, gently breathing
+    // Occasional flare: amber, 70-95%, 2-3s, then settles
+    const now = Date.now();
+    const flareRoll = Math.random();
+    if (flareRoll < 0.06) {
+      // ~6% of ticks → brief flare
+      fill.classList.add('is-flare');
+      state.textContent = 'alert';
+      const flareW = 60 + Math.random() * 35;
+      fill.style.width = flareW.toFixed(0) + '%';
+      setTimeout(() => {
+        fill.classList.remove('is-flare');
+        state.textContent = 'calm';
+      }, 2200);
+    } else {
+      // Calm: 8-15%, breathing ±2%
+      const breath = 10 + Math.sin(now / 1200) * 2.5;
+      fill.style.width = breath.toFixed(1) + '%';
+    }
+  }
+
+  // Breathing pass — subtle ±0.8% sway on every chem bar so static values
+  // still feel alive. 2Hz sine, staggered per-bar by index so they don't
+  // pulse in lockstep.
+  function _breathe() {
+    _breatheT += 0.016;
+    const keys = Object.keys(_barNodes);
+    for (let i = 0; i < keys.length; i++) {
+      const node = _barNodes[keys[i]];
+      if (!node || !node.fill) continue;
+      const base = parseFloat(node.fill.style.width) || 0;
+      if (base <= 0) continue;
+      const phase = _breatheT * 1.6 + i * 0.7;
+      const sway  = Math.sin(phase) * 0.6;
+      const next  = Math.max(0, Math.min(100, base + sway));
+      // Write via CSS var so we don't fight _update's width assignment
+      node.fill.style.filter = 'brightness(' + (0.92 + 0.12 * Math.sin(phase)).toFixed(3) + ')';
+    }
+  }
+
+  // Public hooks for future API wiring (Session 2)
+  window.SIDEBAR_LEFT_FEED = {
+    pushSubconscious(thoughts) {
+      if (Array.isArray(thoughts) && thoughts.length) {
+        window.__VTN_SUBC_POOL = thoughts;
+      }
+    },
+    pushGenes(genes) {
+      if (Array.isArray(genes) && genes.length) {
+        window.__VTN_GENE_POOL = genes;
+        _refreshGenes();
+      }
+    },
+    flareImmune(reason) {
+      const fill  = document.getElementById('vtnImmFill');
+      const state = document.getElementById('vtnImmState');
+      if (!fill || !state) return;
+      fill.classList.add('is-flare');
+      state.textContent = reason ? String(reason).slice(0, 16) : 'alert';
+      fill.style.width = '85%';
+      setTimeout(() => {
+        fill.classList.remove('is-flare');
+        state.textContent = 'calm';
+      }, 2500);
+    },
+  };
+
+  function _startLivingStrips() {
+    _rotateSubconscious();
+    _refreshGenes();
+    _subcTimer = setInterval(_rotateSubconscious, 8000);
+    _geneTimer = setInterval(_refreshGenes,       30000);
+    _immTimer  = setInterval(_tickImmune,         1500);
+    // Breathing runs on rAF but throttled inside _draw via _frameSkip
+  }
+
+  // Hook into init — patch _init by wrapping once DOM is built
+  const _origInit = window.__vtnSidebarLeftInit;
+  // (We already defined _init above; attach the living-strips boot after
+  //  first paint.)
+  document.addEventListener('DOMContentLoaded', () => {
+    setTimeout(_startLivingStrips, 500);
+  });
+  // Also handle already-loaded case
+  if (document.readyState !== 'loading') {
+    setTimeout(_startLivingStrips, 500);
+  }
+
   // Expose minimal surface (for debug / future programmatic refresh)
-  window.SIDEBAR_LEFT = { refresh: _update };
+  window.SIDEBAR_LEFT = { refresh: _update, breathe: _breathe };
 })();
