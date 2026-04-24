@@ -19,6 +19,10 @@ sed -i "s/const _SW_VERSION = '[^']*'/const _SW_VERSION = '$VER'/" brain.html
 # Bump brain.js cache bust in brain.html script tag
 sed -i "s/brain\.js?v=[^\"']*/brain.js?v=$VER/" brain.html
 
+# Bump ALL body/*.js and root-level ?v= tags so nothing serves stale code
+sed -i "s|\(body/[A-Za-z0-9_-]*\.js\)?v=[^\"']*|\1?v=$VER|g" brain.html
+sed -i "s|\(genome-data\.js\)?v=[^\"']*|\1?v=$VER|g" brain.html 2>/dev/null || true
+
 echo "✓ Versions bumped to $VER"
 
 git add -A
