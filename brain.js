@@ -48692,10 +48692,60 @@ const SOUL_AUTH = (() => {
     return h === 'localhost' || h === '127.0.0.1' || h === '::1';
   }
 
+  // Probe the configured API base. If it's unreachable (Cloudflare tunnel
+  // down, CORS-blocked, 5xx, timeout), null out __VINTINUUM_API_BASE so
+  // the bond dialog surfaces the tunnel-URL connector row. Without this,
+  // Pages users got a silent "failed" toast with no way to fix it when
+  // api.vintaclectic.com was down.
+  async function _probeApiHealth() {
+    const base = window.__VINTINUUM_API_BASE;
+    if (!base) return false;
+    // Skip probe on localhost — assume dev server is up
+    if (_isLocalhost()) return true;
+    // Allow user-saved tunnel override to bypass probe
+    try {
+      const saved = localStorage.getItem('vint_api_base');
+      if (saved && saved === base) {
+        // User explicitly set this; trust it for now, probe anyway but don't auto-clear
+      }
+    } catch (_) {}
+    try {
+      const _raw = window._soulAuthOrigFetch || window.fetch;
+      const r = await _raw.call(window, base + '/api/health', {
+        headers: { 'ngrok-skip-browser-warning': '1' },
+        signal: AbortSignal.timeout(5000),
+      });
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      return true;
+    } catch (err) {
+      console.warn('[SOUL_AUTH] API probe failed (' + base + '): ' + err.message + ' — clearing base so tunnel connector appears');
+      window.__VINTINUUM_API_BASE = null;
+      // Also surface a persistent banner on the auth indicator
+      try {
+        if (_indicator) {
+          _indicator.title = 'body offline — click to link a tunnel';
+          _indicator.style.borderColor = 'rgba(255,120,120,0.5)';
+        }
+      } catch (_) {}
+      return false;
+    }
+  }
+
   // ── Initialization ─────────────────────────────────────────────
   function init() {
     _createIndicator();
     _updateIndicator();
+
+    // Fire health probe in background — doesn't block UI. If it fails,
+    // __VINTINUUM_API_BASE gets nulled and next bond-dialog open will
+    // show the tunnel connector row.
+    _probeApiHealth().then(ok => {
+      if (!ok) {
+        // Clear stale tokens that can't be validated — forces bond flow
+        // on next auth action instead of silent failures.
+        if (_accessToken) console.log('[SOUL_AUTH] API offline; keeping local token but bond UI will offer reconnect');
+      }
+    });
 
     // Validate existing token
     if (_accessToken) {
