@@ -214,6 +214,89 @@
   box-shadow: 0 0 6px currentColor;
 }
 
+/* ── Sidebar right (Phase 2 b3) ────────────────────────────────────── */
+.vtn-side-right-inner {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 14px 12px 20px;
+  max-height: 100vh;
+  color: rgba(230, 238, 255, 0.82);
+  font: 11px/1.4 var(--font-ui, system-ui, sans-serif);
+}
+
+.vtn-right-tabs {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 4px;
+  padding: 4px;
+  background: rgba(16, 22, 34, 0.18);
+  border: 1px solid rgba(255, 255, 255, 0.04);
+  border-radius: 12px;
+}
+.vtn-right-tab {
+  min-height: 44px;
+  padding: 0 6px;
+  background: transparent;
+  border: none;
+  border-radius: 8px;
+  color: rgba(200, 215, 235, 0.62);
+  font: 600 9px/1 var(--font-ui, system-ui, sans-serif);
+  letter-spacing: 0.14em;
+  cursor: pointer;
+  transition: background .15s, color .15s;
+}
+.vtn-right-tab:hover { color: #fff; background: rgba(255, 255, 255, 0.04); }
+.vtn-right-tab.is-active {
+  background: rgba(124, 196, 255, 0.14);
+  color: #cfe2ff;
+}
+
+.vtn-card-list {
+  max-height: 80vh;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-right: 4px;
+}
+.vtn-card-list::-webkit-scrollbar { width: 6px; }
+.vtn-card-list::-webkit-scrollbar-track { background: transparent; }
+.vtn-card-list::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 3px; }
+
+.vtn-card {
+  display: grid;
+  grid-template-columns: 28px 1fr;
+  gap: 10px;
+  align-items: flex-start;
+  padding: 10px 12px;
+  background: rgba(16, 22, 34, 0.18);
+  border: 1px solid rgba(255, 255, 255, 0.04);
+  border-radius: 10px;
+}
+.vtn-card-icon {
+  color: rgba(200, 215, 235, 0.62);
+  display: flex; align-items: center; justify-content: center;
+}
+.vtn-card-icon svg { width: 18px; height: 18px; }
+.vtn-card-body { min-width: 0; }
+.vtn-card-title {
+  font: 600 11px/1.25 var(--font-ui, system-ui, sans-serif);
+  color: #e8f0ff;
+  letter-spacing: 0.04em;
+  word-break: break-word;
+}
+.vtn-card-sub {
+  margin-top: 3px;
+  font: 400 10px/1.35 var(--font-ui, system-ui, sans-serif);
+  color: rgba(210, 222, 240, 0.72);
+  word-break: break-word;
+}
+.vtn-card-sub-dim { color: rgba(200, 215, 235, 0.5); }
+
+.vtn-card-offline { opacity: 0.85; }
+.vtn-card-loading .vtn-card-title { color: rgba(200, 215, 235, 0.55); font-weight: 400; }
+
 /* Mobile collapse — below 900px stack vertically, hide right sidebar
    (it reappears via a toggle wired up in sidebar_right.js later). */
 @media (max-width: 900px) {
