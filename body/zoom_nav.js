@@ -265,3 +265,6 @@ const ZOOM_NAV = (() => {
 
 // Init after brain.js has set up the SVG
 setTimeout(() => ZOOM_NAV.init(), 3000);
+
+// Expose globally so footer_strip.js zoom buttons can drive it.
+if (typeof window !== 'undefined') window.ZOOM_NAV = ZOOM_NAV;

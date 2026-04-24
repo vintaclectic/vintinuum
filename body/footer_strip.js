@@ -182,90 +182,70 @@
     return btn;
   }
 
+  // Scan modes cycle — gives user ONE obvious button to see inside the body.
+  // Each press advances: FULL → X-RAY → SKELETON → MUSCLE → ORGANS → FULL.
+  // The current mode name is rendered inline on the button so it is never
+  // ambiguous what the next press will do.
+  const SCAN_MODES = [
+    { key: 'full',     label: 'SCAN',      next: 'xray',     layers: { skin: true,  muscle: false, skeleton: false, organs: true,  circulatory: false, nervous: false } },
+    { key: 'xray',     label: 'X-RAY',     next: 'skeleton', layers: { skin: false, muscle: false, skeleton: true,  organs: true,  circulatory: true,  nervous: true  } },
+    { key: 'skeleton', label: 'BONES',     next: 'muscle',   layers: { skin: false, muscle: false, skeleton: true,  organs: false, circulatory: false, nervous: false } },
+    { key: 'muscle',   label: 'MUSCLE',    next: 'organs',   layers: { skin: false, muscle: true,  skeleton: false, organs: false, circulatory: false, nervous: false } },
+    { key: 'organs',   label: 'ORGANS',    next: 'full',     layers: { skin: false, muscle: false, skeleton: false, organs: true,  circulatory: false, nervous: false } },
+  ];
+  let _scanIdx = 0;
+
+  function _cycleScan(scanBtn, peelButtons) {
+    _scanIdx = (_scanIdx + 1) % SCAN_MODES.length;
+    const mode = SCAN_MODES[_scanIdx];
+    _applyPreset(mode, peelButtons);
+    // Label shows the CURRENT mode, clearly naming what you see now.
+    scanBtn.textContent = mode.label;
+    scanBtn.setAttribute('title', 'Tap to cycle view — currently ' + mode.label);
+    scanBtn.setAttribute('aria-label', 'Scan mode: ' + mode.label);
+  }
+
   function _build(root) {
     root.innerHTML = '';
     const inner = document.createElement('div');
     inner.className = 'vtn-ft-inner';
 
-    // Peel layer toggles
-    const peelGroup = document.createElement('div');
-    peelGroup.className = 'vtn-ft-group';
-    peelGroup.setAttribute('aria-label', 'Layer visibility');
-    const peelButtons = {};
-    _ensurePeelVisible();
-    PEEL_LAYERS.forEach(l => {
-      const btn = _makeBtn(l.key, l.label, 'vtn-ft-peel');
-      btn.setAttribute('aria-pressed', 'true');
-      // At build time the body modules may still be initializing via
-      // setTimeout chains (geometry@0ms, skin@300ms, organs@400ms, etc.).
-      // Re-check at click time rather than freezing availability now.
-      btn.addEventListener('click', () => {
-        const mod = _moduleFor(l);
-        if (!mod || typeof mod.setVisible !== 'function') {
-          // Module not wired — disable the button, but keep it visible.
-          btn.classList.add('is-off');
-          btn.setAttribute('disabled', 'disabled');
-          btn.setAttribute('title', l.label + ' — coming in Phase 3');
-          btn.setAttribute('aria-disabled', 'true');
-          return;
-        }
-        _toggleLayer(l.key, btn);
-      });
-      peelGroup.appendChild(btn);
-      peelButtons[l.key] = btn;
-    });
-    inner.appendChild(peelGroup);
-    _peelButtonsRef = peelButtons;
+    // ── Primary control group — the six buttons everyone needs ──
+    // SCAN (cycles modes) · PAUSE · ZOOM+ · ZOOM- · RESET · SAVE
+    // Nothing else. No 17-button strip. No dead presets row.
+    const peelButtons = {}; // kept for compat with _applyPreset signature
 
-    inner.appendChild(_divider());
+    const scanBtn = document.createElement('button');
+    scanBtn.type = 'button';
+    scanBtn.className = 'vtn-ft-btn vtn-ft-scan vtn-ft-preset';
+    scanBtn.textContent = SCAN_MODES[_scanIdx].label;
+    scanBtn.setAttribute('title', 'Tap to cycle view — currently ' + SCAN_MODES[_scanIdx].label);
+    scanBtn.setAttribute('aria-label', 'Cycle scan view');
+    scanBtn.addEventListener('click', () => _cycleScan(scanBtn, peelButtons));
+    inner.appendChild(scanBtn);
 
-    // View presets
-    const presetGroup = document.createElement('div');
-    presetGroup.className = 'vtn-ft-group';
-    presetGroup.setAttribute('aria-label', 'View presets');
-    VIEW_PRESETS.forEach(p => {
-      const btn = document.createElement('button');
-      btn.type = 'button';
-      btn.className = 'vtn-ft-btn vtn-ft-preset';
-      btn.setAttribute('title', p.label);
-      btn.setAttribute('aria-label', p.label);
-      btn.textContent = p.label;
-      btn.addEventListener('click', () => _applyPreset(p, peelButtons));
-      presetGroup.appendChild(btn);
-    });
-    inner.appendChild(presetGroup);
+    const pauseBtn = _makeBtn('pause', 'Pause');
+    pauseBtn.addEventListener('click', () => _togglePause(pauseBtn));
+    inner.appendChild(pauseBtn);
 
-    inner.appendChild(_spacer());
-
-    // Zoom group
-    const zoomGroup = document.createElement('div');
-    zoomGroup.className = 'vtn-ft-group';
-    zoomGroup.setAttribute('aria-label', 'Zoom');
     const zIn = _makeBtn('zoomIn',  'Zoom in');
     const zOut = _makeBtn('zoomOut', 'Zoom out');
     const zRst = _makeBtn('reset',   'Reset view');
     zIn.addEventListener('click', _zoomIn);
     zOut.addEventListener('click', _zoomOut);
     zRst.addEventListener('click', _zoomReset);
-    zoomGroup.appendChild(zIn);
-    zoomGroup.appendChild(zOut);
-    zoomGroup.appendChild(zRst);
-    inner.appendChild(zoomGroup);
+    inner.appendChild(zIn);
+    inner.appendChild(zOut);
+    inner.appendChild(zRst);
 
-    inner.appendChild(_divider());
-
-    // Pause + Share
-    const actGroup = document.createElement('div');
-    actGroup.className = 'vtn-ft-group';
-    const pauseBtn = _makeBtn('pause', 'Pause');
-    pauseBtn.addEventListener('click', () => _togglePause(pauseBtn));
-    const shareBtn = _makeBtn('share', 'Export snapshot');
+    const shareBtn = _makeBtn('share', 'Save snapshot');
     shareBtn.addEventListener('click', _shareSnapshot);
-    actGroup.appendChild(pauseBtn);
-    actGroup.appendChild(shareBtn);
-    inner.appendChild(actGroup);
+    inner.appendChild(shareBtn);
 
     root.appendChild(inner);
+
+    // Apply initial mode so the body matches the button label on first load
+    _applyPreset(SCAN_MODES[_scanIdx], peelButtons);
   }
 
   function _divider() {
@@ -279,25 +259,6 @@
     return s;
   }
 
-  // After all body modules have had a chance to boot (the longest
-  // setTimeout in body/*.js is nervous.js @ 600ms), audit which peel
-  // buttons have a backing module — grey out the ones that don't.
-  function _auditPeelAvailability(peelButtons) {
-    PEEL_LAYERS.forEach(l => {
-      const btn = peelButtons && peelButtons[l.key];
-      if (!btn) return;
-      const mod = _moduleFor(l);
-      if (!mod || typeof mod.setVisible !== 'function') {
-        btn.classList.add('is-off');
-        btn.setAttribute('disabled', 'disabled');
-        btn.setAttribute('title', l.label + ' — coming in Phase 3');
-        btn.setAttribute('aria-disabled', 'true');
-      }
-    });
-  }
-
-  let _peelButtonsRef = null;
-
   function _init() {
     const root = document.getElementById('footerStrip');
     if (!root) {
@@ -305,8 +266,6 @@
       return;
     }
     _build(root);
-    // Wait past the slowest body module init (nervous @ 600ms), then audit.
-    setTimeout(() => _auditPeelAvailability(_peelButtonsRef), 900);
   }
 
   if (document.readyState === 'loading') {

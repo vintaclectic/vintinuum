@@ -533,6 +533,32 @@
 }
 
 /* ═══════════════════════════════════════════════════════════════════
+   KILL LEGACY PHASE-1 UI — the old mobile bottom bar + lore toggle
+   target DOM ids (#leftSidebar, #rightSidebar, .tab-bar .tab) that
+   no longer exist. Their listeners silently no-op and their buttons
+   overlap the new BODY/MIND pills. Hide them completely at every size.
+   ═══════════════════════════════════════════════════════════════════ */
+#mobileBottomBar,
+#loreToggle {
+  display: none !important;
+}
+
+/* Style the dedicated SCAN button so its label is unmistakable */
+.vtn-ft-scan {
+  min-width: 72px;
+  background: rgba(124, 196, 255, 0.14);
+  border: 1px solid rgba(124, 196, 255, 0.28);
+  color: #cfe2ff;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+}
+.vtn-ft-scan:hover {
+  background: rgba(124, 196, 255, 0.22);
+  border-color: rgba(124, 196, 255, 0.45);
+  color: #fff;
+}
+
+/* ═══════════════════════════════════════════════════════════════════
    MOBILE SAFE ZONES — keep other floating UI from colliding with the
    BODY / MIND pills at the top, or the footer strip at the bottom.
    Targets every known fixed overlay in the app.
