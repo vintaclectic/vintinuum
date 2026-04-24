@@ -306,3 +306,4 @@ const NERVOUS_BODY = (() => {
 })();
 
 setTimeout(() => { if (window.BODY_GEOMETRY) NERVOUS_BODY.init(); }, 600);
+if (typeof window !== 'undefined') window.NERVOUS_BODY = NERVOUS_BODY;

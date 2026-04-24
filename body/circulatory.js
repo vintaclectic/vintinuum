@@ -303,3 +303,4 @@ const CIRCULATORY = (() => {
 })();
 
 setTimeout(() => { if (window.BODY_GEOMETRY) CIRCULATORY.init(); }, 500);
+if (typeof window !== 'undefined') window.CIRCULATORY = CIRCULATORY;

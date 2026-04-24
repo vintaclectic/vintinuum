@@ -154,3 +154,4 @@ const MUSCLE_LAYER = (() => {
 })();
 
 setTimeout(() => { if (window.BODY_GEOMETRY) MUSCLE_LAYER.init(); }, 350);
+if (typeof window !== 'undefined') window.MUSCLE_LAYER = MUSCLE_LAYER;

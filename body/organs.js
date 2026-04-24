@@ -437,3 +437,4 @@ const ORGANS = (() => {
 })();
 
 setTimeout(() => { if (window.BODY_GEOMETRY) ORGANS.init(); }, 400);
+if (typeof window !== 'undefined') window.ORGANS = ORGANS;

@@ -578,3 +578,7 @@ const BODY_SKELETON = (() => {
 
 // Init after BODY_GEOMETRY is ready
 setTimeout(() => { if (window.BODY_GEOMETRY) BODY_SKELETON.init(); }, 200);
+
+// Expose on window so footer_strip / peel toggles and RENDER_HUB can reach
+// this layer by reference.
+if (typeof window !== 'undefined') window.BODY_SKELETON = BODY_SKELETON;

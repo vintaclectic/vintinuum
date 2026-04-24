@@ -170,3 +170,10 @@ const SKIN_LAYER = (() => {
 
 // Init after geometry loads
 setTimeout(() => { if (window.BODY_GEOMETRY) SKIN_LAYER.init(); }, 300);
+
+// Expose on window so RENDER_HUB (body/loop.js) can find and register
+// this layer. In classic scripts, top-level `const` does NOT attach to
+// window — without this line, loop.js sees `window.SKIN_LAYER` as
+// undefined and the body silhouette never paints, leaving only the
+// skeleton (legs, knee joints) visible.
+if (typeof window !== 'undefined') window.SKIN_LAYER = SKIN_LAYER;

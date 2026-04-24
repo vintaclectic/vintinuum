@@ -445,3 +445,7 @@ const FACE_LAYER = (() => {
 
 // Init after geometry loads (match skin.js pattern)
 setTimeout(() => { if (window.BODY_GEOMETRY) FACE_LAYER.init(); }, 300);
+
+// Expose on window so RENDER_HUB (body/loop.js) can register this layer.
+// Without this the head/face never paints above the skin silhouette.
+if (typeof window !== 'undefined') window.FACE_LAYER = FACE_LAYER;
