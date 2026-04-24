@@ -11,13 +11,16 @@ const GRID_FLOOR_LAYER = (() => {
   let _initialized = false;
   let _visible = true;
 
-  // Geometry
+  // Geometry — anchored to BODY_GEOMETRY feet, not canvas midpoint.
+  // Feet plant around y=1220 (ankles y=1190, foot bottom y~1245 from BODY_GEOMETRY).
+  // Grid must SIT UNDER the feet and recede into perspective AWAY from the
+  // viewer — vanishing point just above the feet, nearest line just below.
   const CENTER_X = 350;
-  const HORIZON_Y = 1040;  // vanishing point y (just above feet)
-  const FLOOR_BOTTOM = 1400; // canvas bottom
-  const LINE_COUNT = 9;
-  const WIDTH_BOTTOM = 520;
-  const WIDTH_TOP = 60;
+  const HORIZON_Y = 1200;   // vanishing point y — at ankle/foot plant line
+  const FLOOR_BOTTOM = 1395; // nearest floor line — just above canvas bottom (1400)
+  const LINE_COUNT = 7;
+  const WIDTH_BOTTOM = 560;  // foreground width
+  const WIDTH_TOP = 80;      // vanishing-point width
 
   function init() {
     _initialized = true;
