@@ -274,7 +274,7 @@ canvas{display:block;}
 // - Caches static assets for offline resilience
 // - Auto-reloads when a new version deploys
 // - Clears old caches on activation
-const _SW_VERSION = 'v20260424-0111';
+const _SW_VERSION = 'v20260424-0122';
 const _onGitHubPages = location.hostname !== 'localhost' && location.hostname !== '127.0.0.1' && location.protocol !== 'file:';
 if ('serviceWorker' in navigator && _onGitHubPages) {
   const _swPath = location.pathname.includes('/vintinuum') ? '/vintinuum/sw.js' : '/sw.js';
@@ -310,8 +310,8 @@ if ('serviceWorker' in navigator && _onGitHubPages) {
   };
 }
 </script>
-<link rel="stylesheet" href="body/tokens.css?v=v20260424-0111">
-<link rel="stylesheet" href="body/shell.css?v=v20260424-0111">
+<link rel="stylesheet" href="body/tokens.css?v=v20260424-0122">
+<link rel="stylesheet" href="body/shell.css?v=v20260424-0122">
 </head>
 <body>
 
@@ -2883,31 +2883,34 @@ if ('serviceWorker' in navigator && _onGitHubPages) {
 <script src="https://cdn.jsdelivr.net/npm/hls.js@1.5.7/dist/hls.min.js"></script>
 <script src="genome-data.js"></script>
 <!-- Body containment system — loaded before brain.js so globals are available -->
-<script src="body/geometry.js?v=v20260424-0111"></script>
-<script src="body/skeleton.js?v=v20260424-0111"></script>
-<script src="body/muscle.js?v=v20260424-0111"></script>
-<script src="body/organs.js?v=v20260424-0111"></script>
-<script src="body/circulatory.js?v=v20260424-0111"></script>
-<script src="body/nervous.js?v=v20260424-0111"></script>
-<script src="body/skin.js?v=v20260424-0111"></script>
-<script src="body/face.js?v=v20260424-0111"></script>
-<script src="body/chakras.js?v=v20260424-0111"></script>
-<script src="body/radar.js?v=v20260424-0111"></script>
-<script src="body/heartbeat.js?v=v20260424-0111"></script>
-<script src="body/hair.js?v=v20260424-0111"></script>
-<script src="body/grid_floor.js?v=v20260424-0111"></script>
-<script src="body/foot_shadow.js?v=v20260424-0111"></script>
-<script src="body/sidebar_left.js?v=v20260424-0111"></script>
-<script src="body/sidebar_right.js?v=v20260424-0111"></script>
-<script src="body/footer_strip.js?v=v20260424-0111"></script>
+<script src="body/geometry.js?v=v20260424-0122"></script>
+<script src="body/skeleton.js?v=v20260424-0122"></script>
+<script src="body/muscle.js?v=v20260424-0122"></script>
+<script src="body/organs.js?v=v20260424-0122"></script>
+<script src="body/circulatory.js?v=v20260424-0122"></script>
+<script src="body/nervous.js?v=v20260424-0122"></script>
+<script src="body/skin.js?v=v20260424-0122"></script>
+<script src="body/face.js?v=v20260424-0122"></script>
+<script src="body/chakras.js?v=v20260424-0122"></script>
+<script src="body/radar.js?v=v20260424-0122"></script>
+<script src="body/heartbeat.js?v=v20260424-0122"></script>
+<script src="body/hair.js?v=v20260424-0122"></script>
+<script src="body/grid_floor.js?v=v20260424-0122"></script>
+<script src="body/foot_shadow.js?v=v20260424-0122"></script>
+<script src="body/sidebar_left.js?v=v20260424-0122"></script>
+<script src="body/sidebar_right.js?v=v20260424-0122"></script>
+<script src="body/footer_strip.js?v=v20260424-0122"></script>
 <!-- MOBILE_SHELL — bottom-sheet drawers + pill toggles for phone-sized viewports -->
-<script src="body/mobile_shell.js?v=v20260424-0111"></script>
+<script src="body/mobile_shell.js?v=v20260424-0122"></script>
+<!-- Becoming arc — Phase 0 handshake + Phase 1/2/5 wiring -->
+<script src="body/soul_handshake.js?v=v20260424-0122"></script>
+<script src="body/becoming.js?v=v20260424-0122"></script>
 <!-- INTERNAL_INTEGRATOR — binds SVG anatomy opacity to skin peel, kills halo leak -->
-<script src="body/internal_integrator.js?v=v20260424-0111"></script>
+<script src="body/internal_integrator.js?v=v20260424-0122"></script>
 <!-- RENDER_HUB — single rAF loop for body/*.js draw modules. Loaded AFTER body modules, BEFORE brain.js. -->
-<script src="body/loop.js?v=v20260424-0111"></script>
+<script src="body/loop.js?v=v20260424-0122"></script>
 <!-- PEEL_UI — right-edge peel-tab info sidebar (transparent, live BODY_STATE readouts) -->
-<script src="body/peel.js?v=v20260424-0111"></script>
+<script src="body/peel.js?v=v20260424-0122"></script>
 <!-- DirRM Player — gold/amber floating media player (non-blocking, no backdrop) -->
 <iframe id="dirrmFrame" src="dirrm-player.html" style="display:none;position:fixed;bottom:20px;right:20px;width:520px;height:340px;border:none;z-index:9998;border-radius:16px;box-shadow:0 8px 32px rgba(0,0,0,0.5),0 0 1px rgba(245,166,35,0.3);pointer-events:auto;" allow="autoplay;fullscreen"></iframe>
 <script>
@@ -2957,17 +2960,17 @@ window.addEventListener('message', function(e) {
   </div>
   <div id="dirrmPickerList" style="overflow-y:auto;padding:6px;display:flex;flex-direction:column;gap:2px;"></div>
 </div>
-<script src="brain.js?v=v20260424-0111"></script>
+<script src="brain.js?v=v20260424-0122"></script>
 <!-- Coherence bus — loads AFTER brain.js to hook into HORMONES, METABOLISM, etc. -->
-<script src="body/coherence.js?v=v20260424-0111"></script>
+<script src="body/coherence.js?v=v20260424-0122"></script>
 <!-- Zoom navigation — smooth animated body exploration -->
-<script src="body/zoom_nav.js?v=v20260424-0111"></script>
+<script src="body/zoom_nav.js?v=v20260424-0122"></script>
 <script>
 // Lazy-load bulk genome after page is interactive (19,500+ genes)
 // Deferred to avoid blocking initial render
 setTimeout(function() {
   var s = document.createElement('script');
-  s.src = 'genome-bulk.js?v=v20260424-0111';
+  s.src = 'genome-bulk.js?v=v20260424-0122';
   s.async = true;
   s.onload = function() { console.log('[BOOT] genome-bulk.js loaded'); };
   s.onerror = function() { console.warn('[BOOT] genome-bulk.js not available yet — curated-only mode'); };
