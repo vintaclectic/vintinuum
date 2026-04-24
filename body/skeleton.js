@@ -18,6 +18,16 @@ const BODY_SKELETON = (() => {
   // Cache geometry reference
   let G = null;
 
+  // ── Finger twitch state (Phase 2 A6) ─────────────────────────────────────
+  // 0.3% per-frame chance scaled by NE/100. On trigger, pick a random
+  // finger (0..4) per side and give it a short offset that decays.
+  const _twitch = {
+    left:  { idx: -1, amp: 0, ts: 0 },
+    right: { idx: -1, amp: 0, ts: 0 },
+  };
+  const TWITCH_DURATION_MS = 220;
+  const TWITCH_MAX_PX = 2.4;
+
   function init() {
     G = window.BODY_GEOMETRY;
     if (!G) {
@@ -384,9 +394,30 @@ const BODY_SKELETON = (() => {
 
   // ── LIMB BONES ──────────────────────────────────────────────────────────────
 
-  function drawLimbs(ctx, alpha) {
+  function drawLimbs(ctx, alpha, ts) {
     const A = G.ARMS;
     const L = G.LEGS;
+    const _ts = (typeof ts === 'number') ? ts : 0;
+
+    // Finger twitch (Phase 2 A6) — 0.3% per frame × NE/100 per side
+    const bs = window.BODY_FRAME || window.BODY_STATE || {};
+    const ne = (typeof bs.norepinephrine === 'number')
+      ? bs.norepinephrine
+      : (typeof bs.stressLevel === 'number' ? bs.stressLevel * 100 : 30);
+    const twitchProb = 0.003 * Math.max(0, Math.min(100, ne)) / 100;
+    ['left', 'right'].forEach(side => {
+      const t = _twitch[side];
+      // Decay amp over TWITCH_DURATION_MS
+      if (t.amp > 0) {
+        const age = _ts - t.ts;
+        if (age > TWITCH_DURATION_MS) { t.amp = 0; t.idx = -1; }
+      }
+      if (t.amp <= 0 && Math.random() < twitchProb) {
+        t.idx = Math.floor(Math.random() * 5);
+        t.amp = TWITCH_MAX_PX;
+        t.ts = _ts;
+      }
+    });
 
     // ── ARMS ──
     ['left', 'right'].forEach(side => {
@@ -409,14 +440,26 @@ const BODY_SKELETON = (() => {
       // Simplified hand bones (metacarpals)
       const dx = arm.fingers.x - arm.wrist.x;
       const dy = arm.fingers.y - arm.wrist.y;
+      const tw = _twitch[side];
+      // Envelope: 0..1..0 across TWITCH_DURATION_MS for natural quiver
+      let twEnv = 0;
+      if (tw.amp > 0) {
+        const u = (_ts - tw.ts) / TWITCH_DURATION_MS;
+        if (u >= 0 && u <= 1) twEnv = Math.sin(u * Math.PI);
+      }
       for (let f = 0; f < 5; f++) {
         const spread = (f - 2) * 4;
         const len = f === 0 ? 0.6 : 0.9;  // Thumb shorter
+        const twX = (f === tw.idx) ? (twEnv * tw.amp) : 0;
+        const twY = (f === tw.idx) ? (twEnv * tw.amp * 0.6) : 0;
         ctx.strokeStyle = BONE_COLOR + (alpha * 0.2) + ')';
         ctx.lineWidth = 1;
         ctx.beginPath();
         ctx.moveTo(arm.wrist.x + spread, arm.wrist.y);
-        ctx.lineTo(arm.wrist.x + dx * len + spread * 2, arm.wrist.y + dy * len);
+        ctx.lineTo(
+          arm.wrist.x + dx * len + spread * 2 + twX,
+          arm.wrist.y + dy * len + twY
+        );
         ctx.stroke();
       }
     });
@@ -521,7 +564,7 @@ const BODY_SKELETON = (() => {
     drawPelvis(ctx, baseAlpha);
     drawShoulderGirdle(ctx, baseAlpha);
     drawSkull(ctx, baseAlpha, _pulsePhase);
-    drawLimbs(ctx, baseAlpha);
+    drawLimbs(ctx, baseAlpha, ts);
 
     ctx.restore();
   }
