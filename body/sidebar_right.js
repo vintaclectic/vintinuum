@@ -15,10 +15,10 @@
   //   /api/inner-life/recent?limit=20        MISSING — only /api/inner-life/snapshot exists
   //   /api/soul-queue/unresolved?limit=20    MISSING — no soul-queue routes at all
   const TABS = [
-    { key: 'memory',    label: 'MEMORY',      endpoint: '/api/memory/recent?limit=20',         live: true  },
-    { key: 'inner',     label: 'INNER LIFE',  endpoint: '/api/inner-life/recent?limit=20',     live: false },
-    { key: 'genome',    label: 'GENOME',      endpoint: '/api/genome/events?limit=20',         live: true  },
-    { key: 'soul',      label: 'SOUL QUEUE',  endpoint: '/api/soul-queue/unresolved?limit=20', live: false },
+    { key: 'memory',    label: 'MEMORY',      endpoint: '/api/memory/recent?limit=20',  live: true },
+    { key: 'inner',     label: 'INNER LIFE',  endpoint: '/api/inner-life/snapshot',     live: true },
+    { key: 'genome',    label: 'GENOME',      endpoint: '/api/genome/events?limit=20',  live: true },
+    { key: 'soul',      label: 'SOUL QUEUE',  endpoint: '/api/soul/queue?limit=20',     live: true },
   ];
 
   // ── API base resolution ──────────────────────────────────────────────
@@ -27,18 +27,40 @@
   //   1. window.VTN_API_BASE   — highest priority (set by inline script)
   //   2. localStorage 'vtn:api_base'
   //   3. Default: http://localhost:3030 on local dev, '' (disabled) on Pages
+  // Only accept strings that look like an HTTP(S) URL. Anything else —
+  // email, raw text, nonsense — is purged so the resolver can fall through
+  // to the canonical public default instead of breaking every tab.
+  function _isValidBase(v) {
+    if (typeof v !== 'string') return false;
+    const t = v.trim();
+    if (!t) return false;
+    if (!/^https?:\/\//i.test(t)) return false;
+    try { new URL(t); return true; } catch (_) { return false; }
+  }
+  function _purgeBadStored() {
+    try {
+      ['vtn:api_base', 'vint_api_base'].forEach(k => {
+        const v = localStorage.getItem(k);
+        if (v && !_isValidBase(v)) {
+          console.warn('[sidebar_right] purging invalid ' + k + ': ' + v);
+          localStorage.removeItem(k);
+        }
+      });
+    } catch (_) {}
+  }
   function _resolveApiBase() {
+    _purgeBadStored();
     try {
       // Prefer the canonical SOUL_AUTH base so login + sidebar talk to the
       // same backend — no more "sidebar is offline while login works" drift.
-      if (typeof window !== 'undefined' && window.__VINTINUUM_API_BASE) {
+      if (typeof window !== 'undefined' && _isValidBase(window.__VINTINUUM_API_BASE)) {
         return String(window.__VINTINUUM_API_BASE).replace(/\/$/, '');
       }
-      if (typeof window !== 'undefined' && window.VTN_API_BASE) {
+      if (typeof window !== 'undefined' && _isValidBase(window.VTN_API_BASE)) {
         return String(window.VTN_API_BASE).replace(/\/$/, '');
       }
       const stored = localStorage.getItem('vtn:api_base') || localStorage.getItem('vint_api_base');
-      if (stored) return stored.replace(/\/$/, '');
+      if (_isValidBase(stored)) return stored.replace(/\/$/, '');
     } catch (e) { /* localStorage blocked */ }
     const host = (location.hostname || '').toLowerCase();
     const isLocal = !host || host === 'localhost' || host === '127.0.0.1' || host === '0.0.0.0';
@@ -180,7 +202,13 @@
     const input = document.createElement('input');
     input.type = 'url';
     input.placeholder = 'https://xxxx.ngrok.app';
-    input.value = _apiBase || '';
+    // Block browser password managers from autofilling emails into a URL
+    // input — which is how 'dirhaven@gmail.com' ended up as the API base.
+    input.autocomplete = 'off';
+    input.setAttribute('autocomplete', 'new-password');
+    input.setAttribute('name', 'vtn-api-base-' + Math.random().toString(36).slice(2, 8));
+    input.spellcheck = false;
+    input.value = _isValidBase(_apiBase) ? _apiBase : '';
     input.style.flex = '1';
     input.style.minWidth = '0';
     input.style.minHeight = '44px';
@@ -207,6 +235,12 @@
     save.style.cursor = 'pointer';
     save.addEventListener('click', () => {
       const v = (input.value || '').trim();
+      if (v && !_isValidBase(v)) {
+        input.style.borderColor = 'rgba(255,120,120,0.6)';
+        input.value = '';
+        input.placeholder = 'needs https://… — not an email';
+        return;
+      }
       _setApiBase(v);
     });
     input.addEventListener('keydown', (e) => {
@@ -334,6 +368,32 @@
     }));
   }
 
+  function _shapeInner(data) {
+    const thoughts = Array.isArray(data.thoughts) ? data.thoughts : [];
+    return thoughts.map(t => ({
+      title: 'subconscious',
+      line1: _truncate(t.thought || '', 180),
+      line2: t.ts ? _relTime(t.ts) : (t.created_at ? _relTime(t.created_at) : ''),
+    }));
+  }
+
+  function _shapeSoul(data) {
+    const qs = Array.isArray(data.questions) ? data.questions : [];
+    if (qs.length === 0) {
+      const total = typeof data.totalResolved === 'number' ? data.totalResolved : 0;
+      return [{
+        title: 'queue clear',
+        line1: total + ' question' + (total === 1 ? '' : 's') + ' resolved — nothing unresolved right now',
+        line2: '',
+      }];
+    }
+    return qs.map(q => ({
+      title: q.category || q.topic || 'soul question',
+      line1: _truncate(q.question || q.text || q.content || '', 180),
+      line2: q.created_at ? _relTime(q.created_at) : '',
+    }));
+  }
+
   function _truncate(s, n) {
     if (typeof s !== 'string') return '';
     return s.length > n ? s.slice(0, n - 1) + '…' : s;
@@ -379,6 +439,8 @@
         if (key !== _activeKey) return; // user moved on
         if (key === 'memory') _renderCards('memory', _shapeMemory(data));
         else if (key === 'genome') _renderCards('genome', _shapeGenome(data));
+        else if (key === 'inner')  _renderCards('inner',  _shapeInner(data));
+        else if (key === 'soul')   _renderCards('soul',   _shapeSoul(data));
         else _renderOfflineCard(tab.label);
       })
       .catch(err => {
