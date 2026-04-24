@@ -297,6 +297,64 @@
 .vtn-card-offline { opacity: 0.85; }
 .vtn-card-loading .vtn-card-title { color: rgba(200, 215, 235, 0.55); font-weight: 400; }
 
+/* ── Footer strip (Phase 2 b6) ─────────────────────────────────────── */
+.vtn-ft-inner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 4px 14px;
+  height: 100%;
+  color: rgba(230, 238, 255, 0.75);
+  overflow-x: auto;
+}
+.vtn-ft-group {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex: 0 0 auto;
+}
+.vtn-ft-div {
+  width: 1px;
+  height: 24px;
+  background: rgba(255, 255, 255, 0.08);
+  flex: 0 0 auto;
+}
+.vtn-ft-spacer { flex: 1 1 auto; }
+
+.vtn-ft-btn {
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  color: rgba(210, 222, 240, 0.72);
+  font: 600 10px/1 var(--font-ui, system-ui, sans-serif);
+  letter-spacing: 0.14em;
+  cursor: pointer;
+  transition: background .15s, color .15s, border-color .15s;
+}
+.vtn-ft-btn:hover {
+  background: rgba(255, 255, 255, 0.05);
+  color: #fff;
+  border-color: rgba(255, 255, 255, 0.10);
+}
+.vtn-ft-btn svg { width: 18px; height: 18px; }
+.vtn-ft-btn[aria-pressed="true"] {
+  color: #cfe2ff;
+}
+.vtn-ft-btn.is-off {
+  color: rgba(210, 222, 240, 0.28);
+}
+.vtn-ft-preset {
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  padding: 0 10px;
+}
+
 /* Mobile collapse — below 900px stack vertically, hide right sidebar
    (it reappears via a toggle wired up in sidebar_right.js later). */
 @media (max-width: 900px) {

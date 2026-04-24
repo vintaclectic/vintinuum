@@ -35,12 +35,20 @@ const RENDER_HUB = (() => {
     if (i >= 0) _modules.splice(i, 1);
   }
 
+  let _paused = false;
+
   function _tick(ts) {
     const state = window.BODY_STATE || {};
     // Publish frame-snapshot other modules can read (keeps per-frame reads cheap)
     window.BODY_FRAME = state;
 
     if (!state._frameCost) state._frameCost = {};
+
+    if (_paused) {
+      _frameCount++;
+      requestAnimationFrame(_tick);
+      return;
+    }
 
     for (let i = 0; i < _modules.length; i++) {
       const m = _modules[i];
@@ -99,12 +107,17 @@ const RENDER_HUB = (() => {
 
   function frameCount() { return _frameCount; }
 
+  function setPaused(p) { _paused = !!p; }
+  function isPaused() { return _paused; }
+
   return {
     register: register,
     unregister: unregister,
     start: start,
     list: list,
     frameCount: frameCount,
+    setPaused: setPaused,
+    isPaused: isPaused,
   };
 })();
 
