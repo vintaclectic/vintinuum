@@ -119,6 +119,34 @@ const SKIN_LAYER = (() => {
     ctx.fillRect(G.CENTER_X - shimmerR, shimmerY - shimmerR, shimmerR * 2, shimmerR * 2);
     ctx.restore();
 
+    // ── CHEST RISE (Phase 2 A1) ───────────────────────────────────────────────
+    // Thoracic band subtly expands on inhale (1.5% Y-scale peak).
+    // Breath phase: sin drives a full cycle; inhale = positive half.
+    // If A8 breath-pause is active, respect BODY_STATE._breathHold multiplier.
+    const hold = (bs._breathHold != null) ? bs._breathHold : 1;
+    const rawPhase = Math.sin(ts * 0.0008) * hold;
+    const inhale = Math.max(0, rawPhase); // 0..1
+    if (window.BODY_STATE) {
+      window.BODY_STATE.breathPhase = rawPhase;     // -1..1
+      window.BODY_STATE.breathInhale = inhale;      // 0..1
+    }
+    if (inhale > 0.02) {
+      const thoracicCy = 430;            // mid-thoracic center (geometry.js)
+      const scaleY = 1 + 0.015 * inhale; // 1.015 peak
+      ctx.save();
+      // Y-scale around thoracic center: translate → scale → translate back
+      ctx.translate(0, thoracicCy);
+      ctx.scale(1, scaleY);
+      ctx.translate(0, -thoracicCy);
+      // Redraw a faint thoracic accent stroke so the rise reads visually
+      ctx.strokeStyle = 'rgba(180, 210, 255, ' + (0.05 * inhale * consciousnessMod).toFixed(4) + ')';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.ellipse(G.CENTER_X, thoracicCy, 110, 92, 0, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.restore();
+    }
+
     ctx.restore();
   }
 
