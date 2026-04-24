@@ -311,8 +311,15 @@ if ('serviceWorker' in navigator && _onGitHubPages) {
 }
 </script>
 <link rel="stylesheet" href="body/tokens.css?v=v20260422-phase2">
+<link rel="stylesheet" href="body/shell.css?v=v20260422-phase2">
 </head>
 <body>
+
+<!-- ═══ VINTINUUM SHELL — three-column grid (Phase 2 b1) ═══ -->
+<div class="vtn-shell">
+<aside class="vtn-sidebar-left" id="sidebarLeft"></aside>
+<main class="vtn-stage">
+<!-- existing canvas + svg UNTOUCHED below -->
 
 <canvas id="starfield"></canvas>
 <canvas id="sparks"></canvas>
@@ -3159,5 +3166,12 @@ setTimeout(function() {
   });
 })();
 </script>
+
+<!-- ═══ VINTINUUM SHELL — close stage + rails (Phase 2 b1) ═══ -->
+</main>
+<aside class="vtn-sidebar-right" id="sidebarRight"></aside>
+<footer class="vtn-footer" id="footerStrip"></footer>
+</div>
+
 </body>
 </html>

@@ -1,0 +1,67 @@
+/* ═══════════════════════════════════════════════════════════════════
+   VINTINUUM SHELL — Phase 2 three-column layout
+   Left sidebar 280 | Stage 1fr | Right sidebar 340
+   Footer 52px across bottom
+   All rails keep max opacity <=0.20 so the body stage shows through.
+   ═══════════════════════════════════════════════════════════════════ */
+
+.vtn-shell {
+  display: grid;
+  grid-template-columns: 280px 1fr 340px;
+  grid-template-rows: 1fr 52px;
+  grid-template-areas:
+    "left stage right"
+    "footer footer footer";
+  min-height: 100vh;
+  background: var(--bg-void, #05070c);
+}
+
+.vtn-sidebar-left {
+  grid-area: left;
+  background: rgba(8, 12, 20, 0.20);
+  border-right: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.06));
+  overflow-y: auto;
+  position: relative;
+  z-index: 10;
+}
+
+.vtn-sidebar-right {
+  grid-area: right;
+  background: rgba(8, 12, 20, 0.20);
+  border-left: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.06));
+  overflow-y: auto;
+  position: relative;
+  z-index: 10;
+}
+
+.vtn-stage {
+  grid-area: stage;
+  position: relative;
+  overflow: hidden;
+}
+
+.vtn-footer {
+  grid-area: footer;
+  background: rgba(10, 14, 22, 0.25);
+  border-top: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.06));
+  position: relative;
+  z-index: 10;
+}
+
+/* Mobile collapse — below 900px stack vertically, hide right sidebar
+   (it reappears via a toggle wired up in sidebar_right.js later). */
+@media (max-width: 900px) {
+  .vtn-shell {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto 1fr auto 52px;
+    grid-template-areas:
+      "left"
+      "stage"
+      "right"
+      "footer";
+  }
+  .vtn-sidebar-left,
+  .vtn-sidebar-right {
+    max-height: 40vh;
+  }
+}
