@@ -48,6 +48,172 @@
   z-index: 10;
 }
 
+/* ── Sidebar left (Phase 2 b2) ─────────────────────────────────────── */
+.vtn-side-inner {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  padding: 18px 16px 24px;
+  color: rgba(230, 238, 255, 0.82);
+  font: 11px/1.4 var(--font-ui, system-ui, sans-serif);
+}
+
+.vtn-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: #cfe2ff;
+}
+.vtn-mark { width: 26px; height: 26px; flex: 0 0 auto; }
+.vtn-wordmark {
+  font: 600 13px/1 var(--font-ui, system-ui, sans-serif);
+  letter-spacing: 0.22em;
+}
+
+.vtn-tabs {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+}
+.vtn-tab {
+  display: flex; align-items: center; justify-content: center;
+  min-height: 44px;
+  background: rgba(16, 22, 34, 0.18);
+  border: 1px solid rgba(255, 255, 255, 0.04);
+  border-radius: 10px;
+  color: rgba(200, 215, 235, 0.72);
+  cursor: pointer;
+  transition: background .18s, color .18s, border-color .18s;
+  padding: 0;
+}
+.vtn-tab svg { width: 18px; height: 18px; }
+.vtn-tab:hover { color: #fff; border-color: rgba(255,255,255,0.10); }
+.vtn-tab.is-active {
+  background: rgba(124, 196, 255, 0.12);
+  color: #cfe2ff;
+  border-color: rgba(124, 196, 255, 0.28);
+}
+
+.vtn-sec-label {
+  font: 600 9px/1 var(--font-ui, system-ui, sans-serif);
+  letter-spacing: 0.28em;
+  color: rgba(200, 215, 235, 0.55);
+  margin-bottom: 8px;
+}
+
+.vtn-identity {
+  padding: 10px 12px;
+  background: rgba(16, 22, 34, 0.18);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 12px;
+}
+.vtn-identity-label {
+  font: 600 9px/1 var(--font-ui, system-ui, sans-serif);
+  letter-spacing: 0.28em;
+  color: rgba(200, 215, 235, 0.55);
+  margin-bottom: 6px;
+}
+.vtn-identity-name {
+  font: 600 15px/1 var(--font-ui, system-ui, sans-serif);
+  letter-spacing: 0.14em;
+  color: #e8f0ff;
+}
+
+/* Chem bars */
+.vtn-chem-list { display: flex; flex-direction: column; gap: 8px; }
+.vtn-chem-row {
+  display: grid;
+  grid-template-columns: 84px 1fr 28px;
+  align-items: center;
+  gap: 8px;
+}
+.vtn-chem-label {
+  font: 500 10px/1 var(--font-ui, system-ui, sans-serif);
+  color: rgba(210, 222, 240, 0.72);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.vtn-chem-track {
+  height: 6px;
+  background: rgba(16, 22, 34, 0.18);
+  border: 1px solid rgba(255, 255, 255, 0.04);
+  border-radius: 3px;
+  overflow: hidden;
+  position: relative;
+}
+.vtn-chem-fill {
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, #7cc4ff, #b47cff);
+  transition: width .18s ease-out;
+}
+.vtn-chem-value {
+  font: 500 10px/1 var(--font-ui, system-ui, sans-serif);
+  color: rgba(210, 222, 240, 0.72);
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Layer tiles — 7 tiles in a grid, height-filled from %, accented by --hue */
+.vtn-layer-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+}
+.vtn-layer-tile {
+  position: relative;
+  min-height: 54px;
+  background: rgba(16, 22, 34, 0.18);
+  border: 1px solid rgba(255, 255, 255, 0.04);
+  border-radius: 10px;
+  overflow: hidden;
+  padding: 6px 8px;
+  display: flex; flex-direction: column; justify-content: flex-end;
+  color: var(--hue, #cfe2ff);
+}
+.vtn-layer-fill {
+  position: absolute; left: 0; right: 0; bottom: 0;
+  height: 0%;
+  background: var(--hue, #7cc4ff);
+  opacity: 0.18;
+  transition: height .22s ease-out;
+  pointer-events: none;
+}
+.vtn-layer-name {
+  position: relative;
+  font: 600 9px/1 var(--font-ui, system-ui, sans-serif);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--hue, #cfe2ff);
+  opacity: 0.92;
+}
+.vtn-layer-pct {
+  position: relative;
+  font: 500 11px/1 var(--font-ui, system-ui, sans-serif);
+  color: rgba(230, 238, 255, 0.9);
+  font-variant-numeric: tabular-nums;
+  margin-top: 3px;
+}
+
+/* Legend */
+.vtn-legend-list {
+  list-style: none;
+  padding: 0; margin: 0;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px 12px;
+}
+.vtn-legend-item {
+  display: flex; align-items: center; gap: 6px;
+  font: 500 10px/1 var(--font-ui, system-ui, sans-serif);
+  color: rgba(210, 222, 240, 0.72);
+  text-transform: capitalize;
+}
+.vtn-legend-swatch {
+  width: 10px; height: 10px; border-radius: 2px;
+  box-shadow: 0 0 6px currentColor;
+}
+
 /* Mobile collapse — below 900px stack vertically, hide right sidebar
    (it reappears via a toggle wired up in sidebar_right.js later). */
 @media (max-width: 900px) {
