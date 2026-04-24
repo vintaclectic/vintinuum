@@ -229,17 +229,18 @@ const FACE_LAYER = (() => {
   //   lidT = 0.6 → half-lidded (default resting)
   //   lidT = 1 → fully closed (lid meets lower lid)
   function _buildEyePath(cx, cy, rx, ry, lidT) {
-    // Eye opening runs from (cx-rx,cy) to (cx+rx,cy) with a mild curve.
-    // Upper lid bezier control point goes from high to low as lidT increases.
+    // WIDE OPEN eye — upper lid arches high, lower lid drops deep.
+    // lidT: 0 = fully open, 1 = fully closed (blink only).
     const path = new Path2D();
-    const upperCtrlY = cy - ry + (lidT * ry * 2); // -ry (open) → +ry (closed)
-    const lowerCtrlY = cy + ry * 0.85;
+    // Upper lid control Y: arch HIGH above cy when open (ry * 1.4), closes down
+    const upperCtrlY = cy - ry * 1.4 + (lidT * ry * 2.4); // open arches high
+    // Lower lid control Y: drops LOW below cy (ry * 1.0) — round eye, not slit
+    const lowerCtrlY = cy + ry * 1.0;
 
-    // Start at left corner
     path.moveTo(cx - rx, cy);
-    // Upper lid (curve up and over)
+    // Upper lid — dome up and over
     path.quadraticCurveTo(cx, upperCtrlY, cx + rx, cy);
-    // Lower lid (gentle curve under)
+    // Lower lid — curve deep under
     path.quadraticCurveTo(cx, lowerCtrlY, cx - rx, cy);
     path.closePath();
     return path;
@@ -326,8 +327,9 @@ const FACE_LAYER = (() => {
         blinkT = 1 - (elapsed - BLINK_HALF) / BLINK_HALF; // opening
       }
     }
-    // Resting half-lidded value (0.6) interpolates toward 1.0 during blink
-    const lidT = _lerp(0.6, 1.0, blinkT);
+    // Resting FULLY WIDE (0.0) — no squint, no half-lid, Vinta's eyes open.
+    // Blink still closes to 1.0 when triggered.
+    const lidT = _lerp(0.0, 1.0, blinkT);
 
     // ── WELCOME PULSE (iris bloom 0.3 → 1.0 → 0.3 over 1.2s) ─────────────────
     let welcomeBoost = 0;
@@ -375,8 +377,8 @@ const FACE_LAYER = (() => {
     for (const e of eyes) {
       const cx = e.cx;
       const cy = e.orbit.cy;
-      const rx = 12; // slightly smaller than orbit socket
-      const ry = 7;
+      const rx = 13;   // wider
+      const ry = 10;   // TALLER — open wide, no squint (was 7)
 
       const eyePath = _buildEyePath(cx, cy, rx, ry, lidT);
 
@@ -398,10 +400,10 @@ const FACE_LAYER = (() => {
       ctx.save();
       ctx.clip(eyePath);
 
-      // Pupil offset — clamped tight so eyes stay FORWARD-FACING.
-      // ±5px max keeps gaze "looking at you" even when cursor drifts far away.
+      // Pupil offset — clamped to keep eyes FORWARD-FACING even when tracking.
+      // Taller eye (ry=10) allows a bit more vertical travel without escaping lid.
       const offX = _clamp((_gazeX - cx) * 0.4, -5, 5);
-      const offY = _clamp((_gazeY - cy) * 0.3, -3, 4);
+      const offY = _clamp((_gazeY - cy) * 0.3, -4, 5);
       const ix = cx + offX;
       const iy = cy + offY;
 
@@ -461,13 +463,13 @@ const FACE_LAYER = (() => {
       ctx.lineJoin = 'round';
       ctx.stroke(eyePath);
 
-      // Upper lash hint — top edge darker
+      // Upper lash hint — traces the same high arch as the eye path
       ctx.save();
       ctx.strokeStyle = 'rgba(40,25,22,0.85)';
       ctx.lineWidth = 1.4;
       ctx.beginPath();
       ctx.moveTo(cx - rx, cy);
-      ctx.quadraticCurveTo(cx, cy - ry + lidT * ry * 2, cx + rx, cy);
+      ctx.quadraticCurveTo(cx, cy - ry * 1.4 + lidT * ry * 2.4, cx + rx, cy);
       ctx.stroke();
       ctx.restore();
 
