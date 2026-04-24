@@ -15240,13 +15240,14 @@ function _snapshotBodyFrame(ts) {
 }
 
 function loop(ts) {
+  if (window.VTN_PAUSED) { requestAnimationFrame(loop); return; }
   const t=ts*.001;
   // Snapshot BODY_STATE once at the very top of the frame so every
   // downstream dispatch (skin/aura/face/signals/...) sees the same values.
   _snapshotBodyFrame(ts);
   drawStars();
-  drawSparks();
-  if (ts-lastNeuron>33) { drawNeurons(); lastNeuron=ts; } // 30fps cap
+  if (window.BODY_STATE?.peelVisible?.nervous !== false) drawSparks();
+  if (ts-lastNeuron>33 && window.BODY_STATE?.peelVisible?.nervous !== false) { drawNeurons(); lastNeuron=ts; } // 30fps cap, gated on nervous peel
   animateNodes(t);
   if (ts-lastConn>80) { animateConns(t); lastConn=ts; }
   CNS.draw(ts);
@@ -48062,7 +48063,21 @@ setTimeout(() => GROWTH_ENGINE.init(), 4000);
 //   vint_user          — JSON { id, email, tier }
 // ═══════════════════════════════════════════════════════════════════════════════
 const SOUL_AUTH = (() => {
-  const API = () => window.__VINTINUUM_API_BASE || 'http://localhost:8767';
+  // Env-aware base — mirrors sidebar_right fix (commit 8b69c8d).
+  // On github.io Pages hosts, localhost:8767 is unreachable → return '' so
+  // the auth UI can render offline cards instead of spinning on failed fetches.
+  const API = () => {
+    if (window.__VINTINUUM_API_BASE) return window.__VINTINUUM_API_BASE;
+    try {
+      const stored = localStorage.getItem('vint_api_base') || localStorage.getItem('vtn:api_base');
+      if (stored) return stored.replace(/\/$/, '');
+    } catch (_) {}
+    const host = (location.hostname || '').toLowerCase();
+    const isPagesHost =
+      /github\.io$/i.test(host) ||
+      (host && host !== 'localhost' && host !== '127.0.0.1' && host !== '0.0.0.0');
+    return isPagesHost ? '' : 'http://localhost:8767';
+  };
   const STORAGE_ACCESS  = 'vint_access_token';
   const STORAGE_REFRESH = 'vint_refresh_token';
   const STORAGE_USER    = 'vint_user';

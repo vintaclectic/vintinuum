@@ -9,7 +9,7 @@
 const GRID_FLOOR_LAYER = (() => {
   let _last = 0;
   let _initialized = false;
-  let _visible = true;
+  let _visible = false; // hidden by default — optional toggle via footer_strip
 
   // Geometry — anchored to BODY_GEOMETRY feet, not canvas midpoint.
   // Feet plant around y=1220 (ankles y=1190, foot bottom y~1245 from BODY_GEOMETRY).

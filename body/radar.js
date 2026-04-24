@@ -10,7 +10,7 @@
 const RADAR_LAYER = (() => {
   let _last = 0;
   let _initialized = false;
-  let _visible = true;
+  let _visible = false; // hidden by default — optional toggle via footer_strip
 
   // Center of the radar in SVG-canvas space (upper right of body stage)
   const CX = 560;

@@ -27,11 +27,12 @@
   ];
 
   const VIEW_PRESETS = [
-    { key: 'full',     label: 'Full',     layers: { skin: true,  muscle: true,  skeleton: true,  organs: true,  circulatory: true,  nervous: true  } },
+    { key: 'full',     label: 'Full',     layers: { skin: true,  muscle: false, skeleton: false, organs: true,  circulatory: false, nervous: false } },
     { key: 'skinoff',  label: 'Skin Off', layers: { skin: false, muscle: true,  skeleton: true,  organs: true,  circulatory: true,  nervous: true  } },
     { key: 'muscle',   label: 'Muscle',   layers: { skin: false, muscle: true,  skeleton: false, organs: false, circulatory: false, nervous: false } },
     { key: 'skeleton', label: 'Skeleton', layers: { skin: false, muscle: false, skeleton: true,  organs: false, circulatory: false, nervous: false } },
     { key: 'xray',     label: 'X-Ray',    layers: { skin: false, muscle: false, skeleton: true,  organs: true,  circulatory: true,  nervous: true  } },
+    { key: 'anatomy',  label: 'Anatomy',  layers: { skin: true,  muscle: true,  skeleton: true,  organs: true,  circulatory: true,  nervous: true  } },
   ];
 
   function _icon(name) {
@@ -61,8 +62,8 @@
     if (!window.BODY_STATE) window.BODY_STATE = {};
     if (!window.BODY_STATE.peelVisible) {
       window.BODY_STATE.peelVisible = {
-        skin: true, muscle: true, skeleton: true,
-        organs: true, circulatory: true, nervous: true,
+        skin: true, muscle: false, skeleton: false,
+        organs: true, circulatory: false, nervous: false,
       };
     }
     return window.BODY_STATE.peelVisible;
