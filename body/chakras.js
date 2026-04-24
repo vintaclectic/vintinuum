@@ -15,18 +15,23 @@ const CHAKRA_LAYER = (() => {
   // crown 108, elbow 790, ankle 1378. Spine positions below are the
   // seven traditional chakra locations interpolated across the figure.)
   const NODES = [
+    // Chakra y-positions pulled UP into the torso silhouette — previously
+    // sacral (y:760) and root (y:880) rendered BELOW the crotch apex (y:748),
+    // glowing in the inter-leg V-gap like dangling organs. Now all seven sit
+    // inside the body silhouette (crown:head, brow:face, throat:neck,
+    // heart:chest, solar:upper-abdomen, sacral:lower-abdomen, root:pelvis).
     { key: 'crown',  name: 'crown',        y: 170, layer: 'subconscious', color: '#b47cff', cssVar: '--chakra-crown'  },
     { key: 'brow',   name: 'third-eye',    y: 235, layer: 'neural',       color: '#7c8cff', cssVar: '--chakra-brow'   },
     { key: 'throat', name: 'throat',       y: 340, layer: 'immune',       color: '#7ccfff', cssVar: '--chakra-throat' },
-    { key: 'heart',  name: 'heart',        y: 520, layer: 'emotional',    color: '#7cffb4', cssVar: '--chakra-heart'  },
-    { key: 'solar',  name: 'solar plexus', y: 640, layer: 'metabolic',    color: '#ffe07c', cssVar: '--chakra-solar'  },
-    { key: 'sacral', name: 'sacral',       y: 760, layer: 'genetic',      color: '#ff9b7c', cssVar: '--chakra-sacral' },
-    { key: 'root',   name: 'root',         y: 880, layer: 'somatic',      color: '#ff7c7c', cssVar: '--chakra-root'   },
+    { key: 'heart',  name: 'heart',        y: 450, layer: 'emotional',    color: '#7cffb4', cssVar: '--chakra-heart'  },
+    { key: 'solar',  name: 'solar plexus', y: 530, layer: 'metabolic',    color: '#ffe07c', cssVar: '--chakra-solar'  },
+    { key: 'sacral', name: 'sacral',       y: 610, layer: 'genetic',      color: '#ff9b7c', cssVar: '--chakra-sacral' },
+    { key: 'root',   name: 'root',         y: 680, layer: 'somatic',      color: '#ff7c7c', cssVar: '--chakra-root'   },
   ];
 
   const CENTER_X = 350;
-  const BASE_RADIUS = 16;
-  const MAX_RADIUS = 26;
+  const BASE_RADIUS = 11;   // was 16 — tightened so outer glow (radius × 2.8)
+  const MAX_RADIUS = 18;    // was 26 — no longer bleeds past body silhouette
 
   // Parse #rrggbb to { r, g, b }
   function _hexToRgb(hex) {
@@ -55,6 +60,21 @@ const CHAKRA_LAYER = (() => {
     console.log('[CHAKRA_LAYER] initialized — 7 nodes ready');
   }
 
+  // Lazy-built clip path from BODY_GEOMETRY.SILHOUETTE — ensures no chakra
+  // orb glow can bleed outside the body's outer edge (specifically stops
+  // the root/sacral outer glow from spilling into the inter-leg V-gap).
+  let _clipPath = null;
+  function _buildClip() {
+    const G = window.BODY_GEOMETRY;
+    if (!G || !G.SILHOUETTE || G.SILHOUETTE.length < 3) return null;
+    const p = new Path2D();
+    const pts = G.SILHOUETTE;
+    p.moveTo(pts[0].x, pts[0].y);
+    for (let i = 1; i < pts.length; i++) p.lineTo(pts[i].x, pts[i].y);
+    p.closePath();
+    return p;
+  }
+
   function draw(ts) {
     if (!_initialized || !_visible) return;
     if (ts - _last < 33) return; // ~30fps cap
@@ -71,6 +91,9 @@ const CHAKRA_LAYER = (() => {
     const breathWave = (Math.sin(breathPhase) + 1) / 2;
 
     ctx.save();
+    // Clip all chakra rendering to body silhouette — no glow escapes
+    if (!_clipPath) _clipPath = _buildClip();
+    if (_clipPath) ctx.clip(_clipPath);
 
     for (const node of NODES) {
       const activity = _layerActivity(bs, node.layer);

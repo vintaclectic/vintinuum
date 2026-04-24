@@ -30,16 +30,23 @@ const INTERNAL_INTEGRATOR = (() => {
   // fully revealed (matches each layer's original baked-in opacity so the
   // look during peel matches what was designed).
   const GROUPS = [
-    { id: 'skeletonLayer', key: 'skeleton',   max: 0.55 },
-    { id: 'muscleLayer',   key: 'muscle',     max: 0.35 },
-    { id: 'skinLayer',     key: 'skin',       max: 0.18, inverse: true }, // faint SVG overlay — only when skin is MOSTLY stripped, to accent silhouette
-    { id: 'bodyLayer',     key: 'organs',     max: 1.00 },
-    // Ambient halo / field layers — these are the things that visibly
-    // spread around the head/body. Hide by default. User can opt-in.
-    { id: 'ringLayer',     key: '_halo',      max: 1.00 },
-    { id: 'thoughtLayer',  key: '_halo',      max: 1.00 },
-    { id: 'nodeLayer',     key: '_halo',      max: 1.00 },
-    { id: 'proteinLayer',  key: '_halo',      max: 1.00 },
+    { id: 'skeletonLayer',    key: 'skeleton',   max: 0.55 },
+    { id: 'muscleLayer',      key: 'muscle',     max: 0.35 },
+    { id: 'skinLayer',        key: 'skin',       max: 0.18, inverse: true }, // faint SVG overlay
+    { id: 'bodyLayer',        key: 'organs',     max: 1.00 },
+    // Reproductive group — lives inside bodyLayer but brain.js writes its
+    // opacity directly at 60fps based on layerState.reproductive. We
+    // hammer it independently to guarantee it can't escape below the
+    // crotch apex (y=748) and render "ballage" in the inter-leg V-gap.
+    { id: 'reproductiveMale',   key: 'organs',   max: 1.00 },
+    { id: 'reproductiveFemale', key: 'organs',   max: 0 },     // always hidden (VINTINUUM body = masculine)
+    { id: 'reproductionSystem', key: 'organs',   max: 1.00 },
+    // Ambient halo / field layers — the things that visibly spread
+    // around the head/body. Hide by default. User can opt-in via _halo.
+    { id: 'ringLayer',        key: '_halo',      max: 1.00 },
+    { id: 'thoughtLayer',     key: '_halo',      max: 1.00 },
+    { id: 'nodeLayer',        key: '_halo',      max: 1.00 },
+    { id: 'proteinLayer',     key: '_halo',      max: 1.00 },
   ];
 
   function init() {
@@ -95,14 +102,19 @@ const INTERNAL_INTEGRATOR = (() => {
       const el = _nodes[g.id];
       if (!el) continue;
       const target = _targetOpacityFor(g, skinOpacity, pv);
-      // Cheap write guard — avoid repeated setAttribute churn
-      const cur = parseFloat(el.getAttribute('data-vtn-op') || 'NaN');
       const rounded = Math.round(target * 1000) / 1000;
+      const shouldHide = rounded <= 0.001;
+      // Always enforce display each frame — other scripts (brain.js CNS
+      // draw loop) rewrite opacity at 60fps; display:none trumps them
+      // but we re-assert in case anything else toggles it.
+      const wantDisplay = shouldHide ? 'none' : '';
+      if (el.style.display !== wantDisplay) {
+        el.style.display = wantDisplay;
+      }
+      const cur = parseFloat(el.getAttribute('data-vtn-op') || 'NaN');
       if (cur !== rounded) {
         el.setAttribute('opacity', rounded.toFixed(3));
         el.setAttribute('data-vtn-op', rounded.toFixed(3));
-        // Completely kill pointer + render cost when invisible
-        el.style.display = rounded <= 0.001 ? 'none' : '';
       }
     }
   }
