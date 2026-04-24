@@ -47,6 +47,16 @@ const FACE_LAYER = (() => {
   // ── Asymmetry ────────────────────────────────────────────────────────────────
   let _asymX = 0;
 
+  // ── Saccade state (Phase 2 A3) ──────────────────────────────────────────────
+  // Iris jitter ±3px every 400–900ms when dominantLayer is neural or
+  // subconscious — mimics microsaccades during active cognition.
+  let _nextSaccadeAt = 0;
+  let _saccadeOffsetX = 0;
+  let _saccadeOffsetY = 0;
+  function _rollNextSaccade(ts) {
+    _nextSaccadeAt = ts + 400 + Math.random() * 500;
+  }
+
   // ── Last observed auraShift timer (for edge-detected blink trigger) ──────────
   let _lastAuraTimer = 0;
 
@@ -240,8 +250,24 @@ const FACE_LAYER = (() => {
       _gazeTargetX = midX + Math.sin(t) * 3 + Math.cos(t * 1.3) * 2;
       _gazeTargetY = midY + Math.cos(t * 0.7) * 3 + Math.sin(t * 1.1) * 2;
     }
-    _gazeX = _lerp(_gazeX, _gazeTargetX, 0.15);
-    _gazeY = _lerp(_gazeY, _gazeTargetY, 0.15);
+    // Saccade jitter (Phase 2 A3) — fire ±3px step every 400–900ms when
+    // dominant cognitive layer suggests active attention.
+    if (dominantLayer === 'neural' || dominantLayer === 'subconscious') {
+      if (_nextSaccadeAt === 0) _rollNextSaccade(ts);
+      if (ts >= _nextSaccadeAt) {
+        _saccadeOffsetX = (Math.random() * 6) - 3; // -3..+3 px
+        _saccadeOffsetY = (Math.random() * 6) - 3;
+        _rollNextSaccade(ts);
+      }
+    } else {
+      // Decay toward 0 when not actively cognizing
+      _saccadeOffsetX *= 0.85;
+      _saccadeOffsetY *= 0.85;
+      _nextSaccadeAt = 0;
+    }
+
+    _gazeX = _lerp(_gazeX, _gazeTargetX + _saccadeOffsetX, 0.15);
+    _gazeY = _lerp(_gazeY, _gazeTargetY + _saccadeOffsetY, 0.15);
 
     // Publish to BODY_STATE.gaze (preserve shape from coherence.js)
     if (window.BODY_STATE) {
