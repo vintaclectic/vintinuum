@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>whoami · Vintinuum</title>
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <script src="body/api_base.js?v=v20260429-council"></script>
+  <script src="body/identity.js?v=v20260429-council"></script>
+  <style>
+    :root { color-scheme: dark; }
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body {
+      background:radial-gradient(ellipse at top, #1a1a2e, #050510);
+      color:rgba(255,255,255,0.92); min-height:100vh;
+      font-family:'SF Mono', Menlo, 'Roboto Mono', monospace;
+      padding:max(20px, env(safe-area-inset-top)) 20px max(20px, env(safe-area-inset-bottom));
+      line-height:1.55;
+    }
+    .wrap { max-width:760px; margin:0 auto; }
+    h1 { font-size:18px; font-weight:300; letter-spacing:0.2em; text-transform:uppercase; margin:24px 0 8px; color:rgba(255,255,255,0.7); }
+    h2 { font-size:13px; font-weight:400; letter-spacing:0.15em; text-transform:uppercase; margin:24px 0 8px; color:rgba(255,255,255,0.5); }
+    pre { background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.08); padding:14px 16px; border-radius:10px; overflow-x:auto; font-size:13px; color:rgba(180,220,255,0.85); }
+    .row { display:flex; justify-content:space-between; padding:8px 0; border-bottom:1px solid rgba(255,255,255,0.06); font-size:13px; gap:12px; }
+    .row span:first-child { color:rgba(255,255,255,0.55); }
+    .row span:last-child { color:rgba(255,255,255,0.95); text-align:right; word-break:break-all; }
+    .ok { color:#7eff9b; }
+    .miss { color:#ff8a8a; }
+    .actions { display:flex; gap:10px; flex-wrap:wrap; margin-top:18px; }
+    button {
+      background:rgba(120,120,255,0.16); color:rgba(255,255,255,0.95);
+      border:1px solid rgba(120,120,255,0.4); border-radius:10px;
+      padding:11px 18px; font-size:12px; letter-spacing:0.1em; text-transform:uppercase;
+      cursor:pointer; font-family:inherit;
+    }
+    button:hover { background:rgba(120,120,255,0.28); }
+    a { color:rgba(170,200,255,0.85); text-decoration:none; border-bottom:1px dotted rgba(170,200,255,0.4); }
+    .nav { font-size:12px; color:rgba(255,255,255,0.5); margin-bottom:8px; }
+    @media (max-width: 639px) {
+      pre { font-size:12px; }
+      .row { font-size:12px; }
+    }
+  </style>
+    <link rel="stylesheet" href="body/safe_area.css?v=v20260429-council">
+</head>
+<body>
+  <div class="wrap">
+    <div class="nav"><a href="index.html">← home</a></div>
+    <h1>whoami</h1>
+    <p style="color:rgba(255,255,255,0.55); font-size:13px;">The truth window. What this device thinks you are, and what the server thinks you are.</p>
+
+    <h2>Client view</h2>
+    <div id="client"></div>
+
+    <h2>Server view (/api/auth/whoami)</h2>
+    <pre id="server">loading…</pre>
+
+    <h2>Local storage</h2>
+    <pre id="ls"></pre>
+
+    <div class="actions">
+      <button id="refresh">refresh</button>
+      <button id="signout">sign out (purge everything)</button>
+      <button id="bond">open bond door</button>
+    </div>
+  </div>
+
+  <script src="body/bond_door.js?v=v20260429-council"></script>
+  <script>
+    function row(k, v, cls) {
+      var d = document.createElement('div'); d.className = 'row';
+      var a = document.createElement('span'); a.textContent = k;
+      var b = document.createElement('span'); b.textContent = v == null ? '—' : String(v);
+      if (cls) b.classList.add(cls);
+      d.appendChild(a); d.appendChild(b); return d;
+    }
+    async function refresh() {
+      var c = document.getElementById('client'); c.innerHTML = '';
+      var id = window.VINTINUUM_IDENTITY;
+      c.appendChild(row('api base', window.__VINTINUUM_API_BASE));
+      c.appendChild(row('host', location.host));
+      c.appendChild(row('protocol', location.protocol));
+      c.appendChild(row('user', id && id.user ? (id.user.display_name || id.user.email || id.user.id) : null, id && id.user ? 'ok' : 'miss'));
+      c.appendChild(row('source', id ? id.source : null));
+      c.appendChild(row('bonded at', id && id.bondedAt ? new Date(id.bondedAt).toISOString() : null));
+      c.appendChild(row('token in localStorage', !!localStorage.getItem('soul_auth_token'), localStorage.getItem('soul_auth_token') ? 'ok' : 'miss'));
+
+      try {
+        var j = await window.SOUL_AUTH.whoami();
+        document.getElementById('server').textContent = JSON.stringify(j, null, 2);
+      } catch (err) {
+        document.getElementById('server').textContent = 'Server error: ' + err;
+      }
+
+      var keys = ['soul_auth_token', 'soul_auth_refresh', 'soul_display_name', 'soul_chakra_signature', 'soul_chakra_hue', 'soul_bonded_at', 'soul_lane', 'vint_api_base'];
+      var lines = keys.map(function (k) {
+        var v = localStorage.getItem(k);
+        if (!v) return k + ' = (empty)';
+        if (k.indexOf('token') >= 0) return k + ' = ' + v.slice(0, 20) + '…(redacted, length=' + v.length + ')';
+        return k + ' = ' + v;
+      });
+      document.getElementById('ls').textContent = lines.join('\n');
+    }
+    document.getElementById('refresh').addEventListener('click', refresh);
+    document.getElementById('signout').addEventListener('click', function () {
+      window.SOUL_AUTH.signOut();
+      setTimeout(refresh, 200);
+    });
+    document.getElementById('bond').addEventListener('click', function () {
+      if (window.BOND_DOOR) window.BOND_DOOR.show();
+    });
+    refresh();
+    document.addEventListener('vintinuum:identity-changed', refresh);
+  </script>
+</body>
+</html>

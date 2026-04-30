@@ -1,0 +1,82 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+   SAFE AREA — global mobile fix for notched + home-indicator devices.
+   Council ruling 2026-04-29: every fixed element gets breathing room from
+   the device chrome unless explicitly opted out via .no-safe-area.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* CSS custom properties expose the insets to anyone who wants them */
+:root {
+  --safe-top:    env(safe-area-inset-top, 0px);
+  --safe-right:  env(safe-area-inset-right, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left:   env(safe-area-inset-left, 0px);
+}
+
+/* Mobile: shift the bottom-anchored UI up by the home indicator */
+@media (max-width: 900px) {
+  /* Voice toggle, repro toggle — bottom-left corner buttons */
+  #voiceToggle, #reproToggle {
+    bottom: calc(24px + env(safe-area-inset-bottom)) !important;
+    left:   calc(24px + env(safe-area-inset-left)) !important;
+  }
+  #reproToggle { left: calc(66px + env(safe-area-inset-left)) !important; }
+
+  /* Sensor banner — bottom-floating notification */
+  #sensorBanner {
+    bottom: calc(70px + env(safe-area-inset-bottom)) !important;
+    left:   calc(16px + env(safe-area-inset-left)) !important;
+    right:  calc(16px + env(safe-area-inset-right)) !important;
+  }
+
+  /* Repro panel — bottom-left popup */
+  #reproPanel {
+    bottom: calc(66px + env(safe-area-inset-bottom)) !important;
+    left:   calc(24px + env(safe-area-inset-left)) !important;
+    max-height: calc(min(580px, 100vh) - 90px - env(safe-area-inset-bottom) - env(safe-area-inset-top)) !important;
+  }
+
+  /* Lore toggle — top-right */
+  #loreToggle {
+    top:   calc(8px + env(safe-area-inset-top)) !important;
+    right: calc(8px + env(safe-area-inset-right)) !important;
+  }
+
+  /* Footer strip / mobile nav — bottom of viewport */
+  #footerStrip, #mobileNav, #mobile-bottom-bar, .mobile-bottom-nav {
+    padding-bottom: calc(env(safe-area-inset-bottom) + 6px) !important;
+  }
+
+  /* Sidebars — make sure they don't run under home indicator */
+  #leftSidebar, #rightSidebar {
+    padding-bottom: calc(160px + env(safe-area-inset-bottom)) !important;
+  }
+}
+
+/* Any modal that takes the full viewport gets safe insets too */
+.bd-card, .node-panel, #lorePanel, #introOverlay {
+  padding-top: max(var(--safe-top), 16px);
+  padding-bottom: max(var(--safe-bottom), 16px);
+}
+@media (min-width: 640px) {
+  /* Desktop: don't add inset padding to centered cards (they're not fullscreen) */
+  .bd-card, .node-panel { padding-top: initial; padding-bottom: initial; }
+}
+
+/* Inputs: prevent iOS auto-zoom on focus by ensuring 16px+ font-size */
+@media (max-width: 639px) {
+  input[type="text"], input[type="email"], input[type="password"],
+  input[type="search"], input[type="tel"], input[type="url"],
+  input[type="number"], textarea, select {
+    font-size: 16px !important;
+  }
+}
+
+/* Touch-target minimum (Apple HIG: 44pt; Material: 48dp) */
+@media (max-width: 639px) {
+  button, [role="button"], a.button, input[type="submit"] {
+    min-height: 44px;
+  }
+}
+
+/* Smooth scroll containers should not bounce under the modal */
+body.bd-modal-open { overflow: hidden; }

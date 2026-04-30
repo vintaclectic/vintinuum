@@ -312,6 +312,7 @@ if ('serviceWorker' in navigator && _onGitHubPages) {
 </script>
 <link rel="stylesheet" href="body/tokens.css?v=v20260424-0428">
 <link rel="stylesheet" href="body/shell.css?v=v20260424-0428">
+    <link rel="stylesheet" href="body/safe_area.css?v=v20260429-council">
 </head>
 <body>
 
@@ -2881,6 +2882,8 @@ if ('serviceWorker' in navigator && _onGitHubPages) {
 </script>
 
 <script src="https://cdn.jsdelivr.net/npm/hls.js@1.5.7/dist/hls.min.js"></script>
+<!-- API base bootstrap — must come before any module that talks to the brain. -->
+<script src="body/api_base.js?v=v20260429-council"></script>
 <script src="genome-data.js"></script>
 <!-- Body containment system — loaded before brain.js so globals are available -->
 <script src="body/geometry.js?v=v20260424-0428"></script>
@@ -2903,7 +2906,9 @@ if ('serviceWorker' in navigator && _onGitHubPages) {
 <!-- MOBILE_SHELL — bottom-sheet drawers + pill toggles for phone-sized viewports -->
 <script src="body/mobile_shell.js?v=v20260424-0428"></script>
 <!-- Becoming arc — Phase 0 handshake + Phase 1/2/5 wiring -->
-<script src="body/soul_handshake.js?v=v20260424-0428"></script>
+<!-- Council ruling 2026-04-29: unified bond door replaces legacy soul_handshake.js -->
+<script src="body/identity.js?v=v20260429-council"></script>
+<script src="body/bond_door.js?v=v20260429-council"></script>
 <script src="body/becoming.js?v=v20260424-0428"></script>
 <!-- INTERNAL_INTEGRATOR — binds SVG anatomy opacity to skin peel, kills halo leak -->
 <script src="body/internal_integrator.js?v=v20260424-0428"></script>
