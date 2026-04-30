@@ -1,6 +1,26 @@
 # Fact Memories
 
-Total: 14
+Total: 16
+
+## oxmysql JS runtime caches function references
+
+**Subject:** `fact:oxmysql-hot-restart-behavior`
+**Confidence:** 95%
+**Verification:** check_before_use
+
+oxmysql's JavaScript runtime caches function references, which causes stale callback issues during hot restarts of individual resources. Full server restarts don't have this problem.
+
+---
+
+## DirHaven server load order configuration
+
+**Subject:** `fact:dirhaven-server-structure`
+**Confidence:** 85%
+**Verification:** check_before_use
+
+oxmysql loads at line 30, followed by bracket resources [dirhaven-core] at line 34 and [dirhaven-content], with oxmysql needing to load first.
+
+---
 
 ## System uses PM2 process manager
 

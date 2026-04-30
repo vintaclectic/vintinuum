@@ -1,6 +1,16 @@
 # Preference Memories
 
-Total: 4
+Total: 5
+
+## Prefers simple manual solutions over automated helpers
+
+**Subject:** `preference:code-simplicity-over-automation`
+**Confidence:** 90%
+**Verification:** none
+
+User chose not to implement a Python helper script for automated safe restarts, preferring to keep a simple one-liner command they already know rather than maintain additional tooling.
+
+---
 
 ## Prefers direct, hands-on problem-solving
 

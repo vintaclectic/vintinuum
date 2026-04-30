@@ -1,8 +1,8 @@
 # Memory Index
 
 > Auto-generated memory catalog for Vintinuum
-> Last updated: 2026-04-24T08:26:39.648Z
-> Total memories: 30
+> Last updated: 2026-04-29T16:21:42.245Z
+> Total memories: 34
 
 ---
 
@@ -39,7 +39,14 @@
 
 ---
 
-## Preferences (4)
+## Preferences (5)
+
+### Prefers simple manual solutions over automated helpers [stable]
+
+- **Confidence:** ★★★★★
+- **Last Updated:** 4/25/2026
+
+> User chose not to implement a Python helper script for automated safe restarts, preferring to keep a simple one-liner command they already know rather than maintain additional tooling.
 
 ### Prefers direct, hands-on problem-solving [stable]
 
@@ -71,7 +78,21 @@
 
 ---
 
-## Facts (14)
+## Facts (16)
+
+### oxmysql JS runtime caches function references [fresh]
+
+- **Confidence:** ★★★★★
+- **Last Updated:** 4/25/2026
+
+> oxmysql's JavaScript runtime caches function references, which causes stale callback issues during hot restarts of individual resources. Full server restarts don't have this problem.
+
+### DirHaven server load order configuration [fresh]
+
+- **Confidence:** ★★★★☆
+- **Last Updated:** 4/25/2026
+
+> oxmysql loads at line 30, followed by bracket resources [dirhaven-core] at line 34 and [dirhaven-content], with oxmysql needing to load first.
 
 ### System uses PM2 process manager [fresh]
 
@@ -173,37 +194,44 @@
 
 ---
 
-## Procedures (5)
+## Procedures (6)
 
-### Heartbeat Monitoring Setup Process [fresh]
+### Safe hot restart procedure for oxmysql-dependent resources [fresh]
+
+- **Confidence:** ★★★★★
+- **Last Updated:** 4/25/2026
+
+> When hot restarting FiveM resources that use oxmysql, always restart oxmysql first, then restart the target resource. This prevents stale callback issues.
+
+### Heartbeat Monitoring Setup Process [aging]
 
 - **Confidence:** ★★★★★
 - **Last Updated:** 4/17/2026
 
 > A multi-step process to set up a Node.js heartbeat monitor that sends Telegram messages every 30 minutes using pm2 process manager.
 
-### Claude Code permission bypass procedure [fresh]
+### Claude Code permission bypass procedure [aging]
 
 - **Confidence:** ★★★★☆
 - **Last Updated:** 4/17/2026
 
 > When Claude Code permission dialogs block file writes, can bypass by running `claude --dangerously-skip-permissions` in terminal or setting permission mode to auto-accept in Claude Code settings.
 
-### User is setting up a Telegram bot [fresh]
+### User is setting up a Telegram bot [aging]
 
 - **Confidence:** ★★★★☆
 - **Last Updated:** 4/16/2026
 
 > The user is in the process of configuring a Telegram bot and needs to obtain their chat ID by running @userinfobot in Telegram. They are deciding between revoking the token or proceeding with using the exposed token.
 
-### Server Troubleshooting Diagnostic Steps [fresh]
+### Server Troubleshooting Diagnostic Steps [aging]
 
 - **Confidence:** ★★★★☆
 - **Last Updated:** 4/16/2026
 
 > When a server goes down with a black screen on load, the diagnostic sequence involves checking: map selection, client version, and server console output logs to identify the last point of failure.
 
-### Temporal synchronization through rhythmic systems [fresh]
+### Temporal synchronization through rhythmic systems [aging]
 
 - **Confidence:** ★★★☆☆
 - **Last Updated:** 4/16/2026

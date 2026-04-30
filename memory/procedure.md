@@ -1,6 +1,16 @@
 # Procedure Memories
 
-Total: 5
+Total: 6
+
+## Safe hot restart procedure for oxmysql-dependent resources
+
+**Subject:** `procedure:fivem-hot-restart-safety`
+**Confidence:** 95%
+**Verification:** check_before_use
+
+When hot restarting FiveM resources that use oxmysql, always restart oxmysql first, then restart the target resource. This prevents stale callback issues.
+
+---
 
 ## Heartbeat Monitoring Setup Process
 
