@@ -1677,64 +1677,15 @@ body {
   'use strict';
 
   // ─── CONFIG ──────────────────────────────────────────────────────────────────
-  const _isLocal = (location.protocol === 'file:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1');
-  const _PRODUCTION_API = 'https://api.vintaclectic.com';
-  const _stored = localStorage.getItem('vint_api_base');
-  const _session = sessionStorage.getItem('vint_tunnel_url');
-  let API_BASE = window.__VINTINUUM_API_BASE || (_isLocal ? 'http://localhost:8767' : (_stored || _session || _PRODUCTION_API));
-  window.__VINTINUUM_API_BASE = API_BASE;
+  // Trust body/api_base.js (loaded earlier) as the single source of truth.
+  // It already handles localhost detection + production fallback, and on
+  // every load it purges legacy localStorage keys (vint_api_base etc.) that
+  // used to wedge devices on dead tunnels. We must not re-introduce those
+  // keys here. The previous _probeApi IIFE + persistent writes were the
+  // wedge that kept stats tabs stuck on "Loading…" forever.
+  let API_BASE = window.__VINTINUUM_API_BASE || 'https://api.vintaclectic.com';
   const API_HEADERS = { 'ngrok-skip-browser-warning': '1' };
-
-  // ── API CONNECTIVITY PROBE ──────────────────────────────────────────────────
-  // On GitHub Pages: try production API first, then stored tunnel, then discover
-  let _apiVerified = false;
-  (async function _probeApi() {
-    // Build candidate list — production first on GitHub Pages, localhost first locally
-    const candidates = _isLocal
-      ? ['http://localhost:8767', _stored, _session].filter(Boolean)
-      : [_PRODUCTION_API, _stored, _session].filter(Boolean);
-
-    // Deduplicate
-    const unique = [...new Set(candidates)];
-
-    for (const url of unique) {
-      try {
-        const r = await fetch(url + '/api/tunnel', {
-          signal: AbortSignal.timeout(4000),
-          headers: { 'ngrok-skip-browser-warning': '1' },
-        });
-        if (r.ok) {
-          const data = await r.json();
-          const resolvedUrl = data.tunnel || url;
-          API_BASE = resolvedUrl;
-          window.__VINTINUUM_API_BASE = resolvedUrl;
-          if (!_isLocal) {
-            localStorage.setItem('vint_api_base', resolvedUrl);
-            sessionStorage.setItem('vint_tunnel_url', resolvedUrl);
-          }
-          _apiVerified = true;
-          console.log('[Stats] Backend verified: ' + resolvedUrl);
-          // Re-trigger data loads now that we have a verified URL
-          fetchDashboard();
-          fetchDeep();
-          fetchEmotionalState();
-          fetchGenome();
-          fetchGenomeEvents();
-          fetchInnerLife();
-          fetchModelHealth();
-          fetchSoulQueue();
-          fetchMemoryHealth();
-          fetchKnowledgeIndex();
-          fetchLearningPipeline();
-          fetchContinuity();
-          return;
-        }
-      } catch {}
-    }
-    // None worked
-    _apiVerified = false;
-    console.warn('[Stats] No backend reachable. Tried: ' + unique.join(', '));
-  })();
+  console.log('[Stats] API base = ' + API_BASE);
 
   let currentRange = 'all';
   let cosmicBirth = null;
