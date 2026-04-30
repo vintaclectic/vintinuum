@@ -317,6 +317,9 @@
   }
 
   // ── Fetch with timeout ─────────────────────────────────────────────
+  // 6s ceiling — Cloudflare tunnel cold starts on mobile (LTE → tunnel →
+  // localhost) regularly take 3-4s. The previous 2.5s window false-positived
+  // every slow network into "API UNREACHABLE" forever.
   function _fetchJSON(url) {
     if (_abortController) {
       try { _abortController.abort(); } catch (e) { /* ignore */ }
@@ -324,7 +327,7 @@
     _abortController = new AbortController();
     const timer = setTimeout(() => {
       try { _abortController.abort(); } catch (e) { /* ignore */ }
-    }, 2500);
+    }, 6000);
     return fetch(url, {
       method: 'GET',
       cache: 'no-store',
@@ -457,6 +460,9 @@
       console.warn('[sidebar_right] #sidebarRight not found');
       return;
     }
+    // Re-resolve at init in case window.__VINTINUUM_API_BASE finalized after
+    // module evaluation (defensive — api_base.js loads first, but be safe).
+    _apiBase = _resolveApiBase();
     _build(_root);
     _loadTab(_activeKey);
   }
