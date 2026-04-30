@@ -41933,37 +41933,20 @@ window.addEventListener('message', function(event) {
 
 
 (function() {
-  // ── API BASE AUTO-DISCOVERY ────────────────────────────────────────────────
-  // 1. Localhost → direct connection (development)
-  // 2. Stored URL in localStorage → use it (manually or auto-saved from discovery)
-  // 3. GitHub Pages → probe known tunnel URL, then try /api/tunnel on last-known URL
-  // 4. No backend found → standalone mode (body runs autonomously, no network errors)
-  // ── PERMANENT API URL — named Cloudflare Tunnel, never changes ──
-  var _TUNNEL_SEED = 'https://api.vintaclectic.com';
-
-  var _isLocal = (location.protocol === 'file:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1');
-  var _stored = localStorage.getItem('vint_api_base');
-  var _isGitHubPages = location.hostname.includes('github.io');
-
-  var API_BASE;
-  if (_isLocal) {
-    API_BASE = 'http://localhost:8767';
-  } else if (_TUNNEL_SEED) {
-    // Permanent named tunnel — always use this on non-localhost
-    API_BASE = _TUNNEL_SEED;
-  } else if (_stored) {
-    API_BASE = _stored;
-  } else {
-    API_BASE = 'http://localhost:8767';
+  // ── API BASE — defer to body/api_base.js when present ──────────────────────
+  // body/api_base.js is loaded earlier in the page and is the single source
+  // of truth (handles ?api= override, localhost detection, production fallback,
+  // and purges legacy localStorage keys on every load). If it set the global,
+  // we keep that value untouched. Only when it's somehow missing do we
+  // synthesize a sane default here — same logic, no localStorage reads.
+  if (!window.__VINTINUUM_API_BASE) {
+    var _isLocal = (location.protocol === 'file:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1');
+    window.__VINTINUUM_API_BASE = _isLocal ? 'http://localhost:8767' : 'https://api.vintaclectic.com';
   }
-  window.__VINTINUUM_API_BASE = API_BASE;
-  window.__VINTINUUM_STANDALONE = false; // never standalone when we have a permanent tunnel
+  window.__VINTINUUM_STANDALONE = false; // permanent tunnel — never standalone
 
-  // ── API CONNECTION (permanent tunnel — no discovery needed) ─────────────────
-  // api.vintaclectic.com is a named Cloudflare Tunnel — stable, no rotation.
-  // No probing, no candidate lists, no sessionStorage. Just connect.
-  if (_isGitHubPages) {
-    console.log('[VINTINUUM] API: ' + (window.__VINTINUUM_API_BASE || 'not configured'));
+  if (location.hostname.includes('github.io')) {
+    console.log('[VINTINUUM] API: ' + window.__VINTINUUM_API_BASE);
   }
 
   // ── Elements ──
@@ -48636,14 +48619,21 @@ const SOUL_AUTH = (() => {
               signal: AbortSignal.timeout(5000),
             });
             if (!r.ok) throw new Error('HTTP ' + r.status);
-            try {
-              localStorage.setItem('vint_api_base', url);
-              localStorage.setItem('vtn:api_base',  url);
-            } catch (_) {}
+            // Session-scoped override only — DO NOT persist to localStorage.
+            // api_base.js purges legacy keys on every load; persisting here
+            // would re-poison the cache. For permanent override use ?api=URL
+            // in the page query string (also session-scoped by design).
             window.__VINTINUUM_API_BASE = url;
             tunnelStatus.textContent = '✓ linked — reloading';
             tunnelStatus.style.color = 'rgba(120,220,140,0.9)';
-            setTimeout(() => location.reload(), 600);
+            // Pass ?api=URL on reload so the override survives the refresh.
+            setTimeout(() => {
+              try {
+                var u = new URL(location.href);
+                u.searchParams.set('api', url);
+                location.replace(u.toString());
+              } catch (_) { location.reload(); }
+            }, 600);
           } catch (err) {
             tunnelStatus.textContent = 'unreachable: ' + (err.message || 'failed');
             tunnelStatus.style.color = 'rgba(255,120,120,0.8)';
