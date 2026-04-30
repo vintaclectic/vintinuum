@@ -784,13 +784,14 @@ input[type="range"]::-moz-range-thumb {
 'use strict';
 
 // ── Config ──
-// API base: prefer saved setting, then try known endpoints, never use page origin
-// (page is served from GitHub Pages which is NOT the API)
+// Trust body/api_base.js as the single source of truth. The previous
+// 'vint_phone_api' localStorage fallback could persist a wrong base across
+// deploys; api_base.js purges that key on every load now.
 const API_BASES = [
   'https://api.vintaclectic.com',
   'http://localhost:8767'
 ];
-let API_BASE = localStorage.getItem('vint_phone_api') || API_BASES[0];
+let API_BASE = window.__VINTINUUM_API_BASE || API_BASES[0];
 const TOKEN = () => localStorage.getItem('vint_access_token') || localStorage.getItem('vint_token') || '';
 const PULSE_INTERVAL = 15 * 60 * 1000; // 15 min
 const BODY_POLL_INTERVAL = 30 * 1000;   // 30 sec
@@ -888,7 +889,8 @@ async function checkConnection() {
       if (res.ok) {
         state.connected = true;
         API_BASE = base;
-        localStorage.setItem('vint_phone_api', base);
+        // Do NOT persist — api_base.js is the authority. Persisting here
+        // would re-introduce the contagion key purged on every page load.
         connDot.classList.remove('offline');
         connLabel.textContent = 'connected';
         return;
