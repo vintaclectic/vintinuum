@@ -112,11 +112,11 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
 'use strict';
 (function() {
   // ── Config ──
-  const API_BASES = [
-    'https://api.vintaclectic.com',
-    'http://localhost:8767'
-  ];
-  let apiBase = localStorage.getItem('vint_sensor_api') || API_BASES[0];
+  // Trust body/api_base.js (loaded earlier on the page) as the single source
+  // of truth. The previous fallback wrote 'vint_sensor_api' to localStorage
+  // which permanently wedged devices on http://localhost:8767 from a public
+  // origin (where localhost can never resolve to the brain).
+  let apiBase = window.__VINTINUUM_API_BASE || 'https://api.vintaclectic.com';
   const token = localStorage.getItem('vint_token') || localStorage.getItem('vint_access_token');
 
   // ── DOM refs ──
@@ -281,11 +281,11 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
         return true;
       }
 
-      // Try fallback API
-      if (apiBase === API_BASES[0] && API_BASES[1]) {
-        apiBase = API_BASES[1];
-        localStorage.setItem('vint_sensor_api', apiBase);
-        return transmit(payload);
+      // Auth distinct from network — surface the difference so the user
+      // can act on it (re-bond rather than retry-forever).
+      if (resp.status === 401 || resp.status === 403) {
+        setStatus('unauthorized');
+        return false;
       }
 
       setStatus('offline');
@@ -314,7 +314,13 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
 
   // ── Status Display ──
   function setStatus(state) {
-    orb.className = 'orb ' + (state === 'transmitting' ? 'transmitting' : state === 'offline' ? 'offline' : state === 'buffered' ? 'buffered' : '');
+    orb.className = 'orb ' + (
+      state === 'transmitting' ? 'transmitting' :
+      state === 'offline'      ? 'offline' :
+      state === 'buffered'     ? 'buffered' :
+      state === 'unauthorized' ? 'offline' :
+      ''
+    );
     if (state === 'transmitting') {
       statusEl.textContent = 'TRANSMITTING';
       statusEl.className = 'status live';
@@ -323,6 +329,9 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
       statusEl.className = 'status buff';
     } else if (state === 'offline') {
       statusEl.textContent = 'OFFLINE';
+      statusEl.className = 'status dead';
+    } else if (state === 'unauthorized') {
+      statusEl.textContent = 'BOND REQUIRED \u2014 OPEN VINTINUUM';
       statusEl.className = 'status dead';
     } else {
       statusEl.textContent = 'INITIALIZING';
