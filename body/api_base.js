@@ -16,13 +16,33 @@
   var PRODUCTION = 'https://api.vintaclectic.com';
   var LOCAL      = 'http://localhost:8767';
 
+  // ── Contagion purge ──────────────────────────────────────────────────────
+  // Stale base URLs (quick-tunnels, ngrok, old IPs) cached by legacy resolvers
+  // (sidebar_right, stats, sensor, phone, phone-sw, brain) used to lock devices
+  // into a dead origin forever. Wipe every known key once on every load. The
+  // canonical resolver below is now the only authority.
+  try {
+    var STALE_KEYS = [
+      'vint_api_base',
+      'vtn:api_base',
+      'vint_sensor_api',
+      'vint_phone_api',
+      'vint_brain_api',
+      'vintinuum_api_base'
+    ];
+    for (var i = 0; i < STALE_KEYS.length; i++) {
+      try { localStorage.removeItem(STALE_KEYS[i]); } catch (_) {}
+    }
+  } catch (_) {}
+
   function resolve() {
     // 1. Explicit query-string override wins (?api=https://...)
     try {
       var q = new URLSearchParams(location.search);
       var override = q.get('api');
       if (override && /^https?:\/\//i.test(override)) {
-        try { localStorage.setItem('vint_api_base', override); } catch (_) {}
+        // Override is single-session by design — DO NOT persist. Persisting was
+        // the original contagion vector that wedged devices on dead tunnels.
         return override.replace(/\/$/, '');
       }
     } catch (_) {}
