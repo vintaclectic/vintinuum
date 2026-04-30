@@ -127,8 +127,12 @@ self.addEventListener('periodicsync', e => {
 });
 
 async function sendPassiveHeartbeat() {
-  // Get the stored API base from IDB/caches
-  let apiBase = 'http://localhost:8767';
+  // Get the stored API base from IDB/caches.
+  // Default to production tunnel — phone PWAs almost always run from a public
+  // origin (github.io, app store install) where localhost can never resolve.
+  // The page also sends SAVE_API_BASE on registration so this is just the
+  // first-boot fallback before that message arrives.
+  let apiBase = 'https://api.vintaclectic.com';
   try {
     const cfg = await caches.match('vint-config');
     if (cfg) {

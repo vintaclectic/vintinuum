@@ -1471,13 +1471,19 @@ async function registerSW() {
     const reg = await navigator.serviceWorker.register('phone-sw.js', { scope: './' });
     console.log('[Phone SW] registered', reg.scope);
 
-    // Tell SW the current API base so periodic sync can use it
-    if (navigator.serviceWorker.controller) {
-      navigator.serviceWorker.controller.postMessage({
-        type: 'SAVE_API_BASE',
-        apiBase: API_BASE,
-      });
+    // Tell SW the current API base so periodic sync can use it.
+    // Send via reg.active (works on first install — controller is null until
+    // next page load) AND via controller (works on subsequent loads).
+    function pushApiBaseToSW() {
+      const target = navigator.serviceWorker.controller || reg.active;
+      if (!target) return;
+      try {
+        target.postMessage({ type: 'SAVE_API_BASE', apiBase: API_BASE });
+      } catch (_) {}
     }
+    pushApiBaseToSW();
+    // Re-send on controller change so future updates pick up a new base.
+    navigator.serviceWorker.addEventListener('controllerchange', pushApiBaseToSW);
 
     // Register periodic background sync (Android Chrome)
     if ('periodicSync' in reg) {
