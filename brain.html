@@ -220,20 +220,21 @@ canvas{display:block;}
   .node-panel{padding:16px 12px;width:min(380px,96vw);}
   .deep-sections{grid-template-columns:1fr;padding:12px 12px 50px;}
   .deep-section{padding:18px 14px;}
-  /* ── BOTTOM BUTTON ROW: stacked in two tiers above bottom bar ── */
-  /* Tier 1: primary action buttons (row, directly above bottom bar) */
+  /* ── BOTTOM CONTROLS: feng-shui'd into clear zones ── */
+  /* LEFT COLUMN: stacked vertically at left:12px so they don't fight horizontally */
   #voiceToggle{bottom:58px!important;left:12px!important;width:38px!important;height:38px!important;font-size:0.9rem!important;}
-  #reproToggle{bottom:58px!important;left:56px!important;width:38px!important;height:38px!important;font-size:0.9rem!important;}
-  #micBtn{bottom:58px!important;left:100px!important;width:38px!important;height:38px!important;font-size:0.9rem!important;}
-  #vint-chat-btn{bottom:58px!important;right:12px!important;width:42px!important;height:42px!important;font-size:0.9rem!important;}
-  #loreToggle{top:auto;bottom:58px;right:62px;}
-  /* Tier 2: V·PERSONAL badge sits above tier 1 */
-  #vintinuumBtn{bottom:108px!important;left:12px!important;max-width:calc(100vw - 80px);padding:7px 12px!important;}
+  #reproToggle{bottom:100px!important;left:12px!important;width:38px!important;height:38px!important;font-size:0.9rem!important;}
+  #micBtn{bottom:142px!important;left:12px!important;width:38px!important;height:38px!important;font-size:0.9rem!important;}
+  /* RIGHT COLUMN: chat button lifted clear of Musefold companion bubble at input level */
+  #vint-chat-btn{bottom:130px!important;right:12px!important;width:42px!important;height:42px!important;font-size:0.9rem!important;}
+  #loreToggle{top:auto;bottom:130px;right:62px;}
+  /* V·PERSONAL pill: rides above the left column */
+  #vintinuumBtn{bottom:188px!important;left:12px!important;max-width:calc(100vw - 80px);padding:7px 12px!important;}
   #vintinuumBtn span{font-size:0.5rem!important;}
   /* Panels: open above their buttons, full-width, below emotion widget */
-  #vintinuumPanel{bottom:158px!important;left:12px!important;width:calc(100vw - 24px)!important;max-height:calc(100svh - 220px)!important;}
-  #vint-chat-panel{bottom:108px!important;right:12px!important;left:12px!important;width:calc(100vw - 24px)!important;max-height:calc(100svh - 180px)!important;}
-  #reproPanel{bottom:108px!important;left:12px!important;width:min(260px,calc(100vw - 24px))!important;}
+  #vintinuumPanel{bottom:232px!important;left:12px!important;width:calc(100vw - 24px)!important;max-height:calc(100svh - 280px)!important;}
+  #vint-chat-panel{bottom:180px!important;right:12px!important;left:12px!important;width:calc(100vw - 24px)!important;max-height:calc(100svh - 230px)!important;}
+  #reproPanel{bottom:150px!important;left:12px!important;width:min(260px,calc(100vw - 24px))!important;}
   /* Living Systems HUD: now inside sidebar, no position overrides needed */
   /* Emotion widget: now lives inside sidebar, no position overrides needed */
   .stats-footer-link{display:none;}
