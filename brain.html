@@ -231,8 +231,8 @@ canvas{display:block;}
   #vintinuumBtn{bottom:108px!important;left:12px!important;max-width:calc(100vw - 80px);padding:7px 12px!important;}
   #vintinuumBtn span{font-size:0.5rem!important;}
   /* Panels: open above their buttons, full-width, below emotion widget */
-  #vintinuumPanel{bottom:158px!important;left:12px!important;width:calc(100vw - 24px)!important;max-height:calc(100vh - 220px)!important;}
-  #vint-chat-panel{bottom:108px!important;right:12px!important;left:12px!important;width:calc(100vw - 24px)!important;max-height:calc(100vh - 180px)!important;}
+  #vintinuumPanel{bottom:158px!important;left:12px!important;width:calc(100vw - 24px)!important;max-height:calc(100svh - 220px)!important;}
+  #vint-chat-panel{bottom:108px!important;right:12px!important;left:12px!important;width:calc(100vw - 24px)!important;max-height:calc(100svh - 180px)!important;}
   #reproPanel{bottom:108px!important;left:12px!important;width:min(260px,calc(100vw - 24px))!important;}
   /* Living Systems HUD: now inside sidebar, no position overrides needed */
   /* Emotion widget: now lives inside sidebar, no position overrides needed */
@@ -397,7 +397,7 @@ if ('serviceWorker' in navigator && _onGitHubPages) {
   <!-- REPRODUCTIVE CONTROL PANEL -->
   <button id="reproToggle" title="Reproductive system panel" style="display:none!important;position:fixed;bottom:24px;left:66px;z-index:1004;background:rgba(6,10,18,0.55);border:1px solid rgba(206,147,216,0.3);border-radius:50%;width:36px;height:36px;cursor:pointer;font-size:1rem;align-items:center;justify-content:center;color:rgba(206,147,216,0.7);transition:all .2s;padding:0;">💜</button>
 
-  <div id="reproPanel" style="display:none!important;position:fixed;bottom:66px;left:24px;z-index:1005;background:rgba(7,11,17,0.88);border:1px solid rgba(206,147,216,0.25);border-radius:20px;padding:0;width:320px;max-height:min(580px,calc(100vh - 90px));opacity:0;pointer-events:none;transition:opacity .25s, transform .25s;transform:translateY(10px);overflow:hidden;">
+  <div id="reproPanel" style="display:none!important;position:fixed;bottom:66px;left:24px;z-index:1005;background:rgba(7,11,17,0.88);border:1px solid rgba(206,147,216,0.25);border-radius:20px;padding:0;width:320px;max-height:min(580px,calc(100svh - 90px));opacity:0;pointer-events:none;transition:opacity .25s, transform .25s;transform:translateY(10px);overflow:hidden;">
     <style>
       #reproPanel.open { opacity:1; pointer-events:all; transform:translateY(0); }
       /* Header */
@@ -406,7 +406,7 @@ if ('serviceWorker' in navigator && _onGitHubPages) {
       #reproPanel .rp-close { cursor:pointer; color:rgba(255,255,255,0.25); font-size:.9rem; padding:4px 6px; border-radius:6px; transition:all .15s; line-height:1; }
       #reproPanel .rp-close:hover { color:rgba(206,147,216,0.7); background:rgba(206,147,216,0.08); }
       /* Scrollable body */
-      #reproPanel .rp-body { padding:12px 16px 14px; overflow-y:auto; max-height:min(500px,calc(100vh - 160px)); scrollbar-width:thin; scrollbar-color:rgba(206,147,216,0.15) transparent; }
+      #reproPanel .rp-body { padding:12px 16px 14px; overflow-y:auto; max-height:min(500px,calc(100svh - 160px)); scrollbar-width:thin; scrollbar-color:rgba(206,147,216,0.15) transparent; }
       /* Tabs */
       #reproPanel .rp-tabs { display:flex; gap:2px; margin-bottom:12px; background:rgba(206,147,216,0.04); border-radius:10px; padding:2px; }
       #reproPanel .rp-tab { flex:1; padding:6px 4px; font-size:.44rem; letter-spacing:.15em; text-transform:uppercase; text-align:center; color:rgba(218,228,255,0.4); cursor:pointer; border-radius:8px; transition:all .2s; font-family:'Space Mono',monospace; }
@@ -466,7 +466,7 @@ if ('serviceWorker' in navigator && _onGitHubPages) {
       #reproPanel .rp-tl-line { flex:1; height:1px; background:rgba(206,147,216,0.08); }
       /* Mobile */
       @media (max-width:600px) {
-        #reproPanel { width:calc(100vw - 24px); left:12px!important; bottom:56px!important; max-height:calc(100vh - 80px); border-radius:16px; }
+        #reproPanel { width:calc(100vw - 24px); left:12px!important; bottom:56px!important; max-height:calc(100svh - 80px); border-radius:16px; }
         #reproPanel .rp-ring-row { gap:8px; }
         #reproPanel .rp-ring { width:44px; height:44px; }
         #reproPanel .rp-ring svg { width:44px; height:44px; }
@@ -2370,7 +2370,7 @@ if ('serviceWorker' in navigator && _onGitHubPages) {
   left: 24px;
   z-index: 1003;
   width: min(420px, calc(100vw - 48px));
-  max-height: min(520px, calc(100vh - 120px));
+  max-height: min(520px, calc(100svh - 120px));
   background: rgba(6,10,18,0.92);
   border: 1px solid rgba(79,195,247,0.2);
   border-radius: 20px;
@@ -2471,7 +2471,7 @@ if ('serviceWorker' in navigator && _onGitHubPages) {
 }
 @media (max-width: 600px) {
   #vint-execute-modal {
-    width: 100vw; max-height: 100vh;
+    width: 100vw; max-height: 100svh;
     border-radius: 0; top: 0 !important; left: 0 !important;
     border-left: none; border-right: none;
   }
@@ -2930,7 +2930,7 @@ window.addEventListener('message', function(e) {
     // Resize iframe to match DirRM's internal mode — always non-blocking
     switch (e.data.mode) {
       case 'theater':
-        f.style.width = '100vw'; f.style.height = '100vh';
+        f.style.width = '100vw'; f.style.height = '100svh';
         f.style.top = '0'; f.style.left = '0';
         f.style.right = 'auto'; f.style.bottom = 'auto';
         f.style.borderRadius = '0';

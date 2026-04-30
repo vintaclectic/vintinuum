@@ -12,7 +12,8 @@
   grid-template-areas:
     "left stage right"
     "footer footer footer";
-  min-height: 100vh;
+  min-height: 100vh; /* fallback for browsers without svh */
+  min-height: 100svh; /* svh accounts for dynamic browser chrome — fixes the F11-only bug */
   background: var(--bg-void, #05070c);
 }
 
@@ -221,6 +222,7 @@
   gap: 12px;
   padding: 14px 12px 20px;
   max-height: 100vh;
+  max-height: 100svh;
   color: rgba(230, 238, 255, 0.82);
   font: 11px/1.4 var(--font-ui, system-ui, sans-serif);
 }
