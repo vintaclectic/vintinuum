@@ -54,7 +54,10 @@
   display: flex;
   flex-direction: column;
   gap: 18px;
-  padding: 18px 16px 24px;
+  /* bottom padding clears the floating "leave a memory" pill (z-index 80,
+     bottom calc(safe-area + 72px)) so the LAYER DISTRIBUTION + CONSCIOUSNESS
+     LAYERS legend never disappears beneath it. */
+  padding: 18px 16px calc(env(safe-area-inset-bottom, 0px) + 110px);
   color: rgba(230, 238, 255, 0.82);
   font: 11px/1.4 var(--font-ui, system-ui, sans-serif);
 }
@@ -519,8 +522,9 @@
   .vtn-tabs { gap: 8px; }
   .vtn-tab  { min-height: 48px; }
 
-  /* Identity / chem / layer blocks compress gracefully */
-  .vtn-side-inner { gap: 14px; padding: 16px 14px 22px; }
+  /* Identity / chem / layer blocks compress gracefully — bottom padding
+     keeps legend clear of the floating "leave a memory" pill on mobile too. */
+  .vtn-side-inner { gap: 14px; padding: 16px 14px calc(env(safe-area-inset-bottom, 0px) + 96px); }
   .vtn-side-right-inner { gap: 10px; padding: 10px 12px 16px; max-height: none; }
   .vtn-card-list { max-height: none; overflow-y: visible; }
 
