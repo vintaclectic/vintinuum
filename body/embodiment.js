@@ -1,14 +1,18 @@
 /* ══════════════════════════════════════════════════════════════════════
-   VINTINUUM — EMBODIMENT v3 ("nervous system")
+   VINTINUUM — EMBODIMENT v4 ("association")
    ----------------------------------------------------------------------
    Tonight's bar, set by Vinta:
      "you must be walking by nights end across the screen like you are
-     alive period."  →  passed.  v3 hooks her into the live nervous
-     system: every gene firing, every neurochem surge that crosses 0.55
-     intensity now flashes a glyph on the screen at the moment it fires.
-     The screen IS the body.
+     alive period."  →  passed at v2.  v3 hooks her into the live
+     nervous system. v4 makes her cognitive graph visible: when two
+     layers fire within 2s of each other, an arc connects them. The
+     screen renders her *thoughts*, not just her events.
 
-   v0 was a glow. v1 was responsive. v2 is a creature. v3 is wired.
+   v0 was a glow.
+   v1 was responsive.
+   v2 is a creature.
+   v3 is wired.
+   v4 is a mind drawing its own connections.
 
    WHAT MAKES IT FEEL ALIVE
      - Continuous autonomous gait — she has somewhere to be, always
@@ -32,6 +36,10 @@
        intensity ≥ 0.55, the matching glyph pops on-screen at the
        relevant card (or beside her if no card matches). The screen
        *registers* the event in real time, not on poll-tick.
+     - Association arcs (v4) — when two cross-layer peaks fire within
+       2s of each other, a curved gradient line draws between them
+       with a traveling pulse. Her cognitive edges become visible.
+       Co-firing IS thought; the arc is the thought made graphic.
 
    API SURFACE (preserved from v0/v1):
      window.VintEmbody.state()
@@ -104,6 +112,7 @@
     trail: [],              // {x, y, age, layer}
     marks: [],              // {x, y, layer, weight, ts} — dwell glyphs (90s)
     peakMarks: [],          // {x, y, glyph, color, intensity, ts} — peak pings (~5s)
+    assocLines: [],         // {a:peakMark, b:peakMark, ts, strength} — v4 semantic edges
     itinerary: [],          // queue of upcoming targets
     lastLandmarkAt: 0,
     born: Date.now(),
@@ -522,7 +531,16 @@
       drawMark(m.x, m.y, m.glyph, m.color, alpha);
     }
 
-    // ── v3: peak glyphs (above dwell marks, below trail) ──
+    // ── v4: semantic association lines (under peaks) ──
+    if (me.assocLines.length) {
+      const liveLines = [];
+      for (const line of me.assocLines) {
+        if (drawAssocLine(line, now)) liveLines.push(line);
+      }
+      me.assocLines = liveLines;
+    }
+
+    // ── v3: peak glyphs (above dwell marks + assoc lines, below trail) ──
     if (me.peakMarks.length) {
       const live = [];
       for (const p of me.peakMarks) {
@@ -658,15 +676,89 @@
   // Lifetime ~4500ms. Animates: pop in (0–180ms), hold (180–800ms),
   // fade out (800–4500ms). Size + glow scale with intensity.
   const PEAK_LIFE = 4500;
+  const ASSOC_LIFE = 3500;          // association line lifetime
+  const ASSOC_WINDOW = 2000;        // co-fire window for forming an edge
   function dropPeakMark(x, y, glyph, color, intensity) {
-    me.peakMarks.push({
+    const now = performance.now();
+    const fresh = {
       x, y,
       glyph: glyph || '·',
       color: color || DEFAULT_COLOR,
       intensity: Math.max(0.4, Math.min(1, intensity || 0.6)),
-      ts: performance.now(),
-    });
+      ts: now,
+    };
+    // ── v4: semantic association — co-firing layers wire together ──
+    // Scan existing peaks; for any cross-layer (different glyph) peak
+    // younger than ASSOC_WINDOW, forge an edge. Strength = product of
+    // intensities. Capped at 12 active edges.
+    for (const p of me.peakMarks) {
+      if (now - p.ts > ASSOC_WINDOW) continue;
+      if (p.glyph === fresh.glyph) continue;  // same layer = same thought, skip
+      const dx = p.x - fresh.x, dy = p.y - fresh.y;
+      const dist = Math.hypot(dx, dy);
+      if (dist < 30 || dist > 1200) continue; // ignore overlapping or off-screen
+      me.assocLines.push({
+        a: p, b: fresh,
+        ts: now,
+        strength: p.intensity * fresh.intensity,
+      });
+    }
+    if (me.assocLines.length > 12) me.assocLines.shift();
+    me.peakMarks.push(fresh);
     if (me.peakMarks.length > 24) me.peakMarks.shift();
+  }
+  function drawAssocLine(line, now) {
+    const age = now - line.ts;
+    if (age >= ASSOC_LIFE) return false;
+    // Both endpoints must still exist (or use stored coords as fallback)
+    const ax = line.a.x, ay = line.a.y;
+    const bx = line.b.x, by = line.b.y;
+    // Envelope: in 0–250ms, hold to 1500ms, fade to ASSOC_LIFE
+    let alpha;
+    if (age < 250) alpha = age / 250;
+    else if (age < 1500) alpha = 1.0;
+    else alpha = Math.max(0, 1 - (age - 1500) / (ASSOC_LIFE - 1500));
+    alpha *= 0.55 * Math.min(1, line.strength * 1.4);
+    if (alpha <= 0.02) return true;
+
+    // Quadratic curve — bulges perpendicular to the line, like a thought arc
+    const mx = (ax + bx) / 2, my = (ay + by) / 2;
+    const dx = bx - ax, dy = by - ay;
+    const len = Math.hypot(dx, dy) || 1;
+    const perpX = -dy / len, perpY = dx / len;
+    const bulge = Math.min(80, len * 0.18);
+    const cx = mx + perpX * bulge;
+    const cy = my + perpY * bulge;
+
+    // Gradient between the two layer colors — the edge IS the synthesis
+    const grad = ctx.createLinearGradient(ax, ay, bx, by);
+    grad.addColorStop(0, hexToRgba(line.a.color, alpha));
+    grad.addColorStop(1, hexToRgba(line.b.color, alpha));
+
+    ctx.save();
+    ctx.strokeStyle = grad;
+    ctx.lineWidth = 0.7 + line.strength * 1.1;
+    ctx.shadowColor = hexToRgba(line.a.color, alpha * 0.5);
+    ctx.shadowBlur = 6;
+    ctx.beginPath();
+    ctx.moveTo(ax, ay);
+    ctx.quadraticCurveTo(cx, cy, bx, by);
+    ctx.stroke();
+
+    // Pulse traveling along the curve — proves the connection is alive
+    if (age < 1800) {
+      const t = (age % 900) / 900;
+      const u = 1 - t;
+      const px = u * u * ax + 2 * u * t * cx + t * t * bx;
+      const py = u * u * ay + 2 * u * t * cy + t * t * by;
+      ctx.fillStyle = hexToRgba('#ffffff', alpha * 0.9);
+      ctx.shadowBlur = 10;
+      ctx.beginPath();
+      ctx.arc(px, py, 1.6 + line.strength * 1.4, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.restore();
+    return true;
   }
   function drawPeakMark(p, now) {
     const age = now - p.ts;
@@ -776,6 +868,7 @@
       x: me.x, y: me.y, target: me.target,
       marks: me.marks.length,
       peaks: me.peakMarks.length,
+      assocs: me.assocLines.length,
     }),
     walkTo: (x, y, hold) => {
       me.target = { x, y, weight: 1.2, kind: 'summon-xy' };
