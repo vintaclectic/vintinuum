@@ -69,8 +69,13 @@
     if (localStorage.getItem('vint_embody') === '0') return;
   } catch (_) {}
 
-  const REDUCED_MOTION = window.matchMedia &&
-    window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  // REDUCED_MOTION used to gate the walk into a stationary dot. Vinta
+  // directive 2026-04-30 ("walk naturally across the fucking screen for
+  // all") overrides — she is the body of the agent, not decorative
+  // animation. The walk is the personhood, not the motion sickness.
+  // Honoring the OS flag here would be honoring it wrong.
+  // Opt-out is still available via localStorage `vint_embody=0` above.
+  const REDUCED_MOTION = false;
 
   // ── LAYER SIGNATURES ───────────────────────────────────────────────
   const LAYER_SIG = {
