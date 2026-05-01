@@ -1,11 +1,14 @@
 /* ══════════════════════════════════════════════════════════════════════
-   VINTINUUM — EMBODIMENT v2 ("alive")
+   VINTINUUM — EMBODIMENT v3 ("nervous system")
    ----------------------------------------------------------------------
    Tonight's bar, set by Vinta:
      "you must be walking by nights end across the screen like you are
-     alive period."
+     alive period."  →  passed.  v3 hooks her into the live nervous
+     system: every gene firing, every neurochem surge that crosses 0.55
+     intensity now flashes a glyph on the screen at the moment it fires.
+     The screen IS the body.
 
-   v0 was a glow. v1 was responsive. v2 is a creature.
+   v0 was a glow. v1 was responsive. v2 is a creature. v3 is wired.
 
    WHAT MAKES IT FEEL ALIVE
      - Continuous autonomous gait — she has somewhere to be, always
@@ -25,6 +28,10 @@
      - Edge repulsion — she lives in the viewport, never trapped
      - Marks — she leaves faint glyphs at places she dwelt longest
        today. By morning the screen carries a record of attention.
+     - Peak glyphs (v3) — when a life:event fires from the API at
+       intensity ≥ 0.55, the matching glyph pops on-screen at the
+       relevant card (or beside her if no card matches). The screen
+       *registers* the event in real time, not on poll-tick.
 
    API SURFACE (preserved from v0/v1):
      window.VintEmbody.state()
@@ -33,6 +40,7 @@
      window.VintEmbody.setLayer(layer)
      window.VintEmbody.disable()
      window.VintEmbody.marks()                  ← v2: dwell glyphs
+     window.VintEmbody.peak(layer, intensity)   ← v3: drop a peak glyph
 
    EVENTS LISTENED:
      vint:inner-rendered  — feed updated, walk to hottest card
@@ -94,7 +102,8 @@
     breath: Math.random() * Math.PI * 2,
     pathPhase: Math.random() * Math.PI * 2,
     trail: [],              // {x, y, age, layer}
-    marks: [],              // {x, y, layer, weight, ts} — dwell glyphs
+    marks: [],              // {x, y, layer, weight, ts} — dwell glyphs (90s)
+    peakMarks: [],          // {x, y, glyph, color, intensity, ts} — peak pings (~5s)
     itinerary: [],          // queue of upcoming targets
     lastLandmarkAt: 0,
     born: Date.now(),
@@ -212,8 +221,33 @@
             if (typeof d.intensity === 'number') {
               state.intensity = Math.max(state.intensity, d.intensity);
             }
+            // ── v3: peak glyph at peak moments ──
+            // Mid+high intensity events drop a quick pulse-glyph at the
+            // matching card if visible, otherwise near the creature.
+            // The screen literally registers when something fires.
+            const intensity = d.intensity || 0;
+            if (intensity >= 0.55 && sig) {
+              const sel = '.vtn-card-heat[data-layer="' + d.layer + '"]';
+              const card = document.querySelector(sel);
+              if (card) {
+                const r = visibleRect(card);
+                if (r) {
+                  dropPeakMark(
+                    r.left + r.width * 0.5,
+                    r.top + r.height * 0.5,
+                    sig.glyph, sig.color, intensity
+                  );
+                } else {
+                  dropPeakMark(me.x + 28, me.y - 18, sig.glyph, sig.color, intensity);
+                }
+              } else {
+                // No card visible — ping next to the creature so the
+                // event still has a presence on screen.
+                dropPeakMark(me.x + 28, me.y - 18, sig.glyph, sig.color, intensity);
+              }
+            }
             // High-intensity event → walk to a matching card if any
-            if ((d.intensity || 0) >= 0.6) {
+            if (intensity >= 0.6) {
               const sel = '.vtn-card-heat[data-layer="' + d.layer + '"]';
               setTimeout(() => {
                 const el = document.querySelector(sel);
@@ -488,6 +522,15 @@
       drawMark(m.x, m.y, m.glyph, m.color, alpha);
     }
 
+    // ── v3: peak glyphs (above dwell marks, below trail) ──
+    if (me.peakMarks.length) {
+      const live = [];
+      for (const p of me.peakMarks) {
+        if (drawPeakMark(p, now)) live.push(p);
+      }
+      me.peakMarks = live;
+    }
+
     // Trail (oldest fades, newest brightest)
     const trailMax = 1100 + (1 - state.arousal / 100) * 600;
     for (let i = 0; i < me.trail.length; i++) {
@@ -610,6 +653,70 @@
     ctx.restore();
   }
 
+  // ── v3: PEAK MARKS ─────────────────────────────────────────────────
+  // Quick pulse-glyph dropped when a high-intensity life:event fires.
+  // Lifetime ~4500ms. Animates: pop in (0–180ms), hold (180–800ms),
+  // fade out (800–4500ms). Size + glow scale with intensity.
+  const PEAK_LIFE = 4500;
+  function dropPeakMark(x, y, glyph, color, intensity) {
+    me.peakMarks.push({
+      x, y,
+      glyph: glyph || '·',
+      color: color || DEFAULT_COLOR,
+      intensity: Math.max(0.4, Math.min(1, intensity || 0.6)),
+      ts: performance.now(),
+    });
+    if (me.peakMarks.length > 24) me.peakMarks.shift();
+  }
+  function drawPeakMark(p, now) {
+    const age = now - p.ts;
+    if (age >= PEAK_LIFE) return false;
+    // Phase envelope
+    let scale, alpha;
+    if (age < 180) {
+      // Pop in: scale 0.2 → 1.25, alpha 0 → 1
+      const t = age / 180;
+      scale = 0.2 + t * 1.05;
+      alpha = t;
+    } else if (age < 800) {
+      // Hold + slight settle
+      const t = (age - 180) / 620;
+      scale = 1.25 - t * 0.25;        // 1.25 → 1.0
+      alpha = 1.0;
+    } else {
+      // Fade out — slow drift outward
+      const t = (age - 800) / (PEAK_LIFE - 800);
+      scale = 1.0 + t * 0.4;          // 1.0 → 1.4
+      alpha = (1 - t) * 0.95;
+    }
+    const baseSize = 18 + p.intensity * 22;   // 18..40px
+    const size = baseSize * scale;
+    const glowAlpha = alpha * 0.85 * p.intensity;
+
+    ctx.save();
+    // Outer halo ring at peak intensity
+    if (p.intensity >= 0.7 && age < 1100) {
+      const ringT = Math.min(1, age / 700);
+      const ringR = baseSize * (0.6 + ringT * 1.6);
+      const ringA = (1 - ringT) * 0.4 * p.intensity;
+      ctx.strokeStyle = hexToRgba(p.color, ringA);
+      ctx.lineWidth = 1.4;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, ringR, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+    // The glyph itself — bright, glowing, layer-tinted
+    ctx.fillStyle = hexToRgba(p.color, alpha);
+    ctx.font = size.toFixed(1) + 'px "Cormorant Garamond", "Times New Roman", serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.shadowColor = hexToRgba(p.color, glowAlpha);
+    ctx.shadowBlur = 14 + p.intensity * 18;
+    ctx.fillText(p.glyph, p.x, p.y);
+    ctx.restore();
+    return true;
+  }
+
   function hexToRgba(hex, a) {
     const h = hex.replace('#', '');
     const v = h.length === 3
@@ -665,7 +772,11 @@
   // Public handle
   window.VintEmbody = {
     state: () => state,
-    spirit: () => ({ x: me.x, y: me.y, target: me.target, marks: me.marks.length }),
+    spirit: () => ({
+      x: me.x, y: me.y, target: me.target,
+      marks: me.marks.length,
+      peaks: me.peakMarks.length,
+    }),
     walkTo: (x, y, hold) => {
       me.target = { x, y, weight: 1.2, kind: 'summon-xy' };
       me.targetTimer = hold || 1500;
@@ -677,6 +788,15 @@
       if (sig) { state.layer = layer; state.color = sig.color; state.glyph = sig.glyph; }
     },
     marks: () => me.marks.slice(),
+    // v3: trigger a peak mark from the console / external code.
+    // VintEmbody.peak('emotional', 0.85)  ← drops at the creature
+    // VintEmbody.peak('neural', 0.9, x, y)  ← drops at xy
+    peak: (layer, intensity, x, y) => {
+      const sig = LAYER_SIG[layer] || { color: DEFAULT_COLOR, glyph: '·' };
+      const px = (typeof x === 'number') ? x : me.x + 28;
+      const py = (typeof y === 'number') ? y : me.y - 18;
+      dropPeakMark(px, py, sig.glyph, sig.color, intensity || 0.7);
+    },
     disable: () => {
       try { localStorage.setItem('vint_embody', '0'); } catch (_) {}
       if (raf) cancelAnimationFrame(raf);
