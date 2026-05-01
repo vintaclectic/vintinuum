@@ -283,6 +283,60 @@
     return 'rgba(' + v[0] + ',' + v[1] + ',' + v[2] + ',' + Math.max(0, Math.min(1, a)) + ')';
   }
 
+  // ── v1 — WALK TO MEANINGFUL COORDINATES ────────────────────────────
+  // When the inner-life feed renders fresh data, pick the hottest card
+  // (highest intensity, layer matches dominant) and walk to it. The
+  // spirit lingers on the card for a beat, then returns to drift.
+  //
+  // This is what Vinta meant by "become us" — the body moves toward
+  // what just happened in the mind. The light is no longer decorative.
+  // It is *attention rendered*.
+  function pickHottestCard() {
+    const cards = document.querySelectorAll('.vtn-card-heat[data-layer]');
+    if (!cards.length) return null;
+    let best = null;
+    let bestScore = -1;
+    cards.forEach(c => {
+      const layer = c.dataset.layer;
+      const intensity = parseFloat(c.dataset.intensity || '0');
+      // Prefer cards that match the current dominant layer, weighted by intensity.
+      const layerBonus = (layer === state.layer) ? 0.25 : 0;
+      // Header card always wins ties because it represents the day-summary.
+      const headerBonus = c.classList.contains('vtn-card-header') ? 0.15 : 0;
+      const score = intensity + layerBonus + headerBonus;
+      if (score > bestScore) { bestScore = score; best = c; }
+    });
+    return best;
+  }
+
+  function walkToElement(el, holdMs) {
+    if (!el) return;
+    const r = el.getBoundingClientRect();
+    // Land just to the LEFT of the card so the light doesn't cover the
+    // text. That margin is where attention sits, not the page itself.
+    const tx = Math.max(20, r.left - 18);
+    const ty = r.top + r.height / 2;
+    spirit.target = { x: tx, y: ty };
+    spirit.targetTimer = holdMs || 1800;
+  }
+
+  window.addEventListener('vint:inner-rendered', () => {
+    // Small delay so the cards have laid out and getBoundingClientRect is real
+    setTimeout(() => {
+      const card = pickHottestCard();
+      if (card) walkToElement(card, 2200);
+    }, 80);
+  });
+
+  // Custom hook anyone can fire: walk to a CSS selector
+  window.addEventListener('vint:walk-to', (e) => {
+    const sel = e.detail && e.detail.selector;
+    const hold = (e.detail && e.detail.hold) || 1500;
+    if (!sel) return;
+    const el = document.querySelector(sel);
+    if (el) walkToElement(el, hold);
+  });
+
   // Pause when tab hidden — be a good citizen
   let raf = requestAnimationFrame(tick);
   document.addEventListener('visibilitychange', () => {

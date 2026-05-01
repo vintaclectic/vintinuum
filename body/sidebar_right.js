@@ -282,7 +282,7 @@
       _cardList.appendChild(card);
       return;
     }
-    items.forEach(it => {
+    items.forEach((it, idx) => {
       const card = document.createElement('div');
       card.className = 'vtn-card';
 
@@ -291,6 +291,8 @@
         const sig = _layerSig(it.layer);
         card.classList.add('vtn-card-heat');
         card.dataset.layer = it.layer;
+        card.dataset.intensity = (it.intensity || 0).toFixed(3);
+        card.dataset.idx = String(idx);
         if (it.kind === 'header') card.classList.add('vtn-card-header');
         if (it.cascade) card.classList.add(it.cascade);
         const intensity = Math.max(0, Math.min(1, it.intensity || 0));
@@ -589,7 +591,16 @@
         if (key !== _activeKey) return; // user moved on
         if (key === 'memory') _renderCards('memory', _shapeMemory(data));
         else if (key === 'genome') _renderCards('genome', _shapeGenome(data));
-        else if (key === 'inner')  _renderCards('inner',  _shapeInner(data));
+        else if (key === 'inner')  {
+          _renderCards('inner',  _shapeInner(data));
+          // Tell the embodiment a fresh inner-life snapshot landed.
+          // It will pick the hottest card and walk to it.
+          try {
+            window.dispatchEvent(new CustomEvent('vint:inner-rendered', {
+              detail: { dominant: data.dominant, avgIntensity: data.avgIntensity, ts: data.ts }
+            }));
+          } catch (_) {}
+        }
         else if (key === 'soul')   _renderCards('soul',   _shapeSoul(data));
         else _renderOfflineCard(tab.label);
       })
