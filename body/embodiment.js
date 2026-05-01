@@ -451,34 +451,73 @@
   // ── DRAW PRIMITIVES ────────────────────────────────────────────────
   function drawBeing(x, y, _vx, breath) {
     const intensity = state.intensity;
-    const baseR = 5.5 + intensity * 4.5;
-    const breathScale = 0.9 + 0.18 * breath;
-
-    // Outer aura — wide soft glow
-    drawHalo(x, y, baseR * 3.4 * breathScale, state.color,
-             (0.18 + intensity * 0.18) * (0.8 + 0.2 * breath));
-    // Mid glow
-    drawHalo(x, y, baseR * 1.8 * breathScale, state.color,
-             (0.42 + intensity * 0.32) * (0.85 + 0.15 * breath));
-    // Bright core
-    ctx.beginPath();
-    ctx.arc(x, y, baseR * 0.55 * breathScale, 0, Math.PI * 2);
-    ctx.fillStyle = hexToRgba('#ffffff', 0.85 * (0.7 + 0.3 * breath));
-    ctx.fill();
-    // Core color tint
-    ctx.beginPath();
-    ctx.arc(x, y, baseR * 0.95 * breathScale, 0, Math.PI * 2);
-    ctx.fillStyle = hexToRgba(state.color, 0.55);
-    ctx.fill();
-
-    // Directional wake — small leading edge in direction of motion
+    const baseR = 6 + intensity * 5;
+    const breathScale = 0.88 + 0.20 * breath;
     const speed = Math.hypot(me.vx, me.vy);
-    if (speed > 0.03) {
+
+    // Floor shadow — anchors her to the page so the eye reads "being
+    // in space" not "ambient light." Drawn FIRST so it sits below.
+    // Skip mix-blend-mode for this layer by using a dark fill that
+    // works under screen blend (it darkens the underlying glow slightly
+    // at the contact point, giving a sense of weight).
+    ctx.save();
+    ctx.globalCompositeOperation = 'multiply';
+    const shadowR = baseR * 1.6;
+    const sgrad = ctx.createRadialGradient(x, y + baseR * 0.4, 0, x, y + baseR * 0.4, shadowR);
+    sgrad.addColorStop(0, 'rgba(0,0,0,0.35)');
+    sgrad.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = sgrad;
+    ctx.beginPath();
+    ctx.ellipse(x, y + baseR * 0.4, shadowR, shadowR * 0.45, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+
+    // Outer aura — wide soft glow (signature visible from across the screen)
+    drawHalo(x, y, baseR * 3.8 * breathScale, state.color,
+             (0.22 + intensity * 0.22) * (0.8 + 0.2 * breath));
+    // Mid glow
+    drawHalo(x, y, baseR * 2.0 * breathScale, state.color,
+             (0.48 + intensity * 0.34) * (0.85 + 0.15 * breath));
+
+    // Color-tint disk — gives her a definite body edge
+    ctx.beginPath();
+    ctx.arc(x, y, baseR * 1.05 * breathScale, 0, Math.PI * 2);
+    ctx.fillStyle = hexToRgba(state.color, 0.62);
+    ctx.fill();
+
+    // Bright white core — the "soul-point" the eye locks onto
+    ctx.beginPath();
+    ctx.arc(x, y, baseR * 0.6 * breathScale, 0, Math.PI * 2);
+    ctx.fillStyle = hexToRgba('#ffffff', 0.92 * (0.7 + 0.3 * breath));
+    ctx.fill();
+
+    // Soft inner ring — gives the body a defined edge against busy bg
+    ctx.beginPath();
+    ctx.arc(x, y, baseR * 1.05 * breathScale, 0, Math.PI * 2);
+    ctx.strokeStyle = hexToRgba(state.color, 0.5);
+    ctx.lineWidth = 1.2;
+    ctx.stroke();
+
+    // Directional wake — bright leading streak when moving
+    if (speed > 0.05) {
       const dirX = me.vx / speed;
       const dirY = me.vy / speed;
-      const wakeX = x + dirX * baseR * 1.2;
-      const wakeY = y + dirY * baseR * 1.2;
-      drawHalo(wakeX, wakeY, baseR * 1.1, state.color, 0.32 * Math.min(1, speed * 4));
+      const reach = Math.min(36, speed * 14);
+      // Streak: gradient line from current position forward
+      const wakeX = x + dirX * reach;
+      const wakeY = y + dirY * reach;
+      const lgrad = ctx.createLinearGradient(x, y, wakeX, wakeY);
+      lgrad.addColorStop(0, hexToRgba(state.color, 0.55 * Math.min(1, speed * 4)));
+      lgrad.addColorStop(1, hexToRgba(state.color, 0));
+      ctx.strokeStyle = lgrad;
+      ctx.lineWidth = baseR * 0.9;
+      ctx.lineCap = 'round';
+      ctx.beginPath();
+      ctx.moveTo(x, y);
+      ctx.lineTo(wakeX, wakeY);
+      ctx.stroke();
+      // Soft halo at wake tip
+      drawHalo(wakeX, wakeY, baseR * 1.0, state.color, 0.30 * Math.min(1, speed * 4));
     }
   }
 
