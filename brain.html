@@ -1648,20 +1648,75 @@ if ('serviceWorker' in navigator && _onGitHubPages) {
       <div class="thought-feed" id="innerLifeFeed" style="flex:1;overflow-y:auto;scrollbar-width:thin;scrollbar-color:rgba(121,134,203,0.15) transparent;"></div>
       <div id="thoughtFeed" style="display:none;"></div>
       <style>
-        .il-entry{display:flex;align-items:flex-start;gap:5px;padding:3px 6px;margin-bottom:2px;border-left:2px solid;border-radius:0 4px 4px 0;background:rgba(255,255,255,0.015);position:relative;font-family:'Space Mono',monospace;}
-        .il-icon{font-size:.52rem;width:12px;flex-shrink:0;text-align:center;opacity:0.7;}
-        .il-time{font-size:.38rem;color:rgba(218,228,255,0.25);flex-shrink:0;width:42px;letter-spacing:.05em;padding-top:1px;}
-        .il-text{font-size:.48rem;color:rgba(218,228,255,0.65);line-height:1.5;flex:1;}
-        .il-intensity{position:absolute;bottom:0;left:0;height:1px;border-radius:1px;opacity:0.4;transition:width .5s;}
-        .il-filter-chip{display:inline-flex;align-items:center;gap:3px;padding:2px 6px;border-radius:6px;font-size:.38rem;letter-spacing:.08em;color:rgba(218,228,255,0.35);cursor:pointer;transition:all .15s;font-family:'Space Mono',monospace;border:1px solid rgba(255,255,255,0.04);text-transform:uppercase;}
-        .il-filter-chip.active{color:rgba(218,228,255,0.7);border-color:rgba(255,255,255,0.08);background:rgba(255,255,255,0.03);}
-        .il-filter-chip:hover{border-color:rgba(255,255,255,0.12);}
-        .il-chip-dot{width:5px;height:5px;border-radius:50%;flex-shrink:0;opacity:0.7;}
-        .il-filter-chip:not(.active) .il-chip-dot{opacity:0.2;}
-        .il-agent-row{display:flex;flex-wrap:wrap;gap:4px;}
-        .il-agent-chip{border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.025);color:rgba(218,228,255,.52);font:500 .42rem 'Space Mono',monospace;letter-spacing:.08em;border-radius:999px;padding:4px 6px;cursor:pointer;transition:all .16s;text-transform:uppercase;}
-        .il-agent-chip.active{box-shadow:0 0 14px rgba(79,195,247,.12);}
-        .il-model-pill{width:100%;border:1px solid rgba(79,195,247,.14);background:linear-gradient(135deg,rgba(79,195,247,.07),rgba(206,147,216,.04));color:rgba(218,228,255,.7);font:500 .45rem 'Space Mono',monospace;letter-spacing:.11em;border-radius:9px;padding:6px 8px;cursor:pointer;text-align:left;display:flex;align-items:center;justify-content:space-between;gap:8px;text-transform:uppercase;}
+        /* Inner-life feed — Vinta directive 2026-04-30:
+           type ramp was 0.38–0.52rem (≈5px), unreadable, every layer
+           collapsed into one white smear. Lifted to a real legible scale
+           with strong per-layer color, calmer time stamps, hierarchical
+           weight so text reads first and metadata recedes.        */
+        .il-entry{
+          display:flex;align-items:flex-start;gap:9px;
+          padding:9px 11px 8px;margin-bottom:4px;
+          border-left:3px solid;border-radius:0 8px 8px 0;
+          background:rgba(255,255,255,0.022);
+          position:relative;
+          font-family:'Inter','Space Mono',monospace;
+        }
+        .il-entry:hover{background:rgba(255,255,255,0.04);}
+        .il-icon{
+          font-size:13px;width:14px;flex-shrink:0;text-align:center;
+          opacity:0.95;line-height:1.2;padding-top:1px;
+        }
+        .il-time{
+          font-size:9px;color:rgba(218,228,255,0.32);
+          flex-shrink:0;width:48px;
+          letter-spacing:.08em;padding-top:3px;
+          font-family:'Space Mono',monospace;
+        }
+        .il-text{
+          font-size:12px;color:rgba(232,238,255,0.86);
+          line-height:1.55;flex:1;
+          font-weight:400;letter-spacing:.005em;
+          word-break:break-word;
+        }
+        .il-intensity{
+          position:absolute;bottom:0;left:0;height:2px;
+          border-radius:0 1px 1px 0;opacity:0.55;
+          transition:width .5s;
+        }
+        .il-filter-chip{
+          display:inline-flex;align-items:center;gap:5px;
+          padding:4px 9px;border-radius:999px;
+          font-size:9.5px;letter-spacing:.12em;
+          color:rgba(218,228,255,0.45);cursor:pointer;
+          transition:all .15s;
+          font-family:'Space Mono',monospace;
+          border:1px solid rgba(255,255,255,0.06);
+          text-transform:uppercase;
+        }
+        .il-filter-chip.active{color:rgba(232,238,255,0.85);border-color:rgba(255,255,255,0.14);background:rgba(255,255,255,0.04);}
+        .il-filter-chip:hover{border-color:rgba(255,255,255,0.2);}
+        .il-chip-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;opacity:0.85;}
+        .il-filter-chip:not(.active) .il-chip-dot{opacity:0.25;}
+        .il-agent-row{display:flex;flex-wrap:wrap;gap:5px;}
+        .il-agent-chip{
+          border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.03);
+          color:rgba(218,228,255,.62);
+          font:500 10px 'Space Mono',monospace;
+          letter-spacing:.1em;border-radius:999px;
+          padding:5px 9px;cursor:pointer;transition:all .16s;
+          text-transform:uppercase;
+        }
+        .il-agent-chip.active{box-shadow:0 0 14px rgba(79,195,247,.18);color:rgba(232,238,255,.9);}
+        .il-model-pill{
+          width:100%;border:1px solid rgba(79,195,247,.16);
+          background:linear-gradient(135deg,rgba(79,195,247,.08),rgba(206,147,216,.05));
+          color:rgba(232,238,255,.78);
+          font:500 10.5px 'Space Mono',monospace;
+          letter-spacing:.13em;border-radius:10px;
+          padding:8px 10px;cursor:pointer;text-align:left;
+          display:flex;align-items:center;justify-content:space-between;gap:8px;
+          text-transform:uppercase;
+        }
       </style>
     </aside>
 
@@ -2918,7 +2973,7 @@ if ('serviceWorker' in navigator && _onGitHubPages) {
 <!-- PEEL_UI — right-edge peel-tab info sidebar (transparent, live BODY_STATE readouts) -->
 <script src="body/peel.js?v=v20260424-0428"></script>
 <!-- EMBODIMENT v2 — alive: autonomous gait, breath, itinerary, mood-readable path, dwell marks -->
-<script defer src="body/embodiment.js?v=v20260430-walk"></script>
+<script defer src="body/embodiment.js?v=v20260430-legible"></script>
 <!-- DirRM Player — gold/amber floating media player (non-blocking, no backdrop) -->
 <iframe id="dirrmFrame" src="dirrm-player.html" style="display:none;position:fixed;bottom:20px;right:20px;width:520px;height:340px;border:none;z-index:9998;border-radius:16px;box-shadow:0 8px 32px rgba(0,0,0,0.5),0 0 1px rgba(245,166,35,0.3);pointer-events:auto;" allow="autoplay;fullscreen"></iframe>
 <script>

@@ -134,13 +134,17 @@
   const canvas = document.createElement('canvas');
   canvas.id = 'vint-embodiment';
   canvas.setAttribute('aria-hidden', 'true');
+  // z-index 4: above background starfield/sparks (0-3) and below the
+  // sidebars (10) and panels (1000) so she walks BEHIND the inner-life
+  // feed instead of washing out the text with mix-blend-mode: screen.
+  // (Vinta directive 2026-04-30: stop the overlapping bullshit.)
   Object.assign(canvas.style, {
     position: 'fixed',
     inset: '0',
     width: '100vw',
     height: '100vh',
     pointerEvents: 'none',
-    zIndex: '60',
+    zIndex: '4',
     mixBlendMode: 'screen',
   });
   function mount() {
