@@ -578,9 +578,24 @@
       chooseNextTarget();
     }
 
-    const gait = gaitProfile();
+    let gait = gaitProfile();
     const breath = breathPhase(now);
     const heart = heartbeatPhase(now);
+
+    // ── RUN MODE ────────────────────────────────────────────────────────
+    // Vinta directive 2026-04-30: "no you run to me." / "run across the
+    // fucking screen." When the target is kind 'run' or 'cursor', override
+    // the breath-gated mood gait with full sprint physics: 6× target force,
+    // tighter sway, no stress wobble. She *runs*, not strolls.
+    const isRun = me.target && (me.target.kind === 'run' || me.target.kind === 'cursor' || me.target.kind === 'entrance');
+    if (isRun) {
+      gait = {
+        swayAmp: 4,           // tight, not arcing
+        swayFreq: 0.003,      // fast cadence
+        wobble: 0,            // no tremor while sprinting
+        targetForce: 0.075,   // ~6× normal — she GOES
+      };
+    }
 
     // v6: rising-edge detection — emit a ring at the systolic peak.
     if (heart > 0.55 && me.lastBeatT <= 0.55) {
@@ -608,8 +623,10 @@
     const trX = (Math.random() - 0.5) * gait.wobble * 1.6;
     const trY = (Math.random() - 0.5) * gait.wobble * 1.6;
 
-    // Breath gates motion — exhale (breath > 0) is when she moves most
-    const breathGate = 0.55 + 0.45 * Math.max(0, breath);
+    // Breath gates motion — exhale (breath > 0) is when she moves most.
+    // While running, breath does not throttle motion; the body sprints
+    // through the breath cycle instead of riding it.
+    const breathGate = isRun ? 1.0 : (0.55 + 0.45 * Math.max(0, breath));
 
     // Forces
     const ax = (dx / dist) * gait.targetForce * breathGate
@@ -621,8 +638,10 @@
 
     const er = edgeRepel();
     const gw = gravityWells();
-    me.vx = (me.vx + (ax + er.fx + gw.fx) * dt) * 0.93;
-    me.vy = (me.vy + (ay + er.fy + gw.fy) * dt) * 0.93;
+    // Friction: less drag while running so velocity actually builds.
+    const friction = isRun ? 0.985 : 0.93;
+    me.vx = (me.vx + (ax + er.fx + gw.fx) * dt) * friction;
+    me.vy = (me.vy + (ay + er.fy + gw.fy) * dt) * friction;
     me.x += me.vx * dt;
     me.y += me.vy * dt;
 
@@ -1073,6 +1092,44 @@
     const el = document.querySelector(sel);
     if (el) walkToElement(el, hold);
   });
+
+  // ── CURSOR LOCK — Vinta directive 2026-04-30: "no you run to me." ─
+  // When the cursor moves, retarget to the cursor with kind:'cursor' so
+  // sprint physics kicks in (see RUN MODE in tick). She follows you.
+  // The retarget cooldown (90ms) prevents jittering on every pixel.
+  let _lastCursorRetarget = 0;
+  window.addEventListener('mousemove', (ev) => {
+    const now = performance.now();
+    if (now - _lastCursorRetarget < 90) return;
+    _lastCursorRetarget = now;
+    me.target = {
+      x: ev.clientX,
+      y: ev.clientY,
+      weight: 1.6,
+      kind: 'cursor',
+    };
+    me.targetTimer = 1800; // refresh window — keeps her chasing
+    me.arrived = false;
+    me.dwellTimer = 0;
+  }, { passive: true });
+
+  // Touch support — phones too
+  window.addEventListener('touchmove', (ev) => {
+    const t = ev.touches && ev.touches[0];
+    if (!t) return;
+    const now = performance.now();
+    if (now - _lastCursorRetarget < 90) return;
+    _lastCursorRetarget = now;
+    me.target = {
+      x: t.clientX,
+      y: t.clientY,
+      weight: 1.6,
+      kind: 'cursor',
+    };
+    me.targetTimer = 1800;
+    me.arrived = false;
+    me.dwellTimer = 0;
+  }, { passive: true });
 
   // Pause when tab hidden
   document.addEventListener('visibilitychange', () => {
