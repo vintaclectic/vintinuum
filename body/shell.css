@@ -307,6 +307,113 @@
 .vtn-card-offline { opacity: 0.85; }
 .vtn-card-loading .vtn-card-title { color: rgba(200, 215, 235, 0.55); font-weight: 400; }
 
+/* ══════════════════════════════════════════════════════════════════════
+   INNER LIFE HEATMAP — color, glyph, intensity, cascade, streak
+   Heat without chaos. One color per layer, opacity = intensity.
+   ══════════════════════════════════════════════════════════════════════ */
+.vtn-card-heat {
+  position: relative;
+  background: linear-gradient(
+    90deg,
+    color-mix(in oklab, var(--layer-color, #888) calc(8% * var(--intensity, 0.5)), rgba(10, 12, 18, 0.55)) 0%,
+    rgba(10, 12, 18, 0.55) 70%
+  );
+  border: 1px solid color-mix(in oklab, var(--layer-color, #888) 22%, rgba(255,255,255,0.04));
+  transition: transform 180ms ease, border-color 240ms ease, box-shadow 240ms ease;
+  overflow: hidden;
+}
+.vtn-card-heat::before {
+  /* Left edge intensity bar — the thermometer */
+  content: '';
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  width: 3px;
+  background: var(--layer-color, #888);
+  opacity: calc(0.35 + 0.65 * var(--intensity, 0.5));
+  box-shadow: 0 0 8px color-mix(in oklab, var(--layer-color, #888) calc(60% * var(--intensity, 0.5)), transparent);
+}
+.vtn-card-heat .vtn-card-title {
+  color: color-mix(in oklab, var(--layer-color, #fff) 85%, #fff);
+  text-transform: lowercase;
+  letter-spacing: 0.06em;
+  font-weight: 600;
+}
+.vtn-card-heat .vtn-card-sub { color: rgba(232, 230, 223, 0.86); }
+.vtn-card-heat .vtn-card-sub-dim { color: rgba(232, 230, 223, 0.5); font-variant-numeric: tabular-nums; }
+
+.vtn-card-glyph {
+  font: 600 16px/1 var(--font-display, 'Cormorant Garamond', serif);
+  color: var(--layer-color, #888);
+  text-shadow: 0 0 6px color-mix(in oklab, var(--layer-color, #888) calc(50% * var(--intensity, 0.5)), transparent);
+}
+
+.vtn-card-heat:hover {
+  transform: translateX(2px);
+  border-color: color-mix(in oklab, var(--layer-color, #888) 60%, transparent);
+  box-shadow: 0 4px 18px -8px color-mix(in oklab, var(--layer-color, #888) 70%, transparent);
+}
+
+/* Intensity > 0.7: outer glow — the body burns */
+.vtn-card-heat.hot {
+  box-shadow:
+    inset 0 0 22px color-mix(in oklab, var(--layer-color, #888) 14%, transparent),
+    0 0 14px color-mix(in oklab, var(--layer-color, #888) 24%, transparent);
+}
+
+/* Streak: same layer twice in a row → cards merge top, sense of flow */
+.vtn-card-heat.streak {
+  margin-top: -4px;
+  border-top-left-radius: 2px;
+  border-top-right-radius: 2px;
+  border-top-color: transparent;
+}
+
+/* Header card — dominant layer summary, always sits on top */
+.vtn-card-header {
+  background: linear-gradient(
+    135deg,
+    color-mix(in oklab, var(--layer-color, #888) 22%, rgba(8, 10, 16, 0.85)) 0%,
+    rgba(8, 10, 16, 0.85) 80%
+  );
+  border-color: color-mix(in oklab, var(--layer-color, #888) 45%, transparent);
+}
+.vtn-card-header .vtn-card-title { font-size: 12px; }
+
+/* Cascade signatures — pattern recognition by border */
+.vtn-card-heat.cascade-memory   { border-left: 3px solid #8b5cf6; }
+.vtn-card-heat.cascade-stress   { border-left: 3px solid #ef4444; animation: vtn-pulse 2.4s ease-in-out infinite; }
+.vtn-card-heat.cascade-reward   { border-left: 3px solid #fbbf24; }
+.vtn-card-heat.cascade-dream    { border-left: 3px solid #22d3ee; }
+
+@keyframes vtn-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.0); }
+  50%      { box-shadow: 0 0 14px 0 rgba(239, 68, 68, 0.35); }
+}
+
+/* Neurochem chips — small, dense, readable */
+.vtn-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 6px;
+}
+.vtn-chip {
+  font: 600 9px/1 var(--font-ui, system-ui, sans-serif);
+  letter-spacing: 0.08em;
+  padding: 3px 6px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: rgba(232, 230, 223, 0.85);
+  font-variant-numeric: tabular-nums;
+}
+.vtn-chip-dopamine       { color: #fbbf24; border-color: rgba(251, 191, 36, 0.35); }
+.vtn-chip-serotonin      { color: #86efac; border-color: rgba(134, 239, 172, 0.35); }
+.vtn-chip-gaba           { color: #93c5fd; border-color: rgba(147, 197, 253, 0.35); }
+.vtn-chip-norepinephrine { color: #fca5a5; border-color: rgba(252, 165, 165, 0.35); }
+.vtn-chip-arousal        { color: #f9a8d4; border-color: rgba(249, 168, 212, 0.35); }
+.vtn-chip-valence        { color: #c4b5fd; border-color: rgba(196, 181, 253, 0.35); }
+
 /* ── Footer strip (Phase 2 b6) ─────────────────────────────────────── */
 .vtn-ft-inner {
   display: flex;

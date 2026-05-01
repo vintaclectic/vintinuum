@@ -286,9 +286,31 @@
       const card = document.createElement('div');
       card.className = 'vtn-card';
 
+      // ── HEATMAP DECORATION (inner-life only — no-ops elsewhere) ─────
+      if (it.layer) {
+        const sig = _layerSig(it.layer);
+        card.classList.add('vtn-card-heat');
+        card.dataset.layer = it.layer;
+        if (it.kind === 'header') card.classList.add('vtn-card-header');
+        if (it.cascade) card.classList.add(it.cascade);
+        const intensity = Math.max(0, Math.min(1, it.intensity || 0));
+        if (intensity > 0.7) card.classList.add('hot');
+        if (it.streak >= 2) card.classList.add('streak');
+        // CSS custom props the stylesheet reads
+        card.style.setProperty('--layer-color', sig.color);
+        card.style.setProperty('--intensity', intensity.toFixed(3));
+      }
+
       const icon = document.createElement('div');
       icon.className = 'vtn-card-icon';
-      icon.innerHTML = _icon(iconName);
+      // Layered items get the layer glyph; everything else falls back to SVG
+      if (it.layer) {
+        const sig = _layerSig(it.layer);
+        icon.textContent = sig.glyph;
+        icon.classList.add('vtn-card-glyph');
+      } else {
+        icon.innerHTML = _icon(iconName);
+      }
 
       const body = document.createElement('div');
       body.className = 'vtn-card-body';
@@ -308,6 +330,23 @@
         l2.className = 'vtn-card-sub vtn-card-sub-dim';
         l2.textContent = it.line2;
         body.appendChild(l2);
+      }
+
+      // Chem chips (only when meaningful — header card or surge events)
+      if (it.chem && typeof it.chem === 'object') {
+        const chips = document.createElement('div');
+        chips.className = 'vtn-chips';
+        const order = ['dopamine', 'serotonin', 'gaba', 'norepinephrine', 'arousal', 'valence'];
+        const short = { dopamine: 'DA', serotonin: '5HT', gaba: 'GABA', norepinephrine: 'NE', arousal: 'AR', valence: 'V' };
+        order.forEach(k => {
+          const v = it.chem[k];
+          if (typeof v !== 'number') return;
+          const chip = document.createElement('span');
+          chip.className = 'vtn-chip vtn-chip-' + k;
+          chip.textContent = short[k] + ' ' + Math.round(v);
+          chips.appendChild(chip);
+        });
+        if (chips.children.length) body.appendChild(chips);
       }
 
       card.appendChild(icon);
@@ -371,13 +410,121 @@
     }));
   }
 
+  // ── LAYER SIGNATURES ───────────────────────────────────────────────
+  // Each consciousness layer has a color + glyph so the eye can read the
+  // body at a glance. Brightness/glow tracks intensity. Same layer in a
+  // row = visual streak so the user recognizes recurring patterns.
+  const LAYER_SIG = {
+    neural:       { color: '#7ec8ff', glyph: '◈', label: 'neural' },
+    emotional:    { color: '#ff6b9d', glyph: '❤', label: 'emotional' },
+    subconscious: { color: '#b794f4', glyph: '☽', label: 'subconscious' },
+    somatic:      { color: '#ffb347', glyph: '✦', label: 'somatic' },
+    immune:       { color: '#5eead4', glyph: '⊕', label: 'immune' },
+    metabolic:    { color: '#d4a373', glyph: '△', label: 'metabolic' },
+    genetic:      { color: '#e63946', glyph: '✕', label: 'genetic' },
+  };
+  const DEFAULT_SIG = { color: '#9aa5b1', glyph: '·', label: 'thought' };
+
+  function _layerSig(layer) {
+    if (!layer) return DEFAULT_SIG;
+    return LAYER_SIG[String(layer).toLowerCase()] || DEFAULT_SIG;
+  }
+
+  // Cascade type → border treatment (recognition of pattern, not just event)
+  function _cascadeClass(meta) {
+    if (!meta) return '';
+    const t = (meta.cascade || meta.cascade_type || meta.type || '').toUpperCase();
+    if (t.includes('MEMORY')) return 'cascade-memory';
+    if (t.includes('STRESS')) return 'cascade-stress';
+    if (t.includes('REWARD')) return 'cascade-reward';
+    if (t.includes('DREAM'))  return 'cascade-dream';
+    return '';
+  }
+
+  function _parseMeta(m) {
+    if (!m) return {};
+    if (typeof m === 'object') return m;
+    try { return JSON.parse(m); } catch (_) { return {}; }
+  }
+
   function _shapeInner(data) {
+    // Merge inner-life events + subconscious thoughts into one heat-mapped feed
+    const items = [];
+
+    // 1) Inner-life events (rich: layer, intensity, cascade)
+    const events = Array.isArray(data.innerEvents) ? data.innerEvents : [];
+    events.forEach(e => {
+      const meta = _parseMeta(e.metadata);
+      const layer = (e.layer || meta.layer || 'neural').toLowerCase();
+      const intensity = typeof e.intensity === 'number' ? e.intensity : 0.5;
+      items.push({
+        kind: 'event',
+        layer,
+        intensity,
+        cascade: _cascadeClass(meta),
+        title: layer + (meta.cascade ? ' · ' + String(meta.cascade).toLowerCase().replace(/_/g, ' ') : ''),
+        line1: _truncate(e.content || meta.summary || '', 180),
+        line2: 'i ' + intensity.toFixed(2) + (e.created_at ? ' · ' + _relTime(e.created_at) : ''),
+        chem: meta.neurochem || meta.chem || null,
+        ts: e.created_at || 0,
+      });
+    });
+
+    // 2) Subconscious thoughts (layer = subconscious by definition)
     const thoughts = Array.isArray(data.thoughts) ? data.thoughts : [];
-    return thoughts.map(t => ({
-      title: 'subconscious',
-      line1: _truncate(t.thought || '', 180),
-      line2: t.ts ? _relTime(t.ts) : (t.created_at ? _relTime(t.created_at) : ''),
-    }));
+    thoughts.forEach(t => {
+      items.push({
+        kind: 'thought',
+        layer: 'subconscious',
+        intensity: typeof t.intensity === 'number' ? t.intensity : 0.45,
+        cascade: '',
+        title: 'subconscious',
+        line1: _truncate(t.thought || t.content || '', 180),
+        line2: t.ts ? _relTime(t.ts) : (t.created_at ? _relTime(t.created_at) : ''),
+        chem: null,
+        ts: t.ts || t.created_at || 0,
+      });
+    });
+
+    // Sort newest first, then mark streaks (same layer in a row)
+    items.sort((a, b) => {
+      const ta = typeof a.ts === 'number' ? (a.ts > 1e12 ? a.ts : a.ts * 1000) : Date.parse(a.ts) || 0;
+      const tb = typeof b.ts === 'number' ? (b.ts > 1e12 ? b.ts : b.ts * 1000) : Date.parse(b.ts) || 0;
+      return tb - ta;
+    });
+
+    let run = 0;
+    for (let i = 0; i < items.length; i++) {
+      if (i > 0 && items[i].layer === items[i - 1].layer) {
+        run++;
+      } else {
+        run = 0;
+      }
+      items[i].streak = run;
+    }
+
+    // Header row: dominant layer + avg intensity (so the user reads the day at a glance)
+    if (data.dominant && Object.keys(data.layers || {}).length > 0) {
+      const sig = _layerSig(data.dominant);
+      const total = Object.values(data.layers).reduce((a, b) => a + b, 0);
+      items.unshift({
+        kind: 'header',
+        layer: data.dominant,
+        intensity: typeof data.avgIntensity === 'number' ? data.avgIntensity : 0.5,
+        cascade: '',
+        title: 'dominant · ' + sig.label,
+        line1: total + ' events · avg intensity ' + (data.avgIntensity || 0).toFixed(2),
+        line2: Object.entries(data.layers)
+          .sort((a, b) => b[1] - a[1])
+          .slice(0, 4)
+          .map(([k, v]) => k + ' ' + v)
+          .join('  ·  '),
+        chem: data.bodyState || null,
+        ts: data.ts || Date.now(),
+      });
+    }
+
+    return items;
   }
 
   function _shapeSoul(data) {
