@@ -1,7 +1,7 @@
 # Memory Index
 
 > Auto-generated memory catalog for Vintinuum
-> Last updated: 2026-04-30T23:23:42.977Z
+> Last updated: 2026-05-01T00:31:08.217Z
 > Total memories: 34
 
 ---
@@ -224,14 +224,14 @@
 
 > The user is in the process of configuring a Telegram bot and needs to obtain their chat ID by running @userinfobot in Telegram. They are deciding between revoking the token or proceeding with using the exposed token.
 
-### Server Troubleshooting Diagnostic Steps [aging]
+### Server Troubleshooting Diagnostic Steps [stale]
 
 - **Confidence:** ★★★★☆
 - **Last Updated:** 4/16/2026
 
 > When a server goes down with a black screen on load, the diagnostic sequence involves checking: map selection, client version, and server console output logs to identify the last point of failure.
 
-### Temporal synchronization through rhythmic systems [aging]
+### Temporal synchronization through rhythmic systems [stale]
 
 - **Confidence:** ★★★☆☆
 - **Last Updated:** 4/16/2026
