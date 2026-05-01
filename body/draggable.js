@@ -143,6 +143,17 @@
       el.style.webkitTouchCallout = 'none';
       // Promote to its own layer so transform updates are cheap
       if (!el.style.willChange) el.style.willChange = 'transform';
+      // Hide grip-hint on tiles too small for it to read cleanly.
+      // Measured lazily — if tile not in layout yet, retry next frame.
+      const sizeCheck = () => {
+        const r = el.getBoundingClientRect();
+        if (r.width === 0 && r.height === 0) {
+          requestAnimationFrame(sizeCheck);
+          return;
+        }
+        if (r.width < 60 || r.height < 60) el.dataset.dragHint = 'off';
+      };
+      requestAnimationFrame(sizeCheck);
       applyStored(el);
     });
   };
@@ -163,6 +174,7 @@
   const arm = (st) => {
     st.armed = true;
     const el = st.el;
+    el.classList.remove('vint-prearm');
     el.classList.add('vint-dragging');
     el.style.transition = 'transform 60ms ease-out, box-shadow 120ms ease-out';
     el.style.zIndex = String(++topZ);
@@ -175,6 +187,7 @@
     if (!st || !st.el) return;
     const el = st.el;
     el.classList.remove('vint-dragging');
+    el.classList.remove('vint-prearm');
     el.style.boxShadow = '';
     // Keep the transform; release transition so future drags are crisp.
     setTimeout(() => { if (el && el.style) el.style.transition = ''; }, 80);
@@ -226,6 +239,11 @@
       }, HOLD_MS),
     };
 
+    // Light up the grip-hint immediately on touch — visual confirmation
+    // that this surface is grippable. arm() will swap it to the dragging
+    // state at HOLD_MS; if the user moves before then, we clear it.
+    el.classList.add('vint-prearm');
+
     // Capture so the pointer keeps reporting even if it leaves the element
     try { el.setPointerCapture(e.pointerId); } catch {}
   };
@@ -240,6 +258,7 @@
       if (Math.abs(dx) > MOVE_TOL || Math.abs(dy) > MOVE_TOL) {
         active.moved = true;
         clearTimeout(active.holdTimer);
+        if (active.el) active.el.classList.remove('vint-prearm');
         // Don't engage — let the underlying scroll/click happen
         active = null;
       }
@@ -274,6 +293,9 @@
       layout[k] = { x, y };
       saveLayout();
       disarm(active);
+    } else if (active.el) {
+      // Tap released before arm fired — drop the pre-arm hint glow.
+      active.el.classList.remove('vint-prearm');
     }
     try { active.el.releasePointerCapture(e.pointerId); } catch {}
     active = null;
@@ -283,6 +305,7 @@
     if (!active || e.pointerId !== active.pointerId) return;
     clearTimeout(active.holdTimer);
     if (active.armed) disarm(active);
+    else if (active.el) active.el.classList.remove('vint-prearm');
     active = null;
   };
 
@@ -332,10 +355,73 @@
     }
     [data-drag-ready="1"] {
       cursor: grab;
+      position: relative;
     }
     [data-drag-ready="1"]:active { cursor: grabbing; }
     @media (hover: none) {
       [data-drag-ready="1"] { cursor: default; }
+    }
+
+    /* ── Grip-hint: subtle 2x3 dot grid in the top-right corner ──
+       Resting:  8% opacity — just enough to register as grippable.
+       Hover (desktop) / pre-arm (touch): pulses to 60%.
+       Active drag: 100%, with a soft halo so it reads as the anchor.
+       currentColor inheritance lets it tint to whatever the tile's
+       text color is — works on dark and light surfaces alike. */
+    [data-drag-ready="1"]::after {
+      content: "";
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      width: 10px;
+      height: 14px;
+      pointer-events: none;
+      background-image:
+        radial-gradient(circle, currentColor 1px, transparent 1.4px),
+        radial-gradient(circle, currentColor 1px, transparent 1.4px),
+        radial-gradient(circle, currentColor 1px, transparent 1.4px),
+        radial-gradient(circle, currentColor 1px, transparent 1.4px),
+        radial-gradient(circle, currentColor 1px, transparent 1.4px),
+        radial-gradient(circle, currentColor 1px, transparent 1.4px);
+      background-size: 4px 4px;
+      background-repeat: no-repeat;
+      background-position:
+        0 0,    6px 0,
+        0 5px,  6px 5px,
+        0 10px, 6px 10px;
+      opacity: 0.08;
+      transition: opacity 180ms ease-out, transform 180ms ease-out, filter 180ms ease-out;
+      transform-origin: 100% 0;
+      z-index: 1;
+    }
+    /* Hide hint on opted-out tiles + tiles we measured as too small. */
+    [data-drag-skip="1"]::after,
+    [data-drag-hint="off"]::after { display: none; }
+
+    @media (hover: hover) {
+      [data-drag-ready="1"]:hover::after {
+        opacity: 0.6;
+        transform: scale(1.08);
+      }
+    }
+    /* Pre-arm: pointer is down but the 350ms hold hasn't fired.
+       Same level as hover so touch users get the same visual. */
+    [data-drag-ready="1"].vint-prearm::after {
+      opacity: 0.6;
+      transform: scale(1.08);
+    }
+    /* Active drag: the grip becomes the anchor — full visibility,
+       slight scale-up, soft white halo for contrast on any surface. */
+    [data-drag-ready="1"].vint-dragging::after {
+      opacity: 1;
+      transform: scale(1.15);
+      filter: drop-shadow(0 0 3px rgba(255,255,255,.55));
+    }
+    @media (prefers-reduced-motion: reduce) {
+      [data-drag-ready="1"]::after {
+        transition: opacity 1ms;
+        transform: none !important;
+      }
     }
   `;
   document.head.appendChild(style);
