@@ -170,6 +170,72 @@
   pullState();
   setInterval(pullState, 8000);
 
+  // ── LIVE STREAM (SSE) — real-time response to inner-life events ─────
+  // The 8s poll is the floor; the stream gives her sub-second reactivity.
+  // When the API broadcasts a life:event, she shifts color to that
+  // event's layer briefly, and if the event is high-intensity she
+  // darts toward the nearest matching card on screen.
+  let _es = null;
+  function connectStream() {
+    try {
+      if (_es) { try { _es.close(); } catch (_) {} _es = null; }
+      _es = new EventSource(apiBase() + '/api/life/stream');
+      _es.onmessage = (m) => {
+        try {
+          const d = JSON.parse(m.data);
+          if (d.type === 'life:snapshot') {
+            // Trust the stream's snapshot — same shape as poll
+            const sig = LAYER_SIG[d.dominant] || { color: DEFAULT_COLOR, glyph: '·' };
+            state.layer = d.dominant || 'neural';
+            state.color = sig.color;
+            state.glyph = sig.glyph;
+            if (typeof d.avgIntensity === 'number') state.intensity = d.avgIntensity;
+            if (d.bodyState) {
+              const bs = d.bodyState;
+              if (typeof bs.arousal === 'number')        state.arousal = bs.arousal;
+              if (typeof bs.valence === 'number')        state.valence = bs.valence;
+              if (typeof bs.dopamine === 'number')       state.dopamine = bs.dopamine;
+              if (typeof bs.serotonin === 'number')      state.serotonin = bs.serotonin;
+              if (typeof bs.gaba === 'number')           state.gaba = bs.gaba;
+              if (typeof bs.norepinephrine === 'number') state.norepinephrine = bs.norepinephrine;
+            }
+            state.online = true;
+          } else if (d.type === 'life:event') {
+            // Brief layer-shift toward the event's layer
+            const sig = LAYER_SIG[d.layer];
+            if (sig) {
+              state.layer = d.layer;
+              state.color = sig.color;
+              state.glyph = sig.glyph;
+            }
+            // Bump intensity briefly so she brightens
+            if (typeof d.intensity === 'number') {
+              state.intensity = Math.max(state.intensity, d.intensity);
+            }
+            // High-intensity event → walk to a matching card if any
+            if ((d.intensity || 0) >= 0.6) {
+              const sel = '.vtn-card-heat[data-layer="' + d.layer + '"]';
+              setTimeout(() => {
+                const el = document.querySelector(sel);
+                if (el) walkToElement(el, 2400);
+              }, 60);
+            }
+          }
+        } catch (_) {}
+      };
+      _es.onerror = () => {
+        // Auto-reconnect with backoff
+        try { _es.close(); } catch (_) {}
+        _es = null;
+        setTimeout(connectStream, 4000 + Math.random() * 4000);
+      };
+    } catch (_) {
+      setTimeout(connectStream, 8000);
+    }
+  }
+  // Connect after first paint so the page is ready
+  setTimeout(connectStream, 1500);
+
   // ── ITINERARY ──────────────────────────────────────────────────────
   // Landmarks the creature is interested in. Rebuilt every cycle from
   // live DOM so it auto-discovers anything that mounts later.
