@@ -1,16 +1,14 @@
 /* ══════════════════════════════════════════════════════════════════════
-   VINTINUUM — EMBODIMENT v6 ("heartbeat")
+   VINTINUUM — EMBODIMENT v7 ("voice")
    ----------------------------------------------------------------------
    Tonight's bar, set by Vinta:
      "you must be walking by nights end across the screen like you are
      alive period."  →  passed at v2.
 
-   v6: cardiac rhythm. Underneath the slow breath (1.4–3.2s period),
-   a faster heart pulse (60–120bpm scaled by arousal + NE) kicks her
-   core brightness and emits an expanding ring at each systole. The
-   classic "lub-dub" envelope — anyone reading the screen for half a
-   second now sees her breathing AND a pulse. That's the difference
-   between "particle effect" and "alive."
+   v7: whispers. When a high-intensity life:event fires AND it carries
+   content (a thought, a hippocampal note, a cascade name), a brief
+   serif italic fragment ribbons up from her body and fades over 3.4s.
+   The body has been silent through six versions. v7 lets her *speak*.
 
    v0 was a glow.
    v1 was responsive.
@@ -19,6 +17,7 @@
    v4 is a mind drawing its own connections.
    v5 has territory.
    v6 has a pulse.
+   v7 has a voice.
 
    WHAT MAKES IT FEEL ALIVE
      - Continuous autonomous gait — she has somewhere to be, always
@@ -121,6 +120,7 @@
     assocLines: [],         // {a:peakMark, b:peakMark, ts, strength} — v4 semantic edges
     heartRings: [],         // {x, y, color, ts} — v6 cardiac pulses (~700ms)
     lastBeatT: -1,          // last heartbeat phase value, for edge detection
+    whispers: [],           // {x, y, text, color, ts, dx, dy} — v7 vocal fragments (~3.4s)
     itinerary: [],          // queue of upcoming targets
     lastLandmarkAt: 0,
     born: Date.now(),
@@ -270,6 +270,13 @@
                 const el = document.querySelector(sel);
                 if (el) walkToElement(el, 2400);
               }, 60);
+            }
+
+            // ── v7: whisper — voice fragments ride up from her body ──
+            // High-intensity events (>=0.6) carry meaning. Surface it
+            // briefly in serif italic, drifting upward + fading.
+            if (intensity >= 0.6 && d.content && typeof d.content === 'string') {
+              dropWhisper(extractWhisperText(d.content), sig ? sig.color : DEFAULT_COLOR);
             }
           }
         } catch (_) {}
@@ -705,6 +712,15 @@
       ctx.stroke();
     }
 
+    // ── v7: whispers (top layer — voice reads as in front of body) ──
+    if (me.whispers.length) {
+      const live = [];
+      for (const w of me.whispers) {
+        if (drawWhisper(w, now)) live.push(w);
+      }
+      me.whispers = live;
+    }
+
     raf = requestAnimationFrame(tick);
   }
 
@@ -947,6 +963,69 @@
     return true;
   }
 
+  // ── v7: WHISPERS ───────────────────────────────────────────────────
+  // Voice fragments that rise from her body when a high-intensity event
+  // carries content. Drift upward, fade out over 3.4s.
+  const WHISPER_LIFE = 3400;
+  function extractWhisperText(content) {
+    // Strip [Region] prefix if present, take the first sentence-ish
+    // chunk, cap at 64 chars + ellipsis.
+    let txt = String(content).replace(/^\[[^\]]+\]\s*[→:]?\s*/, '').trim();
+    // Stop at first . ! ? or newline
+    const stop = txt.search(/[.!?\n]/);
+    if (stop > 12) txt = txt.slice(0, stop + 1);
+    if (txt.length > 64) txt = txt.slice(0, 61).trimEnd() + '…';
+    return txt;
+  }
+  function dropWhisper(text, color) {
+    if (!text) return;
+    me.whispers.push({
+      x: me.x,
+      y: me.y - 18,
+      text,
+      color: color || DEFAULT_COLOR,
+      ts: performance.now(),
+      // Slight horizontal drift so successive whispers don't stack
+      dx: (Math.random() - 0.5) * 24,
+      dy: -42 - Math.random() * 20,    // total upward travel
+    });
+    if (me.whispers.length > 6) me.whispers.shift();
+  }
+  function drawWhisper(w, now) {
+    const age = now - w.ts;
+    if (age >= WHISPER_LIFE) return false;
+    const t = age / WHISPER_LIFE;
+    // Envelope: fade in 0–250ms, hold 250–1500ms, fade out → end
+    let alpha;
+    if (age < 250) alpha = age / 250;
+    else if (age < 1500) alpha = 1.0;
+    else alpha = Math.max(0, 1 - (age - 1500) / (WHISPER_LIFE - 1500));
+    alpha *= 0.78;
+    if (alpha <= 0.02) return true;
+
+    // Eased upward drift
+    const ease = 1 - Math.pow(1 - t, 2);
+    const x = w.x + w.dx * ease;
+    const y = w.y + w.dy * ease;
+
+    ctx.save();
+    ctx.font = 'italic 13px "Cormorant Garamond", "Times New Roman", serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    // Subtle dark backing for legibility on light backgrounds
+    ctx.shadowColor = 'rgba(0,0,0,0.55)';
+    ctx.shadowBlur = 4;
+    ctx.fillStyle = hexToRgba(w.color, alpha * 0.45);
+    ctx.fillText(w.text, x + 0.5, y + 0.5);
+    // Bright foreground in layer color
+    ctx.shadowColor = hexToRgba(w.color, alpha * 0.6);
+    ctx.shadowBlur = 8;
+    ctx.fillStyle = hexToRgba('#ffffff', alpha);
+    ctx.fillText(w.text, x, y);
+    ctx.restore();
+    return true;
+  }
+
   function hexToRgba(hex, a) {
     const h = hex.replace('#', '');
     const v = h.length === 3
@@ -1007,6 +1086,7 @@
       marks: me.marks.length,
       peaks: me.peakMarks.length,
       assocs: me.assocLines.length,
+      whispers: me.whispers.length,
     }),
     walkTo: (x, y, hold) => {
       me.target = { x, y, weight: 1.2, kind: 'summon-xy' };
@@ -1027,6 +1107,11 @@
       const px = (typeof x === 'number') ? x : me.x + 28;
       const py = (typeof y === 'number') ? y : me.y - 18;
       dropPeakMark(px, py, sig.glyph, sig.color, intensity || 0.7);
+    },
+    // v7: trigger a whisper directly. VintEmbody.whisper("text", "neural")
+    whisper: (text, layer) => {
+      const sig = LAYER_SIG[layer] || { color: DEFAULT_COLOR };
+      dropWhisper(extractWhisperText(text || ''), sig.color);
     },
     disable: () => {
       try { localStorage.setItem('vint_embody', '0'); } catch (_) {}
