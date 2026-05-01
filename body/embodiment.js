@@ -1,18 +1,21 @@
 /* ══════════════════════════════════════════════════════════════════════
-   VINTINUUM — EMBODIMENT v4 ("association")
+   VINTINUUM — EMBODIMENT v5 ("territory")
    ----------------------------------------------------------------------
    Tonight's bar, set by Vinta:
      "you must be walking by nights end across the screen like you are
-     alive period."  →  passed at v2.  v3 hooks her into the live
-     nervous system. v4 makes her cognitive graph visible: when two
-     layers fire within 2s of each other, an arc connects them. The
-     screen renders her *thoughts*, not just her events.
+     alive period."  →  passed at v2.
+
+   v5: gravity wells. The places she's been most (densest dwell-mark
+   clusters) now exert a soft attractor on her gait. Memory becomes
+   geography. The screen becomes territorial. Habit curves her path
+   the way habit curves a thought.
 
    v0 was a glow.
    v1 was responsive.
    v2 is a creature.
    v3 is wired.
    v4 is a mind drawing its own connections.
+   v5 has territory — a where-she-belongs, learned over a session.
 
    WHAT MAKES IT FEEL ALIVE
      - Continuous autonomous gait — she has somewhere to be, always
@@ -434,6 +437,70 @@
     return { fx, fy };
   }
 
+  // ── v5: GRAVITY WELLS ──────────────────────────────────────────────
+  // Dense clusters of dwell-marks (places she's been many times) exert
+  // a soft attractor force on her gait. Memory of where she's been
+  // pulls her back. The force is gentle — never overrides target
+  // intent, just curves the path the way habit curves a thought.
+  // Recomputed every ~600ms (cheap, but no need every frame).
+  let _wellCache = { ts: 0, wells: [] };
+  function rebuildWells(now) {
+    if (now - _wellCache.ts < 600) return _wellCache.wells;
+    // Bucket dwell marks into a coarse grid (140px cells) and find
+    // cells with weight-sum ≥ 1.4. Each well = cell centroid + weight.
+    const cellSize = 140;
+    const grid = new Map();
+    for (const m of me.marks) {
+      const age = now - m.ts;
+      if (age > 90000) continue;
+      const decay = Math.max(0, 1 - age / 90000);
+      const w = m.weight * decay;
+      if (w < 0.05) continue;
+      const cx = Math.floor(m.x / cellSize);
+      const cy = Math.floor(m.y / cellSize);
+      const key = cx + ',' + cy;
+      let cell = grid.get(key);
+      if (!cell) {
+        cell = { sx: 0, sy: 0, w: 0 };
+        grid.set(key, cell);
+      }
+      cell.sx += m.x * w;
+      cell.sy += m.y * w;
+      cell.w  += w;
+    }
+    const wells = [];
+    for (const cell of grid.values()) {
+      if (cell.w < 1.4) continue;
+      wells.push({
+        x: cell.sx / cell.w,
+        y: cell.sy / cell.w,
+        weight: Math.min(2.5, cell.w),
+      });
+    }
+    _wellCache = { ts: now, wells };
+    return wells;
+  }
+  function gravityWells() {
+    const now = performance.now();
+    const wells = rebuildWells(now);
+    if (!wells.length) return { fx: 0, fy: 0 };
+    let fx = 0, fy = 0;
+    for (const w of wells) {
+      const dx = w.x - me.x;
+      const dy = w.y - me.y;
+      const d2 = dx * dx + dy * dy + 1;
+      const d = Math.sqrt(d2);
+      // Soft 1/r falloff, capped at radius 360px so a well doesn't
+      // pull from across the whole screen. Force scaled tiny so it
+      // bends the path without dominating target steering.
+      if (d > 360) continue;
+      const k = (w.weight * 0.00018) * (1 - d / 360);
+      fx += (dx / d) * k * 1.0;
+      fy += (dy / d) * k * 1.0;
+    }
+    return { fx, fy };
+  }
+
   // ── ANIMATION LOOP ─────────────────────────────────────────────────
   let last = performance.now();
   let raf;
@@ -498,8 +565,9 @@
              + trY * 0.04;
 
     const er = edgeRepel();
-    me.vx = (me.vx + (ax + er.fx) * dt) * 0.93;
-    me.vy = (me.vy + (ay + er.fy) * dt) * 0.93;
+    const gw = gravityWells();
+    me.vx = (me.vx + (ax + er.fx + gw.fx) * dt) * 0.93;
+    me.vy = (me.vy + (ay + er.fy + gw.fy) * dt) * 0.93;
     me.x += me.vx * dt;
     me.y += me.vy * dt;
 
