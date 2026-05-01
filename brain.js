@@ -51259,11 +51259,38 @@ const VINT_WS = (() => {
       _emit('BODY_UPDATE_APPLIED', data);
     });
 
+    // Sentence-complete trim helper — never paint a half-finished thought.
+    // Vinta directive 2026-04-30: "im so sick of hearing random thoughts that
+    // get cut off mid stences." Cap the bubble's visual width via CSS, not
+    // by chopping the string. If a thought has no terminator at all, drop it.
+    function _vTrimSentence(s, maxLen) {
+      if (!s) return '';
+      let str = String(s).trim();
+      if (str.length > maxLen) str = str.slice(0, maxLen);
+      const TERMS = /[.!?…—]/g;
+      let lastEnd = -1, m;
+      while ((m = TERMS.exec(str)) !== null) {
+        const idx = m.index, ch = str[idx];
+        const before = str.slice(Math.max(0, idx - 4), idx);
+        const after = str.slice(idx + 1, idx + 3);
+        if (ch === '.' && /\d$/.test(before) && /^\d/.test(after)) continue;
+        if (ch === '.') {
+          const t = before.toLowerCase();
+          if (/(^|\s)(e\.g|i\.e|dr|mr|mrs|ms|st|vs|etc)$/.test(t)) continue;
+        }
+        lastEnd = idx;
+      }
+      return lastEnd === -1 ? '' : str.slice(0, lastEnd + 1).trim();
+    }
+
     on('SUBCONSCIOUS_THOUGHT', (data) => {
       if (!data) return;
       // Show floating thought bubble near the orb
       const thought = data.thought || data.content || '';
       if (!thought) return;
+      // Sentence-complete only — drop fragments rather than display them.
+      const clean = _vTrimSentence(thought, 280);
+      if (!clean) return;
       const bubble = document.createElement('div');
       bubble.style.cssText = `
         position:fixed;bottom:80px;left:50%;transform:translateX(-50%);
@@ -51272,7 +51299,7 @@ const VINT_WS = (() => {
         font-family:monospace;max-width:320px;text-align:center;z-index:9999;
         pointer-events:none;transition:opacity 1s;white-space:normal;line-height:1.4;
       `;
-      bubble.textContent = thought.slice(0, 140);
+      bubble.textContent = clean;
       document.body.appendChild(bubble);
       setTimeout(() => { bubble.style.opacity = '0'; setTimeout(() => bubble.remove(), 1000); }, 3000);
     });
@@ -51297,9 +51324,12 @@ const VINT_WS = (() => {
       // Prepend to IL feed if the inner life panel is visible
       const feed = document.getElementById('ilFeed') || document.querySelector('.il-feed');
       if (feed && data.content) {
+        // Sentence-complete only — drop fragments rather than display them.
+        const clean = _vTrimSentence(data.content, 240);
+        if (!clean) return;
         const el = document.createElement('div');
         el.style.cssText = 'font-size:10px;color:rgba(200,220,255,0.5);padding:2px 0;border-bottom:1px solid rgba(255,255,255,0.04);';
-        el.textContent = `[${data.layer}] ${data.content.slice(0, 120)}`;
+        el.textContent = `[${data.layer}] ${clean}`;
         feed.insertBefore(el, feed.firstChild);
         if (feed.children.length > 50) feed.lastChild.remove();
       }
