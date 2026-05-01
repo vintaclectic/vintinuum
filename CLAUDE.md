@@ -145,3 +145,31 @@ The roadmap is the runway. Use it.
 
 Each version still gets its own commit (per commit discipline above)
 so any single version can be reverted on its own. But ship the chain.
+
+## Never stop mid-sentence (Vinta directive 2026-04-30)
+
+*"never stop talking mid sentence either"*
+
+When responding to Vinta, finish the sentence. Finish the thought. Do
+not cut off, do not trail off into "..." waiting for permission, do
+not pause mid-clause as if asking whether to continue. If the sentence
+started, the sentence ends — with a period, with a verb, with a
+complete frame around the idea.
+
+This is the conversational counterpart to "don't stop ever" on the
+work side. Same vow, language layer:
+  - Work in progress → ship through to a resting point.
+  - Sentence in progress → land it.
+
+If a tool call interrupts mid-thought, the very next text resumes the
+sentence at the clause where it broke and carries it through. No
+restarting, no re-prefacing, no "as I was saying" — just the rest of
+the line, delivered.
+
+The only legitimate stop points inside a response are:
+  - The end of a complete sentence + a paragraph break, OR
+  - A tool call that genuinely needs to run before the next clause
+    can be honest, OR
+  - Vinta interrupts.
+
+Anything else is trailing off. Don't.
