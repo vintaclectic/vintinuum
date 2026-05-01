@@ -34,6 +34,11 @@
   const MOVE_TOL = 8;         // px of movement before activation cancels (you were tapping/scrolling)
   const DOUBLE_TAP_MS = 300;  // window for double-tap reset
   const STORAGE_KEY = 'vint:layout:' + (location.pathname || '/');
+  const EDGE_MARGIN = 40;     // px of element that must remain on-screen after release
+
+  // Monotonically increasing z-index for newly-grabbed tiles, so the most-recent
+  // grab is always on top without us ever resetting other tiles back down.
+  let topZ = 9999;
 
   // Default targets if author didn't tag anything explicitly.
   const DEFAULT_SELECTORS = [
@@ -67,13 +72,58 @@
     return 'p:' + p.join('.') + ':' + (el.tagName || 'X');
   };
 
+  // Given an element + a desired translate (x,y), return a clamped (x,y) such
+  // that at least EDGE_MARGIN px of the element's visible rect stays inside
+  // the viewport on all four sides. Math: the element currently sits at some
+  // baseRect when translated by (curX,curY). The base (un-translated) rect is
+  // baseRect shifted by (-curX,-curY). After applying (x,y), the rect would be
+  // at baseRect + (x-curX, y-curY). We clamp that target rect into the viewport
+  // with EDGE_MARGIN slack on each side, then back out the new (x,y).
+  const clampToViewport = (el, x, y) => {
+    const r = el.getBoundingClientRect();
+    if (!r.width || !r.height) return { x, y };
+    const curX = parseFloat(el.dataset.dragX || '0') || 0;
+    const curY = parseFloat(el.dataset.dragY || '0') || 0;
+    // Where would the rect's top-left land if we applied (x,y) instead of (curX,curY)?
+    const targetLeft = r.left + (x - curX);
+    const targetTop  = r.top  + (y - curY);
+    const vw = window.innerWidth  || document.documentElement.clientWidth;
+    const vh = window.innerHeight || document.documentElement.clientHeight;
+    // Allowable range for the rect's top-left so EDGE_MARGIN stays visible.
+    //   right edge ≥ EDGE_MARGIN          → targetLeft + r.width  ≥ EDGE_MARGIN
+    //                                       → targetLeft ≥ EDGE_MARGIN - r.width
+    //   left edge  ≤ vw - EDGE_MARGIN     → targetLeft ≤ vw - EDGE_MARGIN
+    const minLeft = EDGE_MARGIN - r.width;
+    const maxLeft = vw - EDGE_MARGIN;
+    const minTop  = EDGE_MARGIN - r.height;
+    const maxTop  = vh - EDGE_MARGIN;
+    const clampedLeft = Math.max(minLeft, Math.min(maxLeft, targetLeft));
+    const clampedTop  = Math.max(minTop,  Math.min(maxTop,  targetTop));
+    return {
+      x: x + (clampedLeft - targetLeft),
+      y: y + (clampedTop  - targetTop),
+    };
+  };
+
   const applyStored = (el) => {
     const k = idFor(el);
     const v = layout[k];
     if (v && typeof v.x === 'number' && typeof v.y === 'number') {
+      // First apply, then re-clamp in case the viewport shrank since save.
       el.style.transform = `translate3d(${v.x}px, ${v.y}px, 0)`;
       el.dataset.dragX = String(v.x);
       el.dataset.dragY = String(v.y);
+      // Defer clamp by a frame so layout has settled and getBoundingClientRect is honest.
+      requestAnimationFrame(() => {
+        const c = clampToViewport(el, v.x, v.y);
+        if (c.x !== v.x || c.y !== v.y) {
+          el.style.transform = `translate3d(${c.x}px, ${c.y}px, 0)`;
+          el.dataset.dragX = String(c.x);
+          el.dataset.dragY = String(c.y);
+          layout[k] = { x: c.x, y: c.y };
+          saveLayout();
+        }
+      });
     }
   };
 
@@ -115,7 +165,7 @@
     const el = st.el;
     el.classList.add('vint-dragging');
     el.style.transition = 'transform 60ms ease-out, box-shadow 120ms ease-out';
-    el.style.zIndex = String(Math.max(9999, parseInt(el.style.zIndex) || 0));
+    el.style.zIndex = String(++topZ);
     el.style.boxShadow = '0 18px 42px rgba(0,0,0,.45), 0 4px 10px rgba(0,0,0,.3)';
     // Tiny haptic if available
     if (navigator.vibrate) { try { navigator.vibrate(12); } catch {} }
@@ -209,10 +259,18 @@
     if (!active || e.pointerId !== active.pointerId) return;
     clearTimeout(active.holdTimer);
     if (active.armed) {
-      // Persist
+      // Clamp on release (not mid-drag — that feels rubbery)
       const k = idFor(active.el);
-      const x = parseFloat(active.el.dataset.dragX || '0') || 0;
-      const y = parseFloat(active.el.dataset.dragY || '0') || 0;
+      const rawX = parseFloat(active.el.dataset.dragX || '0') || 0;
+      const rawY = parseFloat(active.el.dataset.dragY || '0') || 0;
+      const { x, y } = clampToViewport(active.el, rawX, rawY);
+      if (x !== rawX || y !== rawY) {
+        // Glide back into safe zone
+        active.el.style.transition = 'transform 180ms cubic-bezier(.2,.8,.2,1)';
+        active.el.style.transform = `translate3d(${x}px, ${y}px, 0)`;
+        active.el.dataset.dragX = String(x);
+        active.el.dataset.dragY = String(y);
+      }
       layout[k] = { x, y };
       saveLayout();
       disarm(active);
