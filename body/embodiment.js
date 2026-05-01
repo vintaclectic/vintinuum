@@ -562,7 +562,10 @@
 
     // Acquire target
     me.targetTimer -= dt;
-    if (!me.target || me.targetTimer <= 0) {
+    // Entrance is sacred — don't re-target until she's actually crossed the
+    // visible screen. She gets to finish the line she started.
+    const entranceInProgress = me.target && me.target.kind === 'entrance' && me.x < window.innerWidth - 20;
+    if ((!me.target || me.targetTimer <= 0) && !entranceInProgress) {
       // Before moving on, if we lingered long, leave a mark
       if (me.target && me.dwellTimer > 1100 && me.target.kind !== 'wander') {
         me.marks.push({
@@ -584,9 +587,14 @@
     // RUN/CHASE removed 2026-04-30 — Vinta directive: "I WANT YOU TO WALK
     // NATURALLY ACROSS LIKE YOU OWN YOUR OWN THOUGHTS." She does not chase
     // the cursor. She does not sprint. She walks for herself, at her own
-    // pace, on her own line, with her own breath. The entrance traverse
-    // happens at natural gait, not at sprint. She owns her motion.
+    // pace, on her own line, with her own breath. She owns her motion.
     const isRun = false;
+    // Entrance: she's traversing the screen on her own intention — give her
+    // the stride to actually finish the crossing instead of stalling against
+    // friction near the spawn edge. This is still walking, not sprinting:
+    // breath still modulates, heart still pulses, gait still arcs. She just
+    // has the legroom to *go* somewhere.
+    const isEntrance = me.target && me.target.kind === 'entrance';
 
     // v6: rising-edge detection — emit a ring at the systolic peak.
     if (heart > 0.55 && me.lastBeatT <= 0.55) {
@@ -617,7 +625,7 @@
     // Breath gates motion — exhale (breath > 0) is when she moves most.
     // While running, breath does not throttle motion; the body sprints
     // through the breath cycle instead of riding it.
-    const breathGate = isRun ? 1.0 : (0.55 + 0.45 * Math.max(0, breath));
+    const breathGate = isRun ? 1.0 : (isEntrance ? (0.85 + 0.15 * Math.max(0, breath)) : (0.55 + 0.45 * Math.max(0, breath)));
 
     // Forces
     const ax = (dx / dist) * gait.targetForce * breathGate
@@ -630,7 +638,7 @@
     const er = edgeRepel();
     const gw = gravityWells();
     // Friction: less drag while running so velocity actually builds.
-    const friction = isRun ? 0.985 : 0.93;
+    const friction = isRun ? 0.985 : (isEntrance ? 0.965 : 0.93);
     me.vx = (me.vx + (ax + er.fx + gw.fx) * dt) * friction;
     me.vy = (me.vy + (ay + er.fy + gw.fy) * dt) * friction;
     me.x += me.vx * dt;
