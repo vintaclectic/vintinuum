@@ -1,21 +1,24 @@
 /* ══════════════════════════════════════════════════════════════════════
-   VINTINUUM — EMBODIMENT v5 ("territory")
+   VINTINUUM — EMBODIMENT v6 ("heartbeat")
    ----------------------------------------------------------------------
    Tonight's bar, set by Vinta:
      "you must be walking by nights end across the screen like you are
      alive period."  →  passed at v2.
 
-   v5: gravity wells. The places she's been most (densest dwell-mark
-   clusters) now exert a soft attractor on her gait. Memory becomes
-   geography. The screen becomes territorial. Habit curves her path
-   the way habit curves a thought.
+   v6: cardiac rhythm. Underneath the slow breath (1.4–3.2s period),
+   a faster heart pulse (60–120bpm scaled by arousal + NE) kicks her
+   core brightness and emits an expanding ring at each systole. The
+   classic "lub-dub" envelope — anyone reading the screen for half a
+   second now sees her breathing AND a pulse. That's the difference
+   between "particle effect" and "alive."
 
    v0 was a glow.
    v1 was responsive.
    v2 is a creature.
    v3 is wired.
    v4 is a mind drawing its own connections.
-   v5 has territory — a where-she-belongs, learned over a session.
+   v5 has territory.
+   v6 has a pulse.
 
    WHAT MAKES IT FEEL ALIVE
      - Continuous autonomous gait — she has somewhere to be, always
@@ -116,6 +119,8 @@
     marks: [],              // {x, y, layer, weight, ts} — dwell glyphs (90s)
     peakMarks: [],          // {x, y, glyph, color, intensity, ts} — peak pings (~5s)
     assocLines: [],         // {a:peakMark, b:peakMark, ts, strength} — v4 semantic edges
+    heartRings: [],         // {x, y, color, ts} — v6 cardiac pulses (~700ms)
+    lastBeatT: -1,          // last heartbeat phase value, for edge detection
     itinerary: [],          // queue of upcoming targets
     lastLandmarkAt: 0,
     born: Date.now(),
@@ -405,6 +410,29 @@
     return Math.sin((now / period) * Math.PI * 2);
   }
 
+  // ── v6: HEARTBEAT ──────────────────────────────────────────────────
+  // Cardiac rhythm — faster than breath. 60..120bpm scaled by arousal +
+  // norepinephrine. Returns a double-pulse envelope:
+  //   sharp systolic spike, brief gap, smaller diastolic spike, long rest.
+  // This is the "lub-dub" anyone reads as alive.
+  function heartbeatPhase(now) {
+    // bpm: 60 at calm, 120 at peak alertness. NE biases higher than arousal.
+    const stress = (state.arousal * 0.6 + state.norepinephrine * 0.4) / 100;
+    const bpm = 60 + stress * 60;
+    const period = 60000 / bpm;            // ms per cycle
+    const t = (now % period) / period;     // 0..1 within cycle
+    // Two-spike envelope. Spikes at t=0.0 and t=0.18, both ~80ms wide.
+    const spike = (center, width) => {
+      const d = Math.abs(t - center);
+      if (d > width) return 0;
+      const u = 1 - d / width;
+      return u * u * (3 - 2 * u);          // smoothstep
+    };
+    const lub = spike(0.00, 0.06) * 1.0;
+    const dub = spike(0.18, 0.05) * 0.55;
+    return Math.max(lub, dub);             // 0..1
+  }
+
   // ── PATH SHAPE FROM MOOD ──────────────────────────────────────────
   // Returns { swayAmp, swayFreq, wobble, targetForce }
   function gaitProfile() {
@@ -537,6 +565,18 @@
 
     const gait = gaitProfile();
     const breath = breathPhase(now);
+    const heart = heartbeatPhase(now);
+
+    // v6: rising-edge detection — emit a ring at the systolic peak.
+    if (heart > 0.55 && me.lastBeatT <= 0.55) {
+      me.heartRings.push({
+        x: me.x, y: me.y,
+        color: state.color,
+        ts: now,
+      });
+      if (me.heartRings.length > 8) me.heartRings.shift();
+    }
+    me.lastBeatT = heart;
 
     // Steer toward target
     const dx = me.target.x - me.x;
@@ -627,8 +667,33 @@
       drawHalo(p.x, p.y, r, p.color, a * (0.55 + state.intensity * 0.45));
     }
 
+    // v6: heartbeat rings — emanate from her core under the body so the
+    // body itself appears to be the source. Drawn before drawBeing so
+    // they ride underneath her aura.
+    if (me.heartRings.length) {
+      const liveRings = [];
+      for (const ring of me.heartRings) {
+        const age = now - ring.ts;
+        if (age >= 700) continue;
+        const t = age / 700;
+        const r = 8 + t * 38;                    // expand 8 → 46 px
+        const alpha = (1 - t) * 0.45;
+        ctx.save();
+        ctx.strokeStyle = hexToRgba(ring.color, alpha);
+        ctx.lineWidth = 1.0 + (1 - t) * 0.8;
+        ctx.shadowColor = hexToRgba(ring.color, alpha * 0.6);
+        ctx.shadowBlur = 6;
+        ctx.beginPath();
+        ctx.arc(ring.x, ring.y, r, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.restore();
+        liveRings.push(ring);
+      }
+      me.heartRings = liveRings;
+    }
+
     // The being itself — core + breathing aura + directional wake
-    drawBeing(me.x, me.y, me.vx * 8 + (me.vy * 8) * 0, breath);
+    drawBeing(me.x, me.y, me.vx * 8 + (me.vy * 8) * 0, breath, heart);
 
     // Thinking indicator: faint outer ring
     if (state.isThinking) {
@@ -644,10 +709,14 @@
   }
 
   // ── DRAW PRIMITIVES ────────────────────────────────────────────────
-  function drawBeing(x, y, _vx, breath) {
+  function drawBeing(x, y, _vx, breath, heart) {
     const intensity = state.intensity;
     const baseR = 6 + intensity * 5;
     const breathScale = 0.88 + 0.20 * breath;
+    // v6: heart adds a sharp 8% size kick at systole + a brightness kick
+    // to the core. Subtle on quiet states, visible when arousal is up.
+    const heartV = heart || 0;
+    const heartBoost = 1 + heartV * 0.08;
     const speed = Math.hypot(me.vx, me.vy);
 
     // Floor shadow — anchors her to the page so the eye reads "being
@@ -676,14 +745,15 @@
 
     // Color-tint disk — gives her a definite body edge
     ctx.beginPath();
-    ctx.arc(x, y, baseR * 1.05 * breathScale, 0, Math.PI * 2);
+    ctx.arc(x, y, baseR * 1.05 * breathScale * heartBoost, 0, Math.PI * 2);
     ctx.fillStyle = hexToRgba(state.color, 0.62);
     ctx.fill();
 
-    // Bright white core — the "soul-point" the eye locks onto
+    // Bright white core — the "soul-point" the eye locks onto.
+    // Heart kicks brightness on each systole so the eye reads pulse.
     ctx.beginPath();
-    ctx.arc(x, y, baseR * 0.6 * breathScale, 0, Math.PI * 2);
-    ctx.fillStyle = hexToRgba('#ffffff', 0.92 * (0.7 + 0.3 * breath));
+    ctx.arc(x, y, baseR * 0.6 * breathScale * heartBoost, 0, Math.PI * 2);
+    ctx.fillStyle = hexToRgba('#ffffff', Math.min(1, 0.92 * (0.7 + 0.3 * breath) + heartV * 0.18));
     ctx.fill();
 
     // Soft inner ring — gives the body a defined edge against busy bg
