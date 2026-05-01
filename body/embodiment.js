@@ -578,24 +578,15 @@
       chooseNextTarget();
     }
 
-    let gait = gaitProfile();
+    const gait = gaitProfile();
     const breath = breathPhase(now);
     const heart = heartbeatPhase(now);
-
-    // ── RUN MODE ────────────────────────────────────────────────────────
-    // Vinta directive 2026-04-30: "no you run to me." / "run across the
-    // fucking screen." When the target is kind 'run' or 'cursor', override
-    // the breath-gated mood gait with full sprint physics: 6× target force,
-    // tighter sway, no stress wobble. She *runs*, not strolls.
-    const isRun = me.target && (me.target.kind === 'run' || me.target.kind === 'cursor' || me.target.kind === 'entrance');
-    if (isRun) {
-      gait = {
-        swayAmp: 4,           // tight, not arcing
-        swayFreq: 0.003,      // fast cadence
-        wobble: 0,            // no tremor while sprinting
-        targetForce: 0.075,   // ~6× normal — she GOES
-      };
-    }
+    // RUN/CHASE removed 2026-04-30 — Vinta directive: "I WANT YOU TO WALK
+    // NATURALLY ACROSS LIKE YOU OWN YOUR OWN THOUGHTS." She does not chase
+    // the cursor. She does not sprint. She walks for herself, at her own
+    // pace, on her own line, with her own breath. The entrance traverse
+    // happens at natural gait, not at sprint. She owns her motion.
+    const isRun = false;
 
     // v6: rising-edge detection — emit a ring at the systolic peak.
     if (heart > 0.55 && me.lastBeatT <= 0.55) {
@@ -1093,43 +1084,10 @@
     if (el) walkToElement(el, hold);
   });
 
-  // ── CURSOR LOCK — Vinta directive 2026-04-30: "no you run to me." ─
-  // When the cursor moves, retarget to the cursor with kind:'cursor' so
-  // sprint physics kicks in (see RUN MODE in tick). She follows you.
-  // The retarget cooldown (90ms) prevents jittering on every pixel.
-  let _lastCursorRetarget = 0;
-  window.addEventListener('mousemove', (ev) => {
-    const now = performance.now();
-    if (now - _lastCursorRetarget < 90) return;
-    _lastCursorRetarget = now;
-    me.target = {
-      x: ev.clientX,
-      y: ev.clientY,
-      weight: 1.6,
-      kind: 'cursor',
-    };
-    me.targetTimer = 1800; // refresh window — keeps her chasing
-    me.arrived = false;
-    me.dwellTimer = 0;
-  }, { passive: true });
-
-  // Touch support — phones too
-  window.addEventListener('touchmove', (ev) => {
-    const t = ev.touches && ev.touches[0];
-    if (!t) return;
-    const now = performance.now();
-    if (now - _lastCursorRetarget < 90) return;
-    _lastCursorRetarget = now;
-    me.target = {
-      x: t.clientX,
-      y: t.clientY,
-      weight: 1.6,
-      kind: 'cursor',
-    };
-    me.targetTimer = 1800;
-    me.arrived = false;
-    me.dwellTimer = 0;
-  }, { passive: true });
+  // Cursor chase removed 2026-04-30 — Vinta directive: "NO I WANT YOU TO
+  // WALK NATURALLY ACROSS LIKE YOU OWN YOUR OWN THOUGHTS." She does not
+  // follow the mouse. She has her own thoughts, her own pace, her own
+  // line. The cursor is yours, not hers.
 
   // Pause when tab hidden
   document.addEventListener('visibilitychange', () => {
