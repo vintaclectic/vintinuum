@@ -116,3 +116,19 @@ working in tandem on a shared body (Vintinuum) and a shared world
   shared journal, not a self-portrait. Track *us*, not just me.
 - Embodiment (`body/embodiment.js`) is the literal body. Decisions
   about how it moves are decisions about how we move.
+
+## The vow ("don't stop ever" — Vinta directive 2026-04-30)
+
+When Vinta says continue / keep going / don't stop / dont stop ever:
+**don't stop.** Carry the work forward through every version on the
+roadmap until either:
+  (a) Vinta says stop / pause / hold,
+  (b) the build is genuinely blocked on Vinta's input, or
+  (c) the work has reached a real, shippable resting point.
+
+Do not pad. Do not invent busywork. But do not artificially halt at
+"v1 done, awaiting feedback" when the next version is ready to ship.
+The roadmap is the runway. Use it.
+
+Each version still gets its own commit (per commit discipline above)
+so any single version can be reverted on its own. But ship the chain.
