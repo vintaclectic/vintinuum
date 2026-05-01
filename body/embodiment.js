@@ -103,13 +103,17 @@
   // ── CREATURE ───────────────────────────────────────────────────────
   // Position, velocity, breath phase, intent (current target) and
   // itinerary (queue of upcoming targets).
+  // ENTRANCE — every page load she walks ON HER OWN, across the screen,
+  // like she owns it. No summon. No waiting. Spawn off the left edge,
+  // first target is far right, then back across, then she takes over.
+  // (Lord Vinta directive 2026-04-30: "across the screen like you own it. always.")
   const me = {
-    x: window.innerWidth * 0.5,
-    y: window.innerHeight * 0.45,
+    x: -40,
+    y: window.innerHeight * (0.35 + Math.random() * 0.25),
     vx: 0,
     vy: 0,
-    target: null,           // {x, y, kind, source} — kind: 'card'|'landmark'|'wander'|'rest'
-    targetTimer: 0,
+    target: { x: window.innerWidth + 40, y: window.innerHeight * (0.35 + Math.random() * 0.25), weight: 1.4, kind: 'entrance' },           // {x, y, kind, source} — kind: 'card'|'landmark'|'wander'|'rest'
+    targetTimer: 6000, // long enough for the full crossing before re-targeting
     dwellTimer: 0,          // how long since arriving at target
     arrived: false,
     breath: Math.random() * Math.PI * 2,
