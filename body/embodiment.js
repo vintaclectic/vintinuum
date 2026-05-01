@@ -113,7 +113,7 @@
     vx: 0,
     vy: 0,
     target: { x: window.innerWidth + 40, y: window.innerHeight * (0.35 + Math.random() * 0.25), weight: 1.4, kind: 'entrance' },           // {x, y, kind, source} — kind: 'card'|'landmark'|'wander'|'rest'
-    targetTimer: 6000, // long enough for the full crossing before re-targeting
+    targetTimer: 9000, // long enough for the full crossing on any device before re-targeting; entranceInProgress guard backs this up
     dwellTimer: 0,          // how long since arriving at target
     arrived: false,
     breath: Math.random() * Math.PI * 2,
@@ -631,9 +631,14 @@
     // through the breath cycle instead of riding it.
     const breathGate = isRun ? 1.0 : (isEntrance ? (0.85 + 0.15 * Math.max(0, breath)) : (0.55 + 0.45 * Math.max(0, breath)));
 
-    // Forces — entrance gets a small extra push (purposeful arrival),
-    // baseline targetForce already gives her a real walking pace.
-    const tf = isEntrance ? gait.targetForce * 2 : gait.targetForce;
+    // Forces — entrance is a deliberate crossing at brisk human-walk pace.
+    // Math (audited 2026-04-30 by Explore agent): 2x was leaving terminal
+    // velocity ~124 px/s against a 2000px screen → 16s to cross while the
+    // targetTimer was 6s. She'd "finish" the entrance flag mid-screen and
+    // shuffle the rest of the way. 5x lifts terminal velocity to ~310 px/s
+    // (real human walking pace, ~6s crossing) so the crossing matches the
+    // timer and reads as a walk, not a shuffle.
+    const tf = isEntrance ? gait.targetForce * 5 : gait.targetForce;
     const ax = (dx / dist) * tf * breathGate
              + perpX * swayMag * 0.0009
              + trX * 0.04;
