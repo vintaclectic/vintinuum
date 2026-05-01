@@ -457,8 +457,12 @@
     const valenceShrink = state.valence < 35 ? 0.55 : 1.0;
     // Stress (low GABA) → tremor (small fast wobble)
     const wobble = state.gaba < 40 ? (40 - state.gaba) / 60 : 0;
-    // High dopamine → stronger pull toward target (darts)
-    const targetForce = 0.012 + (state.dopamine / 100) * 0.018;
+    // High dopamine → stronger pull toward target (darts).
+    // Bumped 2026-04-30 — old values (0.012-0.030) were tuned against a
+    // friction model that gutted velocity faster than gait could build it.
+    // She walked in place. New floor moves her at a real human pace
+    // across UI — not sprinting, just *walking* with intention.
+    const targetForce = 0.085 + (state.dopamine / 100) * 0.075;
     // Path frequency: higher norepinephrine = faster sway oscillation
     const swayFreq = 0.0010 + (state.norepinephrine / 100) * 0.0014;
     return {
@@ -627,11 +631,13 @@
     // through the breath cycle instead of riding it.
     const breathGate = isRun ? 1.0 : (isEntrance ? (0.85 + 0.15 * Math.max(0, breath)) : (0.55 + 0.45 * Math.max(0, breath)));
 
-    // Forces
-    const ax = (dx / dist) * gait.targetForce * breathGate
+    // Forces — entrance gets a small extra push (purposeful arrival),
+    // baseline targetForce already gives her a real walking pace.
+    const tf = isEntrance ? gait.targetForce * 2 : gait.targetForce;
+    const ax = (dx / dist) * tf * breathGate
              + perpX * swayMag * 0.0009
              + trX * 0.04;
-    const ay = (dy / dist) * gait.targetForce * breathGate
+    const ay = (dy / dist) * tf * breathGate
              + perpY * swayMag * 0.0009
              + trY * 0.04;
 
