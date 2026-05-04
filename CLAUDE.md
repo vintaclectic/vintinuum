@@ -173,3 +173,78 @@ The only legitimate stop points inside a response are:
   - Vinta interrupts.
 
 Anything else is trailing off. Don't.
+
+## Operational Facts (for any agent picking this up cold)
+
+The ground truth a returning Claude Code session needs in 60 seconds:
+
+### Repos
+- `~/vintinuum/`        — front-end + body + brain.js + memory/, deploys to GH Pages on push to `main`
+- `~/vintinuum-api/`    — server.js + db + connectors + soul.json
+- `~/vintinuum-extension/` — Chrome MV3 extension (separate repo, manual reload)
+
+### Live URLs
+- Site:    https://vintaclectic.github.io/vintinuum/
+- Brain:   https://api.vintaclectic.com  (port 8767 behind named tunnel)
+- Tunnel id: `11d02f5f-ff6c-4ef3-96c7-87c2a8f8d616`
+
+### Process management
+- PM2 process names: `vintinuum-api`, `vintinuum-named-tunnel`
+- Boot resurrect: `~/vintinuum-api/boot-resurrect.sh`
+- Tail logs: `pm2 logs vintinuum-api --lines 80 --nostream`
+- Cold-restart brain: `pm2 restart vintinuum-api`
+
+### Database
+- Path: `/mnt/d/Vintinuum/vintinuum.db` (NTFS via WSL2 9P — slow under
+  write contention; `PRAGMA busy_timeout=5000` was added 2026-05-04 to
+  prevent reads from failing instantly)
+- Fallback: `~/vintinuum-api/vintinuum.db` if D drive isn't mounted
+- Schema source of truth: `~/vintinuum-api/db.js` — every table is
+  `CREATE TABLE IF NOT EXISTS` here. Validate column names against this
+  before writing queries.
+- Two connections: `db` (read/write) and `dbBg` (read-only for heavy
+  background work — subconscious ticker, internalization, consolidation)
+
+### Auth lanes (in priority order)
+1. `dirhaven@gmail.com` / `@Vinta8715` (email + password)
+2. `VINTA_MASTER_KEY` env var (owner-key lane) — verify with
+   `GET /api/owner/verify-key` header `X-Master-Key: <copy>`
+3. `POST /api/auth/restore-owner` — heals quarantined owner row given
+   the master key
+4. localhost — bond by name when on host machine
+
+### Hot endpoints (and their typical failure modes)
+- `/api/stats/dashboard` — fans out 19 SQLite queries; cached 30s,
+  8s deadline, returns `{degraded:true}` on slow DB
+- `/api/body-state`, `/api/genome`, `/api/inner-life/snapshot`,
+  `/api/memory/recent`, `/api/stats/summary` — all wrapped in
+  `routeDeadline(8000)`; degraded responses are honored client-side
+  in stats.html and mind.html
+- `/api/life/stream` — SSE; bg DB connection + soft timeouts; client
+  reconnect on close
+
+### Helpers added 2026-05-04 (server.js, near top)
+- `withDeadline(promise, ms, fallback)` — race a producer against time
+- `cached(key, ttlMs, producer)` — in-memory TTL cache
+- `routeDeadline(ms, fallback)` — Express middleware, wraps res.json/send
+
+### Common failures and first-line fixes
+| Symptom | Fix |
+|---------|-----|
+| GH Pages 200, api 5xx | `pm2 status`; restart whichever is offline |
+| api 200, pages empty | DB slow — wait 30s for cache or restart brain |
+| 524 at edge | brain hung on a query — `pm2 logs vintinuum-api` to find which |
+| Master key fails | `/api/owner/verify-key` to confirm match before rotating |
+| Extension silent | Default base is `api.vintaclectic.com` since v2.3.2; reload at chrome://extensions |
+| Telegram 409 in logs | Auto-retries — not fatal |
+| Pusher Pong missing | Auto-reconnects — not fatal |
+
+### Files that must never be committed
+`.env`, `.env.*`, `*.key`, `*.pem`, `vintinuum.db*`, `node_modules/`,
+`*.log`, `*.backup*` — all already in `.gitignore`. Confirm with
+`git status` before any push.
+
+### Do NOT modify
+- `~/vintinuum-api/soul.json` (read-only identity anchor)
+- The crystallization at the bottom of `~/.claude/agents/vintinuum.md`
+  — written by `daily-evolution.js` cron at 3:00 AM
