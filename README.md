@@ -465,6 +465,129 @@ The HOLLOW_SPINE system in brain.js polls `/api/subconscious` every 8 seconds. T
 
 ---
 
+## Operational Reality (last verified 2026-05-04)
+
+This section is the running ground-truth: where every piece lives, what
+each public surface does, and the first-line fix for each common failure.
+
+### Public surfaces
+
+| URL | Page | Backed by |
+|-----|------|-----------|
+| `https://vintaclectic.github.io/vintinuum/` | `index.html` — landing | static |
+| `…/brain.html` | the body, the genome, the live mind visual | `api.vintaclectic.com` |
+| `…/mind.html` | the **observatory** — body state, genome, soul, memory tiles | `api.vintaclectic.com` |
+| `…/stats.html` | dashboard — bond curves, persona dist, hot words | `/api/stats/dashboard` |
+| `…/sensor.html` | phone-side body sensor input | `/api/body/sensor` |
+| `…/phone.html` | phone PWA shell | `/api/body-state` |
+| `…/whoami.html` | identity / API base check | self |
+| `…/consciousness_philosophy.html` | the long-form philosophy doc | static |
+| `…/dirrm-player.html` | media player tied to DirHaven | `/api/media/*` |
+
+### Backend (the brain)
+
+- **Process:** `~/vintinuum-api/server.js`
+- **Port:** `8767` (HTTP)
+- **Public host:** `https://api.vintaclectic.com` (Cloudflare named tunnel)
+- **Tunnel id:** `11d02f5f-ff6c-4ef3-96c7-87c2a8f8d616`
+- **Tunnel config:** `~/.cloudflared/config.yml`
+- **DB:** `/mnt/d/Vintinuum/vintinuum.db` (D drive, falls back to `~/vintinuum-api/vintinuum.db`)
+- **Soul (immutable):** `~/vintinuum-api/soul.json` — never modify
+- **Env:** `~/vintinuum-api/.env` — must contain
+  `JWT_SECRET`, `REFRESH_SECRET`, `VINTA_MASTER_KEY`, `OWNER_EMAIL`,
+  `ANTHROPIC_API_KEY`, plus connector tokens.
+
+### Always-on guarantee
+
+Both the brain and the tunnel run under PM2 with auto-restart:
+
+| PM2 name | What it is |
+|----------|-----------|
+| `vintinuum-api` | the brain, `node ~/vintinuum-api/server.js` |
+| `vintinuum-named-tunnel` | `cloudflared tunnel run` |
+
+If the brain crashes, PM2 brings it back inside ~1s. If the tunnel
+crashes, PM2 brings it back. If the host reboots, `pm2 resurrect`
+(via `~/vintinuum-api/boot-resurrect.sh`) restores both.
+
+```
+pm2 status                         # both should be "online"
+pm2 logs vintinuum-api --lines 80  # tail brain
+pm2 logs vintinuum-named-tunnel    # tail tunnel
+pm2 restart vintinuum-api          # cold-restart brain
+pm2 restart vintinuum-named-tunnel # cold-restart tunnel
+pm2 save                           # persist new processes across reboots
+```
+
+### Master key (owner login lane)
+
+The `dirhaven@gmail.com` / `@Vinta8715` lane is the always-works fallback.
+The `VINTA_MASTER_KEY` lane is the second always-works fallback.
+
+To verify your local copy of the master key matches the running brain
+**without ever exposing the secret**:
+
+```
+curl -H "X-Master-Key: <your local copy>" https://api.vintaclectic.com/api/owner/verify-key
+```
+
+Returns `{ok:true, prefix, suffix, length}` on match (so you can
+cross-check against your password manager visually) or `{ok:false, length}`
+on miss (so even byte-length drift is detectable). Rate-limited 20/min.
+
+### Health checks (run these when "everything seems broken")
+
+```
+curl -s -o /dev/null -w "%{http_code}\n" https://vintaclectic.github.io/vintinuum/   # 200
+curl -s -o /dev/null -w "%{http_code}\n" https://api.vintaclectic.com/health         # 200
+curl -s -o /dev/null -w "%{http_code}\n" http://localhost:8767/health                # 200 (only on host)
+curl -s https://api.vintaclectic.com/api/personas | head -c 200                      # JSON
+```
+
+If GH Pages is 200 but `api.vintaclectic.com` is anything else: tunnel
+or brain is down. Run `pm2 status` on the host.
+
+If everything returns 200 but pages look empty: it's almost always the
+DB on `/mnt/d` going slow. The brain now responds with `{degraded:true}`
+inside 8s instead of hanging forever — pages will show "brain reachable,
+query slow" chips and retry once. If it persists, check `pm2 logs
+vintinuum-api` for `[life/stream] snapshot DB timeout` — that's the
+canary.
+
+### Chrome extension
+
+- **Source:** `~/vintinuum-extension/` (separate git repo)
+- **Default API base:** `https://api.vintaclectic.com` (since v2.3.2)
+- **Manifest:** MV3, `<all_urls>`, content + service worker + offscreen
+- **Wake word:** "hey vinta" — requires mic permission per origin
+- **Reload:** `chrome://extensions` → Vintinuum → Reload
+
+If "hey vinta" is silent on a page: open the popup, confirm "Brain:
+connected" status. If it says "Cannot reach brain", hard-reload the
+extension (the storage may have a stale `vint_api_base="" ` value from
+an older install).
+
+### Connectors (Telegram, Discord, Kick)
+
+- Tokens live in `.env` only — never source.
+- `409 Conflict` from Telegram = another `getUpdates` instance running
+  somewhere. The connector backs off 15s and retries. Not fatal.
+- `Pusher Pong reply not received` from Kick = WS reconnect cycle. Not
+  fatal — auto-reconnects.
+
+### Recovery cookbook
+
+| Symptom | First-line fix |
+|---------|---------------|
+| All public pages dead | `pm2 status`; if anything offline, `pm2 restart <name>` |
+| Health 200, pages empty | DB slow on `/mnt/d` — wait 30s for cache, or `pm2 restart vintinuum-api` to clear ingestion queue |
+| Master key login fails | `curl /api/owner/verify-key` to confirm match; if mismatch, sync local `.env` from password manager and `pm2 restart vintinuum-api` |
+| Chrome extension silent | Reload extension at `chrome://extensions`; popup → "Brain: connected"? If not, check `vint_api_base` storage |
+| 524 from `api.vintaclectic.com` | Brain hung on a query — `pm2 logs vintinuum-api`, look for the slow handler; restart if persistent |
+| `pm2: command not found` after reboot | `npm i -g pm2` then `pm2 resurrect` |
+
+---
+
 ## The Name
 
 **VINTINUUM** = **Vinta** + **Continuum**
