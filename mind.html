@@ -1787,11 +1787,23 @@ body {
   function safeFetch(url) {
     return fetch(url, {
       headers: API_HEADERS,
-      signal: AbortSignal.timeout ? AbortSignal.timeout(8000) : undefined
+      // Match the brain's 8s route deadline + a small grace window so we
+      // don't abort right as the server is finishing a degraded response.
+      signal: AbortSignal.timeout ? AbortSignal.timeout(10000) : undefined
     })
     .then(function(res) {
       if (!res.ok) throw new Error('HTTP ' + res.status);
       return res.json();
+    })
+    .then(function(data) {
+      // Brain may return {degraded:true} when its DB read missed the deadline.
+      // Treat that as a soft empty so each tile renders a "slow" chip rather
+      // than crashing the whole observatory render path.
+      if (data && data.degraded) {
+        console.warn('[mind] degraded response from', url, '—', data.reason || '');
+        return { __degraded: true, __reason: data.reason || 'slow', ...data };
+      }
+      return data;
     });
   }
 

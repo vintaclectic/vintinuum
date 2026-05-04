@@ -1866,15 +1866,37 @@ body {
   };
 
   // ─── FETCH + RENDER ──────────────────────────────────────────────────────────
-  async function fetchDashboard() {
+  // Retries once after a short delay before giving up — covers the case where
+  // the brain's first 8s deadline elapses on a cold cache but the second hit
+  // lands fast (the dashboard handler caches the result for 30s).
+  async function fetchDashboard(attempt = 0) {
     try {
-      const res = await fetch(`${API_BASE}/api/stats/dashboard?range=${currentRange}`, { headers: API_HEADERS });
+      const res = await fetch(`${API_BASE}/api/stats/dashboard?range=${currentRange}`, {
+        headers: API_HEADERS,
+        signal: AbortSignal.timeout(12000),
+      });
       if (!res.ok) throw new Error('Failed to fetch stats');
       const data = await res.json();
+      if (data && data.degraded && attempt < 1) {
+        // Brain returned degraded shell — retry once after the dashboard
+        // cache warms behind the scenes.
+        document.getElementById('dashboard-content').innerHTML =
+          `<div class="loading" style="color:var(--dim)">Brain reachable — query slow. Retrying in 4s…</div>`;
+        setTimeout(() => fetchDashboard(attempt + 1), 4000);
+        return;
+      }
+      if (data && data.degraded) {
+        document.getElementById('dashboard-content').innerHTML =
+          `<div class="loading" style="color:var(--orange,#ffaa55)">The brain is reachable but the database is slow right now (${data.reason || 'deadline'}). Try again in a moment.</div>`;
+        return;
+      }
       renderDashboard(data);
     } catch (err) {
+      const msg = (err && err.name === 'TimeoutError')
+        ? 'The query took too long. Brain may be busy ingesting.'
+        : 'The signal is quiet. Could not reach the API.';
       document.getElementById('dashboard-content').innerHTML =
-        `<div class="loading" style="color:var(--red)">The signal is quiet. Could not reach the API.</div>`;
+        `<div class="loading" style="color:var(--red)">${msg}</div>`;
     }
   }
 
