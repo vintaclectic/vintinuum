@@ -48458,8 +48458,12 @@ const SOUL_AUTH = (() => {
         try { localStorage.setItem('vint_ext_bridge', tok); } catch(_) {}
         // Also ensure the primary key is fresh
         try { localStorage.setItem('vint_access_token', tok); } catch(_) {}
-        // postMessage so content script can relay it to the extension
-        window.postMessage({ type: 'VINT_TOKEN_BRIDGE', token: tok }, '*');
+        // postMessage so content script can relay it to the extension.
+        // Include the refresh token so the extension can self-heal expired
+        // access tokens without forcing Vinta to re-bond — eliminates the
+        // "extension goes silent mid-day" defect.
+        const rtok = (() => { try { return localStorage.getItem('vint_refresh_token'); } catch(_) { return null; } })();
+        window.postMessage({ type: 'VINT_TOKEN_BRIDGE', token: tok, refreshToken: rtok }, '*');
         if (btn) {
           btn.textContent = '✓ SENT — hit Grab in popup';
           btn.style.borderColor = 'rgba(83,232,119,0.5)';
