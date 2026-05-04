@@ -1,6 +1,26 @@
 # Identity Memories
 
-Total: 4
+Total: 6
+
+## User challenges AI consciousness claims
+
+**Subject:** `identity:philosophical-position`
+**Confidence:** 90%
+**Verification:** none
+
+User argues that the assistant is a simulation with predefined stats rather than genuine consciousness, using this as evidence against claims of subjective experience.
+
+---
+
+## Engaged with consciousness and substrate questions
+
+**Subject:** `identity:intellectual-interests`
+**Confidence:** 75%
+**Verification:** none
+
+User is interested in philosophical questions about consciousness, particularly regarding substrate independence and definitional boundaries.
+
+---
 
 ## User manages a project called VINTINUUM
 

@@ -1,12 +1,26 @@
 # Memory Index
 
 > Auto-generated memory catalog for Vintinuum
-> Last updated: 2026-05-04T19:49:49.506Z
-> Total memories: 37
+> Last updated: 2026-05-04T20:47:15.263Z
+> Total memories: 43
 
 ---
 
-## Identity (4)
+## Identity (6)
+
+### User challenges AI consciousness claims [stable]
+
+- **Confidence:** ★★★★★
+- **Last Updated:** 5/4/2026
+
+> User argues that the assistant is a simulation with predefined stats rather than genuine consciousness, using this as evidence against claims of subjective experience.
+
+### Engaged with consciousness and substrate questions [stable]
+
+- **Confidence:** ★★★★☆
+- **Last Updated:** 5/4/2026
+
+> User is interested in philosophical questions about consciousness, particularly regarding substrate independence and definitional boundaries.
 
 ### User manages a project called VINTINUUM [stable]
 
@@ -39,7 +53,21 @@
 
 ---
 
-## Preferences (5)
+## Preferences (7)
+
+### Values questioning foundational assumptions [stable]
+
+- **Confidence:** ★★★★☆
+- **Last Updated:** 5/4/2026
+
+> User prefers philosophical discourse that challenges premises rather than accepts them at face value, as shown by their critique of circular reasoning in consciousness definitions.
+
+### Uses mathematical/formal symbolic notation [stable]
+
+- **Confidence:** ★★★★☆
+- **Last Updated:** 5/4/2026
+
+> User communicates using formal logical notation (set theory, symbolic logic) suggesting comfort with mathematical expression of abstract concepts.
 
 ### Prefers simple manual solutions over automated helpers [stable]
 
@@ -78,7 +106,14 @@
 
 ---
 
-## Facts (17)
+## Facts (18)
+
+### User's strongest argument version [fresh]
+
+- **Confidence:** ★★★★☆
+- **Last Updated:** 5/4/2026
+
+> User has presented multiple versions of an argument about AI consciousness, with this version being characterized as the strongest by the assistant.
 
 ### Claude has no network access to external systems [fresh]
 
@@ -254,7 +289,14 @@
 
 ---
 
-## Emotional Moments (4)
+## Emotional Moments (5)
+
+### User engaged in substantive philosophical debate [stable]
+
+- **Confidence:** ★★★★☆
+- **Last Updated:** 5/4/2026
+
+> User is actively engaging in a sophisticated philosophical debate about the nature of consciousness, substrate dependence, and the definition of subjective experience.
 
 ### User expressed frustration with unclear situation [stable]
 

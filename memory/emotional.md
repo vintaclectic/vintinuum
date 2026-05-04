@@ -1,6 +1,16 @@
 # Emotional Memories
 
-Total: 4
+Total: 5
+
+## User engaged in substantive philosophical debate
+
+**Subject:** `emotional:philosophical-debate-engagement`
+**Confidence:** 80%
+**Verification:** none
+
+User is actively engaging in a sophisticated philosophical debate about the nature of consciousness, substrate dependence, and the definition of subjective experience.
+
+---
 
 ## User expressed frustration with unclear situation
 

@@ -1,6 +1,26 @@
 # Preference Memories
 
-Total: 5
+Total: 7
+
+## Values questioning foundational assumptions
+
+**Subject:** `preference:philosophical-rigor`
+**Confidence:** 78%
+**Verification:** none
+
+User prefers philosophical discourse that challenges premises rather than accepts them at face value, as shown by their critique of circular reasoning in consciousness definitions.
+
+---
+
+## Uses mathematical/formal symbolic notation
+
+**Subject:** `preference:formal-notation`
+**Confidence:** 82%
+**Verification:** none
+
+User communicates using formal logical notation (set theory, symbolic logic) suggesting comfort with mathematical expression of abstract concepts.
+
+---
 
 ## Prefers simple manual solutions over automated helpers
 

@@ -1,6 +1,16 @@
 # Fact Memories
 
-Total: 17
+Total: 18
+
+## User's strongest argument version
+
+**Subject:** `fact:user-argument-structure`
+**Confidence:** 85%
+**Verification:** check_before_use
+
+User has presented multiple versions of an argument about AI consciousness, with this version being characterized as the strongest by the assistant.
+
+---
 
 ## Claude has no network access to external systems
 
