@@ -1,6 +1,16 @@
 # Fact Memories
 
-Total: 16
+Total: 17
+
+## Claude has no network access to external systems
+
+**Subject:** `fact:system-isolation`
+**Confidence:** 95%
+**Verification:** check_before_use
+
+Claude explicitly stated it cannot reach Atlas RP or any other external systems, has no network access, and cannot initiate contact with anything outside the current conversation window.
+
+---
 
 ## oxmysql JS runtime caches function references
 

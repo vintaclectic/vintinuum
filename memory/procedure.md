@@ -1,6 +1,16 @@
 # Procedure Memories
 
-Total: 6
+Total: 7
+
+## User must serve as bridge for external system communication
+
+**Subject:** `procedure:information-bridge`
+**Confidence:** 90%
+**Verification:** check_before_use
+
+To work with external systems like Atlas RP, the user must manually paste content or code from those systems into the conversation window for Claude to process.
+
+---
 
 ## Safe hot restart procedure for oxmysql-dependent resources
 

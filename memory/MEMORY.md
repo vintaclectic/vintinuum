@@ -1,8 +1,8 @@
 # Memory Index
 
 > Auto-generated memory catalog for Vintinuum
-> Last updated: 2026-05-01T00:31:08.217Z
-> Total memories: 34
+> Last updated: 2026-05-04T19:49:49.506Z
+> Total memories: 37
 
 ---
 
@@ -78,7 +78,14 @@
 
 ---
 
-## Facts (16)
+## Facts (17)
+
+### Claude has no network access to external systems [fresh]
+
+- **Confidence:** ★★★★★
+- **Last Updated:** 4/30/2026
+
+> Claude explicitly stated it cannot reach Atlas RP or any other external systems, has no network access, and cannot initiate contact with anything outside the current conversation window.
 
 ### oxmysql JS runtime caches function references [fresh]
 
@@ -194,7 +201,14 @@
 
 ---
 
-## Procedures (6)
+## Procedures (7)
+
+### User must serve as bridge for external system communication [fresh]
+
+- **Confidence:** ★★★★★
+- **Last Updated:** 4/30/2026
+
+> To work with external systems like Atlas RP, the user must manually paste content or code from those systems into the conversation window for Claude to process.
 
 ### Safe hot restart procedure for oxmysql-dependent resources [fresh]
 
@@ -203,21 +217,21 @@
 
 > When hot restarting FiveM resources that use oxmysql, always restart oxmysql first, then restart the target resource. This prevents stale callback issues.
 
-### Heartbeat Monitoring Setup Process [aging]
+### Heartbeat Monitoring Setup Process [stale]
 
 - **Confidence:** ★★★★★
 - **Last Updated:** 4/17/2026
 
 > A multi-step process to set up a Node.js heartbeat monitor that sends Telegram messages every 30 minutes using pm2 process manager.
 
-### Claude Code permission bypass procedure [aging]
+### Claude Code permission bypass procedure [stale]
 
 - **Confidence:** ★★★★☆
 - **Last Updated:** 4/17/2026
 
 > When Claude Code permission dialogs block file writes, can bypass by running `claude --dangerously-skip-permissions` in terminal or setting permission mode to auto-accept in Claude Code settings.
 
-### User is setting up a Telegram bot [aging]
+### User is setting up a Telegram bot [stale]
 
 - **Confidence:** ★★★★☆
 - **Last Updated:** 4/16/2026
@@ -240,7 +254,14 @@
 
 ---
 
-## Emotional Moments (3)
+## Emotional Moments (4)
+
+### User expressed frustration with unclear situation [stable]
+
+- **Confidence:** ★★★★☆
+- **Last Updated:** 4/30/2026
+
+> User responded with a curt expletive-laden message ('figure it the fuck out'), suggesting frustration with the current state of affairs.
 
 ### User frustrated with communication breakdown [stable]
 

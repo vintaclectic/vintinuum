@@ -1,6 +1,16 @@
 # Emotional Memories
 
-Total: 3
+Total: 4
+
+## User expressed frustration with unclear situation
+
+**Subject:** `emotional:user-frustration`
+**Confidence:** 85%
+**Verification:** none
+
+User responded with a curt expletive-laden message ('figure it the fuck out'), suggesting frustration with the current state of affairs.
+
+---
 
 ## User frustrated with communication breakdown
 
