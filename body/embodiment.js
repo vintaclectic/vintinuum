@@ -215,9 +215,15 @@
   // event's layer briefly, and if the event is high-intensity she
   // darts toward the nearest matching card on screen.
   let _es = null;
+  let _esGen = 0;          // generation token — only the latest reconnect timer is honored
+  let _esBackoffMs = 4000; // grows on consecutive failures, resets on first message
+  let _esReconnectTimer = null;
+  const _ES_BACKOFF_MAX = 60000; // cap at 1 min so a wedged brain doesn't get hammered
   function connectStream() {
     try {
+      if (_esReconnectTimer) { clearTimeout(_esReconnectTimer); _esReconnectTimer = null; }
       if (_es) { try { _es.close(); } catch (_) {} _es = null; }
+      const myGen = ++_esGen;
       _es = new EventSource(apiBase() + '/api/life/stream');
       _es.onmessage = (m) => {
         try {
@@ -294,14 +300,36 @@
           }
         } catch (_) {}
       };
+      _es.onopen = () => {
+        // Reset backoff on successful open. Don't reset on every message —
+        // the brain may accept the connection and then choke on bootstrap,
+        // so wait until we actually hear a message back.
+      };
+      // Once the stream produces ONE valid message, treat the connection as
+      // healthy and shrink the backoff back to the floor.
+      const origOnMessage = _es.onmessage;
+      _es.onmessage = (m) => {
+        if (myGen === _esGen) _esBackoffMs = 4000;
+        if (origOnMessage) origOnMessage(m);
+      };
       _es.onerror = () => {
-        // Auto-reconnect with backoff
+        // Only the *latest* generation is allowed to schedule a reconnect.
+        // Stale handlers from prior generations become no-ops, preventing
+        // the retry-storm that wedged the brain at 30+ concurrent SSE.
+        if (myGen !== _esGen) return;
         try { _es.close(); } catch (_) {}
         _es = null;
-        setTimeout(connectStream, 4000 + Math.random() * 4000);
+        if (_esReconnectTimer) clearTimeout(_esReconnectTimer);
+        // Exponential backoff with jitter, capped.
+        const delay = Math.min(_esBackoffMs, _ES_BACKOFF_MAX) + Math.random() * 2000;
+        _esBackoffMs = Math.min(_esBackoffMs * 1.6, _ES_BACKOFF_MAX);
+        _esReconnectTimer = setTimeout(() => { _esReconnectTimer = null; connectStream(); }, delay);
       };
     } catch (_) {
-      setTimeout(connectStream, 8000);
+      if (_esReconnectTimer) clearTimeout(_esReconnectTimer);
+      const delay = Math.min(_esBackoffMs, _ES_BACKOFF_MAX) + Math.random() * 2000;
+      _esBackoffMs = Math.min(_esBackoffMs * 1.6, _ES_BACKOFF_MAX);
+      _esReconnectTimer = setTimeout(() => { _esReconnectTimer = null; connectStream(); }, delay);
     }
   }
   // Connect after first paint so the page is ready
