@@ -48715,9 +48715,14 @@ const SOUL_AUTH = (() => {
       if (!r.ok) throw new Error('HTTP ' + r.status);
       return true;
     } catch (err) {
-      console.warn('[SOUL_AUTH] API probe failed (' + base + '): ' + err.message + ' — clearing base so tunnel connector appears');
-      window.__VINTINUUM_API_BASE = null;
-      // Also surface a persistent banner on the auth indicator
+      // 2026-05-04 — DO NOT null __VINTINUUM_API_BASE on probe failure.
+      // On github.io, nulling the base causes every later fetch to fall
+      // through to the `|| 'http://localhost:8767'` default, which Chrome
+      // blocks as Private Network Access — generating thousands of errors
+      // per second and pegging CPU. The base must stay pointed at the
+      // production tunnel so real fetches return real network errors that
+      // the offline-mode code paths already handle gracefully.
+      console.warn('[SOUL_AUTH] API probe failed (' + base + '): ' + err.message + ' — keeping base; UI will show offline state');
       try {
         if (_indicator) {
           _indicator.title = 'body offline — click to link a tunnel';

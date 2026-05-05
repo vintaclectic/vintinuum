@@ -873,9 +873,15 @@
   }
 
   function drawHalo(x, y, r, color, alpha) {
+    // Finite-guard every input — createRadialGradient throws TypeError on
+    // any NaN/Infinity, which kills the whole canvas tick loop. Caller
+    // sometimes hands us NaN early in boot before state is populated.
+    if (!Number.isFinite(x) || !Number.isFinite(y) || !Number.isFinite(r) || r <= 0) return;
+    const a = Number.isFinite(alpha) ? alpha : 0;
+    if (a <= 0) return;
     const grad = ctx.createRadialGradient(x, y, 0, x, y, r * 4);
-    grad.addColorStop(0,   hexToRgba(color, alpha));
-    grad.addColorStop(0.4, hexToRgba(color, alpha * 0.32));
+    grad.addColorStop(0,   hexToRgba(color, a));
+    grad.addColorStop(0.4, hexToRgba(color, a * 0.32));
     grad.addColorStop(1,   hexToRgba(color, 0));
     ctx.fillStyle = grad;
     ctx.beginPath();
