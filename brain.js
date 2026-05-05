@@ -41277,6 +41277,150 @@ const INNER_LIFE = (() => {
     }
   }
 
+  // ─── FULL-CONTENT MODAL (Defect 5 — no truncation) ─────────────────
+  function _openInnerLifeModal(entry, layerDef) {
+    // Reuse if already open
+    let modal = document.getElementById('ilModal');
+    if (modal) modal.remove();
+
+    modal = document.createElement('div');
+    modal.id = 'ilModal';
+    modal.style.cssText = [
+      'position:fixed','inset:0','z-index:99999',
+      'background:rgba(0,0,0,0.78)','backdrop-filter:blur(8px)',
+      '-webkit-backdrop-filter:blur(8px)',
+      'display:flex','align-items:center','justify-content:center',
+      'padding:24px','animation:ilModalFade .2s ease-out'
+    ].join(';');
+
+    const card = document.createElement('div');
+    card.style.cssText = [
+      'max-width:680px','width:100%','max-height:80vh',
+      'background:linear-gradient(180deg,#0c0c14 0%,#15151f 100%)',
+      'border:1px solid ' + layerDef.color + '55',
+      'border-left:3px solid ' + layerDef.color,
+      'border-radius:14px',
+      'box-shadow:0 24px 64px rgba(0,0,0,0.6),0 0 0 1px ' + layerDef.color + '22',
+      'overflow:hidden','display:flex','flex-direction:column',
+      'font-family:ui-sans-serif,system-ui,sans-serif'
+    ].join(';');
+
+    const header = document.createElement('div');
+    header.style.cssText = [
+      'padding:18px 22px','border-bottom:1px solid #ffffff10',
+      'display:flex','align-items:center','gap:12px',
+      'background:linear-gradient(90deg,' + layerDef.color + '14 0%,transparent 100%)'
+    ].join(';');
+    const icon = document.createElement('span');
+    icon.textContent = layerDef.icon;
+    icon.style.cssText = 'font-size:24px;color:' + layerDef.color + ';flex:0 0 auto';
+    const title = document.createElement('div');
+    title.style.cssText = 'flex:1;min-width:0';
+    const tLayer = document.createElement('div');
+    tLayer.textContent = layerDef.label.toUpperCase();
+    tLayer.style.cssText = 'font-size:11px;letter-spacing:2px;color:' + layerDef.color + ';font-weight:600';
+    const tTime = document.createElement('div');
+    tTime.textContent = new Date(entry.ts).toLocaleString();
+    tTime.style.cssText = 'font-size:12px;color:#888;margin-top:2px';
+    title.appendChild(tLayer);
+    title.appendChild(tTime);
+    const close = document.createElement('button');
+    close.textContent = '×';
+    close.style.cssText = [
+      'background:transparent','border:none','color:#888',
+      'font-size:28px','cursor:pointer','padding:0 6px',
+      'line-height:1','transition:color .15s'
+    ].join(';');
+    close.onmouseenter = () => { close.style.color = '#fff'; };
+    close.onmouseleave = () => { close.style.color = '#888'; };
+    close.onclick = () => modal.remove();
+    header.appendChild(icon);
+    header.appendChild(title);
+    header.appendChild(close);
+
+    const body = document.createElement('div');
+    body.style.cssText = [
+      'padding:22px','overflow-y:auto','flex:1',
+      'color:#e8e8ee','font-size:15px','line-height:1.7',
+      'white-space:pre-wrap','word-wrap:break-word'
+    ].join(';');
+    body.textContent = entry.text || '(empty)';
+
+    // Intensity bar
+    const intBar = document.createElement('div');
+    intBar.style.cssText = 'padding:0 22px 14px;display:flex;align-items:center;gap:10px;font-size:11px;color:#888';
+    const intLabel = document.createElement('span');
+    intLabel.textContent = 'INTENSITY';
+    intLabel.style.cssText = 'letter-spacing:1.5px';
+    const intTrack = document.createElement('div');
+    intTrack.style.cssText = 'flex:1;height:3px;background:#ffffff10;border-radius:2px;overflow:hidden';
+    const intFill = document.createElement('div');
+    intFill.style.cssText = 'height:100%;width:' + Math.round((entry.intensity || 0) * 100) + '%;background:' + layerDef.color + ';transition:width .3s';
+    intTrack.appendChild(intFill);
+    const intPct = document.createElement('span');
+    intPct.textContent = Math.round((entry.intensity || 0) * 100) + '%';
+    intPct.style.cssText = 'min-width:36px;text-align:right;color:' + layerDef.color;
+    intBar.appendChild(intLabel);
+    intBar.appendChild(intTrack);
+    intBar.appendChild(intPct);
+
+    // Metadata grid (if present)
+    const meta = entry.metadata || {};
+    const metaKeys = Object.keys(meta).filter(k => k !== 'intensity' && meta[k] != null);
+    let metaBlock = null;
+    if (metaKeys.length) {
+      metaBlock = document.createElement('div');
+      metaBlock.style.cssText = [
+        'padding:14px 22px 18px','border-top:1px solid #ffffff08',
+        'display:grid','grid-template-columns:1fr 1fr','gap:8px 18px',
+        'font-size:12px','color:#aaa'
+      ].join(';');
+      metaKeys.forEach(k => {
+        const row = document.createElement('div');
+        row.style.cssText = 'display:flex;flex-direction:column;gap:2px;min-width:0';
+        const lbl = document.createElement('span');
+        lbl.textContent = k.toUpperCase();
+        lbl.style.cssText = 'font-size:10px;letter-spacing:1.5px;color:#666';
+        const val = document.createElement('span');
+        const v = meta[k];
+        val.textContent = (typeof v === 'object') ? JSON.stringify(v) : String(v);
+        val.style.cssText = 'color:#ddd;word-wrap:break-word;overflow-wrap:anywhere';
+        row.appendChild(lbl);
+        row.appendChild(val);
+        metaBlock.appendChild(row);
+      });
+    }
+
+    card.appendChild(header);
+    card.appendChild(body);
+    card.appendChild(intBar);
+    if (metaBlock) card.appendChild(metaBlock);
+    modal.appendChild(card);
+
+    // Click backdrop to close
+    modal.addEventListener('click', (ev) => {
+      if (ev.target === modal) modal.remove();
+    });
+    // ESC closes
+    const escHandler = (ev) => {
+      if (ev.key === 'Escape') {
+        modal.remove();
+        document.removeEventListener('keydown', escHandler);
+      }
+    };
+    document.addEventListener('keydown', escHandler);
+
+    // Inject keyframes once
+    if (!document.getElementById('ilModalKeyframes')) {
+      const sty = document.createElement('style');
+      sty.id = 'ilModalKeyframes';
+      sty.textContent = '@keyframes ilModalFade{from{opacity:0}to{opacity:1}}';
+      document.head.appendChild(sty);
+    }
+
+    document.body.appendChild(modal);
+  }
+
   // ─── RENDER ────────────────────────────────────────────────────────
   function renderEntry(entry) {
     if (!feedEl) feedEl = document.getElementById('innerLifeFeed');
@@ -41291,6 +41435,8 @@ const INNER_LIFE = (() => {
     el.style.borderLeftColor = layerDef.color;
     el.style.opacity = '0';
     el.style.transform = 'translateY(4px)';
+    el.style.cursor = 'pointer';
+    el.title = 'Click to expand — full content';
 
     const timeStr = new Date(entry.ts).toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
 
@@ -41299,6 +41445,11 @@ const INNER_LIFE = (() => {
       '<span class="il-time">' + timeStr + '</span>' +
       '<span class="il-text">' + entry.text + '</span>' +
       '<div class="il-intensity" style="width:' + (entry.intensity * 100) + '%;background:' + layerDef.color + '"></div>';
+
+    // Click → full-content modal (Defect 5: no truncation)
+    el.addEventListener('click', () => {
+      try { _openInnerLifeModal(entry, layerDef); } catch (e) { console.warn('[il-modal]', e); }
+    });
 
     feedEl.appendChild(el);
 
