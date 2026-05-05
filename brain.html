@@ -318,27 +318,39 @@ if ('serviceWorker' in navigator && _onGitHubPages) {
 </head>
 <body>
 
-<!-- ═══ AUTH SHELL — sign in / sign up so strangers can actually use the site ═══ -->
-<button id="authTrigger" type="button" aria-label="Sign in or create account"
-  style="position:fixed;top:8px;left:12px;z-index:99996;background:rgba(8,12,20,0.55);
-  border:1px solid rgba(79,195,247,0.28);color:rgba(79,195,247,0.85);
-  padding:7px 14px;border-radius:14px;cursor:pointer;font-size:.6rem;letter-spacing:.18em;
-  font-family:'Space Mono',monospace;text-transform:uppercase;transition:all .18s;
-  min-height:36px;display:flex;align-items:center;gap:8px;">
-  <span id="authTriggerDot" style="width:6px;height:6px;border-radius:50%;background:rgba(255,90,90,0.85);box-shadow:0 0 8px rgba(255,90,90,0.5);"></span>
-  <span id="authTriggerLabel">SIGN IN</span>
-</button>
+<!-- ═══ TOP-LEFT PILL CLUSTER — flex row so pills can never overlap ═══
+     Both auth + kick connect pills live inside one fixed flex container.
+     This eliminates the hardcoded left:12 / left:140 collision when the
+     auth label expands (e.g. "DIRHAVEN@GMAIL.COM" instead of "SIGN IN")
+     and avoids stacking on top of each other on narrow viewports.
+     (Vinta directive 2026-05-05: "kick connect overlapping connected
+      account or sign in or sign in is overlapping other shit") -->
+<div id="topLeftCluster" style="position:fixed;top:8px;left:12px;z-index:99996;
+  display:flex;flex-wrap:wrap;align-items:center;gap:8px;
+  max-width:calc(100vw - 80px);pointer-events:none;">
+  <button id="authTrigger" type="button" aria-label="Sign in or create account"
+    style="pointer-events:auto;background:rgba(8,12,20,0.55);
+    border:1px solid rgba(79,195,247,0.28);color:rgba(79,195,247,0.85);
+    padding:7px 14px;border-radius:14px;cursor:pointer;font-size:.6rem;letter-spacing:.18em;
+    font-family:'Space Mono',monospace;text-transform:uppercase;transition:all .18s;
+    min-height:36px;display:flex;align-items:center;gap:8px;
+    max-width:60vw;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
+    <span id="authTriggerDot" style="flex:0 0 auto;width:6px;height:6px;border-radius:50%;background:rgba(255,90,90,0.85);box-shadow:0 0 8px rgba(255,90,90,0.5);"></span>
+    <span id="authTriggerLabel" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">SIGN IN</span>
+  </button>
 
-<!-- Kick OAuth connect pill — shown when logged in, lets user mod with !vinta -->
-<button id="kickConnectBtn" type="button" aria-label="Connect Kick account"
-  style="position:fixed;top:8px;left:140px;z-index:99996;background:rgba(8,12,20,0.55);
-  border:1px solid rgba(83,255,38,0.32);color:rgba(160,255,120,0.85);
-  padding:7px 14px;border-radius:14px;cursor:pointer;font-size:.6rem;letter-spacing:.18em;
-  font-family:'Space Mono',monospace;text-transform:uppercase;transition:all .18s;
-  min-height:36px;display:none;align-items:center;gap:8px;">
-  <span id="kickConnectDot" style="width:6px;height:6px;border-radius:50%;background:rgba(255,180,40,0.9);box-shadow:0 0 8px rgba(255,180,40,0.5);"></span>
-  <span id="kickConnectLabel">CONNECT KICK</span>
-</button>
+  <!-- Kick OAuth connect pill — shown when logged in, lets user mod with !vinta -->
+  <button id="kickConnectBtn" type="button" aria-label="Connect Kick account"
+    style="pointer-events:auto;background:rgba(8,12,20,0.55);
+    border:1px solid rgba(83,255,38,0.32);color:rgba(160,255,120,0.85);
+    padding:7px 14px;border-radius:14px;cursor:pointer;font-size:.6rem;letter-spacing:.18em;
+    font-family:'Space Mono',monospace;text-transform:uppercase;transition:all .18s;
+    min-height:36px;display:none;align-items:center;gap:8px;
+    max-width:60vw;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
+    <span id="kickConnectDot" style="flex:0 0 auto;width:6px;height:6px;border-radius:50%;background:rgba(255,180,40,0.9);box-shadow:0 0 8px rgba(255,180,40,0.5);"></span>
+    <span id="kickConnectLabel" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">CONNECT KICK</span>
+  </button>
+</div>
 
 <div id="authOverlay" role="dialog" aria-modal="true" aria-labelledby="authTitle"
   style="position:fixed;inset:0;z-index:99997;display:none;align-items:center;justify-content:center;
