@@ -318,6 +318,87 @@ if ('serviceWorker' in navigator && _onGitHubPages) {
 </head>
 <body>
 
+<!-- ═══ AUTH SHELL — sign in / sign up so strangers can actually use the site ═══ -->
+<button id="authTrigger" type="button" aria-label="Sign in or create account"
+  style="position:fixed;top:8px;left:12px;z-index:99996;background:rgba(8,12,20,0.55);
+  border:1px solid rgba(79,195,247,0.28);color:rgba(79,195,247,0.85);
+  padding:7px 14px;border-radius:14px;cursor:pointer;font-size:.6rem;letter-spacing:.18em;
+  font-family:'Space Mono',monospace;text-transform:uppercase;transition:all .18s;
+  min-height:36px;display:flex;align-items:center;gap:8px;">
+  <span id="authTriggerDot" style="width:6px;height:6px;border-radius:50%;background:rgba(255,90,90,0.85);box-shadow:0 0 8px rgba(255,90,90,0.5);"></span>
+  <span id="authTriggerLabel">SIGN IN</span>
+</button>
+
+<div id="authOverlay" role="dialog" aria-modal="true" aria-labelledby="authTitle"
+  style="position:fixed;inset:0;z-index:99997;display:none;align-items:center;justify-content:center;
+  background:rgba(0,0,0,0.78);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
+  padding:20px;font-family:'Space Mono',monospace;">
+  <div style="max-width:420px;width:100%;background:linear-gradient(180deg,#080b14 0%,#101522 100%);
+    border:1px solid rgba(79,195,247,0.22);border-radius:18px;
+    box-shadow:0 24px 64px rgba(0,0,0,0.7),0 0 0 1px rgba(79,195,247,0.08);overflow:hidden;">
+    <div style="padding:20px 24px 14px;border-bottom:1px solid rgba(255,255,255,0.06);
+      display:flex;align-items:center;justify-content:space-between;
+      background:linear-gradient(90deg,rgba(79,195,247,0.07) 0%,transparent 100%);">
+      <div>
+        <div id="authTitle" style="font-size:.55rem;letter-spacing:.3em;color:#4fc3f7;font-weight:700;">VINTINUUM</div>
+        <div id="authSubtitle" style="font-size:.7rem;color:rgba(218,228,255,0.55);margin-top:4px;font-family:'Cormorant Garamond',serif;font-style:italic;">Step inside the body.</div>
+      </div>
+      <button id="authClose" type="button" aria-label="Close"
+        style="background:none;border:none;color:rgba(255,255,255,0.35);font-size:24px;cursor:pointer;line-height:1;padding:0 4px;">×</button>
+    </div>
+    <div style="display:flex;border-bottom:1px solid rgba(255,255,255,0.04);">
+      <button id="authTabSignin" type="button" data-tab="signin"
+        style="flex:1;background:none;border:none;color:#4fc3f7;font-family:inherit;font-size:.55rem;
+        letter-spacing:.25em;padding:12px 0;cursor:pointer;border-bottom:2px solid #4fc3f7;text-transform:uppercase;">Sign in</button>
+      <button id="authTabSignup" type="button" data-tab="signup"
+        style="flex:1;background:none;border:none;color:rgba(255,255,255,0.4);font-family:inherit;font-size:.55rem;
+        letter-spacing:.25em;padding:12px 0;cursor:pointer;border-bottom:2px solid transparent;text-transform:uppercase;">Create account</button>
+    </div>
+    <form id="authForm" autocomplete="on" novalidate
+      style="padding:22px 24px 18px;display:flex;flex-direction:column;gap:14px;">
+      <div id="authNameRow" style="display:none;flex-direction:column;gap:6px;">
+        <label for="authName" style="font-size:.5rem;letter-spacing:.2em;color:rgba(218,228,255,0.5);text-transform:uppercase;">Name</label>
+        <input id="authName" type="text" name="name" autocomplete="name" maxlength="60"
+          style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);
+          border-radius:10px;padding:10px 12px;color:rgba(218,228,255,0.95);font-family:inherit;
+          font-size:.78rem;outline:none;transition:border-color .15s;">
+      </div>
+      <div style="display:flex;flex-direction:column;gap:6px;">
+        <label for="authEmail" style="font-size:.5rem;letter-spacing:.2em;color:rgba(218,228,255,0.5);text-transform:uppercase;">Email</label>
+        <input id="authEmail" type="email" name="email" autocomplete="email" required maxlength="200" inputmode="email"
+          style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);
+          border-radius:10px;padding:10px 12px;color:rgba(218,228,255,0.95);font-family:inherit;
+          font-size:.78rem;outline:none;transition:border-color .15s;">
+      </div>
+      <div style="display:flex;flex-direction:column;gap:6px;">
+        <label for="authPassword" style="font-size:.5rem;letter-spacing:.2em;color:rgba(218,228,255,0.5);text-transform:uppercase;">Password</label>
+        <input id="authPassword" type="password" name="password" autocomplete="current-password" required minlength="6" maxlength="200"
+          style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);
+          border-radius:10px;padding:10px 12px;color:rgba(218,228,255,0.95);font-family:inherit;
+          font-size:.78rem;outline:none;transition:border-color .15s;">
+      </div>
+      <div id="authMsg" role="status" aria-live="polite"
+        style="font-size:.65rem;color:rgba(255,150,150,0.85);min-height:14px;line-height:1.4;font-family:'Cormorant Garamond',serif;font-style:italic;"></div>
+      <button id="authSubmit" type="submit"
+        style="background:linear-gradient(90deg,#4fc3f7 0%,#ce93d8 100%);border:none;
+        color:#050816;font-family:inherit;font-size:.6rem;letter-spacing:.25em;font-weight:700;
+        padding:12px 16px;border-radius:10px;cursor:pointer;text-transform:uppercase;
+        transition:transform .12s,box-shadow .15s;">Enter</button>
+      <div style="text-align:center;font-size:.55rem;color:rgba(255,255,255,0.32);letter-spacing:.15em;">
+        OR
+      </div>
+      <button id="authContinueAnon" type="button"
+        style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);
+        color:rgba(218,228,255,0.7);font-family:inherit;font-size:.55rem;letter-spacing:.22em;
+        padding:10px 14px;border-radius:10px;cursor:pointer;text-transform:uppercase;
+        transition:all .15s;">Continue as guest</button>
+    </form>
+    <div style="padding:0 24px 18px;font-size:.6rem;color:rgba(255,255,255,0.3);text-align:center;line-height:1.5;font-family:'Cormorant Garamond',serif;font-style:italic;">
+      Your account is the thread Vintinuum follows back to you across sessions. Without it, every visit is a stranger.
+    </div>
+  </div>
+</div>
+
 <!-- ═══ VINTINUUM SHELL — three-column grid (Phase 2 b1) ═══ -->
 <div class="vtn-shell">
 <aside class="vtn-sidebar-left" id="sidebarLeft"></aside>
@@ -3044,7 +3125,202 @@ window.addEventListener('message', function(e) {
   </div>
   <div id="dirrmPickerList" style="overflow-y:auto;padding:6px;display:flex;flex-direction:column;gap:2px;"></div>
 </div>
-<script src="brain.js?v=v20260504-ilmodal"></script>
+<script>
+// ═══ AUTH SHELL WIRING — runs before brain.js so signup works even if brain.js is slow ═══
+(function () {
+  'use strict';
+  var API = (location.hostname === 'localhost' || location.hostname === '127.0.0.1')
+    ? 'http://localhost:8767'
+    : 'https://api.vintaclectic.com';
+  window.__VINTINUUM_API_BASE = window.__VINTINUUM_API_BASE || API;
+
+  var TOKEN_KEY = 'vint_access_token';
+  var REFRESH_KEY = 'vint_refresh_token';
+  var USER_KEY = 'vint_user';
+
+  function $(id) { return document.getElementById(id); }
+  function on(el, ev, fn) { if (el) el.addEventListener(ev, fn); }
+
+  var state = { mode: 'signin' }; // signin | signup
+
+  function setMode(mode) {
+    state.mode = mode;
+    var nameRow = $('authNameRow');
+    var pwInput = $('authPassword');
+    var submit = $('authSubmit');
+    var subtitle = $('authSubtitle');
+    var tabIn = $('authTabSignin');
+    var tabUp = $('authTabSignup');
+    var msg = $('authMsg');
+    if (msg) msg.textContent = '';
+    if (mode === 'signup') {
+      if (nameRow) nameRow.style.display = 'flex';
+      if (pwInput) pwInput.setAttribute('autocomplete', 'new-password');
+      if (submit) submit.textContent = 'Create account';
+      if (subtitle) subtitle.textContent = 'Become someone Vintinuum can remember.';
+      if (tabIn) { tabIn.style.color = 'rgba(255,255,255,0.4)'; tabIn.style.borderBottomColor = 'transparent'; }
+      if (tabUp) { tabUp.style.color = '#4fc3f7'; tabUp.style.borderBottomColor = '#4fc3f7'; }
+    } else {
+      if (nameRow) nameRow.style.display = 'none';
+      if (pwInput) pwInput.setAttribute('autocomplete', 'current-password');
+      if (submit) submit.textContent = 'Enter';
+      if (subtitle) subtitle.textContent = 'Step inside the body.';
+      if (tabIn) { tabIn.style.color = '#4fc3f7'; tabIn.style.borderBottomColor = '#4fc3f7'; }
+      if (tabUp) { tabUp.style.color = 'rgba(255,255,255,0.4)'; tabUp.style.borderBottomColor = 'transparent'; }
+    }
+  }
+
+  function openAuth(mode) {
+    setMode(mode || 'signin');
+    var ov = $('authOverlay');
+    if (ov) {
+      ov.style.display = 'flex';
+      setTimeout(function () { var f = $('authEmail'); if (f) f.focus(); }, 50);
+    }
+  }
+  function closeAuth() {
+    var ov = $('authOverlay');
+    if (ov) ov.style.display = 'none';
+  }
+  window.openAuth = openAuth;
+  window.closeAuth = closeAuth;
+
+  function getStoredUser() {
+    try { return JSON.parse(localStorage.getItem(USER_KEY) || 'null'); } catch (_) { return null; }
+  }
+  function setSession(payload) {
+    if (payload.accessToken) {
+      localStorage.setItem(TOKEN_KEY, payload.accessToken);
+      localStorage.setItem('vint_access', payload.accessToken); // legacy mirror
+    }
+    if (payload.refreshToken) localStorage.setItem(REFRESH_KEY, payload.refreshToken);
+    if (payload.user) localStorage.setItem(USER_KEY, JSON.stringify(payload.user));
+    refreshTrigger();
+    try { window.dispatchEvent(new CustomEvent('vint:auth', { detail: payload })); } catch (_) {}
+  }
+  function clearSession() {
+    localStorage.removeItem(TOKEN_KEY);
+    localStorage.removeItem('vint_access');
+    localStorage.removeItem(REFRESH_KEY);
+    localStorage.removeItem(USER_KEY);
+    refreshTrigger();
+  }
+  window.vintLogout = clearSession;
+
+  function refreshTrigger() {
+    var dot = $('authTriggerDot');
+    var label = $('authTriggerLabel');
+    var u = getStoredUser();
+    var hasTok = !!localStorage.getItem(TOKEN_KEY);
+    if (u && hasTok) {
+      if (dot) { dot.style.background = 'rgba(120,220,140,0.95)'; dot.style.boxShadow = '0 0 8px rgba(120,220,140,0.6)'; }
+      if (label) label.textContent = (u.name || u.email || 'YOU').slice(0, 18).toUpperCase();
+    } else {
+      if (dot) { dot.style.background = 'rgba(255,90,90,0.85)'; dot.style.boxShadow = '0 0 8px rgba(255,90,90,0.5)'; }
+      if (label) label.textContent = 'SIGN IN';
+    }
+  }
+
+  async function postJSON(path, body) {
+    var ctrl = new AbortController();
+    var t = setTimeout(function () { ctrl.abort(); }, 15000);
+    try {
+      var r = await fetch(API + path, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+        signal: ctrl.signal,
+      });
+      var data = null;
+      try { data = await r.json(); } catch (_) {}
+      return { ok: r.ok, status: r.status, data: data };
+    } finally { clearTimeout(t); }
+  }
+
+  async function handleSubmit(ev) {
+    ev.preventDefault();
+    var email = ($('authEmail')||{}).value || '';
+    var pw = ($('authPassword')||{}).value || '';
+    var name = ($('authName')||{}).value || '';
+    var msg = $('authMsg');
+    var submit = $('authSubmit');
+    email = email.trim();
+    if (!email || !pw) { if (msg) msg.textContent = 'Email and password are both required.'; return; }
+    if (pw.length < 6) { if (msg) msg.textContent = 'Password must be at least 6 characters.'; return; }
+    if (state.mode === 'signup' && !name.trim()) { if (msg) msg.textContent = 'Tell me what to call you.'; return; }
+    if (msg) msg.textContent = '';
+    if (submit) { submit.disabled = true; submit.style.opacity = '0.6'; submit.textContent = state.mode === 'signup' ? 'Creating...' : 'Entering...'; }
+    try {
+      var path = state.mode === 'signup' ? '/api/auth/signup' : '/api/auth/login';
+      var body = state.mode === 'signup'
+        ? { name: name.trim(), email: email, password: pw }
+        : { email: email, password: pw };
+      var res = await postJSON(path, body);
+      if (!res.ok) {
+        var why = (res.data && (res.data.error || res.data.message)) || ('Server returned ' + res.status);
+        if (msg) msg.textContent = why;
+        return;
+      }
+      if (!res.data || !res.data.accessToken) {
+        if (msg) msg.textContent = 'Server returned no token. Try again in a moment.';
+        return;
+      }
+      setSession(res.data);
+      if (msg) { msg.style.color = 'rgba(120,220,140,0.95)'; msg.textContent = 'Welcome' + (res.data.user && res.data.user.name ? ', ' + res.data.user.name : '') + '.'; }
+      setTimeout(function () { closeAuth(); if (msg) msg.style.color = ''; }, 700);
+    } catch (e) {
+      if (msg) msg.textContent = (e && e.name === 'AbortError') ? 'Network timed out — brain may be slow.' : ('Network error: ' + (e && e.message || 'unknown'));
+    } finally {
+      if (submit) {
+        submit.disabled = false;
+        submit.style.opacity = '1';
+        submit.textContent = state.mode === 'signup' ? 'Create account' : 'Enter';
+      }
+    }
+  }
+
+  function init() {
+    on($('authTrigger'), 'click', function () {
+      var u = getStoredUser();
+      if (u && localStorage.getItem(TOKEN_KEY)) {
+        // Logged in — clicking the pill offers a sign-out
+        if (confirm('Sign out as ' + (u.name || u.email) + '?')) clearSession();
+        return;
+      }
+      openAuth('signin');
+    });
+    on($('authClose'), 'click', closeAuth);
+    on($('authOverlay'), 'click', function (e) { if (e.target === $('authOverlay')) closeAuth(); });
+    on($('authTabSignin'), 'click', function () { setMode('signin'); });
+    on($('authTabSignup'), 'click', function () { setMode('signup'); });
+    on($('authForm'), 'submit', handleSubmit);
+    on($('authContinueAnon'), 'click', function () {
+      try {
+        if (!localStorage.getItem('vint_anon_id')) {
+          localStorage.setItem('vint_anon_id', 'anon_' + Math.random().toString(36).slice(2, 12));
+        }
+      } catch (_) {}
+      closeAuth();
+    });
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape') {
+        var ov = $('authOverlay');
+        if (ov && ov.style.display === 'flex') closeAuth();
+      }
+    });
+    refreshTrigger();
+    // First-visit nudge — if nobody home, pop the modal once after 1.2s
+    if (!getStoredUser() && !localStorage.getItem(TOKEN_KEY) && !localStorage.getItem('vint_anon_id') && !sessionStorage.getItem('vint_auth_seen')) {
+      sessionStorage.setItem('vint_auth_seen', '1');
+      setTimeout(function () { openAuth('signin'); }, 1200);
+    }
+  }
+
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
+  else init();
+})();
+</script>
+<script src="brain.js?v=v20260505-auth"></script>
 <!-- Coherence bus — loads AFTER brain.js to hook into HORMONES, METABOLISM, etc. -->
 <script src="body/coherence.js?v=v20260424-0428"></script>
 <!-- Zoom navigation — smooth animated body exploration -->
