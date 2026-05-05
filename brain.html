@@ -329,6 +329,17 @@ if ('serviceWorker' in navigator && _onGitHubPages) {
   <span id="authTriggerLabel">SIGN IN</span>
 </button>
 
+<!-- Kick OAuth connect pill — shown when logged in, lets user mod with !vinta -->
+<button id="kickConnectBtn" type="button" aria-label="Connect Kick account"
+  style="position:fixed;top:8px;left:140px;z-index:99996;background:rgba(8,12,20,0.55);
+  border:1px solid rgba(83,255,38,0.32);color:rgba(160,255,120,0.85);
+  padding:7px 14px;border-radius:14px;cursor:pointer;font-size:.6rem;letter-spacing:.18em;
+  font-family:'Space Mono',monospace;text-transform:uppercase;transition:all .18s;
+  min-height:36px;display:none;align-items:center;gap:8px;">
+  <span id="kickConnectDot" style="width:6px;height:6px;border-radius:50%;background:rgba(255,180,40,0.9);box-shadow:0 0 8px rgba(255,180,40,0.5);"></span>
+  <span id="kickConnectLabel">CONNECT KICK</span>
+</button>
+
 <div id="authOverlay" role="dialog" aria-modal="true" aria-labelledby="authTitle"
   style="position:fixed;inset:0;z-index:99997;display:none;align-items:center;justify-content:center;
   background:rgba(0,0,0,0.78);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
@@ -3309,6 +3320,7 @@ window.addEventListener('message', function(e) {
       }
     });
     refreshTrigger();
+    initKick();
     // First-visit nudge — if nobody home, pop the modal once after 1.2s
     if (!getStoredUser() && !localStorage.getItem(TOKEN_KEY) && !localStorage.getItem('vint_anon_id') && !sessionStorage.getItem('vint_auth_seen')) {
       sessionStorage.setItem('vint_auth_seen', '1');
@@ -3316,11 +3328,113 @@ window.addEventListener('message', function(e) {
     }
   }
 
+  // ── Kick OAuth wiring ──────────────────────────────────────────────────
+  function refreshKickPill(connected) {
+    var btn = $('kickConnectBtn');
+    var dot = $('kickConnectDot');
+    var label = $('kickConnectLabel');
+    if (!btn) return;
+    var token = localStorage.getItem(TOKEN_KEY);
+    if (!token) {
+      btn.style.display = 'none';
+      return;
+    }
+    btn.style.display = 'flex';
+    if (connected) {
+      btn.style.borderColor = 'rgba(83,255,38,0.42)';
+      btn.style.color = 'rgba(180,255,140,0.95)';
+      if (dot) dot.style.background = 'rgba(83,255,38,0.95)';
+      if (dot) dot.style.boxShadow = '0 0 8px rgba(83,255,38,0.6)';
+      if (label) label.textContent = 'KICK ✓';
+      btn.title = 'Kick connected — !vinta works on your stream. Click to reconnect.';
+    } else {
+      btn.style.borderColor = 'rgba(83,255,38,0.32)';
+      btn.style.color = 'rgba(160,255,120,0.85)';
+      if (dot) dot.style.background = 'rgba(255,180,40,0.9)';
+      if (dot) dot.style.boxShadow = '0 0 8px rgba(255,180,40,0.5)';
+      if (label) label.textContent = 'CONNECT KICK';
+      btn.title = 'Connect Kick so viewers can use !vinta';
+    }
+  }
+
+  function getApiBase() {
+    try {
+      if (window.VINT_API_BASE) return window.VINT_API_BASE;
+    } catch (_) {}
+    return 'https://api.vintaclectic.com';
+  }
+
+  async function checkKickStatus() {
+    var token = localStorage.getItem(TOKEN_KEY);
+    if (!token) { refreshKickPill(false); return false; }
+    try {
+      var r = await fetch(getApiBase() + '/api/kick/status', {
+        headers: { 'Authorization': 'Bearer ' + token },
+        signal: AbortSignal.timeout(8000),
+      });
+      if (!r.ok) { refreshKickPill(false); return false; }
+      var d = await r.json();
+      refreshKickPill(!!d.connected);
+      return !!d.connected;
+    } catch (_) {
+      refreshKickPill(false);
+      return false;
+    }
+  }
+
+  function startKickOAuth() {
+    var token = localStorage.getItem(TOKEN_KEY);
+    if (!token) {
+      alert('Sign in first — Kick is tied to your account.');
+      openAuth('signin');
+      return;
+    }
+    var url = getApiBase() + '/api/kick/oauth/start?token=' + encodeURIComponent(token);
+    var pop = window.open(url, 'vint_kick_oauth', 'width=520,height=720,menubar=no,toolbar=no');
+    if (!pop) {
+      // Popup blocked — fall back to top-level redirect
+      window.location.href = url;
+      return;
+    }
+    // Poll status every 2s while popup is open; close on success
+    var tries = 0;
+    var poll = setInterval(async function () {
+      tries++;
+      if (pop.closed || tries > 90) {
+        clearInterval(poll);
+        // Final check after popup closes
+        await checkKickStatus();
+        return;
+      }
+      var connected = await checkKickStatus();
+      if (connected) {
+        clearInterval(poll);
+        try { pop.close(); } catch (_) {}
+      }
+    }, 2000);
+  }
+
+  function initKick() {
+    on($('kickConnectBtn'), 'click', startKickOAuth);
+    // If we just came back from OAuth callback, clear the query and check
+    try {
+      var q = new URLSearchParams(location.search);
+      if (q.get('kick_connected') === '1') {
+        history.replaceState({}, '', location.pathname + location.hash);
+      }
+    } catch (_) {}
+    checkKickStatus();
+    // Re-check when auth state changes (login/logout broadcasts via vint:auth)
+    window.addEventListener('vint:auth', function () {
+      setTimeout(checkKickStatus, 200);
+    });
+  }
+
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
   else init();
 })();
 </script>
-<script src="brain.js?v=v20260505-auth"></script>
+<script src="brain.js?v=v20260505-kickoauth"></script>
 <!-- Coherence bus — loads AFTER brain.js to hook into HORMONES, METABOLISM, etc. -->
 <script src="body/coherence.js?v=v20260424-0428"></script>
 <!-- Zoom navigation — smooth animated body exploration -->
