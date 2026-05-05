@@ -459,13 +459,24 @@
       const meta = _parseMeta(e.metadata);
       const layer = (e.layer || meta.layer || 'neural').toLowerCase();
       const intensity = typeof e.intensity === 'number' ? e.intensity : 0.5;
+      // Content can come from the row, the metadata summary, or the metadata
+      // text/note/thought field — surface whichever is non-empty, then a typed
+      // hint so cards never render as label-only.
+      const rawContent =
+        (typeof e.content === 'string' && e.content.trim()) ||
+        (typeof meta.summary === 'string' && meta.summary.trim()) ||
+        (typeof meta.text === 'string' && meta.text.trim()) ||
+        (typeof meta.note === 'string' && meta.note.trim()) ||
+        (typeof meta.thought === 'string' && meta.thought.trim()) ||
+        '';
+      const fallback = layer + ' pulse · intensity ' + intensity.toFixed(2);
       items.push({
         kind: 'event',
         layer,
         intensity,
         cascade: _cascadeClass(meta),
         title: layer + (meta.cascade ? ' · ' + String(meta.cascade).toLowerCase().replace(/_/g, ' ') : ''),
-        line1: _truncate(e.content || meta.summary || '', 180),
+        line1: _truncate(rawContent || fallback, 180),
         line2: 'i ' + intensity.toFixed(2) + (e.created_at ? ' · ' + _relTime(e.created_at) : ''),
         chem: meta.neurochem || meta.chem || null,
         ts: e.created_at || 0,
