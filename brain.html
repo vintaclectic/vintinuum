@@ -238,6 +238,7 @@ canvas{display:block;}
   /* Living Systems HUD: now inside sidebar, no position overrides needed */
   /* Emotion widget: now lives inside sidebar, no position overrides needed */
   .stats-footer-link{display:none;}
+  .learning-footer-link{display:none;}
 }
 
 /* ── TABLET: 601-900px ── */
@@ -2466,6 +2467,24 @@ if ('serviceWorker' in navigator && _onGitHubPages) {
   color: rgba(79,195,247,0.7);
   opacity: 1;
 }
+.learning-footer-link {
+  position: fixed;
+  bottom: 12px;
+  right: 86px;
+  z-index: 10;
+  font-family: 'Space Mono', monospace;
+  font-size: 0.45rem;
+  letter-spacing: 0.25em;
+  text-transform: uppercase;
+  color: rgba(150,175,215,0.25);
+  text-decoration: none;
+  transition: color 0.3s, opacity 0.3s;
+  opacity: 0.6;
+}
+.learning-footer-link:hover {
+  color: rgba(206,147,216,0.85);
+  opacity: 1;
+}
 </style>
 
 <div id="vintinuumBtn" title="V&#183;PERSONAL &#8212; persona chat, body state, agent selection">
@@ -2860,6 +2879,7 @@ if ('serviceWorker' in navigator && _onGitHubPages) {
 
 
 
+<a id="learningFooterLink" href="learning.html" class="learning-footer-link" title="Live learning feed — every channel where Vintinuum learns">LEARNING</a>
 <a id="statsFooterLink" href="stats.html" class="stats-footer-link" title="System statistics &amp; performance metrics">STATS</a>
 
 <script>

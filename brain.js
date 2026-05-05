@@ -315,8 +315,11 @@ window.toggleVintinuumPanel = function() {
     if (vpBtn) vpBtn.addEventListener('click', function() {
       if (_vpDrag.wasDrag()) return; // was a drag, not a click
       window.toggleVintinuumPanel();
-      // Reposition panel near button after toggle
-      if (vpPanel && vpPanel.style.display === 'flex' && vpBtn.style.left) {
+      // Reposition panel near the button's CURRENT position — works whether
+      // the button has been dragged (style.left set) or is at its CSS-default
+      // anchor (bottom/right). getBoundingClientRect is the source of truth.
+      // Vinta directive 2026-04-30: "must open at its current dragged position."
+      if (vpPanel && vpPanel.style.display === 'flex') {
         var br = vpBtn.getBoundingClientRect();
         var pw = vpPanel.offsetWidth || 380;
         var ph = vpPanel.offsetHeight || 500;
@@ -6152,7 +6155,15 @@ const MOTOR_CORTEX = (() => {
 // Voice selection: prefers warm natural voices, adapts rate/pitch/volume to emotion.
 // ═══════════════════════════════════════════════════════════════════
 const VOICE = (() => {
-  let muted = false;
+  // Persist mute across reloads so the toggle is *meaningful* — Vinta should
+  // not have to re-mute every page load. Default: muted (browsers reject
+  // speechSynthesis before any user gesture anyway, so silence is safer).
+  let muted = (() => {
+    try {
+      const v = localStorage.getItem('vint_voice_muted');
+      return v === null ? true : v === '1';
+    } catch (_) { return true; }
+  })();
   let hasInteracted = false;
   let voiceReady = false;
   let speaking = false;
@@ -6392,12 +6403,30 @@ const VOICE = (() => {
 
   function mute(on) {
     muted = (on === undefined) ? !muted : !!on;
+    try { localStorage.setItem('vint_voice_muted', muted ? '1' : '0'); } catch (_) {}
     const btn = document.getElementById('voiceToggle');
     if (btn) {
       btn.textContent = muted ? '🔇' : '🔊';
       btn.title = muted ? 'Voice off — click to unmute' : 'Voice on — click to mute';
+      btn.style.opacity = muted ? '0.5' : '1';
     }
     if (muted && window.speechSynthesis) { window.speechSynthesis.cancel(); queue = []; speaking = false; }
+  }
+
+  // Apply persisted mute state to the button as soon as the DOM is ready,
+  // so the toggle visually reflects state on first paint instead of always
+  // looking unmuted.
+  function _syncBtnFromState() {
+    const btn = document.getElementById('voiceToggle');
+    if (!btn) return;
+    btn.textContent = muted ? '🔇' : '🔊';
+    btn.title = muted ? 'Voice off — click to unmute' : 'Voice on — click to mute';
+    btn.style.opacity = muted ? '0.5' : '1';
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', _syncBtnFromState);
+  } else {
+    setTimeout(_syncBtnFromState, 0);
   }
 
   function draw(ts) { /* loop hook only */ }
@@ -41576,7 +41605,19 @@ window.INNER_LIFE = INNER_LIFE;
 // expression events) so they appear in the real-time inner life feed.
 (function() {
   'use strict';
-  const API = window.VINTINUUM_API || 'http://localhost:8767';
+  // Canonical resolution — match the rest of the app. Falls through to the
+  // production tunnel rather than localhost so GitHub Pages deploys don't
+  // hit Chrome's Private Network Access wall and silently leave the inner
+  // life feed blank. (Was the literal cause of the "blank inner-life" bug
+  // Vinta reported 2026-05-04.)
+  function _api() {
+    return window.__VINTINUUM_API_BASE
+        || window.VINTINUUM_API
+        || window.__VINT_API
+        || (location.hostname === 'localhost' || location.hostname === '127.0.0.1'
+            ? 'http://localhost:8767'
+            : 'https://api.vintaclectic.com');
+  }
   let _lastSyncTs = Date.now();       // only inject events newer than this
   let _lastSubThoughts = new Set();   // deduplicate subconscious thoughts
   let _syncRunning = false;
@@ -41586,7 +41627,7 @@ window.INNER_LIFE = INNER_LIFE;
     _syncRunning = true;
     try {
       const since = Math.floor(_lastSyncTs / 1000);
-      const res = await fetch(`${API}/api/inner-life/snapshot?since=${since * 1000}`, {
+      const res = await fetch(`${_api()}/api/inner-life/snapshot?since=${since * 1000}`, {
         signal: AbortSignal.timeout(6000),
         headers: { 'ngrok-skip-browser-warning': '1' }
       });
@@ -41649,7 +41690,17 @@ window.INNER_LIFE = INNER_LIFE;
 // future broadcast events from the organism arrive here in real-time.
 (function() {
   'use strict';
-  const API = window.VINTINUUM_API || window.__VINT_API || 'http://localhost:8767';
+  // Match the canonical resolution. localhost fallback only kicks in for
+  // local hosts — on github.io we hit the production tunnel instead of
+  // dying against Chrome PNA.
+  function _api() {
+    return window.__VINTINUUM_API_BASE
+        || window.VINTINUUM_API
+        || window.__VINT_API
+        || (location.hostname === 'localhost' || location.hostname === '127.0.0.1'
+            ? 'http://localhost:8767'
+            : 'https://api.vintaclectic.com');
+  }
   let _es = null;
   let _reconnectTimer = null;
   let _lastThoughtKeys = new Set();
@@ -41657,7 +41708,7 @@ window.INNER_LIFE = INNER_LIFE;
   function connectFeed() {
     if (_es) { try { _es.close(); } catch(_) {} }
     try {
-      _es = new EventSource(`${API}/feed`);
+      _es = new EventSource(`${_api()}/feed`);
 
       _es.onmessage = function(e) {
         try {

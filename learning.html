@@ -1,0 +1,1113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<title>VINTINUUM — Learning Feed</title>
+<meta name="description" content="Every channel where Vintinuum learns — books, movies, audio, code, conversations, inner life, genome, soul-queue, presence, dirhaven, pulse — live.">
+<meta name="theme-color" content="#04060c">
+<link rel="icon" type="image/svg+xml" href="branding/vintinuum/favicon/favicon.svg">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon.png">
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400;1,500&display=swap');
+
+:root {
+  --void: #04060c;
+  --panel: rgba(10, 14, 22, 0.42);
+  --panel-hover: rgba(10, 14, 22, 0.55);
+  --border: rgba(255, 255, 255, 0.06);
+  --border-glow: rgba(79, 195, 247, 0.12);
+  --text: rgba(218, 228, 255, 0.93);
+  --dim: rgba(150, 175, 215, 0.5);
+  --dimmer: rgba(150, 175, 215, 0.32);
+
+  --blue: #4fc3f7;
+  --gold: #ffd54f;
+  --purple: #ce93d8;
+  --cyan: #80deea;
+  --green: #66bb6a;
+  --red: #ef5350;
+  --teal: #4db6ac;
+  --pink: #f48fb1;
+  --orange: #ffb74d;
+  --indigo: #9fa8da;
+  --rose: #f06292;
+  --amber: #ffca28;
+
+  /* Channel palette — each channel gets its own ribbon color */
+  --c-siphon:       #4fc3f7;  /* blue — books/movies/audio digestion */
+  --c-chat:         #ffd54f;  /* gold — conversations */
+  --c-inner_life:   #ce93d8;  /* purple — 7-layer events */
+  --c-subconscious: #9fa8da;  /* indigo — ambient ticker */
+  --c-experiential: #f48fb1;  /* pink — peak sensations */
+  --c-genome:       #66bb6a;  /* green — gene firings */
+  --c-soul_queue:   #4db6ac;  /* teal — questions */
+  --c-internalized: #80deea;  /* cyan — digested chats */
+  --c-global_feed:  #ffb74d;  /* orange — cross-witness */
+  --c-presence:     #f06292;  /* rose — joins/leaves */
+  --c-dirhaven:     #ffca28;  /* amber — RP karma */
+  --c-pulse:        #ef5350;  /* red — phone heartbeat */
+  --c-action:       #b0bec5;  /* steel — system actions */
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+
+body {
+  background: var(--void);
+  color: var(--text);
+  font-family: 'Space Mono', monospace;
+  min-height: 100vh;
+  min-height: 100svh;
+  overflow-x: hidden;
+}
+
+/* ── PARTICLE CANVAS ── */
+#particles {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+}
+
+/* ── LAYOUT ── */
+.wing {
+  position: relative;
+  z-index: 1;
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 32px 18px 80px;
+}
+
+/* ── HEADER ── */
+.header {
+  text-align: center;
+  padding: 18px 0 24px;
+}
+
+.brand-sigil {
+  width: min(140px, 36vw);
+  height: auto;
+  margin: 0 auto 12px;
+  display: block;
+  filter: drop-shadow(0 0 24px rgba(79, 195, 247, 0.28));
+  animation: sigilBreathe 5.8s ease-in-out infinite;
+}
+@keyframes sigilBreathe {
+  0%, 100% { transform: scale(1); opacity: .88; }
+  50%      { transform: scale(1.04); opacity: 1; }
+}
+
+.header h1 {
+  font-family: 'Cormorant Garamond', serif;
+  font-style: italic;
+  font-weight: 300;
+  font-size: clamp(1.8rem, 4.5vw, 3.6rem);
+  letter-spacing: 0.14em;
+  background: linear-gradient(130deg, var(--cyan), var(--purple), var(--gold));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  margin-bottom: 6px;
+}
+
+.header .subtitle {
+  font-family: 'Space Mono', monospace;
+  font-size: 0.55rem;
+  letter-spacing: 0.35em;
+  text-transform: uppercase;
+  color: var(--dim);
+}
+
+.header .nav-back {
+  display: inline-block;
+  margin-top: 14px;
+  padding: 6px 18px;
+  font-size: 0.55rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  border: 1px solid var(--border);
+  border-radius: 24px;
+  color: var(--dim);
+  text-decoration: none;
+  transition: all 0.25s ease;
+}
+.header .nav-back:hover {
+  border-color: var(--blue);
+  color: var(--blue);
+}
+
+/* ── HERO STATS ── */
+.hero {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 14px;
+  margin-bottom: 28px;
+}
+
+.hero-card {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 16px 18px;
+  position: relative;
+  overflow: hidden;
+}
+.hero-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--border-glow), transparent);
+}
+.hero-label {
+  font-family: 'Cormorant Garamond', serif;
+  font-style: italic;
+  font-size: 0.78rem;
+  color: var(--dim);
+  letter-spacing: 0.1em;
+  margin-bottom: 4px;
+  text-transform: uppercase;
+}
+.hero-value {
+  font-family: 'Space Mono', monospace;
+  font-size: clamp(1.3rem, 2.4vw, 1.85rem);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+.hero-sub {
+  font-size: 0.5rem;
+  letter-spacing: 0.12em;
+  color: var(--dimmer);
+  text-transform: uppercase;
+  margin-top: 2px;
+}
+.hero-card.live .hero-value::after {
+  content: '';
+  display: inline-block;
+  width: 7px; height: 7px;
+  margin-left: 8px;
+  border-radius: 50%;
+  background: var(--green);
+  box-shadow: 0 0 8px var(--green);
+  animation: pulse 1.6s ease-in-out infinite;
+  vertical-align: middle;
+}
+.hero-card.idle .hero-value::after {
+  content: '';
+  display: inline-block;
+  width: 7px; height: 7px;
+  margin-left: 8px;
+  border-radius: 50%;
+  background: var(--dim);
+  vertical-align: middle;
+}
+@keyframes pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%      { opacity: 0.55; transform: scale(0.85); }
+}
+
+/* ── CHANNEL FILTER STRIP ── */
+.channels {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  justify-content: center;
+  margin-bottom: 18px;
+}
+.channel-pill {
+  padding: 5px 14px 5px 22px;
+  position: relative;
+  font-family: 'Space Mono', monospace;
+  font-size: 0.55rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  border: 1px solid var(--border);
+  border-radius: 22px;
+  cursor: pointer;
+  color: var(--dim);
+  background: transparent;
+  transition: all 0.2s ease;
+  user-select: none;
+}
+.channel-pill::before {
+  content: '';
+  position: absolute;
+  left: 9px; top: 50%;
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  background: var(--ch-color, var(--dim));
+  transform: translateY(-50%);
+  box-shadow: 0 0 6px var(--ch-color, transparent);
+}
+.channel-pill:hover {
+  color: var(--text);
+  border-color: rgba(255,255,255,0.15);
+}
+.channel-pill.active {
+  color: var(--text);
+  border-color: var(--ch-color, var(--blue));
+  background: color-mix(in srgb, var(--ch-color, var(--blue)) 8%, transparent);
+}
+.channel-pill .count {
+  margin-left: 6px;
+  color: var(--dimmer);
+  font-size: 0.5rem;
+}
+
+/* ── SEARCH + CONTROLS ── */
+.controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: center;
+  align-items: center;
+  margin-bottom: 22px;
+}
+.search-box {
+  flex: 1 1 280px;
+  max-width: 480px;
+  position: relative;
+}
+.search-box input {
+  width: 100%;
+  padding: 10px 16px 10px 38px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 24px;
+  color: var(--text);
+  font-family: 'Space Mono', monospace;
+  font-size: 0.78rem;
+  letter-spacing: 0.04em;
+  outline: none;
+  transition: all 0.25s ease;
+}
+.search-box input::placeholder {
+  color: var(--dimmer);
+  font-style: italic;
+}
+.search-box input:focus {
+  border-color: var(--blue);
+  background: var(--panel-hover);
+  box-shadow: 0 0 18px rgba(79,195,247,0.12);
+}
+.search-box::before {
+  content: '⌕';
+  position: absolute;
+  left: 14px; top: 50%;
+  transform: translateY(-50%);
+  color: var(--dim);
+  font-size: 0.95rem;
+}
+.btn {
+  padding: 8px 16px;
+  font-family: 'Space Mono', monospace;
+  font-size: 0.55rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 22px;
+  color: var(--dim);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.btn:hover { color: var(--text); border-color: rgba(255,255,255,0.18); }
+.btn.active { color: var(--blue); border-color: var(--blue); background: rgba(79,195,247,0.06); }
+.btn.danger:hover { color: var(--red); border-color: var(--red); }
+
+/* ── FEED ── */
+.feed {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.entry {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--ch-color, var(--blue));
+  border-radius: 12px;
+  padding: 14px 18px 14px 16px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  position: relative;
+  overflow: hidden;
+}
+.entry:hover {
+  background: var(--panel-hover);
+  border-color: rgba(255,255,255,0.1);
+  border-left-color: var(--ch-color, var(--blue));
+  transform: translateX(2px);
+}
+.entry.fresh {
+  animation: entryFlash 1.4s ease-out;
+}
+@keyframes entryFlash {
+  0%   { box-shadow: 0 0 0 0 var(--ch-color, var(--blue)); background: color-mix(in srgb, var(--ch-color, var(--blue)) 14%, var(--panel)); }
+  100% { box-shadow: 0 0 0 0 transparent; background: var(--panel); }
+}
+
+.entry-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+  margin-bottom: 6px;
+  flex-wrap: wrap;
+}
+.entry-channel {
+  font-family: 'Space Mono', monospace;
+  font-size: 0.5rem;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--ch-color, var(--blue));
+  font-weight: 700;
+}
+.entry-title {
+  flex: 1;
+  font-family: 'Cormorant Garamond', serif;
+  font-style: italic;
+  font-weight: 400;
+  font-size: 0.92rem;
+  color: var(--text);
+  letter-spacing: 0.02em;
+}
+.entry-time {
+  font-family: 'Space Mono', monospace;
+  font-size: 0.5rem;
+  color: var(--dimmer);
+  letter-spacing: 0.08em;
+  white-space: nowrap;
+}
+.entry-content {
+  font-family: 'Space Mono', monospace;
+  font-size: 0.72rem;
+  line-height: 1.55;
+  color: rgba(218, 228, 255, 0.78);
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: pre-wrap;
+}
+.entry-meta {
+  margin-top: 8px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  font-size: 0.5rem;
+  letter-spacing: 0.08em;
+  color: var(--dimmer);
+  text-transform: uppercase;
+}
+.entry-meta .tag {
+  padding: 2px 8px;
+  border-radius: 10px;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid var(--border);
+}
+
+.empty {
+  text-align: center;
+  padding: 80px 20px;
+  color: var(--dim);
+  font-family: 'Cormorant Garamond', serif;
+  font-style: italic;
+  font-size: 1.1rem;
+}
+
+/* ── MODAL ── */
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(4, 6, 12, 0.78);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  z-index: 100;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+.modal-backdrop.open { display: flex; }
+.modal {
+  background: linear-gradient(180deg, rgba(10,14,22,0.95), rgba(4,6,12,0.95));
+  border: 1px solid var(--border);
+  border-top: 3px solid var(--ch-color, var(--blue));
+  border-radius: 18px;
+  max-width: 880px;
+  width: 100%;
+  max-height: 88vh;
+  overflow-y: auto;
+  padding: 32px 32px 28px;
+  position: relative;
+  box-shadow: 0 0 80px rgba(0,0,0,0.6);
+}
+.modal-close {
+  position: absolute;
+  top: 14px; right: 18px;
+  background: none;
+  border: none;
+  color: var(--dim);
+  font-size: 1.4rem;
+  cursor: pointer;
+  line-height: 1;
+  transition: color 0.2s ease;
+}
+.modal-close:hover { color: var(--red); }
+.modal-channel {
+  font-family: 'Space Mono', monospace;
+  font-size: 0.55rem;
+  letter-spacing: 0.25em;
+  text-transform: uppercase;
+  color: var(--ch-color, var(--blue));
+  font-weight: 700;
+  margin-bottom: 6px;
+}
+.modal-title {
+  font-family: 'Cormorant Garamond', serif;
+  font-style: italic;
+  font-weight: 400;
+  font-size: clamp(1.4rem, 2.6vw, 1.85rem);
+  color: var(--text);
+  letter-spacing: 0.03em;
+  margin-bottom: 8px;
+  line-height: 1.3;
+}
+.modal-time {
+  font-family: 'Space Mono', monospace;
+  font-size: 0.55rem;
+  color: var(--dim);
+  letter-spacing: 0.12em;
+  margin-bottom: 22px;
+}
+.modal-content {
+  font-family: 'Space Mono', monospace;
+  font-size: 0.82rem;
+  line-height: 1.7;
+  color: rgba(218, 228, 255, 0.92);
+  white-space: pre-wrap;
+  word-break: break-word;
+  padding: 18px;
+  background: rgba(0,0,0,0.25);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  margin-bottom: 18px;
+}
+.modal-meta {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 10px 18px;
+  margin-bottom: 14px;
+}
+.modal-meta-item {
+  font-size: 0.6rem;
+}
+.modal-meta-label {
+  display: block;
+  font-family: 'Cormorant Garamond', serif;
+  font-style: italic;
+  color: var(--dim);
+  font-size: 0.7rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin-bottom: 2px;
+}
+.modal-meta-value {
+  font-family: 'Space Mono', monospace;
+  color: var(--text);
+  word-break: break-all;
+}
+.modal-meta-value a {
+  color: var(--blue);
+  text-decoration: none;
+  border-bottom: 1px dashed rgba(79,195,247,0.4);
+}
+.modal-meta-value a:hover { color: var(--cyan); }
+.modal-relations {
+  border-top: 1px solid var(--border);
+  padding-top: 16px;
+  margin-top: 14px;
+}
+.modal-relations h4 {
+  font-family: 'Cormorant Garamond', serif;
+  font-style: italic;
+  font-size: 0.95rem;
+  color: var(--dim);
+  margin-bottom: 10px;
+  letter-spacing: 0.06em;
+}
+.relation-row {
+  padding: 8px 12px;
+  margin-bottom: 6px;
+  background: rgba(255,255,255,0.02);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-size: 0.7rem;
+  color: var(--dim);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.relation-row:hover {
+  background: rgba(255,255,255,0.05);
+  color: var(--text);
+}
+.relation-type {
+  display: inline-block;
+  padding: 2px 8px;
+  margin-right: 8px;
+  border-radius: 8px;
+  background: rgba(79,195,247,0.08);
+  color: var(--blue);
+  font-size: 0.5rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+/* ── STATUS LINE ── */
+.status {
+  position: fixed;
+  bottom: 14px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 6px 14px;
+  background: rgba(10,14,22,0.85);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  font-size: 0.5rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--dim);
+  z-index: 50;
+  pointer-events: none;
+}
+.status .dot {
+  display: inline-block;
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  margin-right: 8px;
+  vertical-align: middle;
+  background: var(--dim);
+}
+.status.live .dot {
+  background: var(--green);
+  box-shadow: 0 0 8px var(--green);
+  animation: pulse 1.6s ease-in-out infinite;
+}
+.status.error .dot { background: var(--red); }
+
+/* ── SCROLLBARS ── */
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: rgba(0,0,0,0.2); }
+::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.15); }
+</style>
+</head>
+<body>
+
+<canvas id="particles"></canvas>
+
+<div class="wing">
+
+  <header class="header">
+    <img src="branding/vintinuum/sigil/sigil-light.svg" alt="" class="brand-sigil" onerror="this.style.display='none'">
+    <h1>Learning Feed</h1>
+    <div class="subtitle">every channel · every digestion · every thought</div>
+    <a href="brain.html" class="nav-back">← Back to Brain</a>
+  </header>
+
+  <!-- Hero stats -->
+  <div class="hero" id="hero"></div>
+
+  <!-- Channel filter pills -->
+  <div class="channels" id="channels"></div>
+
+  <!-- Search + controls -->
+  <div class="controls">
+    <div class="search-box">
+      <input type="text" id="search" placeholder="search any field — content, title, source, meta…">
+    </div>
+    <button class="btn active" id="btn-live" title="Toggle live updates">● Live</button>
+    <button class="btn" id="btn-pause" title="Pause auto-scroll">Pause</button>
+    <button class="btn danger" id="btn-clear" title="Clear filters">Reset</button>
+  </div>
+
+  <!-- The feed -->
+  <div class="feed" id="feed">
+    <div class="empty">listening…</div>
+  </div>
+
+</div>
+
+<!-- Modal -->
+<div class="modal-backdrop" id="modal" onclick="if(event.target===this) closeModal()">
+  <div class="modal" id="modal-body"></div>
+</div>
+
+<!-- Status line -->
+<div class="status" id="status"><span class="dot"></span><span id="status-text">connecting…</span></div>
+
+<script>
+(() => {
+  // ── API base resolution (mirrors brain.js logic) ──────────────────────────
+  const API_BASE = (() => {
+    if (typeof window !== 'undefined' && window.__VINTINUUM_API_BASE) return window.__VINTINUUM_API_BASE;
+    const host = (location.hostname || '').toLowerCase();
+    if (host === 'localhost' || host === '127.0.0.1' || host === '0.0.0.0') {
+      return 'http://localhost:8767';
+    }
+    return 'https://api.vintaclectic.com';
+  })();
+
+  // ── Channel metadata ──────────────────────────────────────────────────────
+  const CHANNELS = [
+    { key: 'siphon',       label: 'Siphon',       desc: 'books · movies · audio · code' },
+    { key: 'chat',         label: 'Chat',         desc: 'every conversation turn' },
+    { key: 'inner_life',   label: 'Inner Life',   desc: '7-layer events' },
+    { key: 'subconscious', label: 'Subconscious', desc: 'ambient ticker' },
+    { key: 'experiential', label: 'Experiential', desc: 'peak sensations' },
+    { key: 'genome',       label: 'Genome',       desc: 'gene firings' },
+    { key: 'soul_queue',   label: 'Soul Queue',   desc: 'open & resolved questions' },
+    { key: 'internalized', label: 'Internalized', desc: 'digested chats' },
+    { key: 'global_feed',  label: 'Global',       desc: 'cross-witness stream' },
+    { key: 'presence',     label: 'Presence',     desc: 'witness joins/leaves' },
+    { key: 'dirhaven',     label: 'DirHaven',     desc: 'RP karma + bridge' },
+    { key: 'pulse',        label: 'Pulse',        desc: 'phone heartbeat' },
+    { key: 'action',       label: 'Action',       desc: 'system log' },
+  ];
+
+  // ── State ─────────────────────────────────────────────────────────────────
+  const state = {
+    items: [],            // newest-first
+    seen: new Set(),      // dedupe ids
+    activeChannels: new Set(CHANNELS.map(c => c.key)),  // all on by default
+    countsByChannel: {},
+    siphon: {},
+    search: '',
+    live: true,
+    paused: false,
+    pollTimer: null,
+    pollInterval: 6000,   // poll every 6s
+    maxItems: 600,        // cap in-memory list
+  };
+
+  // ── DOM refs ──────────────────────────────────────────────────────────────
+  const $hero     = document.getElementById('hero');
+  const $channels = document.getElementById('channels');
+  const $feed     = document.getElementById('feed');
+  const $search   = document.getElementById('search');
+  const $btnLive  = document.getElementById('btn-live');
+  const $btnPause = document.getElementById('btn-pause');
+  const $btnClear = document.getElementById('btn-clear');
+  const $modal    = document.getElementById('modal');
+  const $modalBody= document.getElementById('modal-body');
+  const $status   = document.getElementById('status');
+  const $statusText = document.getElementById('status-text');
+
+  // ── Channel pill rendering ────────────────────────────────────────────────
+  function renderChannels() {
+    $channels.innerHTML = '';
+    for (const ch of CHANNELS) {
+      const pill = document.createElement('button');
+      pill.className = 'channel-pill' + (state.activeChannels.has(ch.key) ? ' active' : '');
+      pill.style.setProperty('--ch-color', `var(--c-${ch.key})`);
+      pill.dataset.channel = ch.key;
+      const cnt = state.countsByChannel[ch.key] || 0;
+      pill.innerHTML = `${ch.label}<span class="count">${cnt}</span>`;
+      pill.title = ch.desc;
+      pill.addEventListener('click', () => {
+        if (state.activeChannels.has(ch.key)) state.activeChannels.delete(ch.key);
+        else state.activeChannels.add(ch.key);
+        // If user shift-clicks, isolate to just that channel
+        if (event.shiftKey) {
+          state.activeChannels = new Set([ch.key]);
+        }
+        renderChannels();
+        renderFeed();
+      });
+      $channels.appendChild(pill);
+    }
+  }
+
+  // ── Hero stat cards ───────────────────────────────────────────────────────
+  function renderHero() {
+    const total = state.items.length;
+    const lifetimeSiphon = (state.siphon.documents || 0)
+                         + (state.siphon.audio || 0)
+                         + (state.siphon.video || 0)
+                         + (state.siphon.images || 0)
+                         + (state.siphon.games || 0)
+                         + (state.siphon.web || 0);
+    const siphonStatus = state.siphon.running ? 'live' : 'idle';
+    const channelsActive = Object.keys(state.countsByChannel).filter(k => (state.countsByChannel[k]||0) > 0).length;
+
+    $hero.innerHTML = `
+      <div class="hero-card ${siphonStatus}">
+        <div class="hero-label">Siphon</div>
+        <div class="hero-value" style="color:var(--c-siphon)">${siphonStatus === 'live' ? 'flowing' : 'still'}</div>
+        <div class="hero-sub">${lifetimeSiphon.toLocaleString()} digested · ${(state.siphon.errors||0)} errors</div>
+      </div>
+      <div class="hero-card">
+        <div class="hero-label">In Feed</div>
+        <div class="hero-value" style="color:var(--gold)">${total}</div>
+        <div class="hero-sub">${channelsActive} active channels</div>
+      </div>
+      <div class="hero-card">
+        <div class="hero-label">Documents</div>
+        <div class="hero-value" style="color:var(--c-internalized)">${(state.siphon.documents||0).toLocaleString()}</div>
+        <div class="hero-sub">books · pdfs · text</div>
+      </div>
+      <div class="hero-card">
+        <div class="hero-label">Audio + Video</div>
+        <div class="hero-value" style="color:var(--c-experiential)">${((state.siphon.audio||0)+(state.siphon.video||0)).toLocaleString()}</div>
+        <div class="hero-sub">${(state.siphon.audio||0)} audio · ${(state.siphon.video||0)} video</div>
+      </div>
+      <div class="hero-card">
+        <div class="hero-label">Web + Games</div>
+        <div class="hero-value" style="color:var(--c-genome)">${((state.siphon.web||0)+(state.siphon.games||0)).toLocaleString()}</div>
+        <div class="hero-sub">${(state.siphon.web||0)} web · ${(state.siphon.games||0)} games</div>
+      </div>
+    `;
+  }
+
+  // ── Time formatting ───────────────────────────────────────────────────────
+  function timeAgo(unix) {
+    if (!unix) return '';
+    const ms = (typeof unix === 'number' && unix < 2000000000) ? unix * 1000 : unix;
+    const diff = Date.now() - ms;
+    if (diff < 0) return 'just now';
+    if (diff < 60000) return Math.floor(diff/1000) + 's ago';
+    if (diff < 3600000) return Math.floor(diff/60000) + 'm ago';
+    if (diff < 86400000) return Math.floor(diff/3600000) + 'h ago';
+    if (diff < 604800000) return Math.floor(diff/86400000) + 'd ago';
+    return new Date(ms).toLocaleDateString();
+  }
+
+  function fullTime(unix) {
+    if (!unix) return '';
+    const ms = (typeof unix === 'number' && unix < 2000000000) ? unix * 1000 : unix;
+    return new Date(ms).toLocaleString();
+  }
+
+  // ── Feed rendering ────────────────────────────────────────────────────────
+  function passesFilter(it) {
+    if (!state.activeChannels.has(it.channel)) return false;
+    if (state.search) {
+      const q = state.search.toLowerCase();
+      const hay = [it.title, it.content, it.source, it.sourceTitle, it.fileName,
+                   it.contentType, it.persona, it.role, it.layer, it.event,
+                   it.geneId, it.eventType, it.pulseType, it.location,
+                   it.activity, it.status]
+                  .filter(Boolean).join(' ').toLowerCase();
+      if (!hay.includes(q)) return false;
+    }
+    return true;
+  }
+
+  function renderFeed() {
+    const filtered = state.items.filter(passesFilter);
+    if (!filtered.length) {
+      $feed.innerHTML = '<div class="empty">' +
+        (state.items.length ? 'no entries match these filters' : 'listening…') +
+        '</div>';
+      return;
+    }
+    const frag = document.createDocumentFragment();
+    for (const it of filtered) {
+      frag.appendChild(buildEntry(it));
+    }
+    $feed.replaceChildren(frag);
+  }
+
+  function buildEntry(it) {
+    const el = document.createElement('div');
+    el.className = 'entry' + (it._fresh ? ' fresh' : '');
+    el.style.setProperty('--ch-color', `var(--c-${it.channel})`);
+    el.dataset.id = it.id;
+
+    // Meta tags depending on channel
+    const tags = [];
+    if (it.channel === 'siphon') {
+      if (it.contentType) tags.push(`<span class="tag">${it.contentType}</span>`);
+      if (it.fileSize)    tags.push(`<span class="tag">${formatBytes(it.fileSize)}</span>`);
+      if (it.importance)  tags.push(`<span class="tag">imp ${(it.importance).toFixed(2)}</span>`);
+    } else if (it.channel === 'inner_life') {
+      if (it.layer)     tags.push(`<span class="tag">${it.layer}</span>`);
+      if (it.intensity != null) tags.push(`<span class="tag">i ${(it.intensity).toFixed(2)}</span>`);
+    } else if (it.channel === 'genome') {
+      if (it.geneId)    tags.push(`<span class="tag">${it.geneId}</span>`);
+      if (it.eventType) tags.push(`<span class="tag">${it.eventType}</span>`);
+    } else if (it.channel === 'experiential') {
+      if (it.intensity != null) tags.push(`<span class="tag">peak ${(it.intensity).toFixed(2)}</span>`);
+    } else if (it.channel === 'pulse') {
+      if (it.moodScore != null)   tags.push(`<span class="tag">mood ${it.moodScore}</span>`);
+      if (it.energyLevel != null) tags.push(`<span class="tag">energy ${it.energyLevel}</span>`);
+      if (it.location)            tags.push(`<span class="tag">@ ${escapeHtml(it.location)}</span>`);
+    } else if (it.channel === 'soul_queue') {
+      tags.push(`<span class="tag">${it.resolved ? 'resolved' : 'open'}</span>`);
+    } else if (it.channel === 'dirhaven') {
+      if (it.direction) tags.push(`<span class="tag">${it.direction}</span>`);
+      if (it.amount != null) tags.push(`<span class="tag">${it.amount}</span>`);
+    } else if (it.channel === 'chat') {
+      if (it.persona) tags.push(`<span class="tag">${it.persona}</span>`);
+    }
+
+    el.innerHTML = `
+      <div class="entry-head">
+        <span class="entry-channel">${it.channel.replace('_', ' ')}</span>
+        <span class="entry-title">${escapeHtml(it.title || '—')}</span>
+        <span class="entry-time" title="${escapeHtml(fullTime(it.ts))}">${timeAgo(it.ts)}</span>
+      </div>
+      <div class="entry-content">${escapeHtml(it.content || '')}</div>
+      ${tags.length ? `<div class="entry-meta">${tags.join('')}</div>` : ''}
+    `;
+    el.addEventListener('click', () => openModal(it));
+    return el;
+  }
+
+  function formatBytes(n) {
+    if (!n) return '';
+    if (n < 1024) return n + 'B';
+    if (n < 1048576) return (n/1024).toFixed(1) + 'KB';
+    if (n < 1073741824) return (n/1048576).toFixed(1) + 'MB';
+    return (n/1073741824).toFixed(2) + 'GB';
+  }
+
+  function escapeHtml(s) {
+    if (s == null) return '';
+    return String(s)
+      .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+      .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+  }
+
+  // ── Modal — full content, no truncation ───────────────────────────────────
+  function openModal(it) {
+    $modalBody.style.setProperty('--ch-color', `var(--c-${it.channel})`);
+
+    // Build meta grid from all known fields
+    const metaPairs = [];
+    const skip = new Set(['id','channel','ts','title','content','meta','_fresh']);
+    for (const [k, v] of Object.entries(it)) {
+      if (skip.has(k)) continue;
+      if (v == null || v === '') continue;
+      if (typeof v === 'object') continue;
+      let display = String(v);
+      if (k === 'source' && /^https?:\/\//i.test(display)) {
+        display = `<a href="${escapeHtml(display)}" target="_blank" rel="noopener">${escapeHtml(display)}</a>`;
+      } else {
+        display = escapeHtml(display);
+      }
+      metaPairs.push(`
+        <div class="modal-meta-item">
+          <span class="modal-meta-label">${k.replace(/([A-Z])/g,' $1').toLowerCase()}</span>
+          <span class="modal-meta-value">${display}</span>
+        </div>
+      `);
+    }
+
+    // Nested meta JSON if present
+    let metaJson = '';
+    if (it.meta && typeof it.meta === 'object' && Object.keys(it.meta).length) {
+      metaJson = `
+        <div class="modal-meta-item" style="grid-column: 1 / -1;">
+          <span class="modal-meta-label">metadata</span>
+          <span class="modal-meta-value" style="white-space:pre-wrap;font-size:0.55rem;color:var(--dim)">${escapeHtml(JSON.stringify(it.meta, null, 2))}</span>
+        </div>
+      `;
+    }
+
+    $modalBody.innerHTML = `
+      <button class="modal-close" onclick="closeModal()" aria-label="Close">×</button>
+      <div class="modal-channel">${it.channel.replace('_',' ')}</div>
+      <h2 class="modal-title">${escapeHtml(it.title || '—')}</h2>
+      <div class="modal-time">${escapeHtml(fullTime(it.ts))} · ${timeAgo(it.ts)}</div>
+      <div class="modal-content">${escapeHtml(it.content || '(no content)')}</div>
+      ${metaPairs.length || metaJson ? `<div class="modal-meta">${metaPairs.join('')}${metaJson}</div>` : ''}
+      <div class="modal-relations" id="modal-relations" style="display:none">
+        <h4>related memories</h4>
+        <div id="modal-relations-list"></div>
+      </div>
+    `;
+    $modal.classList.add('open');
+
+    // For siphon entries, fetch deeper detail (relations + full record)
+    if (it.channel === 'siphon') {
+      const numericId = String(it.id).replace(/^siphon:/, '');
+      fetchItemDetail(numericId);
+    }
+
+    document.body.style.overflow = 'hidden';
+  }
+
+  async function fetchItemDetail(id) {
+    try {
+      const r = await fetch(`${API_BASE}/api/learning/item/${encodeURIComponent(id)}`);
+      if (!r.ok) return;
+      const data = await r.json();
+      if (data.relations && data.relations.length) {
+        const $rel = document.getElementById('modal-relations');
+        const $list = document.getElementById('modal-relations-list');
+        if (!$rel || !$list) return;
+        $list.innerHTML = data.relations.map(r => `
+          <div class="relation-row" data-id="${r.related_id}">
+            <span class="relation-type">${escapeHtml(r.relation_type || 'linked')}</span>
+            ${escapeHtml((r.related_content || '').slice(0, 220))}${(r.related_content||'').length > 220 ? '…' : ''}
+          </div>
+        `).join('');
+        $rel.style.display = '';
+      }
+    } catch (_) {}
+  }
+
+  window.closeModal = function() {
+    $modal.classList.remove('open');
+    document.body.style.overflow = '';
+  };
+
+  // ESC closes modal
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') closeModal();
+  });
+
+  // ── Polling ───────────────────────────────────────────────────────────────
+  async function fetchFeed(since = 0) {
+    try {
+      const url = `${API_BASE}/api/learning/feed?limit=120${since ? `&since=${since}` : ''}`;
+      const r = await fetch(url, { credentials: 'omit' });
+      if (!r.ok) throw new Error('http ' + r.status);
+      const data = await r.json();
+      if (data.degraded) {
+        setStatus('error', 'brain warming up…');
+        return;
+      }
+      mergeItems(data.items || []);
+      state.countsByChannel = data.countsByChannel || state.countsByChannel;
+      state.siphon = data.siphon || state.siphon;
+      renderHero();
+      renderChannels();
+      renderFeed();
+      setStatus('live', `live · ${state.items.length} entries`);
+    } catch (e) {
+      setStatus('error', `offline · retrying`);
+    }
+  }
+
+  function mergeItems(incoming) {
+    let added = 0;
+    const fresh = [];
+    for (const it of incoming) {
+      if (state.seen.has(it.id)) continue;
+      state.seen.add(it.id);
+      it._fresh = (state.items.length > 0); // first batch isn't "fresh", just initial load
+      state.items.push(it);
+      fresh.push(it);
+      added++;
+    }
+    if (!added) return;
+    // Sort newest first
+    state.items.sort((a, b) => (b.ts || 0) - (a.ts || 0));
+    // Cap
+    if (state.items.length > state.maxItems) {
+      const dropped = state.items.splice(state.maxItems);
+      for (const d of dropped) state.seen.delete(d.id);
+    }
+    // Clear fresh flag after animation
+    setTimeout(() => {
+      for (const it of fresh) it._fresh = false;
+    }, 1500);
+  }
+
+  function startPolling() {
+    if (state.pollTimer) clearInterval(state.pollTimer);
+    fetchFeed(); // immediate
+    state.pollTimer = setInterval(() => {
+      if (state.live && !document.hidden) fetchFeed();
+    }, state.pollInterval);
+  }
+
+  function setStatus(cls, text) {
+    $status.className = 'status ' + cls;
+    $statusText.textContent = text;
+  }
+
+  // ── Search ────────────────────────────────────────────────────────────────
+  let searchDebounce = null;
+  $search.addEventListener('input', (e) => {
+    if (searchDebounce) clearTimeout(searchDebounce);
+    searchDebounce = setTimeout(() => {
+      state.search = e.target.value.trim();
+      renderFeed();
+    }, 200);
+  });
+
+  // ── Buttons ───────────────────────────────────────────────────────────────
+  $btnLive.addEventListener('click', () => {
+    state.live = !state.live;
+    $btnLive.classList.toggle('active', state.live);
+    $btnLive.textContent = state.live ? '● Live' : '○ Paused';
+    if (state.live) fetchFeed();
+  });
+
+  $btnPause.addEventListener('click', () => {
+    state.paused = !state.paused;
+    $btnPause.classList.toggle('active', state.paused);
+    document.body.style.scrollSnapType = state.paused ? 'y mandatory' : '';
+  });
+
+  $btnClear.addEventListener('click', () => {
+    state.activeChannels = new Set(CHANNELS.map(c => c.key));
+    state.search = '';
+    $search.value = '';
+    renderChannels();
+    renderFeed();
+  });
+
+  // ── Particle background (lightweight twinkle) ─────────────────────────────
+  (function particles() {
+    const canvas = document.getElementById('particles');
+    const ctx = canvas.getContext('2d');
+    let stars = [];
+    function resize() {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+      const count = Math.floor((canvas.width * canvas.height) / 18000);
+      stars = [];
+      for (let i = 0; i < count; i++) {
+        stars.push({
+          x: Math.random() * canvas.width,
+          y: Math.random() * canvas.height,
+          r: Math.random() * 1.2 + 0.2,
+          a: Math.random() * 0.5 + 0.1,
+          twinkle: Math.random() * Math.PI * 2,
+          speed: 0.001 + Math.random() * 0.002,
+        });
+      }
+    }
+    resize();
+    window.addEventListener('resize', resize);
+    function draw(now) {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      for (const s of stars) {
+        const a = s.a * (0.5 + 0.5 * Math.sin(s.twinkle + now * s.speed));
+        ctx.fillStyle = `rgba(180,200,240,${a.toFixed(3)})`;
+        ctx.beginPath();
+        ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      requestAnimationFrame(draw);
+    }
+    requestAnimationFrame(draw);
+  })();
+
+  // ── Boot ──────────────────────────────────────────────────────────────────
+  renderChannels();
+  renderHero();
+  startPolling();
+})();
+</script>
+
+</body>
+</html>
