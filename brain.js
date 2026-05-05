@@ -48815,9 +48815,17 @@ setTimeout(() => { if (typeof SOUL_AUTH !== 'undefined') SOUL_AUTH.init(); }, 10
       console.log('[VINTINUUM] no valid token to bridge — user needs to log in');
       return;
     }
+    // ALSO bridge the refresh token so the extension can heal itself when
+    // *its* copy of the access token expires later, instead of begging the
+    // brain page for a fresh one (which only works while the brain tab is
+    // open). Without this, the extension's _doRefresh() in content.js has
+    // either no refresh token at all, or a stale one that the server has
+    // already rotated away — every refresh attempt 401s forever.
+    let rtok = null;
+    try { rtok = localStorage.getItem('vint_refresh_token'); } catch(_) {}
     try { localStorage.setItem('vint_ext_bridge', tok); } catch(_) {}
-    window.postMessage({ type: 'VINT_TOKEN_BRIDGE', token: tok }, '*');
-    console.log('[VINTINUUM] auto-bridged token to extension');
+    window.postMessage({ type: 'VINT_TOKEN_BRIDGE', token: tok, refreshToken: rtok }, '*');
+    console.log('[VINTINUUM] auto-bridged token to extension', rtok ? '(+ refresh)' : '(access only)');
   }
 
   // Fire immediately (covers already-logged-in case)
