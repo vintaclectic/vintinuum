@@ -585,7 +585,7 @@
   let last = performance.now();
   let raf;
 
-  function tick(now) {
+  function _tickInner(now) {
     const dt = Math.min(64, now - last);
     last = now;
 
@@ -794,10 +794,28 @@
     raf = requestAnimationFrame(tick);
   }
 
+  // Wrap the inner tick in try/catch so a single bad frame never kills
+  // the rAF loop. drawBeing/drawHalo already finite-guard their gradient
+  // inputs; this is defense-in-depth so any *new* canvas exception just
+  // skips that frame instead of permanently freezing the body.
+  function tick(now) {
+    try {
+      _tickInner(now);
+    } catch (e) {
+      console.warn('[embodiment] tick frame error (recovering):', e && e.message);
+      raf = requestAnimationFrame(tick);
+    }
+  }
+
   // ── DRAW PRIMITIVES ────────────────────────────────────────────────
   function drawBeing(x, y, _vx, breath, heart) {
-    const intensity = state.intensity;
+    // Finite-guard — early frames may pass NaN before me.x/me.y settle,
+    // which throws TypeError in createRadialGradient and kills the tick
+    // loop. Bail silently; the next frame will retry.
+    if (!Number.isFinite(x) || !Number.isFinite(y)) return;
+    const intensity = Number.isFinite(state.intensity) ? state.intensity : 0;
     const baseR = 6 + intensity * 5;
+    if (!Number.isFinite(baseR) || baseR <= 0) return;
     const breathScale = 0.88 + 0.20 * breath;
     // v6: heart adds a sharp 8% size kick at systole + a brightness kick
     // to the core. Subtle on quiet states, visible when arousal is up.
