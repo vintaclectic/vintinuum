@@ -319,15 +319,15 @@ if ('serviceWorker' in navigator && _onGitHubPages) {
      Loaded before any other script so window.Shell exists for everyone.
      Populates auth/viewport/connectors/pulse from localStorage and live state.
      Movements II–VII subscribe to this. (Vinta directive 2026-05-05.) -->
-<script src="body/shell.js?v=v20260505-pulsefix"></script>
+<script src="body/shell.js?v=v20260505-authbridge"></script>
 <!-- Movement III: topbar header with reactive shell subscriptions.
      Replaces the scattered absolute-positioned pills with a single header
      that hides legacy elements and re-routes their click handlers. Slides
      into a hamburger drawer on mobile. (Vinta directive 2026-05-05.) -->
-<script src="body/topbar.js?v=v20260505-pulsefix" defer></script>
+<script src="body/topbar.js?v=v20260505-authbridge" defer></script>
 <!-- Movement VI: 5-tab mobile bottom nav (HOME/MIND/CHAT/STATS/YOU).
      Replaces the legacy 4-icon bar contents at runtime. -->
-<script src="body/mobile_nav.js?v=v20260505-pulsefix" defer></script>
+<script src="body/mobile_nav.js?v=v20260505-authbridge" defer></script>
 </head>
 <body>
 
@@ -3228,18 +3228,37 @@ window.addEventListener('message', function(e) {
     if (payload.accessToken) {
       localStorage.setItem(TOKEN_KEY, payload.accessToken);
       localStorage.setItem('vint_access', payload.accessToken); // legacy mirror
+      localStorage.setItem('vint_access_token', payload.accessToken); // Shell key
     }
-    if (payload.refreshToken) localStorage.setItem(REFRESH_KEY, payload.refreshToken);
+    if (payload.refreshToken) {
+      localStorage.setItem(REFRESH_KEY, payload.refreshToken);
+      localStorage.setItem('vint_refresh_token', payload.refreshToken); // Shell key
+    }
     if (payload.user) localStorage.setItem(USER_KEY, JSON.stringify(payload.user));
     refreshTrigger();
+    // Push the new identity into the reactive Shell so the topbar pill,
+    // YOU page, vitals — every surface — flips to signed-in immediately
+    // without needing a page reload. (Council fix 2026-05-05.)
+    try {
+      if (window.Shell) {
+        if (payload.accessToken) Shell.setToken(payload.accessToken);
+        if (payload.refreshToken) Shell.setRefresh(payload.refreshToken);
+        if (payload.user) Shell.setUser(payload.user);
+        // Re-hit /api/v2/auth/me so the arrival line + tier glow paint.
+        Shell.bootstrap().catch(() => {});
+      }
+    } catch (_) {}
     try { window.dispatchEvent(new CustomEvent('vint:auth', { detail: payload })); } catch (_) {}
   }
   function clearSession() {
     localStorage.removeItem(TOKEN_KEY);
     localStorage.removeItem('vint_access');
+    localStorage.removeItem('vint_access_token');
     localStorage.removeItem(REFRESH_KEY);
+    localStorage.removeItem('vint_refresh_token');
     localStorage.removeItem(USER_KEY);
     refreshTrigger();
+    try { if (window.Shell) Shell.signOut(); } catch (_) {}
   }
   window.vintLogout = clearSession;
 
