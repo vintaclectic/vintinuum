@@ -442,6 +442,9 @@
     if (state.auth.token || getRefresh()) {
       Shell.bootstrap().catch((e) => console.warn('[Shell] bootstrap err:', e));
     }
+    // Movement IV: open the pulse stream right away. Anonymous-friendly —
+    // no auth required, the heartbeat is public read-only.
+    try { Shell.startPulse(); } catch (_) {}
     // Refresh every 6h on active tabs (visibility-aware so we don't burn it
     // when the laptop's been closed for a week).
     const REFRESH_INTERVAL = 6 * 3600 * 1000;
@@ -503,6 +506,57 @@
     refreshAuth: async function () {
       const tok = await tryRefresh();
       return !!tok;
+    },
+    // Movement IV: pulse stream subscription. Idempotent — multiple calls
+    // share one EventSource. Updates Shell.connectors.* + Shell.pulse.*
+    // so any consumer (topbar vitals pill, mind.html, phone) gets the
+    // same heartbeat.
+    startPulse: function startPulse() {
+      if (Shell._pulseEs) return Shell._pulseEs;
+      let es;
+      try {
+        es = new EventSource(getApiBase() + '/api/v2/pulse/stream');
+      } catch (e) {
+        console.warn('[Shell] pulse stream open failed:', e.message);
+        return null;
+      }
+      Shell._pulseEs = es;
+      es.onmessage = (ev) => {
+        try {
+          const snap = JSON.parse(ev.data);
+          if (!snap) return;
+          // connectors
+          if (snap.connectors) {
+            const c = snap.connectors;
+            update('connectors', {
+              telegram: { alive: !!c.telegram?.ready, lastMsg: state.connectors.telegram.lastMsg, latency: null },
+              discord:  { alive: !!c.discord?.ready,  lastMsg: state.connectors.discord.lastMsg,  latency: c.discord?.ping ?? null },
+              kick:     state.connectors.kick,
+              pulse:    { alive: true, lastBeat: snap.ts, dominantLayer: state.connectors.pulse.dominantLayer },
+            });
+          }
+          // body / pulse
+          if (snap.body) {
+            update('pulse', {
+              arousal: snap.body.arousal,
+              valence: snap.body.valence,
+              gene:    state.pulse.gene,
+            });
+          }
+        } catch (_) {}
+      };
+      es.onerror = () => {
+        // EventSource auto-reconnects; we just mark pulse alive=false
+        // briefly so the UI can dim. The next message will re-light it.
+        update('connectors.pulse', { ...state.connectors.pulse, alive: false });
+      };
+      return es;
+    },
+    stopPulse: function stopPulse() {
+      if (Shell._pulseEs) {
+        try { Shell._pulseEs.close(); } catch (_) {}
+        Shell._pulseEs = null;
+      }
     },
   };
 

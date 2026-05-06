@@ -85,10 +85,12 @@
       dotColor: 'rgba(124,255,180,0.6)',
       label: 'VITALS',
     });
-    vitals.style.display = 'none'; // hidden until IV ships
+    // Movement IV is live — show the pill, populate from Shell.connectors
+    vitals.style.display = '';
     vitals.addEventListener('click', () => {
-      // Movement IV: open vitals panel
-      console.log('[topbar] vitals click — Movement IV will open per-connector panel');
+      const c = Shell.get('connectors') || {};
+      const ready = ['telegram','discord','kick','pulse'].filter(k => c[k]?.alive).length;
+      console.log('[topbar] vitals click — connectors ready=' + ready + '/4', c);
     });
     left.appendChild(vitals);
 
@@ -415,6 +417,28 @@
     }, 6000);
   }
 
+  function refreshVitalsPill() {
+    if (!refs.vitals) return;
+    const c = Shell.get('connectors') || {};
+    const checks = ['telegram','discord','kick','pulse'];
+    const ready = checks.filter(k => c[k]?.alive).length;
+    const total = checks.length;
+    const dot = $('topVitalsPillDot');
+    const label = $('topVitalsPillLabel');
+    // Color scale: 4/4 green, 2-3 amber, 0-1 dim red
+    const color = ready === total ? '#7cffb4'
+                : ready >= 2      ? '#ffd479'
+                : ready >= 1      ? '#ff9a7c'
+                :                   'rgba(180,180,200,0.45)';
+    if (label) label.textContent = `${ready}/${total}`;
+    if (dot) {
+      dot.style.background = color;
+      dot.style.boxShadow = `0 0 8px ${color}`;
+    }
+    refs.vitals.style.borderColor = color + '55';
+    refs.vitals.style.color = color;
+  }
+
   function applyMobileLayout() {
     if (!refs.header) return;
     const v = Shell.get('viewport');
@@ -438,6 +462,7 @@
     }
     mount();
     refreshAuthPill();
+    refreshVitalsPill();
     applyMobileLayout();
 
     // Subscribe to Shell state
@@ -445,6 +470,7 @@
     Shell.subscribe('auth.user', () => refreshAuthPill());
     Shell.subscribe('auth.signedIn', () => refreshAuthPill());
     Shell.subscribe('auth.arrival', (line) => { if (line) showArrival(line); });
+    Shell.subscribe('connectors', refreshVitalsPill);
     Shell.subscribe('viewport', applyMobileLayout);
 
     console.log('[topbar] mounted — auth=' + (Shell.get('auth.signedIn') ? 'in' : 'out'));
