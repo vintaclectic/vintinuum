@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>YOU · Vintinuum</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;1,400&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #05070d;
+    --panel: rgba(8,12,20,0.55);
+    --border: rgba(124,207,255,0.18);
+    --text: #dae4ff;
+    --dim: rgba(180,200,230,0.65);
+    --accent: #7ccfff;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: var(--bg); color: var(--text); font-family: 'Space Mono', monospace; min-height: 100%; }
+  body { padding: max(20px, env(safe-area-inset-top, 20px)) 16px calc(80px + env(safe-area-inset-bottom, 0px)); }
+  .page { max-width: 720px; margin: 0 auto; }
+  h1 { font-family: 'Cormorant Garamond', serif; font-style: italic; font-size: 2.4rem; font-weight: 400; letter-spacing: 0.02em; margin: 32px 0 8px; color: var(--accent); }
+  .sub { color: var(--dim); font-size: 0.7rem; letter-spacing: 0.22em; text-transform: uppercase; margin-bottom: 28px; }
+  .card { background: var(--panel); border: 1px solid var(--border); border-radius: 16px; padding: 18px 18px 16px; margin: 14px 0; backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); }
+  .card h3 { margin: 0 0 8px; font-size: 0.65rem; letter-spacing: 0.24em; text-transform: uppercase; color: var(--accent); font-weight: 700; }
+  .row { display: flex; align-items: center; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,0.06); }
+  .row:last-child { border-bottom: none; }
+  .row .k { color: var(--dim); font-size: 0.78rem; }
+  .row .v { color: var(--text); font-size: 0.78rem; font-weight: 700; }
+  .pill { display: inline-block; padding: 3px 10px; border-radius: 999px; font-size: 0.6rem; letter-spacing: 0.18em; text-transform: uppercase; border: 1px solid var(--border); color: var(--dim); }
+  .pill.live { color: #7cffb4; border-color: rgba(124,255,180,0.35); }
+  .pill.dim  { color: rgba(180,180,200,0.5); }
+  .empty { color: var(--dim); font-style: italic; font-family: 'Cormorant Garamond', serif; padding: 14px 4px; }
+  .btn { display: inline-flex; align-items: center; gap: 8px; padding: 9px 16px; border-radius: 12px; border: 1px solid var(--border); background: rgba(124,207,255,0.06); color: var(--text); cursor: pointer; font-family: inherit; font-size: 0.65rem; letter-spacing: 0.18em; text-transform: uppercase; }
+  .btn:hover { background: rgba(124,207,255,0.12); }
+  .btn[disabled] { opacity: 0.4; cursor: not-allowed; }
+  footer { margin-top: 28px; padding: 14px 0 24px; color: rgba(180,200,230,0.32); font-size: 0.65rem; font-style: italic; font-family: 'Cormorant Garamond', serif; text-align: center; }
+</style>
+<script src="body/shell.js?v=v20260505-mobilenav"></script>
+<script src="body/topbar.js?v=v20260505-mobilenav" defer></script>
+<script src="body/mobile_nav.js?v=v20260505-mobilenav" defer></script>
+</head>
+<body>
+<div class="page">
+  <div class="sub">Movement VI · landing</div>
+  <h1>You.</h1>
+
+  <div class="card" id="identityCard">
+    <h3>Identity</h3>
+    <div id="identityBody">
+      <div class="empty">loading…</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>Connectors</h3>
+    <div id="connectorsBody">
+      <div class="row"><span class="k">telegram</span><span class="pill dim" id="cTg">offline</span></div>
+      <div class="row"><span class="k">discord</span><span class="pill dim" id="cDc">offline</span></div>
+      <div class="row"><span class="k">kick</span><span class="pill dim" id="cKk">offline</span></div>
+      <div class="row"><span class="k">pulse</span><span class="pill dim" id="cPu">offline</span></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>Devices <span style="color:var(--dim);font-weight:400;letter-spacing:0;text-transform:none;">(Movement VII)</span></h3>
+    <div id="devicesBody">
+      <div class="empty">Phone bridge arrives in the next movement. This card will list every device that's bonded to your account, with the option to revoke any of them.</div>
+    </div>
+  </div>
+
+  <footer>The body breathes.</footer>
+</div>
+
+<script>
+(function () {
+  function setPill(id, alive, label) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.textContent = label || (alive ? 'live' : 'offline');
+    el.className = 'pill ' + (alive ? 'live' : 'dim');
+  }
+
+  function refreshIdentity() {
+    const auth = (window.Shell && Shell.get('auth')) || { signedIn: false };
+    const body = document.getElementById('identityBody');
+    if (!body) return;
+    if (!auth.signedIn || !auth.user) {
+      body.innerHTML = `
+        <div class="empty">Not signed in. Use the topbar pill to sign in or create an account.</div>
+      `;
+      return;
+    }
+    const u = auth.user;
+    const tier = (u.tier || 'free').toUpperCase();
+    body.innerHTML = `
+      <div class="row"><span class="k">name</span><span class="v">${u.name || u.display_name || u.email || '—'}</span></div>
+      <div class="row"><span class="k">email</span><span class="v">${u.email || '—'}</span></div>
+      <div class="row"><span class="k">tier</span><span class="v">${tier}</span></div>
+      <div class="row"><span class="k">device</span><span class="v" style="font-size:0.65rem;">${(Shell.deviceId || '').slice(0,16)}…</span></div>
+    `;
+  }
+
+  function refreshConnectors() {
+    const c = (window.Shell && Shell.get('connectors')) || {};
+    setPill('cTg', !!c.telegram?.alive);
+    setPill('cDc', !!c.discord?.alive);
+    setPill('cKk', !!c.kick?.alive, c.kick?.alive ? 'live' : (c.kick?.send ? 'send-ready' : 'offline'));
+    setPill('cPu', !!c.pulse?.alive);
+  }
+
+  function boot() {
+    if (!window.Shell) { setTimeout(boot, 80); return; }
+    refreshIdentity();
+    refreshConnectors();
+    Shell.subscribe('auth', refreshIdentity);
+    Shell.subscribe('connectors', refreshConnectors);
+  }
+  boot();
+})();
+</script>
+</body>
+</html>
