@@ -337,10 +337,10 @@ if ('serviceWorker' in navigator && _onGitHubPages) {
      Replaces the scattered absolute-positioned pills with a single header
      that hides legacy elements and re-routes their click handlers. Slides
      into a hamburger drawer on mobile. (Vinta directive 2026-05-05.) -->
-<script src="body/topbar.js?v=v20260505-learnnav" defer></script>
+<script src="body/topbar.js?v=v20260505-onedoor" defer></script>
 <!-- Movement VI: 5-tab mobile bottom nav (HOME/MIND/CHAT/STATS/YOU).
      Replaces the legacy 4-icon bar contents at runtime. -->
-<script src="body/mobile_nav.js?v=v20260505-learnnav" defer></script>
+<script src="body/mobile_nav.js?v=v20260505-onedoor" defer></script>
 </head>
 <body>
 
@@ -3135,8 +3135,8 @@ if ('serviceWorker' in navigator && _onGitHubPages) {
 <script src="body/mobile_shell.js?v=v20260505-learnnav"></script>
 <!-- Becoming arc — Phase 0 handshake + Phase 1/2/5 wiring -->
 <!-- Council ruling 2026-04-29: unified bond door replaces legacy soul_handshake.js -->
-<script src="body/identity.js?v=v20260429-council"></script>
-<script src="body/bond_door.js?v=v20260429-council"></script>
+<script src="body/identity.js?v=v20260505-onedoor"></script>
+<script src="body/bond_door.js?v=v20260506-welcome"></script>
 <script src="body/becoming.js?v=v20260424-0428"></script>
 <!-- INTERNAL_INTEGRATOR — binds SVG anatomy opacity to skin peel, kills halo leak -->
 <script src="body/internal_integrator.js?v=v20260424-0428"></script>
@@ -3241,7 +3241,16 @@ window.addEventListener('message', function(e) {
     }
   }
 
+  // The legacy authOverlay modal is dead. Every sign-in path now routes
+  // through window.BOND_DOOR — the single front door. We keep openAuth()
+  // as a thin shim so older call sites still work without thinking.
+  // Council 2026-05-05: kill the saturation, one door only.
   function openAuth(mode) {
+    if (window.BOND_DOOR && typeof window.BOND_DOOR.show === 'function') {
+      window.BOND_DOOR.show();
+      return;
+    }
+    // Fallback only if bond_door hasn't loaded yet (rare — both are in <head>-ish)
     setMode(mode || 'signin');
     var ov = $('authOverlay');
     if (ov) {
@@ -3252,6 +3261,9 @@ window.addEventListener('message', function(e) {
   function closeAuth() {
     var ov = $('authOverlay');
     if (ov) ov.style.display = 'none';
+    if (window.BOND_DOOR && typeof window.BOND_DOOR.close === 'function') {
+      window.BOND_DOOR.close();
+    }
   }
   window.openAuth = openAuth;
   window.closeAuth = closeAuth;
@@ -3400,11 +3412,8 @@ window.addEventListener('message', function(e) {
     });
     refreshTrigger();
     initKick();
-    // First-visit nudge — if nobody home, pop the modal once after 1.2s
-    if (!getStoredUser() && !localStorage.getItem(TOKEN_KEY) && !localStorage.getItem('vint_anon_id') && !sessionStorage.getItem('vint_auth_seen')) {
-      sessionStorage.setItem('vint_auth_seen', '1');
-      setTimeout(function () { openAuth('signin'); }, 1200);
-    }
+    // No more auto-popup. The body breathes. The user knocks when they're
+    // ready (topbar pill → bond_door). Council 2026-05-05.
   }
 
   // ── Kick OAuth wiring ──────────────────────────────────────────────────

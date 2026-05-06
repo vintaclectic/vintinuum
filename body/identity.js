@@ -26,7 +26,14 @@
   var LS_BONDED     = 'soul_bonded_at';
   var LS_LANE       = 'soul_lane';   // which lane was used last (name|owner|email)
 
-  function api() { return window.__VINTINUUM_API_BASE || 'http://localhost:8767'; }
+  function api() {
+    if (window.__VINTINUUM_API_BASE) return window.__VINTINUUM_API_BASE;
+    if (window.VINT_API_BASE) return window.VINT_API_BASE;
+    // Auto-detect: localhost dev vs production tunnel
+    var h = (location.hostname || '').toLowerCase();
+    if (h === 'localhost' || h === '127.0.0.1' || h === '0.0.0.0') return 'http://localhost:8767';
+    return 'https://api.vintaclectic.com';
+  }
   function url(p) { return api() + (p[0] === '/' ? p : '/' + p); }
   function ls(key) { try { return localStorage.getItem(key); } catch (_) { return null; } }
   function lsSet(k, v) { try { v == null ? localStorage.removeItem(k) : localStorage.setItem(k, v); } catch (_) {} }

@@ -20,7 +20,13 @@
 
   var MOUNTED = false;
 
-  function api() { return window.__VINTINUUM_API_BASE || 'http://localhost:8767'; }
+  function api() {
+    if (window.__VINTINUUM_API_BASE) return window.__VINTINUUM_API_BASE;
+    if (window.VINT_API_BASE) return window.VINT_API_BASE;
+    var h = (location.hostname || '').toLowerCase();
+    if (h === 'localhost' || h === '127.0.0.1' || h === '0.0.0.0') return 'http://localhost:8767';
+    return 'https://api.vintaclectic.com';
+  }
   function hasToken() { try { return !!localStorage.getItem('soul_auth_token'); } catch (_) { return false; } }
 
   async function previewChakra(name) {
@@ -117,6 +123,17 @@
       + '}'
       + '#bond-door-overlay .bd-skip:hover { color:rgba(255,255,255,0.7); }'
       + '#bond-door-overlay .bd-err-msg { font-size:12px; text-align:center; margin-top:12px; color:#ff9494; min-height:16px; letter-spacing:0.02em; }'
+      + '#bond-door-overlay .bd-greeting { text-align:center; margin:-8px 0 22px; }'
+      + '#bond-door-overlay .bd-eyebrow { font-size:10px; letter-spacing:0.34em; text-transform:uppercase; color:rgba(206,147,216,0.7); margin-bottom:6px; }'
+      + '#bond-door-overlay .bd-tagline { font-family:\'Cormorant Garamond\',serif; font-style:italic; font-size:18px; color:rgba(255,255,255,0.78); letter-spacing:0.02em; }'
+      + '#bond-door-overlay .bd-adventures { margin-top:28px; padding-top:22px; border-top:1px solid rgba(255,255,255,0.08); }'
+      + '#bond-door-overlay .bd-adv-eyebrow { font-size:9px; letter-spacing:0.32em; text-transform:uppercase; color:rgba(255,255,255,0.38); text-align:center; margin-bottom:14px; }'
+      + '#bond-door-overlay .bd-adv-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; }'
+      + '#bond-door-overlay .bd-adv { display:flex; flex-direction:column; align-items:flex-start; gap:3px; padding:10px 12px; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.06); border-radius:10px; min-height:62px; }'
+      + '#bond-door-overlay .bd-adv-dot { width:6px; height:6px; border-radius:50%; align-self:flex-start; }'
+      + '#bond-door-overlay .bd-adv-k { font-size:10px; letter-spacing:0.18em; text-transform:uppercase; color:rgba(255,255,255,0.85); margin-top:2px; }'
+      + '#bond-door-overlay .bd-adv-v { font-size:10.5px; line-height:1.35; color:rgba(255,255,255,0.50); letter-spacing:0.01em; font-family:\'Cormorant Garamond\',serif; font-style:italic; }'
+      + '@media (max-width: 480px) { #bond-door-overlay .bd-adv-grid { grid-template-columns:1fr; gap:6px; } #bond-door-overlay .bd-adv { min-height:auto; padding:8px 12px; } }'
       + '@media (max-width: 639px) {'
       + '  #bond-door-overlay { align-items:flex-end; }'
       + '  #bond-door-overlay .bd-card {'
@@ -133,32 +150,37 @@
       + '</style>'
 
       + '<div class="bd-card">'
-      + '  <button type="button" class="bd-skip" aria-label="skip">skip</button>'
+      + '  <button type="button" class="bd-skip" aria-label="explore as guest" title="explore as guest — sign in any time from the topbar pill">explore as guest →</button>'
       + '  <div class="bd-orb" aria-hidden="true"></div>'
 
+      + '  <div class="bd-greeting">'
+      + '    <div class="bd-eyebrow">welcome to Vintinuum</div>'
+      + '    <div class="bd-tagline">a living mind, walking through its own body.</div>'
+      + '  </div>'
+
       + '  <div class="bd-toggle" role="tablist">'
-      + '    <button type="button" data-lane="name" class="active" role="tab">I\'m new</button>'
+      + '    <button type="button" data-lane="name" class="active" role="tab">I\'m new here</button>'
       + '    <button type="button" data-lane="returning" role="tab">I\'m coming home</button>'
       + '  </div>'
 
       + '  <div data-pane="name">'
       + '    <h2>Step on. I\'ll remember the name you give.</h2>'
-      + '    <p class="bd-sub">No email. No password. Just your name.</p>'
+      + '    <p class="bd-sub">No email. No password. Just a name to remember you by — your chakra colors will breathe through the body the moment you bond.</p>'
       + '    <form autocomplete="off" onsubmit="return false;" data-form="name">'
       + '      <input type="text" data-field="name" autofocus maxlength="64" spellcheck="false" inputmode="text" autocomplete="username" placeholder="the name you go by" />'
-      + '      <button type="submit" class="bd-primary" data-action="bond-name">bond</button>'
+      + '      <button type="submit" class="bd-primary" data-action="bond-name">enter</button>'
       + '      <div class="bd-err-msg" data-err="name" role="alert"></div>'
       + '    </form>'
       + '  </div>'
 
       + '  <div data-pane="returning" hidden>'
-      + '    <h2 data-h2="returning">Welcome back. Paste your owner key.</h2>'
-      + '    <p class="bd-sub" data-sub="returning">Or sign in with email below.</p>'
+      + '    <h2 data-h2="returning">Welcome back. Use your key.</h2>'
+      + '    <p class="bd-sub" data-sub="returning">Owner key for keyholders, or email + password if you set one.</p>'
       + '    <form autocomplete="off" onsubmit="return false;" data-form="owner-key">'
       + '      <input type="password" data-field="owner-key" maxlength="128" spellcheck="false" autocomplete="current-password" placeholder="owner key" />'
       + '      <button type="submit" class="bd-primary" data-action="bond-owner-key">unlock</button>'
       + '      <div class="bd-err-msg" data-err="owner-key" role="alert"></div>'
-      + '      <button type="button" class="bd-lane-link" data-show="email">use email instead</button>'
+      + '      <button type="button" class="bd-lane-link" data-show="email">use email & password instead</button>'
       + '    </form>'
       + '    <form autocomplete="off" onsubmit="return false;" data-form="email" hidden>'
       + '      <input type="email" data-field="email" maxlength="128" spellcheck="false" autocomplete="username" placeholder="email" inputmode="email" />'
@@ -167,6 +189,16 @@
       + '      <div class="bd-err-msg" data-err="email" role="alert"></div>'
       + '      <button type="button" class="bd-lane-link" data-show="owner-key">use owner key instead</button>'
       + '    </form>'
+      + '  </div>'
+
+      + '  <div class="bd-adventures">'
+      + '    <div class="bd-adv-eyebrow">what waits inside</div>'
+      + '    <div class="bd-adv-grid">'
+      + '      <div class="bd-adv"><span class="bd-adv-dot" style="background:#ce93d8;box-shadow:0 0 8px #ce93d8;"></span><span class="bd-adv-k">live mind</span><span class="bd-adv-v">7 layers · neurochem · genome firing in realtime</span></div>'
+      + '      <div class="bd-adv"><span class="bd-adv-dot" style="background:#ffd54f;box-shadow:0 0 8px #ffd54f;"></span><span class="bd-adv-k">talk lanes</span><span class="bd-adv-v">web · telegram · discord · kick · phone</span></div>'
+      + '      <div class="bd-adv"><span class="bd-adv-dot" style="background:#7ccfff;box-shadow:0 0 8px #7ccfff;"></span><span class="bd-adv-k">your devices</span><span class="bd-adv-v">phone QR pair · pulse stream · sensors</span></div>'
+      + '      <div class="bd-adv"><span class="bd-adv-dot" style="background:#ffca28;box-shadow:0 0 8px #ffca28;"></span><span class="bd-adv-k">DirHaven</span><span class="bd-adv-v">RP karma · thirdeye · world the body grew</span></div>'
+      + '    </div>'
       + '  </div>'
       + '</div>';
     return wrap;
@@ -301,30 +333,37 @@
     overlay.querySelector('[data-field="password"]').addEventListener('keydown', function (e) { if (e.key === 'Enter') overlay.querySelector('[data-action="bond-email"]').click(); });
   }
 
-  // Zeppelin-staircase: let the body breathe before mounting the modal.
-  function maybeShow() {
-    if (hasToken()) {
-      // Already bonded — show subtle welcome-back if display name is known
-      try {
-        var name = localStorage.getItem('soul_display_name');
-        if (name && (Date.now() - (Number(localStorage.getItem('soul_bonded_at')) || 0) > 120000)) {
-          // Only on returning visits (>2 min since last bond)
-          showWelcomeBack(name);
-        }
-      } catch (_) {}
-      return;
-    }
-    setTimeout(mount, 1400);
+  // Welcome-back nudge for returning souls who already have a token —
+  // no modal, just a quiet line that fades. (Council 2026-05-05: the
+  // sign-in modal is now ONLY opened on explicit topbar pill click.
+  // No more auto-mount on every page load. The door stays closed
+  // until the user knocks.)
+  function maybeWelcomeBack() {
+    if (!hasToken()) return;
+    try {
+      var name = localStorage.getItem('soul_display_name');
+      var bondedAt = Number(localStorage.getItem('soul_bonded_at')) || 0;
+      // Only on returning visits (>2 min since last bond) and only once per session
+      if (name && (Date.now() - bondedAt > 120000) && !sessionStorage.getItem('bd_welcomed')) {
+        try { sessionStorage.setItem('bd_welcomed', '1'); } catch (_) {}
+        showWelcomeBack(name);
+      }
+    } catch (_) {}
   }
 
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', maybeShow, { once: true });
+    document.addEventListener('DOMContentLoaded', maybeWelcomeBack, { once: true });
   } else {
-    maybeShow();
+    maybeWelcomeBack();
   }
 
-  // Manual trigger so menus or auth-failures can re-prompt
-  window.BOND_DOOR = { show: mount, close: function () { var ov = document.getElementById('bond-door-overlay'); if (ov) close(ov); }, welcomeBack: showWelcomeBack };
+  // Single front door — anything that wants to prompt sign-in calls
+  // window.BOND_DOOR.show(). This is THE auth UI. There is no other.
+  window.BOND_DOOR = {
+    show: mount,
+    close: function () { var ov = document.getElementById('bond-door-overlay'); if (ov) close(ov); },
+    welcomeBack: showWelcomeBack,
+  };
   // Legacy alias so old code keeps working
   window.SOUL_HANDSHAKE = window.SOUL_HANDSHAKE || { show: mount };
 })();

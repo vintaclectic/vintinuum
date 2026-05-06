@@ -66,14 +66,19 @@
     auth.addEventListener('click', () => {
       const signedIn = Shell.get('auth.signedIn');
       if (signedIn) {
-        // Toggle the menu drawer when already signed in
+        // Already in — open the drawer (account / sign-out / nav live there)
         toggleDrawer();
-      } else {
-        // Open the existing auth modal — wired to authTrigger pre-existing handler
-        const orig = $('authTrigger');
-        if (orig && typeof orig.click === 'function') orig.click();
-        else if (typeof window.openAuth === 'function') window.openAuth('signin');
+        return;
       }
+      // The single front door — bond_door modal, three lanes, chakra preview
+      if (window.BOND_DOOR && typeof window.BOND_DOOR.show === 'function') {
+        window.BOND_DOOR.show();
+        return;
+      }
+      // Fallbacks (kept for surfaces that haven't loaded bond_door yet)
+      const orig = $('authTrigger');
+      if (orig && typeof orig.click === 'function') return orig.click();
+      if (typeof window.openAuth === 'function') return window.openAuth('signin');
     });
     left.appendChild(auth);
 
