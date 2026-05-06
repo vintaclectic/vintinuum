@@ -32,27 +32,48 @@
   // keys so nothing in the app breaks during the transition.
   const LS_TOKEN          = 'vint_token';
   const LS_TOKEN_LEGACY   = 'vint_access_token';
+  const LS_TOKEN_SOUL     = 'soul_auth_token';      // bond_door / SOUL_AUTH lane
   const LS_REFRESH        = 'vint_refresh';
   const LS_REFRESH_LEGACY = 'vint_refresh_token';
+  const LS_REFRESH_SOUL   = 'soul_auth_refresh';    // bond_door / SOUL_AUTH lane
   const LS_USER           = 'vint_user';
   const LS_THEME          = 'vint_theme';
   const LS_DEVICE         = 'vint_device_id';
   const BC_NAME           = 'vintinuum-shell';
 
+  // All "soul_*" companion keys SOUL_AUTH writes during a bond. Cleared as a
+  // unit on signOut so we never leak ghost identity across reloads.
+  // (Helios-Fusion council audit, 2026-05-06: bond was writing 7 keys but
+  // signOut was clearing 4, so soul_auth_token survived and bond_door
+  // suppressed the welcome on next visit thinking the user was still bonded.)
+  const SOUL_COMPANION_KEYS = [
+    'soul_display_name',
+    'soul_chakra_signature',
+    'soul_chakra_hue',
+    'soul_bonded_at',
+    'soul_lane',
+  ];
+
   function readToken() {
-    return safeRead(LS_TOKEN) || safeRead(LS_TOKEN_LEGACY) || null;
+    return safeRead(LS_TOKEN) || safeRead(LS_TOKEN_LEGACY) || safeRead(LS_TOKEN_SOUL) || null;
   }
   function readRefresh() {
-    return safeRead(LS_REFRESH) || safeRead(LS_REFRESH_LEGACY) || null;
+    return safeRead(LS_REFRESH) || safeRead(LS_REFRESH_LEGACY) || safeRead(LS_REFRESH_SOUL) || null;
   }
   function writeToken(tok) {
     try {
       if (tok) {
         localStorage.setItem(LS_TOKEN, tok);
-        localStorage.setItem(LS_TOKEN_LEGACY, tok);   // mirror for legacy reads
+        localStorage.setItem(LS_TOKEN_LEGACY, tok);
+        localStorage.setItem(LS_TOKEN_SOUL, tok);     // SOUL_AUTH parity
       } else {
         localStorage.removeItem(LS_TOKEN);
         localStorage.removeItem(LS_TOKEN_LEGACY);
+        localStorage.removeItem(LS_TOKEN_SOUL);
+        // Purge soul-companion keys atomically with the token so a Shell-only
+        // signOut wipes the full bond_door cache and the welcome-back nudge
+        // doesn't fire on a ghost.
+        SOUL_COMPANION_KEYS.forEach(k => { try { localStorage.removeItem(k); } catch (_) {} });
       }
     } catch (_) {}
   }
@@ -61,9 +82,11 @@
       if (tok) {
         localStorage.setItem(LS_REFRESH, tok);
         localStorage.setItem(LS_REFRESH_LEGACY, tok);
+        localStorage.setItem(LS_REFRESH_SOUL, tok);   // SOUL_AUTH parity
       } else {
         localStorage.removeItem(LS_REFRESH);
         localStorage.removeItem(LS_REFRESH_LEGACY);
+        localStorage.removeItem(LS_REFRESH_SOUL);
       }
     } catch (_) {}
   }

@@ -58,8 +58,12 @@
   }
 
   function setIdentity(j, lane) {
-    if (j && j.accessToken)  lsSet(LS_TOKEN, j.accessToken);
-    if (j && j.refreshToken) lsSet(LS_REFRESH, j.refreshToken);
+    // The bond response carries everything we need to paint signed-in state.
+    // Council ruling 2026-05-06 (Helios-Fusion): Shell is the canonical
+    // writer for auth tokens — Shell.setToken now mirrors to all three
+    // namespaces (vint_token, vint_access_token, soul_auth_token) so we
+    // no longer manually mirror here. SOUL-side companion keys (display
+    // name, chakra, bonded-at, lane) stay our concern.
     if (j && j.user) {
       if (j.user.display_name) lsSet(LS_DISPLAY, j.user.display_name);
       if (j.user.chakra && j.user.chakra.hsl) lsSet(LS_CHAKRA, j.user.chakra.hsl);
@@ -69,26 +73,22 @@
     lsSet(LS_BONDED, String(Date.now()));
     if (lane) lsSet(LS_LANE, lane);
 
-    // Bridge into the reactive Shell so the topbar pill, YOU page, and
-    // any other surface flips to signed-in immediately. Without this
-    // bridge the bond_door / SOUL_AUTH lane writes only to soul_auth_token
-    // and the Shell-driven UI (topbar) never knew the user was bonded.
-    // Council fix 2026-05-05.
-    try {
-      if (j && j.accessToken) {
-        try { localStorage.setItem('vint_access_token', j.accessToken); } catch (_) {}
-      }
-      if (j && j.refreshToken) {
-        try { localStorage.setItem('vint_refresh_token', j.refreshToken); } catch (_) {}
-      }
-      if (window.Shell) {
-        if (j && j.accessToken) Shell.setToken(j.accessToken);
-        if (j && j.refreshToken) Shell.setRefresh(j.refreshToken);
-        if (j && j.user) Shell.setUser(j.user);
-        // Force a fresh /api/v2/auth/me so tier glow + arrival line paint.
-        Shell.bootstrap().catch(function () {});
-      }
-    } catch (_) {}
+    if (window.Shell) {
+      // Shell owns the token bus. setToken/setRefresh mirror to every
+      // namespace and broadcast the auth change across tabs.
+      if (j && j.accessToken) Shell.setToken(j.accessToken);
+      if (j && j.refreshToken) Shell.setRefresh(j.refreshToken);
+      if (j && j.user) Shell.setUser(j.user);
+      // Bond response should carry user+tier already. Bootstrap is a soft
+      // refresh to backfill arrival-line + connector health; non-blocking.
+      try { Shell.bootstrap().catch(function () {}); } catch (_) {}
+    } else {
+      // Defensive fallback: if Shell isn't loaded (vanishingly rare since
+      // shell.js loads before identity.js on every surface), persist the
+      // raw tokens directly so a page reload picks them up.
+      if (j && j.accessToken)  { lsSet(LS_TOKEN, j.accessToken); try { localStorage.setItem('vint_access_token', j.accessToken); } catch (_) {} }
+      if (j && j.refreshToken) { lsSet(LS_REFRESH, j.refreshToken); try { localStorage.setItem('vint_refresh_token', j.refreshToken); } catch (_) {} }
+    }
 
     window.VINTINUUM_IDENTITY = {
       user: j && j.user ? j.user : null,
@@ -153,17 +153,28 @@
   }
 
   function signOut() {
-    [LS_TOKEN, LS_REFRESH, LS_DISPLAY, LS_CHAKRA, LS_CHAKRA_HUE, LS_BONDED, LS_LANE].forEach(function (k) { lsSet(k, null); });
-    // Also clear Shell's keys so the topbar doesn't keep showing the user
-    try { localStorage.removeItem('vint_access_token'); } catch (_) {}
-    try { localStorage.removeItem('vint_refresh_token'); } catch (_) {}
-    try { localStorage.removeItem('vint_user'); } catch (_) {}
+    // Visual-state cleanup we own: chakra CSS vars, identity object, event.
     window.VINTINUUM_IDENTITY = null;
     document.documentElement.style.removeProperty('--soul-chakra-hue');
     document.documentElement.style.removeProperty('--soul-chakra-hsl');
-    try { if (window.Shell) Shell.signOut().catch(function(){}); } catch (_) {}
+
+    // Token + companion-key purge: Shell.signOut handles all three namespaces
+    // (vint_token, vint_access_token, soul_auth_token) AND clears the soul-*
+    // companion keys atomically (display name, chakra, bonded-at, lane).
+    // Helios-Fusion fix 2026-05-06 — was previously asymmetric (bond wrote
+    // 7 keys, signOut cleared 4) which left ghost identity in localStorage.
+    if (window.Shell) {
+      try { Shell.signOut().catch(function(){}); } catch (_) {}
+    } else {
+      // Fallback path if Shell unavailable
+      [LS_TOKEN, LS_REFRESH, LS_DISPLAY, LS_CHAKRA, LS_CHAKRA_HUE, LS_BONDED, LS_LANE].forEach(function (k) { lsSet(k, null); });
+      try { localStorage.removeItem('vint_access_token'); } catch (_) {}
+      try { localStorage.removeItem('vint_refresh_token'); } catch (_) {}
+      try { localStorage.removeItem('vint_user'); } catch (_) {}
+    }
+
     emitChange();
-    // Optional: tell server (best-effort)
+    // Best-effort server-side logout
     try {
       fetch(url('/api/auth/logout'), { method: 'POST', headers: authHeaders(), credentials: 'include' }).catch(function () {});
     } catch (_) {}

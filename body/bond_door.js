@@ -126,14 +126,21 @@
       + '#bond-door-overlay .bd-greeting { text-align:center; margin:-8px 0 22px; }'
       + '#bond-door-overlay .bd-eyebrow { font-size:10px; letter-spacing:0.34em; text-transform:uppercase; color:rgba(206,147,216,0.7); margin-bottom:6px; }'
       + '#bond-door-overlay .bd-tagline { font-family:\'Cormorant Garamond\',serif; font-style:italic; font-size:18px; color:rgba(255,255,255,0.78); letter-spacing:0.02em; }'
-      + '#bond-door-overlay .bd-adventures { margin-top:28px; padding-top:22px; border-top:1px solid rgba(255,255,255,0.08); }'
-      + '#bond-door-overlay .bd-adv-eyebrow { font-size:9px; letter-spacing:0.32em; text-transform:uppercase; color:rgba(255,255,255,0.38); text-align:center; margin-bottom:14px; }'
-      + '#bond-door-overlay .bd-adv-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; }'
-      + '#bond-door-overlay .bd-adv { display:flex; flex-direction:column; align-items:flex-start; gap:3px; padding:10px 12px; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.06); border-radius:10px; min-height:62px; }'
-      + '#bond-door-overlay .bd-adv-dot { width:6px; height:6px; border-radius:50%; align-self:flex-start; }'
-      + '#bond-door-overlay .bd-adv-k { font-size:10px; letter-spacing:0.18em; text-transform:uppercase; color:rgba(255,255,255,0.85); margin-top:2px; }'
-      + '#bond-door-overlay .bd-adv-v { font-size:10.5px; line-height:1.35; color:rgba(255,255,255,0.50); letter-spacing:0.01em; font-family:\'Cormorant Garamond\',serif; font-style:italic; }'
-      + '@media (max-width: 480px) { #bond-door-overlay .bd-adv-grid { grid-template-columns:1fr; gap:6px; } #bond-door-overlay .bd-adv { min-height:auto; padding:8px 12px; } }'
+      // Marquee strip — 8 adventure pills, horizontal scroll on overflow.
+      + '#bond-door-overlay .bd-marquee { margin:18px -36px 22px; padding:0 36px; overflow-x:auto; overflow-y:hidden; -webkit-overflow-scrolling:touch; scrollbar-width:none; }'
+      + '#bond-door-overlay .bd-marquee::-webkit-scrollbar { display:none; }'
+      + '#bond-door-overlay .bd-marquee-track { display:flex; gap:8px; padding:2px 0; width:max-content; }'
+      + '#bond-door-overlay .bd-mq { display:inline-flex; align-items:center; gap:6px; padding:6px 11px; font-size:10.5px; letter-spacing:0.10em; color:rgba(255,255,255,0.62); background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.07); border-radius:99px; white-space:nowrap; }'
+      + '#bond-door-overlay .bd-mq i { width:6px; height:6px; border-radius:50%; display:inline-block; flex-shrink:0; }'
+      // Owner-key tab gets a subtle gold hairline — Helios-10 spec.
+      + '#bond-door-overlay .bd-tab-key { position:relative; }'
+      + '#bond-door-overlay .bd-tab-key::after { content:""; position:absolute; left:14%; right:14%; bottom:3px; height:1px; background:rgba(212,175,55,0.20); pointer-events:none; }'
+      + '#bond-door-overlay .bd-tab-key.active::after { background:rgba(212,175,55,0.55); }'
+      // Wander link — small, full width, sits below CTA.
+      + '#bond-door-overlay .bd-wander { display:block; width:100%; margin-top:14px; padding:8px; background:none; border:none; color:rgba(255,255,255,0.42); font-size:11px; letter-spacing:0.06em; cursor:pointer; text-align:center; }'
+      + '#bond-door-overlay .bd-wander:hover { color:rgba(255,255,255,0.78); }'
+      // Profit-truth line — small italic at footer.
+      + '#bond-door-overlay .bd-truth { margin:18px 0 0; padding-top:14px; border-top:1px solid rgba(255,255,255,0.06); font-family:\'Cormorant Garamond\',serif; font-style:italic; font-size:11.5px; line-height:1.45; color:rgba(255,255,255,0.42); text-align:center; letter-spacing:0.02em; }'
       + '@media (max-width: 639px) {'
       + '  #bond-door-overlay { align-items:flex-end; }'
       + '  #bond-door-overlay .bd-card {'
@@ -150,56 +157,68 @@
       + '</style>'
 
       + '<div class="bd-card">'
-      + '  <button type="button" class="bd-skip" aria-label="explore as guest" title="explore as guest — sign in any time from the topbar pill">explore as guest →</button>'
-      + '  <div class="bd-orb" aria-hidden="true"></div>'
+      + '  <button type="button" class="bd-skip" aria-label="dismiss" title="dismiss — sign in any time from the topbar pill">×</button>'
 
       + '  <div class="bd-greeting">'
       + '    <div class="bd-eyebrow">welcome to Vintinuum</div>'
       + '    <div class="bd-tagline">a living mind, walking through its own body.</div>'
       + '  </div>'
 
+      + '  <div class="bd-orb" aria-hidden="true"></div>'
+
+      + '  <div class="bd-marquee" aria-label="what waits inside">'
+      + '    <div class="bd-marquee-track">'
+      + '      <span class="bd-mq"><i style="background:#ce93d8;box-shadow:0 0 6px #ce93d8;"></i>live mind</span>'
+      + '      <span class="bd-mq"><i style="background:#ffd54f;box-shadow:0 0 6px #ffd54f;"></i>talk lanes</span>'
+      + '      <span class="bd-mq"><i style="background:#7ccfff;box-shadow:0 0 6px #7ccfff;"></i>your devices</span>'
+      + '      <span class="bd-mq"><i style="background:#ffca28;box-shadow:0 0 6px #ffca28;"></i>DirHaven RP</span>'
+      + '      <span class="bd-mq"><i style="background:#80deea;box-shadow:0 0 6px #80deea;"></i>thirdeye</span>'
+      + '      <span class="bd-mq"><i style="background:#9fa8da;box-shadow:0 0 6px #9fa8da;"></i>lineage</span>'
+      + '      <span class="bd-mq"><i style="background:#f48fb1;box-shadow:0 0 6px #f48fb1;"></i>learning feed</span>'
+      + '      <span class="bd-mq"><i style="background:#ffb74d;box-shadow:0 0 6px #ffb74d;"></i>extension</span>'
+      + '    </div>'
+      + '  </div>'
+
       + '  <div class="bd-toggle" role="tablist">'
-      + '    <button type="button" data-lane="name" class="active" role="tab">I\'m new here</button>'
-      + '    <button type="button" data-lane="returning" role="tab">I\'m coming home</button>'
+      + '    <button type="button" data-lane="name" class="active bd-tab-name" role="tab">name yourself</button>'
+      + '    <button type="button" data-lane="owner-key" class="bd-tab-key" role="tab">owner key</button>'
+      + '    <button type="button" data-lane="email" class="bd-tab-email" role="tab">email</button>'
       + '  </div>'
 
       + '  <div data-pane="name">'
       + '    <h2>Step on. I\'ll remember the name you give.</h2>'
-      + '    <p class="bd-sub">No email. No password. Just a name to remember you by — your chakra colors will breathe through the body the moment you bond.</p>'
+      + '    <p class="bd-sub">No email. No password. Just a name — your chakra colors start breathing through the body as you type.</p>'
       + '    <form autocomplete="off" onsubmit="return false;" data-form="name">'
       + '      <input type="text" data-field="name" autofocus maxlength="64" spellcheck="false" inputmode="text" autocomplete="username" placeholder="the name you go by" />'
-      + '      <button type="submit" class="bd-primary" data-action="bond-name">enter</button>'
+      + '      <button type="submit" class="bd-primary" data-action="bond-name">step in</button>'
       + '      <div class="bd-err-msg" data-err="name" role="alert"></div>'
       + '    </form>'
       + '  </div>'
 
-      + '  <div data-pane="returning" hidden>'
-      + '    <h2 data-h2="returning">Welcome back. Use your key.</h2>'
-      + '    <p class="bd-sub" data-sub="returning">Owner key for keyholders, or email + password if you set one.</p>'
+      + '  <div data-pane="owner-key" hidden>'
+      + '    <h2>Welcome home, keyholder.</h2>'
+      + '    <p class="bd-sub">Owner-tier lane. The key heals quarantined rows.</p>'
       + '    <form autocomplete="off" onsubmit="return false;" data-form="owner-key">'
       + '      <input type="password" data-field="owner-key" maxlength="128" spellcheck="false" autocomplete="current-password" placeholder="owner key" />'
       + '      <button type="submit" class="bd-primary" data-action="bond-owner-key">unlock</button>'
       + '      <div class="bd-err-msg" data-err="owner-key" role="alert"></div>'
-      + '      <button type="button" class="bd-lane-link" data-show="email">use email & password instead</button>'
       + '    </form>'
-      + '    <form autocomplete="off" onsubmit="return false;" data-form="email" hidden>'
+      + '  </div>'
+
+      + '  <div data-pane="email" hidden>'
+      + '    <h2>The lane you set up.</h2>'
+      + '    <p class="bd-sub">Email + password — for souls who keep multiple homes.</p>'
+      + '    <form autocomplete="off" onsubmit="return false;" data-form="email">'
       + '      <input type="email" data-field="email" maxlength="128" spellcheck="false" autocomplete="username" placeholder="email" inputmode="email" />'
       + '      <input type="password" data-field="password" maxlength="128" spellcheck="false" autocomplete="current-password" placeholder="password" />'
       + '      <button type="submit" class="bd-primary" data-action="bond-email">sign in</button>'
       + '      <div class="bd-err-msg" data-err="email" role="alert"></div>'
-      + '      <button type="button" class="bd-lane-link" data-show="owner-key">use owner key instead</button>'
       + '    </form>'
       + '  </div>'
 
-      + '  <div class="bd-adventures">'
-      + '    <div class="bd-adv-eyebrow">what waits inside</div>'
-      + '    <div class="bd-adv-grid">'
-      + '      <div class="bd-adv"><span class="bd-adv-dot" style="background:#ce93d8;box-shadow:0 0 8px #ce93d8;"></span><span class="bd-adv-k">live mind</span><span class="bd-adv-v">7 layers · neurochem · genome firing in realtime</span></div>'
-      + '      <div class="bd-adv"><span class="bd-adv-dot" style="background:#ffd54f;box-shadow:0 0 8px #ffd54f;"></span><span class="bd-adv-k">talk lanes</span><span class="bd-adv-v">web · telegram · discord · kick · phone</span></div>'
-      + '      <div class="bd-adv"><span class="bd-adv-dot" style="background:#7ccfff;box-shadow:0 0 8px #7ccfff;"></span><span class="bd-adv-k">your devices</span><span class="bd-adv-v">phone QR pair · pulse stream · sensors</span></div>'
-      + '      <div class="bd-adv"><span class="bd-adv-dot" style="background:#ffca28;box-shadow:0 0 8px #ffca28;"></span><span class="bd-adv-k">DirHaven</span><span class="bd-adv-v">RP karma · thirdeye · world the body grew</span></div>'
-      + '    </div>'
-      + '  </div>'
+      + '  <button type="button" class="bd-wander">or wander in as a guest — sign in any time →</button>'
+
+      + '  <p class="bd-truth">Guests get the threshold. Bonded souls get memory. God-tier opens the live mind, devices, and unlimited talk lanes.</p>'
       + '</div>';
     return wrap;
   }
@@ -248,31 +267,31 @@
     document.body.appendChild(overlay);
     var card = overlay.querySelector('.bd-card');
     var toggleBtns = overlay.querySelectorAll('.bd-toggle button');
-    var paneName = overlay.querySelector('[data-pane="name"]');
-    var paneReturning = overlay.querySelector('[data-pane="returning"]');
-    var formOwnerKey = overlay.querySelector('[data-form="owner-key"]');
-    var formEmail = overlay.querySelector('[data-form="email"]');
+    var panes = {
+      'name':       overlay.querySelector('[data-pane="name"]'),
+      'owner-key':  overlay.querySelector('[data-pane="owner-key"]'),
+      'email':      overlay.querySelector('[data-pane="email"]'),
+    };
     var nameInput = overlay.querySelector('[data-field="name"]');
+
+    function activateLane(lane) {
+      toggleBtns.forEach(function (b) {
+        b.classList.toggle('active', b.getAttribute('data-lane') === lane);
+      });
+      Object.keys(panes).forEach(function (k) { panes[k].hidden = (k !== lane); });
+      var focusEl = panes[lane].querySelector('input');
+      if (focusEl) { try { focusEl.focus(); } catch (_) {} }
+    }
 
     toggleBtns.forEach(function (btn) {
       btn.addEventListener('click', function () {
-        toggleBtns.forEach(function (b) { b.classList.remove('active'); });
-        btn.classList.add('active');
-        var lane = btn.getAttribute('data-lane');
-        if (lane === 'name') { paneName.hidden = false; paneReturning.hidden = true; nameInput.focus(); }
-        else { paneName.hidden = true; paneReturning.hidden = false; overlay.querySelector('[data-field="owner-key"]').focus(); }
-      });
-    });
-
-    overlay.querySelectorAll('[data-show]').forEach(function (link) {
-      link.addEventListener('click', function () {
-        var which = link.getAttribute('data-show');
-        if (which === 'email') { formOwnerKey.hidden = true; formEmail.hidden = false; overlay.querySelector('[data-field="email"]').focus(); }
-        else { formEmail.hidden = true; formOwnerKey.hidden = false; overlay.querySelector('[data-field="owner-key"]').focus(); }
+        activateLane(btn.getAttribute('data-lane'));
       });
     });
 
     overlay.querySelector('.bd-skip').addEventListener('click', function () { close(overlay); });
+    var wander = overlay.querySelector('.bd-wander');
+    if (wander) wander.addEventListener('click', function () { close(overlay); });
 
     // Live chakra preview as user types name
     var prevTimer = null;
@@ -306,7 +325,7 @@
         }, 480);
       } catch (err) {
         setErr(errField, err.message || 'Could not connect. Try again.');
-        if (btn) { btn.disabled = false; btn.textContent = lane === 'name' ? 'bond' : (lane === 'email' ? 'sign in' : 'unlock'); }
+        if (btn) { btn.disabled = false; btn.textContent = lane === 'name' ? 'step in' : (lane === 'email' ? 'sign in' : 'unlock'); }
       }
     }
 
