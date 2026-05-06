@@ -315,6 +315,11 @@ if ('serviceWorker' in navigator && _onGitHubPages) {
 <link rel="stylesheet" href="body/tokens.css?v=v20260424-0428">
 <link rel="stylesheet" href="body/shell.css?v=v20260424-0428">
     <link rel="stylesheet" href="body/safe_area.css?v=v20260429-council">
+<!-- ═══ MOVEMENT I — Shell Contract ═══
+     Loaded before any other script so window.Shell exists for everyone.
+     Populates auth/viewport/connectors/pulse from localStorage and live state.
+     Movements II–VII subscribe to this. (Vinta directive 2026-05-05.) -->
+<script src="body/shell.js?v=v20260505-shell-contract"></script>
 </head>
 <body>
 
