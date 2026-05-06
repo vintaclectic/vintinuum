@@ -63,9 +63,28 @@
   </div>
 
   <div class="card">
-    <h3>Devices <span style="color:var(--dim);font-weight:400;letter-spacing:0;text-transform:none;">(Movement VII)</span></h3>
+    <h3>Devices</h3>
     <div id="devicesBody">
-      <div class="empty">Phone bridge arrives in the next movement. This card will list every device that's bonded to your account, with the option to revoke any of them.</div>
+      <div class="empty">loading…</div>
+    </div>
+    <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap;">
+      <button class="btn" id="btnPair">+ Pair phone</button>
+      <button class="btn" id="btnRefreshDevices">refresh</button>
+    </div>
+  </div>
+
+  <!-- Pairing modal -->
+  <div id="pairModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);backdrop-filter:blur(8px);z-index:500;align-items:center;justify-content:center;padding:20px;">
+    <div style="background:#0a0e18;border:1px solid var(--border);border-radius:18px;padding:24px;max-width:380px;width:100%;text-align:center;">
+      <h3 style="margin:0 0 12px;font-size:0.65rem;letter-spacing:0.24em;text-transform:uppercase;color:var(--accent);">Pair a phone</h3>
+      <div id="pairCode" style="font-family:'Space Mono',monospace;font-size:2rem;letter-spacing:0.4em;margin:18px 0;color:var(--text);">—</div>
+      <div id="pairCanvas" style="display:flex;justify-content:center;margin:12px 0;"></div>
+      <div style="color:var(--dim);font-size:0.7rem;line-height:1.55;font-family:'Cormorant Garamond',serif;font-style:italic;">
+        Open the Vintinuum app on your phone, scan this code (or type it). The code expires in 5 minutes.
+      </div>
+      <div style="margin-top:16px;">
+        <button class="btn" id="btnClosePair">Close</button>
+      </div>
     </div>
   </div>
 
@@ -109,12 +128,99 @@
     setPill('cPu', !!c.pulse?.alive);
   }
 
+  function fmtTime(ts) {
+    if (!ts) return '—';
+    const d = new Date(ts * 1000);
+    const now = Date.now() / 1000;
+    const ago = now - ts;
+    if (ago < 60) return 'just now';
+    if (ago < 3600) return Math.floor(ago/60) + 'm ago';
+    if (ago < 86400) return Math.floor(ago/3600) + 'h ago';
+    return Math.floor(ago/86400) + 'd ago';
+  }
+
+  async function refreshDevices() {
+    const body = document.getElementById('devicesBody');
+    if (!body) return;
+    const auth = (window.Shell && Shell.get('auth')) || { signedIn: false };
+    if (!auth.signedIn) {
+      body.innerHTML = '<div class="empty">Sign in to see your bonded devices.</div>';
+      return;
+    }
+    try {
+      const res = await window.apiFetch('/api/v2/device/list', { method: 'GET' });
+      if (!res.ok) throw new Error('list failed: ' + res.status);
+      const data = await res.json();
+      const devices = data.devices || [];
+      const current = data.currentDevice || '';
+      if (!devices.length) {
+        body.innerHTML = '<div class="empty">No devices bonded yet. Pair your phone with the button below.</div>';
+        return;
+      }
+      body.innerHTML = devices.map(d => {
+        const isThis = d.device_id === current;
+        const platform = d.platform || (d.user_agent || '').includes('Mobile') ? 'mobile' : 'web';
+        return `
+          <div class="row">
+            <span class="k">
+              ${platform.toUpperCase()}${isThis ? ' <span class="pill live" style="margin-left:6px;">this</span>' : ''}
+              <span style="display:block;color:var(--dim);font-size:0.65rem;margin-top:2px;">last seen ${fmtTime(d.last_seen)}</span>
+            </span>
+            <span class="v">
+              ${isThis ? '' : `<button class="btn" data-revoke="${d.id}" style="padding:5px 10px;font-size:0.55rem;">revoke</button>`}
+            </span>
+          </div>
+        `;
+      }).join('');
+      body.querySelectorAll('button[data-revoke]').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          const id = btn.getAttribute('data-revoke');
+          if (!confirm('Revoke this device? It will be signed out.')) return;
+          await window.apiFetch('/api/v2/device/' + id, { method: 'DELETE' });
+          refreshDevices();
+        });
+      });
+    } catch (e) {
+      body.innerHTML = '<div class="empty">Could not load devices: ' + e.message + '</div>';
+    }
+  }
+
+  async function openPair() {
+    const auth = (window.Shell && Shell.get('auth')) || { signedIn: false };
+    if (!auth.signedIn) { alert('Sign in first to pair a device.'); return; }
+    const modal = document.getElementById('pairModal');
+    const codeEl = document.getElementById('pairCode');
+    const canvas = document.getElementById('pairCanvas');
+    codeEl.textContent = '…';
+    canvas.innerHTML = '';
+    modal.style.display = 'flex';
+    try {
+      const res = await window.apiFetch('/api/v2/device/pair-issue', { method: 'POST' });
+      const data = await res.json();
+      codeEl.textContent = data.code;
+      // Simple QR via google chart endpoint (no JS lib pull needed for v1).
+      const url = encodeURIComponent(data.pairUrl || data.code);
+      canvas.innerHTML = `<img alt="pair QR" width="180" height="180"
+        style="border-radius:12px;background:#fff;padding:8px;"
+        src="https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${url}" />`;
+    } catch (e) {
+      codeEl.textContent = 'error';
+      canvas.innerHTML = '<div class="empty">' + e.message + '</div>';
+    }
+  }
+
   function boot() {
     if (!window.Shell) { setTimeout(boot, 80); return; }
     refreshIdentity();
     refreshConnectors();
-    Shell.subscribe('auth', refreshIdentity);
+    refreshDevices();
+    Shell.subscribe('auth', () => { refreshIdentity(); refreshDevices(); });
     Shell.subscribe('connectors', refreshConnectors);
+    document.getElementById('btnPair').addEventListener('click', openPair);
+    document.getElementById('btnRefreshDevices').addEventListener('click', refreshDevices);
+    document.getElementById('btnClosePair').addEventListener('click', () => {
+      document.getElementById('pairModal').style.display = 'none';
+    });
   }
   boot();
 })();
