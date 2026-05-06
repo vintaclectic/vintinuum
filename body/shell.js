@@ -531,7 +531,14 @@
             update('connectors', {
               telegram: { alive: !!c.telegram?.ready, lastMsg: state.connectors.telegram.lastMsg, latency: null },
               discord:  { alive: !!c.discord?.ready,  lastMsg: state.connectors.discord.lastMsg,  latency: c.discord?.ping ?? null },
-              kick:     state.connectors.kick,
+              kick:     {
+                alive:   !!c.kick?.ready,
+                listen:  !!c.kick?.listen,
+                send:    !!c.kick?.send,
+                lastMsg: state.connectors.kick.lastMsg,
+                latency: state.connectors.kick.latency,
+                oauth:   !!c.kick?.send,
+              },
               pulse:    { alive: true, lastBeat: snap.ts, dominantLayer: state.connectors.pulse.dominantLayer },
             });
           }
