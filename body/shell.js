@@ -141,11 +141,26 @@
     notifyDescendants(key, value, prev);
   }
 
-  function update(key, mutator) {
+  function update(key, mutatorOrPatch) {
     const prev = get(key);
-    const draft = structuredClone(prev);
-    const result = mutator(draft);
-    set(key, result === undefined ? draft : result);
+    // Two call shapes are accepted:
+    //   update('auth', a => { a.token = x; return a; })   ← mutator fn
+    //   update('connectors', { telegram: {...}, ... })    ← partial-merge object
+    // The object form shallow-merges over the previous value (or replaces if
+    // the previous value isn't a plain object). This forgives the natural
+    // habit of passing a literal and keeps Movement-IV's pulse stream alive.
+    if (typeof mutatorOrPatch === 'function') {
+      const draft = structuredClone(prev);
+      const result = mutatorOrPatch(draft);
+      set(key, result === undefined ? draft : result);
+      return;
+    }
+    if (mutatorOrPatch && typeof mutatorOrPatch === 'object' && !Array.isArray(mutatorOrPatch)) {
+      const base = (prev && typeof prev === 'object' && !Array.isArray(prev)) ? prev : {};
+      set(key, { ...base, ...mutatorOrPatch });
+      return;
+    }
+    set(key, mutatorOrPatch);
   }
 
   function notifyDescendants(key, value, prev) {
