@@ -42,7 +42,8 @@
     {
       id: 'mind', label: 'MIND', glyph: '◌',
       href: 'mind.html',
-      match: (p) => /mind\.html/.test(p),
+      // MIND tab also lights when on the LEARN feed — same family of surfaces
+      match: (p) => /mind\.html/.test(p) || /learning\.html/.test(p),
     },
     {
       id: 'chat', label: 'CHAT', glyph: '◐',

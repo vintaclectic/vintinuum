@@ -605,8 +605,11 @@ body {
 ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 4px; }
 ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.15); }
 </style>
+<script src="body/shell.js?v=v20260505-learnnav"></script>
+<script src="body/topbar.js?v=v20260505-learnnav" defer></script>
+<script src="body/mobile_nav.js?v=v20260505-learnnav" defer></script>
 </head>
-<body>
+<body style="padding-top: max(60px, calc(56px + env(safe-area-inset-top, 0px)));">
 
 <canvas id="particles"></canvas>
 

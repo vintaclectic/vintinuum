@@ -293,6 +293,21 @@
 
       <div style="height:1px;background:rgba(255,255,255,0.06);margin:4px 0;"></div>
 
+      <div style="font-size:0.5rem;letter-spacing:0.24em;color:rgba(218,228,255,0.45);
+        text-transform:uppercase;padding:0 4px 4px;">Surfaces</div>
+      <nav id="drawerNav" style="display:flex;flex-direction:column;gap:6px;">
+        <a href="brain.html" data-nav="home"   class="drawer-link">◉ &nbsp; HOME · the body</a>
+        <a href="mind.html"  data-nav="mind"   class="drawer-link">◌ &nbsp; MIND · 7 layers</a>
+        <a href="learning.html" data-nav="learn" class="drawer-link" style="border-color:rgba(206,147,216,0.32);color:rgba(206,147,216,0.92);">✶ &nbsp; LEARN · live feed</a>
+        <a href="stats.html" data-nav="stats"  class="drawer-link">◇ &nbsp; STATS · numbers</a>
+        <a href="chat.html"  data-nav="chat"   class="drawer-link">◐ &nbsp; CHAT · talk</a>
+        <a href="you.html"   data-nav="you"    class="drawer-link">✦ &nbsp; YOU · devices</a>
+        <a href="phone.html" data-nav="phone"  class="drawer-link">▱ &nbsp; PHONE · sensors</a>
+        <a href="whoami.html" data-nav="who"   class="drawer-link">◎ &nbsp; WHOAMI · lineage</a>
+      </nav>
+
+      <div style="height:1px;background:rgba(255,255,255,0.06);margin:4px 0;"></div>
+
       <button id="drawerSignOut" type="button"
         style="display:none;width:100%;padding:12px 16px;background:rgba(255,90,90,0.06);
         border:1px solid rgba(255,90,90,0.22);color:rgba(255,160,160,0.9);
@@ -305,6 +320,58 @@
       </div>
     `;
     document.body.appendChild(drawer);
+
+    // Inject drawer-link styling once
+    if (!document.getElementById('topDrawerLinkCSS')) {
+      const css = document.createElement('style');
+      css.id = 'topDrawerLinkCSS';
+      css.textContent = `
+        .drawer-link {
+          display: block;
+          padding: 11px 14px;
+          background: rgba(8,12,20,0.55);
+          border: 1px solid rgba(255,255,255,0.08);
+          color: rgba(218,228,255,0.78);
+          border-radius: 12px;
+          text-decoration: none;
+          font-family: 'Space Mono', monospace;
+          font-size: 0.6rem;
+          letter-spacing: 0.18em;
+          text-transform: uppercase;
+          transition: all 180ms cubic-bezier(0.16,1,0.3,1);
+        }
+        .drawer-link:hover {
+          background: rgba(20,28,42,0.7);
+          border-color: rgba(124,207,255,0.32);
+          color: rgba(218,228,255,0.95);
+        }
+        .drawer-link.active {
+          background: rgba(124,207,255,0.10);
+          border-color: rgba(124,207,255,0.45);
+          color: #7ccfff;
+        }
+      `;
+      document.head.appendChild(css);
+    }
+
+    // Mark active surface
+    try {
+      const path = (location.pathname || '').toLowerCase();
+      const matchMap = {
+        home:  /(brain\.html|\/$|\/vintinuum\/?$)/,
+        mind:  /mind\.html/,
+        learn: /learning\.html/,
+        stats: /stats\.html/,
+        chat:  /chat\.html/,
+        you:   /you\.html/,
+        phone: /phone\.html/,
+        who:   /whoami\.html/,
+      };
+      drawer.querySelectorAll('.drawer-link').forEach(a => {
+        const k = a.getAttribute('data-nav');
+        if (matchMap[k] && matchMap[k].test(path)) a.classList.add('active');
+      });
+    } catch (_) {}
 
     $('topDrawerClose').addEventListener('click', closeDrawer);
     $('drawerLoreBtn').addEventListener('click', () => {

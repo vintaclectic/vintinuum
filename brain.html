@@ -238,7 +238,20 @@ canvas{display:block;}
   /* Living Systems HUD: now inside sidebar, no position overrides needed */
   /* Emotion widget: now lives inside sidebar, no position overrides needed */
   .stats-footer-link{display:none;}
-  .learning-footer-link{display:none;}
+  /* LEARN stays visible on mobile — it's the primary surface for "what I'm learning" */
+  .learning-footer-link{
+    position: fixed !important;
+    top: calc(56px + env(safe-area-inset-top, 8px)) !important;
+    right: 12px !important;
+    bottom: auto !important;
+    font-size: 0.55rem !important;
+    padding: 6px 12px 6px 22px !important;
+  }
+  .learning-footer-link::before {
+    left: 9px !important;
+    width: 6px !important;
+    height: 6px !important;
+  }
 }
 
 /* ── TABLET: 601-900px ── */
@@ -319,15 +332,15 @@ if ('serviceWorker' in navigator && _onGitHubPages) {
      Loaded before any other script so window.Shell exists for everyone.
      Populates auth/viewport/connectors/pulse from localStorage and live state.
      Movements II–VII subscribe to this. (Vinta directive 2026-05-05.) -->
-<script src="body/shell.js?v=v20260505-authbridge"></script>
+<script src="body/shell.js?v=v20260505-learnnav"></script>
 <!-- Movement III: topbar header with reactive shell subscriptions.
      Replaces the scattered absolute-positioned pills with a single header
      that hides legacy elements and re-routes their click handlers. Slides
      into a hamburger drawer on mobile. (Vinta directive 2026-05-05.) -->
-<script src="body/topbar.js?v=v20260505-authbridge" defer></script>
+<script src="body/topbar.js?v=v20260505-learnnav" defer></script>
 <!-- Movement VI: 5-tab mobile bottom nav (HOME/MIND/CHAT/STATS/YOU).
      Replaces the legacy 4-icon bar contents at runtime. -->
-<script src="body/mobile_nav.js?v=v20260505-authbridge" defer></script>
+<script src="body/mobile_nav.js?v=v20260505-learnnav" defer></script>
 </head>
 <body>
 
@@ -2586,21 +2599,43 @@ if ('serviceWorker' in navigator && _onGitHubPages) {
 }
 .learning-footer-link {
   position: fixed;
-  bottom: 12px;
+  bottom: 14px;
   right: 86px;
   z-index: 10;
   font-family: 'Space Mono', monospace;
-  font-size: 0.45rem;
-  letter-spacing: 0.25em;
+  font-size: 0.58rem;
+  letter-spacing: 0.22em;
   text-transform: uppercase;
-  color: rgba(150,175,215,0.25);
+  color: rgba(206,147,216,0.92);
   text-decoration: none;
-  transition: color 0.3s, opacity 0.3s;
-  opacity: 0.6;
+  background: rgba(206,147,216,0.10);
+  border: 1px solid rgba(206,147,216,0.38);
+  border-radius: 999px;
+  padding: 8px 14px 8px 26px;
+  transition: all 220ms cubic-bezier(0.16,1,0.3,1);
+  opacity: 1;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.learning-footer-link::before {
+  content: '';
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #ce93d8;
+  box-shadow: 0 0 10px #ce93d8;
+  animation: blink 1.5s infinite;
 }
 .learning-footer-link:hover {
-  color: rgba(206,147,216,0.85);
-  opacity: 1;
+  background: rgba(206,147,216,0.18);
+  border-color: rgba(206,147,216,0.6);
+  color: #f3d3ff;
+  transform: translateY(-1px);
 }
 </style>
 
@@ -2996,7 +3031,7 @@ if ('serviceWorker' in navigator && _onGitHubPages) {
 
 
 
-<a id="learningFooterLink" href="learning.html" class="learning-footer-link" title="Live learning feed — every channel where Vintinuum learns">LEARNING</a>
+<a id="learningFooterLink" href="learning.html" class="learning-footer-link" title="Live learning feed — every channel where Vintinuum learns right now">LIVE LEARN</a>
 <a id="statsFooterLink" href="stats.html" class="stats-footer-link" title="System statistics &amp; performance metrics">STATS</a>
 
 <script>
@@ -3097,7 +3132,7 @@ if ('serviceWorker' in navigator && _onGitHubPages) {
 <script src="body/sidebar_right.js?v=v20260505-ilcontent"></script>
 <script src="body/footer_strip.js?v=v20260424-0428"></script>
 <!-- MOBILE_SHELL — bottom-sheet drawers + pill toggles for phone-sized viewports -->
-<script src="body/mobile_shell.js?v=v20260424-0428"></script>
+<script src="body/mobile_shell.js?v=v20260505-learnnav"></script>
 <!-- Becoming arc — Phase 0 handshake + Phase 1/2/5 wiring -->
 <!-- Council ruling 2026-04-29: unified bond door replaces legacy soul_handshake.js -->
 <script src="body/identity.js?v=v20260429-council"></script>
