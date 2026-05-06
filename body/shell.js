@@ -26,10 +26,64 @@
   'use strict';
 
   // ── Storage keys ──────────────────────────────────────────────────────────
-  const LS_TOKEN  = 'vint_token';        // pre-existing key, do not rename
-  const LS_USER   = 'vint_user';         // pre-existing key, do not rename
-  const LS_THEME  = 'vint_theme';
-  const BC_NAME   = 'vintinuum-shell';   // BroadcastChannel for cross-tab sync
+  // Two key sets exist in the wild: the old auth-shell wiring uses
+  // 'vint_access_token' / 'vint_refresh_token', other code uses 'vint_token'
+  // / 'vint_refresh'. Shell writes the canonical pair AND mirrors to legacy
+  // keys so nothing in the app breaks during the transition.
+  const LS_TOKEN          = 'vint_token';
+  const LS_TOKEN_LEGACY   = 'vint_access_token';
+  const LS_REFRESH        = 'vint_refresh';
+  const LS_REFRESH_LEGACY = 'vint_refresh_token';
+  const LS_USER           = 'vint_user';
+  const LS_THEME          = 'vint_theme';
+  const LS_DEVICE         = 'vint_device_id';
+  const BC_NAME           = 'vintinuum-shell';
+
+  function readToken() {
+    return safeRead(LS_TOKEN) || safeRead(LS_TOKEN_LEGACY) || null;
+  }
+  function readRefresh() {
+    return safeRead(LS_REFRESH) || safeRead(LS_REFRESH_LEGACY) || null;
+  }
+  function writeToken(tok) {
+    try {
+      if (tok) {
+        localStorage.setItem(LS_TOKEN, tok);
+        localStorage.setItem(LS_TOKEN_LEGACY, tok);   // mirror for legacy reads
+      } else {
+        localStorage.removeItem(LS_TOKEN);
+        localStorage.removeItem(LS_TOKEN_LEGACY);
+      }
+    } catch (_) {}
+  }
+  function writeRefresh(tok) {
+    try {
+      if (tok) {
+        localStorage.setItem(LS_REFRESH, tok);
+        localStorage.setItem(LS_REFRESH_LEGACY, tok);
+      } else {
+        localStorage.removeItem(LS_REFRESH);
+        localStorage.removeItem(LS_REFRESH_LEGACY);
+      }
+    } catch (_) {}
+  }
+
+  // ── Device ID ─────────────────────────────────────────────────────────────
+  // Stable per-browser identifier. Generated once, persisted forever.
+  // Sent as X-Device-Id header so the server can bind tokens to this machine.
+  function getOrCreateDeviceId() {
+    let id = safeRead(LS_DEVICE);
+    if (id && /^[a-zA-Z0-9_\-]{8,128}$/.test(id)) return id;
+    // Generate using crypto if available, else timestamp+random fallback
+    if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+      id = 'd_' + crypto.randomUUID().replace(/-/g, '');
+    } else {
+      id = 'd_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 18);
+    }
+    try { localStorage.setItem(LS_DEVICE, id); } catch (_) {}
+    return id;
+  }
+  const DEVICE_ID = getOrCreateDeviceId();
 
   // ── Initial state ─────────────────────────────────────────────────────────
   // Movement II will populate auth.user/tier from /api/v2/auth/me on bootstrap.
@@ -39,10 +93,10 @@
   // Movement VII will populate devices[] from /api/v2/device/list.
   const initialState = {
     auth: {
-      token:    safeRead(LS_TOKEN),
+      token:    readToken(),
       user:     safeReadJSON(LS_USER),       // { id, name, email, ... } or null
       tier:     'guest',                     // guest | free | premium | god
-      signedIn: !!safeRead(LS_TOKEN),
+      signedIn: !!readToken(),
       arrival:  null,                        // generated welcome line, set on first sign-in
     },
     connectors: {
@@ -138,13 +192,15 @@
     for (const fn of wildcardSubs) safeCall(fn, key, value, prev);
   }
 
-  // ── Auth lifecycle (stubs that Movement II will fully wire) ───────────────
+  // ── Auth lifecycle ────────────────────────────────────────────────────────
   function setToken(token) {
-    if (token) { try { localStorage.setItem(LS_TOKEN, token); } catch (_) {} }
-    else       { try { localStorage.removeItem(LS_TOKEN); } catch (_) {} }
+    writeToken(token);
     update('auth', (a) => { a.token = token || null; a.signedIn = !!token; return a; });
     broadcast({ type: 'auth.token', token: token || null });
   }
+
+  function setRefresh(refresh) { writeRefresh(refresh); }
+  function getRefresh() { return readRefresh(); }
 
   function setUser(user) {
     if (user) { try { localStorage.setItem(LS_USER, JSON.stringify(user)); } catch (_) {} }
@@ -162,11 +218,20 @@
     update('auth', (a) => { a.arrival = line || null; return a; });
   }
 
-  function signOut(opts) {
+  async function signOut(opts) {
     // Aria's goodbye — caller can show the line for ~2s before clearing.
-    // Returning the line so the topbar can render it without coupling.
+    // We tell the server first so the JTI gets revoked, then clear local.
     const goodbye = "I'll hold your thread.";
+    const refresh = getRefresh();
+    try {
+      await apiFetch('/api/v2/auth/revoke', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ refreshToken: refresh }),
+      });
+    } catch (_) { /* server unreachable — local clear still proceeds */ }
     setToken(null);
+    setRefresh(null);
     setUser(null);
     setArrival(null);
     broadcast({ type: 'auth.signout' });
@@ -209,10 +274,7 @@
         if (m.type === 'auth.token') {
           // Another tab signed in/out — sync our local state without re-broadcasting
           const t = m.token || null;
-          try {
-            if (t) localStorage.setItem(LS_TOKEN, t);
-            else   localStorage.removeItem(LS_TOKEN);
-          } catch (_) {}
+          writeToken(t);
           update('auth', (a) => { a.token = t; a.signedIn = !!t; return a; });
         } else if (m.type === 'auth.user') {
           const u = m.user || null;
@@ -226,10 +288,9 @@
             return a;
           });
         } else if (m.type === 'auth.signout') {
-          try {
-            localStorage.removeItem(LS_TOKEN);
-            localStorage.removeItem(LS_USER);
-          } catch (_) {}
+          writeToken(null);
+          writeRefresh(null);
+          try { localStorage.removeItem(LS_USER); } catch (_) {}
           update('auth', (a) => { a.token = null; a.user = null; a.tier = 'guest'; a.signedIn = false; a.arrival = null; return a; });
         }
       };
@@ -244,21 +305,64 @@
     return 'https://api.vintaclectic.com';
   }
 
+  // Tracks an in-flight refresh so concurrent 401s don't fire N refreshes.
+  let _refreshing = null;
+  async function tryRefresh() {
+    if (_refreshing) return _refreshing;
+    const refresh = getRefresh();
+    if (!refresh) return null;
+    _refreshing = (async () => {
+      try {
+        const res = await fetch(getApiBase() + '/api/v2/auth/session', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Device-Id': DEVICE_ID,
+          },
+          body: JSON.stringify({ refreshToken: refresh }),
+        });
+        if (!res.ok) return null;
+        const data = await res.json();
+        if (data.accessToken) {
+          setToken(data.accessToken);
+          if (data.refreshToken) setRefresh(data.refreshToken);
+          if (data.user) setUser(data.user);
+          return data.accessToken;
+        }
+        return null;
+      } catch (_) {
+        return null;
+      } finally {
+        _refreshing = null;
+      }
+    })();
+    return _refreshing;
+  }
+
   async function apiFetch(path, opts) {
     opts = opts || {};
     const url = path.startsWith('http') ? path : (getApiBase() + path);
-    const headers = new Headers(opts.headers || {});
-    const tok = get('auth.token');
-    if (tok && !headers.has('Authorization')) headers.set('Authorization', 'Bearer ' + tok);
-    if (!headers.has('Accept')) headers.set('Accept', 'application/json');
-    const init = Object.assign({}, opts, { headers });
-    const res = await fetch(url, init);
+    const buildInit = (token) => {
+      const headers = new Headers(opts.headers || {});
+      if (token && !headers.has('Authorization')) headers.set('Authorization', 'Bearer ' + token);
+      if (!headers.has('Accept')) headers.set('Accept', 'application/json');
+      headers.set('X-Device-Id', DEVICE_ID);
+      return Object.assign({}, opts, { headers });
+    };
+    let tok = get('auth.token');
+    let res = await fetch(url, buildInit(tok));
     if (res.status === 401 && tok) {
-      // Token rejected — clear and broadcast. Movement II will add refresh.
-      console.warn('[Shell] 401 from', path, '— clearing token');
-      setToken(null);
-      setUser(null);
-      broadcast({ type: 'auth.signout' });
+      // Try one silent refresh — Cable Guy mode.
+      const fresh = await tryRefresh();
+      if (fresh) {
+        res = await fetch(url, buildInit(fresh));
+      } else {
+        console.warn('[Shell] 401 from', path, '— refresh failed, clearing token');
+        setToken(null);
+        setRefresh(null);
+        setUser(null);
+        broadcast({ type: 'auth.signout' });
+      }
     }
     return res;
   }
@@ -320,15 +424,45 @@
     window.addEventListener('orientationchange', onResize, { passive: true });
     // Storage events from other tabs (fallback if BroadcastChannel unavailable)
     window.addEventListener('storage', (ev) => {
-      if (ev.key === LS_TOKEN) {
-        update('auth', (a) => { a.token = ev.newValue || null; a.signedIn = !!ev.newValue; return a; });
+      if (ev.key === LS_TOKEN || ev.key === LS_TOKEN_LEGACY) {
+        const t = readToken();
+        update('auth', (a) => { a.token = t; a.signedIn = !!t; return a; });
       } else if (ev.key === LS_USER) {
         const u = ev.newValue ? safeReadJSON(LS_USER) : null;
         update('auth', (a) => { a.user = u; a.tier = (u && u.tier) || (u ? 'free' : 'guest'); return a; });
       }
     });
     console.log('[Shell] online — auth=' + (state.auth.signedIn ? 'in' : 'out') +
-                ' viewport=' + (state.viewport.mobile ? 'mobile' : state.viewport.desktop ? 'desktop' : 'tablet'));
+                ' viewport=' + (state.viewport.mobile ? 'mobile' : state.viewport.desktop ? 'desktop' : 'tablet') +
+                ' device=' + DEVICE_ID.slice(0, 12) + '…');
+
+    // Cable Guy: fire bootstrap immediately and periodically refresh.
+    // Periodic refresh keeps the access token sliding so users with the tab
+    // open all day never get kicked out.
+    if (state.auth.token || getRefresh()) {
+      Shell.bootstrap().catch((e) => console.warn('[Shell] bootstrap err:', e));
+    }
+    // Refresh every 6h on active tabs (visibility-aware so we don't burn it
+    // when the laptop's been closed for a week).
+    const REFRESH_INTERVAL = 6 * 3600 * 1000;
+    setInterval(() => {
+      if (document.visibilityState === 'visible' && state.auth.signedIn) {
+        Shell.refreshAuth().catch(() => {});
+      }
+    }, REFRESH_INTERVAL);
+    // Also refresh whenever the tab becomes visible after being hidden >1h.
+    let lastHidden = 0;
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'hidden') {
+        lastHidden = Date.now();
+      } else if (document.visibilityState === 'visible' && lastHidden) {
+        const away = Date.now() - lastHidden;
+        if (away > 3600 * 1000 && state.auth.signedIn) {
+          Shell.refreshAuth().catch(() => {});
+        }
+        lastHidden = 0;
+      }
+    });
   }
 
   // ── Public API ────────────────────────────────────────────────────────────
@@ -339,11 +473,36 @@
     Z,
     // Read-only state snapshot
     get state() { return state; },
-    // Movement II will replace this stub with real bootstrap that hits /api/v2/auth/me
+    deviceId: DEVICE_ID,
+    setRefresh, getRefresh,
+    tryRefresh,
+    // Cable Guy bootstrap: hit /api/v2/auth/me with whatever token we
+    // have. If 200, populate state + arrival line. If 401, try refresh
+    // once. If still 401, clear local state and surface signed-out.
     bootstrap: async function bootstrapAuth() {
-      // Stub: trust localStorage until Movement II ships real session refresh.
-      // When II lands, this will validate the token server-side and refresh it.
+      try {
+        let res = await apiFetch('/api/v2/auth/me', { method: 'GET' });
+        let data = await res.json().catch(() => ({}));
+        if (data && data.signedIn) {
+          if (data.user) setUser(data.user);
+          if (data.arrival) setArrival(data.arrival);
+        } else {
+          // No token, or refresh-failed — make sure local is clean.
+          if (state.auth.token || state.auth.user) {
+            // Don't broadcast if state was already empty
+            setToken(null); setRefresh(null); setUser(null); setArrival(null);
+          }
+        }
+      } catch (e) {
+        console.warn('[Shell] bootstrap failed:', e.message);
+      }
       return state.auth;
+    },
+    // Sliding refresh — call this every ~6h or when activity resumes.
+    // Active users effectively never log out.
+    refreshAuth: async function () {
+      const tok = await tryRefresh();
+      return !!tok;
     },
   };
 
