@@ -205,6 +205,32 @@
     }
   })();
 
+  // ─── LOCALHOST AUTO-BOND ──────────────────────────────────────────────────
+  // When Vinta opens the site on his own machine (http://localhost:8080/...),
+  // the brain's /api/auth/auto-bond endpoint accepts keyless requests from
+  // loopback IPs (and rejects anything proxied — see brain side, Helios-Sec10
+  // hardening 2026-05-07). Skip the door entirely: silent owner bond.
+  async function tryLocalhostAutoBond() {
+    var h = (location.hostname || '').toLowerCase();
+    var isLocalhost = (h === 'localhost' || h === '127.0.0.1' || h === '0.0.0.0');
+    if (!isLocalhost) return false;
+    if (token()) return false; // already bonded
+    try {
+      var r = await fetch(url('/api/auth/auto-bond'), {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', 'accept': 'application/json' },
+        body: '{}',
+        credentials: 'include',
+      });
+      if (!r.ok) return false;
+      var j = await r.json();
+      if (!j || !j.accessToken) return false;
+      setIdentity(j, 'localhost');
+      console.log('[identity] localhost auto-bond → owner');
+      return true;
+    } catch (_) { return false; }
+  }
+
   window.SOUL_AUTH = {
     __loaded: true,
     bond: bond,
@@ -214,8 +240,15 @@
     authHeaders: authHeaders,
     api: api,
     url: url,
+    tryLocalhostAutoBond: tryLocalhostAutoBond,
   };
 
-  // Verify with server in the background — doesn't block render
-  setTimeout(whoami, 200);
+  // Boot sequence: try localhost auto-bond first (fires only when on host).
+  // If that doesn't bond, fall back to background whoami to verify any
+  // existing token. Either way, never blocks render.
+  setTimeout(function () {
+    tryLocalhostAutoBond().then(function (bonded) {
+      if (!bonded) whoami();
+    });
+  }, 200);
 })();
