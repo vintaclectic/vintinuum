@@ -36,24 +36,33 @@
     const header = document.createElement('header');
     header.id = 'topShell';
     header.setAttribute('role', 'banner');
+    // Helios-10 redesign 2026-05-07: 3-column grid (left | brand | right)
+    // instead of flex space-between. The center 'auto' track reserves
+    // exact width for the brand wordmark — vitals pill can never wrap
+    // over the brand because the brand is in its own grid track.
     header.style.cssText = `
       position: fixed;
       top: env(safe-area-inset-top, 0px);
       left: 0; right: 0;
       z-index: ${Shell.Z.shell};
-      display: flex;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
       align-items: center;
-      justify-content: space-between;
-      padding: 8px max(12px, env(safe-area-inset-right, 12px))
-              8px max(12px, env(safe-area-inset-left, 12px));
-      pointer-events: none;
       gap: 8px;
+      height: 56px;
+      padding: 0 max(12px, env(safe-area-inset-right, 12px))
+               0 max(12px, env(safe-area-inset-left, 12px));
+      background: linear-gradient(180deg, rgba(1,3,6,0.92), rgba(1,3,6,0.55));
+      border-bottom: 1px solid rgba(124,207,255,0.10);
+      backdrop-filter: blur(12px) saturate(1.2);
+      -webkit-backdrop-filter: blur(12px) saturate(1.2);
+      pointer-events: none;
     `;
 
-    // LEFT cluster
+    // LEFT cluster (identity + vitals)
     const left = document.createElement('div');
     left.id = 'topLeft';
-    left.style.cssText = 'display:flex;align-items:center;gap:8px;flex-wrap:wrap;pointer-events:none;min-width:0;';
+    left.style.cssText = 'justify-self:start;display:flex;align-items:center;gap:8px;pointer-events:none;min-width:0;overflow:hidden;';
 
     // Identity pill
     const auth = makePill('topAuthPill', {
@@ -99,10 +108,40 @@
     });
     left.appendChild(vitals);
 
-    // RIGHT cluster
+    // Inject brandPulse keyframe so the brand mark glows on every page
+    // (brain.html has it inline, but mind/stats/chat/learning/you don't).
+    if (!document.getElementById('topBrandPulseCSS')) {
+      const css = document.createElement('style');
+      css.id = 'topBrandPulseCSS';
+      css.textContent = '@keyframes brandPulse{0%,100%{transform:scale(1);filter:drop-shadow(0 0 10px rgba(79,195,247,.28));}50%{transform:scale(1.08);filter:drop-shadow(0 0 18px rgba(255,213,79,.36));}}';
+      document.head.appendChild(css);
+    }
+
+    // CENTER brand — fixed-width track in the middle of the grid.
+    // Helios-10 redesign 2026-05-07: gives the wordmark its own track so
+    // it can never collide with the vitals pill or the menu hamburger,
+    // at any breakpoint. Tighter letter-spacing (0.02em desktop / 0.06em
+    // mobile) than the legacy in-flow header (0.12em) so the wordmark
+    // fits without conditional hide.
+    const brand = document.createElement('div');
+    brand.id = 'topBrand';
+    brand.style.cssText = 'justify-self:center;display:flex;align-items:center;gap:10px;pointer-events:none;flex-shrink:0;';
+    const brandImg = document.createElement('img');
+    brandImg.src = 'branding/vintinuum/favicon/favicon.svg';
+    brandImg.alt = '';
+    brandImg.setAttribute('aria-hidden', 'true');
+    brandImg.style.cssText = 'width:24px;height:24px;filter:drop-shadow(0 0 10px rgba(79,195,247,0.36));animation:brandPulse 4.8s ease-in-out infinite;flex-shrink:0;';
+    const brandWord = document.createElement('h1');
+    brandWord.id = 'topBrandWord';
+    brandWord.textContent = 'Vintinuum';
+    brandWord.style.cssText = "margin:0;font-family:'Cormorant Garamond',serif;font-style:italic;font-weight:300;font-size:1.4rem;letter-spacing:0.02em;background:linear-gradient(130deg,#80deea,#ce93d8,#ffd54f);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;line-height:1;white-space:nowrap;";
+    brand.appendChild(brandImg);
+    brand.appendChild(brandWord);
+
+    // RIGHT cluster (lore + menu)
     const right = document.createElement('div');
     right.id = 'topRight';
-    right.style.cssText = 'display:flex;align-items:center;gap:8px;pointer-events:none;';
+    right.style.cssText = 'justify-self:end;display:flex;align-items:center;gap:8px;pointer-events:none;';
 
     // Lore button (compact icon variant of pill)
     const lore = makePill('topLorePill', {
@@ -130,8 +169,21 @@
     right.appendChild(menu);
 
     header.appendChild(left);
+    header.appendChild(brand);
     header.appendChild(right);
     document.body.appendChild(header);
+
+    // Brand responsive behavior: hide wordmark under 720px, mark only.
+    // Hide vitals pill text under 480px (dot-only).
+    const brandResponsive = () => {
+      const w = window.innerWidth;
+      if (w < 720) brandWord.style.display = 'none';
+      else { brandWord.style.display = ''; brandWord.style.letterSpacing = w < 1024 ? '0.04em' : '0.02em'; }
+      const vLabel = document.getElementById('topVitalsPillLabel');
+      if (vLabel) vLabel.style.display = (w < 480) ? 'none' : '';
+    };
+    brandResponsive();
+    window.addEventListener('resize', brandResponsive, { passive: true });
 
     // Arrival line — sits under the identity pill, fades in on first sign-in
     const arrival = document.createElement('div');
@@ -296,6 +348,20 @@
         border-radius:12px;cursor:pointer;font-family:inherit;font-size:0.6rem;
         letter-spacing:0.18em;text-transform:uppercase;text-align:left;">Open Lore</button>
 
+      <!-- Helios-10 redesign 2026-05-07: quick-action 2x2 grid for the
+           four flagship surfaces (BODY / MEMORY / GENOME / SETTINGS).
+           Real anchors → real navigation. The buttons Vinta said "do
+           nothing" are these — now they're tiles, not phantom dropdowns. -->
+      <div style="height:1px;background:rgba(255,255,255,0.06);margin:4px 0;"></div>
+      <div style="font-size:0.5rem;letter-spacing:0.24em;color:rgba(218,228,255,0.45);
+        text-transform:uppercase;padding:0 4px 4px;">Quick</div>
+      <div id="drawerQuickGrid" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+        <a href="brain.html"           data-quick="body"     class="quick-tile">◉ BODY</a>
+        <a href="mind.html#memory"     data-quick="memory"   class="quick-tile">◌ MEMORY</a>
+        <a href="mind.html#genome"     data-quick="genome"   class="quick-tile">⌬ GENOME</a>
+        <a href="you.html"             data-quick="settings" class="quick-tile">✦ SETTINGS</a>
+      </div>
+
       <div style="height:1px;background:rgba(255,255,255,0.06);margin:4px 0;"></div>
 
       <div style="font-size:0.5rem;letter-spacing:0.24em;color:rgba(218,228,255,0.45);
@@ -354,6 +420,30 @@
           background: rgba(124,207,255,0.10);
           border-color: rgba(124,207,255,0.45);
           color: #7ccfff;
+        }
+        .quick-tile {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 6px;
+          aspect-ratio: 2 / 1;
+          background: rgba(8,12,20,0.6);
+          border: 1px solid rgba(124,207,255,0.18);
+          color: rgba(218,228,255,0.88);
+          border-radius: 14px;
+          text-decoration: none;
+          font-family: 'Space Mono', monospace;
+          font-size: 0.6rem;
+          letter-spacing: 0.18em;
+          text-transform: uppercase;
+          transition: all 180ms cubic-bezier(0.16,1,0.3,1);
+          min-height: 56px;
+        }
+        .quick-tile:hover {
+          background: rgba(20,28,42,0.7);
+          border-color: rgba(124,207,255,0.45);
+          color: #7ccfff;
+          transform: translateY(-1px);
         }
       `;
       document.head.appendChild(css);
