@@ -158,10 +158,9 @@
       + '#bond-door-overlay .bd-eyebrow { font-size:10px; letter-spacing:0.34em; text-transform:uppercase; color:rgba(206,147,216,0.7); margin-bottom:6px; }'
       + '#bond-door-overlay .bd-tagline { font-family:\'Cormorant Garamond\',serif; font-style:italic; font-size:18px; color:rgba(255,255,255,0.78); letter-spacing:0.02em; }'
       // Marquee strip — 8 adventure pills, horizontal scroll on overflow.
-      + '#bond-door-overlay .bd-marquee { margin:18px -36px 22px; padding:0 36px; overflow-x:auto; overflow-y:hidden; -webkit-overflow-scrolling:touch; scrollbar-width:none; max-width:none; width:auto; }'
-      + '#bond-door-overlay .bd-marquee::-webkit-scrollbar { display:none; }'
-      + '#bond-door-overlay .bd-marquee-track { display:flex; gap:8px; padding:2px 0; width:max-content; }'
-      + '#bond-door-overlay .bd-mq { display:inline-flex; align-items:center; gap:6px; padding:6px 11px; font-size:10.5px; letter-spacing:0.10em; color:rgba(255,255,255,0.62); background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.07); border-radius:99px; white-space:nowrap; }'
+      + '#bond-door-overlay .bd-marquee { margin:18px 0 22px; padding:0; overflow:hidden; max-width:100%; width:100%; }'
+      + '#bond-door-overlay .bd-marquee-track { display:flex; flex-wrap:wrap; gap:6px; padding:2px 0; width:100%; justify-content:center; }'
+      + '#bond-door-overlay .bd-mq { display:inline-flex; align-items:center; gap:5px; padding:5px 10px; font-size:10.5px; letter-spacing:0.06em; color:rgba(255,255,255,0.62); background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.07); border-radius:99px; white-space:nowrap; flex:0 0 auto; }'
       + '#bond-door-overlay .bd-mq i { width:6px; height:6px; border-radius:50%; display:inline-block; flex-shrink:0; }'
       // Owner-key tab gets a subtle gold hairline — Helios-10 spec.
       + '#bond-door-overlay .bd-tab-key { position:relative; }'
@@ -184,14 +183,15 @@
       + '  #bond-door-overlay .bd-orb { width:100px; height:100px; margin-bottom:20px; }'
       + '  #bond-door-overlay h2 { font-size:18px; }'
       + '  #bond-door-overlay input { font-size:16px; padding:14px 16px; }'  /* 16px prevents iOS zoom */
-      + '  #bond-door-overlay .bd-marquee { margin:18px -22px 22px; padding:0 22px; }'
+      + '  #bond-door-overlay .bd-marquee { margin:14px 0 18px; }'
+      + '  #bond-door-overlay .bd-mq { font-size:10px; padding:4px 9px; letter-spacing:0.05em; }'
       + '  #bond-door-overlay .bd-toggle button { font-size:10.5px; letter-spacing:0.04em; padding:9px 4px; }'
       + '  #bond-door-overlay .bd-tab-key::after { left:8%; right:8%; }'
       + '}'
       + '@media (max-width: 380px) {'
       + '  #bond-door-overlay .bd-toggle button { font-size:10px; letter-spacing:0.02em; padding:9px 2px; }'
       + '  #bond-door-overlay .bd-card { padding-left:18px; padding-right:18px; }'
-      + '  #bond-door-overlay .bd-marquee { margin-left:-18px; margin-right:-18px; padding-left:18px; padding-right:18px; }'
+      + '  #bond-door-overlay .bd-mq { font-size:9.5px; padding:4px 8px; letter-spacing:0.04em; }'
       + '}'
       + '</style>'
 
@@ -275,7 +275,12 @@
   function close(overlay) {
     overlay.style.transition = 'opacity 360ms ease';
     overlay.style.opacity = '0';
-    setTimeout(function () { overlay.remove(); }, 380);
+    setTimeout(function () {
+      try { overlay.remove(); } catch (_) {}
+      // Council ruling 2026-05-08: clear MOUNTED so re-opening works after
+      // a close. Without this, second click on the topbar pill is a no-op.
+      MOUNTED = false;
+    }, 380);
   }
 
   function showWelcomeBack(name) {
@@ -353,8 +358,18 @@
       var btn = overlay.querySelector('[data-action="bond-' + (lane === 'owner-key' ? 'owner-key' : lane) + '"]');
       if (btn) { btn.disabled = true; btn.textContent = 'connecting…'; }
       setErr(errField, '');
+      // Council ruling 2026-05-08: surface every failure mode loudly. The
+      // user has been hitting silent dead-ends for three rounds. Log the
+      // raw error to console + show a *specific* message in the modal.
+      if (!window.SOUL_AUTH || typeof window.SOUL_AUTH.bond !== 'function') {
+        console.error('[bond_door] SOUL_AUTH.bond unavailable at submit time', window.SOUL_AUTH);
+        setErr(errField, 'Identity layer not loaded — reload the page.');
+        if (btn) { btn.disabled = false; btn.textContent = lane === 'name' ? 'step in' : (lane === 'email' ? 'sign in' : 'unlock'); }
+        return;
+      }
       try {
         var j = await window.SOUL_AUTH.bond(Object.assign({ lane: lane }, payload));
+        console.log('[bond_door] bond ok', { lane: lane, user: j && j.user && j.user.display_name, returning: j && j.returning });
         if (j.user && j.user.chakra) applyChakraTo(card, j.user.chakra);
         if (btn) btn.textContent = 'bonded';
         var name = (j.user && (j.user.display_name || j.user.email)) || payload.name || null;
@@ -363,7 +378,13 @@
           if (j.returning || lane !== 'name') showWelcomeBack(name);
         }, 480);
       } catch (err) {
-        setErr(errField, err.message || 'Could not connect. Try again.');
+        console.error('[bond_door] bond failed', { lane: lane, status: err && err.status, message: err && err.message, err: err });
+        var msg = (err && err.message) ? err.message : 'Could not connect. Try again.';
+        // Make common server errors human
+        if (/HTTP 401/i.test(msg) || /invalid/i.test(msg)) msg = lane === 'owner-key' ? 'Wrong owner key.' : (lane === 'email' ? 'Wrong email or password.' : msg);
+        if (/HTTP 5/i.test(msg)) msg = 'Brain unreachable — try again in a moment.';
+        if (/Failed to fetch/i.test(msg) || /NetworkError/i.test(msg)) msg = 'Network blocked — check your connection or extension blockers.';
+        setErr(errField, msg);
         if (btn) { btn.disabled = false; btn.textContent = lane === 'name' ? 'step in' : (lane === 'email' ? 'sign in' : 'unlock'); }
       }
     }
