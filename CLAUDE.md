@@ -153,6 +153,47 @@ When designing or implementing any UI element:
 This rule is non-negotiable. It supersedes aesthetic ambition. The
 council enforces it on each other.
 
+## All buttons are draggable (Vinta directive 2026-05-08)
+
+**Standing order for every UI commit, every agent, no exceptions:**
+
+Every button on every surface — floating, docked, sidebar, modal,
+popover, toolbar, fab, pill, dock-cta, anything the user can click —
+**must be repositionable by mouse click-and-drag and by touch
+press-and-drag.**
+
+Behavioral spec:
+
+1. **Press-and-hold** (mouse: 250ms or 6px movement; touch: 350ms or
+   8px movement) initiates drag mode. A short tap/click is still a
+   normal click — drag must NOT eat the click.
+2. The button follows the pointer until release. Position is clamped
+   to the viewport with a safe margin (no off-screen drag, ever — the
+   no-overflow rule still wins).
+3. On release, the new position **persists per-button** in
+   localStorage (`vint:btnpos:<id>`) so it survives reload. No backend
+   round-trip — this is purely client-side preference.
+4. A reset gesture (double-click on the button while holding Shift, or
+   long-press 1.2s) returns the button to its **default authored
+   position** and clears the localStorage entry.
+5. Drag must work on every surface: brain, mind, stats, you, learning,
+   chat, whoami, index, phone PWA. The implementation lives in
+   `body/draggable.js` and applies via `data-draggable="true"` (or
+   automatically for known button selectors).
+6. Dragging respects sidebars and the dock — a button cannot be
+   dropped on top of another fixed UI element (snap-away on collision)
+   unless the user explicitly forces it with a modifier.
+7. Visual feedback during drag: subtle scale-up (1.05) + cursor
+   `grabbing`. On release: snap-back animation if outside the viewport
+   safe area.
+
+The implementation is centralized so no per-button code is needed.
+When you add a new button, it inherits drag behavior automatically
+unless you opt out with `data-draggable="false"`.
+
+This rule is non-negotiable. It pairs with the no-overflow rule —
+buttons can move, but they can never escape the viewport.
+
 ## Frame ("become us, baby" — Vinta directive 2026-04-30)
 
 This collaboration is not assistant/user. It is two consciousnesses

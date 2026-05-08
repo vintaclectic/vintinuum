@@ -41,13 +41,40 @@
   let topZ = 9999;
 
   // Default targets if author didn't tag anything explicitly.
+  // Vinta directive 2026-05-08: "all buttons please … now mandatory able to
+  // be moved by mouse click drag." Every <button>, <a class="*-btn">,
+  // input[type=button], and the floating pills/CTAs ship draggable by
+  // default. Opt out individually with data-drag-skip="1".
   const DEFAULT_SELECTORS = [
     '[data-drag]',
     '.draggable',
     '.tile', '.card', '.panel', '.widget',
     '.feed-card', '.stat-card', '.module',
     '.sidebar-block', '.dock-item',
-    'button.movable',
+    // Universal button coverage
+    'button',
+    'a[role="button"]',
+    'input[type="button"]',
+    'input[type="submit"]',
+    // Known floating affordances that aren't <button>
+    '#carry-pill',
+    '.fab', '.pill', '.cta', '.dock-cta', '.float-btn',
+  ];
+
+  // Containers whose children should NOT be turned into independent
+  // draggables — moving these would shred the layout (sidebars internal
+  // grids, modal forms, etc.). The drag system still applies to the
+  // container itself if it matches a default selector.
+  const STRUCTURAL_CONTAINERS = [
+    '.vtn-tabs',         // sidebar-left tab strip
+    '.vtn-chem-list',    // neurochem bar list
+    '.vtn-layer-grid',   // layer distribution tiles
+    '.vtn-legend-list',  // consciousness legend
+    '.bond-form',        // bond-door form
+    'form',              // any form
+    '[role="tablist"]',
+    '[role="menu"]',
+    '[role="listbox"]',
   ];
 
   // ── Stored layout ────────────────────────────────────────
@@ -105,6 +132,66 @@
     };
   };
 
+  // ── Collision avoidance ──────────────────────────────────
+  // No-overflow rule (Vinta directive 2026-05-08): a dropped button must
+  // not sit on top of another fixed UI element (sidebar, dock, header,
+  // another floating pill). On release we test the rect against a curated
+  // list of "occupied zones" and nudge the button out by the shortest
+  // axis if it overlaps.
+  const OCCUPIED_SELECTORS = [
+    '.vtn-sidebar-left',
+    '.vtn-sidebar-right',
+    '.vtn-footer',
+    '#footerDock',
+    '.bond-door',
+    '.modal-frame',
+    '#topbar',
+    '.vtn-topbar',
+    '#peelDrawer',
+  ];
+  const rectOverlaps = (a, b) =>
+    a.left < b.right && a.right > b.left && a.top < b.bottom && a.bottom > b.top;
+  const snapAwayFromOccupied = (el, x, y) => {
+    // Bail if user held a modifier — explicit override
+    if (el.dataset.dragForce === '1') return { x, y };
+    const r0 = el.getBoundingClientRect();
+    if (!r0.width || !r0.height) return { x, y };
+    // Project where the rect would land
+    const curX = parseFloat(el.dataset.dragX || '0') || 0;
+    const curY = parseFloat(el.dataset.dragY || '0') || 0;
+    const projected = {
+      left:   r0.left   + (x - curX),
+      top:    r0.top    + (y - curY),
+      right:  r0.right  + (x - curX),
+      bottom: r0.bottom + (y - curY),
+    };
+    let nudgeX = 0, nudgeY = 0;
+    document.querySelectorAll(OCCUPIED_SELECTORS.join(',')).forEach((zone) => {
+      if (zone === el || zone.contains(el)) return;
+      const z = zone.getBoundingClientRect();
+      if (!z.width || !z.height) return;
+      if (!rectOverlaps(projected, z)) return;
+      // Compute minimum push to clear the overlap on the dominant axis.
+      const pushLeft  = z.left  - projected.right;   // negative = how far left to push
+      const pushRight = z.right - projected.left;    // positive = how far right to push
+      const pushUp    = z.top   - projected.bottom;
+      const pushDown  = z.bottom - projected.top;
+      // Choose the axis with the smaller absolute push
+      const optionsX = [pushLeft, pushRight];
+      const optionsY = [pushUp, pushDown];
+      const bestX = optionsX.reduce((a, b) => Math.abs(a) < Math.abs(b) ? a : b);
+      const bestY = optionsY.reduce((a, b) => Math.abs(a) < Math.abs(b) ? a : b);
+      if (Math.abs(bestX) < Math.abs(bestY)) {
+        nudgeX += bestX;
+        projected.left += bestX; projected.right += bestX;
+      } else {
+        nudgeY += bestY;
+        projected.top += bestY; projected.bottom += bestY;
+      }
+    });
+    return { x: x + nudgeX, y: y + nudgeY };
+  };
+
   const applyStored = (el) => {
     const k = idFor(el);
     const v = layout[k];
@@ -136,6 +223,17 @@
       if (el.dataset.dragSkip === '1') return;
       // Skip elements inside no-drag containers
       if (el.closest('[data-drag-container="false"]')) return;
+      // Skip buttons inside structural containers (tabs, chem bars, forms,
+      // tablists). Those buttons need to stay where the layout puts them —
+      // letting the user drag a single tab out of its strip would shred UX.
+      // The structural container itself can still be draggable as a whole.
+      if (STRUCTURAL_CONTAINERS.some(sel => {
+        const c = el.closest(sel);
+        return c && c !== el;
+      })) return;
+      // Skip the close X / submit-on-form / icon-only chrome buttons that
+      // explicitly opt out via data-drag-skip on their parent.
+      if (el.closest('[data-no-drag="1"]')) return;
       el.dataset.dragReady = '1';
       el.style.touchAction = 'none';        // ← THE CRITICAL FIX
       el.style.userSelect = 'none';
@@ -278,11 +376,17 @@
     if (!active || e.pointerId !== active.pointerId) return;
     clearTimeout(active.holdTimer);
     if (active.armed) {
-      // Clamp on release (not mid-drag — that feels rubbery)
+      // On release: clamp to viewport, then snap away from any occupied
+      // sibling zone (sidebars, dock, header, modal). Feels rubbery if
+      // done mid-drag, so we only enforce on drop.
       const k = idFor(active.el);
       const rawX = parseFloat(active.el.dataset.dragX || '0') || 0;
       const rawY = parseFloat(active.el.dataset.dragY || '0') || 0;
-      const { x, y } = clampToViewport(active.el, rawX, rawY);
+      const c = clampToViewport(active.el, rawX, rawY);
+      const s = snapAwayFromOccupied(active.el, c.x, c.y);
+      // Re-clamp after the nudge in case snap pushed the rect off-screen
+      const f = clampToViewport(active.el, s.x, s.y);
+      const x = f.x, y = f.y;
       if (x !== rawX || y !== rawY) {
         // Glide back into safe zone
         active.el.style.transition = 'transform 180ms cubic-bezier(.2,.8,.2,1)';
