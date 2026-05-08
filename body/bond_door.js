@@ -16,7 +16,34 @@
 // ═══════════════════════════════════════════════════════════════════════════
 (function () {
   if (typeof window === 'undefined' || typeof document === 'undefined') return;
-  if (!window.SOUL_AUTH) { console.warn('[bond_door] SOUL_AUTH missing — load identity.js first'); return; }
+  // Council ruling 2026-05-08: don't bail out if SOUL_AUTH is missing at
+  // parse time. Wait for it. The topbar pill might fire before identity.js
+  // finishes (race on slow connections). Late-bind: poll for SOUL_AUTH up
+  // to 8s; once it appears, expose BOND_DOOR.show. If it never appears,
+  // surface a visible error in the overlay so the user knows what broke.
+  if (!window.SOUL_AUTH) {
+    console.warn('[bond_door] SOUL_AUTH not yet loaded — waiting...');
+    var __waitTries = 0;
+    var __waitIv = setInterval(function () {
+      __waitTries++;
+      if (window.SOUL_AUTH) {
+        clearInterval(__waitIv);
+        try { __initBondDoor(); } catch (e) { console.error('[bond_door] late-init failed:', e); }
+      } else if (__waitTries >= 80) {
+        clearInterval(__waitIv);
+        console.error('[bond_door] SOUL_AUTH never appeared after 8s — sign-in disabled');
+        // Expose a stub so callers don't crash; show a soft error toast.
+        window.BOND_DOOR = window.BOND_DOOR || {
+          show: function () { alert('Sign-in is unavailable — the identity layer did not load. Reload the page or check the network.'); },
+          close: function () {},
+          welcomeBack: function () {},
+        };
+      }
+    }, 100);
+    return;
+  }
+  __initBondDoor();
+  function __initBondDoor() {
 
   var MOUNTED = false;
 
@@ -397,4 +424,5 @@
   };
   // Legacy alias so old code keeps working
   window.SOUL_HANDSHAKE = window.SOUL_HANDSHAKE || { show: mount };
+  } // end __initBondDoor
 })();
