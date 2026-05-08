@@ -6984,21 +6984,59 @@ window.MIC = (() => {
   // ── Web Speech API — continuous, never stops ─────────────────────────────
   let _wsRestarting = false;
   let _wsWatchdog = null;
+  let _wsRecognition = null;       // active SpeechRecognition (so stop() can abort it)
+  let _wsSessionStarted = false;   // first-start visual flag (independent of watchdog)
+  let _wsRestartTimer = null;      // pending restart timeout (so stop() can cancel it)
 
   function _wsKeepalive() {
     // Watchdog: if autoListen is on but not listening, kick it
     if (autoListen && !listening && !_wsRestarting) {
       _wsRestarting = true;
-      setTimeout(() => { _wsRestarting = false; if (autoListen) startWebSpeech(); }, 200);
+      _wsRestartTimer = setTimeout(() => {
+        _wsRestarting = false; _wsRestartTimer = null;
+        if (autoListen) startWebSpeech();
+      }, 200);
     }
     _wsWatchdog = setTimeout(_wsKeepalive, 2000);
+  }
+
+  // Tear down every piece of Web Speech state so the next start() is clean.
+  // Called by stop() and on hard errors.
+  function _wsTeardown() {
+    if (_wsWatchdog) { clearTimeout(_wsWatchdog); _wsWatchdog = null; }
+    if (_wsRestartTimer) { clearTimeout(_wsRestartTimer); _wsRestartTimer = null; }
+    _wsRestarting = false;
+    _wsSessionStarted = false;
+    if (_wsRecognition) {
+      // Detach handlers BEFORE abort so the dying recognition can't fire onend
+      // and trigger a restart against the now-cleared autoListen flag.
+      try { _wsRecognition.onstart = null; } catch(_) {}
+      try { _wsRecognition.onend = null; } catch(_) {}
+      try { _wsRecognition.onerror = null; } catch(_) {}
+      try { _wsRecognition.onresult = null; } catch(_) {}
+      try { _wsRecognition.abort(); } catch(_) {}
+      _wsRecognition = null;
+    }
   }
 
   function startWebSpeech() {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SpeechRecognition) { showResponse('voice not supported in this browser', 'rgba(239,83,80,.7)'); return; }
 
+    // Abort any prior recognition object before creating a new one. Two
+    // SpeechRecognition instances on the same tab fight for the mic and
+    // produce ghost "already started" errors.
+    if (_wsRecognition) {
+      try { _wsRecognition.onstart = null; } catch(_) {}
+      try { _wsRecognition.onend = null; } catch(_) {}
+      try { _wsRecognition.onerror = null; } catch(_) {}
+      try { _wsRecognition.onresult = null; } catch(_) {}
+      try { _wsRecognition.abort(); } catch(_) {}
+      _wsRecognition = null;
+    }
+
     const recognition = new SpeechRecognition();
+    _wsRecognition = recognition;
     recognition.continuous = true;
     recognition.interimResults = true;
     recognition.lang = 'en-US';
@@ -7007,20 +7045,28 @@ window.MIC = (() => {
     recognition.onstart = () => {
       listening = true;
       _wsRestarting = false;
-      // Only update visuals + show message on first start, not silent restarts
-      if (!_wsWatchdog) {
+      // Only update visuals + show message on first start, not silent restarts.
+      // Use an explicit per-session flag so a stale watchdog from a previous
+      // open/close cycle can't suppress the visuals on reopen.
+      if (!_wsSessionStarted) {
+        _wsSessionStarted = true;
         setListening(true);
         showResponse('listening...', 'rgba(218,228,255,.5)');
-        _wsKeepalive();
+        if (!_wsWatchdog) _wsKeepalive();
       }
     };
 
     recognition.onend = () => {
       listening = false;
+      // If this onend belongs to a recognition we already swapped out, ignore.
+      if (recognition !== _wsRecognition) return;
       if (autoListen && !_wsRestarting) {
         // Seamless restart — don't touch visuals, just silently reconnect
         _wsRestarting = true;
-        setTimeout(() => { _wsRestarting = false; if (autoListen) startWebSpeech(); }, 150);
+        _wsRestartTimer = setTimeout(() => {
+          _wsRestarting = false; _wsRestartTimer = null;
+          if (autoListen) startWebSpeech();
+        }, 150);
       } else if (!autoListen) {
         // Intentional stop — update visuals
         setListening(false);
@@ -7031,7 +7077,7 @@ window.MIC = (() => {
       if (e.error === 'not-allowed') {
         showResponse('mic blocked — click 🔒 → Allow Microphone', 'rgba(239,83,80,.9)');
         autoListen = false; setListening(false);
-        clearTimeout(_wsWatchdog); _wsWatchdog = null;
+        _wsTeardown();
       } else if (e.error === 'no-speech' || e.error === 'aborted' || e.error === 'network') {
         // These are normal — Chrome stops after silence or network blip. Just restart.
         // onend will fire after this and handle the restart
@@ -7059,7 +7105,10 @@ window.MIC = (() => {
       // Already started — wait a tick and retry
       if (autoListen && !_wsRestarting) {
         _wsRestarting = true;
-        setTimeout(() => { _wsRestarting = false; if (autoListen) startWebSpeech(); }, 500);
+        _wsRestartTimer = setTimeout(() => {
+          _wsRestarting = false; _wsRestartTimer = null;
+          if (autoListen) startWebSpeech();
+        }, 500);
       }
     }
   }
@@ -7086,6 +7135,11 @@ window.MIC = (() => {
     if (mr && mr.state !== 'inactive') { try { mr.stop(); } catch(e) {} }
     if (stream) { stream.getTracks().forEach(t => t.stop()); stream = null; }
     analyser = null;
+    // ── CRITICAL: tear down every Web Speech timer/recognition object ──
+    // Without this, _wsWatchdog keeps ticking after stop, _wsSessionStarted
+    // stays true, and the next reopen click silently no-ops (the watchdog's
+    // first-start visuals were already shown to a now-dead session).
+    _wsTeardown();
     setListening(false);
     statusLabel.textContent = 'MIC OFF';
     statusDot.style.background = 'rgba(100,100,100,0.4)';
