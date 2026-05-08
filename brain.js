@@ -44733,8 +44733,8 @@ function _buildPersonaRow(panel) {
   // Voice settings gear button
   const voiceGear = document.createElement('button');
   voiceGear.id = 'voiceSettingsBtn';
-  voiceGear.style.cssText = 'background:none;border:1px solid rgba(255,255,255,0.08);border-radius:50%;width:26px;height:26px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:12px;color:rgba(255,255,255,0.35);transition:all 0.2s;flex-shrink:0;margin-left:auto;';
-  voiceGear.textContent = '🎤';
+  voiceGear.style.cssText = 'background:none;border:1px solid rgba(255,255,255,0.08);border-radius:50%;width:26px;height:26px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:13px;color:rgba(255,255,255,0.45);transition:all 0.2s;flex-shrink:0;margin-left:auto;';
+  voiceGear.textContent = '⚙';
   voiceGear.title = 'Voice settings for each persona';
   voiceGear.addEventListener('click', _openVoiceSettings);
   wrapper.appendChild(voiceGear);

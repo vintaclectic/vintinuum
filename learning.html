@@ -745,8 +745,10 @@ body {
     </div>
     <button class="btn active" id="btn-live" title="Toggle live updates">● Live</button>
     <button class="btn" id="btn-pause" title="Pause auto-scroll">Pause</button>
+    <button class="btn" id="btn-export" title="Force a fresh ChatML JSONL export now (no waiting for the 24h cron)">⇪ Force Export</button>
     <button class="btn danger" id="btn-clear" title="Clear filters">Reset</button>
   </div>
+  <div id="export-status" style="margin:8px 0 0;font-size:11px;letter-spacing:.04em;color:var(--dim);min-height:14px;"></div>
 
   <!-- Live Learn — direct teaching input -->
   <div class="teach" id="teach">
@@ -1208,6 +1210,49 @@ body {
     renderChannels();
     renderFeed();
   });
+
+  // Force a fresh learning export (ChatML JSONL) on demand. Server runs the
+  // same producer the 24h timer fires; we just trigger it manually and surface
+  // the result inline so Vinta can see it without tailing pm2 logs.
+  const $btnExport = document.getElementById('btn-export');
+  const $exportStatus = document.getElementById('export-status');
+  if ($btnExport) {
+    $btnExport.addEventListener('click', async () => {
+      $btnExport.disabled = true;
+      const orig = $btnExport.textContent;
+      $btnExport.textContent = '⇪ exporting…';
+      $exportStatus.textContent = 'building ChatML JSONL — this may take 30-90s on a busy DB…';
+      $exportStatus.style.color = 'var(--dim)';
+      try {
+        const token = localStorage.getItem('vint:token') || '';
+        const r = await fetch('https://api.vintaclectic.com/api/learning/export', {
+          method: 'POST',
+          headers: Object.assign(
+            { 'Content-Type': 'application/json' },
+            token ? { 'Authorization': 'Bearer ' + token } : {}
+          ),
+          body: JSON.stringify({ source: 'learning-page-force' }),
+        });
+        const d = await r.json().catch(() => ({}));
+        if (!r.ok) throw new Error(d.error || ('HTTP ' + r.status));
+        const pairs = d.pairCount ?? d.lines ?? d.count ?? '?';
+        const tok = d.totalTokensEstimate ? ` · ~${d.totalTokensEstimate.toLocaleString()} tokens` : '';
+        const file = (d.path || d.file || '').split('/').pop() || '(see logs)';
+        const s = d.sources || {};
+        const detail = s.chatPairs != null
+          ? ` · ${s.chatPairs} chat / ${s.personaMemories} memory / ${s.experientialMemories} experiential / ${s.innerLifeEvents} inner-life`
+          : '';
+        $exportStatus.textContent = `✓ ${pairs} training rows${tok} → ${file}${detail}`;
+        $exportStatus.style.color = 'var(--green)';
+      } catch (e) {
+        $exportStatus.textContent = '✗ export failed: ' + (e.message || e);
+        $exportStatus.style.color = 'var(--red)';
+      } finally {
+        $btnExport.textContent = orig;
+        $btnExport.disabled = false;
+      }
+    });
+  }
 
   // ── Particle background (lightweight twinkle) ─────────────────────────────
   (function particles() {

@@ -1828,7 +1828,7 @@ if ('serviceWorker' in navigator && _onGitHubPages) {
 </div><!-- layout -->
 
 <!-- ═══ LORE PANEL (full-screen overlay for deep content) ═══ -->
-<button id="loreToggle" aria-label="Open lore panel" title="Deep lore &amp; anatomy documentation">&#x25C8; lore</button>
+<button id="loreToggle" data-drag-skip="1" aria-label="Open lore panel" title="Deep lore &amp; anatomy documentation">&#x25C8; lore</button>
 <div id="lorePanel">
   <div id="lorePanelHeader">
     <h2>The Deep Structure</h2>
@@ -1847,7 +1847,7 @@ if ('serviceWorker' in navigator && _onGitHubPages) {
 <div id="mobileBottomBar">
   <button id="mobileLeftToggle" aria-label="Toggle state panel" title="Live body state panel">&#x2630;</button>
   <button id="mobileTabsToggle" aria-label="Switch view" title="Switch view mode">&#x25CE;</button>
-  <button id="mobileLoreToggle" aria-label="Open lore" title="Deep lore &amp; anatomy">&#x25C8;</button>
+  <button id="mobileLoreToggle" data-drag-skip="1" aria-label="Open lore" title="Deep lore &amp; anatomy">&#x25C8;</button>
   <button id="mobileRightToggle" aria-label="Toggle thought feed" title="Inner life thought feed">&#x2261;</button>
 </div>
 
@@ -3477,17 +3477,32 @@ window.addEventListener('message', function(e) {
 
   function initKick() {
     on($('kickConnectBtn'), 'click', startKickOAuth);
-    // If we just came back from OAuth callback, clear the query and check
+    // If we just came back from OAuth callback, clear the query and run an
+    // aggressive recheck loop — the server-side kick_status is cached for 2s
+    // and the DB write to user_integrations races with the redirect, so a
+    // single check often misses. Hit it 6× over 12s to outwait both.
+    var fromOAuth = false;
     try {
       var q = new URLSearchParams(location.search);
       if (q.get('kick_connected') === '1') {
+        fromOAuth = true;
         history.replaceState({}, '', location.pathname + location.hash);
       }
     } catch (_) {}
     checkKickStatus();
+    if (fromOAuth) {
+      [800, 2000, 4000, 6500, 9500, 12000].forEach(function (ms) {
+        setTimeout(checkKickStatus, ms);
+      });
+    }
     // Re-check when auth state changes (login/logout broadcasts via vint:auth)
     window.addEventListener('vint:auth', function () {
       setTimeout(checkKickStatus, 200);
+    });
+    // Re-check on tab focus — covers the case where OAuth completes in
+    // the popup but the user manually closed it before the poll noticed.
+    window.addEventListener('focus', function () {
+      setTimeout(checkKickStatus, 100);
     });
   }
 
@@ -3495,7 +3510,7 @@ window.addEventListener('message', function(e) {
   else init();
 })();
 </script>
-<script src="brain.js?v=v20260508-2345-micreopen"></script>
+<script src="brain.js?v=v20260509-loregearkick"></script>
 <!-- Coherence bus — loads AFTER brain.js to hook into HORMONES, METABOLISM, etc. -->
 <script src="body/coherence.js?v=v20260424-0428"></script>
 <!-- Zoom navigation — smooth animated body exploration -->

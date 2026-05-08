@@ -1342,15 +1342,29 @@ body {
 
   function updateLayers(snapshot) {
     if (!snapshot) return;
-    var events = snapshot.recentEvents || [];
+    // API returns events as `innerEvents` (not `recentEvents`). Council fix
+    // 2026-05-09: psyche view was reading the wrong key, so all layer bars
+    // collapsed to baseline 15% even though the brain was firing constantly.
+    var events = snapshot.innerEvents || snapshot.recentEvents || snapshot.events || [];
     var layerActivity = {};
     var layerLastEvent = {};
+
+    // If API also gives a pre-aggregated `layers` distribution, seed from it
+    // so a fresh snapshot with no events still paints something honest.
+    if (snapshot.layers && typeof snapshot.layers === 'object') {
+      Object.keys(snapshot.layers).forEach(function(k) {
+        layerActivity[String(k).toLowerCase()] = Number(snapshot.layers[k]) || 0;
+      });
+    }
 
     // Count events per layer, track most recent
     events.forEach(function(evt) {
       var l = (evt.layer || '').toLowerCase();
       layerActivity[l] = (layerActivity[l] || 0) + (evt.intensity || 0.5);
-      if (!layerLastEvent[l] || (evt.timestamp && evt.timestamp > (layerLastEvent[l].timestamp || ''))) {
+      var ts = evt.timestamp || evt.created_at || evt.ts || 0;
+      var prev = layerLastEvent[l];
+      var prevTs = prev ? (prev.timestamp || prev.created_at || prev.ts || 0) : 0;
+      if (!prev || ts > prevTs) {
         layerLastEvent[l] = evt;
       }
     });
@@ -1372,7 +1386,8 @@ body {
 
       if (bar) bar.style.width = pct + '%';
       if (evt && layerLastEvent[layer.key]) {
-        evt.textContent = layerLastEvent[layer.key].description || layerLastEvent[layer.key].type || '--';
+        var le = layerLastEvent[layer.key];
+        evt.textContent = le.description || le.content || le.type || le.event_type || '--';
       }
 
       // Highlight most active layer
@@ -1400,7 +1415,9 @@ body {
     if (!Array.isArray(thoughts)) return;
 
     thoughts.forEach(function(t) {
-      var text = typeof t === 'string' ? t : (t.text || t.content || '');
+      // API shape: {thought, ts, temp}. Council fix 2026-05-09 — was reading
+      // .text/.content which never existed, so the thought stream stayed dead.
+      var text = typeof t === 'string' ? t : (t.thought || t.text || t.content || '');
       if (!text || seenThoughts.has(text)) return;
       seenThoughts.add(text);
 
@@ -1460,7 +1477,15 @@ body {
     var list = document.getElementById('memoryList');
     if (!list || !data) return;
 
-    var memories = Array.isArray(data) ? data : (data.memories || data.recent || []);
+    // API shape: { experiential: [...], consolidated: [...], ts }.
+    // Council fix 2026-05-09: previously read .memories/.recent which
+    // don't exist, so the Memory Palace stayed at "AWAITING…" forever.
+    var memories = [];
+    if (Array.isArray(data)) {
+      memories = data;
+    } else if (data) {
+      memories = (data.experiential || []).concat(data.consolidated || data.memories || data.recent || []);
+    }
     if (memories.length === 0) return;
 
     memories = memories.slice(0, 5);
@@ -1470,9 +1495,11 @@ body {
       var entry = document.createElement('div');
       entry.className = 'memory-entry';
 
-      var type = m.type || m.category || 'thought';
-      var content = m.content || m.text || m.summary || '--';
-      var age = m.timestamp ? getMemoryFreshness(m.timestamp) : { icon: '\u26aa', label: 'unknown' };
+      var type = m.event_type || m.memory_type || m.type || m.category || 'thought';
+      var content = m.detail || m.content || m.text || m.summary || '--';
+      // experiential rows use unix-seconds in `created_at`; multiply for ms.
+      var rawTs = m.created_at ? (m.created_at < 1e12 ? m.created_at * 1000 : m.created_at) : (m.timestamp || 0);
+      var age = rawTs ? getMemoryFreshness(rawTs) : { icon: '\u26aa', label: 'unknown' };
 
       entry.innerHTML =
         '<div class="memory-type">' + escapeHtml(type) + '</div>' +
