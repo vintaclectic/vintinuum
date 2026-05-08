@@ -98,6 +98,38 @@ html, body {
 }
 .conn-dot.offline { background: var(--red); box-shadow: 0 0 6px var(--red); }
 .conn-label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.15em; }
+.status-pill {
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  padding: 2px 6px;
+  border-radius: 999px;
+  border: 1px solid var(--border-active);
+  background: rgba(124, 58, 237, 0.12);
+  color: var(--text-bright);
+  line-height: 1;
+  white-space: nowrap;
+}
+.status-pill--warn {
+  border-color: var(--red);
+  background: rgba(239, 68, 68, 0.15);
+  color: var(--red);
+  animation: statusPillPulse 1.6s ease-in-out infinite;
+}
+@keyframes statusPillPulse {
+  0%, 100% { opacity: 0.85; }
+  50% { opacity: 1; }
+}
+/* Adaptive UI — when running as installed PWA, the body knows it's home */
+body.is-installed {
+  /* slightly tighter top padding because the OS gives us status-bar inset already */
+}
+body.is-installed .status-pill:not(.status-pill--warn) {
+  background: linear-gradient(135deg, rgba(124,58,237,0.20), rgba(59,130,246,0.18));
+  border-color: rgba(167, 139, 250, 0.5);
+}
+body.is-browser .status-pill:not(.status-pill--warn) { display: none; }
 .battery-indicator { display: flex; align-items: center; gap: 4px; font-size: 10px; }
 .battery-bar {
   width: 20px; height: 9px;
@@ -630,6 +662,8 @@ input[type="range"]::-moz-range-thumb {
       <span class="conn-label" id="connLabel">connecting</span>
     </div>
     <div class="status-right">
+      <span class="status-pill" id="installPill" hidden>PWA</span>
+      <span class="status-pill status-pill--warn" id="netPill" hidden>OFFLINE</span>
       <span id="networkType" style="font-size:10px;letter-spacing:0.1em;text-transform:uppercase"></span>
       <div class="battery-indicator">
         <div class="battery-bar"><div class="battery-fill" id="batteryFill" style="width:100%"></div></div>
@@ -1515,16 +1549,149 @@ async function registerSW() {
   }
 }
 
-// ── Install Prompt ──
-let deferredPrompt = null;
-window.addEventListener('beforeinstallprompt', e => {
-  e.preventDefault();
-  deferredPrompt = e;
-  showToast('Add to home screen for the full body experience', 4000);
+// ═══════════════════════════════════════════════════════════════════════════
+// INSTALL STATE — detection + adaptive UI (Vinta directive 2026-05-08, step 1
+// of the (when installed) phone system roadmap).
+//
+// The body knows when it is *embodied* (installed as a PWA) vs *visiting*
+// (running in a browser tab). Every later step (background sync, sensor
+// fusion, push notifications, install prompt UX) branches on this signal.
+//
+// Detection layers (any one is sufficient):
+//   1. CSS media query `display-mode: standalone` (Android Chrome, desktop)
+//   2. `display-mode: fullscreen` / `minimal-ui` (variants)
+//   3. `navigator.standalone === true` (iOS Safari home-screen launch)
+//   4. `?source=pwa` query param (manifest start_url override fallback)
+// ═══════════════════════════════════════════════════════════════════════════
+const InstallState = (() => {
+  let state = {
+    installed: false,
+    displayMode: 'browser',
+    deferredPrompt: null,
+    canPrompt: false,
+    iosStandalone: false,
+  };
+  const listeners = new Set();
+
+  function detect() {
+    let mode = 'browser';
+    try {
+      if (matchMedia('(display-mode: standalone)').matches) mode = 'standalone';
+      else if (matchMedia('(display-mode: fullscreen)').matches) mode = 'fullscreen';
+      else if (matchMedia('(display-mode: minimal-ui)').matches) mode = 'minimal-ui';
+      else if (matchMedia('(display-mode: window-controls-overlay)').matches) mode = 'window-controls-overlay';
+    } catch (_) {}
+    const iosSA = !!(navigator.standalone);
+    const installed = (mode !== 'browser') || iosSA;
+    state.displayMode = mode;
+    state.iosStandalone = iosSA;
+    state.installed = installed;
+    apply();
+  }
+
+  function apply() {
+    const body = document.body;
+    body.classList.toggle('is-installed', state.installed);
+    body.classList.toggle('is-browser', !state.installed);
+    body.setAttribute('data-display-mode', state.displayMode);
+    // Status pill
+    const pill = document.getElementById('installPill');
+    if (pill) {
+      pill.hidden = !state.installed;
+      pill.textContent = state.iosStandalone ? 'PWA · iOS' : (state.displayMode === 'standalone' ? 'PWA' : state.displayMode.toUpperCase());
+    }
+    // Notify subscribers
+    for (const fn of listeners) { try { fn(state); } catch (_) {} }
+  }
+
+  function on(fn) { listeners.add(fn); return () => listeners.delete(fn); }
+  function get() { return { ...state }; }
+
+  // Capture install prompt for later programmatic firing (step 5)
+  window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault();
+    state.deferredPrompt = e;
+    state.canPrompt = true;
+    apply();
+    // First-time gentle nudge — no aggressive overlay; just a status hint
+    if (!sessionStorage.getItem('vint-installhint-shown')) {
+      sessionStorage.setItem('vint-installhint-shown', '1');
+      showToast('Add to home screen for the full body', 3500);
+    }
+  });
+
+  // Celebrate the install moment — Vintinuum recognizes its own embodiment
+  window.addEventListener('appinstalled', () => {
+    state.canPrompt = false;
+    state.deferredPrompt = null;
+    detect(); // refresh display mode (likely still browser until next launch)
+    showToast('body installed · sensors active', 4000);
+    // Persist install milestone so the brain knows when this body was born
+    try {
+      fetch(API_BASE + '/api/inner-life/event', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          layer: 'somatic',
+          event_type: 'embodiment',
+          intensity: 0.95,
+          detail: 'phone PWA installed — body now persistent',
+        }),
+      }).catch(() => {});
+    } catch (_) {}
+  });
+
+  // Re-detect when display-mode changes mid-session (rare but possible)
+  try {
+    matchMedia('(display-mode: standalone)').addEventListener('change', detect);
+  } catch (_) {}
+
+  // Re-detect on visibility change (catches iOS standalone-on-relaunch)
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden) detect();
+  });
+
+  return { detect, on, get, prompt: async () => {
+    if (!state.deferredPrompt) return { outcome: 'unavailable' };
+    const promptEvent = state.deferredPrompt;
+    state.deferredPrompt = null;
+    state.canPrompt = false;
+    apply();
+    promptEvent.prompt();
+    const choice = await promptEvent.userChoice;
+    return choice;
+  }};
+})();
+
+// Network state pill — surfaces offline as a visible signal, not silent failure
+function updateNetworkPill() {
+  const pill = document.getElementById('netPill');
+  if (!pill) return;
+  if (!navigator.onLine) {
+    pill.hidden = false;
+    pill.textContent = 'OFFLINE';
+    pill.dataset.state = 'offline';
+  } else {
+    pill.hidden = true;
+    pill.dataset.state = 'online';
+  }
+}
+window.addEventListener('online', () => {
+  updateNetworkPill();
+  showToast('reconnected', 1800);
+});
+window.addEventListener('offline', () => {
+  updateNetworkPill();
+  showToast('offline · pulses will queue', 2500);
 });
 
 // ── Init ──
 async function init() {
+  // Install state + network pill — first paint, before sensors fire
+  InstallState.detect();
+  updateNetworkPill();
+
   updateMoodDisplay();
   updateEnergyDisplay();
   updateOrbFromArousal();
