@@ -54,10 +54,11 @@
   display: flex;
   flex-direction: column;
   gap: 18px;
-  /* bottom padding clears the floating "leave a memory" pill (z-index 80,
+  /* No-overflow: top padding clears the fixed topbar (56px + safe area).
+     Bottom padding clears the floating "leave a memory" pill (z-index 80,
      bottom calc(safe-area + 72px)) so the LAYER DISTRIBUTION + CONSCIOUSNESS
      LAYERS legend never disappears beneath it. */
-  padding: 18px 16px calc(env(safe-area-inset-bottom, 0px) + 110px);
+  padding: calc(env(safe-area-inset-top, 0px) + 68px) 16px calc(env(safe-area-inset-bottom, 0px) + 110px);
   color: rgba(230, 238, 255, 0.82);
   font: 11px/1.4 var(--font-ui, system-ui, sans-serif);
 }
@@ -223,7 +224,11 @@
   display: flex;
   flex-direction: column;
   gap: 12px;
-  padding: 14px 12px 20px;
+  /* No-overflow rule: top padding clears the fixed topbar (56px + safe area)
+     so MEMORY / INNER LIFE / GENOME / SOUL QUEUE tab strip never sits under
+     LORE/☰. Bottom padding clears the dock so feed cards never bleed under
+     the footer strip. */
+  padding: calc(env(safe-area-inset-top, 0px) + 68px) 12px 76px;
   max-height: 100vh;
   max-height: 100svh;
   color: rgba(230, 238, 255, 0.82);

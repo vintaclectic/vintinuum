@@ -90,8 +90,17 @@
     return `
       /* No-overflow rule (CLAUDE.md 2026-05-08): peel UI is contained
          below the top header (78px including margin) and above the
-         bottom dock (96px). Right edge anchored. Internal scroll only. */
+         bottom dock (96px). Right edge anchored. Internal scroll only.
+         DESKTOP (>820px): the right sidebar (#sidebarRight, 340px wide)
+         already shows MEMORY / INNER LIFE / GENOME / SOUL QUEUE in the
+         grid 'right' column. Peel painting at right:0 was overlapping
+         the sidebar cards. Hide peel on desktop entirely — sidebar wins.
+         MOBILE (<=820px): sidebar is a bottom-sheet drawer, so peel is
+         the right-edge access strip and remains visible. */
       #peelUI{position:fixed;top:88px;bottom:104px;right:0;z-index:9000;display:flex;pointer-events:none;font-family:'Space Mono',monospace;max-height:calc(100vh - 192px);max-height:calc(100svh - 192px);}
+      @media(min-width:821px){
+        #peelUI{display:none !important;}
+      }
       #peelUI .peel-tabs{width:32px;background:rgba(10,14,22,0.12);border-left:1px solid rgba(255,255,255,0.06);border-top-left-radius:14px;border-bottom-left-radius:14px;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;padding:14px 0;gap:10px;pointer-events:auto;}
       #peelUI .peel-tab{width:26px;height:26px;display:flex;align-items:center;justify-content:center;border:0;background:transparent;color:rgba(218,228,255,0.45);font-size:13px;cursor:pointer;border-radius:8px;transition:color .2s ease,background .2s ease;padding:0;}
       #peelUI .peel-tab:hover{color:rgba(218,228,255,0.85);background:rgba(255,255,255,0.04);}
