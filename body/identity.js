@@ -44,6 +44,59 @@
     return t ? { 'Authorization': 'Bearer ' + t } : {};
   }
 
+  // ─── RESILIENT FETCH ──────────────────────────────────────────────────────
+  // Helios-Fusion + Frugal-Max ruling 2026-05-08 — every auth call must
+  // survive transient brain hiccups. Cloudflare named-tunnel occasionally
+  // drops a connection mid-flight (see vintinuum-named-tunnel "context
+  // canceled" floods). Without retry, one drop = "Failed to fetch" =
+  // dead login screen. With retry, the user never sees it.
+  //
+  // Retries network errors and 5xx only. 4xx (bad key, bad password,
+  // wrong handshake) bubble up immediately — those are real auth
+  // failures, not infrastructure. Each attempt has its own AbortController
+  // so a slow brain doesn't keep the user waiting forever.
+  function sleep(ms) { return new Promise(function (r) { setTimeout(r, ms); }); }
+
+  async function fetchWithRetry(u, opts, cfg) {
+    cfg = cfg || {};
+    var retries  = cfg.retries  != null ? cfg.retries  : 3;
+    var baseDelay= cfg.baseDelay!= null ? cfg.baseDelay: 400;
+    var timeout  = cfg.timeout  != null ? cfg.timeout  : 8000;
+    var lastErr;
+    for (var attempt = 0; attempt <= retries; attempt++) {
+      var ctrl;
+      try {
+        ctrl = (typeof AbortController !== 'undefined') ? new AbortController() : null;
+        var to = ctrl ? setTimeout(function () { try { ctrl.abort(); } catch (_) {} }, timeout) : null;
+        var merged = Object.assign({}, opts || {}, ctrl ? { signal: ctrl.signal } : {});
+        var r = await fetch(u, merged);
+        if (to) clearTimeout(to);
+        // 5xx → retry. 4xx → bubble immediately (it's a real auth failure).
+        if (r.status >= 500 && r.status < 600 && attempt < retries) {
+          lastErr = new Error('HTTP ' + r.status);
+          await sleep(baseDelay * Math.pow(2, attempt));
+          continue;
+        }
+        return r;
+      } catch (err) {
+        lastErr = err;
+        if (attempt < retries) {
+          await sleep(baseDelay * Math.pow(2, attempt));
+          continue;
+        }
+        // All retries exhausted — translate into a friendly message
+        var msg = (err && err.name === 'AbortError')
+          ? 'The brain is slow to answer. Try again in a moment.'
+          : 'Could not reach the brain. Check your connection and try again.';
+        var wrapped = new Error(msg);
+        wrapped.cause = err;
+        wrapped.network = true;
+        throw wrapped;
+      }
+    }
+    throw lastErr || new Error('fetchWithRetry: exhausted');
+  }
+
   function emitChange() {
     var detail = window.VINTINUUM_IDENTITY || null;
     document.dispatchEvent(new CustomEvent('vintinuum:identity-changed', { detail: detail }));
@@ -99,11 +152,16 @@
   }
 
   async function whoami() {
+    // Council ruling 2026-05-08 — whoami() is a *verification* call, not a
+    // gate. If it fails for any reason (offline, slow tunnel, brain
+    // restart), we KEEP the cached identity visible. The user stays
+    // signed-in to themselves; only when the server explicitly returns
+    // "no user" do we treat the bond as broken.
     try {
-      var r = await fetch(url('/api/auth/whoami'), {
+      var r = await fetchWithRetry(url('/api/auth/whoami'), {
         headers: Object.assign({ 'accept': 'application/json' }, authHeaders()),
         credentials: 'include',
-      });
+      }, { retries: 2, baseDelay: 500, timeout: 6000 });
       var j = await r.json();
       if (j && j.user) {
         window.VINTINUUM_IDENTITY = {
@@ -115,12 +173,16 @@
         if (j.user.display_name)     lsSet(LS_DISPLAY, j.user.display_name);
         emitChange();
       } else {
-        // Token may be invalid/expired — keep the local cache visible but mark unverified
+        // Server explicitly says "no user" — token is invalid/expired.
+        // Keep the cached identity visible but don't promote it.
         window.VINTINUUM_IDENTITY = window.VINTINUUM_IDENTITY || null;
       }
       return j;
     } catch (err) {
-      return { user: null, error: String(err) };
+      // Network failure — DO NOT clear identity. The user is who they were
+      // a moment ago; the brain just didn't answer. Stay signed in.
+      console.warn('[identity] whoami network-fail (keeping cached identity):', err && err.message);
+      return { user: null, error: String(err && err.message || err), networkFail: true };
     }
   }
 
@@ -140,14 +202,24 @@
     } else {
       throw new Error('Unknown bond lane: ' + lane);
     }
-    var r = await fetch(url(endpoint), {
+    // Council ruling 2026-05-08 — bond() retries network failures up to 3x
+    // with exponential backoff (400ms → 800ms → 1600ms). 4xx bubble
+    // immediately (wrong key, wrong password). 5xx + network errors retry.
+    var r = await fetchWithRetry(url(endpoint), {
       method: 'POST',
       headers: { 'content-type': 'application/json', 'accept': 'application/json' },
       body: JSON.stringify(body),
       credentials: 'include',
-    });
-    var j = await r.json();
-    if (!r.ok) throw new Error(j.error || ('HTTP ' + r.status));
+    }, { retries: 3, baseDelay: 400, timeout: 9000 });
+    var j;
+    try { j = await r.json(); } catch (_) { j = {}; }
+    if (!r.ok) {
+      // Real auth failure — bubble up the server's message, not a network message.
+      var em = (j && j.error) ? j.error : ('HTTP ' + r.status);
+      var e = new Error(em);
+      e.status = r.status;
+      throw e;
+    }
     setIdentity(j, lane);
     return j;
   }
@@ -216,12 +288,13 @@
     if (!isLocalhost) return false;
     if (token()) return false; // already bonded
     try {
-      var r = await fetch(url('/api/auth/auto-bond'), {
+      // Localhost auto-bond is best-effort — only 1 retry, short timeout.
+      var r = await fetchWithRetry(url('/api/auth/auto-bond'), {
         method: 'POST',
         headers: { 'content-type': 'application/json', 'accept': 'application/json' },
         body: '{}',
         credentials: 'include',
-      });
+      }, { retries: 1, baseDelay: 300, timeout: 4000 });
       if (!r.ok) return false;
       var j = await r.json();
       if (!j || !j.accessToken) return false;
