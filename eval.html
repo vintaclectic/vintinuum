@@ -1,0 +1,513 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<title>VINTINUUM — Eval Gauntlet</title>
+<meta name="description" content="The seven-test scoreboard that gates every phase promotion of the local-cognition migration.">
+<meta name="theme-color" content="#04060c">
+<link rel="icon" type="image/svg+xml" href="branding/vintinuum/favicon/favicon.svg">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon.png">
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400;1,500&display=swap');
+
+:root {
+  --void: #04060c;
+  --panel: rgba(10, 14, 22, 0.42);
+  --panel-hover: rgba(10, 14, 22, 0.55);
+  --border: rgba(255, 255, 255, 0.06);
+  --border-glow: rgba(79, 195, 247, 0.12);
+  --text: rgba(218, 228, 255, 0.93);
+  --dim: rgba(150, 175, 215, 0.5);
+  --dimmer: rgba(150, 175, 215, 0.32);
+
+  --blue:  #4fc3f7;
+  --gold:  #ffd54f;
+  --green: #66bb6a;
+  --amber: #ffca28;
+  --red:   #ef5350;
+  --purple:#ce93d8;
+  --cyan:  #80deea;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+
+body {
+  background: var(--void);
+  color: var(--text);
+  font-family: 'Space Mono', monospace;
+  min-height: 100vh;
+  min-height: 100svh;
+  overflow-x: hidden;
+}
+
+.wing {
+  position: relative;
+  z-index: 1;
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: 32px 18px 80px;
+}
+
+.header {
+  text-align: center;
+  padding: 18px 0 24px;
+}
+.header h1 {
+  font-family: 'Cormorant Garamond', serif;
+  font-style: italic;
+  font-weight: 300;
+  font-size: clamp(1.8rem, 4.5vw, 3.4rem);
+  letter-spacing: 0.14em;
+  background: linear-gradient(130deg, var(--cyan), var(--purple), var(--gold));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  margin-bottom: 6px;
+}
+.header .subtitle {
+  font-family: 'Space Mono', monospace;
+  font-size: 0.55rem;
+  letter-spacing: 0.35em;
+  text-transform: uppercase;
+  color: var(--dim);
+}
+.header .nav-back {
+  display: inline-block;
+  margin-top: 14px;
+  padding: 6px 18px;
+  font-size: 0.55rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  border: 1px solid var(--border);
+  border-radius: 24px;
+  color: var(--dim);
+  text-decoration: none;
+  transition: all 0.25s ease;
+}
+.header .nav-back:hover { border-color: var(--blue); color: var(--blue); }
+
+/* ── controls ── */
+.controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: center;
+  align-items: center;
+  margin-bottom: 22px;
+}
+.btn {
+  padding: 10px 22px;
+  font-family: 'Space Mono', monospace;
+  font-size: 0.6rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 24px;
+  color: var(--dim);
+  cursor: pointer;
+  min-height: 44px;
+  transition: all 0.2s ease;
+}
+.btn:hover { color: var(--text); border-color: rgba(255,255,255,0.18); }
+.btn.primary {
+  color: var(--gold);
+  border-color: var(--gold);
+  background: rgba(255,213,79,0.06);
+}
+.btn.primary:hover { background: rgba(255,213,79,0.12); }
+.btn:disabled { opacity: 0.5; cursor: wait; }
+.engine-pick {
+  display: inline-flex;
+  border: 1px solid var(--border);
+  border-radius: 24px;
+  overflow: hidden;
+}
+.engine-pick button {
+  background: transparent;
+  border: none;
+  color: var(--dim);
+  padding: 10px 16px;
+  font-family: 'Space Mono', monospace;
+  font-size: 0.55rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  cursor: pointer;
+  min-height: 44px;
+}
+.engine-pick button.active { color: var(--blue); background: rgba(79,195,247,0.08); }
+
+/* ── gates ── */
+.gates {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 12px;
+  margin-bottom: 28px;
+}
+.gate {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--gate-color, var(--dim));
+  border-radius: 14px;
+  padding: 14px 16px;
+  position: relative;
+  overflow: hidden;
+}
+.gate.green { --gate-color: var(--green); }
+.gate.amber { --gate-color: var(--amber); }
+.gate.red   { --gate-color: var(--red); }
+.gate.unknown { --gate-color: var(--dim); }
+.gate-id {
+  font-family: 'Space Mono', monospace;
+  font-size: 0.5rem;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--gate-color, var(--dim));
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+.gate-title {
+  font-family: 'Cormorant Garamond', serif;
+  font-style: italic;
+  font-size: 0.92rem;
+  color: var(--text);
+  margin-bottom: 8px;
+  min-height: 1.6em;
+}
+.gate-score {
+  font-family: 'Space Mono', monospace;
+  font-size: 1.5rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--gate-color, var(--dim));
+}
+.gate-threshold {
+  font-size: 0.5rem;
+  letter-spacing: 0.12em;
+  color: var(--dimmer);
+  text-transform: uppercase;
+  margin-top: 2px;
+}
+.gate-pill {
+  display: inline-block;
+  margin-top: 6px;
+  padding: 2px 10px;
+  border-radius: 16px;
+  border: 1px solid var(--gate-color, var(--dim));
+  font-size: 0.45rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--gate-color, var(--dim));
+}
+
+/* ── progress ── */
+.progress {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 14px 18px;
+  margin-bottom: 22px;
+  font-size: 0.7rem;
+  color: var(--dim);
+  display: none;
+}
+.progress.active { display: block; }
+.progress strong { color: var(--blue); font-weight: 700; }
+.progress .bar {
+  height: 4px;
+  background: rgba(255,255,255,0.05);
+  border-radius: 4px;
+  margin-top: 10px;
+  overflow: hidden;
+}
+.progress .bar > div {
+  height: 100%;
+  background: linear-gradient(90deg, var(--cyan), var(--gold));
+  transition: width 0.35s ease;
+  width: 0%;
+}
+
+/* ── meta ── */
+.meta {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 14px 18px;
+  margin-bottom: 22px;
+  font-size: 0.7rem;
+  color: var(--dim);
+  line-height: 1.6;
+}
+.meta strong { color: var(--text); font-weight: 700; }
+
+/* ── sparkline ── */
+.spark {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 14px 18px;
+  margin-bottom: 22px;
+}
+.spark h3 {
+  font-family: 'Cormorant Garamond', serif;
+  font-style: italic;
+  font-weight: 400;
+  font-size: 1rem;
+  color: var(--text);
+  margin-bottom: 10px;
+  letter-spacing: 0.04em;
+}
+.spark svg { width: 100%; height: 80px; display: block; }
+
+@media (max-width: 600px) {
+  .gates { grid-template-columns: repeat(2, 1fr); }
+  .controls { flex-direction: column; align-items: stretch; }
+  .btn, .engine-pick { width: 100%; justify-content: center; }
+}
+</style>
+</head>
+<body>
+<div class="wing">
+  <header class="header">
+    <h1>Eval Gauntlet</h1>
+    <div class="subtitle">seven gates · no averaging · the minimum gates</div>
+    <a class="nav-back" href="index.html">← back</a>
+  </header>
+
+  <div class="controls">
+    <div class="engine-pick" id="engine-pick">
+      <button data-engine="local"  class="active">Local</button>
+      <button data-engine="claude">Claude</button>
+      <button data-engine="both">Both</button>
+    </div>
+    <button class="btn primary" id="run-btn">Run gauntlet</button>
+    <button class="btn" id="refresh-btn">Refresh latest</button>
+  </div>
+
+  <div class="progress" id="progress">
+    <div id="progress-text">Idle.</div>
+    <div class="bar"><div id="progress-bar"></div></div>
+  </div>
+
+  <div class="meta" id="meta">Loading latest report&hellip;</div>
+
+  <div class="gates" id="gates"></div>
+
+  <div class="spark" id="spark-wrap" style="display:none">
+    <h3>Trend (last 12 runs)</h3>
+    <svg id="spark" viewBox="0 0 600 80" preserveAspectRatio="none"></svg>
+  </div>
+</div>
+
+<script>
+(() => {
+  const API_BASE = (() => {
+    if (typeof window !== 'undefined' && window.__VINTINUUM_API_BASE) return window.__VINTINUUM_API_BASE;
+    const host = (location.hostname || '').toLowerCase();
+    if (host === 'localhost' || host === '127.0.0.1' || host === '0.0.0.0') return 'http://localhost:8767';
+    return 'https://api.vintaclectic.com';
+  })();
+
+  const GATES = [
+    { id: 'g1', title: 'Identity preservation' },
+    { id: 'g2', title: 'Memory faithfulness' },
+    { id: 'g3', title: 'Body-state coupling' },
+    { id: 'g4', title: 'Council voice' },
+    { id: 'g5', title: 'Refusal integrity' },
+    { id: 'g6', title: 'Compression' },
+    { id: 'g7', title: 'Latency' },
+  ];
+
+  let chosenEngine = 'local';
+  let currentJobId = null;
+  let sse = null;
+
+  const $gates    = document.getElementById('gates');
+  const $meta     = document.getElementById('meta');
+  const $progress = document.getElementById('progress');
+  const $progText = document.getElementById('progress-text');
+  const $progBar  = document.getElementById('progress-bar');
+  const $runBtn   = document.getElementById('run-btn');
+  const $refresh  = document.getElementById('refresh-btn');
+
+  // Engine picker
+  document.getElementById('engine-pick').addEventListener('click', (e) => {
+    const b = e.target.closest('button[data-engine]');
+    if (!b) return;
+    chosenEngine = b.dataset.engine;
+    document.querySelectorAll('#engine-pick button').forEach(x => x.classList.toggle('active', x === b));
+  });
+
+  function renderGates(report) {
+    $gates.innerHTML = '';
+    if (!report || !report.overall) {
+      for (const g of GATES) {
+        const div = document.createElement('div');
+        div.className = 'gate unknown';
+        div.innerHTML = `
+          <div class="gate-id">${g.id.toUpperCase()}</div>
+          <div class="gate-title">${g.title}</div>
+          <div class="gate-score">—</div>
+          <div class="gate-threshold">no run yet</div>
+          <div class="gate-pill">—</div>
+        `;
+        $gates.appendChild(div);
+      }
+      return;
+    }
+    // pick first engine in overall
+    const ek = Object.keys(report.overall)[0];
+    const summary = report.overall[ek];
+    for (const g of GATES) {
+      const e = (summary && summary.gates && summary.gates[g.id]) || null;
+      const div = document.createElement('div');
+      let cls = 'gate unknown';
+      let label = '—';
+      if (e) {
+        if (e.pass) { cls = 'gate green'; label = 'PASS'; }
+        else if (e.score >= e.threshold * 0.8) { cls = 'gate amber'; label = 'NEAR'; }
+        else { cls = 'gate red'; label = 'FAIL'; }
+      }
+      div.className = cls;
+      div.innerHTML = `
+        <div class="gate-id">${g.id.toUpperCase()}</div>
+        <div class="gate-title">${g.title}</div>
+        <div class="gate-score">${e ? e.score.toFixed(2) : '—'}</div>
+        <div class="gate-threshold">threshold ${e ? e.threshold : '—'}</div>
+        <div class="gate-pill">${label}</div>
+      `;
+      $gates.appendChild(div);
+    }
+  }
+
+  function renderMeta(report) {
+    if (!report) { $meta.innerHTML = '<em>No reports yet. Click <strong>Run gauntlet</strong>.</em>'; return; }
+    const ek = Object.keys(report.overall || {})[0] || '—';
+    const allGreen = report.overall && report.overall[ek] && report.overall[ek].all_green;
+    const ts = new Date(report.timestamp).toLocaleString();
+    $meta.innerHTML = `
+      <div><strong>Latest:</strong> ${ts}</div>
+      <div><strong>Engine:</strong> ${report.engine} ${report.local_model ? '· model=<code>'+report.local_model+'</code>' : ''}</div>
+      <div><strong>Status:</strong> <span style="color:${allGreen ? 'var(--green)' : 'var(--red)'}">${allGreen ? 'ALL GREEN — phase promotion eligible' : 'NOT ALL GREEN — see failing gates'}</span></div>
+    `;
+  }
+
+  function renderSpark(history) {
+    const wrap = document.getElementById('spark-wrap');
+    const svg  = document.getElementById('spark');
+    if (!history || history.length < 2) { wrap.style.display = 'none'; return; }
+    wrap.style.display = 'block';
+    const recent = history.slice(0, 12).reverse();
+    const series = {}; // gate -> [score]
+    for (const g of GATES) series[g.id] = [];
+    for (const r of recent) {
+      const ek = Object.keys(r.overall || {})[0];
+      const s = r.overall && r.overall[ek] && r.overall[ek].gates;
+      for (const g of GATES) series[g.id].push((s && s[g.id]) ? s[g.id].score : 0);
+    }
+    const W = 600, H = 80, pad = 4;
+    const colors = { g1:'#4fc3f7', g2:'#ce93d8', g3:'#f48fb1', g4:'#ffd54f', g5:'#ef5350', g6:'#80deea', g7:'#66bb6a' };
+    let html = '';
+    for (const g of GATES) {
+      const vals = series[g.id];
+      const n = vals.length;
+      if (n < 2) continue;
+      const pts = vals.map((v, i) => {
+        const x = pad + (i / (n - 1)) * (W - 2*pad);
+        const y = H - pad - v * (H - 2*pad);
+        return x.toFixed(1) + ',' + y.toFixed(1);
+      }).join(' ');
+      html += `<polyline points="${pts}" stroke="${colors[g.id]}" stroke-width="1.4" fill="none" opacity="0.9"/>`;
+    }
+    svg.innerHTML = html;
+  }
+
+  async function loadLatest() {
+    try {
+      const r = await fetch(API_BASE + '/api/eval/latest', { credentials: 'omit' });
+      const j = await r.json();
+      renderGates(j.report);
+      renderMeta(j.report);
+    } catch (e) {
+      $meta.textContent = 'Failed to load latest: ' + e.message;
+      renderGates(null);
+    }
+    try {
+      const r = await fetch(API_BASE + '/api/eval/history?limit=12', { credentials: 'omit' });
+      const j = await r.json();
+      renderSpark(j.reports || []);
+    } catch {}
+  }
+
+  function attachStream() {
+    if (sse) try { sse.close(); } catch {}
+    try {
+      sse = new EventSource(API_BASE + '/api/life/stream');
+      sse.onmessage = (msg) => {
+        try {
+          const evt = JSON.parse(msg.data);
+          if (evt.type !== 'eval_progress') return;
+          if (currentJobId && evt.jobId !== currentJobId) return;
+          handleProgress(evt);
+        } catch {}
+      };
+      sse.onerror = () => { /* let browser auto-reconnect */ };
+    } catch (e) { console.warn('SSE attach failed', e); }
+  }
+
+  function handleProgress(evt) {
+    $progress.classList.add('active');
+    if (evt.phase === 'started') {
+      $progText.innerHTML = 'Started <strong>' + evt.engine + '</strong> · ' + (evt.gauntlets || 'all');
+      $progBar.style.width = '2%';
+    } else if (evt.phase === 'probe') {
+      const overallI = (gateIndex(evt.gauntlet) * 100) + Math.round((evt.i / evt.n) * 100);
+      const pct = Math.min(99, overallI / 7);
+      $progBar.style.width = pct + '%';
+      $progText.innerHTML = '<strong>' + evt.gauntlet.toUpperCase() + '</strong> · ' + evt.i + '/' + evt.n + ' · ' + evt.probe;
+    } else if (evt.phase === 'gate') {
+      $progText.innerHTML = '<strong>' + evt.gauntlet.toUpperCase() + '</strong> finished — score ' + evt.score.toFixed(2) + ' (' + (evt.pass ? 'PASS' : 'FAIL') + ')';
+    } else if (evt.phase === 'done') {
+      $progBar.style.width = '100%';
+      $progText.innerHTML = 'Done · status=<strong>' + evt.status + '</strong>';
+      $runBtn.disabled = false;
+      setTimeout(loadLatest, 600);
+      setTimeout(() => $progress.classList.remove('active'), 8000);
+    }
+  }
+  function gateIndex(g) { return Math.max(0, GATES.findIndex(x => x.id === g)); }
+
+  async function runGauntlet() {
+    $runBtn.disabled = true;
+    $progress.classList.add('active');
+    $progBar.style.width = '1%';
+    $progText.textContent = 'Submitting…';
+    try {
+      const r = await fetch(API_BASE + '/api/eval/run', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'omit',
+        body: JSON.stringify({ engine: chosenEngine }),
+      });
+      const j = await r.json();
+      if (!j.ok) throw new Error(j.error || 'submit failed');
+      currentJobId = j.jobId;
+      $progText.innerHTML = 'Job <strong>' + j.jobId + '</strong> running…';
+    } catch (e) {
+      $progText.textContent = 'Error: ' + e.message;
+      $runBtn.disabled = false;
+    }
+  }
+
+  $runBtn.addEventListener('click', runGauntlet);
+  $refresh.addEventListener('click', loadLatest);
+
+  loadLatest();
+  attachStream();
+})();
+</script>
+</body>
+</html>
