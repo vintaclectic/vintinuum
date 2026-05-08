@@ -1080,44 +1080,144 @@ body {
   color: var(--red);
 }
 
-/* Gene bars */
+/* Gene bars — reimagined 2026-05-08: tri-allele bar (l|m|h stacked) */
 .gene-row {
-  display: flex;
+  display: grid;
+  grid-template-columns: 100px 1fr 38px;
   align-items: center;
-  gap: 8px;
-  margin-bottom: 6px;
+  gap: 10px;
+  margin-bottom: 7px;
+  padding: 4px 6px;
+  border-radius: 6px;
+  transition: background 200ms;
 }
+.gene-row:hover { background: rgba(255,255,255,0.02); }
+.gene-row.gene-row--hot { background: rgba(79,195,247,0.04); }
 .gene-name {
   font-size: 0.5rem;
-  letter-spacing: 0.1em;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: var(--dim);
-  width: 110px;
-  flex-shrink: 0;
+  color: var(--text);
   text-align: right;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  font-weight: 500;
 }
 .gene-bar-track {
-  flex: 1;
-  height: 4px;
-  background: rgba(255,255,255,0.04);
-  border-radius: 3px;
+  position: relative;
+  height: 8px;
+  background: rgba(255,255,255,0.03);
+  border-radius: 4px;
   overflow: hidden;
+  display: flex;
+  align-items: stretch;
 }
-.gene-bar-fill {
+.gene-allele {
   height: 100%;
-  border-radius: 3px;
-  transition: width 1s cubic-bezier(0.22,1,0.36,1);
+  transition: width 900ms cubic-bezier(0.22,1,0.36,1);
   width: 0;
+  position: relative;
 }
+.gene-allele--l { background: rgba(124,207,255,0.22); border-right: 1px solid rgba(0,0,0,0.12); }
+.gene-allele--m { background: rgba(255,213,79,0.4); border-right: 1px solid rgba(0,0,0,0.12); }
+.gene-allele--h { background: linear-gradient(90deg, rgba(206,147,216,0.7), rgba(255,213,79,0.85)); }
 .gene-val {
-  font-size: 0.5rem;
-  color: var(--text);
-  width: 32px;
+  font-size: 0.52rem;
+  color: var(--gold);
   text-align: right;
-  flex-shrink: 0;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+.gene-val.gene-val--dim { color: var(--dim); }
+
+/* Category chips */
+.gene-cat-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 10px 0 14px;
+}
+.gene-cat-chip {
+  padding: 5px 11px;
+  border-radius: 999px;
+  font-size: 0.46rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  border: 1px solid rgba(255,255,255,0.08);
+  background: rgba(255,255,255,0.02);
+  color: var(--dim);
+  cursor: pointer;
+  transition: background 180ms, color 180ms, border-color 180ms;
+  user-select: none;
+}
+.gene-cat-chip:hover { color: var(--text); border-color: rgba(255,255,255,0.18); }
+.gene-cat-chip.active {
+  background: rgba(79,195,247,0.12);
+  border-color: rgba(79,195,247,0.4);
+  color: var(--blue);
+}
+.gene-cat-chip .cat-count {
+  display: inline-block;
+  margin-left: 5px;
+  padding: 0 5px;
+  border-radius: 8px;
+  background: rgba(255,255,255,0.06);
+  color: var(--text);
+  font-size: 0.44rem;
+}
+/* Search input */
+.gene-search {
+  width: 100%;
+  padding: 8px 12px;
+  margin-bottom: 10px;
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 8px;
+  color: var(--text);
+  font-size: 0.6rem;
+  letter-spacing: 0.04em;
+  outline: none;
+  transition: border-color 180ms, background 180ms;
+  -webkit-appearance: none; appearance: none;
+  box-sizing: border-box;
+}
+.gene-search:focus { border-color: rgba(79,195,247,0.4); background: rgba(255,255,255,0.05); }
+.gene-search::placeholder { color: var(--dim); }
+/* Scrollable gene list — internal scroll, no overflow */
+.gene-list {
+  max-height: 460px;
+  overflow-y: auto;
+  padding-right: 4px;
+  margin: 0 -4px;
+}
+.gene-list::-webkit-scrollbar { width: 4px; }
+.gene-list::-webkit-scrollbar-track { background: transparent; }
+.gene-list::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 3px; }
+/* Stat tiles */
+.gene-stat-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(86px, 1fr));
+  gap: 10px;
+  margin-bottom: 14px;
+  padding: 12px;
+  background: rgba(255,255,255,0.02);
+  border-radius: 10px;
+  border: 1px solid rgba(255,255,255,0.04);
+}
+.gene-stat-tile { text-align: center; }
+.gene-stat-tile .gst-val {
+  font-size: 1.3rem;
+  font-weight: 300;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+.gene-stat-tile .gst-lbl {
+  font-size: 0.4rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--dim);
+  margin-top: 5px;
 }
 
 /* Epigenetic tags */
@@ -2500,14 +2600,58 @@ body {
   fetchNeuro();
   setInterval(fetchNeuro, 5000);
 
-  // ─── LIVE GENOME STATS ────────────────────────────────────────────────────────
-  const GENE_COLORS = ['#4fc3f7','#80deea','#ce93d8','#ffd54f','#f48fb1','#66bb6a','#4db6ac','#ef9a9a','#90caf9','#a5d6a7'];
+  // ─── LIVE GENOME STATS — full reimagining 2026-05-08 ─────────────────────────
+  // The /api/genome endpoint returns expressionLevels as { GENE: {l, m, h} }
+  // where each component is a 0–1 transcription weight for the low/mid/high
+  // expression band. Total expression = l + m + h (capped at 1.5 for color
+  // scale). "Active" means h ≥ 0.5 (high-allele dominance). The previous
+  // renderer assumed a flat number and read 0 for every gene — bug fixed.
+  //
+  // 502 genes is too many to render as bars at once, so we:
+  //   1. Show top stat tiles (Total / Active / Hot / SNPs / Epigenetic ticks)
+  //   2. Surface category chips with active counts (filter by clicking)
+  //   3. Render the top 60 most-expressed genes by default, sorted desc by h
+  //   4. Provide a search box that filters live across all 502
+  //   5. Internal scroll so the card never overflows its grid cell
+
+  // Functional categories — each gene mapped to one. Anything not listed
+  // falls into "other" so the number of unrecognized genes stays visible.
+  const GENE_CATEGORIES = {
+    'Neurotransmission': ['COMT','SLC6A4','DRD1','DRD2','DRD3','DRD4','MAOA','MAOB','TPH2','HTR1A','HTR1B','HTR2A','HTR3A','SLC6A2','SLC6A3','TH','DBH','DDC','GAD1','GAD2','SLC18A2','GRIN1','GRIN2B','GRIA1','GRIA2','GRM1','GRM5','SLC17A7','SLC1A1','SLC1A2','GABRA1','GABRA2','GABRA5','GABRB3','GABRG2','GABBR1','CHRNA4','ACHE','CHAT','CNR1','FAAH','OPRM1','OXTR','AVPR1A','PVALB','SST','HTR3A','SLC6A11','SLC6A19'],
+    'Memory & Plasticity': ['BDNF','CREB1','ARC','KIBRA','DISC1','SYN1','SNAP25','NRXN1','NRXN3','NLGN4X','SHANK3','CACNA1C','CACNA1A','CACNA1B','ANK3','SCN1A','SCN2A','KCNA1','KCNB1','GRIA1','GRIA2','SYP','APP','MAPT','SOD1','PSEN1','MECP2','FMR1','HTT','NTRK1','NTRK2','NGF','GDNF'],
+    'Stress & Mood': ['FKBP5','NR3C1','NR3C2','CRH','POMC','SHBG','HTR1A','HTR2A','SLC6A4','TPH2','MAOA','BDNF','CREB1','OXTR','AVPR1A','GRM5'],
+    'Circadian': ['CLOCK','PER2','CRY1','CRY2','BMAL1','PRL'],
+    'Immunity': ['HLA-A','HLA-B','HLA-C','HLA-DRB1','IL6','IL10','TNF','IFNG','TLR4','TLR7','TLR9','CD3E','CD4','CD8A','CD8B','CD19','FOXP3','RAG1','CTLA4','JAK1','JAK2','JAK3','STAT3','C3','C4A','C5','NLRP3','CASP1','IL1B','IL2','TGFB1','CCR5','CXCR4','IRF7','IRF4','MYD88','PDCD1','CD274','AIRE','NFKB1','IL17A','IL23A','STING1','TMPRSS2','ICOS','FCGR3A'],
+    'Metabolism': ['INS','INSR','GCK','GLP1R','GCG','LCT','ADH1B','ALDH2','CYP2D6','CYP3A4','MTHFR','FUT2','HFE','PPARG','PPARA','PPARGC1A','LEP','LEPR','MC4R','UGT1A1','SLC2A1','SLC2A2','SLC2A4','SLC30A8','FTO','TCF7L2','HMGCR','LDLR','APOB','APOE','PCSK9','CETP','ADIPOQ','SOD2','CAT','GPX1','GSTP1','NAT2','PAH','PCCA','TET1','TET2','SIRT1','AMPK','SLC5A1','SLC5A2','SLC7A5','AMY1A','AMY2A','PRSS1','PNLIP'],
+    'Cardiovascular': ['MYH7','MYH9','SCN5A','KCNQ1','ACE','ACE2','AGT','AGTR1','NOS3','GJA1','VEGFA','F5','KCNH2','RYR2','MYBPC3','NPPA','EDN1','ADRB1','ADRB2','HBB','HBA1','HBA2','EPO','EPOR','SERPINC1','PROC','PDGFA','PDGFB','FXIII'],
+    'DNA Repair / Cancer': ['TP53','RB1','BRCA1','BRCA2','MYC','KRAS','TERT','PTEN','APC','MLH1','ATM','ATR','CHEK1','CHEK2','RAD51','XRCC1','XPC','ERCC1','MSH2','MSH6','PMS2','PARP1','CDK1','CDK2','CDK4','CDK6','CCND1','CCNE1','CCNB1','E2F1','CDKN2A','CDKN1A','BCL2','BCL2L1','BAX','CASP3','CASP8','CASP9','APAF1','BID','PALB2','VHL','NF1','NF2','TSC1','TSC2','IDH1','BRAF','EGFR','PIK3CA','AKT1','MTOR','SRC','ABL1','RAF1','MAP2K1','SMAD4','SMAD2','CTNNB1','NOTCH1','PTCH1','SMO','WT1','ARID1A','BCR','CCND1','CCNA1'],
+    'Epigenetic Machinery': ['DNMT1','DNMT3A','DNMT3B','TET1','TET2','HDAC1','HDAC2','HDAC3','EZH2','KAT2A','EP300','KDM1A','KDM6A','DICER1','AGO2','DROSHA','MECP2'],
+    'Development': ['SOX2','POU5F1','NANOG','JUN','FOS','RUNX1','RUNX2','ERG','ETS2','HOXA1','HOXA5','HOXA9','HOXA13','HOXB4','HOXC8','HOXD13','SHH','WNT1','WNT3A','WNT5A','WNT7A','BMP2','BMP4','BMP7','BMP15','GDF8','GDF9','PAX6','SOX9','SOX10','SNAI1','TBX1','PRNP','HIF1A','EGF','FGF1','FGF2','IGF1','IGF2','GH1','TSHR','TG'],
+    'Reproduction': ['SRY','FSHR','LHCGR','AMH','ZP3','DAZL','SYCP3','SPO11','CATSPER1','FIGLA','NOBOX','PGR','STAR','CYP19A1','AR','ESR1','ESR2','GNRHR','KISS1','SRD5A2','PRL','INSL3','BMP15','GDF9'],
+    'Sensory': ['OPN1LW','OPN1MW','OPN1SW','RHO','PAX6','GJB2','GJB6','TMC1','MYO7A','TAS2R38','TAS1R2','TRPV1','TRPV3','TRPV4','TRPM8','TRPA1','OR7D4','PIEZO1','PIEZO2','CNGA3','USH2A','OTOF','SLC26A4','KCNJ13','ABCA4','SLC24A5','SLC45A2','MC1R','TYR','OCA2','HERC2','ASIP'],
+    'Structural': ['COL1A1','COL1A2','COL2A1','COL3A1','COL4A5','COL6A1','COL6A2','COL7A1','FBN1','ELN','KRT5','KRT10','KRT14','KRT18','FLG','ACTN3','DMD','RYR1','VDR','ACAN','MMP2','MMP9','TGFBR2','LAMA2','LAMA3','TNC','SPP1','BGLAP','ALPL','COMP','ACTB','TUBA1A','VIM','DES','FN1','DTNA'],
+    'Pharmacogenomics': ['CYP1A2','CYP2C19','CYP2C9','CYP1B1','CYP2D6','CYP3A4','ADH1C','ALDH1A1','ALDH3A1','PGA3','UGT1A1','ABCB1','ABCG2','SLC22A1','CBS','GART','SLC40A1','HAMP','SLC12A1','SLC12A3','ATP7B','SLC6A19','ABCC12'],
+  };
+
+  // Build reverse map gene → category once
+  const GENE_TO_CAT = (() => {
+    const m = {};
+    for (const [cat, genes] of Object.entries(GENE_CATEGORIES)) {
+      for (const g of genes) { if (!m[g]) m[g] = cat; }
+    }
+    return m;
+  })();
+  function categoryOf(gene) { return GENE_TO_CAT[gene] || 'Other'; }
+
+  // UI state — persisted across re-renders so search/filter survives polls
+  let GENOME_STATE = { search: '', category: 'all', last: null };
 
   async function fetchGenome() {
     try {
       const r = await fetch(`${API_BASE}/api/genome`, { headers: API_HEADERS });
       if (!r.ok) throw new Error('genome unreachable');
       const d = await r.json();
+      GENOME_STATE.last = d;
       renderGenomeStats(d);
     } catch (err) {
       const el = document.getElementById('genome-stats-content');
@@ -2517,81 +2661,166 @@ body {
     }
   }
 
+  // Convert a {l, m, h} record into a single 0–1 expression intensity.
+  // We use h as the primary signal (high-allele transcription) — this is
+  // the dominant active expression band. Returns {primary, l, m, h, total}.
+  function decodeExpression(level) {
+    if (level == null) return { primary: 0, l: 0, m: 0, h: 0, total: 0 };
+    if (typeof level === 'number') {
+      const v = Math.max(0, Math.min(1, level));
+      return { primary: v, l: 0, m: 0, h: v, total: v };
+    }
+    if (typeof level === 'object') {
+      const l = +level.l || +level.low || 0;
+      const m = +level.m || +level.mid || +level.medium || 0;
+      const h = +level.h || +level.high || 0;
+      return { primary: h, l, m, h, total: l + m + h };
+    }
+    const n = parseFloat(level) || 0;
+    return { primary: n, l: 0, m: 0, h: n, total: n };
+  }
+
   function renderGenomeStats(d) {
-    // Render expression levels
     const statsEl = document.getElementById('genome-stats-content');
     const epiEl = document.getElementById('genome-epigenetic-content');
     if (!statsEl) return;
 
-    // Parse expression levels — could be object or array
     const expressions = d.expression_levels || d.expressionLevels || d.expressions || {};
     const snps = d.snp_selections || d.snpSelections || d.snps || {};
     const epigenetic = d.epigenetic_state || d.epigeneticState || d.epigenetic || {};
 
-    // Build gene expression bars
-    let geneCount = 0;
-    let activeCount = 0;
-    let barsHtml = '';
+    // Decode all genes once; sort by primary (h) desc.
+    const exprEntries = (typeof expressions === 'object' && !Array.isArray(expressions))
+      ? Object.entries(expressions) : [];
+    const decoded = exprEntries.map(([gene, lvl]) => {
+      const e = decodeExpression(lvl);
+      return { gene, ...e, cat: categoryOf(gene) };
+    });
+    decoded.sort((a, b) => b.primary - a.primary);
 
-    const exprEntries = typeof expressions === 'object' && !Array.isArray(expressions)
-      ? Object.entries(expressions)
-      : (Array.isArray(expressions) ? expressions.map((v, i) => [`gene_${i}`, v]) : []);
+    // Aggregate stats
+    const totalGenes = decoded.length;
+    const activeGenes = decoded.filter(g => g.h >= 0.5).length;
+    const hotGenes = decoded.filter(g => g.h >= 0.55).length; // top tier
+    const snpCount = Object.keys(snps).length;
+    const epiTicks = (epigenetic && (epigenetic.tickCount || epigenetic.ticks)) || 0;
 
-    for (const [gene, level] of exprEntries) {
-      const val = typeof level === 'number' ? level : (typeof level === 'object' ? (level.value || level.level || 0) : parseFloat(level) || 0);
-      const pct = Math.round(Math.min(100, Math.max(0, val * 100)));
-      const color = GENE_COLORS[geneCount % GENE_COLORS.length];
-      if (val > 0.1) activeCount++;
-      geneCount++;
-      barsHtml += `
-        <div class="gene-row">
-          <div class="gene-name" title="${gene}">${gene.replace(/_/g, ' ')}</div>
-          <div class="gene-bar-track">
-            <div class="gene-bar-fill" style="background:${color};" data-width="${pct}%"></div>
-          </div>
-          <div class="gene-val">${pct}%</div>
-        </div>`;
+    // Per-category active counts (h >= 0.5)
+    const catCounts = {};
+    for (const g of decoded) {
+      catCounts[g.cat] = catCounts[g.cat] || { total: 0, active: 0 };
+      catCounts[g.cat].total++;
+      if (g.h >= 0.5) catCounts[g.cat].active++;
     }
+    const catList = Object.keys(catCounts).sort((a, b) => catCounts[b].active - catCounts[a].active);
 
-    // SNP summary
-    const snpEntries = typeof snps === 'object' ? Object.entries(snps) : [];
-    const snpCount = snpEntries.length;
+    // Apply current filter state
+    const search = (GENOME_STATE.search || '').trim().toUpperCase();
+    const cat = GENOME_STATE.category || 'all';
+    const filtered = decoded.filter(g => {
+      if (cat !== 'all' && g.cat !== cat) return false;
+      if (search && !g.gene.toUpperCase().includes(search)) return false;
+      return true;
+    });
+    const showLimit = search ? filtered.length : Math.min(60, filtered.length);
+    const shown = filtered.slice(0, showLimit);
 
+    const barsHtml = shown.map(g => {
+      const lpct = Math.round(g.l * 100);
+      const mpct = Math.round(g.m * 100);
+      const hpct = Math.round(g.h * 100);
+      const isHot = g.h >= 0.55;
+      const valColor = g.h >= 0.5 ? 'gene-val' : 'gene-val gene-val--dim';
+      // Stacked allele bar — proportional widths normalized so they fill
+      // the track based on actual transcription strength (cap total at 100%).
+      const sumPct = lpct + mpct + hpct;
+      const scale = sumPct > 100 ? 100 / sumPct : 1;
+      return `
+        <div class="gene-row${isHot ? ' gene-row--hot' : ''}" title="${g.gene} — ${g.cat}\nlow ${lpct}% / mid ${mpct}% / high ${hpct}%">
+          <div class="gene-name">${g.gene}</div>
+          <div class="gene-bar-track">
+            <div class="gene-allele gene-allele--l" data-width="${(lpct * scale).toFixed(1)}%"></div>
+            <div class="gene-allele gene-allele--m" data-width="${(mpct * scale).toFixed(1)}%"></div>
+            <div class="gene-allele gene-allele--h" data-width="${(hpct * scale).toFixed(1)}%"></div>
+          </div>
+          <div class="${valColor}">${hpct}%</div>
+        </div>`;
+    }).join('') || '<div style="color:var(--dim);font-size:0.55rem;padding:14px 0;text-align:center;">No genes match this filter.</div>';
+
+    const catChipsHtml = '<div class="gene-cat-row">'
+      + `<button type="button" class="gene-cat-chip${cat==='all'?' active':''}" data-cat="all">All <span class="cat-count">${activeGenes}/${totalGenes}</span></button>`
+      + catList.map(c => `<button type="button" class="gene-cat-chip${cat===c?' active':''}" data-cat="${c}">${c} <span class="cat-count">${catCounts[c].active}/${catCounts[c].total}</span></button>`).join('')
+      + '</div>';
+
+    const remaining = filtered.length - shown.length;
     statsEl.innerHTML = `
-      <div style="display:flex;gap:16px;margin-bottom:14px;flex-wrap:wrap;">
-        <div style="text-align:center;">
-          <div style="font-size:1.4rem;color:var(--blue);">${geneCount}</div>
-          <div style="font-size:0.42rem;letter-spacing:0.15em;text-transform:uppercase;color:var(--dim);">Tracked Genes</div>
-        </div>
-        <div style="text-align:center;">
-          <div style="font-size:1.4rem;color:var(--green);">${activeCount}</div>
-          <div style="font-size:0.42rem;letter-spacing:0.15em;text-transform:uppercase;color:var(--dim);">Active (>10%)</div>
-        </div>
-        <div style="text-align:center;">
-          <div style="font-size:1.4rem;color:var(--gold);">${snpCount}</div>
-          <div style="font-size:0.42rem;letter-spacing:0.15em;text-transform:uppercase;color:var(--dim);">SNP Selections</div>
-        </div>
+      <div class="gene-stat-grid">
+        <div class="gene-stat-tile"><div class="gst-val" style="color:var(--blue);">${totalGenes}</div><div class="gst-lbl">Tracked</div></div>
+        <div class="gene-stat-tile"><div class="gst-val" style="color:var(--green);">${activeGenes}</div><div class="gst-lbl">Active ≥50%</div></div>
+        <div class="gene-stat-tile"><div class="gst-val" style="color:var(--gold);">${hotGenes}</div><div class="gst-lbl">Hot ≥55%</div></div>
+        <div class="gene-stat-tile"><div class="gst-val" style="color:var(--purple);">${snpCount}</div><div class="gst-lbl">SNPs</div></div>
+        <div class="gene-stat-tile"><div class="gst-val" style="color:var(--cyan);">${epiTicks.toLocaleString()}</div><div class="gst-lbl">Epi Ticks</div></div>
       </div>
-      ${barsHtml || '<div style="color:var(--dim);font-size:0.55rem;">No expression data available</div>'}
+      ${catChipsHtml}
+      <input type="text" class="gene-search" placeholder="search 502 genes…" value="${search}" data-genome-search />
+      <div class="gene-list">
+        ${barsHtml}
+        ${remaining > 0 ? `<div style="text-align:center;color:var(--dim);font-size:0.5rem;padding:8px 0;letter-spacing:0.1em;">+ ${remaining} more — narrow with search or category</div>` : ''}
+      </div>
     `;
 
-    // Animate bars
+    // Animate allele bars
     requestAnimationFrame(() => {
-      statsEl.querySelectorAll('.gene-bar-fill[data-width]').forEach(el => { el.style.width = el.dataset.width; });
+      statsEl.querySelectorAll('.gene-allele[data-width]').forEach(el => { el.style.width = el.dataset.width; });
     });
 
-    // Epigenetic state
+    // Wire category chips (delegated)
+    statsEl.querySelectorAll('.gene-cat-chip').forEach(chip => {
+      chip.addEventListener('click', () => {
+        GENOME_STATE.category = chip.dataset.cat;
+        if (GENOME_STATE.last) renderGenomeStats(GENOME_STATE.last);
+      });
+    });
+
+    // Wire search input — debounced re-render against last payload
+    const searchEl = statsEl.querySelector('[data-genome-search]');
+    if (searchEl) {
+      let t;
+      searchEl.addEventListener('input', () => {
+        clearTimeout(t);
+        t = setTimeout(() => {
+          GENOME_STATE.search = searchEl.value;
+          if (GENOME_STATE.last) renderGenomeStats(GENOME_STATE.last);
+          // Restore focus + cursor position after re-render
+          const fresh = document.querySelector('[data-genome-search]');
+          if (fresh) { fresh.focus(); fresh.setSelectionRange(fresh.value.length, fresh.value.length); }
+        }, 180);
+      });
+    }
+
+    // Epigenetic state — readable, with tick count + last save
     if (epiEl) {
-      const epiEntries = typeof epigenetic === 'object' ? Object.entries(epigenetic) : [];
-      if (epiEntries.length > 0) {
-        epiEl.innerHTML = epiEntries.map(([key, val]) => {
-          const isActive = val === true || val > 0.5 || val === 'active' || val === 'on';
-          const display = typeof val === 'number' ? `${Math.round(val * 100)}%` : String(val);
-          return `<span class="epi-tag ${isActive ? 'epi-tag--active' : ''}" title="${key}: ${display}">${key.replace(/_/g, ' ')} <span style="opacity:0.6">${display}</span></span>`;
-        }).join('');
+      const ep = epigenetic || {};
+      const ticks = ep.tickCount || ep.ticks || 0;
+      const lastSave = ep.lastSave ? new Date(ep.lastSave) : null;
+      const otherTags = Object.entries(ep).filter(([k]) => k !== 'tickCount' && k !== 'ticks' && k !== 'lastSave');
+      let html = `<div style="display:flex;flex-direction:column;gap:10px;">`;
+      html += `<div style="display:flex;gap:18px;flex-wrap:wrap;align-items:baseline;">
+        <div><div style="font-size:1.4rem;color:var(--cyan);font-variant-numeric:tabular-nums;line-height:1;">${ticks.toLocaleString()}</div><div style="font-size:0.42rem;letter-spacing:0.16em;text-transform:uppercase;color:var(--dim);margin-top:5px;">Epigenetic Ticks</div></div>
+        ${lastSave ? `<div><div style="font-size:0.7rem;color:var(--text);line-height:1;">${lastSave.toLocaleString()}</div><div style="font-size:0.42rem;letter-spacing:0.16em;text-transform:uppercase;color:var(--dim);margin-top:5px;">Last Save</div></div>` : ''}
+        ${d.genomeProfile ? `<div><div style="font-size:0.7rem;color:var(--purple);line-height:1;text-transform:uppercase;letter-spacing:0.08em;">${d.genomeProfile}</div><div style="font-size:0.42rem;letter-spacing:0.16em;text-transform:uppercase;color:var(--dim);margin-top:5px;">Profile</div></div>` : ''}
+      </div>`;
+      if (otherTags.length > 0) {
+        html += '<div>' + otherTags.map(([k, v]) => {
+          const isActive = v === true || (typeof v === 'number' && v > 0.5) || v === 'active' || v === 'on';
+          const display = typeof v === 'number' ? `${Math.round(v * 100)}%` : (typeof v === 'object' ? '' : String(v));
+          return `<span class="epi-tag ${isActive ? 'epi-tag--active' : ''}" title="${k}: ${display}">${k.replace(/_/g, ' ')}${display ? ` <span style="opacity:0.6">${display}</span>` : ''}</span>`;
+        }).join('') + '</div>';
       } else {
-        epiEl.innerHTML = '<span style="color:var(--dim);font-size:0.55rem;">No epigenetic markers detected</span>';
+        html += `<div style="color:var(--dim);font-size:0.55rem;font-style:italic;">Steady state — no anomalous markers.</div>`;
       }
+      html += '</div>';
+      epiEl.innerHTML = html;
     }
   }
 
@@ -2622,21 +2851,49 @@ body {
     }
 
     const EVENT_TYPE_COLORS = {
-      mutation: '#ef5350', expression: '#4fc3f7', adaptation: '#66bb6a',
-      epigenetic: '#ce93d8', snp: '#ffd54f', default: '#4db6ac'
+      cascade_expression: '#ce93d8',
+      mutation: '#ef5350',
+      expression: '#4fc3f7',
+      adaptation: '#66bb6a',
+      epigenetic: '#ce93d8',
+      snp: '#ffd54f',
+      default: '#4db6ac',
     };
 
-    const latest = events.slice(-30).reverse();
+    // Endpoint may return raw rows (gene_id / event_type / detail /
+    // expression_after / created_at) — map those to a friendly shape.
+    // Sort newest first by created_at; ids are not strictly time-ordered.
+    const sorted = [...events].sort((a, b) => {
+      const ta = a.created_at || a.timestamp || a.time || 0;
+      const tb = b.created_at || b.timestamp || b.time || 0;
+      return tb - ta;
+    });
+    const latest = sorted.slice(0, 50).map(ev => {
+      const rawType = (ev.event_type || ev.type || 'unknown').toLowerCase();
+      const time = ev.created_at || ev.timestamp || ev.time || 0;
+      // created_at is unix-seconds in the API; convert if it looks like seconds
+      const ms = (typeof time === 'number' && time < 1e12) ? time * 1000 : time;
+      const t = ms ? new Date(ms) : null;
+      const gene = ev.gene_id || ev.gene || '';
+      const detail = ev.detail || ev.description || ev.desc || ev.message || '';
+      const after = ev.expression_after;
+      const before = ev.expression_before;
+      const delta = (typeof after === 'number' && typeof before === 'number') ? (after - before) : null;
+      return { rawType, t, gene, detail, after, before, delta };
+    });
+
     el.innerHTML = `<div class="genome-events-list">${latest.map(ev => {
-      const type = (ev.type || ev.event_type || 'unknown').toLowerCase();
-      const color = EVENT_TYPE_COLORS[type] || EVENT_TYPE_COLORS.default;
-      const time = ev.timestamp || ev.time || ev.created_at || '';
-      const timeStr = time ? new Date(time).toLocaleTimeString() : '';
-      const desc = ev.description || ev.desc || ev.message || ev.details || JSON.stringify(ev);
-      return `<div class="genome-event-row">
-        <div class="genome-event-time">${timeStr}</div>
-        <div class="genome-event-type" style="background:${color}15;border:1px solid ${color}33;color:${color};">${type}</div>
-        <div class="genome-event-desc">${desc}</div>
+      const color = EVENT_TYPE_COLORS[ev.rawType] || EVENT_TYPE_COLORS.default;
+      const typeLabel = ev.rawType.replace(/_/g, ' ');
+      const timeStr = ev.t ? ev.t.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : '';
+      const dateStr = ev.t ? ev.t.toLocaleDateString([], { month: 'short', day: 'numeric' }) : '';
+      const exprBadge = (typeof ev.after === 'number')
+        ? `<span style="display:inline-block;padding:1px 6px;border-radius:5px;background:rgba(255,213,79,0.1);color:var(--gold);font-size:0.42rem;letter-spacing:0.08em;margin-left:6px;">${ev.after}%</span>`
+        : '';
+      return `<div class="genome-event-row" title="${ev.detail.replace(/"/g,'&quot;')}">
+        <div class="genome-event-time">${dateStr ? `<span style="opacity:0.5;">${dateStr}</span> ` : ''}${timeStr}</div>
+        <div class="genome-event-type" style="background:${color}15;border:1px solid ${color}33;color:${color};">${typeLabel}</div>
+        <div class="genome-event-desc">${ev.gene ? `<strong style="color:var(--text);letter-spacing:0.06em;">${ev.gene}</strong>${exprBadge} ` : ''}${ev.detail || '<span style="opacity:0.5;font-style:italic;">(no detail)</span>'}</div>
       </div>`;
     }).join('')}</div>`;
   }
