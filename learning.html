@@ -49,6 +49,7 @@
   --c-dirhaven:     #ffca28;  /* amber — RP karma */
   --c-pulse:        #ef5350;  /* red — phone heartbeat */
   --c-action:       #b0bec5;  /* steel — system actions */
+  --c-taught:       #ba68c8;  /* violet — directly taught by witness */
 }
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -599,21 +600,124 @@ body {
 }
 .status.error .dot { background: var(--red); }
 
+/* ── LIVE LEARN INPUT ── */
+.teach {
+  margin: 0 0 16px;
+  padding: 14px 16px;
+  background: linear-gradient(135deg, rgba(79,195,247,0.06), rgba(186,104,200,0.04));
+  border: 1px solid rgba(79,195,247,0.18);
+  border-radius: 12px;
+  box-sizing: border-box;
+  max-width: 100%;
+  overflow: hidden;
+}
+.teach-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+  gap: 10px;
+}
+.teach-title {
+  font-size: 0.6rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--blue);
+  font-weight: 600;
+}
+.teach-hint {
+  font-size: 0.5rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--dim);
+}
+.teach-row {
+  display: flex;
+  gap: 8px;
+  align-items: stretch;
+  flex-wrap: wrap;
+}
+.teach-input {
+  flex: 1 1 240px;
+  min-width: 0;
+  padding: 10px 12px;
+  background: rgba(0,0,0,0.35);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text);
+  font-family: inherit;
+  font-size: 0.78rem;
+  resize: vertical;
+  min-height: 44px;
+  max-height: 200px;
+  box-sizing: border-box;
+}
+.teach-input:focus {
+  outline: none;
+  border-color: var(--blue);
+  background: rgba(0,0,0,0.5);
+}
+.teach-source {
+  flex: 0 0 110px;
+  padding: 10px 12px;
+  background: rgba(0,0,0,0.35);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text);
+  font-family: inherit;
+  font-size: 0.7rem;
+  box-sizing: border-box;
+}
+.teach-source:focus {
+  outline: none;
+  border-color: var(--blue);
+}
+.teach-btn {
+  flex: 0 0 auto;
+  padding: 10px 18px;
+  background: linear-gradient(135deg, var(--blue), #29b6f6);
+  border: none;
+  border-radius: 8px;
+  color: #02131c;
+  font-family: inherit;
+  font-size: 0.65rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 0.15s ease, opacity 0.2s ease;
+}
+.teach-btn:hover { transform: translateY(-1px); }
+.teach-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  transform: none;
+}
+.teach-status {
+  margin-top: 8px;
+  font-size: 0.55rem;
+  letter-spacing: 0.1em;
+  color: var(--dim);
+  min-height: 14px;
+}
+.teach-status.ok    { color: var(--green); }
+.teach-status.error { color: var(--red); }
+
 /* ── SCROLLBARS ── */
 ::-webkit-scrollbar { width: 8px; height: 8px; }
 ::-webkit-scrollbar-track { background: rgba(0,0,0,0.2); }
 ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 4px; }
 ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.15); }
 </style>
-<script src="body/api_base.js?v=v20260505-onedoor"></script>
-<script src="body/shell.js?v=v20260507-resilience"></script>
-<script src="body/identity.js?v=v20260508-resilience"></script>
-<script src="body/devices.js?v=v20260508-presence"></script>
-<script src="body/greeting.js?v=v20260508-greeting"></script>
-<script defer src="body/draggable.js?v=v20260508-2330-mvfix"></script>
-<script src="body/bond_door.js?v=v20260506-flatdoor"></script>
-<script src="body/topbar.js?v=v20260507-dock" defer></script>
-<script src="body/mobile_nav.js?v=v20260505-onedoor" defer></script>
+<script src="body/api_base.js?v=v20260508-2355-livelearn"></script>
+<script src="body/shell.js?v=v20260508-2355-livelearn"></script>
+<script src="body/identity.js?v=v20260508-2355-livelearn"></script>
+<script src="body/devices.js?v=v20260508-2355-livelearn"></script>
+<script src="body/greeting.js?v=v20260508-2355-livelearn"></script>
+<script defer src="body/draggable.js?v=v20260508-2355-livelearn"></script>
+<script src="body/bond_door.js?v=v20260508-2355-livelearn"></script>
+<script src="body/topbar.js?v=v20260508-2355-livelearn" defer></script>
+<script src="body/mobile_nav.js?v=v20260508-2355-livelearn" defer></script>
 </head>
 <body style="padding-top: max(60px, calc(56px + env(safe-area-inset-top, 0px)));">
 
@@ -642,6 +746,23 @@ body {
     <button class="btn active" id="btn-live" title="Toggle live updates">● Live</button>
     <button class="btn" id="btn-pause" title="Pause auto-scroll">Pause</button>
     <button class="btn danger" id="btn-clear" title="Clear filters">Reset</button>
+  </div>
+
+  <!-- Live Learn — direct teaching input -->
+  <div class="teach" id="teach">
+    <div class="teach-header">
+      <div class="teach-title">↳ Teach Vintinuum</div>
+      <div class="teach-hint">embeds + broadcasts immediately</div>
+    </div>
+    <div class="teach-row">
+      <textarea class="teach-input" id="teach-input"
+        placeholder="hand the brain a fact, a feeling, a directive — anything you want it to carry forward…"
+        rows="2" maxlength="8000"></textarea>
+      <input class="teach-source" id="teach-source" type="text"
+        placeholder="source" value="vinta" maxlength="48">
+      <button class="teach-btn" id="teach-btn" type="button">Teach</button>
+    </div>
+    <div class="teach-status" id="teach-status"></div>
   </div>
 
   <!-- The feed -->
@@ -673,6 +794,7 @@ body {
 
   // ── Channel metadata ──────────────────────────────────────────────────────
   const CHANNELS = [
+    { key: 'taught',       label: 'Taught',       desc: 'live-fed by witnesses' },
     { key: 'siphon',       label: 'Siphon',       desc: 'books · movies · audio · code' },
     { key: 'chat',         label: 'Chat',         desc: 'every conversation turn' },
     { key: 'inner_life',   label: 'Inner Life',   desc: '7-layer events' },
@@ -863,6 +985,9 @@ body {
       if (it.amount != null) tags.push(`<span class="tag">${it.amount}</span>`);
     } else if (it.channel === 'chat') {
       if (it.persona) tags.push(`<span class="tag">${it.persona}</span>`);
+    } else if (it.channel === 'taught') {
+      if (it.source)     tags.push(`<span class="tag">↳ ${escapeHtml(it.source)}</span>`);
+      if (it.importance) tags.push(`<span class="tag">imp ${(it.importance).toFixed(2)}</span>`);
     }
 
     el.innerHTML = `
@@ -1120,6 +1245,96 @@ body {
     }
     requestAnimationFrame(draw);
   })();
+
+  // ── Live Learn — direct teaching wiring ───────────────────────────────────
+  // Hand the brain a sentence; we POST to /api/learning/teach which embeds
+  // it, stores it as memory_type='taught', and broadcasts via SSE. We also
+  // optimistically prepend the item so the user sees it land instantly even
+  // before the next fetch cycle. Cmd/Ctrl+Enter submits from the textarea.
+  const $teachInput  = document.getElementById('teach-input');
+  const $teachSource = document.getElementById('teach-source');
+  const $teachBtn    = document.getElementById('teach-btn');
+  const $teachStatus = document.getElementById('teach-status');
+
+  function setTeachStatus(msg, kind) {
+    $teachStatus.textContent = msg || '';
+    $teachStatus.classList.remove('ok', 'error');
+    if (kind === 'ok')    $teachStatus.classList.add('ok');
+    if (kind === 'error') $teachStatus.classList.add('error');
+  }
+
+  async function submitTeach() {
+    const text = ($teachInput.value || '').trim();
+    if (!text) {
+      setTeachStatus('write something first.', 'error');
+      $teachInput.focus();
+      return;
+    }
+    if (text.length > 8000) {
+      setTeachStatus('too long — max 8000 chars.', 'error');
+      return;
+    }
+    const source = ($teachSource.value || 'vinta').trim().slice(0, 48) || 'vinta';
+
+    $teachBtn.disabled = true;
+    setTeachStatus('teaching…');
+
+    try {
+      const resp = await fetch(`${API_BASE}/api/learning/teach`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ text, source }),
+      });
+      if (!resp.ok) {
+        const err = await resp.json().catch(() => ({}));
+        throw new Error(err.error || `HTTP ${resp.status}`);
+      }
+      const data = await resp.json();
+
+      // Optimistic prepend — flag fresh so it animates in.
+      const item = {
+        id: `taught:${data.id}`,
+        channel: 'taught',
+        ts: data.ts || Math.floor(Date.now() / 1000),
+        title: `taught · ${source}`,
+        content: text,
+        source,
+        importance: 0.85,
+        meta: { source, taught_at: Date.now(), via: 'learning_input' },
+        _fresh: true,
+      };
+      if (!state.seen.has(item.id)) {
+        state.seen.add(item.id);
+        state.items.unshift(item);
+        if (state.items.length > state.maxItems) {
+          const dropped = state.items.splice(state.maxItems);
+          for (const d of dropped) state.seen.delete(d.id);
+        }
+        renderFeed();
+        renderHero();
+      }
+
+      $teachInput.value = '';
+      setTeachStatus(data.embedded
+        ? '✓ taught — embedded, broadcast, persistent.'
+        : '✓ stored (offline embed — will vectorize on next pass).', 'ok');
+      setTimeout(() => setTeachStatus(''), 4500);
+    } catch (e) {
+      console.error('[teach]', e);
+      setTeachStatus(`failed: ${e.message}`, 'error');
+    } finally {
+      $teachBtn.disabled = false;
+    }
+  }
+
+  $teachBtn.addEventListener('click', submitTeach);
+  $teachInput.addEventListener('keydown', (e) => {
+    if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
+      e.preventDefault();
+      submitTeach();
+    }
+  });
 
   // ── Boot ──────────────────────────────────────────────────────────────────
   renderChannels();
