@@ -145,12 +145,69 @@
         '</section>' +
       '</div>';
 
-    // Tabs — simple active state, real routing later
+    // Tabs — wired 2026-05-08. Previously only toggled is-active and did
+    // nothing on click (Vinta caught it in the screenshot). Each tab now
+    // routes to a real destination:
+    //   • body     → scroll left sidebar to NEUROCHEMISTRY (body readout)
+    //   • memory   → activate MEMORY tab in right sidebar (live feed)
+    //   • genome   → scroll left sidebar to GENETIC EXPRESSION
+    //   • settings → open YOU page (bonded user) OR bond door (not bonded)
+    function _smoothScrollIntoView(el) {
+      if (!el) return;
+      try {
+        // Scroll the SIDEBAR (not the page) — sidebar is the scroll container.
+        const container = root;
+        const top = el.offsetTop - 12;
+        if (typeof container.scrollTo === 'function') {
+          container.scrollTo({ top: Math.max(0, top), behavior: 'smooth' });
+        } else {
+          container.scrollTop = Math.max(0, top);
+        }
+      } catch (_) { /* noop */ }
+    }
+    function _onTabClick(btn) {
+      const which = btn.dataset.tab;
+      // Visual active state stays in this sidebar
+      root.querySelectorAll('.vtn-tab').forEach(b => b.classList.remove('is-active'));
+      btn.classList.add('is-active');
+
+      if (which === 'body') {
+        _smoothScrollIntoView(root.querySelector('.vtn-chem'));
+      } else if (which === 'memory') {
+        // Activate live feed in the right sidebar
+        if (window.SIDEBAR_RIGHT && typeof window.SIDEBAR_RIGHT.setActive === 'function') {
+          window.SIDEBAR_RIGHT.setActive('memory');
+          // On mobile (≤820px) the right sidebar is a bottom-sheet drawer;
+          // open it so the user actually sees what they tapped.
+          const right = document.getElementById('sidebarRight');
+          if (right && window.innerWidth <= 820) right.classList.add('is-open');
+        }
+        _smoothScrollIntoView(root.querySelector('.vtn-chem'));
+      } else if (which === 'genome') {
+        _smoothScrollIntoView(root.querySelector('.vtn-genetics'));
+        // Also poke the right sidebar to GENOME so the live event feed
+        // shows the same content the tile is summarizing.
+        if (window.SIDEBAR_RIGHT && typeof window.SIDEBAR_RIGHT.setActive === 'function') {
+          window.SIDEBAR_RIGHT.setActive('genome');
+        }
+      } else if (which === 'settings') {
+        // Settings = the YOU surface (devices, identity, preferences). If
+        // not bonded yet, open the bond door first — settings are bonded-only.
+        const bonded = (window.SOUL_AUTH && window.SOUL_AUTH.isLoggedIn && window.SOUL_AUTH.isLoggedIn());
+        if (!bonded && window.BOND_DOOR && typeof window.BOND_DOOR.show === 'function') {
+          window.BOND_DOOR.show();
+        } else {
+          // Keep within the same origin so GH Pages routing works
+          location.href = 'you.html';
+        }
+      }
+    }
     root.querySelectorAll('.vtn-tab').forEach(btn => {
-      btn.addEventListener('click', () => {
-        root.querySelectorAll('.vtn-tab').forEach(b => b.classList.remove('is-active'));
-        btn.classList.add('is-active');
-      });
+      // Tooltip already on the markup via title="…"; mirror to aria-label
+      // for screen readers since these are icon-only.
+      const t = btn.getAttribute('title');
+      if (t && !btn.getAttribute('aria-label')) btn.setAttribute('aria-label', t);
+      btn.addEventListener('click', () => _onTabClick(btn));
     });
 
     // Identity — textContent only
