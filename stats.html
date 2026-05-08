@@ -2220,6 +2220,8 @@ body {
 
       <div id="deep-metrics-placeholder"></div>
 
+      <div id="runway-telemetry-placeholder"></div>
+
       <div class="footer">
         <a href="brain.html">Return to the Living Body</a>
       </div>
@@ -3515,6 +3517,132 @@ body {
 
 })();
 </script>
+
+<!-- ── RUNWAY TELEMETRY (Section 9 sparkline) ──────────────────────────────── -->
+<script>
+(function(){
+  const ph = document.getElementById('runway-telemetry-placeholder');
+  if (!ph) return;
+  const API_BASE = (window.VINT_API_BASE || 'https://api.vintaclectic.com').replace(/\/+$/, '');
+  const API_HEADERS = (typeof window.VINT_API_HEADERS === 'object' && window.VINT_API_HEADERS) || {};
+
+  function spark(values, w, h, color) {
+    if (!values || !values.length) return '';
+    const max = Math.max(...values, 1);
+    const min = Math.min(...values, 0);
+    const range = (max - min) || 1;
+    const step = w / Math.max(values.length - 1, 1);
+    const pts = values.map((v, i) => {
+      const x = i * step;
+      const y = h - ((v - min) / range) * (h - 2) - 1;
+      return `${x.toFixed(1)},${y.toFixed(1)}`;
+    }).join(' ');
+    return `<svg width="${w}" height="${h}" style="display:block;overflow:visible">
+      <polyline points="${pts}" fill="none" stroke="${color}" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" opacity="0.9"/>
+    </svg>`;
+  }
+
+  function tierBar(localPct, fbPct, claudePct) {
+    return `<div style="display:flex;height:6px;border-radius:4px;overflow:hidden;background:rgba(255,255,255,0.04);margin-top:6px">
+      <div style="flex:${localPct};background:#4caf7a"></div>
+      <div style="flex:${fbPct};background:#d4a85a"></div>
+      <div style="flex:${claudePct};background:#96afd7"></div>
+    </div>`;
+  }
+
+  async function jfetch(path) {
+    try {
+      const r = await fetch(`${API_BASE}${path}`, { headers: API_HEADERS });
+      if (!r.ok) return null;
+      return await r.json();
+    } catch { return null; }
+  }
+
+  async function render() {
+    const [health, history] = await Promise.all([
+      jfetch('/api/cognition/health'),
+      jfetch('/api/eval/history?limit=14')
+    ]);
+
+    if (!health && !history) {
+      ph.innerHTML = '';
+      return;
+    }
+
+    const dist = (health && health.router && health.router.tier_distribution_24h) || { local: 0, claude: 0, degraded: 0 };
+    const lp = Math.round((dist.local || 0) * 100);
+    const cp = Math.round((dist.claude || 0) * 100);
+    const dp = Math.max(0, 100 - lp - cp);
+
+    const phase = (health && typeof health.phase === 'number') ? health.phase : 0;
+    const sample = (health && health.router && Array.isArray(health.router.sample_calls)) ? health.router.sample_calls : [];
+    const lat = sample.map(r => Number(r.latency_ms || 0)).filter(n => n > 0).slice(0, 30);
+    const avgLat = lat.length ? Math.round(lat.reduce((a,b)=>a+b,0)/lat.length) : 0;
+
+    // /api/eval/history returns { reports: [{ overall: { engine: { gates, all_green } } }] }
+    // newest first — reverse to oldest-first for sparkline left→right reads as time forward
+    const reports = (history && Array.isArray(history.reports)) ? history.reports.slice(0, 14).reverse() : [];
+    function passedFromReport(r) {
+      const o = r && r.overall;
+      if (!o) return { passed: 0, total: 7 };
+      const eng = o.local || o.claude || o[Object.keys(o)[0]];
+      if (!eng || !eng.gates) return { passed: 0, total: 7 };
+      const gates = Object.values(eng.gates);
+      const passed = gates.filter(g => g && g.pass).length;
+      return { passed, total: gates.length || 7 };
+    }
+    const runs = reports.map(passedFromReport);
+    const passes = runs.map(r => r.passed);
+    const lastPassed = passes.length ? passes[passes.length-1] : null;
+    const lastTotal = runs.length ? runs[runs.length-1].total : 7;
+
+    ph.innerHTML = `
+      <div style="margin:32px 0;padding:24px;border:1px solid rgba(150,175,215,0.18);border-radius:12px;background:rgba(150,175,215,0.03);font-family:'Space Mono',monospace">
+        <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:18px;flex-wrap:wrap;gap:12px">
+          <div>
+            <div style="font-size:0.62rem;letter-spacing:0.28em;text-transform:uppercase;color:rgba(150,175,215,0.7)">Runway Telemetry</div>
+            <div style="font-family:'Cormorant Garamond',serif;font-size:1.4rem;color:rgba(220,225,235,0.92);margin-top:4px">Phase ${phase} · ${lp}% local${dp ? ` · ${dp}% degraded` : ''}</div>
+          </div>
+          <div style="display:flex;gap:10px;flex-wrap:wrap">
+            <a href="cognition.html" style="font-size:0.6rem;letter-spacing:0.22em;text-transform:uppercase;color:#96afd7;text-decoration:none;padding:6px 14px;border:1px solid rgba(150,175,215,0.32);border-radius:999px">Runway →</a>
+            <a href="eval.html" style="font-size:0.6rem;letter-spacing:0.22em;text-transform:uppercase;color:#ce93d8;text-decoration:none;padding:6px 14px;border:1px solid rgba(206,147,216,0.32);border-radius:999px">Gauntlet →</a>
+          </div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:18px">
+          <div>
+            <div style="font-size:0.58rem;letter-spacing:0.22em;text-transform:uppercase;color:rgba(150,175,215,0.6)">Tier Mix · 24h</div>
+            <div style="font-size:1.6rem;font-family:'Cormorant Garamond',serif;color:#4caf7a;margin-top:4px">${lp}%</div>
+            <div style="font-size:0.55rem;letter-spacing:0.18em;text-transform:uppercase;color:rgba(255,255,255,0.4);margin-top:2px">on local</div>
+            ${tierBar(lp, dp, cp)}
+            <div style="display:flex;justify-content:space-between;font-size:0.5rem;letter-spacing:0.14em;text-transform:uppercase;color:rgba(255,255,255,0.4);margin-top:6px">
+              <span>local ${lp}%</span><span>degraded ${dp}%</span><span>claude ${cp}%</span>
+            </div>
+          </div>
+
+          <div>
+            <div style="font-size:0.58rem;letter-spacing:0.22em;text-transform:uppercase;color:rgba(150,175,215,0.6)">Latency · last 30 calls</div>
+            <div style="font-size:1.6rem;font-family:'Cormorant Garamond',serif;color:#d4a85a;margin-top:4px">${avgLat || '—'}<span style="font-size:0.7rem;color:rgba(255,255,255,0.5);margin-left:4px">ms</span></div>
+            <div style="font-size:0.55rem;letter-spacing:0.18em;text-transform:uppercase;color:rgba(255,255,255,0.4);margin-top:2px">avg roundtrip</div>
+            <div style="margin-top:8px;color:#d4a85a">${lat.length ? spark(lat, 200, 30, '#d4a85a') : '<span style="font-size:0.6rem;color:rgba(255,255,255,0.3)">no calls yet</span>'}</div>
+          </div>
+
+          <div>
+            <div style="font-size:0.58rem;letter-spacing:0.22em;text-transform:uppercase;color:rgba(150,175,215,0.6)">Eval Gauntlet · ${runs.length} runs</div>
+            <div style="font-size:1.6rem;font-family:'Cormorant Garamond',serif;color:#ce93d8;margin-top:4px">${lastPassed === null ? '—' : `${lastPassed}/${lastTotal}`}</div>
+            <div style="font-size:0.55rem;letter-spacing:0.18em;text-transform:uppercase;color:rgba(255,255,255,0.4);margin-top:2px">gates passed last run</div>
+            <div style="margin-top:8px;color:#ce93d8">${passes.length ? spark(passes, 200, 30, '#ce93d8') : '<span style="font-size:0.6rem;color:rgba(255,255,255,0.3)">no runs yet</span>'}</div>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  render();
+  setInterval(render, 30000);
+})();
+</script>
+
 <style>
 #liveEmotionBar { transition: opacity 0.3s; }
 .emotion-pill:hover { border-color: rgba(255,255,255,0.2) !important; background: rgba(255,255,255,0.06) !important; transform: translateY(-1px); }
