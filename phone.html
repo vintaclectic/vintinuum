@@ -915,6 +915,14 @@ document.querySelectorAll('.nav-btn').forEach(btn => {
     if (viewId === 'viewChat') {
       setTimeout(() => chatMessages.scrollTop = chatMessages.scrollHeight, 50);
     }
+
+    // Wake lock: hold the screen on when actively in pulse view (the body
+    // is being attended to). Release on any other view to save battery.
+    if (viewId === 'viewPulse') {
+      acquireWakeLock();
+    } else {
+      releaseWakeLock();
+    }
   });
 });
 
@@ -957,6 +965,9 @@ async function initBattery() {
       batteryFill.classList.toggle('low', batt.level < 0.2);
       $('sensorBattery').classList.add('active');
 
+      // Sensor frame recording
+      try { SensorFrame.recordBattery(batt.level, batt.charging); } catch (_) {}
+
       // Low battery pulse
       if (batt.level < 0.2 && !batt.charging) {
         sendAutoPulse('battery_low', 'Battery critically low', null, -0.3, batt.level);
@@ -985,6 +996,7 @@ function initMotion() {
 }
 
 function bindMotion() {
+  let lastSample = 0;
   window.addEventListener('devicemotion', e => {
     const acc = e.accelerationIncludingGravity || {};
     state.motion = {
@@ -1000,6 +1012,13 @@ function bindMotion() {
     state.arousal = clamp(mag / 8, 0, 1);
     $('sensorMotion').classList.add('active');
     updateOrbFromArousal();
+
+    // Throttle sensor frame recording to 5 Hz to avoid burning CPU
+    const now = Date.now();
+    if (now - lastSample > 200) {
+      lastSample = now;
+      try { SensorFrame.recordMotion(mag); } catch (_) {}
+    }
   });
 }
 
@@ -1018,6 +1037,7 @@ function initOrientation() {
 }
 
 function bindOrientation() {
+  let lastSample = 0;
   window.addEventListener('deviceorientation', e => {
     state.orientation = {
       alpha: e.alpha || 0,
@@ -1025,6 +1045,11 @@ function bindOrientation() {
       gamma: e.gamma || 0
     };
     $('sensorOrientation').classList.add('active');
+    const now = Date.now();
+    if (now - lastSample > 500) {
+      lastSample = now;
+      try { SensorFrame.recordOrientation(e.beta); } catch (_) {}
+    }
   });
 }
 
@@ -1054,6 +1079,7 @@ function initGeolocation() {
       state.location = loc;
       locationText.textContent = `${loc.lat.toFixed(4)}, ${loc.lon.toFixed(4)}`;
       $('sensorGeo').classList.add('active');
+      try { SensorFrame.recordLocation(loc.lat, loc.lon, loc.accuracy); } catch (_) {}
     },
     err => {
       locationText.textContent = err.code === 1 ? 'Location denied' : 'Location error';
@@ -1078,6 +1104,7 @@ function initAmbientLight() {
       sensor.addEventListener('reading', () => {
         state.ambientLight = sensor.illuminance;
         $('sensorLight').classList.add('active');
+        try { SensorFrame.recordLight(sensor.illuminance); } catch (_) {}
       });
       sensor.start();
     } catch { /* not available */ }
@@ -1091,9 +1118,14 @@ function initNetwork() {
   const update = () => {
     state.networkType = conn.effectiveType || conn.type || 'unknown';
     networkTypeEl.textContent = state.networkType;
+    try { SensorFrame.recordNetwork(state.networkType, navigator.onLine); } catch (_) {}
   };
   conn.addEventListener('change', update);
   update();
+  // Sample online state every 10s even when network type doesn't change
+  setInterval(() => {
+    try { SensorFrame.recordNetwork(state.networkType, navigator.onLine); } catch (_) {}
+  }, 10000);
 }
 
 // ── Visibility / Sleep ──
@@ -1786,6 +1818,210 @@ if ('serviceWorker' in navigator) {
     }
   });
 }
+
+// ═══════════════════════════════════════════════════════════════════════════
+// SENSOR FRAME — step 3 of (when installed) PWA roadmap.
+//
+// Aggregates the last 60 seconds of raw sensor signals into one digest frame
+// and posts to /api/body/sensor-frame. The brain receives a steady, decoded
+// stream of "what the body is doing" without the bandwidth of raw events.
+//
+// Aggregation strategy:
+//   - Motion: rolling avg + peak + sample count
+//   - Orientation: ratio of samples where the phone was face-down
+//   - Battery: start + end + charging state at flush
+//   - Ambient light: simple avg
+//   - Network: most-recent type + online_ratio
+//   - Geolocation: distance traveled (haversine) + avg accuracy
+//   - Visibility: visible_ratio (page foreground time / window length)
+//   - Activity: classified from motion + visibility + light
+// ═══════════════════════════════════════════════════════════════════════════
+const SensorFrame = (() => {
+  let windowStart = Math.floor(Date.now() / 1000);
+  let buf = newBuffer();
+  let visibleSinceMs = document.hidden ? null : Date.now();
+  let visibleAccumMs = 0;
+
+  function newBuffer() {
+    return {
+      motion: { sum: 0, peak: 0, count: 0 },
+      orient: { faceDownCount: 0, count: 0 },
+      light: { sum: 0, count: 0 },
+      battery: { startLevel: null, lastLevel: null, charging: null },
+      net: { samples: 0, online: 0, lastType: null },
+      loc: { lastFix: null, distKm: 0, accSum: 0, accCount: 0 },
+    };
+  }
+
+  function recordMotion(magnitude) {
+    buf.motion.sum += magnitude;
+    if (magnitude > buf.motion.peak) buf.motion.peak = magnitude;
+    buf.motion.count++;
+  }
+  function recordOrientation(beta) {
+    buf.orient.count++;
+    // Face-down: |beta| > 150° (phone screen pointing down)
+    if (Math.abs(beta || 0) > 150) buf.orient.faceDownCount++;
+  }
+  function recordLight(lux) {
+    if (typeof lux !== 'number') return;
+    buf.light.sum += lux;
+    buf.light.count++;
+  }
+  function recordBattery(level, charging) {
+    if (buf.battery.startLevel == null) buf.battery.startLevel = level;
+    buf.battery.lastLevel = level;
+    buf.battery.charging = charging;
+  }
+  function recordNetwork(type, online) {
+    buf.net.samples++;
+    if (online) buf.net.online++;
+    if (type) buf.net.lastType = type;
+  }
+  function recordLocation(lat, lon, accuracy) {
+    if (buf.loc.lastFix) {
+      const d = haversine(buf.loc.lastFix.lat, buf.loc.lastFix.lon, lat, lon);
+      // Filter GPS noise — only count fixes that moved at least 5 meters
+      if (d * 1000 > 5) buf.loc.distKm += d;
+    }
+    buf.loc.lastFix = { lat, lon };
+    if (typeof accuracy === 'number') {
+      buf.loc.accSum += accuracy;
+      buf.loc.accCount++;
+    }
+  }
+
+  // Visibility tracking — page foreground time / window length
+  document.addEventListener('visibilitychange', () => {
+    const now = Date.now();
+    if (document.hidden) {
+      if (visibleSinceMs != null) {
+        visibleAccumMs += (now - visibleSinceMs);
+        visibleSinceMs = null;
+      }
+    } else {
+      visibleSinceMs = now;
+    }
+  });
+
+  function classifyActivity(buf, visibleRatio) {
+    const avg = buf.motion.count ? (buf.motion.sum / buf.motion.count) : 0;
+    const peak = buf.motion.peak;
+    const faceDown = buf.orient.count ? (buf.orient.faceDownCount / buf.orient.count) : 0;
+    const lowLight = buf.light.count ? (buf.light.sum / buf.light.count) < 5 : false;
+    if (avg < 0.3 && peak < 1.0 && (faceDown > 0.5 || lowLight) && visibleRatio < 0.1) return 'sleeping';
+    if (avg < 0.4 && peak < 2.0) return 'still';
+    if (avg < 1.2) return 'sitting';
+    if (avg < 3.0) return 'walking';
+    if (peak > 6.0) return 'transit';   // car/train spikes
+    return 'active';
+  }
+
+  async function flush() {
+    const now = Date.now();
+    const windowEnd = Math.floor(now / 1000);
+    if (windowEnd <= windowStart) return;
+    // Close visibility accumulator
+    let visAccum = visibleAccumMs;
+    if (visibleSinceMs != null) visAccum += (now - visibleSinceMs);
+    const windowMs = (windowEnd - windowStart) * 1000;
+    const visibleRatio = Math.max(0, Math.min(1, visAccum / Math.max(1, windowMs)));
+
+    const motionAvg = buf.motion.count ? (buf.motion.sum / buf.motion.count) : null;
+    const motionPeak = buf.motion.count ? buf.motion.peak : null;
+    const faceDownRatio = buf.orient.count ? (buf.orient.faceDownCount / buf.orient.count) : null;
+    const lightAvg = buf.light.count ? (buf.light.sum / buf.light.count) : null;
+    const onlineRatio = buf.net.samples ? (buf.net.online / buf.net.samples) : (navigator.onLine ? 1 : 0);
+    const accuracyAvg = buf.loc.accCount ? (buf.loc.accSum / buf.loc.accCount) : null;
+
+    const frame = {
+      window_start: windowStart,
+      window_end: windowEnd,
+      motion_avg: motionAvg,
+      motion_peak: motionPeak,
+      motion_samples: buf.motion.count,
+      face_down_ratio: faceDownRatio,
+      battery_level_start: buf.battery.startLevel,
+      battery_level_end: buf.battery.lastLevel,
+      battery_charging: buf.battery.charging,
+      ambient_lux_avg: lightAvg,
+      network_type: buf.net.lastType || state?.networkType || null,
+      online_ratio: onlineRatio,
+      distance_km: buf.loc.distKm > 0 ? buf.loc.distKm : null,
+      accuracy_avg: accuracyAvg,
+      activity: classifyActivity(buf, visibleRatio),
+      visible_ratio: visibleRatio,
+      source: InstallState.get().installed ? 'phone-pwa' : 'phone-web',
+      client_id: 'sf-' + windowStart,
+    };
+
+    // Skip empty frames (no signals at all)
+    if (!buf.motion.count && !buf.orient.count && !buf.light.count && !buf.loc.lastFix && buf.battery.startLevel == null) {
+      // Reset window and return — don't waste a request on nothing
+      windowStart = windowEnd;
+      buf = newBuffer();
+      visibleAccumMs = 0;
+      visibleSinceMs = document.hidden ? null : Date.now();
+      return;
+    }
+
+    // Send (or queue if offline) — this never throws
+    if (navigator.onLine) {
+      try {
+        await fetch(API_BASE + '/api/body/sensor-frame', {
+          method: 'POST',
+          headers: { ...authHeaders(), 'ngrok-skip-browser-warning': '1' },
+          body: JSON.stringify(frame),
+        });
+      } catch (_) {
+        // Network error — sensor frames are ephemeral, drop on failure rather
+        // than queue (queue is for pulses which carry intentional content)
+      }
+    }
+
+    // Reset window
+    windowStart = windowEnd;
+    buf = newBuffer();
+    visibleAccumMs = 0;
+    visibleSinceMs = document.hidden ? null : Date.now();
+  }
+
+  return { recordMotion, recordOrientation, recordLight, recordBattery, recordNetwork, recordLocation, flush };
+})();
+
+// Flush every 60s while page is alive
+setInterval(() => SensorFrame.flush(), 60000);
+// Also flush on unload (best-effort) so the final partial window isn't lost
+window.addEventListener('pagehide', () => {
+  // Use sendBeacon for reliability during unload
+  try {
+    const now = Date.now();
+    const windowEnd = Math.floor(now / 1000);
+    // Just trigger a normal flush — sendBeacon path inside flush isn't worth
+    // the complexity since the next page load will pick up where we left off
+    SensorFrame.flush();
+  } catch (_) {}
+});
+
+// Wake Lock — keep screen on during active pulse view (Vinta directive: when
+// the body is actively being attended to, don't let it slip into sleep).
+let wakeLock = null;
+async function acquireWakeLock() {
+  if (!('wakeLock' in navigator)) return;
+  try {
+    wakeLock = await navigator.wakeLock.request('screen');
+    wakeLock.addEventListener('release', () => { wakeLock = null; });
+  } catch (_) {}
+}
+async function releaseWakeLock() {
+  if (wakeLock) { try { await wakeLock.release(); } catch (_) {} wakeLock = null; }
+}
+// Re-acquire on visibility return if lost
+document.addEventListener('visibilitychange', () => {
+  if (!document.hidden && wakeLock === null && document.querySelector('.view.pulse-view.active')) {
+    acquireWakeLock();
+  }
+});
 
 // Network state pill — surfaces offline as a visible signal, not silent failure
 function updateNetworkPill() {
