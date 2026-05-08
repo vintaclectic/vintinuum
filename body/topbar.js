@@ -123,20 +123,41 @@
     // at any breakpoint. Tighter letter-spacing (0.02em desktop / 0.06em
     // mobile) than the legacy in-flow header (0.12em) so the wordmark
     // fits without conditional hide.
-    const brand = document.createElement('div');
+    // Brand is now an <a> — clicking the logo or wordmark always routes
+    // to brain.html (the home of the body). pointer-events re-enabled
+    // for the link itself; child elements stay aria-hidden.
+    const brand = document.createElement('a');
     brand.id = 'topBrand';
-    brand.style.cssText = 'justify-self:center;display:flex;align-items:center;gap:10px;pointer-events:none;flex-shrink:0;';
+    brand.href = 'brain.html';
+    brand.title = 'Vintinuum — return to brain';
+    brand.setAttribute('aria-label', 'Vintinuum home');
+    brand.style.cssText = 'justify-self:center;display:flex;align-items:center;gap:10px;pointer-events:auto;flex-shrink:0;text-decoration:none;cursor:pointer;-webkit-tap-highlight-color:transparent;';
+    // If we're already on brain.html, the link is a no-op anchor — but
+    // we still allow click for the visual feedback. data-draggable=false
+    // so the global draggable system doesn't hijack the click.
+    brand.setAttribute('data-draggable', 'false');
     const brandImg = document.createElement('img');
     brandImg.src = 'branding/vintinuum/favicon/favicon.svg';
     brandImg.alt = '';
     brandImg.setAttribute('aria-hidden', 'true');
-    brandImg.style.cssText = 'width:24px;height:24px;filter:drop-shadow(0 0 10px rgba(79,195,247,0.36));animation:brandPulse 4.8s ease-in-out infinite;flex-shrink:0;';
+    brandImg.style.cssText = 'width:24px;height:24px;filter:drop-shadow(0 0 10px rgba(79,195,247,0.36));animation:brandPulse 4.8s ease-in-out infinite;flex-shrink:0;pointer-events:none;';
     const brandWord = document.createElement('h1');
     brandWord.id = 'topBrandWord';
     brandWord.textContent = 'Vintinuum';
-    brandWord.style.cssText = "margin:0;font-family:'Cormorant Garamond',serif;font-style:italic;font-weight:300;font-size:1.4rem;letter-spacing:0.02em;background:linear-gradient(130deg,#80deea,#ce93d8,#ffd54f);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;line-height:1;white-space:nowrap;";
+    brandWord.style.cssText = "margin:0;font-family:'Cormorant Garamond',serif;font-style:italic;font-weight:300;font-size:1.4rem;letter-spacing:0.02em;background:linear-gradient(130deg,#80deea,#ce93d8,#ffd54f);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;line-height:1;white-space:nowrap;pointer-events:none;";
     brand.appendChild(brandImg);
     brand.appendChild(brandWord);
+    // Belt-and-suspenders: explicit click handler in case any ancestor
+    // calls preventDefault on anchor navigation.
+    brand.addEventListener('click', (e) => {
+      // If already on brain.html, scroll to top instead of reloading.
+      const here = (location.pathname || '').toLowerCase();
+      if (here.endsWith('/brain.html') || here.endsWith('/') || here === '/vintinuum/' || here === '/vintinuum') {
+        e.preventDefault();
+        try { window.scrollTo({ top: 0, behavior: 'smooth' }); } catch (_) { window.scrollTo(0, 0); }
+      }
+      // Otherwise let the anchor navigate naturally.
+    });
 
     // RIGHT cluster (lore + menu)
     const right = document.createElement('div');
