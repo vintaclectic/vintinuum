@@ -182,10 +182,47 @@ body {
 }
 .savings .note { font-size: 0.55rem; color: var(--dimmer); margin-top: 6px; }
 
+/* archive panel — live retrievals from dirhaven mirror */
+.archive {
+  background: var(--panel); border: 1px solid var(--border); border-radius: 12px;
+  padding: 14px 18px; margin-bottom: 22px;
+}
+.archive h3 {
+  font-family: 'Cormorant Garamond', serif; font-style: italic; font-weight: 400;
+  font-size: 1rem; color: var(--text); margin-bottom: 4px; letter-spacing: 0.04em;
+}
+.archive .sub { font-size: 0.55rem; color: var(--dimmer); margin-bottom: 12px; letter-spacing: 0.12em; text-transform: uppercase; }
+.archive-status {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 8px; margin-bottom: 12px;
+}
+.archive-stat {
+  background: rgba(255,255,255,0.02); border: 1px solid var(--border); border-radius: 8px;
+  padding: 8px 12px;
+}
+.archive-stat .k { font-size: 0.5rem; letter-spacing: 0.18em; text-transform: uppercase; color: var(--dim); }
+.archive-stat .v { font-family: 'Space Mono', monospace; font-weight: 700; color: var(--text); font-size: 0.85rem; margin-top: 2px; }
+.archive-stat .v.green { color: var(--green); }
+.archive-stat .v.amber { color: var(--amber); }
+.archive-list { display: flex; flex-direction: column; gap: 6px; }
+.archive-row {
+  display: grid; grid-template-columns: 80px 1fr 60px 60px;
+  gap: 10px; align-items: center;
+  font-size: 0.6rem; padding: 6px 8px; border-radius: 6px;
+  background: rgba(255,255,255,0.02); color: var(--dim);
+}
+.archive-row .at { color: var(--dimmer); font-size: 0.55rem; }
+.archive-row .q { color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.archive-row .count { text-align: right; font-family: 'Space Mono', monospace; color: var(--green); }
+.archive-row .lat { text-align: right; color: var(--dim); }
+.archive-row.zero .count { color: var(--dimmer); }
+
 @media (max-width: 720px) {
   .ladder { grid-template-columns: repeat(3, 1fr); }
   .decision-row { grid-template-columns: 70px 1fr 70px; }
   .decision-row .at, .decision-row .latency { display: none; }
+  .archive-row { grid-template-columns: 1fr 50px; }
+  .archive-row .at, .archive-row .lat { display: none; }
 }
 </style>
 </head>
@@ -222,6 +259,13 @@ body {
   <div class="decisions">
     <h3>Recent routing decisions</h3>
     <div class="decision-list" id="decision-list"></div>
+  </div>
+
+  <div class="archive">
+    <h3>Archive recall · dirhaven bridge</h3>
+    <div class="sub">real FTS5 hits injected into the system prompt when intent fires</div>
+    <div class="archive-status" id="archive-status"></div>
+    <div class="archive-list" id="archive-list"></div>
   </div>
 </div>
 
@@ -365,12 +409,89 @@ body {
     }
   }
 
+  function fmtBytes(n) {
+    if (!n || n < 1024) return (n || 0) + 'B';
+    if (n < 1024 * 1024) return (n / 1024).toFixed(1) + 'KB';
+    if (n < 1024 * 1024 * 1024) return (n / 1024 / 1024).toFixed(1) + 'MB';
+    return (n / 1024 / 1024 / 1024).toFixed(2) + 'GB';
+  }
+  function fmtAge(ms) {
+    if (!ms) return '—';
+    const s = Math.floor(ms / 1000);
+    if (s < 60) return s + 's';
+    if (s < 3600) return Math.floor(s / 60) + 'm';
+    if (s < 86400) return Math.floor(s / 3600) + 'h';
+    return Math.floor(s / 86400) + 'd';
+  }
+
+  function paintArchive(snap, archStatus) {
+    const $stat = document.getElementById('archive-status');
+    const $list = document.getElementById('archive-list');
+    $stat.innerHTML = '';
+    $list.innerHTML = '';
+
+    const arch = (snap && snap.archive) || {};
+    const mirror = (archStatus && archStatus.mirror) || {};
+    const stats = (archStatus && archStatus.stats) || {};
+
+    // status tiles
+    const loaded = !!arch.bridge_loaded;
+    const usingMirror = !!mirror.using_mirror;
+    const totalFiles = stats.total_files || 0;
+    const totalDirs = stats.total_dirs || 0;
+    const mirrorAge = mirror.mirror_mtime ? (Date.now() - new Date(mirror.mirror_mtime).getTime()) : null;
+
+    const tiles = [
+      { k: 'bridge', v: loaded ? 'loaded' : 'off', cls: loaded ? 'green' : '' },
+      { k: 'source', v: usingMirror ? 'local mirror' : 'live D:', cls: usingMirror ? 'green' : 'amber' },
+      { k: 'mirror size', v: mirror.mirror_size_bytes ? fmtBytes(mirror.mirror_size_bytes) : '—', cls: '' },
+      { k: 'mirror age', v: fmtAge(mirrorAge), cls: '' },
+      { k: 'files indexed', v: totalFiles ? totalFiles.toLocaleString() : '—', cls: '' },
+      { k: 'dirs indexed', v: totalDirs ? totalDirs.toLocaleString() : '—', cls: '' },
+      { k: 'hits · 24h', v: arch.hits_in_window != null ? String(arch.hits_in_window) : '—', cls: arch.hits_in_window > 0 ? 'green' : '' },
+    ];
+    for (const t of tiles) {
+      const div = document.createElement('div');
+      div.className = 'archive-stat';
+      div.innerHTML = `<div class="k">${t.k}</div><div class="v ${t.cls}">${t.v}</div>`;
+      $stat.appendChild(div);
+    }
+
+    // recent retrievals — prefer archive.recent (router-side injections),
+    // fall back to /api/archive/status recent (direct UI hits) when empty.
+    let rows = Array.isArray(arch.recent) ? arch.recent.slice(0, 10) : [];
+    if (rows.length === 0 && archStatus && Array.isArray(archStatus.recent)) {
+      rows = archStatus.recent.slice(0, 10);
+    }
+    if (rows.length === 0) {
+      const div = document.createElement('div');
+      div.className = 'archive-row zero';
+      div.innerHTML = '<div class="at">—</div><div class="q">no archive queries yet — ask the brain "do you have X in the archive?"</div><div class="count">—</div><div class="lat">—</div>';
+      $list.appendChild(div);
+      return;
+    }
+    for (const r of rows) {
+      const at = r.at || r.ts; const t = at ? new Date(at).toLocaleTimeString() : '—';
+      const q = (r.q || '—').slice(0, 80);
+      const c = (r.count != null) ? r.count : 0;
+      const lat = (r.latency_ms != null) ? r.latency_ms + 'ms' : '—';
+      const div = document.createElement('div');
+      div.className = 'archive-row' + (c > 0 ? '' : ' zero');
+      div.innerHTML = `<div class="at">${t}</div><div class="q">${q}</div><div class="count">${c} hit${c === 1 ? '' : 's'}</div><div class="lat">${lat}</div>`;
+      $list.appendChild(div);
+    }
+  }
+
   async function refresh() {
     try {
-      const r = await fetch(API_BASE + '/api/cognition/health', { credentials: 'omit' });
-      const j = await r.json();
+      const [r1, r2] = await Promise.all([
+        fetch(API_BASE + '/api/cognition/health', { credentials: 'omit' }).then(r => r.json()).catch(() => null),
+        fetch(API_BASE + '/api/archive/status',   { credentials: 'omit' }).then(r => r.json()).catch(() => null),
+      ]);
+      const j = r1;
       if (!j || !j.ok) {
         paintLadder(0);
+        paintArchive({}, r2 || {});
         return;
       }
       paintLadder(typeof j.phase === 'number' ? j.phase : 0);
@@ -378,6 +499,7 @@ body {
       paintTiers(j);
       paintDecisions(j);
       paintSavings(j);
+      paintArchive(j, r2 || {});
     } catch (e) {
       console.warn('cognition refresh failed', e);
       paintLadder(0);
