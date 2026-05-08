@@ -2,7 +2,7 @@
 // v2.0 — Background sync + periodic sync for Android body sensors
 // Caches the phone shell for offline, proxies API calls network-first.
 
-const CACHE_NAME = 'vint-phone-v2';
+const CACHE_NAME = 'vint-phone-v3';
 const SYNC_TAG = 'vint-body-sync';
 const PERIODIC_SYNC_TAG = 'vint-periodic-pulse';
 
@@ -94,6 +94,8 @@ self.addEventListener('sync', e => {
 async function replaySyncQueue() {
   const cache = await caches.open('vint-sync-queue');
   const keys = await cache.keys();
+  let drained = 0;
+  let remaining = keys.length;
   for (const key of keys) {
     try {
       const resp = await cache.match(key);
@@ -111,11 +113,29 @@ async function replaySyncQueue() {
       });
       if (result.ok) {
         await cache.delete(key);
+        drained++;
+        remaining--;
       }
     } catch (_) {
       // Leave in queue for next sync opportunity
     }
   }
+  // Tell every open client what just happened so they can update their badge
+  try {
+    const cs = await self.clients.matchAll({ type: 'window' });
+    for (const c of cs) {
+      c.postMessage({ type: 'SYNC_REPLAY_RESULT', drained, remaining });
+    }
+  } catch (_) {}
+}
+
+// Allow page to query current queue depth on demand
+async function getQueueDepth() {
+  try {
+    const cache = await caches.open('vint-sync-queue');
+    const keys = await cache.keys();
+    return keys.length;
+  } catch (_) { return 0; }
 }
 
 // ─── Periodic Background Sync ────────────────────────────────────────────────
@@ -185,7 +205,8 @@ self.addEventListener('notificationclick', e => {
 });
 
 // ─── Message handler ──────────────────────────────────────────────────────────
-// Phone page can save API base URL for periodic sync use
+// Phone page can save API base URL for periodic sync use, query queue depth,
+// or force a manual replay (e.g. when network returns and we want immediate flush)
 self.addEventListener('message', async e => {
   if (e.data?.type === 'SAVE_API_BASE') {
     try {
@@ -194,5 +215,12 @@ self.addEventListener('message', async e => {
         headers: { 'Content-Type': 'application/json' }
       }));
     } catch (_) {}
+  } else if (e.data?.type === 'QUEUE_DEPTH_QUERY') {
+    const depth = await getQueueDepth();
+    if (e.source && e.source.postMessage) {
+      e.source.postMessage({ type: 'QUEUE_DEPTH_RESULT', depth });
+    }
+  } else if (e.data?.type === 'FORCE_REPLAY') {
+    await replaySyncQueue();
   }
 });

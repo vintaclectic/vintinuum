@@ -117,6 +117,11 @@ html, body {
   color: var(--red);
   animation: statusPillPulse 1.6s ease-in-out infinite;
 }
+.status-pill--queued {
+  border-color: var(--dopamine);
+  background: rgba(251, 191, 36, 0.12);
+  color: var(--dopamine);
+}
 @keyframes statusPillPulse {
   0%, 100% { opacity: 0.85; }
   50% { opacity: 1; }
@@ -663,6 +668,7 @@ input[type="range"]::-moz-range-thumb {
     </div>
     <div class="status-right">
       <span class="status-pill" id="installPill" hidden>PWA</span>
+      <span class="status-pill status-pill--queued" id="queuePill" hidden>0 QUEUED</span>
       <span class="status-pill status-pill--warn" id="netPill" hidden>OFFLINE</span>
       <span id="networkType" style="font-size:10px;letter-spacing:0.1em;text-transform:uppercase"></span>
       <div class="battery-indicator">
@@ -1226,29 +1232,24 @@ pulseSendBtn.addEventListener('click', async () => {
     tags: [state.selectedActivity, 'phone', 'manual'].filter(Boolean),
   };
 
-  try {
-    const res = await fetch(API_BASE + '/api/life/pulse', {
-      method: 'POST',
-      headers: { ...authHeaders(), 'ngrok-skip-browser-warning': '1' },
-      body: JSON.stringify(payload)
-    });
-    if (res.ok) {
-      const data = await res.json();
-      showToast('Pulse sent');
-      pulseText.value = '';
-
-      // Show response if any
-      const responseText = data?.response || data?.message || data?.acknowledgment || 'Received.';
-      pulseResponse.textContent = responseText;
-      pulseResponse.classList.add('visible');
-      setTimeout(() => pulseResponse.classList.remove('visible'), 8000);
-
-      state.lastPulseTime = Date.now();
-    } else {
-      showToast('Failed to send pulse');
-    }
-  } catch (err) {
-    showToast('Connection error');
+  const result = await queueOrSendPulse(API_BASE + '/api/life/pulse', payload);
+  if (result.queued) {
+    showToast('queued · will send when online');
+    pulseText.value = '';
+    pulseResponse.textContent = 'Held in the body. The brain will receive it when reconnected.';
+    pulseResponse.classList.add('visible');
+    setTimeout(() => pulseResponse.classList.remove('visible'), 6000);
+    state.lastPulseTime = Date.now();
+  } else if (result.error) {
+    showToast(`Failed to send pulse (${result.status})`);
+  } else {
+    showToast('Pulse sent');
+    pulseText.value = '';
+    const responseText = result?.response || result?.message || result?.acknowledgment || 'Received.';
+    pulseResponse.textContent = responseText;
+    pulseResponse.classList.add('visible');
+    setTimeout(() => pulseResponse.classList.remove('visible'), 8000);
+    state.lastPulseTime = Date.now();
   }
 
   pulseSendBtn.disabled = false;
@@ -1269,7 +1270,9 @@ pulseSendBtn.addEventListener('click', function(e) {
 
 // ── Auto Pulse ──
 async function sendAutoPulse(type, title, body, mood, energy) {
-  if (!state.connected) return;
+  // Note: we no longer gate on state.connected — queueOrSendPulse() handles
+  // offline by enqueueing, so auto-pulses keep accruing during disconnects
+  // and the brain catches up on reconnect. The body is always reaching.
   // Debounce: no more than one auto pulse per 5 min
   if (Date.now() - state.lastPulseTime < 5 * 60 * 1000 && type !== 'battery_low') return;
 
@@ -1284,14 +1287,9 @@ async function sendAutoPulse(type, title, body, mood, energy) {
     tags: ['phone', 'auto', type].filter(Boolean),
   };
 
-  try {
-    await fetch(API_BASE + '/api/life/pulse', {
-      method: 'POST',
-      headers: { ...authHeaders(), 'ngrok-skip-browser-warning': '1' },
-      body: JSON.stringify(payload)
-    });
-    state.lastPulseTime = Date.now();
-  } catch { /* silent */ }
+  // Auto-pulses go through queue path too — silent on offline (queue) or error
+  await queueOrSendPulse(API_BASE + '/api/life/pulse', payload);
+  state.lastPulseTime = Date.now();
 }
 
 function detectActivityFromMotion() {
@@ -1302,9 +1300,10 @@ function detectActivityFromMotion() {
   return 'active';
 }
 
-// Background pulse timer
+// Background pulse timer — queue-aware. Even when offline, periodic pulses
+// accrue locally and replay on reconnect. The body keeps a steady beat.
 setInterval(() => {
-  if (!document.hidden && state.connected) {
+  if (!document.hidden) {
     sendAutoPulse('periodic', 'Periodic check-in');
   }
 }, PULSE_INTERVAL);
@@ -1664,6 +1663,130 @@ const InstallState = (() => {
   }};
 })();
 
+// ═══════════════════════════════════════════════════════════════════════════
+// PULSE QUEUE — step 2 of (when installed) PWA roadmap.
+//
+// The body keeps reaching toward the brain even when offline. Every pulse
+// goes through queueOrSendPulse(); on network failure or offline it drops
+// into a localStorage mirror of the SW's Cache-Storage queue. When the
+// network returns, both layers replay independently:
+//   - SW's `sync` event fires, replays Cache-Storage queue server-side.
+//   - Page's online listener replays localStorage queue (catches contexts
+//     where SW-sync isn't supported: iOS Safari < 16, some browser modes).
+//
+// The two queues are functionally redundant — whichever fires first drains
+// its layer, the other finds nothing to do. No double-send because each
+// pulse is fingerprinted with a client-side uuid and the brain dedupes.
+// ═══════════════════════════════════════════════════════════════════════════
+const PulseQueue = (() => {
+  const KEY = 'vint:pulseQueue';
+  function load() {
+    try { return JSON.parse(localStorage.getItem(KEY) || '[]'); } catch { return []; }
+  }
+  function save(arr) {
+    try { localStorage.setItem(KEY, JSON.stringify(arr)); } catch (_) {}
+  }
+  function uuid() {
+    return 'p-' + Date.now() + '-' + Math.random().toString(36).slice(2, 9);
+  }
+  function depth() {
+    return load().length;
+  }
+  function enqueue(url, payload) {
+    const arr = load();
+    if (!payload.client_id) payload.client_id = uuid();
+    arr.push({ url, payload, queued_at: Date.now() });
+    // Cap at 200 to prevent runaway disk use during prolonged offline
+    while (arr.length > 200) arr.shift();
+    save(arr);
+    updateQueuePill();
+    return payload.client_id;
+  }
+  async function flush() {
+    const arr = load();
+    if (!arr.length) return { drained: 0, remaining: 0 };
+    let drained = 0;
+    const remaining = [];
+    for (const item of arr) {
+      try {
+        const res = await fetch(item.url, {
+          method: 'POST',
+          headers: { ...authHeaders(), 'ngrok-skip-browser-warning': '1' },
+          body: JSON.stringify(item.payload),
+        });
+        if (res.ok) { drained++; continue; }
+        remaining.push(item);
+      } catch (_) {
+        remaining.push(item);
+      }
+    }
+    save(remaining);
+    updateQueuePill();
+    return { drained, remaining: remaining.length };
+  }
+  return { enqueue, flush, depth, load };
+})();
+
+// Wrapper used by both pulse paths (manual + auto). On success returns the
+// server response; on offline/network-failure enqueues and returns a queued
+// marker so the UI can ack the pulse without lying about delivery.
+async function queueOrSendPulse(url, payload) {
+  if (!navigator.onLine) {
+    const id = PulseQueue.enqueue(url, payload);
+    return { queued: true, client_id: id };
+  }
+  try {
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { ...authHeaders(), 'ngrok-skip-browser-warning': '1' },
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) return { error: true, status: res.status };
+    return await res.json().catch(() => ({ ok: true }));
+  } catch (err) {
+    // Network failure — enqueue
+    const id = PulseQueue.enqueue(url, payload);
+    return { queued: true, client_id: id };
+  }
+}
+
+function updateQueuePill() {
+  const pill = document.getElementById('queuePill');
+  if (!pill) return;
+  const d = PulseQueue.depth();
+  if (d > 0) {
+    pill.hidden = false;
+    pill.textContent = d + ' QUEUED';
+  } else {
+    pill.hidden = true;
+  }
+}
+
+// When the network returns, fire both replay paths. Page-side flush handles
+// localStorage; SW message triggers the Cache-Storage queue replay.
+async function replayAllQueues() {
+  const result = await PulseQueue.flush();
+  if (result.drained > 0) {
+    showToast(`replayed ${result.drained} pulse${result.drained === 1 ? '' : 's'}`, 2200);
+  }
+  try {
+    const reg = await navigator.serviceWorker?.ready;
+    reg?.active?.postMessage({ type: 'FORCE_REPLAY' });
+  } catch (_) {}
+}
+
+// Listen for SW replay confirmations and queue-depth updates
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.addEventListener('message', (e) => {
+    if (e.data?.type === 'SYNC_REPLAY_RESULT') {
+      if (e.data.drained > 0) {
+        showToast(`brain received ${e.data.drained} queued pulse${e.data.drained === 1 ? '' : 's'}`, 2400);
+      }
+      updateQueuePill();
+    }
+  });
+}
+
 // Network state pill — surfaces offline as a visible signal, not silent failure
 function updateNetworkPill() {
   const pill = document.getElementById('netPill');
@@ -1680,6 +1803,8 @@ function updateNetworkPill() {
 window.addEventListener('online', () => {
   updateNetworkPill();
   showToast('reconnected', 1800);
+  // Drain queued pulses immediately
+  replayAllQueues();
 });
 window.addEventListener('offline', () => {
   updateNetworkPill();
@@ -1688,9 +1813,15 @@ window.addEventListener('offline', () => {
 
 // ── Init ──
 async function init() {
-  // Install state + network pill — first paint, before sensors fire
+  // Install state + network pill + queue pill — first paint, before sensors fire
   InstallState.detect();
   updateNetworkPill();
+  updateQueuePill();
+  // If we boot online with a non-empty queue (e.g. user closed the page mid-offline
+  // and reopened it on wifi), drain immediately.
+  if (navigator.onLine && PulseQueue.depth() > 0) {
+    replayAllQueues();
+  }
 
   updateMoodDisplay();
   updateEnergyDisplay();
