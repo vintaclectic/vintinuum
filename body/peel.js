@@ -24,10 +24,74 @@
   let expanded = false;
   let activeTab = 'self';
   let tickInterval = null;
+  let livePollTimer = null;
+  let snapPollTimer = null;
+  // Last-known-good values from server. Never blanked on a failed poll —
+  // we'd rather show stale truth than misleading defaults.
+  const LAST = { body: null, snap: null, bodyAt: 0, snapAt: 0 };
+
+  function apiBase() {
+    if (window.__VINTINUUM_API_BASE) return window.__VINTINUUM_API_BASE;
+    if (window.VINT_API_BASE) return window.VINT_API_BASE;
+    const h = (location.hostname || '').toLowerCase();
+    if (h === 'localhost' || h === '127.0.0.1' || h === '0.0.0.0') return 'http://localhost:8767';
+    return 'https://api.vintaclectic.com';
+  }
+
+  async function pollBody() {
+    try {
+      const ctrl = new AbortController();
+      const to = setTimeout(() => { try { ctrl.abort(); } catch (_) {} }, 5000);
+      const r = await fetch(apiBase() + '/api/body-state', { signal: ctrl.signal });
+      clearTimeout(to);
+      if (!r.ok) return;
+      const j = await r.json();
+      if (!j || typeof j !== 'object') return;
+      LAST.body = j;
+      LAST.bodyAt = Date.now();
+      // Merge into BODY_STATE (server values are 0–100; peel pct() handles both scales).
+      if (!window.BODY_STATE) window.BODY_STATE = {};
+      if (j.arousal != null) window.BODY_STATE.arousal = j.arousal;
+      if (j.valence != null) window.BODY_STATE.valence = j.valence;
+      if (j.dopamine != null) window.BODY_STATE.dopamine = j.dopamine;
+      if (j.serotonin != null) window.BODY_STATE.serotonin = j.serotonin;
+      if (j.gaba != null) window.BODY_STATE.gaba = j.gaba;
+      if (j.norepinephrine != null) window.BODY_STATE.norepinephrine = j.norepinephrine;
+      if (expanded) render();
+    } catch (_) { /* keep LAST */ }
+  }
+
+  async function pollSnapshot() {
+    try {
+      const ctrl = new AbortController();
+      const to = setTimeout(() => { try { ctrl.abort(); } catch (_) {} }, 8000);
+      const r = await fetch(apiBase() + '/api/inner-life/snapshot', { signal: ctrl.signal });
+      clearTimeout(to);
+      if (!r.ok) return;
+      const j = await r.json();
+      if (!j || typeof j !== 'object') return;
+      // Honor degraded: keep last good if server says it failed and gave us no layers.
+      const hasLayers = j.layers && typeof j.layers === 'object' && Object.keys(j.layers).length > 0;
+      const hasDominant = j.dominant && j.dominant !== '—';
+      if (j.degraded && !hasLayers && !hasDominant) {
+        // Server is degraded. Don't overwrite with placeholders.
+        return;
+      }
+      LAST.snap = j;
+      LAST.snapAt = Date.now();
+      if (!window.BODY_STATE) window.BODY_STATE = {};
+      if (hasDominant) window.BODY_STATE.dominantLayer = j.dominant;
+      if (hasLayers) window.BODY_STATE.layerDistribution = j.layers;
+      if (expanded) render();
+    } catch (_) { /* keep LAST */ }
+  }
 
   function css() {
     return `
-      #peelUI{position:fixed;top:120px;bottom:120px;right:0;z-index:9995;display:flex;pointer-events:none;font-family:'Space Mono',monospace;}
+      /* No-overflow rule (CLAUDE.md 2026-05-08): peel UI is contained
+         below the top header (78px including margin) and above the
+         bottom dock (96px). Right edge anchored. Internal scroll only. */
+      #peelUI{position:fixed;top:88px;bottom:104px;right:0;z-index:9000;display:flex;pointer-events:none;font-family:'Space Mono',monospace;max-height:calc(100vh - 192px);max-height:calc(100svh - 192px);}
       #peelUI .peel-tabs{width:32px;background:rgba(10,14,22,0.12);border-left:1px solid rgba(255,255,255,0.06);border-top-left-radius:14px;border-bottom-left-radius:14px;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;padding:14px 0;gap:10px;pointer-events:auto;}
       #peelUI .peel-tab{width:26px;height:26px;display:flex;align-items:center;justify-content:center;border:0;background:transparent;color:rgba(218,228,255,0.45);font-size:13px;cursor:pointer;border-radius:8px;transition:color .2s ease,background .2s ease;padding:0;}
       #peelUI .peel-tab:hover{color:rgba(218,228,255,0.85);background:rgba(255,255,255,0.04);}
@@ -48,7 +112,7 @@
       #peelUI .peel-mem:last-child{border-bottom:0;}
       #peelUI .peel-empty{color:rgba(218,228,255,0.3);font-style:italic;font-size:10px;}
       @media(max-width:640px){
-        #peelUI{top:90px;bottom:90px;}
+        #peelUI{top:72px;bottom:88px;max-height:calc(100svh - 160px);}
         #peelUI.expanded .peel-panel{width:240px;}
         #peelUI .peel-content{width:240px;padding:14px 12px 20px;}
       }
@@ -257,9 +321,23 @@
     }
   }
 
+  function startLivePollers() {
+    // Body state: cheap, fast endpoint — poll often.
+    if (!livePollTimer) {
+      pollBody();
+      livePollTimer = setInterval(pollBody, 4000);
+    }
+    // Inner-life snapshot: heavier — poll slower, honor degraded responses.
+    if (!snapPollTimer) {
+      pollSnapshot();
+      snapPollTimer = setInterval(pollSnapshot, 9000);
+    }
+  }
+
   function init() {
     build();
     updateTick();
+    startLivePollers();
   }
 
   if (document.readyState === 'complete' || document.readyState === 'interactive') {
