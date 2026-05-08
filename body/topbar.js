@@ -174,13 +174,23 @@
     document.body.appendChild(header);
 
     // Brand responsive behavior: hide wordmark under 720px, mark only.
-    // Hide vitals pill text under 480px (dot-only).
+    // Vitals pill: full pill on desktop, label-hidden on tablet, ring-badge
+    // (Helios-10 step 8) under 480px so the dot+ratio survives narrow phones.
     const brandResponsive = () => {
       const w = window.innerWidth;
       if (w < 720) brandWord.style.display = 'none';
       else { brandWord.style.display = ''; brandWord.style.letterSpacing = w < 1024 ? '0.04em' : '0.02em'; }
       const vLabel = document.getElementById('topVitalsPillLabel');
       if (vLabel) vLabel.style.display = (w < 480) ? 'none' : '';
+      if (refs.vitals) {
+        if (w < 480) {
+          refs.vitals.style.padding = '6px 10px';
+          refs.vitals.style.minWidth = '36px';
+        } else {
+          refs.vitals.style.padding = '';
+          refs.vitals.style.minWidth = '';
+        }
+      }
     };
     brandResponsive();
     window.addEventListener('resize', brandResponsive, { passive: true });
@@ -205,6 +215,43 @@
       text-shadow: 0 1px 8px rgba(0,0,0,0.6);
     `;
     document.body.appendChild(arrival);
+
+    // Helios-10 step 7 (2026-05-07): SSE HEARTBEAT SEAM.
+    // 2px ambient strip pinned to the bottom edge of the topbar that
+    // shimmers per pulse event. Pure decoration — pointer-events:none,
+    // never interactive. This is the "alive" claim made visible: the
+    // body breathes under the chrome. Subscribes to Shell.connectors.pulse
+    // so any pulse beat triggers a left→right gradient sweep.
+    const seam = document.createElement('div');
+    seam.id = 'topShellSeam';
+    seam.setAttribute('aria-hidden', 'true');
+    seam.style.cssText = `
+      position: fixed;
+      top: calc(56px + env(safe-area-inset-top, 0px));
+      left: 0; right: 0; height: 2px;
+      z-index: ${Shell.Z.shell};
+      pointer-events: none;
+      background: linear-gradient(90deg,
+        rgba(124,207,255,0) 0%,
+        rgba(124,207,255,0.42) 50%,
+        rgba(206,147,216,0) 100%);
+      background-size: 220% 100%;
+      background-position: 100% 0;
+      opacity: 0.5;
+    `;
+    document.body.appendChild(seam);
+    if (!document.getElementById('topShellSeamCSS')) {
+      const seamCss = document.createElement('style');
+      seamCss.id = 'topShellSeamCSS';
+      seamCss.textContent = '@keyframes topShellSeamSweep{0%{background-position:100% 0;opacity:0.85;}100%{background-position:0% 0;opacity:0.35;}}';
+      document.head.appendChild(seamCss);
+    }
+    Shell.subscribe('pulse', () => {
+      seam.style.animation = 'none';
+      // force reflow then re-trigger
+      void seam.offsetWidth;
+      seam.style.animation = 'topShellSeamSweep 1.4s ease-out';
+    });
 
     // Drawer (hidden until menu clicked)
     mountDrawer();
