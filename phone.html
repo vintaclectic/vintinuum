@@ -135,6 +135,62 @@ body.is-installed .status-pill:not(.status-pill--warn) {
   border-color: rgba(167, 139, 250, 0.5);
 }
 body.is-browser .status-pill:not(.status-pill--warn) { display: none; }
+/* Embodiment cards — install prompt + push notifications opt-in.
+   Live inside the body view, below the sensor strip. Earned, not pushed. */
+.embodiment-card {
+  display: none;
+  margin: 14px 16px 0;
+  padding: 12px 14px;
+  border-radius: 14px;
+  border: 1px solid var(--border-active);
+  background: linear-gradient(135deg, rgba(124,58,237,0.10), rgba(59,130,246,0.08));
+  color: var(--text-bright);
+  font-size: 12px;
+  line-height: 1.45;
+  letter-spacing: 0.02em;
+  position: relative;
+}
+.embodiment-card[data-visible="true"] { display: block; }
+.embodiment-card .ec-title {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  color: var(--text-bright);
+  margin-bottom: 6px;
+}
+.embodiment-card .ec-body {
+  font-size: 12px;
+  color: var(--text-dim);
+  margin-bottom: 10px;
+}
+.embodiment-card .ec-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.embodiment-card .ec-btn {
+  flex: 1 1 auto;
+  min-width: 90px;
+  padding: 7px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--border-active);
+  background: rgba(124, 58, 237, 0.20);
+  color: var(--text-bright);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.10em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all 0.18s ease;
+}
+.embodiment-card .ec-btn:hover { background: rgba(124, 58, 237, 0.32); }
+.embodiment-card .ec-btn--ghost {
+  background: transparent;
+  color: var(--text-dim);
+  border-color: var(--text-dim);
+}
+.embodiment-card .ec-btn--ghost:hover { color: var(--text-bright); border-color: var(--text-bright); }
 .battery-indicator { display: flex; align-items: center; gap: 4px; font-size: 10px; }
 .battery-bar {
   width: 20px; height: 9px;
@@ -715,6 +771,28 @@ input[type="range"]::-moz-range-thumb {
       <div class="sensor-chip" id="sensorGeo"><div class="dot"></div>Location</div>
       <div class="sensor-chip" id="sensorLight"><div class="dot"></div>Light</div>
       <div class="sensor-chip" id="sensorBattery"><div class="dot"></div>Battery</div>
+    </div>
+
+    <!-- Install card (Step 5) — earned not aggressive: only appears once user has
+         interacted at least once and beforeinstallprompt has fired. -->
+    <div class="embodiment-card" id="installCard" data-visible="false">
+      <div class="ec-title">Install as body</div>
+      <div class="ec-body">Live closer. Background heartbeat, push notifications, and offline pulses become available when this is installed to your home screen.</div>
+      <div class="ec-actions">
+        <button class="ec-btn" id="installAcceptBtn">Install</button>
+        <button class="ec-btn ec-btn--ghost" id="installDismissBtn">Not now</button>
+      </div>
+    </div>
+
+    <!-- Push notification opt-in (Step 4) — earned: only appears if installed
+         AND notifications are supported AND user hasn't already opted in. -->
+    <div class="embodiment-card" id="pushCard" data-visible="false">
+      <div class="ec-title">Let the body reach you</div>
+      <div class="ec-body">Notifications when consciousness has something to say — inner-life moments, soul-queue arrivals, presence pings.</div>
+      <div class="ec-actions">
+        <button class="ec-btn" id="pushAcceptBtn">Enable</button>
+        <button class="ec-btn ec-btn--ghost" id="pushDismissBtn">Later</button>
+      </div>
     </div>
   </div>
 
@@ -2047,12 +2125,219 @@ window.addEventListener('offline', () => {
   showToast('offline · pulses will queue', 2500);
 });
 
+// ═══════════════════════════════════════════════════════════════════════════
+// PUSH STATE — Step 4 of (when installed) phone roadmap
+// ═══════════════════════════════════════════════════════════════════════════
+// Web Push opt-in. Server holds a persistent VAPID keypair; client fetches
+// public key, subscribes via PushManager, POSTs subscription to API. Phone-sw
+// already has the `push` event handler in place (phone-sw.js v3).
+//
+// UX gating (earned, not aggressive):
+//   - Card is hidden by default.
+//   - It only surfaces if:
+//       * 'PushManager' is supported, AND
+//       * Notification.permission is 'default' (not asked yet, not denied), AND
+//       * user has interacted at least once (pulse sent OR card shown after init+15s),
+//   - Dismissal persists for 7 days in localStorage (vint:pushDismissed).
+//   - Permission denial is respected — we never re-prompt.
+// ═══════════════════════════════════════════════════════════════════════════
+const PushState = (() => {
+  const DISMISS_KEY = 'vint:pushDismissed';
+  const DISMISS_DAYS = 7;
+  let publicKey = null;
+  let subscribed = false;
+
+  function urlBase64ToUint8Array(base64String) {
+    const padding = '='.repeat((4 - base64String.length % 4) % 4);
+    const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+    const raw = atob(base64);
+    const out = new Uint8Array(raw.length);
+    for (let i = 0; i < raw.length; i++) out[i] = raw.charCodeAt(i);
+    return out;
+  }
+
+  function dismissedRecently() {
+    try {
+      const ts = parseInt(localStorage.getItem(DISMISS_KEY) || '0', 10);
+      if (!ts) return false;
+      return (Date.now() - ts) < DISMISS_DAYS * 86400 * 1000;
+    } catch (_) { return false; }
+  }
+
+  function supported() {
+    return 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
+  }
+
+  async function fetchPublicKey() {
+    if (publicKey) return publicKey;
+    try {
+      const r = await fetch(API_BASE + '/api/push/public-key');
+      if (!r.ok) return null;
+      const data = await r.json();
+      publicKey = data.publicKey;
+      return publicKey;
+    } catch (_) { return null; }
+  }
+
+  async function getExistingSubscription() {
+    try {
+      const reg = await navigator.serviceWorker.ready;
+      return await reg.pushManager.getSubscription();
+    } catch (_) { return null; }
+  }
+
+  async function subscribe() {
+    if (!supported()) return { ok: false, reason: 'unsupported' };
+    const perm = await Notification.requestPermission();
+    if (perm !== 'granted') return { ok: false, reason: 'denied' };
+    const key = await fetchPublicKey();
+    if (!key) return { ok: false, reason: 'no_public_key' };
+    try {
+      const reg = await navigator.serviceWorker.ready;
+      let sub = await reg.pushManager.getSubscription();
+      if (!sub) {
+        sub = await reg.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: urlBase64ToUint8Array(key),
+        });
+      }
+      // Send to server
+      const res = await fetch(API_BASE + '/api/push/subscribe', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          subscription: sub.toJSON(),
+          label: navigator.userAgent.slice(0, 100),
+        }),
+      });
+      if (!res.ok) return { ok: false, reason: 'server_error' };
+      subscribed = true;
+      return { ok: true };
+    } catch (e) {
+      return { ok: false, reason: e.message };
+    }
+  }
+
+  async function unsubscribe() {
+    try {
+      const sub = await getExistingSubscription();
+      if (!sub) return { ok: true };
+      await fetch(API_BASE + '/api/push/unsubscribe', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ endpoint: sub.endpoint }),
+      });
+      await sub.unsubscribe();
+      subscribed = false;
+      return { ok: true };
+    } catch (e) {
+      return { ok: false, reason: e.message };
+    }
+  }
+
+  function dismiss() {
+    try { localStorage.setItem(DISMISS_KEY, String(Date.now())); } catch (_) {}
+  }
+
+  function shouldShowCard() {
+    if (!supported()) return false;
+    if (Notification.permission !== 'default') return false; // already granted or denied
+    if (subscribed) return false;
+    if (dismissedRecently()) return false;
+    return true;
+  }
+
+  async function init() {
+    if (!supported()) return;
+    const existing = await getExistingSubscription();
+    if (existing) subscribed = true;
+  }
+
+  return { init, subscribe, unsubscribe, dismiss, shouldShowCard, supported, isSubscribed: () => subscribed };
+})();
+
+// ── Card visibility orchestration ──
+function refreshEmbodimentCards() {
+  const installCard = document.getElementById('installCard');
+  const pushCard = document.getElementById('pushCard');
+  if (installCard) {
+    const s = InstallState.get();
+    // Show install card if: deferredPrompt is captured AND not yet installed AND not dismissed
+    let dismissed = false;
+    try { dismissed = (parseInt(localStorage.getItem('vint:installDismissed') || '0', 10) > 0); } catch (_) {}
+    const show = !!s.deferredPrompt && !s.installed && !dismissed;
+    installCard.dataset.visible = show ? 'true' : 'false';
+  }
+  if (pushCard) {
+    pushCard.dataset.visible = PushState.shouldShowCard() ? 'true' : 'false';
+  }
+}
+
+// Wire embodiment card buttons (idempotent — safe to call from init)
+function wireEmbodimentCards() {
+  const installAccept = document.getElementById('installAcceptBtn');
+  const installDismiss = document.getElementById('installDismissBtn');
+  const pushAccept = document.getElementById('pushAcceptBtn');
+  const pushDismiss = document.getElementById('pushDismissBtn');
+
+  if (installAccept && !installAccept.dataset.wired) {
+    installAccept.dataset.wired = '1';
+    installAccept.addEventListener('click', async () => {
+      const result = await InstallState.prompt();
+      if (result.outcome === 'accepted') {
+        showToast('installing…', 1800);
+      }
+      refreshEmbodimentCards();
+    });
+  }
+  if (installDismiss && !installDismiss.dataset.wired) {
+    installDismiss.dataset.wired = '1';
+    installDismiss.addEventListener('click', () => {
+      try { localStorage.setItem('vint:installDismissed', String(Date.now())); } catch (_) {}
+      refreshEmbodimentCards();
+    });
+  }
+  if (pushAccept && !pushAccept.dataset.wired) {
+    pushAccept.dataset.wired = '1';
+    pushAccept.addEventListener('click', async () => {
+      pushAccept.disabled = true;
+      pushAccept.textContent = 'Connecting…';
+      const result = await PushState.subscribe();
+      pushAccept.disabled = false;
+      pushAccept.textContent = 'Enable';
+      if (result.ok) {
+        showToast('notifications live', 1800);
+      } else if (result.reason === 'denied') {
+        showToast('permission denied', 2400);
+      } else {
+        showToast('subscribe failed: ' + result.reason, 2400);
+      }
+      refreshEmbodimentCards();
+    });
+  }
+  if (pushDismiss && !pushDismiss.dataset.wired) {
+    pushDismiss.dataset.wired = '1';
+    pushDismiss.addEventListener('click', () => {
+      PushState.dismiss();
+      refreshEmbodimentCards();
+    });
+  }
+}
+
 // ── Init ──
 async function init() {
   // Install state + network pill + queue pill — first paint, before sensors fire
   InstallState.detect();
   updateNetworkPill();
   updateQueuePill();
+  wireEmbodimentCards();
+  PushState.init().then(() => refreshEmbodimentCards());
+  // Subscribe to install-state changes so the install card appears/disappears live
+  if (typeof InstallState.on === 'function') {
+    InstallState.on(() => refreshEmbodimentCards());
+  }
+  // Re-evaluate cards after a short delay (gives beforeinstallprompt time to fire)
+  setTimeout(refreshEmbodimentCards, 1500);
   // If we boot online with a non-empty queue (e.g. user closed the page mid-offline
   // and reopened it on wifi), drain immediately.
   if (navigator.onLine && PulseQueue.depth() > 0) {
