@@ -606,7 +606,7 @@ body {
 ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.15); }
 </style>
 <script src="body/api_base.js?v=v20260505-onedoor"></script>
-<script src="body/shell.js?v=v20260505-learnnav"></script>
+<script src="body/shell.js?v=v20260507-resilience"></script>
 <script src="body/identity.js?v=v20260507-autobond"></script>
 <script src="body/bond_door.js?v=v20260506-flatdoor"></script>
 <script src="body/topbar.js?v=v20260505-onedoor" defer></script>
@@ -698,6 +698,7 @@ body {
     pollTimer: null,
     pollInterval: 6000,   // poll every 6s
     maxItems: 600,        // cap in-memory list
+    since: 0,             // newest ts seen — passed to backend for incremental fetch
   };
 
   // ── DOM refs ──────────────────────────────────────────────────────────────
@@ -979,7 +980,11 @@ body {
   });
 
   // ── Polling ───────────────────────────────────────────────────────────────
-  async function fetchFeed(since = 0) {
+  // Helios-Fusion 2026-05-07: pass `since` from state.since so the backend
+  // returns only new rows after the first snapshot. Saves bandwidth and
+  // makes "live" actually feel live (new items animate in on each poll).
+  async function fetchFeed(sinceArg) {
+    const since = (typeof sinceArg === 'number') ? sinceArg : state.since;
     try {
       const url = `${API_BASE}/api/learning/feed?limit=120${since ? `&since=${since}` : ''}`;
       const r = await fetch(url, { credentials: 'omit' });
@@ -992,6 +997,11 @@ body {
       mergeItems(data.items || []);
       state.countsByChannel = data.countsByChannel || state.countsByChannel;
       state.siphon = data.siphon || state.siphon;
+      // Track newest ts so the next poll asks for incremental rows only.
+      if (state.items.length) {
+        const maxTs = state.items.reduce((m, it) => (it.ts && it.ts > m) ? it.ts : m, 0);
+        if (maxTs > state.since) state.since = maxTs;
+      }
       renderHero();
       renderChannels();
       renderFeed();

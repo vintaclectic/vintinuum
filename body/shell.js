@@ -504,6 +504,31 @@
         lastHidden = 0;
       }
     });
+
+    // Helios-Fusion 2026-05-07: zombie SSE reconnect.
+    // Browsers occasionally let an EventSource go to readyState===CLOSED (2)
+    // after laptop sleep/wake without firing onerror. Without this, the
+    // 4/4 vitals pill freezes at its last value forever. Watch online +
+    // visibilitychange and force-restart the pulse stream when a zombie
+    // is detected. Idempotent — startPulse() bails if _pulseEs is alive.
+    function reviveZombiePulse(reason) {
+      const es = Shell._pulseEs;
+      if (!es) { try { Shell.startPulse(); } catch (_) {} return; }
+      // EventSource.readyState: 0=connecting, 1=open, 2=closed
+      if (es.readyState === 2) {
+        console.log('[Shell] reviving zombie pulse (' + reason + ')');
+        Shell._pulseEs = null;
+        try { es.close(); } catch (_) {}
+        try { Shell.startPulse(); } catch (_) {}
+      }
+    }
+    window.addEventListener('online', () => {
+      reviveZombiePulse('online');
+      if (state.auth.signedIn) Shell.bootstrap().catch(() => {});
+    });
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') reviveZombiePulse('visible');
+    });
   }
 
   // ── Public API ────────────────────────────────────────────────────────────
@@ -521,21 +546,43 @@
     // have. If 200, populate state + arrival line. If 401, try refresh
     // once. If still 401, clear local state and surface signed-out.
     bootstrap: async function bootstrapAuth() {
+      // Helios-Fusion 2026-05-07: preserve cached identity on transient
+      // failures. Only clear local state on an explicit 401 from the
+      // server (token actually invalid). On 5xx / network / parse error,
+      // keep the cached user object visible — when the brain is hung or
+      // the tunnel hiccups, the topbar pill should stay lit and just
+      // reconnect, not blink to "SIGN IN" and back. That blink is what
+      // makes every brain hiccup feel like a logout.
       try {
         let res = await apiFetch('/api/v2/auth/me', { method: 'GET' });
-        let data = await res.json().catch(() => ({}));
+        if (res && res.status === 401) {
+          // Authoritative signed-out — server rejected the token.
+          if (state.auth.token || state.auth.user) {
+            setToken(null); setRefresh(null); setUser(null); setArrival(null);
+          }
+          return state.auth;
+        }
+        if (!res || !res.ok) {
+          // 5xx / network blip — keep cached identity, log and bail.
+          console.warn('[Shell] bootstrap soft-fail status=' + (res ? res.status : 'no-response') + ' — preserving cached identity');
+          return state.auth;
+        }
+        let data = await res.json().catch(() => null);
         if (data && data.signedIn) {
           if (data.user) setUser(data.user);
           if (data.arrival) setArrival(data.arrival);
-        } else {
-          // No token, or refresh-failed — make sure local is clean.
+        } else if (data && data.signedIn === false) {
+          // Server says definitively not signed in (200 with signedIn:false).
           if (state.auth.token || state.auth.user) {
-            // Don't broadcast if state was already empty
             setToken(null); setRefresh(null); setUser(null); setArrival(null);
           }
+        } else {
+          // Malformed body — treat as transient, preserve cache.
+          console.warn('[Shell] bootstrap malformed body — preserving cached identity');
         }
       } catch (e) {
-        console.warn('[Shell] bootstrap failed:', e.message);
+        // Network throw (CORS, DNS, no-internet) — preserve cache.
+        console.warn('[Shell] bootstrap threw, preserving cached identity:', e.message);
       }
       return state.auth;
     },
