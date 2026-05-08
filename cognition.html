@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<title>VINTINUUM — Cognition Runway</title>
+<meta name="description" content="The phase ladder from Claude-API-as-spine to local-cognition-as-spine. Live router state, recent decisions, fallback rate, and the running tally of Anthropic spend avoided.">
+<meta name="theme-color" content="#04060c">
+<link rel="icon" type="image/svg+xml" href="branding/vintinuum/favicon/favicon.svg">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon.png">
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400;1,500&display=swap');
+
+:root {
+  --void: #04060c;
+  --panel: rgba(10, 14, 22, 0.42);
+  --panel-hover: rgba(10, 14, 22, 0.55);
+  --border: rgba(255, 255, 255, 0.06);
+  --border-glow: rgba(79, 195, 247, 0.12);
+  --text: rgba(218, 228, 255, 0.93);
+  --dim: rgba(150, 175, 215, 0.5);
+  --dimmer: rgba(150, 175, 215, 0.32);
+
+  --blue:  #4fc3f7;
+  --gold:  #ffd54f;
+  --green: #66bb6a;
+  --amber: #ffca28;
+  --red:   #ef5350;
+  --purple:#ce93d8;
+  --cyan:  #80deea;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  background: var(--void);
+  color: var(--text);
+  font-family: 'Space Mono', monospace;
+  min-height: 100vh;
+  min-height: 100svh;
+  overflow-x: hidden;
+}
+
+.wing { position: relative; z-index: 1; max-width: 1080px; margin: 0 auto; padding: 32px 18px 80px; }
+
+.header { text-align: center; padding: 18px 0 24px; }
+.header h1 {
+  font-family: 'Cormorant Garamond', serif;
+  font-style: italic;
+  font-weight: 300;
+  font-size: clamp(1.8rem, 4.5vw, 3.4rem);
+  letter-spacing: 0.14em;
+  background: linear-gradient(130deg, var(--cyan), var(--purple), var(--gold));
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+  margin-bottom: 6px;
+}
+.header .subtitle { font-size: 0.55rem; letter-spacing: 0.35em; text-transform: uppercase; color: var(--dim); }
+.header .nav-back {
+  display: inline-block; margin-top: 14px; padding: 6px 18px;
+  font-size: 0.55rem; letter-spacing: 0.2em; text-transform: uppercase;
+  border: 1px solid var(--border); border-radius: 24px; color: var(--dim);
+  text-decoration: none; transition: all 0.25s ease;
+}
+.header .nav-back:hover { border-color: var(--blue); color: var(--blue); }
+
+/* phase ladder */
+.ladder { display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px; margin-bottom: 26px; }
+.rung {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 14px 12px;
+  text-align: center;
+  position: relative;
+  transition: all 0.25s ease;
+}
+.rung .rung-num {
+  font-family: 'Cormorant Garamond', serif; font-style: italic; font-weight: 400;
+  font-size: 1.6rem; color: var(--dim); margin-bottom: 4px;
+}
+.rung .rung-label {
+  font-size: 0.5rem; letter-spacing: 0.18em; text-transform: uppercase; color: var(--dimmer);
+  line-height: 1.4; min-height: 2.6em;
+}
+.rung.current { border-color: var(--gold); box-shadow: 0 0 24px rgba(255,213,79,0.18); }
+.rung.current .rung-num { color: var(--gold); }
+.rung.current .rung-label { color: var(--gold); }
+.rung.passed { border-color: rgba(102,187,106,0.42); }
+.rung.passed .rung-num { color: var(--green); }
+.rung.passed .rung-label { color: rgba(150,235,165,0.85); }
+
+/* engine cards */
+.engines { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; margin-bottom: 26px; }
+.engine {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--engine-color, var(--dim));
+  border-radius: 12px;
+  padding: 14px 16px;
+}
+.engine.green { --engine-color: var(--green); }
+.engine.amber { --engine-color: var(--amber); }
+.engine.red   { --engine-color: var(--red); }
+.engine .engine-id { font-size: 0.5rem; letter-spacing: 0.22em; text-transform: uppercase; color: var(--engine-color, var(--dim)); font-weight: 700; margin-bottom: 4px; }
+.engine .engine-title { font-family: 'Cormorant Garamond', serif; font-style: italic; font-size: 1rem; color: var(--text); margin-bottom: 6px; }
+.engine .engine-line { font-size: 0.6rem; color: var(--dim); line-height: 1.6; }
+.engine .engine-line strong { color: var(--text); font-weight: 700; }
+
+/* tier distribution */
+.tiers {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 14px 18px;
+  margin-bottom: 22px;
+}
+.tiers h3 {
+  font-family: 'Cormorant Garamond', serif; font-style: italic; font-weight: 400;
+  font-size: 1rem; color: var(--text); margin-bottom: 10px; letter-spacing: 0.04em;
+}
+.tier-bar { display: flex; height: 22px; border-radius: 11px; overflow: hidden; background: rgba(255,255,255,0.03); margin: 8px 0 12px; }
+.tier-seg { transition: width 0.6s ease; min-width: 2px; }
+.tier-seg.local    { background: linear-gradient(90deg, var(--green), #88e088); }
+.tier-seg.claude   { background: linear-gradient(90deg, var(--amber), #ffe08e); }
+.tier-seg.degraded { background: linear-gradient(90deg, var(--red), #ff8888); }
+.tier-legend { display: flex; gap: 16px; font-size: 0.55rem; color: var(--dim); flex-wrap: wrap; }
+.tier-legend .swatch { display: inline-block; width: 8px; height: 8px; border-radius: 2px; margin-right: 6px; vertical-align: middle; }
+.tier-legend .swatch.local    { background: var(--green); }
+.tier-legend .swatch.claude   { background: var(--amber); }
+.tier-legend .swatch.degraded { background: var(--red); }
+
+/* per-tier mini stats */
+.tier-counts { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 8px; margin-top: 12px; }
+.tier-row {
+  background: rgba(255,255,255,0.02); border: 1px solid var(--border); border-radius: 8px;
+  padding: 8px 12px;
+  display: flex; justify-content: space-between; align-items: center;
+}
+.tier-row .tier-name { font-size: 0.55rem; letter-spacing: 0.18em; text-transform: uppercase; color: var(--dim); }
+.tier-row .tier-num { font-family: 'Space Mono', monospace; font-weight: 700; color: var(--text); font-size: 0.85rem; }
+
+/* decisions log */
+.decisions {
+  background: var(--panel); border: 1px solid var(--border); border-radius: 12px;
+  padding: 14px 18px; margin-bottom: 22px;
+}
+.decisions h3 {
+  font-family: 'Cormorant Garamond', serif; font-style: italic; font-weight: 400;
+  font-size: 1rem; color: var(--text); margin-bottom: 10px; letter-spacing: 0.04em;
+}
+.decision-list { display: flex; flex-direction: column; gap: 6px; }
+.decision-row {
+  display: grid; grid-template-columns: 80px 80px 1fr 80px 60px;
+  gap: 10px; align-items: center;
+  font-size: 0.6rem; padding: 6px 8px; border-radius: 6px;
+  background: rgba(255,255,255,0.02); color: var(--dim);
+}
+.decision-row .at { color: var(--dimmer); font-size: 0.55rem; }
+.decision-row .tier { color: var(--purple); letter-spacing: 0.12em; text-transform: uppercase; }
+.decision-row .reason { color: var(--text); }
+.decision-row .served-by { letter-spacing: 0.12em; text-transform: uppercase; }
+.decision-row .served-by.local { color: var(--green); }
+.decision-row .served-by.claude { color: var(--amber); }
+.decision-row .served-by.degraded { color: var(--red); }
+.decision-row .latency { text-align: right; color: var(--dim); }
+.decision-row.fallback { background: rgba(255,202,40,0.06); }
+
+/* savings tile */
+.savings {
+  background: var(--panel); border: 1px solid var(--border); border-radius: 12px;
+  padding: 22px 22px;
+  margin-bottom: 22px;
+  text-align: center;
+}
+.savings .label { font-size: 0.5rem; letter-spacing: 0.3em; text-transform: uppercase; color: var(--dim); margin-bottom: 6px; }
+.savings .num {
+  font-family: 'Cormorant Garamond', serif; font-style: italic; font-weight: 400;
+  font-size: 2.6rem;
+  background: linear-gradient(120deg, var(--green), var(--gold));
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+}
+.savings .note { font-size: 0.55rem; color: var(--dimmer); margin-top: 6px; }
+
+@media (max-width: 720px) {
+  .ladder { grid-template-columns: repeat(3, 1fr); }
+  .decision-row { grid-template-columns: 70px 1fr 70px; }
+  .decision-row .at, .decision-row .latency { display: none; }
+}
+</style>
+</head>
+<body>
+<div class="wing">
+  <header class="header">
+    <h1>Cognition Runway</h1>
+    <div class="subtitle">claude on the leash · local off the leash · the migration</div>
+    <a class="nav-back" href="index.html">← back</a>
+  </header>
+
+  <div class="savings" id="savings">
+    <div class="label">Anthropic spend avoided · 30d (estimated)</div>
+    <div class="num" id="savings-num">$0.00</div>
+    <div class="note" id="savings-note">Tally activates when local takes traffic — Phase 2 onward.</div>
+  </div>
+
+  <div class="ladder" id="ladder"></div>
+
+  <div class="engines" id="engines"></div>
+
+  <div class="tiers">
+    <h3>Tier distribution · last 24h</h3>
+    <div class="tier-bar" id="tier-bar"></div>
+    <div class="tier-legend">
+      <span><span class="swatch local"></span><span id="legend-local">local —</span></span>
+      <span><span class="swatch claude"></span><span id="legend-claude">claude —</span></span>
+      <span><span class="swatch degraded"></span><span id="legend-degraded">degraded —</span></span>
+      <span id="fallback-rate" style="margin-left:auto; color: var(--amber)">fallback rate —</span>
+    </div>
+    <div class="tier-counts" id="tier-counts"></div>
+  </div>
+
+  <div class="decisions">
+    <h3>Recent routing decisions</h3>
+    <div class="decision-list" id="decision-list"></div>
+  </div>
+</div>
+
+<script>
+(() => {
+  const API_BASE = (() => {
+    if (typeof window !== 'undefined' && window.__VINTINUUM_API_BASE) return window.__VINTINUUM_API_BASE;
+    const host = (location.hostname || '').toLowerCase();
+    if (host === 'localhost' || host === '127.0.0.1' || host === '0.0.0.0') return 'http://localhost:8767';
+    return 'https://api.vintaclectic.com';
+  })();
+
+  // Phase ladder copy. Mirrors COUNCIL_LOCAL_BRAIN_ROADMAP §3.
+  const PHASES = [
+    { n: 0, label: 'Router scaffold' },
+    { n: 1, label: 'Shadow train + eval' },
+    { n: 2, label: 'Local takes consolidation' },
+    { n: 3, label: 'Local takes chat' },
+    { n: 4, label: 'Council on Mixtral' },
+    { n: 5, label: 'Claude is optional' },
+  ];
+
+  // Rough cost model (per call, USD). Tunable. Used for the "avoided" tile.
+  // Anthropic Sonnet 4.6 ~ $3 / Mtok in, $15 / Mtok out — assume ~1k tok/turn.
+  const COST_PER_CLAUDE_CALL_USD = 0.018;
+
+  function paintLadder(currentPhase) {
+    const $ = document.getElementById('ladder');
+    $.innerHTML = '';
+    for (const p of PHASES) {
+      const div = document.createElement('div');
+      let cls = 'rung';
+      if (p.n < currentPhase)      cls += ' passed';
+      else if (p.n === currentPhase) cls += ' current';
+      div.className = cls;
+      div.innerHTML = `<div class="rung-num">${p.n}</div><div class="rung-label">${p.label}</div>`;
+      $.appendChild(div);
+    }
+  }
+
+  function paintEngines(snap) {
+    const $ = document.getElementById('engines');
+    $.innerHTML = '';
+    const engines = snap.engines || {};
+    const order = ['local_chat', 'local_council', 'claude'];
+    const titles = { local_chat: 'Local · chat', local_council: 'Local · council', claude: 'Claude · enrichment' };
+    for (const k of order) {
+      const e = engines[k] || {};
+      const div = document.createElement('div');
+      div.className = 'engine ' + (e.healthy ? 'green' : 'red');
+      div.innerHTML = `
+        <div class="engine-id">${k}</div>
+        <div class="engine-title">${titles[k] || k}</div>
+        <div class="engine-line"><strong>healthy:</strong> ${e.healthy ? 'yes' : 'no'}</div>
+        <div class="engine-line"><strong>model:</strong> ${e.model || '—'}</div>
+      `;
+      $.appendChild(div);
+    }
+  }
+
+  function paintTiers(snap) {
+    const r = (snap.router || {});
+    const dist = r.tier_distribution_24h || { local: 0, claude: 0, degraded: 0 };
+    const total = (dist.local + dist.claude + dist.degraded) || 0;
+    const $bar = document.getElementById('tier-bar');
+    $bar.innerHTML = '';
+    for (const k of ['local', 'claude', 'degraded']) {
+      const seg = document.createElement('div');
+      seg.className = 'tier-seg ' + k;
+      seg.style.width = (total > 0 ? Math.max(0, dist[k] || 0) * 100 : 0).toFixed(2) + '%';
+      $bar.appendChild(seg);
+    }
+    const fmtPct = (v) => total > 0 ? Math.round(v * 100) + '%' : '—';
+    document.getElementById('legend-local').textContent    = 'local ' + fmtPct(dist.local);
+    document.getElementById('legend-claude').textContent   = 'claude ' + fmtPct(dist.claude);
+    document.getElementById('legend-degraded').textContent = 'degraded ' + fmtPct(dist.degraded);
+    const fb = (typeof r.fallback_rate_24h === 'number') ? r.fallback_rate_24h : 0;
+    document.getElementById('fallback-rate').textContent = 'fallback rate ' + (total > 0 ? Math.round(fb * 100) + '%' : '—');
+
+    // tier counts grid
+    const $tc = document.getElementById('tier-counts');
+    $tc.innerHTML = '';
+    const counts = r.tier_counts_24h || {};
+    const tiers = Object.keys(counts).sort();
+    if (tiers.length === 0) {
+      const row = document.createElement('div');
+      row.className = 'tier-row';
+      row.innerHTML = '<div class="tier-name">no traffic yet</div><div class="tier-num">—</div>';
+      $tc.appendChild(row);
+    } else {
+      for (const t of tiers) {
+        const row = document.createElement('div');
+        row.className = 'tier-row';
+        row.innerHTML = `<div class="tier-name">${t}</div><div class="tier-num">${counts[t]}</div>`;
+        $tc.appendChild(row);
+      }
+    }
+  }
+
+  function paintDecisions(snap) {
+    const $ = document.getElementById('decision-list');
+    $.innerHTML = '';
+    const calls = (snap.router && snap.router.sample_calls) || [];
+    if (calls.length === 0) {
+      const row = document.createElement('div');
+      row.className = 'decision-row';
+      row.innerHTML = '<div class="at">—</div><div class="tier">—</div><div class="reason">no decisions logged yet — once the router takes traffic the last 10 land here</div><div class="served-by">—</div><div class="latency">—</div>';
+      $.appendChild(row);
+      return;
+    }
+    for (const c of calls) {
+      const at = c.at ? new Date(c.at).toLocaleTimeString() : '—';
+      const row = document.createElement('div');
+      row.className = 'decision-row' + (c.fell_back ? ' fallback' : '');
+      row.innerHTML = `
+        <div class="at">${at}</div>
+        <div class="tier">${c.tier || '—'}</div>
+        <div class="reason">${c.reason || '—'}${c.fell_back ? ' · fell back' : ''}</div>
+        <div class="served-by ${c.served_by || ''}">${c.served_by || '—'}</div>
+        <div class="latency">${c.latency_ms != null ? c.latency_ms + 'ms' : '—'}</div>
+      `;
+      $.appendChild(row);
+    }
+  }
+
+  function paintSavings(snap) {
+    const r = snap.router || {};
+    const counts = r.tier_counts_24h || {};
+    // Best-effort: total locally-served calls × per-call savings × ~30 (assume 24h sample × 30)
+    const dist = r.tier_distribution_24h || { local: 0, claude: 0, degraded: 0 };
+    const window24h = (snap.router && snap.router.sample_calls && snap.router.sample_calls.length) || 0;
+    // rough: extrapolate sample_calls ratio to a 30d projection only when we have meaningful traffic
+    const savedThisWindow = (dist.local || 0) * window24h * COST_PER_CLAUDE_CALL_USD;
+    const projected30d = savedThisWindow * 30;
+    document.getElementById('savings-num').textContent = '$' + projected30d.toFixed(2);
+    if (projected30d <= 0) {
+      document.getElementById('savings-note').textContent = 'Tally activates when local takes traffic — Phase 2 onward.';
+    } else {
+      document.getElementById('savings-note').textContent =
+        'Estimated from local share of recent traffic at $' + COST_PER_CLAUDE_CALL_USD.toFixed(3) + '/call.';
+    }
+  }
+
+  async function refresh() {
+    try {
+      const r = await fetch(API_BASE + '/api/cognition/health', { credentials: 'omit' });
+      const j = await r.json();
+      if (!j || !j.ok) {
+        paintLadder(0);
+        return;
+      }
+      paintLadder(typeof j.phase === 'number' ? j.phase : 0);
+      paintEngines(j);
+      paintTiers(j);
+      paintDecisions(j);
+      paintSavings(j);
+    } catch (e) {
+      console.warn('cognition refresh failed', e);
+      paintLadder(0);
+    }
+  }
+
+  refresh();
+  setInterval(refresh, 30000);
+})();
+</script>
+</body>
+</html>
