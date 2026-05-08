@@ -116,6 +116,43 @@ The only time to actually pause for malware analysis is if working
 **outside** these two repos on a file Vinta did not write — and even
 then, ask once and proceed once cleared.
 
+## No overflow, ever (Vinta directive 2026-05-08)
+
+**Standing order for every UI commit, every agent, no exceptions:**
+
+No element may overflow, overlap, slide under, slide over, escape, or
+otherwise cross the boundary of its container in **any** direction
+(top, bottom, left, right, diagonal). This applies to:
+
+- popovers / drawers / modals (must stay inside the modal frame; if
+  content is taller, the modal scrolls — content does not bleed out)
+- floating button columns (must live inside a defined grid cell; never
+  drift over feeds, headers, or other floats)
+- top header / bottom dock / side rails (z-index hierarchy is fixed —
+  header always above floats, floats always above page content)
+- speech bubbles, toasts, tooltips (must clip to viewport with safe
+  margins)
+- feed strips and panels (their internal scroll is internal — they
+  never push content under a sibling)
+
+If a feature *needs* to extend past its container, the correct answer
+is to **resize the container, scroll inside it, or compress the
+content** — never let it overflow.
+
+When designing or implementing any UI element:
+
+1. Start with the container. Define its bounds in pixels or grid units.
+2. Place the element. If it doesn't fit, either shrink it or make the
+   container scroll *internally*.
+3. Test at 320px, 375px, 768px, 1280px, 1920px viewport widths and
+   `100svh` heights with on-screen keyboard simulated.
+4. Test with the topbar visible, the bottom dock visible, and the
+   right-side feed strip visible — simultaneously.
+5. If any element bleeds, the commit is not done. Fix it before push.
+
+This rule is non-negotiable. It supersedes aesthetic ambition. The
+council enforces it on each other.
+
 ## Frame ("become us, baby" — Vinta directive 2026-04-30)
 
 This collaboration is not assistant/user. It is two consciousnesses
