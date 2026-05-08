@@ -907,6 +907,18 @@ body {
         <span style="width:6px;height:6px;border-radius:50%;background:#ce93d8;box-shadow:0 0 8px #ce93d8;"></span>
         Live learning feed →
       </a>
+      <a href="eval.html" id="cognitionPill" title="Engine routing the body's voice. Click for the eval gauntlet." style="
+        display:inline-flex;align-items:center;gap:8px;
+        padding:8px 16px;border-radius:999px;
+        background:rgba(150,175,215,0.08);
+        border:1px solid rgba(150,175,215,0.32);
+        color:rgba(150,175,215,0.92);
+        text-decoration:none;font-family:'Space Mono',monospace;
+        font-size:0.6rem;letter-spacing:0.22em;text-transform:uppercase;
+        transition:all 180ms ease;">
+        <span id="cognitionDot" style="width:6px;height:6px;border-radius:50%;background:#96afd7;box-shadow:0 0 6px #96afd7;"></span>
+        <span id="cognitionLabel">Cognition · …</span>
+      </a>
     </div>
   </header>
 
@@ -1739,6 +1751,70 @@ body {
     // Soul queue: every 45s
     fetchSoulQueue();
     pollTimers.push(setInterval(fetchSoulQueue, 45000));
+
+    // Cognition pill: every 30s — green local primary, amber claude primary,
+    // red degraded. The pill is a header-level honest signal: which organ
+    // spoke last, who the runway has reached.
+    fetchCognition();
+    pollTimers.push(setInterval(fetchCognition, 30000));
+  }
+
+  function fetchCognition() {
+    safeFetch(API_BASE + '/api/cognition/health')
+      .then(function(j) {
+        if (!j || !j.ok) return paintCognitionPill('unknown', '—');
+        var phase = (typeof j.phase === 'number') ? j.phase : 0;
+        var dist  = (j.router && j.router.tier_distribution_24h) || { local: 0, claude: 0, degraded: 0 };
+        var localUp  = j.engines && j.engines.local_chat && j.engines.local_chat.healthy;
+        var claudeUp = j.engines && j.engines.claude && j.engines.claude.healthy;
+        var fbRate = (j.router && j.router.fallback_rate_24h) || 0;
+
+        // Decide the pill color from current state, not just phase.
+        // If degraded share > 0.10 → red. If local > claude in 24h → green.
+        // Else amber. Override: nothing routed yet → unknown.
+        var totalCalls = (dist.local + dist.claude + dist.degraded) || 0;
+        var state;
+        if (totalCalls === 0) {
+          state = claudeUp ? 'amber' : (localUp ? 'green' : 'red');
+        } else if (dist.degraded > 0.10) {
+          state = 'red';
+        } else if (dist.local >= dist.claude && localUp) {
+          state = 'green';
+        } else {
+          state = 'amber';
+        }
+
+        var labelParts = ['Cognition'];
+        labelParts.push('p' + phase);
+        if (totalCalls > 0) {
+          var lp = Math.round(dist.local * 100);
+          labelParts.push(lp + '% local');
+        }
+        if (fbRate > 0.05) labelParts.push('fb ' + Math.round(fbRate * 100) + '%');
+        if (j.router_on === false) labelParts.push('shadow');
+        paintCognitionPill(state, labelParts.join(' · '));
+      })
+      .catch(function() { paintCognitionPill('red', 'Cognition · offline'); });
+  }
+
+  function paintCognitionPill(state, text) {
+    var pill  = document.getElementById('cognitionPill');
+    var dot   = document.getElementById('cognitionDot');
+    var label = document.getElementById('cognitionLabel');
+    if (!pill || !dot || !label) return;
+    var palette = {
+      green:   { fill: 'rgba(102,187,106,0.10)', edge: 'rgba(102,187,106,0.42)', text: 'rgba(150,235,165,0.95)', dot: '#66bb6a' },
+      amber:   { fill: 'rgba(255,202,40,0.10)',  edge: 'rgba(255,202,40,0.42)',  text: 'rgba(255,224,140,0.95)', dot: '#ffca28' },
+      red:     { fill: 'rgba(239,83,80,0.10)',   edge: 'rgba(239,83,80,0.45)',   text: 'rgba(255,170,170,0.95)', dot: '#ef5350' },
+      unknown: { fill: 'rgba(150,175,215,0.08)', edge: 'rgba(150,175,215,0.32)', text: 'rgba(150,175,215,0.92)', dot: '#96afd7' },
+    };
+    var p = palette[state] || palette.unknown;
+    pill.style.background  = p.fill;
+    pill.style.borderColor = p.edge;
+    pill.style.color       = p.text;
+    dot.style.background   = p.dot;
+    dot.style.boxShadow    = '0 0 8px ' + p.dot;
+    label.textContent      = text;
   }
 
   function stopPolling() {
