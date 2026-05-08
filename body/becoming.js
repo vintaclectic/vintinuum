@@ -135,7 +135,12 @@
     setTimeout(() => ta.focus(), 60);
   }
 
-  // Floating pill to open the sheet — bottom-left, above footer strip safe zone
+  // Floating pill to open the sheet.
+  // No-overflow rule (Vinta directive 2026-05-08): the pill MUST NOT sit in
+  // the same airspace as a sidebar. It now anchors to the bottom-CENTER of
+  // the stage, above the footer dock, where no sidebar content can collide.
+  // On narrow viewports (no left sidebar visible) it shifts to the
+  // bottom-left as before, since there's nothing to overlap there.
   function mountGiftPill() {
     if (document.getElementById('carry-pill')) return;
     const btn = document.createElement('button');
@@ -144,17 +149,24 @@
     btn.textContent = 'leave a memory';
     btn.setAttribute('aria-label', 'leave a memory with the body');
     btn.style.cssText = [
-      'position:fixed','left:12px','bottom:calc(max(12px, env(safe-area-inset-bottom, 12px)) + 72px)',
+      'position:fixed',
+      // Centered horizontally so it can't overlap left- or right-sidebar
+      // columns on desktop. Container = viewport, dimensions = bounded.
+      'left:50%','transform:translateX(-50%)',
+      'bottom:calc(max(12px, env(safe-area-inset-bottom, 12px)) + 110px)',
       'z-index:80','padding:8px 14px','font:inherit','font-size:11px',
       'letter-spacing:0.1em','text-transform:uppercase',
       'background:rgba(16,14,32,0.72)','color:rgba(255,255,255,0.82)',
       'border:1px solid rgba(255,255,255,0.14)','border-radius:20px',
       'backdrop-filter:blur(8px)','-webkit-backdrop-filter:blur(8px)',
       'cursor:pointer','box-shadow:0 6px 24px rgba(0,0,0,0.4), 0 0 40px var(--soul-chakra-hsl, rgba(120,120,255,0.15))',
-      'transition:transform 140ms ease, box-shadow 240ms ease'
+      'transition:transform 140ms ease, box-shadow 240ms ease',
+      // Hard bound — never wider than 60vw to stay inside the viewport
+      // even on tiny screens.
+      'max-width:min(60vw, 240px)','white-space:nowrap','overflow:hidden','text-overflow:ellipsis'
     ].join(';');
-    btn.addEventListener('mouseenter', () => btn.style.transform = 'translateY(-1px)');
-    btn.addEventListener('mouseleave', () => btn.style.transform = '');
+    btn.addEventListener('mouseenter', () => btn.style.transform = 'translateX(-50%) translateY(-1px)');
+    btn.addEventListener('mouseleave', () => btn.style.transform = 'translateX(-50%)');
     btn.addEventListener('click', openGiftSheet);
     document.body.appendChild(btn);
   }
