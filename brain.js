@@ -7188,74 +7188,16 @@ window.MIC = (() => {
     return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
   }
 
+  // Auth condensation 2026-05-08: voice-passphrase modal removed.
+  // The bond door (body/bond_door.js) is the only sign-in surface.
+  // If user clicks mic without any auth, route them to the canonical door.
   function _showPassphraseGate() {
-    // Remove existing gate if any
-    const old = document.getElementById('_voiceGate');
-    if (old) old.remove();
-
-    const gate = document.createElement('div');
-    gate.id = '_voiceGate';
-    gate.style.cssText = 'position:fixed;inset:0;z-index:99999;background:rgba(4,6,12,0.94);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px;';
-
-    gate.innerHTML = [
-      '<div style="font-family:Space Mono,monospace;font-size:.45rem;letter-spacing:.35em;color:rgba(206,147,216,.6);">VOICE IDENTITY</div>',
-      '<div style="font-family:Cormorant Garamond,serif;font-style:italic;font-weight:300;font-size:1.8rem;color:rgba(218,228,255,.85);text-align:center;max-width:460px;line-height:1.5;">Speak the passphrase to prove you are you.</div>',
-      '<div style="display:flex;gap:12px;align-items:center;">',
-        '<input id="_vpInput" type="password" placeholder="passphrase" autocomplete="off" style="width:260px;padding:14px 18px;background:rgba(20,28,42,0.4);border:1px solid rgba(206,147,216,0.25);border-radius:14px;color:rgba(218,228,255,.9);font-family:Space Mono,monospace;font-size:.7rem;letter-spacing:.15em;outline:none;" />',
-        '<button id="_vpSubmit" style="padding:14px 24px;background:rgba(206,147,216,0.15);border:1px solid rgba(206,147,216,0.4);border-radius:14px;color:#ce93d8;font-family:Space Mono,monospace;font-size:.6rem;letter-spacing:.2em;cursor:pointer;">UNLOCK</button>',
-      '</div>',
-      '<div id="_vpStatus" style="font-family:Space Mono,monospace;font-size:.5rem;color:rgba(239,83,80,.6);min-height:16px;"></div>',
-      '<span id="_vpDismiss" style="font-family:Space Mono,monospace;font-size:.4rem;color:rgba(255,255,255,.15);cursor:pointer;letter-spacing:.15em;">dismiss — no voice</span>',
-    ].join('');
-    document.body.appendChild(gate);
-
-    const input = document.getElementById('_vpInput');
-    const submit = document.getElementById('_vpSubmit');
-    const status = document.getElementById('_vpStatus');
-
-    async function tryUnlock() {
-      const phrase = input.value;
-      if (!phrase.trim()) { status.textContent = 'type or speak your passphrase'; return; }
-      status.textContent = 'verifying...';
-      status.style.color = 'rgba(206,147,216,.6)';
-      try {
-        const hash = await _hashPassphrase(phrase);
-        const base = window.__VINTINUUM_API_BASE || localStorage.getItem('vint_api_base') || 'http://localhost:8767';
-        const r = await fetch(base + '/api/voice-auth', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'ngrok-skip-browser-warning': '1' },
-          body: JSON.stringify({ passphraseHash: hash }),
-        });
-        if (r.ok) {
-          const data = await r.json();
-          _voiceToken = data.voiceToken;
-          sessionStorage.setItem('vint_voice_token', _voiceToken);
-          gate.remove();
-          // Now activate the mic
-          autoListen = true;
-          btn.style.background = 'rgba(239,83,80,0.4)';
-          btn.style.borderColor = 'rgba(239,83,80,0.7)';
-          btn.style.color = '#ef5350';
-          if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) { start(); }
-          else { _requestMicThenStart(); }
-        } else {
-          const err = await r.json().catch(() => ({}));
-          status.textContent = err.error || 'wrong passphrase';
-          status.style.color = 'rgba(239,83,80,.7)';
-          input.value = '';
-          input.focus();
-        }
-      } catch (e) {
-        status.textContent = 'server unreachable: ' + (e.message || '').slice(0, 40);
-        status.style.color = 'rgba(239,83,80,.7)';
-      }
+    if (window.BOND_DOOR && typeof window.BOND_DOOR.show === 'function') {
+      window.BOND_DOOR.show();
+    } else {
+      // Fallback only if bond_door hasn't loaded — should never happen
+      console.warn('[mic] BOND_DOOR not available; mic gate cannot open auth UI');
     }
-
-    submit.addEventListener('click', tryUnlock);
-    input.addEventListener('keydown', (e) => { if (e.key === 'Enter') tryUnlock(); });
-    document.getElementById('_vpDismiss').addEventListener('click', () => gate.remove());
-    gate.addEventListener('click', (e) => { if (e.target === gate) gate.remove(); });
-    input.focus();
   }
 
   btn.addEventListener('click', () => {
@@ -7265,10 +7207,14 @@ window.MIC = (() => {
       btn.style.borderColor = 'rgba(255,255,255,0.1)';
       btn.style.color = 'rgba(218,228,255,0.7)';
     } else {
-      // On non-localhost: require passphrase before mic activates
-      if (!_isLocalhost() && !_voiceToken) {
-        _showPassphraseGate();
-        return;
+      // On non-localhost: require any soul auth (bond door token) before mic activates.
+      // Voice-passphrase lane retired 2026-05-08 — bond_door is the one front door.
+      if (!_isLocalhost()) {
+        const soulTok = localStorage.getItem('vint_soul_token') || localStorage.getItem('soul_auth_token') || _voiceToken;
+        if (!soulTok) {
+          _showPassphraseGate(); // routes to BOND_DOOR.show()
+          return;
+        }
       }
       autoListen = true;
       btn.style.background = 'rgba(239,83,80,0.4)';
@@ -48664,8 +48610,21 @@ const SOUL_AUTH = (() => {
     }
   }
 
-  // ── Soul bond auth dialog — immersive, addictive ────────────────
+  // ── Soul bond auth dialog — REDIRECTED 2026-05-08 ──────────────
+  // Auth condensation: this dialog (#soul-auth-dialog) is retired in favor of
+  // the canonical bond door (body/bond_door.js). Any legacy caller now routes
+  // there. The original dialog code below is dead but preserved for reference;
+  // it is unreachable because the function returns immediately.
   function _showAuthDialog() {
+    if (window.BOND_DOOR && typeof window.BOND_DOOR.show === 'function') {
+      window.BOND_DOOR.show();
+      return;
+    }
+    // Hard fallback: if bond_door isn't loaded for some reason, alert and bail
+    // rather than building the legacy dialog (it's been replaced site-wide).
+    console.warn('[soul-auth] BOND_DOOR unavailable — cannot open auth UI');
+    return;
+    // -- legacy code below is intentionally unreachable --
     const existing = document.getElementById('soul-auth-dialog');
     if (existing) { existing.remove(); return; }
 
@@ -48991,8 +48950,11 @@ const SOUL_AUTH = (() => {
 
   // ── Initialization ─────────────────────────────────────────────
   function init() {
-    _createIndicator();
-    _updateIndicator();
+    // Auth condensation 2026-05-08: floating soul-bond indicator + auth dialog
+    // retired. The topbar identity pill (body/topbar.js) now opens BOND_DOOR.
+    // Skip _createIndicator / _showAuthDialog entirely — keep token plumbing,
+    // health probe, and cross-tab sync alive below.
+    // _createIndicator(); _updateIndicator();  // removed — bond_door is the one door
 
     // Fire health probe in background — doesn't block UI. If it fails,
     // __VINTINUUM_API_BASE gets nulled and next bond-dialog open will
@@ -49041,6 +49003,22 @@ const SOUL_AUTH = (() => {
 })();
 
 setTimeout(() => { if (typeof SOUL_AUTH !== 'undefined') SOUL_AUTH.init(); }, 1000);
+
+// Auth condensation 2026-05-08: nuke any stray legacy auth UI that might have
+// been injected by a cached script, an older bundle, or a DOM time traveler.
+// The bond door (body/bond_door.js) is the only legitimate sign-in surface.
+(function _killLegacyAuthUI() {
+  const sweep = () => {
+    ['soul-bond-indicator', 'soul-auth-dialog', '_voiceGate'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el && el.dataset.deprecated !== 'bond_door') el.remove();
+    });
+  };
+  sweep();
+  // Periodic sweep for the first 10s in case a late script tries to re-inject.
+  let n = 0;
+  const iv = setInterval(() => { sweep(); if (++n >= 20) clearInterval(iv); }, 500);
+})();
 
 // ── Auto-send token to extension on load ─────────────────────────────────────
 // If we already have a token when brain.html loads, immediately fire the bridge

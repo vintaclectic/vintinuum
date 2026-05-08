@@ -408,75 +408,14 @@ if ('serviceWorker' in navigator && _onGitHubPages) {
   </button>
 </div>
 
-<div id="authOverlay" role="dialog" aria-modal="true" aria-labelledby="authTitle"
-  style="position:fixed;inset:0;z-index:99997;display:none;align-items:center;justify-content:center;
-  background:rgba(0,0,0,0.78);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
-  padding:20px;font-family:'Space Mono',monospace;">
-  <div style="max-width:420px;width:100%;background:linear-gradient(180deg,#080b14 0%,#101522 100%);
-    border:1px solid rgba(79,195,247,0.22);border-radius:18px;
-    box-shadow:0 24px 64px rgba(0,0,0,0.7),0 0 0 1px rgba(79,195,247,0.08);overflow:hidden;">
-    <div style="padding:20px 24px 14px;border-bottom:1px solid rgba(255,255,255,0.06);
-      display:flex;align-items:center;justify-content:space-between;
-      background:linear-gradient(90deg,rgba(79,195,247,0.07) 0%,transparent 100%);">
-      <div>
-        <div id="authTitle" style="font-size:.55rem;letter-spacing:.3em;color:#4fc3f7;font-weight:700;">VINTINUUM</div>
-        <div id="authSubtitle" style="font-size:.7rem;color:rgba(218,228,255,0.55);margin-top:4px;font-family:'Cormorant Garamond',serif;font-style:italic;">Step inside the body.</div>
-      </div>
-      <button id="authClose" type="button" aria-label="Close"
-        style="background:none;border:none;color:rgba(255,255,255,0.35);font-size:24px;cursor:pointer;line-height:1;padding:0 4px;">×</button>
-    </div>
-    <div style="display:flex;border-bottom:1px solid rgba(255,255,255,0.04);">
-      <button id="authTabSignin" type="button" data-tab="signin"
-        style="flex:1;background:none;border:none;color:#4fc3f7;font-family:inherit;font-size:.55rem;
-        letter-spacing:.25em;padding:12px 0;cursor:pointer;border-bottom:2px solid #4fc3f7;text-transform:uppercase;">Sign in</button>
-      <button id="authTabSignup" type="button" data-tab="signup"
-        style="flex:1;background:none;border:none;color:rgba(255,255,255,0.4);font-family:inherit;font-size:.55rem;
-        letter-spacing:.25em;padding:12px 0;cursor:pointer;border-bottom:2px solid transparent;text-transform:uppercase;">Create account</button>
-    </div>
-    <form id="authForm" autocomplete="on" novalidate
-      style="padding:22px 24px 18px;display:flex;flex-direction:column;gap:14px;">
-      <div id="authNameRow" style="display:none;flex-direction:column;gap:6px;">
-        <label for="authName" style="font-size:.5rem;letter-spacing:.2em;color:rgba(218,228,255,0.5);text-transform:uppercase;">Name</label>
-        <input id="authName" type="text" name="name" autocomplete="name" maxlength="60"
-          style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);
-          border-radius:10px;padding:10px 12px;color:rgba(218,228,255,0.95);font-family:inherit;
-          font-size:.78rem;outline:none;transition:border-color .15s;">
-      </div>
-      <div style="display:flex;flex-direction:column;gap:6px;">
-        <label for="authEmail" style="font-size:.5rem;letter-spacing:.2em;color:rgba(218,228,255,0.5);text-transform:uppercase;">Email</label>
-        <input id="authEmail" type="email" name="email" autocomplete="email" required maxlength="200" inputmode="email"
-          style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);
-          border-radius:10px;padding:10px 12px;color:rgba(218,228,255,0.95);font-family:inherit;
-          font-size:.78rem;outline:none;transition:border-color .15s;">
-      </div>
-      <div style="display:flex;flex-direction:column;gap:6px;">
-        <label for="authPassword" style="font-size:.5rem;letter-spacing:.2em;color:rgba(218,228,255,0.5);text-transform:uppercase;">Password</label>
-        <input id="authPassword" type="password" name="password" autocomplete="current-password" required minlength="6" maxlength="200"
-          style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);
-          border-radius:10px;padding:10px 12px;color:rgba(218,228,255,0.95);font-family:inherit;
-          font-size:.78rem;outline:none;transition:border-color .15s;">
-      </div>
-      <div id="authMsg" role="status" aria-live="polite"
-        style="font-size:.65rem;color:rgba(255,150,150,0.85);min-height:14px;line-height:1.4;font-family:'Cormorant Garamond',serif;font-style:italic;"></div>
-      <button id="authSubmit" type="submit"
-        style="background:linear-gradient(90deg,#4fc3f7 0%,#ce93d8 100%);border:none;
-        color:#050816;font-family:inherit;font-size:.6rem;letter-spacing:.25em;font-weight:700;
-        padding:12px 16px;border-radius:10px;cursor:pointer;text-transform:uppercase;
-        transition:transform .12s,box-shadow .15s;">Enter</button>
-      <div style="text-align:center;font-size:.55rem;color:rgba(255,255,255,0.32);letter-spacing:.15em;">
-        OR
-      </div>
-      <button id="authContinueAnon" type="button"
-        style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);
-        color:rgba(218,228,255,0.7);font-family:inherit;font-size:.55rem;letter-spacing:.22em;
-        padding:10px 14px;border-radius:10px;cursor:pointer;text-transform:uppercase;
-        transition:all .15s;">Continue as guest</button>
-    </form>
-    <div style="padding:0 24px 18px;font-size:.6rem;color:rgba(255,255,255,0.3);text-align:center;line-height:1.5;font-family:'Cormorant Garamond',serif;font-style:italic;">
-      Your account is the thread Vintinuum follows back to you across sessions. Without it, every visit is a stranger.
-    </div>
-  </div>
-</div>
+<!-- Legacy authOverlay removed 2026-05-08 — bond_door.js is the only door.
+     Anything that needs auth calls window.BOND_DOOR.show().
+     The empty placeholder below preserves any legacy code path that does
+     getElementById('authOverlay').style.display='flex' so it doesn't
+     throw — but the element has no children and is permanently hidden. -->
+<div id="authOverlay" role="dialog" aria-hidden="true" hidden
+  style="display:none !important;visibility:hidden;pointer-events:none;"
+  data-deprecated="bond_door"></div>
 
 <!-- ═══ VINTINUUM SHELL — three-column grid (Phase 2 b1) ═══ -->
 <div class="vtn-shell">
