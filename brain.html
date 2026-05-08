@@ -38,8 +38,14 @@ canvas{display:block;}
 /* ── LAYOUT ── */
 .layout{position:relative;z-index:3;margin:0 auto;padding:0;height:100%;display:flex;flex-direction:column;overflow:hidden;}
 
-/* ── HEADER ── */
-.header{height:40px;display:flex;align-items:center;justify-content:center;gap:16px;padding:0 16px;overflow:hidden;flex-shrink:0;}
+/* ── HEADER ──
+   Legacy in-flow header (line 489 below). The new fixed topbar
+   (body/topbar.js Movement III) paints brand + identity + vitals.
+   This in-flow header is hidden so it doesn't double-paint or steal
+   the 40px band underneath the fixed topbar. Kept in DOM in case any
+   inline script reads .brand-mark / .header h1.
+   2026-05-07 redesign — Vinta directive: no overlap. */
+.header{display:none !important;height:0;overflow:hidden;flex-shrink:0;}
 .brand-mark{width:28px;height:28px;filter:drop-shadow(0 0 12px rgba(79,195,247,.36));animation:brandPulse 4.8s ease-in-out infinite;flex-shrink:0;}
 .header h1{font-family:'Cormorant Garamond',serif;font-style:italic;font-weight:300;font-size:clamp(1.2rem,3vw,2rem);letter-spacing:.12em;background:linear-gradient(130deg,var(--cyan),var(--purple),var(--gold));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;line-height:1;}
 .header .sub{font-size:.48rem;letter-spacing:.2em;text-transform:uppercase;color:var(--dim);display:flex;gap:12px;flex-wrap:nowrap;overflow:hidden;}
@@ -344,16 +350,17 @@ if ('serviceWorker' in navigator && _onGitHubPages) {
 </head>
 <body>
 
-<!-- ═══ TOP-LEFT PILL CLUSTER — flex row so pills can never overlap ═══
-     Both auth + kick connect pills live inside one fixed flex container.
-     This eliminates the hardcoded left:12 / left:140 collision when the
-     auth label expands (e.g. "DIRHAVEN@GMAIL.COM" instead of "SIGN IN")
-     and avoids stacking on top of each other on narrow viewports.
-     (Vinta directive 2026-05-05: "kick connect overlapping connected
-      account or sign in or sign in is overlapping other shit") -->
-<div id="topLeftCluster" style="position:fixed;top:8px;left:12px;z-index:99996;
-  display:flex;flex-wrap:wrap;align-items:center;gap:8px;
-  max-width:calc(100vw - 80px);pointer-events:none;">
+<!-- ═══ LEGACY TOP-LEFT CLUSTER — hidden, retained as DOM anchor only ═══
+     The new topbar (body/topbar.js, Movement III) is the canonical chrome.
+     This cluster is kept off-screen so the inline brain.html JS that still
+     references #authTrigger / #authTriggerLabel / #kickConnectBtn doesn't
+     null-crash. Visually, it is GONE — display:none + position:absolute +
+     left:-9999px belt-and-suspenders so it can never paint again.
+     (Vinta directive 2026-05-07: "reimagine the entire design ... no overlap
+      ever again. body/memory/genome/settings buttons must work.") -->
+<div id="topLeftCluster" aria-hidden="true" style="display:none !important;
+  position:absolute;left:-9999px;top:-9999px;visibility:hidden;
+  pointer-events:none;width:0;height:0;overflow:hidden;">
   <button id="authTrigger" type="button" aria-label="Sign in or create account"
     style="pointer-events:auto;background:rgba(8,12,20,0.55);
     border:1px solid rgba(79,195,247,0.28);color:rgba(79,195,247,0.85);
@@ -2600,8 +2607,8 @@ if ('serviceWorker' in navigator && _onGitHubPages) {
 .learning-footer-link {
   position: fixed;
   bottom: 14px;
-  right: 86px;
-  z-index: 10;
+  right: 180px;
+  z-index: 1005;
   font-family: 'Space Mono', monospace;
   font-size: 0.58rem;
   letter-spacing: 0.22em;
