@@ -61,17 +61,22 @@
     '.fab', '.pill', '.cta', '.dock-cta', '.float-btn',
   ];
 
-  // Containers whose children should NOT be turned into independent
-  // draggables — moving these would shred the layout (sidebars internal
-  // grids, modal forms, etc.). The drag system still applies to the
-  // container itself if it matches a default selector.
-  const STRUCTURAL_CONTAINERS = [
-    '.vtn-tabs',         // sidebar-left tab strip
-    '.vtn-chem-list',    // neurochem bar list
-    '.vtn-layer-grid',   // layer distribution tiles
-    '.vtn-legend-list',  // consciousness legend
-    '.bond-form',        // bond-door form
-    'form',              // any form
+  // Containers whose DIRECT-CHILD layout strip cannot be torn apart by
+  // dragging individual tabs out of order. We still allow buttons inside
+  // these containers to be draggable EXCEPT when the button is a direct
+  // tab-row child (a tab in a tablist, a list-row in a chem-list, etc.).
+  // For everything else (buttons inside forms, modals, popovers), drag is
+  // allowed. Vinta directive: every button moveable. Period.
+  //
+  // The skip-rule is now: "only skip if my immediate parent matches one
+  // of these AND the parent is acting as a positional row." That keeps
+  // the chem-bar / layer-grid / tab-strip rows intact while letting
+  // every form-submit, modal-cta, popover-action, etc. drag freely.
+  const STRUCTURAL_TAB_PARENTS = [
+    '.vtn-tabs',
+    '.vtn-chem-list',
+    '.vtn-layer-grid',
+    '.vtn-legend-list',
     '[role="tablist"]',
     '[role="menu"]',
     '[role="listbox"]',
@@ -167,7 +172,10 @@
     };
     let nudgeX = 0, nudgeY = 0;
     document.querySelectorAll(OCCUPIED_SELECTORS.join(',')).forEach((zone) => {
-      if (zone === el || zone.contains(el)) return;
+      // Don't push a button OUT of its own ancestor (modal/sidebar/dock).
+      // The button "lives" in that container and is allowed to occupy it.
+      // Only push it away from FOREIGN occupied zones.
+      if (zone === el || zone.contains(el) || el.contains(zone)) return;
       const z = zone.getBoundingClientRect();
       if (!z.width || !z.height) return;
       if (!rectOverlaps(projected, z)) return;
@@ -214,6 +222,64 @@
     }
   };
 
+  // ── Auto-separate stacked fixed-position buttons ─────────
+  // When two fixed-position buttons authored to the same corner overlap
+  // (e.g. #micBtn and #voiceToggle both at bottom-left), nudge the
+  // newcomer along the dominant clear axis until it doesn't overlap
+  // any other fixed-position draggable. Result is committed via
+  // translate3d so the user's drag system can still relocate it later.
+  const separateFixedSiblings = (el) => {
+    if (!el || !el.isConnected) return;
+    const r = el.getBoundingClientRect();
+    if (!r.width || !r.height) return;
+    // Find peers: other fixed-position draggables (not ancestors/descendants)
+    const peers = [...document.querySelectorAll('[data-drag-ready="1"]')].filter(p => {
+      if (p === el || p.contains(el) || el.contains(p)) return false;
+      const cs = window.getComputedStyle(p);
+      return cs.position === 'fixed';
+    });
+    let dx = 0, dy = 0;
+    let projected = { left: r.left, top: r.top, right: r.right, bottom: r.bottom };
+    let safety = 8; // max iterations to avoid pathological loops
+    let collided = true;
+    while (collided && safety-- > 0) {
+      collided = false;
+      for (const p of peers) {
+        const z = p.getBoundingClientRect();
+        if (!z.width || !z.height) continue;
+        if (!rectOverlaps(projected, z)) continue;
+        // Push along the smaller-overlap axis (cheaper movement)
+        const overlapX = Math.min(projected.right - z.left, z.right - projected.left);
+        const overlapY = Math.min(projected.bottom - z.top, z.bottom - projected.top);
+        const gap = 8;
+        if (overlapX < overlapY) {
+          // horizontal push — pick whichever side is closer to clear
+          const pushRight = z.right - projected.left + gap;
+          const pushLeft  = -(projected.right - z.left + gap);
+          const push = Math.abs(pushLeft) < Math.abs(pushRight) ? pushLeft : pushRight;
+          dx += push;
+          projected.left += push; projected.right += push;
+        } else {
+          const pushDown = z.bottom - projected.top + gap;
+          const pushUp   = -(projected.bottom - z.top + gap);
+          const push = Math.abs(pushUp) < Math.abs(pushDown) ? pushUp : pushDown;
+          dy += push;
+          projected.top += push; projected.bottom += push;
+        }
+        collided = true;
+      }
+    }
+    if (dx !== 0 || dy !== 0) {
+      const c = clampToViewport(el, dx, dy);
+      el.style.transform = `translate3d(${c.x}px, ${c.y}px, 0)`;
+      el.dataset.dragX = String(c.x);
+      el.dataset.dragY = String(c.y);
+      const k = idFor(el);
+      layout[k] = { x: c.x, y: c.y };
+      saveLayout();
+    }
+  };
+
   // ── Mark every matching node as draggable ────────────────
   const markDraggable = (root) => {
     const nodes = (root || document).querySelectorAll(DEFAULT_SELECTORS.join(','));
@@ -223,13 +289,13 @@
       if (el.dataset.dragSkip === '1') return;
       // Skip elements inside no-drag containers
       if (el.closest('[data-drag-container="false"]')) return;
-      // Skip buttons inside structural containers (tabs, chem bars, forms,
-      // tablists). Those buttons need to stay where the layout puts them —
-      // letting the user drag a single tab out of its strip would shred UX.
-      // The structural container itself can still be draggable as a whole.
-      if (STRUCTURAL_CONTAINERS.some(sel => {
-        const c = el.closest(sel);
-        return c && c !== el;
+      // Skip ONLY when the element is a direct-row child of a tab strip
+      // (tabs / chem rows / layer grid cells / list rows). Buttons inside
+      // forms, modals, popovers — i.e. NOT direct children of a tablist
+      // row — are still draggable. Vinta directive: every button moveable.
+      if (STRUCTURAL_TAB_PARENTS.some(sel => {
+        const par = el.parentElement;
+        return par && par !== el && par.matches && par.matches(sel);
       })) return;
       // Skip the close X / submit-on-form / icon-only chrome buttons that
       // explicitly opt out via data-drag-skip on their parent.
@@ -241,6 +307,16 @@
       el.style.webkitTouchCallout = 'none';
       // Promote to its own layer so transform updates are cheap
       if (!el.style.willChange) el.style.willChange = 'transform';
+      // ── FIXED-POSITION SIBLING SEPARATION ────────────────────
+      // Buttons authored at the same (left, bottom) — like #micBtn and
+      // #voiceToggle stacking at bottom-left — overlap visually on load.
+      // After the layer settles, if this button overlaps another fixed
+      // button, nudge it horizontally until clear. Only fires when no
+      // saved position exists (saved layout wins).
+      const cs = window.getComputedStyle(el);
+      if (cs.position === 'fixed' && !layout[idFor(el)]) {
+        requestAnimationFrame(() => separateFixedSiblings(el));
+      }
       // Hide grip-hint on tiles too small for it to read cleanly.
       // Measured lazily — if tile not in layout yet, retry next frame.
       const sizeCheck = () => {
