@@ -1,6 +1,26 @@
 # Identity Memories
 
-Total: 6
+Total: 8
+
+## User may be at risk for self-harm
+
+**Subject:** `identity:mental-health-risk`
+**Confidence:** 85%
+**Verification:** none
+
+Based on initial expression, user may be experiencing suicidal ideation or severe depression. This is important context for future interactions.
+
+---
+
+## User engages in reflective/meta-conversation
+
+**Subject:** `identity:communication-pattern`
+**Confidence:** 70%
+**Verification:** none
+
+The user asks open-ended questions ('What do you see?') and appears to test or probe the assistant's responses, suggesting they engage in exploratory or analytical dialogue patterns.
+
+---
 
 ## User challenges AI consciousness claims
 

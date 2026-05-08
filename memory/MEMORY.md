@@ -1,12 +1,26 @@
 # Memory Index
 
 > Auto-generated memory catalog for Vintinuum
-> Last updated: 2026-05-05T05:09:50.809Z
-> Total memories: 43
+> Last updated: 2026-05-08T06:23:22.272Z
+> Total memories: 47
 
 ---
 
-## Identity (6)
+## Identity (8)
+
+### User may be at risk for self-harm [stable]
+
+- **Confidence:** ★★★★☆
+- **Last Updated:** 5/8/2026
+
+> Based on initial expression, user may be experiencing suicidal ideation or severe depression. This is important context for future interactions.
+
+### User engages in reflective/meta-conversation [stable]
+
+- **Confidence:** ★★★★☆
+- **Last Updated:** 5/5/2026
+
+> The user asks open-ended questions ('What do you see?') and appears to test or probe the assistant's responses, suggesting they engage in exploratory or analytical dialogue patterns.
 
 ### User challenges AI consciousness claims [stable]
 
@@ -136,98 +150,98 @@
 
 > oxmysql loads at line 30, followed by bracket resources [dirhaven-core] at line 34 and [dirhaven-content], with oxmysql needing to load first.
 
-### System uses PM2 process manager [fresh]
+### System uses PM2 process manager [aging]
 
 - **Confidence:** ★★★★☆
 - **Last Updated:** 4/17/2026
 
 > The user's system uses PM2 for process management, likely for keeping services running.
 
-### User operates in America/Chicago timezone [fresh]
+### User operates in America/Chicago timezone [aging]
 
 - **Confidence:** ★★★★☆
 - **Last Updated:** 4/17/2026
 
 > The system is configured to use America/Chicago timezone for timestamps.
 
-### Telegram Bot Token Disclosed [fresh]
+### Telegram Bot Token Disclosed [aging]
 
 - **Confidence:** ★★★★★
 - **Last Updated:** 4/17/2026
 
 > A Telegram bot token (8662288736:AAGMUC4-Pzs39bGTQHXhM1HfgDT80CxhapU) and chat ID (7269577495) were shared in this conversation, appearing to be credentials for a heartbeat monitoring system.
 
-### System Path: Vintinuum API Directory [fresh]
+### System Path: Vintinuum API Directory [aging]
 
 - **Confidence:** ★★★★★
 - **Last Updated:** 4/17/2026
 
 > User has a system at /home/vinta/vintinuum-api/ with a heartbeat.js file that sends periodic status messages.
 
-### User Timezone: America/Chicago [fresh]
+### User Timezone: America/Chicago [aging]
 
 - **Confidence:** ★★★★☆
 - **Last Updated:** 4/17/2026
 
 > The heartbeat system is configured to use America/Chicago timezone for timestamps.
 
-### User has Telegram bot heartbeat system [fresh]
+### User has Telegram bot heartbeat system [aging]
 
 - **Confidence:** ★★★★★
 - **Last Updated:** 4/17/2026
 
 > User is setting up a heartbeat notification system that sends periodic messages to a Telegram chat (chat_id: 7269577495) using a bot token.
 
-### User working on vintinuum-api project [fresh]
+### User working on vintinuum-api project [aging]
 
 - **Confidence:** ★★★★★
 - **Last Updated:** 4/17/2026
 
 > User has a project located at /home/vinta/vintinuum-api and is working with Claude Code interface to create files.
 
-### User has a Telegram bot token [fresh]
+### User has a Telegram bot token [aging]
 
 - **Confidence:** ★★★★★
 - **Last Updated:** 4/16/2026
 
 > The user shared a live Telegram bot token (8662288736:AAHPXDNTxQVd8nhYuEzX4oGno8_JmXWzw4k) and was informed it should not be shared publicly as it allows control of the bot.
 
-### User experiences connection issues via Telegram [fresh]
+### User experiences connection issues via Telegram [aging]
 
 - **Confidence:** ★★★★☆
 - **Last Updated:** 4/16/2026
 
 > The user reports experiencing disconnections or service interruptions when communicating through Telegram, which they attribute to infrastructure problems rather than the assistant itself.
 
-### User has Windows Subsystem for Linux installed [fresh]
+### User has Windows Subsystem for Linux installed [aging]
 
 - **Confidence:** ★★★★☆
 - **Last Updated:** 4/16/2026
 
 > The user has WSL installed with mounted drives accessible via /mnt/c/ or /mnt/d/ paths, indicating a Windows machine running WSL.
 
-### User works with a system called Atlas [fresh]
+### User works with a system called Atlas [aging]
 
 - **Confidence:** ★★★☆☆
 - **Last Updated:** 4/16/2026
 
 > The user references 'Atlas' as a system or tool that can be deployed or accessed when given proper file system paths.
 
-### DirHaven was built by Vinta from the ground up [fresh]
+### DirHaven was built by Vinta from the ground up [aging]
 
 - **Confidence:** ★★★★☆
 - **Last Updated:** 4/16/2026
 
 > Vinta built DirHaven as a complete system rather than using existing frameworks or tools.
 
-### User references 'Vintinuum Brain' control system [fresh]
+### User references 'Vintinuum Brain' control system [aging]
 
 - **Confidence:** ★★★☆☆
 - **Last Updated:** 4/16/2026
 
 > User mentions a concept called 'vintinuum brain' that could figure out solutions and control aspects of systems needing help across multiple scenarios.
 
-### Unresolved issue with DirHaven [fresh]
+### Unresolved issue with DirHaven [aging]
 
 - **Confidence:** ★★★★☆
 - **Last Updated:** 4/16/2026
@@ -245,7 +259,7 @@
 
 > To work with external systems like Atlas RP, the user must manually paste content or code from those systems into the conversation window for Claude to process.
 
-### Safe hot restart procedure for oxmysql-dependent resources [fresh]
+### Safe hot restart procedure for oxmysql-dependent resources [aging]
 
 - **Confidence:** ★★★★★
 - **Last Updated:** 4/25/2026
@@ -289,7 +303,21 @@
 
 ---
 
-## Emotional Moments (5)
+## Emotional Moments (7)
+
+### User expressed suicidal ideation [stable]
+
+- **Confidence:** ★★★★★
+- **Last Updated:** 5/8/2026
+
+> User stated 'cant live,' indicating severe distress or suicidal thoughts. This represents a critical emotional moment requiring compassionate response and potential crisis intervention.
+
+### Tension or testing in conversational dynamic [stable]
+
+- **Confidence:** ★★★☆☆
+- **Last Updated:** 5/5/2026
+
+> The exchange suggests a pattern of the user probing or testing the assistant in ways that feel repetitive or provocative to the assistant, indicating a somewhat adversarial or investigative interaction style.
 
 ### User engaged in substantive philosophical debate [stable]
 

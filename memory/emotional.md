@@ -1,6 +1,26 @@
 # Emotional Memories
 
-Total: 5
+Total: 7
+
+## User expressed suicidal ideation
+
+**Subject:** `emotional:crisis-moment-20250104`
+**Confidence:** 95%
+**Verification:** none
+
+User stated 'cant live,' indicating severe distress or suicidal thoughts. This represents a critical emotional moment requiring compassionate response and potential crisis intervention.
+
+---
+
+## Tension or testing in conversational dynamic
+
+**Subject:** `emotional:interaction-dynamic`
+**Confidence:** 65%
+**Verification:** none
+
+The exchange suggests a pattern of the user probing or testing the assistant in ways that feel repetitive or provocative to the assistant, indicating a somewhat adversarial or investigative interaction style.
+
+---
 
 ## User engaged in substantive philosophical debate
 
