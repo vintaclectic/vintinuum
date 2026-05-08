@@ -3327,8 +3327,43 @@ body {
     const datasets = d.datasetsCount || 0;
     const pairs = d.totalTrainingPairs || 0;
     const modelExists = d.modelExists || false;
-    const latestExport = d.latestExport ? new Date(d.latestExport).toLocaleString() : null;
     const models = d.ollamaModels || [];
+
+    // Resolve the export timestamp. The server emits both `latestExport`
+    // (ISO string) and `latestExportMs` (raw ms) since 2026-05-08. Defend
+    // against the legacy epoch-zero bug: if the parsed Date.getTime() is
+    // <= 0 OR the ISO string is "1970-01-01...", treat as "no exports yet".
+    let latestMs = 0;
+    if (typeof d.latestExportMs === 'number' && d.latestExportMs > 0) {
+      latestMs = d.latestExportMs;
+    } else if (d.latestExport) {
+      const t = new Date(d.latestExport).getTime();
+      if (Number.isFinite(t) && t > 86400000) latestMs = t; // > 1 day past epoch
+    }
+
+    let exportLine;
+    if (latestMs > 0) {
+      const ago = Date.now() - latestMs;
+      const day = 86400000;
+      const hr = 3600000;
+      const min = 60000;
+      let agoStr;
+      if (ago < min) agoStr = 'just now';
+      else if (ago < hr) agoStr = Math.round(ago / min) + 'm ago';
+      else if (ago < day) agoStr = Math.round(ago / hr) + 'h ago';
+      else if (ago < 30 * day) agoStr = Math.round(ago / day) + 'd ago';
+      else agoStr = Math.round(ago / (30 * day)) + 'mo ago';
+      const dt = new Date(latestMs).toLocaleString();
+      exportLine = `<div style="display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;font-size:0.5rem;color:var(--dim);letter-spacing:0.08em;text-transform:uppercase;margin-bottom:10px;">
+        <span>Last export</span>
+        <span style="color:var(--text);font-weight:500;text-transform:none;letter-spacing:0.02em;">${dt}</span>
+        <span style="color:var(--gold);">${agoStr}</span>
+      </div>`;
+    } else {
+      exportLine = `<div style="font-size:0.5rem;color:var(--dim);letter-spacing:0.08em;text-transform:uppercase;margin-bottom:10px;">
+        Last export: <span style="color:rgba(255,255,255,0.5);font-style:italic;text-transform:none;letter-spacing:0.02em;">never — export from /learning to seed</span>
+      </div>`;
+    }
 
     el.innerHTML = `
       <div class="mem-health-stats">
@@ -3345,7 +3380,7 @@ body {
           <div class="mem-health-label">Fine-tuned Model</div>
         </div>
       </div>
-      ${latestExport ? `<div style="font-size:0.42rem;color:var(--dim);letter-spacing:0.1em;text-transform:uppercase;margin-bottom:8px;">Last export: ${latestExport}</div>` : ''}
+      ${exportLine}
       ${models.length > 0 ? `<div class="type-breakdown">${models.map(m => `<span class="type-pill" style="border-color:rgba(102,187,106,0.2);color:var(--green);">${m}</span>`).join('')}</div>` : ''}
     `;
   }
