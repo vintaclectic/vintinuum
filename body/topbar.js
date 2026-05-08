@@ -151,9 +151,41 @@
       label: 'LORE',
       iconOnly: false,
     });
+    // LORE button — directly toggle the panel. The legacy #loreToggle is
+    // hidden via shell.css (display:none on the kill-list) — programmatically
+    // calling .click() on a hidden element still fires its handler in
+    // most browsers, but on some Chromium builds the pointerdown is eaten
+    // before reaching the listener. Bypass the dead element entirely:
+    // open #lorePanel ourselves. If brain.js hasn't populated #deepSections
+    // yet, the panel still opens and the user sees the close button — which
+    // beats "click does nothing." Content streams in as soon as it exists.
     lore.addEventListener('click', () => {
-      const orig = $('loreToggle');
-      if (orig && typeof orig.click === 'function') orig.click();
+      const panel = document.getElementById('lorePanel');
+      if (!panel) return;
+      const isOpen = panel.classList.contains('open');
+      if (isOpen) {
+        panel.classList.remove('open');
+      } else {
+        panel.classList.add('open');
+        // Best-effort: pull in any deepSections content brain.js produced
+        // since last open. moveLore was attached as a MutationObserver but
+        // it only mutates childList — it doesn't sync on demand.
+        try {
+          const src = document.getElementById('deepSections');
+          const dst = document.getElementById('lorePanelContent');
+          if (src && dst && src.children.length > 0) {
+            while (src.firstChild) dst.appendChild(src.firstChild);
+          }
+          // If the panel is still empty after the sync, surface a friendly
+          // explainer so it doesn't render as a black void.
+          if (dst && dst.children.length === 0) {
+            const empty = document.createElement('div');
+            empty.style.cssText = 'padding:60px 32px;color:rgba(218,228,255,0.55);font-family:Cormorant Garamond,serif;font-style:italic;font-size:1.1rem;text-align:center;line-height:1.6;max-width:620px;margin:0 auto;';
+            empty.textContent = 'The lore is loading. Deep anatomy and consciousness documentation streams in once the body finishes initializing — give it a few seconds, then reopen.';
+            dst.appendChild(empty);
+          }
+        } catch (_) { /* ignore */ }
+      }
     });
     right.appendChild(lore);
 
