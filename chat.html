@@ -19,6 +19,31 @@
   a.btn { display: inline-flex; gap: 8px; padding: 10px 18px; border-radius: 12px; border: 1px solid var(--border); background: rgba(124,207,255,0.06); color: var(--text); text-decoration: none; font-size: 0.65rem; letter-spacing: 0.18em; text-transform: uppercase; }
   a.btn:hover { background: rgba(124,207,255,0.12); }
   footer { margin-top: 28px; padding: 14px 0 24px; color: rgba(180,200,230,0.32); font-size: 0.65rem; font-style: italic; font-family: 'Cormorant Garamond', serif; text-align: center; }
+
+  /* ── Live conversation (Phase 1 echo) ────────────────────────────────── */
+  .talk-row { display: flex; align-items: center; gap: 14px; margin-top: 14px; flex-wrap: wrap; }
+  .mic-btn {
+    appearance: none; -webkit-appearance: none;
+    width: 64px; height: 64px; border-radius: 50%;
+    border: 1px solid var(--border);
+    background: radial-gradient(circle at 30% 30%, rgba(124,207,255,0.18), rgba(124,207,255,0.04));
+    color: var(--accent); font-size: 1.6rem; cursor: pointer;
+    display: inline-flex; align-items: center; justify-content: center;
+    transition: transform 120ms ease, box-shadow 200ms ease, background 200ms ease;
+    box-shadow: 0 0 0 0 rgba(124,207,255,0.0);
+  }
+  .mic-btn:hover { transform: scale(1.04); }
+  .mic-btn:active { transform: scale(0.96); }
+  .talk-state { font-size: 0.65rem; letter-spacing: 0.22em; text-transform: uppercase; color: var(--dim); }
+  .talk-meter { flex: 1 1 120px; height: 4px; background: rgba(124,207,255,0.08); border-radius: 2px; overflow: hidden; min-width: 80px; }
+  .talk-meter > i { display: block; height: 100%; width: 0%; background: var(--accent); transition: width 60ms linear; }
+
+  /* React to the global FSM */
+  html[data-convo-state="listening"]   .mic-btn { box-shadow: 0 0 0 6px rgba(124,207,255,0.10); }
+  html[data-convo-state="capturing"]   .mic-btn { box-shadow: 0 0 0 10px rgba(124,207,255,0.18); background: radial-gradient(circle at 30% 30%, rgba(124,207,255,0.32), rgba(124,207,255,0.06)); }
+  html[data-convo-state="speaking"]    .mic-btn { box-shadow: 0 0 0 10px rgba(255,200,124,0.18); color: #ffc87c; }
+  html[data-convo-state="interrupted"] .mic-btn { box-shadow: 0 0 0 6px rgba(255,124,124,0.18); }
+  html[data-convo-state="idle"]        .mic-btn { box-shadow: 0 0 0 0 rgba(0,0,0,0); }
 </style>
 <script src="body/api_base.js?v=v20260505-onedoor"></script>
 <script src="body/shell.js?v=v20260507-resilience"></script>
@@ -30,6 +55,8 @@
 <script src="body/bond_door.js?v=v20260509-marqueewrap"></script>
 <script src="body/topbar.js?v=v20260509-altarup" defer></script>
 <script src="body/mobile_nav.js?v=v20260505-onedoor" defer></script>
+<!-- Real-time conversation (Phase 1 — echo loop). Disable with ?talk=off -->
+<script src="body/talk_surface.js?v=v20260509-0140-talk-phase1" data-talk="on" defer></script>
 </head>
 <body>
 <div class="page">
@@ -51,14 +78,66 @@
   </div>
 
   <div class="card">
-    <h3>Soon</h3>
+    <h3>Live conversation · Phase 1 echo</h3>
     <div class="empty">
-      A direct conversation panel here, threaded with the same memory the bots
-      see, with file drops + voice in a later pass.
+      The first heartbeat of the real-time voice loop. Tap the mic, say something,
+      and Vintinuum's pipe will echo it back through the same socket the
+      cognition layer will use in Phase 2. If you hear yourself, the spine is alive.
+    </div>
+    <div class="talk-row">
+      <button id="micBtn" class="mic-btn" aria-label="Toggle live conversation"
+              title="Tap to start/stop · drag to reposition"
+              data-draggable="true">&#x1F399;</button>
+      <div class="talk-meter" aria-hidden="true"><i id="micLevel"></i></div>
+      <div class="talk-state" id="talkState">idle</div>
+    </div>
+    <div class="empty" style="font-size:0.78rem; margin-top:10px;">
+      Phases 2-5 will replace the echo with: STT → LLM (shadow-turn Ollama+Sonnet)
+      → streaming TTS, full barge-in interrupt, and the avatar layer.
     </div>
   </div>
 
   <footer>The body breathes.</footer>
 </div>
+
+<script>
+  // Wire the mic button → window.talk. Loaded after talk_surface.js (defer).
+  (function () {
+    var btn = document.getElementById('micBtn');
+    var meter = document.getElementById('micLevel');
+    var label = document.getElementById('talkState');
+    if (!btn) return;
+
+    var clickArmed = true;
+    btn.addEventListener('click', function () {
+      if (!clickArmed) return; // draggable.js sets data-just-dragged briefly
+      if (btn.getAttribute('data-just-dragged') === '1') return;
+      if (!window.talk) {
+        label.textContent = 'loading…';
+        return;
+      }
+      label.textContent = 'connecting…';
+      window.talk.toggle({ surface: 'chat' })
+        .then(function (r) { /* state listener will update label */ })
+        .catch(function (e) {
+          console.error('[chat] toggle failed:', e);
+          label.textContent = 'error: ' + (e && e.message || e);
+        });
+    });
+
+    // FSM listener
+    window.addEventListener('convo:state', function (ev) {
+      if (label) label.textContent = (ev.detail && ev.detail.next) || 'idle';
+    });
+
+    // Light meter loop (input level when capturing, output level when speaking)
+    setInterval(function () {
+      if (!window.talk) return;
+      var lvl = window.talk.level();
+      var v = Math.max(lvl.in || 0, lvl.out || 0);
+      if (meter) meter.style.width = Math.min(100, Math.round(v * 100)) + '%';
+    }, 80);
+  })();
+</script>
 </body>
 </html>
