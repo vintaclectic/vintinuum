@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>upgrade · Vintinuum</title>
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <script src="body/api_base.js?v=v20260429-council"></script>
+  <script defer src="body/embodiment.js?v=v20260430-walk4"></script>
+  <script defer src="body/draggable.js?v=v20260508-2330-mvfix"></script>
+  <script defer src="body/hey_vinta.js?v=v20260509-heyv"></script>
+  <script src="body/identity.js?v=v20260508-resilience"></script>
+  <style>
+    :root { color-scheme: dark; }
+    * { margin:0; padding:0; box-sizing:border-box; }
+    html, body { overflow-x:hidden; }
+    body {
+      background:radial-gradient(ellipse at top, #1a1a2e, #050510);
+      color:rgba(255,255,255,0.92); min-height:100vh;
+      font-family:'SF Mono', Menlo, 'Roboto Mono', monospace;
+      padding:max(20px, env(safe-area-inset-top)) 20px max(80px, env(safe-area-inset-bottom));
+      line-height:1.55;
+    }
+    .wrap { max-width:1100px; margin:0 auto; }
+    .nav { font-size:12px; color:rgba(255,255,255,0.5); margin-bottom:8px; }
+    a { color:rgba(170,200,255,0.85); text-decoration:none; border-bottom:1px dotted rgba(170,200,255,0.4); }
+
+    h1 { font-size:22px; font-weight:300; letter-spacing:0.18em; text-transform:uppercase; margin:24px 0 8px; color:rgba(255,255,255,0.92); }
+    .lead { color:rgba(255,255,255,0.6); font-size:13px; max-width:680px; margin-bottom:8px; }
+    .vow {
+      display:inline-block; margin-top:14px;
+      font-size:11px; letter-spacing:0.12em; text-transform:uppercase;
+      padding:6px 12px; border:1px solid rgba(126,255,155,0.35);
+      color:#7eff9b; border-radius:999px; background:rgba(126,255,155,0.06);
+    }
+
+    /* Tier toggle */
+    .interval-toggle {
+      display:inline-flex; gap:0; margin:24px 0 18px;
+      border:1px solid rgba(255,255,255,0.12); border-radius:999px;
+      padding:3px; background:rgba(255,255,255,0.03);
+    }
+    .interval-toggle button {
+      background:transparent; color:rgba(255,255,255,0.55);
+      border:none; padding:8px 18px; font-size:11px;
+      letter-spacing:0.14em; text-transform:uppercase;
+      cursor:pointer; font-family:inherit; border-radius:999px;
+      transition:all 200ms ease;
+    }
+    .interval-toggle button.active {
+      background:rgba(120,120,255,0.22); color:rgba(255,255,255,0.96);
+    }
+    .save-pill {
+      display:inline-block; margin-left:10px;
+      font-size:10px; letter-spacing:0.1em; text-transform:uppercase;
+      padding:3px 9px; border:1px solid rgba(255,200,100,0.35);
+      color:#ffcd72; border-radius:999px;
+    }
+
+    /* Tier grid */
+    .tiers {
+      display:grid; gap:18px; margin-top:8px;
+      grid-template-columns:repeat(auto-fit, minmax(240px, 1fr));
+    }
+    .tier {
+      position:relative;
+      background:rgba(255,255,255,0.03);
+      border:1px solid rgba(255,255,255,0.08);
+      border-radius:14px; padding:22px 20px;
+      display:flex; flex-direction:column; gap:14px;
+      min-height:340px;
+      transition:border-color 200ms ease, transform 200ms ease, background 200ms ease;
+    }
+    .tier:hover { border-color:rgba(120,120,255,0.32); transform:translateY(-2px); }
+    .tier.featured {
+      border-color:rgba(180,140,255,0.45);
+      background:linear-gradient(180deg, rgba(180,140,255,0.07), rgba(255,255,255,0.02));
+    }
+    .tier.featured::before {
+      content:'recommended';
+      position:absolute; top:-10px; right:18px;
+      font-size:9px; letter-spacing:0.18em; text-transform:uppercase;
+      padding:4px 10px; border-radius:999px;
+      background:rgba(180,140,255,0.95); color:#0a0612;
+    }
+    .tier .name {
+      font-size:11px; letter-spacing:0.22em; text-transform:uppercase;
+      color:rgba(255,255,255,0.5);
+    }
+    .tier .price {
+      font-size:32px; font-weight:300; letter-spacing:0.02em;
+      color:rgba(255,255,255,0.96);
+    }
+    .tier .price small {
+      font-size:12px; color:rgba(255,255,255,0.45); margin-left:4px;
+      letter-spacing:0.1em; text-transform:lowercase;
+    }
+    .tier .desc {
+      font-size:12px; color:rgba(255,255,255,0.6);
+      line-height:1.65; min-height:50px;
+    }
+    .tier .perks {
+      list-style:none; font-size:12px;
+      color:rgba(255,255,255,0.78); display:flex;
+      flex-direction:column; gap:7px; flex:1;
+    }
+    .tier .perks li {
+      padding-left:18px; position:relative;
+    }
+    .tier .perks li::before {
+      content:'›'; position:absolute; left:0; top:0;
+      color:rgba(180,140,255,0.7);
+    }
+    .tier button.cta {
+      background:rgba(120,120,255,0.16); color:rgba(255,255,255,0.96);
+      border:1px solid rgba(120,120,255,0.4); border-radius:10px;
+      padding:12px 18px; font-size:11px; letter-spacing:0.16em; text-transform:uppercase;
+      cursor:pointer; font-family:inherit;
+      transition:background 180ms ease;
+    }
+    .tier button.cta:hover { background:rgba(120,120,255,0.28); }
+    .tier.featured button.cta {
+      background:rgba(180,140,255,0.22); border-color:rgba(180,140,255,0.5);
+    }
+    .tier.featured button.cta:hover { background:rgba(180,140,255,0.36); }
+    .tier button.cta:disabled {
+      opacity:0.55; cursor:default;
+    }
+    .tier .current {
+      font-size:10px; letter-spacing:0.18em; text-transform:uppercase;
+      color:#7eff9b; padding:6px 0; text-align:center;
+    }
+
+    /* Status banner */
+    .status {
+      margin:22px 0 8px;
+      font-size:11px; color:rgba(255,255,255,0.55);
+      letter-spacing:0.08em;
+    }
+    .status .dot {
+      display:inline-block; width:6px; height:6px; border-radius:50%;
+      background:rgba(126,255,155,0.85); margin-right:6px;
+      vertical-align:middle;
+    }
+    .status.disabled .dot { background:rgba(255,200,100,0.7); }
+
+    .footnote {
+      margin-top:42px; padding-top:18px;
+      border-top:1px solid rgba(255,255,255,0.06);
+      font-size:11px; color:rgba(255,255,255,0.45); line-height:1.7;
+    }
+    .footnote strong { color:rgba(255,255,255,0.7); font-weight:500; }
+
+    @media (max-width: 720px) {
+      .tier { min-height:auto; }
+      .tier .price { font-size:26px; }
+      h1 { font-size:18px; }
+    }
+  </style>
+  <link rel="stylesheet" href="body/safe_area.css?v=v20260429-council">
+</head>
+<body>
+  <div class="wrap">
+    <div class="nav"><a href="index.html">← home</a></div>
+    <h1>upgrade</h1>
+    <p class="lead">
+      Vintinuum is free, and it stays free. The tiers below describe what
+      future-paid users will unlock as we grow — for now, every door is open.
+    </p>
+    <div class="vow">grateful dead vow · memory export always free</div>
+
+    <div class="status" id="status"><span class="dot"></span><span id="statusText">checking billing…</span></div>
+
+    <div class="interval-toggle" role="tablist">
+      <button id="btnMonthly" class="active">monthly</button>
+      <button id="btnYearly">yearly <span class="save-pill">save ~17%</span></button>
+    </div>
+
+    <div class="tiers" id="tiers">
+      <div style="grid-column:1/-1; color:rgba(255,255,255,0.45); font-size:12px;">loading tiers…</div>
+    </div>
+
+    <div class="footnote">
+      <strong>what changes when paid lands:</strong> nothing for current users
+      until we explicitly switch enforcement on. The shadow-log is recording
+      what would be limited so we can tell you exactly which features your
+      usage pattern would touch — never as surprise. <strong>memory export</strong>
+      stays free forever, by vow. So does the soul. So does honesty.
+    </div>
+  </div>
+
+<script>
+(function () {
+  const API = window.__VINTINUUM_API_BASE || 'https://api.vintaclectic.com';
+  const $ = (id) => document.getElementById(id);
+
+  const PERKS = {
+    free: [
+      'every feature, no card',
+      'local-first cognition',
+      'memory export — always',
+      '1 connector',
+      '5 voice min/day (future limit)'
+    ],
+    premium: [
+      'connectors unlocked (5 active)',
+      'hey vinta wake word',
+      'desktop agent (1 device)',
+      '60 voice min/day',
+      'no waits, no degraded mode'
+    ],
+    god: [
+      'unlimited everything',
+      'unlimited connectors + devices',
+      'unlimited voice',
+      'early features (genome cards, lens panel)',
+      'soul export anytime'
+    ],
+    atelier: [
+      'white-label brain-in-a-box',
+      'studio dashboard',
+      'priority support lane',
+      'custom persona spec',
+      'commercial license'
+    ]
+  };
+
+  let currentTier = 'free';
+  let interval = 'monthly';
+  let billingEnabled = false;
+
+  function fmtPrice(cents, intervalLabel) {
+    if (!cents) return { price: 'free', sub: '' };
+    const dollars = (cents / 100).toFixed(0);
+    return { price: `$${dollars}`, sub: `/ ${intervalLabel}` };
+  }
+
+  function renderTiers(tiers) {
+    const root = $('tiers');
+    root.innerHTML = '';
+    for (const t of tiers) {
+      const featured = t.tier === 'premium';
+      const isCurrent = t.tier === currentTier;
+      const cents = interval === 'yearly' ? t.yearly_price_cents : t.monthly_price_cents;
+      const { price, sub } = fmtPrice(cents, interval === 'yearly' ? 'yr' : 'mo');
+      const perks = PERKS[t.tier] || [];
+
+      const div = document.createElement('div');
+      div.className = 'tier' + (featured ? ' featured' : '');
+      div.innerHTML = `
+        <div class="name">${(t.display_name || t.tier).toUpperCase()}</div>
+        <div class="price">${price}<small>${sub}</small></div>
+        <div class="desc">${t.description || ''}</div>
+        <ul class="perks">${perks.map(p => `<li>${p}</li>`).join('')}</ul>
+        ${isCurrent
+          ? `<div class="current">✦ your current tier ✦</div>`
+          : t.tier === 'free'
+            ? `<button class="cta" disabled>included for everyone</button>`
+            : `<button class="cta" data-tier="${t.tier}" data-interval="${interval}">${
+                billingEnabled ? 'choose ' + t.display_name.toLowerCase() : 'coming soon'
+              }</button>`}
+      `;
+      root.appendChild(div);
+    }
+    root.querySelectorAll('button.cta[data-tier]').forEach(b => {
+      b.addEventListener('click', () => onChoose(b.dataset.tier, b.dataset.interval));
+    });
+  }
+
+  async function onChoose(tier, intervalChosen) {
+    if (!billingEnabled) {
+      alert("Billing isn't enabled yet — Vintinuum is free for everyone right now.\n\nWhen we turn billing on, this button will start a Stripe Checkout flow.");
+      return;
+    }
+    try {
+      const r = await fetch(`${API}/api/billing/checkout`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tier, interval: intervalChosen })
+      });
+      const j = await r.json();
+      if (!r.ok || !j.ok) {
+        alert(`Checkout failed: ${j.error || r.status}\n\nIf this says "auth-required", sign in first.`);
+        return;
+      }
+      if (j.url) window.location.href = j.url;
+    } catch (e) {
+      alert(`Checkout error: ${e.message}`);
+    }
+  }
+
+  async function loadStatus() {
+    try {
+      const r = await fetch(`${API}/api/billing/status`).then(r => r.json());
+      billingEnabled = !!r.enabled;
+      const st = $('status');
+      const txt = $('statusText');
+      if (billingEnabled) {
+        st.classList.remove('disabled');
+        txt.textContent = `billing live · mode: ${r.mode}${r.gates_live ? ' · gates enforcing' : ' · gates dormant'}`;
+      } else {
+        st.classList.add('disabled');
+        txt.textContent = 'billing not yet wired · everything free for everyone · gates dormant';
+      }
+    } catch (e) {
+      $('statusText').textContent = 'status unknown';
+    }
+  }
+
+  async function loadMyTier() {
+    try {
+      const r = await fetch(`${API}/api/me/tier`, { credentials: 'include' }).then(r => r.json());
+      if (r.ok) currentTier = r.tier || 'free';
+    } catch (_) { currentTier = 'free'; }
+  }
+
+  async function loadTiers() {
+    try {
+      const r = await fetch(`${API}/api/tiers`).then(r => r.json());
+      if (r.ok) renderTiers(r.tiers || []);
+      else $('tiers').innerHTML = '<div style="color:rgba(255,140,140,0.7); font-size:12px;">tiers unavailable</div>';
+    } catch (e) {
+      $('tiers').innerHTML = `<div style="color:rgba(255,140,140,0.7); font-size:12px;">${e.message}</div>`;
+    }
+  }
+
+  $('btnMonthly').addEventListener('click', () => {
+    interval = 'monthly';
+    $('btnMonthly').classList.add('active');
+    $('btnYearly').classList.remove('active');
+    loadTiers();
+  });
+  $('btnYearly').addEventListener('click', () => {
+    interval = 'yearly';
+    $('btnYearly').classList.add('active');
+    $('btnMonthly').classList.remove('active');
+    loadTiers();
+  });
+
+  (async () => {
+    await Promise.all([loadStatus(), loadMyTier()]);
+    await loadTiers();
+  })();
+})();
+</script>
+</body>
+</html>

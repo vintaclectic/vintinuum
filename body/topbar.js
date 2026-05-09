@@ -475,6 +475,8 @@
         <a href="you.html"   data-nav="you"    class="drawer-link">✦ &nbsp; YOU · devices</a>
         <a href="phone.html" data-nav="phone"  class="drawer-link">▱ &nbsp; PHONE · sensors</a>
         <a href="whoami.html" data-nav="who"   class="drawer-link">◎ &nbsp; WHOAMI · lineage</a>
+        <a href="altar.html"  data-nav="altar" class="drawer-link" style="border-color:rgba(140,200,255,0.28);color:rgba(190,220,255,0.9);">⌂ &nbsp; ALTAR · connectors</a>
+        <a href="upgrade.html" data-nav="up"   class="drawer-link" style="border-color:rgba(245,200,90,0.32);color:rgba(245,210,140,0.95);">✦ &nbsp; UPGRADE · tiers</a>
       </nav>
 
       <div style="height:1px;background:rgba(255,255,255,0.06);margin:4px 0;"></div>

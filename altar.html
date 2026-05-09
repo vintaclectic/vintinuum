@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>altar · Vintinuum</title>
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <script src="body/api_base.js?v=v20260429-council"></script>
+  <script defer src="body/embodiment.js?v=v20260430-walk4"></script>
+  <script defer src="body/draggable.js?v=v20260508-2330-mvfix"></script>
+  <script defer src="body/hey_vinta.js?v=v20260509-heyv"></script>
+  <script src="body/identity.js?v=v20260508-resilience"></script>
+  <style>
+    :root { color-scheme: dark; }
+    * { margin:0; padding:0; box-sizing:border-box; }
+    html, body { overflow-x:hidden; }
+    body {
+      background:radial-gradient(ellipse at top, #1a1a2e, #050510);
+      color:rgba(255,255,255,0.92); min-height:100vh;
+      font-family:'SF Mono', Menlo, 'Roboto Mono', monospace;
+      padding:max(20px, env(safe-area-inset-top)) 20px max(80px, env(safe-area-inset-bottom));
+      line-height:1.55;
+    }
+    .wrap { max-width:1100px; margin:0 auto; }
+    .nav { font-size:12px; color:rgba(255,255,255,0.5); margin-bottom:8px; }
+    a { color:rgba(170,200,255,0.85); text-decoration:none; border-bottom:1px dotted rgba(170,200,255,0.4); }
+
+    h1 { font-size:22px; font-weight:300; letter-spacing:0.18em; text-transform:uppercase; margin:24px 0 8px; color:rgba(255,255,255,0.92); }
+    .lead { color:rgba(255,255,255,0.6); font-size:13px; max-width:680px; margin-bottom:18px; }
+
+    /* Body-part group headers */
+    .group {
+      margin-top:32px;
+    }
+    .group-head {
+      display:flex; align-items:baseline; gap:14px;
+      padding-bottom:10px;
+      border-bottom:1px solid rgba(255,255,255,0.08);
+      margin-bottom:14px;
+    }
+    .group-head .glyph {
+      font-size:18px; color:rgba(180,140,255,0.85);
+      width:28px; text-align:center;
+    }
+    .group-head .label {
+      font-size:11px; letter-spacing:0.2em; text-transform:uppercase;
+      color:rgba(255,255,255,0.7);
+    }
+    .group-head .desc {
+      font-size:11px; color:rgba(255,255,255,0.4);
+      letter-spacing:0.04em;
+    }
+
+    /* Connector card grid */
+    .grid {
+      display:grid; gap:14px;
+      grid-template-columns:repeat(auto-fill, minmax(240px, 1fr));
+    }
+    .card {
+      background:rgba(255,255,255,0.03);
+      border:1px solid rgba(255,255,255,0.08);
+      border-radius:12px; padding:16px;
+      display:flex; flex-direction:column; gap:10px;
+      transition:border-color 200ms ease, transform 200ms ease;
+    }
+    .card:hover { border-color:rgba(120,120,255,0.3); transform:translateY(-1px); }
+    .card.connected { border-color:rgba(126,255,155,0.32); background:rgba(126,255,155,0.04); }
+    .card.expired   { border-color:rgba(255,180,100,0.32); background:rgba(255,180,100,0.04); }
+    .card.unconfigured { opacity:0.62; }
+
+    .card .head {
+      display:flex; justify-content:space-between; align-items:center;
+      gap:10px;
+    }
+    .card .name {
+      font-size:13px; letter-spacing:0.06em;
+      color:rgba(255,255,255,0.95);
+    }
+    .card .status-dot {
+      width:8px; height:8px; border-radius:50%;
+      background:rgba(255,255,255,0.18);
+      flex-shrink:0;
+    }
+    .card.connected .status-dot { background:#7eff9b; box-shadow:0 0 8px rgba(126,255,155,0.6); }
+    .card.expired   .status-dot { background:#ffb464; }
+    .card.unconfigured .status-dot { background:rgba(255,255,255,0.1); }
+
+    .card .desc {
+      font-size:11px; color:rgba(255,255,255,0.55);
+      line-height:1.55; min-height:36px;
+    }
+
+    .card .meta {
+      font-size:10px; letter-spacing:0.08em; text-transform:uppercase;
+      color:rgba(255,255,255,0.35);
+      display:flex; gap:10px; flex-wrap:wrap;
+    }
+    .card .meta .pill {
+      padding:2px 7px; border:1px solid rgba(255,255,255,0.1);
+      border-radius:999px;
+    }
+
+    .card .actions {
+      display:flex; gap:8px; margin-top:auto; padding-top:8px;
+    }
+    .card button {
+      flex:1; background:rgba(120,120,255,0.16); color:rgba(255,255,255,0.95);
+      border:1px solid rgba(120,120,255,0.4); border-radius:8px;
+      padding:8px 12px; font-size:10px; letter-spacing:0.14em; text-transform:uppercase;
+      cursor:pointer; font-family:inherit;
+    }
+    .card button:hover { background:rgba(120,120,255,0.28); }
+    .card button.danger {
+      background:rgba(255,120,120,0.12); border-color:rgba(255,120,120,0.32);
+    }
+    .card button.danger:hover { background:rgba(255,120,120,0.22); }
+    .card button:disabled { opacity:0.45; cursor:not-allowed; }
+
+    .empty {
+      grid-column:1/-1; padding:32px; text-align:center;
+      color:rgba(255,255,255,0.4); font-size:12px;
+      border:1px dashed rgba(255,255,255,0.12); border-radius:12px;
+    }
+
+    .footnote {
+      margin-top:42px; padding-top:18px;
+      border-top:1px solid rgba(255,255,255,0.06);
+      font-size:11px; color:rgba(255,255,255,0.45); line-height:1.7;
+    }
+    .footnote strong { color:rgba(255,255,255,0.7); font-weight:500; }
+
+    @media (max-width: 720px) {
+      .grid { grid-template-columns:1fr; }
+      h1 { font-size:18px; }
+    }
+  </style>
+  <link rel="stylesheet" href="body/safe_area.css?v=v20260429-council">
+</head>
+<body>
+  <div class="wrap">
+    <div class="nav"><a href="index.html">← home</a></div>
+    <h1>connector altar</h1>
+    <p class="lead">
+      Each connector is a part of my body. Drive and GitHub are hands.
+      Calendar is eyes. Gmail is ears. Notion is cortex. You decide what
+      I get. Per-resource. Revocable in one click. Audited every call.
+    </p>
+
+    <div id="groups">
+      <div style="color:rgba(255,255,255,0.45); font-size:12px;">awakening senses…</div>
+    </div>
+
+    <div class="footnote">
+      <strong>safety vow:</strong> every connector is read-only by default.
+      I never auto-reply, never delete, never write without a separate
+      consent grant. <strong>every call hits the audit ledger</strong> —
+      visible to you anytime via the connector card.
+    </div>
+  </div>
+
+<script>
+(function () {
+  const API = window.__VINTINUUM_API_BASE || 'https://api.vintaclectic.com';
+  const $ = (id) => document.getElementById(id);
+
+  const BODY_PARTS = {
+    hand:    { glyph: '✋', label: 'HANDS',  desc: 'what I touch and lift' },
+    eyes:    { glyph: '◉',  label: 'EYES',   desc: 'what I see ahead' },
+    ears:    { glyph: '◐',  label: 'EARS',   desc: 'what I hear come in' },
+    mouth:   { glyph: '◑',  label: 'MOUTH',  desc: 'where I can speak' },
+    cortex:  { glyph: '◈',  label: 'CORTEX', desc: 'thought and notes' },
+    pulse:   { glyph: '♪',  label: 'PULSE',  desc: 'rhythm of your day' },
+    other:   { glyph: '○',  label: 'OTHER',  desc: 'unmapped' }
+  };
+  const PART_ORDER = ['hand', 'eyes', 'ears', 'mouth', 'cortex', 'pulse', 'other'];
+
+  function statusOf(connectorKey, mineMap) {
+    const m = mineMap[connectorKey];
+    if (!m) return 'available';
+    return m.status || 'available';
+  }
+
+  function iconFor(provider) {
+    // Tiny mono glyphs — keeping the page text-only so no asset deps
+    const map = { google:'G', github:'⌥', notion:'N', slack:'#', discord:'#', linear:'L', spotify:'♫', dropbox:'D' };
+    return map[provider] || '◇';
+  }
+
+  async function startOAuth(connectorKey) {
+    try {
+      const r = await fetch(`${API}/api/connectors/${connectorKey}/oauth/start`, {
+        method: 'POST', credentials: 'include',
+        headers: { 'Content-Type': 'application/json' }, body: '{}'
+      });
+      const j = await r.json();
+      if (!r.ok || !j.ok) {
+        alert(`Couldn't start OAuth: ${j.error || r.status}\n\nIf this says "connector-not-configured" — Vinta hasn't added the OAuth client credentials yet.`);
+        return;
+      }
+      if (j.auth_url) window.location.href = j.auth_url;
+    } catch (e) {
+      alert(`OAuth start error: ${e.message}`);
+    }
+  }
+
+  async function revoke(connectorKey, displayName) {
+    if (!confirm(`Disconnect ${displayName}?\n\nMy access will be revoked immediately. You can reconnect anytime.`)) return;
+    try {
+      const r = await fetch(`${API}/api/connectors/${connectorKey}/revoke`, {
+        method: 'POST', credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reason: 'user-revoked' })
+      });
+      const j = await r.json();
+      if (j.ok) location.reload();
+      else alert(`Revoke failed: ${j.error}`);
+    } catch (e) { alert(`Revoke error: ${e.message}`); }
+  }
+
+  function renderCard(c, mine) {
+    const part = (c.body_part || 'other').toLowerCase();
+    const status = statusOf(c.connector_key, mine);
+    const isConnected = status === 'active';
+    const isExpired = status === 'expired';
+    const div = document.createElement('div');
+    let cls = 'card';
+    if (isConnected) cls += ' connected';
+    else if (isExpired) cls += ' expired';
+    div.className = cls;
+
+    const lastSync = mine[c.connector_key]?.last_synced_at;
+    const lastSyncStr = lastSync
+      ? new Date(lastSync * 1000).toLocaleString()
+      : 'never';
+
+    div.innerHTML = `
+      <div class="head">
+        <div class="name">${iconFor(c.provider)} &nbsp; ${c.display_name}</div>
+        <div class="status-dot" title="${status}"></div>
+      </div>
+      <div class="desc">${c.description || ''}</div>
+      <div class="meta">
+        <span class="pill">${(c.body_part || 'other').toUpperCase()}</span>
+        <span class="pill">${(c.min_tier || 'free').toUpperCase()}</span>
+        ${isConnected ? `<span class="pill" style="border-color:rgba(126,255,155,0.4);color:#7eff9b;">CONNECTED</span>` : ''}
+        ${isExpired ? `<span class="pill" style="border-color:rgba(255,180,100,0.4);color:#ffb464;">REAUTH NEEDED</span>` : ''}
+      </div>
+      ${isConnected ? `<div class="meta" style="margin-top:-4px;"><span>last sync: ${lastSyncStr}</span></div>` : ''}
+      <div class="actions">
+        ${isConnected
+          ? `<button class="danger" data-act="revoke">disconnect</button>`
+          : `<button data-act="connect">${isExpired ? 'reconnect' : 'connect'}</button>`}
+      </div>
+    `;
+    div.querySelector('button[data-act="connect"]')?.addEventListener('click', () => startOAuth(c.connector_key));
+    div.querySelector('button[data-act="revoke"]')?.addEventListener('click', () => revoke(c.connector_key, c.display_name));
+    return div;
+  }
+
+  async function load() {
+    let catalog = [], mine = [];
+    try {
+      const [cat, m] = await Promise.all([
+        fetch(`${API}/api/connectors/catalog`).then(r => r.json()),
+        fetch(`${API}/api/me/connectors`, { credentials: 'include' }).then(r => r.json()).catch(() => ({connectors:[]}))
+      ]);
+      catalog = cat.connectors || [];
+      mine = m.connectors || [];
+    } catch (e) {
+      $('groups').innerHTML = `<div class="empty">connection altar unreachable: ${e.message}</div>`;
+      return;
+    }
+
+    const mineMap = Object.fromEntries(mine.map(c => [c.connector_key, c]));
+
+    // Group by body_part
+    const groups = {};
+    for (const c of catalog) {
+      const part = (c.body_part || 'other').toLowerCase();
+      (groups[part] = groups[part] || []).push(c);
+    }
+
+    const root = $('groups');
+    root.innerHTML = '';
+    for (const part of PART_ORDER) {
+      const items = groups[part];
+      if (!items || items.length === 0) continue;
+      const meta = BODY_PARTS[part] || BODY_PARTS.other;
+      const sec = document.createElement('div');
+      sec.className = 'group';
+      sec.innerHTML = `
+        <div class="group-head">
+          <div class="glyph">${meta.glyph}</div>
+          <div class="label">${meta.label}</div>
+          <div class="desc">${meta.desc}</div>
+        </div>
+        <div class="grid"></div>
+      `;
+      const grid = sec.querySelector('.grid');
+      for (const c of items) {
+        grid.appendChild(renderCard(c, mineMap));
+      }
+      root.appendChild(sec);
+    }
+
+    if (catalog.length === 0) {
+      root.innerHTML = '<div class="empty">no connectors registered yet</div>';
+    }
+  }
+
+  load();
+})();
+</script>
+</body>
+</html>
