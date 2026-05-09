@@ -86,6 +86,8 @@
 
       sock.addEventListener('message', function (ev) {
         // Audio frames echoed back from server → hand to voice_out
+        // (Phase 2 onward: server stops echoing PCM. Kept for back-compat
+        //  in case a Phase 1 server is still answering.)
         if (ev.data instanceof ArrayBuffer) {
           if (window.__voiceOut && typeof window.__voiceOut.enqueuePcm16 === 'function') {
             window.__voiceOut.enqueuePcm16(ev.data);
@@ -95,11 +97,32 @@
         // Text control frames
         var msg;
         try { msg = JSON.parse(ev.data); } catch (_) { return; }
+
+        // Re-emit every typed frame as a window event so any UI surface
+        // (captions, transcripts, debug panels) can listen without coupling.
+        try {
+          window.dispatchEvent(new CustomEvent('convo:frame', { detail: msg }));
+        } catch (_) {}
+
         if (msg.type === 'READY') {
           sid = msg.sid;
           resolve();
+        } else if (msg.type === 'STT_FINAL') {
+          try { window.dispatchEvent(new CustomEvent('convo:stt', { detail: msg })); } catch (_) {}
+        } else if (msg.type === 'LLM_FIRST_TOKEN') {
+          // Server has begun replying — flip UI to speaking even before TTS exists.
+          if (state && state.get() !== 'speaking') state.set('speaking', 'llm-first-token');
+        } else if (msg.type === 'TOKEN') {
+          try { window.dispatchEvent(new CustomEvent('convo:token', { detail: msg })); } catch (_) {}
+        } else if (msg.type === 'TURN_FINAL') {
+          try { window.dispatchEvent(new CustomEvent('convo:final', { detail: msg })); } catch (_) {}
         } else if (msg.type === 'TURN_END') {
-          // Server confirms end-of-turn; no auto-state-change here in Phase 1.
+          // Phase 2: no TTS yet, so when the LLM finishes we return to listening.
+          if (state && state.get() === 'speaking') state.set('listening', 'turn-end-no-tts');
+        } else if (msg.type === 'ERROR') {
+          try { window.dispatchEvent(new CustomEvent('convo:error', { detail: msg })); } catch (_) {}
+          // Don't tear down on transient errors; just unblock UI.
+          if (state && state.get() === 'speaking') state.set('listening', 'server-error');
         } else if (msg.type === 'KILL_SWITCH') {
           stop();
           if (state) state.force('idle', 'kill-switch');
@@ -199,9 +222,10 @@
     }
     try { ws && ws.readyState === 1 && ws.send(JSON.stringify({ type: 'AUDIO_END', client_ts: Date.now(), reason: reason })); } catch (_) {}
     if (state && state.get() === 'capturing') {
-      // In Phase 1 (echo), audio comes back immediately, so we go to speaking.
-      // The voice_out module will return us to listening when its queue drains.
-      state.set('speaking', 'audio-end-echo');
+      // Phase 2: no echo. Hold in a 'thinking' beat until STT/LLM resolves.
+      // (We use the existing 'listening' state as the resting state and rely
+      //  on LLM_FIRST_TOKEN / TURN_END to flip into and out of 'speaking'.)
+      state.set('listening', 'audio-end-await-llm');
     }
   }
 

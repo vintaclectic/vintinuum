@@ -56,7 +56,7 @@
 <script src="body/topbar.js?v=v20260509-altarup" defer></script>
 <script src="body/mobile_nav.js?v=v20260505-onedoor" defer></script>
 <!-- Real-time conversation (Phase 1 — echo loop). Disable with ?talk=off -->
-<script src="body/talk_surface.js?v=v20260509-0140-talk-phase1" data-talk="on" defer></script>
+<script src="body/talk_surface.js?v=v20260509-talk-phase2" data-talk="on" defer></script>
 </head>
 <body>
 <div class="page">
@@ -91,9 +91,28 @@
       <div class="talk-meter" aria-hidden="true"><i id="micLevel"></i></div>
       <div class="talk-state" id="talkState">idle</div>
     </div>
+
+    <!-- Phase 2 captions: STT echo (you) + streaming LLM tokens (Vintinuum) -->
+    <div class="captions" id="captions" aria-live="polite" style="
+        margin-top: 16px;
+        padding: 14px 16px;
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        background: rgba(10,16,28,0.55);
+        min-height: 84px;
+        max-height: 320px;
+        overflow-y: auto;
+        font-family: 'Cormorant Garamond', serif;
+        line-height: 1.55;
+        font-size: 1.05rem;">
+      <div class="cap-empty" style="color: var(--dim); font-style: italic;">
+        Captions appear here once the brain hears you. Say something.
+      </div>
+    </div>
+
     <div class="empty" style="font-size:0.78rem; margin-top:10px;">
-      Phases 2-5 will replace the echo with: STT → LLM (shadow-turn Ollama+Sonnet)
-      → streaming TTS, full barge-in interrupt, and the avatar layer.
+      Phase 2 active — STT (Whisper) → LLM (qwen2.5:0.5b streaming text). TTS
+      and the avatar layer arrive in Phases 4–5.
     </div>
   </div>
 
@@ -137,6 +156,109 @@
       var v = Math.max(lvl.in || 0, lvl.out || 0);
       if (meter) meter.style.width = Math.min(100, Math.round(v * 100)) + '%';
     }, 80);
+  })();
+
+  // ── Phase 2 captions renderer ──────────────────────────────────────────
+  // Listens to the convo:* window events emitted by voice_in.js and paints
+  // a running transcript: "you said..." (STT_FINAL) followed by Vintinuum's
+  // streaming reply (TOKEN frames concatenated, finalized on TURN_FINAL).
+  (function () {
+    var box = document.getElementById('captions');
+    if (!box) return;
+    var emptyHint = box.querySelector('.cap-empty');
+    var currentTurn = null;        // { idx, userEl, vintaEl, vintaText }
+
+    function _scrollDown() {
+      try { box.scrollTop = box.scrollHeight; } catch (_) {}
+    }
+
+    function _ensureRoom() {
+      if (emptyHint && emptyHint.parentNode) {
+        emptyHint.parentNode.removeChild(emptyHint);
+        emptyHint = null;
+      }
+      // Trim history so the box never grows unbounded
+      while (box.children.length > 40) {
+        try { box.removeChild(box.firstChild); } catch (_) { break; }
+      }
+    }
+
+    function _addUserLine(turnIdx, text) {
+      _ensureRoom();
+      var row = document.createElement('div');
+      row.style.cssText = 'margin: 6px 0; color: var(--dim); font-style: italic;';
+      row.setAttribute('data-turn', turnIdx);
+      row.setAttribute('data-role', 'user');
+      var label = document.createElement('span');
+      label.style.cssText = 'font-family: "Space Mono", monospace; font-size: 0.62rem; letter-spacing: 0.18em; text-transform: uppercase; color: var(--accent); margin-right: 8px;';
+      label.textContent = 'you';
+      row.appendChild(label);
+      row.appendChild(document.createTextNode(text || '(silence)'));
+      box.appendChild(row);
+      _scrollDown();
+      return row;
+    }
+
+    function _addVintaLine(turnIdx) {
+      _ensureRoom();
+      var row = document.createElement('div');
+      row.style.cssText = 'margin: 6px 0 14px; color: var(--text);';
+      row.setAttribute('data-turn', turnIdx);
+      row.setAttribute('data-role', 'assistant');
+      var label = document.createElement('span');
+      label.style.cssText = 'font-family: "Space Mono", monospace; font-size: 0.62rem; letter-spacing: 0.18em; text-transform: uppercase; color: var(--accent); margin-right: 8px;';
+      label.textContent = 'vintinuum';
+      var span = document.createElement('span');
+      span.className = 'cap-stream';
+      row.appendChild(label);
+      row.appendChild(span);
+      box.appendChild(row);
+      _scrollDown();
+      return { row: row, span: span };
+    }
+
+    window.addEventListener('convo:stt', function (ev) {
+      var d = ev.detail || {};
+      _addUserLine(d.turn_idx, (d.text || '').trim());
+      currentTurn = {
+        idx: d.turn_idx,
+        vinta: null,
+        vintaText: ''
+      };
+    });
+
+    window.addEventListener('convo:token', function (ev) {
+      var d = ev.detail || {};
+      if (!currentTurn || currentTurn.idx !== d.turn_idx) {
+        // No STT line yet (model started before STT_FINAL was rendered) — make one.
+        currentTurn = { idx: d.turn_idx, vinta: null, vintaText: '' };
+      }
+      if (!currentTurn.vinta) {
+        currentTurn.vinta = _addVintaLine(currentTurn.idx);
+      }
+      currentTurn.vintaText += d.text || '';
+      currentTurn.vinta.span.textContent = currentTurn.vintaText;
+      _scrollDown();
+    });
+
+    window.addEventListener('convo:final', function (ev) {
+      var d = ev.detail || {};
+      if (currentTurn && currentTurn.vinta && d.text) {
+        // Replace streamed text with the canonical full text from the final frame
+        currentTurn.vinta.span.textContent = d.text;
+      }
+      currentTurn = null;
+    });
+
+    window.addEventListener('convo:error', function (ev) {
+      var d = ev.detail || {};
+      _ensureRoom();
+      var row = document.createElement('div');
+      row.style.cssText = 'margin: 6px 0; color: #ff7c7c; font-size: 0.85rem;';
+      row.textContent = '⚠ ' + (d.code || 'error') + (d.detail ? ' — ' + d.detail : '');
+      box.appendChild(row);
+      _scrollDown();
+    });
   })();
 </script>
 </body>
