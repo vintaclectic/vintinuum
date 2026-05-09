@@ -327,6 +327,15 @@
     }
   }
 
+  function authToken() {
+    try {
+      return localStorage.getItem('vint_token') ||
+             localStorage.getItem('vint_access_token') ||
+             localStorage.getItem('soul_auth_token') ||
+             null;
+    } catch (_) { return null; }
+  }
+
   function postWake({ transcript = '', confidence = 0, errored = false, errorCode = null, fulfilled = true } = {}) {
     const body = {
       device_id: DEVICE_ID,
@@ -338,11 +347,14 @@
       errored: !!errored,
       error_code: errorCode
     };
+    const headers = { 'Content-Type': 'application/json' };
+    const tok = authToken();
+    if (tok) headers['Authorization'] = 'Bearer ' + tok;
     try {
       fetch(apiBase() + '/api/voice/wake', {
         method: 'POST',
         credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify(body),
         keepalive: true
       }).catch(() => {});

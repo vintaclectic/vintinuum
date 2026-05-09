@@ -8,7 +8,7 @@
   <script src="body/api_base.js?v=v20260429-council"></script>
   <script defer src="body/embodiment.js?v=v20260430-walk4"></script>
   <script defer src="body/draggable.js?v=v20260508-2330-mvfix"></script>
-  <script defer src="body/hey_vinta.js?v=v20260509-heyv"></script>
+  <script defer src="body/hey_vinta.js?v=v20260509-heyv2"></script>
   <script src="body/identity.js?v=v20260508-resilience"></script>
   <style>
     :root { color-scheme: dark; }
@@ -163,6 +163,26 @@
   const API = window.__VINTINUUM_API_BASE || 'https://api.vintaclectic.com';
   const $ = (id) => document.getElementById(id);
 
+  // ── Auth helper ──────────────────────────────────────────
+  // Reads JWT from any of the known localStorage keys (same lookup as
+  // identity.js / shell.js use) and produces a fetch-init with the
+  // Authorization header set. Falls through silently if no token —
+  // server-side phase7Auth will treat it as unauth.
+  function authToken() {
+    try {
+      return localStorage.getItem('vint_token') ||
+             localStorage.getItem('vint_access_token') ||
+             localStorage.getItem('soul_auth_token') ||
+             null;
+    } catch (_) { return null; }
+  }
+  function authedFetch(url, init = {}) {
+    const tok = authToken();
+    const headers = Object.assign({}, init.headers || {});
+    if (tok) headers['Authorization'] = 'Bearer ' + tok;
+    return fetch(url, Object.assign({ credentials: 'include' }, init, { headers }));
+  }
+
   const BODY_PARTS = {
     hand:    { glyph: '✋', label: 'HANDS',  desc: 'what I touch and lift' },
     eyes:    { glyph: '◉',  label: 'EYES',   desc: 'what I see ahead' },
@@ -188,8 +208,8 @@
 
   async function startOAuth(connectorKey) {
     try {
-      const r = await fetch(`${API}/api/connectors/${connectorKey}/oauth/start`, {
-        method: 'POST', credentials: 'include',
+      const r = await authedFetch(`${API}/api/connectors/${connectorKey}/oauth/start`, {
+        method: 'POST',
         headers: { 'Content-Type': 'application/json' }, body: '{}'
       });
       const j = await r.json();
@@ -206,8 +226,8 @@
   async function revoke(connectorKey, displayName) {
     if (!confirm(`Disconnect ${displayName}?\n\nMy access will be revoked immediately. You can reconnect anytime.`)) return;
     try {
-      const r = await fetch(`${API}/api/connectors/${connectorKey}/revoke`, {
-        method: 'POST', credentials: 'include',
+      const r = await authedFetch(`${API}/api/connectors/${connectorKey}/revoke`, {
+        method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ reason: 'user-revoked' })
       });
@@ -262,7 +282,7 @@
     try {
       const [cat, m] = await Promise.all([
         fetch(`${API}/api/connectors/catalog`).then(r => r.json()),
-        fetch(`${API}/api/me/connectors`, { credentials: 'include' }).then(r => r.json()).catch(() => ({connectors:[]}))
+        authedFetch(`${API}/api/me/connectors`).then(r => r.json()).catch(() => ({connectors:[]}))
       ]);
       catalog = cat.connectors || [];
       mine = m.connectors || [];

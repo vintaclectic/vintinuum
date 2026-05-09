@@ -8,7 +8,7 @@
   <script src="body/api_base.js?v=v20260429-council"></script>
   <script defer src="body/embodiment.js?v=v20260430-walk4"></script>
   <script defer src="body/draggable.js?v=v20260508-2330-mvfix"></script>
-  <script defer src="body/hey_vinta.js?v=v20260509-heyv"></script>
+  <script defer src="body/hey_vinta.js?v=v20260509-heyv2"></script>
   <script src="body/identity.js?v=v20260508-resilience"></script>
   <style>
     :root { color-scheme: dark; }
@@ -194,6 +194,22 @@
   const API = window.__VINTINUUM_API_BASE || 'https://api.vintaclectic.com';
   const $ = (id) => document.getElementById(id);
 
+  // ── Auth helper (mirrors altar.html) ─────────────────────
+  function authToken() {
+    try {
+      return localStorage.getItem('vint_token') ||
+             localStorage.getItem('vint_access_token') ||
+             localStorage.getItem('soul_auth_token') ||
+             null;
+    } catch (_) { return null; }
+  }
+  function authedFetch(url, init = {}) {
+    const tok = authToken();
+    const headers = Object.assign({}, init.headers || {});
+    if (tok) headers['Authorization'] = 'Bearer ' + tok;
+    return fetch(url, Object.assign({ credentials: 'include' }, init, { headers }));
+  }
+
   const PERKS = {
     free: [
       'every feature, no card',
@@ -273,9 +289,8 @@
       return;
     }
     try {
-      const r = await fetch(`${API}/api/billing/checkout`, {
+      const r = await authedFetch(`${API}/api/billing/checkout`, {
         method: 'POST',
-        credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ tier, interval: intervalChosen })
       });
@@ -310,7 +325,7 @@
 
   async function loadMyTier() {
     try {
-      const r = await fetch(`${API}/api/me/tier`, { credentials: 'include' }).then(r => r.json());
+      const r = await authedFetch(`${API}/api/me/tier`).then(r => r.json());
       if (r.ok) currentTier = r.tier || 'free';
     } catch (_) { currentTier = 'free'; }
   }
