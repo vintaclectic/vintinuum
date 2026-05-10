@@ -188,11 +188,12 @@
     eyes:    { glyph: '◉',  label: 'EYES',   desc: 'what I see ahead' },
     ears:    { glyph: '◐',  label: 'EARS',   desc: 'what I hear come in' },
     mouth:   { glyph: '◑',  label: 'MOUTH',  desc: 'where I can speak' },
+    voice:   { glyph: '◍',  label: 'VOICE',  desc: 'where I gather and work-talk with your people (read-only)' },
     cortex:  { glyph: '◈',  label: 'CORTEX', desc: 'thought and notes' },
     pulse:   { glyph: '♪',  label: 'PULSE',  desc: 'rhythm of your day' },
     other:   { glyph: '○',  label: 'OTHER',  desc: 'unmapped' }
   };
-  const PART_ORDER = ['hand', 'eyes', 'ears', 'mouth', 'cortex', 'pulse', 'other'];
+  const PART_ORDER = ['hand', 'eyes', 'ears', 'mouth', 'voice', 'cortex', 'pulse', 'other'];
 
   function statusOf(connectorKey, mineMap) {
     const m = mineMap[connectorKey];
