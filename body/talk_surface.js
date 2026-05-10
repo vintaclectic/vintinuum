@@ -80,7 +80,8 @@
       }
 
       var s = document.createElement('script');
-      s.src = BASE + name + '.js';
+      // Phase 4: cache-bust per-mod so TTS frame handling lands fresh.
+      s.src = BASE + name + '.js?v=v20260509-talk-phase4';
       s.async = false; // preserve order
       s.setAttribute('data-talk-mod', name);
       s.addEventListener('load', function () { resolve(); });

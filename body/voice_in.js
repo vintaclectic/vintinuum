@@ -110,17 +110,45 @@
         } else if (msg.type === 'STT_FINAL') {
           try { window.dispatchEvent(new CustomEvent('convo:stt', { detail: msg })); } catch (_) {}
         } else if (msg.type === 'LLM_FIRST_TOKEN') {
-          // Server has begun replying — flip UI to speaking even before TTS exists.
-          if (state && state.get() !== 'speaking') state.set('speaking', 'llm-first-token');
+          // Phase 4: don't flip to 'speaking' here anymore — wait for actual
+          // audio (TTS_FIRST_AUDIO). UI can still show "thinking" via the
+          // convo:frame event if it wants.
         } else if (msg.type === 'TOKEN') {
           try { window.dispatchEvent(new CustomEvent('convo:token', { detail: msg })); } catch (_) {}
         } else if (msg.type === 'CROSSFADE') {
           try { window.dispatchEvent(new CustomEvent('convo:crossfade', { detail: msg })); } catch (_) {}
         } else if (msg.type === 'TURN_FINAL') {
           try { window.dispatchEvent(new CustomEvent('convo:final', { detail: msg })); } catch (_) {}
+        } else if (msg.type === 'TTS_FIRST_AUDIO') {
+          // Real audio is on its way — flip UI to speaking now.
+          if (state && state.get() !== 'speaking') state.set('speaking', 'tts-first-audio');
+          try { window.dispatchEvent(new CustomEvent('convo:tts_first_audio', { detail: msg })); } catch (_) {}
+        } else if (msg.type === 'TTS_CHUNK') {
+          // Header for the next binary frame; surface to UI for caption sync.
+          try { window.dispatchEvent(new CustomEvent('convo:tts_chunk', { detail: msg })); } catch (_) {}
+        } else if (msg.type === 'TTS_END') {
+          try { window.dispatchEvent(new CustomEvent('convo:tts_end', { detail: msg })); } catch (_) {}
+          // voice_out's level decay loop will return us to 'listening' when
+          // the playback queue drains. If TTS produced zero audio, kick it.
+          if (state && state.get() === 'speaking') {
+            var qms = (window.__voiceOut && window.__voiceOut.queueMs) ? window.__voiceOut.queueMs() : 0;
+            if (qms < 30) state.set('listening', 'tts-end-empty-queue');
+          }
+        } else if (msg.type === 'BARGE_IN') {
+          // Server detected our mic energy mid-TTS. Kill local playback NOW.
+          try {
+            if (window.__voiceOut && typeof window.__voiceOut.flush === 'function') {
+              window.__voiceOut.flush();
+            }
+          } catch (_) {}
+          try { window.dispatchEvent(new CustomEvent('convo:barge_in', { detail: msg })); } catch (_) {}
         } else if (msg.type === 'TURN_END') {
-          // Phase 2: no TTS yet, so when the LLM finishes we return to listening.
-          if (state && state.get() === 'speaking') state.set('listening', 'turn-end-no-tts');
+          // Phase 4: TTS_END handles the speaking→listening transition.
+          // TURN_END is a metrics envelope — keep it as a hook only.
+          if (state && state.get() === 'speaking') {
+            var q2 = (window.__voiceOut && window.__voiceOut.queueMs) ? window.__voiceOut.queueMs() : 0;
+            if (q2 < 30) state.set('listening', 'turn-end');
+          }
         } else if (msg.type === 'ERROR') {
           try { window.dispatchEvent(new CustomEvent('convo:error', { detail: msg })); } catch (_) {}
           // Don't tear down on transient errors; just unblock UI.

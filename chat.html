@@ -55,8 +55,8 @@
 <script src="body/bond_door.js?v=v20260509-marqueewrap"></script>
 <script src="body/topbar.js?v=v20260509-altarup" defer></script>
 <script src="body/mobile_nav.js?v=v20260505-onedoor" defer></script>
-<!-- Real-time conversation (Phase 1 — echo loop). Disable with ?talk=off -->
-<script src="body/talk_surface.js?v=v20260509-talk-phase3" data-talk="on" defer></script>
+<!-- Real-time conversation (Phase 4 — TTS streaming + barge-in). Disable with ?talk=off -->
+<script src="body/talk_surface.js?v=v20260509-talk-phase4" data-talk="on" defer></script>
 </head>
 <body>
 <div class="page">
@@ -284,6 +284,35 @@
       row.textContent = '⚠ ' + (d.code || 'error') + (d.detail ? ' — ' + d.detail : '');
       box.appendChild(row);
       _scrollDown();
+    });
+
+    // Phase 4: TTS lifecycle hooks — show a small audio pill when the
+    // synth finishes, and a barge-in marker if the user cut Vintinuum off.
+    window.addEventListener('convo:tts_first_audio', function (ev) {
+      var d = ev.detail || {};
+      if (!currentTurn || currentTurn.idx !== d.turn_idx) return;
+      if (!currentTurn.vinta) return;
+      if (currentTurn.vinta.row.querySelector('.cap-tts-pill')) return;
+      var pill = document.createElement('span');
+      pill.className = 'cap-tts-pill';
+      pill.style.cssText = 'display:inline-block; margin-left: 8px; padding: 1px 6px; border: 1px solid rgba(124,207,255,0.25); border-radius: 4px; color: rgba(180,200,230,0.5); font-family: "Space Mono", monospace; font-size: 0.55rem; letter-spacing: 0.16em; text-transform: uppercase;';
+      pill.textContent = '🔊 ' + (d.first_audio_ms ? d.first_audio_ms + 'ms' : 'voice');
+      currentTurn.vinta.row.appendChild(pill);
+    });
+
+    window.addEventListener('convo:barge_in', function (ev) {
+      var d = ev.detail || {};
+      _ensureRoom();
+      var mark = document.createElement('div');
+      mark.style.cssText = 'margin: 2px 0 8px; color: rgba(255,180,120,0.7); font-family: "Space Mono", monospace; font-size: 0.62rem; letter-spacing: 0.18em; text-transform: uppercase;';
+      mark.textContent = '— interrupted —';
+      box.appendChild(mark);
+      _scrollDown();
+    });
+
+    window.addEventListener('convo:tts_end', function (ev) {
+      // No visible row by default; reserved for debug overlays.
+      // Metrics live on the convo:frame stream for anyone listening.
     });
   })();
 </script>
