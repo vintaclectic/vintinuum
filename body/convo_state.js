@@ -69,6 +69,41 @@
     try {
       window.dispatchEvent(new CustomEvent('convo:state', { detail: entry }));
     } catch (_) {}
+    // Bridge to status pill protocol — every FSM transition lights the pill.
+    // Pill listens for vint:voice:listening|thinking|speaking|idle. Map our
+    // 7 internal states down to those 4 surfaces so external watchers see a
+    // simple, stable signal even as we add finer-grained internal states.
+    try {
+      var pillEvent = null;
+      var pillDetail = { from: 'convo_state', prev: prev, fsm: next };
+      switch (next) {
+        case 'listening':
+        case 'capturing':
+          pillEvent = 'vint:voice:listening';
+          break;
+        case 'thinking':
+          pillEvent = 'vint:voice:thinking';
+          break;
+        case 'speaking':
+          // Sticky budget scales with avg sentence length; 1.6s holds the
+          // pill on speaking through brief inter-chunk gaps without locking
+          // it past the actual end of speech.
+          pillEvent = 'vint:voice:speaking';
+          pillDetail.stickyMs = 1600;
+          break;
+        case 'idle':
+        case 'paused':
+          pillEvent = 'vint:voice:idle';
+          break;
+        case 'interrupted':
+          // Brief listening flash — interruption means the user took the floor
+          pillEvent = 'vint:voice:listening';
+          break;
+      }
+      if (pillEvent) {
+        window.dispatchEvent(new CustomEvent(pillEvent, { detail: pillDetail }));
+      }
+    } catch (_) {}
   }
 
   function set(next, reason) {
