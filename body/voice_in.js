@@ -114,6 +114,8 @@
           if (state && state.get() !== 'speaking') state.set('speaking', 'llm-first-token');
         } else if (msg.type === 'TOKEN') {
           try { window.dispatchEvent(new CustomEvent('convo:token', { detail: msg })); } catch (_) {}
+        } else if (msg.type === 'CROSSFADE') {
+          try { window.dispatchEvent(new CustomEvent('convo:crossfade', { detail: msg })); } catch (_) {}
         } else if (msg.type === 'TURN_FINAL') {
           try { window.dispatchEvent(new CustomEvent('convo:final', { detail: msg })); } catch (_) {}
         } else if (msg.type === 'TURN_END') {

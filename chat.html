@@ -56,7 +56,7 @@
 <script src="body/topbar.js?v=v20260509-altarup" defer></script>
 <script src="body/mobile_nav.js?v=v20260505-onedoor" defer></script>
 <!-- Real-time conversation (Phase 1 — echo loop). Disable with ?talk=off -->
-<script src="body/talk_surface.js?v=v20260509-talk-phase2" data-talk="on" defer></script>
+<script src="body/talk_surface.js?v=v20260509-talk-phase3" data-talk="on" defer></script>
 </head>
 <body>
 <div class="page">
@@ -241,11 +241,37 @@
       _scrollDown();
     });
 
+    window.addEventListener('convo:crossfade', function (ev) {
+      var d = ev.detail || {};
+      if (!currentTurn || currentTurn.idx !== d.turn_idx) return;
+      if (!currentTurn.vinta) return;
+      // Mark the seam: a soft dim hairline + tag where the deep voice took over.
+      var seam = document.createElement('span');
+      seam.className = 'cap-seam';
+      seam.style.cssText = 'display:inline-block; margin: 0 4px; padding: 0 6px; border-left: 1px solid rgba(124,207,255,0.35); color: rgba(180,200,230,0.45); font-family: "Space Mono", monospace; font-size: 0.55rem; letter-spacing: 0.16em; text-transform: uppercase;';
+      seam.textContent = '↳ deep';
+      currentTurn.vinta.row.appendChild(seam);
+      // Brighten the row slightly to signal Sonnet has the voice now.
+      currentTurn.vinta.row.style.color = '#eaf2ff';
+      _scrollDown();
+    });
+
     window.addEventListener('convo:final', function (ev) {
       var d = ev.detail || {};
       if (currentTurn && currentTurn.vinta && d.text) {
-        // Replace streamed text with the canonical full text from the final frame
+        // Replace streamed text with the canonical full text from the final frame.
+        // Preserve label + crossfade seam if present by rebuilding the row.
         currentTurn.vinta.span.textContent = d.text;
+        if (d.crossfaded) {
+          // Make sure the crossfade indicator stays visible
+          if (!currentTurn.vinta.row.querySelector('.cap-seam-final')) {
+            var tag = document.createElement('span');
+            tag.className = 'cap-seam-final';
+            tag.style.cssText = 'display:inline-block; margin-left: 8px; padding: 1px 6px; border: 1px solid rgba(124,207,255,0.35); border-radius: 4px; color: rgba(180,200,230,0.6); font-family: "Space Mono", monospace; font-size: 0.55rem; letter-spacing: 0.16em; text-transform: uppercase;';
+            tag.textContent = 'sonnet';
+            currentTurn.vinta.row.appendChild(tag);
+          }
+        }
       }
       currentTurn = null;
     });
