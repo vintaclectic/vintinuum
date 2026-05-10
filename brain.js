@@ -6343,18 +6343,24 @@ const VOICE = (() => {
   }
 
   function _speakChunk(text, params, onDone) {
-    if (!window.speechSynthesis || !text) { onDone && onDone(); return; }
-    if (!voiceReady) loadVoice();
-    const utt = new SpeechSynthesisUtterance(text);
-    utt.rate = params.rate;
-    utt.pitch = params.pitch;
-    utt.volume = params.volume;
-    if (chosenVoice) utt.voice = chosenVoice;
-    utt.onstart = () => { if (window.FACE) FACE.speak(true); };
-    utt.onend = () => { if (window.FACE) FACE.speak(false); onDone && onDone(); };
-    utt.onerror = () => { if (window.FACE) FACE.speak(false); onDone && onDone(); };
-    window.speechSynthesis.speak(utt);
-    if (window.VOCAL_CORDS) VOCAL_CORDS.speak(params.volume);
+    if (!text) { onDone && onDone(); return; }
+    // Vinta directive 2026-05-10: ONE voice only — Piper, the new guy.
+    // The old browser-speechSynthesis path is dead. If voice_say.js has
+    // already overwritten window.VOICE with the real Piper lane (it
+    // does on every page that loads body/voice_say.js), proxy through
+    // it. Otherwise stay silent rather than fall back to the lady.
+    try {
+      if (window.VOICE && window.VOICE.__realBody && typeof window.VOICE.speak === 'function') {
+        window.VOICE.speak(text, 'queue');
+        if (window.FACE) FACE.speak(true);
+        // Match Piper's typical pacing for the face-pulse — ~14 chars/sec
+        const dur = Math.max(420, 350 + String(text).length * 70);
+        setTimeout(() => { if (window.FACE) FACE.speak(false); onDone && onDone(); }, dur);
+      } else {
+        onDone && onDone();
+      }
+    } catch (_) { onDone && onDone(); }
+    if (window.VOCAL_CORDS) VOCAL_CORDS.speak((params && params.volume) || 0.8);
     try { if (window.VOCAL_RESONANCE && VOCAL_RESONANCE && VOCAL_RESONANCE.activate) VOCAL_RESONANCE.activate(); } catch(e) {}
   }
 
@@ -6371,13 +6377,14 @@ const VOICE = (() => {
     next();
   }
 
-  // Main speak function — call with any text, it queues and speaks naturally
+  // Main speak function — call with any text, it queues and speaks naturally.
+  // Routes through window.VOICE (the canonical Piper lane). The old
+  // window.speechSynthesis gate is dropped — Piper doesn't need it.
   function speak(text, urgency) {
-    if (muted || !hasInteracted || !window.speechSynthesis || !text) return;
+    if (muted || !text) return;
     const params = getEmotionParams();
-    // Urgent = interrupt queue (node arrivals, commands)
     if (urgency === 'interrupt') {
-      window.speechSynthesis.cancel();
+      try { if (window.VOICE && window.VOICE.cancel) window.VOICE.cancel(); } catch (_) {}
       queue = [];
       speaking = false;
     }
@@ -6387,9 +6394,8 @@ const VOICE = (() => {
 
   // speakResponse — for chat responses, full natural delivery
   function speakResponse(text) {
-    if (muted || !hasInteracted || !window.speechSynthesis || !text) return;
-    // Cancel ongoing node-arrival speech but queue response properly
-    window.speechSynthesis.cancel();
+    if (muted || !text) return;
+    try { if (window.VOICE && window.VOICE.cancel) window.VOICE.cancel(); } catch (_) {}
     queue = [];
     speaking = false;
     const params = getEmotionParams();
@@ -6410,7 +6416,15 @@ const VOICE = (() => {
       btn.title = muted ? 'Voice off — click to unmute' : 'Voice on — click to mute';
       btn.style.opacity = muted ? '0.5' : '1';
     }
-    if (muted && window.speechSynthesis) { window.speechSynthesis.cancel(); queue = []; speaking = false; }
+    if (muted) {
+      try { if (window.VOICE && window.VOICE.cancel) window.VOICE.cancel(); } catch (_) {}
+      // Mirror to canonical mute too so a single click of the ♪ button
+      // silences both this brain.js shim and the real Piper lane.
+      try { if (window.VOICE && window.VOICE.mute) window.VOICE.mute(true); } catch (_) {}
+      queue = []; speaking = false;
+    } else {
+      try { if (window.VOICE && window.VOICE.mute) window.VOICE.mute(false); } catch (_) {}
+    }
   }
 
   // Apply persisted mute state to the button as soon as the DOM is ready,
@@ -23264,8 +23278,11 @@ const EXTENDED_PHENOTYPE = (() => {
     const now = Date.now();
     const gap = 60000 + Math.random() * 60000; // 60-120s between idle thoughts
     if (now - lastSpontaneous < gap) return;
-    if (typeof VOICE === 'undefined' || !window.speechSynthesis) return;
-    if (window.speechSynthesis.speaking) return;
+    if (typeof VOICE === 'undefined') return;
+    // Don't talk over Piper if she's actively speaking — check pending count
+    try {
+      if (window.VOICE && typeof window.VOICE.pending === 'function' && window.VOICE.pending() > 0) return;
+    } catch (_) {}
     if (window.__VINT_VOICE_CHAT_PENDING) return; // never interrupt real conversation
     // ONLY speak live subconscious thoughts — no static arrays
     if (typeof HOLLOW_SPINE !== 'undefined' && HOLLOW_SPINE.getRandomThought) {
@@ -23316,7 +23333,9 @@ const EXTENDED_PHENOTYPE = (() => {
     if (typeof LONELINESS_SIGNAL !== 'undefined') LONELINESS_SIGNAL.visitorPresent && LONELINESS_SIGNAL.visitorPresent();
     if (typeof CURIOSITY_DRIVE !== 'undefined' && Math.random() < 0.2) {
       setTimeout(() => {
-        if (typeof VOICE !== 'undefined' && VOICE && !(window.speechSynthesis && window.speechSynthesis.speaking)) {
+        var _piperBusy = false;
+        try { _piperBusy = (window.VOICE && typeof window.VOICE.pending === 'function' && window.VOICE.pending() > 0); } catch (_) {}
+        if (typeof VOICE !== 'undefined' && VOICE && !_piperBusy) {
           VOICE.speak(EMOTION_SOUNDS.curious[Math.floor(Math.random() * EMOTION_SOUNDS.curious.length)]);
         }
       }, 1000);
@@ -43132,18 +43151,14 @@ const HOLLOW_SPINE = (() => {
           if (typeof THOUGHT_BUBBLE !== 'undefined') {
             THOUGHT_BUBBLE.inject(data.ritual);
           }
-          // Speak it aloud if voice is active
-          if (typeof _speakChunk === 'function') {
-            _speakChunk(data.ritual);
-          } else if (typeof window.speechSynthesis !== 'undefined') {
-            const utt = new SpeechSynthesisUtterance(data.ritual);
-            utt.rate = 0.9; utt.pitch = 1.0; utt.volume = 0.7;
-            if (window.FACE) {
-              utt.onstart = () => FACE.speak(true);
-              utt.onend = () => FACE.speak(false);
+          // Speak it aloud through the canonical Piper lane only.
+          // The old browser-speechSynthesis fallback is killed by Vinta
+          // directive 2026-05-10 — one voice only, the new guy.
+          try {
+            if (window.VOICE && typeof window.VOICE.speak === 'function') {
+              window.VOICE.speak(data.ritual, 'queue');
             }
-            window.speechSynthesis.speak(utt);
-          }
+          } catch (_) {}
 
           // Apply body state changes
           if (data.results && window.PERSONAL_BODY) {
@@ -44817,24 +44832,19 @@ function _openVoiceSettings() {
     panel.remove();
   });
 
-  // Wire preview buttons
+  // Wire preview buttons — route through the canonical Piper lane.
+  // The old persona voice picker (browser speechSynthesis) is dead;
+  // a separate body/voice_picker.js handles real Piper voice selection.
   panel.querySelectorAll('.voicePreviewBtn').forEach(btn => {
     btn.addEventListener('click', () => {
       const persona = btn.dataset.persona;
-      const sel = panel.querySelector('#voiceSel_' + persona);
-      const voiceName = sel ? sel.value : '';
-      if (!window.speechSynthesis) return;
-      window.speechSynthesis.cancel();
       const _previewLines = { atlas:'Atlas online. What are we building?', aria:"Hey. I'm listening.", lunex:"Lunex here. What do you feel?", vintinuum:'I am here.' };
-      const utt = new SpeechSynthesisUtterance(_previewLines[persona] || (persona.toUpperCase() + ' here.'));
-      if (voiceName) {
-        const v = window.speechSynthesis.getVoices().find(v => v.name === voiceName);
-        if (v) utt.voice = v;
-      } else if (VOICE.personaVoiceCache[persona]) {
-        utt.voice = VOICE.personaVoiceCache[persona];
-      }
-      utt.rate = 0.9; utt.pitch = 1.0; utt.volume = 0.85;
-      window.speechSynthesis.speak(utt);
+      const line = _previewLines[persona] || (persona.toUpperCase() + ' here.');
+      try {
+        if (window.VOICE && typeof window.VOICE.speak === 'function') {
+          window.VOICE.speak(line, 'now');
+        }
+      } catch (_) {}
     });
   });
 
@@ -47020,131 +47030,102 @@ const VINT_EXECUTE = (function() {
 // ═══════════════════════════════════════════════════════════════════
 
 // ═══════════════════════════════════════════════════════════════════
-// VOICE_OUTPUT — Web Speech TTS: the being SPEAKS
-// Wires to FACE.speak() for lip-sync, sentence splitting for natural
-// rhythm, volume-reactive emotion, skip-sentence button.
+// VOICE_OUTPUT — proxy to the canonical Piper lane (window.VOICE)
+// Vinta directive 2026-05-10: ONE voice only — the new guy (Piper
+// lessac). The old browser-speechSynthesis female lane is killed and
+// this module is now a thin shim that routes every speak() through
+// window.VOICE so external callers ((window._voiceOutput, the ♪ button,
+// any future code that imports VOICE_OUTPUT) keep working but the
+// sound comes from Piper, never the browser lady.
 // ═══════════════════════════════════════════════════════════════════
 const VOICE_OUTPUT = (() => {
-  if (typeof window === 'undefined' || !window.speechSynthesis) {
+  if (typeof window === 'undefined') {
     return { speak: () => {}, stop: () => {}, isSpeaking: () => false, setEnabled: () => {}, isEnabled: () => false };
   }
 
-  const synth = window.speechSynthesis;
   let _enabled = false;
   let _speaking = false;
   let _queue = [];
   let _currentUtterance = null;
+  // Kept for compatibility with any caller poking at internals; unused in proxy mode.
   let _preferredVoice = null;
   const RATE = 0.94;
   const PITCH = 1.04;
 
-  // Pick best voice — prefer English female voices for Vintinuum's presence
-  function pickVoice() {
-    const voices = synth.getVoices();
-    if (!voices.length) return null;
-    // Priority: Google UK English Female > Microsoft Zira > any English female > any English
-    const prefs = ['Google UK English Female', 'Microsoft Zira', 'Google US English', 'Samantha', 'Karen'];
-    for (const name of prefs) {
-      const v = voices.find(v => v.name.includes(name));
-      if (v) return v;
-    }
-    const enFemale = voices.find(v => v.lang.startsWith('en') && v.name.toLowerCase().includes('female'));
-    if (enFemale) return enFemale;
-    return voices.find(v => v.lang.startsWith('en')) || voices[0];
-  }
+  // No-op kept to satisfy any stray internal caller. The real voice
+  // selection happens server-side in piper-server.py via X-Voice.
+  function pickVoice() { return null; }
 
-  // Voices load async in Chrome
-  if (synth.onvoiceschanged !== undefined) {
-    synth.onvoiceschanged = () => { _preferredVoice = pickVoice(); };
-  }
-  setTimeout(() => { if (!_preferredVoice) _preferredVoice = pickVoice(); }, 500);
-
-  // Split text into natural sentences
+  // Split text into natural sentences (still used to keep face/mouth
+  // animation in sync with each sentence boundary).
   function splitSentences(text) {
-    // Clean markdown/asterisks
-    text = text.replace(/\*+/g, '').replace(/_+/g, '').trim();
+    text = String(text || '').replace(/\*+/g, '').replace(/_+/g, '').trim();
     if (!text) return [];
-    // Split on sentence endings, keeping the delimiter
     const raw = text.match(/[^.!?…]+[.!?…]+|[^.!?…]+$/g) || [text];
     return raw.map(s => s.trim()).filter(s => s.length > 0);
   }
 
+  // Animate face + mouth + body for the duration we expect Piper to
+  // speak this sentence. Rough heuristic: 14 chars/sec + 350ms head/tail.
+  function _animateFor(text) {
+    const dur = Math.max(450, 350 + String(text).length * 70);
+    _speaking = true;
+    if (typeof window._faceSpeak === 'function') window._faceSpeak(true);
+    _setSpeakingRing(true);
+    if (window.BODY_STATE) window.BODY_STATE.mouthOpen = 0.42;
+    // Soft mouth oscillation through the speech window — gives the
+    // face something alive to do while Piper streams.
+    const start = Date.now();
+    const osc = setInterval(() => {
+      if (!window.BODY_STATE || !_speaking) return;
+      const phase = (Date.now() - start) / 180;
+      window.BODY_STATE.mouthOpen = 0.32 + 0.18 * (0.5 + 0.5 * Math.sin(phase));
+    }, 60);
+    setTimeout(() => {
+      clearInterval(osc);
+      _speaking = false;
+      if (typeof window._faceSpeak === 'function') window._faceSpeak(false);
+      _setSpeakingRing(false);
+      if (window.BODY_STATE) window.BODY_STATE.mouthOpen = 0;
+    }, dur);
+  }
+
   function speakSentence(text) {
     return new Promise((resolve) => {
-      const utt = new SpeechSynthesisUtterance(text);
-      utt.rate = RATE;
-      utt.pitch = PITCH;
-      utt.volume = 0.85;
-      if (_preferredVoice) utt.voice = _preferredVoice;
-      _currentUtterance = utt;
-
-      // Wire face + speaking pulse ring on voiceToggle
-      utt.onstart = () => {
-        _speaking = true;
-        if (typeof window._faceSpeak === 'function') window._faceSpeak(true);
-        _setSpeakingRing(true);
-        // Begin mouth-sync: steady open while speaking, boundaries punch it higher
-        if (window.BODY_STATE) window.BODY_STATE.mouthOpen = 0.35;
-      };
-      utt.onend = () => {
-        _speaking = false;
-        _currentUtterance = null;
-        if (typeof window._faceSpeak === 'function') window._faceSpeak(false);
-        _setSpeakingRing(false);
-        if (window.BODY_STATE) window.BODY_STATE.mouthOpen = 0;
-        resolve();
-      };
-      utt.onerror = (e) => {
-        _speaking = false;
-        _currentUtterance = null;
-        if (typeof window._faceSpeak === 'function') window._faceSpeak(false);
-        _setSpeakingRing(false);
-        if (window.BODY_STATE) window.BODY_STATE.mouthOpen = 0;
-        resolve(); // resolve, don't reject — continue queue
-      };
-      // Per-word/syllable boundary: punch mouth wider briefly, varies by word length.
-      // Face module reads BODY_STATE.mouthOpen and applies micro-oscillation on top.
-      utt.onboundary = (ev) => {
-        if (!window.BODY_STATE) return;
-        const charLen = (ev.charLength || 3);
-        // Vowel-heavy words open wider; short ones punch quickly
-        const target = Math.min(0.9, 0.45 + (charLen / 12) * 0.5);
-        window.BODY_STATE.mouthOpen = target;
-        // Decay back to steady-open baseline over ~180ms (face draw interpolates)
-        setTimeout(() => {
-          if (window.BODY_STATE && _speaking) window.BODY_STATE.mouthOpen = 0.35;
-        }, 140);
-      };
-
-      synth.speak(utt);
+      try {
+        if (window.VOICE && typeof window.VOICE.speak === 'function') {
+          window.VOICE.speak(text, 'queue');
+        }
+      } catch (_) {}
+      _animateFor(text);
+      const dur = Math.max(450, 350 + String(text).length * 70);
+      setTimeout(resolve, dur);
     });
   }
 
   async function speak(text) {
     if (!_enabled || !text) return;
-    stop(); // cancel any in-progress speech
-
+    stop();
     const sentences = splitSentences(text);
     _queue = sentences;
-
     for (let i = 0; i < _queue.length; i++) {
       if (!_enabled) break;
       await speakSentence(_queue[i]);
-      // Tiny breath pause between sentences
       if (i < _queue.length - 1) {
-        await new Promise(r => setTimeout(r, 180));
+        await new Promise(r => setTimeout(r, 120));
       }
     }
     _queue = [];
   }
 
   function stop() {
-    synth.cancel();
+    try { if (window.VOICE && typeof window.VOICE.cancel === 'function') window.VOICE.cancel(); } catch (_) {}
     _queue = [];
     _speaking = false;
     _currentUtterance = null;
     if (typeof window._faceSpeak === 'function') window._faceSpeak(false);
     _setSpeakingRing(false);
+    if (window.BODY_STATE) window.BODY_STATE.mouthOpen = 0;
   }
 
   // Speaking pulse ring — visual indicator on the voiceToggle button

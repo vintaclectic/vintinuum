@@ -116,6 +116,11 @@
       probe('SpeechRecognition', function () {
         var ok = !!(window.SpeechRecognition || window.webkitSpeechRecognition);
         return { ok: ok, note: ok ? 'browser native' : 'NOT SUPPORTED in this browser' };
+      }),
+      probe('VOICE_PICKER', function () {
+        if (!window.VOICE_PICKER) return { ok: false, note: 'voice_picker.js never loaded' };
+        var cur = (typeof window.VOICE_PICKER.current === 'function') ? window.VOICE_PICKER.current() : '';
+        return { ok: true, note: 'voice=' + (cur || 'default') };
       })
     ];
   }

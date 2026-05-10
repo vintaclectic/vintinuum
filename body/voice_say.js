@@ -42,6 +42,17 @@
   var muted = false;
   try { muted = (localStorage.getItem('vint_voice_muted') === '1'); } catch (_) {}
 
+  // Voice id — the user-pickable Piper voice. Empty = server default.
+  // Picker UI (body/voice_picker.js) writes this; we read on every play
+  // so a change takes effect on the next utterance. Listen to the
+  // vint:voice:changed event for instant feedback (cancel + reset).
+  var voiceId = '';
+  try { voiceId = String(localStorage.getItem('vint:voice_id') || ''); } catch (_) {}
+  function _readVoiceId() {
+    try { voiceId = String(localStorage.getItem('vint:voice_id') || ''); } catch (_) {}
+    return voiceId;
+  }
+
   var hasInteracted = false;
   var queue = [];
   var current = null;     // { audio, text }
@@ -89,7 +100,9 @@
 
   function play(item) {
     var a = ensureAudio();
-    var url = apiBase().replace(/\/+$/, '') + '/api/voice/say?text=' + encodeURIComponent(item.text);
+    var vid = _readVoiceId();
+    var url = apiBase().replace(/\/+$/, '') + '/api/voice/say?text=' + encodeURIComponent(item.text) +
+              (vid ? '&voice=' + encodeURIComponent(vid) : '');
     current = item;
     item.audio = a;
     a.src = url;
@@ -141,6 +154,22 @@
     if (muted) cancel();
   }
 
+  function setVoice(id) {
+    var clean = String(id || '').slice(0, 64).trim();
+    voiceId = clean;
+    try {
+      if (clean) localStorage.setItem('vint:voice_id', clean);
+      else localStorage.removeItem('vint:voice_id');
+    } catch (_) {}
+    // Cancel anything mid-flight so the new voice takes effect immediately
+    cancel();
+    try {
+      window.dispatchEvent(new CustomEvent('vint:voice:changed', { detail: { voice: clean || null } }));
+    } catch (_) {}
+  }
+
+  function getVoice() { return _readVoiceId(); }
+
   window.VOICE = {
     __realBody: true,
     speak: speak,
@@ -149,9 +178,17 @@
     muted: function () { return muted; },
     get hasInteracted() { return hasInteracted; },
     pending: function () { return queue.length + (current ? 1 : 0); },
-    get lastSpokeAt() { return lastSpokeAt; }
+    get lastSpokeAt() { return lastSpokeAt; },
+    // Voice selection — empty string / null means server default
+    setVoice: setVoice,
+    getVoice: getVoice
   };
 
   // Convenience: VOICE.say(text) === VOICE.speak(text)
   window.VOICE.say = speak;
+
+  // Cross-tab sync: if another tab changes the voice, pick it up here too
+  window.addEventListener('storage', function (e) {
+    if (e && e.key === 'vint:voice_id') _readVoiceId();
+  });
 })();
