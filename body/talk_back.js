@@ -71,6 +71,7 @@
       return;
     }
     inFlight = true;
+    try { window.dispatchEvent(new CustomEvent('vint:voice:thinking')); } catch (_) {}
     var url = apiBase().replace(/\/+$/, '') + '/api/voice/reply';
     var headers = { 'Content-Type': 'application/json' };
     try {
