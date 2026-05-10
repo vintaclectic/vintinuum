@@ -172,42 +172,11 @@
       label: 'LORE',
       iconOnly: false,
     });
-    // LORE button — directly toggle the panel. The legacy #loreToggle is
-    // hidden via shell.css (display:none on the kill-list) — programmatically
-    // calling .click() on a hidden element still fires its handler in
-    // most browsers, but on some Chromium builds the pointerdown is eaten
-    // before reaching the listener. Bypass the dead element entirely:
-    // open #lorePanel ourselves. If brain.js hasn't populated #deepSections
-    // yet, the panel still opens and the user sees the close button — which
-    // beats "click does nothing." Content streams in as soon as it exists.
-    lore.addEventListener('click', () => {
-      const panel = document.getElementById('lorePanel');
-      if (!panel) return;
-      const isOpen = panel.classList.contains('open');
-      if (isOpen) {
-        panel.classList.remove('open');
-      } else {
-        panel.classList.add('open');
-        // Best-effort: pull in any deepSections content brain.js produced
-        // since last open. moveLore was attached as a MutationObserver but
-        // it only mutates childList — it doesn't sync on demand.
-        try {
-          const src = document.getElementById('deepSections');
-          const dst = document.getElementById('lorePanelContent');
-          if (src && dst && src.children.length > 0) {
-            while (src.firstChild) dst.appendChild(src.firstChild);
-          }
-          // If the panel is still empty after the sync, surface a friendly
-          // explainer so it doesn't render as a black void.
-          if (dst && dst.children.length === 0) {
-            const empty = document.createElement('div');
-            empty.style.cssText = 'padding:60px 32px;color:rgba(218,228,255,0.55);font-family:Cormorant Garamond,serif;font-style:italic;font-size:1.1rem;text-align:center;line-height:1.6;max-width:620px;margin:0 auto;';
-            empty.textContent = 'The lore is loading. Deep anatomy and consciousness documentation streams in once the body finishes initializing — give it a few seconds, then reopen.';
-            dst.appendChild(empty);
-          }
-        } catch (_) { /* ignore */ }
-      }
-    });
+    // LORE button — works on every page.
+    // If brain.html's native #lorePanel is present: toggle it directly.
+    // If not (every other page): open/close the universal lore overlay
+    // mounted below by mountUniversalLore().
+    lore.addEventListener('click', () => toggleLore());
     right.appendChild(lore);
 
     // Hamburger menu
@@ -575,8 +544,7 @@
     $('topDrawerClose').addEventListener('click', closeDrawer);
     $('drawerLoreBtn').addEventListener('click', () => {
       closeDrawer();
-      const orig = $('loreToggle');
-      if (orig && typeof orig.click === 'function') orig.click();
+      toggleLore();
     });
     $('drawerKickBtn').addEventListener('click', () => {
       closeDrawer();
@@ -718,6 +686,109 @@
       const lore = $('topLorePillLabel');
       if (lore) lore.style.display = '';
     }
+  }
+
+  // ── Universal Lore overlay (works on every page) ─────────────────────────
+  // brain.html has its own rich #lorePanel populated by brain.js.
+  // Every other page gets a lightweight overlay that explains the lore
+  // concept and links back to brain.html where the real content lives.
+  // Both surfaces are toggled via the single toggleLore() entry-point.
+  function mountUniversalLore() {
+    if ($('topLoreOverlay')) return; // idempotent
+    if ($('lorePanel')) return;      // brain.html has its own — skip
+
+    const overlay = document.createElement('div');
+    overlay.id = 'topLoreOverlay';
+    overlay.setAttribute('role', 'dialog');
+    overlay.setAttribute('aria-label', 'Lore panel');
+    overlay.style.cssText = `
+      position: fixed; inset: 0;
+      z-index: ${Shell.Z.drawer + 1};
+      background: rgba(1,3,6,0.94);
+      display: none; flex-direction: column;
+      overflow: hidden;
+      font-family: 'Space Mono', monospace;
+    `;
+
+    overlay.innerHTML = `
+      <div style="display:flex;align-items:center;justify-content:space-between;
+        padding:16px 24px;border-bottom:1px solid rgba(124,207,255,0.12);flex-shrink:0;">
+        <h2 style="margin:0;font-family:'Cormorant Garamond',serif;font-style:italic;
+          font-weight:300;font-size:1.4rem;color:rgba(218,228,255,0.95);">Lore</h2>
+        <button id="topLoreOverlayClose" type="button" aria-label="Close lore"
+          style="background:none;border:1px solid rgba(124,207,255,0.18);
+          color:rgba(218,228,255,0.65);width:36px;height:36px;border-radius:50%;
+          cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center;">×</button>
+      </div>
+      <div style="flex:1;overflow-y:auto;padding:48px 32px;max-width:680px;margin:0 auto;width:100%;">
+        <p style="font-family:'Cormorant Garamond',serif;font-style:italic;
+          font-size:1.15rem;line-height:1.8;color:rgba(218,228,255,0.75);margin:0 0 32px;">
+          The lore — deep anatomy, consciousness documentation, layer-by-layer
+          architecture — lives in the body. It streams in from the brain.
+        </p>
+        <a href="brain.html#lore"
+          style="display:inline-flex;align-items:center;gap:10px;
+          padding:14px 24px;background:rgba(124,207,255,0.08);
+          border:1px solid rgba(124,207,255,0.32);color:#7ccfff;
+          border-radius:14px;text-decoration:none;font-size:0.6rem;
+          letter-spacing:0.18em;text-transform:uppercase;
+          transition:all 180ms ease;">
+          ◉ &nbsp; Go to brain — read the lore
+        </a>
+        <p style="margin:40px 0 0;font-size:0.55rem;letter-spacing:0.15em;
+          color:rgba(218,228,255,0.35);text-transform:uppercase;line-height:2;">
+          Subconscious · Somatic · Genetic · Immune · Metabolic · Neural · Emotional
+        </p>
+      </div>
+    `;
+
+    document.body.appendChild(overlay);
+    // Close on X or backdrop click
+    $('topLoreOverlayClose').addEventListener('click', () => {
+      overlay.style.display = 'none';
+    });
+    overlay.addEventListener('click', (e) => {
+      if (e.target === overlay) overlay.style.display = 'none';
+    });
+    // Escape key
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && overlay.style.display !== 'none') {
+        overlay.style.display = 'none';
+      }
+    });
+  }
+
+  function toggleLore() {
+    // brain.html native panel
+    const nativePanel = $('lorePanel');
+    if (nativePanel) {
+      const isOpen = nativePanel.classList.contains('open');
+      if (isOpen) {
+        nativePanel.classList.remove('open');
+      } else {
+        nativePanel.classList.add('open');
+        try {
+          const src = $('deepSections');
+          const dst = $('lorePanelContent');
+          if (src && dst && src.children.length > 0) {
+            while (src.firstChild) dst.appendChild(src.firstChild);
+          }
+          if (dst && dst.children.length === 0) {
+            const empty = document.createElement('div');
+            empty.style.cssText = 'padding:60px 32px;color:rgba(218,228,255,0.55);font-family:Cormorant Garamond,serif;font-style:italic;font-size:1.1rem;text-align:center;line-height:1.6;max-width:620px;margin:0 auto;';
+            empty.textContent = 'The lore is loading — give brain.js a moment to stream it in, then reopen.';
+            dst.appendChild(empty);
+          }
+        } catch (_) {}
+      }
+      return;
+    }
+    // Universal overlay on every other page
+    mountUniversalLore();
+    const overlay = $('topLoreOverlay');
+    if (!overlay) return;
+    const visible = overlay.style.display !== 'none';
+    overlay.style.display = visible ? 'none' : 'flex';
   }
 
   // ── Boot ──────────────────────────────────────────────────────────────────

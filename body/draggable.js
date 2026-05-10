@@ -152,6 +152,7 @@
     '.modal-frame',
     '#topbar',
     '.vtn-topbar',
+    '#topShell',        // topbar.js header — hey-vinta / other floats must not land here
     '#peelDrawer',
   ];
   const rectOverlaps = (a, b) =>

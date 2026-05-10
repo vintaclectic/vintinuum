@@ -217,6 +217,45 @@
     document.addEventListener('DOMContentLoaded', mount, { once: true });
   }
 
+  // ── Topbar-zone guard ─────────────────────────────────────
+  // draggable.js persists translate3d to localStorage. If a saved position
+  // puts #hey-vinta-btn inside the topbar's zone (top 72px of viewport) it
+  // will overlap #topLorePill / #topMenuPill. We can't guard this at drag-
+  // time (draggable.js owns that via OCCUPIED_SELECTORS) but we need to
+  // also guard on page-load when the saved transform is restored.
+  //
+  // Strategy: after two rAF ticks (draggable.js restores on rAF too), read
+  // the element's client rect. If it lands above 72px from the top of the
+  // viewport, wipe the stored transform back to the authored default
+  // (bottom-right corner) and clear the localStorage entry so it won't
+  // re-fire next load.
+  (function guardTopbarOverlap() {
+    const TOPBAR_H = 72; // px — matches topbar height + 16px safe buffer
+    const STORAGE_KEY = 'vint:layout:' + (location.pathname || '/');
+    requestAnimationFrame(function () {
+      requestAnimationFrame(function () {
+        try {
+          const r = btn.getBoundingClientRect();
+          if (r.top < TOPBAR_H) {
+            // Clear the translate
+            btn.style.transform = '';
+            btn.dataset.dragX = '0';
+            btn.dataset.dragY = '0';
+            // Wipe from stored layout so it doesn't reload on next page
+            try {
+              var stored = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
+              var btnKey = '#' + btn.id;
+              if (stored[btnKey]) {
+                delete stored[btnKey];
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(stored));
+              }
+            } catch (_) {}
+          }
+        } catch (_) {}
+      });
+    });
+  })();
+
   // ── Bubble helpers ────────────────────────────────────────
   let bubbleTimer = null;
   function flashBubble(label, text, ms = 3200) {
