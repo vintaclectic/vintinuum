@@ -275,7 +275,34 @@
     };
 
     recognizer.onend = () => {
-      if (listening) finishListening();
+      if (!listening) return;
+      // Pause-tolerance (Vinta directive 2026-05-10): browser SR auto-ends
+      // after ~0.5-1s of silence, but the user may just be gathering words.
+      // If we've heard nothing yet, OR what we heard is short and we're
+      // still well under the max-listen window, transparently restart
+      // recognition instead of finishing the turn.
+      var elapsed = Date.now() - listenStartedAt;
+      var heard = (lastTranscript || '').trim();
+      var wordCount = heard ? heard.split(/\s+/).length : 0;
+      var maxListenMs = 22000;          // hard cap — never hold the mic longer than this
+      var graceMs = 9000;               // for short utterances, allow ~9s of total listening
+      var shortAndEarly = (wordCount < 8) && (elapsed < graceMs);
+      var nothingYet = (wordCount === 0) && (elapsed < maxListenMs);
+
+      if ((shortAndEarly || nothingYet) && elapsed < maxListenMs) {
+        // Try to restart the same recognizer. In Chrome this works after
+        // a brief tick; if it throws (already-started / aborted) we fall
+        // through to finishListening cleanly.
+        try {
+          setTimeout(function () {
+            if (!listening) return;
+            try { recognizer.start(); flashBubble('still listening', heard || '…'); }
+            catch (_) { try { finishListening(); } catch (__) {} }
+          }, 60);
+          return;
+        } catch (_) { /* fall through */ }
+      }
+      finishListening();
     };
 
     try {

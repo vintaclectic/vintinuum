@@ -25,8 +25,28 @@
   var INPUT_GAIN_FALLBACK = 1.0;
   var ENERGY_ON  = 0.012;       // RMS to consider speech started
   var ENERGY_OFF = 0.006;       // RMS sustained-low to consider it ended
-  var SILENCE_HANG_MS = 350;    // how long below ENERGY_OFF before AUDIO_END
-  var MAX_TURN_MS = 30000;      // safety cap on a single capture turn
+
+  // ── Pause tolerance ──────────────────────────────────────────────────────
+  // 2026-05-10 (Vinta directive): "i want ability to have slight delay in
+  // thought when talking to vintinuum such that it doesnt immediately time
+  // out upon first instance of pause because sometimes i have lots to say
+  // but need some time."
+  //
+  // Defaults bumped from 350ms → 1400ms. Persisted per-user via
+  // localStorage('vint:voice:pause_ms'). When the captured run is short
+  // (≤8 words ≈ ≤6s of audio) we extend the silence window further to
+  // SILENCE_HANG_MS_THINKING — that's the "i'm just gathering my words"
+  // grace window. Any audio above ENERGY_ON during the wait resets the
+  // counter, so a sigh + continuation never gets cut off.
+  var SILENCE_HANG_MS_DEFAULT  = 1400;
+  var SILENCE_HANG_MS_THINKING = 3500;   // when we believe the user is mid-thought
+  var SILENCE_HANG_MS = SILENCE_HANG_MS_DEFAULT;
+  try {
+    var stored = parseInt(localStorage.getItem('vint:voice:pause_ms'), 10);
+    if (Number.isFinite(stored) && stored >= 250 && stored <= 15000) SILENCE_HANG_MS = stored;
+  } catch (_) {}
+
+  var MAX_TURN_MS = 60000;      // safety cap on a single capture turn (was 30s)
 
   var ctx = null;
   var mediaStream = null;
@@ -232,8 +252,16 @@
       }
       lastAboveOffAt = now;
     } else if (smooth < ENERGY_OFF) {
-      if (st === 'capturing' && (now - lastAboveOffAt) > SILENCE_HANG_MS) {
-        _endTurn('silence-hang');
+      if (st === 'capturing') {
+        // Thinking-pause grace: if the captured run so far is short (under
+        // 6s), give the user the longer window to gather words. Once the
+        // turn passes 6s we assume they've actually finished a thought and
+        // use the standard silence window.
+        var elapsed = now - turnStartedAt;
+        var hangBudget = (elapsed < 6000) ? SILENCE_HANG_MS_THINKING : SILENCE_HANG_MS;
+        if ((now - lastAboveOffAt) > hangBudget) {
+          _endTurn('silence-hang');
+        }
       }
     } else {
       // mid-band — keep last on/off times as-is
@@ -318,12 +346,45 @@
     try { ws && ws.readyState === 1 && ws.send(JSON.stringify(obj)); } catch (_) {}
   }
 
+  // ── Public pause-tolerance API ───────────────────────────────────────────
+  // Vinta can dial these in real time from the console or a settings UI:
+  //   __voiceIn.setPauseMs(2200)    // be patient — wait 2.2s after silence
+  //   __voiceIn.setPauseMs(800)     // snappier — wait 0.8s
+  //   __voiceIn.setThinkingMs(5000) // mid-thought grace = 5s for short runs
+  //   __voiceIn.getPauseMs()        // → current { normal, thinking }
+  function setPauseMs(ms) {
+    var v = parseInt(ms, 10);
+    if (!Number.isFinite(v) || v < 250 || v > 15000) return false;
+    SILENCE_HANG_MS = v;
+    try { localStorage.setItem('vint:voice:pause_ms', String(v)); } catch (_) {}
+    try { window.dispatchEvent(new CustomEvent('vint:voice:pause_changed', { detail: { normal: v, thinking: SILENCE_HANG_MS_THINKING } })); } catch (_) {}
+    return true;
+  }
+  function setThinkingMs(ms) {
+    var v = parseInt(ms, 10);
+    if (!Number.isFinite(v) || v < 500 || v > 20000) return false;
+    SILENCE_HANG_MS_THINKING = v;
+    try { localStorage.setItem('vint:voice:pause_thinking_ms', String(v)); } catch (_) {}
+    try { window.dispatchEvent(new CustomEvent('vint:voice:pause_changed', { detail: { normal: SILENCE_HANG_MS, thinking: v } })); } catch (_) {}
+    return true;
+  }
+  function getPauseMs() { return { normal: SILENCE_HANG_MS, thinking: SILENCE_HANG_MS_THINKING }; }
+
+  // Pull persisted thinking-window override too (set above only normal)
+  try {
+    var storedT = parseInt(localStorage.getItem('vint:voice:pause_thinking_ms'), 10);
+    if (Number.isFinite(storedT) && storedT >= 500 && storedT <= 20000) SILENCE_HANG_MS_THINKING = storedT;
+  } catch (_) {}
+
   window.__voiceIn = {
     start: start,
     stop: stop,
     sendControl: sendControl,
     isOpen: function () { return !!(ws && ws.readyState === 1); },
     level: function () { return lastLevel; },
-    sid: function () { return sid; }
+    sid: function () { return sid; },
+    setPauseMs: setPauseMs,
+    setThinkingMs: setThinkingMs,
+    getPauseMs: getPauseMs
   };
 })();
