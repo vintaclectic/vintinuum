@@ -122,6 +122,28 @@
         rgba(140, 50, 50, 0.95) 60%,
         rgba(70, 20, 20, 0.95) 100%);
     }
+    #hey-vinta-btn.passive {
+      box-shadow:
+        0 6px 20px rgba(0, 0, 0, 0.5),
+        0 0 0 2px rgba(126, 200, 255, 0.45),
+        0 0 18px rgba(126, 200, 255, 0.45),
+        inset 0 1px 0 rgba(255, 255, 255, 0.12);
+    }
+    #hey-vinta-btn.passive::after {
+      content: '';
+      position: absolute;
+      right: 2px; top: 2px;
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: #7ec8ff;
+      box-shadow: 0 0 8px rgba(126, 200, 255, 0.8);
+      animation: heyVintaPassiveDot 2.4s ease-in-out infinite;
+      pointer-events: none;
+    }
+    @keyframes heyVintaPassiveDot {
+      0%, 100% { opacity: 0.55; transform: scale(1); }
+      50%      { opacity: 1;    transform: scale(1.18); }
+    }
     #hey-vinta-btn.disabled {
       opacity: 0.45;
       cursor: not-allowed;
@@ -388,7 +410,25 @@
     } catch (_) {}
   }
 
-  // ── Click toggles listen ──────────────────────────────────
+  // ── Passive-mode visual reflection ────────────────────────
+  // Reflects window.WAKE_WORD enabled-state on the V button as a
+  // cyan halo + breathing dot. Polls every 800ms so external
+  // toggles (e.g. status_pill, wake_consent banner) stay in sync.
+  function refreshPassiveVisual() {
+    try {
+      const ww = window.WAKE_WORD;
+      const on = !!(ww && ww.status && ww.status().enabled);
+      btn.classList.toggle('passive', on);
+      btn.title = on
+        ? 'Hey Vinta — passive listening on (shift-click to disable, tap to capture)'
+        : 'Hey Vinta — tap to listen (shift-click to enable always-on)';
+    } catch (_) {}
+  }
+  setInterval(refreshPassiveVisual, 800);
+  window.addEventListener('vint:wake:enabled',  refreshPassiveVisual);
+  window.addEventListener('vint:wake:disabled', refreshPassiveVisual);
+
+  // ── Click toggles listen; Shift+Click toggles passive mode ─
   // Important: draggable.js uses long-press to grab. A short tap
   // still fires click — that's our activation. We DO suppress
   // click if the press turned into a drag (draggable adds a
@@ -397,6 +437,29 @@
     if (btn.classList.contains('dragging')) return;
     if (btn.classList.contains('disabled')) {
       flashBubble('unsupported', 'speech api not available', 2200);
+      return;
+    }
+    // Shift+Click → toggle passive ambient listening
+    if (ev.shiftKey) {
+      ev.preventDefault();
+      try {
+        const ww = window.WAKE_WORD;
+        if (!ww) {
+          flashBubble('passive', 'wake module not loaded', 2400);
+          return;
+        }
+        const cur = (ww.status && ww.status().enabled) || false;
+        if (cur) {
+          ww.disable();
+          flashBubble('passive off', 'tap to talk', 2400);
+        } else {
+          ww.enable();
+          flashBubble('passive on', 'just say "hey vinta"', 3200);
+        }
+        refreshPassiveVisual();
+      } catch (e) {
+        flashBubble('passive', 'toggle failed', 2200);
+      }
       return;
     }
     if (listening) {
