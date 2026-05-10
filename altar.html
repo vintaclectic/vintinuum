@@ -218,7 +218,12 @@
         alert(`Couldn't start OAuth: ${j.error || r.status}\n\nIf this says "connector-not-configured" — Vinta hasn't added the OAuth client credentials yet.`);
         return;
       }
-      if (j.auth_url) window.location.href = j.auth_url;
+      const url = j.auth_url || j.authorize_url;
+      if (url) {
+        window.location.href = url;
+      } else {
+        alert('OAuth started but no redirect URL was returned. Check brain logs.');
+      }
     } catch (e) {
       alert(`OAuth start error: ${e.message}`);
     }
