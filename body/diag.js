@@ -121,6 +121,11 @@
         if (!window.VOICE_PICKER) return { ok: false, note: 'voice_picker.js never loaded' };
         var cur = (typeof window.VOICE_PICKER.current === 'function') ? window.VOICE_PICKER.current() : '';
         return { ok: true, note: 'voice=' + (cur || 'default') };
+      }),
+      probe('EMBODIED_CONVO', function () {
+        if (!window.EMBODIED_CONVO) return { ok: false, note: 'embodied_convo.js never loaded' };
+        var l = (typeof window.EMBODIED_CONVO.last === 'function') ? window.EMBODIED_CONVO.last() : null;
+        return { ok: true, note: 'state=' + (l && l.state || 'idle') };
       })
     ];
   }

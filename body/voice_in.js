@@ -119,6 +119,12 @@
           try { window.dispatchEvent(new CustomEvent('convo:crossfade', { detail: msg })); } catch (_) {}
         } else if (msg.type === 'TURN_FINAL') {
           try { window.dispatchEvent(new CustomEvent('convo:final', { detail: msg })); } catch (_) {}
+          // Bridge to the body: same reply protocol as the wake-loop, so
+          // embodied_convo.js whispers/peaks the reply through her body.
+          try {
+            var _txt = (msg.text || msg.reply || '').toString();
+            if (_txt) window.dispatchEvent(new CustomEvent('vint:she_said', { detail: { reply: _txt, from: 'ws' } }));
+          } catch (_) {}
         } else if (msg.type === 'TTS_FIRST_AUDIO') {
           // Real audio is on its way — flip UI to speaking now.
           if (state && state.get() !== 'speaking') state.set('speaking', 'tts-first-audio');
