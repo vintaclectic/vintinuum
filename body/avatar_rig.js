@@ -232,8 +232,71 @@
     }
   });
 
+  // ── Public reaction primitives (used by perception_in.js and others) ──────
+  // glance(x,y,ms): momentarily turn head toward normalized viewport coord
+  // (0..1, 0..1) for `ms` then return to neutral. Cheap; non-blocking.
+  function glance(nx, ny, ms) {
+    if (!av()) return;
+    ms = +ms || 1200;
+    nx = clamp01(+nx); ny = clamp01(+ny);
+    // facing: -1 = full left, +1 = full right (avatar.js channel)
+    var facing = (nx - 0.5) * 1.6;
+    if (facing < -1) facing = -1; if (facing > 1) facing = 1;
+    // Slight profileMix in the same direction so it reads as turning, not
+    // just eye-darting.
+    var profileMix = (nx - 0.5) * 0.5;
+    av().setPose({ facing: facing, profileMix: profileMix });
+    setTimeout(function () {
+      if (av()) av().setPose({ facing: 0, profileMix: 0 });
+    }, ms);
+  }
+
+  // bump({...}): transient mood blip layered over the BODY_STATE-derived
+  // baseline. Each bump decays linearly over `decayMs` (default 2400). We
+  // accumulate into _bumpAcc and re-apply on each mood tick.
+  var _bumps = []; // { field, mag, t0, decayMs }
+  function bump(spec, decayMs) {
+    if (!spec) return;
+    decayMs = +decayMs || 2400;
+    var t0 = performance.now();
+    Object.keys(spec).forEach(function (k) {
+      _bumps.push({ field: k, mag: +spec[k] || 0, t0: t0, decayMs: decayMs });
+    });
+  }
+  function _bumpAcc() {
+    var now = performance.now();
+    var out = {};
+    for (var i = _bumps.length - 1; i >= 0; i--) {
+      var b = _bumps[i];
+      var age = now - b.t0;
+      if (age > b.decayMs) { _bumps.splice(i, 1); continue; }
+      var k = 1 - (age / b.decayMs);
+      out[b.field] = (out[b.field] || 0) + b.mag * k;
+    }
+    return out;
+  }
+  // Re-wire the mood timer to layer bumps over derived mood.
+  clearInterval(moodTimer);
+  moodTimer = setInterval(function () {
+    if (!av()) return;
+    var mood = deriveMood();
+    var bumps = _bumpAcc();
+    if (bumps.dopa)            mood.dopa            = clamp01((mood.dopa            || 0) + bumps.dopa);
+    if (bumps.dopamine)        mood.dopa            = clamp01((mood.dopa            || 0) + bumps.dopamine);
+    if (bumps.arousal)         mood.arousal         = clamp01((mood.arousal         || 0) + bumps.arousal);
+    if (bumps.alertness)       mood.neuralWeight    = clamp01((mood.neuralWeight    || 0) + bumps.alertness);
+    if (bumps.emotionalWeight) mood.emotionalWeight = clamp01((mood.emotionalWeight || 0) + bumps.emotionalWeight);
+    av().setMood(mood);
+    // gold bump piggybacks the gold channel (already 0..1)
+    if (bumps.gold && av().setGold) {
+      try { av().setGold(clamp01(0.18 + bumps.gold * 0.5)); } catch (_) {}
+    }
+  }, 120);
+
   window.__avatarRig = {
     deriveMood: deriveMood,
-    sessionMinutes: function () { return (performance.now() - sessionStart) / 60000; }
+    sessionMinutes: function () { return (performance.now() - sessionStart) / 60000; },
+    glance: glance,
+    bump: bump
   };
 })();
