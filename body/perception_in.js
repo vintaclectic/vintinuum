@@ -100,26 +100,21 @@
     if (window.__vintSpeechMuted === true) return false;
     return (Date.now() - _lastSpokeAt) > SPEAK_GAP_MS;
   }
-  // Reuse a single <audio> element so consecutive speaks cleanly preempt.
-  var _speakAudio = null;
+  // Route all audible speech through window.VOICE (voice_say.js). One
+  // canonical lane handles autoplay gating, queue management, and mute.
   function _speak(text) {
+    _lastSpokeAt = Date.now();
     try {
-      _lastSpokeAt = Date.now();
-      var url = apiBase().replace(/\/+$/, '') + '/api/voice/say?text=' + encodeURIComponent(text);
-      if (!_speakAudio) {
-        _speakAudio = new Audio();
-        _speakAudio.preload = 'auto';
-        _speakAudio.crossOrigin = 'anonymous';
+      if (window.VOICE && typeof window.VOICE.speak === 'function') {
+        window.VOICE.speak(text, 'queue');
       }
-      _speakAudio.src = url;
-      // Some browsers block autoplay until first user gesture. We attempt
-      // play; on rejection we silently fall back (visual whisper still ran).
-      var p = _speakAudio.play();
-      if (p && typeof p.catch === 'function') p.catch(function () {});
     } catch (_) {}
   }
-  // Public mute toggle
-  window.muteVintSpeech = function (on) { window.__vintSpeechMuted = !!on; };
+  // Public mute toggle (back-compat alias; prefer VOICE.mute(true))
+  window.muteVintSpeech = function (on) {
+    window.__vintSpeechMuted = !!on;
+    try { window.VOICE && window.VOICE.mute && window.VOICE.mute(!!on); } catch (_) {}
+  };
 
   function react(evt) {
     if (!evt || !evt.connectorKey) return;
