@@ -126,6 +126,23 @@
         if (!window.EMBODIED_CONVO) return { ok: false, note: 'embodied_convo.js never loaded' };
         var l = (typeof window.EMBODIED_CONVO.last === 'function') ? window.EMBODIED_CONVO.last() : null;
         return { ok: true, note: 'state=' + (l && l.state || 'idle') };
+      }),
+      probe('JARVIS', function () {
+        // Only meaningful on a page that mounts the JARVIS surface.
+        var hasRoot = !!document.querySelector('[data-jarvis-root]');
+        if (!window.JARVIS) {
+          return hasRoot
+            ? { ok: false, note: 'jarvis_client.js never loaded (root present)' }
+            : { ok: true,  note: 'not on jarvis surface — n/a' };
+        }
+        var l = (typeof window.JARVIS.last === 'function') ? window.JARVIS.last() : {};
+        var painted = l && l.layers ? Object.keys(l.layers).filter(function (k) { return l.layers[k] && l.layers[k].has_body; }).length : 0;
+        var note = 'date=' + (l.date || '?') +
+                   ' tier=' + (l.tier || '?') +
+                   ' sse=' + (l.sse_open ? 'open' : 'closed') +
+                   ' layers=' + painted + '/7' +
+                   (l.degraded ? ' DEGRADED' : '');
+        return { ok: !!l.date && (l.sse_open || painted > 0), note: note };
       })
     ];
   }

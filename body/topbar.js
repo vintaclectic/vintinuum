@@ -468,6 +468,7 @@
         text-transform:uppercase;padding:0 4px 4px;">Surfaces</div>
       <nav id="drawerNav" style="display:flex;flex-direction:column;gap:6px;">
         <a href="brain.html" data-nav="home"   class="drawer-link">◉ &nbsp; HOME · the body</a>
+        <a href="jarvis.html" data-nav="jarvis" class="drawer-link" style="border-color:rgba(124,207,255,0.45);color:#7ccfff;">⌖ &nbsp; JARVIS · today, felt</a>
         <a href="mind.html"  data-nav="mind"   class="drawer-link">◌ &nbsp; MIND · 7 layers</a>
         <a href="learning.html" data-nav="learn" class="drawer-link" style="border-color:rgba(206,147,216,0.32);color:rgba(206,147,216,0.92);">✶ &nbsp; LEARN · live feed</a>
         <a href="stats.html" data-nav="stats"  class="drawer-link">◇ &nbsp; STATS · numbers</a>
@@ -555,14 +556,15 @@
     try {
       const path = (location.pathname || '').toLowerCase();
       const matchMap = {
-        home:  /(brain\.html|\/$|\/vintinuum\/?$)/,
-        mind:  /mind\.html/,
-        learn: /learning\.html/,
-        stats: /stats\.html/,
-        chat:  /chat\.html/,
-        you:   /you\.html/,
-        phone: /phone\.html/,
-        who:   /whoami\.html/,
+        home:   /(brain\.html|\/$|\/vintinuum\/?$)/,
+        jarvis: /jarvis\.html/,
+        mind:   /mind\.html/,
+        learn:  /learning\.html/,
+        stats:  /stats\.html/,
+        chat:   /chat\.html/,
+        you:    /you\.html/,
+        phone:  /phone\.html/,
+        who:    /whoami\.html/,
       };
       drawer.querySelectorAll('.drawer-link').forEach(a => {
         const k = a.getAttribute('data-nav');

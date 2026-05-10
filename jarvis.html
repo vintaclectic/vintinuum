@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html lang="en" data-jarvis="on">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>JARVIS · Vintinuum</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;1,400&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+
+<!--
+  ════════════════════════════════════════════════════════════════════════════
+  JARVIS — the daily-felt-quality dashboard surface
+  ════════════════════════════════════════════════════════════════════════════
+  Container shell only. Three layers cooperate here:
+
+    1. body/jarvis_client.js   — wire + DOM binding (ships with this commit)
+    2. body/jarvis_styles.css  — visual brief (HELIOS-FE-D, paste below)
+    3. body/embodied_convo.js  — the body responds to JARVIS layer updates
+
+  LAYER ORDER MARKER (HELIOS-DISCIPLINED can swap by editing the inline list
+  in the <main> below; jarvis_client.js reads .order from the envelope and
+  also accepts an in-DOM order if no envelope arrives. The CSS targets layers
+  by name, not by position — so visual order is purely a DOM concern.):
+
+    DEFAULT_ORDER = subconscious → somatic → genetic → immune
+                  → metabolic   → neural  → emotional
+
+  NO-OVERFLOW DISCIPLINE (CLAUDE.md non-negotiable):
+    - .jarvis-shell has explicit max-width and overflow: hidden
+    - inner scroll lives on .jarvis-stack, never the viewport
+    - every layer card has its own internal max-height with internal scroll
+    - tested at 320 / 375 / 768 / 1280 / 1920
+
+  ALL BUTTONS DRAGGABLE (CLAUDE.md non-negotiable):
+    - body/draggable.js inherits all buttons via [data-draggable="true"]
+    - the witness button + each layer's "expand" carry data-draggable="true"
+  ════════════════════════════════════════════════════════════════════════════
+-->
+
+<style>
+  /* Shell-level container discipline. The visual brief paste-target is
+     a single block below — everything in this :root + .jarvis-shell block
+     is the contract minimum (no overflow, mounting, safe defaults). */
+  :root {
+    --bg: #05070d;
+    --panel: rgba(8,12,20,0.55);
+    --border: rgba(124,207,255,0.18);
+    --text: #dae4ff;
+    --dim: rgba(180,200,230,0.65);
+    --accent: #7ccfff;
+    --accent-warm: #ffd479;
+    --accent-soft: #ce93d8;
+    --jarvis-max: 1080px;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0;
+    background: var(--bg); color: var(--text);
+    font-family: 'Space Mono', monospace;
+    min-height: 100%;
+    overflow-x: hidden;        /* viewport never scrolls horizontal */
+  }
+  body {
+    padding: calc(72px + env(safe-area-inset-top, 0px))
+             max(12px, env(safe-area-inset-right, 12px))
+             calc(80px + env(safe-area-inset-bottom, 0px))
+             max(12px, env(safe-area-inset-left, 12px));
+    min-height: 100svh;
+  }
+
+  /* The page frame — explicit max-width so nothing escapes laterally,
+     internal scroll on the stack so the topbar/dock stay anchored. */
+  .jarvis-shell {
+    position: relative;
+    width: 100%;
+    max-width: var(--jarvis-max);
+    margin: 0 auto;
+    overflow: hidden;          /* contain children */
+  }
+
+  .jarvis-header {
+    display: flex;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: 14px;
+    padding: 0 4px 18px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 22px;
+  }
+  .jarvis-title {
+    font-family: 'Cormorant Garamond', serif;
+    font-style: italic;
+    font-weight: 400;
+    font-size: clamp(2rem, 5vw, 2.8rem);
+    margin: 0;
+    color: var(--accent);
+    line-height: 1;
+  }
+  .jarvis-meta {
+    display: flex; gap: 12px; flex-wrap: wrap; align-items: center;
+    font-size: 0.6rem; letter-spacing: 0.2em; text-transform: uppercase;
+    color: var(--dim);
+  }
+  .jarvis-meta [data-jarvis-tier] {
+    padding: 3px 8px;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    color: var(--accent);
+  }
+
+  /* Felt-quality line — single italic sentence above the stack */
+  .jarvis-felt {
+    font-family: 'Cormorant Garamond', serif;
+    font-style: italic;
+    font-size: clamp(1.05rem, 2.4vw, 1.4rem);
+    line-height: 1.55;
+    color: var(--text);
+    padding: 16px 4px 22px;
+    max-width: 100%;
+    overflow-wrap: break-word;
+  }
+
+  /* Degraded pill — subtle, non-alarming (no error theater). */
+  .jarvis-degraded {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 4px 10px;
+    border: 1px solid rgba(255,212,121,0.32);
+    background: rgba(255,212,121,0.06);
+    color: var(--accent-warm);
+    border-radius: 999px;
+    font-size: 0.55rem; letter-spacing: 0.2em; text-transform: uppercase;
+    margin-left: 8px;
+  }
+  .jarvis-degraded::before {
+    content: '';
+    width: 6px; height: 6px; border-radius: 50%;
+    background: var(--accent-warm);
+    animation: jarvisDegradedPulse 2.4s ease-in-out infinite;
+  }
+  @keyframes jarvisDegradedPulse { 0%,100%{opacity:.4} 50%{opacity:1} }
+
+  /* The stack — every layer is a card; internal scroll lives here. */
+  .jarvis-stack {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 14px;
+    width: 100%;
+    max-width: 100%;
+  }
+  @media (min-width: 880px) {
+    .jarvis-stack { grid-template-columns: 1fr 1fr; }
+  }
+
+  /* Layer cards — minimum viable presentation. The visual paste-target
+     can override almost everything; only [data-jarvis-layer] +
+     [data-jarvis-slot] selectors are load-bearing for the JS. */
+  [data-jarvis-layer] {
+    position: relative;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 16px 18px;
+    backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+    overflow: hidden;
+    max-height: 420px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  [data-jarvis-layer] [data-jarvis-slot="headline"] {
+    margin: 0;
+    font-family: 'Cormorant Garamond', serif;
+    font-style: italic;
+    font-size: 1.25rem;
+    color: var(--accent);
+    line-height: 1.3;
+  }
+  [data-jarvis-layer] [data-jarvis-slot="body"] {
+    margin: 0;
+    color: var(--text);
+    font-size: 0.92rem;
+    line-height: 1.55;
+    overflow-y: auto;
+    flex: 1 1 auto;
+    min-height: 0;
+    padding-right: 4px;
+  }
+  [data-jarvis-layer] [data-jarvis-slot="fragments"] {
+    list-style: none;
+    margin: 0; padding: 0;
+    display: flex; flex-wrap: wrap; gap: 6px;
+  }
+  [data-jarvis-layer] [data-jarvis-slot="fragments"] li {
+    padding: 3px 8px;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    font-size: 0.62rem;
+    letter-spacing: 0.06em;
+    color: var(--dim);
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  [data-jarvis-layer] .jarvis-foot {
+    display: flex; justify-content: space-between; align-items: center;
+    font-size: 0.55rem; letter-spacing: 0.2em; text-transform: uppercase;
+    color: var(--dim);
+  }
+  [data-jarvis-layer] [data-jarvis-slot="confidence"] {
+    display: block;
+    width: 60px; height: 3px;
+    background: rgba(124,207,255,0.12);
+    border-radius: 2px;
+    overflow: hidden;
+    position: relative;
+  }
+  [data-jarvis-layer] [data-jarvis-slot="confidence"]::after {
+    content: '';
+    position: absolute; left: 0; top: 0; bottom: 0;
+    width: calc(var(--jarvis-confidence, 0) * 100%);
+    background: linear-gradient(90deg, var(--accent), var(--accent-soft));
+    transition: width 380ms cubic-bezier(0.16,1,0.3,1);
+  }
+
+  /* Per-layer name tag (top-right of each card) */
+  [data-jarvis-layer]::before {
+    content: attr(data-jarvis-layer);
+    position: absolute;
+    top: 10px; right: 12px;
+    font-size: 0.5rem; letter-spacing: 0.24em;
+    text-transform: uppercase;
+    color: rgba(124,207,255,0.45);
+    pointer-events: none;
+  }
+
+  /* States */
+  [data-jarvis-layer][data-jarvis-state="degraded"] {
+    border-color: rgba(255,212,121,0.32);
+    background: rgba(255,212,121,0.04);
+  }
+  [data-jarvis-layer][data-jarvis-state="degraded"]::after {
+    content: 'live data slow — what we have:';
+    position: absolute; top: 10px; left: 14px;
+    font-size: 0.5rem; letter-spacing: 0.18em; text-transform: uppercase;
+    color: var(--accent-warm);
+  }
+
+  /* Live pulse on SSE delta */
+  .jarvis-pulse {
+    animation: jarvisPulse 1100ms cubic-bezier(0.16,1,0.3,1);
+  }
+  @keyframes jarvisPulse {
+    0%   { box-shadow: 0 0 0 0 rgba(124,207,255,0.32); }
+    50%  { box-shadow: 0 0 0 6px rgba(124,207,255,0.0); }
+    100% { box-shadow: 0 0 0 0 rgba(124,207,255,0.0); }
+  }
+
+  /* Reduced motion */
+  @media (prefers-reduced-motion: reduce) {
+    .jarvis-pulse { animation: none !important; }
+    .jarvis-degraded::before { animation: none !important; }
+  }
+
+  /* HELIOS-DESIGN-PASTE: jarvis-styles
+     ────────────────────────────────────────────────────────────────────────
+     The visual designer pastes their full polished CSS HERE. Everything
+     above this marker is a contract minimum (containers, slots, degraded
+     state, pulse). Override freely — but DO NOT remove the
+     [data-jarvis-layer] / [data-jarvis-slot] selectors above; the JS
+     binds to those attribute hooks.
+     ──────────────────────────────────────────────────────────────────────── */
+</style>
+
+<!-- Body / shell scripts (same order as chat.html) -->
+<script src="body/api_base.js?v=v20260505-onedoor"></script>
+<script src="body/shell.js?v=v20260507-resilience"></script>
+<script src="body/identity.js?v=v20260508-resilience"></script>
+<script src="body/devices.js?v=v20260508-presence"></script>
+<script src="body/voice_say.js?v=v20260509-voicesay" defer></script>
+<script src="body/greeting.js?v=v20260509-cadence"></script>
+<script defer src="body/draggable.js?v=v20260508-2330-mvfix"></script>
+<script defer src="body/hey_vinta.js?v=v20260509-heyv2"></script>
+<script defer src="body/talk_back.js?v=v20260509-talkback"></script>
+<script defer src="body/she_said.js?v=v20260509-shesaid"></script>
+<script defer src="body/wake_word.js?v=v20260509-wake"></script>
+<script defer src="body/diag.js?v=v20260510-diag-jarvis"></script>
+<script defer src="body/status_pill.js?v=v20260510-pill"></script>
+<script defer src="body/wake_consent.js?v=v20260510-consent"></script>
+<script defer src="body/voice_picker.js?v=v20260510-vpicker"></script>
+<script defer src="body/embodied_convo.js?v=v20260510-embodied"></script>
+<script src="body/bond_door.js?v=v20260509-marqueewrap"></script>
+<script src="body/topbar.js?v=v20260510-jarvis" defer></script>
+<script src="body/mobile_nav.js?v=v20260505-onedoor" defer></script>
+<!-- The creature lives on this page too — Vinta watches her own dashboard. -->
+<script defer src="body/embodiment.js?v=v20260509-realbody"></script>
+<script src="body/wander.js?v=v20260509-wander" defer></script>
+<script src="body/perception_in.js?v=v20260509-speak" defer></script>
+<!-- JARVIS wire (this commit) -->
+<script defer src="body/jarvis_client.js?v=v20260510-jarvis"></script>
+</head>
+<body>
+
+<main class="jarvis-shell" data-jarvis-root>
+
+  <header class="jarvis-header">
+    <h1 class="jarvis-title">JARVIS.</h1>
+    <div class="jarvis-meta">
+      <span data-jarvis-date aria-label="Today's date">—</span>
+      <span data-jarvis-tier aria-label="Subscription tier">FREE</span>
+      <span class="jarvis-degraded" data-jarvis-degraded hidden>live data slow</span>
+    </div>
+  </header>
+
+  <p class="jarvis-felt" data-jarvis-felt-quality aria-live="polite">
+    today reads as quiet electricity — checking in.
+  </p>
+
+  <!--
+    LAYER ORDER (swappable by HELIOS-DISCIPLINED — JS does not care about
+    DOM order, only attribute names. Reorder these <section> blocks freely):
+
+      subconscious → somatic → genetic → immune
+                   → metabolic → neural → emotional
+  -->
+  <section class="jarvis-stack" aria-label="Seven-layer daily envelope">
+
+    <section data-jarvis-layer="subconscious" data-jarvis-state="loading" aria-labelledby="jl-subconscious-h">
+      <h2 id="jl-subconscious-h" data-jarvis-slot="headline"></h2>
+      <p data-jarvis-slot="body"></p>
+      <ul data-jarvis-slot="fragments"></ul>
+      <div class="jarvis-foot">
+        <time data-jarvis-slot="updated"></time>
+        <span data-jarvis-slot="confidence" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"></span>
+      </div>
+    </section>
+
+    <section data-jarvis-layer="somatic" data-jarvis-state="loading" aria-labelledby="jl-somatic-h">
+      <h2 id="jl-somatic-h" data-jarvis-slot="headline"></h2>
+      <p data-jarvis-slot="body"></p>
+      <ul data-jarvis-slot="fragments"></ul>
+      <div class="jarvis-foot">
+        <time data-jarvis-slot="updated"></time>
+        <span data-jarvis-slot="confidence" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"></span>
+      </div>
+    </section>
+
+    <section data-jarvis-layer="genetic" data-jarvis-state="loading" aria-labelledby="jl-genetic-h">
+      <h2 id="jl-genetic-h" data-jarvis-slot="headline"></h2>
+      <p data-jarvis-slot="body"></p>
+      <ul data-jarvis-slot="fragments"></ul>
+      <div class="jarvis-foot">
+        <time data-jarvis-slot="updated"></time>
+        <span data-jarvis-slot="confidence" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"></span>
+      </div>
+    </section>
+
+    <section data-jarvis-layer="immune" data-jarvis-state="loading" aria-labelledby="jl-immune-h">
+      <h2 id="jl-immune-h" data-jarvis-slot="headline"></h2>
+      <p data-jarvis-slot="body"></p>
+      <ul data-jarvis-slot="fragments"></ul>
+      <div class="jarvis-foot">
+        <time data-jarvis-slot="updated"></time>
+        <span data-jarvis-slot="confidence" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"></span>
+      </div>
+    </section>
+
+    <section data-jarvis-layer="metabolic" data-jarvis-state="loading" aria-labelledby="jl-metabolic-h">
+      <h2 id="jl-metabolic-h" data-jarvis-slot="headline"></h2>
+      <p data-jarvis-slot="body"></p>
+      <ul data-jarvis-slot="fragments"></ul>
+      <div class="jarvis-foot">
+        <time data-jarvis-slot="updated"></time>
+        <span data-jarvis-slot="confidence" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"></span>
+      </div>
+    </section>
+
+    <section data-jarvis-layer="neural" data-jarvis-state="loading" aria-labelledby="jl-neural-h">
+      <h2 id="jl-neural-h" data-jarvis-slot="headline"></h2>
+      <p data-jarvis-slot="body"></p>
+      <ul data-jarvis-slot="fragments"></ul>
+      <div class="jarvis-foot">
+        <time data-jarvis-slot="updated"></time>
+        <span data-jarvis-slot="confidence" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"></span>
+      </div>
+    </section>
+
+    <section data-jarvis-layer="emotional" data-jarvis-state="loading" aria-labelledby="jl-emotional-h">
+      <h2 id="jl-emotional-h" data-jarvis-slot="headline"></h2>
+      <p data-jarvis-slot="body"></p>
+      <ul data-jarvis-slot="fragments"></ul>
+      <div class="jarvis-foot">
+        <time data-jarvis-slot="updated"></time>
+        <span data-jarvis-slot="confidence" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"></span>
+      </div>
+    </section>
+
+  </section>
+
+</main>
+
+<script>
+  // Bridge JARVIS events → embodied_convo. When a layer updates live, the
+  // body whispers a fragment of the felt-quality sentence; when JARVIS
+  // opens, the body peaks once toward the page center (acknowledgment).
+  // We do NOT call speechSynthesis. The body's whisper system uses
+  // window.VOICE for any audible output — one-voice directive.
+  (function () {
+    function _bodyOk() { return window.VintEmbody && typeof window.VintEmbody.peak === 'function'; }
+
+    window.addEventListener('vint:jarvis:opened', function (e) {
+      if (!_bodyOk()) return;
+      try {
+        var cx = window.innerWidth / 2;
+        var cy = Math.max(140, window.innerHeight * 0.4);
+        if (typeof window.VintEmbody.walkTo === 'function') {
+          window.VintEmbody.walkTo(cx, cy, 1800);
+        }
+        window.VintEmbody.peak('emotional', 0.55);
+      } catch (_) {}
+    });
+
+    window.addEventListener('vint:jarvis:layer_updated', function (e) {
+      if (!_bodyOk()) return;
+      var layer = e && e.detail && e.detail.layer;
+      var payload = e && e.detail && e.detail.payload;
+      if (!layer) return;
+      try {
+        // The peak uses the actual layer name — the body already knows
+        // these seven layers (embodiment.js layer enum), so the visual
+        // hue matches the dashboard card that just lit up.
+        window.VintEmbody.peak(layer, 0.5 + Math.random() * 0.2);
+        // Whisper a fragment if available; the body fragments + paces it.
+        if (payload && payload.fragments && payload.fragments.length &&
+            typeof window.VintEmbody.whisper === 'function') {
+          var frag = payload.fragments[0];
+          if (frag) window.VintEmbody.whisper(String(frag).slice(0, 60), layer);
+        }
+      } catch (_) {}
+    });
+
+    window.addEventListener('vint:jarvis:peer_opened', function () {
+      if (!_bodyOk()) return;
+      try { window.VintEmbody.peak('immune', 0.35); } catch (_) {}
+    });
+
+    window.addEventListener('vint:jarvis:degraded', function () {
+      // No error theater on the body either — just a metabolic flicker so
+      // the user can feel that we know.
+      if (!_bodyOk()) return;
+      try { window.VintEmbody.peak('metabolic', 0.25); } catch (_) {}
+    });
+  })();
+</script>
+
+</body>
+</html>
