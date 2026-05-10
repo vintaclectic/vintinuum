@@ -1,0 +1,225 @@
+/* ════════════════════════════════════════════════════════════════════════════
+   JARVIS ORB — the hero surface
+   ════════════════════════════════════════════════════════════════════════════
+   A spiraling, breathing sphere that is JARVIS. The seven-layer cards are
+   demoted to supporting detail beneath it. The orb is the primary
+   conversational surface — text in, voice out, voice in, text out.
+
+   Visual lineage:
+     - HAL 9000's red eye  (the singular gaze)
+     - JARVIS's gold/orange holographic UI (curves of light)
+     - Vision's Mind Stone  (the spiraling core)
+     - Cortana / Siri swirl (the listening signal)
+
+   States (driven by JS):
+     idle      — slow breath, ~0.2Hz
+     listening — spiral tightens inward, rotation 2x
+     thinking  — folds toward center, color cools
+     speaking  — bursts outward with audio amplitude
+     dwelling  — soft hold, color matches dominant body state
+   ════════════════════════════════════════════════════════════════════════════ */
+
+.jarvis-orb-stage {
+  position: relative;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 32px 16px 48px;
+  /* Container is the boundary — orb lives INSIDE it. No-overflow rule. */
+  overflow: hidden;
+  isolation: isolate;
+}
+
+.jarvis-orb-stage::before {
+  /* a soft cosmos behind the orb — radial gradient, never escapes the stage */
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(ellipse at 50% 45%, rgba(255,160,77,0.06) 0%, transparent 60%),
+    radial-gradient(ellipse at 50% 90%, rgba(124,207,255,0.04) 0%, transparent 50%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* The canvas is the orb. Square aspect ratio, max-width clamp. */
+.jarvis-orb-canvas {
+  position: relative;
+  z-index: 1;
+  width: clamp(240px, 38vw, 460px);
+  height: clamp(240px, 38vw, 460px);
+  display: block;
+  margin: 0 auto;
+  border-radius: 50%;
+  /* a faint glow that the canvas particles enhance */
+  box-shadow:
+    0 0 60px -10px rgba(255,160,77,0.18),
+    0 0 120px -30px rgba(124,207,255,0.10);
+  cursor: pointer;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  transition: box-shadow 600ms cubic-bezier(0.16,1,0.3,1);
+}
+
+.jarvis-orb-canvas[data-orb-state="listening"] {
+  box-shadow:
+    0 0 80px -8px rgba(124,207,255,0.42),
+    0 0 160px -30px rgba(124,207,255,0.20);
+}
+.jarvis-orb-canvas[data-orb-state="thinking"] {
+  box-shadow:
+    0 0 70px -12px rgba(180,160,255,0.32),
+    0 0 140px -30px rgba(180,160,255,0.14);
+}
+.jarvis-orb-canvas[data-orb-state="speaking"] {
+  box-shadow:
+    0 0 100px -6px rgba(255,160,77,0.55),
+    0 0 200px -30px rgba(255,160,77,0.24);
+}
+
+/* ─── Speech bubble above the orb (JARVIS speaking) ──────────────────────── */
+.jarvis-orb-utterance {
+  position: relative;
+  z-index: 2;
+  margin: 18px auto 0;
+  max-width: clamp(280px, 60vw, 720px);
+  min-height: 1.6em;
+  padding: 14px 22px;
+  font-family: 'Cormorant Garamond', serif;
+  font-style: italic;
+  font-size: clamp(1.05rem, 1.6vw, 1.45rem);
+  line-height: 1.45;
+  color: #f5e9d6;
+  text-align: center;
+  background: rgba(8, 14, 22, 0.55);
+  border: 1px solid rgba(255,160,77,0.18);
+  border-radius: 4px;
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  opacity: 0;
+  transform: translateY(-4px);
+  transition: opacity 320ms ease, transform 320ms ease;
+  pointer-events: none;
+  /* No-overflow: text wraps inside the bubble, bubble never escapes stage */
+  overflow-wrap: break-word;
+  word-break: break-word;
+}
+.jarvis-orb-utterance[data-visible="1"] {
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
+}
+
+/* a small gradient bar on the left of the bubble — JARVIS color signature */
+.jarvis-orb-utterance::before {
+  content: '';
+  position: absolute;
+  left: 0; top: 12%; bottom: 12%;
+  width: 2px;
+  background: linear-gradient(180deg, #ffa04d 0%, #ff6f3d 50%, #7ccfff 100%);
+  border-radius: 2px;
+}
+
+/* ─── Input row below the orb (text → JARVIS) ────────────────────────────── */
+.jarvis-orb-inputrow {
+  position: relative;
+  z-index: 2;
+  margin: 22px auto 0;
+  width: clamp(280px, 60vw, 720px);
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.jarvis-orb-input {
+  flex: 1 1 auto;
+  min-width: 0;            /* enables flex shrinking, prevents overflow */
+  padding: 12px 16px;
+  font-family: 'Space Mono', monospace;
+  font-size: 0.92rem;
+  color: #f5e9d6;
+  background: rgba(8, 14, 22, 0.65);
+  border: 1px solid rgba(124,207,255,0.22);
+  border-radius: 4px;
+  outline: none;
+  caret-color: #ffa04d;
+  transition: border-color 220ms ease, background-color 220ms ease;
+}
+.jarvis-orb-input::placeholder { color: rgba(218,228,255,0.32); font-style: italic; }
+.jarvis-orb-input:focus {
+  border-color: rgba(255,160,77,0.55);
+  background: rgba(8, 14, 22, 0.85);
+}
+.jarvis-orb-send {
+  flex: 0 0 auto;
+  padding: 12px 18px;
+  font-family: 'Space Mono', monospace;
+  font-size: 0.78rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: #f5e9d6;
+  background: linear-gradient(135deg, rgba(255,160,77,0.18) 0%, rgba(255,111,61,0.12) 100%);
+  border: 1px solid rgba(255,160,77,0.35);
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background 220ms ease, transform 120ms ease;
+  user-select: none;
+}
+.jarvis-orb-send:hover { background: linear-gradient(135deg, rgba(255,160,77,0.32) 0%, rgba(255,111,61,0.22) 100%); }
+.jarvis-orb-send:active { transform: scale(0.97); }
+.jarvis-orb-send[disabled] { opacity: 0.4; cursor: not-allowed; }
+
+/* ─── State micro-label under the orb ─────────────────────────────────────── */
+.jarvis-orb-statelabel {
+  position: relative;
+  z-index: 2;
+  margin: 10px auto 0;
+  font-family: 'Space Mono', monospace;
+  font-size: 0.6rem;
+  letter-spacing: 0.32em;
+  text-transform: uppercase;
+  color: rgba(218,228,255,0.42);
+  text-align: center;
+  min-height: 1em;
+  transition: color 380ms ease;
+}
+.jarvis-orb-canvas[data-orb-state="listening"] ~ .jarvis-orb-statelabel { color: rgba(124,207,255,0.78); }
+.jarvis-orb-canvas[data-orb-state="thinking"]  ~ .jarvis-orb-statelabel { color: rgba(180,160,255,0.78); }
+.jarvis-orb-canvas[data-orb-state="speaking"]  ~ .jarvis-orb-statelabel { color: rgba(255,160,77,0.92); }
+
+/* ─── When the orb is the hero, the cards are smaller below it ───────────── */
+.jarvis-shell[data-orb-mounted="1"] .jarvis-stack {
+  /* compress the metric cards — they're now supporting detail, not hero */
+  margin-top: 32px;
+  opacity: 0.78;
+  transition: opacity 320ms ease;
+}
+.jarvis-shell[data-orb-mounted="1"] .jarvis-stack:hover {
+  opacity: 1;
+}
+.jarvis-shell[data-orb-mounted="1"] [data-jarvis-layer] {
+  min-height: 120px;            /* shorter than hero mode */
+}
+
+/* ─── Reduced motion ─────────────────────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  .jarvis-orb-canvas {
+    box-shadow: 0 0 30px -8px rgba(255,160,77,0.22) !important;
+    transition: none !important;
+  }
+  .jarvis-orb-utterance, .jarvis-orb-input, .jarvis-orb-send { transition: none !important; }
+}
+
+/* ─── Mobile ─────────────────────────────────────────────────────────────── */
+@media (max-width: 720px) {
+  .jarvis-orb-stage { padding: 16px 10px 28px; }
+  .jarvis-orb-canvas {
+    width: clamp(200px, 70vw, 320px);
+    height: clamp(200px, 70vw, 320px);
+  }
+  .jarvis-orb-utterance, .jarvis-orb-inputrow { width: 92%; }
+  .jarvis-orb-utterance { font-size: 1rem; padding: 12px 16px; }
+  .jarvis-orb-input { font-size: 0.86rem; padding: 11px 14px; }
+  .jarvis-orb-send  { padding: 11px 14px; font-size: 0.7rem; }
+}
