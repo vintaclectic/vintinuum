@@ -67,9 +67,11 @@
   function _loadOnce(name) {
     return new Promise(function (resolve, reject) {
       // Already attached? skip.
-      if (name === 'convo_state' && window.__convoState) return resolve();
-      if (name === 'voice_in'    && window.__voiceIn)    return resolve();
-      if (name === 'voice_out'   && window.__voiceOut)   return resolve();
+      if (name === 'convo_state'  && window.__convoState)  return resolve();
+      if (name === 'voice_in'     && window.__voiceIn)     return resolve();
+      if (name === 'voice_out'    && window.__voiceOut)    return resolve();
+      if (name === 'voice_avatar' && window.__voiceAvatar) return resolve();
+      if (name === 'voice_kill'   && window.__voiceKill)   return resolve();
 
       // Already in DOM? wait for it.
       var existing = document.querySelector('script[data-talk-mod="' + name + '"]');
@@ -80,8 +82,8 @@
       }
 
       var s = document.createElement('script');
-      // Phase 4: cache-bust per-mod so TTS frame handling lands fresh.
-      s.src = BASE + name + '.js?v=v20260509-talk-phase4';
+      // Phase 5: cache-bust per-mod so avatar/kill modules land fresh too.
+      s.src = BASE + name + '.js?v=v20260509-talk-phase5';
       s.async = false; // preserve order
       s.setAttribute('data-talk-mod', name);
       s.addEventListener('load', function () { resolve(); });
@@ -102,6 +104,10 @@
     await _loadOnce('convo_state');
     await _loadOnce('voice_in');
     await _loadOnce('voice_out');
+    // Phase 5 — avatar bridge + kill switch. These attach window-level
+    // listeners on load and don't need explicit start().
+    await _loadOnce('voice_avatar');
+    await _loadOnce('voice_kill');
     var status = await _statusProbe();
     if (!status.mounted) {
       console.warn('[talk_surface] /api/voice/convo not mounted yet:', status);
