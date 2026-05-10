@@ -1,0 +1,411 @@
+/* ════════════════════════════════════════════════════════════════════════════
+   PHONE PULSE PRO — the council on the small screen
+   ════════════════════════════════════════════════════════════════════════════
+   Additive layer on top of phone.html's existing Pulse view. Honors the
+   no-overflow + draggable rules. Builds:
+
+     1. Mood/energy slider faces — sun-rise + heartbeat strokes
+     2. Calligraphic V send button (Buffet stroke + Morrison heat)
+     3. Echo Panel — organism's reply, italic, lower contrast
+     4. Day Strip — horizontal scroll of today's pulse thumbnails
+     5. Body Mirror — live 4-arc neurochemistry SVG (matches JARVIS arcs)
+     6. JARVIS Glance — felt-quality line pulled from /api/jarvis/today/0
+     7. Extension Whisper — latest browser capture from /api/extension/recent
+
+   Three windows, one organism: the phone (sense organ), the extension
+   (nervous system in the browser), and JARVIS (inward mirror) all see
+   each other on this surface.
+   ════════════════════════════════════════════════════════════════════════════ */
+
+:root {
+  --pp-velvet:        #2a0a3e;
+  --pp-heat:          #ff6f3d;
+  --pp-gold:          #c9a44a;
+  --pp-rose:          #e74c8a;
+  --pp-jade:          #2bb673;
+  --pp-bdnf:          #7ccfff;
+  --pp-creb:          #ce93d8;
+  --pp-arc:           #ffd479;
+  --pp-line:          rgba(255,255,255,0.85);
+  --pp-shadow:        rgba(0,0,0,0.85);
+}
+
+/* Atmosphere lift inside the pulse view only */
+.pulse-view {
+  background:
+    radial-gradient(700px 360px at 50% 0%, rgba(42,10,62,0.32), transparent 60%),
+    radial-gradient(500px 360px at 100% 100%, rgba(255,111,61,0.06), transparent 70%);
+  padding-bottom: 96px !important;     /* never let content slide under bottom nav */
+  overflow-y: auto;
+  scrollbar-width: thin;
+}
+
+/* Section labels — small caps, gold underline */
+.pulse-view .pulse-label {
+  font-family: 'Cormorant Garamond', serif !important;
+  font-style: italic;
+  font-size: 0.95rem !important;
+  color: var(--pp-gold) !important;
+  letter-spacing: 0.08em;
+  border-bottom: 1px solid rgba(201,164,74,0.25);
+  padding-bottom: 4px;
+  margin-bottom: 10px !important;
+}
+
+/* Mood slider face — sun rising over the dial */
+.pulse-view .pulse-section:first-of-type .slider-row {
+  position: relative;
+  padding: 10px 6px 14px;
+  background: linear-gradient(180deg, rgba(255,111,61,0.08) 0%, transparent 100%);
+  border: 1px solid rgba(255,111,61,0.18);
+  border-radius: 10px;
+}
+#moodEmoji {
+  font-family: 'Cormorant Garamond', serif !important;
+  font-style: italic;
+  color: var(--pp-heat) !important;
+  font-size: 1.4rem !important;
+}
+#moodValue {
+  color: var(--pp-gold) !important;
+  font-family: 'Cormorant Garamond', serif !important;
+  font-style: italic;
+}
+
+/* Energy slider — heartbeat under the track */
+.pulse-view .pulse-section:nth-of-type(2) .slider-row {
+  position: relative;
+  padding: 10px 6px 14px;
+  background: linear-gradient(180deg, rgba(231,76,138,0.06) 0%, transparent 100%);
+  border: 1px solid rgba(231,76,138,0.18);
+  border-radius: 10px;
+}
+.pulse-view .pulse-section:nth-of-type(2) .slider-row::after {
+  content: '♥';
+  position: absolute;
+  right: 14px; bottom: 4px;
+  color: var(--pp-rose);
+  font-size: 0.85rem;
+  animation: ppHeartbeat 1.6s ease-in-out infinite;
+  pointer-events: none;
+}
+@keyframes ppHeartbeat {
+  0%,40%,100% { opacity: 0.4; transform: scale(1); }
+  20% { opacity: 1; transform: scale(1.18); }
+  30% { opacity: 1; transform: scale(1.05); }
+}
+#energyEmoji { color: var(--pp-rose) !important; }
+
+/* Activity chips — Buffet contour, hot-on-press */
+.pulse-view .activity-chip {
+  border: 1px solid var(--pp-line) !important;
+  background: rgba(0,0,0,0.45) !important;
+  color: rgba(220,225,255,0.78) !important;
+  font-family: 'Cormorant Garamond', serif !important;
+  font-style: italic;
+  border-radius: 4px !important;
+  transition: all 180ms ease;
+}
+.pulse-view .activity-chip.active,
+.pulse-view .activity-chip[data-on="1"] {
+  background: var(--pp-heat) !important;
+  color: #06070d !important;
+  border-color: var(--pp-heat) !important;
+  box-shadow: 0 0 16px rgba(255,111,61,0.4);
+}
+
+/* Pulse text — quill paper feel */
+.pulse-view .pulse-text {
+  font-family: 'Cormorant Garamond', serif !important;
+  font-style: italic;
+  font-size: 1.05rem !important;
+  background: rgba(0,0,0,0.45) !important;
+  border: 1px solid var(--pp-line) !important;
+  border-radius: 6px !important;
+  color: #f5e9d6 !important;
+  line-height: 1.5;
+  padding: 12px !important;
+}
+.pulse-view .pulse-text::placeholder {
+  color: rgba(218,228,255,0.4);
+  font-style: italic;
+}
+
+/* The send V button — calligraphic, Morrison heat */
+.pulse-view .pulse-send-btn {
+  font-family: 'Cormorant Garamond', serif !important;
+  font-style: italic;
+  font-size: 1.1rem !important;
+  letter-spacing: 0.04em;
+  background:
+    linear-gradient(135deg, var(--pp-heat) 0%, var(--pp-rose) 100%) !important;
+  color: #06070d !important;
+  border: 1px solid var(--pp-line) !important;
+  border-radius: 6px !important;
+  padding: 14px 20px !important;
+  box-shadow:
+    0 8px 24px -8px rgba(255,111,61,0.5),
+    inset 0 0 0 1px var(--pp-shadow) !important;
+  position: relative;
+  overflow: hidden;
+}
+.pulse-view .pulse-send-btn::before {
+  content: '𝒱';
+  position: absolute;
+  left: 14px; top: 50%; transform: translateY(-50%);
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: rgba(0,0,0,0.6);
+  font-family: 'Cormorant Garamond', serif;
+}
+.pulse-view .pulse-send-btn:active {
+  transform: translateY(1px);
+  box-shadow:
+    0 4px 12px -4px rgba(255,111,61,0.5),
+    inset 0 0 0 1px var(--pp-shadow) !important;
+}
+
+/* Pulse response — italic, low-contrast, the body's reply */
+.pulse-view .pulse-response {
+  font-family: 'Cormorant Garamond', serif;
+  font-style: italic;
+  font-size: 1.0rem;
+  color: rgba(218,228,255,0.7);
+  border-left: 3px solid var(--pp-rose);
+  padding: 10px 14px;
+  margin-top: 14px;
+  background: rgba(231,76,138,0.06);
+  border-radius: 0 6px 6px 0;
+  line-height: 1.55;
+  min-height: 0;
+  max-height: 180px;
+  overflow-y: auto;
+}
+.pulse-view .pulse-response:empty { display: none; }
+
+/* ── PRO ADDITIONS (built by phone_pulse_pro.js) ───────────────────────── */
+
+/* JARVIS Glance — the felt-quality line as a small mirror */
+.pp-jarvis-glance {
+  margin: 4px 0 12px;
+  padding: 12px 14px;
+  background:
+    linear-gradient(135deg, rgba(42,10,62,0.45) 0%, rgba(0,0,0,0.55) 100%);
+  border: 1px solid var(--pp-line);
+  border-radius: 6px;
+  position: relative;
+  overflow: hidden;
+}
+.pp-jarvis-glance::before {
+  content: 'JARVIS · today';
+  position: absolute;
+  top: 6px; right: 10px;
+  font-family: 'Cormorant Garamond', serif;
+  font-style: italic;
+  font-size: 0.55rem;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: var(--pp-gold);
+  opacity: 0.8;
+}
+.pp-jarvis-glance .text {
+  font-family: 'Cormorant Garamond', serif;
+  font-style: italic;
+  color: #f5e9d6;
+  font-size: 1.0rem;
+  line-height: 1.45;
+  padding-top: 14px;
+  padding-right: 90px;
+}
+
+/* Body Mirror — 4-arc live neurochemistry */
+.pp-body-mirror {
+  margin: 12px 0;
+  padding: 14px;
+  background: rgba(8,5,16,0.6);
+  border: 1px solid var(--pp-line);
+  border-radius: 6px;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
+  overflow: hidden;
+}
+.pp-body-mirror .head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-family: 'Cormorant Garamond', serif;
+  font-style: italic;
+  font-size: 0.85rem;
+  color: var(--pp-creb);
+  border-bottom: 1px solid rgba(206,147,216,0.25);
+  padding-bottom: 4px;
+}
+.pp-body-mirror .head .src {
+  font-family: 'Cormorant Garamond', serif;
+  font-style: italic;
+  font-size: 0.55rem;
+  letter-spacing: 0.18em;
+  color: rgba(206,147,216,0.55);
+  text-transform: uppercase;
+}
+.pp-body-mirror .canvas-wrap {
+  width: 100%;
+  aspect-ratio: 2 / 1;
+  position: relative;
+}
+.pp-body-mirror svg { width: 100%; height: 100%; display: block; overflow: visible; }
+.pp-body-mirror .arc-track { fill: none; stroke: rgba(255,255,255,0.06); stroke-width: 6; stroke-linecap: round; }
+.pp-body-mirror .arc-fill {
+  fill: none; stroke-width: 6; stroke-linecap: round;
+  transition: stroke-dashoffset 600ms cubic-bezier(0.16,1,0.3,1);
+  filter: drop-shadow(0 0 5px var(--c, #7ccfff));
+}
+.pp-body-mirror .arc-fill[data-arc="dopamine"]      { stroke: var(--pp-bdnf);   --c: var(--pp-bdnf); }
+.pp-body-mirror .arc-fill[data-arc="serotonin"]     { stroke: var(--pp-rose);   --c: var(--pp-rose); }
+.pp-body-mirror .arc-fill[data-arc="gaba"]          { stroke: var(--pp-jade);   --c: var(--pp-jade); }
+.pp-body-mirror .arc-fill[data-arc="norepinephrine"]{ stroke: var(--pp-heat);   --c: var(--pp-heat); }
+.pp-body-mirror .legend {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+  font-family: 'Cormorant Garamond', serif;
+  font-style: italic;
+  font-size: 0.7rem;
+  color: rgba(218,228,255,0.7);
+  text-align: center;
+}
+.pp-body-mirror .legend .swatch {
+  display: block;
+  width: 100%; height: 3px;
+  border-radius: 2px;
+  margin-bottom: 4px;
+}
+.pp-body-mirror .legend .val { color: var(--pp-gold); font-weight: 600; }
+
+/* Day Strip — horizontal scroll of today's pulse thumbnails */
+.pp-day-strip {
+  margin: 12px -16px;
+  padding: 10px 16px;
+  background:
+    linear-gradient(90deg, rgba(0,0,0,0.0) 0%, rgba(206,147,216,0.04) 50%, rgba(0,0,0,0.0) 100%);
+  border-top: 1px solid rgba(206,147,216,0.15);
+  border-bottom: 1px solid rgba(206,147,216,0.15);
+  overflow-x: auto;
+  overflow-y: hidden;
+  display: flex;
+  gap: 8px;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.pp-day-strip::-webkit-scrollbar { display: none; }
+.pp-day-strip .pp-empty {
+  font-family: 'Cormorant Garamond', serif;
+  font-style: italic;
+  color: rgba(218,228,255,0.4);
+  font-size: 0.85rem;
+  padding: 8px 4px;
+}
+.pp-pulse-thumb {
+  flex: 0 0 auto;
+  width: 110px;
+  min-height: 88px;
+  scroll-snap-align: start;
+  background: rgba(0,0,0,0.5);
+  border: 1px solid var(--pp-line);
+  border-left: 3px solid var(--pp-rose);
+  border-radius: 4px;
+  padding: 8px 10px;
+  font-family: 'Cormorant Garamond', serif;
+  font-style: italic;
+  font-size: 0.75rem;
+  color: rgba(218,228,255,0.85);
+  line-height: 1.35;
+  overflow: hidden;
+  position: relative;
+}
+.pp-pulse-thumb .when {
+  display: block;
+  font-family: 'Cormorant Garamond', serif;
+  font-style: normal;
+  font-size: 0.55rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--pp-gold);
+  margin-bottom: 4px;
+}
+.pp-pulse-thumb[data-mood-class="warm"]  { border-left-color: var(--pp-heat); }
+.pp-pulse-thumb[data-mood-class="cool"]  { border-left-color: var(--pp-bdnf); }
+.pp-pulse-thumb[data-mood-class="bright"]{ border-left-color: var(--pp-arc); }
+.pp-pulse-thumb[data-mood-class="green"] { border-left-color: var(--pp-jade); }
+
+/* Extension Whisper — latest browser capture */
+.pp-ext-whisper {
+  margin: 12px 0 4px;
+  padding: 10px 12px;
+  background: rgba(154,255,182,0.04);
+  border: 1px dashed rgba(154,255,182,0.28);
+  border-radius: 6px;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 4px;
+  overflow: hidden;
+}
+.pp-ext-whisper .head {
+  font-family: 'Cormorant Garamond', serif;
+  font-style: italic;
+  font-size: 0.7rem;
+  color: var(--pp-jade);
+  letter-spacing: 0.06em;
+}
+.pp-ext-whisper .title {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 0.85rem;
+  color: rgba(218,228,255,0.85);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.pp-ext-whisper .meta {
+  font-family: 'Cormorant Garamond', serif;
+  font-style: italic;
+  font-size: 0.6rem;
+  color: rgba(218,228,255,0.4);
+  letter-spacing: 0.08em;
+}
+.pp-ext-whisper:empty { display: none; }
+
+/* Online/offline subtle pill at very top of pulse view */
+.pp-status-line {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-family: 'Cormorant Garamond', serif;
+  font-style: italic;
+  font-size: 0.7rem;
+  color: rgba(218,228,255,0.55);
+  padding: 4px 0 8px;
+  border-bottom: 1px dashed rgba(255,255,255,0.06);
+  margin-bottom: 10px;
+}
+.pp-status-line .left,
+.pp-status-line .right { display: flex; align-items: center; gap: 6px; }
+.pp-status-line .dot {
+  width: 7px; height: 7px; border-radius: 50%;
+  background: var(--pp-jade);
+  box-shadow: 0 0 6px var(--pp-jade);
+}
+.pp-status-line[data-online="0"] .dot {
+  background: var(--pp-heat);
+  box-shadow: 0 0 6px var(--pp-heat);
+}
+.pp-status-line[data-queued]:not([data-queued="0"]):after {
+  content: ' · ' attr(data-queued) ' queued';
+  color: var(--pp-gold);
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .pulse-view .pulse-section:nth-of-type(2) .slider-row::after { animation: none !important; }
+}

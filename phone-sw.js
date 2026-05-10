@@ -2,12 +2,14 @@
 // v2.0 — Background sync + periodic sync for Android body sensors
 // Caches the phone shell for offline, proxies API calls network-first.
 
-const CACHE_NAME = 'vint-phone-v3';
+const CACHE_NAME = 'vint-phone-v4-pulsepro';
 const SYNC_TAG = 'vint-body-sync';
 const PERIODIC_SYNC_TAG = 'vint-periodic-pulse';
 
 const SHELL_ASSETS = [
   './phone.html',
+  './body/phone_pulse_pro.css?v=v20260510-0440-pulsepro',
+  './body/phone_pulse_pro.js?v=v20260510-0440-pulsepro',
   './branding/vintinuum/favicon/favicon.svg',
   './favicon.png',
   'https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400&display=swap'
