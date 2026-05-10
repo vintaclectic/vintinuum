@@ -223,27 +223,17 @@
     transition: width 380ms cubic-bezier(0.16,1,0.3,1);
   }
 
-  /* Per-layer name tag (top-right of each card) */
-  [data-jarvis-layer]::before {
-    content: attr(data-jarvis-layer);
-    position: absolute;
-    top: 10px; right: 12px;
-    font-size: 0.5rem; letter-spacing: 0.24em;
-    text-transform: uppercase;
-    color: rgba(124,207,255,0.45);
-    pointer-events: none;
-  }
-
-  /* States */
+  /* States — the council stylesheet (body/jarvis_styles.css) owns ALL
+     ::before and ::after pseudos on [data-jarvis-layer]. Removing the
+     duplicate rules here that previously collided with the colored
+     left-stroke ::after — the collision forced the long "live data slow"
+     string into a 4px-wide column and rendered it letter-stacked
+     vertically down the left edge of every panel (screenshot
+     2026-05-10 0506). The degraded label is now expressed via the
+     header pill [data-jarvis-degraded] instead, which is already wired. */
   [data-jarvis-layer][data-jarvis-state="degraded"] {
     border-color: rgba(255,212,121,0.32);
     background: rgba(255,212,121,0.04);
-  }
-  [data-jarvis-layer][data-jarvis-state="degraded"]::after {
-    content: 'live data slow — what we have:';
-    position: absolute; top: 10px; left: 14px;
-    font-size: 0.5rem; letter-spacing: 0.18em; text-transform: uppercase;
-    color: var(--accent-warm);
   }
 
   /* Live pulse on SSE delta */
@@ -299,7 +289,7 @@
 <!-- JARVIS wire (this commit) -->
 <script defer src="body/jarvis_client.js?v=v20260510-0540-noleak"></script>
 <!-- JARVIS enhancer (council redesign — chakra spine, weather, body arcs, crosswind, witness) -->
-<script defer src="body/jarvis_enhancer.js?v=v20260510-0540-rootfix"></script>
+<script defer src="body/jarvis_enhancer.js?v=v20260510-0545-orbprep"></script>
 </head>
 <body>
 
