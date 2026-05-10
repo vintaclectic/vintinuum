@@ -425,7 +425,15 @@
 
   // ─── WIRING ────────────────────────────────────────────────────────────
   function init() {
-    if (document.body && document.body.getAttribute('data-jarvis') !== 'on') return;
+    // Opt-in marker can live on either <html> or <body> (jarvis.html puts it
+    // on <html> for SSR contrast styling, but earlier drafts assumed body).
+    // Check both. Also short-circuit-true if the shell root is present —
+    // that's the real signal that we're on the JARVIS page.
+    var htmlOpt = document.documentElement && document.documentElement.getAttribute('data-jarvis');
+    var bodyOpt = document.body && document.body.getAttribute('data-jarvis');
+    var shellPresent = !!document.querySelector('[data-jarvis-root]');
+    if (htmlOpt !== 'on' && bodyOpt !== 'on' && !shellPresent) return;
+
     buildLivingRow();
     buildWeather();
     buildBodyArt();

@@ -246,8 +246,13 @@
     var el = _layerEl(layer);
     if (!el) return;
     if (!payload) {
+      // Mark degraded — CSS owns the "live data slow" label via ::after,
+      // do NOT also stamp it into the headline slot (that produced 8x
+      // duplicate text on screen, screenshot 2026-05-10 0506). Leave
+      // existing headline/body text in place if any prior render put
+      // something useful there; otherwise the panel just looks empty,
+      // which is a more honest signal than a stamped error string.
       el.setAttribute('data-jarvis-state', 'degraded');
-      _setText(el, 'headline', 'live data slow — what we have:');
       return;
     }
     el.setAttribute('data-jarvis-state', source === 'sse' ? 'live' : 'ready');
