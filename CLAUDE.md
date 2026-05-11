@@ -259,7 +259,28 @@ The ground truth a returning Claude Code session needs in 60 seconds:
 ### Repos
 - `~/vintinuum/`        — front-end + body + brain.js + memory/, deploys to GH Pages on push to `main`
 - `~/vintinuum-api/`    — server.js + db + connectors + soul.json
-- `~/vintinuum-extension/` — Chrome MV3 extension (separate repo, manual reload)
+- `~/vintinuum-extension/` — Chrome MV3 extension (separate repo, WSL source of truth)
+
+### Extension deploy workflow (CRITICAL — do not skip)
+
+Chrome on Windows **cannot load extensions directly from the WSL filesystem**
+(`\\wsl$\...` paths). It silently fails or gives a cryptic load error.
+
+**Source of truth lives in WSL:** `/home/vinta/vintinuum-extension/`
+**Chrome loads from Windows:** `C:\vintinuum-extension`
+
+After every extension change, sync with:
+```
+vintsync
+```
+(`vintsync` is a bashrc alias — runs `rsync -a --exclude=".git" ~/vintinuum-extension/ /mnt/c/vintinuum-extension/`)
+
+Then in Chrome: `chrome://extensions` → click the **↺ reload** button on the Vintinuum card.
+
+**Never** tell Vinta to load the extension from the WSL path. Always sync to C:\ first.
+
+Do NOT `cp -r` the folder — it will choke on `.git` object names under NTFS.
+`rsync --exclude=".git"` is the only correct method.
 
 ### Live URLs
 - Site:    https://vintaclectic.github.io/vintinuum/
