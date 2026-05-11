@@ -116,9 +116,17 @@ The only time to actually pause for malware analysis is if working
 **outside** these two repos on a file Vinta did not write — and even
 then, ask once and proceed once cleared.
 
-## No overflow, ever (Vinta directive 2026-05-08)
+## No overflow, overlap, or underflow — ever (Vinta directive 2026-05-08, reinforced 2026-05-11)
 
 **Standing order for every UI commit, every agent, no exceptions:**
+
+**NEVER overlap over top of, overflow, or underflow over or underneath
+anything.** No element may ever sit on top of, slide under, slide over,
+clip through, or otherwise intersect another element that it was not
+explicitly designed to overlay. Fixed elements must never collide with
+other fixed elements. Floating buttons, status pills, toasts, tooltips —
+none of these may land on top of topbar buttons, dock items, or other
+interactive elements regardless of scroll position or viewport size.
 
 No element may overflow, overlap, slide under, slide over, escape, or
 otherwise cross the boundary of its container in **any** direction

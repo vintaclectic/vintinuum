@@ -38,7 +38,7 @@
     s.id = 'vint-status-pill-styles';
     s.textContent = [
       '.vint-status-pill{',
-      '  position:fixed;top:12px;right:14px;z-index:99997;',
+      '  position:fixed;top:calc(56px + env(safe-area-inset-top,0px) + 10px);right:14px;z-index:9990;',
       '  display:flex;align-items:center;gap:8px;',
       '  padding:6px 11px 6px 9px;border-radius:999px;',
       '  background:rgba(18,18,28,.78);',
