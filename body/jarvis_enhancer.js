@@ -27,8 +27,16 @@
   'use strict';
 
   // ─── helpers ────────────────────────────────────────────────────────────
-  var API_BASE = (window.API_BASE || '').replace(/\/$/, '');
-  function api(p) { return (API_BASE || '') + p; }
+  // api_base.js sets __VINTINUUM_API_BASE; fall back to production so no
+  // fetch ever hits the GH Pages origin by mistake.
+  var API_BASE = (
+    window.__VINTINUUM_API_BASE ||
+    window.VINTINUUM_API        ||
+    window.__VINT_API           ||
+    window.API_BASE             ||
+    'https://api.vintaclectic.com'
+  ).replace(/\/$/, '');
+  function api(p) { return API_BASE + p; }
   function $(sel, root) { return (root || document).querySelector(sel); }
   function $$(sel, root) { return Array.from((root || document).querySelectorAll(sel)); }
   function el(tag, attrs, kids) {

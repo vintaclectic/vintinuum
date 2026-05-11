@@ -202,6 +202,36 @@
   min-height: 120px;            /* shorter than hero mode */
 }
 
+/* ─── Continuous mode toggle ─────────────────────────────────────────────── */
+.jarvis-orb-continuous {
+  position: relative;
+  z-index: 2;
+  margin: 8px auto 0;
+  padding: 5px 12px;
+  font-family: 'Space Mono', monospace;
+  font-size: 0.55rem;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: rgba(124,207,255,0.45);
+  background: rgba(8,14,22,0.45);
+  border: 1px solid rgba(124,207,255,0.15);
+  border-radius: 999px;
+  cursor: pointer;
+  transition: color 220ms ease, border-color 220ms ease, background 220ms ease;
+  user-select: none;
+  display: block;
+}
+.jarvis-orb-continuous:hover {
+  color: rgba(124,207,255,0.75);
+  border-color: rgba(124,207,255,0.35);
+}
+.jarvis-orb-continuous[data-active="1"] {
+  color: #7ccfff;
+  border-color: rgba(124,207,255,0.55);
+  background: rgba(124,207,255,0.08);
+  box-shadow: 0 0 14px -4px rgba(124,207,255,0.22);
+}
+
 /* ─── Reduced motion ─────────────────────────────────────────────────────── */
 @media (prefers-reduced-motion: reduce) {
   .jarvis-orb-canvas {

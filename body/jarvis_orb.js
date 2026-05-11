@@ -18,11 +18,12 @@
      speaking  — bursts outward with mouth-amplitude, gold heat
      dwelling  — soft hold, colors track body state if available
 
-   Wiring:
-     - Text input  → POST {API}/chat with persona=vintinuum, stream SSE
-     - Voice in    → window.SpeechRecognition (graceful skip if absent)
-     - Voice out   → window.VOICE.say(text) (Piper TTS via /api/voice/say)
-     - Body state  → tries window.JARVIS.lastBodyState() then /api/body-state
+   Conversation:
+     - Persistent conversationId per session — messages thread properly
+     - Streaming SSE from /chat — tokens arrive live
+     - Auto-restart mic after reply (continuous mode toggle)
+     - Text input → POST /chat → SSE stream
+     - Tap orb to speak; tap again to stop; continuous mode re-listens after reply
 
    No-overflow: everything sits inside .jarvis-orb-stage, which is overflow:
    hidden in jarvis_orb.css. The orb never escapes.
@@ -33,15 +34,31 @@
 
   // ─── Config ──────────────────────────────────────────────────────────────
   var API_BASE = (function () {
-    try {
-      if (window.JARVIS && window.JARVIS.config && window.JARVIS.config.api) {
-        return window.JARVIS.config.api.replace(/\/+$/, '');
-      }
-    } catch (_) {}
-    return 'https://api.vintaclectic.com';
+    return (
+      window.__VINTINUUM_API_BASE ||
+      window.VINTINUUM_API        ||
+      window.__VINT_API           ||
+      'https://api.vintaclectic.com'
+    ).replace(/\/+$/, '');
   })();
 
   var PERSONA = 'vintinuum';
+
+  // ─── Conversation state ──────────────────────────────────────────────────
+  // A single conversationId per page session threads all messages together.
+  // Cleared on page unload so each visit starts fresh unless you bookmark.
+  var _convId = null;
+  var _convHistory = [];   // [{role,content}] — for display / context depth gauge
+  var _continuousMode = false;  // when true: after speaking, auto-restart mic
+
+  function _authToken() {
+    try {
+      return localStorage.getItem('vint_token')
+          || localStorage.getItem('vint_access_token')
+          || localStorage.getItem('soul_auth_token')
+          || null;
+    } catch (_) { return null; }
+  }
 
   // ─── DOM build ───────────────────────────────────────────────────────────
   function el(tag, cls, attrs) {
@@ -75,6 +92,15 @@
     var stateLabel = el('div', 'jarvis-orb-statelabel');
     stateLabel.textContent = 'idle';
 
+    // Continuous mode toggle pill — below the state label
+    var contToggle = el('button', 'jarvis-orb-continuous', {
+      'type': 'button',
+      'aria-label': 'Toggle continuous listening',
+      'data-active': '0',
+      'title': 'Continuous — auto-relisten after each reply'
+    });
+    contToggle.textContent = '⟳ continuous';
+
     var inputRow = el('form', 'jarvis-orb-inputrow', { 'autocomplete': 'off' });
     var input = el('input', 'jarvis-orb-input', {
       'type': 'text',
@@ -93,6 +119,7 @@
     stage.appendChild(canvas);
     stage.appendChild(utterance);
     stage.appendChild(stateLabel);
+    stage.appendChild(contToggle);
     stage.appendChild(inputRow);
 
     if (stack && stack.parentNode) {
@@ -103,7 +130,7 @@
     shell.setAttribute('data-orb-mounted', '1');
 
     return { canvas: canvas, utterance: utterance, stateLabel: stateLabel,
-             input: input, send: send, form: inputRow, stage: stage };
+             contToggle: contToggle, input: input, send: send, form: inputRow, stage: stage };
   }
 
   // ─── Particle engine ─────────────────────────────────────────────────────
@@ -135,7 +162,6 @@
   };
 
   Orb.prototype._buildParticles = function () {
-    // Two counter-rotating spirals, ~220 particles each.
     this.particles.length = 0;
     var COUNT = 220;
     for (var arm = 0; arm < 2; arm++) {
@@ -143,13 +169,9 @@
       for (var i = 0; i < COUNT; i++) {
         var t = i / COUNT;
         this.particles.push({
-          arm: arm,
-          dir: dir,
-          // angle along the spiral
+          arm: arm, dir: dir,
           a0: t * Math.PI * 6 * dir + (arm * Math.PI),
-          // radius along the spiral (0..1)
           r0: 0.18 + 0.78 * t,
-          // jitter so the spirals breathe organically
           j: Math.random() * Math.PI * 2,
           jr: 0.6 + Math.random() * 0.4,
           size: 0.6 + Math.random() * 1.6
@@ -165,29 +187,18 @@
     if (this.stateLabel) this.stateLabel.textContent = next;
   };
 
-  Orb.prototype.setBodyState = function (bs) {
-    this.bodyState = bs || null;
-  };
+  Orb.prototype.setBodyState = function (bs) { this.bodyState = bs || null; };
 
-  // returns {core, glow, accent} colors based on state + body
   Orb.prototype._palette = function () {
     var s = this.state;
     var bs = this.bodyState || {};
     var dop = (bs.dopamine || 50) / 100;
     var ser = (bs.serotonin || 50) / 100;
     var cort = (bs.cortisol || 30) / 100;
-
-    if (s === 'listening') {
-      return { core: [124, 207, 255], glow: [124, 207, 255], accent: [200, 240, 255] };
-    }
-    if (s === 'thinking') {
-      return { core: [180, 160, 255], glow: [140, 120, 220], accent: [220, 200, 255] };
-    }
-    if (s === 'speaking') {
-      return { core: [255, 160, 77], glow: [255, 111, 61], accent: [255, 220, 160] };
-    }
-    // idle / dwelling — track body state, default warm gold
-    var r = Math.round(255 - 60 * ser + 0 * dop);
+    if (s === 'listening') return { core: [124, 207, 255], glow: [124, 207, 255], accent: [200, 240, 255] };
+    if (s === 'thinking')  return { core: [180, 160, 255], glow: [140, 120, 220], accent: [220, 200, 255] };
+    if (s === 'speaking')  return { core: [255, 160, 77], glow: [255, 111, 61], accent: [255, 220, 160] };
+    var r = Math.round(255 - 60 * ser);
     var g = Math.round(160 - 40 * cort + 30 * ser);
     var b = Math.round(77 + 80 * ser);
     return { core: [r, g, b], glow: [255, 111, 61], accent: [255, 220, 160] };
@@ -198,11 +209,8 @@
     var ctx = this.ctx;
     var w = this.canvas.width, h = this.canvas.height;
     ctx.clearRect(0, 0, w, h);
-
     var pal = this._palette();
     var cx = this.cx, cy = this.cy, R = this.r;
-
-    // breathing: ~0.2Hz idle, 0.8Hz listening, 0.4Hz thinking, audio for speaking
     var breath;
     if (this.state === 'idle' || this.state === 'dwelling') {
       breath = 0.92 + 0.08 * Math.sin(this.t * 1.2);
@@ -212,11 +220,8 @@
       breath = 0.70 + 0.06 * Math.sin(this.t * 2.4);
     } else if (this.state === 'speaking') {
       breath = 0.95 + 0.20 * this.mouthAmp + 0.04 * Math.sin(this.t * 8.0);
-    } else {
-      breath = 0.92;
-    }
+    } else { breath = 0.92; }
 
-    // background core glow
     var grad = ctx.createRadialGradient(cx, cy, R * 0.05, cx, cy, R * breath);
     grad.addColorStop(0,    'rgba(' + pal.core.join(',') + ',0.55)');
     grad.addColorStop(0.45, 'rgba(' + pal.glow.join(',') + ',0.18)');
@@ -226,34 +231,27 @@
     ctx.arc(cx, cy, R * breath, 0, Math.PI * 2);
     ctx.fill();
 
-    // rotation rate per state
     var rate;
-    if (this.state === 'listening')      rate = 0.9;
-    else if (this.state === 'thinking')  rate = 0.25;
-    else if (this.state === 'speaking')  rate = 0.6 + 1.4 * this.mouthAmp;
-    else                                  rate = 0.18; // idle
+    if (this.state === 'listening')     rate = 0.9;
+    else if (this.state === 'thinking') rate = 0.25;
+    else if (this.state === 'speaking') rate = 0.6 + 1.4 * this.mouthAmp;
+    else                                rate = 0.18;
     var rot = this.t * rate;
 
-    // particles
     ctx.globalCompositeOperation = 'lighter';
     for (var i = 0; i < this.particles.length; i++) {
       var p = this.particles[i];
       var a = p.a0 + p.dir * rot;
-      // radius modulation: tighten on listening, expand on speaking
       var radial = p.r0;
       if (this.state === 'listening')      radial *= 0.78 + 0.10 * Math.sin(this.t * 3 + p.j);
       else if (this.state === 'thinking')  radial *= 0.55 + 0.08 * Math.sin(this.t * 1.6 + p.j);
       else if (this.state === 'speaking')  radial *= 1.00 + 0.18 * this.mouthAmp + 0.04 * Math.sin(this.t * 5 + p.j);
       else                                  radial *= 0.92 + 0.06 * Math.sin(this.t * 0.8 + p.j);
-
       var rr = R * radial * breath;
       var x = cx + Math.cos(a) * rr;
       var y = cy + Math.sin(a) * rr;
-
-      // distance-based fade (outermost dimmer)
       var alpha = 0.18 + 0.55 * (1 - p.r0);
       var col = (p.arm === 0) ? pal.core : pal.glow;
-
       ctx.fillStyle = 'rgba(' + col[0] + ',' + col[1] + ',' + col[2] + ',' + alpha + ')';
       ctx.beginPath();
       ctx.arc(x, y, p.size * this.dpr, 0, Math.PI * 2);
@@ -261,7 +259,6 @@
     }
     ctx.globalCompositeOperation = 'source-over';
 
-    // central singular gaze — the HAL eye, the Mind Stone
     var coreR = R * 0.06 * (1 + 0.12 * Math.sin(this.t * (this.state === 'speaking' ? 6 : 1.5)));
     var coreGrad = ctx.createRadialGradient(cx, cy, 0, cx, cy, coreR * 3);
     coreGrad.addColorStop(0,   'rgba(' + pal.accent.join(',') + ',1)');
@@ -272,20 +269,18 @@
     ctx.arc(cx, cy, coreR * 3, 0, Math.PI * 2);
     ctx.fill();
 
-    // decay amplitudes so audio doesn't stick
     this.mouthAmp *= 0.92;
-    this.micAmp *= 0.90;
-
+    this.micAmp   *= 0.90;
     requestAnimationFrame(this._loop);
   };
 
-  // ─── Utterance bubble (JARVIS-says) ──────────────────────────────────────
+  // ─── Utterance bubble ────────────────────────────────────────────────────
   function Utterance(node) { this.node = node; this._hideTimer = null; }
   Utterance.prototype.show = function (text) {
     if (!this.node) return;
     this.node.textContent = text || '';
     this.node.setAttribute('data-visible', '1');
-    if (this._hideTimer) clearTimeout(this._hideTimer);
+    if (this._hideTimer) { clearTimeout(this._hideTimer); this._hideTimer = null; }
   };
   Utterance.prototype.append = function (chunk) {
     if (!this.node) return;
@@ -297,10 +292,11 @@
     if (this._hideTimer) clearTimeout(this._hideTimer);
     this._hideTimer = setTimeout(function () {
       if (self.node) self.node.setAttribute('data-visible', '0');
+      self._hideTimer = null;
     }, ms || 9000);
   };
 
-  // ─── Body-state poll (color the orb by mood) ─────────────────────────────
+  // ─── Body-state poll ─────────────────────────────────────────────────────
   function pollBodyState(orb) {
     function tick() {
       try {
@@ -309,102 +305,238 @@
           if (bs) { orb.setBodyState(bs); return; }
         }
       } catch (_) {}
-      // direct fetch fallback
       fetch(API_BASE + '/api/body-state', { credentials: 'include' })
         .then(function (r) { return r.ok ? r.json() : null; })
         .then(function (j) { if (j) orb.setBodyState(j.state || j); })
-        .catch(function () { /* offline; keep last */ });
+        .catch(function () {});
     }
     tick();
     setInterval(tick, 12000);
   }
 
   // ─── Speech in (mic) ─────────────────────────────────────────────────────
-  function attachListening(orb, utterance, onTranscript) {
+  // Returns a controller with start()/stop()/isActive()
+  function makeMic(orb, utterance, onTranscript) {
     var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SR) return null;
-    var rec = new SR();
-    rec.continuous = false;
-    rec.interimResults = true;
-    rec.lang = 'en-US';
-    rec.onstart = function () {
-      orb.setState('listening');
-      utterance.show('listening…');
+
+    var _rec = null;
+    var _active = false;
+    var _pendingRestart = false;
+
+    function _build() {
+      var rec = new SR();
+      rec.continuous = true;        // keep listening between phrases
+      rec.interimResults = true;
+      rec.lang = 'en-US';
+
+      rec.onstart = function () {
+        _active = true;
+        orb.setState('listening');
+        utterance.show('listening…');
+      };
+
+      var _lastFinal = '';
+      rec.onresult = function (ev) {
+        var interim = '';
+        var finals = '';
+        for (var i = ev.resultIndex; i < ev.results.length; i++) {
+          var t = ev.results[i][0].transcript;
+          if (ev.results[i].isFinal) finals += t;
+          else interim += t;
+        }
+        utterance.show(finals || interim || 'listening…');
+        orb.micAmp = Math.min(1, orb.micAmp + 0.25);
+
+        if (finals && finals.trim() && finals.trim() !== _lastFinal) {
+          _lastFinal = finals.trim();
+          // pause recognition while thinking/speaking
+          try { rec.stop(); } catch (_) {}
+          orb.setState('thinking');
+          if (onTranscript) onTranscript(_lastFinal);
+        }
+      };
+
+      rec.onerror = function (e) {
+        if (e.error === 'no-speech') return; // ignore silence
+        _active = false;
+        orb.setState('idle');
+      };
+
+      rec.onend = function () {
+        _active = false;
+        // if continuous mode and pending restart — restart mic after a beat
+        if (_pendingRestart && _continuousMode) {
+          _pendingRestart = false;
+          setTimeout(function () { ctrl.start(); }, 800);
+        } else {
+          orb.setState('idle');
+        }
+      };
+
+      return rec;
+    }
+
+    var ctrl = {
+      start: function () {
+        if (_active) return;
+        _rec = _build();
+        _lastFinal = '';
+        try { _rec.start(); } catch (_) { orb.setState('idle'); }
+      },
+      stop: function () {
+        _pendingRestart = false;
+        if (_rec) { try { _rec.stop(); } catch (_) {} }
+        _active = false;
+        orb.setState('idle');
+      },
+      scheduleRestart: function () {
+        // Called when speaking finishes — if continuous, re-activate mic
+        _pendingRestart = true;
+        if (_rec) { try { _rec.stop(); } catch (_) {} }
+        // onend will fire and pick up _pendingRestart
+      },
+      isActive: function () { return _active; }
     };
-    rec.onresult = function (ev) {
-      var txt = '';
-      for (var i = ev.resultIndex; i < ev.results.length; i++) {
-        txt += ev.results[i][0].transcript;
-      }
-      utterance.show(txt);
-      // crude amplitude proxy from transcript growth
-      orb.micAmp = Math.min(1, orb.micAmp + 0.25);
-      if (ev.results[ev.results.length - 1].isFinal) {
-        orb.setState('thinking');
-        if (onTranscript) onTranscript(txt.trim());
-      }
-    };
-    rec.onerror = function () { orb.setState('idle'); };
-    rec.onend = function () {
-      if (orb.state === 'listening') orb.setState('idle');
-    };
-    return rec;
+    return ctrl;
   }
 
-  // ─── Chat fetch (text → /chat → utterance + voice) ───────────────────────
-  function sendChat(text, orb, utterance) {
+  // ─── Chat via SSE streaming ───────────────────────────────────────────────
+  function sendChat(text, orb, utterance, mic, onDone) {
     if (!text) return;
     orb.setState('thinking');
     utterance.show('…');
 
+    // Add to local history immediately (display purposes)
+    _convHistory.push({ role: 'user', content: text });
+
+    var headers = { 'Content-Type': 'application/json' };
+    var tok = _authToken();
+    if (tok) headers['Authorization'] = 'Bearer ' + tok;
+
+    var body = {
+      message: text,
+      persona: PERSONA,
+      source: 'jarvis-orb'
+    };
+    // Thread the conversation if we have a session ID
+    if (_convId) body.conversation_id = _convId;
+
     fetch(API_BASE + '/chat', {
       method: 'POST',
       credentials: 'include',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        message: text,
-        persona: PERSONA,
-        source: 'jarvis-orb'
-      })
+      headers: headers,
+      body: JSON.stringify(body)
     })
-      .then(function (r) {
-        if (!r.ok) throw new Error('chat ' + r.status);
-        return r.json();
-      })
-      .then(function (j) {
-        var reply = (j && (j.reply || j.message || j.text)) || '';
-        if (!reply) {
-          utterance.show('(no reply)');
-          orb.setState('idle');
-          utterance.hideAfter(4000);
-          return;
+    .then(function (r) {
+      if (!r.ok) {
+        return r.text().then(function (t) { throw new Error('chat ' + r.status + ': ' + (t || '')); });
+      }
+      // SSE stream
+      orb.setState('speaking');
+      utterance.show('');
+
+      var reader = r.body.getReader();
+      var decoder = new TextDecoder();
+      var buf = '';
+      var fullReply = '';
+      var firstToken = true;
+      var ampInterval = null;
+
+      function startAmpTick() {
+        if (ampInterval) return;
+        ampInterval = setInterval(function () { orb.mouthAmp = 0.35 + Math.random() * 0.55; }, 90);
+      }
+      function stopAmpTick() {
+        if (ampInterval) { clearInterval(ampInterval); ampInterval = null; }
+      }
+
+      function pump() {
+        return reader.read().then(function (chunk) {
+          if (chunk.done) {
+            stopAmpTick();
+            _finish(fullReply);
+            return;
+          }
+          buf += decoder.decode(chunk.value, { stream: true });
+          // Split on SSE frame boundaries
+          var frames = buf.split('\n\n');
+          buf = frames.pop(); // last (possibly incomplete) frame stays in buf
+
+          frames.forEach(function (frame) {
+            var lines = frame.split('\n');
+            lines.forEach(function (line) {
+              if (line.startsWith('data: ')) {
+                var raw = line.slice(6).trim();
+                if (!raw || raw === '[DONE]') return;
+                // Try JSON first (Claude SSE sends delta objects)
+                try {
+                  var obj = JSON.parse(raw);
+                  // delta object with token
+                  var token = obj.delta || obj.token || obj.text || obj.chunk || null;
+                  if (token == null && obj.reply) {
+                    // complete reply in one shot (non-streaming fallback)
+                    token = obj.reply;
+                  }
+                  if (obj.conversation_id && !_convId) {
+                    _convId = obj.conversation_id;
+                  }
+                  if (token) {
+                    if (firstToken) { utterance.show(''); firstToken = false; }
+                    startAmpTick();
+                    utterance.append(token);
+                    fullReply += token;
+                  }
+                } catch (_) {
+                  // Plain text token
+                  if (firstToken) { utterance.show(''); firstToken = false; }
+                  startAmpTick();
+                  utterance.append(raw);
+                  fullReply += raw;
+                }
+              }
+            });
+          });
+          return pump();
+        });
+      }
+
+      function _finish(reply) {
+        orb.setState('dwelling');
+        if (!reply) { utterance.show('(no reply)'); utterance.hideAfter(4000); }
+        else { utterance.hideAfter(10000); }
+
+        _convHistory.push({ role: 'assistant', content: reply });
+
+        // Speak via Piper if available
+        if (reply) {
+          try {
+            if (window.VOICE && typeof window.VOICE.say === 'function') {
+              window.VOICE.say(reply);
+            }
+          } catch (_) {}
         }
-        orb.setState('speaking');
-        utterance.show(reply);
-        // simulate mouth amplitude over the duration of speech
-        var ticks = Math.min(80, Math.max(12, Math.floor(reply.length / 6)));
-        var i = 0;
-        var amp = setInterval(function () {
-          orb.mouthAmp = 0.4 + Math.random() * 0.6;
-          i++;
-          if (i >= ticks) {
-            clearInterval(amp);
-            orb.setState('idle');
-            utterance.hideAfter(8000);
+
+        // After a short dwell, return to idle; if continuous, kick mic back
+        var dwellMs = reply ? Math.min(2200, 600 + reply.length * 18) : 1200;
+        setTimeout(function () {
+          orb.setState('idle');
+          if (onDone) onDone(reply);
+          // Continuous: schedule mic restart via mic controller
+          if (_continuousMode && mic) {
+            mic.scheduleRestart();
           }
-        }, 90);
-        // actually speak via Piper if available
-        try {
-          if (window.VOICE && typeof window.VOICE.say === 'function') {
-            window.VOICE.say(reply);
-          }
-        } catch (_) {}
-      })
-      .catch(function (err) {
-        utterance.show('(JARVIS unreachable: ' + (err && err.message || 'offline') + ')');
-        orb.setState('idle');
-        utterance.hideAfter(5000);
-      });
+        }, dwellMs);
+      }
+
+      return pump();
+    })
+    .catch(function (err) {
+      utterance.show('(' + (err && err.message || 'JARVIS unreachable') + ')');
+      orb.setState('idle');
+      utterance.hideAfter(5000);
+      if (onDone) onDone(null);
+    });
   }
 
   // ─── Init ────────────────────────────────────────────────────────────────
@@ -414,30 +546,43 @@
 
     var orb = new Orb(nodes.canvas, nodes.stateLabel);
     var utterance = new Utterance(nodes.utterance);
+    var mic = null;
 
-    // text input → chat
+    // Continuous mode toggle
+    nodes.contToggle.addEventListener('click', function () {
+      _continuousMode = !_continuousMode;
+      nodes.contToggle.setAttribute('data-active', _continuousMode ? '1' : '0');
+      nodes.contToggle.textContent = _continuousMode ? '⟳ continuous · on' : '⟳ continuous';
+    });
+
+    // Text input → chat
     nodes.form.addEventListener('submit', function (ev) {
       ev.preventDefault();
       var v = (nodes.input.value || '').trim();
       if (!v) return;
+      if (orb.state === 'thinking' || orb.state === 'speaking') return; // busy
       nodes.input.value = '';
-      sendChat(v, orb, utterance);
+      sendChat(v, orb, utterance, mic, null);
     });
 
-    // tap-orb → toggle listening
-    var rec = attachListening(orb, utterance, function (transcript) {
-      if (transcript) sendChat(transcript, orb, utterance);
+    // Tap orb → toggle listening
+    mic = makeMic(orb, utterance, function (transcript) {
+      if (transcript) sendChat(transcript, orb, utterance, mic, null);
     });
+
     nodes.canvas.addEventListener('click', function () {
-      if (!rec) {
-        // no mic available — focus the text input instead
+      if (orb.state === 'thinking' || orb.state === 'speaking') return; // don't interrupt
+      if (!mic) {
         nodes.input.focus();
         return;
       }
-      if (orb.state === 'listening') {
-        try { rec.stop(); } catch (_) {}
+      if (mic.isActive()) {
+        _continuousMode = false;
+        nodes.contToggle.setAttribute('data-active', '0');
+        nodes.contToggle.textContent = '⟳ continuous';
+        mic.stop();
       } else {
-        try { rec.start(); } catch (_) {}
+        mic.start();
       }
     });
     nodes.canvas.addEventListener('keydown', function (ev) {
@@ -450,18 +595,20 @@
     // body-state poll for idle palette
     pollBodyState(orb);
 
-    // initial greeting hint (no fetch)
+    // Initial greeting
     setTimeout(function () {
       utterance.show('JARVIS online. tap to speak, or type below.');
       utterance.hideAfter(6000);
     }, 600);
 
-    // expose for debugging / external scripts
+    // Expose for debugging / external scripts
     window.JARVIS = window.JARVIS || {};
     window.JARVIS.orb = {
       setState: function (s) { orb.setState(s); },
       say: function (t) { utterance.show(t); utterance.hideAfter(8000); },
-      ask: function (t) { sendChat(t, orb, utterance); }
+      ask: function (t) { sendChat(t, orb, utterance, mic, null); },
+      clearConversation: function () { _convId = null; _convHistory = []; },
+      history: function () { return _convHistory.slice(); }
     };
   }
 
