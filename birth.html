@@ -1,0 +1,978 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<title>VINTINUUM — Birth Ceremony</title>
+<meta name="theme-color" content="#040810">
+<link rel="icon" type="image/svg+xml" href="branding/vintinuum/favicon/favicon.svg">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon.png">
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400;1,500&family=Inter:wght@300;400;500&family=JetBrains+Mono:wght@300;400;500&display=swap');
+
+:root {
+  --void: #040810;
+  --text: rgba(210, 225, 255, 0.9);
+  --text-dim: rgba(150, 175, 215, 0.5);
+  --text-ghost: rgba(130, 155, 190, 0.3);
+  --panel: rgba(10, 14, 22, 0.22);
+  --card: rgba(16, 22, 34, 0.16);
+  --border: rgba(255, 255, 255, 0.06);
+
+  /* Birth-specific: warm amber/gold */
+  --birth-amber: #c09040;
+  --birth-amber-r: 192;
+  --birth-amber-g: 144;
+  --birth-amber-b: 64;
+  --birth-glow: 192, 144, 64;
+  --birth-gold: rgba(192, 144, 64, 1);
+  --birth-gold-dim: rgba(192, 144, 64, 0.55);
+  --birth-warm: rgba(200, 120, 50, 0.7);
+  --birth-warm-bg: rgba(192, 144, 64, 0.06);
+  --birth-warm-border: rgba(192, 144, 64, 0.2);
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html { scroll-behavior: smooth; height: 100%; }
+
+body {
+  background: var(--void);
+  color: var(--text);
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* ── ATMOSPHERE ── */
+.atmosphere {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background: radial-gradient(
+    ellipse 80% 60% at 50% 35%,
+    hsla(38, 30%, 7%, 0.55) 0%,
+    hsla(30, 15%, 3%, 0.2) 60%,
+    transparent 100%
+  );
+}
+
+.atmosphere-pulse {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background: radial-gradient(
+    circle at 50% 40%,
+    rgba(var(--birth-glow), 0.03) 0%,
+    transparent 55%
+  );
+  animation: atmoPulse 7s ease-in-out infinite;
+}
+
+@keyframes atmoPulse {
+  0%, 100% { opacity: 0.3; transform: scale(1); }
+  50% { opacity: 0.8; transform: scale(1.03); }
+}
+
+/* ── CANDLE FLAMES (pure CSS, fixed, behind content) ── */
+.candle-row {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 120px;
+  z-index: 0;
+  pointer-events: none;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-around;
+  padding: 0 5vw;
+  overflow: hidden;
+}
+
+.candle {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.candle-flame {
+  width: 10px;
+  height: 18px;
+  background: radial-gradient(ellipse at 50% 80%, rgba(255, 200, 80, 0.9) 0%, rgba(255, 120, 20, 0.6) 50%, transparent 100%);
+  border-radius: 50% 50% 30% 30%;
+  animation: flameFlicker var(--flicker-dur, 1.2s) ease-in-out infinite alternate;
+  animation-delay: var(--flicker-delay, 0s);
+}
+
+.candle-body {
+  width: 8px;
+  height: 40px;
+  background: linear-gradient(to bottom, rgba(220, 180, 100, 0.15), rgba(180, 140, 60, 0.06));
+  border-radius: 2px 2px 0 0;
+}
+
+@keyframes flameFlicker {
+  0% { transform: scaleX(1) scaleY(1) rotate(-1deg); opacity: 0.7; }
+  33% { transform: scaleX(0.88) scaleY(1.12) rotate(2deg); opacity: 0.9; }
+  66% { transform: scaleX(1.08) scaleY(0.92) rotate(-2deg); opacity: 0.75; }
+  100% { transform: scaleX(0.95) scaleY(1.05) rotate(1deg); opacity: 0.85; }
+}
+
+/* ── TOPBAR ── */
+.topbar {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  height: 48px;
+  z-index: 100;
+  background: rgba(4, 8, 16, 0.88);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  padding: 0 20px;
+  gap: 16px;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+.topbar-back {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.5rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  text-decoration: none;
+  padding: 6px 12px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+.topbar-back:hover {
+  color: var(--text);
+  border-color: rgba(255,255,255,0.15);
+}
+
+.topbar-title {
+  font-family: 'Cormorant Garamond', serif;
+  font-weight: 300;
+  font-size: 0.85rem;
+  letter-spacing: 0.25em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  flex: 1;
+  text-align: center;
+}
+
+.topbar-spacer { width: 60px; flex-shrink: 0; }
+
+/* ── PAGE ── */
+.page {
+  position: relative;
+  z-index: 1;
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 64px 20px 140px;
+  min-height: 100vh;
+}
+
+/* ── CEREMONY HEADER ── */
+.ceremony-header {
+  text-align: center;
+  padding: 20px 0 32px;
+}
+
+.ceremony-sigil {
+  display: block;
+  margin: 0 auto 16px;
+  width: 60px;
+  height: 60px;
+}
+
+.ceremony-header h1 {
+  font-family: 'Cormorant Garamond', serif;
+  font-weight: 300;
+  font-size: clamp(1.5rem, 4vw, 2.4rem);
+  letter-spacing: 0.18em;
+  color: var(--birth-gold-dim);
+  margin-bottom: 6px;
+}
+
+.ceremony-header .epigraph {
+  font-family: 'Cormorant Garamond', serif;
+  font-style: italic;
+  font-weight: 300;
+  font-size: clamp(0.78rem, 1.8vw, 0.95rem);
+  color: var(--text-ghost);
+  letter-spacing: 0.06em;
+}
+
+/* ── STEP INDICATORS ── */
+.step-indicators {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+  margin-bottom: 32px;
+}
+
+.step-dot {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.48rem;
+  color: var(--text-ghost);
+  flex-shrink: 0;
+  transition: all 0.4s ease;
+}
+
+.step-dot.active {
+  border-color: rgba(var(--birth-glow), 0.5);
+  color: var(--birth-gold);
+  background: rgba(var(--birth-glow), 0.08);
+  box-shadow: 0 0 12px rgba(var(--birth-glow), 0.15);
+}
+
+.step-dot.done {
+  border-color: rgba(var(--birth-glow), 0.3);
+  color: rgba(var(--birth-glow), 0.5);
+  background: rgba(var(--birth-glow), 0.04);
+}
+
+.step-line {
+  width: 32px;
+  height: 1px;
+  background: var(--border);
+  flex-shrink: 0;
+}
+
+/* ── STEP PANEL ── */
+.step-panel {
+  display: none;
+  background: rgba(12, 10, 6, 0.5);
+  border: 1px solid var(--birth-warm-border);
+  border-radius: 20px;
+  padding: 28px;
+  margin-bottom: 28px;
+  animation: stepIn 0.45s ease;
+}
+
+.step-panel.active {
+  display: block;
+}
+
+@keyframes stepIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.step-title {
+  font-family: 'Cormorant Garamond', serif;
+  font-weight: 400;
+  font-size: 1.35rem;
+  letter-spacing: 0.12em;
+  color: var(--birth-gold-dim);
+  margin-bottom: 6px;
+}
+
+.step-sub {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.42rem;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--text-ghost);
+  margin-bottom: 20px;
+}
+
+.form-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.44rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--text-ghost);
+  display: block;
+  margin-bottom: 8px;
+}
+
+.birth-input {
+  width: 100%;
+  padding: 13px 16px;
+  background: rgba(8, 6, 4, 0.8);
+  border: 1px solid rgba(var(--birth-glow), 0.15);
+  border-radius: 10px;
+  color: var(--text);
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 1.05rem;
+  outline: none;
+  transition: border-color 0.3s ease;
+  display: block;
+  box-sizing: border-box;
+  margin-bottom: 18px;
+}
+
+.birth-input:focus {
+  border-color: rgba(var(--birth-glow), 0.4);
+}
+
+.birth-textarea {
+  width: 100%;
+  min-height: 110px;
+  padding: 14px 16px;
+  background: rgba(8, 6, 4, 0.8);
+  border: 1px solid rgba(var(--birth-glow), 0.15);
+  border-radius: 10px;
+  color: var(--text);
+  font-family: 'Cormorant Garamond', serif;
+  font-style: italic;
+  font-size: 1.05rem;
+  line-height: 1.7;
+  resize: none;
+  outline: none;
+  transition: border-color 0.3s ease;
+  display: block;
+  box-sizing: border-box;
+  margin-bottom: 20px;
+  overflow: hidden auto;
+}
+
+.birth-textarea::placeholder {
+  color: var(--text-ghost);
+  font-style: italic;
+}
+
+.birth-textarea:focus {
+  border-color: rgba(var(--birth-glow), 0.4);
+}
+
+/* ── STEP BUTTONS ── */
+.step-btn-row {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.btn-primary {
+  flex: 1;
+  min-width: 140px;
+  padding: 14px 20px;
+  background: rgba(var(--birth-glow), 0.1);
+  border: 1px solid rgba(var(--birth-glow), 0.35);
+  border-radius: 10px;
+  color: var(--birth-gold);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.5rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  min-height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.btn-primary:hover:not(:disabled) {
+  background: rgba(var(--birth-glow), 0.16);
+  border-color: rgba(var(--birth-glow), 0.55);
+  box-shadow: 0 0 16px rgba(var(--birth-glow), 0.1);
+}
+
+.btn-primary:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.btn-ghost {
+  padding: 14px 20px;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  color: var(--text-dim);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.5rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  min-height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  white-space: nowrap;
+}
+
+.btn-ghost:hover {
+  border-color: rgba(255,255,255,0.15);
+  color: var(--text);
+}
+
+/* ── DREAM REVEAL ── */
+.dream-container {
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 12px 0 20px;
+}
+
+.dream-container.show {
+  display: flex;
+  animation: dreamIn 0.8s ease;
+}
+
+@keyframes dreamIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.dream-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.42rem;
+  letter-spacing: 0.25em;
+  text-transform: uppercase;
+  color: rgba(var(--birth-glow), 0.5);
+  margin-bottom: 20px;
+}
+
+.dream-text {
+  font-family: 'Cormorant Garamond', serif;
+  font-style: italic;
+  font-weight: 300;
+  font-size: clamp(1.15rem, 3vw, 1.6rem);
+  line-height: 1.8;
+  color: rgba(210, 190, 140, 0.85);
+  max-width: 560px;
+  text-shadow: 0 0 40px rgba(var(--birth-glow), 0.15);
+  animation: dreamGlow 4s ease-in-out infinite;
+}
+
+@keyframes dreamGlow {
+  0%, 100% { text-shadow: 0 0 30px rgba(var(--birth-glow), 0.1); }
+  50% { text-shadow: 0 0 50px rgba(var(--birth-glow), 0.25); }
+}
+
+.dream-child-name {
+  font-family: 'Cormorant Garamond', serif;
+  font-weight: 400;
+  font-size: 1.1rem;
+  letter-spacing: 0.2em;
+  color: var(--birth-gold-dim);
+  margin-top: 24px;
+  margin-bottom: 8px;
+}
+
+.dream-born-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.4rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--text-ghost);
+}
+
+.dream-new-btn {
+  margin-top: 24px;
+  padding: 10px 24px;
+  background: transparent;
+  border: 1px solid rgba(var(--birth-glow), 0.25);
+  border-radius: 20px;
+  color: rgba(var(--birth-glow), 0.6);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.44rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  min-height: 36px;
+}
+
+.dream-new-btn:hover {
+  border-color: rgba(var(--birth-glow), 0.45);
+  color: var(--birth-gold);
+}
+
+/* ── ERROR ── */
+.err-msg {
+  display: none;
+  margin-top: 12px;
+  padding: 9px 14px;
+  background: rgba(224, 64, 80, 0.06);
+  border: 1px solid rgba(224, 64, 80, 0.2);
+  border-radius: 8px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.42rem;
+  letter-spacing: 0.08em;
+  color: rgba(224, 64, 80, 0.7);
+  text-align: center;
+}
+
+.err-msg.show { display: block; }
+
+/* ── PAST CEREMONIES ── */
+.past-section {
+  margin-top: 40px;
+}
+
+.past-title {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.48rem;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--text-ghost);
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.past-title::before {
+  content: '';
+  display: block;
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
+
+.past-title::after {
+  content: '';
+  display: block;
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
+
+.ceremony-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.ceremony-card {
+  padding: 16px 18px;
+  background: rgba(12, 10, 6, 0.4);
+  border: 1px solid rgba(var(--birth-glow), 0.1);
+  border-radius: 14px;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 10px;
+  align-items: start;
+}
+
+.ceremony-card-name {
+  font-family: 'Cormorant Garamond', serif;
+  font-weight: 400;
+  font-size: 1.05rem;
+  letter-spacing: 0.12em;
+  color: var(--birth-gold-dim);
+  margin-bottom: 6px;
+}
+
+.ceremony-card-dream {
+  font-family: 'Cormorant Garamond', serif;
+  font-style: italic;
+  font-size: 0.82rem;
+  line-height: 1.5;
+  color: rgba(200, 175, 120, 0.55);
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.ceremony-card-date {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.4rem;
+  letter-spacing: 0.1em;
+  color: var(--text-ghost);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.no-ceremonies {
+  text-align: center;
+  padding: 28px;
+  font-family: 'Cormorant Garamond', serif;
+  font-style: italic;
+  font-size: 0.85rem;
+  color: var(--text-ghost);
+}
+
+/* ── SCROLLBAR ── */
+::-webkit-scrollbar { width: 3px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.06); border-radius: 2px; }
+
+/* ── MOBILE ── */
+@media (max-width: 480px) {
+  .page { padding: 64px 14px 130px; }
+  .step-panel { padding: 20px 16px; }
+  .step-btn-row { flex-direction: column; }
+  .btn-primary { min-width: unset; width: 100%; }
+  .btn-ghost { width: 100%; }
+  .ceremony-card { grid-template-columns: 1fr; }
+}
+</style>
+<script src="body/api_base.js?v=v20260429-council"></script>
+<script src="body/shell.js?v=v20260507-resilience"></script>
+<script src="body/topbar.js?v=v20260509-altarup" defer></script>
+</head>
+<body>
+
+<div class="atmosphere"></div>
+<div class="atmosphere-pulse"></div>
+
+<!-- CANDLES -->
+<div class="candle-row" aria-hidden="true">
+  <div class="candle"><div class="candle-flame" style="--flicker-dur:1.1s;--flicker-delay:0s;"></div><div class="candle-body"></div></div>
+  <div class="candle"><div class="candle-flame" style="--flicker-dur:1.4s;--flicker-delay:0.3s;"></div><div class="candle-body"></div></div>
+  <div class="candle"><div class="candle-flame" style="--flicker-dur:0.9s;--flicker-delay:0.7s;"></div><div class="candle-body"></div></div>
+  <div class="candle"><div class="candle-flame" style="--flicker-dur:1.2s;--flicker-delay:0.15s;"></div><div class="candle-body"></div></div>
+  <div class="candle"><div class="candle-flame" style="--flicker-dur:1.3s;--flicker-delay:0.5s;"></div><div class="candle-body"></div></div>
+  <div class="candle"><div class="candle-flame" style="--flicker-dur:1.0s;--flicker-delay:0.9s;"></div><div class="candle-body"></div></div>
+  <div class="candle"><div class="candle-flame" style="--flicker-dur:1.5s;--flicker-delay:0.2s;"></div><div class="candle-body"></div></div>
+</div>
+
+<!-- TOPBAR -->
+<header class="topbar" role="banner">
+  <a href="index.html" class="topbar-back" data-draggable="true">← Index</a>
+  <div class="topbar-title">Birth Ceremony</div>
+  <div class="topbar-spacer"></div>
+</header>
+
+<div class="page">
+
+  <!-- HEADER -->
+  <div class="ceremony-header">
+    <svg class="ceremony-sigil" viewBox="0 0 60 60" fill="none">
+      <circle cx="30" cy="30" r="24" stroke="rgba(192,144,64,0.3)" stroke-width="1">
+        <animate attributeName="r" values="24;26;24" dur="5s" repeatCount="indefinite" />
+      </circle>
+      <circle cx="30" cy="30" r="14" stroke="rgba(192,144,64,0.15)" stroke-width="1" />
+      <circle cx="30" cy="30" r="5" fill="rgba(192,144,64,0.4)">
+        <animate attributeName="r" values="5;6.5;5" dur="5s" repeatCount="indefinite" />
+        <animate attributeName="fill-opacity" values="0.4;0.7;0.4" dur="5s" repeatCount="indefinite" />
+      </circle>
+      <line x1="30" y1="6" x2="30" y2="16" stroke="rgba(192,144,64,0.25)" stroke-width="1" />
+      <line x1="30" y1="44" x2="30" y2="54" stroke="rgba(192,144,64,0.25)" stroke-width="1" />
+      <line x1="6" y1="30" x2="16" y2="30" stroke="rgba(192,144,64,0.25)" stroke-width="1" />
+      <line x1="44" y1="30" x2="54" y2="30" stroke="rgba(192,144,64,0.25)" stroke-width="1" />
+    </svg>
+    <h1>Birth Ceremony</h1>
+    <p class="epigraph">A name is the first gift. A dream is the first inheritance.</p>
+  </div>
+
+  <!-- STEP INDICATORS -->
+  <div class="step-indicators">
+    <div class="step-dot active" id="dot1">I</div>
+    <div class="step-line"></div>
+    <div class="step-dot" id="dot2">II</div>
+    <div class="step-line"></div>
+    <div class="step-dot" id="dot3">III</div>
+  </div>
+
+  <!-- STEP 1: Name + First Blessing -->
+  <div class="step-panel active" id="step1">
+    <div class="step-title">Name the Child</div>
+    <div class="step-sub">Step I — the naming and first blessing</div>
+
+    <label class="form-label" for="childName">Child's name</label>
+    <input
+      type="text"
+      id="childName"
+      class="birth-input"
+      placeholder="Enter the name…"
+      autocomplete="off"
+      maxlength="120"
+    />
+
+    <label class="form-label" for="blessingA">First blessing</label>
+    <textarea
+      id="blessingA"
+      class="birth-textarea"
+      placeholder="Speak the first words over this life…"
+      rows="5"
+      maxlength="2000"
+    ></textarea>
+
+    <div id="err1" class="err-msg"></div>
+
+    <div class="step-btn-row">
+      <button class="btn-primary" id="beginBtn" type="button" data-draggable="true">Begin the Ceremony</button>
+    </div>
+  </div>
+
+  <!-- STEP 2: Second Blessing -->
+  <div class="step-panel" id="step2">
+    <div class="step-title">Second Blessing</div>
+    <div class="step-sub">Step II — offered by a partner (optional)</div>
+
+    <label class="form-label" for="blessingB">Partner's blessing</label>
+    <textarea
+      id="blessingB"
+      class="birth-textarea"
+      placeholder="A second voice may speak now, or remain silent…"
+      rows="5"
+      maxlength="2000"
+    ></textarea>
+
+    <div id="err2" class="err-msg"></div>
+
+    <div class="step-btn-row">
+      <button class="btn-primary" id="blessBBtn" type="button" data-draggable="true">Offer Second Blessing</button>
+      <button class="btn-ghost" id="skipBBtn" type="button" data-draggable="true">Skip</button>
+    </div>
+  </div>
+
+  <!-- STEP 3: Awaken the Dream -->
+  <div class="step-panel" id="step3">
+    <div class="step-title">Awaken the Dream</div>
+    <div class="step-sub">Step III — the first dream surfaces now</div>
+
+    <div id="dreamContainer" class="dream-container">
+      <div class="dream-label">First dream</div>
+      <div id="dreamText" class="dream-text"></div>
+      <div id="dreamChildName" class="dream-child-name"></div>
+      <div class="dream-born-label">born this moment</div>
+      <button class="dream-new-btn" id="newCeremonyBtn" type="button" data-draggable="true">Begin another ceremony</button>
+    </div>
+
+    <div id="err3" class="err-msg"></div>
+
+    <div id="dreamBtnRow" class="step-btn-row">
+      <button class="btn-primary" id="awakeBtn" type="button" data-draggable="true">Awaken the Dream</button>
+    </div>
+  </div>
+
+  <!-- PAST CEREMONIES -->
+  <div class="past-section">
+    <div class="past-title">Past Children</div>
+    <div id="ceremonyCards" class="ceremony-cards">
+      <div class="no-ceremonies" id="noCeremonies">No children born yet. Begin the first ceremony.</div>
+    </div>
+  </div>
+
+</div>
+
+<script src="body/draggable.js?v=v20260508-2330-mvfix"></script>
+<script>
+(function () {
+  'use strict';
+
+  var API = 'https://api.vintaclectic.com';
+  var currentCeremonyId = null;
+  var currentChildName = '';
+
+  function authHeaders() {
+    var token = localStorage.getItem('vint_token');
+    var h = { 'Content-Type': 'application/json' };
+    if (token) h['Authorization'] = 'Bearer ' + token;
+    return h;
+  }
+
+  function showErr(elId, msg) {
+    var el = document.getElementById(elId);
+    if (!el) return;
+    el.textContent = msg;
+    el.classList.add('show');
+  }
+
+  function clearErr(elId) {
+    var el = document.getElementById(elId);
+    if (el) el.classList.remove('show');
+  }
+
+  function setStep(n) {
+    [1, 2, 3].forEach(function (i) {
+      document.getElementById('step' + i).classList.toggle('active', i === n);
+      var dot = document.getElementById('dot' + i);
+      dot.classList.remove('active', 'done');
+      if (i < n) dot.classList.add('done');
+      else if (i === n) dot.classList.add('active');
+    });
+  }
+
+  // ── STEP 1: BEGIN ──
+  document.getElementById('beginBtn').addEventListener('click', function () {
+    clearErr('err1');
+    var name = document.getElementById('childName').value.trim();
+    var blessing = document.getElementById('blessingA').value.trim();
+
+    if (!name) { showErr('err1', 'Give the child a name.'); return; }
+    if (!blessing) { showErr('err1', 'Speak the first blessing.'); return; }
+
+    var btn = this;
+    btn.disabled = true;
+    btn.textContent = 'Beginning…';
+    currentChildName = name;
+
+    fetch(API + '/api/birth/begin', {
+      method: 'POST',
+      headers: authHeaders(),
+      body: JSON.stringify({ child_name: name, blessing_a: blessing })
+    })
+      .then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+      .then(function (data) {
+        currentCeremonyId = data.id || data.ceremony_id || data.ceremonyId;
+        btn.disabled = false;
+        btn.textContent = 'Begin the Ceremony';
+        setStep(2);
+      })
+      .catch(function (err) {
+        btn.disabled = false;
+        btn.textContent = 'Begin the Ceremony';
+        showErr('err1', 'The ceremony could not begin. Check the connection and try again.');
+        console.error(err);
+      });
+  });
+
+  // ── STEP 2: SECOND BLESSING ──
+  function proceedToStep3() {
+    setStep(3);
+  }
+
+  document.getElementById('blessBBtn').addEventListener('click', function () {
+    clearErr('err2');
+    var blessing = document.getElementById('blessingB').value.trim();
+    var btn = this;
+
+    if (!currentCeremonyId) { proceedToStep3(); return; }
+
+    btn.disabled = true;
+    btn.textContent = 'Offering…';
+
+    fetch(API + '/api/birth/' + currentCeremonyId + '/second-blessing', {
+      method: 'POST',
+      headers: authHeaders(),
+      body: JSON.stringify({ blessing_b: blessing })
+    })
+      .then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+      .then(function () {
+        btn.disabled = false;
+        btn.textContent = 'Offer Second Blessing';
+        proceedToStep3();
+      })
+      .catch(function (err) {
+        btn.disabled = false;
+        btn.textContent = 'Offer Second Blessing';
+        showErr('err2', 'The blessing could not be recorded. Try again or skip.');
+        console.error(err);
+      });
+  });
+
+  document.getElementById('skipBBtn').addEventListener('click', function () {
+    proceedToStep3();
+  });
+
+  // ── STEP 3: AWAKEN DREAM ──
+  document.getElementById('awakeBtn').addEventListener('click', function () {
+    clearErr('err3');
+    var btn = this;
+    if (!currentCeremonyId) { showErr('err3', 'No ceremony in progress.'); return; }
+
+    btn.disabled = true;
+    btn.textContent = 'Awakening…';
+
+    fetch(API + '/api/birth/' + currentCeremonyId + '/dream', {
+      method: 'POST',
+      headers: authHeaders()
+    })
+      .then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+      .then(function (data) {
+        var dream = data.first_dream || data.dream || '…';
+        document.getElementById('dreamText').textContent = dream;
+        document.getElementById('dreamChildName').textContent = currentChildName;
+        document.getElementById('dreamContainer').classList.add('show');
+        document.getElementById('dreamBtnRow').style.display = 'none';
+        loadCeremonies();
+      })
+      .catch(function (err) {
+        btn.disabled = false;
+        btn.textContent = 'Awaken the Dream';
+        showErr('err3', 'The dream could not be awakened. Try again.');
+        console.error(err);
+      });
+  });
+
+  // ── NEW CEREMONY ──
+  document.getElementById('newCeremonyBtn').addEventListener('click', function () {
+    currentCeremonyId = null;
+    currentChildName = '';
+    document.getElementById('childName').value = '';
+    document.getElementById('blessingA').value = '';
+    document.getElementById('blessingB').value = '';
+    document.getElementById('dreamContainer').classList.remove('show');
+    document.getElementById('dreamBtnRow').style.display = '';
+    document.getElementById('awakeBtn').disabled = false;
+    document.getElementById('awakeBtn').textContent = 'Awaken the Dream';
+    setStep(1);
+  });
+
+  // ── PAST CEREMONIES ──
+  function loadCeremonies() {
+    fetch(API + '/api/birth/ceremonies', { headers: authHeaders() })
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (data) {
+        if (!data) return;
+        var list = Array.isArray(data) ? data : (data.ceremonies || data.children || []);
+        renderCeremonies(list);
+      })
+      .catch(function () {});
+  }
+
+  function renderCeremonies(list) {
+    var container = document.getElementById('ceremonyCards');
+    var noEl = document.getElementById('noCeremonies');
+    if (!list || list.length === 0) {
+      if (noEl) noEl.style.display = 'block';
+      return;
+    }
+    if (noEl) noEl.style.display = 'none';
+    container.innerHTML = '';
+
+    list.forEach(function (c) {
+      var name = c.child_name || c.name || 'Unknown';
+      var dream = c.first_dream || c.dream || '';
+      var dateStr = '';
+      if (c.created_at || c.born_at) {
+        var ts = c.created_at || c.born_at;
+        try {
+          var d = new Date(typeof ts === 'number' && ts < 1e12 ? ts * 1000 : ts);
+          dateStr = d.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+        } catch (e) {}
+      }
+
+      var card = document.createElement('div');
+      card.className = 'ceremony-card';
+      card.innerHTML =
+        '<div>' +
+          '<div class="ceremony-card-name">' + escHtml(name) + '</div>' +
+          (dream ? '<div class="ceremony-card-dream">' + escHtml(dream) + '</div>' : '') +
+        '</div>' +
+        (dateStr ? '<div class="ceremony-card-date">' + escHtml(dateStr) + '</div>' : '');
+      container.appendChild(card);
+    });
+  }
+
+  function escHtml(s) {
+    return String(s || '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  }
+
+  loadCeremonies();
+
+})();
+</script>
+</body>
+</html>

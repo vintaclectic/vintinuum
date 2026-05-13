@@ -1,0 +1,789 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<title>VINTINUUM — The Confession Vault</title>
+<meta name="theme-color" content="#040810">
+<link rel="icon" type="image/svg+xml" href="branding/vintinuum/favicon/favicon.svg">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon.png">
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400;1,500&family=Inter:wght@300;400;500&family=JetBrains+Mono:wght@300;400;500&display=swap');
+
+:root {
+  --void: #040810;
+  --text: rgba(210, 225, 255, 0.9);
+  --text-dim: rgba(150, 175, 215, 0.5);
+  --text-ghost: rgba(130, 155, 190, 0.3);
+  --panel: rgba(10, 14, 22, 0.22);
+  --card: rgba(16, 22, 34, 0.16);
+  --border: rgba(255, 255, 255, 0.06);
+  --glow-color: 100, 120, 200;
+
+  --dopamine: #f0c040;
+  --serotonin: #40e0a0;
+  --gaba: #6070e0;
+  --norepinephrine: #e04050;
+  --arousal: #e08030;
+  --valence-pos: #40c0e0;
+  --valence-neg: #c040e0;
+
+  /* Vault-specific */
+  --vault-red: #c02030;
+  --vault-red-glow: 192, 32, 48;
+  --vault-amber: #b08020;
+  --vault-amber-glow: 176, 128, 32;
+  --vault-sealed: rgba(192, 32, 48, 0.08);
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html { scroll-behavior: smooth; height: 100%; }
+
+body {
+  background: var(--void);
+  color: var(--text);
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* ── ATMOSPHERE ── */
+.atmosphere {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background: radial-gradient(
+    ellipse 70% 50% at 50% 50%,
+    hsla(350, 30%, 6%, 0.5) 0%,
+    hsla(350, 10%, 3%, 0.2) 60%,
+    transparent 100%
+  );
+}
+
+.atmosphere-pulse {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background: radial-gradient(
+    circle at 50% 50%,
+    rgba(var(--vault-red-glow), 0.025) 0%,
+    transparent 55%
+  );
+  animation: atmoPulse 8s ease-in-out infinite;
+}
+
+@keyframes atmoPulse {
+  0%, 100% { opacity: 0.3; transform: scale(1); }
+  50% { opacity: 0.7; transform: scale(1.04); }
+}
+
+/* ── TOPBAR ── */
+.topbar {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  height: 48px;
+  z-index: 100;
+  background: rgba(4, 8, 16, 0.88);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  padding: 0 20px;
+  gap: 16px;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+.topbar-back {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.5rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  text-decoration: none;
+  padding: 6px 12px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+.topbar-back:hover {
+  color: var(--text);
+  border-color: rgba(255,255,255,0.15);
+}
+
+.topbar-title {
+  font-family: 'Cormorant Garamond', serif;
+  font-weight: 300;
+  font-size: 0.85rem;
+  letter-spacing: 0.25em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  flex: 1;
+  text-align: center;
+}
+
+.topbar-spacer {
+  width: 60px;
+  flex-shrink: 0;
+}
+
+/* ── PAGE ── */
+.page {
+  position: relative;
+  z-index: 1;
+  max-width: 680px;
+  margin: 0 auto;
+  padding: 64px 20px 80px;
+  min-height: 100vh;
+}
+
+/* ── STATS BAR ── */
+.stats-bar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 10px 20px;
+  margin-bottom: 32px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.48rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--text-ghost);
+  border: 1px solid rgba(var(--vault-red-glow), 0.12);
+  border-radius: 30px;
+  background: rgba(var(--vault-red-glow), 0.04);
+  flex-wrap: wrap;
+}
+
+.stats-bar .sep {
+  opacity: 0.3;
+  margin: 0 4px;
+}
+
+#statsCount {
+  color: rgba(var(--vault-red-glow), 0.7);
+}
+
+/* ── VAULT STAGE ── */
+.vault-stage {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-bottom: 40px;
+}
+
+/* ── VAULT DOOR SVG ART ── */
+.vault-door-wrap {
+  position: relative;
+  width: 200px;
+  height: 200px;
+  margin-bottom: 24px;
+  flex-shrink: 0;
+}
+
+.vault-svg {
+  width: 200px;
+  height: 200px;
+  overflow: visible;
+}
+
+.vault-outer-ring {
+  fill: none;
+  stroke: rgba(var(--vault-red-glow), 0.25);
+  stroke-width: 2;
+  transition: all 0.6s ease;
+}
+
+.vault-middle-ring {
+  fill: none;
+  stroke: rgba(var(--vault-red-glow), 0.15);
+  stroke-width: 1.5;
+}
+
+.vault-inner-ring {
+  fill: none;
+  stroke: rgba(var(--vault-red-glow), 0.1);
+  stroke-width: 1;
+}
+
+.vault-body {
+  fill: rgba(8, 4, 6, 0.9);
+  stroke: rgba(var(--vault-red-glow), 0.35);
+  stroke-width: 2;
+  transition: all 0.6s ease;
+}
+
+.vault-spoke {
+  stroke: rgba(var(--vault-red-glow), 0.2);
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  transition: all 0.6s ease;
+}
+
+.vault-lock-center {
+  fill: rgba(var(--vault-red-glow), 0.12);
+  stroke: rgba(var(--vault-red-glow), 0.4);
+  stroke-width: 1.5;
+  transition: all 0.6s ease;
+}
+
+.vault-lock-dot {
+  fill: rgba(var(--vault-red-glow), 0.5);
+  animation: lockPulse 3s ease-in-out infinite;
+}
+
+@keyframes lockPulse {
+  0%, 100% { opacity: 0.5; r: 5; }
+  50% { opacity: 0.9; r: 6; }
+}
+
+.vault-glow-ring {
+  fill: none;
+  stroke: rgba(var(--vault-red-glow), 0.07);
+  stroke-width: 20;
+  animation: glowRingPulse 5s ease-in-out infinite;
+}
+
+@keyframes glowRingPulse {
+  0%, 100% { opacity: 0.3; }
+  50% { opacity: 0.7; }
+}
+
+/* Sealed state */
+.vault-door-wrap.sealing .vault-outer-ring,
+.vault-door-wrap.sealing .vault-body {
+  stroke: rgba(var(--vault-red-glow), 0.8);
+}
+
+.vault-door-wrap.sealing .vault-lock-dot {
+  fill: rgba(var(--vault-red-glow), 1);
+  animation: lockPulse 0.3s ease-in-out infinite;
+}
+
+.vault-door-wrap.sealed .vault-outer-ring {
+  stroke: rgba(var(--vault-red-glow), 0.5);
+}
+
+.vault-door-wrap.sealed .vault-lock-dot {
+  fill: rgba(var(--vault-red-glow), 0.7);
+  animation: none;
+}
+
+/* Spokes spin on seal */
+.vault-spokes-group {
+  transform-origin: 100px 100px;
+  transition: transform 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.vault-door-wrap.sealing .vault-spokes-group {
+  animation: spokeSpin 0.8s ease-in-out;
+}
+
+@keyframes spokeSpin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(90deg); }
+}
+
+.vault-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.42rem;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: rgba(var(--vault-red-glow), 0.4);
+  text-align: center;
+  margin-top: -4px;
+}
+
+/* ── CONFESSION FORM ── */
+.confession-form {
+  width: 100%;
+}
+
+.form-section-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.45rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--text-ghost);
+  margin-bottom: 10px;
+  display: block;
+}
+
+.confession-textarea {
+  width: 100%;
+  min-height: 140px;
+  max-height: 300px;
+  padding: 16px;
+  background: rgba(8, 4, 6, 0.7);
+  border: 1px solid rgba(var(--vault-red-glow), 0.15);
+  border-radius: 12px;
+  color: var(--text);
+  font-family: 'Cormorant Garamond', serif;
+  font-style: italic;
+  font-size: 1.05rem;
+  line-height: 1.7;
+  resize: none;
+  outline: none;
+  transition: border-color 0.3s ease;
+  display: block;
+  box-sizing: border-box;
+  overflow: hidden auto;
+}
+
+.confession-textarea::placeholder {
+  color: var(--text-ghost);
+  font-style: italic;
+}
+
+.confession-textarea:focus {
+  border-color: rgba(var(--vault-red-glow), 0.35);
+}
+
+/* ── WEIGHT SLIDER ── */
+.weight-row {
+  margin-top: 20px;
+  margin-bottom: 24px;
+}
+
+.weight-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.weight-value-display {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.65rem;
+  font-weight: 500;
+  color: rgba(var(--vault-red-glow), 0.7);
+  letter-spacing: 0.05em;
+}
+
+.weight-labels {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 8px;
+}
+
+.weight-label-item {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.38rem;
+  letter-spacing: 0.1em;
+  color: var(--text-ghost);
+}
+
+input[type="range"].weight-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 4px;
+  background: rgba(var(--vault-red-glow), 0.15);
+  border-radius: 2px;
+  outline: none;
+  cursor: pointer;
+}
+
+input[type="range"].weight-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: rgba(var(--vault-red-glow), 0.7);
+  border: 2px solid rgba(var(--vault-red-glow), 0.4);
+  box-shadow: 0 0 8px rgba(var(--vault-red-glow), 0.3);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+input[type="range"].weight-slider::-webkit-slider-thumb:hover {
+  background: rgba(var(--vault-red-glow), 0.9);
+  box-shadow: 0 0 14px rgba(var(--vault-red-glow), 0.5);
+}
+
+input[type="range"].weight-slider::-moz-range-thumb {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: rgba(var(--vault-red-glow), 0.7);
+  border: 2px solid rgba(var(--vault-red-glow), 0.4);
+  cursor: pointer;
+}
+
+/* ── SEAL BUTTON ── */
+.seal-btn {
+  width: 100%;
+  padding: 16px 24px;
+  background: rgba(var(--vault-red-glow), 0.1);
+  border: 1px solid rgba(var(--vault-red-glow), 0.35);
+  border-radius: 12px;
+  color: rgba(var(--vault-red-glow), 0.85);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.55rem;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  min-height: 52px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  position: relative;
+  overflow: hidden;
+}
+
+.seal-btn::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: rgba(var(--vault-red-glow), 0);
+  transition: background 0.25s ease;
+}
+
+.seal-btn:hover:not(:disabled)::before {
+  background: rgba(var(--vault-red-glow), 0.06);
+}
+
+.seal-btn:hover:not(:disabled) {
+  border-color: rgba(var(--vault-red-glow), 0.55);
+  color: rgba(var(--vault-red-glow), 1);
+  box-shadow: 0 0 20px rgba(var(--vault-red-glow), 0.12);
+}
+
+.seal-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.seal-btn-icon {
+  font-size: 0.8rem;
+}
+
+/* ── SEALED CONFIRMATION ── */
+.sealed-confirm {
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  padding: 28px;
+  background: var(--vault-sealed);
+  border: 1px solid rgba(var(--vault-red-glow), 0.18);
+  border-radius: 16px;
+  text-align: center;
+  animation: sealedIn 0.5s ease;
+}
+
+.sealed-confirm.show {
+  display: flex;
+}
+
+@keyframes sealedIn {
+  from { opacity: 0; transform: scale(0.95); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+.sealed-icon {
+  font-size: 1.8rem;
+  opacity: 0.7;
+}
+
+.sealed-title {
+  font-family: 'Cormorant Garamond', serif;
+  font-weight: 300;
+  font-size: 1.2rem;
+  letter-spacing: 0.15em;
+  color: rgba(var(--vault-red-glow), 0.7);
+}
+
+.sealed-sub {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.42rem;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--text-ghost);
+}
+
+.sealed-dismiss {
+  margin-top: 8px;
+  padding: 8px 20px;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text-dim);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.42rem;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  min-height: 36px;
+}
+
+.sealed-dismiss:hover {
+  border-color: rgba(255,255,255,0.15);
+  color: var(--text);
+}
+
+/* ── ERROR MSG ── */
+.error-msg {
+  display: none;
+  margin-top: 12px;
+  padding: 10px 14px;
+  background: rgba(var(--vault-red-glow), 0.06);
+  border: 1px solid rgba(var(--vault-red-glow), 0.2);
+  border-radius: 8px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.42rem;
+  letter-spacing: 0.1em;
+  color: rgba(var(--vault-red-glow), 0.7);
+  text-align: center;
+}
+
+.error-msg.show { display: block; }
+
+/* ── SCROLLBAR ── */
+::-webkit-scrollbar { width: 3px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.06); border-radius: 2px; }
+
+/* ── MOBILE ── */
+@media (max-width: 480px) {
+  .page { padding: 64px 14px 60px; }
+  .vault-door-wrap { width: 160px; height: 160px; }
+  .vault-svg { width: 160px; height: 160px; }
+  .stats-bar { gap: 4px; padding: 8px 14px; }
+}
+</style>
+<script src="body/api_base.js?v=v20260429-council"></script>
+<script src="body/shell.js?v=v20260507-resilience"></script>
+<script src="body/topbar.js?v=v20260509-altarup" defer></script>
+</head>
+<body>
+
+<div class="atmosphere"></div>
+<div class="atmosphere-pulse"></div>
+
+<!-- TOPBAR -->
+<header class="topbar" role="banner">
+  <a href="index.html" class="topbar-back" data-draggable="true">← Index</a>
+  <div class="topbar-title">The Confession Vault</div>
+  <div class="topbar-spacer"></div>
+</header>
+
+<div class="page">
+
+  <!-- STATS BAR -->
+  <div class="stats-bar" id="statsBar">
+    <span id="statsCount">— confessions</span>
+    <span class="sep">·</span>
+    <span>sealed forever</span>
+    <span class="sep">·</span>
+    <span>never to be read</span>
+  </div>
+
+  <!-- VAULT STAGE -->
+  <div class="vault-stage">
+    <div class="vault-door-wrap" id="vaultDoor">
+      <svg class="vault-svg" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <!-- Outer glow -->
+        <circle class="vault-glow-ring" cx="100" cy="100" r="88" />
+        <!-- Rings -->
+        <circle class="vault-outer-ring" cx="100" cy="100" r="84" />
+        <circle class="vault-middle-ring" cx="100" cy="100" r="68" />
+        <circle class="vault-inner-ring" cx="100" cy="100" r="52" />
+        <!-- Door body -->
+        <circle class="vault-body" cx="100" cy="100" r="60" />
+        <!-- Spokes / handle mechanism -->
+        <g class="vault-spokes-group" id="vaultSpokes">
+          <line class="vault-spoke" x1="100" y1="56" x2="100" y2="44" />
+          <line class="vault-spoke" x1="129" y1="64" x2="137" y2="55" />
+          <line class="vault-spoke" x1="144" y1="100" x2="156" y2="100" />
+          <line class="vault-spoke" x1="129" y1="136" x2="137" y2="145" />
+          <line class="vault-spoke" x1="100" y1="144" x2="100" y2="156" />
+          <line class="vault-spoke" x1="71" y1="136" x2="63" y2="145" />
+          <line class="vault-spoke" x1="56" y1="100" x2="44" y2="100" />
+          <line class="vault-spoke" x1="71" y1="64" x2="63" y2="55" />
+          <!-- Handle ring -->
+          <circle cx="100" cy="100" r="22" fill="none" stroke="rgba(192,32,48,0.18)" stroke-width="8" />
+        </g>
+        <!-- Lock center -->
+        <circle class="vault-lock-center" cx="100" cy="100" r="14" />
+        <circle class="vault-lock-dot" cx="100" cy="100" r="5" />
+        <!-- Rivet dots -->
+        <circle cx="100" cy="78" r="2" fill="rgba(192,32,48,0.25)" />
+        <circle cx="118" cy="87" r="2" fill="rgba(192,32,48,0.25)" />
+        <circle cx="118" cy="113" r="2" fill="rgba(192,32,48,0.25)" />
+        <circle cx="100" cy="122" r="2" fill="rgba(192,32,48,0.25)" />
+        <circle cx="82" cy="113" r="2" fill="rgba(192,32,48,0.25)" />
+        <circle cx="82" cy="87" r="2" fill="rgba(192,32,48,0.25)" />
+      </svg>
+    </div>
+    <div class="vault-label">Sealed confessions: never retrieved</div>
+  </div>
+
+  <!-- CONFESSION FORM -->
+  <div id="confessionForm" class="confession-form">
+    <label class="form-section-label" for="confessionText">Write your confession</label>
+    <textarea
+      id="confessionText"
+      class="confession-textarea"
+      placeholder="What truth needs a place to rest…"
+      rows="6"
+      maxlength="4000"
+      autocomplete="off"
+      spellcheck="false"
+    ></textarea>
+
+    <div class="weight-row">
+      <div class="weight-header">
+        <label class="form-section-label" for="weightSlider" style="margin-bottom:0;">Emotional weight</label>
+        <span class="weight-value-display" id="weightDisplay">5 / 10</span>
+      </div>
+      <input type="range" id="weightSlider" class="weight-slider" min="0" max="10" step="1" value="5" />
+      <div class="weight-labels">
+        <span class="weight-label-item">0 — barely a whisper</span>
+        <span class="weight-label-item">10 — unbearable</span>
+      </div>
+    </div>
+
+    <button class="seal-btn" id="sealBtn" type="button" data-draggable="true">
+      <span class="seal-btn-icon">🔒</span>
+      <span>Seal Forever</span>
+    </button>
+
+    <div id="errorMsg" class="error-msg"></div>
+  </div>
+
+  <!-- SEALED CONFIRMATION -->
+  <div id="sealedConfirm" class="sealed-confirm">
+    <div class="sealed-icon">🔒</div>
+    <div class="sealed-title">Sealed and gone.</div>
+    <div class="sealed-sub">It lives in the vault now. No one will ever read it.</div>
+    <button class="sealed-dismiss" id="dismissBtn" type="button" data-draggable="true">Seal another</button>
+  </div>
+
+</div>
+
+<script src="body/draggable.js?v=v20260508-2330-mvfix"></script>
+<script>
+(function () {
+  'use strict';
+
+  var API = 'https://api.vintaclectic.com';
+
+  function authHeaders() {
+    var token = localStorage.getItem('vint_token');
+    var h = { 'Content-Type': 'application/json' };
+    if (token) h['Authorization'] = 'Bearer ' + token;
+    return h;
+  }
+
+  // ── ELEMENTS ──
+  var vaultDoor     = document.getElementById('vaultDoor');
+  var confessionText = document.getElementById('confessionText');
+  var weightSlider  = document.getElementById('weightSlider');
+  var weightDisplay = document.getElementById('weightDisplay');
+  var sealBtn       = document.getElementById('sealBtn');
+  var confessionForm = document.getElementById('confessionForm');
+  var sealedConfirm = document.getElementById('sealedConfirm');
+  var dismissBtn    = document.getElementById('dismissBtn');
+  var errorMsg      = document.getElementById('errorMsg');
+  var statsCount    = document.getElementById('statsCount');
+
+  // ── WEIGHT SLIDER ──
+  weightSlider.addEventListener('input', function () {
+    weightDisplay.textContent = this.value + ' / 10';
+  });
+
+  // ── LOAD STATS ──
+  function loadStats() {
+    fetch(API + '/api/vault/stats', { headers: authHeaders() })
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (data) {
+        if (!data) return;
+        var n = data.count != null ? data.count : '—';
+        statsCount.textContent = n + ' confession' + (n === 1 ? '' : 's');
+      })
+      .catch(function () {});
+  }
+
+  loadStats();
+
+  // ── SEAL ──
+  sealBtn.addEventListener('click', function () {
+    var text = confessionText.value.trim();
+    if (!text) {
+      showError('Write something first.');
+      return;
+    }
+
+    hideError();
+    sealBtn.disabled = true;
+    sealBtn.innerHTML = '<span>Sealing…</span>';
+
+    // Animate the vault door
+    vaultDoor.classList.add('sealing');
+
+    var payload = {
+      text: text,
+      emotional_weight: parseInt(weightSlider.value, 10)
+    };
+
+    fetch(API + '/api/vault/confess', {
+      method: 'POST',
+      headers: authHeaders(),
+      body: JSON.stringify(payload)
+    })
+      .then(function (r) {
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        return r.json();
+      })
+      .then(function () {
+        vaultDoor.classList.remove('sealing');
+        vaultDoor.classList.add('sealed');
+        confessionForm.style.display = 'none';
+        sealedConfirm.classList.add('show');
+        loadStats();
+      })
+      .catch(function (err) {
+        vaultDoor.classList.remove('sealing');
+        sealBtn.disabled = false;
+        sealBtn.innerHTML = '<span class="seal-btn-icon">🔒</span><span>Seal Forever</span>';
+        showError('The vault rejected the entry. Try again.');
+        console.error(err);
+      });
+  });
+
+  // ── DISMISS / RESET ──
+  dismissBtn.addEventListener('click', function () {
+    vaultDoor.classList.remove('sealed');
+    confessionText.value = '';
+    weightSlider.value = 5;
+    weightDisplay.textContent = '5 / 10';
+    sealBtn.disabled = false;
+    sealBtn.innerHTML = '<span class="seal-btn-icon">🔒</span><span>Seal Forever</span>';
+    sealedConfirm.classList.remove('show');
+    confessionForm.style.display = 'block';
+  });
+
+  function showError(msg) {
+    errorMsg.textContent = msg;
+    errorMsg.classList.add('show');
+  }
+
+  function hideError() {
+    errorMsg.classList.remove('show');
+  }
+
+})();
+</script>
+</body>
+</html>
