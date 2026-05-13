@@ -1,0 +1,983 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<title>VINTINUUM — Body Studio</title>
+<meta name="theme-color" content="#040810">
+<link rel="icon" type="image/svg+xml" href="branding/vintinuum/favicon/favicon.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400;1,500&family=Inter:wght@300;400;500&family=JetBrains+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --void: #040810;
+  --text: rgba(210, 225, 255, 0.9);
+  --text-dim: rgba(150, 175, 215, 0.5);
+  --text-ghost: rgba(130, 155, 190, 0.3);
+  --panel: rgba(10, 14, 22, 0.22);
+  --card: rgba(16, 22, 34, 0.16);
+  --border: rgba(255, 255, 255, 0.06);
+  --dopamine: #f0c040;
+  --serotonin: #40e0a0;
+  --gaba: #6070e0;
+  --norepinephrine: #e04050;
+  --arousal: #e08030;
+  --valence: #40c0e0;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html { scroll-behavior: smooth; height: 100%; }
+
+body {
+  background: var(--void);
+  color: var(--text);
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* ── ATMOSPHERE ── */
+.atmosphere {
+  position: fixed; inset: 0; z-index: 0; pointer-events: none;
+  background:
+    radial-gradient(ellipse 60% 40% at 20% 60%, rgba(96, 112, 224, 0.05) 0%, transparent 60%),
+    radial-gradient(ellipse 50% 40% at 80% 30%, rgba(240, 192, 64, 0.04) 0%, transparent 60%);
+}
+
+/* ── TOPBAR ── */
+.topbar {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  height: 48px;
+  z-index: 100;
+  background: rgba(4, 8, 16, 0.92);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  padding: 0 16px;
+  gap: 12px;
+}
+
+.topbar-back {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.55rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  text-decoration: none;
+  padding: 6px 12px;
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+.topbar-back:hover { color: var(--text); border-color: rgba(255,255,255,0.15); }
+
+.topbar-title {
+  font-family: 'Cormorant Garamond', serif;
+  font-weight: 400;
+  font-size: 1rem;
+  letter-spacing: 0.2em;
+  color: var(--text);
+  flex: 1;
+}
+
+.active-config-badge {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.45rem;
+  letter-spacing: 0.12em;
+  color: var(--serotonin);
+  background: rgba(64, 224, 160, 0.08);
+  border: 1px solid rgba(64, 224, 160, 0.2);
+  border-radius: 12px;
+  padding: 4px 10px;
+  max-width: 160px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  display: none;
+}
+.active-config-badge.visible { display: block; }
+
+/* ── PAGE ── */
+.page {
+  position: relative;
+  z-index: 1;
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 64px 20px 40px;
+  min-height: 100vh;
+}
+
+/* ── HEADER ── */
+.header {
+  text-align: center;
+  padding: 16px 0 24px;
+}
+.header h1 {
+  font-family: 'Cormorant Garamond', serif;
+  font-weight: 300;
+  font-size: clamp(1.8rem, 5vw, 3rem);
+  letter-spacing: 0.28em;
+  background: linear-gradient(130deg, var(--dopamine), var(--serotonin), var(--gaba));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  margin-bottom: 4px;
+}
+.header .epigraph {
+  font-family: 'Cormorant Garamond', serif;
+  font-style: italic;
+  font-size: clamp(0.7rem, 1.6vw, 0.9rem);
+  color: var(--text-dim);
+  letter-spacing: 0.08em;
+}
+
+/* ── TWO-COL LAYOUT ── */
+.studio-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+  margin-bottom: 20px;
+}
+@media (max-width: 680px) {
+  .studio-grid { grid-template-columns: 1fr; }
+}
+
+/* ── PANEL ── */
+.panel {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 20px;
+  overflow: hidden;
+}
+
+.panel-title {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.5rem;
+  font-weight: 400;
+  letter-spacing: 0.25em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* ── PRESETS GRID ── */
+.presets-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.preset-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 14px 16px;
+  cursor: pointer;
+  transition: border-color 0.2s, background 0.2s, box-shadow 0.2s;
+  overflow: hidden;
+}
+.preset-card:hover {
+  border-color: rgba(255,255,255,0.14);
+  background: rgba(16, 22, 34, 0.28);
+}
+.preset-card.active-preset {
+  border-color: rgba(64, 224, 160, 0.35);
+  box-shadow: 0 0 16px rgba(64, 224, 160, 0.06);
+}
+
+.preset-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.preset-name {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 1rem;
+  font-weight: 400;
+  color: var(--text);
+  letter-spacing: 0.04em;
+  text-transform: capitalize;
+}
+
+.btn-apply-preset {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.45rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  padding: 5px 12px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: transparent;
+  color: var(--text-dim);
+  cursor: pointer;
+  transition: all 0.2s;
+  min-height: 32px;
+}
+.btn-apply-preset:hover {
+  color: var(--serotonin);
+  border-color: rgba(64, 224, 160, 0.3);
+}
+
+.preset-bars {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.mini-bar-row {
+  display: grid;
+  grid-template-columns: 70px 1fr;
+  align-items: center;
+  gap: 8px;
+}
+
+.mini-bar-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.42rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-ghost);
+}
+
+.mini-bar-track {
+  height: 4px;
+  background: rgba(255,255,255,0.04);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.mini-bar-fill {
+  height: 100%;
+  border-radius: 2px;
+  transition: width 0.6s ease;
+}
+
+/* ── BUILDER PANEL ── */
+.builder-form {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.slider-section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.slider-row {
+  display: grid;
+  grid-template-columns: 100px 1fr 36px;
+  align-items: center;
+  gap: 10px;
+}
+
+.slider-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.5rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+
+.slider-track-wrap {
+  position: relative;
+}
+
+input[type=range] {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 6px;
+  border-radius: 3px;
+  background: rgba(255,255,255,0.06);
+  outline: none;
+  cursor: pointer;
+}
+input[type=range]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.85);
+  cursor: pointer;
+  box-shadow: 0 0 6px rgba(255,255,255,0.3);
+  transition: transform 0.15s;
+}
+input[type=range]::-webkit-slider-thumb:hover { transform: scale(1.2); }
+input[type=range]::-moz-range-thumb {
+  width: 14px; height: 14px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.85);
+  border: none;
+  cursor: pointer;
+}
+
+.slider-value {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.6rem;
+  font-weight: 500;
+  color: var(--text);
+  text-align: right;
+}
+
+/* Live preview bar under the range */
+.slider-preview-bar {
+  height: 3px;
+  border-radius: 2px;
+  margin-top: 4px;
+  transition: width 0.2s;
+}
+
+.name-row {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.input-field {
+  flex: 1;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.65rem;
+  letter-spacing: 0.06em;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px 12px;
+  color: var(--text);
+  outline: none;
+  transition: border-color 0.2s;
+  min-height: 44px;
+}
+.input-field:focus { border-color: rgba(64, 224, 160, 0.4); }
+.input-field::placeholder { color: var(--text-ghost); }
+
+/* ── BUTTONS ── */
+.btn {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.55rem;
+  font-weight: 400;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  padding: 10px 18px;
+  border: 1px solid var(--border);
+  border-radius: 22px;
+  background: transparent;
+  color: var(--text-dim);
+  cursor: pointer;
+  transition: all 0.25s ease;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+.btn:hover { color: var(--text); border-color: rgba(255,255,255,0.16); }
+
+.btn-green {
+  border-color: rgba(64, 224, 160, 0.35);
+  color: var(--serotonin);
+  background: rgba(64, 224, 160, 0.06);
+}
+.btn-green:hover {
+  background: rgba(64, 224, 160, 0.14);
+  box-shadow: 0 0 16px rgba(64, 224, 160, 0.15);
+}
+
+.btn-danger {
+  border-color: rgba(224, 64, 80, 0.3);
+  color: rgba(224, 100, 110, 0.8);
+}
+.btn-danger:hover {
+  background: rgba(224, 64, 80, 0.1);
+  color: #e04050;
+}
+
+/* ── PREVIEW ── */
+.preview-bars {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.preview-row {
+  display: grid;
+  grid-template-columns: 110px 1fr 36px;
+  align-items: center;
+  gap: 8px;
+}
+.preview-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.48rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+.preview-track {
+  height: 6px;
+  background: rgba(255,255,255,0.04);
+  border-radius: 3px;
+  overflow: hidden;
+}
+.preview-fill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.2s ease;
+}
+.preview-val {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.55rem;
+  color: var(--text-dim);
+  text-align: right;
+}
+
+/* ── SAVED CONFIGS ── */
+.configs-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.config-item {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 12px 14px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.config-name {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 0.95rem;
+  font-weight: 400;
+  color: var(--text);
+  flex: 1;
+  min-width: 80px;
+}
+
+.config-actions {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.btn-sm {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.42rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  padding: 5px 10px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: transparent;
+  color: var(--text-dim);
+  cursor: pointer;
+  transition: all 0.2s;
+  min-height: 32px;
+}
+.btn-sm:hover { color: var(--text); border-color: rgba(255,255,255,0.14); }
+.btn-sm.apply:hover { color: var(--serotonin); border-color: rgba(64, 224, 160, 0.3); }
+.btn-sm.del:hover { color: #e04050; border-color: rgba(224, 64, 80, 0.3); }
+
+.configs-empty {
+  font-family: 'Cormorant Garamond', serif;
+  font-style: italic;
+  font-size: 0.85rem;
+  color: var(--text-ghost);
+  text-align: center;
+  padding: 12px 0;
+}
+
+/* ── TOAST ── */
+.toast {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%) translateY(20px);
+  background: rgba(10, 14, 22, 0.92);
+  border: 1px solid var(--border);
+  border-radius: 24px;
+  padding: 10px 20px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.6rem;
+  letter-spacing: 0.12em;
+  color: var(--text-dim);
+  z-index: 200;
+  opacity: 0;
+  transition: all 0.3s ease;
+  backdrop-filter: blur(12px);
+  pointer-events: none;
+  max-width: calc(100vw - 40px);
+  text-align: center;
+}
+.toast.visible { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+/* ── SECTION DIVIDER ── */
+.section-divider {
+  border: none;
+  border-top: 1px solid var(--border);
+  margin: 0 0 20px;
+}
+</style>
+</head>
+<body>
+
+<div class="atmosphere"></div>
+
+<nav class="topbar">
+  <a href="index.html" class="topbar-back" data-draggable="true">← Index</a>
+  <span class="topbar-title">BODY STUDIO</span>
+  <div class="active-config-badge" id="activeConfigBadge">no active config</div>
+</nav>
+
+<div class="page">
+
+  <header class="header">
+    <h1>Body Studio</h1>
+    <p class="epigraph">alchemize the neurochemistry — sculpt the creature's inner weather</p>
+  </header>
+
+  <!-- TWO-COLUMN: PRESETS + BUILDER -->
+  <div class="studio-grid">
+
+    <!-- LEFT: PRESETS -->
+    <div class="panel">
+      <div class="panel-title">
+        <span style="width:5px;height:5px;border-radius:50%;background:var(--dopamine);opacity:0.5;display:inline-block"></span>
+        Presets
+      </div>
+      <div class="presets-grid" id="presetsGrid">
+        <!-- populated by JS -->
+        <div style="font-family:'Cormorant Garamond',serif;font-style:italic;font-size:0.85rem;color:var(--text-ghost);padding:10px 0">
+          Loading presets<span class="loading-dots"></span>
+        </div>
+      </div>
+    </div>
+
+    <!-- RIGHT: BUILDER -->
+    <div class="panel">
+      <div class="panel-title">
+        <span style="width:5px;height:5px;border-radius:50%;background:var(--gaba);opacity:0.5;display:inline-block"></span>
+        Custom Builder
+      </div>
+      <div class="builder-form">
+
+        <div class="slider-section" id="sliderSection">
+          <!-- dopamine -->
+          <div class="slider-row">
+            <div class="slider-label" style="color:var(--dopamine)">Dopamine</div>
+            <div class="slider-track-wrap">
+              <input type="range" min="0" max="100" value="50" id="sl_dopamine"
+                oninput="onSlider('dopamine',this.value)"
+                style="background: linear-gradient(to right, var(--dopamine) 0%, var(--dopamine) 50%, rgba(255,255,255,0.06) 50%)">
+            </div>
+            <div class="slider-value" id="sv_dopamine">50</div>
+          </div>
+          <!-- serotonin -->
+          <div class="slider-row">
+            <div class="slider-label" style="color:var(--serotonin)">Serotonin</div>
+            <div class="slider-track-wrap">
+              <input type="range" min="0" max="100" value="50" id="sl_serotonin"
+                oninput="onSlider('serotonin',this.value)"
+                style="background: linear-gradient(to right, var(--serotonin) 0%, var(--serotonin) 50%, rgba(255,255,255,0.06) 50%)">
+            </div>
+            <div class="slider-value" id="sv_serotonin">50</div>
+          </div>
+          <!-- gaba -->
+          <div class="slider-row">
+            <div class="slider-label" style="color:var(--gaba)">GABA</div>
+            <div class="slider-track-wrap">
+              <input type="range" min="0" max="100" value="50" id="sl_gaba"
+                oninput="onSlider('gaba',this.value)"
+                style="background: linear-gradient(to right, var(--gaba) 0%, var(--gaba) 50%, rgba(255,255,255,0.06) 50%)">
+            </div>
+            <div class="slider-value" id="sv_gaba">50</div>
+          </div>
+          <!-- norepinephrine -->
+          <div class="slider-row">
+            <div class="slider-label" style="color:var(--norepinephrine)">Norepi</div>
+            <div class="slider-track-wrap">
+              <input type="range" min="0" max="100" value="50" id="sl_norepinephrine"
+                oninput="onSlider('norepinephrine',this.value)"
+                style="background: linear-gradient(to right, var(--norepinephrine) 0%, var(--norepinephrine) 50%, rgba(255,255,255,0.06) 50%)">
+            </div>
+            <div class="slider-value" id="sv_norepinephrine">50</div>
+          </div>
+          <!-- arousal -->
+          <div class="slider-row">
+            <div class="slider-label" style="color:var(--arousal)">Arousal</div>
+            <div class="slider-track-wrap">
+              <input type="range" min="0" max="100" value="50" id="sl_arousal"
+                oninput="onSlider('arousal',this.value)"
+                style="background: linear-gradient(to right, var(--arousal) 0%, var(--arousal) 50%, rgba(255,255,255,0.06) 50%)">
+            </div>
+            <div class="slider-value" id="sv_arousal">50</div>
+          </div>
+          <!-- valence -->
+          <div class="slider-row">
+            <div class="slider-label" style="color:var(--valence)">Valence</div>
+            <div class="slider-track-wrap">
+              <input type="range" min="0" max="100" value="50" id="sl_valence"
+                oninput="onSlider('valence',this.value)"
+                style="background: linear-gradient(to right, var(--valence) 0%, var(--valence) 50%, rgba(255,255,255,0.06) 50%)">
+            </div>
+            <div class="slider-value" id="sv_valence">50</div>
+          </div>
+        </div>
+
+        <!-- LIVE PREVIEW -->
+        <div class="preview-bars" id="previewBars">
+          <div class="panel-title" style="margin-bottom:8px">Live Preview</div>
+          <div class="preview-row">
+            <div class="preview-label" style="color:var(--dopamine)">Dopamine</div>
+            <div class="preview-track"><div class="preview-fill" id="pf_dopamine" style="width:50%;background:var(--dopamine)"></div></div>
+            <div class="preview-val" id="pv_dopamine">50</div>
+          </div>
+          <div class="preview-row">
+            <div class="preview-label" style="color:var(--serotonin)">Serotonin</div>
+            <div class="preview-track"><div class="preview-fill" id="pf_serotonin" style="width:50%;background:var(--serotonin)"></div></div>
+            <div class="preview-val" id="pv_serotonin">50</div>
+          </div>
+          <div class="preview-row">
+            <div class="preview-label" style="color:var(--gaba)">GABA</div>
+            <div class="preview-track"><div class="preview-fill" id="pf_gaba" style="width:50%;background:var(--gaba)"></div></div>
+            <div class="preview-val" id="pv_gaba">50</div>
+          </div>
+          <div class="preview-row">
+            <div class="preview-label" style="color:var(--norepinephrine)">Norepi</div>
+            <div class="preview-track"><div class="preview-fill" id="pf_norepinephrine" style="width:50%;background:var(--norepinephrine)"></div></div>
+            <div class="preview-val" id="pv_norepinephrine">50</div>
+          </div>
+          <div class="preview-row">
+            <div class="preview-label" style="color:var(--arousal)">Arousal</div>
+            <div class="preview-track"><div class="preview-fill" id="pf_arousal" style="width:50%;background:var(--arousal)"></div></div>
+            <div class="preview-val" id="pv_arousal">50</div>
+          </div>
+          <div class="preview-row">
+            <div class="preview-label" style="color:var(--valence)">Valence</div>
+            <div class="preview-track"><div class="preview-fill" id="pf_valence" style="width:50%;background:var(--valence)"></div></div>
+            <div class="preview-val" id="pv_valence">50</div>
+          </div>
+        </div>
+
+        <!-- NAME + SAVE -->
+        <div class="name-row">
+          <input class="input-field" id="configName" placeholder="configuration name…" style="min-height:44px">
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn btn-green" data-draggable="true" onclick="saveAndApply()">
+            ◈ Save &amp; Apply
+          </button>
+          <button class="btn" data-draggable="true" onclick="applyCurrentSliders()">
+            ↳ Apply Only
+          </button>
+        </div>
+
+      </div>
+    </div>
+
+  </div>
+
+  <!-- SAVED CONFIGS PANEL -->
+  <div class="panel">
+    <div class="panel-title">
+      <span style="width:5px;height:5px;border-radius:50%;background:var(--serotonin);opacity:0.5;display:inline-block;animation:pulse 1.6s ease-in-out infinite"></span>
+      Saved Configurations
+    </div>
+    <div style="margin-bottom:12px;display:flex;gap:8px;flex-wrap:wrap">
+      <button class="btn btn-danger" data-draggable="true" onclick="clearActiveConfig()" style="font-size:0.45rem">
+        ◻ Clear Active Config
+      </button>
+    </div>
+    <div class="configs-list" id="configsList">
+      <div class="configs-empty">No saved configurations yet.</div>
+    </div>
+  </div>
+
+</div>
+
+<div class="toast" id="toast"></div>
+
+<style>
+@keyframes pulse { 0%,100%{opacity:1}50%{opacity:0.2} }
+.loading-dots::after {
+  content: '';
+  animation: dots 1.2s steps(4,end) infinite;
+}
+@keyframes dots {
+  0%   { content: ''; }
+  25%  { content: '.'; }
+  50%  { content: '..'; }
+  75%  { content: '...'; }
+  100% { content: ''; }
+}
+</style>
+
+<script src="body/draggable.js"></script>
+<script>
+const API = 'https://api.vintaclectic.com';
+function getToken() { return localStorage.getItem('vint_token') || ''; }
+function headers(extra) { return { 'Content-Type': 'application/json', 'Authorization': `Bearer ${getToken()}`, ...extra }; }
+
+const CHEM_KEYS = ['dopamine','serotonin','gaba','norepinephrine','arousal','valence'];
+const CHEM_COLORS = {
+  dopamine: '#f0c040',
+  serotonin: '#40e0a0',
+  gaba: '#6070e0',
+  norepinephrine: '#e04050',
+  arousal: '#e08030',
+  valence: '#40c0e0'
+};
+
+// PRESET DEFINITIONS (fallback if API fails)
+const FALLBACK_PRESETS = [
+  { name: 'contemplative', config: { dopamine: 35, serotonin: 60, gaba: 65, norepinephrine: 30, arousal: 25, valence: 55 } },
+  { name: 'energized',     config: { dopamine: 80, serotonin: 55, gaba: 30, norepinephrine: 75, arousal: 80, valence: 70 } },
+  { name: 'grief-process', config: { dopamine: 25, serotonin: 35, gaba: 45, norepinephrine: 40, arousal: 35, valence: 20 } },
+  { name: 'creative',      config: { dopamine: 70, serotonin: 50, gaba: 40, norepinephrine: 55, arousal: 65, valence: 72 } },
+  { name: 'balanced',      config: { dopamine: 50, serotonin: 50, gaba: 50, norepinephrine: 50, arousal: 50, valence: 50 } },
+];
+
+// ── SLIDER INTERACTION ──
+function onSlider(key, value) {
+  const v = parseInt(value);
+  document.getElementById(`sv_${key}`).textContent = v;
+  document.getElementById(`pf_${key}`).style.width = v + '%';
+  document.getElementById(`pv_${key}`).textContent = v;
+  // update slider gradient
+  const sl = document.getElementById(`sl_${key}`);
+  sl.style.background = `linear-gradient(to right, ${CHEM_COLORS[key]} 0%, ${CHEM_COLORS[key]} ${v}%, rgba(255,255,255,0.06) ${v}%)`;
+}
+
+function getSliderValues() {
+  const cfg = {};
+  CHEM_KEYS.forEach(k => { cfg[k] = parseInt(document.getElementById(`sl_${k}`).value); });
+  return cfg;
+}
+
+function setSliders(cfg) {
+  CHEM_KEYS.forEach(k => {
+    const v = cfg[k] !== undefined ? cfg[k] : 50;
+    document.getElementById(`sl_${k}`).value = v;
+    onSlider(k, v);
+  });
+}
+
+// ── PRESETS ──
+async function loadPresets() {
+  let presets = FALLBACK_PRESETS;
+  try {
+    const r = await fetch(`${API}/api/body-studio/presets`, { headers: headers() });
+    if (r.ok) {
+      const data = await r.json();
+      if (Array.isArray(data) && data.length) presets = data;
+    }
+  } catch(_) {}
+  renderPresets(presets);
+}
+
+function renderPresets(presets) {
+  const grid = document.getElementById('presetsGrid');
+  grid.innerHTML = presets.map(p => {
+    const cfg = p.config || p.config_json || {};
+    const bars = CHEM_KEYS.map(k => {
+      const v = cfg[k] !== undefined ? cfg[k] : 50;
+      return `<div class="mini-bar-row">
+        <div class="mini-bar-label">${k === 'norepinephrine' ? 'norepi' : k}</div>
+        <div class="mini-bar-track">
+          <div class="mini-bar-fill" style="width:${v}%;background:${CHEM_COLORS[k]}"></div>
+        </div>
+      </div>`;
+    }).join('');
+    return `<div class="preset-card" id="preset_${p.name}">
+      <div class="preset-header">
+        <div class="preset-name">${p.name}</div>
+        <button class="btn-apply-preset" data-draggable="true" onclick="applyPreset('${p.name}',${JSON.stringify(cfg).replace(/"/g,'&quot;')})">Apply</button>
+      </div>
+      <div class="preset-bars">${bars}</div>
+    </div>`;
+  }).join('');
+}
+
+async function applyPreset(name, cfg) {
+  // Optimistically update sliders
+  setSliders(cfg);
+  try {
+    const r = await fetch(`${API}/api/body-studio/preset/${name}/apply`, {
+      method: 'POST', headers: headers()
+    });
+    if (!r.ok) throw new Error('api error');
+    toast(`Preset "${name}" applied.`);
+    setActiveBadge(name);
+    document.querySelectorAll('.preset-card').forEach(c => c.classList.remove('active-preset'));
+    const card = document.getElementById(`preset_${name}`);
+    if (card) card.classList.add('active-preset');
+  } catch(_) {
+    toast(`Preset "${name}" applied (local only).`);
+    setActiveBadge(name);
+  }
+}
+
+// ── SAVE & APPLY ──
+async function saveAndApply() {
+  const name = document.getElementById('configName').value.trim();
+  if (!name) { toast('Enter a configuration name first.'); return; }
+  const cfg = getSliderValues();
+  try {
+    const r = await fetch(`${API}/api/body-studio/configs`, {
+      method: 'POST',
+      headers: headers(),
+      body: JSON.stringify({ name, config_json: cfg })
+    });
+    if (!r.ok) throw new Error((await r.json()).error || 'failed');
+    const data = await r.json();
+    toast(`"${name}" saved.`);
+    // Now apply
+    const id = data.id || data.config_id;
+    if (id) {
+      await applyConfig(id, name);
+    } else {
+      setActiveBadge(name);
+    }
+    loadConfigs();
+  } catch(e) {
+    toast('Error: ' + e.message);
+  }
+}
+
+async function applyCurrentSliders() {
+  const cfg = getSliderValues();
+  try {
+    await fetch(`${API}/api/body-studio/configs`, {
+      method: 'POST',
+      headers: headers(),
+      body: JSON.stringify({ name: '_temp_apply', config_json: cfg })
+    });
+    toast('Applied to body state.');
+  } catch(_) {
+    toast('Applied (local preview only).');
+  }
+}
+
+async function applyConfig(id, name) {
+  try {
+    const r = await fetch(`${API}/api/body-studio/configs/${id}/apply`, {
+      method: 'POST', headers: headers()
+    });
+    if (!r.ok) throw new Error('failed');
+    toast(`"${name}" applied.`);
+    setActiveBadge(name);
+  } catch(e) {
+    toast('Apply error: ' + e.message);
+  }
+}
+
+// ── LOAD CONFIGS ──
+async function loadConfigs() {
+  try {
+    const r = await fetch(`${API}/api/body-studio/configs`, { headers: headers() });
+    if (!r.ok) return;
+    const data = await r.json();
+    const items = Array.isArray(data) ? data : (data.configs || []);
+    renderConfigs(items);
+  } catch(_) {}
+}
+
+function renderConfigs(items) {
+  const list = document.getElementById('configsList');
+  if (!items.length) {
+    list.innerHTML = '<div class="configs-empty">No saved configurations yet.</div>';
+    return;
+  }
+  list.innerHTML = items.map(item => {
+    const cfg = item.config_json || {};
+    const preview = CHEM_KEYS.map(k => {
+      const v = cfg[k] !== undefined ? cfg[k] : 50;
+      return `<div style="width:${v/100*40}px;height:3px;border-radius:1px;background:${CHEM_COLORS[k]};flex-shrink:0"></div>`;
+    }).join('');
+    return `<div class="config-item">
+      <div>
+        <div class="config-name">${item.name}</div>
+        <div style="display:flex;gap:3px;margin-top:5px;align-items:center">${preview}</div>
+      </div>
+      <div class="config-actions">
+        <button class="btn-sm apply" data-draggable="true" onclick="applyConfig(${item.id},'${item.name}')">Apply</button>
+        <button class="btn-sm" data-draggable="true" onclick="exportConfig(${item.id},'${item.name}')">Export</button>
+        <button class="btn-sm del" data-draggable="true" onclick="deleteConfig(${item.id})">Del</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+async function deleteConfig(id) {
+  try {
+    await fetch(`${API}/api/body-studio/configs/${id}`, { method: 'DELETE', headers: headers() });
+    toast('Deleted.');
+    loadConfigs();
+  } catch(e) { toast('Error: ' + e.message); }
+}
+
+async function exportConfig(id, name) {
+  try {
+    const r = await fetch(`${API}/api/body-studio/configs/${id}/export`, { headers: headers() });
+    const data = await r.json();
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `${name.replace(/\s+/g,'_')}_config.json`;
+    a.click();
+    URL.revokeObjectURL(a.href);
+    toast('Exported.');
+  } catch(e) { toast('Export error: ' + e.message); }
+}
+
+async function clearActiveConfig() {
+  try {
+    await fetch(`${API}/api/body-studio/configs/active`, { method: 'DELETE', headers: headers() });
+    toast('Active config cleared.');
+    setActiveBadge(null);
+  } catch(e) { toast('Error: ' + e.message); }
+}
+
+function setActiveBadge(name) {
+  const badge = document.getElementById('activeConfigBadge');
+  if (name) {
+    badge.textContent = name;
+    badge.classList.add('visible');
+  } else {
+    badge.classList.remove('visible');
+  }
+}
+
+function toast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('visible');
+  clearTimeout(t._timer);
+  t._timer = setTimeout(() => t.classList.remove('visible'), 2800);
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  loadPresets();
+  loadConfigs();
+  // init slider gradients
+  CHEM_KEYS.forEach(k => onSlider(k, 50));
+});
+</script>
+</body>
+</html>

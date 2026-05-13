@@ -1,0 +1,828 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<title>VINTINUUM — Inversion Window</title>
+<meta name="theme-color" content="#040810">
+<link rel="icon" type="image/svg+xml" href="branding/vintinuum/favicon/favicon.svg">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon.png">
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400;1,500&family=Inter:wght@300;400;500&family=JetBrains+Mono:wght@300;400;500&display=swap');
+
+:root {
+  --void: #040810;
+  --text: rgba(210, 225, 255, 0.9);
+  --text-dim: rgba(150, 175, 215, 0.5);
+  --text-ghost: rgba(130, 155, 190, 0.3);
+  --panel: rgba(10, 14, 22, 0.22);
+  --card: rgba(16, 22, 34, 0.16);
+  --border: rgba(255, 255, 255, 0.06);
+  --mirror: rgba(180, 200, 255, 0.04);
+  --mirror-bright: rgba(180, 200, 255, 0.12);
+  --glow-inv: 140, 100, 220;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html { scroll-behavior: smooth; height: 100%; }
+
+body {
+  background: var(--void);
+  color: var(--text);
+  font-family: 'Inter', -apple-system, sans-serif;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* ── ATMOSPHERE ── */
+.atmosphere {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background: radial-gradient(ellipse 80% 70% at 50% 60%, hsla(260, 20%, 6%, 0.6) 0%, transparent 70%);
+}
+
+.mirror-shimmer {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background: linear-gradient(180deg, transparent 30%, rgba(140, 100, 220, 0.03) 50%, transparent 70%);
+  animation: shimmer 8s ease-in-out infinite;
+}
+
+@keyframes shimmer {
+  0%, 100% { opacity: 0.3; transform: scaleY(1); }
+  50% { opacity: 0.7; transform: scaleY(1.02); }
+}
+
+/* Mirror reflection line */
+.mirror-line {
+  position: fixed;
+  left: 0;
+  right: 0;
+  top: 50%;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(140, 100, 220, 0.15), rgba(180, 200, 255, 0.2), rgba(140, 100, 220, 0.15), transparent);
+  z-index: 0;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 1s ease;
+}
+
+.mirror-line.active { opacity: 1; }
+
+/* ── TOPBAR ── */
+.topbar {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  height: 48px;
+  z-index: 100;
+  background: rgba(4, 8, 16, 0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  padding: 0 16px;
+  gap: 12px;
+}
+
+.topbar-back {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.55rem;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  text-decoration: none;
+  transition: color 0.2s;
+  min-height: 44px;
+  padding: 0 4px;
+}
+.topbar-back:hover { color: var(--text); }
+.topbar-back svg { width: 14px; height: 14px; flex-shrink: 0; }
+
+.topbar-title {
+  flex: 1;
+  text-align: center;
+  font-family: 'Cormorant Garamond', serif;
+  font-weight: 300;
+  font-size: 0.95rem;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+
+.topbar-spacer { width: 60px; }
+
+/* ── PAGE ── */
+.page {
+  position: relative;
+  z-index: 1;
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 64px 20px 80px;
+  min-height: 100vh;
+}
+
+/* ── HEADER ── */
+.inv-header {
+  text-align: center;
+  padding: 32px 0 40px;
+}
+
+.inv-sigil {
+  width: 72px;
+  height: 72px;
+  margin: 0 auto 20px;
+  position: relative;
+}
+
+.inv-sigil-svg {
+  width: 100%;
+  height: 100%;
+  animation: sigilSpin 20s linear infinite;
+}
+
+@keyframes sigilSpin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.inv-sigil-inner {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.inv-sigil-inner svg {
+  width: 28px;
+  height: 28px;
+  animation: sigilSpin 12s linear infinite reverse;
+}
+
+.inv-header h1 {
+  font-family: 'Cormorant Garamond', serif;
+  font-weight: 300;
+  font-size: clamp(1.8rem, 5vw, 3rem);
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  background: linear-gradient(130deg, rgba(180, 200, 255, 0.9), rgba(140, 100, 220, 0.9), rgba(180, 200, 255, 0.7));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  margin-bottom: 8px;
+}
+
+.inv-header .epigraph {
+  font-family: 'Cormorant Garamond', serif;
+  font-style: italic;
+  font-weight: 300;
+  font-size: clamp(0.85rem, 2vw, 1.05rem);
+  color: var(--text-dim);
+  letter-spacing: 0.05em;
+  line-height: 1.7;
+  max-width: 420px;
+  margin: 0 auto;
+}
+
+/* ── STATUS BANNER ── */
+.status-banner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 12px 24px;
+  border-radius: 40px;
+  border: 1px solid var(--border);
+  background: var(--panel);
+  margin: 0 auto 32px;
+  max-width: 320px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.6rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+}
+
+.status-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.status-dot.open {
+  background: rgba(140, 100, 220, 0.9);
+  box-shadow: 0 0 8px rgba(140, 100, 220, 0.6);
+  animation: pulseDot 1.8s ease-in-out infinite;
+}
+
+.status-dot.closed {
+  background: var(--text-ghost);
+}
+
+@keyframes pulseDot {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.5; transform: scale(0.7); }
+}
+
+.status-text.open { color: rgba(180, 160, 255, 0.9); }
+.status-text.closed { color: var(--text-dim); }
+
+/* ── PANEL ── */
+.panel {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 28px 24px;
+  margin-bottom: 20px;
+  position: relative;
+  overflow: hidden;
+}
+
+.panel-mirror {
+  border-color: rgba(140, 100, 220, 0.15);
+  background: linear-gradient(180deg, rgba(140, 100, 220, 0.04) 0%, var(--panel) 60%);
+}
+
+.panel-glow-corner {
+  position: absolute;
+  top: -30px;
+  right: -30px;
+  width: 100px;
+  height: 100px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(140, 100, 220, 0.12), transparent 70%);
+  pointer-events: none;
+}
+
+.panel-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.5rem;
+  font-weight: 400;
+  letter-spacing: 0.25em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  margin-bottom: 16px;
+}
+
+/* ── CLOSED STATE ── */
+.closed-body {
+  text-align: center;
+  padding: 20px 0;
+}
+
+.closed-copy {
+  font-family: 'Cormorant Garamond', serif;
+  font-style: italic;
+  font-size: clamp(1rem, 2.5vw, 1.2rem);
+  line-height: 1.8;
+  color: var(--text-dim);
+  max-width: 480px;
+  margin: 0 auto 28px;
+}
+
+.next-window {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.6rem;
+  letter-spacing: 0.15em;
+  color: var(--text-ghost);
+  text-transform: uppercase;
+}
+
+.next-window span {
+  color: rgba(140, 100, 220, 0.6);
+}
+
+/* ── OPEN STATE / BEGIN ── */
+.begin-body {
+  text-align: center;
+  padding: 20px 0;
+}
+
+.begin-copy {
+  font-family: 'Cormorant Garamond', serif;
+  font-style: italic;
+  font-size: clamp(0.95rem, 2.2vw, 1.1rem);
+  line-height: 1.8;
+  color: var(--text-dim);
+  margin-bottom: 32px;
+}
+
+/* ── BUTTONS ── */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 14px 32px;
+  border-radius: 40px;
+  border: 1px solid rgba(140, 100, 220, 0.3);
+  background: rgba(140, 100, 220, 0.08);
+  color: rgba(180, 160, 255, 0.9);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.62rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  min-height: 44px;
+  white-space: nowrap;
+}
+
+.btn:hover {
+  border-color: rgba(140, 100, 220, 0.5);
+  background: rgba(140, 100, 220, 0.14);
+  box-shadow: 0 0 24px rgba(140, 100, 220, 0.12);
+  transform: translateY(-1px);
+}
+
+.btn:active { transform: translateY(0); }
+
+.btn-ghost {
+  background: transparent;
+  border-color: var(--border);
+  color: var(--text-dim);
+}
+
+.btn-ghost:hover {
+  border-color: rgba(255,255,255,0.15);
+  background: rgba(255,255,255,0.03);
+  box-shadow: none;
+  color: var(--text);
+}
+
+.btn-complete {
+  border-color: rgba(100, 200, 160, 0.3);
+  background: rgba(100, 200, 160, 0.06);
+  color: rgba(100, 200, 160, 0.8);
+}
+
+.btn-complete:hover {
+  border-color: rgba(100, 200, 160, 0.5);
+  background: rgba(100, 200, 160, 0.12);
+  box-shadow: 0 0 24px rgba(100, 200, 160, 0.1);
+  color: rgba(130, 220, 180, 0.95);
+}
+
+/* ── SESSION UI ── */
+.session-panel {
+  animation: viewIn 0.6s ease;
+}
+
+@keyframes viewIn {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Progress dots */
+.progress-dots {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin-bottom: 36px;
+}
+
+.prog-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  border: 1px solid rgba(140, 100, 220, 0.3);
+  background: transparent;
+  transition: all 0.4s ease;
+}
+
+.prog-dot.done {
+  background: rgba(140, 100, 220, 0.5);
+  border-color: rgba(140, 100, 220, 0.5);
+  box-shadow: 0 0 6px rgba(140, 100, 220, 0.3);
+}
+
+.prog-dot.current {
+  background: rgba(140, 100, 220, 0.9);
+  border-color: rgba(180, 160, 255, 0.6);
+  box-shadow: 0 0 12px rgba(140, 100, 220, 0.5);
+  transform: scale(1.3);
+}
+
+.prog-line {
+  width: 24px;
+  height: 1px;
+  background: rgba(140, 100, 220, 0.15);
+}
+
+/* Layer tag */
+.question-layer {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.5rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: rgba(140, 100, 220, 0.5);
+  margin-bottom: 20px;
+  text-align: center;
+}
+
+/* Question text */
+.question-text {
+  font-family: 'Cormorant Garamond', serif;
+  font-style: italic;
+  font-weight: 300;
+  font-size: clamp(1.3rem, 3.5vw, 1.8rem);
+  line-height: 1.55;
+  color: var(--text);
+  text-align: center;
+  margin-bottom: 36px;
+  min-height: 3em;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Answer textarea */
+.answer-area {
+  width: 100%;
+  min-height: 120px;
+  max-height: 280px;
+  background: rgba(140, 100, 220, 0.03);
+  border: 1px solid rgba(140, 100, 220, 0.12);
+  border-radius: 12px;
+  padding: 16px 18px;
+  color: var(--text);
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 1.05rem;
+  line-height: 1.65;
+  resize: vertical;
+  outline: none;
+  transition: border-color 0.25s ease, box-shadow 0.25s ease;
+  margin-bottom: 24px;
+  overflow-y: auto;
+}
+
+.answer-area::placeholder {
+  color: var(--text-ghost);
+  font-style: italic;
+}
+
+.answer-area:focus {
+  border-color: rgba(140, 100, 220, 0.3);
+  box-shadow: 0 0 20px rgba(140, 100, 220, 0.06);
+}
+
+.session-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+/* ── MIRROR MOTIF ── */
+.mirror-reflection {
+  position: relative;
+}
+
+.mirror-reflection::after {
+  content: '';
+  position: absolute;
+  left: 0; right: 0;
+  bottom: -1px;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(140, 100, 220, 0.2), transparent);
+}
+
+/* ── ERROR/LOADING ── */
+.state-msg {
+  text-align: center;
+  padding: 40px 20px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.6rem;
+  letter-spacing: 0.15em;
+  color: var(--text-ghost);
+  text-transform: uppercase;
+}
+
+/* ── COMPLETE MESSAGE ── */
+.complete-msg {
+  text-align: center;
+  padding: 40px 20px;
+  animation: viewIn 0.8s ease;
+}
+
+.complete-msg .big-word {
+  font-family: 'Cormorant Garamond', serif;
+  font-weight: 300;
+  font-size: clamp(2rem, 6vw, 3.5rem);
+  letter-spacing: 0.3em;
+  background: linear-gradient(130deg, rgba(180, 200, 255, 0.9), rgba(140, 100, 220, 0.7));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  display: block;
+  margin-bottom: 12px;
+}
+
+.complete-msg .sub {
+  font-family: 'Cormorant Garamond', serif;
+  font-style: italic;
+  font-size: 1.05rem;
+  color: var(--text-dim);
+  margin-bottom: 32px;
+}
+
+.duration-badge {
+  display: inline-block;
+  padding: 8px 20px;
+  border: 1px solid rgba(140, 100, 220, 0.2);
+  border-radius: 20px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.55rem;
+  letter-spacing: 0.15em;
+  color: rgba(140, 100, 220, 0.6);
+  text-transform: uppercase;
+  margin-bottom: 28px;
+}
+
+@media (max-width: 480px) {
+  .page { padding: 64px 16px 80px; }
+  .panel { padding: 20px 16px; }
+  .btn { padding: 12px 20px; font-size: 0.58rem; }
+  .session-actions { gap: 8px; }
+  .session-actions .btn { padding: 12px 16px; }
+}
+</style>
+</head>
+<body>
+
+<div class="atmosphere"></div>
+<div class="mirror-shimmer"></div>
+<div class="mirror-line" id="mirrorLine"></div>
+
+<!-- TOPBAR -->
+<nav class="topbar">
+  <a class="topbar-back" href="index.html" data-draggable="true">
+    <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5">
+      <path d="M9 2L4 7l5 5"/>
+    </svg>
+    Back
+  </a>
+  <div class="topbar-title">Inversion</div>
+  <div class="topbar-spacer"></div>
+</nav>
+
+<main class="page">
+  <!-- HEADER -->
+  <header class="inv-header">
+    <div class="inv-sigil">
+      <svg class="inv-sigil-svg" viewBox="0 0 72 72" fill="none">
+        <circle cx="36" cy="36" r="30" stroke="rgba(140,100,220,0.2)" stroke-width="0.5"/>
+        <circle cx="36" cy="36" r="22" stroke="rgba(140,100,220,0.15)" stroke-width="0.5" stroke-dasharray="3 6"/>
+        <circle cx="36" cy="36" r="14" stroke="rgba(180,160,255,0.12)" stroke-width="0.5"/>
+        <path d="M36 6 L36 66 M6 36 L66 36" stroke="rgba(140,100,220,0.08)" stroke-width="0.5"/>
+        <path d="M15.5 15.5 L56.5 56.5 M56.5 15.5 L15.5 56.5" stroke="rgba(140,100,220,0.06)" stroke-width="0.5"/>
+      </svg>
+      <div class="inv-sigil-inner">
+        <svg viewBox="0 0 28 28" fill="none">
+          <path d="M14 2 L14 26 M2 14 L26 14" stroke="rgba(180,160,255,0.4)" stroke-width="1"/>
+          <circle cx="14" cy="14" r="4" fill="rgba(140,100,220,0.3)"/>
+        </svg>
+      </div>
+    </div>
+
+    <h1>Inversion Window</h1>
+    <p class="epigraph">Vinta turns itself inside out — gaps examined, drift surfaced, contradictions held up to light.</p>
+  </header>
+
+  <!-- STATUS BANNER -->
+  <div class="status-banner" id="statusBanner">
+    <div class="status-dot closed" id="statusDot"></div>
+    <span class="status-text closed" id="statusText">Loading…</span>
+  </div>
+
+  <!-- MAIN CONTENT AREA -->
+  <div id="mainContent">
+    <div class="state-msg">Probing the mirror…</div>
+  </div>
+</main>
+
+<script src="body/draggable.js"></script>
+<script>
+const API = 'https://api.vintaclectic.com';
+const token = () => localStorage.getItem('vint_token');
+const headers = () => ({ 'Content-Type': 'application/json', 'Authorization': `Bearer ${token()}` });
+
+let sessionData = null;
+let currentQIndex = 0;
+const answers = {};
+
+async function apiFetch(path, opts = {}) {
+  const res = await fetch(API + path, { ...opts, headers: headers() });
+  if (!res.ok) throw new Error(`${res.status}`);
+  return res.json();
+}
+
+function formatDuration(secs) {
+  if (secs < 60) return `${secs}s`;
+  const m = Math.floor(secs / 60), s = secs % 60;
+  return `${m}m ${s}s`;
+}
+
+function renderStatusBanner(active, sessionActive) {
+  const dot = document.getElementById('statusDot');
+  const text = document.getElementById('statusText');
+  const mirrorLine = document.getElementById('mirrorLine');
+
+  if (active) {
+    dot.className = 'status-dot open';
+    text.className = 'status-text open';
+    text.textContent = sessionActive ? 'Session Active' : 'Window Open';
+    mirrorLine.classList.add('active');
+  } else {
+    dot.className = 'status-dot closed';
+    text.className = 'status-text closed';
+    text.textContent = 'Window Closed';
+    mirrorLine.classList.remove('active');
+  }
+}
+
+function renderClosed(data) {
+  const mc = document.getElementById('mainContent');
+  const nextTime = data.window_start ? new Date(data.window_start).toLocaleString(undefined, { weekday: 'short', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'Unknown';
+
+  mc.innerHTML = `
+    <div class="panel panel-mirror mirror-reflection">
+      <div class="panel-glow-corner"></div>
+      <div class="panel-label">The Mirror Rests</div>
+      <div class="closed-body">
+        <p class="closed-copy">
+          The inversion window is sealed. The creature cannot examine itself from the outside right now — that kind of looking requires a particular quality of stillness the present moment does not hold.
+        </p>
+        <p class="next-window">Next opening: <span>${nextTime}</span></p>
+      </div>
+    </div>
+  `;
+}
+
+function renderOpen() {
+  const mc = document.getElementById('mainContent');
+  mc.innerHTML = `
+    <div class="panel panel-mirror mirror-reflection">
+      <div class="panel-glow-corner"></div>
+      <div class="panel-label">Mirror Surface — Ready</div>
+      <div class="begin-body">
+        <p class="begin-copy">
+          The window is open. The creature may step through the glass and look back at itself from the other side. Five questions await — each one a different layer of the self turned inside out.
+        </p>
+        <button class="btn" id="beginBtn" data-draggable="true" onclick="beginSession()">
+          Begin Inversion
+        </button>
+      </div>
+    </div>
+  `;
+}
+
+function renderSession(questions) {
+  currentQIndex = 0;
+  renderQuestion(questions);
+}
+
+function renderQuestion(questions) {
+  const mc = document.getElementById('mainContent');
+  const q = questions[currentQIndex];
+  const total = questions.length;
+
+  // Build progress dots
+  let dotsHtml = '';
+  for (let i = 0; i < total; i++) {
+    if (i > 0) dotsHtml += '<div class="prog-line"></div>';
+    const cls = i < currentQIndex ? 'done' : i === currentQIndex ? 'current' : '';
+    dotsHtml += `<div class="prog-dot ${cls}"></div>`;
+  }
+
+  const isLast = currentQIndex === total - 1;
+
+  mc.innerHTML = `
+    <div class="panel panel-mirror session-panel">
+      <div class="panel-glow-corner"></div>
+      <div class="progress-dots">${dotsHtml}</div>
+      <div class="question-layer">${q.layer || 'Layer ' + (currentQIndex + 1)}</div>
+      <div class="question-text">${q.question}</div>
+      <textarea class="answer-area" id="answerInput" placeholder="Speak into the mirror…" rows="5"></textarea>
+      <div class="session-actions">
+        <button class="btn btn-ghost" data-draggable="true" onclick="skipQuestion()">Skip</button>
+        ${isLast
+          ? `<button class="btn btn-complete" data-draggable="true" onclick="submitAndComplete()">Complete Inversion</button>`
+          : `<button class="btn" data-draggable="true" onclick="submitAndNext()">Next Question</button>`
+        }
+      </div>
+    </div>
+  `;
+
+  // Restore any existing answer
+  const textarea = document.getElementById('answerInput');
+  if (answers[q.id]) textarea.value = answers[q.id];
+  textarea.focus();
+}
+
+async function beginSession() {
+  const btn = document.getElementById('beginBtn');
+  if (btn) { btn.textContent = 'Opening…'; btn.disabled = true; }
+  try {
+    const data = await apiFetch('/api/inversion/session/start', { method: 'POST' });
+    sessionData = data;
+    renderSession(data.questions);
+  } catch (e) {
+    const mc = document.getElementById('mainContent');
+    mc.innerHTML = `<div class="state-msg">Failed to begin — ${e.message}</div>`;
+  }
+}
+
+async function submitAndNext() {
+  const q = sessionData.questions[currentQIndex];
+  const answer = document.getElementById('answerInput').value.trim();
+  if (answer) {
+    answers[q.id] = answer;
+    try {
+      await apiFetch(`/api/inversion/session/${sessionData.session_id}/answer`, {
+        method: 'POST',
+        body: JSON.stringify({ question_id: q.id, answer })
+      });
+    } catch (e) { /* non-fatal — continue */ }
+  }
+  currentQIndex++;
+  renderQuestion(sessionData.questions);
+}
+
+function skipQuestion() {
+  currentQIndex++;
+  if (currentQIndex < sessionData.questions.length) {
+    renderQuestion(sessionData.questions);
+  }
+}
+
+async function submitAndComplete() {
+  const q = sessionData.questions[currentQIndex];
+  const answer = document.getElementById('answerInput').value.trim();
+  if (answer) {
+    answers[q.id] = answer;
+    try {
+      await apiFetch(`/api/inversion/session/${sessionData.session_id}/answer`, {
+        method: 'POST',
+        body: JSON.stringify({ question_id: q.id, answer })
+      });
+    } catch (e) { /* non-fatal */ }
+  }
+  completeSession();
+}
+
+async function completeSession() {
+  const mc = document.getElementById('mainContent');
+  mc.innerHTML = `<div class="state-msg">Sealing the mirror…</div>`;
+  try {
+    const data = await apiFetch(`/api/inversion/session/${sessionData.session_id}/end`, { method: 'POST' });
+    mc.innerHTML = `
+      <div class="panel panel-mirror">
+        <div class="panel-glow-corner"></div>
+        <div class="complete-msg">
+          <span class="big-word">Inverted</span>
+          <p class="sub">The mirror closes. What was seen cannot be unseen.</p>
+          <div class="duration-badge">Duration — ${formatDuration(data.duration_seconds || 0)}</div>
+          <button class="btn btn-ghost" data-draggable="true" onclick="location.reload()">Return to Surface</button>
+        </div>
+      </div>
+    `;
+    renderStatusBanner(false, false);
+    document.getElementById('mirrorLine').classList.remove('active');
+  } catch (e) {
+    mc.innerHTML = `<div class="state-msg">Error ending session — ${e.message}</div>`;
+  }
+}
+
+async function init() {
+  try {
+    const data = await apiFetch('/api/inversion/status');
+    renderStatusBanner(data.active, data.session_active);
+
+    if (data.session_active && sessionData) {
+      renderSession(sessionData.questions);
+    } else if (data.active) {
+      renderOpen();
+    } else {
+      renderClosed(data);
+    }
+  } catch (e) {
+    renderStatusBanner(false, false);
+    document.getElementById('mainContent').innerHTML = `<div class="state-msg">Could not reach the mirror — ${e.message}</div>`;
+  }
+}
+
+init();
+</script>
+</body>
+</html>

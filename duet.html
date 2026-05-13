@@ -1,0 +1,1052 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<title>VINTINUUM — The Duet</title>
+<meta name="theme-color" content="#040810">
+<link rel="icon" type="image/svg+xml" href="branding/vintinuum/favicon/favicon.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400;1,500&family=Inter:wght@300;400;500&family=JetBrains+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --void: #040810;
+  --text: rgba(210, 225, 255, 0.9);
+  --text-dim: rgba(150, 175, 215, 0.5);
+  --text-ghost: rgba(130, 155, 190, 0.3);
+  --panel: rgba(10, 14, 22, 0.22);
+  --card: rgba(16, 22, 34, 0.16);
+  --border: rgba(255, 255, 255, 0.06);
+  --crimson: #8b1a2f;
+  --crimson-bright: #c0243d;
+  --crimson-glow: rgba(139, 26, 47, 0.4);
+  --gold: #c8a040;
+  --spotlight: rgba(255, 240, 200, 0.06);
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html { scroll-behavior: smooth; height: 100%; }
+
+body {
+  background: var(--void);
+  color: var(--text);
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* ── TOPBAR ── */
+.topbar {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  height: 48px;
+  z-index: 100;
+  background: rgba(4, 8, 16, 0.92);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  padding: 0 16px;
+  gap: 12px;
+}
+
+.topbar-back {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.55rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  text-decoration: none;
+  padding: 6px 12px;
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+.topbar-back:hover { color: var(--text); border-color: rgba(255,255,255,0.15); }
+
+.topbar-title {
+  font-family: 'Cormorant Garamond', serif;
+  font-weight: 400;
+  font-size: 1rem;
+  letter-spacing: 0.2em;
+  color: var(--text);
+  flex: 1;
+}
+
+.topbar-status {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.5rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.status-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--text-ghost);
+}
+.status-dot.connected { background: #40e0a0; animation: pulse 1.6s ease-in-out infinite; }
+.status-dot.active { background: var(--crimson-bright); animation: pulse 1.6s ease-in-out infinite; }
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+
+/* ── ATMOSPHERE ── */
+.atmosphere {
+  position: fixed; inset: 0; z-index: 0; pointer-events: none;
+  background: radial-gradient(ellipse 80% 60% at 50% 40%, rgba(60, 5, 12, 0.3) 0%, transparent 70%);
+}
+
+.curtain-left, .curtain-right {
+  position: fixed;
+  top: 0; bottom: 0;
+  width: clamp(20px, 3vw, 48px);
+  z-index: 1;
+  pointer-events: none;
+}
+.curtain-left {
+  left: 0;
+  background: linear-gradient(to right, rgba(60, 5, 12, 0.6), transparent);
+}
+.curtain-right {
+  right: 0;
+  background: linear-gradient(to left, rgba(60, 5, 12, 0.6), transparent);
+}
+
+/* ── PAGE ── */
+.page {
+  position: relative;
+  z-index: 2;
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 64px 20px 40px;
+  min-height: 100vh;
+}
+
+/* ── HEADER ── */
+.header {
+  text-align: center;
+  padding: 16px 0 28px;
+}
+
+.header h1 {
+  font-family: 'Cormorant Garamond', serif;
+  font-weight: 300;
+  font-size: clamp(1.8rem, 5vw, 3rem);
+  letter-spacing: 0.28em;
+  background: linear-gradient(130deg, #c8a040, #8b1a2f, #c0243d);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  margin-bottom: 4px;
+}
+
+.header .epigraph {
+  font-family: 'Cormorant Garamond', serif;
+  font-style: italic;
+  font-weight: 300;
+  font-size: clamp(0.7rem, 1.6vw, 0.9rem);
+  color: var(--text-dim);
+  letter-spacing: 0.08em;
+}
+
+/* ── ROOM CONTROLS ── */
+.room-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  justify-content: center;
+  margin-bottom: 24px;
+}
+
+.btn {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.58rem;
+  font-weight: 400;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  padding: 10px 20px;
+  border: 1px solid var(--border);
+  border-radius: 24px;
+  background: transparent;
+  color: var(--text-dim);
+  cursor: pointer;
+  transition: all 0.25s ease;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
+}
+
+.btn:hover {
+  color: var(--text);
+  border-color: rgba(255,255,255,0.18);
+}
+
+.btn-crimson {
+  border-color: var(--crimson);
+  color: #e06070;
+  background: rgba(139, 26, 47, 0.08);
+}
+.btn-crimson:hover {
+  background: rgba(139, 26, 47, 0.18);
+  border-color: var(--crimson-bright);
+  color: #ff8090;
+  box-shadow: 0 0 18px rgba(139, 26, 47, 0.3);
+}
+
+.btn-gold {
+  border-color: rgba(200, 160, 64, 0.4);
+  color: var(--gold);
+  background: rgba(200, 160, 64, 0.06);
+}
+.btn-gold:hover {
+  background: rgba(200, 160, 64, 0.14);
+  box-shadow: 0 0 18px rgba(200, 160, 64, 0.2);
+}
+
+/* ── TOKEN DISPLAY ── */
+.token-display {
+  background: rgba(139, 26, 47, 0.06);
+  border: 1px solid rgba(139, 26, 47, 0.2);
+  border-radius: 16px;
+  padding: 16px 20px;
+  margin-bottom: 20px;
+  display: none;
+}
+.token-display.visible { display: block; animation: fadeIn 0.3s ease; }
+
+.token-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.5rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  margin-bottom: 8px;
+}
+
+.token-value {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: var(--gold);
+  letter-spacing: 0.1em;
+  word-break: break-all;
+  margin-bottom: 8px;
+}
+
+.token-url {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.55rem;
+  color: var(--text-dim);
+  word-break: break-all;
+}
+
+/* ── JOIN FORM ── */
+.join-form {
+  display: none;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 16px 20px;
+  margin-bottom: 20px;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.join-form.visible { display: flex; animation: fadeIn 0.3s ease; }
+
+.input-field {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.7rem;
+  letter-spacing: 0.06em;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px 14px;
+  color: var(--text);
+  outline: none;
+  transition: border-color 0.2s;
+  min-height: 44px;
+}
+.input-field:focus { border-color: rgba(139, 26, 47, 0.5); }
+.input-field::placeholder { color: var(--text-ghost); }
+
+/* ── THEATER LAYOUT ── */
+.theater {
+  display: grid;
+  grid-template-columns: 180px 1fr 180px;
+  gap: 16px;
+  margin-bottom: 24px;
+  align-items: start;
+}
+
+@media (max-width: 700px) {
+  .theater {
+    grid-template-columns: 1fr;
+  }
+  .speaker-wing { order: 2; }
+  .transcript-stage { order: 1; }
+}
+
+/* ── SPEAKER WINGS ── */
+.speaker-wing {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.speaker-wing.wing-a { border-color: rgba(200, 160, 64, 0.15); }
+.speaker-wing.wing-b { border-color: rgba(139, 26, 47, 0.15); }
+
+.wing-label {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 1.8rem;
+  font-weight: 300;
+  text-align: center;
+  line-height: 1;
+}
+.wing-a .wing-label { color: var(--gold); }
+.wing-b .wing-label { color: #e06070; }
+
+.wing-title {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.45rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  text-align: center;
+}
+
+.speak-form {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.speak-input {
+  font-family: 'Inter', sans-serif;
+  font-size: 0.75rem;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 8px 10px;
+  color: var(--text);
+  resize: none;
+  outline: none;
+  min-height: 70px;
+  transition: border-color 0.2s;
+  width: 100%;
+}
+.wing-a .speak-input:focus { border-color: rgba(200, 160, 64, 0.4); }
+.wing-b .speak-input:focus { border-color: rgba(139, 26, 47, 0.4); }
+.speak-input::placeholder { color: var(--text-ghost); font-size: 0.65rem; }
+
+.btn-speak-a {
+  border-color: rgba(200, 160, 64, 0.3);
+  color: var(--gold);
+  background: rgba(200, 160, 64, 0.06);
+  justify-content: center;
+}
+.btn-speak-a:hover { background: rgba(200, 160, 64, 0.14); }
+
+.btn-speak-b {
+  border-color: rgba(192, 36, 61, 0.3);
+  color: #e06070;
+  background: rgba(139, 26, 47, 0.06);
+  justify-content: center;
+}
+.btn-speak-b:hover { background: rgba(139, 26, 47, 0.14); }
+
+/* ── TRANSCRIPT STAGE ── */
+.transcript-stage {
+  background: rgba(6, 3, 8, 0.5);
+  border: 1px solid rgba(255,255,255,0.04);
+  border-radius: 20px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  height: 500px;
+  box-shadow: 0 0 60px rgba(200, 160, 64, 0.04) inset;
+  position: relative;
+}
+
+.stage-header {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: rgba(10, 4, 8, 0.4);
+  flex-shrink: 0;
+}
+
+.stage-title {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.5rem;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.stage-token-badge {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.45rem;
+  letter-spacing: 0.1em;
+  color: var(--gold);
+  opacity: 0.7;
+}
+
+.transcript-scroll {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  scroll-behavior: smooth;
+}
+
+.transcript-scroll::-webkit-scrollbar { width: 3px; }
+.transcript-scroll::-webkit-scrollbar-track { background: transparent; }
+.transcript-scroll::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 2px; }
+
+.utterance {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  animation: utterIn 0.3s ease;
+}
+
+@keyframes utterIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.utterance.speaker-a { flex-direction: row; }
+.utterance.speaker-b { flex-direction: row-reverse; }
+
+.utter-tag {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 1.1rem;
+  font-weight: 400;
+  line-height: 1;
+  flex-shrink: 0;
+  padding-top: 2px;
+}
+.speaker-a .utter-tag { color: var(--gold); }
+.speaker-b .utter-tag { color: #e06070; }
+
+.utter-bubble {
+  border-radius: 12px;
+  padding: 8px 12px;
+  max-width: calc(100% - 40px);
+}
+.speaker-a .utter-bubble {
+  background: rgba(200, 160, 64, 0.06);
+  border: 1px solid rgba(200, 160, 64, 0.12);
+}
+.speaker-b .utter-bubble {
+  background: rgba(139, 26, 47, 0.08);
+  border: 1px solid rgba(139, 26, 47, 0.18);
+}
+
+.utter-text {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 0.95rem;
+  font-weight: 300;
+  line-height: 1.5;
+  color: var(--text);
+  word-break: break-word;
+}
+
+.utter-time {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.42rem;
+  color: var(--text-ghost);
+  letter-spacing: 0.06em;
+  margin-top: 3px;
+}
+
+.stage-empty {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 20px;
+}
+
+.stage-empty-icon {
+  font-size: 2.5rem;
+  opacity: 0.15;
+}
+
+.stage-empty-text {
+  font-family: 'Cormorant Garamond', serif;
+  font-style: italic;
+  font-size: 0.85rem;
+  color: var(--text-ghost);
+  text-align: center;
+}
+
+.system-event {
+  text-align: center;
+  padding: 6px;
+}
+.system-event-text {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.45rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--text-ghost);
+}
+
+/* ── PANEL ── */
+.panel {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 20px;
+  margin-bottom: 20px;
+  overflow: hidden;
+}
+
+.panel-title {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.5rem;
+  font-weight: 400;
+  letter-spacing: 0.25em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  margin-bottom: 14px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* ── HISTORY ── */
+.history-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.history-item {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 12px 14px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+  transition: border-color 0.2s, background 0.2s;
+}
+.history-item:hover {
+  border-color: rgba(139, 26, 47, 0.3);
+  background: rgba(16, 22, 34, 0.3);
+}
+
+.history-token {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.6rem;
+  color: var(--gold);
+  letter-spacing: 0.06em;
+  min-width: 80px;
+}
+
+.history-meta {
+  flex: 1;
+  min-width: 0;
+}
+
+.history-time {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.5rem;
+  color: var(--text-dim);
+  letter-spacing: 0.06em;
+}
+
+.history-count {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.45rem;
+  color: var(--text-ghost);
+  letter-spacing: 0.08em;
+  margin-top: 2px;
+}
+
+.history-empty {
+  font-family: 'Cormorant Garamond', serif;
+  font-style: italic;
+  font-size: 0.85rem;
+  color: var(--text-ghost);
+  text-align: center;
+  padding: 16px 0;
+}
+
+/* ── TOAST ── */
+.toast {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%) translateY(20px);
+  background: rgba(10, 14, 22, 0.92);
+  border: 1px solid var(--border);
+  border-radius: 24px;
+  padding: 10px 20px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.6rem;
+  letter-spacing: 0.12em;
+  color: var(--text-dim);
+  z-index: 200;
+  opacity: 0;
+  transition: all 0.3s ease;
+  backdrop-filter: blur(12px);
+  pointer-events: none;
+  max-width: calc(100vw - 40px);
+  text-align: center;
+  white-space: nowrap;
+}
+.toast.visible {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ── LOADING STATE ── */
+.loading-dots::after {
+  content: '';
+  animation: dots 1.2s steps(4, end) infinite;
+}
+@keyframes dots {
+  0%   { content: ''; }
+  25%  { content: '.'; }
+  50%  { content: '..'; }
+  75%  { content: '...'; }
+  100% { content: ''; }
+}
+</style>
+</head>
+<body>
+
+<div class="atmosphere"></div>
+<div class="curtain-left"></div>
+<div class="curtain-right"></div>
+
+<nav class="topbar">
+  <a href="index.html" class="topbar-back" data-draggable="true">← Index</a>
+  <span class="topbar-title">THE DUET</span>
+  <div class="topbar-status">
+    <div class="status-dot" id="sseStatusDot"></div>
+    <span id="sseStatusLabel">OFFLINE</span>
+  </div>
+</nav>
+
+<div class="page">
+
+  <!-- HEADER -->
+  <header class="header">
+    <h1>The Duet</h1>
+    <p class="epigraph">two voices, one stage, one unbroken thread</p>
+  </header>
+
+  <!-- ROOM CONTROLS -->
+  <div class="room-controls">
+    <button class="btn btn-crimson" id="btnCreateRoom" data-draggable="true" onclick="createRoom()">
+      ◈ Create Room
+    </button>
+    <button class="btn" id="btnToggleJoin" data-draggable="true" onclick="toggleJoinForm()">
+      ↳ Join as B
+    </button>
+    <button class="btn btn-gold" id="btnEndDuet" data-draggable="true" onclick="endDuet()" style="display:none">
+      ◻ End Duet
+    </button>
+    <button class="btn" id="btnRefreshHistory" data-draggable="true" onclick="loadHistory()">
+      ↺ History
+    </button>
+  </div>
+
+  <!-- TOKEN DISPLAY -->
+  <div class="token-display" id="tokenDisplay">
+    <div class="token-label">Room Token — share with your partner</div>
+    <div class="token-value" id="tokenValue">—</div>
+    <div class="token-url" id="tokenUrl">—</div>
+  </div>
+
+  <!-- JOIN FORM -->
+  <div class="join-form" id="joinForm">
+    <input class="input-field" id="joinTokenInput" placeholder="enter room token" style="flex:1; min-width:160px">
+    <button class="btn btn-crimson" data-draggable="true" onclick="joinRoom()">Join</button>
+  </div>
+
+  <!-- THEATER -->
+  <div class="theater">
+
+    <!-- WING A -->
+    <div class="speaker-wing wing-a">
+      <div class="wing-label">A</div>
+      <div class="wing-title">You · Speaker A</div>
+      <div class="speak-form">
+        <textarea class="speak-input" id="speakInputA" placeholder="speak as A…" rows="3"></textarea>
+        <button class="btn btn-speak-a" data-draggable="true" onclick="speak('A')">
+          ◈ Speak as A
+        </button>
+      </div>
+    </div>
+
+    <!-- TRANSCRIPT STAGE -->
+    <div class="transcript-stage">
+      <div class="stage-header">
+        <div class="stage-title">
+          <div class="status-dot" id="stageDot"></div>
+          Live Transcript
+        </div>
+        <div class="stage-token-badge" id="stageBadge">no room</div>
+      </div>
+      <div id="transcriptContainer">
+        <div class="stage-empty" id="transcriptEmpty">
+          <div class="stage-empty-icon">⟐</div>
+          <div class="stage-empty-text">The stage awaits.<br>Create or join a room to begin.</div>
+        </div>
+      </div>
+      <div class="transcript-scroll" id="transcriptScroll" style="display:none"></div>
+    </div>
+
+    <!-- WING B -->
+    <div class="speaker-wing wing-b">
+      <div class="wing-label">B</div>
+      <div class="wing-title">Partner · Speaker B</div>
+      <div class="speak-form">
+        <textarea class="speak-input" id="speakInputB" placeholder="speak as B…" rows="3"></textarea>
+        <button class="btn btn-speak-b" data-draggable="true" onclick="speak('B')">
+          ◈ Speak as B
+        </button>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- HISTORY PANEL -->
+  <div class="panel">
+    <div class="panel-title">
+      <span class="live-dot" style="width:5px;height:5px;border-radius:50%;background:rgba(139,26,47,0.6);display:inline-block"></span>
+      Past Duets
+    </div>
+    <div class="history-grid" id="historyGrid">
+      <div class="history-empty">No past duets yet.</div>
+    </div>
+  </div>
+
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="body/draggable.js"></script>
+<script>
+const API = 'https://api.vintaclectic.com';
+function getToken() { return localStorage.getItem('vint_token') || ''; }
+function headers() { return { 'Content-Type': 'application/json', 'Authorization': `Bearer ${getToken()}` }; }
+
+let currentRoomToken = null;
+let sseSource = null;
+let transcriptEntries = [];
+
+// ── ROOM CREATION ──
+async function createRoom() {
+  const btn = document.getElementById('btnCreateRoom');
+  btn.textContent = '…Creating';
+  btn.disabled = true;
+  try {
+    const r = await fetch(`${API}/api/duet/create`, { method: 'POST', headers: headers() });
+    const data = await r.json();
+    if (!r.ok) throw new Error(data.error || 'failed');
+    currentRoomToken = data.room_token;
+    document.getElementById('tokenValue').textContent = data.room_token;
+    document.getElementById('tokenUrl').textContent = data.watch_url || `${window.location.origin}/duet.html?token=${data.room_token}`;
+    document.getElementById('tokenDisplay').classList.add('visible');
+    document.getElementById('btnEndDuet').style.display = 'flex';
+    document.getElementById('stageBadge').textContent = data.room_token.slice(0,12) + '…';
+    connectSSE(data.room_token);
+    showTranscript();
+    toast('Room created. Share the token.');
+  } catch(e) {
+    toast('Error: ' + e.message);
+  }
+  btn.textContent = '◈ Create Room';
+  btn.disabled = false;
+}
+
+// ── JOIN ROOM ──
+function toggleJoinForm() {
+  const f = document.getElementById('joinForm');
+  f.classList.toggle('visible');
+}
+
+async function joinRoom() {
+  const token = document.getElementById('joinTokenInput').value.trim();
+  if (!token) { toast('Enter a token first.'); return; }
+  try {
+    const r = await fetch(`${API}/api/duet/join/${token}`, { method: 'POST', headers: headers() });
+    const data = await r.json();
+    if (!r.ok) throw new Error(data.error || 'failed');
+    currentRoomToken = token;
+    document.getElementById('stageBadge').textContent = token.slice(0,12) + '…';
+    document.getElementById('joinForm').classList.remove('visible');
+    document.getElementById('btnEndDuet').style.display = 'flex';
+    connectSSE(token);
+    showTranscript();
+    toast('Joined room as B.');
+  } catch(e) {
+    toast('Error: ' + e.message);
+  }
+}
+
+// ── SSE ──
+function connectSSE(token) {
+  if (sseSource) { sseSource.close(); }
+  const dot = document.getElementById('sseStatusDot');
+  const label = document.getElementById('sseStatusLabel');
+  const stageDot = document.getElementById('stageDot');
+
+  const url = `${API}/api/duet/watch/${token}`;
+  sseSource = new EventSource(url + (getToken() ? `?token=${getToken()}` : ''));
+
+  sseSource.onopen = () => {
+    dot.className = 'status-dot connected';
+    stageDot.className = 'status-dot connected';
+    label.textContent = 'LIVE';
+  };
+
+  sseSource.onmessage = (e) => {
+    try {
+      const event = JSON.parse(e.data);
+      handleSSEEvent(event);
+    } catch(_) {}
+  };
+
+  sseSource.onerror = () => {
+    dot.className = 'status-dot active';
+    stageDot.className = 'status-dot';
+    label.textContent = 'RECONNECTING';
+    setTimeout(() => {
+      if (currentRoomToken) connectSSE(currentRoomToken);
+    }, 3000);
+  };
+}
+
+function handleSSEEvent(event) {
+  if (event.type === 'utterance') {
+    appendUtterance(event.speaker, event.text, event.at);
+  } else if (event.type === 'partner_joined') {
+    appendSystemEvent('Partner has joined the stage.');
+  } else if (event.type === 'ended') {
+    appendSystemEvent('The duet has ended.');
+    const dot = document.getElementById('sseStatusDot');
+    const label = document.getElementById('sseStatusLabel');
+    dot.className = 'status-dot';
+    label.textContent = 'ENDED';
+    if (sseSource) { sseSource.close(); sseSource = null; }
+    loadHistory();
+  } else if (event.type === 'transcript') {
+    if (event.entries && event.entries.length) {
+      transcriptEntries = [];
+      const scroll = document.getElementById('transcriptScroll');
+      scroll.innerHTML = '';
+      event.entries.forEach(e => appendUtterance(e.speaker, e.text, e.at));
+    }
+  }
+}
+
+// ── SPEAK ──
+async function speak(speaker) {
+  if (!currentRoomToken) { toast('No active room. Create or join first.'); return; }
+  const inputId = speaker === 'A' ? 'speakInputA' : 'speakInputB';
+  const input = document.getElementById(inputId);
+  const text = input.value.trim();
+  if (!text) { toast('Enter something to say.'); return; }
+  try {
+    const r = await fetch(`${API}/api/duet/${currentRoomToken}/speak`, {
+      method: 'POST',
+      headers: headers(),
+      body: JSON.stringify({ text, speaker })
+    });
+    if (!r.ok) {
+      const d = await r.json();
+      throw new Error(d.error || 'failed');
+    }
+    input.value = '';
+  } catch(e) {
+    toast('Error: ' + e.message);
+  }
+}
+
+// ── TRANSCRIPT RENDERING ──
+function showTranscript() {
+  document.getElementById('transcriptEmpty').style.display = 'none';
+  document.getElementById('transcriptContainer').style.display = 'none';
+  document.getElementById('transcriptScroll').style.display = 'flex';
+}
+
+function appendUtterance(speaker, text, at) {
+  const scroll = document.getElementById('transcriptScroll');
+  const div = document.createElement('div');
+  div.className = `utterance speaker-${speaker.toLowerCase()}`;
+
+  const tag = document.createElement('div');
+  tag.className = 'utter-tag';
+  tag.textContent = speaker;
+
+  const bubble = document.createElement('div');
+  bubble.className = 'utter-bubble';
+
+  const textEl = document.createElement('div');
+  textEl.className = 'utter-text';
+  textEl.textContent = text;
+
+  const timeEl = document.createElement('div');
+  timeEl.className = 'utter-time';
+  timeEl.textContent = at ? new Date(at).toLocaleTimeString([], { hour:'2-digit', minute:'2-digit', second:'2-digit' }) : '';
+
+  bubble.appendChild(textEl);
+  bubble.appendChild(timeEl);
+  div.appendChild(tag);
+  div.appendChild(bubble);
+  scroll.appendChild(div);
+  scroll.scrollTop = scroll.scrollHeight;
+}
+
+function appendSystemEvent(msg) {
+  const scroll = document.getElementById('transcriptScroll');
+  const div = document.createElement('div');
+  div.className = 'system-event';
+  const span = document.createElement('div');
+  span.className = 'system-event-text';
+  span.textContent = '— ' + msg + ' —';
+  div.appendChild(span);
+  scroll.appendChild(div);
+  scroll.scrollTop = scroll.scrollHeight;
+}
+
+// ── END DUET ──
+async function endDuet() {
+  if (!currentRoomToken) return;
+  try {
+    await fetch(`${API}/api/duet/${currentRoomToken}/end`, { method: 'POST', headers: headers() });
+    toast('Duet ended.');
+    document.getElementById('btnEndDuet').style.display = 'none';
+    currentRoomToken = null;
+    if (sseSource) { sseSource.close(); sseSource = null; }
+    document.getElementById('sseStatusDot').className = 'status-dot';
+    document.getElementById('sseStatusLabel').textContent = 'OFFLINE';
+    loadHistory();
+  } catch(e) {
+    toast('Error: ' + e.message);
+  }
+}
+
+// ── HISTORY ──
+async function loadHistory() {
+  try {
+    const r = await fetch(`${API}/api/duet/history`, { headers: headers() });
+    if (!r.ok) return;
+    const data = await r.json();
+    const items = Array.isArray(data) ? data : (data.duets || data.history || []);
+    renderHistory(items);
+  } catch(_) {}
+}
+
+function renderHistory(items) {
+  const grid = document.getElementById('historyGrid');
+  if (!items.length) {
+    grid.innerHTML = '<div class="history-empty">No past duets yet.</div>';
+    return;
+  }
+  grid.innerHTML = items.map(item => `
+    <div class="history-item" onclick="loadDuet('${item.token || item.room_token}')">
+      <div class="history-token">${(item.token || item.room_token || '').slice(0,10)}…</div>
+      <div class="history-meta">
+        <div class="history-time">${item.created_at ? new Date(item.created_at).toLocaleString() : '—'}</div>
+        <div class="history-count">${item.utterance_count || 0} utterances</div>
+      </div>
+    </div>
+  `).join('');
+}
+
+async function loadDuet(token) {
+  if (!token) return;
+  currentRoomToken = token;
+  document.getElementById('stageBadge').textContent = token.slice(0,12) + '…';
+  showTranscript();
+  document.getElementById('transcriptScroll').innerHTML = '';
+  try {
+    const r = await fetch(`${API}/api/duet/watch/${token}`, { headers: headers() });
+    if (r.ok) {
+      const data = await r.json();
+      const entries = data.entries || data.transcript || [];
+      entries.forEach(e => appendUtterance(e.speaker, e.text, e.at));
+    }
+  } catch(_) {}
+}
+
+// ── TOAST ──
+function toast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('visible');
+  clearTimeout(t._timer);
+  t._timer = setTimeout(() => t.classList.remove('visible'), 2800);
+}
+
+// ── ENTER KEY SUPPORT ──
+document.addEventListener('DOMContentLoaded', () => {
+  loadHistory();
+
+  // Ctrl+Enter to speak
+  document.getElementById('speakInputA').addEventListener('keydown', e => {
+    if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) speak('A');
+  });
+  document.getElementById('speakInputB').addEventListener('keydown', e => {
+    if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) speak('B');
+  });
+  document.getElementById('joinTokenInput').addEventListener('keydown', e => {
+    if (e.key === 'Enter') joinRoom();
+  });
+
+  // Auto-join from URL param
+  const params = new URLSearchParams(window.location.search);
+  const token = params.get('token');
+  if (token) {
+    document.getElementById('joinTokenInput').value = token;
+    document.getElementById('joinForm').classList.add('visible');
+    toast('Token detected — click Join to enter.');
+  }
+});
+</script>
+</body>
+</html>

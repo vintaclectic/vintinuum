@@ -1,0 +1,905 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<title>VINTINUUM — Ghost Mode</title>
+<meta name="theme-color" content="#040810">
+<link rel="icon" type="image/svg+xml" href="branding/vintinuum/favicon/favicon.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400;1,500&family=Inter:wght@300;400;500&family=JetBrains+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --void: #040810;
+  --text: rgba(210, 225, 255, 0.9);
+  --text-dim: rgba(150, 175, 215, 0.5);
+  --text-ghost: rgba(130, 155, 190, 0.3);
+  --panel: rgba(10, 14, 22, 0.22);
+  --card: rgba(16, 22, 34, 0.16);
+  --border: rgba(255, 255, 255, 0.06);
+  --ghost-white: rgba(220, 230, 255, 0.85);
+  --ghost-dim: rgba(180, 195, 230, 0.4);
+  --ghost-glow: rgba(190, 210, 255, 0.12);
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html { scroll-behavior: smooth; height: 100%; }
+
+body {
+  background: var(--void);
+  color: var(--text);
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* ── ATMOSPHERE ── */
+.atmosphere {
+  position: fixed; inset: 0; z-index: 0; pointer-events: none;
+  background: radial-gradient(ellipse 70% 50% at 50% 30%, rgba(40, 40, 80, 0.12) 0%, transparent 70%);
+  transition: background 2s ease;
+}
+.atmosphere.active-mode {
+  background: radial-gradient(ellipse 70% 50% at 50% 30%, rgba(150, 165, 220, 0.07) 0%, transparent 65%);
+  animation: ghostAtmo 6s ease-in-out infinite;
+}
+@keyframes ghostAtmo {
+  0%,100% { opacity: 0.7; }
+  50% { opacity: 1; }
+}
+
+/* ── TOPBAR ── */
+.topbar {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  height: 48px;
+  z-index: 100;
+  background: rgba(4, 8, 16, 0.92);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  padding: 0 16px;
+  gap: 12px;
+}
+
+.topbar-back {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.55rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  text-decoration: none;
+  padding: 6px 12px;
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+.topbar-back:hover { color: var(--text); border-color: rgba(255,255,255,0.15); }
+
+.topbar-title {
+  font-family: 'Cormorant Garamond', serif;
+  font-weight: 400;
+  font-size: 1rem;
+  letter-spacing: 0.2em;
+  color: var(--text);
+  flex: 1;
+}
+
+.topbar-ghost-pill {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.45rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  padding: 4px 12px;
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  color: var(--text-dim);
+  transition: all 0.5s ease;
+}
+.topbar-ghost-pill.active {
+  background: rgba(180, 195, 230, 0.06);
+  border-color: rgba(180, 195, 230, 0.25);
+  color: var(--ghost-white);
+  animation: pillShimmer 3s ease-in-out infinite;
+}
+@keyframes pillShimmer {
+  0%,100% { box-shadow: 0 0 8px rgba(180,195,230,0.1); }
+  50% { box-shadow: 0 0 20px rgba(180,195,230,0.22); }
+}
+
+/* ── PAGE ── */
+.page {
+  position: relative;
+  z-index: 1;
+  max-width: 860px;
+  margin: 0 auto;
+  padding: 64px 20px 60px;
+  min-height: 100vh;
+}
+
+/* ── HEADER ── */
+.header {
+  text-align: center;
+  padding: 20px 0 32px;
+}
+.header h1 {
+  font-family: 'Cormorant Garamond', serif;
+  font-weight: 300;
+  font-size: clamp(2rem, 6vw, 3.4rem);
+  letter-spacing: 0.3em;
+  color: var(--ghost-white);
+  margin-bottom: 4px;
+  transition: text-shadow 1s ease;
+}
+.header h1.active-glow {
+  text-shadow: 0 0 30px rgba(200, 215, 255, 0.2), 0 0 60px rgba(180, 195, 230, 0.1);
+  animation: ghostTitle 4s ease-in-out infinite;
+}
+@keyframes ghostTitle {
+  0%,100% { text-shadow: 0 0 30px rgba(200,215,255,0.2), 0 0 60px rgba(180,195,230,0.1); }
+  50% { text-shadow: 0 0 50px rgba(200,215,255,0.35), 0 0 90px rgba(180,195,230,0.18); }
+}
+
+.header .epigraph {
+  font-family: 'Cormorant Garamond', serif;
+  font-style: italic;
+  font-size: clamp(0.7rem, 1.6vw, 0.9rem);
+  color: var(--text-dim);
+  letter-spacing: 0.08em;
+}
+
+/* ── STATUS SECTION ── */
+.ghost-status-section {
+  text-align: center;
+  margin-bottom: 32px;
+  padding: 40px 24px;
+  border: 1px solid var(--border);
+  border-radius: 24px;
+  background: var(--panel);
+  position: relative;
+  overflow: hidden;
+  transition: border-color 1s ease, background 1s ease;
+}
+.ghost-status-section.active {
+  border-color: rgba(180, 195, 230, 0.2);
+  background: rgba(10, 12, 25, 0.3);
+}
+
+/* Ghost shimmer overlay */
+.ghost-shimmer {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0;
+  background: radial-gradient(ellipse 60% 40% at 50% 50%, rgba(180,195,230,0.08) 0%, transparent 70%);
+  transition: opacity 1.5s ease;
+}
+.ghost-status-section.active .ghost-shimmer {
+  opacity: 1;
+  animation: shimmerPulse 5s ease-in-out infinite;
+}
+@keyframes shimmerPulse {
+  0%,100% { opacity: 0.6; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.04); }
+}
+
+.dormant-indicator {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.ghost-glyph {
+  font-size: 3.5rem;
+  line-height: 1;
+  opacity: 0.18;
+  transition: opacity 0.8s ease, transform 0.8s ease;
+  user-select: none;
+}
+.ghost-status-section.active .ghost-glyph {
+  opacity: 0.55;
+  animation: glyphFloat 5s ease-in-out infinite;
+}
+@keyframes glyphFloat {
+  0%,100% { transform: translateY(0); opacity: 0.55; }
+  50% { transform: translateY(-6px); opacity: 0.75; }
+}
+
+.status-word {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.55rem;
+  letter-spacing: 0.35em;
+  text-transform: uppercase;
+  color: var(--text-ghost);
+  transition: color 1s ease;
+}
+.ghost-status-section.active .status-word {
+  color: var(--ghost-dim);
+  animation: wordFade 4s ease-in-out infinite;
+}
+@keyframes wordFade {
+  0%,100% { opacity: 0.7; }
+  50% { opacity: 1; }
+}
+
+.activated-at {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.5rem;
+  letter-spacing: 0.1em;
+  color: var(--text-ghost);
+  margin-top: 4px;
+  display: none;
+}
+.ghost-status-section.active .activated-at { display: block; }
+
+.status-buttons {
+  margin-top: 20px;
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+/* ── BUTTONS ── */
+.btn {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.55rem;
+  font-weight: 400;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  padding: 10px 20px;
+  border: 1px solid var(--border);
+  border-radius: 24px;
+  background: transparent;
+  color: var(--text-dim);
+  cursor: pointer;
+  transition: all 0.25s ease;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
+}
+.btn:hover { color: var(--text); border-color: rgba(255,255,255,0.16); }
+
+.btn-ghost-activate {
+  border-color: rgba(180, 195, 230, 0.2);
+  color: var(--ghost-dim);
+}
+.btn-ghost-activate:hover {
+  border-color: rgba(180, 195, 230, 0.4);
+  color: var(--ghost-white);
+  box-shadow: 0 0 20px rgba(180, 195, 230, 0.12);
+}
+
+.btn-danger {
+  border-color: rgba(180, 50, 60, 0.3);
+  color: rgba(200, 80, 90, 0.8);
+}
+.btn-danger:hover {
+  background: rgba(180, 50, 60, 0.1);
+  color: #e06070;
+  border-color: rgba(180, 50, 60, 0.5);
+}
+
+/* ── PANEL ── */
+.panel {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 22px;
+  margin-bottom: 20px;
+  overflow: hidden;
+}
+
+.panel-title {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.5rem;
+  font-weight: 400;
+  letter-spacing: 0.25em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* ── WARNING COPY ── */
+.warning-copy {
+  font-family: 'Cormorant Garamond', serif;
+  font-style: italic;
+  font-size: 0.9rem;
+  font-weight: 300;
+  color: var(--text-dim);
+  line-height: 1.6;
+  letter-spacing: 0.02em;
+  padding: 14px 18px;
+  border-left: 2px solid rgba(180, 195, 230, 0.1);
+  background: rgba(180, 195, 230, 0.02);
+  border-radius: 0 10px 10px 0;
+  margin-bottom: 16px;
+}
+
+.sealed-note {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.48rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--text-ghost);
+  text-align: center;
+  margin-top: 10px;
+}
+
+/* ── BENEFICIARY TABLE ── */
+.beneficiary-table {
+  width: 100%;
+  border-collapse: collapse;
+  overflow: hidden;
+}
+
+.beneficiary-table th {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.45rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--text-ghost);
+  text-align: left;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--border);
+}
+
+.beneficiary-table td {
+  font-family: 'Inter', sans-serif;
+  font-size: 0.7rem;
+  color: var(--text-dim);
+  padding: 10px 10px;
+  border-bottom: 1px solid rgba(255,255,255,0.03);
+  vertical-align: middle;
+}
+
+.beneficiary-table tbody tr:hover td {
+  background: rgba(255,255,255,0.015);
+}
+
+.access-pill {
+  display: inline-block;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.42rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  padding: 3px 8px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  color: var(--text-ghost);
+}
+.access-pill.read_only {
+  border-color: rgba(64, 192, 224, 0.2);
+  color: rgba(64, 192, 224, 0.65);
+}
+.access-pill.read_with_response {
+  border-color: rgba(180, 195, 230, 0.25);
+  color: var(--ghost-dim);
+}
+
+.no-beneficiaries {
+  font-family: 'Cormorant Garamond', serif;
+  font-style: italic;
+  font-size: 0.85rem;
+  color: var(--text-ghost);
+  text-align: center;
+  padding: 16px 0;
+}
+
+/* ── ADD BENEFICIARY FORM ── */
+.add-beneficiary-form {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-top: 16px;
+}
+@media (max-width: 520px) {
+  .add-beneficiary-form { grid-template-columns: 1fr; }
+}
+
+.input-field {
+  font-family: 'Inter', sans-serif;
+  font-size: 0.7rem;
+  background: rgba(255,255,255,0.03);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px 12px;
+  color: var(--text);
+  outline: none;
+  transition: border-color 0.2s;
+  min-height: 44px;
+  width: 100%;
+}
+.input-field:focus { border-color: rgba(180, 195, 230, 0.3); }
+.input-field::placeholder { color: var(--text-ghost); font-size: 0.65rem; }
+
+.form-row-full {
+  grid-column: 1 / -1;
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+/* ── CONFIRMATION DIALOG ── */
+.confirm-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 300;
+  background: rgba(0, 0, 0, 0.72);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+.confirm-overlay.visible { display: flex; animation: overlayIn 0.25s ease; }
+
+@keyframes overlayIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.confirm-box {
+  background: rgba(8, 10, 18, 0.98);
+  border: 1px solid rgba(180, 195, 230, 0.15);
+  border-radius: 20px;
+  padding: 28px 28px 24px;
+  max-width: 460px;
+  width: 100%;
+  position: relative;
+  animation: boxIn 0.3s ease;
+  box-shadow: 0 0 60px rgba(180, 195, 230, 0.06);
+}
+@keyframes boxIn {
+  from { opacity: 0; transform: scale(0.96) translateY(-10px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+.confirm-title {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 1.4rem;
+  font-weight: 300;
+  letter-spacing: 0.12em;
+  color: var(--ghost-white);
+  margin-bottom: 8px;
+}
+
+.confirm-body {
+  font-family: 'Inter', sans-serif;
+  font-size: 0.75rem;
+  color: var(--text-dim);
+  line-height: 1.6;
+  margin-bottom: 20px;
+}
+
+.confirm-phrase {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.65rem;
+  letter-spacing: 0.06em;
+  color: var(--ghost-dim);
+  background: rgba(180, 195, 230, 0.04);
+  border: 1px solid rgba(180, 195, 230, 0.12);
+  border-radius: 8px;
+  padding: 6px 10px;
+  display: inline-block;
+  margin-bottom: 14px;
+}
+
+.confirm-input-wrap {
+  margin-bottom: 16px;
+}
+
+.confirm-submit {
+  width: 100%;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.55rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  padding: 12px;
+  border: 1px solid rgba(180, 195, 230, 0.2);
+  border-radius: 14px;
+  background: transparent;
+  color: var(--ghost-dim);
+  cursor: pointer;
+  transition: all 0.25s ease;
+  min-height: 44px;
+  margin-bottom: 8px;
+}
+.confirm-submit:enabled:hover {
+  background: rgba(180, 195, 230, 0.08);
+  border-color: rgba(180, 195, 230, 0.35);
+  color: var(--ghost-white);
+  box-shadow: 0 0 24px rgba(180, 195, 230, 0.1);
+}
+.confirm-submit:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.confirm-cancel {
+  width: 100%;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.5rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  padding: 10px;
+  border: none;
+  background: transparent;
+  color: var(--text-ghost);
+  cursor: pointer;
+  transition: color 0.2s;
+  min-height: 36px;
+}
+.confirm-cancel:hover { color: var(--text-dim); }
+
+/* ── TOAST ── */
+.toast {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%) translateY(20px);
+  background: rgba(8, 10, 20, 0.94);
+  border: 1px solid var(--border);
+  border-radius: 24px;
+  padding: 10px 20px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.6rem;
+  letter-spacing: 0.12em;
+  color: var(--text-dim);
+  z-index: 200;
+  opacity: 0;
+  transition: all 0.3s ease;
+  backdrop-filter: blur(12px);
+  pointer-events: none;
+  max-width: calc(100vw - 40px);
+  text-align: center;
+}
+.toast.visible { opacity: 1; transform: translateX(-50%) translateY(0); }
+</style>
+</head>
+<body>
+
+<div class="atmosphere" id="atmosphere"></div>
+
+<!-- CONFIRMATION OVERLAY -->
+<div class="confirm-overlay" id="confirmOverlay">
+  <div class="confirm-box">
+    <div class="confirm-title">Activate Ghost Mode</div>
+    <div class="confirm-body">
+      Once activated, your memories become readable by designated beneficiaries. Confessions remain sealed forever. This cannot be undone without explicit deactivation.
+    </div>
+    <div>Type exactly to confirm:</div>
+    <div class="confirm-phrase">i activate ghost mode</div>
+    <div class="confirm-input-wrap">
+      <input class="input-field" id="confirmInput"
+        placeholder="type the phrase exactly…"
+        oninput="onConfirmInput(this.value)">
+    </div>
+    <button class="confirm-submit" id="confirmSubmitBtn" disabled onclick="submitActivate()">
+      Activate Ghost Mode
+    </button>
+    <button class="confirm-cancel" onclick="closeConfirm()">Cancel</button>
+  </div>
+</div>
+
+<nav class="topbar">
+  <a href="index.html" class="topbar-back" data-draggable="true">← Index</a>
+  <span class="topbar-title">GHOST MODE</span>
+  <div class="topbar-ghost-pill" id="topbarPill">Dormant</div>
+</nav>
+
+<div class="page">
+
+  <header class="header">
+    <h1 id="pageTitle">Ghost</h1>
+    <p class="epigraph">your memories, readable after departure — confessions sealed forever</p>
+  </header>
+
+  <!-- STATUS SECTION -->
+  <div class="ghost-status-section" id="ghostStatusSection">
+    <div class="ghost-shimmer"></div>
+    <div class="dormant-indicator">
+      <div class="ghost-glyph" id="ghostGlyph">◯</div>
+      <div class="status-word" id="statusWord">Dormant</div>
+      <div class="activated-at" id="activatedAt">—</div>
+    </div>
+    <div class="warning-copy">
+      Your memories will be readable after activation. Confessions remain sealed forever.
+    </div>
+    <div class="sealed-note">All confessions remain sealed. No beneficiary may access them.</div>
+    <div class="status-buttons">
+      <button class="btn btn-ghost-activate" id="btnActivate" data-draggable="true" onclick="openConfirm()">
+        ◯ Activate Ghost Mode
+      </button>
+      <button class="btn btn-danger" id="btnDeactivate" data-draggable="true" onclick="deactivate()" style="display:none">
+        ✕ Deactivate
+      </button>
+    </div>
+  </div>
+
+  <!-- BENEFICIARIES PANEL -->
+  <div class="panel">
+    <div class="panel-title">
+      <span style="width:5px;height:5px;border-radius:50%;background:var(--ghost-dim);opacity:0.5;display:inline-block"></span>
+      Designated Beneficiaries
+      <span id="beneCount" style="font-family:'JetBrains Mono',monospace;font-size:0.45rem;color:var(--text-ghost)"></span>
+    </div>
+    <div id="beneTableWrap">
+      <div class="no-beneficiaries" id="nobeneTxt">No beneficiaries designated yet.</div>
+      <table class="beneficiary-table" id="beneTable" style="display:none">
+        <thead>
+          <tr>
+            <th>Email</th>
+            <th>Name</th>
+            <th>Access</th>
+            <th>Accepted</th>
+            <th>Expires</th>
+          </tr>
+        </thead>
+        <tbody id="beneTableBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ADD BENEFICIARY PANEL -->
+  <div class="panel">
+    <div class="panel-title">
+      <span style="width:5px;height:5px;border-radius:50%;background:rgba(180,195,230,0.3);display:inline-block"></span>
+      Add Beneficiary
+    </div>
+    <div class="add-beneficiary-form" id="addBeneForm">
+      <input class="input-field" id="beneEmail" placeholder="email address" type="email">
+      <input class="input-field" id="beneName" placeholder="display name">
+      <div class="form-row-full" style="gap:10px">
+        <select class="input-field" id="beneAccessLevel" style="flex:1;cursor:pointer">
+          <option value="read_only">read_only — can read memories</option>
+          <option value="read_with_response">read_with_response — can read + respond</option>
+        </select>
+        <input class="input-field" id="beneAccessDays" type="number" min="1" placeholder="days (optional)" style="width:140px;flex:none">
+      </div>
+      <div class="form-row-full">
+        <button class="btn btn-ghost-activate" data-draggable="true" onclick="addBeneficiary()" style="flex:0">
+          ◯ Designate
+        </button>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="body/draggable.js"></script>
+<script>
+const API = 'https://api.vintaclectic.com';
+function getToken() { return localStorage.getItem('vint_token') || ''; }
+function headers() { return { 'Content-Type': 'application/json', 'Authorization': `Bearer ${getToken()}` }; }
+
+let ghostActive = false;
+
+// ── STATUS ──
+async function loadStatus() {
+  try {
+    const r = await fetch(`${API}/api/ghost/status`, { headers: headers() });
+    if (!r.ok) return;
+    const data = await r.json();
+    applyStatus(data);
+    if (data.beneficiaries) renderBeneficiaries(data.beneficiaries);
+    else loadBeneficiaries();
+  } catch(_) {
+    loadBeneficiaries();
+  }
+}
+
+function applyStatus(data) {
+  ghostActive = !!data.ghost_mode_active;
+  const section = document.getElementById('ghostStatusSection');
+  const atmo = document.getElementById('atmosphere');
+  const pill = document.getElementById('topbarPill');
+  const title = document.getElementById('pageTitle');
+  const statusWord = document.getElementById('statusWord');
+  const glyph = document.getElementById('ghostGlyph');
+  const activatedAt = document.getElementById('activatedAt');
+  const btnActivate = document.getElementById('btnActivate');
+  const btnDeactivate = document.getElementById('btnDeactivate');
+
+  if (ghostActive) {
+    section.classList.add('active');
+    atmo.classList.add('active-mode');
+    pill.classList.add('active');
+    pill.textContent = 'Active';
+    title.classList.add('active-glow');
+    statusWord.textContent = 'Active';
+    glyph.textContent = '◎';
+    if (data.ghost_activated_at) {
+      activatedAt.textContent = 'since ' + new Date(data.ghost_activated_at).toLocaleString();
+    }
+    btnActivate.style.display = 'none';
+    btnDeactivate.style.display = 'inline-flex';
+  } else {
+    section.classList.remove('active');
+    atmo.classList.remove('active-mode');
+    pill.classList.remove('active');
+    pill.textContent = 'Dormant';
+    title.classList.remove('active-glow');
+    statusWord.textContent = 'Dormant';
+    glyph.textContent = '◯';
+    activatedAt.textContent = '';
+    btnActivate.style.display = 'inline-flex';
+    btnDeactivate.style.display = 'none';
+  }
+}
+
+// ── CONFIRM DIALOG ──
+function openConfirm() {
+  document.getElementById('confirmInput').value = '';
+  document.getElementById('confirmSubmitBtn').disabled = true;
+  document.getElementById('confirmOverlay').classList.add('visible');
+  setTimeout(() => document.getElementById('confirmInput').focus(), 100);
+}
+
+function closeConfirm() {
+  document.getElementById('confirmOverlay').classList.remove('visible');
+}
+
+function onConfirmInput(val) {
+  document.getElementById('confirmSubmitBtn').disabled = (val !== 'i activate ghost mode');
+}
+
+async function submitActivate() {
+  const phrase = document.getElementById('confirmInput').value;
+  if (phrase !== 'i activate ghost mode') return;
+  closeConfirm();
+  try {
+    const r = await fetch(`${API}/api/ghost/activate`, {
+      method: 'POST',
+      headers: headers(),
+      body: JSON.stringify({ confirm: 'i activate ghost mode' })
+    });
+    if (!r.ok) {
+      const d = await r.json();
+      throw new Error(d.error || 'failed');
+    }
+    const data = await r.json();
+    applyStatus({ ghost_mode_active: true, ghost_activated_at: data.activated_at || new Date().toISOString() });
+    toast('Ghost Mode activated.');
+  } catch(e) {
+    toast('Error: ' + e.message);
+  }
+}
+
+async function deactivate() {
+  try {
+    const r = await fetch(`${API}/api/ghost/deactivate`, {
+      method: 'POST', headers: headers()
+    });
+    if (!r.ok) {
+      const d = await r.json();
+      throw new Error(d.error || 'failed');
+    }
+    applyStatus({ ghost_mode_active: false });
+    toast('Ghost Mode deactivated.');
+  } catch(e) {
+    toast('Error: ' + e.message);
+  }
+}
+
+// ── BENEFICIARIES ──
+async function loadBeneficiaries() {
+  try {
+    const r = await fetch(`${API}/api/ghost/beneficiaries`, { headers: headers() });
+    if (!r.ok) return;
+    const data = await r.json();
+    const items = Array.isArray(data) ? data : (data.beneficiaries || []);
+    renderBeneficiaries(items);
+  } catch(_) {}
+}
+
+function renderBeneficiaries(items) {
+  const count = document.getElementById('beneCount');
+  const noTxt = document.getElementById('nobeneTxt');
+  const table = document.getElementById('beneTable');
+  const tbody = document.getElementById('beneTableBody');
+
+  count.textContent = items.length ? `(${items.length})` : '';
+
+  if (!items.length) {
+    noTxt.style.display = 'block';
+    table.style.display = 'none';
+    return;
+  }
+
+  noTxt.style.display = 'none';
+  table.style.display = 'table';
+
+  tbody.innerHTML = items.map(b => {
+    const accessClass = b.access_level === 'read_with_response' ? 'read_with_response' : 'read_only';
+    const accepted = b.accepted_at ? new Date(b.accepted_at).toLocaleDateString() : '—';
+    const expires = b.expires_at ? new Date(b.expires_at).toLocaleDateString() : 'never';
+    return `<tr>
+      <td>${escHtml(b.beneficiary_email || b.email || '—')}</td>
+      <td>${escHtml(b.beneficiary_name || b.name || '—')}</td>
+      <td><span class="access-pill ${accessClass}">${b.access_level || 'read_only'}</span></td>
+      <td>${accepted}</td>
+      <td>${expires}</td>
+    </tr>`;
+  }).join('');
+}
+
+async function addBeneficiary() {
+  const email = document.getElementById('beneEmail').value.trim();
+  const name = document.getElementById('beneName').value.trim();
+  const access_level = document.getElementById('beneAccessLevel').value;
+  const daysRaw = document.getElementById('beneAccessDays').value.trim();
+  const access_days = daysRaw ? parseInt(daysRaw) : undefined;
+
+  if (!email) { toast('Email is required.'); return; }
+  if (!name) { toast('Name is required.'); return; }
+
+  const body = { beneficiary_email: email, beneficiary_name: name, access_level };
+  if (access_days) body.access_days = access_days;
+
+  try {
+    const r = await fetch(`${API}/api/ghost/designate`, {
+      method: 'POST',
+      headers: headers(),
+      body: JSON.stringify(body)
+    });
+    if (!r.ok) {
+      const d = await r.json();
+      throw new Error(d.error || 'failed');
+    }
+    document.getElementById('beneEmail').value = '';
+    document.getElementById('beneName').value = '';
+    document.getElementById('beneAccessDays').value = '';
+    toast(`${name} designated as beneficiary.`);
+    loadBeneficiaries();
+  } catch(e) {
+    toast('Error: ' + e.message);
+  }
+}
+
+// ── UTILS ──
+function escHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function toast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('visible');
+  clearTimeout(t._timer);
+  t._timer = setTimeout(() => t.classList.remove('visible'), 2800);
+}
+
+// ── CLOSE CONFIRM ON BACKGROUND CLICK ──
+document.getElementById('confirmOverlay').addEventListener('click', (e) => {
+  if (e.target === e.currentTarget) closeConfirm();
+});
+
+// ── ENTER KEY IN CONFIRM ──
+document.getElementById('confirmInput').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') {
+    const btn = document.getElementById('confirmSubmitBtn');
+    if (!btn.disabled) submitActivate();
+  }
+  if (e.key === 'Escape') closeConfirm();
+});
+
+document.addEventListener('DOMContentLoaded', loadStatus);
+</script>
+</body>
+</html>

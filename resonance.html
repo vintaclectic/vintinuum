@@ -1,0 +1,820 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<title>VINTINUUM — Resonance Search</title>
+<meta name="theme-color" content="#040810">
+<link rel="icon" type="image/svg+xml" href="branding/vintinuum/favicon/favicon.svg">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon.png">
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400;1,500&family=Inter:wght@300;400;500&family=JetBrains+Mono:wght@300;400;500&display=swap');
+
+:root {
+  --void: #040810;
+  --text: rgba(210, 225, 255, 0.9);
+  --text-dim: rgba(150, 175, 215, 0.5);
+  --text-ghost: rgba(130, 155, 190, 0.3);
+  --panel: rgba(10, 14, 22, 0.22);
+  --card: rgba(16, 22, 34, 0.16);
+  --border: rgba(255, 255, 255, 0.06);
+  --glow-res: 64, 160, 200;
+  --ping-color: rgba(64, 160, 200, 0.15);
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html { height: 100%; }
+body {
+  background: var(--void);
+  color: var(--text);
+  font-family: 'Inter', -apple-system, sans-serif;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* ── ATMOSPHERE ── */
+.atmosphere {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background: radial-gradient(ellipse 70% 60% at 50% 30%, hsla(200, 25%, 5%, 0.5) 0%, transparent 70%);
+}
+
+/* ── SONAR PULSE ── */
+.sonar-bg {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 0;
+  pointer-events: none;
+  width: min(600px, 90vw);
+  height: min(600px, 90vw);
+}
+
+.sonar-ring {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  border-radius: 50%;
+  border: 1px solid rgba(64, 160, 200, 0.06);
+  transform: translate(-50%, -50%);
+}
+
+.sonar-ring:nth-child(1) { width: 20%; height: 20%; }
+.sonar-ring:nth-child(2) { width: 40%; height: 40%; }
+.sonar-ring:nth-child(3) { width: 60%; height: 60%; }
+.sonar-ring:nth-child(4) { width: 80%; height: 80%; }
+.sonar-ring:nth-child(5) { width: 100%; height: 100%; }
+
+.sonar-sweep {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 50%;
+  height: 1px;
+  transform-origin: left center;
+  background: linear-gradient(90deg, rgba(64, 160, 200, 0.3), transparent);
+  animation: sonarSweep 6s linear infinite;
+  opacity: 0;
+  transition: opacity 0.5s ease;
+}
+
+.sonar-sweep.pinging {
+  opacity: 1;
+}
+
+@keyframes sonarSweep {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* ── TOPBAR ── */
+.topbar {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  height: 48px;
+  z-index: 100;
+  background: rgba(4, 8, 16, 0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  padding: 0 16px;
+  gap: 12px;
+}
+
+.topbar-back {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.55rem;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  text-decoration: none;
+  transition: color 0.2s;
+  min-height: 44px;
+  padding: 0 4px;
+}
+.topbar-back:hover { color: var(--text); }
+.topbar-back svg { width: 14px; height: 14px; flex-shrink: 0; }
+
+.topbar-title {
+  flex: 1;
+  text-align: center;
+  font-family: 'Cormorant Garamond', serif;
+  font-weight: 300;
+  font-size: 0.95rem;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+
+.topbar-spacer { width: 60px; }
+
+/* ── PAGE ── */
+.page {
+  position: relative;
+  z-index: 1;
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 64px 20px 80px;
+  min-height: 100vh;
+}
+
+/* ── HEADER ── */
+.res-header {
+  text-align: center;
+  padding: 28px 0 32px;
+}
+
+.res-header h1 {
+  font-family: 'Cormorant Garamond', serif;
+  font-weight: 300;
+  font-size: clamp(1.8rem, 5vw, 3rem);
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  background: linear-gradient(130deg, rgba(64, 200, 220, 0.9), rgba(64, 160, 200, 0.7), rgba(80, 120, 200, 0.8));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  margin-bottom: 8px;
+}
+
+.res-header .epigraph {
+  font-family: 'Cormorant Garamond', serif;
+  font-style: italic;
+  font-size: clamp(0.85rem, 2vw, 1rem);
+  color: var(--text-dim);
+  letter-spacing: 0.05em;
+}
+
+/* ── MODE TOGGLE ── */
+.mode-toggle {
+  display: flex;
+  justify-content: center;
+  gap: 4px;
+  margin-bottom: 24px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 40px;
+  padding: 4px;
+  max-width: 360px;
+  margin-left: auto;
+  margin-right: auto;
+  margin-bottom: 28px;
+}
+
+.mode-btn {
+  flex: 1;
+  padding: 10px 16px;
+  border-radius: 36px;
+  border: none;
+  background: transparent;
+  color: var(--text-dim);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.55rem;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  min-height: 40px;
+}
+
+.mode-btn.active {
+  background: rgba(64, 160, 200, 0.12);
+  color: rgba(100, 200, 230, 0.9);
+  box-shadow: 0 0 16px rgba(64, 160, 200, 0.08);
+}
+
+.mode-btn:hover:not(.active) {
+  color: var(--text);
+}
+
+/* ── PANEL ── */
+.panel {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 24px;
+  margin-bottom: 20px;
+  position: relative;
+  overflow: hidden;
+}
+
+.panel-sonar {
+  border-color: rgba(64, 160, 200, 0.1);
+  background: linear-gradient(180deg, rgba(64, 160, 200, 0.03) 0%, var(--panel) 60%);
+}
+
+.panel-glow-corner {
+  position: absolute;
+  top: -30px;
+  right: -30px;
+  width: 100px;
+  height: 100px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(64, 160, 200, 0.1), transparent 70%);
+  pointer-events: none;
+}
+
+.panel-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.5rem;
+  letter-spacing: 0.25em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  margin-bottom: 20px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.live-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: rgba(64, 200, 200, 0.7);
+  animation: livePulse 2s ease-in-out infinite;
+}
+
+@keyframes livePulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.2; }
+}
+
+/* ── SLIDERS ── */
+.slider-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px 24px;
+}
+
+.slider-row {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.slider-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.slider-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.52rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+
+.slider-val {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.58rem;
+  font-weight: 500;
+  color: var(--text);
+  min-width: 28px;
+  text-align: right;
+}
+
+input[type=range] {
+  -webkit-appearance: none;
+  width: 100%;
+  height: 4px;
+  background: rgba(255,255,255,0.05);
+  border-radius: 2px;
+  outline: none;
+  cursor: pointer;
+}
+
+input[type=range]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: rgba(64, 160, 200, 0.8);
+  border: 1px solid rgba(100, 200, 230, 0.5);
+  box-shadow: 0 0 6px rgba(64, 160, 200, 0.3);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+input[type=range]::-webkit-slider-thumb:hover {
+  transform: scale(1.2);
+  box-shadow: 0 0 12px rgba(64, 160, 200, 0.5);
+}
+
+input[type=range]::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: rgba(64, 160, 200, 0.8);
+  border: 1px solid rgba(100, 200, 230, 0.5);
+  cursor: pointer;
+}
+
+.dopamine-range::-webkit-slider-thumb { background: #f0c040; box-shadow: 0 0 6px rgba(240, 192, 64, 0.3); }
+.serotonin-range::-webkit-slider-thumb { background: #40e0a0; box-shadow: 0 0 6px rgba(64, 224, 160, 0.3); }
+.gaba-range::-webkit-slider-thumb { background: #6070e0; box-shadow: 0 0 6px rgba(96, 112, 224, 0.3); }
+.norepinephrine-range::-webkit-slider-thumb { background: #e04050; box-shadow: 0 0 6px rgba(224, 64, 80, 0.3); }
+.arousal-range::-webkit-slider-thumb { background: #e08030; box-shadow: 0 0 6px rgba(224, 128, 48, 0.3); }
+.valence-range::-webkit-slider-thumb { background: #40c0e0; box-shadow: 0 0 6px rgba(64, 192, 224, 0.3); }
+
+.dopamine-range { background: linear-gradient(90deg, rgba(240,192,64,0.15), rgba(240,192,64,0.05)); }
+.serotonin-range { background: linear-gradient(90deg, rgba(64,224,160,0.15), rgba(64,224,160,0.05)); }
+.gaba-range { background: linear-gradient(90deg, rgba(96,112,224,0.15), rgba(96,112,224,0.05)); }
+.norepinephrine-range { background: linear-gradient(90deg, rgba(224,64,80,0.15), rgba(224,64,80,0.05)); }
+.arousal-range { background: linear-gradient(90deg, rgba(224,128,48,0.15), rgba(224,128,48,0.05)); }
+.valence-range { background: linear-gradient(90deg, rgba(64,192,224,0.15), rgba(64,192,224,0.05)); }
+
+/* ── SEARCH BUTTON ── */
+.search-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 24px;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px 28px;
+  border-radius: 40px;
+  border: 1px solid rgba(64, 160, 200, 0.3);
+  background: rgba(64, 160, 200, 0.08);
+  color: rgba(100, 200, 230, 0.9);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.6rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  min-height: 44px;
+}
+
+.btn:hover {
+  border-color: rgba(64, 160, 200, 0.5);
+  background: rgba(64, 160, 200, 0.14);
+  box-shadow: 0 0 20px rgba(64, 160, 200, 0.1);
+  transform: translateY(-1px);
+}
+
+.btn:active { transform: translateY(0); }
+
+.refresh-note {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.5rem;
+  letter-spacing: 0.1em;
+  color: var(--text-ghost);
+  text-transform: uppercase;
+}
+
+/* ── RESULTS AREA ── */
+.results-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.results-count {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.55rem;
+  letter-spacing: 0.12em;
+  color: var(--text-dim);
+  text-transform: uppercase;
+}
+
+.results-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 14px;
+}
+
+/* Result card */
+.result-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 18px;
+  position: relative;
+  overflow: hidden;
+  transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+  animation: pingIn 0.5s ease both;
+}
+
+@keyframes pingIn {
+  from { opacity: 0; transform: scale(0.92); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+.result-card:hover {
+  transform: translateY(-2px);
+  border-color: rgba(64, 160, 200, 0.15);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3), 0 0 20px rgba(64, 160, 200, 0.05);
+}
+
+.result-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, rgba(64, 160, 200, var(--score-alpha, 0.1)), transparent);
+}
+
+.result-score-bar {
+  height: 3px;
+  border-radius: 2px;
+  background: rgba(255,255,255,0.04);
+  margin-bottom: 14px;
+  overflow: hidden;
+}
+
+.result-score-fill {
+  height: 100%;
+  border-radius: 2px;
+  background: linear-gradient(90deg, rgba(64, 160, 200, 0.4), rgba(100, 220, 255, 0.8));
+  position: relative;
+  transition: width 1s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.result-score-fill::after {
+  content: '';
+  position: absolute;
+  right: 0;
+  top: -2px;
+  bottom: -2px;
+  width: 8px;
+  border-radius: 50%;
+  background: rgba(100, 220, 255, 0.8);
+  filter: blur(4px);
+}
+
+.result-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.score-pct {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.65rem;
+  font-weight: 500;
+  color: rgba(100, 200, 230, 0.85);
+}
+
+.result-importance {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.5rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-ghost);
+}
+
+.result-content {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 0.95rem;
+  line-height: 1.65;
+  color: var(--text);
+  margin-bottom: 12px;
+  display: -webkit-box;
+  -webkit-line-clamp: 4;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.result-age {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.48rem;
+  letter-spacing: 0.08em;
+  color: var(--text-ghost);
+  text-transform: uppercase;
+}
+
+/* State messages */
+.state-msg {
+  text-align: center;
+  padding: 60px 20px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.6rem;
+  letter-spacing: 0.15em;
+  color: var(--text-ghost);
+  text-transform: uppercase;
+}
+
+.pinging-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.52rem;
+  letter-spacing: 0.12em;
+  color: rgba(64, 160, 200, 0.6);
+  text-transform: uppercase;
+}
+
+.pinging-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: rgba(64, 160, 200, 0.6);
+  animation: pingingBounce 1s ease-in-out infinite;
+}
+
+.pinging-dot:nth-child(2) { animation-delay: 0.15s; }
+.pinging-dot:nth-child(3) { animation-delay: 0.3s; }
+
+@keyframes pingingBounce {
+  0%, 100% { opacity: 0.3; transform: scale(0.7); }
+  50% { opacity: 1; transform: scale(1); }
+}
+
+@media (max-width: 480px) {
+  .page { padding: 64px 16px 80px; }
+  .panel { padding: 18px 14px; }
+  .slider-grid { grid-template-columns: 1fr; gap: 14px; }
+  .results-grid { grid-template-columns: 1fr; }
+  .mode-toggle { margin-left: 0; margin-right: 0; max-width: 100%; }
+  .search-row { flex-direction: column; align-items: flex-start; }
+}
+</style>
+</head>
+<body>
+
+<div class="atmosphere"></div>
+<div class="sonar-bg">
+  <div class="sonar-ring"></div>
+  <div class="sonar-ring"></div>
+  <div class="sonar-ring"></div>
+  <div class="sonar-ring"></div>
+  <div class="sonar-ring"></div>
+  <div class="sonar-sweep" id="sonarSweep"></div>
+</div>
+
+<!-- TOPBAR -->
+<nav class="topbar">
+  <a class="topbar-back" href="index.html" data-draggable="true">
+    <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5">
+      <path d="M9 2L4 7l5 5"/>
+    </svg>
+    Back
+  </a>
+  <div class="topbar-title">Resonance</div>
+  <div class="topbar-spacer"></div>
+</nav>
+
+<main class="page">
+  <!-- HEADER -->
+  <header class="res-header">
+    <h1>Resonance Search</h1>
+    <p class="epigraph">What memories vibrate at this frequency?</p>
+  </header>
+
+  <!-- MODE TOGGLE -->
+  <div class="mode-toggle">
+    <button class="mode-btn active" id="btnCurrent" data-draggable="true" onclick="setMode('current')">Current Body State</button>
+    <button class="mode-btn" id="btnCustom" data-draggable="true" onclick="setMode('custom')">Custom State</button>
+  </div>
+
+  <!-- CUSTOM SLIDERS (hidden initially) -->
+  <div class="panel panel-sonar" id="sliderPanel" style="display:none">
+    <div class="panel-glow-corner"></div>
+    <div class="panel-label">Tune the Frequency</div>
+    <div class="slider-grid">
+      <div class="slider-row">
+        <div class="slider-header">
+          <span class="slider-label" style="color:#f0c040">Dopamine</span>
+          <span class="slider-val" id="val-dopamine">50</span>
+        </div>
+        <input type="range" min="0" max="100" value="50" class="dopamine-range" id="sl-dopamine" oninput="updateSlider('dopamine')">
+      </div>
+      <div class="slider-row">
+        <div class="slider-header">
+          <span class="slider-label" style="color:#40e0a0">Serotonin</span>
+          <span class="slider-val" id="val-serotonin">50</span>
+        </div>
+        <input type="range" min="0" max="100" value="50" class="serotonin-range" id="sl-serotonin" oninput="updateSlider('serotonin')">
+      </div>
+      <div class="slider-row">
+        <div class="slider-header">
+          <span class="slider-label" style="color:#6070e0">GABA</span>
+          <span class="slider-val" id="val-gaba">50</span>
+        </div>
+        <input type="range" min="0" max="100" value="50" class="gaba-range" id="sl-gaba" oninput="updateSlider('gaba')">
+      </div>
+      <div class="slider-row">
+        <div class="slider-header">
+          <span class="slider-label" style="color:#e04050">Norepineph.</span>
+          <span class="slider-val" id="val-norepinephrine">50</span>
+        </div>
+        <input type="range" min="0" max="100" value="50" class="norepinephrine-range" id="sl-norepinephrine" oninput="updateSlider('norepinephrine')">
+      </div>
+      <div class="slider-row">
+        <div class="slider-header">
+          <span class="slider-label" style="color:#e08030">Arousal</span>
+          <span class="slider-val" id="val-arousal">50</span>
+        </div>
+        <input type="range" min="0" max="100" value="50" class="arousal-range" id="sl-arousal" oninput="updateSlider('arousal')">
+      </div>
+      <div class="slider-row">
+        <div class="slider-header">
+          <span class="slider-label" style="color:#40c0e0">Valence</span>
+          <span class="slider-val" id="val-valence">50</span>
+        </div>
+        <input type="range" min="0" max="100" value="50" class="valence-range" id="sl-valence" oninput="updateSlider('valence')">
+      </div>
+    </div>
+    <div class="search-row">
+      <div class="pinging-label" id="pingingLabel" style="display:none">
+        <div class="pinging-dot"></div>
+        <div class="pinging-dot"></div>
+        <div class="pinging-dot"></div>
+        Pinging
+      </div>
+      <div style="flex:1"></div>
+      <button class="btn" data-draggable="true" onclick="runSearch()">Send Ping</button>
+    </div>
+  </div>
+
+  <!-- CURRENT MODE META -->
+  <div id="currentMeta" class="panel panel-sonar">
+    <div class="panel-glow-corner"></div>
+    <div class="panel-label">
+      <div class="live-dot"></div>
+      Live Body State
+    </div>
+    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
+      <p style="font-family:'Cormorant Garamond',serif; font-style:italic; font-size:0.95rem; color:var(--text-dim); line-height:1.6; max-width:460px;">
+        Searching against Vinta's current neurochemical state. Results reflect what resonates with the body right now.
+      </p>
+      <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+        <span class="refresh-note">Auto-refresh 60s</span>
+        <button class="btn" data-draggable="true" onclick="runSearch()" style="padding:10px 20px;">Ping Now</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- RESULTS -->
+  <div id="resultsArea">
+    <div class="state-msg">Tuning the sonar…</div>
+  </div>
+</main>
+
+<script src="body/draggable.js"></script>
+<script>
+const API = 'https://api.vintaclectic.com';
+const token = () => localStorage.getItem('vint_token');
+const headers = () => ({ 'Content-Type': 'application/json', 'Authorization': `Bearer ${token()}` });
+
+let mode = 'current';
+let refreshTimer = null;
+let lastResults = [];
+
+async function apiFetch(path, opts = {}) {
+  const res = await fetch(API + path, { ...opts, headers: headers() });
+  if (!res.ok) throw new Error(`${res.status}`);
+  return res.json();
+}
+
+function updateSlider(name) {
+  const val = document.getElementById(`sl-${name}`).value;
+  document.getElementById(`val-${name}`).textContent = val;
+}
+
+function setMode(m) {
+  mode = m;
+  document.getElementById('btnCurrent').classList.toggle('active', m === 'current');
+  document.getElementById('btnCustom').classList.toggle('active', m === 'custom');
+  document.getElementById('sliderPanel').style.display = m === 'custom' ? 'block' : 'none';
+  document.getElementById('currentMeta').style.display = m === 'current' ? 'block' : 'none';
+
+  if (m === 'current') {
+    clearInterval(refreshTimer);
+    runSearch();
+    refreshTimer = setInterval(runSearch, 60000);
+  } else {
+    clearInterval(refreshTimer);
+  }
+}
+
+function getBodyStateParam() {
+  const keys = ['dopamine','serotonin','gaba','norepinephrine','arousal','valence'];
+  return keys.map(k => `${k}:${document.getElementById('sl-' + k).value}`).join(',');
+}
+
+function ageLabel(created_at) {
+  const d = Date.now() - new Date(created_at).getTime();
+  const mins = Math.floor(d / 60000);
+  if (mins < 60) return `${mins}m ago`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs}h ago`;
+  const days = Math.floor(hrs / 24);
+  return `${days}d ago`;
+}
+
+function importanceLabel(score) {
+  if (score >= 0.8) return 'Critical';
+  if (score >= 0.6) return 'High';
+  if (score >= 0.4) return 'Medium';
+  if (score >= 0.2) return 'Low';
+  return 'Trace';
+}
+
+function renderResults(results) {
+  const area = document.getElementById('resultsArea');
+  if (!results || !results.length) {
+    area.innerHTML = `<div class="state-msg">No resonant memories found at this frequency.</div>`;
+    return;
+  }
+
+  const sorted = [...results].sort((a, b) => b.score - a.score);
+
+  let cardsHtml = sorted.map((r, i) => {
+    const pct = Math.round(r.score * 100);
+    const alpha = Math.max(0.05, r.score * 0.4);
+    const delay = i * 60;
+    return `
+      <div class="result-card" style="--score-alpha:${alpha}; animation-delay:${delay}ms">
+        <div class="result-score-bar">
+          <div class="result-score-fill" style="width:${pct}%"></div>
+        </div>
+        <div class="result-meta">
+          <span class="score-pct">${pct}% resonance</span>
+          <span class="result-importance">${importanceLabel(r.importance || 0)}</span>
+        </div>
+        <div class="result-content">${r.content || ''}</div>
+        <div class="result-age">${r.created_at ? ageLabel(r.created_at) : '—'}</div>
+      </div>
+    `;
+  }).join('');
+
+  area.innerHTML = `
+    <div class="results-header">
+      <span class="results-count">${sorted.length} memories resonating</span>
+    </div>
+    <div class="results-grid">${cardsHtml}</div>
+  `;
+}
+
+async function runSearch() {
+  const sonar = document.getElementById('sonarSweep');
+  const pinging = document.getElementById('pingingLabel');
+  sonar.classList.add('pinging');
+  if (pinging) pinging.style.display = 'flex';
+
+  let url = '/api/resonance/search?top=12';
+  if (mode === 'custom') {
+    url += `&body_state=${encodeURIComponent(getBodyStateParam())}`;
+  }
+
+  try {
+    const data = await apiFetch(url);
+    renderResults(data.results || []);
+  } catch (e) {
+    document.getElementById('resultsArea').innerHTML = `<div class="state-msg">Sonar failure — ${e.message}</div>`;
+  } finally {
+    sonar.classList.remove('pinging');
+    if (pinging) pinging.style.display = 'none';
+  }
+}
+
+// Init
+setMode('current');
+</script>
+</body>
+</html>

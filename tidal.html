@@ -1,0 +1,928 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<title>VINTINUUM — Tidal Calendar</title>
+<meta name="theme-color" content="#040810">
+<link rel="icon" type="image/svg+xml" href="branding/vintinuum/favicon/favicon.svg">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon.png">
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400;1,500&family=Inter:wght@300;400;500&family=JetBrains+Mono:wght@300;400;500&display=swap');
+
+:root {
+  --void: #040810;
+  --text: rgba(210, 225, 255, 0.9);
+  --text-dim: rgba(150, 175, 215, 0.5);
+  --text-ghost: rgba(130, 155, 190, 0.3);
+  --panel: rgba(10, 14, 22, 0.22);
+  --card: rgba(16, 22, 34, 0.16);
+  --border: rgba(255, 255, 255, 0.06);
+  --ocean: rgba(20, 60, 100, 0.2);
+  --star: rgba(180, 210, 255, 0.6);
+  --tide-blue: rgba(40, 120, 180, 0.4);
+  --teal: rgba(40, 180, 160, 0.8);
+  --teal-dim: rgba(40, 180, 160, 0.4);
+  --glow-tide: 40, 140, 200;
+  --unlocked-glow: 40, 180, 160;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html { height: 100%; }
+body {
+  background: var(--void);
+  color: var(--text);
+  font-family: 'Inter', -apple-system, sans-serif;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* ── OCEAN ATMOSPHERE ── */
+.atmosphere {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse 100% 40% at 50% 100%, rgba(10, 40, 80, 0.5) 0%, transparent 60%),
+    radial-gradient(ellipse 80% 40% at 50% 0%, rgba(5, 15, 40, 0.4) 0%, transparent 60%);
+}
+
+/* Starfield */
+.starfield {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.star {
+  position: absolute;
+  border-radius: 50%;
+  background: rgba(200, 220, 255, 0.6);
+  animation: starTwinkle var(--dur, 4s) ease-in-out infinite;
+}
+
+@keyframes starTwinkle {
+  0%, 100% { opacity: 0.15; transform: scale(1); }
+  50% { opacity: 0.7; transform: scale(1.3); }
+}
+
+/* Tidal wave */
+.tidal-wave {
+  position: fixed;
+  bottom: 0;
+  left: -20%;
+  right: -20%;
+  height: 80px;
+  z-index: 0;
+  pointer-events: none;
+  opacity: 0.08;
+  overflow: hidden;
+}
+
+.wave-path {
+  width: 100%;
+  height: 100%;
+}
+
+.wave-path path {
+  animation: waveMov 12s ease-in-out infinite;
+}
+
+@keyframes waveMov {
+  0%, 100% { d: path("M0 50 Q25 20 50 50 Q75 80 100 50 L100 80 L0 80 Z"); }
+  50% { d: path("M0 50 Q25 80 50 50 Q75 20 100 50 L100 80 L0 80 Z"); }
+}
+
+.wave-2 .wave-path path {
+  animation: waveMov2 9s ease-in-out infinite;
+  opacity: 0.5;
+}
+
+@keyframes waveMov2 {
+  0%, 100% { d: path("M0 60 Q33 30 66 60 Q83 75 100 60 L100 80 L0 80 Z"); }
+  50% { d: path("M0 60 Q17 75 33 60 Q66 30 100 60 L100 80 L0 80 Z"); }
+}
+
+/* ── TOPBAR ── */
+.topbar {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  height: 48px;
+  z-index: 100;
+  background: rgba(4, 8, 16, 0.88);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  padding: 0 16px;
+  gap: 12px;
+}
+
+.topbar-back {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.55rem;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  text-decoration: none;
+  transition: color 0.2s;
+  min-height: 44px;
+  padding: 0 4px;
+}
+.topbar-back:hover { color: var(--text); }
+.topbar-back svg { width: 14px; height: 14px; flex-shrink: 0; }
+
+.topbar-title {
+  flex: 1;
+  text-align: center;
+  font-family: 'Cormorant Garamond', serif;
+  font-weight: 300;
+  font-size: 0.95rem;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+
+.topbar-spacer { width: 60px; }
+
+/* ── PAGE ── */
+.page {
+  position: relative;
+  z-index: 1;
+  max-width: 860px;
+  margin: 0 auto;
+  padding: 64px 20px 100px;
+  min-height: 100vh;
+}
+
+/* ── HEADER ── */
+.tidal-header {
+  text-align: center;
+  padding: 28px 0 32px;
+}
+
+.tidal-moon {
+  width: 64px;
+  height: 64px;
+  margin: 0 auto 18px;
+  position: relative;
+}
+
+.moon-svg {
+  width: 100%;
+  height: 100%;
+}
+
+.tidal-header h1 {
+  font-family: 'Cormorant Garamond', serif;
+  font-weight: 300;
+  font-size: clamp(1.8rem, 5vw, 3rem);
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  background: linear-gradient(130deg, rgba(100, 180, 220, 0.9), rgba(40, 140, 180, 0.7), rgba(40, 180, 160, 0.8));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  margin-bottom: 8px;
+}
+
+.tidal-header .epigraph {
+  font-family: 'Cormorant Garamond', serif;
+  font-style: italic;
+  font-size: clamp(0.85rem, 2vw, 1rem);
+  color: var(--text-dim);
+  letter-spacing: 0.05em;
+}
+
+/* ── CHECK TIDES BAR ── */
+.tide-check-bar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  margin-bottom: 32px;
+  flex-wrap: wrap;
+}
+
+.btn-check-tides {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 13px 28px;
+  border-radius: 40px;
+  border: 1px solid rgba(40, 140, 200, 0.3);
+  background: rgba(40, 140, 200, 0.08);
+  color: rgba(80, 180, 220, 0.9);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.62rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  min-height: 44px;
+}
+
+.btn-check-tides:hover {
+  border-color: rgba(40, 140, 200, 0.5);
+  background: rgba(40, 140, 200, 0.14);
+  box-shadow: 0 0 24px rgba(40, 140, 200, 0.1);
+  transform: translateY(-1px);
+}
+
+.btn-check-tides:active { transform: translateY(0); }
+
+.tide-result {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.58rem;
+  letter-spacing: 0.12em;
+  color: var(--teal-dim);
+  text-transform: uppercase;
+  animation: fadeIn 0.4s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* ── PANEL ── */
+.panel {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 24px;
+  margin-bottom: 20px;
+  position: relative;
+  overflow: hidden;
+}
+
+.panel-ocean {
+  border-color: rgba(40, 140, 200, 0.1);
+  background: linear-gradient(180deg, rgba(20, 60, 100, 0.1) 0%, var(--panel) 60%);
+}
+
+.panel-glow {
+  position: absolute;
+  top: -40px;
+  right: -40px;
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(40, 140, 200, 0.08), transparent 70%);
+  pointer-events: none;
+}
+
+.panel-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.5rem;
+  letter-spacing: 0.25em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  margin-bottom: 18px;
+}
+
+/* ── SEAL FORM ── */
+.seal-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.form-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.5rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+
+input.form-input, textarea.form-input, select.form-input {
+  width: 100%;
+  background: rgba(40, 140, 200, 0.03);
+  border: 1px solid rgba(40, 140, 200, 0.1);
+  border-radius: 10px;
+  padding: 11px 14px;
+  color: var(--text);
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 1rem;
+  line-height: 1.6;
+  outline: none;
+  transition: border-color 0.2s ease;
+}
+
+select.form-input {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.62rem;
+  letter-spacing: 0.08em;
+  cursor: pointer;
+  -webkit-appearance: none;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='rgba(150,175,215,0.4)' stroke-width='1.5' fill='none'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 14px center;
+  padding-right: 36px;
+  background-color: rgba(40, 140, 200, 0.04);
+}
+
+select.form-input option {
+  background: #0a0e16;
+  color: var(--text);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.62rem;
+}
+
+textarea.form-input {
+  min-height: 100px;
+  resize: vertical;
+}
+
+input.form-input:focus, textarea.form-input:focus, select.form-input:focus {
+  border-color: rgba(40, 140, 200, 0.3);
+}
+
+input.form-input::placeholder, textarea.form-input::placeholder {
+  color: var(--text-ghost);
+  font-style: italic;
+}
+
+.params-hint {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.47rem;
+  letter-spacing: 0.06em;
+  color: var(--text-ghost);
+  line-height: 1.5;
+  margin-top: 3px;
+}
+
+/* ── BUTTONS ── */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px 24px;
+  border-radius: 40px;
+  border: 1px solid rgba(40, 140, 200, 0.25);
+  background: rgba(40, 140, 200, 0.07);
+  color: rgba(80, 180, 220, 0.9);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.6rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all 0.22s ease;
+  min-height: 44px;
+  white-space: nowrap;
+}
+
+.btn:hover {
+  border-color: rgba(40, 140, 200, 0.45);
+  background: rgba(40, 140, 200, 0.13);
+  box-shadow: 0 0 20px rgba(40, 140, 200, 0.1);
+  transform: translateY(-1px);
+}
+
+.btn:active { transform: translateY(0); }
+
+.btn-seal {
+  border-color: rgba(40, 180, 160, 0.3);
+  background: rgba(40, 180, 160, 0.07);
+  color: var(--teal);
+}
+
+.btn-seal:hover {
+  border-color: rgba(40, 180, 160, 0.5);
+  background: rgba(40, 180, 160, 0.13);
+  box-shadow: 0 0 24px rgba(40, 180, 160, 0.1);
+  color: rgba(80, 220, 200, 0.95);
+}
+
+.form-actions { margin-top: 4px; }
+
+/* ── SECTION LABEL ── */
+.section-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.5rem;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: var(--text-ghost);
+  margin-bottom: 12px;
+  padding-left: 4px;
+}
+
+/* ── SESSION CARDS ── */
+.sessions-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 14px;
+  margin-bottom: 20px;
+}
+
+.session-card {
+  border-radius: 18px;
+  padding: 20px;
+  position: relative;
+  overflow: hidden;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.session-card:hover { transform: translateY(-2px); }
+
+.session-card.sealed {
+  background: rgba(10, 16, 28, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.session-card.unlocked {
+  background: linear-gradient(160deg, rgba(20, 60, 80, 0.35) 0%, rgba(10, 40, 30, 0.2) 100%);
+  border: 1px solid rgba(40, 180, 160, 0.2);
+  box-shadow: 0 0 30px rgba(40, 180, 160, 0.06);
+  animation: glowIn 0.8s ease;
+}
+
+@keyframes glowIn {
+  from { box-shadow: 0 0 0 rgba(40, 180, 160, 0); }
+  to { box-shadow: 0 0 30px rgba(40, 180, 160, 0.06); }
+}
+
+.session-card.unlocked::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, rgba(40, 180, 160, 0.5), transparent);
+}
+
+.card-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.card-title {
+  font-family: 'Cormorant Garamond', serif;
+  font-weight: 400;
+  font-size: clamp(1rem, 2.5vw, 1.15rem);
+  line-height: 1.3;
+  color: var(--text);
+}
+
+.sealed .card-title { opacity: 0.5; }
+
+.lock-icon {
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+  opacity: 0.25;
+}
+
+.unlock-icon {
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+  color: var(--teal);
+  opacity: 0.7;
+}
+
+.card-condition {
+  font-family: 'Cormorant Garamond', serif;
+  font-style: italic;
+  font-size: 0.85rem;
+  color: var(--text-dim);
+  margin-bottom: 10px;
+  opacity: 0.7;
+}
+
+.unlocked .card-condition { opacity: 1; }
+
+.card-content {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 0.95rem;
+  line-height: 1.65;
+  color: var(--text);
+  display: -webkit-box;
+  -webkit-line-clamp: 4;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  position: relative;
+}
+
+.sealed .card-content {
+  filter: blur(6px);
+  user-select: none;
+  pointer-events: none;
+  opacity: 0.3;
+}
+
+.card-unlock-date {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.48rem;
+  letter-spacing: 0.1em;
+  color: var(--teal-dim);
+  text-transform: uppercase;
+  margin-top: 12px;
+}
+
+.sealed .card-unlock-date { color: var(--text-ghost); }
+
+/* State messages */
+.state-msg {
+  text-align: center;
+  padding: 40px 20px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.6rem;
+  letter-spacing: 0.15em;
+  color: var(--text-ghost);
+  text-transform: uppercase;
+}
+
+.no-sessions {
+  text-align: center;
+  padding: 32px 20px;
+  background: var(--panel);
+  border: 1px dashed var(--border);
+  border-radius: 16px;
+  margin-bottom: 20px;
+}
+
+.no-sessions p {
+  font-family: 'Cormorant Garamond', serif;
+  font-style: italic;
+  font-size: 1rem;
+  color: var(--text-dim);
+}
+
+/* ── TOAST ── */
+.toast {
+  position: fixed;
+  bottom: 80px;
+  left: 50%;
+  transform: translateX(-50%) translateY(20px);
+  background: rgba(12, 20, 36, 0.96);
+  border: 1px solid rgba(40, 180, 160, 0.3);
+  border-radius: 40px;
+  padding: 10px 22px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.58rem;
+  letter-spacing: 0.12em;
+  color: var(--teal);
+  text-transform: uppercase;
+  z-index: 150;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.3s ease, transform 0.3s ease;
+  white-space: nowrap;
+  max-width: calc(100vw - 40px);
+}
+
+.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+@media (max-width: 480px) {
+  .page { padding: 64px 16px 100px; }
+  .panel { padding: 18px 14px; }
+  .sessions-grid { grid-template-columns: 1fr; }
+  .session-card { padding: 16px; }
+}
+</style>
+</head>
+<body>
+
+<div class="atmosphere"></div>
+
+<!-- Starfield -->
+<div class="starfield" id="starfield"></div>
+
+<!-- Tidal waves -->
+<div class="tidal-wave">
+  <svg class="wave-path" viewBox="0 0 100 80" preserveAspectRatio="none" fill="rgba(40,100,160,0.8)">
+    <path d="M0 50 Q25 20 50 50 Q75 80 100 50 L100 80 L0 80 Z"/>
+  </svg>
+</div>
+<div class="tidal-wave wave-2" style="opacity:0.04; bottom:-10px;">
+  <svg class="wave-path" viewBox="0 0 100 80" preserveAspectRatio="none" fill="rgba(20,80,120,0.8)">
+    <path d="M0 60 Q33 30 66 60 Q83 75 100 60 L100 80 L0 80 Z"/>
+  </svg>
+</div>
+
+<!-- TOPBAR -->
+<nav class="topbar">
+  <a class="topbar-back" href="index.html" data-draggable="true">
+    <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5">
+      <path d="M9 2L4 7l5 5"/>
+    </svg>
+    Back
+  </a>
+  <div class="topbar-title">Tidal Calendar</div>
+  <div class="topbar-spacer"></div>
+</nav>
+
+<main class="page">
+  <!-- HEADER -->
+  <header class="tidal-header">
+    <div class="tidal-moon">
+      <svg class="moon-svg" viewBox="0 0 64 64" fill="none">
+        <circle cx="32" cy="32" r="28" stroke="rgba(100,180,220,0.2)" stroke-width="0.5"/>
+        <!-- Crescent moon -->
+        <path d="M32 8 A24 24 0 0 1 32 56 A18 18 0 0 0 32 8Z" fill="rgba(100,180,220,0.15)"/>
+        <path d="M32 8 A24 24 0 0 1 32 56 A18 18 0 0 0 32 8Z" stroke="rgba(100,180,220,0.3)" stroke-width="0.5" fill="none"/>
+        <!-- Stars around -->
+        <circle cx="50" cy="16" r="1" fill="rgba(200,220,255,0.5)"/>
+        <circle cx="14" cy="20" r="0.8" fill="rgba(200,220,255,0.4)"/>
+        <circle cx="54" cy="46" r="0.7" fill="rgba(200,220,255,0.3)"/>
+        <circle cx="10" cy="48" r="1" fill="rgba(200,220,255,0.4)"/>
+        <!-- Nautical star in center -->
+        <path d="M32 22 L33.5 30 L40 28 L34 33 L38 40 L32 36 L26 40 L30 33 L24 28 L30.5 30 Z" fill="rgba(100,180,220,0.15)" stroke="rgba(100,180,220,0.3)" stroke-width="0.4"/>
+      </svg>
+    </div>
+    <h1>Tidal Calendar</h1>
+    <p class="epigraph">Messages sealed to the stars. Unlocked when the sky is right.</p>
+  </header>
+
+  <!-- CHECK TIDES -->
+  <div class="tide-check-bar">
+    <button class="btn-check-tides" data-draggable="true" id="checkBtn" onclick="checkTides()">
+      <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.2">
+        <circle cx="7" cy="7" r="5.5"/>
+        <path d="M7 4v3.5l2 1.5"/>
+      </svg>
+      Check the Tides
+    </button>
+    <div class="tide-result" id="tideResult" style="display:none"></div>
+  </div>
+
+  <!-- SEAL PANEL -->
+  <div class="section-label">Seal a Message</div>
+  <div class="panel panel-ocean" id="sealPanel">
+    <div class="panel-glow"></div>
+    <div class="panel-label">Cast Into the Tide</div>
+    <div class="seal-grid">
+      <div class="form-group">
+        <label class="form-label">Title</label>
+        <input class="form-input" id="sealTitle" placeholder="Name this sealed message">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Content</label>
+        <textarea class="form-input" id="sealContent" placeholder="Write what you want to find waiting for you when the moment arrives…" rows="4"></textarea>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Condition — When Shall It Open?</label>
+        <select class="form-input" id="sealCondition" onchange="updateParamsHint()">
+          <option value="exact_date">On a Specific Date</option>
+          <option value="full_moon">When the Moon is Full</option>
+          <option value="new_moon">When the Moon Goes Dark</option>
+          <option value="solstice">At the Solstice</option>
+          <option value="equinox">At the Equinox</option>
+          <option value="meteor_shower">During a Meteor Shower</option>
+          <option value="birthday">On the Birthday</option>
+        </select>
+      </div>
+      <div class="form-group" id="paramsGroup">
+        <label class="form-label">Condition Parameters (JSON)</label>
+        <input class="form-input" id="sealParams" placeholder='{"date": "2026-12-21"}'>
+        <div class="params-hint" id="paramsHint">e.g. {"date": "2026-12-21"}</div>
+      </div>
+      <div class="form-actions">
+        <button class="btn btn-seal" data-draggable="true" onclick="sealMessage()">Seal Until the Stars Align</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- SESSIONS LIST -->
+  <div class="section-label" style="margin-top:8px">Sealed & Revealed</div>
+  <div id="sessionsArea">
+    <div class="state-msg">Reading the tides…</div>
+  </div>
+</main>
+
+<div class="toast" id="toast"></div>
+
+<script src="body/draggable.js"></script>
+<script>
+const API = 'https://api.vintaclectic.com';
+const token = () => localStorage.getItem('vint_token');
+const headers = () => ({ 'Content-Type': 'application/json', 'Authorization': `Bearer ${token()}` });
+
+async function apiFetch(path, opts = {}) {
+  const res = await fetch(API + path, { ...opts, headers: headers() });
+  if (!res.ok) throw new Error(`${res.status}`);
+  return res.json();
+}
+
+// ── STARFIELD ──
+(function buildStars() {
+  const sf = document.getElementById('starfield');
+  const count = 60;
+  for (let i = 0; i < count; i++) {
+    const s = document.createElement('div');
+    s.className = 'star';
+    const size = Math.random() * 2 + 0.5;
+    s.style.cssText = `
+      left: ${Math.random() * 100}%;
+      top: ${Math.random() * 70}%;
+      width: ${size}px;
+      height: ${size}px;
+      --dur: ${2 + Math.random() * 5}s;
+      animation-delay: ${Math.random() * 5}s;
+    `;
+    sf.appendChild(s);
+  }
+})();
+
+// ── TOAST ──
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 3000);
+}
+
+// ── CONDITION LABELS ──
+const conditionLabels = {
+  exact_date: 'On a specific date',
+  full_moon: 'When the moon is full',
+  new_moon: 'When the moon goes dark',
+  solstice: 'At the turning of the sun',
+  equinox: 'When day and night are equal',
+  meteor_shower: 'When stars streak the sky',
+  birthday: 'On the day of return'
+};
+
+const paramsHints = {
+  exact_date: '{"date": "2026-12-21"} — ISO date when this unseals',
+  full_moon: '{"month": 12, "year": 2026} — optional: restrict to a specific full moon',
+  new_moon: '{"month": 6, "year": 2027} — optional: restrict to a specific new moon',
+  solstice: '{"year": 2026} — optional: target a specific solstice year',
+  equinox: '{"year": 2026, "season": "spring"} — spring or autumn',
+  meteor_shower: '{"shower": "Perseids", "year": 2026} — specify the shower name',
+  birthday: '{"month": 7, "day": 15} — month and day of the birthday'
+};
+
+function updateParamsHint() {
+  const cond = document.getElementById('sealCondition').value;
+  document.getElementById('paramsHint').textContent = paramsHints[cond] || '';
+  document.getElementById('sealParams').placeholder = paramsHints[cond]
+    ? paramsHints[cond].split(' — ')[0]
+    : '{}';
+}
+
+updateParamsHint();
+
+// ── CONDITION DISPLAY LABEL ──
+function condLabel(type) {
+  return conditionLabels[type] || type;
+}
+
+// ── RENDER SESSIONS ──
+function renderSessions(sessions) {
+  const area = document.getElementById('sessionsArea');
+  if (!sessions || !sessions.length) {
+    area.innerHTML = `<div class="no-sessions"><p>No sealed messages yet. The tide waits.</p></div>`;
+    return;
+  }
+
+  // Unlocked first, then sealed
+  const sorted = [...sessions].sort((a, b) => {
+    if (a.status === 'unlocked' && b.status !== 'unlocked') return -1;
+    if (b.status === 'unlocked' && a.status !== 'unlocked') return 1;
+    return new Date(b.unlocked_at || 0) - new Date(a.unlocked_at || 0);
+  });
+
+  const cardsHtml = sorted.map((s, i) => {
+    const isUnlocked = s.status === 'unlocked';
+    const cardClass = isUnlocked ? 'unlocked' : 'sealed';
+    const delay = i * 50;
+
+    const iconHtml = isUnlocked
+      ? `<svg class="unlock-icon" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.2">
+           <rect x="3" y="8" width="12" height="9" rx="2"/>
+           <path d="M6 8V5a3 3 0 0 1 6 0"/>
+         </svg>`
+      : `<svg class="lock-icon" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.2">
+           <rect x="3" y="8" width="12" height="9" rx="2"/>
+           <path d="M6 8V6a3 3 0 0 1 6 0v2"/>
+         </svg>`;
+
+    const dateStr = s.unlocked_at
+      ? `Opened ${new Date(s.unlocked_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}`
+      : 'Sealed';
+
+    return `
+      <div class="session-card ${cardClass}" style="animation-delay:${delay}ms">
+        <div class="card-top">
+          <div class="card-title">${escHtml(s.title || 'Unnamed')}</div>
+          ${iconHtml}
+        </div>
+        <div class="card-condition">${condLabel(s.condition_type)}</div>
+        ${isUnlocked && s.content_preview
+          ? `<div class="card-content">${escHtml(s.content_preview)}</div>`
+          : `<div class="card-content">This message waits in darkness, sealed against the present moment.</div>`
+        }
+        <div class="card-unlock-date">${dateStr}</div>
+      </div>
+    `;
+  }).join('');
+
+  area.innerHTML = `<div class="sessions-grid">${cardsHtml}</div>`;
+}
+
+function escHtml(s) {
+  return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ── CHECK TIDES ──
+async function checkTides() {
+  const btn = document.getElementById('checkBtn');
+  const result = document.getElementById('tideResult');
+  btn.disabled = true;
+  btn.textContent = 'Reading…';
+  result.style.display = 'none';
+
+  try {
+    const data = await apiFetch('/api/tidal/check', { method: 'POST' });
+    const count = data.unlocked_count || 0;
+    result.style.display = 'block';
+    if (count > 0) {
+      result.textContent = `${count} message${count !== 1 ? 's' : ''} revealed by the tide`;
+      showToast(`${count} sealed message${count !== 1 ? 's' : ''} now unlocked`);
+    } else {
+      result.textContent = 'The tide holds — nothing unlocked yet';
+    }
+    // Reload sessions
+    loadSessions();
+  } catch (e) {
+    result.style.display = 'block';
+    result.textContent = `Tide check failed — ${e.message}`;
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = `<svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.2"><circle cx="7" cy="7" r="5.5"/><path d="M7 4v3.5l2 1.5"/></svg> Check the Tides`;
+  }
+}
+
+// ── SEAL MESSAGE ──
+async function sealMessage() {
+  const title = document.getElementById('sealTitle').value.trim();
+  const content = document.getElementById('sealContent').value.trim();
+  const condition_type = document.getElementById('sealCondition').value;
+  const paramsRaw = document.getElementById('sealParams').value.trim();
+
+  if (!title || !content) {
+    showToast('Title and content are required');
+    return;
+  }
+
+  let condition_params = {};
+  if (paramsRaw) {
+    try {
+      condition_params = JSON.parse(paramsRaw);
+    } catch (e) {
+      showToast('Invalid JSON in condition parameters');
+      return;
+    }
+  }
+
+  try {
+    await apiFetch('/api/tidal/seal', {
+      method: 'POST',
+      body: JSON.stringify({ title, content, condition_type, condition_params })
+    });
+    document.getElementById('sealTitle').value = '';
+    document.getElementById('sealContent').value = '';
+    document.getElementById('sealParams').value = '';
+    showToast('Message sealed to the stars');
+    loadSessions();
+  } catch (e) {
+    showToast(`Failed to seal — ${e.message}`);
+  }
+}
+
+// ── LOAD SESSIONS ──
+async function loadSessions() {
+  try {
+    const data = await apiFetch('/api/tidal/sessions');
+    renderSessions(data.sessions || []);
+  } catch (e) {
+    document.getElementById('sessionsArea').innerHTML =
+      `<div class="state-msg">The tide is unreadable — ${e.message}</div>`;
+  }
+}
+
+loadSessions();
+</script>
+</body>
+</html>
