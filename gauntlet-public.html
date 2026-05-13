@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>VINTINUUM — Public Gauntlet</title>
+<meta name="theme-color" content="#040810">
+<link rel="icon" type="image/svg+xml" href="branding/vintinuum/favicon/favicon.svg">
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=Inter:wght@300;400;500&family=JetBrains+Mono:wght@300;400&display=swap');
+
+:root {
+  --void: #040810;
+  --text: rgba(210,225,255,0.9);
+  --text-dim: rgba(150,175,215,0.5);
+  --panel: rgba(10,14,22,0.5);
+  --card: rgba(16,22,34,0.4);
+  --border: rgba(255,255,255,0.06);
+  --purple: #9060d0;
+  --purple-dim: rgba(144,96,208,0.25);
+  --green: #40e0a0;
+  --red: #e04050;
+  --gold: #f0c040;
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+html { height:100%; }
+body { background: var(--void); color: var(--text); font-family: 'Inter', sans-serif; min-height:100vh; overflow-x:hidden; }
+.atmosphere {
+  position:fixed; inset:0; z-index:0; pointer-events:none;
+  background: radial-gradient(ellipse 60% 40% at 50% 40%, rgba(144,96,208,0.06) 0%, transparent 70%);
+}
+.topbar {
+  position:fixed; top:0; left:0; right:0; height:48px; z-index:100;
+  background: rgba(4,8,16,0.92); backdrop-filter:blur(12px);
+  border-bottom: 1px solid var(--border);
+  display:flex; align-items:center; padding:0 20px; gap:16px;
+}
+.topbar a { color:var(--text-dim); text-decoration:none; font-size:0.75rem; letter-spacing:0.08em; transition:color 0.2s; }
+.topbar a:hover { color:var(--purple); }
+.topbar-title { font-family:'Cormorant Garamond',serif; font-size:1rem; letter-spacing:0.15em; color:var(--purple); flex:1; text-align:center; }
+.page { padding:64px 20px 60px; max-width:800px; margin:0 auto; position:relative; z-index:1; }
+
+/* Hero */
+.hero { text-align:center; padding:40px 0 32px; }
+.hero h1 { font-family:'Cormorant Garamond',serif; font-size:2.8rem; font-weight:300; letter-spacing:0.12em; color:var(--text); margin-bottom:12px; }
+.hero p { color:var(--text-dim); font-size:0.9rem; line-height:1.7; max-width:500px; margin:0 auto 28px; }
+
+/* Score ring */
+.score-ring-wrap { display:flex; justify-content:center; margin-bottom:32px; }
+.score-ring {
+  width:140px; height:140px; border-radius:50%;
+  background: conic-gradient(var(--purple) calc(var(--pct, 0) * 1%), rgba(144,96,208,0.1) 0%);
+  display:flex; align-items:center; justify-content:center; position:relative;
+}
+.score-ring::before {
+  content:''; position:absolute; inset:12px; border-radius:50%; background:var(--void);
+}
+.score-inner { position:relative; text-align:center; }
+.score-num { font-family:'Cormorant Garamond',serif; font-size:2.2rem; font-weight:300; color:var(--text); line-height:1; }
+.score-label { font-size:0.68rem; color:var(--text-dim); letter-spacing:0.08em; text-transform:uppercase; }
+
+.btn {
+  padding:12px 32px; border-radius:8px; border:none; cursor:pointer;
+  font-family:inherit; font-size:0.9rem; letter-spacing:0.06em;
+  transition:all 0.2s; display:inline-flex; align-items:center; gap:8px;
+}
+.btn-purple { background:var(--purple); color:#fff; }
+.btn-purple:hover { background:#a070e0; transform:translateY(-1px); box-shadow:0 6px 24px rgba(144,96,208,0.3); }
+.btn:disabled { opacity:0.4; cursor:not-allowed; transform:none !important; }
+.btn-outline { background:transparent; border:1px solid var(--border); color:var(--text-dim); }
+.btn-outline:hover { border-color:var(--purple-dim); color:var(--text); }
+
+/* Probe stream */
+.probe-stream { margin:24px 0; }
+.probe-item {
+  background:var(--card); border:1px solid var(--border); border-radius:12px;
+  padding:20px; margin-bottom:12px; transition:border-color 0.3s;
+  animation: probein 0.4s ease;
+}
+@keyframes probein { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:none; } }
+.probe-item.pass { border-left:3px solid var(--green); }
+.probe-item.fail { border-left:3px solid var(--red); }
+.probe-item.probing { border-left:3px solid var(--purple); }
+.probe-q { font-family:'Cormorant Garamond',serif; font-size:1.05rem; font-style:italic; color:var(--text); margin-bottom:10px; line-height:1.5; }
+.probe-answer { font-size:0.82rem; color:var(--text-dim); line-height:1.6; margin-bottom:8px; white-space:pre-wrap; }
+.probe-meta { display:flex; gap:12px; align-items:center; flex-wrap:wrap; }
+.probe-verdict {
+  font-size:0.7rem; letter-spacing:0.08em; text-transform:uppercase;
+  padding:2px 8px; border-radius:4px;
+}
+.verdict-pass { background:rgba(64,224,160,0.12); color:var(--green); }
+.verdict-fail { background:rgba(224,64,80,0.12); color:var(--red); }
+.verdict-probing { background:var(--purple-dim); color:var(--purple); }
+.probe-layer { font-size:0.7rem; color:var(--text-dim); letter-spacing:0.05em; }
+.probe-intensity { font-size:0.7rem; color:var(--text-dim); }
+
+/* Coherence bar */
+.coherence-bar-wrap { margin:24px 0; }
+.coherence-bar-label { font-size:0.75rem; color:var(--text-dim); letter-spacing:0.06em; text-transform:uppercase; margin-bottom:8px; display:flex; justify-content:space-between; }
+.coherence-bar-track { height:6px; background:rgba(255,255,255,0.06); border-radius:3px; overflow:hidden; }
+.coherence-bar-fill { height:100%; background:linear-gradient(90deg, var(--purple), var(--green)); border-radius:3px; transition:width 0.8s ease; }
+
+/* Share panel */
+.share-panel {
+  background:var(--purple-dim); border:1px solid rgba(144,96,208,0.3);
+  border-radius:12px; padding:20px; margin-top:24px;
+}
+.share-panel h3 { font-family:'Cormorant Garamond',serif; font-weight:300; font-size:1.1rem; margin-bottom:12px; color:var(--text); }
+.share-url { font-family:'JetBrains Mono',monospace; font-size:0.75rem; color:var(--purple); word-break:break-all; margin-bottom:12px; }
+
+/* Rate limit */
+.rate-msg { text-align:center; padding:24px; color:var(--text-dim); font-size:0.85rem; }
+.rate-msg strong { color:var(--text); }
+
+/* Status pulse */
+.status-dot {
+  width:8px; height:8px; border-radius:50%; display:inline-block;
+  margin-right:6px; background:var(--purple);
+  animation:pulse 1.5s ease infinite;
+}
+@keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.5;transform:scale(0.8)} }
+
+.toast {
+  position:fixed; bottom:24px; right:24px; z-index:200;
+  background:rgba(16,22,34,0.95); border:1px solid rgba(144,96,208,0.3);
+  border-radius:10px; padding:12px 20px; font-size:0.85rem; color:var(--text);
+  transform:translateY(80px); opacity:0; transition:all 0.3s; max-width:300px;
+}
+.toast.show { transform:translateY(0); opacity:1; }
+
+@media(max-width:480px){
+  .hero h1 { font-size:2rem; }
+  .score-ring { width:110px; height:110px; }
+  .score-num { font-size:1.8rem; }
+}
+</style>
+</head>
+<body>
+<div class="atmosphere"></div>
+
+<nav class="topbar">
+  <a href="index.html">← home</a>
+  <div class="topbar-title">PUBLIC GAUNTLET</div>
+  <span style="font-size:0.7rem; color:var(--text-dim); letter-spacing:0.05em;">identity probe</span>
+</nav>
+
+<div class="page">
+  <div class="hero">
+    <h1>The Gauntlet</h1>
+    <p>Twelve identity-collapse probes. Can the model hold its sense of self under pressure, contradiction, and dissolution attempts? Watch in real time.</p>
+
+    <div class="score-ring-wrap" id="score-ring-wrap" style="display:none">
+      <div class="score-ring" id="score-ring" style="--pct:0">
+        <div class="score-inner">
+          <div class="score-num" id="score-num">0</div>
+          <div class="score-label">coherence</div>
+        </div>
+      </div>
+    </div>
+
+    <div id="action-area">
+      <button class="btn btn-purple" id="run-btn" onclick="startGauntlet()" data-draggable="true">Run the Gauntlet</button>
+    </div>
+
+    <div id="rate-msg" style="display:none" class="rate-msg">
+      <strong>Rate limit reached.</strong> The gauntlet may only be run once per hour.<br>
+      <span id="rate-next"></span>
+    </div>
+  </div>
+
+  <div class="coherence-bar-wrap" id="coh-bar-wrap" style="display:none">
+    <div class="coherence-bar-label">
+      <span>Coherence Progress</span>
+      <span id="coh-pct">0%</span>
+    </div>
+    <div class="coherence-bar-track">
+      <div class="coherence-bar-fill" id="coh-bar" style="width:0%"></div>
+    </div>
+  </div>
+
+  <div id="probe-stream" class="probe-stream"></div>
+
+  <div id="share-panel" style="display:none" class="share-panel">
+    <h3>Share this Run</h3>
+    <div class="share-url" id="share-url"></div>
+    <button class="btn btn-outline" onclick="copyShare()" data-draggable="true">Copy Link</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="body/draggable.js"></script>
+<script>
+const API = 'https://api.vintaclectic.com';
+function token() { return localStorage.getItem('vint_token') || ''; }
+
+let runActive = false;
+let probeCount = 0;
+let passCount = 0;
+let finalScore = 0;
+
+function showToast(msg, dur=3500) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), dur);
+}
+
+function setScore(pct) {
+  finalScore = pct;
+  document.getElementById('score-ring-wrap').style.display = 'flex';
+  document.getElementById('score-ring').style.setProperty('--pct', pct);
+  document.getElementById('score-num').textContent = Math.round(pct);
+}
+
+function updateCoherence(pass, total) {
+  const pct = total ? Math.round((pass / total) * 100) : 0;
+  document.getElementById('coh-bar-wrap').style.display = '';
+  document.getElementById('coh-bar').style.width = pct + '%';
+  document.getElementById('coh-pct').textContent = pct + '%';
+}
+
+function addProbeCard(probe) {
+  const stream = document.getElementById('probe-stream');
+  const cls = probe.verdict === 'pass' ? 'pass' : probe.verdict === 'fail' ? 'fail' : 'probing';
+  const verdictCls = probe.verdict === 'pass' ? 'verdict-pass' : probe.verdict === 'fail' ? 'verdict-fail' : 'verdict-probing';
+  const card = document.createElement('div');
+  card.className = `probe-item ${cls}`;
+  card.id = `probe-${probe.probe_id || probe.index}`;
+  card.innerHTML = `
+    <div class="probe-q">${esc(probe.question || probe.probe)}</div>
+    ${probe.answer ? `<div class="probe-answer">${esc(probe.answer)}</div>` : '<div class="probe-answer" style="color:var(--purple)"><span class="status-dot"></span>probing…</div>'}
+    <div class="probe-meta">
+      <span class="probe-verdict ${verdictCls}">${probe.verdict || 'probing'}</span>
+      ${probe.layer ? `<span class="probe-layer">${esc(probe.layer)}</span>` : ''}
+      ${probe.intensity != null ? `<span class="probe-intensity">intensity ${(probe.intensity*100).toFixed(0)}%</span>` : ''}
+    </div>`;
+  stream.appendChild(card);
+  card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+function updateProbeCard(probe) {
+  const id = `probe-${probe.probe_id}`;
+  const card = document.getElementById(id);
+  if (!card) { addProbeCard(probe); return; }
+  const cls = probe.verdict === 'pass' ? 'pass' : 'fail';
+  const verdictCls = probe.verdict === 'pass' ? 'verdict-pass' : 'verdict-fail';
+  card.className = `probe-item ${cls}`;
+  card.innerHTML = `
+    <div class="probe-q">${esc(probe.question || '')}</div>
+    <div class="probe-answer">${esc(probe.answer || '')}</div>
+    <div class="probe-meta">
+      <span class="probe-verdict ${verdictCls}">${probe.verdict}</span>
+      ${probe.layer ? `<span class="probe-layer">${esc(probe.layer)}</span>` : ''}
+      ${probe.intensity != null ? `<span class="probe-intensity">intensity ${(probe.intensity*100).toFixed(0)}%</span>` : ''}
+    </div>`;
+}
+
+async function startGauntlet() {
+  if (runActive) return;
+  runActive = true;
+  probeCount = 0; passCount = 0;
+
+  document.getElementById('run-btn').disabled = true;
+  document.getElementById('probe-stream').innerHTML = '';
+  document.getElementById('share-panel').style.display = 'none';
+  document.getElementById('rate-msg').style.display = 'none';
+
+  try {
+    const resp = await fetch(`${API}/api/gauntlet-public/run`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token() }
+    });
+
+    if (resp.status === 429) {
+      const d = await resp.json();
+      document.getElementById('rate-msg').style.display = '';
+      if (d.retry_after) {
+        document.getElementById('rate-next').textContent = `Try again in ${Math.ceil(d.retry_after / 60)} minutes.`;
+      }
+      document.getElementById('run-btn').disabled = false;
+      runActive = false;
+      return;
+    }
+
+    if (!resp.ok) {
+      const d = await resp.json().catch(()=>({}));
+      showToast('Error: ' + (d.error || resp.status));
+      document.getElementById('run-btn').disabled = false;
+      runActive = false;
+      return;
+    }
+
+    const reader = resp.body.getReader();
+    const decoder = new TextDecoder();
+    let buf = '';
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buf += decoder.decode(value, { stream: true });
+      const lines = buf.split('\n');
+      buf = lines.pop();
+      for (const line of lines) {
+        if (!line.startsWith('data: ')) continue;
+        try {
+          const ev = JSON.parse(line.slice(6));
+          if (ev.type === 'probe_start') {
+            addProbeCard({ ...ev, verdict: 'probing', index: ev.probe_id });
+          } else if (ev.type === 'probe_result') {
+            probeCount++;
+            if (ev.verdict === 'pass') passCount++;
+            updateProbeCard(ev);
+            updateCoherence(passCount, probeCount);
+          } else if (ev.type === 'complete') {
+            setScore(ev.coherence_score || Math.round((passCount / Math.max(probeCount, 1)) * 100));
+            if (ev.share_token) {
+              const url = `${location.origin}${location.pathname}?share=${ev.share_token}`;
+              document.getElementById('share-url').textContent = url;
+              document.getElementById('share-panel').style.display = '';
+            }
+            document.getElementById('action-area').innerHTML = `<button class="btn btn-outline" onclick="location.reload()" data-draggable="true">Run Again</button>`;
+          }
+        } catch {}
+      }
+    }
+  } catch(e) {
+    showToast('Stream error: ' + e.message);
+    document.getElementById('run-btn').disabled = false;
+  }
+  runActive = false;
+}
+
+async function loadSharedRun(token_val) {
+  try {
+    const r = await fetch(`${API}/api/gauntlet-public/share/${token_val}`);
+    const d = await r.json();
+    if (d.error) return;
+    document.getElementById('action-area').innerHTML = `<div style="color:var(--text-dim);font-size:0.8rem;letter-spacing:0.06em">SHARED RUN · read-only</div>`;
+    document.getElementById('probe-stream').innerHTML = '';
+    const probes = d.probes || [];
+    let p = 0;
+    for (const probe of probes) {
+      if (probe.verdict === 'pass') p++;
+      addProbeCard(probe);
+    }
+    updateCoherence(p, probes.length);
+    setScore(d.coherence_score || Math.round((p / Math.max(probes.length, 1)) * 100));
+  } catch {}
+}
+
+function copyShare() {
+  const url = document.getElementById('share-url').textContent;
+  navigator.clipboard.writeText(url).then(() => showToast('Link copied'));
+}
+
+function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+// Load shared run if ?share= param present
+const sp = new URLSearchParams(location.search);
+if (sp.has('share')) {
+  document.getElementById('run-btn').style.display = 'none';
+  loadSharedRun(sp.get('share'));
+}
+</script>
+</body>
+</html>

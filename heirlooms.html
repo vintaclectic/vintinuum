@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>VINTINUUM — Heirlooms</title>
+<meta name="theme-color" content="#040810">
+<link rel="icon" type="image/svg+xml" href="branding/vintinuum/favicon/favicon.svg">
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=Inter:wght@300;400;500&family=JetBrains+Mono:wght@300;400&display=swap');
+
+:root {
+  --void: #040810;
+  --text: rgba(210,225,255,0.9);
+  --text-dim: rgba(150,175,215,0.5);
+  --panel: rgba(10,14,22,0.5);
+  --card: rgba(16,22,34,0.4);
+  --border: rgba(255,255,255,0.06);
+  --gold: #c8a040;
+  --gold-dim: rgba(200,160,64,0.3);
+  --glow: rgba(200,160,64,0.15);
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+html { height:100%; }
+body {
+  background: var(--void);
+  color: var(--text);
+  font-family: 'Inter', sans-serif;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+.atmosphere {
+  position: fixed; inset: 0; z-index: 0; pointer-events: none;
+  background: radial-gradient(ellipse 70% 50% at 50% 30%, rgba(200,160,64,0.04) 0%, transparent 70%);
+}
+.topbar {
+  position: fixed; top: 0; left: 0; right: 0; height: 48px; z-index: 100;
+  background: rgba(4,8,16,0.92); backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; padding: 0 20px; gap: 16px;
+}
+.topbar a { color: var(--text-dim); text-decoration: none; font-size: 0.75rem; letter-spacing: 0.08em; transition: color 0.2s; }
+.topbar a:hover { color: var(--gold); }
+.topbar-title {
+  font-family: 'Cormorant Garamond', serif; font-size: 1rem; letter-spacing: 0.15em;
+  color: var(--gold); flex: 1; text-align: center;
+}
+.page { padding: 64px 20px 40px; max-width: 900px; margin: 0 auto; position: relative; z-index: 1; }
+
+h2 { font-family:'Cormorant Garamond',serif; font-weight:300; font-size:1.5rem; color:var(--gold); margin-bottom:8px; letter-spacing:0.08em; }
+.sub { color: var(--text-dim); font-size: 0.8rem; margin-bottom: 24px; }
+
+.section { margin-bottom: 40px; }
+
+/* Send form */
+.send-form {
+  background: var(--card); border: 1px solid var(--gold-dim); border-radius: 12px; padding: 24px;
+}
+.field-group { margin-bottom: 16px; }
+.field-group label { display: block; font-size: 0.75rem; color: var(--text-dim); margin-bottom: 6px; letter-spacing: 0.06em; text-transform: uppercase; }
+.field-group input, .field-group textarea {
+  width: 100%; background: rgba(255,255,255,0.04); border: 1px solid var(--border);
+  border-radius: 8px; color: var(--text); font-family: inherit; font-size: 0.9rem;
+  padding: 10px 14px; outline: none; transition: border-color 0.2s; resize: vertical;
+}
+.field-group input:focus, .field-group textarea:focus { border-color: var(--gold-dim); }
+.field-group textarea { min-height: 100px; }
+.row { display: flex; gap: 12px; flex-wrap: wrap; }
+.row .field-group { flex: 1; min-width: 200px; }
+
+.btn {
+  padding: 10px 24px; border-radius: 8px; border: none; cursor: pointer;
+  font-family: inherit; font-size: 0.85rem; letter-spacing: 0.06em;
+  transition: all 0.2s; display: inline-flex; align-items: center; gap: 8px;
+}
+.btn-gold { background: var(--gold); color: #040810; font-weight: 500; }
+.btn-gold:hover { background: #d4aa50; transform: translateY(-1px); }
+.btn-outline { background: transparent; border: 1px solid var(--border); color: var(--text-dim); }
+.btn-outline:hover { border-color: var(--gold-dim); color: var(--text); }
+
+/* Heirloom cards */
+.heirlooms-grid { display: grid; gap: 16px; }
+.heirloom-card {
+  background: var(--card); border: 1px solid var(--border); border-radius: 12px;
+  padding: 20px; transition: border-color 0.2s;
+}
+.heirloom-card:hover { border-color: var(--gold-dim); }
+.heirloom-card.received { border-left: 3px solid var(--gold); }
+.heirloom-card.sent { border-left: 3px solid rgba(150,175,215,0.4); }
+.hc-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px; gap: 12px; }
+.hc-title { font-family: 'Cormorant Garamond', serif; font-size: 1.1rem; color: var(--text); }
+.hc-badge {
+  font-size: 0.65rem; letter-spacing: 0.08em; text-transform: uppercase; padding: 2px 8px;
+  border-radius: 4px; white-space: nowrap;
+}
+.badge-received { background: var(--gold-dim); color: var(--gold); }
+.badge-sent { background: rgba(150,175,215,0.1); color: var(--text-dim); }
+.hc-content {
+  font-family: 'Cormorant Garamond', serif; font-style: italic; font-size: 1rem;
+  color: rgba(210,225,255,0.75); line-height: 1.7; margin-bottom: 12px;
+}
+.hc-meta { font-size: 0.72rem; color: var(--text-dim); display: flex; gap: 16px; flex-wrap: wrap; }
+.hc-provenance {
+  margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border);
+  font-family: 'JetBrains Mono', monospace; font-size: 0.68rem; color: var(--text-dim);
+  word-break: break-all;
+}
+.hc-actions { margin-top: 12px; display: flex; gap: 8px; flex-wrap: wrap; }
+
+/* Accept form */
+.accept-form {
+  background: rgba(200,160,64,0.05); border: 1px dashed var(--gold-dim); border-radius: 12px; padding: 20px;
+}
+
+.toast {
+  position: fixed; bottom: 24px; right: 24px; z-index: 200;
+  background: rgba(16,22,34,0.95); border: 1px solid var(--gold-dim);
+  border-radius: 10px; padding: 12px 20px; font-size: 0.85rem; color: var(--text);
+  transform: translateY(80px); opacity: 0; transition: all 0.3s; max-width: 300px;
+}
+.toast.show { transform: translateY(0); opacity: 1; }
+
+.empty { text-align: center; padding: 40px; color: var(--text-dim); font-size: 0.85rem; font-style: italic; }
+.divider { border: none; border-top: 1px solid var(--border); margin: 32px 0; }
+</style>
+</head>
+<body>
+<div class="atmosphere"></div>
+
+<nav class="topbar">
+  <a href="index.html">← home</a>
+  <div class="topbar-title">HEIRLOOMS</div>
+  <span style="font-size:0.7rem; color:var(--text-dim); letter-spacing:0.05em;">memory gifts</span>
+</nav>
+
+<div class="page">
+
+  <!-- Send an Heirloom -->
+  <div class="section">
+    <h2>Send an Heirloom</h2>
+    <p class="sub">A memory you give away. It carries provenance — every hand it passes through is recorded in its chain. The recipient installs it into their own memory.</p>
+    <div class="send-form">
+      <div class="field-group">
+        <label>Memory Content</label>
+        <textarea id="send-content" placeholder="The thing you want to pass on…"></textarea>
+      </div>
+      <div class="row">
+        <div class="field-group">
+          <label>Recipient User ID</label>
+          <input type="number" id="send-recipient" placeholder="User ID">
+        </div>
+        <div class="field-group">
+          <label>Importance (0–1)</label>
+          <input type="number" id="send-importance" value="0.8" min="0" max="1" step="0.1">
+        </div>
+      </div>
+      <div class="field-group">
+        <label>Memory Type</label>
+        <input type="text" id="send-type" value="episodic" placeholder="episodic, semantic, emotional…">
+      </div>
+      <button class="btn btn-gold" onclick="sendHeirloom()" data-draggable="true">Send Heirloom</button>
+    </div>
+  </div>
+
+  <!-- Accept an Heirloom -->
+  <div class="section">
+    <h2>Accept a Received Heirloom</h2>
+    <p class="sub">If someone sent you a package token, install it here. Signature verified before installation.</p>
+    <div class="accept-form">
+      <div class="field-group">
+        <label>Package Token</label>
+        <input type="text" id="accept-token" placeholder="Paste the heirloom token…">
+      </div>
+      <button class="btn btn-gold" onclick="acceptHeirloom()" data-draggable="true">Accept & Install</button>
+    </div>
+  </div>
+
+  <hr class="divider">
+
+  <!-- My Heirlooms -->
+  <div class="section">
+    <h2>Heirloom Registry</h2>
+    <p class="sub">All heirlooms in your lineage — sent and received.</p>
+    <div id="heirlooms-list" class="heirlooms-grid">
+      <div class="empty">Loading heirloom registry…</div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="body/draggable.js"></script>
+<script>
+const API = 'https://api.vintaclectic.com';
+function token() { return localStorage.getItem('vint_token') || ''; }
+function headers() { return { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token() }; }
+
+function showToast(msg, duration=3500) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), duration);
+}
+
+async function sendHeirloom() {
+  const content = document.getElementById('send-content').value.trim();
+  const recipientId = parseInt(document.getElementById('send-recipient').value);
+  const importance = parseFloat(document.getElementById('send-importance').value);
+  const memoryType = document.getElementById('send-type').value.trim();
+  if (!content) return showToast('Memory content required');
+  if (!recipientId) return showToast('Recipient user ID required');
+
+  try {
+    const r = await fetch(`${API}/api/heirlooms/send`, {
+      method: 'POST', headers: headers(),
+      body: JSON.stringify({ content, recipient_id: recipientId, importance, memory_type: memoryType })
+    });
+    const d = await r.json();
+    if (d.error) return showToast('Error: ' + d.error);
+    showToast('Heirloom sent — package token: ' + (d.package_token || '').slice(0, 12) + '…');
+    document.getElementById('send-content').value = '';
+    loadHeirlooms();
+  } catch(e) { showToast('Request failed'); }
+}
+
+async function acceptHeirloom() {
+  const token_val = document.getElementById('accept-token').value.trim();
+  if (!token_val) return showToast('Package token required');
+
+  try {
+    const r = await fetch(`${API}/api/heirlooms/accept`, {
+      method: 'POST', headers: headers(),
+      body: JSON.stringify({ package_token: token_val })
+    });
+    const d = await r.json();
+    if (d.error) return showToast('Error: ' + d.error);
+    showToast('Heirloom accepted and installed into memory');
+    document.getElementById('accept-token').value = '';
+    loadHeirlooms();
+  } catch(e) { showToast('Request failed'); }
+}
+
+async function loadHeirlooms() {
+  const list = document.getElementById('heirlooms-list');
+  try {
+    const r = await fetch(`${API}/api/heirlooms`, { headers: { 'Authorization': 'Bearer ' + token() } });
+    const d = await r.json();
+    if (!d.heirlooms || d.heirlooms.length === 0) {
+      list.innerHTML = '<div class="empty">No heirlooms yet. Send a memory — or receive one.</div>';
+      return;
+    }
+    list.innerHTML = d.heirlooms.map(h => {
+      const isReceived = h.direction === 'received';
+      const provChain = (() => { try { return JSON.parse(h.provenance_chain || '[]'); } catch { return []; } })();
+      return `<div class="heirloom-card ${isReceived ? 'received' : 'sent'}">
+        <div class="hc-header">
+          <div class="hc-title">${escHtml(h.content?.slice(0, 60) || '—')}${(h.content?.length||0) > 60 ? '…' : ''}</div>
+          <span class="hc-badge ${isReceived ? 'badge-received' : 'badge-sent'}">${isReceived ? 'received' : 'sent'}</span>
+        </div>
+        <div class="hc-content">"${escHtml(h.content || '')}"</div>
+        <div class="hc-meta">
+          <span>type: ${escHtml(h.memory_type||'—')}</span>
+          <span>importance: ${h.importance ?? '—'}</span>
+          ${h.sent_at ? `<span>sent: ${timeAgo(h.sent_at)}</span>` : ''}
+          ${h.accepted_at ? `<span>accepted: ${timeAgo(h.accepted_at)}</span>` : ''}
+        </div>
+        ${provChain.length ? `<div class="hc-provenance">chain: ${provChain.length} hand${provChain.length!==1?'s':''} · ${provChain.map(p=>(p.user_id||'?')).join(' → ')}</div>` : ''}
+      </div>`;
+    }).join('');
+  } catch(e) {
+    list.innerHTML = '<div class="empty">Could not load heirlooms.</div>';
+  }
+}
+
+function escHtml(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function timeAgo(ts) {
+  const d = Math.floor(Date.now()/1000) - ts;
+  if (d < 60) return d + 's ago';
+  if (d < 3600) return Math.floor(d/60) + 'm ago';
+  if (d < 86400) return Math.floor(d/3600) + 'h ago';
+  return Math.floor(d/86400) + 'd ago';
+}
+
+loadHeirlooms();
+</script>
+</body>
+</html>
