@@ -3,44 +3,27 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-<title>Vintinuum — Body v3.1</title>
+<title>Vintinuum — Body v3.0</title>
 <meta name="theme-color" content="#02030a" />
 <link rel="icon" href="favicon.svg" />
 <style>
-/* ════════════════════════════════════════════════════════════════════════
-   VINTINUUM BODY v3.1 — "ground-up rebuild"
-   CSS 3D sculpted human-machine hybrid · real walk-cycle traversal ·
-   holographic media dock · terminal w/ WS bridge scaffold.
-   No SVG figure. No three.js. Single file.
-   ──────────────────────────────────────────────────────────────────── */
 :root{
-  /* skin */
-  --skin-hi:#f5d4ad;
-  --skin-mid:#d4a075;
-  --skin-low:#7a4527;
-  --skin-deep:#3d1f0f;
-  --sss:#ff7a55;            /* subsurface scatter */
-  --lip:#a8444a;
-  --vein:#4a5a9a;
-  /* metal */
+  --skin-hi:#d4a585;
+  --skin-mid:#a07358;
+  --skin-low:#6b3a2a;
+  --skin-deep:#2d1408;
+  --sss:#ff8866;
   --metal-hi:#e8ecf2;
-  --metal:#a8b0bd;
-  --metal-low:#4a525e;
-  --metal-deep:#1a1e26;
-  --carbon:#0e1014;
-  /* circuit / glow */
+  --metal:#888d96;
+  --metal-mid:#4a525e;
+  --metal-low:#2a2e36;
+  --metal-deep:#0a0c10;
   --circuit:#5ce3ff;
-  --circuit-soft:#7ee0ff;
-  --circuit-deep:#0a4860;
-  /* heart */
+  --circuit-soft:#9eebff;
   --blood:#c4202e;
-  --blood-hi:#ff4555;
-  --heart-deep:#5a0810;
-  /* world */
-  --night-0:#010206;
+  --night-0:#02030a;
   --night-1:#04060e;
   --night-2:#0a1024;
-  --night-3:#141a32;
   --hud:#7ec8ff;
   --hud-fg:#cfe8ff;
 }
@@ -52,42 +35,17 @@ html,body{
   font-family:"Helvetica Neue","Inter",system-ui,Arial,sans-serif;
   overflow:hidden;
   -webkit-font-smoothing:antialiased;
-  text-rendering:optimizeLegibility;
   touch-action:manipulation;
 }
 button{font-family:inherit;color:inherit}
 
-/* ── Scene root ──────────────────────────────────────────────── */
 #scene{
-  position:fixed;inset:0;
-  overflow:hidden;
-  perspective:1800px;
-  perspective-origin:50% 60%;
+  position:fixed;inset:0;overflow:hidden;
   background:
-    radial-gradient(ellipse 70% 50% at 50% 105%, #0c1a3a 0%, transparent 60%),
-    radial-gradient(ellipse 80% 40% at 50% -8%, #1a0a2e 0%, transparent 55%),
-    radial-gradient(ellipse 30% 60% at 22% 38%, rgba(255,180,120,0.06) 0%, transparent 60%),
-    linear-gradient(180deg, var(--night-0) 0%, var(--night-1) 40%, var(--night-2) 100%);
-}
-
-/* aurora */
-.aurora{
-  position:absolute;top:-15%;left:-25%;
-  width:150%;height:55%;
-  background:
-    radial-gradient(ellipse 50% 100% at 22% 50%, #6aa8ff 0%, transparent 60%),
-    radial-gradient(ellipse 55% 100% at 58% 42%, #b794f4 0%, transparent 65%),
-    radial-gradient(ellipse 45% 100% at 84% 58%, #5eead4 0%, transparent 60%);
-  filter:blur(80px) saturate(140%);
-  opacity:.14;
-  mix-blend-mode:screen;
-  animation:auroraDrift 38s ease-in-out infinite alternate;
-  pointer-events:none;
-}
-@keyframes auroraDrift{
-  0%{transform:translate3d(0,0,0) skewX(-3deg);opacity:.12}
-  50%{transform:translate3d(40px,12px,0) skewX(2deg);opacity:.18}
-  100%{transform:translate3d(-30px,-6px,0) skewX(-1deg);opacity:.14}
+    radial-gradient(ellipse 80% 60% at 50% 100%, #0a1228 0%, transparent 60%),
+    radial-gradient(ellipse 50% 30% at 50% 10%, #14081e 0%, transparent 60%),
+    repeating-linear-gradient(0deg, transparent 0 2px, rgba(255,255,255,0.012) 2px 3px),
+    linear-gradient(180deg, #050608 0%, #0c0e16 60%, #1a1c24 100%);
 }
 .stars{
   position:absolute;inset:0;pointer-events:none;
@@ -97,574 +55,655 @@ button{font-family:inherit;color:inherit}
     radial-gradient(1px 1px at 46% 22%, #ffffff 50%, transparent 51%),
     radial-gradient(2px 2px at 67% 41%, #b8d4ff 50%, transparent 51%),
     radial-gradient(1px 1px at 81% 12%, #ffffff 50%, transparent 51%),
-    radial-gradient(1px 1px at 92% 56%, #e0eaff 50%, transparent 51%),
-    radial-gradient(1px 1px at 7% 80%, #ffffff 50%, transparent 51%);
-  opacity:.45;animation:twinkle 9s ease-in-out infinite;
+    radial-gradient(1px 1px at 92% 56%, #e0eaff 50%, transparent 51%);
+  opacity:.35;animation:twinkle 9s ease-in-out infinite;
 }
-@keyframes twinkle{0%,100%{opacity:.35}50%{opacity:.55}}
-
-/* floor */
+@keyframes twinkle{0%,100%{opacity:.25}50%{opacity:.45}}
 .floor{
-  position:absolute;left:0;right:0;bottom:0;
-  height:38vh;
+  position:absolute;left:0;right:0;bottom:0;height:30vh;
   background:
-    radial-gradient(ellipse 60% 80% at 50% 100%, rgba(120,180,255,0.18) 0%, transparent 60%),
-    linear-gradient(180deg, transparent 0%, rgba(20,32,68,0.55) 60%, rgba(2,4,10,0.95) 100%);
+    radial-gradient(ellipse 70% 90% at 50% 100%, rgba(120,180,255,0.12) 0%, transparent 65%),
+    linear-gradient(180deg, transparent 0%, rgba(10,20,40,0.6) 50%, rgba(2,4,10,0.96) 100%);
   pointer-events:none;
 }
 .floor::before{
   content:"";position:absolute;inset:0;
-  background:
-    linear-gradient(180deg, transparent 0%, rgba(126,200,255,0.08) 60%, transparent 100%),
-    repeating-linear-gradient(90deg, transparent 0 60px, rgba(126,200,255,0.05) 60px 61px);
+  background:repeating-linear-gradient(90deg, transparent 0 80px, rgba(126,200,255,0.04) 80px 81px);
   transform:perspective(800px) rotateX(62deg);
   transform-origin:50% 100%;
 }
 
-/* ── Walking figure stage ───────────────────────────────────── */
+/* ── FIGURE STAGE ── */
 #figure-stage{
   position:absolute;
-  bottom:14%;
-  left:0;
-  width:100vw;height:60vh;
+  bottom:14vh;
+  left:0;width:100vw;height:300px;
   pointer-events:none;
   z-index:5;
 }
-/* the wrapper that JS translates — only horizontal traversal lives here */
 #figure-wrap{
   position:absolute;
-  bottom:0;
-  left:0;
-  width:200px;height:60vh;
-  transform-origin:50% 100%;
-  transition:none;
-  will-change:transform,left;
+  bottom:0;left:0;
+  width:140px;height:300px;
+  will-change:transform;
+  pointer-events:auto;
+  cursor:pointer;
 }
-/* The figure itself — preserves 3d, runs bob animation locally so the JS
-   translate stays additive and you can SEE traversal. */
-#vint-body{
+#figure-inner{
   position:absolute;
-  bottom:0;left:50%;
-  width:200px;height:60vh;
-  transform:translateX(-50%);
-  transform-style:preserve-3d;
-  animation:bodyBob 1.2s ease-in-out infinite;
+  inset:0;
+  transform-origin:50% 100%;
 }
-@keyframes bodyBob{
-  0%,100%{transform:translateX(-50%) translateY(0)}
-  50%{transform:translateX(-50%) translateY(-6px)}
+#figure-inner.walking{animation:torsoLean 1.2s ease-in-out infinite}
+@keyframes torsoLean{
+  0%,100%{transform:rotate(0deg)}
+  50%{transform:rotate(0.4deg)}
 }
 
-/* ── HEAD ──
-   The head is a single rounded div sculpted with stacked radial
-   gradients (top-left light → bottom-right shadow) plus three inset
-   shadow layers for volume, plus a left/right split: the left half is
-   warm flesh, the right half is gunmetal exoskull.
-*/
+/* floor reflection */
+.reflection{
+  position:absolute;
+  left:50%;bottom:-130px;
+  width:140px;height:140px;
+  transform:translateX(-50%) scaleY(-1);
+  opacity:0.22;
+  filter:blur(2px) brightness(0.5);
+  pointer-events:none;
+  mask-image:linear-gradient(180deg, #000 0%, transparent 80%);
+  -webkit-mask-image:linear-gradient(180deg, #000 0%, transparent 80%);
+}
+.ground-shadow{
+  position:absolute;
+  left:50%;bottom:-6px;
+  width:120px;height:14px;
+  transform:translateX(-50%);
+  background:radial-gradient(ellipse at center, rgba(0,0,0,0.7) 0%, transparent 70%);
+  filter:blur(5px);
+  z-index:0;
+}
+
+/* ── HEAD ── */
 .head{
   position:absolute;
   left:50%;top:0;
-  width:64px;height:84px;
+  width:54px;height:68px;
   transform:translateX(-50%);
-  border-radius:48% 48% 44% 44% / 56% 56% 44% 44%;
+  border-radius:48% 48% 42% 42% / 56% 56% 44% 44%;
   background:
-    /* right-side metal skull (split via mask gradient) */
-    linear-gradient(90deg,
-      transparent 0%, transparent 48%,
-      rgba(60,72,90,0.0) 48%, rgba(60,72,90,0.85) 52%,
-      rgba(40,50,66,1) 100%),
-    /* skin base with subsurface warmth and top-left key */
-    radial-gradient(ellipse 80% 90% at 32% 26%,
+    linear-gradient(96deg,
+      rgba(20,22,28,0) 0%, rgba(20,22,28,0) 47%,
+      rgba(40,46,56,0.7) 51%, rgba(20,24,32,1) 100%),
+    radial-gradient(ellipse 90% 100% at 32% 28%,
       var(--skin-hi) 0%,
-      var(--skin-mid) 38%,
-      var(--skin-low) 72%,
+      var(--skin-mid) 40%,
+      var(--skin-low) 75%,
       var(--skin-deep) 100%);
   box-shadow:
-    inset -10px -10px 22px rgba(0,0,0,0.55),
-    inset 6px 6px 16px rgba(255,220,180,0.22),
-    inset 0 -2px 8px rgba(255,120,80,0.18),
-    8px 4px 28px rgba(80,140,220,0.18),
-    -4px 0 14px rgba(255,150,100,0.08);
+    inset -8px -8px 18px rgba(0,0,0,0.55),
+    inset 5px 4px 14px rgba(255,210,180,0.22),
+    inset 0 -3px 8px rgba(255,120,90,0.16),
+    6px 3px 22px rgba(80,140,220,0.18),
+    -3px 0 12px rgba(255,150,100,0.08);
+  z-index:10;
 }
-/* hair / scalp plate */
 .hair{
   position:absolute;
-  left:50%;top:-4px;
-  width:66px;height:36px;
+  left:50%;top:-2px;
+  width:56px;height:32px;
   transform:translateX(-50%);
-  border-radius:50% 50% 40% 40% / 70% 70% 30% 30%;
+  border-radius:50% 50% 40% 40% / 75% 75% 25% 25%;
   background:
-    radial-gradient(ellipse 80% 80% at 35% 25%, #2a1e16 0%, #14080a 70%, #050204 100%);
+    radial-gradient(ellipse 80% 90% at 35% 25%, #2a1c14 0%, #100808 70%, #050204 100%);
   box-shadow:
-    inset -6px -4px 12px rgba(0,0,0,0.6),
-    inset 4px 4px 8px rgba(120,80,60,0.18),
-    0 -2px 8px rgba(40,20,10,0.6);
+    inset -5px -3px 10px rgba(0,0,0,0.7),
+    inset 3px 3px 6px rgba(100,70,50,0.2),
+    0 -2px 6px rgba(30,15,8,0.6);
+  z-index:11;
 }
-/* eyes */
+.beard{
+  position:absolute;
+  left:50%;top:42px;
+  width:38px;height:24px;
+  transform:translateX(-50%);
+  border-radius:40% 40% 50% 50% / 30% 30% 70% 70%;
+  background:radial-gradient(ellipse 80% 80% at 50% 40%, #1c1208 0%, #0a0604 80%, transparent 100%);
+  opacity:0.85;
+  z-index:12;
+  pointer-events:none;
+}
 .eye{
-  position:absolute;top:34px;
-  width:9px;height:6px;
+  position:absolute;top:28px;
+  width:7px;height:5px;
   border-radius:50%;
-  background:radial-gradient(circle at 35% 35%, #fff 0%, #b0d4f0 30%, #1a2840 70%, #000 100%);
-  box-shadow:inset 0 -1px 2px rgba(0,0,0,0.6), 0 0 4px rgba(255,255,255,0.4);
+  background:radial-gradient(circle at 35% 35%, #fff 0%, #b0c4d8 30%, #1a2438 70%, #000 100%);
+  box-shadow:inset 0 -1px 1px rgba(0,0,0,0.6), 0 0 3px rgba(255,255,255,0.3);
+  z-index:13;
 }
-.eye.l{left:18px}
+.eye.l{left:14px}
 .eye.r{
-  right:14px;left:auto;
-  /* right eye is camera lens */
-  width:11px;height:11px;
-  top:32px;
+  right:11px;left:auto;
+  width:9px;height:9px;
+  top:26px;
   background:
-    radial-gradient(circle at 50% 50%, var(--circuit-soft) 0%, var(--circuit) 22%, #0a2a40 50%, #050a14 100%);
+    radial-gradient(circle at 50% 50%, var(--circuit-soft) 0%, var(--circuit) 22%, #0a2438 50%, #04080e 100%);
   box-shadow:
-    inset 0 0 4px rgba(0,0,0,0.8),
-    0 0 8px var(--circuit),
-    0 0 16px rgba(92,227,255,0.4);
+    inset 0 0 3px rgba(0,0,0,0.8),
+    0 0 6px var(--circuit),
+    0 0 14px rgba(92,227,255,0.4);
   animation:lensPulse 2.8s ease-in-out infinite;
 }
 @keyframes lensPulse{
-  0%,100%{box-shadow:inset 0 0 4px rgba(0,0,0,0.8),0 0 6px var(--circuit),0 0 12px rgba(92,227,255,0.3)}
-  50%{box-shadow:inset 0 0 4px rgba(0,0,0,0.8),0 0 12px var(--circuit),0 0 22px rgba(92,227,255,0.6)}
+  0%,100%{box-shadow:inset 0 0 3px rgba(0,0,0,0.8),0 0 4px var(--circuit),0 0 10px rgba(92,227,255,0.3)}
+  50%{box-shadow:inset 0 0 3px rgba(0,0,0,0.8),0 0 10px var(--circuit),0 0 20px rgba(92,227,255,0.6)}
 }
-/* nose suggestion (soft inset shadow shape) */
+.brow{
+  position:absolute;top:24px;
+  width:10px;height:2px;
+  background:#1a0e08;
+  border-radius:2px;
+  filter:blur(0.3px);
+  z-index:13;
+}
+.brow.l{left:12px;transform:rotate(-4deg)}
+.brow.r{right:9px;transform:rotate(4deg);width:11px}
 .nose{
   position:absolute;
-  left:46%;top:44px;
-  width:8px;height:18px;
+  left:46%;top:36px;
+  width:6px;height:14px;
   border-radius:40% 40% 50% 50%;
-  background:linear-gradient(160deg, rgba(255,220,180,0.15) 0%, rgba(80,40,20,0.0) 70%);
+  background:linear-gradient(160deg, rgba(255,210,170,0.2) 0%, rgba(80,40,20,0) 70%);
   box-shadow:
-    inset -2px 0 3px rgba(0,0,0,0.3),
-    inset 1px 0 2px rgba(255,220,180,0.25),
-    1px 2px 3px rgba(0,0,0,0.25);
+    inset -2px 0 2px rgba(0,0,0,0.3),
+    inset 1px 0 2px rgba(255,210,170,0.25),
+    1px 2px 2px rgba(0,0,0,0.25);
+  z-index:13;
 }
-/* lips */
 .mouth{
   position:absolute;
-  left:38%;top:62px;
-  width:18px;height:5px;
+  left:38%;top:51px;
+  width:14px;height:3px;
   border-radius:50%;
-  background:linear-gradient(180deg, var(--lip) 0%, #6a2226 100%);
-  box-shadow:
-    inset 0 -1px 2px rgba(0,0,0,0.5),
-    inset 0 1px 1px rgba(255,180,160,0.3),
-    0 1px 2px rgba(0,0,0,0.4);
+  background:linear-gradient(180deg, #8a3a3a 0%, #4a1818 100%);
+  box-shadow:inset 0 -1px 1px rgba(0,0,0,0.5), 0 1px 1px rgba(0,0,0,0.4);
+  z-index:13;
+  transform-origin:center;
 }
-/* circuit etching across right cheek */
-.circuit-etch{
-  position:absolute;
-  left:50%;top:38px;
-  width:30px;height:32px;
-  pointer-events:none;
-  background:
-    linear-gradient(90deg, transparent 40%, rgba(92,227,255,0.6) 40.5%, rgba(92,227,255,0.6) 41%, transparent 41.5%),
-    linear-gradient(0deg, transparent 60%, rgba(92,227,255,0.4) 60.5%, rgba(92,227,255,0.4) 61%, transparent 61.5%),
-    linear-gradient(45deg, transparent 70%, rgba(92,227,255,0.5) 70.5%, rgba(92,227,255,0.5) 71%, transparent 71.5%);
-  filter:drop-shadow(0 0 2px rgba(92,227,255,0.7));
-  opacity:.85;
-  animation:circuitFlicker 4s ease-in-out infinite;
+.mouth.talking{animation:talk 0.22s ease-in-out infinite}
+@keyframes talk{
+  0%,100%{transform:scaleY(1)}
+  50%{transform:scaleY(2.4)}
 }
-@keyframes circuitFlicker{
-  0%,100%{opacity:.7}
-  50%{opacity:.95}
-}
-/* ear (left, organic) */
 .ear{
   position:absolute;
-  left:-3px;top:38px;
-  width:9px;height:18px;
+  left:-2px;top:32px;
+  width:7px;height:14px;
   border-radius:60% 30% 60% 40%;
+  background:radial-gradient(ellipse 80% 80% at 40% 30%, var(--skin-hi) 0%, var(--skin-mid) 50%, var(--skin-low) 100%);
+  box-shadow:inset -2px -1px 2px rgba(0,0,0,0.4), inset 1px 1px 1px rgba(255,160,120,0.4);
+  z-index:9;
+}
+.circuit-etch{
+  position:absolute;
+  left:54%;top:30px;
+  width:24px;height:30px;
+  pointer-events:none;
   background:
-    radial-gradient(ellipse 80% 80% at 40% 30%, var(--skin-hi) 0%, var(--skin-mid) 50%, var(--skin-low) 100%);
-  box-shadow:
-    inset -2px -1px 3px rgba(0,0,0,0.4),
-    inset 1px 1px 2px rgba(255,160,120,0.4),
-    0 0 3px rgba(255,100,80,0.25);
+    linear-gradient(90deg, transparent 30%, rgba(92,227,255,0.55) 30.5%, rgba(92,227,255,0.55) 31%, transparent 31.5%),
+    linear-gradient(0deg, transparent 50%, rgba(92,227,255,0.4) 50.5%, rgba(92,227,255,0.4) 51%, transparent 51.5%),
+    linear-gradient(45deg, transparent 65%, rgba(92,227,255,0.5) 65.5%, rgba(92,227,255,0.5) 66%, transparent 66.5%);
+  filter:drop-shadow(0 0 2px rgba(92,227,255,0.7));
+  opacity:.8;
+  animation:circuitFlicker 4s ease-in-out infinite;
+  z-index:14;
+}
+@keyframes circuitFlicker{
+  0%,100%{opacity:.6}
+  50%{opacity:.95}
 }
 
 /* ── NECK ── */
 .neck{
   position:absolute;
-  left:50%;top:78px;
-  width:32px;height:22px;
+  left:50%;top:62px;
+  width:28px;height:18px;
   transform:translateX(-50%);
-  border-radius:30% 30% 20% 20%;
+  border-radius:30% 30% 25% 25%;
   background:
-    linear-gradient(90deg,
-      var(--skin-mid) 0%, var(--skin-mid) 48%,
-      rgba(70,80,96,0.95) 52%, rgba(50,60,76,1) 100%),
+    linear-gradient(96deg,
+      rgba(0,0,0,0) 0%, rgba(0,0,0,0) 48%,
+      rgba(60,68,80,0.95) 52%, rgba(36,42,52,1) 100%),
     radial-gradient(ellipse at 30% 20%, var(--skin-hi) 0%, var(--skin-low) 100%);
   box-shadow:
-    inset -3px -3px 8px rgba(0,0,0,0.5),
-    inset 2px 2px 4px rgba(255,200,160,0.2),
-    0 4px 8px rgba(0,0,0,0.4);
+    inset -3px -2px 6px rgba(0,0,0,0.5),
+    inset 2px 2px 3px rgba(255,200,160,0.2),
+    0 3px 6px rgba(0,0,0,0.4);
+  z-index:6;
+}
+.pendant{
+  position:absolute;
+  left:50%;top:76px;
+  width:10px;height:10px;
+  transform:translateX(-50%) rotate(45deg);
+  background:linear-gradient(135deg, #f0d080 0%, #a07020 60%, #5a3810 100%);
+  box-shadow:0 0 4px rgba(240,200,120,0.6), inset 0 0 2px rgba(0,0,0,0.4);
+  z-index:8;
+  border-radius:2px;
 }
 
-/* ── TORSO ──
-   Tapered chest using clip-path; layered radial gradient creates the
-   chest-window glow where the heart shows through.
-*/
+/* ── TORSO (in a black button-down shirt) ── */
 .torso{
   position:absolute;
-  left:50%;top:96px;
-  width:96px;height:140px;
+  left:50%;top:82px;
+  width:88px;height:118px;
   transform:translateX(-50%);
   clip-path:polygon(
-    14% 0%, 86% 0%,
-    98% 28%, 92% 60%,
-    82% 100%, 18% 100%,
-    8% 60%, 2% 28%
+    16% 0%, 84% 0%,
+    98% 30%, 94% 64%,
+    86% 100%, 14% 100%,
+    6% 64%, 2% 30%
   );
   background:
-    /* right-side metal panel */
-    linear-gradient(90deg,
-      transparent 0%, transparent 50%,
-      rgba(60,72,90,0.7) 54%, rgba(36,46,60,0.95) 100%),
-    /* heart window — the dark center */
-    radial-gradient(ellipse 30% 26% at 40% 40%,
-      rgba(20,4,8,0.85) 0%, rgba(40,8,12,0.4) 50%, transparent 75%),
-    /* skin base */
+    /* right-side metal panel — chrome shoulder/chest plate */
+    linear-gradient(96deg,
+      rgba(0,0,0,0) 0%, rgba(0,0,0,0) 50%,
+      rgba(60,68,84,0.0) 50%, rgba(60,68,84,0.85) 54%,
+      rgba(36,44,58,1) 75%, rgba(20,26,36,1) 100%),
+    /* shirt: deep matte black with subtle fabric weave */
     radial-gradient(ellipse 80% 90% at 30% 20%,
-      var(--skin-hi) 0%,
-      var(--skin-mid) 38%,
-      var(--skin-low) 72%,
-      var(--skin-deep) 100%);
+      #1a1a1e 0%, #0c0c10 50%, #050508 100%);
   box-shadow:
-    inset -12px -12px 30px rgba(0,0,0,0.55),
-    inset 8px 8px 18px rgba(255,210,170,0.18),
-    inset 0 -8px 14px rgba(255,100,70,0.1),
-    10px 6px 32px rgba(80,140,220,0.18);
+    inset -10px -10px 26px rgba(0,0,0,0.7),
+    inset 6px 6px 12px rgba(80,90,110,0.18),
+    8px 6px 28px rgba(80,140,220,0.16);
+  z-index:5;
 }
-/* heart inside chest window */
-.heart{
+/* shirt button placket */
+.placket{
   position:absolute;
-  left:32%;top:118px;
-  width:36px;height:34px;
-  z-index:2;
-  filter:drop-shadow(0 0 6px rgba(255,40,60,0.6)) drop-shadow(0 0 18px rgba(255,40,60,0.25));
-  animation:heartBeat 0.9s ease-in-out infinite;
-}
-.heart svg{width:100%;height:100%;display:block}
-@keyframes heartBeat{
-  0%,100%{transform:scale(1)}
-  20%{transform:scale(1.12)}
-  40%{transform:scale(0.96)}
-  60%{transform:scale(1.06)}
-}
-/* chest window glass overlay */
-.chest-glass{
-  position:absolute;
-  left:28%;top:108px;
-  width:44px;height:56px;
-  border-radius:14px / 18px;
-  background:
-    linear-gradient(135deg, rgba(180,220,255,0.16) 0%, transparent 40%, rgba(40,80,140,0.1) 100%);
-  border:1px solid rgba(126,200,255,0.35);
-  box-shadow:
-    inset 0 0 12px rgba(126,200,255,0.18),
-    0 0 8px rgba(126,200,255,0.2);
-  z-index:3;
-  pointer-events:none;
-}
-/* right-side chest plate seams */
-.plate-seam{
-  position:absolute;
-  background:linear-gradient(90deg, transparent, rgba(92,227,255,0.5), transparent);
-  filter:drop-shadow(0 0 2px rgba(92,227,255,0.6));
-  z-index:3;
-  pointer-events:none;
-}
-.plate-seam.s1{left:62%;top:108px;width:32px;height:1px}
-.plate-seam.s2{left:60%;top:140px;width:36px;height:1px}
-.plate-seam.s3{left:64%;top:172px;width:30px;height:1px}
-.plate-seam.v1{left:74%;top:104px;width:1px;height:96px;background:linear-gradient(180deg,transparent,rgba(92,227,255,0.4),transparent)}
-
-/* ── PELVIS ── */
-.pelvis{
-  position:absolute;
-  left:50%;top:230px;
-  width:84px;height:36px;
+  left:50%;top:88px;
+  width:2px;height:108px;
   transform:translateX(-50%);
-  clip-path:polygon(8% 0%, 92% 0%, 96% 70%, 76% 100%, 24% 100%, 4% 70%);
-  background:
-    linear-gradient(90deg,
-      transparent 0%, transparent 48%,
-      rgba(50,62,78,0.9) 52%, rgba(30,40,54,1) 100%),
-    radial-gradient(ellipse at 30% 30%,
-      var(--skin-mid) 0%, var(--skin-low) 60%, var(--skin-deep) 100%);
-  box-shadow:
-    inset -6px -6px 14px rgba(0,0,0,0.5),
-    inset 4px 4px 8px rgba(255,200,160,0.16),
-    0 6px 12px rgba(0,0,0,0.4);
+  background:linear-gradient(180deg, rgba(60,60,68,0.6) 0%, rgba(30,30,38,0.4) 100%);
+  z-index:6;
+  pointer-events:none;
+}
+.btn-dot{
+  position:absolute;
+  left:50%;
+  width:4px;height:4px;
+  transform:translateX(-50%);
+  border-radius:50%;
+  background:radial-gradient(circle at 30% 30%, #555 0%, #1a1a1e 70%, #000 100%);
+  box-shadow:inset 0 -1px 1px rgba(0,0,0,0.7), 0 0 2px rgba(0,0,0,0.5);
+  z-index:7;
+  pointer-events:none;
+}
+.btn-dot.b1{top:98px}
+.btn-dot.b2{top:120px}
+.btn-dot.b3{top:142px}
+.btn-dot.b4{top:164px}
+.btn-dot.b5{top:184px}
+
+/* exposed fiber-optic collarbone cables */
+.fiber{
+  position:absolute;
+  left:50%;top:84px;
+  width:60px;height:10px;
+  transform:translateX(-50%);
+  z-index:7;
+  pointer-events:none;
+}
+.fiber::before,.fiber::after{
+  content:"";position:absolute;
+  left:32%;right:8%;height:1px;
+  background:linear-gradient(90deg, transparent, rgba(92,227,255,0.7), rgba(92,227,255,0.4), transparent);
+  filter:drop-shadow(0 0 2px var(--circuit));
+}
+.fiber::before{top:2px;animation:fiberGlow 2.4s ease-in-out infinite}
+.fiber::after{top:6px;animation:fiberGlow 2.4s ease-in-out infinite 0.6s}
+@keyframes fiberGlow{
+  0%,100%{opacity:0.5}
+  50%{opacity:0.95}
 }
 
-/* ── ARMS ──
-   Each arm has a shoulder-anchored wrap that JS doesn't touch.
-   The wrap rotates via @keyframes for swing. Inside the wrap the
-   upper/forearm divs handle their own cylinder shading.
-*/
+/* chest chrome window — opens on hover */
+.chest-panel{
+  position:absolute;
+  right:8px;top:106px;
+  width:30px;height:40px;
+  border-radius:4px;
+  background:
+    linear-gradient(135deg, #1a1a1e 0%, #4a4a52 30%, #888 50%, #3a3a42 70%, #111 100%);
+  box-shadow:
+    inset -3px -3px 8px rgba(0,0,0,0.8),
+    inset 2px 2px 5px rgba(255,255,255,0.18),
+    0 0 4px rgba(92,227,255,0.3);
+  z-index:7;
+  cursor:pointer;
+  pointer-events:auto;
+  overflow:hidden;
+  transition:all 0.4s ease;
+}
+.chest-panel::before{
+  content:"";
+  position:absolute;
+  inset:3px;
+  background:
+    radial-gradient(circle at 50% 50%, var(--circuit) 0%, transparent 30%),
+    repeating-linear-gradient(90deg, transparent 0 4px, rgba(92,227,255,0.4) 4px 5px),
+    repeating-linear-gradient(0deg, transparent 0 4px, rgba(92,227,255,0.2) 4px 5px);
+  border-radius:3px;
+  opacity:0;
+  transition:opacity 0.4s ease;
+  animation:innerPulse 2s ease-in-out infinite;
+}
+@keyframes innerPulse{
+  0%,100%{filter:brightness(0.7)}
+  50%{filter:brightness(1.4)}
+}
+.chest-panel:hover::before{opacity:1}
+.chest-panel:hover{
+  box-shadow:
+    inset -3px -3px 8px rgba(0,0,0,0.6),
+    inset 2px 2px 5px rgba(255,255,255,0.25),
+    0 0 12px rgba(92,227,255,0.8);
+}
+
+/* ── ARMS ── */
 .arm{
   position:absolute;
-  top:104px;
-  width:24px;height:140px;
+  top:88px;
+  width:22px;height:128px;
   transform-origin:50% 6px;
-  transform-style:preserve-3d;
+  z-index:3;
 }
-.arm.l{left:18%;animation:armSwingL 1.2s ease-in-out infinite}
-.arm.r{right:18%;animation:armSwingR 1.2s ease-in-out infinite}
+.arm.l{left:14px}
+.arm.r{right:14px;z-index:7}
+#figure-inner.walking .arm.l{animation:armSwingL 1.2s ease-in-out infinite}
+#figure-inner.walking .arm.r{animation:armSwingR 1.2s ease-in-out infinite}
 @keyframes armSwingL{
-  0%,100%{transform:rotate(18deg)}
-  50%{transform:rotate(-22deg)}
+  0%,100%{transform:rotate(14deg)}
+  50%{transform:rotate(-18deg)}
 }
 @keyframes armSwingR{
-  0%,100%{transform:rotate(-22deg)}
-  50%{transform:rotate(18deg)}
+  0%,100%{transform:rotate(-18deg)}
+  50%{transform:rotate(14deg)}
 }
-/* upper arm */
 .upper-arm{
   position:absolute;
   left:0;top:0;
-  width:24px;height:72px;
-  border-radius:14px 14px 12px 12px / 50% 50% 30% 30%;
+  width:22px;height:62px;
+  border-radius:12px 12px 10px 10px / 45% 45% 25% 25%;
 }
+/* LEFT arm — human in black sleeve */
 .arm.l .upper-arm{
   background:
     radial-gradient(ellipse 80% 100% at 30% 20%,
-      var(--skin-hi) 0%, var(--skin-mid) 40%, var(--skin-low) 80%, var(--skin-deep) 100%);
+      #1f1f24 0%, #14141a 40%, #0a0a10 80%, #050508 100%);
   box-shadow:
-    inset -5px -3px 10px rgba(0,0,0,0.55),
-    inset 3px 2px 6px rgba(255,210,170,0.25),
-    inset 0 -2px 6px rgba(255,100,70,0.12),
-    2px 2px 6px rgba(0,0,0,0.4);
+    inset -4px -2px 8px rgba(0,0,0,0.7),
+    inset 3px 2px 4px rgba(80,90,110,0.15),
+    2px 2px 5px rgba(0,0,0,0.5);
 }
+/* RIGHT arm — chrome */
 .arm.r .upper-arm{
   background:
     linear-gradient(135deg,
-      var(--metal-hi) 0%,
-      var(--metal) 30%,
-      var(--metal-low) 70%,
-      var(--metal-deep) 100%);
+      #1a1a1a 0%,
+      #4a4a4a 28%,
+      #b8b8c0 50%,
+      #3a3a42 72%,
+      #0e0e12 100%);
   box-shadow:
-    inset -4px -3px 8px rgba(0,0,0,0.6),
-    inset 3px 2px 4px rgba(255,255,255,0.25),
-    0 0 6px rgba(92,227,255,0.2);
+    inset -4px -3px 8px rgba(0,0,0,0.85),
+    inset 3px 2px 5px rgba(255,255,255,0.3),
+    0 0 6px rgba(92,227,255,0.22);
 }
 .arm.r .upper-arm::before{
   content:"";position:absolute;
-  left:2px;right:2px;top:24px;height:1px;
+  left:2px;right:2px;top:22px;height:1px;
   background:linear-gradient(90deg,transparent,var(--circuit),transparent);
   filter:drop-shadow(0 0 2px var(--circuit));
 }
 .arm.r .upper-arm::after{
   content:"";position:absolute;
-  left:2px;right:2px;top:48px;height:1px;
+  left:2px;right:2px;top:44px;height:1px;
   background:linear-gradient(90deg,transparent,var(--circuit),transparent);
   filter:drop-shadow(0 0 2px var(--circuit));
 }
-/* forearm */
+.elbow{
+  position:absolute;left:1px;top:56px;
+  width:20px;height:12px;border-radius:50%;
+}
+.arm.l .elbow{
+  background:radial-gradient(circle at 35% 30%, #2a2a30 0%, #0a0a10 80%);
+  box-shadow:inset 0 -2px 3px rgba(0,0,0,0.7);
+}
+.arm.r .elbow{
+  background:radial-gradient(circle at 35% 30%, var(--metal-hi) 0%, var(--metal-deep) 75%);
+  box-shadow:inset 0 -2px 3px rgba(0,0,0,0.7), 0 0 6px rgba(92,227,255,0.5);
+}
 .forearm{
   position:absolute;
-  left:0;top:68px;
-  width:22px;height:68px;
-  border-radius:11px;
-  transform-origin:50% 6px;
+  left:1px;top:64px;
+  width:20px;height:58px;
+  border-radius:10px;
 }
 .arm.l .forearm{
+  /* left forearm is exposed human skin below rolled sleeve */
   background:
     radial-gradient(ellipse 80% 100% at 30% 20%,
       var(--skin-hi) 0%, var(--skin-mid) 40%, var(--skin-low) 85%, var(--skin-deep) 100%);
   box-shadow:
-    inset -4px -3px 8px rgba(0,0,0,0.5),
-    inset 2px 2px 4px rgba(255,210,170,0.22),
+    inset -3px -2px 6px rgba(0,0,0,0.5),
+    inset 2px 2px 3px rgba(255,210,170,0.22),
     inset 0 -2px 4px rgba(255,100,70,0.1),
-    2px 2px 5px rgba(0,0,0,0.4);
+    2px 2px 4px rgba(0,0,0,0.4);
 }
-/* vein hint on left forearm */
 .arm.l .forearm::before{
   content:"";position:absolute;
-  left:6px;top:8px;width:1px;height:46px;
+  left:5px;top:6px;width:1px;height:38px;
   background:linear-gradient(180deg,transparent,rgba(74,90,154,0.5) 40%,transparent);
   filter:blur(0.4px);
 }
 .arm.r .forearm{
   background:
     linear-gradient(135deg,
-      var(--metal-hi) 0%,
-      var(--metal) 30%,
-      var(--metal-low) 70%,
-      var(--metal-deep) 100%);
+      #1a1a1a 0%, #4a4a4a 28%, #b8b8c0 50%, #3a3a42 72%, #0e0e12 100%);
   box-shadow:
-    inset -4px -3px 8px rgba(0,0,0,0.6),
-    inset 3px 2px 4px rgba(255,255,255,0.2),
+    inset -3px -2px 6px rgba(0,0,0,0.8),
+    inset 3px 2px 4px rgba(255,255,255,0.25),
     0 0 6px rgba(92,227,255,0.25);
 }
 .arm.r .forearm::before{
   content:"";position:absolute;
-  left:2px;right:2px;top:30px;height:1px;
+  left:2px;right:2px;top:28px;height:1px;
   background:linear-gradient(90deg,transparent,var(--circuit),transparent);
   filter:drop-shadow(0 0 2px var(--circuit));
 }
-/* elbow joint */
-.elbow{
-  position:absolute;left:1px;top:64px;
-  width:20px;height:10px;border-radius:50%;
-}
-.arm.l .elbow{
-  background:radial-gradient(circle at 35% 30%, var(--skin-hi), var(--skin-low) 80%);
-  box-shadow:inset 0 -2px 4px rgba(0,0,0,0.5), inset 0 1px 2px rgba(255,200,160,0.3);
-}
-.arm.r .elbow{
-  background:radial-gradient(circle at 35% 30%, var(--metal-hi), var(--metal-deep) 80%);
-  box-shadow:inset 0 -2px 4px rgba(0,0,0,0.7), 0 0 8px rgba(92,227,255,0.5);
-}
-/* hand */
 .hand{
   position:absolute;
-  left:1px;top:130px;
-  width:22px;height:24px;
+  left:1px;top:118px;
+  width:20px;height:20px;
   border-radius:40% 40% 50% 50% / 50% 50% 60% 60%;
 }
 .arm.l .hand{
-  background:
-    radial-gradient(ellipse at 30% 25%, var(--skin-hi), var(--skin-mid) 50%, var(--skin-low) 100%);
-  box-shadow:
-    inset -3px -2px 6px rgba(0,0,0,0.5),
-    inset 2px 1px 3px rgba(255,210,170,0.25);
+  background:radial-gradient(ellipse at 30% 25%, var(--skin-hi), var(--skin-mid) 50%, var(--skin-low) 100%);
+  box-shadow:inset -2px -2px 4px rgba(0,0,0,0.5), inset 2px 1px 2px rgba(255,210,170,0.25);
+}
+.arm.l .hand::after{
+  /* wristwatch */
+  content:"";position:absolute;
+  left:-2px;right:-2px;top:-2px;height:4px;
+  background:linear-gradient(180deg, #2a2018 0%, #0a0604 100%);
+  border-radius:2px;
+  box-shadow:0 0 2px rgba(0,0,0,0.6);
 }
 .arm.r .hand{
-  background:
-    linear-gradient(135deg, var(--metal-hi), var(--metal-low));
+  background:linear-gradient(135deg, var(--metal-hi), var(--metal-low));
   box-shadow:
-    inset -3px -2px 6px rgba(0,0,0,0.6),
-    inset 2px 1px 3px rgba(255,255,255,0.2),
+    inset -2px -2px 4px rgba(0,0,0,0.7),
+    inset 2px 1px 2px rgba(255,255,255,0.25),
     0 0 6px rgba(92,227,255,0.3);
 }
 
-/* ── LEGS ── */
+/* ── PELVIS ── */
+.pelvis{
+  position:absolute;
+  left:50%;top:196px;
+  width:78px;height:24px;
+  transform:translateX(-50%);
+  clip-path:polygon(10% 0%, 90% 0%, 96% 70%, 76% 100%, 24% 100%, 4% 70%);
+  background:linear-gradient(180deg, #14141a 0%, #050508 100%);
+  box-shadow:
+    inset -5px -3px 10px rgba(0,0,0,0.7),
+    inset 3px 3px 5px rgba(60,70,90,0.15),
+    0 4px 8px rgba(0,0,0,0.5);
+  z-index:4;
+}
+/* belt */
+.belt{
+  position:absolute;
+  left:50%;top:194px;
+  width:80px;height:6px;
+  transform:translateX(-50%);
+  background:linear-gradient(180deg, #1a1410 0%, #050202 100%);
+  box-shadow:inset 0 -1px 2px rgba(0,0,0,0.8), 0 1px 2px rgba(0,0,0,0.5);
+  z-index:5;
+}
+.buckle{
+  position:absolute;
+  left:50%;top:0;
+  width:10px;height:6px;
+  transform:translateX(-50%);
+  background:linear-gradient(180deg, #a08840 0%, #4a3818 100%);
+  box-shadow:inset 0 -1px 1px rgba(0,0,0,0.5);
+}
+
+/* ── LEGS (in dark slacks) ── */
 .leg{
   position:absolute;
-  top:258px;
-  width:30px;height:240px;
+  top:216px;
+  width:26px;height:74px;
   transform-origin:50% 4px;
-  transform-style:preserve-3d;
+  z-index:2;
 }
-.leg.l{left:36%;animation:legSwingL 1.2s ease-in-out infinite}
-.leg.r{right:36%;animation:legSwingR 1.2s ease-in-out infinite}
+.leg.l{left:36px}
+.leg.r{right:36px}
+#figure-inner.walking .leg.l{animation:legSwingL 1.2s ease-in-out infinite}
+#figure-inner.walking .leg.r{animation:legSwingR 1.2s ease-in-out infinite}
 @keyframes legSwingL{
-  0%,100%{transform:rotate(-14deg)}
-  50%{transform:rotate(18deg)}
+  0%,100%{transform:rotate(-12deg)}
+  50%{transform:rotate(16deg)}
 }
 @keyframes legSwingR{
-  0%,100%{transform:rotate(18deg)}
-  50%{transform:rotate(-14deg)}
+  0%,100%{transform:rotate(16deg)}
+  50%{transform:rotate(-12deg)}
 }
 .thigh{
   position:absolute;left:0;top:0;
-  width:30px;height:120px;
-  border-radius:15px 15px 12px 12px / 40% 40% 30% 30%;
-}
-.leg.l .thigh{
+  width:26px;height:40px;
+  border-radius:13px 13px 10px 10px / 30% 30% 20% 20%;
   background:
     radial-gradient(ellipse 80% 100% at 30% 20%,
-      var(--skin-hi) 0%, var(--skin-mid) 40%, var(--skin-low) 85%, var(--skin-deep) 100%);
+      #20202a 0%, #14141c 40%, #08080e 85%, #020204 100%);
   box-shadow:
-    inset -6px -4px 12px rgba(0,0,0,0.55),
-    inset 3px 2px 6px rgba(255,210,170,0.22),
-    inset 0 -3px 8px rgba(255,100,70,0.1),
-    3px 2px 8px rgba(0,0,0,0.4);
-}
-.leg.r .thigh{
-  background:
-    linear-gradient(135deg, var(--metal-hi) 0%, var(--metal) 30%, var(--metal-low) 70%, var(--metal-deep) 100%);
-  box-shadow:
-    inset -5px -3px 10px rgba(0,0,0,0.6),
-    inset 3px 2px 5px rgba(255,255,255,0.2),
-    0 0 8px rgba(92,227,255,0.22);
+    inset -5px -3px 10px rgba(0,0,0,0.7),
+    inset 3px 2px 4px rgba(60,70,90,0.15),
+    3px 2px 6px rgba(0,0,0,0.5);
 }
 .leg.r .thigh::before{
+  /* subtle chrome panel on right leg */
   content:"";position:absolute;
-  left:3px;right:3px;top:40px;height:1px;
-  background:linear-gradient(90deg,transparent,var(--circuit),transparent);
-  filter:drop-shadow(0 0 2px var(--circuit));
-}
-.leg.r .thigh::after{
-  content:"";position:absolute;
-  left:3px;right:3px;top:80px;height:1px;
-  background:linear-gradient(90deg,transparent,var(--circuit),transparent);
-  filter:drop-shadow(0 0 2px var(--circuit));
+  left:18px;top:8px;width:6px;height:26px;
+  background:linear-gradient(135deg, #2a2a32 0%, #5a5a62 50%, #1a1a22 100%);
+  border-radius:3px;
+  box-shadow:inset 0 0 2px rgba(0,0,0,0.7), 0 0 3px rgba(92,227,255,0.25);
 }
 .knee{
-  position:absolute;left:1px;top:114px;
-  width:28px;height:14px;border-radius:50%;
-}
-.leg.l .knee{
-  background:radial-gradient(circle at 35% 30%, var(--skin-hi), var(--skin-low) 80%);
-  box-shadow:inset 0 -3px 5px rgba(0,0,0,0.5);
-}
-.leg.r .knee{
-  background:radial-gradient(circle at 35% 30%, var(--metal-hi), var(--metal-deep) 80%);
-  box-shadow:inset 0 -3px 5px rgba(0,0,0,0.7), 0 0 10px rgba(92,227,255,0.6);
+  position:absolute;left:1px;top:36px;
+  width:24px;height:10px;border-radius:50%;
+  background:linear-gradient(180deg, #14141c 0%, #050508 100%);
+  box-shadow:inset 0 -2px 3px rgba(0,0,0,0.7);
 }
 .shin{
-  position:absolute;left:2px;top:124px;
-  width:26px;height:110px;
-  border-radius:13px;
-}
-.leg.l .shin{
+  position:absolute;left:2px;top:42px;
+  width:22px;height:32px;
+  border-radius:11px;
   background:
     radial-gradient(ellipse 80% 100% at 30% 20%,
-      var(--skin-hi) 0%, var(--skin-mid) 40%, var(--skin-low) 85%, var(--skin-deep) 100%);
+      #1f1f28 0%, #14141c 40%, #08080e 85%, #020204 100%);
   box-shadow:
-    inset -5px -3px 10px rgba(0,0,0,0.55),
-    inset 2px 2px 4px rgba(255,210,170,0.22),
-    inset 0 -2px 6px rgba(255,100,70,0.1),
-    2px 2px 6px rgba(0,0,0,0.4);
-}
-.leg.r .shin{
-  background:
-    linear-gradient(135deg, var(--metal-hi) 0%, var(--metal) 30%, var(--metal-low) 70%, var(--metal-deep) 100%);
-  box-shadow:
-    inset -4px -3px 8px rgba(0,0,0,0.6),
-    inset 3px 2px 4px rgba(255,255,255,0.2),
-    0 0 6px rgba(92,227,255,0.22);
+    inset -4px -2px 8px rgba(0,0,0,0.7),
+    inset 2px 2px 3px rgba(60,70,90,0.15),
+    2px 2px 4px rgba(0,0,0,0.5);
 }
 .foot{
-  position:absolute;left:-3px;top:228px;
-  width:32px;height:14px;
-  border-radius:40% 40% 60% 60% / 50% 50% 70% 70%;
+  position:absolute;left:-4px;top:68px;
+  width:32px;height:12px;
+  border-radius:30% 60% 70% 30% / 40% 60% 70% 40%;
+  background:
+    linear-gradient(180deg, #5a3a20 0%, #2a1810 50%, #0c0604 100%);
+  box-shadow:
+    inset -2px -2px 4px rgba(0,0,0,0.8),
+    inset 2px 1px 2px rgba(180,130,80,0.25),
+    0 3px 5px rgba(0,0,0,0.6);
 }
-.leg.l .foot{
-  background:linear-gradient(180deg, #2a1a14 0%, #0a0408 100%);
-  box-shadow:inset 0 -2px 4px rgba(0,0,0,0.7), 0 4px 6px rgba(0,0,0,0.5);
-}
-.leg.r .foot{
-  background:linear-gradient(180deg, var(--metal-low) 0%, var(--metal-deep) 100%);
-  box-shadow:inset 0 -2px 4px rgba(0,0,0,0.8), 0 4px 8px rgba(0,0,0,0.6), 0 0 6px rgba(92,227,255,0.3);
+.foot::before{
+  /* shoe sheen */
+  content:"";position:absolute;
+  left:6px;top:1px;width:14px;height:2px;
+  background:linear-gradient(90deg, transparent, rgba(255,220,180,0.3), transparent);
+  filter:blur(0.5px);
+  border-radius:50%;
 }
 
-/* ground shadow under figure */
-.ground-shadow{
+/* speech bubble from figure */
+.speech{
   position:absolute;
-  left:50%;bottom:-8px;
-  width:160px;height:18px;
+  left:50%;top:-30px;
   transform:translateX(-50%);
-  background:radial-gradient(ellipse at center, rgba(0,0,0,0.55) 0%, transparent 70%);
-  filter:blur(4px);
-  z-index:-1;
-  animation:shadowPulse 1.2s ease-in-out infinite;
+  background:rgba(6,12,24,0.92);
+  color:#cfe8ff;
+  border:1px solid rgba(126,200,255,0.4);
+  border-radius:14px;
+  padding:8px 14px;
+  font-size:13px;
+  white-space:nowrap;
+  max-width:280px;
+  pointer-events:none;
+  opacity:0;
+  transform-origin:bottom center;
+  transition:opacity 0.3s ease, transform 0.3s ease;
+  backdrop-filter:blur(8px);
+  box-shadow:0 4px 16px rgba(0,0,0,0.6), 0 0 12px rgba(92,227,255,0.3);
+  z-index:50;
+  white-space:normal;
+  text-align:center;
+  min-width:120px;
 }
-@keyframes shadowPulse{
-  0%,100%{transform:translateX(-50%) scale(1)}
-  50%{transform:translateX(-50%) scale(0.92)}
+.speech.show{
+  opacity:1;
+  transform:translateX(-50%) translateY(-4px);
+}
+.speech::after{
+  content:"";
+  position:absolute;
+  left:50%;bottom:-7px;
+  transform:translateX(-50%) rotate(45deg);
+  width:10px;height:10px;
+  background:rgba(6,12,24,0.92);
+  border-right:1px solid rgba(126,200,255,0.4);
+  border-bottom:1px solid rgba(126,200,255,0.4);
 }
 
-/* ── HUD ──────────────────────────────────────────────────────── */
+/* ── HUD ── */
 #hud{
   position:fixed;
   top:14px;left:14px;
   font:11px/1.4 "JetBrains Mono","SF Mono",monospace;
   color:var(--hud-fg);
-  background:rgba(6,10,20,0.55);
+  background:rgba(6,10,20,0.6);
   border:1px solid rgba(126,200,255,0.25);
   border-radius:8px;
   padding:8px 12px;
@@ -676,7 +715,7 @@ button{font-family:inherit;color:inherit}
 #hud .label{color:var(--hud);opacity:0.7;font-size:9px;text-transform:uppercase;letter-spacing:1px}
 #hud .val{color:#fff;font-weight:600}
 
-/* ── Media Dock ─────────────────────────────────────────────── */
+/* ── Media Dock ── */
 #media-dock{
   position:fixed;
   bottom:78px;
@@ -727,10 +766,9 @@ button{font-family:inherit;color:inherit}
   outline:none;
   transform:translateY(-1px);
 }
-#media-dock button:active{transform:translateY(0)}
 .dock-ico{font-size:16px;line-height:1}
 
-/* ── Conversation Bar ───────────────────────────────────────── */
+/* ── Conversation Bar ── */
 #conv-bar{
   position:fixed;
   bottom:14px;
@@ -776,20 +814,19 @@ button{font-family:inherit;color:inherit}
 .conv-btn.mic.live{background:rgba(220,60,80,0.85);box-shadow:0 0 16px rgba(220,60,80,0.6);animation:micPulse 1s ease-in-out infinite}
 @keyframes micPulse{0%,100%{transform:scale(1)}50%{transform:scale(1.06)}}
 
-/* ── Holographic Panel ──────────────────────────────────────── */
+/* ── Holographic Panel ── */
 .panel{
   position:fixed;
-  left:50%;top:50%;
-  width:min(70vw, 1100px);
-  height:min(70vh, 760px);
-  transform:translate(-50%,-50%);
+  right:20px;bottom:140px;
+  width:min(560px, calc(100vw - 40px));
+  height:min(560px, calc(100vh - 200px));
   background:rgba(6,10,20,0.92);
-  border:1px solid rgba(79,195,247,0.35);
+  border:1px solid rgba(79,195,247,0.45);
   border-radius:14px;
   backdrop-filter:blur(20px) saturate(140%);
   box-shadow:
     0 20px 60px rgba(0,0,0,0.75),
-    0 0 40px rgba(92,227,255,0.2),
+    0 0 40px rgba(92,227,255,0.25),
     inset 0 1px 0 rgba(255,255,255,0.08);
   z-index:1000;
   display:none;
@@ -800,8 +837,8 @@ button{font-family:inherit;color:inherit}
 }
 .panel.open{display:flex;animation:panelIn 0.22s ease-out}
 @keyframes panelIn{
-  from{opacity:0;transform:translate(-50%,-46%) scale(0.96)}
-  to  {opacity:1;transform:translate(-50%,-50%) scale(1)}
+  from{opacity:0;transform:translateY(20px) scale(0.96)}
+  to  {opacity:1;transform:translateY(0) scale(1)}
 }
 .panel-header{
   display:flex;
@@ -849,8 +886,7 @@ button{font-family:inherit;color:inherit}
   right:0;bottom:0;
   width:20px;height:20px;
   cursor:nwse-resize;
-  background:
-    linear-gradient(135deg, transparent 0%, transparent 50%, rgba(126,200,255,0.35) 50%, rgba(126,200,255,0.35) 60%, transparent 60%, transparent 70%, rgba(126,200,255,0.5) 70%, rgba(126,200,255,0.5) 80%, transparent 80%);
+  background:linear-gradient(135deg, transparent 50%, rgba(126,200,255,0.5) 50%, rgba(126,200,255,0.5) 60%, transparent 60%, transparent 70%, rgba(126,200,255,0.5) 70%, rgba(126,200,255,0.5) 80%, transparent 80%);
   z-index:5;
 }
 .panel.minimized{
@@ -860,7 +896,6 @@ button{font-family:inherit;color:inherit}
 .panel.minimized .panel-body,
 .panel.minimized .panel-resize{display:none}
 
-/* panel content shells */
 .mode-file .drop-zone{
   border:2px dashed rgba(126,200,255,0.4);
   border-radius:12px;
@@ -944,7 +979,6 @@ button{font-family:inherit;color:inherit}
   word-break:break-word;
 }
 
-/* terminal */
 .term{
   height:100%;
   background:#02060e;
@@ -955,48 +989,22 @@ button{font-family:inherit;color:inherit}
   font:13px/1.5 "JetBrains Mono","SF Mono",monospace;
   color:#9cd6ff;
 }
-.term-out{
-  flex:1;
-  overflow:auto;
-  white-space:pre-wrap;
-  word-break:break-word;
-  margin-bottom:8px;
-}
+.term-out{flex:1;overflow:auto;white-space:pre-wrap;word-break:break-word;margin-bottom:8px}
 .term-out .l-sys{color:#ffb27a}
 .term-out .l-err{color:#ff7a8a}
 .term-out .l-ok{color:#7ee0ff}
 .term-out .l-dim{color:#5a7a9a;opacity:0.7}
-.term-in{
-  display:flex;gap:6px;align-items:center;
-  border-top:1px solid rgba(126,200,255,0.18);
-  padding-top:8px;
-}
+.term-in{display:flex;gap:6px;align-items:center;border-top:1px solid rgba(126,200,255,0.18);padding-top:8px}
 .term-prompt{color:#7ee0ff;font-weight:600;flex:0 0 auto}
-.term-input{
-  flex:1;
-  background:transparent;
-  border:none;
-  color:#fff;
-  font:inherit;
-  outline:none;
-  caret-color:var(--circuit);
-}
+.term-input{flex:1;background:transparent;border:none;color:#fff;font:inherit;outline:none;caret-color:var(--circuit)}
 
-/* ── Mobile ───────────────────────────────────────────────── */
 @media (max-width: 768px){
   .panel{
-    width:100vw;height:calc(100vh - 140px);
-    left:0;top:auto;bottom:140px;
-    transform:none;
-    border-radius:14px 14px 0 0;
-    border-bottom:none;
+    width:calc(100vw - 16px);
+    right:8px;left:8px;
+    height:calc(100vh - 200px);
+    bottom:140px;
   }
-  .panel.open{animation:panelInMobile 0.22s ease-out}
-  @keyframes panelInMobile{
-    from{transform:translateY(20px);opacity:0}
-    to  {transform:translateY(0);opacity:1}
-  }
-  .panel-resize{display:none}
   #media-dock{
     bottom:72px;
     left:8px;right:8px;
@@ -1013,73 +1021,54 @@ button{font-family:inherit;color:inherit}
   }
 }
 @media (max-width:380px){
-  #vint-body{transform:translateX(-50%) scale(0.85)}
+  #figure-wrap{transform-origin:bottom center}
+  #figure-inner{transform:scale(0.85);transform-origin:50% 100%}
   #media-dock button{padding:9px 10px;font-size:11px}
   .dock-ico{font-size:14px}
 }
-
-/* reduced motion */
 @media (prefers-reduced-motion: reduce){
-  #vint-body,.arm,.leg,.heart,.aurora,.stars,.eye.r{animation:none}
+  .arm,.leg,.stars,.eye.r,.fiber::before,.fiber::after{animation:none}
+  #figure-inner.walking{animation:none}
 }
 </style>
 </head>
 <body>
 
-<!-- ── Scene ─────────────────────────────────────────────────── -->
 <div id="scene">
-  <div class="aurora"></div>
   <div class="stars"></div>
   <div class="floor"></div>
 
-  <!-- Walking figure ‒ JS translates the wrap horizontally -->
   <div id="figure-stage">
     <div id="figure-wrap">
-      <div id="vint-body">
-        <div class="ground-shadow"></div>
+      <div class="ground-shadow"></div>
+      <div id="figure-inner" class="walking">
 
-        <!-- head + face -->
         <div class="hair"></div>
         <div class="head">
           <div class="ear"></div>
+          <div class="brow l"></div>
+          <div class="brow r"></div>
           <div class="eye l"></div>
           <div class="eye r"></div>
           <div class="circuit-etch"></div>
           <div class="nose"></div>
-          <div class="mouth"></div>
+          <div class="mouth" id="mouth"></div>
         </div>
+        <div class="beard"></div>
 
         <div class="neck"></div>
+        <div class="pendant"></div>
 
-        <!-- torso + chest window -->
         <div class="torso"></div>
-        <div class="chest-glass"></div>
-        <div class="heart">
-          <svg viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-            <defs>
-              <radialGradient id="hg" cx="40%" cy="35%" r="65%">
-                <stop offset="0%" stop-color="#ff5566"/>
-                <stop offset="55%" stop-color="#c4202e"/>
-                <stop offset="100%" stop-color="#5a0810"/>
-              </radialGradient>
-            </defs>
-            <!-- anatomical-ish heart, not cartoon -->
-            <path d="M20 36 C 8 28, 3 18, 6 11 C 9 5, 16 5, 20 12 C 24 5, 31 5, 34 11 C 37 18, 32 28, 20 36 Z"
-                  fill="url(#hg)"
-                  stroke="#3a0408" stroke-width="0.6"/>
-            <path d="M20 14 C 22 11, 25 11, 26 14 M20 14 C 18 11, 15 11, 14 14"
-                  stroke="#7a0a14" stroke-width="0.5" fill="none" opacity="0.7"/>
-          </svg>
-        </div>
-        <div class="plate-seam s1"></div>
-        <div class="plate-seam s2"></div>
-        <div class="plate-seam s3"></div>
-        <div class="plate-seam v1"></div>
+        <div class="fiber"></div>
+        <div class="placket"></div>
+        <div class="btn-dot b1"></div>
+        <div class="btn-dot b2"></div>
+        <div class="btn-dot b3"></div>
+        <div class="btn-dot b4"></div>
+        <div class="btn-dot b5"></div>
+        <div class="chest-panel" id="chest-panel" title="open me"></div>
 
-        <!-- pelvis -->
-        <div class="pelvis"></div>
-
-        <!-- arms -->
         <div class="arm l">
           <div class="upper-arm"></div>
           <div class="elbow"></div>
@@ -1093,7 +1082,9 @@ button{font-family:inherit;color:inherit}
           <div class="hand"></div>
         </div>
 
-        <!-- legs -->
+        <div class="pelvis"></div>
+        <div class="belt"><div class="buckle"></div></div>
+
         <div class="leg l">
           <div class="thigh"></div>
           <div class="knee"></div>
@@ -1106,37 +1097,35 @@ button{font-family:inherit;color:inherit}
           <div class="shin"></div>
           <div class="foot"></div>
         </div>
+
+        <div class="speech" id="speech"></div>
       </div>
     </div>
   </div>
 </div>
 
-<!-- HUD -->
 <div id="hud">
-  <div><span class="label">VINTINUUM</span> <span class="val">BODY v3.1</span></div>
+  <div><span class="label">VINTINUUM</span> <span class="val">BODY v3.0</span></div>
   <div><span class="label">STATE</span> <span class="val" id="hud-state">walking</span></div>
   <div><span class="label">BRAIN</span> <span class="val" id="hud-brain">…</span></div>
 </div>
 
-<!-- Media Dock -->
 <div id="media-dock" role="toolbar" aria-label="Media Suite">
-  <button data-mode="file"     aria-label="Open file"><span class="dock-ico">📁</span>Open</button>
-  <button data-mode="video"    aria-label="Video"><span class="dock-ico">🎬</span>Video</button>
-  <button data-mode="audio"    aria-label="Audio"><span class="dock-ico">🎵</span>Audio</button>
-  <button data-mode="docs"     aria-label="Documents"><span class="dock-ico">📄</span>Docs</button>
-  <button data-mode="ebook"    aria-label="Books"><span class="dock-ico">📚</span>Books</button>
-  <button data-mode="terminal" aria-label="Terminal"><span class="dock-ico">💻</span>Terminal</button>
-  <button data-mode="drive"    aria-label="Google Drive"><span class="dock-ico">☁️</span>Drive</button>
+  <button data-mode="file"     data-draggable="true" aria-label="Open file"><span class="dock-ico">📁</span>Open</button>
+  <button data-mode="video"    data-draggable="true" aria-label="Video"><span class="dock-ico">🎬</span>Video</button>
+  <button data-mode="audio"    data-draggable="true" aria-label="Audio"><span class="dock-ico">🎵</span>Audio</button>
+  <button data-mode="docs"     data-draggable="true" aria-label="Documents"><span class="dock-ico">📄</span>Docs</button>
+  <button data-mode="ebook"    data-draggable="true" aria-label="Books"><span class="dock-ico">📚</span>Books</button>
+  <button data-mode="terminal" data-draggable="true" aria-label="Terminal"><span class="dock-ico">💻</span>Terminal</button>
+  <button data-mode="drive"    data-draggable="true" aria-label="Google Drive"><span class="dock-ico">☁️</span>Drive</button>
 </div>
 
-<!-- Conversation bar -->
 <form id="conv-bar" autocomplete="off">
   <input id="conv-input" type="text" placeholder="say something to vintinuum…" aria-label="Message Vintinuum"/>
-  <button type="button" class="conv-btn mic" id="conv-mic" aria-label="Voice input">🎙️</button>
-  <button type="submit" class="conv-btn" aria-label="Send">➤</button>
+  <button type="button" class="conv-btn mic" id="conv-mic" data-draggable="true" aria-label="Voice input">🎙️</button>
+  <button type="submit" class="conv-btn" data-draggable="true" aria-label="Send">➤</button>
 </form>
 
-<!-- Holographic Panel (one, reused per mode) -->
 <div class="panel" id="panel" role="dialog" aria-modal="false" aria-labelledby="panel-title">
   <div class="panel-header" id="panel-header">
     <div class="panel-title" id="panel-title">
@@ -1153,32 +1142,174 @@ button{font-family:inherit;color:inherit}
 </div>
 
 <script>
-/* ════════════════════════════════════════════════════════════════════════
-   VINTINUUM BODY v3.1 — runtime
-   ──────────────────────────────────────────────────────────────────── */
 const API = 'https://api.vintaclectic.com';
 
-/* ── Walk traversal — JS-driven horizontal motion ────────────── */
-(function walk(){
+/* ── walk traversal: rAF-driven, left↔right at ~80px/s ── */
+const Walker = (() => {
   const wrap = document.getElementById('figure-wrap');
-  const body = document.getElementById('vint-body');
+  const inner = document.getElementById('figure-inner');
   let x = 80;
   let dir = 1;
-  const speed = 0.7;          // px per frame ≈ 42 px/sec at 60fps
-  function tick(){
-    const maxX = window.innerWidth - 220;
-    x += dir * speed;
-    if (x > maxX){ x = maxX; dir = -1; }
-    else if (x < 50){ x = 50; dir = 1; }
-    wrap.style.left = x + 'px';
-    // flip the body (not the wrap) so its bob keeps centering math intact
-    body.style.transform = (dir < 0 ? 'translateX(-50%) scaleX(-1)' : 'translateX(-50%) scaleX(1)');
+  let walking = true;
+  let pausedUntil = 0;
+  let last = performance.now();
+  const SPEED = 80; // px/sec
+
+  function setFacing(){
+    const flip = dir < 0 ? ' scaleX(-1)' : ' scaleX(1)';
+    inner.style.transform = `rotate(${dir<0 ? -7 : 7}deg)${flip}`;
+  }
+  function faceForward(){
+    inner.style.transform = 'rotate(0deg)';
+  }
+  function pause(ms){
+    pausedUntil = performance.now() + ms;
+    walking = false;
+    inner.classList.remove('walking');
+    faceForward();
+  }
+  function resume(){
+    walking = true;
+    pausedUntil = 0;
+    inner.classList.add('walking');
+    setFacing();
+  }
+  function tick(now){
+    const dt = Math.min(0.05, (now - last) / 1000);
+    last = now;
+    if (walking && now >= pausedUntil){
+      const maxX = window.innerWidth - 160;
+      x += dir * SPEED * dt;
+      if (x > maxX){ x = maxX; dir = -1; setFacing(); }
+      else if (x < 20){ x = 20; dir = 1; setFacing(); }
+      wrap.style.transform = `translateX(${x}px)`;
+    } else if (now >= pausedUntil && !walking){
+      resume();
+    }
     requestAnimationFrame(tick);
   }
-  requestAnimationFrame(tick);
+  setFacing();
+  wrap.style.transform = `translateX(${x}px)`;
+  requestAnimationFrame((t)=>{ last = t; requestAnimationFrame(tick); });
+  return { pause, resume, position: () => x };
 })();
 
-/* ── HUD: brain ping ────────────────────────────────────────── */
+/* ── speech bubble + lip sync ── */
+const Voice = (() => {
+  const bubble = document.getElementById('speech');
+  const mouth  = document.getElementById('mouth');
+  let speakTimer = null;
+  let hideTimer = null;
+
+  function showBubble(text, ms){
+    bubble.textContent = text;
+    bubble.classList.add('show');
+    clearTimeout(hideTimer);
+    hideTimer = setTimeout(() => bubble.classList.remove('show'), ms || 4500);
+  }
+  function startLip(){
+    mouth.classList.add('talking');
+  }
+  function stopLip(){
+    mouth.classList.remove('talking');
+  }
+
+  async function speak(text, opts){
+    opts = opts || {};
+    if (!text) return;
+    showBubble(text, opts.bubbleMs || Math.max(2200, text.length * 60));
+    Walker.pause(Math.max(2000, text.length * 60));
+    startLip();
+    // try /api/voice/say first
+    let played = false;
+    try{
+      const r = await fetch(API + '/api/voice/say?text=' + encodeURIComponent(text), {cache:'no-store'});
+      if (r.ok){
+        const blob = await r.blob();
+        if (blob && blob.size > 100){
+          const url = URL.createObjectURL(blob);
+          const a = new Audio(url);
+          a.onended = () => { stopLip(); URL.revokeObjectURL(url); };
+          a.onerror = () => { stopLip(); fallbackSpeak(text); };
+          try{ await a.play(); played = true; }catch(_){}
+        }
+      }
+    }catch(_){}
+    if (!played){
+      fallbackSpeak(text);
+    }
+  }
+  function fallbackSpeak(text){
+    if (!window.speechSynthesis){
+      // No TTS available — still keep lip motion brief
+      clearTimeout(speakTimer);
+      speakTimer = setTimeout(stopLip, Math.max(1500, text.length * 55));
+      return;
+    }
+    try{
+      const u = new SpeechSynthesisUtterance(String(text).slice(0, 500));
+      u.rate = 1.02; u.pitch = 0.95;
+      u.onend = stopLip;
+      u.onerror = stopLip;
+      window.speechSynthesis.speak(u);
+    }catch(_){ stopLip(); }
+  }
+
+  return { speak, showBubble };
+})();
+
+/* ── greeting on load ── */
+setTimeout(() => {
+  Voice.speak("Hey — what do you want me to pull up?");
+}, 900);
+
+/* ── ambient thoughts every 90s (NEVER say "still there?") ── */
+const THOUGHTS = [
+  "I was just thinking about the way light folds inside chrome.",
+  "Drop a file on me. Anything.",
+  "I can read PDFs, EPUBs, play video, you name it.",
+  "The terminal works. Try it.",
+  "I'm watching the floor. The floor is watching back.",
+  "Need your resume? Hit Drive.",
+  "I run on subsurface scatter and a little electricity.",
+];
+setInterval(() => {
+  if (document.hidden) return;
+  if (Math.random() < 0.6){
+    Voice.speak(THOUGHTS[Math.floor(Math.random() * THOUGHTS.length)]);
+  }
+}, 90000);
+
+/* ── click figure: stops & quips ── */
+const QUIPS = [
+  "Ow. Watch the chrome — I just buffed it.",
+  "Yes? You rang?",
+  "Take a picture. It lasts longer.",
+  "I'm walking here.",
+  "Smile when you say that.",
+  "Don't poke the hybrid.",
+];
+document.getElementById('figure-wrap').addEventListener('click', e => {
+  if (e.detail === 1){
+    Voice.speak(QUIPS[Math.floor(Math.random() * QUIPS.length)]);
+  }
+});
+/* double-click: Carrey stretch */
+document.getElementById('figure-wrap').addEventListener('dblclick', () => {
+  const inner = document.getElementById('figure-inner');
+  inner.style.transition = 'transform 0.3s cubic-bezier(.34,1.56,.64,1)';
+  inner.style.transform = (inner.style.transform || '') + ' scaleX(1.4) scaleY(0.7)';
+  setTimeout(() => {
+    inner.style.transform = inner.style.transform.replace(' scaleX(1.4) scaleY(0.7)', ' scaleX(0.8) scaleY(1.25)');
+    setTimeout(() => {
+      inner.style.transition = '';
+      inner.style.transform = inner.style.transform.replace(' scaleX(0.8) scaleY(1.25)', '');
+    }, 300);
+  }, 300);
+  Voice.speak("ALLLRIGHTY THEN!");
+});
+
+/* ── HUD: brain ping ── */
 (function brainPing(){
   const el = document.getElementById('hud-brain');
   fetch(API + '/api/health', {cache:'no-store'})
@@ -1186,6 +1317,13 @@ const API = 'https://api.vintaclectic.com';
     .then(() => { el.textContent = 'online'; el.style.color = '#7ee0ff'; })
     .catch(() => { el.textContent = 'offline'; el.style.color = '#ff7a8a'; });
 })();
+
+/* ── chest panel hover: pulse handled in CSS; click opens terminal ── */
+document.getElementById('chest-panel').addEventListener('click', e => {
+  e.stopPropagation();
+  Voice.speak("Inside the panel. Welcome.");
+  setTimeout(() => MODES.terminal(), 600);
+});
 
 /* ════════════════════════════════════════════════════════════════
    PANEL CORE
@@ -1198,6 +1336,7 @@ const Panel = (() => {
   const subEl   = document.getElementById('panel-sub');
   const resize  = document.getElementById('panel-resize');
   let currentMode = null;
+  let userPositioned = false;
 
   function setTitle(mode, sub){
     titleEl.textContent = mode.toUpperCase();
@@ -1223,24 +1362,25 @@ const Panel = (() => {
   document.getElementById('panel-max').onclick   = () => {
     if (el.style.width === '96vw'){
       el.style.width = ''; el.style.height = '';
-      el.style.left = '50%'; el.style.top = '50%';
-      el.style.transform = 'translate(-50%,-50%)';
+      el.style.left = ''; el.style.top = '';
+      el.style.right = '20px'; el.style.bottom = '140px';
     } else {
       el.style.width  = '96vw';
-      el.style.height = 'calc(100vh - 180px)';
+      el.style.height = 'calc(100vh - 200px)';
       el.style.left   = '2vw';
       el.style.top    = '14px';
-      el.style.transform = 'none';
+      el.style.right  = 'auto';
+      el.style.bottom = 'auto';
     }
   };
 
-  /* drag */
   let dragging = false, dx=0, dy=0;
   function startDrag(clientX, clientY){
     const rect = el.getBoundingClientRect();
     el.style.left = rect.left + 'px';
     el.style.top  = rect.top  + 'px';
-    el.style.transform = 'none';
+    el.style.right = 'auto';
+    el.style.bottom = 'auto';
     dragging = true;
     dx = clientX - rect.left;
     dy = clientY - rect.top;
@@ -1250,7 +1390,6 @@ const Panel = (() => {
     if (!dragging) return;
     let nx = clientX - dx;
     let ny = clientY - dy;
-    // clamp to viewport — no overflow rule
     nx = Math.max(8, Math.min(window.innerWidth  - el.offsetWidth  - 8, nx));
     ny = Math.max(8, Math.min(window.innerHeight - 60, ny));
     el.style.left = nx + 'px';
@@ -1274,7 +1413,6 @@ const Panel = (() => {
   }, {passive:true});
   document.addEventListener('touchend', endDrag);
 
-  /* resize */
   let resizing = false, rx=0, ry=0, rw=0, rh=0;
   resize.addEventListener('mousedown', e => {
     e.preventDefault();
@@ -1292,11 +1430,9 @@ const Panel = (() => {
   return { open, close, content, mode: () => currentMode };
 })();
 
-/* ════════════════════════════════════════════════════════════════
-   MODES
-   ──────────────────────────────────────────────────────────── */
+/* ── MODES ── */
 const TYPES = {
-  video: ['mp4','webm','mkv','ogg','mov','m4v'],
+  video: ['mp4','webm','mkv','ogg','mov','m4v','m3u8'],
   audio: ['mp3','wav','ogg','flac','aac','m4a','opus'],
   ebook: ['epub','mobi','azw3','fb2'],
   pdf:   ['pdf'],
@@ -1317,7 +1453,6 @@ function detectMode(name){
   return 'docs';
 }
 
-/* ── file/drop zone ──────────────────────────────────────── */
 function renderFile(){
   Panel.open('file', 'choose or drop');
   const c = Panel.content();
@@ -1354,13 +1489,12 @@ function handleFiles(fileList){
   return renderDocFile(first);
 }
 
-/* ── video ────────────────────────────────────────────────── */
 function renderVideo(){
   Panel.open('video', 'paste url or open a file');
   const c = Panel.content();
   c.innerHTML = `
     <div class="url-row">
-      <input id="vu" type="text" placeholder="https://…  (mp4 / webm / youtube)" />
+      <input id="vu" type="text" placeholder="https://…  (mp4 / webm / m3u8 / youtube)" />
       <button id="vg">load</button>
     </div>
     <div class="media-wrap" id="vwrap"><video controls></video></div>
@@ -1385,7 +1519,21 @@ function loadVideoURL(url){
   }
   const v = document.createElement('video');
   v.controls = true;
-  v.src = url;
+  // HLS support via hls.js if available
+  if (/\.m3u8($|\?)/i.test(url)){
+    if (window.Hls && window.Hls.isSupported()){
+      const hls = new window.Hls();
+      hls.loadSource(url);
+      hls.attachMedia(v);
+    } else if (v.canPlayType('application/vnd.apple.mpegurl')){
+      v.src = url;
+    } else {
+      // attempt load anyway, fallback message
+      v.src = url;
+    }
+  } else {
+    v.src = url;
+  }
   v.play().catch(()=>{});
   wrap.appendChild(v);
 }
@@ -1400,7 +1548,6 @@ function renderVideoFiles(files){
   wrap.appendChild(v);
 }
 
-/* ── audio (with WebAudio visualizer) ────────────────────── */
 let audioCtx, audioAnalyser, audioRaf;
 function stopAudioViz(){
   if (audioRaf) cancelAnimationFrame(audioRaf);
@@ -1483,13 +1630,12 @@ function drawAudioViz(){
   draw();
 }
 
-/* ── docs / ebook ────────────────────────────────────────── */
 function renderDocs(){
   Panel.open('docs', 'paste url or open a file');
   const c = Panel.content();
   c.innerHTML = `
     <div class="url-row">
-      <input id="du" type="text" placeholder="https://…  (pdf / docx / xlsx / txt / md / json / image)" />
+      <input id="du" type="text" placeholder="https://…  (pdf / docx / txt / md / json / image)" />
       <button id="dg">load</button>
     </div>
     <div class="doc-view" id="dwrap"><div style="opacity:0.5;text-align:center;padding:40px">paste a url or drop a file in Open</div></div>
@@ -1557,35 +1703,79 @@ function renderDocFile(file){
     reader.readAsText(file);
   }
 }
+
+/* ── ebook (EPUB via JSZip CDN) ── */
+function loadJSZip(){
+  return new Promise((resolve, reject) => {
+    if (window.JSZip) return resolve(window.JSZip);
+    const s = document.createElement('script');
+    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js';
+    s.onload = () => resolve(window.JSZip);
+    s.onerror = reject;
+    document.head.appendChild(s);
+  });
+}
 function renderEbook(){
-  Panel.open('ebook', 'epub / mobi');
+  Panel.open('ebook', 'open an .epub via Open');
   Panel.content().innerHTML = `
     <div class="doc-view">
-      <pre>EPUB/MOBI reader coming next pass.
-Drop a .epub via Open and we'll add inline rendering.
+      <pre>EPUB reader — drop a .epub via the Open tab.
+Supports inline rendering of EPUB v2/v3 content.
 
-For now: use Docs panel for PDFs.</pre>
+For PDF: use the Docs tab.</pre>
     </div>`;
 }
-function renderEbookFile(file){
+async function renderEbookFile(file){
   Panel.open('ebook', file.name);
-  Panel.content().innerHTML = `
-    <div class="doc-view">
-      <pre>Loaded ${file.name} (${(file.size/1024).toFixed(1)} KB).
-
-EPUB rendering is wired for v3.2 — currently the file is held in memory.
-For PDFs and plain text, use the Docs panel.</pre>
-    </div>`;
+  const c = Panel.content();
+  c.innerHTML = `<div class="doc-view"><pre id="ebook-status">loading ${file.name}…</pre><div id="ebook-content" style="flex:1;overflow:auto;display:none;padding:14px;background:#fff;color:#000;border-radius:8px;font:14px/1.6 Georgia,serif"></div></div>`;
+  const status = document.getElementById('ebook-status');
+  const out = document.getElementById('ebook-content');
+  try{
+    const JSZip = await loadJSZip();
+    const zip = await JSZip.loadAsync(file);
+    // find OPF
+    const containerXml = await zip.file('META-INF/container.xml')?.async('string');
+    if (!containerXml) throw new Error('container.xml not found');
+    const opfPath = containerXml.match(/full-path="([^"]+)"/)?.[1];
+    if (!opfPath) throw new Error('opf path not found');
+    const opf = await zip.file(opfPath).async('string');
+    const baseDir = opfPath.split('/').slice(0, -1).join('/');
+    // get spine order
+    const idrefs = [...opf.matchAll(/<itemref[^>]*idref="([^"]+)"/g)].map(m=>m[1]);
+    const manifest = {};
+    for (const m of opf.matchAll(/<item[^>]*id="([^"]+)"[^>]*href="([^"]+)"/g)){
+      manifest[m[1]] = m[2];
+    }
+    const parts = [];
+    for (const id of idrefs){
+      const href = manifest[id];
+      if (!href) continue;
+      const full = baseDir ? baseDir + '/' + href : href;
+      const txt = await zip.file(full)?.async('string');
+      if (txt){
+        // strip <head>, take body
+        const body = txt.match(/<body[^>]*>([\s\S]*?)<\/body>/i)?.[1] || txt;
+        parts.push(body);
+      }
+    }
+    out.innerHTML = parts.join('<hr style="margin:30px 0;border:none;border-top:1px solid #ccc"/>');
+    status.style.display = 'none';
+    out.style.display = 'block';
+  }catch(e){
+    status.textContent = 'epub parse failed: ' + e.message;
+    status.className = 'l-err';
+  }
 }
 
-/* ── terminal ────────────────────────────────────────────── */
+/* ── terminal ── */
 class VintTerminal {
   constructor(rootEl){
     this.root = rootEl;
     this.out = rootEl.querySelector('.term-out');
     this.input = rootEl.querySelector('.term-input');
     this.ws = null;
-    this.mode = 'vint';      // 'vint' | 'shell'
+    this.mode = 'vint';
     this.history = JSON.parse(localStorage.getItem('vint:term:hist') || '[]');
     this.histIdx = this.history.length;
     this.bind();
@@ -1593,7 +1783,7 @@ class VintTerminal {
   }
   banner(){
     this.print('╔═════════════════════════════════════╗', 'sys');
-    this.print('║ VINTINUUM SHELL v1.0                ║', 'sys');
+    this.print('║ VINTINUUM SHELL v3.0                ║', 'sys');
     this.print('║ type "help" for commands            ║', 'sys');
     this.print('╚═════════════════════════════════════╝', 'sys');
     this.print('', '');
@@ -1643,23 +1833,16 @@ class VintTerminal {
     switch ((head||'').toLowerCase()){
       case 'help':
         this.print('commands:', 'ok');
-        this.print('  help               this list');
-        this.print('  whoami             identity');
-        this.print('  status             /api/health');
-        this.print('  ask <text>         talk to vintinuum (POST /api/chat)');
-        this.print('  pulse <text>       record a pulse');
-        this.print('  genome             snapshot');
-        this.print('  memory             recent fragments');
-        this.print('  ping               brain reachability');
-        this.print('  version            build');
-        this.print('  date               local time');
-        this.print('  ls                 panel modes');
-        this.print('  shell              attempt machine bridge (pending)');
-        this.print('  exit               leave shell mode');
-        this.print('  clear              clear screen');
+        this.print('  help · whoami · status · ping · version · date · ls');
+        this.print('  ask <text>     talk to vintinuum');
+        this.print('  pulse <text>   record a pulse');
+        this.print('  genome         snapshot');
+        this.print('  memory         recent fragments');
+        this.print('  shell          attempt machine bridge');
+        this.print('  exit · clear');
         break;
       case 'whoami':
-        this.print('vinta · operator of vintinuum · this is the body, the brain runs at ' + API, 'ok');
+        this.print('vinta · operator of vintinuum · brain at ' + API, 'ok');
         break;
       case 'status':
         try{
@@ -1686,13 +1869,7 @@ class VintTerminal {
           const j = await r.json().catch(()=>({}));
           const reply = j.reply || j.response || j.text || j.message || JSON.stringify(j);
           this.print(reply, 'ok');
-          if (window.speechSynthesis && reply){
-            try{
-              const u = new SpeechSynthesisUtterance(String(reply).slice(0,400));
-              u.rate = 1.0; u.pitch = 1.0;
-              window.speechSynthesis.speak(u);
-            }catch(_){}
-          }
+          Voice.speak(String(reply).slice(0, 300));
         }catch(e){ this.print('chat failed: ' + e.message, 'err'); }
         break;
       case 'pulse':
@@ -1722,19 +1899,10 @@ class VintTerminal {
           items.forEach(it => this.print('• ' + (it.content || it.text || JSON.stringify(it)).slice(0,140)));
         }catch(e){ this.print(e.message, 'err'); }
         break;
-      case 'date':
-        this.print(new Date().toString(), 'ok');
-        break;
-      case 'version':
-        this.print('vintinuum body v3.1 · brain ' + API, 'ok');
-        break;
-      case 'ls':
-        this.print('modes: file · video · audio · docs · ebook · terminal · drive', 'ok');
-        break;
-      case 'clear':
-        this.out.innerHTML = '';
-        this.banner();
-        break;
+      case 'date': this.print(new Date().toString(), 'ok'); break;
+      case 'version': this.print('vintinuum body v3.0 · brain ' + API, 'ok'); break;
+      case 'ls': this.print('modes: file · video · audio · docs · ebook · terminal · drive', 'ok'); break;
+      case 'clear': this.out.innerHTML = ''; this.banner(); break;
       case 'shell':
         this.print('attempting machine bridge…', 'dim');
         this.connectShell();
@@ -1744,14 +1912,10 @@ class VintTerminal {
           try{ this.ws && this.ws.close(); }catch(_){}
           this.mode = 'vint';
           this.print('left shell mode', 'ok');
-        } else {
-          this.print('not in shell mode', 'dim');
-        }
+        } else this.print('not in shell mode', 'dim');
         break;
-      case '':
-        break;
-      default:
-        this.print('unknown command: ' + head + ' (try "help")', 'err');
+      case '': break;
+      default: this.print('unknown command: ' + head + ' (try "help")', 'err');
     }
   }
   connectShell(){
@@ -1768,16 +1932,12 @@ class VintTerminal {
     this.ws.onmessage = (e) => {
       try{
         const j = JSON.parse(e.data);
-        if (j.type === 'error'){ this.print('[server] ' + j.msg, 'err'); }
-        else if (j.type === 'data'){ this.print(j.data); }
+        if (j.type === 'error') this.print('[server] ' + j.msg, 'err');
+        else if (j.type === 'data') this.print(j.data);
         else this.print(e.data);
-      }catch(_){
-        this.print(e.data);
-      }
+      }catch(_){ this.print(e.data); }
     };
-    this.ws.onerror = () => {
-      this.print('[PENDING] Machine bridge not yet activated — coming soon', 'err');
-    };
+    this.ws.onerror = () => this.print('[PENDING] Machine bridge not yet activated', 'err');
     this.ws.onclose = () => {
       this.ws = null;
       this.mode = 'vint';
@@ -1802,7 +1962,6 @@ function renderTerminal(){
   window.__vintTerm = term;
 }
 
-/* ── drive ───────────────────────────────────────────────── */
 function renderDrive(){
   Panel.open('drive', 'resume');
   const c = Panel.content();
@@ -1841,7 +2000,6 @@ To connect Google Drive:
     });
 }
 
-/* ── dock wiring ──────────────────────────────────────────── */
 const MODES = {
   file:     renderFile,
   video:    renderVideo,
@@ -1859,14 +2017,11 @@ document.querySelectorAll('#media-dock button').forEach(b => {
   });
 });
 
-/* close panel on Esc */
 document.addEventListener('keydown', e => {
   if (e.key === 'Escape') Panel.close();
 });
 
-/* ════════════════════════════════════════════════════════════════
-   CONVERSATION BAR
-   ──────────────────────────────────────────────────────────── */
+/* ── CONVERSATION BAR ── */
 const convForm  = document.getElementById('conv-bar');
 const convInput = document.getElementById('conv-input');
 const convMic   = document.getElementById('conv-mic');
@@ -1878,33 +2033,53 @@ convForm.addEventListener('submit', async e => {
   if (!text) return;
   convInput.value = '';
   hudState.textContent = 'thinking';
+  Voice.showBubble('…', 1200);
+  let replyText = '';
   try{
-    const r = await fetch(API + '/api/chat', {
+    // try streaming endpoint first
+    const r = await fetch(API + '/api/chat/stream', {
       method:'POST',
       headers:{'Content-Type':'application/json'},
       body: JSON.stringify({message:text, source:'body-v3'})
     });
-    const j = await r.json().catch(()=>({}));
-    const reply = j.reply || j.response || j.text || j.message;
-    if (reply){
-      // also push into terminal if open
-      if (window.__vintTerm){
-        window.__vintTerm.print('vint → ' + reply, 'ok');
+    if (r.ok && r.body && r.headers.get('content-type')?.includes('text/event-stream')){
+      const reader = r.body.getReader();
+      const dec = new TextDecoder();
+      let buf = '';
+      while(true){
+        const {done, value} = await reader.read();
+        if (done) break;
+        buf += dec.decode(value, {stream:true});
+        const lines = buf.split('\n');
+        buf = lines.pop();
+        for (const l of lines){
+          if (l.startsWith('data: ')){
+            const d = l.slice(6).trim();
+            if (d && d !== '[DONE]'){
+              try{ const j = JSON.parse(d); replyText += (j.delta || j.content || j.text || ''); }
+              catch(_){ replyText += d; }
+            }
+          }
+        }
       }
-      if (window.speechSynthesis){
-        try{
-          const u = new SpeechSynthesisUtterance(String(reply).slice(0,400));
-          u.rate = 1.0; u.pitch = 1.0;
-          window.speechSynthesis.speak(u);
-        }catch(_){}
-      }
+    } else {
+      // fallback to non-streaming
+      const r2 = await fetch(API + '/api/chat', {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({message:text, source:'body-v3'})
+      });
+      const j = await r2.json().catch(()=>({}));
+      replyText = j.reply || j.response || j.text || j.message || '';
     }
-  }catch(_){
+  }catch(_){}
+  if (replyText){
+    if (window.__vintTerm) window.__vintTerm.print('vint → ' + replyText, 'ok');
+    Voice.speak(replyText);
   }
   hudState.textContent = 'walking';
 });
 
-/* mic — Web Speech API */
 let recog = null, recogLive = false;
 function ensureRecog(){
   if (recog) return recog;
@@ -1928,14 +2103,143 @@ function ensureRecog(){
 }
 convMic.addEventListener('click', () => {
   const r = ensureRecog();
-  if (!r){
-    alert('Speech recognition not supported in this browser.');
-    return;
-  }
+  if (!r){ alert('Speech recognition not supported in this browser.'); return; }
   if (recogLive){ r.stop(); return; }
   try{ r.start(); recogLive = true; convMic.classList.add('live'); }
   catch(_){ recogLive = false; convMic.classList.remove('live'); }
 });
+
+/* ── DRAGGABLE BUTTONS (data-draggable="true") ── */
+(function draggable(){
+  const NS = 'vint:btnpos:';
+  function applyPos(el, id){
+    try{
+      const raw = localStorage.getItem(NS + id);
+      if (!raw) return;
+      const p = JSON.parse(raw);
+      el.style.position = 'fixed';
+      el.style.left = p.x + 'px';
+      el.style.top  = p.y + 'px';
+      el.style.right = 'auto';
+      el.style.bottom = 'auto';
+      el.style.zIndex = 200;
+    }catch(_){}
+  }
+  function init(el){
+    let id = el.dataset.dragId;
+    if (!id){
+      id = (el.id || el.dataset.mode || el.getAttribute('aria-label') || el.textContent || 'btn').replace(/\s+/g,'_').slice(0,40);
+      el.dataset.dragId = id;
+    }
+    applyPos(el, id);
+
+    let pressTimer = null;
+    let dragging = false;
+    let sx=0, sy=0, ox=0, oy=0;
+    let startedClick = false;
+
+    function start(clientX, clientY){
+      const rect = el.getBoundingClientRect();
+      sx = clientX; sy = clientY;
+      ox = rect.left; oy = rect.top;
+      startedClick = true;
+      pressTimer = setTimeout(() => {
+        dragging = true;
+        el.style.position = 'fixed';
+        el.style.left = ox + 'px';
+        el.style.top  = oy + 'px';
+        el.style.right = 'auto';
+        el.style.bottom = 'auto';
+        el.style.zIndex = 200;
+        el.style.transform = 'scale(1.05)';
+        el.style.cursor = 'grabbing';
+      }, 250);
+    }
+    function move(clientX, clientY){
+      const dx = clientX - sx;
+      const dy = clientY - sy;
+      if (!dragging){
+        if (Math.abs(dx) > 6 || Math.abs(dy) > 6){
+          clearTimeout(pressTimer);
+          dragging = true;
+          el.style.position = 'fixed';
+          el.style.left = ox + 'px';
+          el.style.top  = oy + 'px';
+          el.style.right = 'auto';
+          el.style.bottom = 'auto';
+          el.style.zIndex = 200;
+          el.style.transform = 'scale(1.05)';
+        } else return;
+      }
+      let nx = ox + dx;
+      let ny = oy + dy;
+      nx = Math.max(4, Math.min(window.innerWidth  - el.offsetWidth  - 4, nx));
+      ny = Math.max(4, Math.min(window.innerHeight - el.offsetHeight - 4, ny));
+      el.style.left = nx + 'px';
+      el.style.top  = ny + 'px';
+    }
+    function end(){
+      clearTimeout(pressTimer);
+      if (dragging){
+        el.style.transform = '';
+        el.style.cursor = '';
+        const rect = el.getBoundingClientRect();
+        try{ localStorage.setItem(NS + id, JSON.stringify({x:rect.left, y:rect.top})); }catch(_){}
+      }
+      // if it was a real click (not a drag), let the normal click fire (we don't preventDefault)
+      dragging = false;
+      startedClick = false;
+    }
+
+    el.addEventListener('mousedown', e => {
+      if (e.button !== 0) return;
+      start(e.clientX, e.clientY);
+      const mm = ev => move(ev.clientX, ev.clientY);
+      const mu = () => {
+        document.removeEventListener('mousemove', mm);
+        document.removeEventListener('mouseup', mu);
+        end();
+      };
+      document.addEventListener('mousemove', mm);
+      document.addEventListener('mouseup', mu);
+    });
+    el.addEventListener('touchstart', e => {
+      const t = e.touches[0];
+      start(t.clientX, t.clientY);
+      const tm = ev => {
+        const tt = ev.touches[0];
+        move(tt.clientX, tt.clientY);
+      };
+      const te = () => {
+        el.removeEventListener('touchmove', tm);
+        el.removeEventListener('touchend', te);
+        end();
+      };
+      el.addEventListener('touchmove', tm, {passive:true});
+      el.addEventListener('touchend', te);
+    }, {passive:true});
+
+    // click swallow if dragged
+    el.addEventListener('click', e => {
+      if (dragging){ e.stopImmediatePropagation(); e.preventDefault(); }
+    }, true);
+
+    // shift+dblclick reset
+    el.addEventListener('dblclick', e => {
+      if (e.shiftKey){
+        e.preventDefault();
+        try{ localStorage.removeItem(NS + id); }catch(_){}
+        el.style.position = '';
+        el.style.left = '';
+        el.style.top = '';
+        el.style.right = '';
+        el.style.bottom = '';
+        el.style.zIndex = '';
+      }
+    });
+  }
+  document.querySelectorAll('[data-draggable="true"]').forEach(init);
+})();
 </script>
 </body>
 </html>
