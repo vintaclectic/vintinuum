@@ -146,8 +146,11 @@
     display: grid !important;
     grid-template-columns: 1fr !important;
     gap: 14px;
-    width: 100%;
-    max-width: 100%;
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;    /* prevent grid item width collapse */
+    flex: 1 1 auto !important;  /* fill parent if inside flex/grid */
+    align-self: stretch !important;
   }
   @media (min-width: 800px) {
     .jarvis-stack { grid-template-columns: 1fr 1fr !important; }
@@ -246,6 +249,44 @@
     0%   { box-shadow: 0 0 0 0 rgba(124,207,255,0.32); }
     50%  { box-shadow: 0 0 0 6px rgba(124,207,255,0.0); }
     100% { box-shadow: 0 0 0 0 rgba(124,207,255,0.0); }
+  }
+
+  /* Living row — spine + stack side by side */
+  .jarvis-living-row {
+    display: grid !important;
+    grid-template-columns: 36px 1fr !important;
+    gap: 12px !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    padding: 16px 14px 22px !important;
+    align-items: start !important;
+  }
+  @media (min-width: 800px) {
+    .jarvis-living-row {
+      grid-template-columns: 56px 1fr !important;
+      gap: 18px !important;
+      padding: 22px 22px 28px !important;
+    }
+  }
+
+  /* Layer cards — must not collapse on mobile */
+  [data-jarvis-layer] {
+    width: 100% !important;
+    min-width: 0 !important;
+    box-sizing: border-box !important;
+  }
+
+  /* Felt — clear the giant quote glyph on mobile too */
+  @media (max-width: 640px) {
+    .jarvis-felt {
+      padding: 22px 16px 22px 52px !important;
+      font-size: 1rem !important;
+    }
+    .jarvis-felt::before {
+      font-size: 3.5rem !important;
+      left: 8px !important;
+      top: 6px !important;
+    }
   }
 
   /* Weather ticker — grid so label never overlaps scrolling text */
