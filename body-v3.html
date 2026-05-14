@@ -880,6 +880,13 @@ button{font-family:inherit;color:inherit}
   padding:14px;
   position:relative;
   background:rgba(2,6,14,0.55);
+  min-height:0; /* critical: allows flex child to shrink below content height */
+}
+.panel-body.mode-terminal{
+  padding:0;
+  overflow:hidden;
+  display:flex;
+  flex-direction:column;
 }
 .panel-resize{
   position:absolute;
@@ -1791,8 +1798,15 @@ class VintTerminal {
     this._loadXterm().then(() => this._showAuthPrompt());
   }
 
+  // Get stored access token (same key used by brain.html / jarvis.html)
+  _getAccessToken() {
+    return localStorage.getItem('vint_access_token')
+      || localStorage.getItem('vint_token')
+      || localStorage.getItem('vint_access')
+      || '';
+  }
+
   async _loadXterm() {
-    // Load xterm.js from CDN if not already present
     if (!window.Terminal) {
       await new Promise((res, rej) => {
         const s = document.createElement('script');
@@ -1814,12 +1828,17 @@ class VintTerminal {
   }
 
   _showAuthPrompt() {
+    const hasToken = !!this._getAccessToken();
     this.container.innerHTML = `
       <div class="term-masterkey-prompt">
-        <div style="color:#00d4ff;font-size:15px;margin-bottom:4px;">🔐 Machine Bridge Auth</div>
-        <div style="color:#5a8aaa;font-size:12px;">Enter master key to open real bash shell on your machine.</div>
+        <div style="color:#00d4ff;font-size:15px;margin-bottom:4px;">🔐 Machine Bridge</div>
+        ${!hasToken ? `
+        <div style="color:#f0a040;font-size:12px;margin-bottom:8px;">⚠ Not logged in — enter email + password first</div>
+        <input id="mk-email" type="email" placeholder="email…" autocomplete="email" value="dirhaven@gmail.com"/>
+        <input id="mk-pass" type="password" placeholder="password…" autocomplete="current-password"/>
+        ` : `<div style="color:#40d060;font-size:12px;margin-bottom:4px;">✓ Session active</div>`}
         <input id="mk-input" type="password" placeholder="master key…" autocomplete="off"/>
-        <button class="mk-submit" id="mk-go">Connect Shell</button>
+        <button class="mk-submit" id="mk-go">Open Shell</button>
         <div id="mk-err" style="color:#f04060;font-size:12px;min-height:16px;"></div>
       </div>
     `;
@@ -1828,15 +1847,41 @@ class VintTerminal {
     const err = this.container.querySelector('#mk-err');
 
     const tryConnect = async () => {
-      const mk = inp.value.trim();
-      if (!mk) { err.textContent = 'key required'; return; }
-      btn.disabled = true; btn.textContent = 'connecting…';
       err.textContent = '';
+      btn.disabled = true; btn.textContent = 'connecting…';
+
+      // If no token, login first
+      if (!this._getAccessToken()) {
+        const email = (this.container.querySelector('#mk-email')?.value || '').trim();
+        const pass  = (this.container.querySelector('#mk-pass')?.value  || '').trim();
+        if (!email || !pass) { err.textContent = 'email + password required'; btn.disabled=false; btn.textContent='Open Shell'; return; }
+        try {
+          const lr = await fetch(API + '/api/auth/login', {
+            method:'POST', headers:{'Content-Type':'application/json'},
+            body: JSON.stringify({email, password: pass})
+          });
+          const lj = await lr.json().catch(()=>({}));
+          if (!lr.ok) throw new Error(lj.error || 'login failed');
+          const tok = lj.accessToken || lj.token;
+          if (!tok) throw new Error('no token in login response');
+          localStorage.setItem('vint_access_token', tok);
+          localStorage.setItem('vint_token', tok);
+          localStorage.setItem('vint_access', tok);
+        } catch(e) {
+          err.textContent = 'Login: ' + e.message;
+          btn.disabled=false; btn.textContent='Open Shell';
+          return;
+        }
+      }
+
+      const mk = inp.value.trim();
+      if (!mk) { err.textContent = 'master key required'; btn.disabled=false; btn.textContent='Open Shell'; return; }
+
       try {
         await this._connect(mk);
       } catch (e) {
         err.textContent = e.message;
-        btn.disabled = false; btn.textContent = 'Connect Shell';
+        btn.disabled = false; btn.textContent = 'Open Shell';
       }
     };
 
@@ -1846,18 +1891,31 @@ class VintTerminal {
   }
 
   async _connect(masterKey) {
-    // 1. Request terminal session token from brain
+    const accessToken = this._getAccessToken();
+    if (!accessToken) throw new Error('No session — log in first');
+
+    const cols = this._cols();
+    const rows = this._rows();
+
+    // 1. Get terminal session token
     const resp = await fetch(API + '/api/terminal/session', {
       method: 'POST',
-      credentials: 'include',
       headers: {
         'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + accessToken,
         'X-Master-Key': masterKey,
       },
-      body: JSON.stringify({ cols: this._cols(), rows: this._rows(), masterKey }),
+      body: JSON.stringify({ cols, rows, masterKey }),
     });
     if (!resp.ok) {
       const j = await resp.json().catch(() => ({}));
+      // If 401, clear stale token and retry via prompt
+      if (resp.status === 401) {
+        localStorage.removeItem('vint_access_token');
+        localStorage.removeItem('vint_token');
+        localStorage.removeItem('vint_access');
+        throw new Error('Session expired — re-enter credentials');
+      }
       throw new Error(j.error || j.hint || `HTTP ${resp.status}`);
     }
     const { token, ws_url } = await resp.json();
@@ -2020,7 +2078,6 @@ class VintTerminal {
 function renderTerminal() {
   Panel.open('terminal', '💻 machine shell');
   const c = Panel.content();
-  c.style.cssText = 'display:flex;flex-direction:column;height:100%;padding:0;overflow:hidden;';
   c.innerHTML = '';
   window.__vintTerm = new VintTerminal(c);
 }
