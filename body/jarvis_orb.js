@@ -323,6 +323,7 @@
     var _rec = null;
     var _active = false;
     var _pendingRestart = false;
+    var _lastFinal = '';
 
     function _build() {
       var rec = new SR();
@@ -335,8 +336,6 @@
         orb.setState('listening');
         utterance.show('listening…');
       };
-
-      var _lastFinal = '';
       rec.onresult = function (ev) {
         var interim = '';
         var finals = '';

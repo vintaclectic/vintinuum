@@ -138,6 +138,7 @@
     if ($('.jarvis-weather', shell)) return;
     var feltP = $('[data-jarvis-felt-quality]', shell);
     var w = el('div', { class: 'jarvis-weather', 'aria-live': 'off' },
+      el('span', { class: 'jarvis-weather-label' }, 'WEATHER ⌁'),
       el('span', { class: 'jarvis-weather-text' }, pickWeather()));
     if (feltP && feltP.parentNode) {
       feltP.parentNode.insertBefore(w, feltP.nextSibling);

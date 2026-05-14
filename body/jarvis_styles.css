@@ -393,18 +393,20 @@ html, body[data-jarvis="on"] {
   color: var(--carrey-cable);
   letter-spacing: 0.04em;
 }
-/* Label column — pinned in grid column 1, never scrolls */
-.jarvis-weather::before {
-  content: 'WEATHER ⌁';
+/* Kill the pseudo — label is now a real element */
+.jarvis-weather::before { display: none !important; content: none !important; }
+
+/* Label column — real element, pinned, never scrolls */
+.jarvis-weather-label {
   display: block;
-  position: static;   /* must be static to participate in grid layout */
   color: var(--zep-gold);
   letter-spacing: 0.28em;
   font-weight: 700;
+  font-family: 'Space Mono', monospace;
+  font-size: 0.72rem;
   padding: 10px 12px 10px 16px;
   white-space: nowrap;
   background: rgba(154,255,182,0.04);
-  z-index: 2;
   flex-shrink: 0;
 }
 /* Text column — overflow hidden, text drifts inside its own column */

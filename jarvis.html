@@ -289,7 +289,7 @@
     }
   }
 
-  /* Weather ticker — grid so label never overlaps scrolling text */
+  /* Weather ticker — real label element in grid column 1 */
   .jarvis-weather {
     display: grid !important;
     grid-template-columns: auto 1fr !important;
@@ -297,19 +297,17 @@
     overflow: hidden !important;
     width: 100%;
   }
-  .jarvis-weather::before {
-    /* label column — pinned, never scrolls */
+  .jarvis-weather::before { display: none !important; content: none !important; }
+  .jarvis-weather-label {
     display: block !important;
-    position: static !important;
-    z-index: 2;
-    white-space: nowrap;
-    flex-shrink: 0;
+    white-space: nowrap !important;
+    flex-shrink: 0 !important;
   }
   .jarvis-weather-text {
     display: block !important;
     overflow: hidden !important;
     white-space: nowrap !important;
-    min-width: 0;
+    min-width: 0 !important;
   }
 
   /* Reduced motion */
@@ -353,11 +351,11 @@
 <script src="body/wander.js?v=v20260509-wander" defer></script>
 <script src="body/perception_in.js?v=v20260509-speak" defer></script>
 <!-- JARVIS wire (this commit) -->
-<script defer src="body/jarvis_client.js?v=v20260511-jarvis-live"></script>
+<script defer src="body/jarvis_client.js?v=v20260514-orbfix"></script>
 <!-- JARVIS enhancer (council redesign — chakra spine, weather, body arcs, crosswind, witness) -->
-<script defer src="body/jarvis_enhancer.js?v=v20260511-jarvis-live"></script>
+<script defer src="body/jarvis_enhancer.js?v=v20260514-orbfix"></script>
 <!-- JARVIS spiraling orb — voice in / voice out / text both ways -->
-<script defer src="body/jarvis_orb.js?v=v20260511-jarvis-live"></script>
+<script defer src="body/jarvis_orb.js?v=v20260514-orbfix"></script>
 </head>
 <body>
 
