@@ -697,7 +697,7 @@ body {
 const API = 'https://api.vintaclectic.com';
 
 function authHeaders() {
-  const tok = localStorage.getItem('vint_token');
+  const tok = localStorage.getItem('vint_access_token') || localStorage.getItem('vint_token');
   const h = { 'Content-Type': 'application/json' };
   if (tok) h['Authorization'] = 'Bearer ' + tok;
   return h;
