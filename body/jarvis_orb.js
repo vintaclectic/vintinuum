@@ -122,8 +122,16 @@
     stage.appendChild(contToggle);
     stage.appendChild(inputRow);
 
-    if (stack && stack.parentNode) {
-      stack.parentNode.insertBefore(stage, stack);
+    // Always insert the orb stage as a direct child of shell, BEFORE whatever
+    // top-level block contains the stack (which may be .jarvis-living-row if
+    // jarvis_enhancer.js ran first and wrapped the stack). Inserting inside the
+    // living-row would make orb a grid cell in the 36px|1fr spine grid, which
+    // causes the cards below to land in the 36px column and render as slivers.
+    var insertBefore = stack
+      ? (stack.parentNode === shell ? stack : stack.parentNode)
+      : null;
+    if (insertBefore && insertBefore.parentNode === shell) {
+      shell.insertBefore(stage, insertBefore);
     } else {
       shell.appendChild(stage);
     }
