@@ -116,9 +116,10 @@
     font-size: clamp(1.05rem, 2.4vw, 1.4rem);
     line-height: 1.55;
     color: var(--text);
-    padding: 16px 4px 22px;
+    padding: 28px 28px 28px 68px !important; /* left clearance for ::before quote glyph */
     max-width: 100%;
     overflow-wrap: break-word;
+    position: relative !important; /* needed so ::before positions against this element */
   }
 
   /* Degraded pill — subtle, non-alarming (no error theater). */
@@ -142,14 +143,14 @@
 
   /* The stack — every layer is a card; internal scroll lives here. */
   .jarvis-stack {
-    display: grid;
-    grid-template-columns: 1fr;
+    display: grid !important;
+    grid-template-columns: 1fr !important;
     gap: 14px;
     width: 100%;
     max-width: 100%;
   }
-  @media (min-width: 880px) {
-    .jarvis-stack { grid-template-columns: 1fr 1fr; }
+  @media (min-width: 800px) {
+    .jarvis-stack { grid-template-columns: 1fr 1fr !important; }
   }
 
   /* Layer cards — minimum viable presentation. The visual paste-target
@@ -245,6 +246,29 @@
     0%   { box-shadow: 0 0 0 0 rgba(124,207,255,0.32); }
     50%  { box-shadow: 0 0 0 6px rgba(124,207,255,0.0); }
     100% { box-shadow: 0 0 0 0 rgba(124,207,255,0.0); }
+  }
+
+  /* Weather ticker — grid so label never overlaps scrolling text */
+  .jarvis-weather {
+    display: grid !important;
+    grid-template-columns: auto 1fr !important;
+    align-items: center !important;
+    overflow: hidden !important;
+    width: 100%;
+  }
+  .jarvis-weather::before {
+    /* label column — pinned, never scrolls */
+    display: block !important;
+    position: static !important;
+    z-index: 2;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+  .jarvis-weather-text {
+    display: block !important;
+    overflow: hidden !important;
+    white-space: nowrap !important;
+    min-width: 0;
   }
 
   /* Reduced motion */
