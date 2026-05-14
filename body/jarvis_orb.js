@@ -357,8 +357,15 @@
       };
 
       rec.onerror = function (e) {
-        if (e.error === 'no-speech') return; // ignore silence
         _active = false;
+        if (e.error === 'no-speech') return; // ignore silence
+        if (e.error === 'not-allowed' || e.error === 'permission-denied') {
+          utterance.show('mic blocked — type below ↓');
+          utterance.hideAfter(4000);
+        } else if (e.error === 'network') {
+          utterance.show('speech network error — type below ↓');
+          utterance.hideAfter(4000);
+        }
         orb.setState('idle');
       };
 
@@ -381,7 +388,14 @@
         if (_active) return;
         _rec = _build();
         _lastFinal = '';
-        try { _rec.start(); } catch (_) { orb.setState('idle'); }
+        try {
+          _rec.start();
+        } catch (e) {
+          orb.setState('idle');
+          utterance.show('mic unavailable — type below ↓');
+          utterance.hideAfter(4000);
+          nodes.input.focus();
+        }
       },
       stop: function () {
         _pendingRestart = false;
@@ -569,9 +583,13 @@
       if (transcript) sendChat(transcript, orb, utterance, mic, null);
     });
 
-    nodes.canvas.addEventListener('click', function () {
-      if (orb.state === 'thinking' || orb.state === 'speaking') return; // don't interrupt
+    function handleOrbTap() {
+      if (orb.state === 'thinking' || orb.state === 'speaking') return;
       if (!mic) {
+        // No speech recognition — show input and prompt
+        orb.setState('listening');
+        utterance.show('type your message below ↓');
+        utterance.hideAfter(4000);
         nodes.input.focus();
         return;
       }
@@ -583,7 +601,14 @@
       } else {
         mic.start();
       }
-    });
+    }
+
+    nodes.canvas.addEventListener('click', handleOrbTap);
+    // touchend for mobile — canvas click events fire ~300ms late on iOS/Android
+    nodes.canvas.addEventListener('touchend', function (e) {
+      e.preventDefault(); // prevent ghost click
+      handleOrbTap();
+    }, { passive: false });
     nodes.canvas.addEventListener('keydown', function (ev) {
       if (ev.key === 'Enter' || ev.key === ' ') {
         ev.preventDefault();
