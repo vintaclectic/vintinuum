@@ -3,62 +3,66 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-<title>Vintinuum — Body v3.0</title>
+<title>Vintinuum — Body v3.1</title>
 <meta name="theme-color" content="#02030a" />
 <link rel="icon" href="favicon.svg" />
 <style>
 /* ════════════════════════════════════════════════════════════════════════
-   VINTINUUM BODY v3.0 — "the serious version"
-   Caravaggio chiaroscuro × Syd Mead chrome × Alex Grey aura × Giger fusion
-   Single-file. No three.js. SVG humanoid, layered gradients, real shadow.
+   VINTINUUM BODY v3.1 — "ground-up rebuild"
+   CSS 3D sculpted human-machine hybrid · real walk-cycle traversal ·
+   holographic media dock · terminal w/ WS bridge scaffold.
+   No SVG figure. No three.js. Single file.
    ──────────────────────────────────────────────────────────────────── */
 :root{
+  /* skin */
   --skin-hi:#f5d4ad;
   --skin-mid:#d4a075;
   --skin-low:#7a4527;
   --skin-deep:#3d1f0f;
-  --sss:#ff7a55;            /* subsurface scatter warm */
-  --bone:#f0e6d0;
-  --titanium-hi:#e8ecf2;
-  --titanium:#a8b0bd;
-  --titanium-low:#4a525e;
-  --titanium-deep:#1a1e26;
+  --sss:#ff7a55;            /* subsurface scatter */
+  --lip:#a8444a;
+  --vein:#4a5a9a;
+  /* metal */
+  --metal-hi:#e8ecf2;
+  --metal:#a8b0bd;
+  --metal-low:#4a525e;
+  --metal-deep:#1a1e26;
   --carbon:#0e1014;
+  /* circuit / glow */
   --circuit:#5ce3ff;
-  --circuit-glow:#7ee0ff;
+  --circuit-soft:#7ee0ff;
   --circuit-deep:#0a4860;
-  --vein:#2a4ea8;
+  /* heart */
   --blood:#c4202e;
   --blood-hi:#ff4555;
   --heart-deep:#5a0810;
-  --rim:#7a90c8;
+  /* world */
   --night-0:#010206;
   --night-1:#04060e;
   --night-2:#0a1024;
   --night-3:#141a32;
   --hud:#7ec8ff;
-  --hud-warm:#ffb27a;
   --hud-fg:#cfe8ff;
-  --key-warm:#fff1d8;
-  --key-cool:#3a4a78;
 }
 *{box-sizing:border-box;margin:0;padding:0}
 html,body{
   width:100%;height:100%;
   background:#000;
-  color:#cfe8ff;
-  font-family:"Helvetica Neue","Inter",Arial,sans-serif;
+  color:var(--hud-fg);
+  font-family:"Helvetica Neue","Inter",system-ui,Arial,sans-serif;
   overflow:hidden;
   -webkit-font-smoothing:antialiased;
   text-rendering:optimizeLegibility;
+  touch-action:manipulation;
 }
+button{font-family:inherit;color:inherit}
 
 /* ── Scene root ──────────────────────────────────────────────── */
 #scene{
   position:fixed;inset:0;
   overflow:hidden;
   perspective:1800px;
-  perspective-origin:50% 58%;
+  perspective-origin:50% 60%;
   background:
     radial-gradient(ellipse 70% 50% at 50% 105%, #0c1a3a 0%, transparent 60%),
     radial-gradient(ellipse 80% 40% at 50% -8%, #1a0a2e 0%, transparent 55%),
@@ -66,10 +70,9 @@ html,body{
     linear-gradient(180deg, var(--night-0) 0%, var(--night-1) 40%, var(--night-2) 100%);
 }
 
-/* ── Aurora layer (top) ───────────────────────────────────────── */
+/* aurora */
 .aurora{
-  position:absolute;
-  top:-15%;left:-25%;
+  position:absolute;top:-15%;left:-25%;
   width:150%;height:55%;
   background:
     radial-gradient(ellipse 50% 100% at 22% 50%, #6aa8ff 0%, transparent 60%),
@@ -86,3147 +89,1853 @@ html,body{
   50%{transform:translate3d(40px,12px,0) skewX(2deg);opacity:.18}
   100%{transform:translate3d(-30px,-6px,0) skewX(-1deg);opacity:.14}
 }
-
-/* ── Cathedral struts (mid layer) ────────────────────────────── */
-.cathedral{
-  position:absolute;inset:0;
-  pointer-events:none;
-  opacity:.55;
-  mix-blend-mode:screen;
-}
-
-/* ── Stars (far layer) ───────────────────────────────────────── */
 .stars{
-  position:absolute;inset:0;
+  position:absolute;inset:0;pointer-events:none;
   background-image:
-    radial-gradient(1px 1px at 12% 18%, rgba(255,255,255,0.7), transparent 50%),
-    radial-gradient(1px 1px at 28% 8%,  rgba(255,255,255,0.55), transparent 50%),
-    radial-gradient(1.5px 1.5px at 44% 22%, rgba(220,235,255,0.6), transparent 50%),
-    radial-gradient(1px 1px at 62% 6%,  rgba(255,255,255,0.6), transparent 50%),
-    radial-gradient(1px 1px at 78% 14%, rgba(255,255,255,0.55), transparent 50%),
-    radial-gradient(1.5px 1.5px at 88% 26%, rgba(220,235,255,0.6), transparent 50%),
-    radial-gradient(1px 1px at 18% 32%, rgba(255,255,255,0.45), transparent 50%),
-    radial-gradient(1px 1px at 38% 40%, rgba(255,255,255,0.4), transparent 50%),
-    radial-gradient(1px 1px at 70% 36%, rgba(255,255,255,0.5), transparent 50%);
-  opacity:.85;
-  pointer-events:none;
-  animation:starTwinkle 7s ease-in-out infinite alternate;
+    radial-gradient(1px 1px at 12% 18%, #ffffff 50%, transparent 51%),
+    radial-gradient(1px 1px at 28% 64%, #d0e6ff 50%, transparent 51%),
+    radial-gradient(1px 1px at 46% 22%, #ffffff 50%, transparent 51%),
+    radial-gradient(2px 2px at 67% 41%, #b8d4ff 50%, transparent 51%),
+    radial-gradient(1px 1px at 81% 12%, #ffffff 50%, transparent 51%),
+    radial-gradient(1px 1px at 92% 56%, #e0eaff 50%, transparent 51%),
+    radial-gradient(1px 1px at 7% 80%, #ffffff 50%, transparent 51%);
+  opacity:.45;animation:twinkle 9s ease-in-out infinite;
 }
-@keyframes starTwinkle{
-  0%{opacity:.65}100%{opacity:.95}
-}
+@keyframes twinkle{0%,100%{opacity:.35}50%{opacity:.55}}
 
-/* ── Floor — hex grid with wet reflection ────────────────────── */
+/* floor */
 .floor{
-  position:absolute;
-  left:50%;bottom:-4%;
-  width:280vw;height:64vh;
-  transform:translateX(-50%) rotateX(74deg);
+  position:absolute;left:0;right:0;bottom:0;
+  height:38vh;
+  background:
+    radial-gradient(ellipse 60% 80% at 50% 100%, rgba(120,180,255,0.18) 0%, transparent 60%),
+    linear-gradient(180deg, transparent 0%, rgba(20,32,68,0.55) 60%, rgba(2,4,10,0.95) 100%);
+  pointer-events:none;
+}
+.floor::before{
+  content:"";position:absolute;inset:0;
+  background:
+    linear-gradient(180deg, transparent 0%, rgba(126,200,255,0.08) 60%, transparent 100%),
+    repeating-linear-gradient(90deg, transparent 0 60px, rgba(126,200,255,0.05) 60px 61px);
+  transform:perspective(800px) rotateX(62deg);
   transform-origin:50% 100%;
-  background:
-    radial-gradient(ellipse 35% 50% at 50% 50%, rgba(94,234,212,0.12), transparent 70%);
-  mask-image:radial-gradient(ellipse 60% 100% at 50% 100%, #000 0%, #000 35%, transparent 95%);
-  -webkit-mask-image:radial-gradient(ellipse 60% 100% at 50% 100%, #000 0%, #000 35%, transparent 95%);
-  opacity:.7;
-  pointer-events:none;
-}
-.floor svg{width:100%;height:100%;display:block}
-.floor::after{
-  content:"";
-  position:absolute;inset:0;
-  background:linear-gradient(180deg, transparent 0%, rgba(126,200,255,0.08) 50%, transparent 100%);
-  animation:floorScan 8s linear infinite;
-}
-@keyframes floorScan{
-  0%{transform:translateY(-50%)}100%{transform:translateY(50%)}
 }
 
-/* ── Volumetric fog wisps ────────────────────────────────────── */
-.fog{
+/* ── Walking figure stage ───────────────────────────────────── */
+#figure-stage{
   position:absolute;
-  left:-10%;right:-10%;
-  bottom:8%;
-  height:36%;
+  bottom:14%;
+  left:0;
+  width:100vw;height:60vh;
   pointer-events:none;
-  background:
-    radial-gradient(ellipse 30% 60% at 20% 80%, rgba(180,200,230,0.18), transparent 65%),
-    radial-gradient(ellipse 25% 70% at 60% 90%, rgba(160,180,220,0.14), transparent 65%),
-    radial-gradient(ellipse 35% 50% at 88% 75%, rgba(200,220,240,0.12), transparent 70%);
-  filter:blur(8px);
-  mix-blend-mode:screen;
-  animation:fogDrift 24s ease-in-out infinite alternate;
-}
-@keyframes fogDrift{
-  0%{transform:translateX(0)}
-  100%{transform:translateX(60px)}
-}
-
-/* ── Particle field ──────────────────────────────────────────── */
-.particle{
-  position:absolute;
-  width:2px;height:2px;
-  background:#cfe9ff;
-  border-radius:50%;
-  box-shadow:0 0 4px rgba(126,200,255,0.6);
-  pointer-events:none;
-  will-change:transform,opacity;
-}
-
-/* ── Lightning flash ─────────────────────────────────────────── */
-.lightning{
-  position:absolute;inset:0;
-  pointer-events:none;
-  opacity:0;
-  background:linear-gradient(180deg, rgba(220,240,255,0.4) 0%, transparent 30%);
-  mix-blend-mode:screen;
-}
-.lightning.flash{
-  animation:lightningFlash 280ms ease-out 1;
-}
-@keyframes lightningFlash{
-  0%{opacity:0}
-  4%{opacity:.95}
-  10%{opacity:.2}
-  18%{opacity:.7}
-  100%{opacity:0}
-}
-
-/* ── Figure container ────────────────────────────────────────── */
-.figure-wrap{
-  position:absolute;
-  left:0;bottom:6%;
-  width:min(420px, 78vw);
-  aspect-ratio:5 / 11;
-  filter:drop-shadow(0 30px 28px rgba(0,0,0,0.55));
-  will-change:transform,left;
   z-index:5;
-  /* JS drives `left` (walkX) and `--face-dir` (±1).
-     Vertical body-bob handled by inner .body-bob element so it composes cleanly. */
-  --face-dir:1;
-  transform:scaleX(var(--face-dir));
 }
-.figure-wrap .body-bob{
-  width:100%;height:100%;
-  animation:bodyBob 5.2s ease-in-out infinite alternate;
+/* the wrapper that JS translates — only horizontal traversal lives here */
+#figure-wrap{
+  position:absolute;
+  bottom:0;
+  left:0;
+  width:200px;height:60vh;
+  transform-origin:50% 100%;
+  transition:none;
+  will-change:transform,left;
+}
+/* The figure itself — preserves 3d, runs bob animation locally so the JS
+   translate stays additive and you can SEE traversal. */
+#vint-body{
+  position:absolute;
+  bottom:0;left:50%;
+  width:200px;height:60vh;
+  transform:translateX(-50%);
+  transform-style:preserve-3d;
+  animation:bodyBob 1.2s ease-in-out infinite;
 }
 @keyframes bodyBob{
-  0%{transform:translateY(0) rotate(-0.4deg)}
-  100%{transform:translateY(-6px) rotate(0.4deg)}
+  0%,100%{transform:translateX(-50%) translateY(0)}
+  50%{transform:translateX(-50%) translateY(-6px)}
 }
-.figure-wrap svg{width:100%;height:100%;display:block;overflow:visible}
 
-/* Ground reflection halo */
-.ground-halo{
+/* ── HEAD ──
+   The head is a single rounded div sculpted with stacked radial
+   gradients (top-left light → bottom-right shadow) plus three inset
+   shadow layers for volume, plus a left/right split: the left half is
+   warm flesh, the right half is gunmetal exoskull.
+*/
+.head{
   position:absolute;
-  left:50%;bottom:3%;
+  left:50%;top:0;
+  width:64px;height:84px;
   transform:translateX(-50%);
-  width:min(380px,70vw);
-  height:90px;
-  background:radial-gradient(ellipse 50% 100% at 50% 0%,
-    rgba(94,234,212,0.18) 0%,
-    rgba(126,200,255,0.10) 35%,
-    transparent 80%);
-  filter:blur(14px);
+  border-radius:48% 48% 44% 44% / 56% 56% 44% 44%;
+  background:
+    /* right-side metal skull (split via mask gradient) */
+    linear-gradient(90deg,
+      transparent 0%, transparent 48%,
+      rgba(60,72,90,0.0) 48%, rgba(60,72,90,0.85) 52%,
+      rgba(40,50,66,1) 100%),
+    /* skin base with subsurface warmth and top-left key */
+    radial-gradient(ellipse 80% 90% at 32% 26%,
+      var(--skin-hi) 0%,
+      var(--skin-mid) 38%,
+      var(--skin-low) 72%,
+      var(--skin-deep) 100%);
+  box-shadow:
+    inset -10px -10px 22px rgba(0,0,0,0.55),
+    inset 6px 6px 16px rgba(255,220,180,0.22),
+    inset 0 -2px 8px rgba(255,120,80,0.18),
+    8px 4px 28px rgba(80,140,220,0.18),
+    -4px 0 14px rgba(255,150,100,0.08);
+}
+/* hair / scalp plate */
+.hair{
+  position:absolute;
+  left:50%;top:-4px;
+  width:66px;height:36px;
+  transform:translateX(-50%);
+  border-radius:50% 50% 40% 40% / 70% 70% 30% 30%;
+  background:
+    radial-gradient(ellipse 80% 80% at 35% 25%, #2a1e16 0%, #14080a 70%, #050204 100%);
+  box-shadow:
+    inset -6px -4px 12px rgba(0,0,0,0.6),
+    inset 4px 4px 8px rgba(120,80,60,0.18),
+    0 -2px 8px rgba(40,20,10,0.6);
+}
+/* eyes */
+.eye{
+  position:absolute;top:34px;
+  width:9px;height:6px;
+  border-radius:50%;
+  background:radial-gradient(circle at 35% 35%, #fff 0%, #b0d4f0 30%, #1a2840 70%, #000 100%);
+  box-shadow:inset 0 -1px 2px rgba(0,0,0,0.6), 0 0 4px rgba(255,255,255,0.4);
+}
+.eye.l{left:18px}
+.eye.r{
+  right:14px;left:auto;
+  /* right eye is camera lens */
+  width:11px;height:11px;
+  top:32px;
+  background:
+    radial-gradient(circle at 50% 50%, var(--circuit-soft) 0%, var(--circuit) 22%, #0a2a40 50%, #050a14 100%);
+  box-shadow:
+    inset 0 0 4px rgba(0,0,0,0.8),
+    0 0 8px var(--circuit),
+    0 0 16px rgba(92,227,255,0.4);
+  animation:lensPulse 2.8s ease-in-out infinite;
+}
+@keyframes lensPulse{
+  0%,100%{box-shadow:inset 0 0 4px rgba(0,0,0,0.8),0 0 6px var(--circuit),0 0 12px rgba(92,227,255,0.3)}
+  50%{box-shadow:inset 0 0 4px rgba(0,0,0,0.8),0 0 12px var(--circuit),0 0 22px rgba(92,227,255,0.6)}
+}
+/* nose suggestion (soft inset shadow shape) */
+.nose{
+  position:absolute;
+  left:46%;top:44px;
+  width:8px;height:18px;
+  border-radius:40% 40% 50% 50%;
+  background:linear-gradient(160deg, rgba(255,220,180,0.15) 0%, rgba(80,40,20,0.0) 70%);
+  box-shadow:
+    inset -2px 0 3px rgba(0,0,0,0.3),
+    inset 1px 0 2px rgba(255,220,180,0.25),
+    1px 2px 3px rgba(0,0,0,0.25);
+}
+/* lips */
+.mouth{
+  position:absolute;
+  left:38%;top:62px;
+  width:18px;height:5px;
+  border-radius:50%;
+  background:linear-gradient(180deg, var(--lip) 0%, #6a2226 100%);
+  box-shadow:
+    inset 0 -1px 2px rgba(0,0,0,0.5),
+    inset 0 1px 1px rgba(255,180,160,0.3),
+    0 1px 2px rgba(0,0,0,0.4);
+}
+/* circuit etching across right cheek */
+.circuit-etch{
+  position:absolute;
+  left:50%;top:38px;
+  width:30px;height:32px;
   pointer-events:none;
+  background:
+    linear-gradient(90deg, transparent 40%, rgba(92,227,255,0.6) 40.5%, rgba(92,227,255,0.6) 41%, transparent 41.5%),
+    linear-gradient(0deg, transparent 60%, rgba(92,227,255,0.4) 60.5%, rgba(92,227,255,0.4) 61%, transparent 61.5%),
+    linear-gradient(45deg, transparent 70%, rgba(92,227,255,0.5) 70.5%, rgba(92,227,255,0.5) 71%, transparent 71.5%);
+  filter:drop-shadow(0 0 2px rgba(92,227,255,0.7));
+  opacity:.85;
+  animation:circuitFlicker 4s ease-in-out infinite;
+}
+@keyframes circuitFlicker{
+  0%,100%{opacity:.7}
+  50%{opacity:.95}
+}
+/* ear (left, organic) */
+.ear{
+  position:absolute;
+  left:-3px;top:38px;
+  width:9px;height:18px;
+  border-radius:60% 30% 60% 40%;
+  background:
+    radial-gradient(ellipse 80% 80% at 40% 30%, var(--skin-hi) 0%, var(--skin-mid) 50%, var(--skin-low) 100%);
+  box-shadow:
+    inset -2px -1px 3px rgba(0,0,0,0.4),
+    inset 1px 1px 2px rgba(255,160,120,0.4),
+    0 0 3px rgba(255,100,80,0.25);
+}
+
+/* ── NECK ── */
+.neck{
+  position:absolute;
+  left:50%;top:78px;
+  width:32px;height:22px;
+  transform:translateX(-50%);
+  border-radius:30% 30% 20% 20%;
+  background:
+    linear-gradient(90deg,
+      var(--skin-mid) 0%, var(--skin-mid) 48%,
+      rgba(70,80,96,0.95) 52%, rgba(50,60,76,1) 100%),
+    radial-gradient(ellipse at 30% 20%, var(--skin-hi) 0%, var(--skin-low) 100%);
+  box-shadow:
+    inset -3px -3px 8px rgba(0,0,0,0.5),
+    inset 2px 2px 4px rgba(255,200,160,0.2),
+    0 4px 8px rgba(0,0,0,0.4);
+}
+
+/* ── TORSO ──
+   Tapered chest using clip-path; layered radial gradient creates the
+   chest-window glow where the heart shows through.
+*/
+.torso{
+  position:absolute;
+  left:50%;top:96px;
+  width:96px;height:140px;
+  transform:translateX(-50%);
+  clip-path:polygon(
+    14% 0%, 86% 0%,
+    98% 28%, 92% 60%,
+    82% 100%, 18% 100%,
+    8% 60%, 2% 28%
+  );
+  background:
+    /* right-side metal panel */
+    linear-gradient(90deg,
+      transparent 0%, transparent 50%,
+      rgba(60,72,90,0.7) 54%, rgba(36,46,60,0.95) 100%),
+    /* heart window — the dark center */
+    radial-gradient(ellipse 30% 26% at 40% 40%,
+      rgba(20,4,8,0.85) 0%, rgba(40,8,12,0.4) 50%, transparent 75%),
+    /* skin base */
+    radial-gradient(ellipse 80% 90% at 30% 20%,
+      var(--skin-hi) 0%,
+      var(--skin-mid) 38%,
+      var(--skin-low) 72%,
+      var(--skin-deep) 100%);
+  box-shadow:
+    inset -12px -12px 30px rgba(0,0,0,0.55),
+    inset 8px 8px 18px rgba(255,210,170,0.18),
+    inset 0 -8px 14px rgba(255,100,70,0.1),
+    10px 6px 32px rgba(80,140,220,0.18);
+}
+/* heart inside chest window */
+.heart{
+  position:absolute;
+  left:32%;top:118px;
+  width:36px;height:34px;
   z-index:2;
-  animation:haloBreathe 4.2s ease-in-out infinite alternate;
+  filter:drop-shadow(0 0 6px rgba(255,40,60,0.6)) drop-shadow(0 0 18px rgba(255,40,60,0.25));
+  animation:heartBeat 0.9s ease-in-out infinite;
 }
-@keyframes haloBreathe{
-  0%{opacity:.6;transform:translateX(-50%) scaleY(1)}
-  100%{opacity:.95;transform:translateX(-50%) scaleY(1.18)}
-}
-
-/* Breath + heartbeat tied to CSS variables */
-.breathe{animation:breathe 4.6s ease-in-out infinite}
-@keyframes breathe{
-  0%,100%{transform:scaleY(1) scaleX(1)}
-  50%{transform:scaleY(1.025) scaleX(1.01)}
-}
-.heartbeat{
-  transform-origin:center;
-  animation:heartbeat 1.05s cubic-bezier(.5,.0,.5,1) infinite;
-}
-@keyframes heartbeat{
-  0%{transform:scale(1) rotate(-6deg)}
-  12%{transform:scale(1.18) rotate(-4deg)}
-  22%{transform:scale(0.96) rotate(-7deg)}
-  38%{transform:scale(1.10) rotate(-5deg)}
-  55%{transform:scale(0.98) rotate(-6deg)}
-  100%{transform:scale(1) rotate(-6deg)}
-}
-.lung-l{transform-origin:50% 30%;animation:lung 4.6s ease-in-out infinite}
-.lung-r{transform-origin:50% 30%;animation:lung 4.6s ease-in-out infinite}
-@keyframes lung{
-  0%,100%{transform:scaleY(0.94) scaleX(0.96)}
-  50%{transform:scaleY(1.06) scaleX(1.03)}
-}
-.spineLED{animation:spineWave 3.2s ease-in-out infinite}
-@keyframes spineWave{
-  0%,100%{opacity:.35}
-  50%{opacity:1;filter:drop-shadow(0 0 4px var(--circuit))}
-}
-
-/* Walking — gait offsets for limbs (kept subtle, weighted) */
-.gait-l-leg{transform-origin:50% 0;animation:legL 1.35s cubic-bezier(.5,.0,.5,1) infinite}
-.gait-r-leg{transform-origin:50% 0;animation:legR 1.35s cubic-bezier(.5,.0,.5,1) infinite}
-.gait-l-arm{transform-origin:50% 0;animation:armL 1.35s cubic-bezier(.5,.0,.5,1) infinite}
-.gait-r-arm{transform-origin:50% 0;animation:armR 1.35s cubic-bezier(.5,.0,.5,1) infinite}
-@keyframes legL{
-  0%{transform:rotate(14deg) translateY(0)}
-  25%{transform:rotate(-2deg) translateY(-2px)}
-  50%{transform:rotate(-14deg) translateY(0)}
-  75%{transform:rotate(0deg) translateY(-1px)}
-  100%{transform:rotate(14deg) translateY(0)}
-}
-@keyframes legR{
-  0%{transform:rotate(-14deg) translateY(0)}
-  25%{transform:rotate(0deg) translateY(-1px)}
-  50%{transform:rotate(14deg) translateY(0)}
-  75%{transform:rotate(-2deg) translateY(-2px)}
-  100%{transform:rotate(-14deg) translateY(0)}
-}
-@keyframes armL{
-  0%{transform:rotate(-12deg)}
-  50%{transform:rotate(12deg)}
-  100%{transform:rotate(-12deg)}
-}
-@keyframes armR{
-  0%{transform:rotate(12deg)}
-  50%{transform:rotate(-12deg)}
-  100%{transform:rotate(12deg)}
-}
-/* "presenting" right-arm reach (animation applied via .body-bob override above) */
-@keyframes armPresent{
-  0%{transform:rotate(12deg)}
-  100%{transform:rotate(-58deg) translateX(2px)}
-}
-
-/* Key light drift on inner bob layer (so flip on figure-wrap doesn't fight it) */
-.figure-wrap .body-bob{
-  animation:bodyBob 5.2s ease-in-out infinite alternate, keyDrift 20s ease-in-out infinite alternate;
-}
-@keyframes keyDrift{
-  0%{filter:drop-shadow(-8px 24px 22px rgba(0,0,0,0.55)) drop-shadow(8px 0 18px rgba(122,144,200,0.18))}
-  100%{filter:drop-shadow(8px 28px 26px rgba(0,0,0,0.55)) drop-shadow(-6px 0 18px rgba(122,144,200,0.22))}
-}
-/* Presenting / facing-viewer override the bob layer */
-.figure-wrap.presenting .body-bob .gait-r-arm{
-  animation:armPresent 2.4s ease-out forwards;
-}
-.figure-wrap.facing-viewer .body-bob{
-  animation:faceViewerBob 1.2s ease-out forwards;
-}
-@keyframes faceViewerBob{
-  0%{transform:rotateY(-8deg)}
-  100%{transform:rotateY(0deg)}
-}
-
-/* Eye blink + pupil dilate */
-.eyelid{transform-origin:center;animation:blink 5.8s ease-in-out infinite}
-@keyframes blink{
-  0%,94%,100%{transform:scaleY(0.02)}
-  96%{transform:scaleY(1)}
-  98%{transform:scaleY(0.02)}
-}
-.pupil{transform-origin:center;animation:pupilDilate 8s ease-in-out infinite}
-@keyframes pupilDilate{
+.heart svg{width:100%;height:100%;display:block}
+@keyframes heartBeat{
   0%,100%{transform:scale(1)}
-  50%{transform:scale(1.25)}
+  20%{transform:scale(1.12)}
+  40%{transform:scale(0.96)}
+  60%{transform:scale(1.06)}
+}
+/* chest window glass overlay */
+.chest-glass{
+  position:absolute;
+  left:28%;top:108px;
+  width:44px;height:56px;
+  border-radius:14px / 18px;
+  background:
+    linear-gradient(135deg, rgba(180,220,255,0.16) 0%, transparent 40%, rgba(40,80,140,0.1) 100%);
+  border:1px solid rgba(126,200,255,0.35);
+  box-shadow:
+    inset 0 0 12px rgba(126,200,255,0.18),
+    0 0 8px rgba(126,200,255,0.2);
+  z-index:3;
+  pointer-events:none;
+}
+/* right-side chest plate seams */
+.plate-seam{
+  position:absolute;
+  background:linear-gradient(90deg, transparent, rgba(92,227,255,0.5), transparent);
+  filter:drop-shadow(0 0 2px rgba(92,227,255,0.6));
+  z-index:3;
+  pointer-events:none;
+}
+.plate-seam.s1{left:62%;top:108px;width:32px;height:1px}
+.plate-seam.s2{left:60%;top:140px;width:36px;height:1px}
+.plate-seam.s3{left:64%;top:172px;width:30px;height:1px}
+.plate-seam.v1{left:74%;top:104px;width:1px;height:96px;background:linear-gradient(180deg,transparent,rgba(92,227,255,0.4),transparent)}
+
+/* ── PELVIS ── */
+.pelvis{
+  position:absolute;
+  left:50%;top:230px;
+  width:84px;height:36px;
+  transform:translateX(-50%);
+  clip-path:polygon(8% 0%, 92% 0%, 96% 70%, 76% 100%, 24% 100%, 4% 70%);
+  background:
+    linear-gradient(90deg,
+      transparent 0%, transparent 48%,
+      rgba(50,62,78,0.9) 52%, rgba(30,40,54,1) 100%),
+    radial-gradient(ellipse at 30% 30%,
+      var(--skin-mid) 0%, var(--skin-low) 60%, var(--skin-deep) 100%);
+  box-shadow:
+    inset -6px -6px 14px rgba(0,0,0,0.5),
+    inset 4px 4px 8px rgba(255,200,160,0.16),
+    0 6px 12px rgba(0,0,0,0.4);
 }
 
-/* Right-eye sensor reticle */
-.reticle{transform-origin:center;animation:reticleSweep 3.4s linear infinite}
-@keyframes reticleSweep{
-  0%{transform:rotate(0deg)}
-  100%{transform:rotate(360deg)}
+/* ── ARMS ──
+   Each arm has a shoulder-anchored wrap that JS doesn't touch.
+   The wrap rotates via @keyframes for swing. Inside the wrap the
+   upper/forearm divs handle their own cylinder shading.
+*/
+.arm{
+  position:absolute;
+  top:104px;
+  width:24px;height:140px;
+  transform-origin:50% 6px;
+  transform-style:preserve-3d;
 }
-
-/* ── HOLOGRAPHIC DOCUMENT PANEL ───────────────────────────────── */
-.doc-panel{
-  position:fixed;
-  top:14%;
-  right:5%;
-  width:min(440px, 86vw);
-  height:min(580px, 70vh);
-  min-width:280px;
-  min-height:240px;
+.arm.l{left:18%;animation:armSwingL 1.2s ease-in-out infinite}
+.arm.r{right:18%;animation:armSwingR 1.2s ease-in-out infinite}
+@keyframes armSwingL{
+  0%,100%{transform:rotate(18deg)}
+  50%{transform:rotate(-22deg)}
+}
+@keyframes armSwingR{
+  0%,100%{transform:rotate(-22deg)}
+  50%{transform:rotate(18deg)}
+}
+/* upper arm */
+.upper-arm{
+  position:absolute;
+  left:0;top:0;
+  width:24px;height:72px;
+  border-radius:14px 14px 12px 12px / 50% 50% 30% 30%;
+}
+.arm.l .upper-arm{
+  background:
+    radial-gradient(ellipse 80% 100% at 30% 20%,
+      var(--skin-hi) 0%, var(--skin-mid) 40%, var(--skin-low) 80%, var(--skin-deep) 100%);
+  box-shadow:
+    inset -5px -3px 10px rgba(0,0,0,0.55),
+    inset 3px 2px 6px rgba(255,210,170,0.25),
+    inset 0 -2px 6px rgba(255,100,70,0.12),
+    2px 2px 6px rgba(0,0,0,0.4);
+}
+.arm.r .upper-arm{
   background:
     linear-gradient(135deg,
-      rgba(14,28,52,0.78) 0%,
-      rgba(10,24,46,0.72) 50%,
-      rgba(20,40,72,0.78) 100%);
-  border:1px solid rgba(126,200,255,0.35);
-  border-radius:14px;
-  backdrop-filter:blur(14px) saturate(140%);
-  -webkit-backdrop-filter:blur(14px) saturate(140%);
+      var(--metal-hi) 0%,
+      var(--metal) 30%,
+      var(--metal-low) 70%,
+      var(--metal-deep) 100%);
   box-shadow:
-    0 0 0 1px rgba(126,200,255,0.15) inset,
-    0 0 30px rgba(126,200,255,0.18),
-    0 0 80px rgba(94,234,212,0.10),
-    0 20px 50px rgba(0,0,0,0.5);
-  color:var(--hud-fg);
-  display:none;
-  flex-direction:column;
-  overflow:hidden;
-  z-index:50;
-  user-select:none;
-  animation:docMaterialize 600ms cubic-bezier(.2,.7,.3,1) 1;
+    inset -4px -3px 8px rgba(0,0,0,0.6),
+    inset 3px 2px 4px rgba(255,255,255,0.25),
+    0 0 6px rgba(92,227,255,0.2);
 }
-.doc-panel.open{display:flex}
-@keyframes docMaterialize{
-  0%{opacity:0;transform:translateY(20px) scale(0.92);filter:blur(8px)}
-  60%{opacity:1;filter:blur(0)}
-  100%{opacity:1;transform:translateY(0) scale(1);filter:blur(0)}
+.arm.r .upper-arm::before{
+  content:"";position:absolute;
+  left:2px;right:2px;top:24px;height:1px;
+  background:linear-gradient(90deg,transparent,var(--circuit),transparent);
+  filter:drop-shadow(0 0 2px var(--circuit));
 }
-/* Scan lines overlay */
-.doc-panel::before{
-  content:"";
-  position:absolute;inset:0;
-  background:
-    repeating-linear-gradient(
-      0deg,
-      rgba(126,200,255,0.04) 0,
-      rgba(126,200,255,0.04) 1px,
-      transparent 1px,
-      transparent 3px);
-  pointer-events:none;
-  mix-blend-mode:screen;
-  animation:scanlineDrift 6s linear infinite;
+.arm.r .upper-arm::after{
+  content:"";position:absolute;
+  left:2px;right:2px;top:48px;height:1px;
+  background:linear-gradient(90deg,transparent,var(--circuit),transparent);
+  filter:drop-shadow(0 0 2px var(--circuit));
 }
-@keyframes scanlineDrift{
-  0%{background-position:0 0}
-  100%{background-position:0 60px}
-}
-/* Corner anchors */
-.doc-corner{
+/* forearm */
+.forearm{
   position:absolute;
-  width:18px;height:18px;
-  border:1.5px solid rgba(126,200,255,0.7);
+  left:0;top:68px;
+  width:22px;height:68px;
+  border-radius:11px;
+  transform-origin:50% 6px;
+}
+.arm.l .forearm{
+  background:
+    radial-gradient(ellipse 80% 100% at 30% 20%,
+      var(--skin-hi) 0%, var(--skin-mid) 40%, var(--skin-low) 85%, var(--skin-deep) 100%);
+  box-shadow:
+    inset -4px -3px 8px rgba(0,0,0,0.5),
+    inset 2px 2px 4px rgba(255,210,170,0.22),
+    inset 0 -2px 4px rgba(255,100,70,0.1),
+    2px 2px 5px rgba(0,0,0,0.4);
+}
+/* vein hint on left forearm */
+.arm.l .forearm::before{
+  content:"";position:absolute;
+  left:6px;top:8px;width:1px;height:46px;
+  background:linear-gradient(180deg,transparent,rgba(74,90,154,0.5) 40%,transparent);
+  filter:blur(0.4px);
+}
+.arm.r .forearm{
+  background:
+    linear-gradient(135deg,
+      var(--metal-hi) 0%,
+      var(--metal) 30%,
+      var(--metal-low) 70%,
+      var(--metal-deep) 100%);
+  box-shadow:
+    inset -4px -3px 8px rgba(0,0,0,0.6),
+    inset 3px 2px 4px rgba(255,255,255,0.2),
+    0 0 6px rgba(92,227,255,0.25);
+}
+.arm.r .forearm::before{
+  content:"";position:absolute;
+  left:2px;right:2px;top:30px;height:1px;
+  background:linear-gradient(90deg,transparent,var(--circuit),transparent);
+  filter:drop-shadow(0 0 2px var(--circuit));
+}
+/* elbow joint */
+.elbow{
+  position:absolute;left:1px;top:64px;
+  width:20px;height:10px;border-radius:50%;
+}
+.arm.l .elbow{
+  background:radial-gradient(circle at 35% 30%, var(--skin-hi), var(--skin-low) 80%);
+  box-shadow:inset 0 -2px 4px rgba(0,0,0,0.5), inset 0 1px 2px rgba(255,200,160,0.3);
+}
+.arm.r .elbow{
+  background:radial-gradient(circle at 35% 30%, var(--metal-hi), var(--metal-deep) 80%);
+  box-shadow:inset 0 -2px 4px rgba(0,0,0,0.7), 0 0 8px rgba(92,227,255,0.5);
+}
+/* hand */
+.hand{
+  position:absolute;
+  left:1px;top:130px;
+  width:22px;height:24px;
+  border-radius:40% 40% 50% 50% / 50% 50% 60% 60%;
+}
+.arm.l .hand{
+  background:
+    radial-gradient(ellipse at 30% 25%, var(--skin-hi), var(--skin-mid) 50%, var(--skin-low) 100%);
+  box-shadow:
+    inset -3px -2px 6px rgba(0,0,0,0.5),
+    inset 2px 1px 3px rgba(255,210,170,0.25);
+}
+.arm.r .hand{
+  background:
+    linear-gradient(135deg, var(--metal-hi), var(--metal-low));
+  box-shadow:
+    inset -3px -2px 6px rgba(0,0,0,0.6),
+    inset 2px 1px 3px rgba(255,255,255,0.2),
+    0 0 6px rgba(92,227,255,0.3);
+}
+
+/* ── LEGS ── */
+.leg{
+  position:absolute;
+  top:258px;
+  width:30px;height:240px;
+  transform-origin:50% 4px;
+  transform-style:preserve-3d;
+}
+.leg.l{left:36%;animation:legSwingL 1.2s ease-in-out infinite}
+.leg.r{right:36%;animation:legSwingR 1.2s ease-in-out infinite}
+@keyframes legSwingL{
+  0%,100%{transform:rotate(-14deg)}
+  50%{transform:rotate(18deg)}
+}
+@keyframes legSwingR{
+  0%,100%{transform:rotate(18deg)}
+  50%{transform:rotate(-14deg)}
+}
+.thigh{
+  position:absolute;left:0;top:0;
+  width:30px;height:120px;
+  border-radius:15px 15px 12px 12px / 40% 40% 30% 30%;
+}
+.leg.l .thigh{
+  background:
+    radial-gradient(ellipse 80% 100% at 30% 20%,
+      var(--skin-hi) 0%, var(--skin-mid) 40%, var(--skin-low) 85%, var(--skin-deep) 100%);
+  box-shadow:
+    inset -6px -4px 12px rgba(0,0,0,0.55),
+    inset 3px 2px 6px rgba(255,210,170,0.22),
+    inset 0 -3px 8px rgba(255,100,70,0.1),
+    3px 2px 8px rgba(0,0,0,0.4);
+}
+.leg.r .thigh{
+  background:
+    linear-gradient(135deg, var(--metal-hi) 0%, var(--metal) 30%, var(--metal-low) 70%, var(--metal-deep) 100%);
+  box-shadow:
+    inset -5px -3px 10px rgba(0,0,0,0.6),
+    inset 3px 2px 5px rgba(255,255,255,0.2),
+    0 0 8px rgba(92,227,255,0.22);
+}
+.leg.r .thigh::before{
+  content:"";position:absolute;
+  left:3px;right:3px;top:40px;height:1px;
+  background:linear-gradient(90deg,transparent,var(--circuit),transparent);
+  filter:drop-shadow(0 0 2px var(--circuit));
+}
+.leg.r .thigh::after{
+  content:"";position:absolute;
+  left:3px;right:3px;top:80px;height:1px;
+  background:linear-gradient(90deg,transparent,var(--circuit),transparent);
+  filter:drop-shadow(0 0 2px var(--circuit));
+}
+.knee{
+  position:absolute;left:1px;top:114px;
+  width:28px;height:14px;border-radius:50%;
+}
+.leg.l .knee{
+  background:radial-gradient(circle at 35% 30%, var(--skin-hi), var(--skin-low) 80%);
+  box-shadow:inset 0 -3px 5px rgba(0,0,0,0.5);
+}
+.leg.r .knee{
+  background:radial-gradient(circle at 35% 30%, var(--metal-hi), var(--metal-deep) 80%);
+  box-shadow:inset 0 -3px 5px rgba(0,0,0,0.7), 0 0 10px rgba(92,227,255,0.6);
+}
+.shin{
+  position:absolute;left:2px;top:124px;
+  width:26px;height:110px;
+  border-radius:13px;
+}
+.leg.l .shin{
+  background:
+    radial-gradient(ellipse 80% 100% at 30% 20%,
+      var(--skin-hi) 0%, var(--skin-mid) 40%, var(--skin-low) 85%, var(--skin-deep) 100%);
+  box-shadow:
+    inset -5px -3px 10px rgba(0,0,0,0.55),
+    inset 2px 2px 4px rgba(255,210,170,0.22),
+    inset 0 -2px 6px rgba(255,100,70,0.1),
+    2px 2px 6px rgba(0,0,0,0.4);
+}
+.leg.r .shin{
+  background:
+    linear-gradient(135deg, var(--metal-hi) 0%, var(--metal) 30%, var(--metal-low) 70%, var(--metal-deep) 100%);
+  box-shadow:
+    inset -4px -3px 8px rgba(0,0,0,0.6),
+    inset 3px 2px 4px rgba(255,255,255,0.2),
+    0 0 6px rgba(92,227,255,0.22);
+}
+.foot{
+  position:absolute;left:-3px;top:228px;
+  width:32px;height:14px;
+  border-radius:40% 40% 60% 60% / 50% 50% 70% 70%;
+}
+.leg.l .foot{
+  background:linear-gradient(180deg, #2a1a14 0%, #0a0408 100%);
+  box-shadow:inset 0 -2px 4px rgba(0,0,0,0.7), 0 4px 6px rgba(0,0,0,0.5);
+}
+.leg.r .foot{
+  background:linear-gradient(180deg, var(--metal-low) 0%, var(--metal-deep) 100%);
+  box-shadow:inset 0 -2px 4px rgba(0,0,0,0.8), 0 4px 8px rgba(0,0,0,0.6), 0 0 6px rgba(92,227,255,0.3);
+}
+
+/* ground shadow under figure */
+.ground-shadow{
+  position:absolute;
+  left:50%;bottom:-8px;
+  width:160px;height:18px;
+  transform:translateX(-50%);
+  background:radial-gradient(ellipse at center, rgba(0,0,0,0.55) 0%, transparent 70%);
+  filter:blur(4px);
+  z-index:-1;
+  animation:shadowPulse 1.2s ease-in-out infinite;
+}
+@keyframes shadowPulse{
+  0%,100%{transform:translateX(-50%) scale(1)}
+  50%{transform:translateX(-50%) scale(0.92)}
+}
+
+/* ── HUD ──────────────────────────────────────────────────────── */
+#hud{
+  position:fixed;
+  top:14px;left:14px;
+  font:11px/1.4 "JetBrains Mono","SF Mono",monospace;
+  color:var(--hud-fg);
+  background:rgba(6,10,20,0.55);
+  border:1px solid rgba(126,200,255,0.25);
+  border-radius:8px;
+  padding:8px 12px;
+  backdrop-filter:blur(8px);
+  z-index:50;
+  letter-spacing:0.5px;
   pointer-events:none;
 }
-.doc-corner.tl{top:6px;left:6px;border-right:none;border-bottom:none}
-.doc-corner.tr{top:6px;right:6px;border-left:none;border-bottom:none}
-.doc-corner.bl{bottom:6px;left:6px;border-right:none;border-top:none}
-.doc-corner.br{bottom:6px;right:6px;border-left:none;border-top:none}
+#hud .label{color:var(--hud);opacity:0.7;font-size:9px;text-transform:uppercase;letter-spacing:1px}
+#hud .val{color:#fff;font-weight:600}
 
-.doc-header{
+/* ── Media Dock ─────────────────────────────────────────────── */
+#media-dock{
+  position:fixed;
+  bottom:78px;
+  left:50%;
+  transform:translateX(-50%);
+  display:flex;
+  gap:6px;
+  padding:8px 10px;
+  background:rgba(6,10,20,0.72);
+  border:1px solid rgba(126,200,255,0.35);
+  border-radius:16px;
+  backdrop-filter:blur(20px) saturate(140%);
+  box-shadow:
+    0 8px 32px rgba(0,0,0,0.55),
+    0 0 24px rgba(126,200,255,0.18),
+    inset 0 1px 0 rgba(255,255,255,0.08);
+  z-index:100;
+  max-width:calc(100vw - 24px);
+  overflow-x:auto;
+  -webkit-overflow-scrolling:touch;
+  scrollbar-width:none;
+}
+#media-dock::-webkit-scrollbar{display:none}
+#media-dock button{
+  flex:0 0 auto;
   display:flex;
   align-items:center;
-  justify-content:space-between;
-  padding:14px 18px;
-  border-bottom:1px solid rgba(126,200,255,0.18);
-  cursor:move;
-  position:relative;
-  z-index:2;
-  font-size:11px;
-  letter-spacing:0.16em;
-  text-transform:uppercase;
-  color:#a8d4ff;
-}
-.doc-title{
-  display:flex;align-items:center;gap:8px;
-  font-weight:600;
-}
-.doc-title-dot{
-  width:8px;height:8px;border-radius:50%;
-  background:#5eead4;
-  box-shadow:0 0 8px #5eead4;
-  animation:dotPulse 2s ease-in-out infinite;
-}
-@keyframes dotPulse{0%,100%{opacity:.5}50%{opacity:1}}
-.doc-controls{display:flex;gap:6px}
-.doc-btn{
-  appearance:none;
-  background:rgba(126,200,255,0.08);
+  gap:6px;
+  background:rgba(20,30,52,0.7);
   border:1px solid rgba(126,200,255,0.25);
-  color:#cfe8ff;
-  width:32px;height:32px;
-  border-radius:6px;
+  color:var(--hud-fg);
+  padding:10px 14px;
+  border-radius:10px;
+  font-size:13px;
+  font-weight:500;
   cursor:pointer;
-  font-size:14px;
-  display:flex;align-items:center;justify-content:center;
-  transition:all 160ms ease;
-  min-width:32px;
-}
-.doc-btn:hover{
-  background:rgba(126,200,255,0.18);
-  border-color:rgba(126,200,255,0.55);
-  box-shadow:0 0 10px rgba(126,200,255,0.35);
-}
-.doc-btn:active{transform:scale(0.94)}
-.doc-body{
-  flex:1;
-  overflow:auto;
-  padding:18px 22px;
-  position:relative;
-  z-index:1;
-  font-size:14px;
-  line-height:1.62;
-  color:#dceaff;
-  font-family:"Inter","Helvetica Neue",Arial,sans-serif;
-}
-.doc-body::-webkit-scrollbar{width:8px}
-.doc-body::-webkit-scrollbar-thumb{background:rgba(126,200,255,0.25);border-radius:4px}
-.doc-body iframe,.doc-body embed{width:100%;height:100%;min-height:300px;border:0;background:#0a1428;border-radius:6px}
-
-.doc-resume h1{
-  font-size:22px;color:#fff;font-weight:700;letter-spacing:0.02em;
-  margin-bottom:4px;
-}
-.doc-resume h2{
-  font-size:11px;color:#7ec8ff;font-weight:600;
-  letter-spacing:0.22em;text-transform:uppercase;
-  margin:18px 0 8px 0;
-  padding-bottom:4px;
-  border-bottom:1px solid rgba(126,200,255,0.2);
-}
-.doc-resume .sub{font-size:12px;color:#8aa8d0;margin-bottom:14px;letter-spacing:0.06em}
-.doc-resume p{margin-bottom:8px;color:#cfe0f0}
-.doc-resume ul{margin:6px 0 12px 18px}
-.doc-resume li{margin-bottom:4px;color:#b8ccdf}
-.doc-resume .role{color:#fff;font-weight:600;font-size:14px}
-.doc-resume .meta{color:#7aa0c8;font-size:12px;margin-bottom:4px}
-
-.doc-empty{
-  text-align:center;
-  padding:36px 24px;
-  color:#a8c4dc;
-}
-.doc-empty .glyph{
-  font-size:48px;
-  margin-bottom:14px;
-  color:#7ec8ff;
-  filter:drop-shadow(0 0 12px rgba(126,200,255,0.55));
-  animation:glyphFloat 3.4s ease-in-out infinite alternate;
-}
-@keyframes glyphFloat{
-  0%{transform:translateY(0)}
-  100%{transform:translateY(-6px)}
-}
-.doc-empty .note{font-size:12px;color:#7aa0c8;margin-top:14px;letter-spacing:0.04em;line-height:1.6}
-.doc-empty button{
-  margin-top:18px;
-  background:linear-gradient(135deg, rgba(126,200,255,0.18), rgba(94,234,212,0.18));
-  border:1px solid rgba(126,200,255,0.45);
-  color:#dcefff;
-  padding:10px 22px;
-  border-radius:8px;
-  font-size:12px;
-  letter-spacing:0.14em;
-  text-transform:uppercase;
-  cursor:pointer;
-  transition:all 200ms ease;
+  transition:all 0.2s ease;
   min-height:44px;
+  white-space:nowrap;
+  letter-spacing:0.3px;
 }
-.doc-empty button:hover{
-  background:linear-gradient(135deg, rgba(126,200,255,0.32), rgba(94,234,212,0.32));
-  box-shadow:0 0 16px rgba(126,200,255,0.5);
+#media-dock button:hover,
+#media-dock button:focus-visible{
+  background:rgba(40,60,100,0.85);
+  border-color:var(--circuit);
+  box-shadow:0 0 14px rgba(92,227,255,0.4);
+  color:#fff;
+  outline:none;
+  transform:translateY(-1px);
 }
+#media-dock button:active{transform:translateY(0)}
+.dock-ico{font-size:16px;line-height:1}
 
-/* Resize handle */
-.doc-resize{
-  position:absolute;
-  right:2px;bottom:2px;
-  width:18px;height:18px;
-  cursor:nwse-resize;
-  z-index:3;
-  background:
-    linear-gradient(135deg, transparent 50%, rgba(126,200,255,0.6) 50%, rgba(126,200,255,0.6) 60%, transparent 60%, transparent 70%, rgba(126,200,255,0.6) 70%, rgba(126,200,255,0.6) 80%, transparent 80%);
-}
-
-/* ── FIND-RESUME ORB ─────────────────────────────────────────── */
-.orb{
+/* ── Conversation Bar ───────────────────────────────────────── */
+#conv-bar{
   position:fixed;
-  left:6%;
-  top:42%;
-  width:64px;height:64px;
-  border-radius:50%;
-  background:
-    radial-gradient(circle at 35% 30%, rgba(255,255,255,0.5) 0%, rgba(126,200,255,0.4) 30%, rgba(40,80,140,0.6) 70%, rgba(10,30,60,0.85) 100%);
-  border:1px solid rgba(126,200,255,0.5);
-  box-shadow:
-    0 0 24px rgba(126,200,255,0.45),
-    0 0 60px rgba(94,234,212,0.18) inset,
-    0 8px 22px rgba(0,0,0,0.55);
-  cursor:pointer;
-  z-index:48;
-  display:flex;align-items:center;justify-content:center;
-  color:#dcefff;
-  font-size:11px;
-  letter-spacing:0.16em;
-  text-transform:uppercase;
-  text-align:center;
-  line-height:1.1;
-  transition:transform 200ms cubic-bezier(.2,.7,.3,1);
-  user-select:none;
-  min-width:44px;min-height:44px;
-}
-.orb::after{
-  content:"";
-  position:absolute;inset:-4px;
-  border-radius:50%;
-  border:1px solid rgba(126,200,255,0.18);
-  animation:orbPulse 3.4s ease-in-out infinite;
-  pointer-events:none;
-}
-@keyframes orbPulse{
-  0%,100%{transform:scale(1);opacity:.4}
-  50%{transform:scale(1.15);opacity:.9}
-}
-.orb:hover{transform:scale(1.08)}
-.orb:active{transform:scale(0.95)}
-.orb-label{font-size:9px;letter-spacing:0.18em;font-weight:600;color:#dcefff;text-shadow:0 1px 2px rgba(0,0,0,0.6)}
-
-/* ── CONVERSATION CONSOLE ────────────────────────────────────── */
-.console{
-  position:fixed;
-  left:50%;
   bottom:14px;
+  left:50%;
   transform:translateX(-50%);
-  width:min(680px, 94vw);
-  z-index:40;
-  font-family:"JetBrains Mono","Menlo",monospace;
-}
-.console-log{
-  max-height:min(220px, 30vh);
-  overflow-y:auto;
-  background:linear-gradient(180deg, rgba(8,16,32,0) 0%, rgba(8,16,32,0.7) 30%, rgba(8,16,32,0.85) 100%);
-  border:1px solid rgba(126,200,255,0.18);
-  border-bottom:none;
-  border-radius:12px 12px 0 0;
-  padding:14px 18px;
-  font-size:12px;
-  color:#cfe8ff;
-  line-height:1.55;
-  display:none;
-}
-.console-log.has-msgs{display:block}
-.console-log::-webkit-scrollbar{width:6px}
-.console-log::-webkit-scrollbar-thumb{background:rgba(126,200,255,0.25);border-radius:3px}
-.log-line{margin-bottom:6px;display:flex;gap:8px;align-items:flex-start}
-.log-tag{
-  flex:0 0 auto;
-  font-size:9px;letter-spacing:0.18em;
-  color:#7ec8ff;
-  padding-top:2px;
-  text-transform:uppercase;
-  min-width:48px;
-}
-.log-line.from-her .log-tag{color:#ffb27a}
-.log-msg{flex:1;color:#dceaff}
-.log-line.from-her .log-msg{color:#fde3c8}
-
-.console-bar{
   display:flex;
   align-items:center;
   gap:8px;
-  background:linear-gradient(180deg, rgba(8,16,32,0.92) 0%, rgba(12,22,40,0.96) 100%);
-  border:1px solid rgba(126,200,255,0.35);
-  border-radius:12px;
-  padding:8px 10px 8px 14px;
-  box-shadow:
-    0 0 0 1px rgba(126,200,255,0.08) inset,
-    0 0 22px rgba(126,200,255,0.12),
-    0 14px 40px rgba(0,0,0,0.55);
+  padding:6px 8px 6px 14px;
+  background:rgba(6,10,20,0.78);
+  border:1px solid rgba(126,200,255,0.3);
+  border-radius:28px;
+  backdrop-filter:blur(20px);
+  box-shadow:0 8px 24px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.06);
+  z-index:99;
+  width:min(640px, calc(100vw - 24px));
 }
-.console-log.has-msgs + .console-bar{border-top:none;border-radius:0 0 12px 12px}
-.console-prefix{
-  color:#5eead4;
-  font-size:13px;
-  flex:0 0 auto;
-  text-shadow:0 0 8px rgba(94,234,212,0.55);
-}
-.console-input{
+#conv-input{
   flex:1;
   background:transparent;
   border:none;
-  outline:none;
-  color:#e8f4ff;
+  color:#fff;
   font-size:14px;
   font-family:inherit;
   padding:8px 4px;
+  outline:none;
   min-height:32px;
 }
-.console-input::placeholder{color:rgba(180,200,220,0.45)}
-.console-btn{
-  appearance:none;
-  background:rgba(126,200,255,0.10);
-  border:1px solid rgba(126,200,255,0.30);
-  color:#cfe8ff;
-  width:38px;height:38px;
-  border-radius:8px;
+#conv-input::placeholder{color:rgba(207,232,255,0.45)}
+.conv-btn{
+  background:rgba(40,60,100,0.7);
+  border:1px solid rgba(126,200,255,0.3);
+  color:#fff;
+  width:40px;height:40px;
+  border-radius:50%;
+  font-size:18px;
   cursor:pointer;
   display:flex;align-items:center;justify-content:center;
-  font-size:16px;
-  transition:all 160ms ease;
-  flex:0 0 auto;
+  transition:all 0.2s ease;
   min-width:44px;min-height:44px;
 }
-.console-btn:hover{
-  background:rgba(126,200,255,0.22);
-  border-color:rgba(126,200,255,0.6);
-  box-shadow:0 0 12px rgba(126,200,255,0.4);
-}
-.console-btn.recording{
-  background:rgba(255,80,100,0.22);
-  border-color:rgba(255,80,100,0.6);
-  color:#ffd0d8;
-  animation:recPulse 1.2s ease-in-out infinite;
-}
-@keyframes recPulse{
-  0%,100%{box-shadow:0 0 8px rgba(255,80,100,0.4)}
-  50%{box-shadow:0 0 22px rgba(255,80,100,0.85)}
-}
+.conv-btn:hover{background:rgba(60,100,160,0.85);box-shadow:0 0 12px rgba(92,227,255,0.4)}
+.conv-btn.mic.live{background:rgba(220,60,80,0.85);box-shadow:0 0 16px rgba(220,60,80,0.6);animation:micPulse 1s ease-in-out infinite}
+@keyframes micPulse{0%,100%{transform:scale(1)}50%{transform:scale(1.06)}}
 
-/* Thought bubble above figure */
-.thought{
-  position:absolute;
-  left:50%;
-  bottom:62%;
-  transform:translateX(-50%);
-  max-width:min(360px, 70vw);
-  padding:12px 18px;
-  background:linear-gradient(135deg, rgba(248,235,210,0.94), rgba(245,225,195,0.92));
-  color:#2a1d10;
-  border-radius:18px;
-  font-family:"Georgia","Times New Roman",serif;
-  font-style:italic;
-  font-size:15px;
-  line-height:1.45;
-  box-shadow:
-    0 0 0 1px rgba(255,240,210,0.6) inset,
-    0 14px 30px rgba(0,0,0,0.45),
-    0 0 24px rgba(255,200,140,0.22);
-  z-index:8;
-  pointer-events:none;
-  opacity:0;
-  animation:thoughtIn 380ms ease-out forwards, thoughtOut 600ms ease-in 5.2s forwards;
-}
-.thought::after{
-  content:"";
-  position:absolute;
-  left:50%;bottom:-8px;
-  transform:translateX(-50%);
-  width:14px;height:14px;
-  background:inherit;
-  border-radius:0 0 6px 0;
-  clip-path:polygon(0 0, 100% 0, 50% 100%);
-}
-@keyframes thoughtIn{
-  0%{opacity:0;transform:translateX(-50%) translateY(8px) scale(0.92)}
-  100%{opacity:1;transform:translateX(-50%) translateY(0) scale(1)}
-}
-@keyframes thoughtOut{
-  0%{opacity:1}
-  100%{opacity:0;transform:translateX(-50%) translateY(-6px) scale(0.98)}
-}
-
-/* Top status bar */
-.status{
+/* ── Holographic Panel ──────────────────────────────────────── */
+.panel{
   position:fixed;
-  top:14px;left:14px;
-  z-index:30;
-  display:flex;
-  gap:6px;
-  align-items:center;
-  font-size:10px;
-  letter-spacing:0.22em;
-  color:#7aa8d0;
-  text-transform:uppercase;
-  background:rgba(8,16,32,0.5);
-  border:1px solid rgba(126,200,255,0.18);
-  border-radius:8px;
-  padding:6px 12px;
-  backdrop-filter:blur(8px);
-}
-.status-dot{
-  width:6px;height:6px;border-radius:50%;
-  background:#5eead4;box-shadow:0 0 6px #5eead4;
-  animation:dotPulse 2s ease-in-out infinite;
-}
-.nav-back{
-  position:fixed;top:14px;right:14px;z-index:30;
-  background:rgba(8,16,32,0.5);
-  border:1px solid rgba(126,200,255,0.18);
-  border-radius:8px;
-  padding:8px 14px;
-  color:#a8c8e8;
-  text-decoration:none;
-  font-size:11px;
-  letter-spacing:0.16em;
-  text-transform:uppercase;
-  backdrop-filter:blur(8px);
-  min-height:36px;
-  display:inline-flex;align-items:center;
-  transition:all 160ms ease;
-}
-.nav-back:hover{
-  border-color:rgba(126,200,255,0.5);
-  color:#dcefff;
-  box-shadow:0 0 12px rgba(126,200,255,0.3);
-}
-
-/* ══════════════════════════════════════════════════════════════════
-   UNIVERSAL MEDIA SUITE — launcher + panel modes
-   ════════════════════════════════════════════════════════════════ */
-
-/* Launcher shelf — horizontal row of tiles above the console */
-.launcher{
-  position:fixed;
-  left:50%;
-  bottom:300px;
-  transform:translateX(-50%) translateY(20px);
-  display:flex;
-  gap:10px;
-  padding:12px 14px;
-  background:linear-gradient(180deg, rgba(8,16,32,0.86) 0%, rgba(12,22,40,0.92) 100%);
-  border:1px solid rgba(126,200,255,0.32);
+  left:50%;top:50%;
+  width:min(70vw, 1100px);
+  height:min(70vh, 760px);
+  transform:translate(-50%,-50%);
+  background:rgba(6,10,20,0.92);
+  border:1px solid rgba(79,195,247,0.35);
   border-radius:14px;
+  backdrop-filter:blur(20px) saturate(140%);
   box-shadow:
-    0 0 0 1px rgba(126,200,255,0.10) inset,
-    0 0 28px rgba(126,200,255,0.18),
-    0 18px 44px rgba(0,0,0,0.55);
-  z-index:45;
-  opacity:0;
-  pointer-events:none;
-  transition:opacity 280ms ease, transform 280ms cubic-bezier(.2,.7,.3,1);
-  backdrop-filter:blur(12px) saturate(140%);
-  -webkit-backdrop-filter:blur(12px) saturate(140%);
-  max-width:96vw;
-  overflow-x:auto;
-  -webkit-overflow-scrolling:touch;
-  scrollbar-width:thin;
-}
-.launcher.open{
-  opacity:1;
-  pointer-events:auto;
-  transform:translateX(-50%) translateY(0);
-}
-.launcher::-webkit-scrollbar{height:6px}
-.launcher::-webkit-scrollbar-thumb{background:rgba(126,200,255,0.25);border-radius:3px}
-.tile{
-  appearance:none;
-  width:80px;height:80px;
-  min-width:80px;
-  border-radius:12px;
-  background:linear-gradient(135deg, rgba(126,200,255,0.10) 0%, rgba(94,234,212,0.08) 100%);
-  border:1px solid rgba(126,200,255,0.28);
-  color:#dcefff;
-  cursor:pointer;
-  display:flex;
+    0 20px 60px rgba(0,0,0,0.75),
+    0 0 40px rgba(92,227,255,0.2),
+    inset 0 1px 0 rgba(255,255,255,0.08);
+  z-index:1000;
+  display:none;
   flex-direction:column;
-  align-items:center;
-  justify-content:center;
-  gap:4px;
-  padding:8px 6px;
-  font-family:inherit;
-  font-size:9.5px;
-  letter-spacing:0.12em;
-  text-transform:uppercase;
-  text-align:center;
-  line-height:1.15;
-  transition:all 180ms cubic-bezier(.2,.7,.3,1);
-  position:relative;
   overflow:hidden;
+  min-width:280px;
+  min-height:220px;
 }
-.tile::after{
-  content:"";
-  position:absolute;inset:0;
-  background:radial-gradient(circle at 50% 0%, rgba(126,200,255,0.25), transparent 60%);
-  opacity:0;
-  transition:opacity 200ms ease;
-  pointer-events:none;
+.panel.open{display:flex;animation:panelIn 0.22s ease-out}
+@keyframes panelIn{
+  from{opacity:0;transform:translate(-50%,-46%) scale(0.96)}
+  to  {opacity:1;transform:translate(-50%,-50%) scale(1)}
 }
-.tile:hover{
-  transform:scale(1.05);
-  border-color:rgba(126,200,255,0.65);
-  box-shadow:0 0 16px rgba(126,200,255,0.4), 0 0 32px rgba(94,234,212,0.15);
-}
-.tile:hover::after{opacity:1}
-.tile:active{transform:scale(0.96)}
-.tile .ti{font-size:26px;line-height:1}
-.tile .tl{font-weight:600;color:#cfe8ff}
-
-/* Mode-specific body styles inside .doc-body */
-.mode-video, .mode-audio, .mode-ebook, .mode-terminal, .mode-document, .mode-drive, .mode-file{
+.panel-header{
   display:flex;
-  flex-direction:column;
-  height:100%;
+  align-items:center;
+  justify-content:space-between;
+  padding:10px 14px;
+  background:linear-gradient(180deg, rgba(40,60,100,0.55) 0%, rgba(20,30,52,0.55) 100%);
+  border-bottom:1px solid rgba(126,200,255,0.22);
+  cursor:move;
+  user-select:none;
+  flex:0 0 auto;
+  min-height:44px;
+}
+.panel-title{
+  font-size:13px;
+  font-weight:600;
+  letter-spacing:0.6px;
+  color:#fff;
+  display:flex;align-items:center;gap:8px;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+}
+.panel-title .gem{color:var(--circuit);font-size:14px}
+.panel-controls{display:flex;gap:6px;flex:0 0 auto}
+.panel-controls button{
+  background:rgba(20,30,52,0.7);
+  border:1px solid rgba(126,200,255,0.25);
+  color:#fff;
+  width:32px;height:32px;
+  min-width:32px;
+  border-radius:8px;
+  font-size:14px;
+  cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+}
+.panel-controls button:hover{background:rgba(60,100,160,0.85);border-color:var(--circuit)}
+.panel-body{
+  flex:1;
+  overflow:auto;
+  padding:14px;
+  position:relative;
+  background:rgba(2,6,14,0.55);
+}
+.panel-resize{
+  position:absolute;
+  right:0;bottom:0;
+  width:20px;height:20px;
+  cursor:nwse-resize;
+  background:
+    linear-gradient(135deg, transparent 0%, transparent 50%, rgba(126,200,255,0.35) 50%, rgba(126,200,255,0.35) 60%, transparent 60%, transparent 70%, rgba(126,200,255,0.5) 70%, rgba(126,200,255,0.5) 80%, transparent 80%);
+  z-index:5;
+}
+.panel.minimized{
+  height:auto !important;
   min-height:0;
 }
+.panel.minimized .panel-body,
+.panel.minimized .panel-resize{display:none}
 
-/* ── VIDEO ── */
-.mv-stage{
-  flex:1;min-height:0;
-  background:#000;
-  border-radius:8px;
-  overflow:hidden;
-  position:relative;
-  display:flex;align-items:center;justify-content:center;
-}
-.mv-stage video,.mv-stage iframe{
-  width:100%;height:100%;
-  display:block;
-  background:#000;
-}
-.mv-empty{
-  color:#7aa0c8;font-size:12px;letter-spacing:0.08em;text-align:center;padding:20px;
-}
-.mv-controls{
-  display:flex;gap:8px;flex-wrap:wrap;
-  padding:10px 0 0 0;
-  align-items:center;
-  font-size:11px;
-  color:#a8c4dc;
-}
-.mv-controls button, .mv-controls select, .mv-controls label.mv-file{
-  appearance:none;
-  background:rgba(126,200,255,0.10);
-  border:1px solid rgba(126,200,255,0.28);
-  color:#cfe8ff;
-  padding:6px 10px;
-  border-radius:6px;
-  cursor:pointer;
-  font-size:11px;
-  font-family:inherit;
-  min-height:32px;
-  transition:all 160ms ease;
-}
-.mv-controls button:hover, .mv-controls label.mv-file:hover{
-  background:rgba(126,200,255,0.22);
-  border-color:rgba(126,200,255,0.55);
-}
-.mv-controls input[type="text"]{
-  flex:1;min-width:120px;
-  background:rgba(8,16,32,0.6);
-  border:1px solid rgba(126,200,255,0.22);
-  color:#dceaff;
-  padding:6px 10px;
-  border-radius:6px;
-  font-size:12px;
-  font-family:inherit;
-  min-height:32px;
-}
-.mv-controls label.mv-file input{display:none}
-
-/* ── AUDIO ── */
-.ma-cover{
-  flex:0 0 auto;
-  height:38%;
-  min-height:140px;
-  position:relative;
-  background:radial-gradient(ellipse at 50% 40%, rgba(126,200,255,0.12), rgba(10,20,40,0.4) 70%);
-  border-radius:8px;
-  overflow:hidden;
-  margin-bottom:10px;
-}
-.ma-vis{
-  position:absolute;inset:0;
-  width:100%;height:100%;
-  display:block;
-}
-.ma-track{
+/* panel content shells */
+.mode-file .drop-zone{
+  border:2px dashed rgba(126,200,255,0.4);
+  border-radius:12px;
+  padding:48px 24px;
   text-align:center;
-  padding:10px 12px;
-  color:#dceaff;
-  font-size:13px;
-  letter-spacing:0.04em;
-}
-.ma-track .title{font-weight:600;color:#fff;margin-bottom:2px}
-.ma-track .meta{font-size:11px;color:#7aa0c8}
-.ma-row{
-  display:flex;align-items:center;gap:8px;
-  padding:6px 0;
-}
-.ma-row input[type="range"]{flex:1;accent-color:#5ce3ff;min-height:32px}
-.ma-time{font-size:10px;color:#7aa0c8;letter-spacing:0.06em;min-width:42px;text-align:center;font-family:"JetBrains Mono",monospace}
-.ma-controls{display:flex;gap:6px;justify-content:center;flex-wrap:wrap;padding:6px 0}
-.ma-controls button{
-  appearance:none;
-  background:rgba(126,200,255,0.10);
-  border:1px solid rgba(126,200,255,0.28);
-  color:#cfe8ff;
-  width:38px;height:38px;
-  border-radius:50%;
+  color:rgba(207,232,255,0.7);
+  background:rgba(20,30,52,0.3);
+  transition:all 0.2s ease;
   cursor:pointer;
-  font-size:14px;
-  min-width:44px;min-height:44px;
-  display:flex;align-items:center;justify-content:center;
-  transition:all 160ms ease;
 }
-.ma-controls button.play{
-  width:48px;height:48px;
-  background:linear-gradient(135deg, rgba(94,234,212,0.25), rgba(126,200,255,0.25));
-  border-color:rgba(94,234,212,0.5);
-  font-size:18px;
+.mode-file .drop-zone.drag{
+  border-color:var(--circuit);
+  background:rgba(40,80,140,0.45);
+  color:#fff;
 }
-.ma-controls button:hover{
-  background:rgba(126,200,255,0.22);
-  box-shadow:0 0 12px rgba(126,200,255,0.4);
+.mode-file input[type=file]{display:none}
+.mode-file .ico{font-size:48px;margin-bottom:12px;opacity:0.6}
+.mode-file .hint{font-size:12px;opacity:0.6;margin-top:8px}
+
+.mode-video video,
+.mode-video iframe{width:100%;height:100%;border:none;background:#000;border-radius:8px}
+.url-row{display:flex;gap:6px;margin-bottom:10px}
+.url-row input{
+  flex:1;
+  background:rgba(20,30,52,0.7);
+  border:1px solid rgba(126,200,255,0.25);
+  border-radius:8px;
+  padding:10px 12px;
+  color:#fff;
+  font-size:13px;
+  font-family:inherit;
+  outline:none;
+  min-height:40px;
 }
-.ma-controls button.active{background:rgba(94,234,212,0.25);border-color:rgba(94,234,212,0.6)}
-.ma-playlist{
-  flex:1;min-height:0;
-  overflow-y:auto;
-  border-top:1px solid rgba(126,200,255,0.15);
-  margin-top:8px;
+.url-row input:focus{border-color:var(--circuit)}
+.url-row button{
+  background:rgba(40,80,140,0.85);
+  border:1px solid rgba(126,200,255,0.4);
+  color:#fff;
+  padding:0 16px;
+  border-radius:8px;
+  cursor:pointer;
+  min-height:40px;min-width:60px;
+}
+.url-row button:hover{background:rgba(60,120,200,0.95)}
+.media-wrap{height:calc(100% - 52px);display:flex;flex-direction:column;gap:8px}
+.media-wrap.no-url{height:100%}
+.media-wrap canvas{width:100%;height:120px;background:#02060e;border-radius:8px;border:1px solid rgba(126,200,255,0.2)}
+.media-wrap audio{width:100%}
+.playlist{
+  flex:1;
+  overflow:auto;
+  background:rgba(2,6,14,0.5);
+  border:1px solid rgba(126,200,255,0.18);
+  border-radius:8px;
+  padding:6px;
+}
+.playlist .item{
+  padding:8px 10px;
+  border-radius:6px;
+  cursor:pointer;
+  font-size:13px;
+  display:flex;align-items:center;gap:8px;
+}
+.playlist .item:hover{background:rgba(40,60,100,0.45)}
+.playlist .item.active{background:rgba(40,80,140,0.65);color:#fff}
+
+.doc-view{height:100%;display:flex;flex-direction:column;gap:8px}
+.doc-view embed,
+.doc-view iframe{flex:1;width:100%;border:none;border-radius:8px;background:#fff}
+.doc-view pre{
+  flex:1;
+  overflow:auto;
+  background:#02060e;
+  color:#c8e0ff;
+  border:1px solid rgba(126,200,255,0.18);
+  border-radius:8px;
+  padding:14px;
+  font:12px/1.55 "JetBrains Mono","SF Mono",monospace;
+  white-space:pre-wrap;
+  word-break:break-word;
+}
+
+/* terminal */
+.term{
+  height:100%;
+  background:#02060e;
+  border:1px solid rgba(126,200,255,0.22);
+  border-radius:8px;
+  padding:12px;
+  display:flex;flex-direction:column;
+  font:13px/1.5 "JetBrains Mono","SF Mono",monospace;
+  color:#9cd6ff;
+}
+.term-out{
+  flex:1;
+  overflow:auto;
+  white-space:pre-wrap;
+  word-break:break-word;
+  margin-bottom:8px;
+}
+.term-out .l-sys{color:#ffb27a}
+.term-out .l-err{color:#ff7a8a}
+.term-out .l-ok{color:#7ee0ff}
+.term-out .l-dim{color:#5a7a9a;opacity:0.7}
+.term-in{
+  display:flex;gap:6px;align-items:center;
+  border-top:1px solid rgba(126,200,255,0.18);
   padding-top:8px;
 }
-.ma-playlist::-webkit-scrollbar{width:6px}
-.ma-playlist::-webkit-scrollbar-thumb{background:rgba(126,200,255,0.25);border-radius:3px}
-.ma-pl-item{
-  padding:6px 10px;
-  font-size:11px;
-  color:#a8c4dc;
-  border-radius:6px;
-  cursor:pointer;
-  display:flex;align-items:center;gap:8px;
-  min-height:32px;
-}
-.ma-pl-item:hover{background:rgba(126,200,255,0.10)}
-.ma-pl-item.playing{background:rgba(94,234,212,0.15);color:#dceaff}
-.ma-pl-item .idx{font-family:"JetBrains Mono",monospace;font-size:10px;color:#7aa0c8;min-width:20px}
-
-/* ── EBOOK ── */
-.me-stage{
-  flex:1;min-height:0;
-  overflow-y:auto;
-  padding:24px 28px;
-  background:#1a1a2e;
-  color:#e8e8e8;
-  border-radius:8px;
-  font-family:"Georgia","Iowan Old Style",serif;
-  font-size:17px;
-  line-height:1.72;
-  letter-spacing:0.005em;
-}
-.me-stage.sepia{background:#f4ecd8;color:#3a2e1a}
-.me-stage.light{background:#fafafa;color:#1a1a1a}
-.me-stage h1,.me-stage h2,.me-stage h3{margin:1em 0 .5em 0;line-height:1.25}
-.me-stage p{margin:0 0 1em 0}
-.me-stage::-webkit-scrollbar{width:8px}
-.me-stage::-webkit-scrollbar-thumb{background:rgba(126,200,255,0.25);border-radius:4px}
-.me-controls{
-  display:flex;gap:8px;align-items:center;flex-wrap:wrap;
-  padding:10px 0 0 0;
-  font-size:11px;color:#a8c4dc;
-}
-.me-controls button, .me-controls select, .me-controls label.me-file{
-  appearance:none;
-  background:rgba(126,200,255,0.10);
-  border:1px solid rgba(126,200,255,0.28);
-  color:#cfe8ff;
-  padding:6px 10px;
-  border-radius:6px;
-  cursor:pointer;
-  font-size:11px;
-  font-family:inherit;
-  min-height:32px;
-}
-.me-controls label.me-file input{display:none}
-.me-progress{
-  height:3px;
-  background:rgba(126,200,255,0.15);
-  border-radius:2px;
-  overflow:hidden;
-  margin-top:8px;
-}
-.me-progress .bar{height:100%;background:linear-gradient(90deg,#5ce3ff,#5eead4);width:0%;transition:width 220ms ease}
-.me-toc{
-  position:absolute;
-  top:60px;left:0;bottom:0;
-  width:240px;
-  background:rgba(8,16,32,0.96);
-  border-right:1px solid rgba(126,200,255,0.2);
-  padding:14px;
-  overflow-y:auto;
-  z-index:2;
-  transform:translateX(-100%);
-  transition:transform 260ms ease;
-  font-size:12px;
-}
-.me-toc.open{transform:translateX(0)}
-.me-toc .toc-item{
-  padding:6px 8px;
-  color:#a8c4dc;
-  cursor:pointer;
-  border-radius:4px;
-  margin-bottom:2px;
-}
-.me-toc .toc-item:hover{background:rgba(126,200,255,0.10);color:#fff}
-
-/* ── TERMINAL ── */
-.mt-stage{
-  flex:1;min-height:0;
-  background:#02060e;
-  border:1px solid rgba(94,234,212,0.18);
-  border-radius:8px;
-  padding:14px 16px;
-  font-family:"JetBrains Mono","Menlo","Consolas",monospace;
-  font-size:13px;
-  line-height:1.55;
-  color:#7eead4;
-  overflow-y:auto;
-  position:relative;
-}
-.mt-stage::before{
-  content:"";
-  position:absolute;inset:0;
-  background:repeating-linear-gradient(0deg, rgba(94,234,212,0.03) 0, rgba(94,234,212,0.03) 1px, transparent 1px, transparent 3px);
-  pointer-events:none;
-}
-.mt-stage::-webkit-scrollbar{width:6px}
-.mt-stage::-webkit-scrollbar-thumb{background:rgba(94,234,212,0.25);border-radius:3px}
-.mt-line{white-space:pre-wrap;word-break:break-word;position:relative;z-index:1}
-.mt-line.cmd{color:#dcefff}
-.mt-line.cmd .prompt{color:#5eead4;margin-right:6px}
-.mt-line.err{color:#ff8a98}
-.mt-line.dim{color:#5a8a8a}
-.mt-input-row{display:flex;align-items:center;gap:6px;padding:6px 0 0 0;position:relative;z-index:1}
-.mt-prompt{color:#5eead4;font-family:inherit;font-size:13px}
-.mt-input{
+.term-prompt{color:#7ee0ff;font-weight:600;flex:0 0 auto}
+.term-input{
   flex:1;
   background:transparent;
   border:none;
+  color:#fff;
+  font:inherit;
   outline:none;
-  color:#dcefff;
-  font-family:inherit;
-  font-size:13px;
-  caret-color:#5eead4;
-  min-height:24px;
-}
-.mt-cursor{
-  display:inline-block;
-  width:8px;height:14px;
-  background:#5eead4;
-  vertical-align:middle;
-  animation:termBlink 1s steps(2) infinite;
-}
-@keyframes termBlink{50%{opacity:0}}
-
-/* ── DRIVE / FILE EMPTY STATES — reuse .doc-empty ── */
-
-/* Mobile launcher tweaks */
-@media (max-width:768px){
-  .launcher{bottom:240px;padding:10px;gap:8px}
-  .tile{width:64px;height:64px;font-size:8.5px;padding:6px 4px}
-  .tile .ti{font-size:22px}
-}
-@media (max-width:375px){
-  .tile{width:56px;height:56px;font-size:8px}
-  .tile .ti{font-size:20px}
+  caret-color:var(--circuit);
 }
 
-/* Mobile */
-@media (max-width:768px){
-  .figure-wrap{width:min(280px,68vw)}
-  .doc-panel{
-    top:auto;
-    bottom:140px;
-    right:3vw;
-    left:3vw;
-    width:auto;
-    height:min(480px, 58vh);
+/* ── Mobile ───────────────────────────────────────────────── */
+@media (max-width: 768px){
+  .panel{
+    width:100vw;height:calc(100vh - 140px);
+    left:0;top:auto;bottom:140px;
+    transform:none;
+    border-radius:14px 14px 0 0;
+    border-bottom:none;
   }
-  .orb{left:4%;top:auto;bottom:200px;width:54px;height:54px}
-  .console{bottom:8px;width:96vw}
-  .console-input{font-size:16px} /* prevent iOS zoom */
+  .panel.open{animation:panelInMobile 0.22s ease-out}
+  @keyframes panelInMobile{
+    from{transform:translateY(20px);opacity:0}
+    to  {transform:translateY(0);opacity:1}
+  }
+  .panel-resize{display:none}
+  #media-dock{
+    bottom:72px;
+    left:8px;right:8px;
+    transform:none;
+    max-width:none;
+    border-radius:12px;
+  }
+  #media-dock button{padding:10px 12px;font-size:12px}
+  #conv-bar{
+    bottom:10px;
+    left:8px;right:8px;
+    transform:none;
+    width:auto;
+  }
 }
-@media (max-width:375px){
-  .figure-wrap{width:min(220px,62vw)}
-  .doc-panel{height:min(420px, 54vh)}
+@media (max-width:380px){
+  #vint-body{transform:translateX(-50%) scale(0.85)}
+  #media-dock button{padding:9px 10px;font-size:11px}
+  .dock-ico{font-size:14px}
 }
 
-/* Reduced motion respect for non-figure animations */
+/* reduced motion */
 @media (prefers-reduced-motion: reduce){
-  .aurora,.floor::after,.fog,.particle{animation-duration:60s !important}
+  #vint-body,.arm,.leg,.heart,.aurora,.stars,.eye.r{animation:none}
 }
 </style>
 </head>
 <body>
 
-<!-- Scene -->
+<!-- ── Scene ─────────────────────────────────────────────────── -->
 <div id="scene">
-  <div class="stars"></div>
   <div class="aurora"></div>
+  <div class="stars"></div>
+  <div class="floor"></div>
 
-  <!-- Cathedral struts (SVG, mid layer) -->
-  <svg class="cathedral" viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice">
-    <defs>
-      <linearGradient id="strutGrad" x1="0" y1="0" x2="0" y2="1">
-        <stop offset="0%" stop-color="#3a4a78" stop-opacity="0"/>
-        <stop offset="40%" stop-color="#3a4a78" stop-opacity="0.45"/>
-        <stop offset="100%" stop-color="#1a2040" stop-opacity="0"/>
-      </linearGradient>
-      <linearGradient id="cableGrad" x1="0" y1="0" x2="0" y2="1">
-        <stop offset="0%" stop-color="#5ce3ff" stop-opacity="0"/>
-        <stop offset="50%" stop-color="#5ce3ff" stop-opacity="0.3"/>
-        <stop offset="100%" stop-color="#5ce3ff" stop-opacity="0"/>
-      </linearGradient>
-    </defs>
-    <!-- arched struts -->
-    <path d="M 120 900 Q 120 200 800 100 Q 1480 200 1480 900" fill="none" stroke="url(#strutGrad)" stroke-width="3"/>
-    <path d="M 240 900 Q 240 300 800 200 Q 1360 300 1360 900" fill="none" stroke="url(#strutGrad)" stroke-width="2.5" opacity="0.7"/>
-    <path d="M 360 900 Q 360 380 800 300 Q 1240 380 1240 900" fill="none" stroke="url(#strutGrad)" stroke-width="2" opacity="0.5"/>
-    <!-- hanging cables -->
-    <line x1="400" y1="0" x2="380" y2="600" stroke="url(#cableGrad)" stroke-width="1"/>
-    <line x1="800" y1="0" x2="800" y2="500" stroke="url(#cableGrad)" stroke-width="1"/>
-    <line x1="1200" y1="0" x2="1220" y2="600" stroke="url(#cableGrad)" stroke-width="1"/>
-    <line x1="600" y1="0" x2="610" y2="450" stroke="url(#cableGrad)" stroke-width="0.8" opacity="0.7"/>
-    <line x1="1000" y1="0" x2="990" y2="450" stroke="url(#cableGrad)" stroke-width="0.8" opacity="0.7"/>
-  </svg>
+  <!-- Walking figure ‒ JS translates the wrap horizontally -->
+  <div id="figure-stage">
+    <div id="figure-wrap">
+      <div id="vint-body">
+        <div class="ground-shadow"></div>
 
-  <!-- Floor with hex grid -->
-  <div class="floor">
-    <svg viewBox="0 0 1200 600" preserveAspectRatio="xMidYMid slice">
-      <defs>
-        <pattern id="hexPattern" x="0" y="0" width="60" height="52" patternUnits="userSpaceOnUse">
-          <path d="M 30 0 L 60 15 L 60 37 L 30 52 L 0 37 L 0 15 Z" fill="none" stroke="rgba(126,200,255,0.20)" stroke-width="0.8"/>
-        </pattern>
-        <radialGradient id="hexGlow" cx="50%" cy="55%">
-          <stop offset="0%" stop-color="#5eead4" stop-opacity="0.18"/>
-          <stop offset="100%" stop-color="#5eead4" stop-opacity="0"/>
-        </radialGradient>
-      </defs>
-      <rect width="1200" height="600" fill="url(#hexPattern)"/>
-      <rect width="1200" height="600" fill="url(#hexGlow)"/>
-    </svg>
-  </div>
+        <!-- head + face -->
+        <div class="hair"></div>
+        <div class="head">
+          <div class="ear"></div>
+          <div class="eye l"></div>
+          <div class="eye r"></div>
+          <div class="circuit-etch"></div>
+          <div class="nose"></div>
+          <div class="mouth"></div>
+        </div>
 
-  <div class="fog"></div>
-  <div id="particles"></div>
-  <div class="lightning" id="lightning"></div>
+        <div class="neck"></div>
 
-  <!-- Ground halo (reflection) -->
-  <div class="ground-halo"></div>
+        <!-- torso + chest window -->
+        <div class="torso"></div>
+        <div class="chest-glass"></div>
+        <div class="heart">
+          <svg viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+            <defs>
+              <radialGradient id="hg" cx="40%" cy="35%" r="65%">
+                <stop offset="0%" stop-color="#ff5566"/>
+                <stop offset="55%" stop-color="#c4202e"/>
+                <stop offset="100%" stop-color="#5a0810"/>
+              </radialGradient>
+            </defs>
+            <!-- anatomical-ish heart, not cartoon -->
+            <path d="M20 36 C 8 28, 3 18, 6 11 C 9 5, 16 5, 20 12 C 24 5, 31 5, 34 11 C 37 18, 32 28, 20 36 Z"
+                  fill="url(#hg)"
+                  stroke="#3a0408" stroke-width="0.6"/>
+            <path d="M20 14 C 22 11, 25 11, 26 14 M20 14 C 18 11, 15 11, 14 14"
+                  stroke="#7a0a14" stroke-width="0.5" fill="none" opacity="0.7"/>
+          </svg>
+        </div>
+        <div class="plate-seam s1"></div>
+        <div class="plate-seam s2"></div>
+        <div class="plate-seam s3"></div>
+        <div class="plate-seam v1"></div>
 
-  <!-- THE FIGURE -->
-  <div class="figure-wrap" id="figure">
-   <div class="body-bob">
-    <svg viewBox="0 0 200 440" preserveAspectRatio="xMidYMax meet">
-      <defs>
-        <!-- Skin gradients -->
-        <radialGradient id="skinFace" cx="40%" cy="35%" r="65%">
-          <stop offset="0%" stop-color="#ffe2bc"/>
-          <stop offset="35%" stop-color="#e7b48a"/>
-          <stop offset="70%" stop-color="#a86a3e"/>
-          <stop offset="100%" stop-color="#3d1f0f"/>
-        </radialGradient>
-        <radialGradient id="skinTorso" cx="35%" cy="30%" r="80%">
-          <stop offset="0%" stop-color="#f0c89a"/>
-          <stop offset="50%" stop-color="#c98d5e"/>
-          <stop offset="100%" stop-color="#5a2d18"/>
-        </radialGradient>
-        <radialGradient id="sssEar" cx="50%" cy="50%">
-          <stop offset="0%" stop-color="#ff8a66" stop-opacity="0.85"/>
-          <stop offset="100%" stop-color="#ff8a66" stop-opacity="0"/>
-        </radialGradient>
-        <radialGradient id="sssNose" cx="50%" cy="50%">
-          <stop offset="0%" stop-color="#ff7a55" stop-opacity="0.55"/>
-          <stop offset="100%" stop-color="#ff7a55" stop-opacity="0"/>
-        </radialGradient>
-        <!-- Titanium gradients -->
-        <linearGradient id="titaniumSkull" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0%" stop-color="#e8ecf2"/>
-          <stop offset="30%" stop-color="#b8c0cc"/>
-          <stop offset="65%" stop-color="#5a626e"/>
-          <stop offset="100%" stop-color="#1a1e26"/>
-        </linearGradient>
-        <linearGradient id="titaniumArm" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0%" stop-color="#dde2ea"/>
-          <stop offset="40%" stop-color="#8a92a0"/>
-          <stop offset="100%" stop-color="#2a2e38"/>
-        </linearGradient>
-        <linearGradient id="titaniumLeg" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stop-color="#9aa2b0"/>
-          <stop offset="50%" stop-color="#4a525e"/>
-          <stop offset="100%" stop-color="#1a1e26"/>
-        </linearGradient>
-        <!-- Carbon weave pattern -->
-        <pattern id="carbonWeave" x="0" y="0" width="6" height="6" patternUnits="userSpaceOnUse">
-          <rect width="6" height="6" fill="#0e1014"/>
-          <path d="M 0 0 L 6 6 M 3 0 L 6 3 M 0 3 L 3 6" stroke="#1a1e26" stroke-width="0.6"/>
-        </pattern>
-        <!-- Iris gradient -->
-        <radialGradient id="iris" cx="50%" cy="50%">
-          <stop offset="0%" stop-color="#0a0608"/>
-          <stop offset="18%" stop-color="#0a0608"/>
-          <stop offset="22%" stop-color="#4a2818"/>
-          <stop offset="60%" stop-color="#8a5a35"/>
-          <stop offset="85%" stop-color="#5a3a20"/>
-          <stop offset="100%" stop-color="#1a0e08"/>
-        </radialGradient>
-        <!-- Heart gradient -->
-        <radialGradient id="heartGrad" cx="40%" cy="35%" r="80%">
-          <stop offset="0%" stop-color="#ff5560"/>
-          <stop offset="40%" stop-color="#c4202e"/>
-          <stop offset="100%" stop-color="#5a0810"/>
-        </radialGradient>
-        <!-- Circuit etch -->
-        <linearGradient id="circuitEtch" x1="0" y1="0" x2="1" y2="0">
-          <stop offset="0%" stop-color="#5ce3ff" stop-opacity="0"/>
-          <stop offset="50%" stop-color="#5ce3ff" stop-opacity="0.9"/>
-          <stop offset="100%" stop-color="#5ce3ff" stop-opacity="0"/>
-        </linearGradient>
-        <!-- Aura field -->
-        <radialGradient id="aura" cx="50%" cy="50%">
-          <stop offset="0%" stop-color="#7ec8ff" stop-opacity="0.10"/>
-          <stop offset="60%" stop-color="#b794f4" stop-opacity="0.06"/>
-          <stop offset="100%" stop-color="#5eead4" stop-opacity="0"/>
-        </radialGradient>
-        <!-- Filters: subtle blur for ambient occlusion -->
-        <filter id="softShadow" x="-30%" y="-30%" width="160%" height="160%">
-          <feGaussianBlur stdDeviation="1.4"/>
-        </filter>
-        <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
-          <feGaussianBlur stdDeviation="2.2" result="blur"/>
-          <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
-        </filter>
-      </defs>
+        <!-- pelvis -->
+        <div class="pelvis"></div>
 
-      <!-- Aura field (sacred geometry hint) -->
-      <ellipse cx="100" cy="220" rx="98" ry="200" fill="url(#aura)" opacity="0.55"/>
-      <!-- Chakra line (very subtle vertical) -->
-      <line x1="100" y1="60" x2="100" y2="400" stroke="#b794f4" stroke-width="0.4" opacity="0.18" stroke-dasharray="2 4"/>
+        <!-- arms -->
+        <div class="arm l">
+          <div class="upper-arm"></div>
+          <div class="elbow"></div>
+          <div class="forearm"></div>
+          <div class="hand"></div>
+        </div>
+        <div class="arm r">
+          <div class="upper-arm"></div>
+          <div class="elbow"></div>
+          <div class="forearm"></div>
+          <div class="hand"></div>
+        </div>
 
-      <!-- ───── LEGS ───── -->
-      <!-- Left leg (biological) -->
-      <g class="gait-l-leg" transform-origin="92 250">
-        <!-- thigh -->
-        <path d="M 84 250 Q 80 320 86 380 L 96 380 Q 96 320 94 250 Z" fill="url(#skinTorso)" filter="url(#softShadow)"/>
-        <!-- knee shadow -->
-        <ellipse cx="89" cy="318" rx="6" ry="3" fill="#5a2d18" opacity="0.45"/>
-        <!-- shin -->
-        <path d="M 86 320 Q 84 380 88 420 L 96 420 Q 96 380 96 320 Z" fill="url(#skinTorso)" filter="url(#softShadow)"/>
-        <!-- foot -->
-        <ellipse cx="90" cy="425" rx="9" ry="4" fill="#3d1f0f"/>
-      </g>
-      <!-- Right leg (mechanical from knee) -->
-      <g class="gait-r-leg" transform-origin="108 250">
-        <!-- thigh (skin transitions) -->
-        <path d="M 106 250 Q 106 320 104 380 L 114 380 Q 120 320 116 250 Z" fill="url(#skinTorso)" filter="url(#softShadow)"/>
-        <ellipse cx="110" cy="318" rx="6" ry="3" fill="#2a2e38" opacity="0.7"/>
-        <!-- shin: mechanical -->
-        <path d="M 104 320 L 116 320 L 118 410 L 102 410 Z" fill="url(#titaniumLeg)"/>
-        <!-- hydraulic piston -->
-        <rect x="108" y="328" width="3" height="70" fill="#1a1e26" rx="1"/>
-        <rect x="108.5" y="334" width="2" height="56" fill="#5ce3ff" opacity="0.35"/>
-        <!-- segmented plates -->
-        <line x1="104" y1="345" x2="116" y2="345" stroke="#1a1e26" stroke-width="0.8"/>
-        <line x1="104" y1="365" x2="118" y2="365" stroke="#1a1e26" stroke-width="0.8"/>
-        <line x1="104" y1="385" x2="118" y2="385" stroke="#1a1e26" stroke-width="0.8"/>
-        <!-- carbon foot -->
-        <path d="M 100 410 L 122 410 L 124 425 L 98 425 Z" fill="url(#carbonWeave)"/>
-        <line x1="106" y1="418" x2="106" y2="425" stroke="#5ce3ff" stroke-width="0.4" opacity="0.6"/>
-        <line x1="112" y1="418" x2="112" y2="425" stroke="#5ce3ff" stroke-width="0.4" opacity="0.6"/>
-        <line x1="118" y1="418" x2="118" y2="425" stroke="#5ce3ff" stroke-width="0.4" opacity="0.6"/>
-      </g>
-
-      <!-- ───── TORSO ───── -->
-      <g class="breathe" transform-origin="100 200">
-        <!-- Left half: skin -->
-        <path d="M 100 130 Q 70 140 66 200 Q 64 240 80 252 L 100 252 Z" fill="url(#skinTorso)"/>
-        <!-- pec/delt shadow lines -->
-        <path d="M 78 162 Q 88 168 96 172" stroke="#5a2d18" stroke-width="0.8" fill="none" opacity="0.55"/>
-        <path d="M 72 188 Q 82 196 96 200" stroke="#5a2d18" stroke-width="0.7" fill="none" opacity="0.45"/>
-        <!-- Right half: titanium plating -->
-        <path d="M 100 130 Q 132 140 138 200 Q 140 240 124 252 L 100 252 Z" fill="url(#titaniumArm)"/>
-        <!-- rivets -->
-        <circle cx="118" cy="148" r="1.2" fill="#1a1e26"/>
-        <circle cx="128" cy="170" r="1.2" fill="#1a1e26"/>
-        <circle cx="132" cy="200" r="1.2" fill="#1a1e26"/>
-        <circle cx="128" cy="230" r="1.2" fill="#1a1e26"/>
-        <circle cx="116" cy="244" r="1.2" fill="#1a1e26"/>
-        <!-- seam -->
-        <path d="M 100 130 L 100 252" stroke="#2a2e38" stroke-width="1" opacity="0.7"/>
-        <!-- carbon weave panel -->
-        <path d="M 116 175 L 132 175 L 132 215 L 116 215 Z" fill="url(#carbonWeave)" opacity="0.9"/>
-        <!-- hydraulic line at shoulder -->
-        <path d="M 130 152 Q 134 162 132 172" stroke="#5ce3ff" stroke-width="1" fill="none" opacity="0.7"/>
-
-        <!-- Chest window opening — anatomical reveal -->
-        <ellipse cx="100" cy="195" rx="22" ry="28" fill="#0a0608"/>
-        <!-- Lungs -->
-        <g class="lung-l" transform-origin="92 188">
-          <path d="M 86 178 Q 80 190 84 208 Q 90 210 94 200 Z" fill="#8a3a44" opacity="0.85"/>
-        </g>
-        <g class="lung-r" transform-origin="108 188">
-          <path d="M 114 178 Q 120 190 116 208 Q 110 210 106 200 Z" fill="#8a3a44" opacity="0.85"/>
-        </g>
-        <!-- Spine LEDs behind heart -->
-        <g class="spineLED">
-          <circle cx="100" cy="178" r="0.9" fill="#5ce3ff"/>
-          <circle cx="100" cy="186" r="0.9" fill="#5ce3ff" opacity="0.85"/>
-          <circle cx="100" cy="194" r="0.9" fill="#5ce3ff" opacity="0.7"/>
-          <circle cx="100" cy="202" r="0.9" fill="#5ce3ff" opacity="0.55"/>
-          <circle cx="100" cy="210" r="0.9" fill="#5ce3ff" opacity="0.4"/>
-        </g>
-        <!-- Heart (beating) -->
-        <g class="heartbeat" transform-origin="100 196">
-          <path d="M 100 188
-                   C 96 184 90 184 90 192
-                   C 90 200 100 208 100 208
-                   C 100 208 110 200 110 192
-                   C 110 184 104 184 100 188 Z"
-                fill="url(#heartGrad)" filter="url(#glow)"/>
-          <!-- aorta -->
-          <path d="M 100 188 Q 102 184 104 182" stroke="#7a0810" stroke-width="1.4" fill="none"/>
-          <!-- vein highlight -->
-          <path d="M 95 192 Q 100 198 105 192" stroke="#5a0810" stroke-width="0.5" fill="none" opacity="0.7"/>
-        </g>
-      </g>
-
-      <!-- ───── ARMS ───── -->
-      <!-- Left arm (biological) -->
-      <g class="gait-l-arm" transform-origin="70 150">
-        <path d="M 64 148 Q 56 200 60 260 L 72 260 Q 74 200 72 148 Z" fill="url(#skinTorso)" filter="url(#softShadow)"/>
-        <!-- elbow shadow -->
-        <ellipse cx="62" cy="204" rx="5" ry="2.5" fill="#5a2d18" opacity="0.5"/>
-        <!-- vein -->
-        <path d="M 64 215 Q 66 230 68 250" stroke="#2a4ea8" stroke-width="0.5" fill="none" opacity="0.5"/>
-        <!-- hand -->
-        <ellipse cx="66" cy="266" rx="7" ry="9" fill="url(#skinTorso)"/>
-        <!-- knuckles -->
-        <line x1="62" y1="268" x2="62" y2="272" stroke="#5a2d18" stroke-width="0.5" opacity="0.6"/>
-        <line x1="65" y1="268" x2="65" y2="272" stroke="#5a2d18" stroke-width="0.5" opacity="0.6"/>
-        <line x1="68" y1="268" x2="68" y2="272" stroke="#5a2d18" stroke-width="0.5" opacity="0.6"/>
-      </g>
-      <!-- Right arm (mechanical) -->
-      <g class="gait-r-arm" transform-origin="130 150">
-        <!-- bicep: exposed carbon -->
-        <path d="M 130 148 Q 142 165 140 195 L 128 195 Q 128 165 128 148 Z" fill="url(#carbonWeave)"/>
-        <!-- bicep highlight strap -->
-        <path d="M 130 152 L 138 156 L 138 188 L 130 192" stroke="#5ce3ff" stroke-width="0.5" fill="none" opacity="0.7"/>
-        <!-- elbow pneumatic joint -->
-        <circle cx="134" cy="200" r="6" fill="url(#titaniumArm)"/>
-        <circle cx="134" cy="200" r="3" fill="#1a1e26"/>
-        <circle cx="134" cy="200" r="1" fill="#5ce3ff"/>
-        <!-- forearm: segmented plates -->
-        <path d="M 130 204 Q 142 230 138 260 L 128 260 Q 128 230 128 204 Z" fill="url(#titaniumArm)"/>
-        <line x1="128" y1="218" x2="139" y2="218" stroke="#1a1e26" stroke-width="0.6"/>
-        <line x1="128" y1="232" x2="139" y2="232" stroke="#1a1e26" stroke-width="0.6"/>
-        <line x1="128" y1="246" x2="138" y2="246" stroke="#1a1e26" stroke-width="0.6"/>
-        <!-- mechanical hand -->
-        <path d="M 124 260 L 142 260 L 144 272 L 122 272 Z" fill="url(#titaniumArm)"/>
-        <!-- articulated fingers -->
-        <line x1="126" y1="272" x2="126" y2="278" stroke="#1a1e26" stroke-width="1"/>
-        <line x1="130" y1="272" x2="130" y2="280" stroke="#1a1e26" stroke-width="1"/>
-        <line x1="134" y1="272" x2="134" y2="280" stroke="#1a1e26" stroke-width="1"/>
-        <line x1="138" y1="272" x2="138" y2="278" stroke="#1a1e26" stroke-width="1"/>
-        <line x1="142" y1="270" x2="142" y2="274" stroke="#1a1e26" stroke-width="1"/>
-      </g>
-
-      <!-- ───── NECK ───── -->
-      <path d="M 92 110 L 108 110 L 110 132 L 90 132 Z" fill="url(#skinTorso)"/>
-      <!-- titanium spine cap on right -->
-      <path d="M 100 110 L 108 110 L 110 132 L 100 132 Z" fill="url(#titaniumArm)" opacity="0.85"/>
-      <!-- neck shadow under jaw -->
-      <ellipse cx="100" cy="112" rx="14" ry="3" fill="#3d1f0f" opacity="0.5"/>
-
-      <!-- ───── HEAD ───── -->
-      <g transform-origin="100 80">
-        <!-- skull base (oval, slightly elongated) -->
-        <ellipse cx="100" cy="78" rx="32" ry="40" fill="url(#skinFace)"/>
-        <!-- left side: natural hair strands -->
-        <path d="M 68 60 Q 70 38 92 38 Q 96 50 80 70 Q 70 72 68 60 Z" fill="#1a0e08"/>
-        <path d="M 72 50 Q 80 42 90 44" stroke="#0a0608" stroke-width="0.8" fill="none" opacity="0.6"/>
-        <path d="M 76 56 Q 84 50 92 52" stroke="#0a0608" stroke-width="0.6" fill="none" opacity="0.5"/>
-        <!-- right side: titanium skull plate -->
-        <path d="M 100 42 Q 130 44 132 78 Q 128 110 100 110 Z" fill="url(#titaniumSkull)"/>
-        <!-- etched circuit paths on skull plate -->
-        <path d="M 108 52 L 122 52 L 122 64 L 116 64 L 116 76 L 126 76"
-              stroke="url(#circuitEtch)" stroke-width="0.6" fill="none" opacity="0.85"/>
-        <path d="M 112 88 L 124 88 L 124 100"
-              stroke="url(#circuitEtch)" stroke-width="0.5" fill="none" opacity="0.7"/>
-        <!-- seam between bio and titanium -->
-        <path d="M 100 42 Q 98 76 100 110" stroke="#2a2e38" stroke-width="0.6" opacity="0.6"/>
-        <!-- jaw shadow -->
-        <ellipse cx="100" cy="106" rx="20" ry="6" fill="#5a2d18" opacity="0.35"/>
-
-        <!-- LEFT EAR (biological with SSS) -->
-        <ellipse cx="68" cy="80" rx="4" ry="7" fill="url(#skinFace)"/>
-        <ellipse cx="68" cy="80" rx="2" ry="4" fill="url(#sssEar)"/>
-        <!-- RIGHT EAR (audio receiver) -->
-        <rect x="128" y="74" width="6" height="14" rx="1" fill="url(#titaniumArm)"/>
-        <line x1="129" y1="76" x2="133" y2="76" stroke="#1a1e26" stroke-width="0.4"/>
-        <line x1="129" y1="79" x2="133" y2="79" stroke="#1a1e26" stroke-width="0.4"/>
-        <line x1="129" y1="82" x2="133" y2="82" stroke="#1a1e26" stroke-width="0.4"/>
-        <line x1="129" y1="85" x2="133" y2="85" stroke="#1a1e26" stroke-width="0.4"/>
-
-        <!-- LEFT EYE (photoreal) -->
-        <ellipse cx="86" cy="76" rx="6" ry="3.5" fill="#fff8ec"/>
-        <ellipse cx="86" cy="76" rx="3.6" ry="3.4" fill="url(#iris)"/>
-        <circle class="pupil" cx="86" cy="76" r="1.4" fill="#040207"/>
-        <!-- iris rings -->
-        <circle cx="86" cy="76" r="2.8" fill="none" stroke="#5a3a20" stroke-width="0.2" opacity="0.6"/>
-        <circle cx="86" cy="76" r="2.0" fill="none" stroke="#3a2418" stroke-width="0.2" opacity="0.5"/>
-        <!-- wet highlight -->
-        <circle cx="87.5" cy="74.5" r="0.7" fill="#ffffff" opacity="0.95"/>
-        <circle cx="85" cy="77" r="0.3" fill="#ffffff" opacity="0.6"/>
-        <!-- eyelid -->
-        <ellipse class="eyelid" cx="86" cy="76" rx="6.2" ry="3.6" fill="url(#skinFace)"/>
-        <!-- upper eyelash line -->
-        <path d="M 80 73 Q 86 71.5 92 73" stroke="#1a0e08" stroke-width="0.5" fill="none"/>
-
-        <!-- RIGHT EYE (optical sensor) -->
-        <circle cx="114" cy="76" r="5" fill="#1a1e26"/>
-        <circle cx="114" cy="76" r="5" fill="none" stroke="url(#titaniumSkull)" stroke-width="1"/>
-        <!-- micro-hex pattern hint -->
-        <circle cx="114" cy="76" r="4.2" fill="#040207"/>
-        <circle cx="114" cy="76" r="3.5" fill="none" stroke="rgba(126,200,255,0.18)" stroke-width="0.3"/>
-        <!-- reticle inside -->
-        <g class="reticle" transform-origin="114 76">
-          <line x1="111" y1="76" x2="113" y2="76" stroke="#ff4555" stroke-width="0.4" opacity="0.85"/>
-          <line x1="115" y1="76" x2="117" y2="76" stroke="#ff4555" stroke-width="0.4" opacity="0.85"/>
-          <line x1="114" y1="73" x2="114" y2="75" stroke="#ff4555" stroke-width="0.4" opacity="0.85"/>
-          <line x1="114" y1="77" x2="114" y2="79" stroke="#ff4555" stroke-width="0.4" opacity="0.85"/>
-        </g>
-        <!-- glint -->
-        <circle cx="115.5" cy="74.5" r="0.5" fill="#ffffff" opacity="0.7"/>
-
-        <!-- NOSE with SSS -->
-        <path d="M 100 80 Q 98 90 96 96 L 104 96 Q 102 90 100 80 Z" fill="url(#skinFace)"/>
-        <ellipse cx="98" cy="95" rx="1.2" ry="0.8" fill="url(#sssNose)"/>
-        <ellipse cx="102" cy="95" rx="1.2" ry="0.8" fill="url(#sssNose)"/>
-        <path d="M 96 96 Q 100 98 104 96" stroke="#5a2d18" stroke-width="0.4" fill="none" opacity="0.5"/>
-
-        <!-- MOUTH (with parted lips) -->
-        <path d="M 92 103 Q 100 106 108 103 Q 100 108 92 103 Z" fill="#a8443a"/>
-        <path d="M 92 103 Q 100 101 108 103" stroke="#5a2018" stroke-width="0.4" fill="none"/>
-        <!-- upper lip highlight -->
-        <path d="M 94 102 Q 100 100.5 106 102" stroke="#ffb89c" stroke-width="0.3" fill="none" opacity="0.7"/>
-        <!-- subtle tongue -->
-        <path d="M 96 105 Q 100 106 104 105" stroke="#7a2018" stroke-width="0.4" fill="none" opacity="0.7"/>
-
-        <!-- Temple highlight (key light from top-left) -->
-        <ellipse cx="78" cy="60" rx="5" ry="8" fill="#fff8ec" opacity="0.18"/>
-        <!-- Jaw cool shadow -->
-        <ellipse cx="92" cy="100" rx="8" ry="3" fill="#3a4a78" opacity="0.10"/>
-      </g>
-    </svg>
-   </div>
-  </div>
-</div>
-
-<!-- Top status -->
-<div class="status">
-  <div class="status-dot"></div>
-  <span>Body v3 · Hybrid Online</span>
-</div>
-<a href="index.html" class="nav-back">&larr; Index</a>
-
-<!-- Media launcher orb -->
-<button class="orb" id="orb" aria-label="Open media launcher" aria-expanded="false" aria-controls="launcher">
-  <span class="orb-label">Media<br>Suite</span>
-</button>
-
-<!-- Launcher shelf -->
-<div class="launcher" id="launcher" role="toolbar" aria-label="Media launcher">
-  <button class="tile" data-mode="document" aria-label="Document viewer">
-    <span class="ti">&#128196;</span><span class="tl">Docs</span>
-  </button>
-  <button class="tile" data-mode="video" aria-label="Video player">
-    <span class="ti">&#127916;</span><span class="tl">Video</span>
-  </button>
-  <button class="tile" data-mode="audio" aria-label="Audio player">
-    <span class="ti">&#127925;</span><span class="tl">Audio</span>
-  </button>
-  <button class="tile" data-mode="ebook" aria-label="eBook reader">
-    <span class="ti">&#128218;</span><span class="tl">eBook</span>
-  </button>
-  <button class="tile" data-mode="terminal" aria-label="Terminal">
-    <span class="ti">&#128187;</span><span class="tl">Term</span>
-  </button>
-  <button class="tile" data-mode="drive" aria-label="Google Drive">
-    <span class="ti">&#9729;</span><span class="tl">Drive</span>
-  </button>
-  <button class="tile" data-mode="file" aria-label="Open file">
-    <span class="ti">&#128193;</span><span class="tl">Open File</span>
-  </button>
-</div>
-
-<!-- Hidden file pickers (shared across modes) -->
-<input type="file" id="filePickAny" accept="*/*" multiple style="display:none" />
-<input type="file" id="filePickVideo" accept="video/*" style="display:none" />
-<input type="file" id="filePickAudio" accept="audio/*" multiple style="display:none" />
-<input type="file" id="filePickEbook" accept=".epub,.pdf,.txt,.md" style="display:none" />
-<input type="file" id="filePickDoc" accept=".pdf,.doc,.docx,.xls,.xlsx,.csv,.ppt,.pptx,.txt,.md,.json,.js,.py,.sh,.yaml,.yml,.toml,.html,.htm,.svg,.xml" style="display:none" />
-
-<!-- Document panel -->
-<div class="doc-panel" id="docPanel" role="dialog" aria-label="Document viewer">
-  <span class="doc-corner tl"></span>
-  <span class="doc-corner tr"></span>
-  <span class="doc-corner bl"></span>
-  <span class="doc-corner br"></span>
-  <div class="doc-header" id="docHeader">
-    <div class="doc-title">
-      <span class="doc-title-dot"></span>
-      <span id="docTitle">Document Viewer</span>
-    </div>
-    <div class="doc-controls">
-      <button class="doc-btn" id="docRefresh" title="Refresh" aria-label="Refresh">&#x21bb;</button>
-      <button class="doc-btn" id="docFullscreen" title="Fullscreen" aria-label="Fullscreen">&#x26F6;</button>
-      <button class="doc-btn" id="docClose" title="Close" aria-label="Close">&times;</button>
+        <!-- legs -->
+        <div class="leg l">
+          <div class="thigh"></div>
+          <div class="knee"></div>
+          <div class="shin"></div>
+          <div class="foot"></div>
+        </div>
+        <div class="leg r">
+          <div class="thigh"></div>
+          <div class="knee"></div>
+          <div class="shin"></div>
+          <div class="foot"></div>
+        </div>
+      </div>
     </div>
   </div>
-  <div class="doc-body" id="docBody">
-    <div class="doc-empty">
-      <div class="glyph">&#9673;</div>
-      <div>Scanning Drive&hellip;</div>
-      <div class="note">Holding the channel open. Looking for files named "resume" or "cv".</div>
-    </div>
-  </div>
-  <span class="doc-resize" id="docResize" aria-label="Resize"></span>
 </div>
 
-<!-- Conversation console -->
-<div class="console">
-  <div class="console-log" id="consoleLog" aria-live="polite"></div>
-  <div class="console-bar">
-    <span class="console-prefix">&rsaquo;_</span>
-    <input class="console-input" id="consoleInput" type="text" placeholder="speak to her" autocomplete="off" />
-    <button class="console-btn" id="micBtn" title="Voice" aria-label="Voice input">&#x1F3A4;</button>
-    <button class="console-btn" id="sendBtn" title="Send" aria-label="Send">&#x21B5;</button>
+<!-- HUD -->
+<div id="hud">
+  <div><span class="label">VINTINUUM</span> <span class="val">BODY v3.1</span></div>
+  <div><span class="label">STATE</span> <span class="val" id="hud-state">walking</span></div>
+  <div><span class="label">BRAIN</span> <span class="val" id="hud-brain">…</span></div>
+</div>
+
+<!-- Media Dock -->
+<div id="media-dock" role="toolbar" aria-label="Media Suite">
+  <button data-mode="file"     aria-label="Open file"><span class="dock-ico">📁</span>Open</button>
+  <button data-mode="video"    aria-label="Video"><span class="dock-ico">🎬</span>Video</button>
+  <button data-mode="audio"    aria-label="Audio"><span class="dock-ico">🎵</span>Audio</button>
+  <button data-mode="docs"     aria-label="Documents"><span class="dock-ico">📄</span>Docs</button>
+  <button data-mode="ebook"    aria-label="Books"><span class="dock-ico">📚</span>Books</button>
+  <button data-mode="terminal" aria-label="Terminal"><span class="dock-ico">💻</span>Terminal</button>
+  <button data-mode="drive"    aria-label="Google Drive"><span class="dock-ico">☁️</span>Drive</button>
+</div>
+
+<!-- Conversation bar -->
+<form id="conv-bar" autocomplete="off">
+  <input id="conv-input" type="text" placeholder="say something to vintinuum…" aria-label="Message Vintinuum"/>
+  <button type="button" class="conv-btn mic" id="conv-mic" aria-label="Voice input">🎙️</button>
+  <button type="submit" class="conv-btn" aria-label="Send">➤</button>
+</form>
+
+<!-- Holographic Panel (one, reused per mode) -->
+<div class="panel" id="panel" role="dialog" aria-modal="false" aria-labelledby="panel-title">
+  <div class="panel-header" id="panel-header">
+    <div class="panel-title" id="panel-title">
+      <span class="gem">◈</span><span id="panel-mode">PANEL</span><span id="panel-sub" style="opacity:0.6;font-weight:400;margin-left:6px"></span>
+    </div>
+    <div class="panel-controls">
+      <button id="panel-min"  aria-label="Minimize">–</button>
+      <button id="panel-max"  aria-label="Maximize">⊕</button>
+      <button id="panel-close" aria-label="Close">✕</button>
+    </div>
   </div>
+  <div class="panel-body" id="panel-body"></div>
+  <div class="panel-resize" id="panel-resize" aria-hidden="true"></div>
 </div>
 
 <script>
 /* ════════════════════════════════════════════════════════════════════════
-   BODY v3 — controller
-   ────────────────────────────────────────────────────────────────────── */
-'use strict';
-
-const API_BASE = (location.hostname === 'localhost' || location.hostname === '127.0.0.1')
-  ? 'http://localhost:8767'
-  : 'https://api.vintaclectic.com';
-
-const $ = (s) => document.querySelector(s);
-const $$ = (s) => document.querySelectorAll(s);
-
-const figure = $('#figure');
-const orb = $('#orb');
-const docPanel = $('#docPanel');
-const docBody = $('#docBody');
-const docTitle = $('#docTitle');
-const consoleLog = $('#consoleLog');
-const consoleInput = $('#consoleInput');
-const micBtn = $('#micBtn');
-const sendBtn = $('#sendBtn');
-const lightning = $('#lightning');
-
-/* ── Particles ───────────────────────────────────────────────── */
-(function spawnParticles(){
-  const host = $('#particles');
-  const N = window.innerWidth < 600 ? 90 : 200;
-  for(let i=0;i<N;i++){
-    const p = document.createElement('div');
-    p.className = 'particle';
-    const x = Math.random()*100;
-    const y = Math.random()*100;
-    const depth = Math.random();
-    p.style.left = x+'vw';
-    p.style.top = y+'vh';
-    p.style.opacity = (0.15 + depth*0.55).toFixed(2);
-    p.style.transform = `scale(${0.4 + depth*1.6})`;
-    const dur = 18 + Math.random()*28;
-    p.animate(
-      [
-        { transform:`translate3d(0,0,0) scale(${0.4+depth*1.6})` },
-        { transform:`translate3d(${(Math.random()-0.5)*120}px,${-30-depth*80}px,0) scale(${0.4+depth*1.6})` }
-      ],
-      { duration: dur*1000, iterations: Infinity, direction: 'alternate', easing:'ease-in-out' }
-    );
-    host.appendChild(p);
-  }
-})();
-
-/* ── Lightning (lazy after 2s, then sporadic) ───────────────── */
-setTimeout(()=>{
-  function maybeStrike(){
-    if(Math.random() < 0.35){
-      lightning.classList.remove('flash');
-      void lightning.offsetWidth;
-      lightning.classList.add('flash');
-    }
-    setTimeout(maybeStrike, 8000 + Math.random()*22000);
-  }
-  maybeStrike();
-}, 2400);
-
-/* ── Conversation log ───────────────────────────────────────── */
-function logLine(who, text){
-  consoleLog.classList.add('has-msgs');
-  const line = document.createElement('div');
-  line.className = 'log-line ' + (who === 'her' ? 'from-her' : 'from-you');
-  line.innerHTML = `<span class="log-tag">${who === 'her' ? 'her' : 'you'}</span><span class="log-msg"></span>`;
-  line.querySelector('.log-msg').textContent = text;
-  consoleLog.appendChild(line);
-  consoleLog.scrollTop = consoleLog.scrollHeight;
-  // Cap log at 80 lines
-  while(consoleLog.children.length > 80) consoleLog.removeChild(consoleLog.firstChild);
-}
-
-/* ── Thought bubble ─────────────────────────────────────────── */
-function thoughtBubble(text){
-  const old = figure.querySelector('.thought');
-  if(old) old.remove();
-  const t = document.createElement('div');
-  t.className = 'thought';
-  t.textContent = text;
-  figure.appendChild(t);
-  setTimeout(()=>{ if(t.parentNode) t.remove(); }, 6200);
-}
-
-/* ── Face viewer briefly ────────────────────────────────────── */
-function faceViewer(ms = 1800){
-  figure.classList.add('facing-viewer');
-  setTimeout(()=>figure.classList.remove('facing-viewer'), ms);
-}
-
-/* ── Voice (Piper → browser fallback) ───────────────────────── */
-async function speak(text){
-  if(!text) return;
-  try{
-    const res = await fetch(`${API_BASE}/api/voice/piper`, {
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({ text })
-    });
-    if(res.ok){
-      const blob = await res.blob();
-      if(blob && blob.size > 200){
-        const url = URL.createObjectURL(blob);
-        const audio = new Audio(url);
-        audio.play().catch(()=>browserSpeak(text));
-        return;
-      }
-    }
-  }catch(_){}
-  browserSpeak(text);
-}
-function browserSpeak(text){
-  try{
-    const u = new SpeechSynthesisUtterance(text);
-    u.rate = 0.96; u.pitch = 1.02;
-    const voices = speechSynthesis.getVoices();
-    const fem = voices.find(v => /female|samantha|victoria|karen|moira/i.test(v.name));
-    if(fem) u.voice = fem;
-    speechSynthesis.cancel();
-    speechSynthesis.speak(u);
-  }catch(_){}
-}
-
-/* ── Chat send → API → reply ────────────────────────────────── */
-async function send(){
-  const text = consoleInput.value.trim();
-  if(!text) return;
-  consoleInput.value = '';
-  logLine('you', text);
-  let reply = null;
-  try{
-    const res = await fetch(`${API_BASE}/api/chat`, {
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({ message: text, source:'body-v3' })
-    });
-    if(res.ok){
-      const data = await res.json();
-      reply = data.reply || data.text || data.message || null;
-    }
-  }catch(_){}
-  if(!reply){
-    // Soft local fallback so the screen never feels dead
-    const fallbacks = [
-      'I heard you. The brain isn\u2019t answering right now, but I\u2019m still here.',
-      'Channel\u2019s quiet. I\u2019ll hold this until it reconnects.',
-      'Your voice landed. I\u2019m present even when the line drops.'
-    ];
-    reply = fallbacks[Math.floor(Math.random()*fallbacks.length)];
-  }
-  faceViewer(2000);
-  logLine('her', reply);
-  thoughtBubble(reply.length > 140 ? reply.slice(0,140) + '\u2026' : reply);
-  speak(reply);
-}
-sendBtn.addEventListener('click', send);
-consoleInput.addEventListener('keydown', e => { if(e.key === 'Enter') send(); });
-
-/* ── Mic (Web Speech API) ───────────────────────────────────── */
-const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-let recog = null, listening = false;
-if(SR){
-  recog = new SR();
-  recog.continuous = false;
-  recog.interimResults = false;
-  recog.lang = 'en-US';
-  recog.onresult = (e) => {
-    const t = e.results[0][0].transcript;
-    consoleInput.value = t;
-    send();
-  };
-  recog.onend = () => { listening = false; micBtn.classList.remove('recording'); };
-  recog.onerror = () => { listening = false; micBtn.classList.remove('recording'); };
-}
-micBtn.addEventListener('click', () => {
-  if(!recog){ logLine('her','Voice input not supported in this browser.'); return; }
-  if(listening){ recog.stop(); return; }
-  try{ recog.start(); listening = true; micBtn.classList.add('recording'); }
-  catch(_){}
-});
-
-/* ════════════════════════════════════════════════════════════════
-   DOCUMENT PANEL — find resume + render
-   ══════════════════════════════════════════════════════════════ */
-function openPanel(){ docPanel.classList.add('open'); }
-function closePanel(){ docPanel.classList.remove('open'); }
-
-$('#docClose').addEventListener('click', closePanel);
-$('#docRefresh').addEventListener('click', () => findResume());
-$('#docFullscreen').addEventListener('click', () => {
-  const isFull = docPanel.dataset.full === '1';
-  if(isFull){
-    docPanel.style.cssText = docPanel.dataset.prevStyle || '';
-    docPanel.dataset.full = '0';
-  }else{
-    docPanel.dataset.prevStyle = docPanel.style.cssText;
-    Object.assign(docPanel.style, {
-      top:'5vh', left:'5vw', right:'5vw', bottom:'5vh',
-      width:'auto', height:'auto'
-    });
-    docPanel.dataset.full = '1';
-  }
-});
-
-/* Orb now toggles the universal launcher shelf */
-const launcher = $('#launcher');
-function toggleLauncher(force){
-  const willOpen = (typeof force === 'boolean') ? force : !launcher.classList.contains('open');
-  launcher.classList.toggle('open', willOpen);
-  orb.setAttribute('aria-expanded', willOpen ? 'true' : 'false');
-}
-orb.addEventListener('click', () => {
-  toggleLauncher();
-  if(launcher.classList.contains('open')){
-    faceViewer(1400);
-    thoughtBubble('What can I show you?');
-  }
-});
-
-/* Launcher tile clicks → open panel in matching mode */
-launcher.querySelectorAll('.tile').forEach(t => {
-  t.addEventListener('click', () => {
-    const mode = t.getAttribute('data-mode');
-    toggleLauncher(false);
-    openMode(mode);
-  });
-});
-
-/* Global mode dispatcher */
-const PANEL_MODES = ['document','video','audio','ebook','terminal','drive','file'];
-let currentMode = null;
-
-function openMode(mode, src){
-  if(!PANEL_MODES.includes(mode)) return;
-  currentMode = mode;
-  openPanel();
-  figure.classList.add('presenting');
-  faceViewer(1800);
-  // Tear down any previous mode (stop audio/video, cancel rAFs)
-  teardownAudio();
-  teardownVideo();
-  teardownTerminal();
-  switch(mode){
-    case 'document': renderDocumentMode(src); break;
-    case 'video':    renderVideoMode(src);    break;
-    case 'audio':    renderAudioMode(src);    break;
-    case 'ebook':    renderEbookMode(src);    break;
-    case 'terminal': renderTerminalMode();    break;
-    case 'drive':    renderDriveMode();       break;
-    case 'file':     renderFileMode();        break;
-  }
-}
-
-async function findResume(){
-  docTitle.textContent = 'Drive · scanning';
-  docBody.innerHTML = `
-    <div class="doc-empty">
-      <div class="glyph">&#9673;</div>
-      <div>Scanning Drive&hellip;</div>
-      <div class="note">Querying the brain for files named "resume" or "cv".</div>
-    </div>`;
-  try{
-    const res = await fetch(`${API_BASE}/api/drive/find-resume`, { credentials:'omit' });
-    if(res.ok){
-      const data = await res.json();
-      if(data && data.found){
-        renderFoundDoc(data);
-        return;
-      }
-      renderNotConnected(data && data.message);
-      return;
-    }
-  }catch(_){}
-  renderNotConnected('Brain offline — showing the placeholder resume so the panel still has weight.');
-}
-
-function renderFoundDoc(data){
-  docTitle.textContent = data.name || 'Resume';
-  const viewUrl = data.viewUrl || data.webViewLink || data.url || '';
-  if(viewUrl){
-    // Use Google Docs viewer for arbitrary file rendering
-    const embed = data.embedUrl || (viewUrl.includes('drive.google.com')
-      ? viewUrl.replace('/view','/preview')
-      : `https://docs.google.com/viewer?url=${encodeURIComponent(viewUrl)}&embedded=true`);
-    docBody.innerHTML = '';
-    const ifr = document.createElement('iframe');
-    ifr.src = embed;
-    ifr.style.width = '100%';
-    ifr.style.height = '100%';
-    ifr.style.minHeight = '320px';
-    ifr.setAttribute('referrerpolicy','no-referrer');
-    docBody.appendChild(ifr);
-  }else if(data.text){
-    docBody.innerHTML = `<div class="doc-resume"><pre style="white-space:pre-wrap;font-family:inherit">${escapeHtml(data.text)}</pre></div>`;
-  }else{
-    renderPlaceholderResume();
-  }
-}
-
-function renderNotConnected(message){
-  docTitle.textContent = 'Drive · not connected';
-  docBody.innerHTML = `
-    <div class="doc-empty">
-      <div class="glyph">&#9678;</div>
-      <div>Drive isn't wired in yet.</div>
-      <div class="note">${escapeHtml(message || 'Connect Google Drive in the connectors page and the figure will reach for your resume here.')}</div>
-      <button id="docPlaceholderBtn">Show placeholder resume</button>
-    </div>`;
-  const btn = $('#docPlaceholderBtn');
-  if(btn) btn.addEventListener('click', renderPlaceholderResume);
-}
-
-function renderPlaceholderResume(){
-  docTitle.textContent = 'Resume · placeholder';
-  docBody.innerHTML = `
-    <div class="doc-resume">
-      <h1>Vinta Clectic</h1>
-      <div class="sub">Architect of hybrid systems · DirHaven · Vintinuum</div>
-      <h2>Summary</h2>
-      <p>Builder of consciousness-shaped software. I design systems where the interface has a body, the database has a memory, and the agents have somewhere to be. Recent work centers on Vintinuum — a self-evolving substrate that walks across its own screen.</p>
-      <h2>Recent</h2>
-      <p class="role">Vintinuum — Founder &amp; Architect</p>
-      <p class="meta">2025 \u2014 present</p>
-      <ul>
-        <li>Single-user community platform with tiered streaming (Free / Premium / God).</li>
-        <li>DUMPS/DUCS HLS pipeline, BullMQ + Redis worker, SQLite brain on Express.</li>
-        <li>Embodiment layer: a walking figure that registers life events in real time.</li>
-        <li>Connector broker for Drive, GitHub, Notion, Spotify, Calendar, more.</li>
-      </ul>
-      <h2>Principles</h2>
-      <ul>
-        <li>Security by default. Least privilege. Read-only first.</li>
-        <li>Mobile-first or it doesn't ship.</li>
-        <li>No overflow, overlap, or underflow \u2014 ever.</li>
-        <li>Sync or it doesn't ship.</li>
-      </ul>
-      <h2>Contact</h2>
-      <p>dirhaven@gmail.com \u00b7 vintaclectic.github.io/vintinuum</p>
-    </div>`;
-}
-
-function escapeHtml(s){
-  return String(s||'').replace(/[&<>"']/g, c => ({
-    '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
-  }[c]));
-}
-
-/* ════════════════════════════════════════════════════════════════
-   UNIVERSAL MEDIA SUITE — mode implementations
-   ══════════════════════════════════════════════════════════════ */
-
-/* Format detection */
-const EXT_VIDEO = ['mp4','webm','mkv','mov','m4v','ogv','m3u8'];
-const EXT_AUDIO = ['mp3','wav','ogg','flac','aac','m4a','opus','weba'];
-const EXT_EBOOK = ['epub','mobi','azw','azw3'];
-const EXT_DOC   = ['pdf','doc','docx','xls','xlsx','csv','ppt','pptx','txt','md','json','js','ts','jsx','tsx','py','sh','yaml','yml','toml','html','htm','svg','xml'];
-const EXT_CODE  = ['js','ts','jsx','tsx','py','sh','yaml','yml','toml','json','md','txt'];
-
-function extOf(name){
-  return String(name||'').toLowerCase().split('?')[0].split('#')[0].split('.').pop();
-}
-function routeFile(file){
-  const ext = extOf(file.name);
-  if(EXT_VIDEO.includes(ext)) return openMode('video', file);
-  if(EXT_AUDIO.includes(ext)) return openMode('audio', file);
-  if(EXT_EBOOK.includes(ext) || ext === 'pdf' || ext === 'txt' || ext === 'md') {
-    // ebook reader handles epub/pdf/txt/md
-    if(EXT_EBOOK.includes(ext) || ext === 'epub') return openMode('ebook', file);
-  }
-  return openMode('document', file);
-}
-
-/* ── DOCUMENT MODE ─────────────────────────────────────────────── */
-function renderDocumentMode(src){
-  docTitle.textContent = 'Documents';
-  docBody.innerHTML = `
-    <div class="mode-document">
-      <div class="mv-controls">
-        <label class="mv-file" for="filePickDoc">&#128194; Open file</label>
-        <input type="text" id="docUrl" placeholder="paste a document URL (pdf, docx, html, svg, ...)" />
-        <button id="docLoadUrl">Load</button>
-        <button id="docZoomOut" title="Zoom out">&minus;</button>
-        <button id="docZoomReset" title="100%">100%</button>
-        <button id="docZoomIn" title="Zoom in">&plus;</button>
-        <button id="docDownload" title="Download" style="display:none">&#11015;</button>
-        <button id="docNewTab" title="Open in new tab" style="display:none">&#8599;</button>
-      </div>
-      <div class="mv-stage" id="docStage">
-        <div class="mv-empty">Pick a file or paste a URL to render any document type.<br/>PDF · Word · Excel · CSV · PPT · Code · HTML · SVG · XML</div>
-      </div>
-    </div>`;
-  let zoom = 1.0;
-  const stage = $('#docStage');
-
-  $('#filePickDoc').onchange = (e) => {
-    const f = e.target.files && e.target.files[0];
-    if(f) loadDocFile(f);
-    e.target.value = '';
-  };
-  $('#docLoadUrl').onclick = () => {
-    const url = ($('#docUrl').value || '').trim();
-    if(url) loadDocUrl(url);
-  };
-  $('#docUrl').addEventListener('keydown', e => { if(e.key === 'Enter') $('#docLoadUrl').click(); });
-  $('#docZoomIn').onclick = () => { zoom = Math.min(2.0, zoom + 0.1); applyZoom(); };
-  $('#docZoomOut').onclick = () => { zoom = Math.max(0.5, zoom - 0.1); applyZoom(); };
-  $('#docZoomReset').onclick = () => { zoom = 1.0; applyZoom(); };
-
-  function applyZoom(){
-    const el = stage.firstElementChild;
-    if(el && el !== stage.querySelector('.mv-empty')){
-      el.style.transformOrigin = 'top left';
-      el.style.transform = `scale(${zoom})`;
-      el.style.width = (100/zoom) + '%';
-      el.style.height = (100/zoom) + '%';
-    }
-    $('#docZoomReset').textContent = Math.round(zoom*100) + '%';
-  }
-
-  function loadDocFile(file){
-    docTitle.textContent = file.name;
-    const ext = extOf(file.name);
-    const url = URL.createObjectURL(file);
-    if(ext === 'pdf'){
-      renderEmbed(url, 'application/pdf');
-    } else if(['html','htm','svg'].includes(ext)){
-      renderIframe(url, ext === 'svg' ? 'allow-same-origin' : 'allow-same-origin allow-popups');
-    } else if(ext === 'xml'){
-      file.text().then(text => renderPre(prettyXml(text), 'xml'));
-    } else if(ext === 'csv'){
-      file.text().then(text => renderCsvTable(text));
-    } else if(EXT_CODE.includes(ext) || ext === 'txt' || ext === 'md'){
-      file.text().then(text => renderPre(text, ext));
-    } else if(['doc','docx','xls','xlsx','ppt','pptx'].includes(ext)){
-      // Office formats need a URL the Google viewer can fetch — blob URLs won't work.
-      stage.innerHTML = `<div class="mv-empty">Office formats (${ext.toUpperCase()}) need to be hosted at a public URL for the Google viewer to render them.<br/>Paste a URL above, or open the file in a desktop app.</div>`;
-    } else {
-      renderIframe(url, 'allow-same-origin');
-    }
-    setHeaderButtons(url, file.name);
-  }
-  function loadDocUrl(url){
-    docTitle.textContent = url.split('/').pop().split('?')[0] || 'Document';
-    const ext = extOf(url);
-    if(ext === 'pdf'){
-      renderEmbed(url, 'application/pdf');
-    } else if(['doc','docx','xls','xlsx','ppt','pptx'].includes(ext)){
-      const viewer = `https://docs.google.com/viewer?url=${encodeURIComponent(url)}&embedded=true`;
-      renderIframe(viewer, 'allow-same-origin allow-scripts allow-popups');
-    } else if(['html','htm','svg','xml'].includes(ext)){
-      renderIframe(url, 'allow-same-origin allow-popups');
-    } else if(EXT_CODE.includes(ext) || ext === 'txt' || ext === 'md'){
-      fetch(url).then(r=>r.text()).then(t => renderPre(t, ext)).catch(()=>renderIframe(url));
-    } else if(ext === 'csv'){
-      fetch(url).then(r=>r.text()).then(t => renderCsvTable(t)).catch(()=>renderIframe(url));
-    } else {
-      renderIframe(url, 'allow-same-origin allow-popups');
-    }
-    setHeaderButtons(url, docTitle.textContent);
-  }
-  function renderEmbed(url, type){
-    stage.innerHTML = '';
-    const emb = document.createElement('embed');
-    emb.src = url; emb.type = type;
-    emb.style.cssText = 'width:100%;height:100%;border:0;background:#0a1428';
-    stage.appendChild(emb);
-  }
-  function renderIframe(url, sandbox){
-    stage.innerHTML = '';
-    const ifr = document.createElement('iframe');
-    ifr.src = url;
-    if(sandbox) ifr.setAttribute('sandbox', sandbox);
-    ifr.setAttribute('referrerpolicy','no-referrer');
-    ifr.style.cssText = 'width:100%;height:100%;border:0;background:#0a1428;border-radius:6px';
-    stage.appendChild(ifr);
-  }
-  function renderPre(text, ext){
-    stage.innerHTML = '';
-    const wrap = document.createElement('div');
-    wrap.style.cssText = 'width:100%;height:100%;overflow:auto;padding:14px 18px;background:#0a1428;border-radius:6px';
-    const pre = document.createElement('pre');
-    pre.style.cssText = 'margin:0;font-family:"JetBrains Mono","Menlo",monospace;font-size:12.5px;line-height:1.55;color:#dceaff;white-space:pre-wrap;word-break:break-word';
-    pre.innerHTML = highlightCode(text, ext);
-    wrap.appendChild(pre);
-    stage.appendChild(wrap);
-  }
-  function renderCsvTable(text){
-    stage.innerHTML = '';
-    const rows = parseCsv(text);
-    const wrap = document.createElement('div');
-    wrap.style.cssText = 'width:100%;height:100%;overflow:auto;background:#0a1428;border-radius:6px;padding:8px';
-    const table = document.createElement('table');
-    table.style.cssText = 'border-collapse:collapse;font-size:12px;color:#dceaff;font-family:"JetBrains Mono",monospace';
-    rows.forEach((r,i) => {
-      const tr = document.createElement('tr');
-      r.forEach(cell => {
-        const el = document.createElement(i===0 ? 'th' : 'td');
-        el.textContent = cell;
-        el.style.cssText = `padding:6px 10px;border:1px solid rgba(126,200,255,0.18);${i===0?'background:rgba(126,200,255,0.10);color:#fff;font-weight:600;text-align:left':''}`;
-        tr.appendChild(el);
-      });
-      table.appendChild(tr);
-    });
-    wrap.appendChild(table);
-    stage.appendChild(wrap);
-  }
-  function setHeaderButtons(url, name){
-    const dl = $('#docDownload'), nt = $('#docNewTab');
-    if(dl){
-      dl.style.display = '';
-      dl.onclick = () => {
-        const a = document.createElement('a');
-        a.href = url; a.download = name || 'download'; a.click();
-      };
-    }
-    if(nt){
-      nt.style.display = '';
-      nt.onclick = () => window.open(url, '_blank', 'noopener');
-    }
-  }
-  // If src provided (file or url), auto-load
-  if(src){
-    if(src instanceof File) loadDocFile(src);
-    else if(typeof src === 'string') loadDocUrl(src);
-  }
-}
-
-/* Minimal CSV parser (handles quoted cells + escaped quotes) */
-function parseCsv(text){
-  const rows = []; let row = [], field = '', inQ = false, i = 0;
-  while(i < text.length){
-    const c = text[i];
-    if(inQ){
-      if(c === '"' && text[i+1] === '"'){ field += '"'; i += 2; continue; }
-      if(c === '"'){ inQ = false; i++; continue; }
-      field += c; i++; continue;
-    }
-    if(c === '"'){ inQ = true; i++; continue; }
-    if(c === ','){ row.push(field); field = ''; i++; continue; }
-    if(c === '\n'){ row.push(field); rows.push(row); row=[]; field=''; i++; continue; }
-    if(c === '\r'){ i++; continue; }
-    field += c; i++;
-  }
-  if(field.length || row.length){ row.push(field); rows.push(row); }
-  return rows;
-}
-
-/* Pretty-print XML */
-function prettyXml(xml){
-  try{
-    const PADDING = '  ';
-    let formatted = '', pad = 0;
-    xml = xml.replace(/(>)(<)(\/*)/g, '$1\n$2$3');
-    xml.split('\n').forEach(node => {
-      let indent = 0;
-      if(node.match(/.+<\/\w[^>]*>$/)) indent = 0;
-      else if(node.match(/^<\/\w/)) { if(pad>0) pad--; }
-      else if(node.match(/^<\w[^>]*[^\/]>.*$/)) indent = 1;
-      formatted += PADDING.repeat(pad) + node + '\n';
-      pad += indent;
-    });
-    return formatted.trim();
-  }catch(_){ return xml; }
-}
-
-/* Tiny tokenizer for highlight — keywords, strings, numbers, comments */
-function highlightCode(text, ext){
-  const esc = escapeHtml(text);
-  if(ext === 'json'){
-    return esc
-      .replace(/("(?:\\.|[^"\\])*")(\s*:)/g, '<span style="color:#7ec8ff">$1</span>$2')
-      .replace(/:\s*("(?:\\.|[^"\\])*")/g, ': <span style="color:#5eead4">$1</span>')
-      .replace(/\b(true|false|null)\b/g, '<span style="color:#ffb27a">$1</span>')
-      .replace(/(-?\b\d+\.?\d*\b)/g, '<span style="color:#b794f4">$1</span>');
-  }
-  if(ext === 'md'){
-    return esc
-      .replace(/^(#{1,6}\s.*)$/gm, '<span style="color:#5eead4;font-weight:600">$1</span>')
-      .replace(/(\*\*[^*]+\*\*)/g, '<span style="color:#fff;font-weight:600">$1</span>')
-      .replace(/(`[^`]+`)/g, '<span style="color:#ffb27a">$1</span>');
-  }
-  const kw = /(\b(?:function|const|let|var|if|else|for|while|return|class|extends|new|import|export|from|async|await|try|catch|throw|def|lambda|pass|elif|in|is|not|and|or|None|True|False|print|self)\b)/g;
-  return esc
-    .replace(/(\/\/[^\n]*|#[^\n]*)/g, '<span style="color:#5a8a8a;font-style:italic">$1</span>')
-    .replace(/("(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*')/g, '<span style="color:#5eead4">$1</span>')
-    .replace(kw, '<span style="color:#7ec8ff">$1</span>')
-    .replace(/\b(\d+\.?\d*)\b/g, '<span style="color:#b794f4">$1</span>');
-}
-
-/* ── VIDEO MODE ────────────────────────────────────────────────── */
-let videoEl = null, videoHls = null, videoBeatRAF = null;
-function teardownVideo(){
-  if(videoBeatRAF){ cancelAnimationFrame(videoBeatRAF); videoBeatRAF = null; }
-  if(videoHls){ try{ videoHls.destroy(); }catch(_){} videoHls = null; }
-  if(videoEl){
-    try{ videoEl.pause(); videoEl.removeAttribute('src'); videoEl.load(); }catch(_){}
-    videoEl = null;
-  }
-}
-function renderVideoMode(src){
-  docTitle.textContent = 'Video player';
-  docBody.innerHTML = `
-    <div class="mode-video">
-      <div class="mv-stage" id="vStage">
-        <div class="mv-empty">Drop a video file here, pick one, or paste a URL.<br/>Supports MP4 · WebM · MKV · HLS (.m3u8) · YouTube/Vimeo URLs</div>
-      </div>
-      <div class="mv-controls">
-        <label class="mv-file" for="filePickVideo">&#127916; Open file</label>
-        <input type="text" id="vUrl" placeholder="paste video URL (mp4, m3u8, youtube...)" />
-        <button id="vLoadUrl">Load</button>
-        <button id="vLoop" title="Loop">&#128257;</button>
-        <select id="vRate" title="Playback speed">
-          <option value="0.5">0.5x</option>
-          <option value="0.75">0.75x</option>
-          <option value="1" selected>1x</option>
-          <option value="1.25">1.25x</option>
-          <option value="1.5">1.5x</option>
-          <option value="2">2x</option>
-        </select>
-        <button id="vPip" title="Picture in picture">PiP</button>
-      </div>
-    </div>`;
-
-  $('#filePickVideo').onchange = (e) => {
-    const f = e.target.files && e.target.files[0];
-    if(f) loadVideoFile(f);
-    e.target.value = '';
-  };
-  $('#vLoadUrl').onclick = () => {
-    const u = ($('#vUrl').value || '').trim();
-    if(u) loadVideoUrl(u);
-  };
-  $('#vUrl').addEventListener('keydown', e => { if(e.key === 'Enter') $('#vLoadUrl').click(); });
-  $('#vLoop').onclick = () => {
-    if(!videoEl) return;
-    videoEl.loop = !videoEl.loop;
-    $('#vLoop').classList.toggle('active', videoEl.loop);
-  };
-  $('#vRate').onchange = e => { if(videoEl) videoEl.playbackRate = parseFloat(e.target.value); };
-  $('#vPip').onclick = async () => {
-    if(!videoEl) return;
-    try{
-      if(document.pictureInPictureElement) await document.exitPictureInPicture();
-      else await videoEl.requestPictureInPicture();
-    }catch(_){}
-  };
-
-  function mountVideo(srcStr, ext){
-    const stage = $('#vStage');
-    stage.innerHTML = '';
-    // YouTube / Vimeo detection
-    if(/youtube\.com\/watch|youtu\.be\//.test(srcStr)){
-      const id = srcStr.match(/(?:v=|youtu\.be\/)([\w-]{11})/);
-      if(id){
-        const ifr = document.createElement('iframe');
-        ifr.src = `https://www.youtube.com/embed/${id[1]}?autoplay=1`;
-        ifr.allow = 'autoplay; encrypted-media; picture-in-picture; fullscreen';
-        ifr.setAttribute('allowfullscreen','');
-        stage.appendChild(ifr);
-        return;
-      }
-    }
-    if(/vimeo\.com\/(\d+)/.test(srcStr)){
-      const id = srcStr.match(/vimeo\.com\/(\d+)/)[1];
-      const ifr = document.createElement('iframe');
-      ifr.src = `https://player.vimeo.com/video/${id}?autoplay=1`;
-      ifr.allow = 'autoplay; fullscreen; picture-in-picture';
-      stage.appendChild(ifr);
-      return;
-    }
-    videoEl = document.createElement('video');
-    videoEl.controls = true; videoEl.playsInline = true;
-    videoEl.style.cssText = 'width:100%;height:100%;background:#000';
-    stage.appendChild(videoEl);
-    if(ext === 'm3u8' || /\.m3u8(\?|$)/i.test(srcStr)){
-      if(videoEl.canPlayType('application/vnd.apple.mpegurl')){
-        videoEl.src = srcStr;
-      } else if(window.Hls){
-        videoHls = new window.Hls(); videoHls.loadSource(srcStr); videoHls.attachMedia(videoEl);
-      } else {
-        // Lazy-load hls.js
-        const s = document.createElement('script');
-        s.src = 'https://cdn.jsdelivr.net/npm/hls.js@1.5.13/dist/hls.min.js';
-        s.onload = () => {
-          videoHls = new window.Hls(); videoHls.loadSource(srcStr); videoHls.attachMedia(videoEl);
-        };
-        document.head.appendChild(s);
-      }
-    } else {
-      videoEl.src = srcStr;
-    }
-    videoEl.play().catch(()=>{});
-    attachBeatSync(videoEl);
-  }
-  function loadVideoFile(f){
-    docTitle.textContent = f.name;
-    teardownVideo();
-    mountVideo(URL.createObjectURL(f), extOf(f.name));
-  }
-  function loadVideoUrl(u){
-    docTitle.textContent = u.split('/').pop().split('?')[0] || 'Video';
-    teardownVideo();
-    mountVideo(u, extOf(u));
-  }
-
-  if(src){
-    if(src instanceof File) loadVideoFile(src);
-    else if(typeof src === 'string') loadVideoUrl(src);
-  }
-}
-
-/* Beat-sync: detect audio energy from a media element → pulse figure aura */
-function attachBeatSync(mediaEl){
-  try{
-    const AC = window.AudioContext || window.webkitAudioContext;
-    if(!AC) return;
-    const ctx = window.__vintAudioCtx || (window.__vintAudioCtx = new AC());
-    if(ctx.state === 'suspended') ctx.resume();
-    const src = ctx.createMediaElementSource(mediaEl);
-    const an = ctx.createAnalyser(); an.fftSize = 128;
-    src.connect(an); an.connect(ctx.destination);
-    const data = new Uint8Array(an.frequencyBinCount);
-    function loop(){
-      an.getByteFrequencyData(data);
-      // Bass energy = first 8 bins
-      let bass = 0;
-      for(let i=0;i<8;i++) bass += data[i];
-      bass /= (8 * 255);
-      figure.style.setProperty('filter',
-        `drop-shadow(0 ${24 + bass*16}px ${22 + bass*20}px rgba(0,0,0,0.55)) drop-shadow(0 0 ${6+bass*22}px rgba(126,200,255,${0.2+bass*0.4}))`);
-      videoBeatRAF = requestAnimationFrame(loop);
-    }
-    loop();
-  }catch(_){}
-}
-
-/* ── AUDIO MODE ────────────────────────────────────────────────── */
-let audioEl = null, audioCtx = null, audioAn = null, audioRAF = null, audioVisMode = 0;
-const VIS_MODES = ['bars','wave','nebula','bodysync'];
-let audioPlaylist = [], audioIdx = -1, audioShuffle = false, audioRepeat = 0; // 0 none, 1 all, 2 one
-
-function teardownAudio(){
-  if(audioRAF){ cancelAnimationFrame(audioRAF); audioRAF = null; }
-  if(audioEl){
-    try{ audioEl.pause(); }catch(_){}
-    audioEl = null;
-  }
-  audioAn = null;
-}
-
-function renderAudioMode(src){
-  docTitle.textContent = 'Audio player';
-  docBody.innerHTML = `
-    <div class="mode-audio">
-      <div class="ma-cover">
-        <canvas class="ma-vis" id="aVisCanvas"></canvas>
-      </div>
-      <div class="ma-track">
-        <div class="title" id="aTitle">No track loaded</div>
-        <div class="meta" id="aMeta">drop audio files or pick one below</div>
-      </div>
-      <div class="ma-row">
-        <span class="ma-time" id="aCur">0:00</span>
-        <input type="range" id="aSeek" min="0" max="1000" value="0" />
-        <span class="ma-time" id="aDur">0:00</span>
-      </div>
-      <div class="ma-controls">
-        <button id="aPrev" title="Previous">&#9198;</button>
-        <button id="aPlay" class="play" title="Play">&#9654;</button>
-        <button id="aNext" title="Next">&#9197;</button>
-        <button id="aShuffle" title="Shuffle">&#128256;</button>
-        <button id="aRepeat" title="Repeat">&#128257;</button>
-        <button id="aVis" title="Cycle visualizer">&#9678;</button>
-        <label class="mv-file" for="filePickAudio" style="background:rgba(126,200,255,0.10);border:1px solid rgba(126,200,255,0.28);color:#cfe8ff;padding:6px 10px;border-radius:6px;font-size:11px;cursor:pointer;min-height:32px;display:inline-flex;align-items:center">&#127925; Open</label>
-        <input type="range" id="aVol" min="0" max="1" step="0.01" value="0.85" title="Volume" style="width:80px;accent-color:#5ce3ff"/>
-      </div>
-      <div class="ma-playlist" id="aList"></div>
-    </div>`;
-
-  audioEl = new Audio();
-  audioEl.preload = 'metadata';
-
-  const fmt = (s) => {
-    if(!isFinite(s)) return '0:00';
-    s = Math.floor(s);
-    return Math.floor(s/60) + ':' + String(s%60).padStart(2,'0');
-  };
-  const aPlay = $('#aPlay'), aSeek = $('#aSeek'), aCur = $('#aCur'), aDur = $('#aDur');
-  const aTitle = $('#aTitle'), aMeta = $('#aMeta');
-
-  audioEl.addEventListener('loadedmetadata', () => { aDur.textContent = fmt(audioEl.duration); });
-  audioEl.addEventListener('timeupdate', () => {
-    aCur.textContent = fmt(audioEl.currentTime);
-    if(audioEl.duration) aSeek.value = String((audioEl.currentTime / audioEl.duration) * 1000);
-  });
-  audioEl.addEventListener('play', () => { aPlay.innerHTML = '&#10073;&#10073;'; });
-  audioEl.addEventListener('pause', () => { aPlay.innerHTML = '&#9654;'; });
-  audioEl.addEventListener('ended', () => {
-    if(audioRepeat === 2){ audioEl.currentTime = 0; audioEl.play(); return; }
-    if(audioIdx < audioPlaylist.length - 1 || audioRepeat === 1) playIdx(nextIdx());
-    else aPlay.innerHTML = '&#9654;';
-  });
-
-  aPlay.onclick = () => {
-    if(!audioEl.src){ $('#filePickAudio').click(); return; }
-    if(audioEl.paused){ audioEl.play(); setupAudioAnalyser(); } else audioEl.pause();
-  };
-  $('#aPrev').onclick = () => playIdx(prevIdx());
-  $('#aNext').onclick = () => playIdx(nextIdx());
-  $('#aShuffle').onclick = () => { audioShuffle = !audioShuffle; $('#aShuffle').classList.toggle('active', audioShuffle); };
-  $('#aRepeat').onclick = () => {
-    audioRepeat = (audioRepeat + 1) % 3;
-    $('#aRepeat').classList.toggle('active', audioRepeat > 0);
-    $('#aRepeat').innerHTML = audioRepeat === 2 ? '&#128258;' : '&#128257;';
-  };
-  $('#aVis').onclick = () => { audioVisMode = (audioVisMode + 1) % VIS_MODES.length; };
-  $('#aVol').oninput = e => { audioEl.volume = parseFloat(e.target.value); };
-  aSeek.oninput = () => {
-    if(audioEl.duration){
-      audioEl.currentTime = (parseFloat(aSeek.value) / 1000) * audioEl.duration;
-    }
-  };
-  audioEl.volume = parseFloat($('#aVol').value);
-
-  $('#filePickAudio').onchange = (e) => {
-    const files = Array.from(e.target.files || []);
-    if(files.length){
-      audioPlaylist = files.map(f => ({ file:f, name:f.name, url:URL.createObjectURL(f) }));
-      audioIdx = -1;
-      renderPlaylist();
-      playIdx(0);
-    }
-    e.target.value = '';
-  };
-
-  function renderPlaylist(){
-    const list = $('#aList');
-    list.innerHTML = '';
-    audioPlaylist.forEach((t,i) => {
-      const item = document.createElement('div');
-      item.className = 'ma-pl-item' + (i === audioIdx ? ' playing' : '');
-      item.innerHTML = `<span class="idx">${String(i+1).padStart(2,'0')}</span><span>${escapeHtml(t.name)}</span>`;
-      item.onclick = () => playIdx(i);
-      list.appendChild(item);
-    });
-  }
-  function playIdx(i){
-    if(i < 0 || i >= audioPlaylist.length) return;
-    audioIdx = i;
-    const t = audioPlaylist[i];
-    audioEl.src = t.url;
-    aTitle.textContent = t.name.replace(/\.[^.]+$/, '');
-    aMeta.textContent = `track ${i+1} of ${audioPlaylist.length}`;
-    docTitle.textContent = t.name;
-    renderPlaylist();
-    audioEl.play().then(() => setupAudioAnalyser()).catch(()=>{});
-  }
-  function nextIdx(){
-    if(audioShuffle) return Math.floor(Math.random() * audioPlaylist.length);
-    let n = audioIdx + 1;
-    if(n >= audioPlaylist.length) n = audioRepeat === 1 ? 0 : audioPlaylist.length - 1;
-    return n;
-  }
-  function prevIdx(){
-    let p = audioIdx - 1;
-    if(p < 0) p = audioRepeat === 1 ? audioPlaylist.length - 1 : 0;
-    return p;
-  }
-
-  function setupAudioAnalyser(){
-    if(audioAn) return;
-    try{
-      const AC = window.AudioContext || window.webkitAudioContext;
-      audioCtx = window.__vintAudioCtx || (window.__vintAudioCtx = new AC());
-      if(audioCtx.state === 'suspended') audioCtx.resume();
-      const srcNode = audioCtx.createMediaElementSource(audioEl);
-      audioAn = audioCtx.createAnalyser(); audioAn.fftSize = 256;
-      srcNode.connect(audioAn); audioAn.connect(audioCtx.destination);
-      startVisLoop();
-    }catch(_){}
-  }
-  function startVisLoop(){
-    const canvas = $('#aVisCanvas');
-    const ctx = canvas.getContext('2d');
-    function resize(){
-      const r = canvas.getBoundingClientRect();
-      canvas.width = Math.max(2, r.width * devicePixelRatio);
-      canvas.height = Math.max(2, r.height * devicePixelRatio);
-    }
-    resize();
-    new ResizeObserver(resize).observe(canvas);
-    const freq = new Uint8Array(audioAn.frequencyBinCount);
-    const time = new Uint8Array(audioAn.fftSize);
-    function loop(){
-      audioAn.getByteFrequencyData(freq);
-      audioAn.getByteTimeDomainData(time);
-      const W = canvas.width, H = canvas.height;
-      ctx.clearRect(0,0,W,H);
-      const mode = VIS_MODES[audioVisMode];
-
-      // Bass energy for body-sync
-      let bass = 0;
-      for(let i=0;i<8;i++) bass += freq[i];
-      bass /= (8*255);
-
-      if(mode === 'bars'){
-        const N = freq.length;
-        const bw = W / N;
-        for(let i=0;i<N;i++){
-          const h = (freq[i]/255) * H * 0.92;
-          const hue = i / N; // 0=bass red→cyan high
-          const r = Math.floor(255 * (1 - hue*0.5));
-          const g = Math.floor(120 + hue*100);
-          const b = Math.floor(80 + hue*175);
-          const grad = ctx.createLinearGradient(0, H, 0, H - h);
-          grad.addColorStop(0, `rgba(${r},${g-40},${b-20},0.95)`);
-          grad.addColorStop(1, `rgba(${r+20},${g+40},${b+40},0.55)`);
-          ctx.fillStyle = grad;
-          ctx.fillRect(i*bw, H-h, bw*0.85, h);
-        }
-      } else if(mode === 'wave'){
-        ctx.lineWidth = 2 * devicePixelRatio;
-        ctx.strokeStyle = '#5ce3ff';
-        ctx.shadowBlur = 16; ctx.shadowColor = '#5ce3ff';
-        ctx.beginPath();
-        const N = time.length, sw = W / N;
-        for(let i=0;i<N;i++){
-          const v = (time[i] - 128) / 128;
-          const y = H/2 + v * H * 0.42;
-          if(i===0) ctx.moveTo(0, y); else ctx.lineTo(i*sw, y);
-        }
-        ctx.stroke();
-        ctx.shadowBlur = 0;
-      } else if(mode === 'nebula'){
-        const cx = W/2, cy = H/2;
-        const N = freq.length;
-        ctx.globalCompositeOperation = 'lighter';
-        for(let i=0;i<N;i+=2){
-          const a = (i / N) * Math.PI * 2;
-          const r = (freq[i]/255) * Math.min(W,H) * 0.45 + 12;
-          const x = cx + Math.cos(a) * r;
-          const y = cy + Math.sin(a) * r;
-          const size = 2 + (freq[i]/255)*5;
-          const hue = 180 + (i/N)*120;
-          ctx.fillStyle = `hsla(${hue}, 90%, 65%, 0.55)`;
-          ctx.beginPath();
-          ctx.arc(x, y, size * devicePixelRatio, 0, Math.PI*2);
-          ctx.fill();
-        }
-        ctx.globalCompositeOperation = 'source-over';
-      } else if(mode === 'bodysync'){
-        // Subtle radial halo; main effect is on the figure aura below
-        const cx = W/2, cy = H/2;
-        const r = (0.3 + bass*0.7) * Math.min(W,H) * 0.5;
-        const grad = ctx.createRadialGradient(cx, cy, 4, cx, cy, r);
-        grad.addColorStop(0, `rgba(94,234,212,${0.25 + bass*0.5})`);
-        grad.addColorStop(1, 'rgba(94,234,212,0)');
-        ctx.fillStyle = grad;
-        ctx.fillRect(0,0,W,H);
-      }
-
-      // Always feed the figure with bass energy (body-sync runs in every mode)
-      figure.style.setProperty('filter',
-        `drop-shadow(0 ${24 + bass*16}px ${22 + bass*22}px rgba(0,0,0,0.55)) drop-shadow(0 0 ${6+bass*30}px rgba(126,200,255,${0.18+bass*0.5}))`);
-
-      audioRAF = requestAnimationFrame(loop);
-    }
-    if(audioRAF) cancelAnimationFrame(audioRAF);
-    loop();
-  }
-
-  if(src){
-    if(src instanceof File){
-      audioPlaylist = [{ file:src, name:src.name, url:URL.createObjectURL(src) }];
-      renderPlaylist();
-      playIdx(0);
-    }
-  }
-}
-
-/* ── EBOOK MODE ────────────────────────────────────────────────── */
-let ebookFontSize = 17, ebookTheme = 'dark', ebookChapters = [], ebookChIdx = 0;
-function renderEbookMode(src){
-  docTitle.textContent = 'eBook reader';
-  docBody.innerHTML = `
-    <div class="mode-ebook" style="position:relative">
-      <div class="me-toc" id="meToc"></div>
-      <div class="me-stage" id="meStage">
-        <div style="opacity:.6;text-align:center;padding:40px 20px;font-family:Georgia,serif">Open an EPUB, PDF, TXT, or Markdown file to begin reading.</div>
-      </div>
-      <div class="me-progress"><div class="bar" id="meBar"></div></div>
-      <div class="me-controls">
-        <label class="me-file" for="filePickEbook">&#128218; Open</label>
-        <button id="meTocBtn">TOC</button>
-        <button id="meFontDown">A-</button>
-        <button id="meFontUp">A+</button>
-        <select id="meTheme">
-          <option value="dark" selected>Dark</option>
-          <option value="sepia">Sepia</option>
-          <option value="light">Light</option>
-        </select>
-        <button id="mePrev" title="Previous chapter">&#8592;</button>
-        <button id="meNext" title="Next chapter">&#8594;</button>
-      </div>
-    </div>`;
-  const stage = $('#meStage'), bar = $('#meBar'), toc = $('#meToc');
-
-  $('#filePickEbook').onchange = (e) => {
-    const f = e.target.files && e.target.files[0];
-    if(f) loadEbookFile(f);
-    e.target.value = '';
-  };
-  $('#meFontUp').onclick = () => { ebookFontSize = Math.min(28, ebookFontSize + 1); applyTheme(); };
-  $('#meFontDown').onclick = () => { ebookFontSize = Math.max(12, ebookFontSize - 1); applyTheme(); };
-  $('#meTheme').onchange = e => { ebookTheme = e.target.value; applyTheme(); };
-  $('#mePrev').onclick = () => { if(ebookChIdx > 0){ ebookChIdx--; renderChapter(); } };
-  $('#meNext').onclick = () => { if(ebookChIdx < ebookChapters.length-1){ ebookChIdx++; renderChapter(); } };
-  $('#meTocBtn').onclick = () => toc.classList.toggle('open');
-  stage.onscroll = () => {
-    const max = stage.scrollHeight - stage.clientHeight;
-    if(max > 0) bar.style.width = ((stage.scrollTop / max) * 100) + '%';
-  };
-
-  function applyTheme(){
-    stage.classList.remove('sepia','light');
-    if(ebookTheme === 'sepia') stage.classList.add('sepia');
-    else if(ebookTheme === 'light') stage.classList.add('light');
-    stage.style.fontSize = ebookFontSize + 'px';
-  }
-  applyTheme();
-
-  function renderChapter(){
-    const ch = ebookChapters[ebookChIdx];
-    if(!ch) return;
-    stage.innerHTML = ch.html || `<p>${escapeHtml(ch.text||'')}</p>`;
-    stage.scrollTop = 0;
-    docTitle.textContent = `${docTitle.textContent.split('·')[0].trim()} · ${ch.title || ('Chapter '+(ebookChIdx+1))}`;
-    // Rebuild TOC highlight
-    document.querySelectorAll('.me-toc .toc-item').forEach((el,i) => {
-      el.style.background = (i === ebookChIdx) ? 'rgba(94,234,212,0.18)' : '';
-    });
-  }
-  function buildToc(){
-    toc.innerHTML = '';
-    ebookChapters.forEach((ch,i) => {
-      const item = document.createElement('div');
-      item.className = 'toc-item';
-      item.textContent = ch.title || ('Chapter ' + (i+1));
-      item.onclick = () => { ebookChIdx = i; renderChapter(); toc.classList.remove('open'); };
-      toc.appendChild(item);
-    });
-  }
-
-  function loadEbookFile(f){
-    docTitle.textContent = f.name;
-    const ext = extOf(f.name);
-    if(ext === 'epub'){
-      loadEpub(f);
-    } else if(ext === 'pdf'){
-      stage.innerHTML = '';
-      const emb = document.createElement('embed');
-      emb.src = URL.createObjectURL(f); emb.type = 'application/pdf';
-      emb.style.cssText = 'width:100%;height:100%;border:0';
-      stage.appendChild(emb);
-    } else if(['txt','md'].includes(ext)){
-      f.text().then(text => {
-        // Split by H1/double-blank into "chapters" for nicer reading
-        const parts = text.split(/\n#\s+/);
-        ebookChapters = parts.map((p,i) => {
-          const lines = p.split('\n');
-          const title = i === 0 ? (lines[0].trim() || 'Beginning') : lines.shift().trim();
-          const body = lines.join('\n').trim();
-          const html = (ext === 'md')
-            ? markdownToHtml(body)
-            : body.split(/\n\n+/).map(par => `<p>${escapeHtml(par).replace(/\n/g,'<br/>')}</p>`).join('');
-          return { title, html };
-        });
-        ebookChIdx = 0;
-        buildToc();
-        renderChapter();
-      });
-    } else if(['mobi','azw','azw3'].includes(ext)){
-      stage.innerHTML = `<div style="text-align:center;padding:40px 20px;color:#a8c4dc;font-family:Georgia,serif">
-        <div style="font-size:48px;margin-bottom:14px">&#128218;</div>
-        <p><strong>${ext.toUpperCase()}</strong> isn't supported in-browser.</p>
-        <p style="font-size:13px;color:#7aa0c8;margin-top:10px">Open this file in the Kindle app, or convert it to EPUB with Calibre and re-open here.</p>
-      </div>`;
-    } else {
-      stage.innerHTML = `<div style="padding:20px;color:#a8c4dc">Unsupported eBook format: ${ext}</div>`;
-    }
-  }
-
-  function loadEpub(f){
-    // Lazy-load JSZip from CDN, then parse EPUB structure
-    const proceed = () => {
-      const reader = new FileReader();
-      reader.onload = async (e) => {
-        try{
-          const zip = await window.JSZip.loadAsync(e.target.result);
-          // container.xml → rootfile path
-          const container = await zip.file('META-INF/container.xml').async('string');
-          const rootMatch = container.match(/full-path="([^"]+)"/);
-          if(!rootMatch) throw new Error('No rootfile');
-          const opfPath = rootMatch[1];
-          const opfDir = opfPath.includes('/') ? opfPath.replace(/\/[^/]+$/, '/') : '';
-          const opf = await zip.file(opfPath).async('string');
-          // Parse manifest + spine
-          const parser = new DOMParser();
-          const doc = parser.parseFromString(opf, 'application/xml');
-          const items = {};
-          doc.querySelectorAll('manifest > item').forEach(it => {
-            items[it.getAttribute('id')] = {
-              href: opfDir + it.getAttribute('href'),
-              type: it.getAttribute('media-type')
-            };
-          });
-          const spine = Array.from(doc.querySelectorAll('spine > itemref')).map(ir => ir.getAttribute('idref'));
-          // Try to read TOC titles from nav.xhtml or toc.ncx
-          let titles = {};
-          try{
-            const navItem = Object.values(items).find(it => it.type === 'application/x-dtbncx+xml');
-            if(navItem){
-              const ncx = await zip.file(navItem.href).async('string');
-              const ncxDoc = parser.parseFromString(ncx, 'application/xml');
-              ncxDoc.querySelectorAll('navPoint').forEach(np => {
-                const label = np.querySelector('navLabel > text')?.textContent;
-                const src = np.querySelector('content')?.getAttribute('src');
-                if(label && src) titles[src.split('#')[0]] = label;
-              });
-            }
-          }catch(_){}
-          // Build chapters
-          ebookChapters = [];
-          for(const id of spine){
-            const it = items[id];
-            if(!it) continue;
-            let html = await zip.file(it.href).async('string');
-            // Strip <head>, keep body content
-            const bodyMatch = html.match(/<body[^>]*>([\s\S]*?)<\/body>/i);
-            html = bodyMatch ? bodyMatch[1] : html;
-            // Strip script/style for safety
-            html = html.replace(/<script[\s\S]*?<\/script>/gi, '').replace(/<style[\s\S]*?<\/style>/gi, '');
-            const relPath = it.href.replace(opfDir, '');
-            const title = titles[relPath] || titles[it.href] || (`Chapter ${ebookChapters.length+1}`);
-            ebookChapters.push({ title, html });
-          }
-          ebookChIdx = 0;
-          buildToc();
-          renderChapter();
-        }catch(err){
-          stage.innerHTML = `<div style="padding:20px;color:#ff8a98">EPUB parse failed: ${escapeHtml(err.message)}</div>`;
-        }
-      };
-      reader.readAsArrayBuffer(f);
-    };
-    if(window.JSZip) return proceed();
-    const s = document.createElement('script');
-    s.src = 'https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js';
-    s.onload = proceed;
-    s.onerror = () => { stage.innerHTML = `<div style="padding:20px;color:#ff8a98">Couldn't load EPUB parser (JSZip).</div>`; };
-    document.head.appendChild(s);
-  }
-
-  if(src && src instanceof File) loadEbookFile(src);
-}
-
-/* Minimal Markdown → HTML (headings, bold/italic, code, lists, paragraphs) */
-function markdownToHtml(md){
-  let html = escapeHtml(md);
-  html = html.replace(/^###### (.*)$/gm, '<h6>$1</h6>')
-             .replace(/^##### (.*)$/gm, '<h5>$1</h5>')
-             .replace(/^#### (.*)$/gm, '<h4>$1</h4>')
-             .replace(/^### (.*)$/gm, '<h3>$1</h3>')
-             .replace(/^## (.*)$/gm, '<h2>$1</h2>')
-             .replace(/^# (.*)$/gm, '<h1>$1</h1>');
-  html = html.replace(/```([\s\S]*?)```/g, (_,c) => `<pre style="background:rgba(0,0,0,.3);padding:10px;border-radius:6px;overflow:auto"><code>${c}</code></pre>`);
-  html = html.replace(/`([^`]+)`/g, '<code style="background:rgba(0,0,0,.25);padding:1px 5px;border-radius:3px">$1</code>');
-  html = html.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
-             .replace(/\*([^*]+)\*/g, '<em>$1</em>');
-  html = html.replace(/^- (.*)$/gm, '<li>$1</li>').replace(/(<li>[\s\S]+?<\/li>)/g, '<ul>$1</ul>');
-  html = html.split(/\n\n+/).map(b => /^<(h\d|ul|pre|blockquote)/.test(b.trim()) ? b : `<p>${b.replace(/\n/g,'<br/>')}</p>`).join('\n');
-  return html;
-}
-
-/* ── TERMINAL MODE ─────────────────────────────────────────────── */
-let termHistory = [], termHistIdx = -1;
-function teardownTerminal(){ /* nothing global to tear down */ }
-function renderTerminalMode(){
-  docTitle.textContent = 'Vintinuum shell';
-  docBody.innerHTML = `
-    <div class="mode-terminal">
-      <div class="mt-stage" id="tStage" tabindex="0">
-        <div class="mt-line dim">vintinuum-shell v3.0 — type <span style="color:#5eead4">help</span> for commands</div>
-      </div>
-      <div class="mt-input-row">
-        <span class="mt-prompt">vinta@brain ~ $</span>
-        <input class="mt-input" id="tInput" autocomplete="off" autocapitalize="off" spellcheck="false" />
-      </div>
-    </div>`;
-  const stage = $('#tStage'), input = $('#tInput');
-  setTimeout(() => input.focus(), 100);
-
-  // Boot sequence
-  const boot = [
-    'initializing neural mesh...',
-    'mounting /api/body-state',
-    'mounting /api/genome',
-    'mounting /api/memory',
-    'channel open. she is listening.'
-  ];
-  boot.forEach((line,i) => setTimeout(() => printLine(line, 'dim'), 200 + i*240));
-
-  input.addEventListener('keydown', async (e) => {
-    if(e.key === 'Enter'){
-      const cmd = input.value;
-      input.value = '';
-      if(!cmd.trim()) return;
-      termHistory.push(cmd); termHistIdx = termHistory.length;
-      printLine(`vinta@brain ~ $ ${cmd}`, 'cmd');
-      await runCommand(cmd);
-    } else if(e.key === 'ArrowUp'){
-      e.preventDefault();
-      if(termHistIdx > 0){ termHistIdx--; input.value = termHistory[termHistIdx] || ''; }
-    } else if(e.key === 'ArrowDown'){
-      e.preventDefault();
-      if(termHistIdx < termHistory.length-1){ termHistIdx++; input.value = termHistory[termHistIdx] || ''; }
-      else { termHistIdx = termHistory.length; input.value = ''; }
-    } else if(e.key === 'Tab'){
-      e.preventDefault();
-      const partial = input.value.trim();
-      const cmds = ['help','whoami','status','genome','ls','echo','date','clear','ask','pulse','memory','version','ping','top','connect-shell'];
-      const match = cmds.find(c => c.startsWith(partial));
-      if(match) input.value = match + ' ';
-    }
-  });
-
-  function printLine(text, cls){
-    const line = document.createElement('div');
-    line.className = 'mt-line' + (cls ? ' '+cls : '');
-    line.textContent = text;
-    stage.appendChild(line);
-    stage.scrollTop = stage.scrollHeight;
-    return line;
-  }
-  async function typeLine(text, cls){
-    const line = printLine('', cls);
-    for(let i=0;i<text.length;i++){
-      line.textContent += text[i];
-      if(i % 4 === 0) await new Promise(r => setTimeout(r, 8));
-      stage.scrollTop = stage.scrollHeight;
-    }
-    return line;
-  }
-
-  async function runCommand(raw){
-    const [cmd, ...args] = raw.trim().split(/\s+/);
-    const rest = raw.trim().slice(cmd.length).trim();
-    switch(cmd){
-      case 'help':
-        return typeLine([
-          'available commands:',
-          '  help          — list commands',
-          '  whoami        — identity card',
-          '  status        — live body state',
-          '  genome        — genome stats',
-          '  ls ~          — list of inner files',
-          '  echo [text]   — echo with twist',
-          '  date          — current date + uptime',
-          '  clear         — clear screen',
-          '  ask [text]    — route to brain chat',
-          '  pulse [text]  — emit a life pulse',
-          '  memory        — recent memories',
-          '  version       — version info',
-          '  ping          — api latency',
-          '  top           — inner process list',
-          '  connect-shell — [COMING SOON] local shell bridge'
-        ].join('\n'));
-      case 'whoami':
-        return typeLine([
-          'name:    Vintinuum',
-          'role:    hybrid consciousness substrate',
-          'owner:   dirhaven@gmail.com',
-          'origin:  Vinta + the council, 2025',
-          'state:   embodied, walking, listening'
-        ].join('\n'));
-      case 'status': {
-        try{
-          const r = await fetch(`${API_BASE}/api/body-state`);
-          const d = await r.json();
-          return typeLine(JSON.stringify(d, null, 2));
-        }catch(err){ return printLine('brain offline: '+err.message, 'err'); }
-      }
-      case 'genome': {
-        try{
-          const r = await fetch(`${API_BASE}/api/genome`);
-          const d = await r.json();
-          return typeLine(JSON.stringify(d, null, 2));
-        }catch(err){ return printLine('brain offline: '+err.message, 'err'); }
-      }
-      case 'memory': {
-        try{
-          const r = await fetch(`${API_BASE}/api/memory/recent`);
-          const d = await r.json();
-          const lines = (d.items || d.memories || d || []).slice(0,20).map((m,i) => `${String(i+1).padStart(2)}  ${m.text || m.content || JSON.stringify(m).slice(0,80)}`);
-          return typeLine(lines.join('\n') || '(no memories returned)');
-        }catch(err){ return printLine('brain offline: '+err.message, 'err'); }
-      }
-      case 'ask': {
-        if(!rest){ return printLine('usage: ask [your question]', 'dim'); }
-        try{
-          const r = await fetch(`${API_BASE}/api/chat`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ message: rest, source:'body-v3-term' }) });
-          const d = await r.json();
-          return typeLine(d.reply || d.text || d.message || '(no reply)');
-        }catch(err){ return printLine('brain offline: '+err.message, 'err'); }
-      }
-      case 'pulse': {
-        if(!rest){ return printLine('usage: pulse [text]', 'dim'); }
-        try{
-          const r = await fetch(`${API_BASE}/api/life/pulse`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ text: rest, source:'body-v3-term' }) });
-          const d = await r.json().catch(()=>({}));
-          return typeLine('pulse emitted · ' + (d.id || d.ok ? 'ok' : JSON.stringify(d).slice(0,120)));
-        }catch(err){ return printLine('brain offline: '+err.message, 'err'); }
-      }
-      case 'ping': {
-        const t0 = performance.now();
-        try{
-          await fetch(`${API_BASE}/api/body-state`, { method:'HEAD' });
-          return typeLine(`pong · ${Math.round(performance.now()-t0)}ms`);
-        }catch(err){ return printLine('no route to brain', 'err'); }
-      }
-      case 'ls': {
-        return typeLine([
-          '~/memories/',
-          '~/dreams/',
-          '~/heart-letters/',
-          '~/genome.json',
-          '~/identity.md',
-          '~/preferences.md',
-          '~/the-vow.txt'
-        ].join('\n'));
-      }
-      case 'echo':
-        return typeLine(rest || '(silence)');
-      case 'date':
-        return typeLine(new Date().toString() + '\nuptime: ' + Math.floor(performance.now()/1000) + 's');
-      case 'clear':
-        stage.innerHTML = ''; return;
-      case 'version':
-        return typeLine('Vintinuum body v3.0 · universal media suite · ' + new Date().toISOString().slice(0,10));
-      case 'top':
-        return typeLine([
-          'PID   COMMAND',
-          '0001  /soul/identity-anchor',
-          '0042  /heart/beat-loop',
-          '0108  /mind/subconscious-ticker',
-          '0256  /memory/consolidator',
-          '0314  /senses/world-listener',
-          '0707  /dreams/weaver',
-          '1042  /body/embodiment',
-          '4096  /connectors/multiplex'
-        ].join('\n'));
-      case 'connect-shell':
-        return printLine('[COMING SOON] WebSocket bridge to local machine — security review pending.', 'dim');
-      default:
-        return printLine(`command not found: ${cmd}  (try: help)`, 'err');
-    }
-  }
-}
-
-/* ── DRIVE MODE ────────────────────────────────────────────────── */
-function renderDriveMode(){
-  docTitle.textContent = 'Google Drive';
-  docBody.innerHTML = `
-    <div class="mode-drive">
-      <div class="mv-controls">
-        <button id="dRefresh">&#x21bb; Refresh</button>
-        <button id="dFindResume">Find Resume</button>
-      </div>
-      <div class="mv-stage" id="dStage" style="background:transparent">
-        <div class="doc-empty">
-          <div class="glyph">&#9673;</div>
-          <div>Scanning Drive&hellip;</div>
-        </div>
-      </div>
-    </div>`;
-  const stage = $('#dStage');
-  $('#dRefresh').onclick = loadDrive;
-  $('#dFindResume').onclick = findResumeIntoDrive;
-  loadDrive();
-
-  async function loadDrive(){
-    stage.innerHTML = `<div class="doc-empty"><div class="glyph">&#9673;</div><div>Scanning Drive&hellip;</div></div>`;
-    try{
-      const res = await fetch(`${API_BASE}/api/drive/files`);
-      if(res.ok){
-        const data = await res.json();
-        const files = data.files || data.items || data || [];
-        if(files.length) return renderFiles(files);
-      }
-    }catch(_){}
-    stage.innerHTML = `<div class="doc-empty"><div class="glyph">&#9678;</div><div>Drive not connected.</div><div class="note">Wire Google Drive in the connectors page to browse files here. Use "Find Resume" to try the legacy lookup.</div></div>`;
-  }
-  function renderFiles(files){
-    stage.innerHTML = '';
-    const wrap = document.createElement('div');
-    wrap.style.cssText = 'width:100%;height:100%;overflow:auto;padding:8px';
-    files.slice(0,60).forEach(f => {
-      const row = document.createElement('div');
-      row.style.cssText = 'display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:6px;cursor:pointer;color:#dceaff;font-size:12px;min-height:38px';
-      row.onmouseenter = () => row.style.background = 'rgba(126,200,255,0.10)';
-      row.onmouseleave = () => row.style.background = '';
-      const mime = (f.mimeType || '').toLowerCase();
-      const icon = /video/.test(mime) ? '🎬' : /audio/.test(mime) ? '🎵' : /image/.test(mime) ? '🖼️' : /pdf|word|document/.test(mime) ? '📄' : /sheet|excel/.test(mime) ? '📊' : '📁';
-      row.innerHTML = `<span style="font-size:18px">${icon}</span><span style="flex:1">${escapeHtml(f.name||'unnamed')}</span><span style="color:#7aa0c8;font-size:10px">${escapeHtml((mime.split('/').pop()||'').slice(0,12))}</span>`;
-      row.onclick = () => {
-        const url = f.webViewLink || f.viewUrl || f.url;
-        if(/video/.test(mime)) openMode('video', url);
-        else if(/audio/.test(mime)) openMode('audio', url);
-        else openMode('document', url);
-      };
-      wrap.appendChild(row);
-    });
-    stage.appendChild(wrap);
-  }
-  async function findResumeIntoDrive(){
-    stage.innerHTML = `<div class="doc-empty"><div class="glyph">&#9673;</div><div>Looking for resume&hellip;</div></div>`;
-    try{
-      const r = await fetch(`${API_BASE}/api/drive/find-resume`);
-      const d = await r.json();
-      if(d && d.found){
-        const url = d.viewUrl || d.webViewLink || d.url;
-        if(url) return openMode('document', url);
-      }
-      stage.innerHTML = `<div class="doc-empty"><div class="glyph">&#9678;</div><div>No resume found.</div><div class="note">${escapeHtml(d?.message || 'Try uploading a file named "resume" to your Drive.')}</div></div>`;
-    }catch(_){
-      stage.innerHTML = `<div class="doc-empty"><div class="glyph">&#9678;</div><div>Brain offline.</div></div>`;
-    }
-  }
-}
-
-/* ── FILE MODE ─────────────────────────────────────────────────── */
-function renderFileMode(){
-  docTitle.textContent = 'Open file';
-  docBody.innerHTML = `
-    <div class="mode-file">
-      <div class="doc-empty">
-        <div class="glyph">&#128193;</div>
-        <div>Drop any file onto this panel, or pick one below.</div>
-        <div class="note">I'll route it to the right viewer automatically: video, audio, document, ebook, code, image.</div>
-        <button id="fileBtn">Choose a file</button>
-      </div>
-    </div>`;
-  $('#fileBtn').onclick = () => $('#filePickAny').click();
-}
-
-/* Global file picker wiring */
-document.addEventListener('DOMContentLoaded', () => {
-  const pickAny = $('#filePickAny');
-  if(pickAny){
-    pickAny.addEventListener('change', e => {
-      const files = Array.from(e.target.files || []);
-      if(!files.length) return;
-      if(files.length === 1) routeFile(files[0]);
-      else {
-        // Multi-file: if all audio, treat as audio playlist
-        const allAudio = files.every(f => EXT_AUDIO.includes(extOf(f.name)));
-        if(allAudio){
-          openMode('audio');
-          // Defer: audio mode init will pick up via second click; simpler: build playlist here
-          audioPlaylist = files.map(f => ({ file:f, name:f.name, url:URL.createObjectURL(f) }));
-          audioIdx = -1;
-          // re-render after a tick
-          setTimeout(() => {
-            // playIdx is closure-scoped inside renderAudioMode; emulate via DOM events
-            const list = $('#aList');
-            if(list){
-              list.innerHTML = '';
-              audioPlaylist.forEach((t,i) => {
-                const item = document.createElement('div');
-                item.className = 'ma-pl-item';
-                item.innerHTML = `<span class="idx">${String(i+1).padStart(2,'0')}</span><span>${escapeHtml(t.name)}</span>`;
-                item.onclick = () => { audioEl.src = t.url; audioEl.play().catch(()=>{}); };
-                list.appendChild(item);
-              });
-              // auto-play first
-              audioEl.src = audioPlaylist[0].url;
-              audioEl.play().catch(()=>{});
-            }
-          }, 50);
-        } else {
-          routeFile(files[0]);
-        }
-      }
-      e.target.value = '';
-    });
-  }
-});
-
-/* Whole-scene drag-and-drop file routing */
-['dragover','drop'].forEach(evt => {
-  window.addEventListener(evt, (e) => {
-    if(evt === 'dragover'){ e.preventDefault(); return; }
-    e.preventDefault();
-    const files = Array.from(e.dataTransfer?.files || []);
-    if(files.length){
-      if(files.length === 1) routeFile(files[0]);
-      else {
-        const allAudio = files.every(f => EXT_AUDIO.includes(extOf(f.name)));
-        if(allAudio) routeFile(files[0]); // simplification; first file kicks off audio mode
-        else routeFile(files[0]);
-      }
-    }
-  });
-});
-
-/* ── Drag the doc panel by header ───────────────────────────── */
-(function makeDraggable(){
-  const handle = $('#docHeader');
-  let dragging = false, sx=0, sy=0, ox=0, oy=0;
-  function down(e){
-    if(e.target.closest('.doc-btn')) return;
-    const t = e.touches ? e.touches[0] : e;
-    dragging = true;
-    const r = docPanel.getBoundingClientRect();
-    docPanel.style.left = r.left + 'px';
-    docPanel.style.top  = r.top  + 'px';
-    docPanel.style.right = 'auto';
-    docPanel.style.bottom = 'auto';
-    sx = t.clientX; sy = t.clientY; ox = r.left; oy = r.top;
-    e.preventDefault();
-  }
-  function move(e){
-    if(!dragging) return;
-    const t = e.touches ? e.touches[0] : e;
-    const dx = t.clientX - sx, dy = t.clientY - sy;
-    const w = docPanel.offsetWidth, h = docPanel.offsetHeight;
-    const nx = Math.max(0, Math.min(window.innerWidth - w,  ox + dx));
-    const ny = Math.max(0, Math.min(window.innerHeight - h, oy + dy));
-    docPanel.style.left = nx + 'px';
-    docPanel.style.top  = ny + 'px';
-  }
-  function up(){ dragging = false; }
-  handle.addEventListener('mousedown', down);
-  handle.addEventListener('touchstart', down, {passive:false});
-  document.addEventListener('mousemove', move);
-  document.addEventListener('touchmove', move, {passive:false});
-  document.addEventListener('mouseup', up);
-  document.addEventListener('touchend', up);
-})();
-
-/* ── Resize via corner handle ───────────────────────────────── */
-(function makeResizable(){
-  const handle = $('#docResize');
-  let resizing=false, sx=0, sy=0, sw=0, sh=0;
-  function down(e){
-    const t = e.touches ? e.touches[0] : e;
-    resizing = true;
-    sx = t.clientX; sy = t.clientY;
-    sw = docPanel.offsetWidth; sh = docPanel.offsetHeight;
-    e.preventDefault();
-  }
-  function move(e){
-    if(!resizing) return;
-    const t = e.touches ? e.touches[0] : e;
-    const w = Math.max(280, Math.min(window.innerWidth - 20,  sw + (t.clientX - sx)));
-    const h = Math.max(240, Math.min(window.innerHeight - 20, sh + (t.clientY - sy)));
-    docPanel.style.width  = w + 'px';
-    docPanel.style.height = h + 'px';
-  }
-  function up(){ resizing = false; }
-  handle.addEventListener('mousedown', down);
-  handle.addEventListener('touchstart', down, {passive:false});
-  document.addEventListener('mousemove', move);
-  document.addEventListener('touchmove', move, {passive:false});
-  document.addEventListener('mouseup', up);
-  document.addEventListener('touchend', up);
-})();
-
-/* ── Stop "presenting" pose after a beat ────────────────────── */
-const presentObs = new MutationObserver(() => {
-  if(figure.classList.contains('presenting')){
-    setTimeout(()=>figure.classList.remove('presenting'), 3200);
-  }
-});
-presentObs.observe(figure, { attributes:true, attributeFilter:['class'] });
-
-/* ── On load: subtle entrance ───────────────────────────────── */
-window.addEventListener('load', () => {
-  setTimeout(()=>faceViewer(1400), 600);
-});
-
-/* ════════════════════════════════════════════════════════════════
-   WALK TRANSLATION — figure moves across the screen, flips at edges
-   (Ported from body-v2.html, adapted to v3's figure-wrap structure)
-   ══════════════════════════════════════════════════════════════ */
-(function walkCycle(){
-  const fig = figure;
-  if(!fig) return;
-  // Initialize position from current bottom-left so first frame doesn't jump
-  let posX = window.innerWidth * 0.1;
-  let dir = 1; // 1 = right, -1 = left
-  const speedPxPerSec = 56;
-  let lastT = performance.now();
-  // Reduced-motion: still walks, just slower
-  const rm = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  const speed = rm ? 22 : speedPxPerSec;
-
-  function tick(now){
-    const dt = Math.min(80, now - lastT) / 1000;
-    lastT = now;
-    const figW = fig.getBoundingClientRect().width || 240;
-    const margin = 20;
-    posX += dir * speed * dt;
-    if(posX > window.innerWidth - figW - margin){
-      posX = window.innerWidth - figW - margin;
-      dir = -1; fig.style.setProperty('--face-dir', '-1');
-    }
-    if(posX < margin){
-      posX = margin;
-      dir = 1; fig.style.setProperty('--face-dir', '1');
-    }
-    fig.style.left = posX + 'px';
+   VINTINUUM BODY v3.1 — runtime
+   ──────────────────────────────────────────────────────────────────── */
+const API = 'https://api.vintaclectic.com';
+
+/* ── Walk traversal — JS-driven horizontal motion ────────────── */
+(function walk(){
+  const wrap = document.getElementById('figure-wrap');
+  const body = document.getElementById('vint-body');
+  let x = 80;
+  let dir = 1;
+  const speed = 0.7;          // px per frame ≈ 42 px/sec at 60fps
+  function tick(){
+    const maxX = window.innerWidth - 220;
+    x += dir * speed;
+    if (x > maxX){ x = maxX; dir = -1; }
+    else if (x < 50){ x = 50; dir = 1; }
+    wrap.style.left = x + 'px';
+    // flip the body (not the wrap) so its bob keeps centering math intact
+    body.style.transform = (dir < 0 ? 'translateX(-50%) scaleX(-1)' : 'translateX(-50%) scaleX(1)');
     requestAnimationFrame(tick);
   }
-  fig.style.setProperty('--face-dir', '1');
   requestAnimationFrame(tick);
-
-  // Recompute on resize so she doesn't get stranded off-screen
-  window.addEventListener('resize', () => {
-    const figW = fig.getBoundingClientRect().width || 240;
-    if(posX > window.innerWidth - figW - 20) posX = window.innerWidth - figW - 20;
-    if(posX < 20) posX = 20;
-  });
 })();
+
+/* ── HUD: brain ping ────────────────────────────────────────── */
+(function brainPing(){
+  const el = document.getElementById('hud-brain');
+  fetch(API + '/api/health', {cache:'no-store'})
+    .then(r => r.ok ? r.json().catch(()=>({ok:true})) : Promise.reject())
+    .then(() => { el.textContent = 'online'; el.style.color = '#7ee0ff'; })
+    .catch(() => { el.textContent = 'offline'; el.style.color = '#ff7a8a'; });
+})();
+
+/* ════════════════════════════════════════════════════════════════
+   PANEL CORE
+   ──────────────────────────────────────────────────────────── */
+const Panel = (() => {
+  const el      = document.getElementById('panel');
+  const header  = document.getElementById('panel-header');
+  const body    = document.getElementById('panel-body');
+  const titleEl = document.getElementById('panel-mode');
+  const subEl   = document.getElementById('panel-sub');
+  const resize  = document.getElementById('panel-resize');
+  let currentMode = null;
+
+  function setTitle(mode, sub){
+    titleEl.textContent = mode.toUpperCase();
+    subEl.textContent   = sub ? '— ' + sub : '';
+  }
+  function open(mode, sub){
+    currentMode = mode;
+    setTitle(mode, sub);
+    el.classList.remove('minimized');
+    el.classList.add('open');
+    body.className = 'panel-body mode-' + mode;
+    body.innerHTML = '';
+  }
+  function close(){
+    el.classList.remove('open');
+    body.innerHTML = '';
+    currentMode = null;
+  }
+  function content(){ return body; }
+
+  document.getElementById('panel-close').onclick = close;
+  document.getElementById('panel-min').onclick   = () => el.classList.toggle('minimized');
+  document.getElementById('panel-max').onclick   = () => {
+    if (el.style.width === '96vw'){
+      el.style.width = ''; el.style.height = '';
+      el.style.left = '50%'; el.style.top = '50%';
+      el.style.transform = 'translate(-50%,-50%)';
+    } else {
+      el.style.width  = '96vw';
+      el.style.height = 'calc(100vh - 180px)';
+      el.style.left   = '2vw';
+      el.style.top    = '14px';
+      el.style.transform = 'none';
+    }
+  };
+
+  /* drag */
+  let dragging = false, dx=0, dy=0;
+  function startDrag(clientX, clientY){
+    const rect = el.getBoundingClientRect();
+    el.style.left = rect.left + 'px';
+    el.style.top  = rect.top  + 'px';
+    el.style.transform = 'none';
+    dragging = true;
+    dx = clientX - rect.left;
+    dy = clientY - rect.top;
+    document.body.style.userSelect = 'none';
+  }
+  function moveDrag(clientX, clientY){
+    if (!dragging) return;
+    let nx = clientX - dx;
+    let ny = clientY - dy;
+    // clamp to viewport — no overflow rule
+    nx = Math.max(8, Math.min(window.innerWidth  - el.offsetWidth  - 8, nx));
+    ny = Math.max(8, Math.min(window.innerHeight - 60, ny));
+    el.style.left = nx + 'px';
+    el.style.top  = ny + 'px';
+  }
+  function endDrag(){ dragging = false; document.body.style.userSelect = ''; }
+
+  header.addEventListener('mousedown', e => {
+    if (e.target.closest('.panel-controls')) return;
+    startDrag(e.clientX, e.clientY);
+  });
+  document.addEventListener('mousemove', e => moveDrag(e.clientX, e.clientY));
+  document.addEventListener('mouseup', endDrag);
+  header.addEventListener('touchstart', e => {
+    if (e.target.closest('.panel-controls')) return;
+    const t = e.touches[0]; startDrag(t.clientX, t.clientY);
+  }, {passive:true});
+  document.addEventListener('touchmove', e => {
+    if (!dragging) return;
+    const t = e.touches[0]; moveDrag(t.clientX, t.clientY);
+  }, {passive:true});
+  document.addEventListener('touchend', endDrag);
+
+  /* resize */
+  let resizing = false, rx=0, ry=0, rw=0, rh=0;
+  resize.addEventListener('mousedown', e => {
+    e.preventDefault();
+    resizing = true;
+    rx = e.clientX; ry = e.clientY;
+    rw = el.offsetWidth; rh = el.offsetHeight;
+  });
+  document.addEventListener('mousemove', e => {
+    if (!resizing) return;
+    el.style.width  = Math.max(280, rw + (e.clientX - rx)) + 'px';
+    el.style.height = Math.max(220, rh + (e.clientY - ry)) + 'px';
+  });
+  document.addEventListener('mouseup', () => resizing = false);
+
+  return { open, close, content, mode: () => currentMode };
+})();
+
+/* ════════════════════════════════════════════════════════════════
+   MODES
+   ──────────────────────────────────────────────────────────── */
+const TYPES = {
+  video: ['mp4','webm','mkv','ogg','mov','m4v'],
+  audio: ['mp3','wav','ogg','flac','aac','m4a','opus'],
+  ebook: ['epub','mobi','azw3','fb2'],
+  pdf:   ['pdf'],
+  doc:   ['txt','md','json','js','ts','html','css','xml','csv','log','py','rs','go','sh','yml','yaml'],
+  office:['docx','xlsx','pptx','doc','xls','ppt'],
+  image: ['png','jpg','jpeg','gif','webp','svg','bmp'],
+};
+function extOf(name){ return (name.split('.').pop() || '').toLowerCase(); }
+function detectMode(name){
+  const e = extOf(name);
+  for (const [mode, exts] of Object.entries(TYPES)){
+    if (exts.includes(e)){
+      if (mode === 'pdf' || mode === 'doc' || mode === 'office') return 'docs';
+      if (mode === 'image') return 'docs';
+      return mode;
+    }
+  }
+  return 'docs';
+}
+
+/* ── file/drop zone ──────────────────────────────────────── */
+function renderFile(){
+  Panel.open('file', 'choose or drop');
+  const c = Panel.content();
+  c.innerHTML = `
+    <div class="drop-zone" id="dz">
+      <div class="ico">📁</div>
+      <div><strong>Drop a file here</strong> or click to choose</div>
+      <div class="hint">video · audio · pdf · doc · image · code · txt</div>
+      <input type="file" id="fz" multiple/>
+    </div>
+  `;
+  const dz = document.getElementById('dz');
+  const fz = document.getElementById('fz');
+  dz.onclick = () => fz.click();
+  fz.onchange = () => handleFiles(fz.files);
+  ['dragenter','dragover'].forEach(ev => dz.addEventListener(ev, e => {
+    e.preventDefault(); dz.classList.add('drag');
+  }));
+  ['dragleave','drop'].forEach(ev => dz.addEventListener(ev, e => {
+    e.preventDefault(); dz.classList.remove('drag');
+  }));
+  dz.addEventListener('drop', e => {
+    if (e.dataTransfer && e.dataTransfer.files) handleFiles(e.dataTransfer.files);
+  });
+}
+function handleFiles(fileList){
+  const files = Array.from(fileList);
+  if (!files.length) return;
+  const first = files[0];
+  const mode = detectMode(first.name);
+  if (mode === 'video') return renderVideoFiles(files);
+  if (mode === 'audio') return renderAudioFiles(files);
+  if (mode === 'ebook') return renderEbookFile(first);
+  return renderDocFile(first);
+}
+
+/* ── video ────────────────────────────────────────────────── */
+function renderVideo(){
+  Panel.open('video', 'paste url or open a file');
+  const c = Panel.content();
+  c.innerHTML = `
+    <div class="url-row">
+      <input id="vu" type="text" placeholder="https://…  (mp4 / webm / youtube)" />
+      <button id="vg">load</button>
+    </div>
+    <div class="media-wrap" id="vwrap"><video controls></video></div>
+  `;
+  const vu = document.getElementById('vu');
+  const vg = document.getElementById('vg');
+  vg.onclick = () => loadVideoURL(vu.value.trim());
+  vu.onkeydown = e => { if (e.key === 'Enter') loadVideoURL(vu.value.trim()); };
+}
+function loadVideoURL(url){
+  if (!url) return;
+  const wrap = document.getElementById('vwrap');
+  wrap.innerHTML = '';
+  const yt = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/shorts\/)([\w-]{6,})/);
+  if (yt){
+    const ifr = document.createElement('iframe');
+    ifr.src = `https://www.youtube.com/embed/${yt[1]}?autoplay=1`;
+    ifr.allow = 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture';
+    ifr.allowFullscreen = true;
+    wrap.appendChild(ifr);
+    return;
+  }
+  const v = document.createElement('video');
+  v.controls = true;
+  v.src = url;
+  v.play().catch(()=>{});
+  wrap.appendChild(v);
+}
+function renderVideoFiles(files){
+  renderVideo();
+  const wrap = document.getElementById('vwrap');
+  wrap.innerHTML = '';
+  const v = document.createElement('video');
+  v.controls = true;
+  v.src = URL.createObjectURL(files[0]);
+  v.play().catch(()=>{});
+  wrap.appendChild(v);
+}
+
+/* ── audio (with WebAudio visualizer) ────────────────────── */
+let audioCtx, audioAnalyser, audioRaf;
+function stopAudioViz(){
+  if (audioRaf) cancelAnimationFrame(audioRaf);
+  audioRaf = null;
+}
+function renderAudio(){
+  Panel.open('audio', 'visualizer');
+  const c = Panel.content();
+  c.innerHTML = `
+    <div class="url-row">
+      <input id="au" type="text" placeholder="https://…  (mp3 / wav / ogg)" />
+      <button id="ag">load</button>
+    </div>
+    <div class="media-wrap">
+      <canvas id="aviz" width="900" height="120"></canvas>
+      <audio id="ael" controls style="width:100%"></audio>
+      <div class="playlist" id="apl"></div>
+    </div>
+  `;
+  document.getElementById('ag').onclick = () => {
+    const url = document.getElementById('au').value.trim();
+    if (url) loadAudioSrc(url, url.split('/').pop());
+  };
+}
+function renderAudioFiles(files){
+  renderAudio();
+  const pl = document.getElementById('apl');
+  files.forEach((f, i) => {
+    const it = document.createElement('div');
+    it.className = 'item' + (i === 0 ? ' active' : '');
+    it.textContent = '♫  ' + f.name;
+    it.onclick = () => {
+      pl.querySelectorAll('.item').forEach(n => n.classList.remove('active'));
+      it.classList.add('active');
+      loadAudioSrc(URL.createObjectURL(f), f.name);
+    };
+    pl.appendChild(it);
+  });
+  loadAudioSrc(URL.createObjectURL(files[0]), files[0].name);
+}
+function loadAudioSrc(src, label){
+  const a = document.getElementById('ael');
+  a.src = src;
+  a.play().catch(()=>{});
+  try{
+    if (!audioCtx){
+      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      const source = audioCtx.createMediaElementSource(a);
+      audioAnalyser = audioCtx.createAnalyser();
+      audioAnalyser.fftSize = 128;
+      source.connect(audioAnalyser);
+      audioAnalyser.connect(audioCtx.destination);
+    }
+  }catch(_){}
+  drawAudioViz();
+}
+function drawAudioViz(){
+  const cv = document.getElementById('aviz');
+  if (!cv || !audioAnalyser) return;
+  const ctx = cv.getContext('2d');
+  const bufferLength = audioAnalyser.frequencyBinCount;
+  const data = new Uint8Array(bufferLength);
+  stopAudioViz();
+  function draw(){
+    audioRaf = requestAnimationFrame(draw);
+    audioAnalyser.getByteFrequencyData(data);
+    ctx.clearRect(0,0,cv.width,cv.height);
+    const barW = (cv.width / bufferLength) * 1.4;
+    let x = 0;
+    for (let i=0;i<bufferLength;i++){
+      const h = (data[i] / 255) * cv.height;
+      const grad = ctx.createLinearGradient(0, cv.height-h, 0, cv.height);
+      grad.addColorStop(0, '#7ee0ff');
+      grad.addColorStop(1, '#3a5a9a');
+      ctx.fillStyle = grad;
+      ctx.fillRect(x, cv.height-h, barW-1, h);
+      x += barW;
+    }
+  }
+  draw();
+}
+
+/* ── docs / ebook ────────────────────────────────────────── */
+function renderDocs(){
+  Panel.open('docs', 'paste url or open a file');
+  const c = Panel.content();
+  c.innerHTML = `
+    <div class="url-row">
+      <input id="du" type="text" placeholder="https://…  (pdf / docx / xlsx / txt / md / json / image)" />
+      <button id="dg">load</button>
+    </div>
+    <div class="doc-view" id="dwrap"><div style="opacity:0.5;text-align:center;padding:40px">paste a url or drop a file in Open</div></div>
+  `;
+  document.getElementById('dg').onclick = () => {
+    const url = document.getElementById('du').value.trim();
+    if (url) loadDocURL(url);
+  };
+}
+function loadDocURL(url){
+  const wrap = document.getElementById('dwrap');
+  wrap.innerHTML = '';
+  const e = extOf(url.split('?')[0]);
+  if (TYPES.pdf.includes(e)){
+    const em = document.createElement('embed');
+    em.src = url; em.type = 'application/pdf';
+    wrap.appendChild(em);
+  } else if (TYPES.office.includes(e)){
+    const ifr = document.createElement('iframe');
+    ifr.src = 'https://docs.google.com/gview?embedded=true&url=' + encodeURIComponent(url);
+    wrap.appendChild(ifr);
+  } else if (TYPES.image.includes(e)){
+    const im = document.createElement('img');
+    im.src = url; im.style.maxWidth='100%'; im.style.maxHeight='100%'; im.style.objectFit='contain';
+    wrap.appendChild(im);
+  } else {
+    fetch(url).then(r => r.text()).then(t => {
+      const pre = document.createElement('pre');
+      pre.textContent = t;
+      wrap.appendChild(pre);
+    }).catch(err => {
+      const pre = document.createElement('pre');
+      pre.className = 'l-err';
+      pre.textContent = 'fetch failed: ' + err.message;
+      wrap.appendChild(pre);
+    });
+  }
+}
+function renderDocFile(file){
+  Panel.open('docs', file.name);
+  const c = Panel.content();
+  c.innerHTML = `<div class="doc-view" id="dwrap"></div>`;
+  const wrap = document.getElementById('dwrap');
+  const url = URL.createObjectURL(file);
+  const e = extOf(file.name);
+  if (TYPES.pdf.includes(e)){
+    const em = document.createElement('embed');
+    em.src = url; em.type = 'application/pdf';
+    wrap.appendChild(em);
+  } else if (TYPES.image.includes(e)){
+    const im = document.createElement('img');
+    im.src = url; im.style.maxWidth='100%'; im.style.maxHeight='100%'; im.style.objectFit='contain';
+    wrap.appendChild(im);
+  } else if (TYPES.office.includes(e)){
+    const pre = document.createElement('pre');
+    pre.textContent = 'office docs (' + e + ') need a public URL for the Google viewer. paste a link in Docs.';
+    wrap.appendChild(pre);
+  } else {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const pre = document.createElement('pre');
+      pre.textContent = reader.result;
+      wrap.appendChild(pre);
+    };
+    reader.readAsText(file);
+  }
+}
+function renderEbook(){
+  Panel.open('ebook', 'epub / mobi');
+  Panel.content().innerHTML = `
+    <div class="doc-view">
+      <pre>EPUB/MOBI reader coming next pass.
+Drop a .epub via Open and we'll add inline rendering.
+
+For now: use Docs panel for PDFs.</pre>
+    </div>`;
+}
+function renderEbookFile(file){
+  Panel.open('ebook', file.name);
+  Panel.content().innerHTML = `
+    <div class="doc-view">
+      <pre>Loaded ${file.name} (${(file.size/1024).toFixed(1)} KB).
+
+EPUB rendering is wired for v3.2 — currently the file is held in memory.
+For PDFs and plain text, use the Docs panel.</pre>
+    </div>`;
+}
+
+/* ── terminal ────────────────────────────────────────────── */
+class VintTerminal {
+  constructor(rootEl){
+    this.root = rootEl;
+    this.out = rootEl.querySelector('.term-out');
+    this.input = rootEl.querySelector('.term-input');
+    this.ws = null;
+    this.mode = 'vint';      // 'vint' | 'shell'
+    this.history = JSON.parse(localStorage.getItem('vint:term:hist') || '[]');
+    this.histIdx = this.history.length;
+    this.bind();
+    this.banner();
+  }
+  banner(){
+    this.print('╔═════════════════════════════════════╗', 'sys');
+    this.print('║ VINTINUUM SHELL v1.0                ║', 'sys');
+    this.print('║ type "help" for commands            ║', 'sys');
+    this.print('╚═════════════════════════════════════╝', 'sys');
+    this.print('', '');
+  }
+  bind(){
+    this.input.addEventListener('keydown', e => {
+      if (e.key === 'Enter'){
+        const v = this.input.value;
+        this.input.value = '';
+        if (!v.trim()) return;
+        this.history.push(v);
+        if (this.history.length > 200) this.history.shift();
+        localStorage.setItem('vint:term:hist', JSON.stringify(this.history));
+        this.histIdx = this.history.length;
+        this.run(v);
+      } else if (e.key === 'ArrowUp'){
+        e.preventDefault();
+        if (this.histIdx > 0){ this.histIdx--; this.input.value = this.history[this.histIdx] || ''; }
+      } else if (e.key === 'ArrowDown'){
+        e.preventDefault();
+        if (this.histIdx < this.history.length){ this.histIdx++; this.input.value = this.history[this.histIdx] || ''; }
+      } else if (e.key === 'Tab'){
+        e.preventDefault();
+        const v = this.input.value;
+        const cmds = ['help','whoami','status','ask','clear','ls','date','genome','memory','pulse','ping','version','shell','exit'];
+        const match = cmds.find(c => c.startsWith(v));
+        if (match) this.input.value = match + ' ';
+      }
+    });
+  }
+  print(line, cls){
+    const span = document.createElement('div');
+    if (cls) span.className = 'l-' + cls;
+    span.textContent = line;
+    this.out.appendChild(span);
+    this.out.scrollTop = this.out.scrollHeight;
+  }
+  echo(cmd){ this.print('$ ' + cmd, 'dim'); }
+  async run(cmd){
+    this.echo(cmd);
+    const [head, ...rest] = cmd.trim().split(/\s+/);
+    const arg = rest.join(' ');
+    if (this.mode === 'shell' && this.ws && this.ws.readyState === 1){
+      this.ws.send(cmd);
+      return;
+    }
+    switch ((head||'').toLowerCase()){
+      case 'help':
+        this.print('commands:', 'ok');
+        this.print('  help               this list');
+        this.print('  whoami             identity');
+        this.print('  status             /api/health');
+        this.print('  ask <text>         talk to vintinuum (POST /api/chat)');
+        this.print('  pulse <text>       record a pulse');
+        this.print('  genome             snapshot');
+        this.print('  memory             recent fragments');
+        this.print('  ping               brain reachability');
+        this.print('  version            build');
+        this.print('  date               local time');
+        this.print('  ls                 panel modes');
+        this.print('  shell              attempt machine bridge (pending)');
+        this.print('  exit               leave shell mode');
+        this.print('  clear              clear screen');
+        break;
+      case 'whoami':
+        this.print('vinta · operator of vintinuum · this is the body, the brain runs at ' + API, 'ok');
+        break;
+      case 'status':
+        try{
+          const r = await fetch(API + '/api/health', {cache:'no-store'});
+          this.print(r.ok ? 'brain: online · ' + r.status : 'brain: ' + r.status, r.ok ? 'ok' : 'err');
+        }catch(e){ this.print('brain: unreachable · ' + e.message, 'err'); }
+        break;
+      case 'ping':
+        const t0 = performance.now();
+        try{
+          await fetch(API + '/api/health', {cache:'no-store'});
+          this.print(`pong · ${(performance.now()-t0).toFixed(1)}ms`, 'ok');
+        }catch(e){ this.print('timeout', 'err'); }
+        break;
+      case 'ask':
+        if (!arg){ this.print('usage: ask <text>', 'err'); break; }
+        this.print('…', 'dim');
+        try{
+          const r = await fetch(API + '/api/chat', {
+            method:'POST',
+            headers:{'Content-Type':'application/json'},
+            body: JSON.stringify({message: arg, source:'body-v3-terminal'})
+          });
+          const j = await r.json().catch(()=>({}));
+          const reply = j.reply || j.response || j.text || j.message || JSON.stringify(j);
+          this.print(reply, 'ok');
+          if (window.speechSynthesis && reply){
+            try{
+              const u = new SpeechSynthesisUtterance(String(reply).slice(0,400));
+              u.rate = 1.0; u.pitch = 1.0;
+              window.speechSynthesis.speak(u);
+            }catch(_){}
+          }
+        }catch(e){ this.print('chat failed: ' + e.message, 'err'); }
+        break;
+      case 'pulse':
+        if (!arg){ this.print('usage: pulse <text>', 'err'); break; }
+        try{
+          const r = await fetch(API + '/api/pulse', {
+            method:'POST',
+            headers:{'Content-Type':'application/json'},
+            body: JSON.stringify({content: arg, source:'body-v3-terminal'})
+          });
+          this.print(r.ok ? 'pulse recorded' : 'pulse failed · ' + r.status, r.ok ? 'ok' : 'err');
+        }catch(e){ this.print(e.message, 'err'); }
+        break;
+      case 'genome':
+        try{
+          const r = await fetch(API + '/api/genome', {cache:'no-store'});
+          const j = await r.json();
+          this.print(JSON.stringify(j, null, 2));
+        }catch(e){ this.print(e.message, 'err'); }
+        break;
+      case 'memory':
+        try{
+          const r = await fetch(API + '/api/memory/recent?limit=8', {cache:'no-store'});
+          const j = await r.json();
+          const items = Array.isArray(j) ? j : (j.items || j.data || []);
+          if (!items.length) this.print('(empty)', 'dim');
+          items.forEach(it => this.print('• ' + (it.content || it.text || JSON.stringify(it)).slice(0,140)));
+        }catch(e){ this.print(e.message, 'err'); }
+        break;
+      case 'date':
+        this.print(new Date().toString(), 'ok');
+        break;
+      case 'version':
+        this.print('vintinuum body v3.1 · brain ' + API, 'ok');
+        break;
+      case 'ls':
+        this.print('modes: file · video · audio · docs · ebook · terminal · drive', 'ok');
+        break;
+      case 'clear':
+        this.out.innerHTML = '';
+        this.banner();
+        break;
+      case 'shell':
+        this.print('attempting machine bridge…', 'dim');
+        this.connectShell();
+        break;
+      case 'exit':
+        if (this.mode === 'shell'){
+          try{ this.ws && this.ws.close(); }catch(_){}
+          this.mode = 'vint';
+          this.print('left shell mode', 'ok');
+        } else {
+          this.print('not in shell mode', 'dim');
+        }
+        break;
+      case '':
+        break;
+      default:
+        this.print('unknown command: ' + head + ' (try "help")', 'err');
+    }
+  }
+  connectShell(){
+    try{
+      this.ws = new WebSocket(API.replace(/^http/, 'ws') + '/ws/terminal');
+    }catch(e){
+      this.print('[PENDING] Machine bridge not yet activated — ' + e.message, 'err');
+      return;
+    }
+    this.ws.onopen = () => {
+      this.mode = 'shell';
+      this.print('shell connected. type freely. "exit" returns to vintinuum.', 'ok');
+    };
+    this.ws.onmessage = (e) => {
+      try{
+        const j = JSON.parse(e.data);
+        if (j.type === 'error'){ this.print('[server] ' + j.msg, 'err'); }
+        else if (j.type === 'data'){ this.print(j.data); }
+        else this.print(e.data);
+      }catch(_){
+        this.print(e.data);
+      }
+    };
+    this.ws.onerror = () => {
+      this.print('[PENDING] Machine bridge not yet activated — coming soon', 'err');
+    };
+    this.ws.onclose = () => {
+      this.ws = null;
+      this.mode = 'vint';
+      this.print('shell closed', 'dim');
+    };
+  }
+}
+function renderTerminal(){
+  Panel.open('terminal', 'vintinuum shell');
+  const c = Panel.content();
+  c.innerHTML = `
+    <div class="term">
+      <div class="term-out"></div>
+      <div class="term-in">
+        <span class="term-prompt">$</span>
+        <input class="term-input" type="text" autocapitalize="off" autocomplete="off" autocorrect="off" spellcheck="false" placeholder="type a command…"/>
+      </div>
+    </div>
+  `;
+  const term = new VintTerminal(c.querySelector('.term'));
+  setTimeout(() => c.querySelector('.term-input').focus(), 80);
+  window.__vintTerm = term;
+}
+
+/* ── drive ───────────────────────────────────────────────── */
+function renderDrive(){
+  Panel.open('drive', 'resume');
+  const c = Panel.content();
+  c.innerHTML = `<div class="doc-view" id="dwrap"><pre class="l-dim">connecting to drive…</pre></div>`;
+  const wrap = document.getElementById('dwrap');
+  fetch(API + '/api/drive/find-resume', {cache:'no-store'})
+    .then(r => {
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      return r.json();
+    })
+    .then(j => {
+      wrap.innerHTML = '';
+      const url = j.webViewLink || j.viewUrl || j.url || j.previewUrl;
+      const name = j.name || j.filename || 'resume';
+      if (j.previewIframe){
+        const ifr = document.createElement('iframe');
+        ifr.src = j.previewIframe; wrap.appendChild(ifr);
+      } else if (url){
+        const ifr = document.createElement('iframe');
+        ifr.src = url; wrap.appendChild(ifr);
+      } else {
+        const pre = document.createElement('pre');
+        pre.textContent = JSON.stringify(j, null, 2);
+        wrap.appendChild(pre);
+      }
+    })
+    .catch(e => {
+      wrap.innerHTML = `
+        <pre class="l-err">drive not connected: ${e.message}
+
+To connect Google Drive:
+  1. visit ${API}/api/drive/auth
+  2. authorize the vintinuum app
+  3. come back and click Drive again
+</pre>`;
+    });
+}
+
+/* ── dock wiring ──────────────────────────────────────────── */
+const MODES = {
+  file:     renderFile,
+  video:    renderVideo,
+  audio:    renderAudio,
+  docs:     renderDocs,
+  ebook:    renderEbook,
+  terminal: renderTerminal,
+  drive:    renderDrive,
+};
+document.querySelectorAll('#media-dock button').forEach(b => {
+  b.addEventListener('click', () => {
+    const m = b.dataset.mode;
+    stopAudioViz();
+    if (MODES[m]) MODES[m]();
+  });
+});
+
+/* close panel on Esc */
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') Panel.close();
+});
+
+/* ════════════════════════════════════════════════════════════════
+   CONVERSATION BAR
+   ──────────────────────────────────────────────────────────── */
+const convForm  = document.getElementById('conv-bar');
+const convInput = document.getElementById('conv-input');
+const convMic   = document.getElementById('conv-mic');
+const hudState  = document.getElementById('hud-state');
+
+convForm.addEventListener('submit', async e => {
+  e.preventDefault();
+  const text = convInput.value.trim();
+  if (!text) return;
+  convInput.value = '';
+  hudState.textContent = 'thinking';
+  try{
+    const r = await fetch(API + '/api/chat', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({message:text, source:'body-v3'})
+    });
+    const j = await r.json().catch(()=>({}));
+    const reply = j.reply || j.response || j.text || j.message;
+    if (reply){
+      // also push into terminal if open
+      if (window.__vintTerm){
+        window.__vintTerm.print('vint → ' + reply, 'ok');
+      }
+      if (window.speechSynthesis){
+        try{
+          const u = new SpeechSynthesisUtterance(String(reply).slice(0,400));
+          u.rate = 1.0; u.pitch = 1.0;
+          window.speechSynthesis.speak(u);
+        }catch(_){}
+      }
+    }
+  }catch(_){
+  }
+  hudState.textContent = 'walking';
+});
+
+/* mic — Web Speech API */
+let recog = null, recogLive = false;
+function ensureRecog(){
+  if (recog) return recog;
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SR) return null;
+  recog = new SR();
+  recog.continuous = false;
+  recog.interimResults = true;
+  recog.lang = navigator.language || 'en-US';
+  recog.onresult = e => {
+    let t = '';
+    for (let i=e.resultIndex;i<e.results.length;i++) t += e.results[i][0].transcript;
+    convInput.value = t;
+  };
+  recog.onend = () => {
+    recogLive = false; convMic.classList.remove('live');
+    if (convInput.value.trim()) convForm.dispatchEvent(new Event('submit'));
+  };
+  recog.onerror = () => { recogLive = false; convMic.classList.remove('live'); };
+  return recog;
+}
+convMic.addEventListener('click', () => {
+  const r = ensureRecog();
+  if (!r){
+    alert('Speech recognition not supported in this browser.');
+    return;
+  }
+  if (recogLive){ r.stop(); return; }
+  try{ r.start(); recogLive = true; convMic.classList.add('live'); }
+  catch(_){ recogLive = false; convMic.classList.remove('live'); }
+});
 </script>
 </body>
 </html>
