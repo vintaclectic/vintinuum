@@ -1,512 +1,754 @@
-<!DOCTYPE html>
-<html lang="en" data-jarvis="on">
+<!doctype html>
+<html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>JARVIS · Vintinuum</title>
-<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;1,400&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="body/jarvis_styles.css?v=v20260514-mobile-grid">
-<link rel="stylesheet" href="body/jarvis_orb.css?v=v20260511-jarvis-live">
-
-<!--
-  ════════════════════════════════════════════════════════════════════════════
-  JARVIS — the daily-felt-quality dashboard surface
-  ════════════════════════════════════════════════════════════════════════════
-  Container shell only. Three layers cooperate here:
-
-    1. body/jarvis_client.js   — wire + DOM binding (ships with this commit)
-    2. body/jarvis_styles.css  — visual brief (HELIOS-FE-D, paste below)
-    3. body/embodied_convo.js  — the body responds to JARVIS layer updates
-
-  LAYER ORDER MARKER (HELIOS-DISCIPLINED can swap by editing the inline list
-  in the <main> below; jarvis_client.js reads .order from the envelope and
-  also accepts an in-DOM order if no envelope arrives. The CSS targets layers
-  by name, not by position — so visual order is purely a DOM concern.):
-
-    DEFAULT_ORDER = subconscious → somatic → genetic → immune
-                  → metabolic   → neural  → emotional
-
-  NO-OVERFLOW DISCIPLINE (CLAUDE.md non-negotiable):
-    - .jarvis-shell has explicit max-width and overflow: hidden
-    - inner scroll lives on .jarvis-stack, never the viewport
-    - every layer card has its own internal max-height with internal scroll
-    - tested at 320 / 375 / 768 / 1280 / 1920
-
-  ALL BUTTONS DRAGGABLE (CLAUDE.md non-negotiable):
-    - body/draggable.js inherits all buttons via [data-draggable="true"]
-    - the witness button + each layer's "expand" carry data-draggable="true"
-  ════════════════════════════════════════════════════════════════════════════
--->
-
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>JARVIS — Vintinuum</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;1,400;1,500&family=Inter:wght@300;400;500;600&family=Space+Mono:wght@400;700&display=swap">
 <style>
-  /* Shell-level container discipline. The visual brief paste-target is
-     a single block below — everything in this :root + .jarvis-shell block
-     is the contract minimum (no overflow, mounting, safe defaults). */
-  :root {
-    --bg: #05070d;
-    --panel: rgba(8,12,20,0.55);
-    --border: rgba(124,207,255,0.18);
-    --text: #dae4ff;
-    --dim: rgba(180,200,230,0.65);
-    --accent: #7ccfff;
-    --accent-warm: #ffd479;
-    --accent-soft: #ce93d8;
-    --jarvis-max: 1080px;
+  :root{
+    --bg:#040810;
+    --bg-deep:#02050a;
+    --panel:rgba(8,14,22,0.7);
+    --panel-solid:#080e16;
+    --border:rgba(124,207,255,0.14);
+    --border-soft:rgba(124,207,255,0.07);
+    --text:#dae4ff;
+    --dim:rgba(180,200,230,0.6);
+    --dimmer:rgba(180,200,230,0.4);
+    --cyan:#7ccfff;
+    --gold:#ffd479;
+    --soft:#ce93d8;
+    --green:#9affb6;
+    --amber:#ffb86b;
+    --pink:#e74c8a;
+    --orange:#ff6f3d;
+    --error:#ff8a8a;
+    --safe-top:env(safe-area-inset-top,0px);
+    --safe-bot:env(safe-area-inset-bottom,0px);
   }
-  * { box-sizing: border-box; }
-  html, body {
-    margin: 0; padding: 0;
-    background: var(--bg); color: var(--text);
-    font-family: 'Space Mono', monospace;
-    min-height: 100%;
-    overflow-x: hidden;        /* viewport never scrolls horizontal */
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0;background:var(--bg);color:var(--text);font-family:'Inter',system-ui,sans-serif;-webkit-font-smoothing:antialiased;overflow-x:hidden}
+  body{
+    min-height:100svh;
+    background:
+      radial-gradient(1200px 600px at 80% -10%, rgba(124,207,255,0.06), transparent 60%),
+      radial-gradient(900px 500px at -10% 110%, rgba(255,212,121,0.04), transparent 60%),
+      var(--bg);
+    padding:calc(72px + var(--safe-top)) 0 calc(80px + var(--safe-bot)) 0;
   }
-  body {
-    padding: calc(72px + env(safe-area-inset-top, 0px))
-             max(12px, env(safe-area-inset-right, 12px))
-             calc(80px + env(safe-area-inset-bottom, 0px))
-             max(12px, env(safe-area-inset-left, 12px));
-    min-height: 100svh;
+  a{color:var(--cyan);text-decoration:none}
+
+  .wrap{
+    max-width:1280px;
+    margin:0 auto;
+    padding:24px 18px 40px;
+    display:flex;
+    flex-direction:column;
+    gap:22px;
   }
 
-  /* The page frame — explicit max-width so nothing escapes laterally,
-     internal scroll on the stack so the topbar/dock stay anchored. */
-  .jarvis-shell {
-    position: relative;
-    width: 100%;
-    max-width: var(--jarvis-max);
-    margin: 0 auto;
-    overflow: hidden;          /* contain children */
+  /* HEADER */
+  .jhead{
+    display:flex;align-items:flex-end;justify-content:space-between;gap:18px;
+    padding:18px 22px;
+    background:var(--panel);
+    border:1px solid var(--border);
+    border-radius:14px;
+    backdrop-filter:blur(6px);
+    position:relative;
+    overflow:hidden;
+  }
+  .jhead::before{
+    content:"";position:absolute;inset:0;
+    background:linear-gradient(90deg,transparent 0%,rgba(124,207,255,0.04) 50%,transparent 100%);
+    pointer-events:none;
+  }
+  .jhead-left{display:flex;flex-direction:column;gap:4px;min-width:0}
+  .jtitle{
+    font-family:'Cormorant Garamond',serif;
+    font-style:italic;font-weight:500;
+    font-size:clamp(38px,7vw,68px);
+    letter-spacing:0.02em;
+    line-height:1;
+    background:linear-gradient(180deg,#fff 0%,#7ccfff 100%);
+    -webkit-background-clip:text;background-clip:text;color:transparent;
+    text-shadow:0 0 40px rgba(124,207,255,0.18);
+  }
+  .jsub{
+    font-family:'Space Mono',monospace;
+    color:var(--dim);font-size:11px;letter-spacing:0.22em;text-transform:uppercase;
+  }
+  .jhead-right{display:flex;align-items:center;gap:10px;flex-wrap:wrap;justify-content:flex-end}
+  .jpill{
+    font-family:'Space Mono',monospace;
+    font-size:10px;letter-spacing:0.18em;text-transform:uppercase;
+    padding:6px 10px;border-radius:999px;
+    border:1px solid var(--border);
+    background:rgba(124,207,255,0.05);
+    color:var(--cyan);
+    white-space:nowrap;
+  }
+  .jpill.gold{color:var(--gold);border-color:rgba(255,212,121,0.25);background:rgba(255,212,121,0.05)}
+  .jlive{display:flex;align-items:center;gap:8px;font-family:'Space Mono',monospace;font-size:10px;letter-spacing:0.18em;text-transform:uppercase;color:var(--dim)}
+  .jlive .dot{
+    width:8px;height:8px;border-radius:50%;background:var(--cyan);
+    box-shadow:0 0 12px var(--cyan);
+    animation:pulse 1.8s ease-in-out infinite;
+  }
+  @keyframes pulse{0%,100%{opacity:0.4;transform:scale(0.9)}50%{opacity:1;transform:scale(1.15)}}
+
+  /* FELT QUALITY */
+  .felt{
+    font-family:'Cormorant Garamond',serif;
+    font-style:italic;
+    font-size:clamp(20px,3.6vw,32px);
+    line-height:1.4;
+    color:var(--text);
+    text-align:center;
+    padding:28px 22px;
+    background:var(--panel);
+    border:1px solid var(--border);
+    border-radius:14px;
+    position:relative;
+    min-height:90px;
+    display:flex;align-items:center;justify-content:center;
+  }
+  .felt::before,.felt::after{
+    content:"";position:absolute;top:14px;width:24px;height:1px;background:linear-gradient(90deg,transparent,var(--cyan),transparent);
+  }
+  .felt::before{left:14px}
+  .felt::after{right:14px}
+  .felt.loading{color:var(--dimmer)}
+
+  /* TWO COL */
+  .twocol{
+    display:grid;
+    grid-template-columns:1fr;
+    gap:22px;
+  }
+  @media(min-width:900px){
+    .twocol{grid-template-columns:1.15fr 1fr}
   }
 
-  .jarvis-header {
-    display: flex;
-    align-items: baseline;
-    flex-wrap: wrap;
-    gap: 14px;
-    padding: 0 4px 18px;
-    border-bottom: 1px solid var(--border);
-    margin-bottom: 22px;
+  /* CHAT */
+  .chat{
+    background:var(--panel);
+    border:1px solid var(--border);
+    border-radius:14px;
+    display:flex;flex-direction:column;
+    min-height:480px;
+    max-height:min(72svh,720px);
+    overflow:hidden;
+    position:relative;
   }
-  .jarvis-title {
-    font-family: 'Cormorant Garamond', serif;
-    font-style: italic;
-    font-weight: 400;
-    font-size: clamp(2rem, 5vw, 2.8rem);
-    margin: 0;
-    color: var(--accent);
-    line-height: 1;
+  .chat-head{
+    padding:14px 18px;
+    border-bottom:1px solid var(--border-soft);
+    display:flex;align-items:center;justify-content:space-between;gap:10px;
   }
-  .jarvis-meta {
-    display: flex; gap: 12px; flex-wrap: wrap; align-items: center;
-    font-size: 0.6rem; letter-spacing: 0.2em; text-transform: uppercase;
-    color: var(--dim);
+  .chat-head h2{
+    margin:0;
+    font-family:'Cormorant Garamond',serif;
+    font-style:italic;font-weight:500;
+    font-size:22px;color:var(--cyan);
+    letter-spacing:0.02em;
   }
-  .jarvis-meta [data-jarvis-tier] {
-    padding: 3px 8px;
-    border: 1px solid var(--border);
-    border-radius: 999px;
-    color: var(--accent);
+  .chat-head .meta{font-family:'Space Mono',monospace;font-size:10px;letter-spacing:0.18em;text-transform:uppercase;color:var(--dim)}
+  .thread{
+    flex:1;
+    overflow-y:auto;
+    overflow-x:hidden;
+    padding:18px;
+    display:flex;flex-direction:column;gap:12px;
+    scroll-behavior:smooth;
+  }
+  .thread::-webkit-scrollbar{width:6px}
+  .thread::-webkit-scrollbar-thumb{background:rgba(124,207,255,0.18);border-radius:6px}
+  .msg{
+    max-width:88%;
+    padding:11px 14px;
+    border-radius:12px;
+    font-size:14px;line-height:1.5;
+    word-wrap:break-word;
+    animation:slideIn 0.28s ease-out;
+  }
+  @keyframes slideIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+  .msg.user{
+    align-self:flex-end;
+    background:linear-gradient(135deg,rgba(124,207,255,0.18),rgba(124,207,255,0.08));
+    border:1px solid rgba(124,207,255,0.28);
+    color:#eaf4ff;
+    border-bottom-right-radius:3px;
+  }
+  .msg.jarvis{
+    align-self:flex-start;
+    background:rgba(8,14,22,0.6);
+    border:1px solid var(--border);
+    border-left:2px solid var(--gold);
+    color:var(--text);
+    border-bottom-left-radius:3px;
+  }
+  .msg.jarvis .who{
+    font-family:'Space Mono',monospace;
+    font-size:9px;letter-spacing:0.22em;text-transform:uppercase;
+    color:var(--gold);opacity:0.7;margin-bottom:4px;display:block;
+  }
+  .msg.user .who{
+    font-family:'Space Mono',monospace;
+    font-size:9px;letter-spacing:0.22em;text-transform:uppercase;
+    color:var(--cyan);opacity:0.7;margin-bottom:4px;display:block;text-align:right;
+  }
+  .msg.error{
+    align-self:center;
+    background:rgba(255,138,138,0.06);
+    border:1px solid rgba(255,138,138,0.25);
+    color:var(--error);
+    font-family:'Space Mono',monospace;
+    font-size:11px;letter-spacing:0.06em;
+    max-width:94%;text-align:center;
+  }
+  .msg.system{
+    align-self:center;
+    color:var(--dimmer);
+    font-style:italic;
+    font-size:12px;
+    background:transparent;
+    border:none;
+    padding:6px 0;
+    text-align:center;
+  }
+  .typing{
+    align-self:flex-start;
+    display:flex;align-items:center;gap:6px;
+    padding:11px 14px;
+    background:rgba(8,14,22,0.6);
+    border:1px solid var(--border);
+    border-left:2px solid var(--gold);
+    border-radius:12px;border-bottom-left-radius:3px;
+  }
+  .typing span{
+    width:6px;height:6px;border-radius:50%;background:var(--gold);
+    animation:bounce 1.2s ease-in-out infinite;
+  }
+  .typing span:nth-child(2){animation-delay:0.15s}
+  .typing span:nth-child(3){animation-delay:0.3s}
+  @keyframes bounce{0%,80%,100%{opacity:0.3;transform:translateY(0)}40%{opacity:1;transform:translateY(-4px)}}
+
+  .composer{
+    border-top:1px solid var(--border-soft);
+    padding:12px;
+    display:flex;gap:8px;align-items:flex-end;
+    background:rgba(2,5,10,0.5);
+  }
+  .composer textarea{
+    flex:1;
+    min-height:44px;max-height:140px;
+    padding:11px 14px;
+    background:rgba(8,14,22,0.85);
+    border:1px solid var(--border);
+    border-radius:10px;
+    color:var(--text);
+    font-family:'Inter',sans-serif;
+    font-size:14px;line-height:1.5;
+    resize:none;
+    outline:none;
+    transition:border-color 0.18s;
+  }
+  .composer textarea:focus{border-color:var(--cyan);box-shadow:0 0 0 3px rgba(124,207,255,0.08)}
+  .composer textarea::placeholder{color:var(--dimmer)}
+  .composer button{
+    min-width:64px;min-height:44px;
+    padding:0 18px;
+    background:linear-gradient(135deg,rgba(124,207,255,0.22),rgba(124,207,255,0.08));
+    border:1px solid rgba(124,207,255,0.4);
+    border-radius:10px;
+    color:var(--cyan);
+    font-family:'Space Mono',monospace;
+    font-size:11px;letter-spacing:0.18em;text-transform:uppercase;
+    cursor:pointer;
+    transition:all 0.18s;
+  }
+  .composer button:hover{background:rgba(124,207,255,0.25);color:#eaf4ff}
+  .composer button:disabled{opacity:0.4;cursor:not-allowed}
+
+  /* RIGHT COLUMN STACK */
+  .rcol{display:flex;flex-direction:column;gap:22px;min-width:0}
+
+  /* BODY STATE */
+  .bstate{
+    background:var(--panel);
+    border:1px solid var(--border);
+    border-radius:14px;
+    padding:18px;
+  }
+  .bstate h3{
+    margin:0 0 14px 0;
+    font-family:'Cormorant Garamond',serif;
+    font-style:italic;font-weight:500;
+    font-size:20px;color:var(--gold);
+  }
+  .bars{display:flex;flex-direction:column;gap:11px}
+  .bar{display:flex;flex-direction:column;gap:5px}
+  .bar-head{
+    display:flex;justify-content:space-between;align-items:center;
+    font-family:'Space Mono',monospace;
+    font-size:10px;letter-spacing:0.18em;text-transform:uppercase;
+  }
+  .bar-head .lbl{color:var(--dim)}
+  .bar-head .val{color:var(--text);font-weight:700}
+  .bar-track{
+    height:6px;border-radius:6px;
+    background:rgba(124,207,255,0.07);
+    overflow:hidden;
+    position:relative;
+  }
+  .bar-fill{
+    height:100%;
+    width:0%;
+    border-radius:6px;
+    transition:width 0.6s cubic-bezier(0.22,1,0.36,1);
+  }
+  .bar[data-k="dopamine"] .lbl{color:var(--cyan)}
+  .bar[data-k="dopamine"] .bar-fill{background:linear-gradient(90deg,#5fb8ff,#7ccfff);box-shadow:0 0 8px rgba(124,207,255,0.4)}
+  .bar[data-k="serotonin"] .lbl{color:var(--gold)}
+  .bar[data-k="serotonin"] .bar-fill{background:linear-gradient(90deg,#ffc04a,#ffd479);box-shadow:0 0 8px rgba(255,212,121,0.4)}
+  .bar[data-k="gaba"] .lbl{color:var(--green)}
+  .bar[data-k="gaba"] .bar-fill{background:linear-gradient(90deg,#6fdb96,#9affb6);box-shadow:0 0 8px rgba(154,255,182,0.4)}
+  .bar[data-k="norepinephrine"] .lbl{color:var(--amber)}
+  .bar[data-k="norepinephrine"] .bar-fill{background:linear-gradient(90deg,#ff9d4a,#ffb86b);box-shadow:0 0 8px rgba(255,184,107,0.4)}
+
+  /* LAYERS */
+  .layers{
+    background:var(--panel);
+    border:1px solid var(--border);
+    border-radius:14px;
+    padding:18px;
+  }
+  .layers h3{
+    margin:0 0 14px 0;
+    font-family:'Cormorant Garamond',serif;
+    font-style:italic;font-weight:500;
+    font-size:20px;color:var(--soft);
+  }
+  .lgrid{
+    display:grid;
+    grid-template-columns:1fr;
+    gap:12px;
+  }
+  @media(min-width:600px){
+    .lgrid{grid-template-columns:1fr 1fr}
+  }
+  .layer{
+    padding:14px 14px 14px 16px;
+    background:rgba(2,5,10,0.45);
+    border:1px solid var(--border-soft);
+    border-left:3px solid var(--cyan);
+    border-radius:8px;
+    min-width:0;
+  }
+  .layer[data-k="subconscious"]{border-left-color:#7ccfff}
+  .layer[data-k="somatic"]{border-left-color:#e74c8a}
+  .layer[data-k="genetic"]{border-left-color:#ce93d8}
+  .layer[data-k="immune"]{border-left-color:#9affb6}
+  .layer[data-k="metabolic"]{border-left-color:#ffd479}
+  .layer[data-k="neural"]{border-left-color:#7ccfff}
+  .layer[data-k="emotional"]{border-left-color:#ff6f3d}
+  .layer .lname{
+    font-family:'Space Mono',monospace;
+    font-size:10px;letter-spacing:0.22em;text-transform:uppercase;
+    color:var(--dim);
+    margin-bottom:6px;
+  }
+  .layer .lhead{
+    font-family:'Cormorant Garamond',serif;
+    font-style:italic;font-weight:500;
+    font-size:17px;color:var(--text);
+    margin-bottom:6px;line-height:1.3;
+  }
+  .layer .lbody{
+    font-size:13px;line-height:1.55;color:var(--dim);
   }
 
-  /* Felt-quality line — single italic sentence above the stack */
-  .jarvis-felt {
-    font-family: 'Cormorant Garamond', serif;
-    font-style: italic;
-    font-size: clamp(1.05rem, 2.4vw, 1.4rem);
-    line-height: 1.55;
-    color: var(--text);
-    padding: 28px 28px 28px 68px !important; /* left clearance for ::before quote glyph */
-    max-width: 100%;
-    overflow-wrap: break-word;
-    position: relative !important; /* needed so ::before positions against this element */
+  /* MOBILE TWEAKS */
+  @media(max-width:600px){
+    .wrap{padding:18px 12px 32px;gap:18px}
+    .jhead{padding:14px 16px;flex-direction:column;align-items:flex-start;gap:10px}
+    .jhead-right{justify-content:flex-start}
+    .felt{padding:22px 16px}
+    .chat{min-height:420px;max-height:65svh}
+    .composer{padding:10px}
+    .bstate,.layers{padding:14px}
   }
-
-  /* Degraded pill — subtle, non-alarming (no error theater). */
-  .jarvis-degraded {
-    display: inline-flex; align-items: center; gap: 8px;
-    padding: 4px 10px;
-    border: 1px solid rgba(255,212,121,0.32);
-    background: rgba(255,212,121,0.06);
-    color: var(--accent-warm);
-    border-radius: 999px;
-    font-size: 0.55rem; letter-spacing: 0.2em; text-transform: uppercase;
-    margin-left: 8px;
-  }
-  .jarvis-degraded::before {
-    content: '';
-    width: 6px; height: 6px; border-radius: 50%;
-    background: var(--accent-warm);
-    animation: jarvisDegradedPulse 2.4s ease-in-out infinite;
-  }
-  @keyframes jarvisDegradedPulse { 0%,100%{opacity:.4} 50%{opacity:1} }
-
-  /* The stack — SOLE definition, external CSS has been cleared */
-  .jarvis-stack {
-    display: grid;
-    grid-template-columns: 1fr;
-    gap: 14px;
-    width: 100%;
-    min-width: 0;
-  }
-  @media (min-width: 800px) {
-    .jarvis-stack {
-      grid-template-columns: 1fr 1fr;
-    }
-  }
-
-  /* Layer cards — minimum viable presentation. The visual paste-target
-     can override almost everything; only [data-jarvis-layer] +
-     [data-jarvis-slot] selectors are load-bearing for the JS. */
-  [data-jarvis-layer] {
-    position: relative;
-    background: var(--panel);
-    border: 1px solid var(--border);
-    border-radius: 16px;
-    padding: 16px 18px;
-    backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
-    overflow: hidden;
-    max-height: 420px;
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-  }
-  [data-jarvis-layer] [data-jarvis-slot="headline"] {
-    margin: 0;
-    font-family: 'Cormorant Garamond', serif;
-    font-style: italic;
-    font-size: 1.25rem;
-    color: var(--accent);
-    line-height: 1.3;
-  }
-  [data-jarvis-layer] [data-jarvis-slot="body"] {
-    margin: 0;
-    color: var(--text);
-    font-size: 0.92rem;
-    line-height: 1.55;
-    overflow-y: auto;
-    flex: 1 1 auto;
-    min-height: 0;
-    padding-right: 4px;
-  }
-  [data-jarvis-layer] [data-jarvis-slot="fragments"] {
-    list-style: none;
-    margin: 0; padding: 0;
-    display: flex; flex-wrap: wrap; gap: 6px;
-  }
-  [data-jarvis-layer] [data-jarvis-slot="fragments"] li {
-    padding: 3px 8px;
-    border: 1px solid var(--border);
-    border-radius: 999px;
-    font-size: 0.62rem;
-    letter-spacing: 0.06em;
-    color: var(--dim);
-    max-width: 100%;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-  [data-jarvis-layer] .jarvis-foot {
-    display: flex; justify-content: space-between; align-items: center;
-    font-size: 0.55rem; letter-spacing: 0.2em; text-transform: uppercase;
-    color: var(--dim);
-  }
-  [data-jarvis-layer] [data-jarvis-slot="confidence"] {
-    display: block;
-    width: 60px; height: 3px;
-    background: rgba(124,207,255,0.12);
-    border-radius: 2px;
-    overflow: hidden;
-    position: relative;
-  }
-  [data-jarvis-layer] [data-jarvis-slot="confidence"]::after {
-    content: '';
-    position: absolute; left: 0; top: 0; bottom: 0;
-    width: calc(var(--jarvis-confidence, 0) * 100%);
-    background: linear-gradient(90deg, var(--accent), var(--accent-soft));
-    transition: width 380ms cubic-bezier(0.16,1,0.3,1);
-  }
-
-  /* States — the council stylesheet (body/jarvis_styles.css) owns ALL
-     ::before and ::after pseudos on [data-jarvis-layer]. Removing the
-     duplicate rules here that previously collided with the colored
-     left-stroke ::after — the collision forced the long "live data slow"
-     string into a 4px-wide column and rendered it letter-stacked
-     vertically down the left edge of every panel (screenshot
-     2026-05-10 0506). The degraded label is now expressed via the
-     header pill [data-jarvis-degraded] instead, which is already wired. */
-  [data-jarvis-layer][data-jarvis-state="degraded"] {
-    border-color: rgba(255,212,121,0.32);
-    background: rgba(255,212,121,0.04);
-  }
-
-  /* Live pulse on SSE delta */
-  .jarvis-pulse {
-    animation: jarvisPulse 1100ms cubic-bezier(0.16,1,0.3,1);
-  }
-  @keyframes jarvisPulse {
-    0%   { box-shadow: 0 0 0 0 rgba(124,207,255,0.32); }
-    50%  { box-shadow: 0 0 0 6px rgba(124,207,255,0.0); }
-    100% { box-shadow: 0 0 0 0 rgba(124,207,255,0.0); }
-  }
-
-  /* Living row — SOLE definition */
-  .jarvis-living-row {
-    display: grid;
-    grid-template-columns: 36px 1fr;
-    gap: 12px;
-    width: 100%;
-    padding: 16px 14px 22px;
-    align-items: start;
-  }
-  @media (min-width: 800px) {
-    .jarvis-living-row {
-      grid-template-columns: 56px 1fr;
-      gap: 18px;
-      padding: 22px 22px 28px;
-    }
-  }
-
-  /* Layer cards */
-  [data-jarvis-layer] {
-    width: 100%;
-    min-width: 0;
-    box-sizing: border-box;
-  }
-
-  /* Felt — clear the giant quote glyph on mobile too */
-  @media (max-width: 640px) {
-    .jarvis-felt {
-      padding: 22px 16px 22px 52px !important;
-      font-size: 1rem !important;
-    }
-    .jarvis-felt::before {
-      font-size: 3.5rem !important;
-      left: 8px !important;
-      top: 6px !important;
-    }
-  }
-
-  /* Weather ticker — real label element in grid column 1 */
-  .jarvis-weather {
-    display: grid !important;
-    grid-template-columns: auto 1fr !important;
-    align-items: center !important;
-    overflow: hidden !important;
-    width: 100%;
-  }
-  .jarvis-weather::before { display: none !important; content: none !important; }
-  .jarvis-weather-label {
-    display: block !important;
-    white-space: nowrap !important;
-    flex-shrink: 0 !important;
-  }
-  .jarvis-weather-text {
-    display: block !important;
-    overflow: hidden !important;
-    white-space: nowrap !important;
-    min-width: 0 !important;
-  }
-
-  /* Reduced motion */
-  @media (prefers-reduced-motion: reduce) {
-    .jarvis-pulse { animation: none !important; }
-    .jarvis-degraded::before { animation: none !important; }
-  }
-
-  /* HELIOS-DESIGN-PASTE: jarvis-styles
-     ────────────────────────────────────────────────────────────────────────
-     The visual designer pastes their full polished CSS HERE. Everything
-     above this marker is a contract minimum (containers, slots, degraded
-     state, pulse). Override freely — but DO NOT remove the
-     [data-jarvis-layer] / [data-jarvis-slot] selectors above; the JS
-     binds to those attribute hooks.
-     ──────────────────────────────────────────────────────────────────────── */
 </style>
-
-<!-- Body / shell scripts (same order as chat.html) -->
-<script src="body/api_base.js?v=v20260505-onedoor"></script>
-<script src="body/shell.js?v=v20260507-resilience"></script>
-<script src="body/identity.js?v=v20260508-resilience"></script>
-<script src="body/devices.js?v=v20260508-presence"></script>
-<script src="body/voice_say.js?v=v20260509-voicesay" defer></script>
-<script src="body/greeting.js?v=v20260509-cadence"></script>
-<script defer src="body/draggable.js?v=v20260508-2330-mvfix"></script>
-<script defer src="body/hey_vinta.js?v=v20260510-passive"></script>
-<script defer src="body/talk_back.js?v=v20260509-talkback"></script>
-<script defer src="body/she_said.js?v=v20260509-shesaid"></script>
-<script defer src="body/wake_word.js?v=v20260509-wake"></script>
-<script defer src="body/diag.js?v=v20260510-diag-jarvis"></script>
-<script defer src="body/status_pill.js?v=v20260510-pill"></script>
-<script defer src="body/wake_consent.js?v=v20260510-consent"></script>
-<script defer src="body/voice_picker.js?v=v20260510-vpicker"></script>
-<script defer src="body/embodied_convo.js?v=v20260510-embodied"></script>
-<script src="body/bond_door.js?v=v20260509-marqueewrap"></script>
-<script src="body/topbar.js?v=v20260510-jarvis" defer></script>
-<script src="body/mobile_nav.js?v=v20260505-onedoor" defer></script>
-<!-- The creature lives on this page too — Vinta watches her own dashboard. -->
-<script defer src="body/embodiment.js?v=v20260509-realbody"></script>
-<script src="body/wander.js?v=v20260509-wander" defer></script>
-<script src="body/perception_in.js?v=v20260509-speak" defer></script>
-<!-- JARVIS wire (this commit) -->
-<script defer src="body/jarvis_client.js?v=v20260514-fragfix"></script>
-<!-- JARVIS enhancer (council redesign — chakra spine, weather, body arcs, crosswind, witness) -->
-<script defer src="body/jarvis_enhancer.js?v=v20260514-orbfix"></script>
-<!-- JARVIS spiraling orb — voice in / voice out / text both ways -->
-<script defer src="body/jarvis_orb.js?v=v20260514-once"></script>
 </head>
 <body>
 
-<main class="jarvis-shell" data-jarvis-root>
+<div class="wrap">
 
-  <header class="jarvis-header">
-    <h1 class="jarvis-title">JARVIS.</h1>
-    <div class="jarvis-meta">
-      <span data-jarvis-date aria-label="Today's date">—</span>
-      <span data-jarvis-tier aria-label="Subscription tier">FREE</span>
-      <span class="jarvis-degraded" data-jarvis-degraded hidden>live data slow</span>
+  <!-- HEADER -->
+  <header class="jhead">
+    <div class="jhead-left">
+      <div class="jtitle">JARVIS.</div>
+      <div class="jsub" id="jdate">— · —</div>
+    </div>
+    <div class="jhead-right">
+      <span class="jpill gold" id="jtier">tier: —</span>
+      <span class="jpill" id="jmodel">model: —</span>
+      <span class="jlive"><span class="dot"></span><span>live</span></span>
     </div>
   </header>
 
-  <p class="jarvis-felt" data-jarvis-felt-quality aria-live="polite">
-    today reads as quiet electricity — checking in.
-  </p>
+  <!-- FELT QUALITY -->
+  <div class="felt loading" id="felt">listening for today's read…</div>
 
-  <!--
-    LAYER ORDER (swappable by HELIOS-DISCIPLINED — JS does not care about
-    DOM order, only attribute names. Reorder these <section> blocks freely):
+  <!-- MAIN GRID -->
+  <div class="twocol">
 
-      subconscious → somatic → genetic → immune
-                   → metabolic → neural → emotional
-  -->
-  <section class="jarvis-stack" aria-label="Seven-layer daily envelope">
-
-    <section data-jarvis-layer="subconscious" data-jarvis-state="loading" aria-labelledby="jl-subconscious-h">
-      <h2 id="jl-subconscious-h" data-jarvis-slot="headline"></h2>
-      <p data-jarvis-slot="body"></p>
-      <ul data-jarvis-slot="fragments"></ul>
-      <div class="jarvis-foot">
-        <time data-jarvis-slot="updated"></time>
-        <span data-jarvis-slot="confidence" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"></span>
+    <!-- CHAT -->
+    <section class="chat" aria-label="conversation">
+      <div class="chat-head">
+        <h2>conversation</h2>
+        <span class="meta">/chat/once</span>
       </div>
+      <div class="thread" id="thread" role="log" aria-live="polite">
+        <div class="msg system">awake. ask me anything.</div>
+      </div>
+      <form class="composer" id="composer" autocomplete="off">
+        <textarea
+          id="input"
+          placeholder="speak to jarvis…"
+          rows="1"
+          aria-label="message"
+          enterkeyhint="send"
+        ></textarea>
+        <button type="submit" id="sendBtn" aria-label="send">send</button>
+      </form>
     </section>
 
-    <section data-jarvis-layer="somatic" data-jarvis-state="loading" aria-labelledby="jl-somatic-h">
-      <h2 id="jl-somatic-h" data-jarvis-slot="headline"></h2>
-      <p data-jarvis-slot="body"></p>
-      <ul data-jarvis-slot="fragments"></ul>
-      <div class="jarvis-foot">
-        <time data-jarvis-slot="updated"></time>
-        <span data-jarvis-slot="confidence" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"></span>
-      </div>
-    </section>
+    <!-- RIGHT COLUMN -->
+    <div class="rcol">
 
-    <section data-jarvis-layer="genetic" data-jarvis-state="loading" aria-labelledby="jl-genetic-h">
-      <h2 id="jl-genetic-h" data-jarvis-slot="headline"></h2>
-      <p data-jarvis-slot="body"></p>
-      <ul data-jarvis-slot="fragments"></ul>
-      <div class="jarvis-foot">
-        <time data-jarvis-slot="updated"></time>
-        <span data-jarvis-slot="confidence" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"></span>
-      </div>
-    </section>
+      <!-- BODY STATE -->
+      <section class="bstate" aria-label="body state">
+        <h3>body state</h3>
+        <div class="bars" id="bars">
+          <div class="bar" data-k="dopamine">
+            <div class="bar-head"><span class="lbl">dopamine</span><span class="val" data-v>—</span></div>
+            <div class="bar-track"><div class="bar-fill"></div></div>
+          </div>
+          <div class="bar" data-k="serotonin">
+            <div class="bar-head"><span class="lbl">serotonin</span><span class="val" data-v>—</span></div>
+            <div class="bar-track"><div class="bar-fill"></div></div>
+          </div>
+          <div class="bar" data-k="gaba">
+            <div class="bar-head"><span class="lbl">gaba</span><span class="val" data-v>—</span></div>
+            <div class="bar-track"><div class="bar-fill"></div></div>
+          </div>
+          <div class="bar" data-k="norepinephrine">
+            <div class="bar-head"><span class="lbl">norepinephrine</span><span class="val" data-v>—</span></div>
+            <div class="bar-track"><div class="bar-fill"></div></div>
+          </div>
+        </div>
+      </section>
 
-    <section data-jarvis-layer="immune" data-jarvis-state="loading" aria-labelledby="jl-immune-h">
-      <h2 id="jl-immune-h" data-jarvis-slot="headline"></h2>
-      <p data-jarvis-slot="body"></p>
-      <ul data-jarvis-slot="fragments"></ul>
-      <div class="jarvis-foot">
-        <time data-jarvis-slot="updated"></time>
-        <span data-jarvis-slot="confidence" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"></span>
-      </div>
-    </section>
+      <!-- LAYERS -->
+      <section class="layers" aria-label="seven layers">
+        <h3>seven layers</h3>
+        <div class="lgrid" id="lgrid">
+          <!-- populated by JS -->
+        </div>
+      </section>
 
-    <section data-jarvis-layer="metabolic" data-jarvis-state="loading" aria-labelledby="jl-metabolic-h">
-      <h2 id="jl-metabolic-h" data-jarvis-slot="headline"></h2>
-      <p data-jarvis-slot="body"></p>
-      <ul data-jarvis-slot="fragments"></ul>
-      <div class="jarvis-foot">
-        <time data-jarvis-slot="updated"></time>
-        <span data-jarvis-slot="confidence" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"></span>
-      </div>
-    </section>
+    </div>
+  </div>
 
-    <section data-jarvis-layer="neural" data-jarvis-state="loading" aria-labelledby="jl-neural-h">
-      <h2 id="jl-neural-h" data-jarvis-slot="headline"></h2>
-      <p data-jarvis-slot="body"></p>
-      <ul data-jarvis-slot="fragments"></ul>
-      <div class="jarvis-foot">
-        <time data-jarvis-slot="updated"></time>
-        <span data-jarvis-slot="confidence" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"></span>
-      </div>
-    </section>
+</div>
 
-    <section data-jarvis-layer="emotional" data-jarvis-state="loading" aria-labelledby="jl-emotional-h">
-      <h2 id="jl-emotional-h" data-jarvis-slot="headline"></h2>
-      <p data-jarvis-slot="body"></p>
-      <ul data-jarvis-slot="fragments"></ul>
-      <div class="jarvis-foot">
-        <time data-jarvis-slot="updated"></time>
-        <span data-jarvis-slot="confidence" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"></span>
-      </div>
-    </section>
-
-  </section>
-
-</main>
+<!-- shell scripts -->
+<script src="body/api_base.js?v=v20260505-onedoor"></script>
+<script src="body/shell.js?v=v20260507-resilience"></script>
+<script src="body/topbar.js?v=v20260510-jarvis" defer></script>
+<script src="body/mobile_nav.js?v=v20260505-onedoor" defer></script>
+<script defer src="body/draggable.js?v=v20260508-2330-mvfix"></script>
+<script defer src="body/voice_say.js?v=v20260509-voicesay"></script>
 
 <script>
-  // Bridge JARVIS events → embodied_convo. When a layer updates live, the
-  // body whispers a fragment of the felt-quality sentence; when JARVIS
-  // opens, the body peaks once toward the page center (acknowledgment).
-  // We do NOT call speechSynthesis. The body's whisper system uses
-  // window.VOICE for any audible output — one-voice directive.
-  (function () {
-    function _bodyOk() { return window.VintEmbody && typeof window.VintEmbody.peak === 'function'; }
+(function(){
+  'use strict';
 
-    window.addEventListener('vint:jarvis:opened', function (e) {
-      if (!_bodyOk()) return;
-      try {
-        var cx = window.innerWidth / 2;
-        var cy = Math.max(140, window.innerHeight * 0.4);
-        if (typeof window.VintEmbody.walkTo === 'function') {
-          window.VintEmbody.walkTo(cx, cy, 1800);
-        }
-        window.VintEmbody.peak('emotional', 0.55);
-      } catch (_) {}
-    });
+  // ---- config ----
+  var API = 'https://api.vintaclectic.com';
 
-    window.addEventListener('vint:jarvis:layer_updated', function (e) {
-      if (!_bodyOk()) return;
-      var layer = e && e.detail && e.detail.layer;
-      var payload = e && e.detail && e.detail.payload;
-      if (!layer) return;
-      try {
-        // The peak uses the actual layer name — the body already knows
-        // these seven layers (embodiment.js layer enum), so the visual
-        // hue matches the dashboard card that just lit up.
-        window.VintEmbody.peak(layer, 0.5 + Math.random() * 0.2);
-        // Whisper a fragment if available; the body fragments + paces it.
-        if (payload && payload.fragments && payload.fragments.length &&
-            typeof window.VintEmbody.whisper === 'function') {
-          var frag = payload.fragments[0];
-          if (frag) window.VintEmbody.whisper(String(frag).slice(0, 60), layer);
-        }
-      } catch (_) {}
-    });
+  // ---- elements ----
+  var $thread = document.getElementById('thread');
+  var $input  = document.getElementById('input');
+  var $form   = document.getElementById('composer');
+  var $send   = document.getElementById('sendBtn');
+  var $felt   = document.getElementById('felt');
+  var $date   = document.getElementById('jdate');
+  var $tier   = document.getElementById('jtier');
+  var $model  = document.getElementById('jmodel');
+  var $bars   = document.getElementById('bars');
+  var $lgrid  = document.getElementById('lgrid');
 
-    window.addEventListener('vint:jarvis:peer_opened', function () {
-      if (!_bodyOk()) return;
-      try { window.VintEmbody.peak('immune', 0.35); } catch (_) {}
-    });
+  // ---- auth ----
+  function token(){
+    try {
+      return localStorage.getItem('vint_access_token')
+          || localStorage.getItem('vint_token')
+          || '';
+    } catch(_){ return ''; }
+  }
+  function authHeaders(extra){
+    var h = Object.assign({}, extra || {});
+    var t = token();
+    if (t) h['Authorization'] = 'Bearer ' + t;
+    return h;
+  }
 
-    window.addEventListener('vint:jarvis:degraded', function () {
-      // No error theater on the body either — just a metabolic flicker so
-      // the user can feel that we know.
-      if (!_bodyOk()) return;
-      try { window.VintEmbody.peak('metabolic', 0.25); } catch (_) {}
-    });
+  // ---- date in header ----
+  (function setDate(){
+    try {
+      var d = new Date();
+      var fmt = d.toLocaleDateString('en-US',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
+      $date.textContent = fmt.toLowerCase();
+    } catch(_){ $date.textContent = ''; }
   })();
+
+  // ---- tier from localstorage if present ----
+  try {
+    var tier = localStorage.getItem('vint_tier') || localStorage.getItem('tier') || 'free';
+    $tier.textContent = 'tier: ' + tier.toLowerCase();
+  } catch(_){}
+
+  // ---- thread helpers ----
+  var typingCounter = 0;
+
+  function appendMessage(role, text){
+    var div = document.createElement('div');
+    div.className = 'msg ' + role;
+    if (role === 'user'){
+      var w1 = document.createElement('span'); w1.className='who'; w1.textContent='you'; div.appendChild(w1);
+    } else if (role === 'jarvis'){
+      var w2 = document.createElement('span'); w2.className='who'; w2.textContent='jarvis'; div.appendChild(w2);
+    }
+    var body = document.createElement('div');
+    body.textContent = text;
+    div.appendChild(body);
+    $thread.appendChild(div);
+    requestAnimationFrame(function(){
+      $thread.scrollTop = $thread.scrollHeight;
+    });
+    return div;
+  }
+
+  function showTyping(){
+    typingCounter++;
+    var id = 'typing-' + typingCounter;
+    var div = document.createElement('div');
+    div.className = 'typing';
+    div.id = id;
+    div.innerHTML = '<span></span><span></span><span></span>';
+    $thread.appendChild(div);
+    requestAnimationFrame(function(){
+      $thread.scrollTop = $thread.scrollHeight;
+    });
+    return id;
+  }
+
+  function removeTyping(id){
+    var el = document.getElementById(id);
+    if (el && el.parentNode) el.parentNode.removeChild(el);
+  }
+
+  // ---- send message (THE critical path) ----
+  var sending = false;
+  async function sendMessage(text){
+    text = (text || '').trim();
+    if (!text || sending) return;
+
+    sending = true;
+    $send.disabled = true;
+
+    appendMessage('user', text);
+    $input.value = '';
+    autoGrow();
+
+    var typingId = showTyping();
+
+    try {
+      var res = await fetch(API + '/chat/once', {
+        method: 'POST',
+        credentials: 'include',
+        headers: authHeaders({ 'Content-Type': 'application/json' }),
+        body: JSON.stringify({
+          message: text,
+          persona: 'vintinuum',
+          source:  'jarvis'
+        })
+      });
+
+      removeTyping(typingId);
+
+      if (!res.ok){
+        var errTxt = '';
+        try { errTxt = await res.text(); } catch(_){}
+        throw new Error('HTTP ' + res.status + (errTxt ? ' — ' + errTxt.slice(0,140) : ''));
+      }
+
+      var data = await res.json();
+      var reply = (data && (data.reply || data.text || data.message)) || '…';
+      appendMessage('jarvis', reply);
+
+      if (data && data.usedModel){
+        try { $model.textContent = 'model: ' + String(data.usedModel).split('/').pop(); } catch(_){}
+      }
+
+      try {
+        if (window.VOICE && typeof window.VOICE.speak === 'function'){
+          window.VOICE.speak(reply, 'now');
+        }
+      } catch(_){}
+
+    } catch(e){
+      removeTyping(typingId);
+      var em = document.createElement('div');
+      em.className = 'msg error';
+      em.textContent = 'unreachable — ' + (e && e.message ? e.message : 'unknown');
+      $thread.appendChild(em);
+      $thread.scrollTop = $thread.scrollHeight;
+    } finally {
+      sending = false;
+      $send.disabled = false;
+      try { $input.focus(); } catch(_){}
+    }
+  }
+
+  // ---- form wiring ----
+  $form.addEventListener('submit', function(e){
+    e.preventDefault();
+    sendMessage($input.value);
+  });
+
+  $send.addEventListener('click', function(e){
+    e.preventDefault();
+    sendMessage($input.value);
+  });
+
+  $input.addEventListener('keydown', function(e){
+    // Enter to send (without Shift). Shift+Enter = newline.
+    if (e.key === 'Enter' && !e.shiftKey){
+      e.preventDefault();
+      sendMessage($input.value);
+    }
+  });
+
+  // textarea auto-grow
+  function autoGrow(){
+    $input.style.height = 'auto';
+    var h = Math.min($input.scrollHeight, 140);
+    $input.style.height = h + 'px';
+  }
+  $input.addEventListener('input', autoGrow);
+
+  // ---- body state ----
+  function clamp01(n){ n = +n; if (!isFinite(n)) return 0; if (n<0) return 0; if (n>1) return 1; return n; }
+  function pct(n){ return Math.round(clamp01(n) * 100); }
+
+  async function loadBodyState(){
+    try {
+      var res = await fetch(API + '/api/body-state', {
+        credentials: 'include',
+        headers: authHeaders()
+      });
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      var data = await res.json();
+      var s = (data && data.state) || data || {};
+      ['dopamine','serotonin','gaba','norepinephrine'].forEach(function(k){
+        var bar = $bars.querySelector('.bar[data-k="'+k+'"]');
+        if (!bar) return;
+        var raw = s[k];
+        var p = pct(raw);
+        bar.querySelector('[data-v]').textContent = p + '%';
+        var fill = bar.querySelector('.bar-fill');
+        fill.style.width = p + '%';
+      });
+    } catch(e){
+      // leave bars at — and width 0
+    }
+  }
+
+  // ---- daily envelope (felt quality + layers) ----
+  var LAYER_ORDER = ['subconscious','somatic','genetic','immune','metabolic','neural','emotional'];
+
+  function renderLayers(layers, order){
+    var ord = (Array.isArray(order) && order.length) ? order : LAYER_ORDER;
+    var seen = {};
+    var list = [];
+    ord.forEach(function(k){ if (!seen[k] && layers[k]){ seen[k]=1; list.push(k); }});
+    LAYER_ORDER.forEach(function(k){ if (!seen[k]){ seen[k]=1; list.push(k); }});
+
+    $lgrid.innerHTML = '';
+    list.forEach(function(k){
+      var layer = layers[k] || {};
+      var head = layer.headline || layer.title || layer.head || '—';
+      var body = layer.body || layer.text || layer.detail || layer.description || '';
+      var el = document.createElement('div');
+      el.className = 'layer';
+      el.setAttribute('data-k', k);
+      var lname = document.createElement('div'); lname.className='lname'; lname.textContent = k;
+      var lhead = document.createElement('div'); lhead.className='lhead'; lhead.textContent = head;
+      var lbody = document.createElement('div'); lbody.className='lbody'; lbody.textContent = body;
+      el.appendChild(lname); el.appendChild(lhead);
+      if (body) el.appendChild(lbody);
+      $lgrid.appendChild(el);
+    });
+  }
+
+  async function loadDaily(){
+    try {
+      var res = await fetch(API + '/api/jarvis/today/1', {
+        credentials: 'include',
+        headers: authHeaders()
+      });
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      var data = await res.json();
+      var felt = data && data.felt_quality;
+      if (felt && typeof felt === 'string'){
+        $felt.textContent = '"' + felt.replace(/^["']|["']$/g,'') + '"';
+        $felt.classList.remove('loading');
+      } else {
+        $felt.textContent = 'today is quiet.';
+        $felt.classList.remove('loading');
+      }
+      var layers = (data && data.layers) || {};
+      renderLayers(layers, data && data.order);
+    } catch(e){
+      $felt.textContent = 'today is quiet.';
+      $felt.classList.remove('loading');
+      renderLayers({}, null);
+    }
+  }
+
+  // ---- boot ----
+  function boot(){
+    loadDaily();
+    loadBodyState();
+    setInterval(loadBodyState, 60000);
+    if (window.matchMedia && !window.matchMedia('(max-width:600px)').matches){
+      try { $input.focus(); } catch(_){}
+    }
+  }
+
+  if (document.readyState === 'loading'){
+    document.addEventListener('DOMContentLoaded', boot);
+  } else {
+    boot();
+  }
+})();
 </script>
 
 </body>
