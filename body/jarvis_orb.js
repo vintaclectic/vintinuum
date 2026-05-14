@@ -427,8 +427,21 @@
   // ─── Chat via SSE streaming ───────────────────────────────────────────────
   function sendChat(text, orb, utterance, mic, onDone) {
     if (!text) return;
+    // Guard: if stuck in thinking/speaking from a previous timed-out request,
+    // force reset so this message can go through.
+    if (orb.state === 'thinking' || orb.state === 'speaking') {
+      orb.setState('idle');
+    }
     orb.setState('thinking');
     utterance.show('…');
+
+    // Client-side hard timeout — if the fetch never resolves, unblock after 30s
+    var _chatTimeout = setTimeout(function () {
+      orb.setState('idle');
+      utterance.show('(no response — try again)');
+      utterance.hideAfter(4000);
+      if (onDone) onDone(null);
+    }, 30000);
 
     // Add to local history immediately (display purposes)
     _convHistory.push({ role: 'user', content: text });
@@ -537,6 +550,7 @@
       }
 
       function _finish(reply) {
+        clearTimeout(_chatTimeout);
         orb.setState('dwelling');
         if (!reply) { utterance.show('(no reply)'); utterance.hideAfter(4000); }
         else { utterance.hideAfter(10000); }
@@ -572,6 +586,7 @@
       return pump();
     })
     .catch(function (err) {
+      clearTimeout(_chatTimeout);
       utterance.show('(' + (err && err.message || 'JARVIS unreachable') + ')');
       orb.setState('idle');
       utterance.hideAfter(5000);
