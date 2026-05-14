@@ -902,53 +902,30 @@ const MODEL_ROLES = {
   'nomic-embed-text':{ role: 'embed', desc: 'semantic embedding / recall' },
 };
 
-function paintModels(health) {
+function paintModels(data) {
   const el = document.getElementById('model-grid');
   el.innerHTML = '';
-  const models = health.models || [];
+  const models = data.models || [];
   if (!models.length) {
     el.innerHTML = '<div class="unavailable">ollama unavailable or no models loaded</div>';
     return;
   }
-  for (const m of models) {
-    const known = MODEL_ROLES[m.name] || MODEL_ROLES[m.name?.split(':')[0]];
+  for (const item of models) {
+    const keyLookup = item.key || item.model || '';
+    const known = MODEL_ROLES[keyLookup] || MODEL_ROLES[keyLookup.split(':')[0]];
+    const displayName = item.label || item.model || item.key || '—';
+    const healthy = item.healthy;
+    const healthCls = healthy === true ? 'present' : (healthy === false ? 'absent' : 'present');
+    const healthLabel = healthy === true ? 'healthy' : (healthy === false ? 'unhealthy' : 'loaded');
     const card = document.createElement('div');
     card.className = 'model-card';
     card.innerHTML = `
-      <div class="model-role">${known ? known.role : 'model'}</div>
-      <div class="model-name">${m.name || m}</div>
-      <div class="model-meta">${known ? known.desc : ''}</div>
-      <div class="model-badge present">loaded</div>
+      <div class="model-role">${known ? known.role : (item.local ? 'local' : 'cloud')}</div>
+      <div class="model-name">${displayName}</div>
+      <div class="model-meta">${known ? known.desc : (item.model || '')}</div>
+      <div class="model-badge ${healthCls}">${healthLabel}</div>
     `;
     el.appendChild(card);
-  }
-  // show any expected but missing
-  const loaded = new Set(models.map(m => (m.name || m)));
-  for (const [name, info] of Object.entries(MODEL_ROLES)) {
-    if (!loaded.has(name)) {
-      const card = document.createElement('div');
-      card.className = 'model-card';
-      card.innerHTML = `
-        <div class="model-role">${info.role}</div>
-        <div class="model-name">${name}</div>
-        <div class="model-meta">${info.desc}</div>
-        <div class="model-badge absent">not loaded</div>
-      `;
-      el.appendChild(card);
-    }
-  }
-  // GPU
-  if (health.gpu || health.memory) {
-    const g = document.getElementById('gpu-info');
-    g.style.display = '';
-    const parts = [];
-    if (health.gpu) parts.push('<strong>GPU:</strong> ' + health.gpu);
-    if (health.memory) {
-      const mem = health.memory;
-      if (mem.total) parts.push('<strong>VRAM total:</strong> ' + mem.total);
-      if (mem.free) parts.push('<strong>VRAM free:</strong> ' + mem.free);
-    }
-    document.getElementById('gpu-inner').innerHTML = parts.join('<br>') || 'no GPU detail available';
   }
 }
 
@@ -960,11 +937,24 @@ function paintCorpus(data) {
     return;
   }
   el.innerHTML = '';
+  // Extract timestamp from filename like training_1778756985461.jsonl
+  function lastTrainingDate(filename) {
+    if (!filename) return '—';
+    const m = filename.match(/(\d{10,})/);
+    if (!m) return '—';
+    try { return new Date(parseInt(m[1], 10)).toLocaleString(); } catch { return '—'; }
+  }
+  function fmtBytes(n) {
+    if (!n) return '0 — run export to populate';
+    if (n >= 1024 * 1024) return (n / (1024 * 1024)).toFixed(2) + ' MB';
+    return (n / 1024).toFixed(1) + ' KB';
+  }
+  const pairCount = data.pair_count;
   const stats = [
-    { k: 'last built', v: fmtDate(data.built_at || data.last_built) },
-    { k: 'pair count', v: (data.pair_count || data.pairs || '—').toLocaleString() },
-    { k: 'est. tokens', v: data.estimated_tokens ? (data.estimated_tokens / 1000).toFixed(0) + 'k' : '—' },
-    { k: 'format', v: data.format || 'QLoRA JSONL' },
+    { k: 'last built', v: lastTrainingDate(data.last_training_file) },
+    { k: 'pair count', v: pairCount != null ? (pairCount === 0 ? '0 — needs export' : pairCount.toLocaleString()) : '—' },
+    { k: 'corpus size', v: fmtBytes(data.corpus_size_bytes) },
+    { k: 'training files', v: data.training_files != null ? data.training_files : '—' },
   ];
   for (const s of stats) {
     const div = document.createElement('div');
@@ -983,16 +973,19 @@ function paintFeed(items) {
     return;
   }
   for (const item of items) {
-    const type = (item.type || 'unknown').toLowerCase();
+    const channel = (item.channel || 'unknown').toLowerCase();
     const card = document.createElement('div');
-    card.className = 'feed-card ' + type;
-    const snippet = (item.snippet || item.text || item.content || '').slice(0, 100);
+    card.className = 'feed-card ' + channel;
+    // ts is Unix seconds — convert to ms for Date
+    const tsMs = item.ts ? item.ts * 1000 : null;
+    const snippet = (item.content || '').slice(0, 160);
     card.innerHTML = `
       <div class="fc-top">
-        <span class="fc-type">${type}</span>
-        ${item.source ? `<span class="fc-source">${item.source}</span>` : ''}
-        <span class="fc-time">${timeAgo(item.ts || item.created_at || item.at)}</span>
+        <span class="fc-type">${channel}</span>
+        ${item.layer ? `<span class="fc-source">${item.layer}</span>` : ''}
+        <span class="fc-time">${timeAgo(tsMs)}</span>
       </div>
+      ${item.title ? `<div class="fc-title">${item.title}</div>` : ''}
       <div class="fc-snippet">${snippet || '—'}</div>
     `;
     el.appendChild(card);
@@ -1020,13 +1013,21 @@ function paintEvolution(data) {
     return;
   }
 
-  const lastRun = data.last_run || data.latest;
-  const runCount = data.run_count || (data.log ? data.log.length : 0);
+  const runs = data.runs || [];
+  const lastEntry = runs.length ? runs[runs.length - 1] : null;
+  const lastRun = lastEntry ? lastEntry.date : null;
+  const runCount = runs.length;
+  function deriveStatus(lines) {
+    if (!lines || !lines.length) return '—';
+    const joined = lines.join(' ');
+    return /error/i.test(joined) ? 'error' : 'complete';
+  }
+  const lastStatus = lastEntry ? deriveStatus(lastEntry.lines) : '—';
   const stats = [
     { k: 'next run', v: '3:00 AM' },
     { k: 'last run', v: fmtDate(lastRun) },
     { k: 'total runs', v: runCount || '—' },
-    { k: 'last status', v: data.last_status || '—' },
+    { k: 'last status', v: lastStatus },
   ];
   for (const s of stats) {
     const div = document.createElement('div');
@@ -1035,18 +1036,18 @@ function paintEvolution(data) {
     grid.appendChild(div);
   }
 
-  const log = data.log || data.entries || [];
-  const recent = log.slice(0, 5);
+  const recent = runs.slice(-5).reverse();
   for (const e of recent) {
+    const status = deriveStatus(e.lines);
+    const lastLine = (e.lines || []).filter(l => l && l.trim()).slice(-1)[0] || '';
     const div = document.createElement('div');
     div.className = 'evo-entry';
-    const status = (e.status || 'unknown').toLowerCase();
     div.innerHTML = `
-      <span class="ee-date">${fmtDate(e.ts || e.at || e.date)}</span>
-      <span class="ee-status ${status === 'complete' || status === 'success' ? 'complete' : 'failed'}">
+      <span class="ee-date">${fmtDate(e.date)}</span>
+      <span class="ee-status ${status === 'complete' ? 'complete' : 'failed'}">
         ${status}
       </span>
-      ${e.note ? `<span class="ee-note">${e.note}</span>` : ''}
+      ${lastLine ? `<span class="ee-note">${lastLine}</span>` : ''}
     `;
     entries.appendChild(div);
   }
@@ -1236,10 +1237,10 @@ async function loadCognitionHealth() {
 }
 
 async function loadModels() {
-  const data = await apiFetch('/api/health');
+  const data = await apiFetch('/api/models');
   if (data.__err || data.__404) {
     document.getElementById('model-grid').innerHTML =
-      '<div class="unavailable">health endpoint unavailable</div>';
+      '<div class="unavailable">models endpoint unavailable</div>';
     return;
   }
   paintModels(data);

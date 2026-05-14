@@ -402,7 +402,9 @@
           orb.setState('idle');
           utterance.show('mic unavailable — type below ↓');
           utterance.hideAfter(4000);
-          nodes.input.focus();
+          // Focus the text input — query it directly since nodes is out of scope here
+          var inp = document.querySelector('.jarvis-orb-input');
+          if (inp) inp.focus();
         }
       },
       stop: function () {
