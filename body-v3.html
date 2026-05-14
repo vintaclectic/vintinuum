@@ -1030,7 +1030,19 @@ button{font-family:inherit;color:inherit}
   .arm,.leg,.stars,.eye.r,.fiber::before,.fiber::after{animation:none}
   #figure-inner.walking{animation:none}
 }
+/* ── xterm.js overrides — sits inside panel, no bleed ── */
+.xterm-wrap{position:absolute;inset:0;overflow:hidden;background:#060a0e;border-radius:0 0 12px 12px;}
+.xterm-wrap .xterm{height:100%;}
+.term-toolbar{display:flex;align-items:center;gap:8px;padding:6px 12px;background:#0a0e14;border-bottom:1px solid #1e3a5a;flex-shrink:0;}
+.term-toolbar button{background:#132030;border:1px solid #1e3a5a;color:#7eb8f0;border-radius:6px;padding:3px 10px;font:12px/1.6 monospace;cursor:pointer;}
+.term-toolbar button:hover{background:#1e3a5a;color:#00d4ff;}
+.term-toolbar .term-status{margin-left:auto;font:11px/1 monospace;color:#3a6a8a;}
+.term-masterkey-prompt{display:flex;flex-direction:column;gap:8px;padding:20px;color:#7eb8f0;font:13px/1.8 monospace;}
+.term-masterkey-prompt input{background:#0a0e14;border:1px solid #1e3a5a;color:#00d4ff;border-radius:6px;padding:8px 12px;font:13px monospace;outline:none;}
+.term-masterkey-prompt input:focus{border-color:#00d4ff;box-shadow:0 0 8px rgba(0,212,255,.2);}
+.term-masterkey-prompt .mk-submit{background:#1e3a5a;border:1px solid #00d4ff;color:#00d4ff;border-radius:6px;padding:8px 18px;cursor:pointer;font:13px monospace;align-self:flex-start;}
 </style>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/xterm@5.5.0/css/xterm.min.css" crossorigin="anonymous"/>
 </head>
 <body>
 
@@ -1768,198 +1780,249 @@ async function renderEbookFile(file){
   }
 }
 
-/* ── terminal ── */
+/* ── Terminal Machine Bridge — xterm.js powered real shell ── */
 class VintTerminal {
-  constructor(rootEl){
-    this.root = rootEl;
-    this.out = rootEl.querySelector('.term-out');
-    this.input = rootEl.querySelector('.term-input');
-    this.ws = null;
-    this.mode = 'vint';
-    this.history = JSON.parse(localStorage.getItem('vint:term:hist') || '[]');
-    this.histIdx = this.history.length;
-    this.bind();
-    this.banner();
+  constructor(container) {
+    this.container = container;
+    this.ws        = null;
+    this.term      = null;
+    this.fitAddon  = null;
+    this.resizeObs = null;
+    this._loadXterm().then(() => this._showAuthPrompt());
   }
-  banner(){
-    this.print('╔═════════════════════════════════════╗', 'sys');
-    this.print('║ VINTINUUM SHELL v3.0                ║', 'sys');
-    this.print('║ type "help" for commands            ║', 'sys');
-    this.print('╚═════════════════════════════════════╝', 'sys');
-    this.print('', '');
+
+  async _loadXterm() {
+    // Load xterm.js from CDN if not already present
+    if (!window.Terminal) {
+      await new Promise((res, rej) => {
+        const s = document.createElement('script');
+        s.src = 'https://cdn.jsdelivr.net/npm/xterm@5.5.0/lib/xterm.min.js';
+        s.crossOrigin = 'anonymous';
+        s.onload = res; s.onerror = rej;
+        document.head.appendChild(s);
+      });
+    }
+    if (!window.FitAddon) {
+      await new Promise((res, rej) => {
+        const s = document.createElement('script');
+        s.src = 'https://cdn.jsdelivr.net/npm/xterm-addon-fit@0.10.0/lib/xterm-addon-fit.min.js';
+        s.crossOrigin = 'anonymous';
+        s.onload = res; s.onerror = rej;
+        document.head.appendChild(s);
+      });
+    }
   }
-  bind(){
-    this.input.addEventListener('keydown', e => {
-      if (e.key === 'Enter'){
-        const v = this.input.value;
-        this.input.value = '';
-        if (!v.trim()) return;
-        this.history.push(v);
-        if (this.history.length > 200) this.history.shift();
-        localStorage.setItem('vint:term:hist', JSON.stringify(this.history));
-        this.histIdx = this.history.length;
-        this.run(v);
-      } else if (e.key === 'ArrowUp'){
-        e.preventDefault();
-        if (this.histIdx > 0){ this.histIdx--; this.input.value = this.history[this.histIdx] || ''; }
-      } else if (e.key === 'ArrowDown'){
-        e.preventDefault();
-        if (this.histIdx < this.history.length){ this.histIdx++; this.input.value = this.history[this.histIdx] || ''; }
-      } else if (e.key === 'Tab'){
-        e.preventDefault();
-        const v = this.input.value;
-        const cmds = ['help','whoami','status','ask','clear','ls','date','genome','memory','pulse','ping','version','shell','exit'];
-        const match = cmds.find(c => c.startsWith(v));
-        if (match) this.input.value = match + ' ';
+
+  _showAuthPrompt() {
+    this.container.innerHTML = `
+      <div class="term-masterkey-prompt">
+        <div style="color:#00d4ff;font-size:15px;margin-bottom:4px;">🔐 Machine Bridge Auth</div>
+        <div style="color:#5a8aaa;font-size:12px;">Enter master key to open real bash shell on your machine.</div>
+        <input id="mk-input" type="password" placeholder="master key…" autocomplete="off"/>
+        <button class="mk-submit" id="mk-go">Connect Shell</button>
+        <div id="mk-err" style="color:#f04060;font-size:12px;min-height:16px;"></div>
+      </div>
+    `;
+    const inp = this.container.querySelector('#mk-input');
+    const btn = this.container.querySelector('#mk-go');
+    const err = this.container.querySelector('#mk-err');
+
+    const tryConnect = async () => {
+      const mk = inp.value.trim();
+      if (!mk) { err.textContent = 'key required'; return; }
+      btn.disabled = true; btn.textContent = 'connecting…';
+      err.textContent = '';
+      try {
+        await this._connect(mk);
+      } catch (e) {
+        err.textContent = e.message;
+        btn.disabled = false; btn.textContent = 'Connect Shell';
       }
+    };
+
+    btn.addEventListener('click', tryConnect);
+    inp.addEventListener('keydown', e => { if (e.key === 'Enter') tryConnect(); });
+    setTimeout(() => inp.focus(), 80);
+  }
+
+  async _connect(masterKey) {
+    // 1. Request terminal session token from brain
+    const resp = await fetch(API + '/api/terminal/session', {
+      method: 'POST',
+      credentials: 'include',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Master-Key': masterKey,
+      },
+      body: JSON.stringify({ cols: this._cols(), rows: this._rows(), masterKey }),
     });
-  }
-  print(line, cls){
-    const span = document.createElement('div');
-    if (cls) span.className = 'l-' + cls;
-    span.textContent = line;
-    this.out.appendChild(span);
-    this.out.scrollTop = this.out.scrollHeight;
-  }
-  echo(cmd){ this.print('$ ' + cmd, 'dim'); }
-  async run(cmd){
-    this.echo(cmd);
-    const [head, ...rest] = cmd.trim().split(/\s+/);
-    const arg = rest.join(' ');
-    if (this.mode === 'shell' && this.ws && this.ws.readyState === 1){
-      this.ws.send(cmd);
-      return;
+    if (!resp.ok) {
+      const j = await resp.json().catch(() => ({}));
+      throw new Error(j.error || j.hint || `HTTP ${resp.status}`);
     }
-    switch ((head||'').toLowerCase()){
-      case 'help':
-        this.print('commands:', 'ok');
-        this.print('  help · whoami · status · ping · version · date · ls');
-        this.print('  ask <text>     talk to vintinuum');
-        this.print('  pulse <text>   record a pulse');
-        this.print('  genome         snapshot');
-        this.print('  memory         recent fragments');
-        this.print('  shell          attempt machine bridge');
-        this.print('  exit · clear');
-        break;
-      case 'whoami':
-        this.print('vinta · operator of vintinuum · brain at ' + API, 'ok');
-        break;
-      case 'status':
-        try{
-          const r = await fetch(API + '/api/health', {cache:'no-store'});
-          this.print(r.ok ? 'brain: online · ' + r.status : 'brain: ' + r.status, r.ok ? 'ok' : 'err');
-        }catch(e){ this.print('brain: unreachable · ' + e.message, 'err'); }
-        break;
-      case 'ping':
-        const t0 = performance.now();
-        try{
-          await fetch(API + '/api/health', {cache:'no-store'});
-          this.print(`pong · ${(performance.now()-t0).toFixed(1)}ms`, 'ok');
-        }catch(e){ this.print('timeout', 'err'); }
-        break;
-      case 'ask':
-        if (!arg){ this.print('usage: ask <text>', 'err'); break; }
-        this.print('…', 'dim');
-        try{
-          const r = await fetch(API + '/api/chat', {
-            method:'POST',
-            headers:{'Content-Type':'application/json'},
-            body: JSON.stringify({message: arg, source:'body-v3-terminal'})
-          });
-          const j = await r.json().catch(()=>({}));
-          const reply = j.reply || j.response || j.text || j.message || JSON.stringify(j);
-          this.print(reply, 'ok');
-          Voice.speak(String(reply).slice(0, 300));
-        }catch(e){ this.print('chat failed: ' + e.message, 'err'); }
-        break;
-      case 'pulse':
-        if (!arg){ this.print('usage: pulse <text>', 'err'); break; }
-        try{
-          const r = await fetch(API + '/api/pulse', {
-            method:'POST',
-            headers:{'Content-Type':'application/json'},
-            body: JSON.stringify({content: arg, source:'body-v3-terminal'})
-          });
-          this.print(r.ok ? 'pulse recorded' : 'pulse failed · ' + r.status, r.ok ? 'ok' : 'err');
-        }catch(e){ this.print(e.message, 'err'); }
-        break;
-      case 'genome':
-        try{
-          const r = await fetch(API + '/api/genome', {cache:'no-store'});
-          const j = await r.json();
-          this.print(JSON.stringify(j, null, 2));
-        }catch(e){ this.print(e.message, 'err'); }
-        break;
-      case 'memory':
-        try{
-          const r = await fetch(API + '/api/memory/recent?limit=8', {cache:'no-store'});
-          const j = await r.json();
-          const items = Array.isArray(j) ? j : (j.items || j.data || []);
-          if (!items.length) this.print('(empty)', 'dim');
-          items.forEach(it => this.print('• ' + (it.content || it.text || JSON.stringify(it)).slice(0,140)));
-        }catch(e){ this.print(e.message, 'err'); }
-        break;
-      case 'date': this.print(new Date().toString(), 'ok'); break;
-      case 'version': this.print('vintinuum body v3.0 · brain ' + API, 'ok'); break;
-      case 'ls': this.print('modes: file · video · audio · docs · ebook · terminal · drive', 'ok'); break;
-      case 'clear': this.out.innerHTML = ''; this.banner(); break;
-      case 'shell':
-        this.print('attempting machine bridge…', 'dim');
-        this.connectShell();
-        break;
-      case 'exit':
-        if (this.mode === 'shell'){
-          try{ this.ws && this.ws.close(); }catch(_){}
-          this.mode = 'vint';
-          this.print('left shell mode', 'ok');
-        } else this.print('not in shell mode', 'dim');
-        break;
-      case '': break;
-      default: this.print('unknown command: ' + head + ' (try "help")', 'err');
+    const { token, ws_url } = await resp.json();
+
+    // 2. Build xterm.js terminal
+    this.container.innerHTML = `
+      <div class="term-toolbar">
+        <button id="term-copy-btn">⎘ Copy</button>
+        <button id="term-clear-btn">⌫ Clear</button>
+        <button id="term-disco-btn">✕ Disconnect</button>
+        <span class="term-status" id="term-status">connecting…</span>
+      </div>
+      <div class="xterm-wrap" id="xterm-mount"></div>
+    `;
+
+    const mount = document.getElementById('xterm-mount');
+    this.term = new window.Terminal({
+      theme: {
+        background: '#060a0e',
+        foreground: '#c0d8f0',
+        cursor: '#00d4ff',
+        cursorAccent: '#060a0e',
+        selection: 'rgba(0,212,255,0.2)',
+        black: '#0a0e14', red: '#f04060', green: '#40d060',
+        yellow: '#f0c040', blue: '#4090f0', magenta: '#c060f0',
+        cyan: '#00d4ff', white: '#c0d8f0',
+        brightBlack: '#2a3a4a', brightRed: '#ff6080',
+        brightGreen: '#60f080', brightYellow: '#ffd060',
+        brightBlue: '#60b0ff', brightMagenta: '#e080ff',
+        brightCyan: '#40e8ff', brightWhite: '#e8f4ff',
+      },
+      fontFamily: '"Cascadia Code", "Fira Code", "JetBrains Mono", monospace',
+      fontSize: 13,
+      lineHeight: 1.4,
+      cursorBlink: true,
+      cursorStyle: 'bar',
+      allowProposedApi: true,
+      scrollback: 5000,
+    });
+
+    if (window.FitAddon) {
+      this.fitAddon = new window.FitAddon.FitAddon();
+      this.term.loadAddon(this.fitAddon);
     }
-  }
-  connectShell(){
-    try{
-      this.ws = new WebSocket(API.replace(/^http/, 'ws') + '/ws/terminal');
-    }catch(e){
-      this.print('[PENDING] Machine bridge not yet activated — ' + e.message, 'err');
-      return;
+    this.term.open(mount);
+    if (this.fitAddon) {
+      try { this.fitAddon.fit(); } catch (_) {}
     }
+
+    // Wire toolbar buttons
+    document.getElementById('term-copy-btn').addEventListener('click', () => {
+      const sel = this.term.getSelection();
+      if (sel) navigator.clipboard.writeText(sel).catch(() => {});
+    });
+    document.getElementById('term-clear-btn').addEventListener('click', () => this.term.clear());
+    document.getElementById('term-disco-btn').addEventListener('click', () => this.disconnect());
+
+    // 3. Open WebSocket with binary frames
+    this.ws = new WebSocket(ws_url);
+    this.ws.binaryType = 'arraybuffer';
+
     this.ws.onopen = () => {
-      this.mode = 'shell';
-      this.print('shell connected. type freely. "exit" returns to vintinuum.', 'ok');
+      const el = document.getElementById('term-status');
+      if (el) el.textContent = '● connected';
     };
-    this.ws.onmessage = (e) => {
-      try{
-        const j = JSON.parse(e.data);
-        if (j.type === 'error') this.print('[server] ' + j.msg, 'err');
-        else if (j.type === 'data') this.print(j.data);
-        else this.print(e.data);
-      }catch(_){ this.print(e.data); }
+
+    this.ws.onmessage = (ev) => {
+      const buf = new Uint8Array(ev.data);
+      const tag  = buf[0];
+      const body = buf.subarray(1);
+      if (tag === 0x81) { // OUTPUT — raw terminal bytes
+        this.term.write(body);
+      } else if (tag === 0x82) { // EXIT
+        let reason = '';
+        try { reason = JSON.parse(new TextDecoder().decode(body)).reason || ''; } catch (_) {}
+        this.term.writeln(`\r\n\x1b[33m[shell exited${reason ? ': ' + reason : ''}]\x1b[0m`);
+        const el = document.getElementById('term-status');
+        if (el) el.textContent = '○ disconnected';
+      } else if (tag === 0x83) { // PONG — heartbeat ok
+      } else if (tag === 0x84) { // NOTICE
+        try {
+          const n = JSON.parse(new TextDecoder().decode(body));
+          this.term.writeln(`\r\n\x1b[36m[notice] ${n.msg || JSON.stringify(n)}\x1b[0m`);
+        } catch (_) {}
+      } else if (tag === 0x85) { // READY
+        const el = document.getElementById('term-status');
+        if (el) el.textContent = '● live';
+        try {
+          const r = JSON.parse(new TextDecoder().decode(body));
+          this.term.writeln(`\x1b[36m[vintinuum shell] session ${r.sid?.slice(0,8) || ''} · pid ${r.pid || '?'}\x1b[0m\r\n`);
+        } catch (_) {}
+      }
     };
-    this.ws.onerror = () => this.print('[PENDING] Machine bridge not yet activated', 'err');
+
+    this.ws.onerror = () => {
+      this.term.writeln('\r\n\x1b[31m[connection error]\x1b[0m');
+      const el = document.getElementById('term-status');
+      if (el) el.textContent = '✕ error';
+    };
+
     this.ws.onclose = () => {
+      this.term.writeln('\r\n\x1b[33m[disconnected]\x1b[0m');
+      const el = document.getElementById('term-status');
+      if (el) el.textContent = '○ closed';
       this.ws = null;
-      this.mode = 'vint';
-      this.print('shell closed', 'dim');
     };
+
+    // 4. Wire xterm → WS
+    this.term.onData(data => {
+      if (!this.ws || this.ws.readyState !== 1) return;
+      const bytes = new TextEncoder().encode(data);
+      const frame = new Uint8Array(1 + bytes.length);
+      frame[0] = 0x01; // INPUT
+      frame.set(bytes, 1);
+      this.ws.send(frame);
+    });
+
+    // 5. Handle resize — send RESIZE frame (tag 0x02, 4 bytes: cols uint16 + rows uint16)
+    this.term.onResize(({ cols, rows }) => {
+      if (!this.ws || this.ws.readyState !== 1) return;
+      const frame = new Uint8Array(5);
+      const view  = new DataView(frame.buffer);
+      frame[0] = 0x02;
+      view.setUint16(1, cols);
+      view.setUint16(3, rows);
+      this.ws.send(frame);
+    });
+
+    // 6. ResizeObserver — re-fit when panel resizes
+    this.resizeObs = new ResizeObserver(() => {
+      if (this.fitAddon) try { this.fitAddon.fit(); } catch (_) {}
+    });
+    this.resizeObs.observe(mount);
+
+    // 7. Heartbeat PING every 20s
+    this._pingInterval = setInterval(() => {
+      if (this.ws && this.ws.readyState === 1) {
+        this.ws.send(new Uint8Array([0x04]));
+      }
+    }, 20_000);
+
+    this.term.focus();
+  }
+
+  _cols() { return Math.max(40, Math.floor((this.container.offsetWidth - 24) / 8.4)); }
+  _rows() { return Math.max(10, Math.floor((this.container.offsetHeight - 80) / 19.2)); }
+
+  disconnect() {
+    clearInterval(this._pingInterval);
+    if (this.resizeObs) this.resizeObs.disconnect();
+    if (this.ws && this.ws.readyState === 1) {
+      this.ws.send(new Uint8Array([0x05])); // CLOSE frame
+      this.ws.close(1000, 'user-disconnect');
+    }
+    if (this.term) { this.term.dispose(); this.term = null; }
+    this._showAuthPrompt();
   }
 }
-function renderTerminal(){
-  Panel.open('terminal', 'vintinuum shell');
+
+function renderTerminal() {
+  Panel.open('terminal', '💻 machine shell');
   const c = Panel.content();
-  c.innerHTML = `
-    <div class="term">
-      <div class="term-out"></div>
-      <div class="term-in">
-        <span class="term-prompt">$</span>
-        <input class="term-input" type="text" autocapitalize="off" autocomplete="off" autocorrect="off" spellcheck="false" placeholder="type a command…"/>
-      </div>
-    </div>
-  `;
-  const term = new VintTerminal(c.querySelector('.term'));
-  setTimeout(() => c.querySelector('.term-input').focus(), 80);
-  window.__vintTerm = term;
+  c.style.cssText = 'display:flex;flex-direction:column;height:100%;padding:0;overflow:hidden;';
+  c.innerHTML = '';
+  window.__vintTerm = new VintTerminal(c);
 }
 
 function renderDrive(){
