@@ -372,13 +372,79 @@
     font-size:13px;line-height:1.55;color:var(--dim);
   }
 
+  /* ORB */
+  .orb-wrap{
+    display:flex;flex-direction:column;align-items:center;gap:0;
+    padding:28px 0 0;
+    position:relative;
+  }
+  .orb-canvas{
+    display:block;
+    width:clamp(180px,38vw,280px);
+    height:clamp(180px,38vw,280px);
+    border-radius:50%;
+    cursor:pointer;
+    -webkit-tap-highlight-color:transparent;
+    user-select:none;
+    transition:box-shadow 0.5s ease;
+  }
+  .orb-canvas[data-state="idle"]{box-shadow:0 0 40px -10px rgba(124,207,255,0.2)}
+  .orb-canvas[data-state="listening"]{box-shadow:0 0 60px -4px rgba(124,207,255,0.55),0 0 120px -20px rgba(124,207,255,0.25)}
+  .orb-canvas[data-state="thinking"]{box-shadow:0 0 60px -4px rgba(206,147,216,0.55),0 0 120px -20px rgba(206,147,216,0.2)}
+  .orb-canvas[data-state="speaking"]{box-shadow:0 0 60px -4px rgba(255,160,77,0.55),0 0 120px -20px rgba(255,160,77,0.2)}
+  .orb-label{
+    font-family:'Space Mono',monospace;
+    font-size:10px;letter-spacing:0.28em;text-transform:uppercase;
+    color:var(--dim);margin-top:14px;
+    transition:color 0.4s;
+    min-height:1.4em;
+  }
+  .orb-label[data-state="listening"]{color:var(--cyan)}
+  .orb-label[data-state="thinking"]{color:var(--soft)}
+  .orb-label[data-state="speaking"]{color:var(--gold)}
+  .orb-utterance{
+    font-family:'Cormorant Garamond',serif;
+    font-style:italic;
+    font-size:clamp(15px,2.2vw,20px);
+    color:var(--text);
+    text-align:center;
+    max-width:min(520px,90vw);
+    min-height:2.4em;
+    padding:10px 0 0;
+    opacity:0;
+    transform:translateY(4px);
+    transition:opacity 0.3s ease,transform 0.3s ease;
+    pointer-events:none;
+    word-break:break-word;
+  }
+  .orb-utterance.show{opacity:1;transform:translateY(0)}
+  .orb-mic-btn{
+    margin-top:12px;
+    padding:8px 22px;
+    background:rgba(124,207,255,0.08);
+    border:1px solid rgba(124,207,255,0.28);
+    border-radius:999px;
+    color:var(--cyan);
+    font-family:'Space Mono',monospace;
+    font-size:10px;letter-spacing:0.18em;text-transform:uppercase;
+    cursor:pointer;
+    transition:all 0.18s;
+  }
+  .orb-mic-btn:hover{background:rgba(124,207,255,0.16)}
+  .orb-mic-btn.active{
+    background:rgba(239,83,80,0.12);
+    border-color:rgba(239,83,80,0.4);
+    color:#ff8a8a;
+  }
+
   /* MOBILE TWEAKS */
   @media(max-width:600px){
     .wrap{padding:18px 12px 32px;gap:18px}
     .jhead{padding:14px 16px;flex-direction:column;align-items:flex-start;gap:10px}
     .jhead-right{justify-content:flex-start}
     .felt{padding:22px 16px}
-    .chat{min-height:420px;max-height:65svh}
+    .orb-wrap{padding:20px 0 0}
+    .chat{min-height:380px;max-height:60svh}
     .composer{padding:10px}
     .bstate,.layers{padding:14px}
   }
@@ -407,8 +473,17 @@
   <!-- MAIN GRID -->
   <div class="twocol">
 
-    <!-- CHAT -->
+    <!-- CHAT + ORB -->
     <section class="chat" aria-label="conversation">
+      <!-- ORB lives inside the chat panel at the top -->
+      <div class="orb-wrap" id="orb-wrap">
+        <canvas class="orb-canvas" id="orb-canvas" width="280" height="280"
+          data-state="idle" role="button" tabindex="0"
+          aria-label="JARVIS orb — tap to speak"></canvas>
+        <div class="orb-label" id="orb-label" data-state="idle">idle</div>
+        <div class="orb-utterance" id="orb-utterance"></div>
+        <button class="orb-mic-btn" id="orb-mic-btn" type="button" data-draggable="true">⬤ tap to speak</button>
+      </div>
       <div class="chat-head">
         <h2>conversation</h2>
         <span class="meta">/chat/once</span>
@@ -733,11 +808,277 @@
     }
   }
 
+  // ---- ORB ----------------------------------------------------------------
+  var orbCanvas  = document.getElementById('orb-canvas');
+  var orbLabel   = document.getElementById('orb-label');
+  var orbUtter   = document.getElementById('orb-utterance');
+  var orbMicBtn  = document.getElementById('orb-mic-btn');
+  var orbCtx     = orbCanvas ? orbCanvas.getContext('2d') : null;
+
+  // state: idle | listening | thinking | speaking
+  var orbState   = 'idle';
+  var orbMouthAmp = 0;
+  var orbMicAmp   = 0;
+
+  function setOrbState(s){
+    orbState = s;
+    orbCanvas.setAttribute('data-state', s);
+    orbLabel.setAttribute('data-state', s);
+    var labels = {idle:'idle',listening:'listening…',thinking:'thinking…',speaking:'speaking'};
+    orbLabel.textContent = labels[s] || s;
+  }
+
+  function showUtterance(t){
+    orbUtter.textContent = t || '';
+    orbUtter.classList.toggle('show', !!(t));
+  }
+
+  // --- particle engine ---
+  var NPARTICLES = ('ontouchstart' in window || navigator.maxTouchPoints > 0) ? 28 : 60;
+  var particles = [];
+  var orbRAF = null;
+  var orbT = 0;
+
+  function initParticles(){
+    particles = [];
+    for (var i = 0; i < NPARTICLES; i++){
+      particles.push({
+        a: Math.random() * Math.PI * 2,
+        r: 0.28 + Math.random() * 0.38,
+        speed: (0.4 + Math.random() * 0.8) * (Math.random() < 0.5 ? 1 : -1),
+        size: 1.2 + Math.random() * 2.2,
+        phase: Math.random() * Math.PI * 2,
+        j: i
+      });
+    }
+  }
+
+  function orbColors(){
+    var s = orbState;
+    if (s === 'listening') return {core:[124,207,255],glow:[80,180,255]};
+    if (s === 'thinking')  return {core:[206,147,216],glow:[170,100,210]};
+    if (s === 'speaking')  return {core:[255,160,77], glow:[255,100,50]};
+    return {core:[124,207,255],glow:[80,150,220]};
+  }
+
+  function drawOrb(){
+    if (!orbCtx) return;
+    var W = orbCanvas.width, H = orbCanvas.height;
+    var cx = W/2, cy = H/2;
+    orbCtx.clearRect(0,0,W,H);
+
+    var breathe = 0.94 + 0.06 * Math.sin(orbT * 0.8);
+    var excite  = orbState === 'listening' ? (0.06 * orbMicAmp)
+                : orbState === 'speaking'  ? (0.08 + 0.06 * orbMouthAmp)
+                : orbState === 'thinking'  ? 0.03 * Math.sin(orbT * 2.4)
+                : 0;
+    var R = (W * 0.38) * breathe * (1 + excite);
+
+    var col = orbColors();
+
+    // outer glow
+    var grad = orbCtx.createRadialGradient(cx, cy, R*0.3, cx, cy, R*1.5);
+    grad.addColorStop(0, 'rgba('+col.core[0]+','+col.core[1]+','+col.core[2]+',0.10)');
+    grad.addColorStop(1, 'rgba('+col.core[0]+','+col.core[1]+','+col.core[2]+',0.00)');
+    orbCtx.beginPath();
+    orbCtx.arc(cx, cy, R*1.5, 0, Math.PI*2);
+    orbCtx.fillStyle = grad;
+    orbCtx.fill();
+
+    // core sphere
+    var coreGrad = orbCtx.createRadialGradient(cx-R*0.22, cy-R*0.22, R*0.05, cx, cy, R);
+    coreGrad.addColorStop(0, 'rgba('+col.core[0]+','+col.core[1]+','+col.core[2]+',0.55)');
+    coreGrad.addColorStop(0.55,'rgba('+col.glow[0]+','+col.glow[1]+','+col.glow[2]+',0.18)');
+    coreGrad.addColorStop(1,   'rgba('+col.glow[0]+','+col.glow[1]+','+col.glow[2]+',0.04)');
+    orbCtx.beginPath();
+    orbCtx.arc(cx, cy, R, 0, Math.PI*2);
+    orbCtx.fillStyle = coreGrad;
+    orbCtx.fill();
+
+    // ring
+    orbCtx.beginPath();
+    orbCtx.arc(cx, cy, R, 0, Math.PI*2);
+    orbCtx.strokeStyle = 'rgba('+col.core[0]+','+col.core[1]+','+col.core[2]+',0.38)';
+    orbCtx.lineWidth = 1.2;
+    orbCtx.stroke();
+
+    // particles
+    var dt = orbState === 'thinking' ? 0.012
+           : orbState === 'listening' ? 0.022
+           : orbState === 'speaking'  ? 0.02 + 0.01 * orbMouthAmp
+           : 0.006;
+
+    for (var i = 0; i < particles.length; i++){
+      var p = particles[i];
+      p.a += p.speed * dt;
+      var wobble = R * p.r * (1 + 0.12 * Math.sin(orbT * 1.4 + p.phase));
+      var px = cx + Math.cos(p.a) * wobble;
+      var py = cy + Math.sin(p.a) * wobble * 0.9;
+      var alpha = 0.35 + 0.45 * Math.abs(Math.sin(orbT * 0.6 + p.phase));
+      orbCtx.beginPath();
+      orbCtx.arc(px, py, p.size * (orbState === 'speaking' ? 1.2 : 1), 0, Math.PI*2);
+      orbCtx.fillStyle = 'rgba('+col.core[0]+','+col.core[1]+','+col.core[2]+','+alpha.toFixed(2)+')';
+      orbCtx.fill();
+    }
+
+    // centre dot
+    var dotR = R * (0.05 + 0.03 * Math.sin(orbT * 2));
+    var dotGrad = orbCtx.createRadialGradient(cx, cy, 0, cx, cy, dotR);
+    dotGrad.addColorStop(0, 'rgba(255,255,255,0.92)');
+    dotGrad.addColorStop(1, 'rgba('+col.core[0]+','+col.core[1]+','+col.core[2]+',0)');
+    orbCtx.beginPath();
+    orbCtx.arc(cx, cy, dotR, 0, Math.PI*2);
+    orbCtx.fillStyle = dotGrad;
+    orbCtx.fill();
+
+    // decay amp
+    orbMouthAmp *= 0.92;
+    orbMicAmp   *= 0.88;
+    orbT += 0.016;
+  }
+
+  function startOrb(){
+    if (orbRAF) return;
+    initParticles();
+    (function loop(){ orbRAF = requestAnimationFrame(loop); drawOrb(); })();
+  }
+
+  // --- mic ---
+  var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  var _rec = null;
+  var _micActive = false;
+  var _lastFinal = '';
+
+  function startMic(){
+    if (_micActive) return;
+    if (!SR){
+      showUtterance('no mic — type below');
+      setTimeout(function(){ showUtterance(''); }, 3000);
+      try { $input.focus(); } catch(_){}
+      return;
+    }
+    _lastFinal = '';
+    _rec = new SR();
+    _rec.continuous = true;
+    _rec.interimResults = true;
+    _rec.lang = 'en-US';
+
+    _rec.onstart = function(){
+      _micActive = true;
+      setOrbState('listening');
+      showUtterance('listening…');
+      orbMicBtn.textContent = '■ stop';
+      orbMicBtn.classList.add('active');
+    };
+
+    _rec.onresult = function(ev){
+      var interim = '', finals = '';
+      for (var i = ev.resultIndex; i < ev.results.length; i++){
+        var t = ev.results[i][0].transcript;
+        if (ev.results[i].isFinal) finals += t; else interim += t;
+      }
+      showUtterance(finals || interim || 'listening…');
+      orbMicAmp = Math.min(1, orbMicAmp + 0.3);
+      if (finals && finals.trim() && finals.trim() !== _lastFinal){
+        _lastFinal = finals.trim();
+        try { _rec.stop(); } catch(_){}
+        setOrbState('thinking');
+        sendMessage(_lastFinal);
+      }
+    };
+
+    _rec.onerror = function(e){
+      _micActive = false;
+      orbMicBtn.textContent = '⬤ tap to speak';
+      orbMicBtn.classList.remove('active');
+      if (e.error === 'no-speech'){ setOrbState('idle'); showUtterance(''); return; }
+      showUtterance('mic blocked — type below');
+      setOrbState('idle');
+      setTimeout(function(){ showUtterance(''); }, 3000);
+    };
+
+    _rec.onend = function(){
+      _micActive = false;
+      orbMicBtn.textContent = '⬤ tap to speak';
+      orbMicBtn.classList.remove('active');
+      if (orbState === 'listening') setOrbState('idle');
+    };
+
+    try { _rec.start(); } catch(e){
+      _micActive = false;
+      setOrbState('idle');
+      showUtterance('mic error — type below');
+      setTimeout(function(){ showUtterance(''); }, 3000);
+    }
+  }
+
+  function stopMic(){
+    _micActive = false;
+    if (_rec){ try { _rec.stop(); } catch(_){} }
+    orbMicBtn.textContent = '⬤ tap to speak';
+    orbMicBtn.classList.remove('active');
+    setOrbState('idle');
+  }
+
+  function orbTap(){
+    if (orbState === 'thinking') return; // busy
+    if (_micActive) { stopMic(); return; }
+    if (window.__markInteracted) window.__markInteracted();
+    startMic();
+  }
+
+  // wire orb taps
+  if (orbCanvas){
+    orbCanvas.addEventListener('click', orbTap);
+    orbCanvas.addEventListener('touchend', function(e){ e.preventDefault(); orbTap(); }, {passive:false});
+    orbCanvas.addEventListener('keydown', function(e){ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); orbTap(); }});
+  }
+  if (orbMicBtn){
+    orbMicBtn.addEventListener('click', orbTap);
+  }
+
+  // hook sendMessage to update orb state
+  var _origSend = sendMessage;
+  sendMessage = function(text){
+    if (orbState !== 'thinking') setOrbState('thinking');
+    showUtterance('…');
+    return _origSend(text);
+  };
+
+  // After reply arrives, set orb to speaking then idle
+  // We patch appendMessage to detect jarvis replies
+  var _origAppend = appendMessage;
+  appendMessage = function(role, text){
+    var el = _origAppend(role, text);
+    if (role === 'jarvis'){
+      setOrbState('speaking');
+      showUtterance(text.slice(0, 160) + (text.length > 160 ? '…' : ''));
+      orbMouthAmp = 0.8;
+      // Amp ticks during speech
+      var ampTick = setInterval(function(){ orbMouthAmp = 0.35 + Math.random() * 0.55; }, 100);
+      var dwell = Math.min(3200, 900 + text.length * 20);
+      setTimeout(function(){
+        clearInterval(ampTick);
+        orbMouthAmp = 0;
+        setOrbState('idle');
+        // fade utterance out after another 4s
+        setTimeout(function(){ showUtterance(''); }, 4000);
+      }, dwell);
+    }
+    return el;
+  };
+
   // ---- boot ----
   function boot(){
     loadDaily();
     loadBodyState();
     setInterval(loadBodyState, 60000);
+    startOrb();
+    // greeting
+    setTimeout(function(){
+      showUtterance('online. tap to speak, or type below.');
+      setTimeout(function(){ showUtterance(''); }, 5000);
+    }, 800);
     if (window.matchMedia && !window.matchMedia('(max-width:600px)').matches){
       try { $input.focus(); } catch(_){}
     }
