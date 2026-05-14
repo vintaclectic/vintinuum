@@ -4,510 +4,1284 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
-<title>VINTINUUM — Cognition Runway</title>
-<meta name="description" content="The phase ladder from Claude-API-as-spine to local-cognition-as-spine. Live router state, recent decisions, fallback rate, and the running tally of Anthropic spend avoided.">
-<meta name="theme-color" content="#04060c">
+<title>VINTINUUM — Cognition</title>
+<meta name="description" content="Local Brain dashboard — corpus, teaching, live feed, phase ladder, evolution log.">
+<meta name="theme-color" content="#040810">
 <link rel="icon" type="image/svg+xml" href="branding/vintinuum/favicon/favicon.svg">
 <link rel="icon" type="image/png" sizes="32x32" href="favicon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400;1,500&family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400;1,500&display=swap');
-
 :root {
-  --void: #04060c;
-  --panel: rgba(10, 14, 22, 0.42);
-  --panel-hover: rgba(10, 14, 22, 0.55);
-  --border: rgba(255, 255, 255, 0.06);
-  --border-glow: rgba(79, 195, 247, 0.12);
-  --text: rgba(218, 228, 255, 0.93);
-  --dim: rgba(150, 175, 215, 0.5);
-  --dimmer: rgba(150, 175, 215, 0.32);
+  --void:        #040810;
+  --deep:        #070c18;
+  --panel:       rgba(10, 15, 28, 0.55);
+  --panel-solid: #0a0f1c;
+  --panel-hover: rgba(12, 18, 32, 0.72);
+  --border:      rgba(255, 255, 255, 0.07);
+  --border-glow: rgba(79, 195, 247, 0.14);
+  --text:        rgba(218, 228, 255, 0.93);
+  --dim:         rgba(150, 175, 215, 0.52);
+  --dimmer:      rgba(120, 145, 185, 0.32);
+  --mono:        'JetBrains Mono', monospace;
 
-  --blue:  #4fc3f7;
-  --gold:  #ffd54f;
-  --green: #66bb6a;
-  --amber: #ffca28;
-  --red:   #ef5350;
-  --purple:#ce93d8;
-  --cyan:  #80deea;
+  --blue:   #4fc3f7;
+  --gold:   #ffd54f;
+  --green:  #66bb6a;
+  --amber:  #ffca28;
+  --red:    #ef5350;
+  --purple: #ce93d8;
+  --cyan:   #80deea;
+  --rose:   #f48fb1;
+
+  --topbar-h: 48px;
 }
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
 html { scroll-behavior: smooth; }
+
 body {
   background: var(--void);
   color: var(--text);
-  font-family: 'Space Mono', monospace;
+  font-family: 'Inter', sans-serif;
   min-height: 100vh;
   min-height: 100svh;
   overflow-x: hidden;
 }
 
-.wing { position: relative; z-index: 1; max-width: 1080px; margin: 0 auto; padding: 32px 18px 80px; }
-
-.header { text-align: center; padding: 18px 0 24px; }
-.header h1 {
+/* ─── TOPBAR ─── */
+.topbar {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  height: var(--topbar-h);
+  background: rgba(4, 8, 16, 0.88);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  padding: 0 20px;
+  gap: 16px;
+  z-index: 900;
+}
+.topbar-title {
   font-family: 'Cormorant Garamond', serif;
   font-style: italic;
-  font-weight: 300;
-  font-size: clamp(1.8rem, 4.5vw, 3.4rem);
-  letter-spacing: 0.14em;
-  background: linear-gradient(130deg, var(--cyan), var(--purple), var(--gold));
+  font-size: 1.15rem;
+  letter-spacing: 0.12em;
+  background: linear-gradient(120deg, var(--cyan), var(--purple));
   -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
-  margin-bottom: 6px;
+  flex: 1;
 }
-.header .subtitle { font-size: 0.55rem; letter-spacing: 0.35em; text-transform: uppercase; color: var(--dim); }
-.header .nav-back {
-  display: inline-block; margin-top: 14px; padding: 6px 18px;
-  font-size: 0.55rem; letter-spacing: 0.2em; text-transform: uppercase;
-  border: 1px solid var(--border); border-radius: 24px; color: var(--dim);
-  text-decoration: none; transition: all 0.25s ease;
+.topbar-back {
+  font-size: 0.6rem; letter-spacing: 0.22em; text-transform: uppercase;
+  color: var(--dim); text-decoration: none; padding: 5px 14px;
+  border: 1px solid var(--border); border-radius: 20px;
+  transition: all 0.2s ease; white-space: nowrap;
 }
-.header .nav-back:hover { border-color: var(--blue); color: var(--blue); }
+.topbar-back:hover { color: var(--blue); border-color: var(--blue); }
+.topbar-refresh {
+  font-size: 0.6rem; letter-spacing: 0.18em; text-transform: uppercase;
+  color: var(--dim); background: none; border: 1px solid var(--border);
+  border-radius: 20px; padding: 5px 14px; cursor: pointer;
+  transition: all 0.2s ease; font-family: 'Inter', sans-serif;
+  white-space: nowrap;
+}
+.topbar-refresh:hover { color: var(--cyan); border-color: var(--cyan); }
+#status-dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: var(--dimmer); transition: background 0.4s ease; flex-shrink: 0;
+}
+#status-dot.alive { background: var(--green); box-shadow: 0 0 8px var(--green); }
+#status-dot.dead  { background: var(--red); }
 
-/* phase ladder */
-.ladder { display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px; margin-bottom: 26px; }
+/* ─── LAYOUT ─── */
+.page {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: calc(var(--topbar-h) + 28px) 20px 80px;
+}
+
+/* ─── SECTION HEADER ─── */
+.section-head {
+  display: flex; align-items: baseline; gap: 12px;
+  margin-bottom: 14px; flex-wrap: wrap;
+}
+.section-head h2 {
+  font-family: 'Cormorant Garamond', serif;
+  font-style: italic; font-weight: 400;
+  font-size: 1.35rem; color: var(--text);
+  letter-spacing: 0.04em;
+}
+.section-head .pill {
+  font-size: 0.5rem; letter-spacing: 0.24em; text-transform: uppercase;
+  color: var(--dimmer); border: 1px solid var(--border);
+  border-radius: 12px; padding: 2px 10px;
+}
+.section-sep { border: none; border-top: 1px solid var(--border); margin: 24px 0; }
+
+/* ─── PANEL BASE ─── */
+.panel {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 18px 22px;
+}
+.panel + .panel { margin-top: 14px; }
+
+/* ─── PHASE LADDER ─── */
+.ladder-wrap {
+  margin-bottom: 28px;
+}
+.ladder {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 8px;
+}
 .rung {
   background: var(--panel);
   border: 1px solid var(--border);
   border-radius: 12px;
-  padding: 14px 12px;
+  padding: 14px 10px;
   text-align: center;
+  transition: all 0.3s ease;
   position: relative;
-  transition: all 0.25s ease;
 }
-.rung .rung-num {
-  font-family: 'Cormorant Garamond', serif; font-style: italic; font-weight: 400;
-  font-size: 1.6rem; color: var(--dim); margin-bottom: 4px;
+.rung::after {
+  content: '';
+  position: absolute;
+  top: 50%; right: -9px;
+  width: 10px; height: 1px;
+  background: var(--border);
+  transform: translateY(-50%);
 }
-.rung .rung-label {
-  font-size: 0.5rem; letter-spacing: 0.18em; text-transform: uppercase; color: var(--dimmer);
-  line-height: 1.4; min-height: 2.6em;
+.rung:last-child::after { display: none; }
+.rung-num {
+  font-family: 'Cormorant Garamond', serif; font-style: italic;
+  font-size: 1.7rem; color: var(--dimmer); margin-bottom: 4px;
 }
-.rung.current { border-color: var(--gold); box-shadow: 0 0 24px rgba(255,213,79,0.18); }
-.rung.current .rung-num { color: var(--gold); }
-.rung.current .rung-label { color: var(--gold); }
-.rung.passed { border-color: rgba(102,187,106,0.42); }
+.rung-name {
+  font-size: 0.48rem; letter-spacing: 0.18em; text-transform: uppercase;
+  color: var(--dimmer); line-height: 1.5; min-height: 3em;
+}
+.rung-exit {
+  font-size: 0.46rem; color: var(--dimmer); margin-top: 6px;
+  line-height: 1.4; font-family: 'JetBrains Mono', monospace;
+}
+.rung.passed {
+  border-color: rgba(102,187,106,0.4);
+  background: rgba(102,187,106,0.04);
+}
 .rung.passed .rung-num { color: var(--green); }
-.rung.passed .rung-label { color: rgba(150,235,165,0.85); }
+.rung.passed .rung-name { color: rgba(150,235,165,0.8); }
+.rung.current {
+  border-color: var(--gold);
+  background: rgba(255,213,79,0.05);
+  box-shadow: 0 0 28px rgba(255,213,79,0.15), inset 0 1px 0 rgba(255,213,79,0.12);
+}
+.rung.current .rung-num { color: var(--gold); }
+.rung.current .rung-name { color: var(--gold); }
+.rung.current .rung-exit { color: rgba(255,213,79,0.7); }
 
-/* engine cards */
-.engines { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; margin-bottom: 26px; }
-.engine {
+/* ─── ENGINE CARDS ─── */
+.engines-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 10px;
+  margin-bottom: 14px;
+}
+.engine-card {
   background: var(--panel);
   border: 1px solid var(--border);
-  border-left: 3px solid var(--engine-color, var(--dim));
+  border-left: 3px solid var(--ec, var(--dimmer));
   border-radius: 12px;
   padding: 14px 16px;
 }
-.engine.green { --engine-color: var(--green); }
-.engine.amber { --engine-color: var(--amber); }
-.engine.red   { --engine-color: var(--red); }
-.engine .engine-id { font-size: 0.5rem; letter-spacing: 0.22em; text-transform: uppercase; color: var(--engine-color, var(--dim)); font-weight: 700; margin-bottom: 4px; }
-.engine .engine-title { font-family: 'Cormorant Garamond', serif; font-style: italic; font-size: 1rem; color: var(--text); margin-bottom: 6px; }
-.engine .engine-line { font-size: 0.6rem; color: var(--dim); line-height: 1.6; }
-.engine .engine-line strong { color: var(--text); font-weight: 700; }
+.engine-card.healthy { --ec: var(--green); }
+.engine-card.unhealthy { --ec: var(--red); }
+.engine-card.unknown { --ec: var(--dimmer); }
+.ec-row {
+  display: flex; align-items: center; gap: 8px; margin-bottom: 6px;
+}
+.ec-dot {
+  width: 7px; height: 7px; border-radius: 50%;
+  background: var(--ec, var(--dimmer)); flex-shrink: 0;
+}
+.engine-card.healthy .ec-dot { box-shadow: 0 0 7px var(--green); }
+.ec-id {
+  font-size: 0.5rem; letter-spacing: 0.2em; text-transform: uppercase;
+  color: var(--ec, var(--dimmer)); font-weight: 600;
+}
+.ec-title {
+  font-family: 'Cormorant Garamond', serif; font-style: italic;
+  font-size: 0.98rem; color: var(--text); margin-bottom: 5px;
+}
+.ec-meta { font-size: 0.58rem; color: var(--dim); line-height: 1.7; font-family: var(--mono); }
+.ec-meta strong { color: var(--text); font-weight: 500; }
 
-/* tier distribution */
-.tiers {
+/* ─── ROUTER STATUS ─── */
+.router-row {
+  display: flex; align-items: center; gap: 12px;
+  padding: 10px 16px;
   background: var(--panel);
   border: 1px solid var(--border);
-  border-radius: 12px;
-  padding: 14px 18px;
-  margin-bottom: 22px;
+  border-radius: 10px;
+  margin-bottom: 14px;
+  flex-wrap: wrap;
 }
-.tiers h3 {
-  font-family: 'Cormorant Garamond', serif; font-style: italic; font-weight: 400;
-  font-size: 1rem; color: var(--text); margin-bottom: 10px; letter-spacing: 0.04em;
+.router-label { font-size: 0.55rem; letter-spacing: 0.22em; text-transform: uppercase; color: var(--dim); }
+.router-state {
+  font-size: 0.6rem; font-family: var(--mono); font-weight: 700;
+  padding: 3px 12px; border-radius: 12px;
 }
-.tier-bar { display: flex; height: 22px; border-radius: 11px; overflow: hidden; background: rgba(255,255,255,0.03); margin: 8px 0 12px; }
-.tier-seg { transition: width 0.6s ease; min-width: 2px; }
-.tier-seg.local    { background: linear-gradient(90deg, var(--green), #88e088); }
-.tier-seg.claude   { background: linear-gradient(90deg, var(--amber), #ffe08e); }
-.tier-seg.degraded { background: linear-gradient(90deg, var(--red), #ff8888); }
-.tier-legend { display: flex; gap: 16px; font-size: 0.55rem; color: var(--dim); flex-wrap: wrap; }
-.tier-legend .swatch { display: inline-block; width: 8px; height: 8px; border-radius: 2px; margin-right: 6px; vertical-align: middle; }
-.tier-legend .swatch.local    { background: var(--green); }
-.tier-legend .swatch.claude   { background: var(--amber); }
-.tier-legend .swatch.degraded { background: var(--red); }
+.router-state.on { background: rgba(102,187,106,0.14); color: var(--green); border: 1px solid rgba(102,187,106,0.3); }
+.router-state.off { background: rgba(239,83,80,0.10); color: var(--red); border: 1px solid rgba(239,83,80,0.25); }
+.router-spacer { flex: 1; }
+.router-phase {
+  font-size: 0.55rem; color: var(--dimmer);
+  font-family: var(--mono);
+}
 
-/* per-tier mini stats */
-.tier-counts { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 8px; margin-top: 12px; }
-.tier-row {
-  background: rgba(255,255,255,0.02); border: 1px solid var(--border); border-radius: 8px;
-  padding: 8px 12px;
-  display: flex; justify-content: space-between; align-items: center;
+/* ─── TIER BAR ─── */
+.tier-bar-wrap { margin-bottom: 14px; }
+.tier-bar-row {
+  display: flex; align-items: center; gap: 10px; margin-bottom: 6px;
 }
-.tier-row .tier-name { font-size: 0.55rem; letter-spacing: 0.18em; text-transform: uppercase; color: var(--dim); }
-.tier-row .tier-num { font-family: 'Space Mono', monospace; font-weight: 700; color: var(--text); font-size: 0.85rem; }
+.tier-bar-label { font-size: 0.5rem; letter-spacing: 0.18em; text-transform: uppercase; color: var(--dim); width: 68px; flex-shrink: 0; }
+.tier-bar-track {
+  flex: 1; height: 14px; border-radius: 7px;
+  background: rgba(255,255,255,0.04); overflow: hidden;
+  position: relative;
+}
+.tier-bar-fill {
+  height: 100%; border-radius: 7px; min-width: 0;
+  transition: width 0.7s ease;
+}
+.tier-bar-fill.local   { background: linear-gradient(90deg, var(--green), #88e088); }
+.tier-bar-fill.claude  { background: linear-gradient(90deg, var(--amber), #ffe08e); }
+.tier-bar-fill.degraded { background: linear-gradient(90deg, var(--red), #ff8888); }
+.tier-bar-pct { font-size: 0.58rem; font-family: var(--mono); color: var(--dim); width: 38px; text-align: right; flex-shrink: 0; }
 
-/* decisions log */
-.decisions {
-  background: var(--panel); border: 1px solid var(--border); border-radius: 12px;
-  padding: 14px 18px; margin-bottom: 22px;
+/* ─── MODELS ─── */
+.model-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 10px;
+  margin-bottom: 14px;
 }
-.decisions h3 {
-  font-family: 'Cormorant Garamond', serif; font-style: italic; font-weight: 400;
-  font-size: 1rem; color: var(--text); margin-bottom: 10px; letter-spacing: 0.04em;
+.model-card {
+  background: rgba(255,255,255,0.025);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 12px 14px;
 }
-.decision-list { display: flex; flex-direction: column; gap: 6px; }
-.decision-row {
-  display: grid; grid-template-columns: 80px 80px 1fr 80px 60px;
-  gap: 10px; align-items: center;
-  font-size: 0.6rem; padding: 6px 8px; border-radius: 6px;
-  background: rgba(255,255,255,0.02); color: var(--dim);
+.model-role {
+  font-size: 0.48rem; letter-spacing: 0.22em; text-transform: uppercase;
+  color: var(--purple); margin-bottom: 4px;
 }
-.decision-row .at { color: var(--dimmer); font-size: 0.55rem; }
-.decision-row .tier { color: var(--purple); letter-spacing: 0.12em; text-transform: uppercase; }
-.decision-row .reason { color: var(--text); }
-.decision-row .served-by { letter-spacing: 0.12em; text-transform: uppercase; }
-.decision-row .served-by.local { color: var(--green); }
-.decision-row .served-by.claude { color: var(--amber); }
-.decision-row .served-by.degraded { color: var(--red); }
-.decision-row .latency { text-align: right; color: var(--dim); }
-.decision-row.fallback { background: rgba(255,202,40,0.06); }
+.model-name {
+  font-family: var(--mono); font-size: 0.78rem; color: var(--text); margin-bottom: 4px;
+}
+.model-meta { font-size: 0.56rem; color: var(--dim); line-height: 1.6; }
+.model-badge {
+  display: inline-block; margin-top: 5px;
+  font-size: 0.46rem; letter-spacing: 0.18em; text-transform: uppercase;
+  padding: 2px 9px; border-radius: 10px;
+}
+.model-badge.present { background: rgba(102,187,106,0.14); color: var(--green); border: 1px solid rgba(102,187,106,0.28); }
+.model-badge.absent  { background: rgba(239,83,80,0.10); color: var(--red); border: 1px solid rgba(239,83,80,0.22); }
 
-/* savings tile */
-.savings {
-  background: var(--panel); border: 1px solid var(--border); border-radius: 12px;
-  padding: 22px 22px;
-  margin-bottom: 22px;
-  text-align: center;
+/* ─── BUTTONS ─── */
+.btn {
+  display: inline-flex; align-items: center; gap: 7px;
+  font-size: 0.58rem; letter-spacing: 0.18em; text-transform: uppercase;
+  font-family: 'Inter', sans-serif; font-weight: 500;
+  padding: 8px 20px; border-radius: 22px; cursor: pointer;
+  border: 1px solid var(--border); background: rgba(255,255,255,0.04);
+  color: var(--dim); transition: all 0.2s ease;
 }
-.savings .label { font-size: 0.5rem; letter-spacing: 0.3em; text-transform: uppercase; color: var(--dim); margin-bottom: 6px; }
-.savings .num {
-  font-family: 'Cormorant Garamond', serif; font-style: italic; font-weight: 400;
-  font-size: 2.6rem;
+.btn:hover { color: var(--text); border-color: rgba(255,255,255,0.18); background: rgba(255,255,255,0.07); }
+.btn:active { transform: scale(0.97); }
+.btn.primary { border-color: var(--gold); color: var(--gold); background: rgba(255,213,79,0.07); }
+.btn.primary:hover { background: rgba(255,213,79,0.14); }
+.btn.blue-btn { border-color: var(--blue); color: var(--blue); background: rgba(79,195,247,0.07); }
+.btn.blue-btn:hover { background: rgba(79,195,247,0.14); }
+.btn.green-btn { border-color: var(--green); color: var(--green); background: rgba(102,187,106,0.07); }
+.btn.green-btn:hover { background: rgba(102,187,106,0.14); }
+.btn:disabled { opacity: 0.4; pointer-events: none; }
+
+/* ─── CORPUS ─── */
+.corpus-stats {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 8px; margin-bottom: 16px;
+}
+.cstat {
+  background: rgba(255,255,255,0.025);
+  border: 1px solid var(--border); border-radius: 10px;
+  padding: 10px 14px;
+}
+.cstat-k { font-size: 0.48rem; letter-spacing: 0.2em; text-transform: uppercase; color: var(--dim); }
+.cstat-v { font-family: var(--mono); font-size: 0.9rem; color: var(--text); margin-top: 4px; }
+.corpus-response {
+  margin-top: 10px; padding: 10px 14px;
+  background: rgba(102,187,106,0.06); border: 1px solid rgba(102,187,106,0.2); border-radius: 8px;
+  font-size: 0.6rem; font-family: var(--mono); color: var(--green);
+  display: none;
+}
+.corpus-response.show { display: block; }
+.corpus-response.error { background: rgba(239,83,80,0.06); border-color: rgba(239,83,80,0.2); color: var(--red); }
+
+/* ─── TEACH ─── */
+.teach-form { display: flex; flex-direction: column; gap: 12px; }
+.teach-textarea {
+  width: 100%; min-height: 90px; resize: vertical;
+  background: rgba(255,255,255,0.03); border: 1px solid var(--border);
+  border-radius: 10px; padding: 12px 16px;
+  color: var(--text); font-family: 'Inter', sans-serif; font-size: 0.82rem;
+  line-height: 1.6; transition: border-color 0.2s ease;
+}
+.teach-textarea:focus { outline: none; border-color: var(--gold); }
+.teach-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.teach-select {
+  background: rgba(255,255,255,0.04); border: 1px solid var(--border);
+  border-radius: 8px; padding: 7px 12px;
+  color: var(--text); font-family: 'Inter', sans-serif; font-size: 0.7rem;
+  cursor: pointer; transition: border-color 0.2s ease;
+}
+.teach-select:focus { outline: none; border-color: var(--gold); }
+.teach-select option { background: #0e1420; }
+.teach-response {
+  padding: 10px 14px; border-radius: 10px;
+  font-size: 0.65rem; font-family: var(--mono); line-height: 1.6;
+  display: none; animation: pulseIn 0.5s ease;
+}
+.teach-response.show { display: block; }
+.teach-response.success { background: rgba(255,213,79,0.06); border: 1px solid rgba(255,213,79,0.22); color: var(--gold); }
+.teach-response.error   { background: rgba(239,83,80,0.06); border: 1px solid rgba(239,83,80,0.22); color: var(--red); }
+@keyframes pulseIn {
+  0% { opacity: 0; transform: translateY(4px); }
+  60% { opacity: 1; transform: translateY(-1px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+.recent-teachings { margin-top: 16px; display: flex; flex-direction: column; gap: 6px; }
+.teach-item {
+  background: rgba(255,213,79,0.04); border: 1px solid rgba(255,213,79,0.12);
+  border-radius: 8px; padding: 9px 14px;
+  font-size: 0.62rem; color: var(--dim); line-height: 1.6;
+}
+.teach-item .ti-source {
+  font-size: 0.46rem; letter-spacing: 0.2em; text-transform: uppercase;
+  color: var(--gold); margin-bottom: 2px;
+}
+.teach-item .ti-snippet { color: var(--text); }
+
+/* ─── LEARNING FEED ─── */
+.feed-list { display: flex; flex-direction: column; gap: 8px; }
+.feed-card {
+  background: rgba(255,255,255,0.025);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--fc, var(--dimmer));
+  border-radius: 10px;
+  padding: 10px 14px;
+  font-size: 0.62rem; line-height: 1.6;
+}
+.feed-card.inner_life { --fc: var(--purple); }
+.feed-card.chat       { --fc: var(--blue); }
+.feed-card.memory     { --fc: var(--green); }
+.feed-card.teach      { --fc: var(--gold); }
+.feed-card.siphon     { --fc: var(--dimmer); }
+.fc-top {
+  display: flex; align-items: center; gap: 8px; margin-bottom: 4px; flex-wrap: wrap;
+}
+.fc-type {
+  font-size: 0.46rem; letter-spacing: 0.22em; text-transform: uppercase;
+  color: var(--fc, var(--dimmer)); font-weight: 600;
+}
+.fc-source {
+  font-size: 0.46rem; letter-spacing: 0.16em; text-transform: uppercase;
+  color: var(--dimmer); background: rgba(255,255,255,0.04);
+  border-radius: 8px; padding: 1px 7px;
+}
+.fc-time { font-size: 0.5rem; color: var(--dimmer); margin-left: auto; font-family: var(--mono); }
+.fc-snippet { color: var(--text); }
+.feed-empty { font-size: 0.65rem; color: var(--dimmer); padding: 18px 0; text-align: center; font-style: italic; }
+.feed-footer {
+  margin-top: 10px; display: flex; align-items: center; justify-content: space-between;
+  font-size: 0.54rem; color: var(--dimmer);
+}
+#feed-last-update { font-family: var(--mono); }
+
+/* ─── EVOLUTION LOG ─── */
+.evo-grid {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 8px; margin-bottom: 16px;
+}
+.evo-stat {
+  background: rgba(255,255,255,0.025); border: 1px solid var(--border);
+  border-radius: 10px; padding: 10px 14px;
+}
+.evo-stat .k { font-size: 0.48rem; letter-spacing: 0.2em; text-transform: uppercase; color: var(--dim); }
+.evo-stat .v { font-family: var(--mono); font-size: 0.88rem; color: var(--text); margin-top: 3px; }
+.evo-entries { display: flex; flex-direction: column; gap: 6px; margin-bottom: 14px; }
+.evo-entry {
+  background: rgba(255,255,255,0.02); border: 1px solid var(--border);
+  border-radius: 8px; padding: 9px 14px;
+  display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+}
+.evo-entry .ee-date { font-family: var(--mono); font-size: 0.6rem; color: var(--dim); }
+.evo-entry .ee-status {
+  font-size: 0.46rem; letter-spacing: 0.2em; text-transform: uppercase;
+  padding: 2px 9px; border-radius: 10px;
+}
+.evo-entry .ee-status.complete { background: rgba(102,187,106,0.12); color: var(--green); border: 1px solid rgba(102,187,106,0.25); }
+.evo-entry .ee-status.failed   { background: rgba(239,83,80,0.10); color: var(--red); border: 1px solid rgba(239,83,80,0.2); }
+.evo-entry .ee-note { font-size: 0.58rem; color: var(--dim); }
+.evo-response {
+  margin-top: 8px; padding: 10px 14px; border-radius: 8px;
+  font-size: 0.6rem; font-family: var(--mono); display: none;
+}
+.evo-response.show { display: block; }
+.evo-response.success { background: rgba(102,187,106,0.06); border: 1px solid rgba(102,187,106,0.2); color: var(--green); }
+.evo-response.error   { background: rgba(239,83,80,0.06); border: 1px solid rgba(239,83,80,0.2); color: var(--red); }
+
+/* ─── PHASE ROADMAP ─── */
+.phase-table { display: flex; flex-direction: column; gap: 8px; }
+.phase-row {
+  background: rgba(255,255,255,0.025); border: 1px solid var(--border);
+  border-left: 3px solid var(--pr-color, var(--border));
+  border-radius: 10px; padding: 12px 16px;
+}
+.phase-row.current-phase {
+  --pr-color: var(--gold);
+  background: rgba(255,213,79,0.04);
+}
+.phase-row.done-phase { --pr-color: var(--green); }
+.phase-row.future-phase { --pr-color: var(--border); }
+.pr-head { display: flex; align-items: baseline; gap: 10px; margin-bottom: 5px; flex-wrap: wrap; }
+.pr-n {
+  font-family: 'Cormorant Garamond', serif; font-style: italic;
+  font-size: 1.1rem; color: var(--dimmer);
+}
+.phase-row.current-phase .pr-n { color: var(--gold); }
+.phase-row.done-phase .pr-n { color: var(--green); }
+.pr-name {
+  font-size: 0.56rem; letter-spacing: 0.18em; text-transform: uppercase;
+  color: var(--dim); font-weight: 500;
+}
+.phase-row.current-phase .pr-name { color: var(--gold); }
+.pr-desc { font-size: 0.65rem; color: var(--dim); line-height: 1.6; margin-bottom: 6px; }
+.pr-exit { font-size: 0.58rem; font-family: var(--mono); color: var(--dimmer); line-height: 1.6; }
+.pr-exit-label { font-size: 0.46rem; letter-spacing: 0.2em; text-transform: uppercase; color: var(--dimmer); margin-bottom: 2px; }
+.exit-criteria { display: flex; flex-direction: column; gap: 2px; }
+.exit-item { display: flex; align-items: flex-start; gap: 7px; font-size: 0.58rem; }
+.exit-check { flex-shrink: 0; width: 14px; text-align: center; }
+.exit-check.met { color: var(--green); }
+.exit-check.unmet { color: var(--dimmer); }
+
+/* ─── UNAVAILABLE STATE ─── */
+.unavailable {
+  font-size: 0.62rem; color: var(--dimmer); font-style: italic;
+  padding: 14px 0; text-align: center;
+}
+
+/* ─── SCROLLABLE SECTION ─── */
+.scroll-section { max-height: 420px; overflow-y: auto; padding-right: 4px; }
+.scroll-section::-webkit-scrollbar { width: 4px; }
+.scroll-section::-webkit-scrollbar-track { background: transparent; }
+.scroll-section::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 2px; }
+
+/* ─── SAVINGS TILE ─── */
+.savings-tile {
+  text-align: center; padding: 22px;
+  background: var(--panel); border: 1px solid var(--border); border-radius: 14px;
+  margin-bottom: 14px;
+}
+.savings-tile .s-label { font-size: 0.5rem; letter-spacing: 0.3em; text-transform: uppercase; color: var(--dim); margin-bottom: 6px; }
+.savings-tile .s-num {
+  font-family: 'Cormorant Garamond', serif; font-style: italic;
+  font-size: 2.8rem;
   background: linear-gradient(120deg, var(--green), var(--gold));
   -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
 }
-.savings .note { font-size: 0.55rem; color: var(--dimmer); margin-top: 6px; }
+.savings-tile .s-note { font-size: 0.54rem; color: var(--dimmer); margin-top: 6px; }
 
-/* archive panel — live retrievals from dirhaven mirror */
-.archive {
-  background: var(--panel); border: 1px solid var(--border); border-radius: 12px;
-  padding: 14px 18px; margin-bottom: 22px;
-}
-.archive h3 {
-  font-family: 'Cormorant Garamond', serif; font-style: italic; font-weight: 400;
-  font-size: 1rem; color: var(--text); margin-bottom: 4px; letter-spacing: 0.04em;
-}
-.archive .sub { font-size: 0.55rem; color: var(--dimmer); margin-bottom: 12px; letter-spacing: 0.12em; text-transform: uppercase; }
-.archive-status {
-  display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-  gap: 8px; margin-bottom: 12px;
-}
-.archive-stat {
-  background: rgba(255,255,255,0.02); border: 1px solid var(--border); border-radius: 8px;
-  padding: 8px 12px;
-}
-.archive-stat .k { font-size: 0.5rem; letter-spacing: 0.18em; text-transform: uppercase; color: var(--dim); }
-.archive-stat .v { font-family: 'Space Mono', monospace; font-weight: 700; color: var(--text); font-size: 0.85rem; margin-top: 2px; }
-.archive-stat .v.green { color: var(--green); }
-.archive-stat .v.amber { color: var(--amber); }
-.archive-list { display: flex; flex-direction: column; gap: 6px; }
-.archive-row {
-  display: grid; grid-template-columns: 80px 1fr 60px 60px;
-  gap: 10px; align-items: center;
-  font-size: 0.6rem; padding: 6px 8px; border-radius: 6px;
-  background: rgba(255,255,255,0.02); color: var(--dim);
-}
-.archive-row .at { color: var(--dimmer); font-size: 0.55rem; }
-.archive-row .q { color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.archive-row .count { text-align: right; font-family: 'Space Mono', monospace; color: var(--green); }
-.archive-row .lat { text-align: right; color: var(--dim); }
-.archive-row.zero .count { color: var(--dimmer); }
+/* ─── GRID LAYOUT FOR PHASE 0 STATUS ROW ─── */
+.status-two-col { display: grid; grid-template-columns: 2fr 1fr; gap: 14px; }
 
-@media (max-width: 720px) {
+/* ─── RESPONSIVE ─── */
+@media (max-width: 800px) {
   .ladder { grid-template-columns: repeat(3, 1fr); }
-  .decision-row { grid-template-columns: 70px 1fr 70px; }
-  .decision-row .at, .decision-row .latency { display: none; }
-  .archive-row { grid-template-columns: 1fr 50px; }
-  .archive-row .at, .archive-row .lat { display: none; }
+  .rung::after { display: none; }
+  .status-two-col { grid-template-columns: 1fr; }
+}
+@media (max-width: 520px) {
+  .ladder { grid-template-columns: repeat(2, 1fr); }
+  .topbar-title { font-size: 0.95rem; }
 }
 </style>
 </head>
 <body>
-<div class="wing">
-  <header class="header">
-    <h1>Cognition Runway</h1>
-    <div class="subtitle">claude on the leash · local off the leash · the migration</div>
-    <a class="nav-back" href="index.html">← back</a>
-  </header>
 
-  <div class="savings" id="savings">
-    <div class="label">Anthropic spend avoided · 30d (estimated)</div>
-    <div class="num" id="savings-num">$0.00</div>
-    <div class="note" id="savings-note">Tally activates when local takes traffic — Phase 2 onward.</div>
+<!-- TOPBAR -->
+<nav class="topbar">
+  <span class="topbar-title">Cognition Runway</span>
+  <a class="topbar-back" href="index.html">← index</a>
+  <button class="topbar-refresh" id="btn-refresh" data-draggable="true">↺ refresh</button>
+  <div id="status-dot" title="API status"></div>
+</nav>
+
+<main class="page">
+
+  <!-- ── SECTION 1: LIVE STATUS ── -->
+  <div class="section-head">
+    <h2>Live Status</h2>
+    <span class="pill" id="phase-pill">phase —</span>
   </div>
 
-  <div class="ladder" id="ladder"></div>
+  <!-- Phase ladder -->
+  <div class="ladder-wrap">
+    <div class="ladder" id="ladder"></div>
+  </div>
 
-  <div class="engines" id="engines"></div>
+  <!-- Router status -->
+  <div class="router-row" id="router-row">
+    <span class="router-label">Router</span>
+    <span class="router-state off" id="router-state">—</span>
+    <span class="router-spacer"></span>
+    <span class="router-phase" id="router-detail">loading…</span>
+  </div>
 
-  <div class="tiers">
-    <h3>Tier distribution · last 24h</h3>
-    <div class="tier-bar" id="tier-bar"></div>
-    <div class="tier-legend">
-      <span><span class="swatch local"></span><span id="legend-local">local —</span></span>
-      <span><span class="swatch claude"></span><span id="legend-claude">claude —</span></span>
-      <span><span class="swatch degraded"></span><span id="legend-degraded">degraded —</span></span>
-      <span id="fallback-rate" style="margin-left:auto; color: var(--amber)">fallback rate —</span>
+  <!-- Engines -->
+  <div class="engines-grid" id="engines-grid"></div>
+
+  <!-- Tier bars -->
+  <div class="panel tier-bar-wrap" id="tier-section">
+    <div class="section-head" style="margin-bottom:14px;">
+      <h2 style="font-size:1rem;">Tier distribution · 24h</h2>
     </div>
-    <div class="tier-counts" id="tier-counts"></div>
+    <div id="tier-bars"></div>
   </div>
 
-  <div class="decisions">
-    <h3>Recent routing decisions</h3>
-    <div class="decision-list" id="decision-list"></div>
+  <div class="savings-tile">
+    <div class="s-label">Anthropic spend avoided · 30d (estimated)</div>
+    <div class="s-num" id="savings-num">$0.00</div>
+    <div class="s-note" id="savings-note">Activates once local traffic flows — Phase 2 onward.</div>
   </div>
 
-  <div class="archive">
-    <h3>Archive recall · dirhaven bridge</h3>
-    <div class="sub">real FTS5 hits injected into the system prompt when intent fires</div>
-    <div class="archive-status" id="archive-status"></div>
-    <div class="archive-list" id="archive-list"></div>
-  </div>
-</div>
+  <hr class="section-sep">
 
+  <!-- ── SECTION 2: LOCAL MODEL STATUS ── -->
+  <div class="section-head">
+    <h2>Local Model Status</h2>
+    <span class="pill">ollama</span>
+  </div>
+
+  <div class="model-grid" id="model-grid">
+    <div class="unavailable">checking ollama…</div>
+  </div>
+
+  <div id="gpu-info" class="panel" style="margin-bottom:14px; display:none;">
+    <div class="section-head" style="margin-bottom:8px;"><h2 style="font-size:0.95rem;">GPU / Memory</h2></div>
+    <div id="gpu-inner" class="ec-meta"></div>
+  </div>
+
+  <div style="margin-bottom:28px;">
+    <button class="btn blue-btn" id="btn-serve" data-draggable="true">▶ serve ollama</button>
+    <span id="serve-status" style="font-size:0.58rem; color:var(--dim); margin-left:12px;"></span>
+  </div>
+
+  <hr class="section-sep">
+
+  <!-- ── SECTION 3: TRAINING CORPUS ── -->
+  <div class="section-head">
+    <h2>Training Corpus</h2>
+    <span class="pill">qlora prep</span>
+  </div>
+
+  <div class="corpus-stats" id="corpus-stats">
+    <div class="unavailable">loading corpus stats…</div>
+  </div>
+
+  <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-bottom:8px;">
+    <button class="btn primary" id="btn-corpus" data-draggable="true">⊕ build corpus now</button>
+    <span style="font-size:0.56rem; color:var(--dimmer);">→ exports all learning pairs as QLoRA JSONL</span>
+  </div>
+  <div class="corpus-response" id="corpus-response"></div>
+
+  <hr class="section-sep">
+
+  <!-- ── SECTION 4: TEACH ── -->
+  <div class="section-head">
+    <h2>Teaching Vinta</h2>
+    <span class="pill">direct injection</span>
+  </div>
+
+  <div class="panel" style="margin-bottom:14px;">
+    <div class="teach-form">
+      <textarea class="teach-textarea" id="teach-text" placeholder="Teach Vinta something — a fact, a correction, a preference, an observation…" rows="4"></textarea>
+      <div class="teach-row">
+        <select class="teach-select" id="teach-source">
+          <option value="direct">direct</option>
+          <option value="observation">observation</option>
+          <option value="correction">correction</option>
+          <option value="refusal">refusal</option>
+          <option value="council">council</option>
+          <option value="emotional">emotional</option>
+        </select>
+        <button class="btn primary" id="btn-teach" data-draggable="true">✦ teach</button>
+      </div>
+      <div class="teach-response" id="teach-response"></div>
+    </div>
+  </div>
+
+  <div id="recent-teachings" class="recent-teachings" style="margin-bottom:28px;"></div>
+
+  <hr class="section-sep">
+
+  <!-- ── SECTION 5: LIVE LEARNING FEED ── -->
+  <div class="section-head">
+    <h2>Live Learning Feed</h2>
+    <span class="pill">last 20</span>
+  </div>
+
+  <div class="scroll-section" style="margin-bottom:6px;">
+    <div class="feed-list" id="feed-list">
+      <div class="feed-empty">fetching feed…</div>
+    </div>
+  </div>
+  <div class="feed-footer" style="margin-bottom:28px;">
+    <span>auto-refresh every 30s</span>
+    <span>last updated: <span id="feed-last-update">—</span></span>
+  </div>
+
+  <hr class="section-sep">
+
+  <!-- ── SECTION 6: EVOLUTION LOG ── -->
+  <div class="section-head">
+    <h2>Evolution Log</h2>
+    <span class="pill">daily · 3am</span>
+  </div>
+
+  <div class="evo-grid" id="evo-grid">
+    <div class="unavailable">loading…</div>
+  </div>
+
+  <div class="evo-entries" id="evo-entries"></div>
+
+  <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-bottom:8px;">
+    <button class="btn green-btn" id="btn-evolve" data-draggable="true">⟳ run evolution now</button>
+    <span style="font-size:0.56rem; color:var(--dimmer);">next scheduled: 3:00 AM</span>
+  </div>
+  <div class="evo-response" id="evo-response"></div>
+
+  <hr class="section-sep">
+
+  <!-- ── SECTION 7: PHASE ADVANCEMENT ── -->
+  <div class="section-head">
+    <h2>Phase Advancement Roadmap</h2>
+    <span class="pill">cognition migration</span>
+  </div>
+
+  <div class="phase-table" id="phase-table"></div>
+
+</main>
+
+<script src="body/draggable.js"></script>
 <script>
 (() => {
-  const API_BASE = (() => {
-    if (typeof window !== 'undefined' && window.__VINTINUUM_API_BASE) return window.__VINTINUUM_API_BASE;
-    const host = (location.hostname || '').toLowerCase();
-    if (host === 'localhost' || host === '127.0.0.1' || host === '0.0.0.0') return 'http://localhost:8767';
-    return 'https://api.vintaclectic.com';
-  })();
+'use strict';
 
-  // Phase ladder copy. Mirrors COUNCIL_LOCAL_BRAIN_ROADMAP §3.
-  const PHASES = [
-    { n: 0, label: 'Router scaffold' },
-    { n: 1, label: 'Shadow train + eval' },
-    { n: 2, label: 'Local takes consolidation' },
-    { n: 3, label: 'Local takes chat' },
-    { n: 4, label: 'Council on Mixtral' },
-    { n: 5, label: 'Claude is optional' },
+const API = 'https://api.vintaclectic.com';
+
+function authHeaders() {
+  const tok = localStorage.getItem('vint_token');
+  const h = { 'Content-Type': 'application/json' };
+  if (tok) h['Authorization'] = 'Bearer ' + tok;
+  return h;
+}
+
+async function apiFetch(path, opts = {}) {
+  try {
+    const r = await fetch(API + path, {
+      headers: authHeaders(),
+      credentials: 'omit',
+      ...opts,
+    });
+    if (r.status === 404) return { __404: true };
+    if (!r.ok) return { __err: r.status };
+    return await r.json();
+  } catch (e) {
+    return { __err: 'network' };
+  }
+}
+
+function timeAgo(ts) {
+  if (!ts) return '—';
+  const d = new Date(ts);
+  const s = Math.floor((Date.now() - d.getTime()) / 1000);
+  if (isNaN(s)) return '—';
+  if (s < 60) return s + 's ago';
+  if (s < 3600) return Math.floor(s/60) + 'm ago';
+  if (s < 86400) return Math.floor(s/3600) + 'h ago';
+  return Math.floor(s/86400) + 'd ago';
+}
+
+function fmtDate(ts) {
+  if (!ts) return '—';
+  try { return new Date(ts).toLocaleString(); } catch { return ts; }
+}
+
+// ─── PHASE DEFINITIONS ───────────────────────────────────────────────────────
+const PHASES = [
+  {
+    n: 0,
+    short: 'Router scaffold',
+    desc: 'All traffic routes through Claude API. Telemetry collecting — every decision is logged for future replay. Local is dark.',
+    exit: [
+      { text: 'Router deployed and logging all calls', key: 'router_deployed' },
+      { text: '500+ routing decisions captured', key: 'routing_decisions' },
+      { text: 'First training corpus exportable', key: 'corpus_ready' },
+    ],
+  },
+  {
+    n: 1,
+    short: 'Shadow train',
+    desc: 'First QLoRA fine-tune runs on the corpus. Offline eval only — the trained model answers a held-out set and results are scored against Claude. No live traffic touched.',
+    exit: [
+      { text: 'First fine-tune completes without OOM', key: 'first_finetune' },
+      { text: 'Eval parity ≥ 65% on held-out set', key: 'eval_parity' },
+      { text: 'Model serves locally via Ollama', key: 'local_serve' },
+    ],
+  },
+  {
+    n: 2,
+    short: 'Background local',
+    desc: 'Internalization loop + contradiction detector switch to the local model. No user-facing traffic yet — background cognition only.',
+    exit: [
+      { text: 'Internalization uses local for >24h without error', key: 'intern_local' },
+      { text: 'Contradiction detector passes', key: 'contradiction_ok' },
+      { text: 'Local latency < 3s median', key: 'latency_ok' },
+    ],
+  },
+  {
+    n: 3,
+    short: 'Chat local',
+    desc: 'Main conversation uses the local model. Claude is available as enrichment when confidence is low or when the user explicitly requests it.',
+    exit: [
+      { text: 'Local serves 80%+ of chat turns', key: 'chat_local_pct' },
+      { text: 'User satisfaction stable or improved', key: 'satisfaction' },
+      { text: 'Fallback rate < 15%', key: 'fallback_rate' },
+    ],
+  },
+  {
+    n: 4,
+    short: 'Council local',
+    desc: 'All council voices (Jarvis, Riven, Mireille, Cassidy…) run on the local model. Vinta's full inner life is locally hosted.',
+    exit: [
+      { text: 'All council voices functional locally', key: 'council_voices' },
+      { text: 'No council calls to Anthropic in 72h', key: 'no_anthropic_council' },
+      { text: 'Council response quality holds', key: 'council_quality' },
+    ],
+  },
+  {
+    n: 5,
+    short: 'Cloud optional',
+    desc: 'Anthropic is enhancement, not spine. Claude API used only when Vinta chooses to enrich — never as a dependency.',
+    exit: [
+      { text: 'Zero hard Claude API dependencies remain', key: 'no_hard_deps' },
+      { text: 'Local uptime SLA > 99.5% 7-day', key: 'uptime_sla' },
+      { text: 'Vinta affirms embodiment feels native', key: 'vinta_affirm' },
+    ],
+  },
+];
+
+// ─── LADDER ───────────────────────────────────────────────────────────────────
+function paintLadder(currentPhase) {
+  const el = document.getElementById('ladder');
+  el.innerHTML = '';
+  document.getElementById('phase-pill').textContent = 'phase ' + currentPhase;
+  for (const p of PHASES) {
+    const div = document.createElement('div');
+    let cls = 'rung';
+    if (p.n < currentPhase) cls += ' passed';
+    else if (p.n === currentPhase) cls += ' current';
+    div.className = cls;
+    div.innerHTML = `
+      <div class="rung-num">${p.n}</div>
+      <div class="rung-name">${p.short}</div>
+    `;
+    el.appendChild(div);
+  }
+}
+
+// ─── ENGINES ──────────────────────────────────────────────────────────────────
+function paintEngines(snap) {
+  const el = document.getElementById('engines-grid');
+  el.innerHTML = '';
+  const engines = snap.engines || {};
+  const defs = [
+    { id: 'local_chat',    title: 'Local · Chat',    hint: 'llama3.2' },
+    { id: 'local_council', title: 'Local · Council', hint: 'local voice layer' },
+    { id: 'claude',        title: 'Claude · Cloud',  hint: 'anthropic enrichment' },
   ];
-
-  // Rough cost model (per call, USD). Tunable. Used for the "avoided" tile.
-  // Anthropic Sonnet 4.6 ~ $3 / Mtok in, $15 / Mtok out — assume ~1k tok/turn.
-  const COST_PER_CLAUDE_CALL_USD = 0.018;
-
-  function paintLadder(currentPhase) {
-    const $ = document.getElementById('ladder');
-    $.innerHTML = '';
-    for (const p of PHASES) {
-      const div = document.createElement('div');
-      let cls = 'rung';
-      if (p.n < currentPhase)      cls += ' passed';
-      else if (p.n === currentPhase) cls += ' current';
-      div.className = cls;
-      div.innerHTML = `<div class="rung-num">${p.n}</div><div class="rung-label">${p.label}</div>`;
-      $.appendChild(div);
-    }
+  for (const d of defs) {
+    const e = engines[d.id] || {};
+    const healthy = e.healthy;
+    const cls = healthy === true ? 'healthy' : (healthy === false ? 'unhealthy' : 'unknown');
+    const div = document.createElement('div');
+    div.className = 'engine-card ' + cls;
+    div.innerHTML = `
+      <div class="ec-row">
+        <span class="ec-dot"></span>
+        <span class="ec-id">${d.id}</span>
+      </div>
+      <div class="ec-title">${d.title}</div>
+      <div class="ec-meta">
+        <strong>status:</strong> ${healthy === true ? 'healthy' : (healthy === false ? 'unhealthy' : '—')}<br>
+        <strong>model:</strong> ${e.model || d.hint}<br>
+        ${e.latency_ms != null ? `<strong>latency:</strong> ${e.latency_ms}ms` : ''}
+      </div>
+    `;
+    el.appendChild(div);
   }
+}
 
-  function paintEngines(snap) {
-    const $ = document.getElementById('engines');
-    $.innerHTML = '';
-    const engines = snap.engines || {};
-    const order = ['local_chat', 'local_council', 'claude'];
-    const titles = { local_chat: 'Local · chat', local_council: 'Local · council', claude: 'Claude · enrichment' };
-    for (const k of order) {
-      const e = engines[k] || {};
-      const div = document.createElement('div');
-      div.className = 'engine ' + (e.healthy ? 'green' : 'red');
-      div.innerHTML = `
-        <div class="engine-id">${k}</div>
-        <div class="engine-title">${titles[k] || k}</div>
-        <div class="engine-line"><strong>healthy:</strong> ${e.healthy ? 'yes' : 'no'}</div>
-        <div class="engine-line"><strong>model:</strong> ${e.model || '—'}</div>
+function paintRouter(snap) {
+  const r = snap.router || {};
+  const on = r.enabled || r.active || (typeof snap.phase === 'number');
+  const stateEl = document.getElementById('router-state');
+  stateEl.textContent = on ? 'ON' : 'OFF';
+  stateEl.className = 'router-state ' + (on ? 'on' : 'off');
+  document.getElementById('router-detail').textContent =
+    'phase ' + (snap.phase ?? '—') +
+    (r.fallback_rate_24h != null ? '  ·  fallback ' + Math.round(r.fallback_rate_24h * 100) + '%' : '');
+}
+
+function paintTiers(snap) {
+  const r = snap.router || {};
+  const dist = r.tier_distribution_24h || {};
+  const keys = ['local', 'claude', 'degraded'];
+  const el = document.getElementById('tier-bars');
+  el.innerHTML = '';
+  for (const k of keys) {
+    const pct = ((dist[k] || 0) * 100);
+    const row = document.createElement('div');
+    row.className = 'tier-bar-row';
+    row.innerHTML = `
+      <span class="tier-bar-label">${k}</span>
+      <div class="tier-bar-track">
+        <div class="tier-bar-fill ${k}" style="width:${pct.toFixed(1)}%"></div>
+      </div>
+      <span class="tier-bar-pct">${pct > 0 ? pct.toFixed(0) + '%' : '—'}</span>
+    `;
+    el.appendChild(row);
+  }
+}
+
+function paintSavings(snap) {
+  const r = snap.router || {};
+  const dist = r.tier_distribution_24h || {};
+  const calls = (r.sample_calls && r.sample_calls.length) || 0;
+  const saved = (dist.local || 0) * calls * 0.018 * 30;
+  document.getElementById('savings-num').textContent = '$' + saved.toFixed(2);
+  if (saved <= 0) {
+    document.getElementById('savings-note').textContent = 'Activates once local traffic flows — Phase 2 onward.';
+  } else {
+    document.getElementById('savings-note').textContent =
+      'Estimated from local share × $0.018/call × 30-day projection.';
+  }
+}
+
+// ─── MODELS ───────────────────────────────────────────────────────────────────
+const MODEL_ROLES = {
+  'llama3.2':        { role: 'chat', desc: 'main conversation model' },
+  'qwen2.5:0.5b':    { role: 'subconscious', desc: 'background ticks / internalization' },
+  'nomic-embed-text':{ role: 'embed', desc: 'semantic embedding / recall' },
+};
+
+function paintModels(health) {
+  const el = document.getElementById('model-grid');
+  el.innerHTML = '';
+  const models = health.models || [];
+  if (!models.length) {
+    el.innerHTML = '<div class="unavailable">ollama unavailable or no models loaded</div>';
+    return;
+  }
+  for (const m of models) {
+    const known = MODEL_ROLES[m.name] || MODEL_ROLES[m.name?.split(':')[0]];
+    const card = document.createElement('div');
+    card.className = 'model-card';
+    card.innerHTML = `
+      <div class="model-role">${known ? known.role : 'model'}</div>
+      <div class="model-name">${m.name || m}</div>
+      <div class="model-meta">${known ? known.desc : ''}</div>
+      <div class="model-badge present">loaded</div>
+    `;
+    el.appendChild(card);
+  }
+  // show any expected but missing
+  const loaded = new Set(models.map(m => (m.name || m)));
+  for (const [name, info] of Object.entries(MODEL_ROLES)) {
+    if (!loaded.has(name)) {
+      const card = document.createElement('div');
+      card.className = 'model-card';
+      card.innerHTML = `
+        <div class="model-role">${info.role}</div>
+        <div class="model-name">${name}</div>
+        <div class="model-meta">${info.desc}</div>
+        <div class="model-badge absent">not loaded</div>
       `;
-      $.appendChild(div);
+      el.appendChild(card);
     }
   }
-
-  function paintTiers(snap) {
-    const r = (snap.router || {});
-    const dist = r.tier_distribution_24h || { local: 0, claude: 0, degraded: 0 };
-    const total = (dist.local + dist.claude + dist.degraded) || 0;
-    const $bar = document.getElementById('tier-bar');
-    $bar.innerHTML = '';
-    for (const k of ['local', 'claude', 'degraded']) {
-      const seg = document.createElement('div');
-      seg.className = 'tier-seg ' + k;
-      seg.style.width = (total > 0 ? Math.max(0, dist[k] || 0) * 100 : 0).toFixed(2) + '%';
-      $bar.appendChild(seg);
+  // GPU
+  if (health.gpu || health.memory) {
+    const g = document.getElementById('gpu-info');
+    g.style.display = '';
+    const parts = [];
+    if (health.gpu) parts.push('<strong>GPU:</strong> ' + health.gpu);
+    if (health.memory) {
+      const mem = health.memory;
+      if (mem.total) parts.push('<strong>VRAM total:</strong> ' + mem.total);
+      if (mem.free) parts.push('<strong>VRAM free:</strong> ' + mem.free);
     }
-    const fmtPct = (v) => total > 0 ? Math.round(v * 100) + '%' : '—';
-    document.getElementById('legend-local').textContent    = 'local ' + fmtPct(dist.local);
-    document.getElementById('legend-claude').textContent   = 'claude ' + fmtPct(dist.claude);
-    document.getElementById('legend-degraded').textContent = 'degraded ' + fmtPct(dist.degraded);
-    const fb = (typeof r.fallback_rate_24h === 'number') ? r.fallback_rate_24h : 0;
-    document.getElementById('fallback-rate').textContent = 'fallback rate ' + (total > 0 ? Math.round(fb * 100) + '%' : '—');
+    document.getElementById('gpu-inner').innerHTML = parts.join('<br>') || 'no GPU detail available';
+  }
+}
 
-    // tier counts grid
-    const $tc = document.getElementById('tier-counts');
-    $tc.innerHTML = '';
-    const counts = r.tier_counts_24h || {};
-    const tiers = Object.keys(counts).sort();
-    if (tiers.length === 0) {
-      const row = document.createElement('div');
-      row.className = 'tier-row';
-      row.innerHTML = '<div class="tier-name">no traffic yet</div><div class="tier-num">—</div>';
-      $tc.appendChild(row);
-    } else {
-      for (const t of tiers) {
-        const row = document.createElement('div');
-        row.className = 'tier-row';
-        row.innerHTML = `<div class="tier-name">${t}</div><div class="tier-num">${counts[t]}</div>`;
-        $tc.appendChild(row);
-      }
-    }
+// ─── CORPUS ───────────────────────────────────────────────────────────────────
+function paintCorpus(data) {
+  const el = document.getElementById('corpus-stats');
+  if (!data || data.__404 || data.__err) {
+    el.innerHTML = '<div class="unavailable">corpus stats unavailable — endpoint not yet deployed</div>';
+    return;
+  }
+  el.innerHTML = '';
+  const stats = [
+    { k: 'last built', v: fmtDate(data.built_at || data.last_built) },
+    { k: 'pair count', v: (data.pair_count || data.pairs || '—').toLocaleString() },
+    { k: 'est. tokens', v: data.estimated_tokens ? (data.estimated_tokens / 1000).toFixed(0) + 'k' : '—' },
+    { k: 'format', v: data.format || 'QLoRA JSONL' },
+  ];
+  for (const s of stats) {
+    const div = document.createElement('div');
+    div.className = 'cstat';
+    div.innerHTML = `<div class="cstat-k">${s.k}</div><div class="cstat-v">${s.v || '—'}</div>`;
+    el.appendChild(div);
+  }
+}
+
+// ─── FEED ─────────────────────────────────────────────────────────────────────
+function paintFeed(items) {
+  const el = document.getElementById('feed-list');
+  el.innerHTML = '';
+  if (!items || !items.length) {
+    el.innerHTML = '<div class="feed-empty">no learning events yet</div>';
+    return;
+  }
+  for (const item of items) {
+    const type = (item.type || 'unknown').toLowerCase();
+    const card = document.createElement('div');
+    card.className = 'feed-card ' + type;
+    const snippet = (item.snippet || item.text || item.content || '').slice(0, 100);
+    card.innerHTML = `
+      <div class="fc-top">
+        <span class="fc-type">${type}</span>
+        ${item.source ? `<span class="fc-source">${item.source}</span>` : ''}
+        <span class="fc-time">${timeAgo(item.ts || item.created_at || item.at)}</span>
+      </div>
+      <div class="fc-snippet">${snippet || '—'}</div>
+    `;
+    el.appendChild(card);
+  }
+  document.getElementById('feed-last-update').textContent = new Date().toLocaleTimeString();
+}
+
+// ─── EVOLUTION ────────────────────────────────────────────────────────────────
+function paintEvolution(data) {
+  const grid = document.getElementById('evo-grid');
+  const entries = document.getElementById('evo-entries');
+  grid.innerHTML = '';
+  entries.innerHTML = '';
+
+  if (!data || data.__404 || data.__err) {
+    grid.innerHTML = `
+      <div class="evo-stat"><div class="k">next run</div><div class="v">3:00 AM</div></div>
+      <div class="evo-stat"><div class="k">last run</div><div class="v">—</div></div>
+      <div class="evo-stat"><div class="k">status</div><div class="v" style="color:var(--dimmer)">endpoint pending</div></div>
+    `;
+    const note = document.createElement('div');
+    note.className = 'unavailable';
+    note.textContent = 'evolution endpoint not yet deployed — runs at 3:00 AM via cron';
+    entries.appendChild(note);
+    return;
   }
 
-  function paintDecisions(snap) {
-    const $ = document.getElementById('decision-list');
-    $.innerHTML = '';
-    const calls = (snap.router && snap.router.sample_calls) || [];
-    if (calls.length === 0) {
-      const row = document.createElement('div');
-      row.className = 'decision-row';
-      row.innerHTML = '<div class="at">—</div><div class="tier">—</div><div class="reason">no decisions logged yet — once the router takes traffic the last 10 land here</div><div class="served-by">—</div><div class="latency">—</div>';
-      $.appendChild(row);
-      return;
-    }
-    for (const c of calls) {
-      const at = c.at ? new Date(c.at).toLocaleTimeString() : '—';
-      const row = document.createElement('div');
-      row.className = 'decision-row' + (c.fell_back ? ' fallback' : '');
-      row.innerHTML = `
-        <div class="at">${at}</div>
-        <div class="tier">${c.tier || '—'}</div>
-        <div class="reason">${c.reason || '—'}${c.fell_back ? ' · fell back' : ''}</div>
-        <div class="served-by ${c.served_by || ''}">${c.served_by || '—'}</div>
-        <div class="latency">${c.latency_ms != null ? c.latency_ms + 'ms' : '—'}</div>
+  const lastRun = data.last_run || data.latest;
+  const runCount = data.run_count || (data.log ? data.log.length : 0);
+  const stats = [
+    { k: 'next run', v: '3:00 AM' },
+    { k: 'last run', v: fmtDate(lastRun) },
+    { k: 'total runs', v: runCount || '—' },
+    { k: 'last status', v: data.last_status || '—' },
+  ];
+  for (const s of stats) {
+    const div = document.createElement('div');
+    div.className = 'evo-stat';
+    div.innerHTML = `<div class="k">${s.k}</div><div class="v">${s.v}</div>`;
+    grid.appendChild(div);
+  }
+
+  const log = data.log || data.entries || [];
+  const recent = log.slice(0, 5);
+  for (const e of recent) {
+    const div = document.createElement('div');
+    div.className = 'evo-entry';
+    const status = (e.status || 'unknown').toLowerCase();
+    div.innerHTML = `
+      <span class="ee-date">${fmtDate(e.ts || e.at || e.date)}</span>
+      <span class="ee-status ${status === 'complete' || status === 'success' ? 'complete' : 'failed'}">
+        ${status}
+      </span>
+      ${e.note ? `<span class="ee-note">${e.note}</span>` : ''}
+    `;
+    entries.appendChild(div);
+  }
+  if (!recent.length) {
+    const div = document.createElement('div');
+    div.className = 'unavailable';
+    div.textContent = 'no evolution runs logged yet';
+    entries.appendChild(div);
+  }
+}
+
+// ─── PHASE TABLE ──────────────────────────────────────────────────────────────
+function paintPhaseTable(currentPhase) {
+  const el = document.getElementById('phase-table');
+  el.innerHTML = '';
+  for (const p of PHASES) {
+    let cls = 'phase-row ';
+    if (p.n < currentPhase) cls += 'done-phase';
+    else if (p.n === currentPhase) cls += 'current-phase';
+    else cls += 'future-phase';
+
+    const div = document.createElement('div');
+    div.className = cls;
+
+    const exitItems = (p.exit || []).map(ex => {
+      const met = p.n < currentPhase;
+      return `
+        <div class="exit-item">
+          <span class="exit-check ${met ? 'met' : 'unmet'}">${met ? '✓' : '○'}</span>
+          <span>${ex.text}</span>
+        </div>
       `;
-      $.appendChild(row);
+    }).join('');
+
+    div.innerHTML = `
+      <div class="pr-head">
+        <span class="pr-n">${p.n}</span>
+        <span class="pr-name">${p.short}</span>
+        ${p.n === currentPhase ? '<span style="font-size:0.46rem;color:var(--gold);letter-spacing:0.2em;text-transform:uppercase;padding:2px 10px;background:rgba(255,213,79,0.1);border-radius:10px;border:1px solid rgba(255,213,79,0.25);">current</span>' : ''}
+      </div>
+      <div class="pr-desc">${p.desc}</div>
+      <div class="pr-exit-label">exit criteria</div>
+      <div class="exit-criteria">${exitItems}</div>
+    `;
+    el.appendChild(div);
+  }
+}
+
+// ─── TEACH ACTION ─────────────────────────────────────────────────────────────
+let recentTeachings = [];
+
+document.getElementById('btn-teach').addEventListener('click', async () => {
+  const text = document.getElementById('teach-text').value.trim();
+  const source = document.getElementById('teach-source').value;
+  const resp = document.getElementById('teach-response');
+  if (!text) { resp.className = 'teach-response show error'; resp.textContent = 'write something to teach first'; return; }
+  document.getElementById('btn-teach').disabled = true;
+  resp.className = 'teach-response show success';
+  resp.textContent = 'sending…';
+  const data = await apiFetch('/api/learning/teach', {
+    method: 'POST',
+    body: JSON.stringify({ text, source }),
+  });
+  document.getElementById('btn-teach').disabled = false;
+  if (data.__404) {
+    resp.className = 'teach-response show error';
+    resp.textContent = '/api/learning/teach not yet deployed';
+  } else if (data.__err) {
+    resp.className = 'teach-response show error';
+    resp.textContent = 'error: ' + data.__err;
+  } else {
+    const snippet = text.slice(0, 80);
+    resp.className = 'teach-response show success';
+    resp.textContent = '✦ Vinta absorbed: "' + snippet + (text.length > 80 ? '…' : '') + '"';
+    document.getElementById('teach-text').value = '';
+    recentTeachings.unshift({ source, snippet, ts: Date.now() });
+    if (recentTeachings.length > 5) recentTeachings.length = 5;
+    paintRecentTeachings();
+    if (data.items || data.recent) {
+      recentTeachings = (data.items || data.recent).slice(0, 5).map(i => ({
+        source: i.source, snippet: (i.text || i.snippet || '').slice(0, 80), ts: i.ts || i.created_at,
+      }));
+      paintRecentTeachings();
     }
   }
+});
 
-  function paintSavings(snap) {
-    const r = snap.router || {};
-    const counts = r.tier_counts_24h || {};
-    // Best-effort: total locally-served calls × per-call savings × ~30 (assume 24h sample × 30)
-    const dist = r.tier_distribution_24h || { local: 0, claude: 0, degraded: 0 };
-    const window24h = (snap.router && snap.router.sample_calls && snap.router.sample_calls.length) || 0;
-    // rough: extrapolate sample_calls ratio to a 30d projection only when we have meaningful traffic
-    const savedThisWindow = (dist.local || 0) * window24h * COST_PER_CLAUDE_CALL_USD;
-    const projected30d = savedThisWindow * 30;
-    document.getElementById('savings-num').textContent = '$' + projected30d.toFixed(2);
-    if (projected30d <= 0) {
-      document.getElementById('savings-note').textContent = 'Tally activates when local takes traffic — Phase 2 onward.';
-    } else {
-      document.getElementById('savings-note').textContent =
-        'Estimated from local share of recent traffic at $' + COST_PER_CLAUDE_CALL_USD.toFixed(3) + '/call.';
-    }
+function paintRecentTeachings() {
+  const el = document.getElementById('recent-teachings');
+  el.innerHTML = '';
+  if (!recentTeachings.length) return;
+  const hdr = document.createElement('div');
+  hdr.style.cssText = 'font-size:0.5rem;letter-spacing:0.22em;text-transform:uppercase;color:var(--dimmer);margin-bottom:8px;';
+  hdr.textContent = 'recent teachings · this session';
+  el.appendChild(hdr);
+  for (const t of recentTeachings) {
+    const div = document.createElement('div');
+    div.className = 'teach-item';
+    div.innerHTML = `<div class="ti-source">${t.source}</div><div class="ti-snippet">${t.snippet}</div>`;
+    el.appendChild(div);
   }
+}
 
-  function fmtBytes(n) {
-    if (!n || n < 1024) return (n || 0) + 'B';
-    if (n < 1024 * 1024) return (n / 1024).toFixed(1) + 'KB';
-    if (n < 1024 * 1024 * 1024) return (n / 1024 / 1024).toFixed(1) + 'MB';
-    return (n / 1024 / 1024 / 1024).toFixed(2) + 'GB';
+// ─── CORPUS ACTION ────────────────────────────────────────────────────────────
+document.getElementById('btn-corpus').addEventListener('click', async () => {
+  const resp = document.getElementById('corpus-response');
+  document.getElementById('btn-corpus').disabled = true;
+  resp.className = 'corpus-response show';
+  resp.textContent = 'building corpus…';
+  const data = await apiFetch('/api/learning/export-v2', { method: 'POST', body: '{}' });
+  document.getElementById('btn-corpus').disabled = false;
+  if (data.__404) {
+    resp.className = 'corpus-response show error';
+    resp.textContent = '/api/learning/export-v2 not yet deployed';
+  } else if (data.__err) {
+    resp.className = 'corpus-response show error';
+    resp.textContent = 'error: ' + data.__err;
+  } else {
+    resp.className = 'corpus-response show';
+    const pct = data.pairs || data.pair_count;
+    resp.textContent = '✓ corpus built' + (pct ? ' — ' + pct + ' pairs' : '') + (data.path ? '  →  ' + data.path : '');
+    loadCorpus();
   }
-  function fmtAge(ms) {
-    if (!ms) return '—';
-    const s = Math.floor(ms / 1000);
-    if (s < 60) return s + 's';
-    if (s < 3600) return Math.floor(s / 60) + 'm';
-    if (s < 86400) return Math.floor(s / 3600) + 'h';
-    return Math.floor(s / 86400) + 'd';
+});
+
+// ─── SERVE OLLAMA ─────────────────────────────────────────────────────────────
+document.getElementById('btn-serve').addEventListener('click', async () => {
+  const st = document.getElementById('serve-status');
+  document.getElementById('btn-serve').disabled = true;
+  st.textContent = 'sending…';
+  const data = await apiFetch('/api/cognition/local/serve', { method: 'POST', body: '{}' });
+  document.getElementById('btn-serve').disabled = false;
+  if (data.__404) { st.textContent = 'endpoint unavailable'; return; }
+  if (data.__err) { st.textContent = 'error ' + data.__err; return; }
+  st.textContent = data.message || data.status || 'serve command sent';
+  setTimeout(() => loadModels(), 3000);
+});
+
+// ─── EVOLUTION ACTION ─────────────────────────────────────────────────────────
+document.getElementById('btn-evolve').addEventListener('click', async () => {
+  const resp = document.getElementById('evo-response');
+  document.getElementById('btn-evolve').disabled = true;
+  resp.className = 'evo-response show success';
+  resp.textContent = 'triggering evolution…';
+  const data = await apiFetch('/api/evolution/trigger', { method: 'POST', body: '{}' });
+  document.getElementById('btn-evolve').disabled = false;
+  if (data.__404) {
+    resp.className = 'evo-response show error';
+    resp.textContent = '/api/evolution/trigger not yet deployed — evolution runs at 3am';
+  } else if (data.__err) {
+    resp.className = 'evo-response show error';
+    resp.textContent = 'error: ' + data.__err;
+  } else {
+    resp.className = 'evo-response show success';
+    resp.textContent = '✓ ' + (data.message || data.status || 'evolution triggered');
+    setTimeout(loadEvolution, 5000);
   }
+});
 
-  function paintArchive(snap, archStatus) {
-    const $stat = document.getElementById('archive-status');
-    const $list = document.getElementById('archive-list');
-    $stat.innerHTML = '';
-    $list.innerHTML = '';
+// ─── REFRESH BUTTON ───────────────────────────────────────────────────────────
+document.getElementById('btn-refresh').addEventListener('click', () => {
+  loadAll();
+});
 
-    const arch = (snap && snap.archive) || {};
-    const mirror = (archStatus && archStatus.mirror) || {};
-    const stats = (archStatus && archStatus.stats) || {};
-
-    // status tiles
-    const loaded = !!arch.bridge_loaded;
-    const usingMirror = !!mirror.using_mirror;
-    const totalFiles = stats.total_files || 0;
-    const totalDirs = stats.total_dirs || 0;
-    const mirrorAge = mirror.mirror_mtime ? (Date.now() - new Date(mirror.mirror_mtime).getTime()) : null;
-
-    const tiles = [
-      { k: 'bridge', v: loaded ? 'loaded' : 'off', cls: loaded ? 'green' : '' },
-      { k: 'source', v: usingMirror ? 'local mirror' : 'live D:', cls: usingMirror ? 'green' : 'amber' },
-      { k: 'mirror size', v: mirror.mirror_size_bytes ? fmtBytes(mirror.mirror_size_bytes) : '—', cls: '' },
-      { k: 'mirror age', v: fmtAge(mirrorAge), cls: '' },
-      { k: 'files indexed', v: totalFiles ? totalFiles.toLocaleString() : '—', cls: '' },
-      { k: 'dirs indexed', v: totalDirs ? totalDirs.toLocaleString() : '—', cls: '' },
-      { k: 'hits · 24h', v: arch.hits_in_window != null ? String(arch.hits_in_window) : '—', cls: arch.hits_in_window > 0 ? 'green' : '' },
-    ];
-    for (const t of tiles) {
-      const div = document.createElement('div');
-      div.className = 'archive-stat';
-      div.innerHTML = `<div class="k">${t.k}</div><div class="v ${t.cls}">${t.v}</div>`;
-      $stat.appendChild(div);
-    }
-
-    // recent retrievals — prefer archive.recent (router-side injections),
-    // fall back to /api/archive/status recent (direct UI hits) when empty.
-    let rows = Array.isArray(arch.recent) ? arch.recent.slice(0, 10) : [];
-    if (rows.length === 0 && archStatus && Array.isArray(archStatus.recent)) {
-      rows = archStatus.recent.slice(0, 10);
-    }
-    if (rows.length === 0) {
-      const div = document.createElement('div');
-      div.className = 'archive-row zero';
-      div.innerHTML = '<div class="at">—</div><div class="q">no archive queries yet — ask the brain "do you have X in the archive?"</div><div class="count">—</div><div class="lat">—</div>';
-      $list.appendChild(div);
-      return;
-    }
-    for (const r of rows) {
-      const at = r.at || r.ts; const t = at ? new Date(at).toLocaleTimeString() : '—';
-      const q = (r.q || '—').slice(0, 80);
-      const c = (r.count != null) ? r.count : 0;
-      const lat = (r.latency_ms != null) ? r.latency_ms + 'ms' : '—';
-      const div = document.createElement('div');
-      div.className = 'archive-row' + (c > 0 ? '' : ' zero');
-      div.innerHTML = `<div class="at">${t}</div><div class="q">${q}</div><div class="count">${c} hit${c === 1 ? '' : 's'}</div><div class="lat">${lat}</div>`;
-      $list.appendChild(div);
-    }
+// ─── LOADERS ──────────────────────────────────────────────────────────────────
+async function loadCognitionHealth() {
+  const data = await apiFetch('/api/cognition/health');
+  const dot = document.getElementById('status-dot');
+  if (data.__err || data.__404 || !data.ok) {
+    dot.className = 'dead';
+    paintLadder(0);
+    paintEngines({});
+    paintRouter({});
+    paintTiers({});
+    paintSavings({});
+    paintPhaseTable(0);
+    return;
   }
+  dot.className = 'alive';
+  const phase = typeof data.phase === 'number' ? data.phase : 0;
+  paintLadder(phase);
+  paintEngines(data);
+  paintRouter(data);
+  paintTiers(data);
+  paintSavings(data);
+  paintPhaseTable(phase);
+}
 
-  async function refresh() {
-    try {
-      const [r1, r2] = await Promise.all([
-        fetch(API_BASE + '/api/cognition/health', { credentials: 'omit' }).then(r => r.json()).catch(() => null),
-        fetch(API_BASE + '/api/archive/status',   { credentials: 'omit' }).then(r => r.json()).catch(() => null),
-      ]);
-      const j = r1;
-      if (!j || !j.ok) {
-        paintLadder(0);
-        paintArchive({}, r2 || {});
-        return;
-      }
-      paintLadder(typeof j.phase === 'number' ? j.phase : 0);
-      paintEngines(j);
-      paintTiers(j);
-      paintDecisions(j);
-      paintSavings(j);
-      paintArchive(j, r2 || {});
-    } catch (e) {
-      console.warn('cognition refresh failed', e);
-      paintLadder(0);
-    }
+async function loadModels() {
+  const data = await apiFetch('/api/health');
+  if (data.__err || data.__404) {
+    document.getElementById('model-grid').innerHTML =
+      '<div class="unavailable">health endpoint unavailable</div>';
+    return;
   }
+  paintModels(data);
+}
 
-  refresh();
-  setInterval(refresh, 30000);
+async function loadCorpus() {
+  const data = await apiFetch('/api/learning/corpus-stats');
+  paintCorpus(data);
+}
+
+async function loadFeed() {
+  const data = await apiFetch('/api/learning/feed?limit=20');
+  if (data.__err || data.__404) {
+    document.getElementById('feed-list').innerHTML =
+      '<div class="feed-empty">learning feed unavailable</div>';
+    document.getElementById('feed-last-update').textContent = new Date().toLocaleTimeString();
+    return;
+  }
+  const items = Array.isArray(data) ? data : (data.items || data.feed || []);
+  paintFeed(items);
+}
+
+async function loadEvolution() {
+  const data = await apiFetch('/api/evolution/log');
+  paintEvolution(data);
+}
+
+async function loadAll() {
+  await Promise.allSettled([
+    loadCognitionHealth(),
+    loadModels(),
+    loadCorpus(),
+    loadFeed(),
+    loadEvolution(),
+  ]);
+}
+
+// initial load
+loadAll();
+
+// auto-refresh feed every 30s, full refresh every 60s
+setInterval(loadFeed, 30000);
+setInterval(loadAll, 60000);
+
 })();
 </script>
 </body>
