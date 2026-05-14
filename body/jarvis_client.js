@@ -208,6 +208,26 @@
     if (t) t.textContent = text || '';
   }
 
+  function _fragText(f) {
+    if (f == null) return '';
+    if (typeof f === 'string') return f;
+    if (typeof f === 'number') return String(f);
+    // Objects from API: pick the most descriptive string field
+    // Known shapes: {text,intensity}, {at,where,what}, {id,text,held_since},
+    //               {layer,intensity,n}, {name,value}, {headline,...}
+    if (f.text)     return f.text;
+    if (f.what)     return [f.what, f.where ? '(' + f.where + ')' : ''].filter(Boolean).join(' ');
+    if (f.name)     return f.name + (f.value != null ? ': ' + f.value : '');
+    if (f.headline) return f.headline;
+    if (f.layer)    return f.layer + (f.intensity != null ? ' ' + f.intensity : '');
+    // Last resort: pull first string value from the object
+    var keys = Object.keys(f);
+    for (var i = 0; i < keys.length; i++) {
+      if (typeof f[keys[i]] === 'string' && f[keys[i]].length > 0) return f[keys[i]];
+    }
+    return JSON.stringify(f);
+  }
+
   function _setFragments(el, frags) {
     if (!el) return;
     var host = el.querySelector('[data-jarvis-slot="fragments"]');
@@ -215,8 +235,10 @@
     host.innerHTML = '';
     if (!Array.isArray(frags)) return;
     frags.slice(0, 12).forEach(function (f) {
+      var text = _fragText(f);
+      if (!text) return;
       var li = document.createElement('li');
-      li.textContent = String(f || '');
+      li.textContent = text;
       host.appendChild(li);
     });
   }

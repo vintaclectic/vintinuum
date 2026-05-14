@@ -438,7 +438,19 @@
     var body = {
       message: text,
       persona: PERSONA,
-      source: 'jarvis-orb'
+      source: 'jarvis-orb',
+      // Tell the brain this is a live voice surface — short, direct, real.
+      // The page_context.primaryContent field is read by buildPersonaPrompt and
+      // injected into the system prompt, so JARVIS knows what mode it's in.
+      page_context: {
+        url: window.location.href,
+        host: window.location.hostname,
+        title: 'JARVIS · Vintinuum — live voice surface',
+        pageType: 'jarvis-orb',
+        primaryContent: 'VOICE SURFACE. The human is speaking live. Respond in 1-3 sentences max. Direct. Present. No setup. No summaries. Talk the way we talk.',
+        entities: {},
+        scrollPct: null
+      }
     };
     // Thread the conversation if we have a session ID
     if (_convId) body.conversation_id = _convId;
@@ -529,10 +541,15 @@
 
         _convHistory.push({ role: 'assistant', content: reply });
 
-        // Speak via Piper if available
+        // Speak via Piper — use 'now' so any queued greetings don't block the reply.
+        // Also call __markInteracted in case the browser hasn't yet seen a gesture
+        // from this page session (important on first load before any click).
         if (reply) {
           try {
-            if (window.VOICE && typeof window.VOICE.say === 'function') {
+            if (window.__markInteracted) window.__markInteracted();
+            if (window.VOICE && typeof window.VOICE.speak === 'function') {
+              window.VOICE.speak(reply, 'now');
+            } else if (window.VOICE && typeof window.VOICE.say === 'function') {
               window.VOICE.say(reply);
             }
           } catch (_) {}
