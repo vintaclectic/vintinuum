@@ -164,22 +164,7 @@ html, body[data-jarvis="on"] {
 }
 
 /* ══════════════ THE LIVING ROW ══════════════
-   left:  chakra spine (7 nodes — one per layer, colored by genome)
-   right: stack of layer panels (Buffet windows) */
-.jarvis-living-row {
-  display: grid;
-  grid-template-columns: var(--jarvis-spine-w) 1fr;
-  gap: var(--jarvis-gutter);
-  padding: 22px 22px 28px;
-  align-items: stretch;
-}
-@media (max-width: 720px) {
-  .jarvis-living-row {
-    grid-template-columns: 36px 1fr;
-    gap: 12px;
-    padding: 16px 14px 22px;
-  }
-}
+   Layout is fully defined in jarvis.html inline <style> — do not redefine here. */
 
 /* The chakra spine — a vertical SVG-ish CSS column. Each layer node
    pulses when the corresponding card is updated by the wire. */
@@ -251,21 +236,7 @@ html, body[data-jarvis="on"] {
 .jarvis-spine-node[data-layer="neural"]       { --node: var(--bdnf); }
 .jarvis-spine-node[data-layer="emotional"]    { --node: var(--morrison-heat); }
 
-/* Stack — 2-col grid on desktop, single column on mobile */
-.jarvis-stack {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 14px;
-  min-width: 0;
-  width: 100%;
-  max-width: 100%;
-  align-self: stretch;
-}
-@media (min-width: 900px) {
-  .jarvis-stack {
-    grid-template-columns: 1fr 1fr;
-  }
-}
+/* Stack — layout fully defined in jarvis.html inline <style> — do not redefine here. */
 
 /* THE LAYER PANELS — Buffet windows. Hard contour, single accent stroke. */
 [data-jarvis-layer] {

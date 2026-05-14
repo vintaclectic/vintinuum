@@ -141,19 +141,18 @@
   }
   @keyframes jarvisDegradedPulse { 0%,100%{opacity:.4} 50%{opacity:1} }
 
-  /* The stack — every layer is a card; internal scroll lives here. */
+  /* The stack — SOLE definition, external CSS has been cleared */
   .jarvis-stack {
-    display: grid !important;
-    grid-template-columns: 1fr !important;
+    display: grid;
+    grid-template-columns: 1fr;
     gap: 14px;
-    width: 100% !important;
-    max-width: 100% !important;
-    min-width: 0 !important;    /* prevent grid item width collapse */
-    flex: 1 1 auto !important;  /* fill parent if inside flex/grid */
-    align-self: stretch !important;
+    width: 100%;
+    min-width: 0;
   }
   @media (min-width: 800px) {
-    .jarvis-stack { grid-template-columns: 1fr 1fr !important; }
+    .jarvis-stack {
+      grid-template-columns: 1fr 1fr;
+    }
   }
 
   /* Layer cards — minimum viable presentation. The visual paste-target
@@ -251,29 +250,28 @@
     100% { box-shadow: 0 0 0 0 rgba(124,207,255,0.0); }
   }
 
-  /* Living row — spine + stack side by side */
+  /* Living row — SOLE definition */
   .jarvis-living-row {
-    display: grid !important;
-    grid-template-columns: 36px 1fr !important;
-    gap: 12px !important;
-    width: 100% !important;
-    min-width: 0 !important;
-    padding: 16px 14px 22px !important;
-    align-items: start !important;
+    display: grid;
+    grid-template-columns: 36px 1fr;
+    gap: 12px;
+    width: 100%;
+    padding: 16px 14px 22px;
+    align-items: start;
   }
   @media (min-width: 800px) {
     .jarvis-living-row {
-      grid-template-columns: 56px 1fr !important;
-      gap: 18px !important;
-      padding: 22px 22px 28px !important;
+      grid-template-columns: 56px 1fr;
+      gap: 18px;
+      padding: 22px 22px 28px;
     }
   }
 
-  /* Layer cards — must not collapse on mobile */
+  /* Layer cards */
   [data-jarvis-layer] {
-    width: 100% !important;
-    min-width: 0 !important;
-    box-sizing: border-box !important;
+    width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
   }
 
   /* Felt — clear the giant quote glyph on mobile too */
