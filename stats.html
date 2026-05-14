@@ -1692,6 +1692,13 @@ body {
         <span class="live-status-waiting">Measuring autonomy...</span>
       </div>
     </div>
+    <div class="card" id="local-brain-card">
+      <div class="card-label"><span class="live-dot"></span>Local Brain</div>
+      <div class="card-sub">Phase ladder · router · inference ratio — <a href="cognition.html" style="color:var(--blue);text-decoration:none;border-bottom:1px dashed rgba(79,195,247,0.3);">full dashboard →</a></div>
+      <div id="local-brain-content" class="live-section-content">
+        <span class="live-status-waiting">Reading cognition health...</span>
+      </div>
+    </div>
   </div>
 
   <!-- Neurochemistry Readout -->
@@ -3144,6 +3151,64 @@ body {
 
   fetchInferenceStats();
   setInterval(fetchInferenceStats, 10000);
+
+  // ─── LOCAL BRAIN (cognition/health) ─────────────────────────────────────────
+  async function fetchLocalBrainStats() {
+    try {
+      const r = await fetch(`${API_BASE}/api/cognition/health`, { headers: API_HEADERS });
+      if (!r.ok) throw new Error('cognition health unreachable');
+      const d = await r.json();
+      renderLocalBrainStats(d);
+    } catch {
+      const el = document.getElementById('local-brain-content');
+      if (el) el.innerHTML = '<span class="live-status-waiting" style="color:var(--dim)">Local brain unavailable</span>';
+    }
+  }
+
+  function renderLocalBrainStats(d) {
+    const el = document.getElementById('local-brain-content');
+    if (!el) return;
+    const phase = typeof d.phase === 'number' ? d.phase : 0;
+    const routerOn = d.router && d.router.enabled;
+    const dist = (d.router && d.router.tier_distribution_24h) || { local: 0, claude: 1, degraded: 0 };
+    const total = (dist.local + dist.claude + dist.degraded) || 0;
+    const localCount = (d.router && d.router.tier_counts_24h && d.router.tier_counts_24h.local) || 0;
+    const cloudCount = (d.router && d.router.tier_counts_24h && d.router.tier_counts_24h.claude) || 0;
+    const localPct = total > 0 ? Math.round((dist.local || 0) * 100) : 0;
+    const cloudPct = total > 0 ? Math.round((dist.claude || 0) * 100) : 100;
+    const PHASE_LABELS = ['Router scaffold','Shadow train','Local consolidation','Local chat','Council on Mixtral','Claude optional'];
+    const phaseLabel = PHASE_LABELS[phase] || `phase ${phase}`;
+
+    el.innerHTML = `
+      <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-start;margin-bottom:10px;">
+        <div style="text-align:center;min-width:52px;">
+          <div style="font-size:1.4rem;font-weight:700;color:var(--gold);">${phase}</div>
+          <div style="font-size:0.42rem;letter-spacing:0.15em;text-transform:uppercase;color:var(--dim);">Phase</div>
+        </div>
+        <div style="flex:1;min-width:120px;">
+          <div style="font-size:0.55rem;color:var(--text);margin-bottom:2px;">${phaseLabel}</div>
+          <div style="font-size:0.48rem;letter-spacing:0.12em;text-transform:uppercase;color:${routerOn ? 'var(--green)' : 'var(--dim)'};">${routerOn ? '● router on' : '○ telemetry only'}</div>
+        </div>
+      </div>
+      <div style="margin-bottom:6px;">
+        <div style="display:flex;justify-content:space-between;font-size:0.48rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--dim);margin-bottom:4px;">
+          <span style="color:var(--green);">Local: ${localCount} calls</span>
+          <span style="color:var(--gold);">Cloud: ${cloudCount} calls</span>
+        </div>
+        <div style="display:flex;height:8px;border-radius:4px;overflow:hidden;background:rgba(255,255,255,0.04);">
+          <div style="width:${localPct}%;background:linear-gradient(90deg,var(--green),#88e088);transition:width 0.6s ease;"></div>
+          <div style="width:${cloudPct}%;background:linear-gradient(90deg,var(--gold),#ffe08e);transition:width 0.6s ease;"></div>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:0.44rem;letter-spacing:0.08em;text-transform:uppercase;color:var(--dim);margin-top:3px;">
+          <span>${localPct}% local</span>
+          <span>${cloudPct}% cloud</span>
+        </div>
+      </div>
+    `;
+  }
+
+  fetchLocalBrainStats();
+  setInterval(fetchLocalBrainStats, 30000);
 
   // ─── SOUL QUEUE ──────────────────────────────────────────────────────────────
   async function fetchSoulQueue() {

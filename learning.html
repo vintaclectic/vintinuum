@@ -600,6 +600,106 @@ body {
 }
 .status.error .dot { background: var(--red); }
 
+/* ── LOCAL BRAIN PANEL ── */
+.local-brain {
+  margin: 0 0 16px;
+  padding: 14px 16px;
+  background: linear-gradient(135deg, rgba(102,187,106,0.06), rgba(79,195,247,0.04));
+  border: 1px solid rgba(102,187,106,0.18);
+  border-radius: 12px;
+  box-sizing: border-box;
+}
+.local-brain-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+.local-brain-title {
+  font-size: 0.6rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--green);
+  font-weight: 600;
+}
+.local-brain-phase {
+  font-size: 0.5rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--dim);
+}
+.local-brain-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 8px;
+  margin-bottom: 10px;
+}
+.lbm-card {
+  background: rgba(0,0,0,0.28);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--lbm-color, var(--dim));
+  border-radius: 8px;
+  padding: 8px 12px;
+}
+.lbm-name {
+  font-size: 0.5rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--lbm-color, var(--dim));
+  margin-bottom: 3px;
+}
+.lbm-model {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.lbm-status {
+  font-size: 0.48rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+.lbm-status.ok    { color: var(--green); }
+.lbm-status.warn  { color: var(--gold); }
+.lbm-status.error { color: var(--red); }
+.corpus-row {
+  display: flex;
+  gap: 18px;
+  flex-wrap: wrap;
+  align-items: center;
+  padding-top: 8px;
+  border-top: 1px solid var(--border);
+  font-size: 0.5rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--dim);
+}
+.corpus-val {
+  font-family: 'Space Mono', monospace;
+  font-weight: 700;
+  font-size: 0.75rem;
+  color: var(--cyan);
+  margin-right: 4px;
+  text-transform: none;
+  letter-spacing: 0.04em;
+}
+.corpus-cognition-link {
+  margin-left: auto;
+  font-size: 0.48rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--blue);
+  text-decoration: none;
+  border-bottom: 1px dashed rgba(79,195,247,0.3);
+  transition: color 0.2s ease;
+}
+.corpus-cognition-link:hover { color: var(--cyan); }
+
 /* ── LIVE LEARN INPUT ── */
 .teach {
   margin: 0 0 16px;
@@ -764,6 +864,36 @@ body {
     <button class="btn danger" id="btn-clear" title="Clear filters">Reset</button>
   </div>
   <div id="export-status" style="margin:8px 0 0;font-size:11px;letter-spacing:.04em;color:var(--dim);min-height:14px;"></div>
+
+  <!-- Local Brain Status -->
+  <div class="local-brain" id="local-brain">
+    <div class="local-brain-header">
+      <div class="local-brain-title">⬡ Local Brain</div>
+      <div class="local-brain-phase" id="lb-phase-label">phase 0 · telemetry only</div>
+    </div>
+    <div class="local-brain-grid" id="lb-models-grid">
+      <div class="lbm-card" style="--lbm-color: var(--dim)">
+        <div class="lbm-name">Chat</div>
+        <div class="lbm-model">—</div>
+        <div class="lbm-status warn">checking…</div>
+      </div>
+      <div class="lbm-card" style="--lbm-color: var(--dim)">
+        <div class="lbm-name">Subconscious</div>
+        <div class="lbm-model">—</div>
+        <div class="lbm-status warn">checking…</div>
+      </div>
+      <div class="lbm-card" style="--lbm-color: var(--dim)">
+        <div class="lbm-name">Embeddings</div>
+        <div class="lbm-model">—</div>
+        <div class="lbm-status warn">checking…</div>
+      </div>
+    </div>
+    <div class="corpus-row" id="lb-corpus-row">
+      <span><span class="corpus-val" id="lb-pair-count">—</span>training pairs</span>
+      <span><span class="corpus-val" id="lb-last-export">—</span>last export</span>
+      <a href="cognition.html" class="corpus-cognition-link">full dashboard →</a>
+    </div>
+  </div>
 
   <!-- Live Learn — direct teaching input -->
   <div class="teach" id="teach">
@@ -1395,6 +1525,94 @@ body {
       submitTeach();
     }
   });
+
+  // ── Local Brain — model health + corpus stats ────────────────────────────
+  // Pulls from /api/cognition/health and /api/learning/corpus-stats.
+  // Both calls are graceful — show "unavailable" text on 4xx/5xx or network error.
+  const LOCAL_MODELS = [
+    { key: 'local_chat',      label: 'Chat',          fallback: 'llama3.2:latest' },
+    { key: 'local_council',   label: 'Subconscious',  fallback: 'qwen2.5:0.5b' },
+    { key: 'embed',           label: 'Embeddings',    fallback: 'nomic-embed-text' },
+  ];
+
+  function timeAgoShort(ms) {
+    if (!ms) return '—';
+    const diff = Date.now() - ms;
+    if (diff < 0) return 'just now';
+    if (diff < 60000) return Math.floor(diff/1000) + 's ago';
+    if (diff < 3600000) return Math.floor(diff/60000) + 'm ago';
+    if (diff < 86400000) return Math.floor(diff/3600000) + 'h ago';
+    return Math.floor(diff/86400000) + 'd ago';
+  }
+
+  async function fetchLocalBrain() {
+    const $grid  = document.getElementById('lb-models-grid');
+    const $phase = document.getElementById('lb-phase-label');
+    const $pairs = document.getElementById('lb-pair-count');
+    const $export= document.getElementById('lb-last-export');
+    if (!$grid) return;
+
+    // ── cognition health ──
+    let snap = null;
+    try {
+      const r = await fetch(`${API_BASE}/api/cognition/health`, { credentials: 'omit' });
+      if (r.ok) snap = await r.json();
+    } catch (_) {}
+
+    if (snap) {
+      const phase = typeof snap.phase === 'number' ? snap.phase : 0;
+      const router_on = snap.router && snap.router.enabled ? 'router on' : 'telemetry only';
+      if ($phase) $phase.textContent = `phase ${phase} · ${router_on}`;
+
+      const engines = snap.engines || {};
+      const cards = LOCAL_MODELS.map(m => {
+        const e = engines[m.key] || {};
+        const healthy = !!e.healthy;
+        const model = e.model || m.fallback;
+        const statusCls = healthy ? 'ok' : (snap.ok === false ? 'error' : 'warn');
+        const statusTxt = healthy ? 'healthy' : (snap.ok === false ? 'unreachable' : 'standby');
+        const color = healthy ? 'var(--green)' : (snap.ok === false ? 'var(--red)' : 'var(--gold)');
+        return `<div class="lbm-card" style="--lbm-color: ${color}">
+          <div class="lbm-name">${m.label}</div>
+          <div class="lbm-model">${model}</div>
+          <div class="lbm-status ${statusCls}">${statusTxt}</div>
+        </div>`;
+      });
+      $grid.innerHTML = cards.join('');
+    } else {
+      if ($phase) $phase.textContent = 'unavailable';
+      $grid.innerHTML = LOCAL_MODELS.map(m => `
+        <div class="lbm-card" style="--lbm-color: var(--dim)">
+          <div class="lbm-name">${m.label}</div>
+          <div class="lbm-model">${m.fallback}</div>
+          <div class="lbm-status warn">unavailable</div>
+        </div>`).join('');
+    }
+
+    // ── corpus stats ──
+    try {
+      const r2 = await fetch(`${API_BASE}/api/learning/corpus-stats`, { credentials: 'omit' });
+      if (r2.ok) {
+        const cs = await r2.json();
+        if ($pairs) $pairs.textContent = cs.pairCount != null ? cs.pairCount.toLocaleString() : '—';
+        if ($export) {
+          let exportMs = 0;
+          if (typeof cs.lastExportMs === 'number' && cs.lastExportMs > 0) exportMs = cs.lastExportMs;
+          else if (cs.lastExport) { const t = new Date(cs.lastExport).getTime(); if (t > 86400000) exportMs = t; }
+          $export.textContent = exportMs ? timeAgoShort(exportMs) : 'never';
+        }
+      } else {
+        if ($pairs) $pairs.textContent = '—';
+        if ($export) $export.textContent = 'unavailable';
+      }
+    } catch (_) {
+      if ($pairs) $pairs.textContent = '—';
+      if ($export) $export.textContent = 'unavailable';
+    }
+  }
+
+  fetchLocalBrain();
+  setInterval(fetchLocalBrain, 30000);
 
   // ── Boot ──────────────────────────────────────────────────────────────────
   renderChannels();
