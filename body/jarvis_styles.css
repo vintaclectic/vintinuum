@@ -251,12 +251,17 @@ html, body[data-jarvis="on"] {
 .jarvis-spine-node[data-layer="neural"]       { --node: var(--bdnf); }
 .jarvis-spine-node[data-layer="emotional"]    { --node: var(--morrison-heat); }
 
-/* Stack — single column, internal scroll lives on each panel */
+/* Stack — 2-col grid on desktop, single column on mobile */
 .jarvis-stack {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: 1fr;
   gap: 14px;
-  min-width: 0;       /* prevent grid blowout */
+  min-width: 0;
+}
+@media (min-width: 800px) {
+  .jarvis-stack {
+    grid-template-columns: 1fr 1fr;
+  }
 }
 
 /* THE LAYER PANELS — Buffet windows. Hard contour, single accent stroke. */
@@ -363,35 +368,46 @@ html, body[data-jarvis="on"] {
    for the body's weather, told in a voice that loves you too much. */
 .jarvis-weather {
   position: relative;
-  display: block;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: center;
   width: 100%;
   margin: 0;
-  padding: 10px 22px;
   background: rgba(154,255,182,0.04);
   border-top: 1px solid rgba(154,255,182,0.18);
   border-bottom: 1px solid rgba(154,255,182,0.18);
-  overflow: hidden;
   font-family: 'Space Mono', monospace;
   font-size: 0.72rem;
   color: var(--carrey-cable);
   letter-spacing: 0.04em;
-  white-space: nowrap;
 }
+/* Label column — pinned, never scrolls */
 .jarvis-weather::before {
-  content: 'WEATHER ⌁ ';
+  content: 'WEATHER ⌁';
+  display: block;
   color: var(--zep-gold);
   letter-spacing: 0.28em;
   font-weight: 700;
-  margin-right: 10px;
+  padding: 10px 12px 10px 22px;
+  white-space: nowrap;
+  background: rgba(154,255,182,0.04);
+  position: relative;
+  z-index: 2;
 }
+/* Text column — overflow hidden, text scrolls inside */
 .jarvis-weather-text {
-  display: inline-block;
-  animation: jarvisWeatherDrift 28s linear infinite;
-  padding-left: 2%;
+  display: block;
+  overflow: hidden;
+  white-space: nowrap;
+  padding: 10px 22px 10px 0;
+  /* Fade out at right edge so text disappears cleanly */
+  -webkit-mask-image: linear-gradient(to right, black 70%, transparent 100%);
+  mask-image: linear-gradient(to right, black 70%, transparent 100%);
+  animation: jarvisWeatherDrift 32s linear infinite;
 }
 @keyframes jarvisWeatherDrift {
   0%   { transform: translateX(0); }
-  100% { transform: translateX(-60%); }
+  100% { transform: translateX(-40%); }
 }
 
 /* ══════════════ BODY-STATE SVG ARCS ══════════════
