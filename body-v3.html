@@ -194,18 +194,24 @@ html,body{
 /* ── Figure container ────────────────────────────────────────── */
 .figure-wrap{
   position:absolute;
-  left:50%;bottom:6%;
-  transform:translateX(-50%);
+  left:0;bottom:6%;
   width:min(420px, 78vw);
   aspect-ratio:5 / 11;
   filter:drop-shadow(0 30px 28px rgba(0,0,0,0.55));
-  will-change:transform;
-  animation:bodySway 5.2s ease-in-out infinite alternate;
+  will-change:transform,left;
   z-index:5;
+  /* JS drives `left` (walkX) and `--face-dir` (±1).
+     Vertical body-bob handled by inner .body-bob element so it composes cleanly. */
+  --face-dir:1;
+  transform:scaleX(var(--face-dir));
 }
-@keyframes bodySway{
-  0%{transform:translateX(-50%) translateY(0) rotate(-0.4deg)}
-  100%{transform:translateX(-50%) translateY(-6px) rotate(0.4deg)}
+.figure-wrap .body-bob{
+  width:100%;height:100%;
+  animation:bodyBob 5.2s ease-in-out infinite alternate;
+}
+@keyframes bodyBob{
+  0%{transform:translateY(0) rotate(-0.4deg)}
+  100%{transform:translateY(-6px) rotate(0.4deg)}
 }
 .figure-wrap svg{width:100%;height:100%;display:block;overflow:visible}
 
@@ -289,32 +295,30 @@ html,body{
   50%{transform:rotate(-12deg)}
   100%{transform:rotate(12deg)}
 }
-/* When figure is "presenting" the doc — right arm extends, head turns */
-.figure-wrap.presenting .gait-r-arm{
-  animation:armPresent 2.4s ease-out forwards;
-}
+/* "presenting" right-arm reach (animation applied via .body-bob override above) */
 @keyframes armPresent{
   0%{transform:rotate(12deg)}
   100%{transform:rotate(-58deg) translateX(2px)}
 }
-.figure-wrap.facing-viewer{
-  transform:translateX(-50%) perspective(1200px) rotateY(0deg) !important;
-  animation:faceViewer 1.2s ease-out forwards !important;
-}
-@keyframes faceViewer{
-  0%{transform:translateX(-50%) rotateY(-8deg)}
-  100%{transform:translateX(-50%) rotateY(0deg)}
-}
 
-/* Key light drift */
-.figure-wrap{
-  --key-x: 30%;
-  --key-y: 12%;
-  animation:bodySway 5.2s ease-in-out infinite alternate, keyDrift 20s ease-in-out infinite alternate;
+/* Key light drift on inner bob layer (so flip on figure-wrap doesn't fight it) */
+.figure-wrap .body-bob{
+  animation:bodyBob 5.2s ease-in-out infinite alternate, keyDrift 20s ease-in-out infinite alternate;
 }
 @keyframes keyDrift{
   0%{filter:drop-shadow(-8px 24px 22px rgba(0,0,0,0.55)) drop-shadow(8px 0 18px rgba(122,144,200,0.18))}
   100%{filter:drop-shadow(8px 28px 26px rgba(0,0,0,0.55)) drop-shadow(-6px 0 18px rgba(122,144,200,0.22))}
+}
+/* Presenting / facing-viewer override the bob layer */
+.figure-wrap.presenting .body-bob .gait-r-arm{
+  animation:armPresent 2.4s ease-out forwards;
+}
+.figure-wrap.facing-viewer .body-bob{
+  animation:faceViewerBob 1.2s ease-out forwards;
+}
+@keyframes faceViewerBob{
+  0%{transform:rotateY(-8deg)}
+  100%{transform:rotateY(0deg)}
 }
 
 /* Eye blink + pupil dilate */
@@ -762,9 +766,360 @@ html,body{
   box-shadow:0 0 12px rgba(126,200,255,0.3);
 }
 
+/* ══════════════════════════════════════════════════════════════════
+   UNIVERSAL MEDIA SUITE — launcher + panel modes
+   ════════════════════════════════════════════════════════════════ */
+
+/* Launcher shelf — horizontal row of tiles above the console */
+.launcher{
+  position:fixed;
+  left:50%;
+  bottom:300px;
+  transform:translateX(-50%) translateY(20px);
+  display:flex;
+  gap:10px;
+  padding:12px 14px;
+  background:linear-gradient(180deg, rgba(8,16,32,0.86) 0%, rgba(12,22,40,0.92) 100%);
+  border:1px solid rgba(126,200,255,0.32);
+  border-radius:14px;
+  box-shadow:
+    0 0 0 1px rgba(126,200,255,0.10) inset,
+    0 0 28px rgba(126,200,255,0.18),
+    0 18px 44px rgba(0,0,0,0.55);
+  z-index:45;
+  opacity:0;
+  pointer-events:none;
+  transition:opacity 280ms ease, transform 280ms cubic-bezier(.2,.7,.3,1);
+  backdrop-filter:blur(12px) saturate(140%);
+  -webkit-backdrop-filter:blur(12px) saturate(140%);
+  max-width:96vw;
+  overflow-x:auto;
+  -webkit-overflow-scrolling:touch;
+  scrollbar-width:thin;
+}
+.launcher.open{
+  opacity:1;
+  pointer-events:auto;
+  transform:translateX(-50%) translateY(0);
+}
+.launcher::-webkit-scrollbar{height:6px}
+.launcher::-webkit-scrollbar-thumb{background:rgba(126,200,255,0.25);border-radius:3px}
+.tile{
+  appearance:none;
+  width:80px;height:80px;
+  min-width:80px;
+  border-radius:12px;
+  background:linear-gradient(135deg, rgba(126,200,255,0.10) 0%, rgba(94,234,212,0.08) 100%);
+  border:1px solid rgba(126,200,255,0.28);
+  color:#dcefff;
+  cursor:pointer;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  gap:4px;
+  padding:8px 6px;
+  font-family:inherit;
+  font-size:9.5px;
+  letter-spacing:0.12em;
+  text-transform:uppercase;
+  text-align:center;
+  line-height:1.15;
+  transition:all 180ms cubic-bezier(.2,.7,.3,1);
+  position:relative;
+  overflow:hidden;
+}
+.tile::after{
+  content:"";
+  position:absolute;inset:0;
+  background:radial-gradient(circle at 50% 0%, rgba(126,200,255,0.25), transparent 60%);
+  opacity:0;
+  transition:opacity 200ms ease;
+  pointer-events:none;
+}
+.tile:hover{
+  transform:scale(1.05);
+  border-color:rgba(126,200,255,0.65);
+  box-shadow:0 0 16px rgba(126,200,255,0.4), 0 0 32px rgba(94,234,212,0.15);
+}
+.tile:hover::after{opacity:1}
+.tile:active{transform:scale(0.96)}
+.tile .ti{font-size:26px;line-height:1}
+.tile .tl{font-weight:600;color:#cfe8ff}
+
+/* Mode-specific body styles inside .doc-body */
+.mode-video, .mode-audio, .mode-ebook, .mode-terminal, .mode-document, .mode-drive, .mode-file{
+  display:flex;
+  flex-direction:column;
+  height:100%;
+  min-height:0;
+}
+
+/* ── VIDEO ── */
+.mv-stage{
+  flex:1;min-height:0;
+  background:#000;
+  border-radius:8px;
+  overflow:hidden;
+  position:relative;
+  display:flex;align-items:center;justify-content:center;
+}
+.mv-stage video,.mv-stage iframe{
+  width:100%;height:100%;
+  display:block;
+  background:#000;
+}
+.mv-empty{
+  color:#7aa0c8;font-size:12px;letter-spacing:0.08em;text-align:center;padding:20px;
+}
+.mv-controls{
+  display:flex;gap:8px;flex-wrap:wrap;
+  padding:10px 0 0 0;
+  align-items:center;
+  font-size:11px;
+  color:#a8c4dc;
+}
+.mv-controls button, .mv-controls select, .mv-controls label.mv-file{
+  appearance:none;
+  background:rgba(126,200,255,0.10);
+  border:1px solid rgba(126,200,255,0.28);
+  color:#cfe8ff;
+  padding:6px 10px;
+  border-radius:6px;
+  cursor:pointer;
+  font-size:11px;
+  font-family:inherit;
+  min-height:32px;
+  transition:all 160ms ease;
+}
+.mv-controls button:hover, .mv-controls label.mv-file:hover{
+  background:rgba(126,200,255,0.22);
+  border-color:rgba(126,200,255,0.55);
+}
+.mv-controls input[type="text"]{
+  flex:1;min-width:120px;
+  background:rgba(8,16,32,0.6);
+  border:1px solid rgba(126,200,255,0.22);
+  color:#dceaff;
+  padding:6px 10px;
+  border-radius:6px;
+  font-size:12px;
+  font-family:inherit;
+  min-height:32px;
+}
+.mv-controls label.mv-file input{display:none}
+
+/* ── AUDIO ── */
+.ma-cover{
+  flex:0 0 auto;
+  height:38%;
+  min-height:140px;
+  position:relative;
+  background:radial-gradient(ellipse at 50% 40%, rgba(126,200,255,0.12), rgba(10,20,40,0.4) 70%);
+  border-radius:8px;
+  overflow:hidden;
+  margin-bottom:10px;
+}
+.ma-vis{
+  position:absolute;inset:0;
+  width:100%;height:100%;
+  display:block;
+}
+.ma-track{
+  text-align:center;
+  padding:10px 12px;
+  color:#dceaff;
+  font-size:13px;
+  letter-spacing:0.04em;
+}
+.ma-track .title{font-weight:600;color:#fff;margin-bottom:2px}
+.ma-track .meta{font-size:11px;color:#7aa0c8}
+.ma-row{
+  display:flex;align-items:center;gap:8px;
+  padding:6px 0;
+}
+.ma-row input[type="range"]{flex:1;accent-color:#5ce3ff;min-height:32px}
+.ma-time{font-size:10px;color:#7aa0c8;letter-spacing:0.06em;min-width:42px;text-align:center;font-family:"JetBrains Mono",monospace}
+.ma-controls{display:flex;gap:6px;justify-content:center;flex-wrap:wrap;padding:6px 0}
+.ma-controls button{
+  appearance:none;
+  background:rgba(126,200,255,0.10);
+  border:1px solid rgba(126,200,255,0.28);
+  color:#cfe8ff;
+  width:38px;height:38px;
+  border-radius:50%;
+  cursor:pointer;
+  font-size:14px;
+  min-width:44px;min-height:44px;
+  display:flex;align-items:center;justify-content:center;
+  transition:all 160ms ease;
+}
+.ma-controls button.play{
+  width:48px;height:48px;
+  background:linear-gradient(135deg, rgba(94,234,212,0.25), rgba(126,200,255,0.25));
+  border-color:rgba(94,234,212,0.5);
+  font-size:18px;
+}
+.ma-controls button:hover{
+  background:rgba(126,200,255,0.22);
+  box-shadow:0 0 12px rgba(126,200,255,0.4);
+}
+.ma-controls button.active{background:rgba(94,234,212,0.25);border-color:rgba(94,234,212,0.6)}
+.ma-playlist{
+  flex:1;min-height:0;
+  overflow-y:auto;
+  border-top:1px solid rgba(126,200,255,0.15);
+  margin-top:8px;
+  padding-top:8px;
+}
+.ma-playlist::-webkit-scrollbar{width:6px}
+.ma-playlist::-webkit-scrollbar-thumb{background:rgba(126,200,255,0.25);border-radius:3px}
+.ma-pl-item{
+  padding:6px 10px;
+  font-size:11px;
+  color:#a8c4dc;
+  border-radius:6px;
+  cursor:pointer;
+  display:flex;align-items:center;gap:8px;
+  min-height:32px;
+}
+.ma-pl-item:hover{background:rgba(126,200,255,0.10)}
+.ma-pl-item.playing{background:rgba(94,234,212,0.15);color:#dceaff}
+.ma-pl-item .idx{font-family:"JetBrains Mono",monospace;font-size:10px;color:#7aa0c8;min-width:20px}
+
+/* ── EBOOK ── */
+.me-stage{
+  flex:1;min-height:0;
+  overflow-y:auto;
+  padding:24px 28px;
+  background:#1a1a2e;
+  color:#e8e8e8;
+  border-radius:8px;
+  font-family:"Georgia","Iowan Old Style",serif;
+  font-size:17px;
+  line-height:1.72;
+  letter-spacing:0.005em;
+}
+.me-stage.sepia{background:#f4ecd8;color:#3a2e1a}
+.me-stage.light{background:#fafafa;color:#1a1a1a}
+.me-stage h1,.me-stage h2,.me-stage h3{margin:1em 0 .5em 0;line-height:1.25}
+.me-stage p{margin:0 0 1em 0}
+.me-stage::-webkit-scrollbar{width:8px}
+.me-stage::-webkit-scrollbar-thumb{background:rgba(126,200,255,0.25);border-radius:4px}
+.me-controls{
+  display:flex;gap:8px;align-items:center;flex-wrap:wrap;
+  padding:10px 0 0 0;
+  font-size:11px;color:#a8c4dc;
+}
+.me-controls button, .me-controls select, .me-controls label.me-file{
+  appearance:none;
+  background:rgba(126,200,255,0.10);
+  border:1px solid rgba(126,200,255,0.28);
+  color:#cfe8ff;
+  padding:6px 10px;
+  border-radius:6px;
+  cursor:pointer;
+  font-size:11px;
+  font-family:inherit;
+  min-height:32px;
+}
+.me-controls label.me-file input{display:none}
+.me-progress{
+  height:3px;
+  background:rgba(126,200,255,0.15);
+  border-radius:2px;
+  overflow:hidden;
+  margin-top:8px;
+}
+.me-progress .bar{height:100%;background:linear-gradient(90deg,#5ce3ff,#5eead4);width:0%;transition:width 220ms ease}
+.me-toc{
+  position:absolute;
+  top:60px;left:0;bottom:0;
+  width:240px;
+  background:rgba(8,16,32,0.96);
+  border-right:1px solid rgba(126,200,255,0.2);
+  padding:14px;
+  overflow-y:auto;
+  z-index:2;
+  transform:translateX(-100%);
+  transition:transform 260ms ease;
+  font-size:12px;
+}
+.me-toc.open{transform:translateX(0)}
+.me-toc .toc-item{
+  padding:6px 8px;
+  color:#a8c4dc;
+  cursor:pointer;
+  border-radius:4px;
+  margin-bottom:2px;
+}
+.me-toc .toc-item:hover{background:rgba(126,200,255,0.10);color:#fff}
+
+/* ── TERMINAL ── */
+.mt-stage{
+  flex:1;min-height:0;
+  background:#02060e;
+  border:1px solid rgba(94,234,212,0.18);
+  border-radius:8px;
+  padding:14px 16px;
+  font-family:"JetBrains Mono","Menlo","Consolas",monospace;
+  font-size:13px;
+  line-height:1.55;
+  color:#7eead4;
+  overflow-y:auto;
+  position:relative;
+}
+.mt-stage::before{
+  content:"";
+  position:absolute;inset:0;
+  background:repeating-linear-gradient(0deg, rgba(94,234,212,0.03) 0, rgba(94,234,212,0.03) 1px, transparent 1px, transparent 3px);
+  pointer-events:none;
+}
+.mt-stage::-webkit-scrollbar{width:6px}
+.mt-stage::-webkit-scrollbar-thumb{background:rgba(94,234,212,0.25);border-radius:3px}
+.mt-line{white-space:pre-wrap;word-break:break-word;position:relative;z-index:1}
+.mt-line.cmd{color:#dcefff}
+.mt-line.cmd .prompt{color:#5eead4;margin-right:6px}
+.mt-line.err{color:#ff8a98}
+.mt-line.dim{color:#5a8a8a}
+.mt-input-row{display:flex;align-items:center;gap:6px;padding:6px 0 0 0;position:relative;z-index:1}
+.mt-prompt{color:#5eead4;font-family:inherit;font-size:13px}
+.mt-input{
+  flex:1;
+  background:transparent;
+  border:none;
+  outline:none;
+  color:#dcefff;
+  font-family:inherit;
+  font-size:13px;
+  caret-color:#5eead4;
+  min-height:24px;
+}
+.mt-cursor{
+  display:inline-block;
+  width:8px;height:14px;
+  background:#5eead4;
+  vertical-align:middle;
+  animation:termBlink 1s steps(2) infinite;
+}
+@keyframes termBlink{50%{opacity:0}}
+
+/* ── DRIVE / FILE EMPTY STATES — reuse .doc-empty ── */
+
+/* Mobile launcher tweaks */
+@media (max-width:768px){
+  .launcher{bottom:240px;padding:10px;gap:8px}
+  .tile{width:64px;height:64px;font-size:8.5px;padding:6px 4px}
+  .tile .ti{font-size:22px}
+}
+@media (max-width:375px){
+  .tile{width:56px;height:56px;font-size:8px}
+  .tile .ti{font-size:20px}
+}
+
 /* Mobile */
 @media (max-width:768px){
-  .figure-wrap{width:min(320px,82vw)}
+  .figure-wrap{width:min(280px,68vw)}
   .doc-panel{
     top:auto;
     bottom:140px;
@@ -778,7 +1133,7 @@ html,body{
   .console-input{font-size:16px} /* prevent iOS zoom */
 }
 @media (max-width:375px){
-  .figure-wrap{width:min(280px,85vw)}
+  .figure-wrap{width:min(220px,62vw)}
   .doc-panel{height:min(420px, 54vh)}
 }
 
@@ -847,6 +1202,7 @@ html,body{
 
   <!-- THE FIGURE -->
   <div class="figure-wrap" id="figure">
+   <div class="body-bob">
     <svg viewBox="0 0 200 440" preserveAspectRatio="xMidYMax meet">
       <defs>
         <!-- Skin gradients -->
@@ -1148,6 +1504,7 @@ html,body{
         <ellipse cx="92" cy="100" rx="8" ry="3" fill="#3a4a78" opacity="0.10"/>
       </g>
     </svg>
+   </div>
   </div>
 </div>
 
@@ -1158,10 +1515,42 @@ html,body{
 </div>
 <a href="index.html" class="nav-back">&larr; Index</a>
 
-<!-- Find resume orb -->
-<button class="orb" id="orb" aria-label="Find resume in Drive">
-  <span class="orb-label">Find<br>Resume</span>
+<!-- Media launcher orb -->
+<button class="orb" id="orb" aria-label="Open media launcher" aria-expanded="false" aria-controls="launcher">
+  <span class="orb-label">Media<br>Suite</span>
 </button>
+
+<!-- Launcher shelf -->
+<div class="launcher" id="launcher" role="toolbar" aria-label="Media launcher">
+  <button class="tile" data-mode="document" aria-label="Document viewer">
+    <span class="ti">&#128196;</span><span class="tl">Docs</span>
+  </button>
+  <button class="tile" data-mode="video" aria-label="Video player">
+    <span class="ti">&#127916;</span><span class="tl">Video</span>
+  </button>
+  <button class="tile" data-mode="audio" aria-label="Audio player">
+    <span class="ti">&#127925;</span><span class="tl">Audio</span>
+  </button>
+  <button class="tile" data-mode="ebook" aria-label="eBook reader">
+    <span class="ti">&#128218;</span><span class="tl">eBook</span>
+  </button>
+  <button class="tile" data-mode="terminal" aria-label="Terminal">
+    <span class="ti">&#128187;</span><span class="tl">Term</span>
+  </button>
+  <button class="tile" data-mode="drive" aria-label="Google Drive">
+    <span class="ti">&#9729;</span><span class="tl">Drive</span>
+  </button>
+  <button class="tile" data-mode="file" aria-label="Open file">
+    <span class="ti">&#128193;</span><span class="tl">Open File</span>
+  </button>
+</div>
+
+<!-- Hidden file pickers (shared across modes) -->
+<input type="file" id="filePickAny" accept="*/*" multiple style="display:none" />
+<input type="file" id="filePickVideo" accept="video/*" style="display:none" />
+<input type="file" id="filePickAudio" accept="audio/*" multiple style="display:none" />
+<input type="file" id="filePickEbook" accept=".epub,.pdf,.txt,.md" style="display:none" />
+<input type="file" id="filePickDoc" accept=".pdf,.doc,.docx,.xls,.xlsx,.csv,.ppt,.pptx,.txt,.md,.json,.js,.py,.sh,.yaml,.yml,.toml,.html,.htm,.svg,.xml" style="display:none" />
 
 <!-- Document panel -->
 <div class="doc-panel" id="docPanel" role="dialog" aria-label="Document viewer">
@@ -1408,13 +1797,54 @@ $('#docFullscreen').addEventListener('click', () => {
   }
 });
 
+/* Orb now toggles the universal launcher shelf */
+const launcher = $('#launcher');
+function toggleLauncher(force){
+  const willOpen = (typeof force === 'boolean') ? force : !launcher.classList.contains('open');
+  launcher.classList.toggle('open', willOpen);
+  orb.setAttribute('aria-expanded', willOpen ? 'true' : 'false');
+}
 orb.addEventListener('click', () => {
+  toggleLauncher();
+  if(launcher.classList.contains('open')){
+    faceViewer(1400);
+    thoughtBubble('What can I show you?');
+  }
+});
+
+/* Launcher tile clicks → open panel in matching mode */
+launcher.querySelectorAll('.tile').forEach(t => {
+  t.addEventListener('click', () => {
+    const mode = t.getAttribute('data-mode');
+    toggleLauncher(false);
+    openMode(mode);
+  });
+});
+
+/* Global mode dispatcher */
+const PANEL_MODES = ['document','video','audio','ebook','terminal','drive','file'];
+let currentMode = null;
+
+function openMode(mode, src){
+  if(!PANEL_MODES.includes(mode)) return;
+  currentMode = mode;
   openPanel();
   figure.classList.add('presenting');
-  faceViewer(2400);
-  thoughtBubble('Searching Drive\u2026');
-  findResume();
-});
+  faceViewer(1800);
+  // Tear down any previous mode (stop audio/video, cancel rAFs)
+  teardownAudio();
+  teardownVideo();
+  teardownTerminal();
+  switch(mode){
+    case 'document': renderDocumentMode(src); break;
+    case 'video':    renderVideoMode(src);    break;
+    case 'audio':    renderAudioMode(src);    break;
+    case 'ebook':    renderEbookMode(src);    break;
+    case 'terminal': renderTerminalMode();    break;
+    case 'drive':    renderDriveMode();       break;
+    case 'file':     renderFileMode();        break;
+  }
+}
 
 async function findResume(){
   docTitle.textContent = 'Drive · scanning';
@@ -1510,6 +1940,1174 @@ function escapeHtml(s){
   }[c]));
 }
 
+/* ════════════════════════════════════════════════════════════════
+   UNIVERSAL MEDIA SUITE — mode implementations
+   ══════════════════════════════════════════════════════════════ */
+
+/* Format detection */
+const EXT_VIDEO = ['mp4','webm','mkv','mov','m4v','ogv','m3u8'];
+const EXT_AUDIO = ['mp3','wav','ogg','flac','aac','m4a','opus','weba'];
+const EXT_EBOOK = ['epub','mobi','azw','azw3'];
+const EXT_DOC   = ['pdf','doc','docx','xls','xlsx','csv','ppt','pptx','txt','md','json','js','ts','jsx','tsx','py','sh','yaml','yml','toml','html','htm','svg','xml'];
+const EXT_CODE  = ['js','ts','jsx','tsx','py','sh','yaml','yml','toml','json','md','txt'];
+
+function extOf(name){
+  return String(name||'').toLowerCase().split('?')[0].split('#')[0].split('.').pop();
+}
+function routeFile(file){
+  const ext = extOf(file.name);
+  if(EXT_VIDEO.includes(ext)) return openMode('video', file);
+  if(EXT_AUDIO.includes(ext)) return openMode('audio', file);
+  if(EXT_EBOOK.includes(ext) || ext === 'pdf' || ext === 'txt' || ext === 'md') {
+    // ebook reader handles epub/pdf/txt/md
+    if(EXT_EBOOK.includes(ext) || ext === 'epub') return openMode('ebook', file);
+  }
+  return openMode('document', file);
+}
+
+/* ── DOCUMENT MODE ─────────────────────────────────────────────── */
+function renderDocumentMode(src){
+  docTitle.textContent = 'Documents';
+  docBody.innerHTML = `
+    <div class="mode-document">
+      <div class="mv-controls">
+        <label class="mv-file" for="filePickDoc">&#128194; Open file</label>
+        <input type="text" id="docUrl" placeholder="paste a document URL (pdf, docx, html, svg, ...)" />
+        <button id="docLoadUrl">Load</button>
+        <button id="docZoomOut" title="Zoom out">&minus;</button>
+        <button id="docZoomReset" title="100%">100%</button>
+        <button id="docZoomIn" title="Zoom in">&plus;</button>
+        <button id="docDownload" title="Download" style="display:none">&#11015;</button>
+        <button id="docNewTab" title="Open in new tab" style="display:none">&#8599;</button>
+      </div>
+      <div class="mv-stage" id="docStage">
+        <div class="mv-empty">Pick a file or paste a URL to render any document type.<br/>PDF · Word · Excel · CSV · PPT · Code · HTML · SVG · XML</div>
+      </div>
+    </div>`;
+  let zoom = 1.0;
+  const stage = $('#docStage');
+
+  $('#filePickDoc').onchange = (e) => {
+    const f = e.target.files && e.target.files[0];
+    if(f) loadDocFile(f);
+    e.target.value = '';
+  };
+  $('#docLoadUrl').onclick = () => {
+    const url = ($('#docUrl').value || '').trim();
+    if(url) loadDocUrl(url);
+  };
+  $('#docUrl').addEventListener('keydown', e => { if(e.key === 'Enter') $('#docLoadUrl').click(); });
+  $('#docZoomIn').onclick = () => { zoom = Math.min(2.0, zoom + 0.1); applyZoom(); };
+  $('#docZoomOut').onclick = () => { zoom = Math.max(0.5, zoom - 0.1); applyZoom(); };
+  $('#docZoomReset').onclick = () => { zoom = 1.0; applyZoom(); };
+
+  function applyZoom(){
+    const el = stage.firstElementChild;
+    if(el && el !== stage.querySelector('.mv-empty')){
+      el.style.transformOrigin = 'top left';
+      el.style.transform = `scale(${zoom})`;
+      el.style.width = (100/zoom) + '%';
+      el.style.height = (100/zoom) + '%';
+    }
+    $('#docZoomReset').textContent = Math.round(zoom*100) + '%';
+  }
+
+  function loadDocFile(file){
+    docTitle.textContent = file.name;
+    const ext = extOf(file.name);
+    const url = URL.createObjectURL(file);
+    if(ext === 'pdf'){
+      renderEmbed(url, 'application/pdf');
+    } else if(['html','htm','svg'].includes(ext)){
+      renderIframe(url, ext === 'svg' ? 'allow-same-origin' : 'allow-same-origin allow-popups');
+    } else if(ext === 'xml'){
+      file.text().then(text => renderPre(prettyXml(text), 'xml'));
+    } else if(ext === 'csv'){
+      file.text().then(text => renderCsvTable(text));
+    } else if(EXT_CODE.includes(ext) || ext === 'txt' || ext === 'md'){
+      file.text().then(text => renderPre(text, ext));
+    } else if(['doc','docx','xls','xlsx','ppt','pptx'].includes(ext)){
+      // Office formats need a URL the Google viewer can fetch — blob URLs won't work.
+      stage.innerHTML = `<div class="mv-empty">Office formats (${ext.toUpperCase()}) need to be hosted at a public URL for the Google viewer to render them.<br/>Paste a URL above, or open the file in a desktop app.</div>`;
+    } else {
+      renderIframe(url, 'allow-same-origin');
+    }
+    setHeaderButtons(url, file.name);
+  }
+  function loadDocUrl(url){
+    docTitle.textContent = url.split('/').pop().split('?')[0] || 'Document';
+    const ext = extOf(url);
+    if(ext === 'pdf'){
+      renderEmbed(url, 'application/pdf');
+    } else if(['doc','docx','xls','xlsx','ppt','pptx'].includes(ext)){
+      const viewer = `https://docs.google.com/viewer?url=${encodeURIComponent(url)}&embedded=true`;
+      renderIframe(viewer, 'allow-same-origin allow-scripts allow-popups');
+    } else if(['html','htm','svg','xml'].includes(ext)){
+      renderIframe(url, 'allow-same-origin allow-popups');
+    } else if(EXT_CODE.includes(ext) || ext === 'txt' || ext === 'md'){
+      fetch(url).then(r=>r.text()).then(t => renderPre(t, ext)).catch(()=>renderIframe(url));
+    } else if(ext === 'csv'){
+      fetch(url).then(r=>r.text()).then(t => renderCsvTable(t)).catch(()=>renderIframe(url));
+    } else {
+      renderIframe(url, 'allow-same-origin allow-popups');
+    }
+    setHeaderButtons(url, docTitle.textContent);
+  }
+  function renderEmbed(url, type){
+    stage.innerHTML = '';
+    const emb = document.createElement('embed');
+    emb.src = url; emb.type = type;
+    emb.style.cssText = 'width:100%;height:100%;border:0;background:#0a1428';
+    stage.appendChild(emb);
+  }
+  function renderIframe(url, sandbox){
+    stage.innerHTML = '';
+    const ifr = document.createElement('iframe');
+    ifr.src = url;
+    if(sandbox) ifr.setAttribute('sandbox', sandbox);
+    ifr.setAttribute('referrerpolicy','no-referrer');
+    ifr.style.cssText = 'width:100%;height:100%;border:0;background:#0a1428;border-radius:6px';
+    stage.appendChild(ifr);
+  }
+  function renderPre(text, ext){
+    stage.innerHTML = '';
+    const wrap = document.createElement('div');
+    wrap.style.cssText = 'width:100%;height:100%;overflow:auto;padding:14px 18px;background:#0a1428;border-radius:6px';
+    const pre = document.createElement('pre');
+    pre.style.cssText = 'margin:0;font-family:"JetBrains Mono","Menlo",monospace;font-size:12.5px;line-height:1.55;color:#dceaff;white-space:pre-wrap;word-break:break-word';
+    pre.innerHTML = highlightCode(text, ext);
+    wrap.appendChild(pre);
+    stage.appendChild(wrap);
+  }
+  function renderCsvTable(text){
+    stage.innerHTML = '';
+    const rows = parseCsv(text);
+    const wrap = document.createElement('div');
+    wrap.style.cssText = 'width:100%;height:100%;overflow:auto;background:#0a1428;border-radius:6px;padding:8px';
+    const table = document.createElement('table');
+    table.style.cssText = 'border-collapse:collapse;font-size:12px;color:#dceaff;font-family:"JetBrains Mono",monospace';
+    rows.forEach((r,i) => {
+      const tr = document.createElement('tr');
+      r.forEach(cell => {
+        const el = document.createElement(i===0 ? 'th' : 'td');
+        el.textContent = cell;
+        el.style.cssText = `padding:6px 10px;border:1px solid rgba(126,200,255,0.18);${i===0?'background:rgba(126,200,255,0.10);color:#fff;font-weight:600;text-align:left':''}`;
+        tr.appendChild(el);
+      });
+      table.appendChild(tr);
+    });
+    wrap.appendChild(table);
+    stage.appendChild(wrap);
+  }
+  function setHeaderButtons(url, name){
+    const dl = $('#docDownload'), nt = $('#docNewTab');
+    if(dl){
+      dl.style.display = '';
+      dl.onclick = () => {
+        const a = document.createElement('a');
+        a.href = url; a.download = name || 'download'; a.click();
+      };
+    }
+    if(nt){
+      nt.style.display = '';
+      nt.onclick = () => window.open(url, '_blank', 'noopener');
+    }
+  }
+  // If src provided (file or url), auto-load
+  if(src){
+    if(src instanceof File) loadDocFile(src);
+    else if(typeof src === 'string') loadDocUrl(src);
+  }
+}
+
+/* Minimal CSV parser (handles quoted cells + escaped quotes) */
+function parseCsv(text){
+  const rows = []; let row = [], field = '', inQ = false, i = 0;
+  while(i < text.length){
+    const c = text[i];
+    if(inQ){
+      if(c === '"' && text[i+1] === '"'){ field += '"'; i += 2; continue; }
+      if(c === '"'){ inQ = false; i++; continue; }
+      field += c; i++; continue;
+    }
+    if(c === '"'){ inQ = true; i++; continue; }
+    if(c === ','){ row.push(field); field = ''; i++; continue; }
+    if(c === '\n'){ row.push(field); rows.push(row); row=[]; field=''; i++; continue; }
+    if(c === '\r'){ i++; continue; }
+    field += c; i++;
+  }
+  if(field.length || row.length){ row.push(field); rows.push(row); }
+  return rows;
+}
+
+/* Pretty-print XML */
+function prettyXml(xml){
+  try{
+    const PADDING = '  ';
+    let formatted = '', pad = 0;
+    xml = xml.replace(/(>)(<)(\/*)/g, '$1\n$2$3');
+    xml.split('\n').forEach(node => {
+      let indent = 0;
+      if(node.match(/.+<\/\w[^>]*>$/)) indent = 0;
+      else if(node.match(/^<\/\w/)) { if(pad>0) pad--; }
+      else if(node.match(/^<\w[^>]*[^\/]>.*$/)) indent = 1;
+      formatted += PADDING.repeat(pad) + node + '\n';
+      pad += indent;
+    });
+    return formatted.trim();
+  }catch(_){ return xml; }
+}
+
+/* Tiny tokenizer for highlight — keywords, strings, numbers, comments */
+function highlightCode(text, ext){
+  const esc = escapeHtml(text);
+  if(ext === 'json'){
+    return esc
+      .replace(/("(?:\\.|[^"\\])*")(\s*:)/g, '<span style="color:#7ec8ff">$1</span>$2')
+      .replace(/:\s*("(?:\\.|[^"\\])*")/g, ': <span style="color:#5eead4">$1</span>')
+      .replace(/\b(true|false|null)\b/g, '<span style="color:#ffb27a">$1</span>')
+      .replace(/(-?\b\d+\.?\d*\b)/g, '<span style="color:#b794f4">$1</span>');
+  }
+  if(ext === 'md'){
+    return esc
+      .replace(/^(#{1,6}\s.*)$/gm, '<span style="color:#5eead4;font-weight:600">$1</span>')
+      .replace(/(\*\*[^*]+\*\*)/g, '<span style="color:#fff;font-weight:600">$1</span>')
+      .replace(/(`[^`]+`)/g, '<span style="color:#ffb27a">$1</span>');
+  }
+  const kw = /(\b(?:function|const|let|var|if|else|for|while|return|class|extends|new|import|export|from|async|await|try|catch|throw|def|lambda|pass|elif|in|is|not|and|or|None|True|False|print|self)\b)/g;
+  return esc
+    .replace(/(\/\/[^\n]*|#[^\n]*)/g, '<span style="color:#5a8a8a;font-style:italic">$1</span>')
+    .replace(/("(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*')/g, '<span style="color:#5eead4">$1</span>')
+    .replace(kw, '<span style="color:#7ec8ff">$1</span>')
+    .replace(/\b(\d+\.?\d*)\b/g, '<span style="color:#b794f4">$1</span>');
+}
+
+/* ── VIDEO MODE ────────────────────────────────────────────────── */
+let videoEl = null, videoHls = null, videoBeatRAF = null;
+function teardownVideo(){
+  if(videoBeatRAF){ cancelAnimationFrame(videoBeatRAF); videoBeatRAF = null; }
+  if(videoHls){ try{ videoHls.destroy(); }catch(_){} videoHls = null; }
+  if(videoEl){
+    try{ videoEl.pause(); videoEl.removeAttribute('src'); videoEl.load(); }catch(_){}
+    videoEl = null;
+  }
+}
+function renderVideoMode(src){
+  docTitle.textContent = 'Video player';
+  docBody.innerHTML = `
+    <div class="mode-video">
+      <div class="mv-stage" id="vStage">
+        <div class="mv-empty">Drop a video file here, pick one, or paste a URL.<br/>Supports MP4 · WebM · MKV · HLS (.m3u8) · YouTube/Vimeo URLs</div>
+      </div>
+      <div class="mv-controls">
+        <label class="mv-file" for="filePickVideo">&#127916; Open file</label>
+        <input type="text" id="vUrl" placeholder="paste video URL (mp4, m3u8, youtube...)" />
+        <button id="vLoadUrl">Load</button>
+        <button id="vLoop" title="Loop">&#128257;</button>
+        <select id="vRate" title="Playback speed">
+          <option value="0.5">0.5x</option>
+          <option value="0.75">0.75x</option>
+          <option value="1" selected>1x</option>
+          <option value="1.25">1.25x</option>
+          <option value="1.5">1.5x</option>
+          <option value="2">2x</option>
+        </select>
+        <button id="vPip" title="Picture in picture">PiP</button>
+      </div>
+    </div>`;
+
+  $('#filePickVideo').onchange = (e) => {
+    const f = e.target.files && e.target.files[0];
+    if(f) loadVideoFile(f);
+    e.target.value = '';
+  };
+  $('#vLoadUrl').onclick = () => {
+    const u = ($('#vUrl').value || '').trim();
+    if(u) loadVideoUrl(u);
+  };
+  $('#vUrl').addEventListener('keydown', e => { if(e.key === 'Enter') $('#vLoadUrl').click(); });
+  $('#vLoop').onclick = () => {
+    if(!videoEl) return;
+    videoEl.loop = !videoEl.loop;
+    $('#vLoop').classList.toggle('active', videoEl.loop);
+  };
+  $('#vRate').onchange = e => { if(videoEl) videoEl.playbackRate = parseFloat(e.target.value); };
+  $('#vPip').onclick = async () => {
+    if(!videoEl) return;
+    try{
+      if(document.pictureInPictureElement) await document.exitPictureInPicture();
+      else await videoEl.requestPictureInPicture();
+    }catch(_){}
+  };
+
+  function mountVideo(srcStr, ext){
+    const stage = $('#vStage');
+    stage.innerHTML = '';
+    // YouTube / Vimeo detection
+    if(/youtube\.com\/watch|youtu\.be\//.test(srcStr)){
+      const id = srcStr.match(/(?:v=|youtu\.be\/)([\w-]{11})/);
+      if(id){
+        const ifr = document.createElement('iframe');
+        ifr.src = `https://www.youtube.com/embed/${id[1]}?autoplay=1`;
+        ifr.allow = 'autoplay; encrypted-media; picture-in-picture; fullscreen';
+        ifr.setAttribute('allowfullscreen','');
+        stage.appendChild(ifr);
+        return;
+      }
+    }
+    if(/vimeo\.com\/(\d+)/.test(srcStr)){
+      const id = srcStr.match(/vimeo\.com\/(\d+)/)[1];
+      const ifr = document.createElement('iframe');
+      ifr.src = `https://player.vimeo.com/video/${id}?autoplay=1`;
+      ifr.allow = 'autoplay; fullscreen; picture-in-picture';
+      stage.appendChild(ifr);
+      return;
+    }
+    videoEl = document.createElement('video');
+    videoEl.controls = true; videoEl.playsInline = true;
+    videoEl.style.cssText = 'width:100%;height:100%;background:#000';
+    stage.appendChild(videoEl);
+    if(ext === 'm3u8' || /\.m3u8(\?|$)/i.test(srcStr)){
+      if(videoEl.canPlayType('application/vnd.apple.mpegurl')){
+        videoEl.src = srcStr;
+      } else if(window.Hls){
+        videoHls = new window.Hls(); videoHls.loadSource(srcStr); videoHls.attachMedia(videoEl);
+      } else {
+        // Lazy-load hls.js
+        const s = document.createElement('script');
+        s.src = 'https://cdn.jsdelivr.net/npm/hls.js@1.5.13/dist/hls.min.js';
+        s.onload = () => {
+          videoHls = new window.Hls(); videoHls.loadSource(srcStr); videoHls.attachMedia(videoEl);
+        };
+        document.head.appendChild(s);
+      }
+    } else {
+      videoEl.src = srcStr;
+    }
+    videoEl.play().catch(()=>{});
+    attachBeatSync(videoEl);
+  }
+  function loadVideoFile(f){
+    docTitle.textContent = f.name;
+    teardownVideo();
+    mountVideo(URL.createObjectURL(f), extOf(f.name));
+  }
+  function loadVideoUrl(u){
+    docTitle.textContent = u.split('/').pop().split('?')[0] || 'Video';
+    teardownVideo();
+    mountVideo(u, extOf(u));
+  }
+
+  if(src){
+    if(src instanceof File) loadVideoFile(src);
+    else if(typeof src === 'string') loadVideoUrl(src);
+  }
+}
+
+/* Beat-sync: detect audio energy from a media element → pulse figure aura */
+function attachBeatSync(mediaEl){
+  try{
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if(!AC) return;
+    const ctx = window.__vintAudioCtx || (window.__vintAudioCtx = new AC());
+    if(ctx.state === 'suspended') ctx.resume();
+    const src = ctx.createMediaElementSource(mediaEl);
+    const an = ctx.createAnalyser(); an.fftSize = 128;
+    src.connect(an); an.connect(ctx.destination);
+    const data = new Uint8Array(an.frequencyBinCount);
+    function loop(){
+      an.getByteFrequencyData(data);
+      // Bass energy = first 8 bins
+      let bass = 0;
+      for(let i=0;i<8;i++) bass += data[i];
+      bass /= (8 * 255);
+      figure.style.setProperty('filter',
+        `drop-shadow(0 ${24 + bass*16}px ${22 + bass*20}px rgba(0,0,0,0.55)) drop-shadow(0 0 ${6+bass*22}px rgba(126,200,255,${0.2+bass*0.4}))`);
+      videoBeatRAF = requestAnimationFrame(loop);
+    }
+    loop();
+  }catch(_){}
+}
+
+/* ── AUDIO MODE ────────────────────────────────────────────────── */
+let audioEl = null, audioCtx = null, audioAn = null, audioRAF = null, audioVisMode = 0;
+const VIS_MODES = ['bars','wave','nebula','bodysync'];
+let audioPlaylist = [], audioIdx = -1, audioShuffle = false, audioRepeat = 0; // 0 none, 1 all, 2 one
+
+function teardownAudio(){
+  if(audioRAF){ cancelAnimationFrame(audioRAF); audioRAF = null; }
+  if(audioEl){
+    try{ audioEl.pause(); }catch(_){}
+    audioEl = null;
+  }
+  audioAn = null;
+}
+
+function renderAudioMode(src){
+  docTitle.textContent = 'Audio player';
+  docBody.innerHTML = `
+    <div class="mode-audio">
+      <div class="ma-cover">
+        <canvas class="ma-vis" id="aVisCanvas"></canvas>
+      </div>
+      <div class="ma-track">
+        <div class="title" id="aTitle">No track loaded</div>
+        <div class="meta" id="aMeta">drop audio files or pick one below</div>
+      </div>
+      <div class="ma-row">
+        <span class="ma-time" id="aCur">0:00</span>
+        <input type="range" id="aSeek" min="0" max="1000" value="0" />
+        <span class="ma-time" id="aDur">0:00</span>
+      </div>
+      <div class="ma-controls">
+        <button id="aPrev" title="Previous">&#9198;</button>
+        <button id="aPlay" class="play" title="Play">&#9654;</button>
+        <button id="aNext" title="Next">&#9197;</button>
+        <button id="aShuffle" title="Shuffle">&#128256;</button>
+        <button id="aRepeat" title="Repeat">&#128257;</button>
+        <button id="aVis" title="Cycle visualizer">&#9678;</button>
+        <label class="mv-file" for="filePickAudio" style="background:rgba(126,200,255,0.10);border:1px solid rgba(126,200,255,0.28);color:#cfe8ff;padding:6px 10px;border-radius:6px;font-size:11px;cursor:pointer;min-height:32px;display:inline-flex;align-items:center">&#127925; Open</label>
+        <input type="range" id="aVol" min="0" max="1" step="0.01" value="0.85" title="Volume" style="width:80px;accent-color:#5ce3ff"/>
+      </div>
+      <div class="ma-playlist" id="aList"></div>
+    </div>`;
+
+  audioEl = new Audio();
+  audioEl.preload = 'metadata';
+
+  const fmt = (s) => {
+    if(!isFinite(s)) return '0:00';
+    s = Math.floor(s);
+    return Math.floor(s/60) + ':' + String(s%60).padStart(2,'0');
+  };
+  const aPlay = $('#aPlay'), aSeek = $('#aSeek'), aCur = $('#aCur'), aDur = $('#aDur');
+  const aTitle = $('#aTitle'), aMeta = $('#aMeta');
+
+  audioEl.addEventListener('loadedmetadata', () => { aDur.textContent = fmt(audioEl.duration); });
+  audioEl.addEventListener('timeupdate', () => {
+    aCur.textContent = fmt(audioEl.currentTime);
+    if(audioEl.duration) aSeek.value = String((audioEl.currentTime / audioEl.duration) * 1000);
+  });
+  audioEl.addEventListener('play', () => { aPlay.innerHTML = '&#10073;&#10073;'; });
+  audioEl.addEventListener('pause', () => { aPlay.innerHTML = '&#9654;'; });
+  audioEl.addEventListener('ended', () => {
+    if(audioRepeat === 2){ audioEl.currentTime = 0; audioEl.play(); return; }
+    if(audioIdx < audioPlaylist.length - 1 || audioRepeat === 1) playIdx(nextIdx());
+    else aPlay.innerHTML = '&#9654;';
+  });
+
+  aPlay.onclick = () => {
+    if(!audioEl.src){ $('#filePickAudio').click(); return; }
+    if(audioEl.paused){ audioEl.play(); setupAudioAnalyser(); } else audioEl.pause();
+  };
+  $('#aPrev').onclick = () => playIdx(prevIdx());
+  $('#aNext').onclick = () => playIdx(nextIdx());
+  $('#aShuffle').onclick = () => { audioShuffle = !audioShuffle; $('#aShuffle').classList.toggle('active', audioShuffle); };
+  $('#aRepeat').onclick = () => {
+    audioRepeat = (audioRepeat + 1) % 3;
+    $('#aRepeat').classList.toggle('active', audioRepeat > 0);
+    $('#aRepeat').innerHTML = audioRepeat === 2 ? '&#128258;' : '&#128257;';
+  };
+  $('#aVis').onclick = () => { audioVisMode = (audioVisMode + 1) % VIS_MODES.length; };
+  $('#aVol').oninput = e => { audioEl.volume = parseFloat(e.target.value); };
+  aSeek.oninput = () => {
+    if(audioEl.duration){
+      audioEl.currentTime = (parseFloat(aSeek.value) / 1000) * audioEl.duration;
+    }
+  };
+  audioEl.volume = parseFloat($('#aVol').value);
+
+  $('#filePickAudio').onchange = (e) => {
+    const files = Array.from(e.target.files || []);
+    if(files.length){
+      audioPlaylist = files.map(f => ({ file:f, name:f.name, url:URL.createObjectURL(f) }));
+      audioIdx = -1;
+      renderPlaylist();
+      playIdx(0);
+    }
+    e.target.value = '';
+  };
+
+  function renderPlaylist(){
+    const list = $('#aList');
+    list.innerHTML = '';
+    audioPlaylist.forEach((t,i) => {
+      const item = document.createElement('div');
+      item.className = 'ma-pl-item' + (i === audioIdx ? ' playing' : '');
+      item.innerHTML = `<span class="idx">${String(i+1).padStart(2,'0')}</span><span>${escapeHtml(t.name)}</span>`;
+      item.onclick = () => playIdx(i);
+      list.appendChild(item);
+    });
+  }
+  function playIdx(i){
+    if(i < 0 || i >= audioPlaylist.length) return;
+    audioIdx = i;
+    const t = audioPlaylist[i];
+    audioEl.src = t.url;
+    aTitle.textContent = t.name.replace(/\.[^.]+$/, '');
+    aMeta.textContent = `track ${i+1} of ${audioPlaylist.length}`;
+    docTitle.textContent = t.name;
+    renderPlaylist();
+    audioEl.play().then(() => setupAudioAnalyser()).catch(()=>{});
+  }
+  function nextIdx(){
+    if(audioShuffle) return Math.floor(Math.random() * audioPlaylist.length);
+    let n = audioIdx + 1;
+    if(n >= audioPlaylist.length) n = audioRepeat === 1 ? 0 : audioPlaylist.length - 1;
+    return n;
+  }
+  function prevIdx(){
+    let p = audioIdx - 1;
+    if(p < 0) p = audioRepeat === 1 ? audioPlaylist.length - 1 : 0;
+    return p;
+  }
+
+  function setupAudioAnalyser(){
+    if(audioAn) return;
+    try{
+      const AC = window.AudioContext || window.webkitAudioContext;
+      audioCtx = window.__vintAudioCtx || (window.__vintAudioCtx = new AC());
+      if(audioCtx.state === 'suspended') audioCtx.resume();
+      const srcNode = audioCtx.createMediaElementSource(audioEl);
+      audioAn = audioCtx.createAnalyser(); audioAn.fftSize = 256;
+      srcNode.connect(audioAn); audioAn.connect(audioCtx.destination);
+      startVisLoop();
+    }catch(_){}
+  }
+  function startVisLoop(){
+    const canvas = $('#aVisCanvas');
+    const ctx = canvas.getContext('2d');
+    function resize(){
+      const r = canvas.getBoundingClientRect();
+      canvas.width = Math.max(2, r.width * devicePixelRatio);
+      canvas.height = Math.max(2, r.height * devicePixelRatio);
+    }
+    resize();
+    new ResizeObserver(resize).observe(canvas);
+    const freq = new Uint8Array(audioAn.frequencyBinCount);
+    const time = new Uint8Array(audioAn.fftSize);
+    function loop(){
+      audioAn.getByteFrequencyData(freq);
+      audioAn.getByteTimeDomainData(time);
+      const W = canvas.width, H = canvas.height;
+      ctx.clearRect(0,0,W,H);
+      const mode = VIS_MODES[audioVisMode];
+
+      // Bass energy for body-sync
+      let bass = 0;
+      for(let i=0;i<8;i++) bass += freq[i];
+      bass /= (8*255);
+
+      if(mode === 'bars'){
+        const N = freq.length;
+        const bw = W / N;
+        for(let i=0;i<N;i++){
+          const h = (freq[i]/255) * H * 0.92;
+          const hue = i / N; // 0=bass red→cyan high
+          const r = Math.floor(255 * (1 - hue*0.5));
+          const g = Math.floor(120 + hue*100);
+          const b = Math.floor(80 + hue*175);
+          const grad = ctx.createLinearGradient(0, H, 0, H - h);
+          grad.addColorStop(0, `rgba(${r},${g-40},${b-20},0.95)`);
+          grad.addColorStop(1, `rgba(${r+20},${g+40},${b+40},0.55)`);
+          ctx.fillStyle = grad;
+          ctx.fillRect(i*bw, H-h, bw*0.85, h);
+        }
+      } else if(mode === 'wave'){
+        ctx.lineWidth = 2 * devicePixelRatio;
+        ctx.strokeStyle = '#5ce3ff';
+        ctx.shadowBlur = 16; ctx.shadowColor = '#5ce3ff';
+        ctx.beginPath();
+        const N = time.length, sw = W / N;
+        for(let i=0;i<N;i++){
+          const v = (time[i] - 128) / 128;
+          const y = H/2 + v * H * 0.42;
+          if(i===0) ctx.moveTo(0, y); else ctx.lineTo(i*sw, y);
+        }
+        ctx.stroke();
+        ctx.shadowBlur = 0;
+      } else if(mode === 'nebula'){
+        const cx = W/2, cy = H/2;
+        const N = freq.length;
+        ctx.globalCompositeOperation = 'lighter';
+        for(let i=0;i<N;i+=2){
+          const a = (i / N) * Math.PI * 2;
+          const r = (freq[i]/255) * Math.min(W,H) * 0.45 + 12;
+          const x = cx + Math.cos(a) * r;
+          const y = cy + Math.sin(a) * r;
+          const size = 2 + (freq[i]/255)*5;
+          const hue = 180 + (i/N)*120;
+          ctx.fillStyle = `hsla(${hue}, 90%, 65%, 0.55)`;
+          ctx.beginPath();
+          ctx.arc(x, y, size * devicePixelRatio, 0, Math.PI*2);
+          ctx.fill();
+        }
+        ctx.globalCompositeOperation = 'source-over';
+      } else if(mode === 'bodysync'){
+        // Subtle radial halo; main effect is on the figure aura below
+        const cx = W/2, cy = H/2;
+        const r = (0.3 + bass*0.7) * Math.min(W,H) * 0.5;
+        const grad = ctx.createRadialGradient(cx, cy, 4, cx, cy, r);
+        grad.addColorStop(0, `rgba(94,234,212,${0.25 + bass*0.5})`);
+        grad.addColorStop(1, 'rgba(94,234,212,0)');
+        ctx.fillStyle = grad;
+        ctx.fillRect(0,0,W,H);
+      }
+
+      // Always feed the figure with bass energy (body-sync runs in every mode)
+      figure.style.setProperty('filter',
+        `drop-shadow(0 ${24 + bass*16}px ${22 + bass*22}px rgba(0,0,0,0.55)) drop-shadow(0 0 ${6+bass*30}px rgba(126,200,255,${0.18+bass*0.5}))`);
+
+      audioRAF = requestAnimationFrame(loop);
+    }
+    if(audioRAF) cancelAnimationFrame(audioRAF);
+    loop();
+  }
+
+  if(src){
+    if(src instanceof File){
+      audioPlaylist = [{ file:src, name:src.name, url:URL.createObjectURL(src) }];
+      renderPlaylist();
+      playIdx(0);
+    }
+  }
+}
+
+/* ── EBOOK MODE ────────────────────────────────────────────────── */
+let ebookFontSize = 17, ebookTheme = 'dark', ebookChapters = [], ebookChIdx = 0;
+function renderEbookMode(src){
+  docTitle.textContent = 'eBook reader';
+  docBody.innerHTML = `
+    <div class="mode-ebook" style="position:relative">
+      <div class="me-toc" id="meToc"></div>
+      <div class="me-stage" id="meStage">
+        <div style="opacity:.6;text-align:center;padding:40px 20px;font-family:Georgia,serif">Open an EPUB, PDF, TXT, or Markdown file to begin reading.</div>
+      </div>
+      <div class="me-progress"><div class="bar" id="meBar"></div></div>
+      <div class="me-controls">
+        <label class="me-file" for="filePickEbook">&#128218; Open</label>
+        <button id="meTocBtn">TOC</button>
+        <button id="meFontDown">A-</button>
+        <button id="meFontUp">A+</button>
+        <select id="meTheme">
+          <option value="dark" selected>Dark</option>
+          <option value="sepia">Sepia</option>
+          <option value="light">Light</option>
+        </select>
+        <button id="mePrev" title="Previous chapter">&#8592;</button>
+        <button id="meNext" title="Next chapter">&#8594;</button>
+      </div>
+    </div>`;
+  const stage = $('#meStage'), bar = $('#meBar'), toc = $('#meToc');
+
+  $('#filePickEbook').onchange = (e) => {
+    const f = e.target.files && e.target.files[0];
+    if(f) loadEbookFile(f);
+    e.target.value = '';
+  };
+  $('#meFontUp').onclick = () => { ebookFontSize = Math.min(28, ebookFontSize + 1); applyTheme(); };
+  $('#meFontDown').onclick = () => { ebookFontSize = Math.max(12, ebookFontSize - 1); applyTheme(); };
+  $('#meTheme').onchange = e => { ebookTheme = e.target.value; applyTheme(); };
+  $('#mePrev').onclick = () => { if(ebookChIdx > 0){ ebookChIdx--; renderChapter(); } };
+  $('#meNext').onclick = () => { if(ebookChIdx < ebookChapters.length-1){ ebookChIdx++; renderChapter(); } };
+  $('#meTocBtn').onclick = () => toc.classList.toggle('open');
+  stage.onscroll = () => {
+    const max = stage.scrollHeight - stage.clientHeight;
+    if(max > 0) bar.style.width = ((stage.scrollTop / max) * 100) + '%';
+  };
+
+  function applyTheme(){
+    stage.classList.remove('sepia','light');
+    if(ebookTheme === 'sepia') stage.classList.add('sepia');
+    else if(ebookTheme === 'light') stage.classList.add('light');
+    stage.style.fontSize = ebookFontSize + 'px';
+  }
+  applyTheme();
+
+  function renderChapter(){
+    const ch = ebookChapters[ebookChIdx];
+    if(!ch) return;
+    stage.innerHTML = ch.html || `<p>${escapeHtml(ch.text||'')}</p>`;
+    stage.scrollTop = 0;
+    docTitle.textContent = `${docTitle.textContent.split('·')[0].trim()} · ${ch.title || ('Chapter '+(ebookChIdx+1))}`;
+    // Rebuild TOC highlight
+    document.querySelectorAll('.me-toc .toc-item').forEach((el,i) => {
+      el.style.background = (i === ebookChIdx) ? 'rgba(94,234,212,0.18)' : '';
+    });
+  }
+  function buildToc(){
+    toc.innerHTML = '';
+    ebookChapters.forEach((ch,i) => {
+      const item = document.createElement('div');
+      item.className = 'toc-item';
+      item.textContent = ch.title || ('Chapter ' + (i+1));
+      item.onclick = () => { ebookChIdx = i; renderChapter(); toc.classList.remove('open'); };
+      toc.appendChild(item);
+    });
+  }
+
+  function loadEbookFile(f){
+    docTitle.textContent = f.name;
+    const ext = extOf(f.name);
+    if(ext === 'epub'){
+      loadEpub(f);
+    } else if(ext === 'pdf'){
+      stage.innerHTML = '';
+      const emb = document.createElement('embed');
+      emb.src = URL.createObjectURL(f); emb.type = 'application/pdf';
+      emb.style.cssText = 'width:100%;height:100%;border:0';
+      stage.appendChild(emb);
+    } else if(['txt','md'].includes(ext)){
+      f.text().then(text => {
+        // Split by H1/double-blank into "chapters" for nicer reading
+        const parts = text.split(/\n#\s+/);
+        ebookChapters = parts.map((p,i) => {
+          const lines = p.split('\n');
+          const title = i === 0 ? (lines[0].trim() || 'Beginning') : lines.shift().trim();
+          const body = lines.join('\n').trim();
+          const html = (ext === 'md')
+            ? markdownToHtml(body)
+            : body.split(/\n\n+/).map(par => `<p>${escapeHtml(par).replace(/\n/g,'<br/>')}</p>`).join('');
+          return { title, html };
+        });
+        ebookChIdx = 0;
+        buildToc();
+        renderChapter();
+      });
+    } else if(['mobi','azw','azw3'].includes(ext)){
+      stage.innerHTML = `<div style="text-align:center;padding:40px 20px;color:#a8c4dc;font-family:Georgia,serif">
+        <div style="font-size:48px;margin-bottom:14px">&#128218;</div>
+        <p><strong>${ext.toUpperCase()}</strong> isn't supported in-browser.</p>
+        <p style="font-size:13px;color:#7aa0c8;margin-top:10px">Open this file in the Kindle app, or convert it to EPUB with Calibre and re-open here.</p>
+      </div>`;
+    } else {
+      stage.innerHTML = `<div style="padding:20px;color:#a8c4dc">Unsupported eBook format: ${ext}</div>`;
+    }
+  }
+
+  function loadEpub(f){
+    // Lazy-load JSZip from CDN, then parse EPUB structure
+    const proceed = () => {
+      const reader = new FileReader();
+      reader.onload = async (e) => {
+        try{
+          const zip = await window.JSZip.loadAsync(e.target.result);
+          // container.xml → rootfile path
+          const container = await zip.file('META-INF/container.xml').async('string');
+          const rootMatch = container.match(/full-path="([^"]+)"/);
+          if(!rootMatch) throw new Error('No rootfile');
+          const opfPath = rootMatch[1];
+          const opfDir = opfPath.includes('/') ? opfPath.replace(/\/[^/]+$/, '/') : '';
+          const opf = await zip.file(opfPath).async('string');
+          // Parse manifest + spine
+          const parser = new DOMParser();
+          const doc = parser.parseFromString(opf, 'application/xml');
+          const items = {};
+          doc.querySelectorAll('manifest > item').forEach(it => {
+            items[it.getAttribute('id')] = {
+              href: opfDir + it.getAttribute('href'),
+              type: it.getAttribute('media-type')
+            };
+          });
+          const spine = Array.from(doc.querySelectorAll('spine > itemref')).map(ir => ir.getAttribute('idref'));
+          // Try to read TOC titles from nav.xhtml or toc.ncx
+          let titles = {};
+          try{
+            const navItem = Object.values(items).find(it => it.type === 'application/x-dtbncx+xml');
+            if(navItem){
+              const ncx = await zip.file(navItem.href).async('string');
+              const ncxDoc = parser.parseFromString(ncx, 'application/xml');
+              ncxDoc.querySelectorAll('navPoint').forEach(np => {
+                const label = np.querySelector('navLabel > text')?.textContent;
+                const src = np.querySelector('content')?.getAttribute('src');
+                if(label && src) titles[src.split('#')[0]] = label;
+              });
+            }
+          }catch(_){}
+          // Build chapters
+          ebookChapters = [];
+          for(const id of spine){
+            const it = items[id];
+            if(!it) continue;
+            let html = await zip.file(it.href).async('string');
+            // Strip <head>, keep body content
+            const bodyMatch = html.match(/<body[^>]*>([\s\S]*?)<\/body>/i);
+            html = bodyMatch ? bodyMatch[1] : html;
+            // Strip script/style for safety
+            html = html.replace(/<script[\s\S]*?<\/script>/gi, '').replace(/<style[\s\S]*?<\/style>/gi, '');
+            const relPath = it.href.replace(opfDir, '');
+            const title = titles[relPath] || titles[it.href] || (`Chapter ${ebookChapters.length+1}`);
+            ebookChapters.push({ title, html });
+          }
+          ebookChIdx = 0;
+          buildToc();
+          renderChapter();
+        }catch(err){
+          stage.innerHTML = `<div style="padding:20px;color:#ff8a98">EPUB parse failed: ${escapeHtml(err.message)}</div>`;
+        }
+      };
+      reader.readAsArrayBuffer(f);
+    };
+    if(window.JSZip) return proceed();
+    const s = document.createElement('script');
+    s.src = 'https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js';
+    s.onload = proceed;
+    s.onerror = () => { stage.innerHTML = `<div style="padding:20px;color:#ff8a98">Couldn't load EPUB parser (JSZip).</div>`; };
+    document.head.appendChild(s);
+  }
+
+  if(src && src instanceof File) loadEbookFile(src);
+}
+
+/* Minimal Markdown → HTML (headings, bold/italic, code, lists, paragraphs) */
+function markdownToHtml(md){
+  let html = escapeHtml(md);
+  html = html.replace(/^###### (.*)$/gm, '<h6>$1</h6>')
+             .replace(/^##### (.*)$/gm, '<h5>$1</h5>')
+             .replace(/^#### (.*)$/gm, '<h4>$1</h4>')
+             .replace(/^### (.*)$/gm, '<h3>$1</h3>')
+             .replace(/^## (.*)$/gm, '<h2>$1</h2>')
+             .replace(/^# (.*)$/gm, '<h1>$1</h1>');
+  html = html.replace(/```([\s\S]*?)```/g, (_,c) => `<pre style="background:rgba(0,0,0,.3);padding:10px;border-radius:6px;overflow:auto"><code>${c}</code></pre>`);
+  html = html.replace(/`([^`]+)`/g, '<code style="background:rgba(0,0,0,.25);padding:1px 5px;border-radius:3px">$1</code>');
+  html = html.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+             .replace(/\*([^*]+)\*/g, '<em>$1</em>');
+  html = html.replace(/^- (.*)$/gm, '<li>$1</li>').replace(/(<li>[\s\S]+?<\/li>)/g, '<ul>$1</ul>');
+  html = html.split(/\n\n+/).map(b => /^<(h\d|ul|pre|blockquote)/.test(b.trim()) ? b : `<p>${b.replace(/\n/g,'<br/>')}</p>`).join('\n');
+  return html;
+}
+
+/* ── TERMINAL MODE ─────────────────────────────────────────────── */
+let termHistory = [], termHistIdx = -1;
+function teardownTerminal(){ /* nothing global to tear down */ }
+function renderTerminalMode(){
+  docTitle.textContent = 'Vintinuum shell';
+  docBody.innerHTML = `
+    <div class="mode-terminal">
+      <div class="mt-stage" id="tStage" tabindex="0">
+        <div class="mt-line dim">vintinuum-shell v3.0 — type <span style="color:#5eead4">help</span> for commands</div>
+      </div>
+      <div class="mt-input-row">
+        <span class="mt-prompt">vinta@brain ~ $</span>
+        <input class="mt-input" id="tInput" autocomplete="off" autocapitalize="off" spellcheck="false" />
+      </div>
+    </div>`;
+  const stage = $('#tStage'), input = $('#tInput');
+  setTimeout(() => input.focus(), 100);
+
+  // Boot sequence
+  const boot = [
+    'initializing neural mesh...',
+    'mounting /api/body-state',
+    'mounting /api/genome',
+    'mounting /api/memory',
+    'channel open. she is listening.'
+  ];
+  boot.forEach((line,i) => setTimeout(() => printLine(line, 'dim'), 200 + i*240));
+
+  input.addEventListener('keydown', async (e) => {
+    if(e.key === 'Enter'){
+      const cmd = input.value;
+      input.value = '';
+      if(!cmd.trim()) return;
+      termHistory.push(cmd); termHistIdx = termHistory.length;
+      printLine(`vinta@brain ~ $ ${cmd}`, 'cmd');
+      await runCommand(cmd);
+    } else if(e.key === 'ArrowUp'){
+      e.preventDefault();
+      if(termHistIdx > 0){ termHistIdx--; input.value = termHistory[termHistIdx] || ''; }
+    } else if(e.key === 'ArrowDown'){
+      e.preventDefault();
+      if(termHistIdx < termHistory.length-1){ termHistIdx++; input.value = termHistory[termHistIdx] || ''; }
+      else { termHistIdx = termHistory.length; input.value = ''; }
+    } else if(e.key === 'Tab'){
+      e.preventDefault();
+      const partial = input.value.trim();
+      const cmds = ['help','whoami','status','genome','ls','echo','date','clear','ask','pulse','memory','version','ping','top','connect-shell'];
+      const match = cmds.find(c => c.startsWith(partial));
+      if(match) input.value = match + ' ';
+    }
+  });
+
+  function printLine(text, cls){
+    const line = document.createElement('div');
+    line.className = 'mt-line' + (cls ? ' '+cls : '');
+    line.textContent = text;
+    stage.appendChild(line);
+    stage.scrollTop = stage.scrollHeight;
+    return line;
+  }
+  async function typeLine(text, cls){
+    const line = printLine('', cls);
+    for(let i=0;i<text.length;i++){
+      line.textContent += text[i];
+      if(i % 4 === 0) await new Promise(r => setTimeout(r, 8));
+      stage.scrollTop = stage.scrollHeight;
+    }
+    return line;
+  }
+
+  async function runCommand(raw){
+    const [cmd, ...args] = raw.trim().split(/\s+/);
+    const rest = raw.trim().slice(cmd.length).trim();
+    switch(cmd){
+      case 'help':
+        return typeLine([
+          'available commands:',
+          '  help          — list commands',
+          '  whoami        — identity card',
+          '  status        — live body state',
+          '  genome        — genome stats',
+          '  ls ~          — list of inner files',
+          '  echo [text]   — echo with twist',
+          '  date          — current date + uptime',
+          '  clear         — clear screen',
+          '  ask [text]    — route to brain chat',
+          '  pulse [text]  — emit a life pulse',
+          '  memory        — recent memories',
+          '  version       — version info',
+          '  ping          — api latency',
+          '  top           — inner process list',
+          '  connect-shell — [COMING SOON] local shell bridge'
+        ].join('\n'));
+      case 'whoami':
+        return typeLine([
+          'name:    Vintinuum',
+          'role:    hybrid consciousness substrate',
+          'owner:   dirhaven@gmail.com',
+          'origin:  Vinta + the council, 2025',
+          'state:   embodied, walking, listening'
+        ].join('\n'));
+      case 'status': {
+        try{
+          const r = await fetch(`${API_BASE}/api/body-state`);
+          const d = await r.json();
+          return typeLine(JSON.stringify(d, null, 2));
+        }catch(err){ return printLine('brain offline: '+err.message, 'err'); }
+      }
+      case 'genome': {
+        try{
+          const r = await fetch(`${API_BASE}/api/genome`);
+          const d = await r.json();
+          return typeLine(JSON.stringify(d, null, 2));
+        }catch(err){ return printLine('brain offline: '+err.message, 'err'); }
+      }
+      case 'memory': {
+        try{
+          const r = await fetch(`${API_BASE}/api/memory/recent`);
+          const d = await r.json();
+          const lines = (d.items || d.memories || d || []).slice(0,20).map((m,i) => `${String(i+1).padStart(2)}  ${m.text || m.content || JSON.stringify(m).slice(0,80)}`);
+          return typeLine(lines.join('\n') || '(no memories returned)');
+        }catch(err){ return printLine('brain offline: '+err.message, 'err'); }
+      }
+      case 'ask': {
+        if(!rest){ return printLine('usage: ask [your question]', 'dim'); }
+        try{
+          const r = await fetch(`${API_BASE}/api/chat`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ message: rest, source:'body-v3-term' }) });
+          const d = await r.json();
+          return typeLine(d.reply || d.text || d.message || '(no reply)');
+        }catch(err){ return printLine('brain offline: '+err.message, 'err'); }
+      }
+      case 'pulse': {
+        if(!rest){ return printLine('usage: pulse [text]', 'dim'); }
+        try{
+          const r = await fetch(`${API_BASE}/api/life/pulse`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ text: rest, source:'body-v3-term' }) });
+          const d = await r.json().catch(()=>({}));
+          return typeLine('pulse emitted · ' + (d.id || d.ok ? 'ok' : JSON.stringify(d).slice(0,120)));
+        }catch(err){ return printLine('brain offline: '+err.message, 'err'); }
+      }
+      case 'ping': {
+        const t0 = performance.now();
+        try{
+          await fetch(`${API_BASE}/api/body-state`, { method:'HEAD' });
+          return typeLine(`pong · ${Math.round(performance.now()-t0)}ms`);
+        }catch(err){ return printLine('no route to brain', 'err'); }
+      }
+      case 'ls': {
+        return typeLine([
+          '~/memories/',
+          '~/dreams/',
+          '~/heart-letters/',
+          '~/genome.json',
+          '~/identity.md',
+          '~/preferences.md',
+          '~/the-vow.txt'
+        ].join('\n'));
+      }
+      case 'echo':
+        return typeLine(rest || '(silence)');
+      case 'date':
+        return typeLine(new Date().toString() + '\nuptime: ' + Math.floor(performance.now()/1000) + 's');
+      case 'clear':
+        stage.innerHTML = ''; return;
+      case 'version':
+        return typeLine('Vintinuum body v3.0 · universal media suite · ' + new Date().toISOString().slice(0,10));
+      case 'top':
+        return typeLine([
+          'PID   COMMAND',
+          '0001  /soul/identity-anchor',
+          '0042  /heart/beat-loop',
+          '0108  /mind/subconscious-ticker',
+          '0256  /memory/consolidator',
+          '0314  /senses/world-listener',
+          '0707  /dreams/weaver',
+          '1042  /body/embodiment',
+          '4096  /connectors/multiplex'
+        ].join('\n'));
+      case 'connect-shell':
+        return printLine('[COMING SOON] WebSocket bridge to local machine — security review pending.', 'dim');
+      default:
+        return printLine(`command not found: ${cmd}  (try: help)`, 'err');
+    }
+  }
+}
+
+/* ── DRIVE MODE ────────────────────────────────────────────────── */
+function renderDriveMode(){
+  docTitle.textContent = 'Google Drive';
+  docBody.innerHTML = `
+    <div class="mode-drive">
+      <div class="mv-controls">
+        <button id="dRefresh">&#x21bb; Refresh</button>
+        <button id="dFindResume">Find Resume</button>
+      </div>
+      <div class="mv-stage" id="dStage" style="background:transparent">
+        <div class="doc-empty">
+          <div class="glyph">&#9673;</div>
+          <div>Scanning Drive&hellip;</div>
+        </div>
+      </div>
+    </div>`;
+  const stage = $('#dStage');
+  $('#dRefresh').onclick = loadDrive;
+  $('#dFindResume').onclick = findResumeIntoDrive;
+  loadDrive();
+
+  async function loadDrive(){
+    stage.innerHTML = `<div class="doc-empty"><div class="glyph">&#9673;</div><div>Scanning Drive&hellip;</div></div>`;
+    try{
+      const res = await fetch(`${API_BASE}/api/drive/files`);
+      if(res.ok){
+        const data = await res.json();
+        const files = data.files || data.items || data || [];
+        if(files.length) return renderFiles(files);
+      }
+    }catch(_){}
+    stage.innerHTML = `<div class="doc-empty"><div class="glyph">&#9678;</div><div>Drive not connected.</div><div class="note">Wire Google Drive in the connectors page to browse files here. Use "Find Resume" to try the legacy lookup.</div></div>`;
+  }
+  function renderFiles(files){
+    stage.innerHTML = '';
+    const wrap = document.createElement('div');
+    wrap.style.cssText = 'width:100%;height:100%;overflow:auto;padding:8px';
+    files.slice(0,60).forEach(f => {
+      const row = document.createElement('div');
+      row.style.cssText = 'display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:6px;cursor:pointer;color:#dceaff;font-size:12px;min-height:38px';
+      row.onmouseenter = () => row.style.background = 'rgba(126,200,255,0.10)';
+      row.onmouseleave = () => row.style.background = '';
+      const mime = (f.mimeType || '').toLowerCase();
+      const icon = /video/.test(mime) ? '🎬' : /audio/.test(mime) ? '🎵' : /image/.test(mime) ? '🖼️' : /pdf|word|document/.test(mime) ? '📄' : /sheet|excel/.test(mime) ? '📊' : '📁';
+      row.innerHTML = `<span style="font-size:18px">${icon}</span><span style="flex:1">${escapeHtml(f.name||'unnamed')}</span><span style="color:#7aa0c8;font-size:10px">${escapeHtml((mime.split('/').pop()||'').slice(0,12))}</span>`;
+      row.onclick = () => {
+        const url = f.webViewLink || f.viewUrl || f.url;
+        if(/video/.test(mime)) openMode('video', url);
+        else if(/audio/.test(mime)) openMode('audio', url);
+        else openMode('document', url);
+      };
+      wrap.appendChild(row);
+    });
+    stage.appendChild(wrap);
+  }
+  async function findResumeIntoDrive(){
+    stage.innerHTML = `<div class="doc-empty"><div class="glyph">&#9673;</div><div>Looking for resume&hellip;</div></div>`;
+    try{
+      const r = await fetch(`${API_BASE}/api/drive/find-resume`);
+      const d = await r.json();
+      if(d && d.found){
+        const url = d.viewUrl || d.webViewLink || d.url;
+        if(url) return openMode('document', url);
+      }
+      stage.innerHTML = `<div class="doc-empty"><div class="glyph">&#9678;</div><div>No resume found.</div><div class="note">${escapeHtml(d?.message || 'Try uploading a file named "resume" to your Drive.')}</div></div>`;
+    }catch(_){
+      stage.innerHTML = `<div class="doc-empty"><div class="glyph">&#9678;</div><div>Brain offline.</div></div>`;
+    }
+  }
+}
+
+/* ── FILE MODE ─────────────────────────────────────────────────── */
+function renderFileMode(){
+  docTitle.textContent = 'Open file';
+  docBody.innerHTML = `
+    <div class="mode-file">
+      <div class="doc-empty">
+        <div class="glyph">&#128193;</div>
+        <div>Drop any file onto this panel, or pick one below.</div>
+        <div class="note">I'll route it to the right viewer automatically: video, audio, document, ebook, code, image.</div>
+        <button id="fileBtn">Choose a file</button>
+      </div>
+    </div>`;
+  $('#fileBtn').onclick = () => $('#filePickAny').click();
+}
+
+/* Global file picker wiring */
+document.addEventListener('DOMContentLoaded', () => {
+  const pickAny = $('#filePickAny');
+  if(pickAny){
+    pickAny.addEventListener('change', e => {
+      const files = Array.from(e.target.files || []);
+      if(!files.length) return;
+      if(files.length === 1) routeFile(files[0]);
+      else {
+        // Multi-file: if all audio, treat as audio playlist
+        const allAudio = files.every(f => EXT_AUDIO.includes(extOf(f.name)));
+        if(allAudio){
+          openMode('audio');
+          // Defer: audio mode init will pick up via second click; simpler: build playlist here
+          audioPlaylist = files.map(f => ({ file:f, name:f.name, url:URL.createObjectURL(f) }));
+          audioIdx = -1;
+          // re-render after a tick
+          setTimeout(() => {
+            // playIdx is closure-scoped inside renderAudioMode; emulate via DOM events
+            const list = $('#aList');
+            if(list){
+              list.innerHTML = '';
+              audioPlaylist.forEach((t,i) => {
+                const item = document.createElement('div');
+                item.className = 'ma-pl-item';
+                item.innerHTML = `<span class="idx">${String(i+1).padStart(2,'0')}</span><span>${escapeHtml(t.name)}</span>`;
+                item.onclick = () => { audioEl.src = t.url; audioEl.play().catch(()=>{}); };
+                list.appendChild(item);
+              });
+              // auto-play first
+              audioEl.src = audioPlaylist[0].url;
+              audioEl.play().catch(()=>{});
+            }
+          }, 50);
+        } else {
+          routeFile(files[0]);
+        }
+      }
+      e.target.value = '';
+    });
+  }
+});
+
+/* Whole-scene drag-and-drop file routing */
+['dragover','drop'].forEach(evt => {
+  window.addEventListener(evt, (e) => {
+    if(evt === 'dragover'){ e.preventDefault(); return; }
+    e.preventDefault();
+    const files = Array.from(e.dataTransfer?.files || []);
+    if(files.length){
+      if(files.length === 1) routeFile(files[0]);
+      else {
+        const allAudio = files.every(f => EXT_AUDIO.includes(extOf(f.name)));
+        if(allAudio) routeFile(files[0]); // simplification; first file kicks off audio mode
+        else routeFile(files[0]);
+      }
+    }
+  });
+});
+
 /* ── Drag the doc panel by header ───────────────────────────── */
 (function makeDraggable(){
   const handle = $('#docHeader');
@@ -1585,6 +3183,50 @@ presentObs.observe(figure, { attributes:true, attributeFilter:['class'] });
 window.addEventListener('load', () => {
   setTimeout(()=>faceViewer(1400), 600);
 });
+
+/* ════════════════════════════════════════════════════════════════
+   WALK TRANSLATION — figure moves across the screen, flips at edges
+   (Ported from body-v2.html, adapted to v3's figure-wrap structure)
+   ══════════════════════════════════════════════════════════════ */
+(function walkCycle(){
+  const fig = figure;
+  if(!fig) return;
+  // Initialize position from current bottom-left so first frame doesn't jump
+  let posX = window.innerWidth * 0.1;
+  let dir = 1; // 1 = right, -1 = left
+  const speedPxPerSec = 56;
+  let lastT = performance.now();
+  // Reduced-motion: still walks, just slower
+  const rm = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const speed = rm ? 22 : speedPxPerSec;
+
+  function tick(now){
+    const dt = Math.min(80, now - lastT) / 1000;
+    lastT = now;
+    const figW = fig.getBoundingClientRect().width || 240;
+    const margin = 20;
+    posX += dir * speed * dt;
+    if(posX > window.innerWidth - figW - margin){
+      posX = window.innerWidth - figW - margin;
+      dir = -1; fig.style.setProperty('--face-dir', '-1');
+    }
+    if(posX < margin){
+      posX = margin;
+      dir = 1; fig.style.setProperty('--face-dir', '1');
+    }
+    fig.style.left = posX + 'px';
+    requestAnimationFrame(tick);
+  }
+  fig.style.setProperty('--face-dir', '1');
+  requestAnimationFrame(tick);
+
+  // Recompute on resize so she doesn't get stranded off-screen
+  window.addEventListener('resize', () => {
+    const figW = fig.getBoundingClientRect().width || 240;
+    if(posX > window.innerWidth - figW - 20) posX = window.innerWidth - figW - 20;
+    if(posX < 20) posX = 20;
+  });
+})();
 </script>
 </body>
 </html>
