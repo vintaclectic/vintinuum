@@ -2164,8 +2164,7 @@ html,body{
   function enterIdle(){
     isIdling = true;
     fig.classList.add('idle-crouch');
-    spawnThoughtWithRipple("...still there?");
-    // Resume normal walk after 3s — the crouch class lasts 3s via CSS
+    // Subtle crouch — no nagging thought bubble
     setTimeout(() => {
       fig.classList.remove('idle-crouch');
       isIdling = false;
