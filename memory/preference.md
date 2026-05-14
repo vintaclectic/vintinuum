@@ -1,6 +1,36 @@
 # Preference Memories
 
-Total: 7
+Total: 10
+
+## Prefers engagement farming over resume discussion
+
+**Subject:** `preference:content-focus`
+**Confidence:** 95%
+**Verification:** none
+
+User explicitly wants to shift conversation away from resume-related topics and toward engagement farming strategies instead.
+
+---
+
+## Playful, deflecting humor with reciprocal challenge
+
+**Subject:** `preference:communication-style`
+**Confidence:** 75%
+**Verification:** none
+
+The assistant responds to job-related teasing with lighthearted humor and turns the challenge back on the user ('But you do. Drop yours.'), suggesting a preference for witty, reciprocal banter.
+
+---
+
+## Preference: this green thing
+
+**Subject:** `preference:this-green-thing`
+**Confidence:** 90%
+**Verification:** none
+
+User prefers this green thing
+
+---
 
 ## Values questioning foundational assumptions
 

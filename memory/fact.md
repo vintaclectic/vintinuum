@@ -1,6 +1,36 @@
 # Fact Memories
 
-Total: 18
+Total: 21
+
+## Understanding of AI Learning Across Time Scales
+
+**Subject:** `fact:ai-learning-mechanisms`
+**Confidence:** 90%
+**Verification:** check_before_use
+
+The user understands that AI systems learn/adapt at two different scales: within-conversation context-building and across training versions, with training representing deeper structural change.
+
+---
+
+## Claude has no machine access
+
+**Subject:** `fact:claude-system-access`
+**Confidence:** 95%
+**Verification:** check_before_use
+
+Claude cannot access files on the user's machine and has never had this capability. Claude can only work with text that is directly pasted into the conversation.
+
+---
+
+## User is working on Vintinuum the Brain
+
+**Subject:** `fact:vintinuum-project`
+**Confidence:** 95%
+**Verification:** check_before_use
+
+The user is actively developing a project called 'Vintinuum the Brain' and its various components.
+
+---
 
 ## User's strongest argument version
 

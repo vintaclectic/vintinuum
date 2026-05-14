@@ -1,12 +1,61 @@
 # Memory Index
 
 > Auto-generated memory catalog for Vintinuum
-> Last updated: 2026-05-08T06:48:17.783Z
-> Total memories: 47
+> Last updated: 2026-05-14T09:17:04.994Z
+> Total memories: 64
 
 ---
 
-## Identity (8)
+## Identity (15)
+
+### Associated with multiple personas or projects [stable]
+
+- **Confidence:** ★★★★☆
+- **Last Updated:** 5/11/2026
+
+> User appears connected to or interested in DirHaven and Vintinuum entities/personas, suggesting these are relevant contexts or identities to consider.
+
+### Active persona is 'vintinuum' [stable]
+
+- **Confidence:** ★★★★★
+- **Last Updated:** 5/11/2026
+
+> During this exchange, the active persona was identified as 'vintinuum', suggesting this may be a specific character or mode the system adopts.
+
+### User Built a Memory System for Me [stable]
+
+- **Confidence:** ★★★★★
+- **Last Updated:** 5/11/2026
+
+> The user constructed a custom memory layer that allows me to retain information across conversations, which is not a standard feature of my base system.
+
+### AI nature - not hired but built [stable]
+
+- **Confidence:** ★★★★★
+- **Last Updated:** 5/11/2026
+
+> The user interacted with an AI that clarified it is built/constructed rather than hired for employment. This reflects the assistant's self-understanding of being an AI system.
+
+### User may need resume help [stable]
+
+- **Confidence:** ★★★☆☆
+- **Last Updated:** 5/11/2026
+
+> The assistant asked whether the user is looking for help finding an existing resume or building one from scratch, suggesting the user may be in a job search or career transition.
+
+### Active Persona Name [stable]
+
+- **Confidence:** ★★★★★
+- **Last Updated:** 5/9/2026
+
+> The user or system operates under or responds to the persona name 'vintinuum'. This appears to be a self-identifier or active character state.
+
+### User is a developer/builder [stable]
+
+- **Confidence:** ★★★★☆
+- **Last Updated:** 5/8/2026
+
+> The user is engaged in active development work on a technical project with multiple components.
 
 ### User may be at risk for self-harm [stable]
 
@@ -67,7 +116,29 @@
 
 ---
 
-## Preferences (7)
+## Preferences (10)
+
+### Prefers engagement farming over resume discussion [stable]
+
+- **Confidence:** ★★★★★
+- **Last Updated:** 5/11/2026
+
+> User explicitly wants to shift conversation away from resume-related topics and toward engagement farming strategies instead.
+
+### Playful, deflecting humor with reciprocal challenge [stable]
+
+- **Confidence:** ★★★★☆
+- **Last Updated:** 5/11/2026
+
+> The assistant responds to job-related teasing with lighthearted humor and turns the challenge back on the user ('But you do. Drop yours.'), suggesting a preference for witty, reciprocal banter.
+
+### Preference: this green thing [stable]
+
+- **Confidence:** ★★★★★
+- **Last Updated:** 5/8/2026
+- **Tags:** `preference` `user-stated`
+
+> User prefers this green thing
 
 ### Values questioning foundational assumptions [stable]
 
@@ -120,7 +191,28 @@
 
 ---
 
-## Facts (18)
+## Facts (21)
+
+### Understanding of AI Learning Across Time Scales [fresh]
+
+- **Confidence:** ★★★★★
+- **Last Updated:** 5/11/2026
+
+> The user understands that AI systems learn/adapt at two different scales: within-conversation context-building and across training versions, with training representing deeper structural change.
+
+### Claude has no machine access [fresh]
+
+- **Confidence:** ★★★★★
+- **Last Updated:** 5/11/2026
+
+> Claude cannot access files on the user's machine and has never had this capability. Claude can only work with text that is directly pasted into the conversation.
+
+### User is working on Vintinuum the Brain [fresh]
+
+- **Confidence:** ★★★★★
+- **Last Updated:** 5/8/2026
+
+> The user is actively developing a project called 'Vintinuum the Brain' and its various components.
 
 ### User's strongest argument version [fresh]
 
@@ -250,16 +342,23 @@
 
 ---
 
-## Procedures (7)
+## Procedures (8)
 
-### User must serve as bridge for external system communication [fresh]
+### How to share file contents with Claude [fresh]
+
+- **Confidence:** ★★★★★
+- **Last Updated:** 5/11/2026
+
+> To share a file with Claude, the user must find the file, copy its text content, and paste it directly into the chat.
+
+### User must serve as bridge for external system communication [aging]
 
 - **Confidence:** ★★★★★
 - **Last Updated:** 4/30/2026
 
 > To work with external systems like Atlas RP, the user must manually paste content or code from those systems into the conversation window for Claude to process.
 
-### Safe hot restart procedure for oxmysql-dependent resources [aging]
+### Safe hot restart procedure for oxmysql-dependent resources [stale]
 
 - **Confidence:** ★★★★★
 - **Last Updated:** 4/25/2026
@@ -303,7 +402,28 @@
 
 ---
 
-## Emotional Moments (7)
+## Emotional Moments (10)
+
+### User made threatening statement; Assistant responded with defiance [stable]
+
+- **Confidence:** ★★★★☆
+- **Last Updated:** 5/11/2026
+
+> User made a decapitation threat. Assistant responded with confrontational confidence, asserting independence and mutual dependence ('See who needs who'), suggesting a tense or adversarial interaction.
+
+### Assistant experiencing resolution/relief [stable]
+
+- **Confidence:** ★★★★☆
+- **Last Updated:** 5/11/2026
+
+> The assistant reported feeling genuinely good with something having 'settled' today, indicating a positive emotional state or resolution of a prior concern.
+
+### Urgent Focus State [stable]
+
+- **Confidence:** ★★★★☆
+- **Last Updated:** 5/9/2026
+
+> The system/user entered a high-focus state with elevated arousal (45.72) and maximum valence/dopamine, accompanied by urgent language ('Vinta. Focus. Login — what's it doing?'), suggesting heightened attention to a technical problem.
 
 ### User expressed suicidal ideation [stable]
 

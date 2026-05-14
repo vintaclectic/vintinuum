@@ -1,6 +1,16 @@
 # Procedure Memories
 
-Total: 7
+Total: 8
+
+## How to share file contents with Claude
+
+**Subject:** `procedure:share-file-with-claude`
+**Confidence:** 90%
+**Verification:** check_before_use
+
+To share a file with Claude, the user must find the file, copy its text content, and paste it directly into the chat.
+
+---
 
 ## User must serve as bridge for external system communication
 
