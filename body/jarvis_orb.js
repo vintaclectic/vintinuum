@@ -424,169 +424,104 @@
     return ctrl;
   }
 
-  // ─── Chat via SSE streaming ───────────────────────────────────────────────
+  // ─── Chat — plain JSON (avoids Cloudflare SSE buffering) ────────────────────
+  // Uses /chat/once which returns { ok, reply, usedModel } as a single JSON blob.
+  // SSE streaming was silently eaten by Cloudflare tunnel — messages arrived at
+  // the server but no tokens ever reached the browser.
   function sendChat(text, orb, utterance, mic, onDone) {
     if (!text) return;
-    // Guard: if stuck in thinking/speaking from a previous timed-out request,
-    // force reset so this message can go through.
+    // Force-reset if stuck from a previous timed-out request
     if (orb.state === 'thinking' || orb.state === 'speaking') {
       orb.setState('idle');
     }
     orb.setState('thinking');
     utterance.show('…');
 
-    // Client-side hard timeout — if the fetch never resolves, unblock after 30s
-    var _chatTimeout = setTimeout(function () {
-      orb.setState('idle');
-      utterance.show('(no response — try again)');
-      utterance.hideAfter(4000);
-      if (onDone) onDone(null);
-    }, 30000);
-
-    // Add to local history immediately (display purposes)
     _convHistory.push({ role: 'user', content: text });
 
     var headers = { 'Content-Type': 'application/json' };
     var tok = _authToken();
     if (tok) headers['Authorization'] = 'Bearer ' + tok;
 
-    var body = {
+    var payload = {
       message: text,
       persona: PERSONA,
-      source: 'jarvis-orb',
-      // Tell the brain this is a live voice surface — short, direct, real.
-      // The page_context.primaryContent field is read by buildPersonaPrompt and
-      // injected into the system prompt, so JARVIS knows what mode it's in.
-      page_context: {
-        url: window.location.href,
-        host: window.location.hostname,
-        title: 'JARVIS · Vintinuum — live voice surface',
-        pageType: 'jarvis-orb',
-        primaryContent: 'VOICE SURFACE. The human is speaking live. Respond in 1-3 sentences max. Direct. Present. No setup. No summaries. Talk the way we talk.',
-        entities: {},
-        scrollPct: null
-      }
+      source: 'jarvis-orb'
     };
-    // Thread the conversation if we have a session ID
-    if (_convId) body.conversation_id = _convId;
+    if (_convId) payload.conversation_id = _convId;
 
-    fetch(API_BASE + '/chat', {
+    // 25s client timeout
+    var _done = false;
+    var _timer = setTimeout(function () {
+      if (_done) return;
+      _done = true;
+      orb.setState('idle');
+      utterance.show('(no response — try again)');
+      utterance.hideAfter(4000);
+      if (onDone) onDone(null);
+    }, 25000);
+
+    fetch(API_BASE + '/chat/once', {
       method: 'POST',
       credentials: 'include',
       headers: headers,
-      body: JSON.stringify(body)
+      body: JSON.stringify(payload)
     })
     .then(function (r) {
       if (!r.ok) {
-        return r.text().then(function (t) { throw new Error('chat ' + r.status + ': ' + (t || '')); });
+        return r.text().then(function (t) { throw new Error('chat ' + r.status + ': ' + (t || 'error')); });
       }
-      // SSE stream
+      return r.json();
+    })
+    .then(function (data) {
+      if (_done) return;
+      _done = true;
+      clearTimeout(_timer);
+
+      var reply = (data && (data.reply || data.text || data.delta)) || '';
+      if (data && data.conversation_id && !_convId) _convId = data.conversation_id;
+
+      _convHistory.push({ role: 'assistant', content: reply });
+
+      if (!reply) {
+        utterance.show('(no reply)');
+        utterance.hideAfter(4000);
+        orb.setState('idle');
+        if (onDone) onDone(null);
+        return;
+      }
+
+      // Animate the orb as if speaking, show reply in bubble
       orb.setState('speaking');
-      utterance.show('');
+      utterance.show(reply);
 
-      var reader = r.body.getReader();
-      var decoder = new TextDecoder();
-      var buf = '';
-      var fullReply = '';
-      var firstToken = true;
-      var ampInterval = null;
+      // Animate mouth while voice plays
+      var ampInterval = setInterval(function () { orb.mouthAmp = 0.35 + Math.random() * 0.55; }, 90);
 
-      function startAmpTick() {
-        if (ampInterval) return;
-        ampInterval = setInterval(function () { orb.mouthAmp = 0.35 + Math.random() * 0.55; }, 90);
-      }
-      function stopAmpTick() {
-        if (ampInterval) { clearInterval(ampInterval); ampInterval = null; }
-      }
-
-      function pump() {
-        return reader.read().then(function (chunk) {
-          if (chunk.done) {
-            stopAmpTick();
-            _finish(fullReply);
-            return;
-          }
-          buf += decoder.decode(chunk.value, { stream: true });
-          // Split on SSE frame boundaries
-          var frames = buf.split('\n\n');
-          buf = frames.pop(); // last (possibly incomplete) frame stays in buf
-
-          frames.forEach(function (frame) {
-            var lines = frame.split('\n');
-            lines.forEach(function (line) {
-              if (line.startsWith('data: ')) {
-                var raw = line.slice(6).trim();
-                if (!raw || raw === '[DONE]') return;
-                // Try JSON first (Claude SSE sends delta objects)
-                try {
-                  var obj = JSON.parse(raw);
-                  // delta object with token
-                  var token = obj.delta || obj.token || obj.text || obj.chunk || null;
-                  if (token == null && obj.reply) {
-                    // complete reply in one shot (non-streaming fallback)
-                    token = obj.reply;
-                  }
-                  if (obj.conversation_id && !_convId) {
-                    _convId = obj.conversation_id;
-                  }
-                  if (token) {
-                    if (firstToken) { utterance.show(''); firstToken = false; }
-                    startAmpTick();
-                    utterance.append(token);
-                    fullReply += token;
-                  }
-                } catch (_) {
-                  // Plain text token
-                  if (firstToken) { utterance.show(''); firstToken = false; }
-                  startAmpTick();
-                  utterance.append(raw);
-                  fullReply += raw;
-                }
-              }
-            });
-          });
-          return pump();
-        });
-      }
-
-      function _finish(reply) {
-        clearTimeout(_chatTimeout);
-        orb.setState('dwelling');
-        if (!reply) { utterance.show('(no reply)'); utterance.hideAfter(4000); }
-        else { utterance.hideAfter(10000); }
-
-        _convHistory.push({ role: 'assistant', content: reply });
-
-        // Speak via Piper — use 'now' so any queued greetings don't block the reply.
-        // Also call __markInteracted in case the browser hasn't yet seen a gesture
-        // from this page session (important on first load before any click).
-        if (reply) {
-          try {
-            if (window.__markInteracted) window.__markInteracted();
-            if (window.VOICE && typeof window.VOICE.speak === 'function') {
-              window.VOICE.speak(reply, 'now');
-            } else if (window.VOICE && typeof window.VOICE.say === 'function') {
-              window.VOICE.say(reply);
-            }
-          } catch (_) {}
+      // Speak via Piper TTS
+      try {
+        if (window.__markInteracted) window.__markInteracted();
+        if (window.VOICE && typeof window.VOICE.speak === 'function') {
+          window.VOICE.speak(reply, 'now');
+        } else if (window.VOICE && typeof window.VOICE.say === 'function') {
+          window.VOICE.say(reply);
         }
+      } catch (_) {}
 
-        // After a short dwell, return to idle; if continuous, kick mic back
-        var dwellMs = reply ? Math.min(2200, 600 + reply.length * 18) : 1200;
-        setTimeout(function () {
-          orb.setState('idle');
-          if (onDone) onDone(reply);
-          // Continuous: schedule mic restart via mic controller
-          if (_continuousMode && mic) {
-            mic.scheduleRestart();
-          }
-        }, dwellMs);
-      }
-
-      return pump();
+      var dwellMs = Math.min(3000, 800 + reply.length * 22);
+      setTimeout(function () {
+        clearInterval(ampInterval);
+        orb.mouthAmp = 0;
+        orb.setState('idle');
+        utterance.hideAfter(8000);
+        if (onDone) onDone(reply);
+        if (_continuousMode && mic) mic.scheduleRestart();
+      }, dwellMs);
     })
     .catch(function (err) {
-      clearTimeout(_chatTimeout);
+      if (_done) return;
+      _done = true;
+      clearTimeout(_timer);
       utterance.show('(' + (err && err.message || 'JARVIS unreachable') + ')');
       orb.setState('idle');
       utterance.hideAfter(5000);
