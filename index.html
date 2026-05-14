@@ -532,12 +532,16 @@
 
         /* Mobile */
         @media (max-width: 640px) {
+            :root {
+                --hero-height: 100svh;
+            }
+
             .constellations {
                 padding: 0 12px 60px;
             }
 
             .zone {
-                margin-bottom: 56px;
+                margin-bottom: 48px;
             }
 
             .zone-grid--hero,
@@ -548,20 +552,65 @@
 
             .card {
                 min-height: auto;
-                padding: 24px 20px;
+                padding: 20px 18px;
+                /* Cards always visible on mobile — no JS reveal needed */
+                opacity: 1 !important;
+                transform: none !important;
+                transition: border-color 0.3s ease, box-shadow 0.3s ease !important;
             }
 
             .card--hero {
                 min-height: auto;
-                padding: 28px 24px;
+                padding: 24px 20px;
             }
 
             .hero-title {
-                -webkit-text-stroke: 1px rgba(255, 255, 255, 0.15);
+                -webkit-text-stroke: 1px rgba(255, 255, 255, 0.12);
+            }
+
+            .hero-subtitle {
+                font-size: 0.85rem;
+                letter-spacing: 0.1em;
+                margin-top: 16px;
+            }
+
+            .hero-breath {
+                margin-top: 20px;
+            }
+
+            .hero-scroll {
+                display: none; /* hide on mobile — just scroll naturally */
             }
 
             .zone-header {
                 margin-bottom: 20px;
+            }
+
+            .zone-label {
+                font-size: 0.6rem;
+            }
+
+            .card-glyph {
+                font-size: 1.2rem;
+                margin-bottom: 10px;
+            }
+
+            .card-title {
+                font-size: 1rem;
+                margin-bottom: 6px;
+            }
+
+            .card-desc {
+                font-size: 0.82rem;
+                line-height: 1.55;
+            }
+
+            .card--hero .card-title {
+                font-size: 1.15rem;
+            }
+
+            .card--hero .card-desc {
+                font-size: 0.85rem;
             }
         }
 
@@ -569,6 +618,10 @@
         @media (max-width: 360px) {
             .hero-title {
                 font-size: 2.8rem;
+                letter-spacing: 0.06em;
+            }
+            .card {
+                padding: 18px 16px;
             }
         }
 
@@ -827,6 +880,8 @@
     (function() {
         'use strict';
 
+        const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+
         /* ── Neural particle canvas ── */
         const canvas = document.getElementById('neuralCanvas');
         if (canvas) {
@@ -834,8 +889,8 @@
             let particles = [];
             let w, h;
             let mouseX = -1, mouseY = -1;
-            const PARTICLE_COUNT = 60;
-            const CONNECTION_DIST = 140;
+            const PARTICLE_COUNT = isTouchDevice ? 20 : 60;
+            const CONNECTION_DIST = isTouchDevice ? 80 : 140;
             const MOUSE_DIST = 200;
 
             function resize() {
@@ -931,7 +986,6 @@
 
         /* ── Card 3D tilt ── */
         const cards = document.querySelectorAll('.card');
-        const isTouchDevice = 'ontouchstart' in window;
 
         if (!isTouchDevice) {
             cards.forEach(function(card) {
@@ -961,8 +1015,8 @@
             });
         }
 
-        /* ── Scroll-triggered card reveal ── */
-        if ('IntersectionObserver' in window) {
+        /* ── Scroll-triggered card reveal (desktop only) ── */
+        if (!isTouchDevice && 'IntersectionObserver' in window) {
             const observer = new IntersectionObserver(function(entries) {
                 entries.forEach(function(entry) {
                     if (entry.isIntersecting) {
@@ -971,7 +1025,7 @@
                         observer.unobserve(entry.target);
                     }
                 });
-            }, { threshold: 0.1, rootMargin: '0px 0px -40px 0px' });
+            }, { threshold: 0.05, rootMargin: '0px 0px -20px 0px' });
 
             cards.forEach(function(card, i) {
                 card.style.opacity = '0';
