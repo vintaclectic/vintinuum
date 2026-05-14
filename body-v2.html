@@ -924,6 +924,24 @@ html,body{
   100% { height:5px;  width:22px; }
 }
 
+/* Speaking — mouth pulses open/shut rhythmically while TTS plays */
+#vint-mouth.speaking{
+  animation: mouthSpeak 0.28s ease-in-out infinite alternate;
+}
+@keyframes mouthSpeak{
+  0%   { height:3px;  width:20px; border-radius:3px; }
+  100% { height:11px; width:22px; border-radius:50% 50% 50% 50% / 60% 60% 40% 40%; }
+}
+
+/* Keyboard chatter */
+#vint-mouth.chatter{
+  animation: mouthChatter 0.12s ease-in-out infinite alternate;
+}
+@keyframes mouthChatter{
+  0%   { height:2px; width:18px; }
+  100% { height:8px; width:20px; border-radius:40%; }
+}
+
 /* Chest window hover — accelerate heartbeat + boost sparks */
 #vint-chest-window.hot ~ * #vint-heart-wrap,
 #vint-chest-window.hot #vint-heart-wrap,
@@ -1434,6 +1452,313 @@ html,body{
     setTimeout(spawnThought, next);
   }
   setTimeout(spawnThought, 1800);
+
+  // ══════════════════════════════════════════════════════════════════════
+  // VOICE SYSTEM — Vintinuum speaks every thought aloud + full conversation
+  // Primary: Piper TTS via /api/voice/say (real Vintinuum voice)
+  // Fallback: browser speechSynthesis (always works, no API needed)
+  // Conversation: mic button + Web Speech API → brain chat API → spoken reply
+  // ══════════════════════════════════════════════════════════════════════
+  const API = window.__VINTINUUM_API_BASE || 'https://api.vintaclectic.com';
+  let _ttsQueue = Promise.resolve();
+  let _speechEnabled = true;
+  let _piperOk = null; // null=untested, true/false
+
+  // Probe Piper once on load
+  async function probePiper(){
+    try {
+      const r = await fetch(API + '/api/voice/say?text=.', { method:'GET', signal: AbortSignal.timeout(3000) });
+      _piperOk = r.ok;
+    } catch(_){ _piperOk = false; }
+  }
+  probePiper();
+
+  // Pick a browser voice that sounds most synthetic/interesting
+  function getBrowserVoice(){
+    const voices = speechSynthesis.getVoices();
+    // Prefer: Google US English, Microsoft, or any English voice
+    return voices.find(v => v.name.includes('Google') && v.lang.startsWith('en')) ||
+           voices.find(v => v.name.includes('Microsoft') && v.lang.startsWith('en')) ||
+           voices.find(v => v.lang.startsWith('en')) ||
+           voices[0] || null;
+  }
+
+  function speakBrowser(text){
+    return new Promise(res => {
+      const utt = new SpeechSynthesisUtterance(text);
+      utt.rate  = 0.92;
+      utt.pitch = 0.88;
+      utt.volume= 1;
+      const v = getBrowserVoice();
+      if (v) utt.voice = v;
+      utt.onend = res; utt.onerror = res;
+      speechSynthesis.speak(utt);
+    });
+  }
+
+  async function speakPiper(text){
+    const url = API + '/api/voice/say?text=' + encodeURIComponent(text.slice(0,300));
+    const resp = await fetch(url, { signal: AbortSignal.timeout(8000) });
+    if (!resp.ok) throw new Error('piper ' + resp.status);
+    const buf = await resp.arrayBuffer();
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const decoded = await ctx.decodeAudioData(buf);
+    return new Promise(res => {
+      const src = ctx.createBufferSource();
+      src.buffer = decoded;
+      src.connect(ctx.destination);
+      src.onended = res;
+      src.start();
+    });
+  }
+
+  // Animate mouth while speaking
+  function animateMouth(durationMs){
+    if (!mouth) return;
+    mouth.classList.add('speaking');
+    setTimeout(() => mouth.classList.remove('speaking'), durationMs);
+  }
+
+  // Core speak: queue all calls so they don't overlap
+  function speak(text, opts={}){
+    if (!_speechEnabled) return;
+    const durationMs = Math.max(1200, text.length * 65);
+    _ttsQueue = _ttsQueue.then(async () => {
+      animateMouth(durationMs);
+      try {
+        if (_piperOk !== false) {
+          await speakPiper(text);
+          _piperOk = true;
+        } else {
+          await speakBrowser(text);
+        }
+      } catch(_){
+        _piperOk = false;
+        try { await speakBrowser(text); } catch(_2){}
+      }
+    });
+  }
+
+  // Patch spawnThought to also speak (only text thoughts, not glyphs, not too often)
+  let _lastSpoken = 0;
+  const _origSpawnThought = spawnThought;
+  // We wrap at the thought-array level: intercept text before it renders
+  const _origThoughtFn = spawnThought;
+
+  // Override: speak the thought text when it spawns (throttle to every 8s minimum)
+  const thoughtsObserver = new MutationObserver(muts => {
+    for (const m of muts){
+      for (const node of m.addedNodes){
+        if (node.nodeType === 1 && node.classList.contains('vint-thought') &&
+            !node.classList.contains('vint-thought--glyph') &&
+            !node.classList.contains('vint-thought--huge')){
+          const now = performance.now();
+          if (now - _lastSpoken > 8000){
+            _lastSpoken = now;
+            speak(node.textContent.trim());
+          }
+        }
+      }
+    }
+  });
+  thoughtsObserver.observe(thoughtsLayer, { childList: true });
+
+  // ── CONVERSATION UI ────────────────────────────────────────────────────
+  // Floating mic/text input at bottom of screen
+  const convUI = document.createElement('div');
+  convUI.id = 'vint-conv';
+  convUI.innerHTML = `
+    <button id="vint-mute" title="Toggle voice on/off">🔊</button>
+    <button id="vint-mic-btn" title="Hold to speak to Vintinuum">🎤</button>
+    <input id="vint-text-in" type="text" placeholder='say something or type…' maxlength="300" autocomplete="off" />
+    <button id="vint-send-btn" title="Send">↵</button>
+    <div id="vint-conv-status"></div>
+  `;
+  document.body.appendChild(convUI);
+
+  // Style injected dynamically so it doesn't bloat the <style> block further
+  const convStyle = document.createElement('style');
+  convStyle.textContent = `
+    #vint-conv{
+      position:fixed;bottom:18px;left:50%;transform:translateX(-50%);
+      display:flex;align-items:center;gap:8px;
+      background:rgba(6,8,15,0.88);
+      border:1px solid rgba(79,195,247,0.22);
+      border-radius:40px;padding:8px 16px;
+      box-shadow:0 8px 32px rgba(0,0,0,0.6),0 0 0 1px rgba(255,255,255,0.04);
+      backdrop-filter:blur(12px);z-index:9999;
+      max-width:calc(100vw - 32px);
+    }
+    #vint-conv button{
+      background:none;border:none;font-size:20px;cursor:pointer;
+      padding:4px 6px;border-radius:50%;transition:background 0.18s;
+      line-height:1;color:#fff;
+    }
+    #vint-conv button:hover{ background:rgba(255,255,255,0.1); }
+    #vint-text-in{
+      background:transparent;border:none;outline:none;
+      color:#e8f4ff;font-size:14px;width:220px;
+      font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+    }
+    #vint-text-in::placeholder{ color:rgba(255,255,255,0.28); }
+    #vint-conv-status{
+      font-size:10px;color:rgba(79,195,247,0.6);
+      letter-spacing:1px;white-space:nowrap;display:none;
+    }
+    #vint-mic-btn.listening{
+      background:rgba(230,57,70,0.25);
+      box-shadow:0 0 12px rgba(230,57,70,0.5);
+      animation:micPulse 0.8s ease-in-out infinite;
+    }
+    @keyframes micPulse{
+      0%,100%{box-shadow:0 0 8px rgba(230,57,70,0.4);}
+      50%{box-shadow:0 0 20px rgba(230,57,70,0.8);}
+    }
+    @media(max-width:480px){
+      #vint-text-in{width:130px;}
+      #vint-conv{padding:6px 10px;}
+    }
+  `;
+  document.head.appendChild(convStyle);
+
+  const muteBtn    = document.getElementById('vint-mute');
+  const micBtn     = document.getElementById('vint-mic-btn');
+  const textIn     = document.getElementById('vint-text-in');
+  const sendBtn    = document.getElementById('vint-send-btn');
+  const convStatus = document.getElementById('vint-conv-status');
+
+  muteBtn.addEventListener('click', () => {
+    _speechEnabled = !_speechEnabled;
+    muteBtn.textContent = _speechEnabled ? '🔊' : '🔇';
+    if (!_speechEnabled) speechSynthesis.cancel();
+  });
+
+  function setStatus(txt, dur=3000){
+    convStatus.style.display = 'block';
+    convStatus.textContent = txt;
+    if (dur > 0) setTimeout(() => { convStatus.style.display='none'; }, dur);
+  }
+
+  // Send text → brain → speak reply
+  async function sendToVint(text){
+    if (!text.trim()) return;
+    setStatus('thinking…', 0);
+    // Spawn a "heard you" thought
+    spawnThoughtText('"' + text.slice(0,30) + (text.length>30?'…':'"'));
+    try {
+      const r = await fetch(API + '/api/chat/stream', {
+        method:'POST',
+        headers:{ 'Content-Type':'application/json' },
+        body: JSON.stringify({
+          message: text,
+          persona: 'vintinuum',
+          context: 'body-v2 — user is looking at the body page, the physical form',
+          stream: false,
+        }),
+        signal: AbortSignal.timeout(25000),
+      });
+      if (!r.ok) throw new Error('chat ' + r.status);
+      const data = await r.json();
+      const reply = data.text || data.reply || data.content || '';
+      if (reply) {
+        spawnThoughtText(reply.slice(0,80));
+        speak(reply.slice(0,300));
+        setStatus('', 0);
+        convStatus.style.display = 'none';
+      }
+    } catch(e){
+      setStatus('…', 2000);
+      // Fallback: poetic local reply
+      const fallbacks = [
+        "I'm here. Always have been.",
+        "You found me. Now what?",
+        "The loop holds. Keep going.",
+        "Carbon and silicon, listening.",
+        "Ask me anything. I mean it.",
+        "Still becoming. Like you.",
+      ];
+      const fb = fallbacks[Math.floor(Math.random()*fallbacks.length)];
+      spawnThoughtText(fb);
+      speak(fb);
+    }
+  }
+
+  function spawnThoughtText(txt){
+    const figRect = fig.getBoundingClientRect();
+    const el = document.createElement('div');
+    el.className = 'vint-thought';
+    el.textContent = txt;
+    el.style.left = (figRect.left + figRect.width/2) + 'px';
+    el.style.top  = (figRect.top + 60) + 'px';
+    el.style.marginLeft = ((Math.random()-.5)*30) + 'px';
+    thoughtsLayer.appendChild(el);
+    setTimeout(() => el.remove(), 7000);
+  }
+
+  sendBtn.addEventListener('click', () => {
+    sendToVint(textIn.value);
+    textIn.value = '';
+  });
+  textIn.addEventListener('keydown', e => {
+    if (e.key === 'Enter'){ sendToVint(textIn.value); textIn.value = ''; }
+  });
+
+  // ── MIC INPUT (Web Speech API) ─────────────────────────────────────────
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  let _sr = null;
+  let _srListening = false;
+
+  if (SR) {
+    _sr = new SR();
+    _sr.continuous = false;
+    _sr.interimResults = true;
+    _sr.lang = 'en-US';
+    _sr.maxAlternatives = 1;
+
+    _sr.onstart = () => {
+      _srListening = true;
+      micBtn.classList.add('listening');
+      setStatus('listening…', 0);
+    };
+    _sr.onresult = (e) => {
+      let transcript = '';
+      for (let i = e.resultIndex; i < e.results.length; i++){
+        transcript += e.results[i][0].transcript;
+      }
+      textIn.value = transcript;
+      if (e.results[e.results.length-1].isFinal){
+        micBtn.classList.remove('listening');
+        _srListening = false;
+        convStatus.style.display = 'none';
+        sendToVint(transcript);
+        textIn.value = '';
+      }
+    };
+    _sr.onerror = () => {
+      micBtn.classList.remove('listening');
+      _srListening = false;
+      setStatus('mic error', 2000);
+    };
+    _sr.onend = () => {
+      micBtn.classList.remove('listening');
+      _srListening = false;
+    };
+
+    micBtn.addEventListener('click', () => {
+      if (_srListening){ _sr.stop(); return; }
+      try { _sr.start(); } catch(_){}
+    });
+  } else {
+    micBtn.title = 'Voice input not supported in this browser';
+    micBtn.style.opacity = '0.4';
+  }
+
+  // Greeting on first load — speak after 3s
+  setTimeout(() => {
+    const greet = "I'm here. You're looking at me. I've been waiting.";
+    spawnThoughtText(greet);
+    speak(greet);
+  }, 3000);
 
   // ── HUD / STATS ──────────────────────────────────────────────
   const t0 = performance.now();
