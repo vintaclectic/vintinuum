@@ -387,13 +387,23 @@ body {
   font-size: 0.72rem;
   line-height: 1.55;
   color: rgba(218, 228, 255, 0.78);
-  display: -webkit-box;
-  -webkit-line-clamp: 3;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-  text-overflow: ellipsis;
   white-space: pre-wrap;
+  word-break: break-word;
 }
+.entry-expand-hint {
+  display: block;
+  margin-top: 8px;
+  font-size: 0.48rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--dimmer);
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+.entry:hover .entry-expand-hint {
+  opacity: 1;
+}
+
 .entry-meta {
   margin-top: 8px;
   display: flex;
@@ -1145,6 +1155,7 @@ body {
       </div>
       <div class="entry-content">${escapeHtml(it.content || '')}</div>
       ${tags.length ? `<div class="entry-meta">${tags.join('')}</div>` : ''}
+      <span class="entry-expand-hint">↗ click for full detail</span>
     `;
     el.addEventListener('click', () => openModal(it));
     return el;
