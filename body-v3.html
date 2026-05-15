@@ -1667,28 +1667,44 @@ function renderAudioFiles(files){
 }
 
 function loadAudioSrc(src, label){
-  const a = document.getElementById('ael');
-  if (!a) return;
+  // Tear down everything — including the old <audio> element.
+  // createMediaElementSource permanently binds an element to one AudioContext;
+  // we must create a fresh element each time or the second load throws
+  // InvalidStateError and falls through to silent playback.
+  _teardownAudio();
 
-  // Always rebuild the audio graph for the current <audio> element
-  // Reusing the old context/sourceNode after innerHTML change causes InvalidStateError
-  if (_audioState) {
-    if (_audioState.rafId) cancelAnimationFrame(_audioState.rafId);
-    _audioState.rafId = null;
-    try { _audioState.sourceNode.disconnect(); } catch(_){}
-    try { _audioState.analyser.disconnect();  } catch(_){}
-    // Keep context alive — just detach nodes
-    _audioState.sourceNode = null;
-    _audioState.analyser   = null;
+  const wrap = document.querySelector('.media-wrap');
+  if (!wrap) return;
+
+  // Replace old <audio> with a fresh one so Web Audio can capture it cleanly
+  const old = document.getElementById('ael');
+  if (old) { try { old.pause(); } catch(_){} old.remove(); }
+  const a = document.createElement('audio');
+  a.id = 'ael';
+  a.controls = true;
+  a.style.width = '100%';
+  wrap.insertBefore(a, wrap.querySelector('#apl'));
+
+  // Re-wire duration / timeupdate display if the elements exist
+  const timeCurrent = document.getElementById('au-current');
+  const timeDuration = document.getElementById('au-duration');
+  if (timeDuration) {
+    a.addEventListener('loadedmetadata', () => {
+      timeDuration.textContent = _fmtTime(a.duration);
+    });
+  }
+  if (timeCurrent) {
+    a.addEventListener('timeupdate', () => {
+      timeCurrent.textContent = _fmtTime(a.currentTime);
+    });
   }
 
   a.src = src;
   a.load();
 
   try {
-    const ctx = (_audioState && _audioState.ctx.state !== 'closed')
-      ? _audioState.ctx
-      : new (window.AudioContext || window.webkitAudioContext)();
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    if (ctx.state === 'suspended') ctx.resume();
     const source   = ctx.createMediaElementSource(a);
     const analyser = ctx.createAnalyser();
     analyser.fftSize = 256;
@@ -1697,12 +1713,18 @@ function loadAudioSrc(src, label){
     _audioState = { ctx, sourceNode: source, analyser, rafId: null };
     drawAudioViz();
   } catch(e) {
-    // Fallback: just play without visualizer
     console.warn('[audio] Web Audio setup failed:', e.message);
     _audioState = null;
   }
 
   a.play().catch(()=>{});
+}
+
+function _fmtTime(s){
+  if (!isFinite(s)) return '0:00';
+  const m = Math.floor(s / 60);
+  const sec = Math.floor(s % 60);
+  return m + ':' + (sec < 10 ? '0' : '') + sec;
 }
 
 function drawAudioViz(){
