@@ -1218,7 +1218,19 @@ const Voice = (() => {
   const bubble = document.getElementById('speech');
   const mouth  = document.getElementById('mouth');
   let speakTimer = null;
-  let hideTimer = null;
+  let hideTimer  = null;
+
+  // Shared AudioContext — created on first gesture, resumed before every play
+  let _sharedCtx = null;
+  function _getCtx() {
+    if (!_sharedCtx) _sharedCtx = new (window.AudioContext || window.webkitAudioContext)();
+    if (_sharedCtx.state === 'suspended') _sharedCtx.resume();
+    return _sharedCtx;
+  }
+  // Prime on first gesture
+  ['click','keydown','touchstart','pointerdown'].forEach(ev =>
+    document.addEventListener(ev, () => { try { _getCtx(); } catch(_){} }, { once:false, capture:true, passive:true })
+  );
 
   function showBubble(text, ms){
     bubble.textContent = text;
@@ -1239,24 +1251,30 @@ const Voice = (() => {
     showBubble(text, opts.bubbleMs || Math.max(2200, text.length * 60));
     Walker.pause(Math.max(2000, text.length * 60));
     startLip();
-    // try /api/voice/say first
+
     let played = false;
-    try{
-      const r = await fetch(API + '/api/voice/say?text=' + encodeURIComponent(text), {cache:'no-store'});
-      if (r.ok){
-        const blob = await r.blob();
-        if (blob && blob.size > 100){
-          const url = URL.createObjectURL(blob);
-          const a = new Audio(url);
-          a.onended = () => { stopLip(); URL.revokeObjectURL(url); };
-          a.onerror = () => { stopLip(); fallbackSpeak(text); };
-          try{ await a.play(); played = true; }catch(e){ played = false; }
+    try {
+      const r = await fetch(API + '/api/voice/say?text=' + encodeURIComponent(text.slice(0,400)), {cache:'no-store'});
+      if (r.ok) {
+        const arrayBuf = await r.arrayBuffer();
+        if (arrayBuf.byteLength > 100) {
+          // Decode via Web Audio API — not blocked by autoplay policy once ctx is resumed
+          const ctx    = _getCtx();
+          const decoded = await ctx.decodeAudioData(arrayBuf);
+          const source  = ctx.createBufferSource();
+          source.buffer = decoded;
+          source.connect(ctx.destination);
+          source.onended = stopLip;
+          source.start(0);
+          played = true;
+          // Sync lip duration to audio
+          clearTimeout(speakTimer);
+          speakTimer = setTimeout(stopLip, decoded.duration * 1000 + 200);
         }
       }
-    }catch(_){}
-    if (!played){
-      fallbackSpeak(text);
-    }
+    } catch(_) {}
+
+    if (!played) fallbackSpeak(text);
   }
   function fallbackSpeak(text){
     if (!window.speechSynthesis){
@@ -2156,41 +2174,101 @@ function renderTerminal() {
 }
 
 function renderDrive(){
-  Panel.open('drive', 'resume');
+  Panel.open('drive', 'google drive');
   const c = Panel.content();
-  c.innerHTML = `<div class="doc-view" id="dwrap"><pre class="l-dim">connecting to drive…</pre></div>`;
-  const wrap = document.getElementById('dwrap');
-  fetch(API + '/api/drive/find-resume', {cache:'no-store'})
-    .then(r => {
-      if (!r.ok) throw new Error('HTTP ' + r.status);
-      return r.json();
-    })
-    .then(j => {
-      wrap.innerHTML = '';
-      const url = j.webViewLink || j.viewUrl || j.url || j.previewUrl;
-      const name = j.name || j.filename || 'resume';
-      if (j.previewIframe){
-        const ifr = document.createElement('iframe');
-        ifr.src = j.previewIframe; wrap.appendChild(ifr);
-      } else if (url){
-        const ifr = document.createElement('iframe');
-        ifr.src = url; wrap.appendChild(ifr);
-      } else {
-        const pre = document.createElement('pre');
-        pre.textContent = JSON.stringify(j, null, 2);
-        wrap.appendChild(pre);
-      }
-    })
-    .catch(e => {
-      wrap.innerHTML = `
-        <pre class="l-err">drive not connected: ${e.message}
+  c.innerHTML = `
+    <div style="display:flex;flex-direction:column;gap:10px;padding:4px;">
+      <div class="url-row">
+        <input id="drv-q" type="text" placeholder="search drive… (leave blank for resume)" style="flex:1"/>
+        <button id="drv-go">search</button>
+      </div>
+      <div id="drv-results" style="overflow-y:auto;flex:1;"></div>
+    </div>`;
+  const inp  = document.getElementById('drv-q');
+  const btn  = document.getElementById('drv-go');
+  const res  = document.getElementById('drv-results');
 
-To connect Google Drive:
-  1. visit ${API}/api/drive/auth
-  2. authorize the vintinuum app
-  3. come back and click Drive again
-</pre>`;
-    });
+  function driveSearch(q) {
+    res.innerHTML = '<div style="color:#5a8aaa;font:12px monospace;padding:8px;">searching…</div>';
+    const url = q
+      ? API + '/api/drive/search?q=' + encodeURIComponent(q)
+      : API + '/api/drive/find-resume';
+    fetch(url, {cache:'no-store'})
+      .then(r => r.json())
+      .then(j => {
+        // Not connected
+        if (j.connected === false || j.found === false) {
+          res.innerHTML = `
+            <div style="padding:16px;color:#7eb8f0;font:13px/2 monospace;">
+              <div style="color:#f0a040;margin-bottom:10px;">⚠ Google Drive not connected</div>
+              <a href="${API}/api/drive/auth" target="_blank"
+                 style="display:inline-block;background:#1e3a5a;border:1px solid #00d4ff;color:#00d4ff;
+                        padding:8px 18px;border-radius:6px;text-decoration:none;font:13px monospace;">
+                Connect Google Drive →
+              </a>
+              <div style="margin-top:12px;color:#3a6a8a;font-size:11px;">
+                After authorizing, click Search again.
+              </div>
+            </div>`;
+          return;
+        }
+        // Single file result (find-resume)
+        if (j.name || j.filename) {
+          const fileUrl = j.webViewLink || j.viewUrl || j.url || j.previewUrl || j.previewIframe;
+          res.innerHTML = '';
+          if (fileUrl) {
+            const ifr = document.createElement('iframe');
+            ifr.src = fileUrl;
+            ifr.style.cssText = 'width:100%;height:400px;border:none;border-radius:6px;';
+            res.appendChild(ifr);
+          }
+          return;
+        }
+        // Array of results
+        const items = Array.isArray(j) ? j : (j.files || j.items || j.results || []);
+        if (!items.length) { res.innerHTML = '<div style="color:#5a8aaa;padding:8px;font:12px monospace;">no results</div>'; return; }
+        res.innerHTML = '';
+        items.forEach(item => {
+          const row = document.createElement('div');
+          row.className = 'item';
+          row.style.cssText = 'display:flex;align-items:center;gap:10px;padding:8px 10px;cursor:pointer;border-radius:6px;margin-bottom:2px;';
+          const ext  = (item.name || '').split('.').pop().toLowerCase();
+          const icon = ['mp4','webm','mov','avi'].includes(ext) ? '🎬'
+                     : ['mp3','wav','flac','ogg','aac'].includes(ext) ? '🎵'
+                     : ['pdf','doc','docx'].includes(ext) ? '📄'
+                     : ['epub'].includes(ext) ? '📚'
+                     : ['jpg','jpeg','png','gif','webp'].includes(ext) ? '🖼'
+                     : '📁';
+          row.innerHTML = `<span style="font-size:16px;">${icon}</span>
+            <span style="flex:1;color:#c0d8f0;font:13px monospace;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${item.name||item.filename||'untitled'}</span>
+            <span style="color:#3a6a8a;font:11px monospace;">${item.mimeType?.split('/').pop()||''}</span>`;
+          row.addEventListener('mouseenter', () => row.style.background = 'rgba(0,212,255,0.07)');
+          row.addEventListener('mouseleave', () => row.style.background = '');
+          row.onclick = () => {
+            const fileUrl = item.webViewLink || item.viewUrl || item.url || item.previewUrl;
+            if (fileUrl) {
+              const ifr = document.createElement('iframe');
+              ifr.src = fileUrl;
+              ifr.style.cssText = 'width:100%;height:380px;border:none;border-radius:6px;margin-top:8px;';
+              res.innerHTML = '';
+              res.appendChild(ifr);
+            }
+          };
+          res.appendChild(row);
+        });
+      })
+      .catch(() => {
+        res.innerHTML = `<div style="padding:12px;color:#f04060;font:12px monospace;">
+          Could not reach drive — check brain connection.<br/>
+          <a href="${API}/api/drive/auth" target="_blank" style="color:#00d4ff;">Connect Drive →</a>
+        </div>`;
+      });
+  }
+
+  btn.onclick = () => driveSearch(inp.value.trim());
+  inp.onkeydown = e => { if (e.key === 'Enter') btn.click(); };
+  // Auto-search resume on open
+  driveSearch('');
 }
 
 const MODES = {
