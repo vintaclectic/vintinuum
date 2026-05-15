@@ -360,7 +360,7 @@
           else { btn.setAttribute('data-witnessed', '1'); btn.textContent = 'witnessed today'; }
         } else {
           // Direct fallback POST
-          fetch(api('/api/jarvis/today/0/witness'), { method: 'POST', credentials: 'include' })
+          fetch(api('/api/jarvis/today/1/witness'), { method: 'POST', credentials: 'include' })
             .then(function () { btn.setAttribute('data-witnessed', '1'); btn.textContent = 'witnessed today'; })
             .catch(function () {});
         }

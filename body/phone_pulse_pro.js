@@ -4,7 +4,7 @@
 // Idempotently injects, after DOMContentLoaded, into #viewPulse:
 //
 //   1. .pp-status-line   — online dot + queued-pulse count (reads localStorage)
-//   2. .pp-jarvis-glance — felt-quality from /api/jarvis/today/0
+//   2. .pp-jarvis-glance — felt-quality from /api/jarvis/today/1
 //   3. .pp-body-mirror   — live 4-arc neurochemistry from /api/body-state
 //   4. .pp-day-strip     — today's pulses as horizontal scroll thumbs
 //   5. .pp-ext-whisper   — latest browser-extension capture (jade dashed pill)
@@ -106,7 +106,7 @@
     host.insertBefore(g, host.children[1] || null);
 
     function refresh() {
-      fetch(api('/api/jarvis/today/0'), { headers: authHeaders(), credentials: 'include', cache: 'no-store' })
+      fetch(api('/api/jarvis/today/1'), { headers: authHeaders(), credentials: 'include', cache: 'no-store' })
         .then(function (r) { return r.ok ? r.json() : null; })
         .then(function (d) {
           if (!d) return;
