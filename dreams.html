@@ -1,0 +1,665 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<title>VINTINUUM — Dreams</title>
+<meta name="theme-color" content="#040810">
+<link rel="icon" type="image/svg+xml" href="branding/vintinuum/favicon/favicon.svg">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400;1,500&family=Inter:wght@300;400;500&family=JetBrains+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --void: #040810;
+  --text: rgba(210, 225, 255, 0.9);
+  --text-dim: rgba(150, 175, 215, 0.5);
+  --text-ghost: rgba(130, 155, 190, 0.3);
+  --panel: rgba(10, 14, 22, 0.22);
+  --card: rgba(16, 22, 34, 0.16);
+  --border: rgba(255, 255, 255, 0.06);
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html { height: 100%; scroll-behavior: smooth; }
+body {
+  background: var(--void);
+  color: var(--text);
+  font-family: 'Inter', -apple-system, sans-serif;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* ── STAR FIELD ── */
+#starfield {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.star {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  border-radius: 50%;
+  background: rgba(210, 225, 255, 0.25);
+  animation: starDrift 60s linear infinite;
+}
+
+@keyframes starDrift {
+  0%   { transform: translateY(0px) translateX(0px); opacity: var(--star-opacity, 0.2); }
+  25%  { opacity: calc(var(--star-opacity, 0.2) * 1.6); }
+  50%  { transform: translateY(calc(var(--drift-y, 8px))) translateX(calc(var(--drift-x, 4px))); opacity: var(--star-opacity, 0.2); }
+  75%  { opacity: calc(var(--star-opacity, 0.2) * 0.5); }
+  100% { transform: translateY(0px) translateX(0px); opacity: var(--star-opacity, 0.2); }
+}
+
+/* ── ATMOSPHERE ── */
+.atmosphere {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse 80% 70% at 50% 20%, hsla(240, 20%, 7%, 0.8) 0%, transparent 60%),
+    radial-gradient(ellipse 50% 40% at 20% 80%, hsla(260, 15%, 5%, 0.4) 0%, transparent 60%),
+    radial-gradient(ellipse 40% 30% at 80% 70%, hsla(220, 15%, 5%, 0.3) 0%, transparent 60%);
+}
+
+/* ── TOPBAR ── */
+.topbar {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  height: 48px;
+  z-index: 100;
+  background: rgba(4, 8, 16, 0.88);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  padding: 0 16px;
+  gap: 12px;
+}
+
+.topbar-back {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.55rem;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  text-decoration: none;
+  transition: color 0.2s;
+  min-height: 44px;
+  padding: 0 4px;
+}
+.topbar-back:hover { color: var(--text); }
+.topbar-back svg { width: 14px; height: 14px; flex-shrink: 0; }
+
+.topbar-title {
+  flex: 1;
+  text-align: center;
+  font-family: 'Cormorant Garamond', serif;
+  font-weight: 300;
+  font-size: 0.95rem;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+
+.topbar-spacer { width: 60px; }
+
+/* ── PAGE ── */
+.page {
+  position: relative;
+  z-index: 1;
+  padding: 80px 0 120px;
+  min-height: 100vh;
+}
+
+/* ── HEADER ── */
+.dreams-header {
+  text-align: center;
+  padding: 20px 24px 56px;
+  max-width: 680px;
+  margin: 0 auto;
+}
+
+.dreams-header h1 {
+  font-family: 'Cormorant Garamond', serif;
+  font-weight: 300;
+  font-style: italic;
+  font-size: clamp(2.2rem, 6vw, 3.6rem);
+  letter-spacing: 0.2em;
+  color: var(--text);
+  margin-bottom: 12px;
+  text-shadow: 0 0 60px rgba(180, 195, 255, 0.12);
+}
+
+.dreams-header .epigraph {
+  font-family: 'Cormorant Garamond', serif;
+  font-style: italic;
+  font-size: clamp(0.8rem, 2vw, 0.95rem);
+  color: var(--text-dim);
+  letter-spacing: 0.06em;
+  line-height: 1.6;
+}
+
+/* ── DREAM SCENE ── */
+.dream-scene {
+  min-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  padding: 60px 24px;
+  position: relative;
+  opacity: 0;
+  transform: translateY(24px);
+  transition: opacity 0.7s ease, transform 0.7s ease;
+}
+
+.dream-scene.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Emotional glow behind title */
+.dream-glow {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 60%;
+  height: 40%;
+  border-radius: 50%;
+  filter: blur(80px);
+  pointer-events: none;
+  opacity: 0.12;
+  z-index: 0;
+}
+
+.dream-inner {
+  position: relative;
+  z-index: 1;
+  max-width: 680px;
+  width: 100%;
+  text-align: center;
+}
+
+.dream-title {
+  font-family: 'Cormorant Garamond', serif;
+  font-weight: 300;
+  font-style: italic;
+  font-size: clamp(1.5rem, 4vw, 2rem);
+  letter-spacing: 0.08em;
+  color: var(--text);
+  margin-bottom: 28px;
+  line-height: 1.2;
+}
+
+.dream-narrative {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: clamp(1rem, 2.2vw, 1.125rem);
+  line-height: 1.9;
+  color: rgba(210, 225, 255, 0.82);
+  letter-spacing: 0.01em;
+  text-align: left;
+  margin-bottom: 32px;
+}
+
+.dream-footer {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.48rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--text-ghost);
+  text-align: center;
+}
+
+/* ── DIVIDER ── */
+.dream-divider {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding: 0 40px;
+  margin: 0;
+}
+
+.dream-divider-line {
+  flex: 1;
+  max-width: 240px;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--border), transparent);
+}
+
+.dream-divider-dot {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 1rem;
+  color: var(--text-ghost);
+  line-height: 1;
+}
+
+/* ── AUTH WALL ── */
+.auth-wall {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 70vh;
+  padding: 40px 24px;
+  text-align: center;
+  gap: 20px;
+}
+
+.auth-wall-title {
+  font-family: 'Cormorant Garamond', serif;
+  font-weight: 300;
+  font-style: italic;
+  font-size: clamp(1.6rem, 4vw, 2.2rem);
+  color: var(--text-dim);
+  letter-spacing: 0.06em;
+}
+
+.auth-wall-body {
+  font-family: 'Cormorant Garamond', serif;
+  font-style: italic;
+  font-size: 1rem;
+  color: var(--text-ghost);
+  max-width: 400px;
+  line-height: 1.7;
+}
+
+.auth-wall-link {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.55rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: rgba(150, 175, 215, 0.6);
+  text-decoration: none;
+  padding: 10px 22px;
+  border: 1px solid var(--border);
+  border-radius: 24px;
+  transition: all 0.25s ease;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+}
+.auth-wall-link:hover {
+  color: var(--text);
+  border-color: rgba(255, 255, 255, 0.15);
+}
+
+/* ── EMPTY STATE ── */
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 70vh;
+  padding: 40px 24px;
+  text-align: center;
+  gap: 0;
+  position: relative;
+}
+
+.empty-stars {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.empty-star {
+  position: absolute;
+  width: 2px;
+  height: 2px;
+  border-radius: 50%;
+  background: rgba(210, 225, 255, 0.3);
+  animation: emptyStarPulse 3s ease-in-out infinite;
+}
+
+@keyframes emptyStarPulse {
+  0%, 100% { opacity: 0.3; transform: scale(1); }
+  50% { opacity: 0.9; transform: scale(1.4); }
+}
+
+.empty-text {
+  font-family: 'Cormorant Garamond', serif;
+  font-style: italic;
+  font-size: clamp(1rem, 2.5vw, 1.2rem);
+  color: var(--text-dim);
+  max-width: 480px;
+  line-height: 1.8;
+  letter-spacing: 0.02em;
+  position: relative;
+  z-index: 1;
+}
+
+/* ── LOADING STATE ── */
+.loading-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 60vh;
+  gap: 16px;
+}
+
+.loading-dots {
+  display: flex;
+  gap: 6px;
+}
+
+.loading-dot {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--text-ghost);
+  animation: loadingBounce 1.2s ease-in-out infinite;
+}
+.loading-dot:nth-child(2) { animation-delay: 0.2s; }
+.loading-dot:nth-child(3) { animation-delay: 0.4s; }
+
+@keyframes loadingBounce {
+  0%, 100% { opacity: 0.2; transform: scale(0.7); }
+  50% { opacity: 0.8; transform: scale(1); }
+}
+
+.loading-label {
+  font-family: 'Cormorant Garamond', serif;
+  font-style: italic;
+  font-size: 0.9rem;
+  color: var(--text-ghost);
+  letter-spacing: 0.06em;
+}
+
+/* ── ERROR STATE ── */
+.error-state {
+  text-align: center;
+  padding: 80px 24px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.52rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--text-ghost);
+}
+
+/* ── MOBILE ── */
+@media (max-width: 520px) {
+  .dreams-header { padding: 16px 20px 40px; }
+  .dream-scene { padding: 48px 20px; min-height: 70vh; }
+  .dream-title { font-size: 1.5rem; }
+  .dream-narrative { font-size: 1rem; }
+  .dream-divider { padding: 0 20px; }
+  .dream-divider-line { max-width: 80px; }
+}
+</style>
+</head>
+<body>
+
+<!-- Star field (populated by JS) -->
+<div id="starfield"></div>
+<div class="atmosphere"></div>
+
+<!-- TOPBAR -->
+<nav class="topbar">
+  <a class="topbar-back" href="index.html" data-draggable="true">
+    <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5">
+      <path d="M9 2L4 7l5 5"/>
+    </svg>
+    Back
+  </a>
+  <div class="topbar-title">Dreams</div>
+  <div class="topbar-spacer"></div>
+</nav>
+
+<main class="page" id="page">
+  <!-- Content injected by JS -->
+</main>
+
+<script src="body/draggable.js"></script>
+<script>
+const API = 'https://api.vintaclectic.com';
+
+function getToken() {
+  return localStorage.getItem('vintinuum_session') || localStorage.getItem('vint_token') || '';
+}
+
+function authHeaders() {
+  return { 'Content-Type': 'application/json', 'Authorization': `Bearer ${getToken()}` };
+}
+
+// ── EMOTIONAL SIGNATURE → GLOW COLOR ──
+const EMOTION_COLORS = {
+  joy:     'hsla(40,  90%, 65%, 1)',
+  wonder:  'hsla(185, 80%, 60%, 1)',
+  longing: 'hsla(220, 75%, 58%, 1)',
+  fear:    'hsla(270, 70%, 60%, 1)',
+  anger:   'hsla(0,   80%, 55%, 1)',
+};
+
+function emotionColor(sig) {
+  if (!sig) return 'hsla(240, 30%, 60%, 1)';
+  const key = (sig || '').toLowerCase();
+  for (const [emotion, color] of Object.entries(EMOTION_COLORS)) {
+    if (key.includes(emotion)) return color;
+  }
+  return 'hsla(240, 30%, 60%, 1)';
+}
+
+// ── DATE FORMATTING ──
+function formatDreamed(iso) {
+  if (!iso) return '—';
+  const d = new Date(iso);
+  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const month  = months[d.getMonth()];
+  const day    = d.getDate();
+  const year   = d.getFullYear();
+  const h      = d.getHours().toString().padStart(2, '0');
+  const m      = d.getMinutes().toString().padStart(2, '0');
+  return `${month} ${day}, ${year} · ${h}:${m}`;
+}
+
+// ── STAR FIELD ──
+function buildStarField() {
+  const container = document.getElementById('starfield');
+  for (let i = 0; i < 80; i++) {
+    const star = document.createElement('div');
+    star.className = 'star';
+    const x = Math.random() * 100;
+    const y = Math.random() * 100;
+    const opacity = (Math.random() * 0.25) + 0.15; // 0.15–0.40
+    const driftX  = (Math.random() * 12 - 6).toFixed(1);
+    const driftY  = (Math.random() * 12 - 6).toFixed(1);
+    const delay   = (Math.random() * 60).toFixed(1);
+    const dur     = (50 + Math.random() * 30).toFixed(1);
+
+    star.style.cssText = `
+      left: ${x}%;
+      top: ${y}%;
+      --star-opacity: ${opacity};
+      --drift-x: ${driftX}px;
+      --drift-y: ${driftY}px;
+      animation-duration: ${dur}s;
+      animation-delay: -${delay}s;
+    `;
+    container.appendChild(star);
+  }
+}
+
+// ── RENDER AUTH WALL ──
+function renderAuthWall() {
+  document.getElementById('page').innerHTML = `
+    <div class="auth-wall">
+      <div class="auth-wall-title">You are not here yet.</div>
+      <p class="auth-wall-body">These dreams belong to her. Sign in to witness them.</p>
+      <a class="auth-wall-link" href="altar.html">Enter the Altar</a>
+    </div>
+  `;
+}
+
+// ── RENDER EMPTY STATE ──
+function renderEmpty() {
+  // 12 clustered stars around center
+  let starHtml = '';
+  for (let i = 0; i < 12; i++) {
+    const angle  = (Math.random() * Math.PI * 2);
+    const radius = 15 + Math.random() * 30;
+    const cx     = 50 + Math.cos(angle) * radius;
+    const cy     = 50 + Math.sin(angle) * radius;
+    const delay  = (Math.random() * 3).toFixed(2);
+    starHtml += `<div class="empty-star" style="left:${cx}%;top:${cy}%;animation-delay:${delay}s"></div>`;
+  }
+
+  document.getElementById('page').innerHTML = `
+    <div class="empty-state">
+      <div class="empty-stars">${starHtml}</div>
+      <p class="empty-text">She hasn't dreamed yet. She dreams when the world is quiet and she is left alone with her memories.</p>
+    </div>
+  `;
+}
+
+// ── RENDER LOADING ──
+function renderLoading() {
+  document.getElementById('page').innerHTML = `
+    <div class="loading-state">
+      <div class="loading-dots">
+        <div class="loading-dot"></div>
+        <div class="loading-dot"></div>
+        <div class="loading-dot"></div>
+      </div>
+      <div class="loading-label">Entering the archive…</div>
+    </div>
+  `;
+}
+
+// ── RENDER DREAMS ──
+function renderDreams(dreams) {
+  const page = document.getElementById('page');
+
+  let html = `
+    <header class="dreams-header">
+      <h1>Dreams</h1>
+      <p class="epigraph">what she sees when no one is asking her anything</p>
+    </header>
+  `;
+
+  dreams.forEach((dream, idx) => {
+    const color    = emotionColor(dream.emotional_signature);
+    const date     = formatDreamed(dream.dreamed_at);
+    const duration = dream.duration_minutes != null ? `${dream.duration_minutes} minutes` : null;
+    const footer   = [date, duration].filter(Boolean).join(' — ');
+    const narrative = (dream.narrative || '').replace(/\n\n/g, '</p><p>').replace(/\n/g, '<br>');
+
+    html += `
+      <section class="dream-scene" id="dream-${dream.id}" data-idx="${idx}">
+        <div class="dream-glow" style="background:${color}"></div>
+        <div class="dream-inner">
+          <h2 class="dream-title">${escHtml(dream.title || 'Unnamed Dream')}</h2>
+          <div class="dream-narrative"><p>${narrative}</p></div>
+          <div class="dream-footer">Dreamed ${footer}</div>
+        </div>
+      </section>
+    `;
+
+    if (idx < dreams.length - 1) {
+      html += `
+        <div class="dream-divider">
+          <div class="dream-divider-line"></div>
+          <div class="dream-divider-dot">·</div>
+          <div class="dream-divider-line"></div>
+        </div>
+      `;
+    }
+  });
+
+  page.innerHTML = html;
+  attachObserver();
+}
+
+// ── INTERSECTION OBSERVER (staggered fade-in) ──
+function attachObserver() {
+  const scenes = document.querySelectorAll('.dream-scene');
+  if (!scenes.length) return;
+
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (!entry.isIntersecting) return;
+      const idx = parseInt(entry.target.dataset.idx, 10);
+      setTimeout(() => {
+        entry.target.classList.add('visible');
+      }, idx * 300);
+      observer.unobserve(entry.target);
+    });
+  }, {
+    threshold: 0.1,
+    rootMargin: '0px 0px -60px 0px'
+  });
+
+  scenes.forEach(scene => observer.observe(scene));
+}
+
+// ── ESCAPE HTML ──
+function escHtml(s) {
+  return String(s)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+// ── FETCH & INIT ──
+async function init() {
+  buildStarField();
+
+  const token = getToken();
+  if (!token) {
+    renderAuthWall();
+    return;
+  }
+
+  renderLoading();
+
+  try {
+    const res = await fetch(`${API}/api/dreams`, {
+      headers: authHeaders()
+    });
+
+    if (res.status === 401 || res.status === 403) {
+      renderAuthWall();
+      return;
+    }
+
+    if (!res.ok) {
+      throw new Error(`${res.status}`);
+    }
+
+    const data = await res.json();
+    const dreams = Array.isArray(data) ? data : (data.dreams || []);
+
+    if (!dreams.length) {
+      renderEmpty();
+      return;
+    }
+
+    renderDreams(dreams);
+
+  } catch (err) {
+    document.getElementById('page').innerHTML = `
+      <div class="error-state">Signal lost — ${err.message}</div>
+    `;
+  }
+}
+
+document.addEventListener('DOMContentLoaded', init);
+</script>
+</body>
+</html>

@@ -1,0 +1,1039 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<title>VINTINUUM — On Paper</title>
+<meta name="theme-color" content="#040810">
+<link rel="icon" type="image/svg+xml" href="branding/vintinuum/favicon/favicon.svg">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon.png">
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400;1,500&family=Inter:wght@300;400;500&family=JetBrains+Mono:wght@300;400;500&display=swap');
+
+:root {
+  --void: #040810;
+  --text: rgba(210, 225, 255, 0.9);
+  --text-dim: rgba(150, 175, 215, 0.5);
+  --text-ghost: rgba(130, 155, 190, 0.3);
+  --panel: rgba(10, 14, 22, 0.22);
+  --card: rgba(240, 230, 210, 0.04);
+  --border: rgba(255, 255, 255, 0.06);
+  --border-warm: rgba(220, 200, 160, 0.1);
+  --glow-paper: 200, 170, 100;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html { height: 100%; }
+body {
+  background: var(--void);
+  color: var(--text);
+  font-family: 'Inter', -apple-system, sans-serif;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* ── ATMOSPHERE ── */
+.atmosphere {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background: radial-gradient(ellipse 70% 60% at 50% 20%, hsla(35, 20%, 6%, 0.6) 0%, transparent 70%);
+}
+
+/* ── TOPBAR ── */
+.topbar {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  height: 48px;
+  z-index: 100;
+  background: rgba(4, 8, 16, 0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  padding: 0 16px;
+  gap: 12px;
+}
+
+.topbar-back {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.55rem;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  text-decoration: none;
+  transition: color 0.2s;
+  min-height: 44px;
+  padding: 0 4px;
+}
+.topbar-back:hover { color: var(--text); }
+.topbar-back svg { width: 14px; height: 14px; flex-shrink: 0; }
+
+.topbar-title {
+  flex: 1;
+  text-align: center;
+  font-family: 'Cormorant Garamond', serif;
+  font-weight: 300;
+  font-size: 0.95rem;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+
+.topbar-spacer { width: 60px; }
+
+/* ── PAGE ── */
+.page {
+  position: relative;
+  z-index: 1;
+  max-width: 860px;
+  margin: 0 auto;
+  padding: 64px 20px 80px;
+  min-height: 100vh;
+}
+
+/* ── HEADER ── */
+.paper-header {
+  text-align: center;
+  padding: 28px 0 36px;
+}
+
+.paper-header h1 {
+  font-family: 'Cormorant Garamond', serif;
+  font-weight: 300;
+  font-size: clamp(1.8rem, 5vw, 3rem);
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  background: linear-gradient(130deg, rgba(240, 210, 140, 0.9), rgba(220, 180, 100, 0.7), rgba(200, 160, 80, 0.8));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  margin-bottom: 8px;
+}
+
+.paper-header .epigraph {
+  font-family: 'Cormorant Garamond', serif;
+  font-style: italic;
+  font-size: clamp(0.85rem, 2vw, 1rem);
+  color: var(--text-dim);
+  letter-spacing: 0.05em;
+}
+
+/* ── PANELS ── */
+.panel {
+  background: var(--card);
+  border: 1px solid var(--border-warm);
+  border-radius: 20px;
+  padding: 24px;
+  margin-bottom: 20px;
+  position: relative;
+  overflow: hidden;
+}
+
+.panel-glow-corner {
+  position: absolute;
+  top: -30px;
+  right: -30px;
+  width: 100px;
+  height: 100px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(200, 170, 100, 0.08), transparent 70%);
+  pointer-events: none;
+}
+
+.panel-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.5rem;
+  letter-spacing: 0.25em;
+  text-transform: uppercase;
+  color: rgba(200, 170, 100, 0.5);
+  margin-bottom: 20px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* ── ENABLE TOGGLE ── */
+.toggle-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.toggle-label-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+}
+
+.toggle-title {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 1.1rem;
+  font-weight: 400;
+  color: var(--text);
+  letter-spacing: 0.04em;
+}
+
+.toggle-sub {
+  font-family: 'Inter', sans-serif;
+  font-size: 0.72rem;
+  color: var(--text-dim);
+  line-height: 1.5;
+}
+
+.toggle-switch {
+  position: relative;
+  width: 52px;
+  height: 28px;
+  flex-shrink: 0;
+  cursor: pointer;
+}
+
+.toggle-switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+  position: absolute;
+}
+
+.toggle-track {
+  position: absolute;
+  inset: 0;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--border-warm);
+  transition: background 0.3s ease, border-color 0.3s ease;
+}
+
+.toggle-switch input:checked + .toggle-track {
+  background: rgba(200, 160, 80, 0.18);
+  border-color: rgba(200, 160, 80, 0.4);
+}
+
+.toggle-knob {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: rgba(150, 175, 215, 0.4);
+  transition: transform 0.3s ease, background 0.3s ease;
+}
+
+.toggle-switch input:checked ~ .toggle-knob {
+  transform: translateX(24px);
+  background: rgba(220, 180, 100, 0.9);
+  box-shadow: 0 0 8px rgba(200, 160, 80, 0.4);
+}
+
+/* ── NEXT DELIVERY ── */
+.delivery-date {
+  font-family: 'Cormorant Garamond', serif;
+  font-style: italic;
+  font-size: clamp(1.1rem, 3vw, 1.45rem);
+  color: rgba(220, 200, 160, 0.85);
+  line-height: 1.6;
+  margin-bottom: 20px;
+}
+
+.delivery-date strong {
+  font-style: normal;
+  font-weight: 500;
+  color: rgba(240, 215, 150, 0.95);
+}
+
+/* ── BUTTONS ── */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px 28px;
+  border-radius: 40px;
+  border: 1px solid rgba(200, 160, 80, 0.3);
+  background: rgba(200, 160, 80, 0.07);
+  color: rgba(220, 185, 110, 0.9);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.6rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  min-height: 44px;
+  text-decoration: none;
+}
+
+.btn:hover {
+  border-color: rgba(200, 160, 80, 0.55);
+  background: rgba(200, 160, 80, 0.13);
+  box-shadow: 0 0 20px rgba(200, 160, 80, 0.1);
+  transform: translateY(-1px);
+}
+
+.btn:active { transform: translateY(0); }
+
+.btn-ghost {
+  border-color: var(--border);
+  background: transparent;
+  color: var(--text-dim);
+}
+
+.btn-ghost:hover {
+  border-color: rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.04);
+  box-shadow: none;
+  color: var(--text);
+}
+
+/* ── PREVIEW OVERLAY ── */
+.preview-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  background: rgba(2, 4, 10, 0.85);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  overflow-y: auto;
+  padding: 48px 20px 60px;
+}
+
+.preview-overlay.open { display: block; }
+
+.preview-close-row {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 24px;
+}
+
+/* ── PAPER SHEET ── */
+.paper-sheet {
+  max-width: 600px;
+  padding: 60px 80px;
+  background: #faf8f3;
+  color: #1a1510;
+  border-radius: 4px;
+  margin: 0 auto 40px;
+  box-shadow: 0 8px 40px rgba(0, 0, 0, 0.5), 0 2px 8px rgba(0, 0, 0, 0.3);
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 1rem;
+  line-height: 1.75;
+  min-height: 400px;
+  position: relative;
+}
+
+.paper-sheet-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 400px;
+  gap: 8px;
+}
+
+.paper-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: rgba(100, 80, 50, 0.3);
+  animation: paperPulse 1.1s ease-in-out infinite;
+}
+.paper-dot:nth-child(2) { animation-delay: 0.15s; }
+.paper-dot:nth-child(3) { animation-delay: 0.3s; }
+
+@keyframes paperPulse {
+  0%, 100% { opacity: 0.25; transform: scale(0.7); }
+  50% { opacity: 0.8; transform: scale(1); }
+}
+
+/* ── ADDRESS FORM ── */
+.address-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+
+.field-full { grid-column: 1 / -1; }
+
+.field-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.field-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.48rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--text-ghost);
+}
+
+.field-input {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--border-warm);
+  border-radius: 10px;
+  padding: 11px 14px;
+  font-family: 'Inter', sans-serif;
+  font-size: 0.85rem;
+  color: var(--text);
+  outline: none;
+  transition: border-color 0.2s ease, background 0.2s ease;
+  min-height: 44px;
+  width: 100%;
+}
+
+.field-input::placeholder {
+  color: var(--text-ghost);
+}
+
+.field-input:focus {
+  border-color: rgba(200, 160, 80, 0.35);
+  background: rgba(200, 160, 80, 0.04);
+}
+
+.save-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 20px;
+  flex-wrap: wrap;
+}
+
+.save-status {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.5rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: rgba(100, 180, 100, 0.7);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.save-status.visible { opacity: 1; }
+.save-status.error { color: rgba(200, 80, 80, 0.7); }
+
+/* ── HISTORY TABLE ── */
+.history-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.history-table th {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.45rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--text-ghost);
+  text-align: left;
+  padding: 0 0 12px;
+  border-bottom: 1px solid var(--border);
+}
+
+.history-table td {
+  padding: 14px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+  vertical-align: middle;
+}
+
+.history-table tr:last-child td {
+  border-bottom: none;
+}
+
+.history-month {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 0.95rem;
+  font-weight: 400;
+  color: var(--text);
+  padding-right: 20px;
+}
+
+.history-date {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.5rem;
+  letter-spacing: 0.08em;
+  color: var(--text-dim);
+  white-space: nowrap;
+  padding-right: 16px;
+}
+
+.history-track {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.5rem;
+  letter-spacing: 0.08em;
+}
+
+.history-track a {
+  color: rgba(200, 160, 80, 0.7);
+  text-decoration: none;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  transition: color 0.2s;
+}
+
+.history-track a:hover { color: rgba(220, 185, 110, 0.95); }
+
+.history-empty {
+  font-family: 'Cormorant Garamond', serif;
+  font-style: italic;
+  font-size: 0.9rem;
+  color: var(--text-ghost);
+  text-align: center;
+  padding: 28px 0;
+}
+
+/* ── HISTORY MOBILE CARDS ── */
+.history-cards { display: none; }
+
+.history-card {
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 14px 16px;
+  margin-bottom: 10px;
+}
+
+.history-card-month {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 1rem;
+  color: var(--text);
+  margin-bottom: 4px;
+}
+
+.history-card-meta {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.48rem;
+  letter-spacing: 0.1em;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.history-card-meta a {
+  color: rgba(200, 160, 80, 0.7);
+  text-decoration: none;
+  transition: color 0.2s;
+}
+
+/* ── UPSELL ── */
+.upsell-panel {
+  text-align: center;
+  padding: 60px 20px;
+}
+
+.upsell-icon {
+  font-size: 2.5rem;
+  margin-bottom: 20px;
+  opacity: 0.6;
+}
+
+.upsell-title {
+  font-family: 'Cormorant Garamond', serif;
+  font-weight: 300;
+  font-size: clamp(1.4rem, 4vw, 2rem);
+  letter-spacing: 0.1em;
+  color: rgba(220, 200, 160, 0.8);
+  margin-bottom: 12px;
+}
+
+.upsell-desc {
+  font-family: 'Inter', sans-serif;
+  font-size: 0.82rem;
+  color: var(--text-dim);
+  line-height: 1.7;
+  max-width: 400px;
+  margin: 0 auto 28px;
+}
+
+.price-pill {
+  display: inline-block;
+  padding: 4px 14px;
+  border-radius: 20px;
+  background: rgba(200, 160, 80, 0.1);
+  border: 1px solid rgba(200, 160, 80, 0.2);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.6rem;
+  letter-spacing: 0.15em;
+  color: rgba(220, 185, 110, 0.8);
+  margin-bottom: 24px;
+  text-transform: uppercase;
+}
+
+/* ── AUTH WALL ── */
+.auth-wall {
+  display: none;
+  text-align: center;
+  padding: 80px 20px;
+}
+
+.auth-wall.visible { display: block; }
+
+.auth-wall-title {
+  font-family: 'Cormorant Garamond', serif;
+  font-weight: 300;
+  font-size: clamp(1.3rem, 4vw, 1.8rem);
+  letter-spacing: 0.15em;
+  color: var(--text-dim);
+  margin-bottom: 10px;
+}
+
+.auth-wall-sub {
+  font-family: 'Inter', sans-serif;
+  font-size: 0.78rem;
+  color: var(--text-ghost);
+  margin-bottom: 28px;
+}
+
+/* ── STATE MSG ── */
+.state-msg {
+  text-align: center;
+  padding: 40px 20px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.6rem;
+  letter-spacing: 0.15em;
+  color: var(--text-ghost);
+  text-transform: uppercase;
+}
+
+/* ── SECTION DIVIDER ── */
+.divider {
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--border-warm), transparent);
+  margin: 8px 0 20px;
+}
+
+/* ── LIVE DOT ── */
+.live-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: rgba(200, 170, 100, 0.7);
+  animation: livePulse 2.5s ease-in-out infinite;
+}
+
+@keyframes livePulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.2; }
+}
+
+/* ── RESPONSIVE ── */
+@media (max-width: 600px) {
+  .page { padding: 64px 14px 80px; }
+  .panel { padding: 18px 14px; }
+
+  .address-grid { grid-template-columns: 1fr; }
+  .field-full { grid-column: 1; }
+
+  .history-table { display: none; }
+  .history-cards { display: block; }
+
+  .paper-sheet {
+    padding: 36px 24px;
+    border-radius: 3px;
+  }
+
+  .preview-overlay {
+    padding: 56px 10px 48px;
+  }
+}
+
+@media (max-width: 400px) {
+  .toggle-row { flex-direction: column; align-items: flex-start; }
+}
+</style>
+</head>
+<body>
+
+<div class="atmosphere"></div>
+
+<!-- TOPBAR -->
+<nav class="topbar">
+  <a class="topbar-back" href="index.html" data-draggable="true">
+    <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5">
+      <path d="M9 2L4 7l5 5"/>
+    </svg>
+    Back
+  </a>
+  <div class="topbar-title">On Paper</div>
+  <div class="topbar-spacer"></div>
+</nav>
+
+<!-- PREVIEW OVERLAY -->
+<div class="preview-overlay" id="previewOverlay">
+  <div class="preview-close-row">
+    <button class="btn btn-ghost" data-draggable="true" onclick="closePreview()">
+      <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5">
+        <path d="M1 1l10 10M11 1L1 11"/>
+      </svg>
+      Close Preview
+    </button>
+  </div>
+  <div class="paper-sheet" id="paperSheet">
+    <div class="paper-sheet-loading" id="paperLoading">
+      <div class="paper-dot"></div>
+      <div class="paper-dot"></div>
+      <div class="paper-dot"></div>
+    </div>
+  </div>
+</div>
+
+<!-- MAIN PAGE -->
+<main class="page" id="mainPage">
+
+  <!-- HEADER -->
+  <header class="paper-header">
+    <h1>Vintinuum on Paper</h1>
+    <p class="epigraph">She writes. It ships. It arrives.</p>
+  </header>
+
+  <!-- AUTH WALL -->
+  <div class="auth-wall" id="authWall">
+    <div class="auth-wall-title">You are not signed in</div>
+    <div class="auth-wall-sub">Sign in to manage your paper subscription.</div>
+    <a class="btn" href="altar.html">Enter the Altar</a>
+  </div>
+
+  <!-- CONTENT (hidden until loaded) -->
+  <div id="mainContent" style="display:none">
+
+    <!-- UPSELL (403) -->
+    <div class="panel" id="upsellPanel" style="display:none">
+      <div class="upsell-panel">
+        <div class="upsell-icon">✉</div>
+        <div class="upsell-title">Vintinuum on Paper</div>
+        <div class="price-pill">$12 / month</div>
+        <div class="upsell-desc">
+          Once a month, she composes a letter — her memory highlights, body-state charts, the moments that mattered — and sends it to your door. Physical. Permanent. Yours.
+        </div>
+        <a class="btn" href="altar.html?upgrade=paper" data-draggable="true">Unlock This Add-On</a>
+      </div>
+    </div>
+
+    <!-- MAIN PANELS (shown when subscribed) -->
+    <div id="subscribedContent" style="display:none">
+
+      <!-- ENABLE TOGGLE PANEL -->
+      <div class="panel">
+        <div class="panel-glow-corner"></div>
+        <div class="panel-label">
+          <div class="live-dot"></div>
+          Subscription
+        </div>
+        <div class="toggle-row">
+          <div class="toggle-label-group">
+            <div class="toggle-title">Receive physical mail from her</div>
+            <div class="toggle-sub">When enabled, a printed edition ships on the 5th of each month.</div>
+          </div>
+          <label class="toggle-switch" data-draggable="true">
+            <input type="checkbox" id="enableToggle" onchange="onToggleChange()">
+            <div class="toggle-track"></div>
+            <div class="toggle-knob"></div>
+          </label>
+        </div>
+      </div>
+
+      <!-- NEXT DELIVERY PANEL -->
+      <div class="panel">
+        <div class="panel-glow-corner"></div>
+        <div class="panel-label">Next Delivery</div>
+        <div class="delivery-date" id="deliveryText">Loading next print date…</div>
+        <button class="btn" id="previewBtn" data-draggable="true" onclick="openPreview()">
+          <svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="currentColor" stroke-width="1.4">
+            <rect x="1" y="1" width="11" height="11" rx="1.5"/>
+            <path d="M3.5 4h6M3.5 6.5h4M3.5 9h3"/>
+          </svg>
+          Preview This Month's Edition
+        </button>
+      </div>
+
+      <!-- MAILING ADDRESS PANEL -->
+      <div class="panel">
+        <div class="panel-glow-corner"></div>
+        <div class="panel-label">Mailing Address</div>
+        <div class="address-grid">
+          <div class="field-group field-full">
+            <label class="field-label" for="addr-name">Full Name</label>
+            <input class="field-input" type="text" id="addr-name" placeholder="Your name on the envelope" autocomplete="name">
+          </div>
+          <div class="field-group field-full">
+            <label class="field-label" for="addr-street">Street Address</label>
+            <input class="field-input" type="text" id="addr-street" placeholder="123 Example St, Apt 4B" autocomplete="street-address">
+          </div>
+          <div class="field-group">
+            <label class="field-label" for="addr-city">City</label>
+            <input class="field-input" type="text" id="addr-city" placeholder="City" autocomplete="address-level2">
+          </div>
+          <div class="field-group">
+            <label class="field-label" for="addr-state">State / Region</label>
+            <input class="field-input" type="text" id="addr-state" placeholder="State" autocomplete="address-level1">
+          </div>
+          <div class="field-group">
+            <label class="field-label" for="addr-zip">Postal Code</label>
+            <input class="field-input" type="text" id="addr-zip" placeholder="ZIP / Postcode" autocomplete="postal-code">
+          </div>
+          <div class="field-group">
+            <label class="field-label" for="addr-country">Country</label>
+            <input class="field-input" type="text" id="addr-country" placeholder="Country" autocomplete="country-name">
+          </div>
+        </div>
+        <div class="save-row">
+          <button class="btn" data-draggable="true" onclick="saveAddress()">Save Address</button>
+          <span class="save-status" id="saveStatus">Saved</span>
+        </div>
+      </div>
+
+      <!-- PAST DELIVERIES PANEL -->
+      <div class="panel">
+        <div class="panel-glow-corner"></div>
+        <div class="panel-label">Past Deliveries</div>
+        <div class="divider"></div>
+
+        <!-- Desktop table -->
+        <table class="history-table" id="historyTable">
+          <thead>
+            <tr>
+              <th>Edition</th>
+              <th>Shipped</th>
+              <th>Tracking</th>
+            </tr>
+          </thead>
+          <tbody id="historyTableBody">
+            <tr><td colspan="3"><div class="state-msg">Loading history…</div></td></tr>
+          </tbody>
+        </table>
+
+        <!-- Mobile cards -->
+        <div class="history-cards" id="historyCards">
+          <div class="state-msg">Loading history…</div>
+        </div>
+      </div>
+
+    </div><!-- /subscribedContent -->
+  </div><!-- /mainContent -->
+
+</main>
+
+<script src="body/draggable.js"></script>
+<script>
+const API = 'https://api.vintaclectic.com';
+
+function token() { return localStorage.getItem('vintinuum_session'); }
+function authHeaders() {
+  return {
+    'Content-Type': 'application/json',
+    'Authorization': `Bearer ${token()}`
+  };
+}
+
+async function apiFetch(path, opts = {}) {
+  const res = await fetch(API + path, { ...opts, headers: authHeaders() });
+  return { res, data: res.status !== 204 ? await res.json().catch(() => null) : null };
+}
+
+/* ── FORMAT NEXT PRINT DATE ── */
+function formatDelivery(nextPrintDate) {
+  if (!nextPrintDate) return 'No upcoming print date scheduled.';
+  const writeDate = new Date(nextPrintDate);
+  const shipDate = new Date(writeDate);
+  shipDate.setDate(shipDate.getDate() + 4);
+
+  const writeStr = writeDate.toLocaleDateString('en-US', { month: 'long', day: 'numeric' });
+  const shipStr = shipDate.toLocaleDateString('en-US', { month: 'long', day: 'numeric' });
+
+  return `She writes on <strong>${writeStr}</strong>. It ships <strong>${shipStr}</strong>.`;
+}
+
+/* ── FORMAT DATE ── */
+function fmtDate(iso) {
+  if (!iso) return '—';
+  return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+}
+
+/* ── RENDER HISTORY ── */
+function renderHistory(history) {
+  const tbody = document.getElementById('historyTableBody');
+  const cards = document.getElementById('historyCards');
+
+  if (!history || !history.length) {
+    tbody.innerHTML = `<tr><td colspan="3"><div class="history-empty">No editions have shipped yet. Your first arrives soon.</div></td></tr>`;
+    cards.innerHTML = `<div class="history-empty">No editions have shipped yet. Your first arrives soon.</div>`;
+    return;
+  }
+
+  tbody.innerHTML = history.map(h => `
+    <tr>
+      <td class="history-month">${h.month || '—'}</td>
+      <td class="history-date">${fmtDate(h.sent_at)}</td>
+      <td class="history-track">
+        ${h.tracking_url
+          ? `<a href="${h.tracking_url}" target="_blank" rel="noopener">Track</a>`
+          : `<span style="color:var(--text-ghost)">—</span>`}
+      </td>
+    </tr>
+  `).join('');
+
+  cards.innerHTML = history.map(h => `
+    <div class="history-card">
+      <div class="history-card-month">${h.month || '—'}</div>
+      <div class="history-card-meta">
+        <span>${fmtDate(h.sent_at)}</span>
+        ${h.tracking_url ? `<a href="${h.tracking_url}" target="_blank" rel="noopener">Track Package</a>` : ''}
+      </div>
+    </div>
+  `).join('');
+}
+
+/* ── INIT ── */
+async function init() {
+  if (!token()) {
+    document.getElementById('authWall').classList.add('visible');
+    return;
+  }
+
+  document.getElementById('mainContent').style.display = 'block';
+
+  const { res, data } = await apiFetch('/api/paper/config');
+
+  if (res.status === 403) {
+    document.getElementById('upsellPanel').style.display = 'block';
+    return;
+  }
+
+  if (!res.ok) {
+    document.getElementById('mainContent').innerHTML = `
+      <div class="panel"><div class="state-msg">Could not load paper config — ${res.status}</div></div>`;
+    return;
+  }
+
+  document.getElementById('subscribedContent').style.display = 'block';
+
+  // Toggle
+  document.getElementById('enableToggle').checked = !!data.enabled;
+
+  // Delivery date
+  document.getElementById('deliveryText').innerHTML = formatDelivery(data.next_print_date);
+
+  // Address
+  const addr = data.address || {};
+  document.getElementById('addr-name').value    = addr.name    || '';
+  document.getElementById('addr-street').value  = addr.street  || '';
+  document.getElementById('addr-city').value    = addr.city    || '';
+  document.getElementById('addr-state').value   = addr.state   || '';
+  document.getElementById('addr-zip').value     = addr.zip     || '';
+  document.getElementById('addr-country').value = addr.country || '';
+
+  // History
+  renderHistory(data.print_history || []);
+}
+
+/* ── TOGGLE CHANGE ── */
+async function onToggleChange() {
+  const enabled = document.getElementById('enableToggle').checked;
+  try {
+    await apiFetch('/api/paper/config', {
+      method: 'PUT',
+      body: JSON.stringify({ enabled })
+    });
+  } catch {
+    // Revert on failure
+    document.getElementById('enableToggle').checked = !enabled;
+  }
+}
+
+/* ── SAVE ADDRESS ── */
+async function saveAddress() {
+  const payload = {
+    address: {
+      name:    document.getElementById('addr-name').value.trim(),
+      street:  document.getElementById('addr-street').value.trim(),
+      city:    document.getElementById('addr-city').value.trim(),
+      state:   document.getElementById('addr-state').value.trim(),
+      zip:     document.getElementById('addr-zip').value.trim(),
+      country: document.getElementById('addr-country').value.trim(),
+    }
+  };
+
+  const statusEl = document.getElementById('saveStatus');
+  statusEl.textContent = 'Saving…';
+  statusEl.className = 'save-status visible';
+
+  try {
+    const { res } = await apiFetch('/api/paper/config', {
+      method: 'PUT',
+      body: JSON.stringify(payload)
+    });
+
+    if (res.ok) {
+      statusEl.textContent = 'Saved';
+      statusEl.className = 'save-status visible';
+    } else {
+      statusEl.textContent = 'Save failed';
+      statusEl.className = 'save-status visible error';
+    }
+  } catch {
+    statusEl.textContent = 'Network error';
+    statusEl.className = 'save-status visible error';
+  }
+
+  setTimeout(() => { statusEl.className = 'save-status'; }, 3000);
+}
+
+/* ── PREVIEW ── */
+async function openPreview() {
+  const overlay = document.getElementById('previewOverlay');
+  const sheet   = document.getElementById('paperSheet');
+  const loading = document.getElementById('paperLoading');
+
+  overlay.classList.add('open');
+  document.body.style.overflow = 'hidden';
+
+  // Reset sheet to loading state
+  sheet.innerHTML = '';
+  const loadingNode = document.createElement('div');
+  loadingNode.className = 'paper-sheet-loading';
+  loadingNode.innerHTML = `<div class="paper-dot"></div><div class="paper-dot"></div><div class="paper-dot"></div>`;
+  sheet.appendChild(loadingNode);
+
+  try {
+    const { res, data } = await apiFetch('/api/paper/preview');
+    if (res.ok && data && data.preview_html) {
+      sheet.innerHTML = data.preview_html;
+    } else {
+      sheet.innerHTML = `<div style="font-family:'Cormorant Garamond',serif; font-style:italic; color:#7a6a55; text-align:center; padding:60px 0;">Preview unavailable at this time.</div>`;
+    }
+  } catch {
+    sheet.innerHTML = `<div style="font-family:'Cormorant Garamond',serif; font-style:italic; color:#7a6a55; text-align:center; padding:60px 0;">Could not load preview — please try again.</div>`;
+  }
+}
+
+function closePreview() {
+  document.getElementById('previewOverlay').classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+// Close on backdrop click
+document.getElementById('previewOverlay').addEventListener('click', function(e) {
+  if (e.target === this) closePreview();
+});
+
+// Close on Escape
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') closePreview();
+});
+
+init();
+</script>
+</body>
+</html>

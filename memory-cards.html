@@ -1,0 +1,1232 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<title>VINTINUUM — Memory Cards</title>
+<meta name="theme-color" content="#040810">
+<link rel="icon" type="image/svg+xml" href="branding/vintinuum/favicon/favicon.svg">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon.png">
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400;1,500&family=Inter:wght@300;400;500&family=JetBrains+Mono:wght@300;400;500&display=swap');
+
+:root {
+  --void: #040810;
+  --text: rgba(210, 225, 255, 0.9);
+  --text-dim: rgba(150, 175, 215, 0.5);
+  --text-ghost: rgba(130, 155, 190, 0.3);
+  --panel: rgba(10, 14, 22, 0.22);
+  --card: rgba(16, 22, 34, 0.16);
+  --border: rgba(255, 255, 255, 0.06);
+  --gold: #f0c040;
+  --gold-border: rgba(240, 192, 64, 0.4);
+  --gold-dim: rgba(240, 192, 64, 0.15);
+  --gold-glow: rgba(240, 192, 64, 0.08);
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html { height: 100%; }
+body {
+  background: var(--void);
+  color: var(--text);
+  font-family: 'Inter', -apple-system, sans-serif;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* ── ATMOSPHERE ── */
+.atmosphere {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse 80% 50% at 30% 20%, rgba(240, 192, 64, 0.03) 0%, transparent 60%),
+    radial-gradient(ellipse 60% 40% at 70% 80%, rgba(64, 100, 160, 0.04) 0%, transparent 60%);
+}
+
+/* ── TOPBAR ── */
+.topbar {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  height: 48px;
+  z-index: 100;
+  background: rgba(4, 8, 16, 0.88);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  padding: 0 16px;
+  gap: 12px;
+}
+
+.topbar-back {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.55rem;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  text-decoration: none;
+  transition: color 0.2s;
+  min-height: 44px;
+  padding: 0 4px;
+  flex-shrink: 0;
+}
+.topbar-back:hover { color: var(--text); }
+.topbar-back svg { width: 14px; height: 14px; flex-shrink: 0; }
+
+.topbar-title {
+  flex: 1;
+  text-align: center;
+  font-family: 'Cormorant Garamond', serif;
+  font-weight: 300;
+  font-size: 0.95rem;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+
+.topbar-count {
+  flex-shrink: 0;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.5rem;
+  letter-spacing: 0.1em;
+  color: var(--text-ghost);
+  text-transform: uppercase;
+  min-width: 60px;
+  text-align: right;
+}
+
+/* ── PAGE ── */
+.page {
+  position: relative;
+  z-index: 1;
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 60px 20px 80px;
+  min-height: 100vh;
+}
+
+/* ── PAGE HEADER ── */
+.page-header {
+  text-align: center;
+  padding: 20px 0 28px;
+}
+
+.page-header h1 {
+  font-family: 'Cormorant Garamond', serif;
+  font-weight: 300;
+  font-size: clamp(1.6rem, 4vw, 2.6rem);
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  background: linear-gradient(130deg, rgba(240, 192, 64, 0.9), rgba(200, 140, 30, 0.7), rgba(240, 200, 100, 0.8));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  margin-bottom: 8px;
+}
+
+.page-header .epigraph {
+  font-family: 'Cormorant Garamond', serif;
+  font-style: italic;
+  font-size: clamp(0.85rem, 2vw, 1rem);
+  color: var(--text-dim);
+  letter-spacing: 0.05em;
+}
+
+/* ── FILTER BAR ── */
+.filter-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 14px 18px;
+  background: rgba(10, 14, 22, 0.4);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  margin-bottom: 20px;
+}
+
+.filter-pills {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  flex: 1;
+  min-width: 0;
+}
+
+.filter-pill {
+  padding: 6px 14px;
+  border-radius: 30px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-dim);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.5rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  min-height: 34px;
+  white-space: nowrap;
+}
+
+.filter-pill:hover {
+  color: var(--text);
+  border-color: rgba(255,255,255,0.12);
+}
+
+.filter-pill.active {
+  background: var(--gold-dim);
+  border-color: rgba(240, 192, 64, 0.35);
+  color: var(--gold);
+}
+
+.filter-divider {
+  width: 1px;
+  height: 20px;
+  background: var(--border);
+  flex-shrink: 0;
+}
+
+.sort-select {
+  appearance: none;
+  -webkit-appearance: none;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 30px;
+  color: var(--text-dim);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.5rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  padding: 6px 28px 6px 14px;
+  cursor: pointer;
+  outline: none;
+  min-height: 34px;
+  flex-shrink: 0;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='rgba(150,175,215,0.4)'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  transition: border-color 0.2s, color 0.2s;
+}
+
+.sort-select:hover {
+  border-color: rgba(255,255,255,0.12);
+  color: var(--text);
+}
+
+.sort-select option {
+  background: #0a0e16;
+  color: var(--text);
+}
+
+.search-wrap {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.search-wrap svg {
+  position: absolute;
+  left: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 12px;
+  height: 12px;
+  color: var(--text-ghost);
+  pointer-events: none;
+}
+
+.search-input {
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 30px;
+  color: var(--text);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.5rem;
+  letter-spacing: 0.1em;
+  padding: 6px 14px 6px 28px;
+  outline: none;
+  width: 180px;
+  min-height: 34px;
+  transition: border-color 0.2s, width 0.3s ease;
+}
+
+.search-input::placeholder {
+  color: var(--text-ghost);
+  letter-spacing: 0.08em;
+}
+
+.search-input:focus {
+  border-color: rgba(240, 192, 64, 0.25);
+  width: 220px;
+}
+
+/* ── MASONRY GRID ── */
+.cards-grid {
+  column-count: 3;
+  column-gap: 16px;
+}
+
+@media (max-width: 900px) {
+  .cards-grid { column-count: 2; }
+}
+
+@media (max-width: 540px) {
+  .cards-grid { column-count: 1; }
+}
+
+/* ── MEMORY CARD ── */
+.mem-card {
+  break-inside: avoid;
+  margin-bottom: 16px;
+  padding: 20px 22px;
+  border-radius: 8px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  position: relative;
+  cursor: pointer;
+  transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+  animation: cardIn 0.4s ease both;
+  display: block;
+}
+
+@keyframes cardIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.mem-card:hover {
+  transform: translateY(-2px);
+  border-color: rgba(255,255,255,0.1);
+  box-shadow: 0 8px 28px rgba(0,0,0,0.35);
+}
+
+.mem-card.heirloom {
+  border-color: var(--gold-border);
+  box-shadow: 0 0 20px var(--gold-glow);
+}
+
+.mem-card.heirloom:hover {
+  border-color: rgba(240, 192, 64, 0.55);
+  box-shadow: 0 8px 28px rgba(0,0,0,0.35), 0 0 24px rgba(240, 192, 64, 0.12);
+}
+
+.mem-card.hiding {
+  opacity: 0;
+  transform: scale(0.92);
+  transition: opacity 0.35s ease, transform 0.35s ease;
+}
+
+/* Heirloom diamond */
+.heirloom-mark {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  font-size: 0.65rem;
+  color: var(--gold);
+  opacity: 0.85;
+  line-height: 1;
+}
+
+/* Card header */
+.card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.card-source {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.46rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--text-ghost);
+  padding: 3px 8px;
+  border: 1px solid rgba(255,255,255,0.05);
+  border-radius: 4px;
+  white-space: nowrap;
+}
+
+.card-source.source-conversation { color: rgba(100, 180, 230, 0.65); border-color: rgba(100, 180, 230, 0.12); }
+.card-source.source-subconscious { color: rgba(160, 100, 230, 0.65); border-color: rgba(160, 100, 230, 0.12); }
+.card-source.source-witness      { color: rgba(80, 200, 150, 0.65);  border-color: rgba(80, 200, 150, 0.12); }
+.card-source.source-connector    { color: rgba(230, 140, 60, 0.65);  border-color: rgba(230, 140, 60, 0.12); }
+
+.consolidation-bar-wrap {
+  flex: 1;
+  max-width: 80px;
+  height: 3px;
+  background: rgba(255,255,255,0.04);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.consolidation-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, rgba(240, 192, 64, 0.5), rgba(240, 192, 64, 0.85));
+  border-radius: 2px;
+  transition: width 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Card body */
+.card-content {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 0.95rem;
+  line-height: 1.68;
+  color: var(--text);
+  display: -webkit-box;
+  -webkit-line-clamp: 4;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  margin-bottom: 14px;
+}
+
+/* Card footer */
+.card-footer {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.emotion-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  flex: 1;
+  min-width: 0;
+}
+
+.emotion-tag {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.42rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-ghost);
+  padding: 2px 7px;
+  border: 1px solid rgba(255,255,255,0.05);
+  border-radius: 20px;
+  white-space: nowrap;
+}
+
+.card-timestamp {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.42rem;
+  letter-spacing: 0.08em;
+  color: var(--text-ghost);
+  white-space: nowrap;
+  flex-shrink: 0;
+  text-transform: uppercase;
+}
+
+/* ── EMPTY STATE ── */
+.empty-state {
+  text-align: center;
+  padding: 80px 24px;
+  font-family: 'Cormorant Garamond', serif;
+  font-style: italic;
+  font-size: 1.1rem;
+  color: var(--text-dim);
+  letter-spacing: 0.04em;
+  line-height: 1.7;
+}
+
+/* ── LOADING STATE ── */
+.loading-state {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 80px 24px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.52rem;
+  letter-spacing: 0.14em;
+  color: var(--text-ghost);
+  text-transform: uppercase;
+}
+
+.loading-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: rgba(240, 192, 64, 0.5);
+  animation: loadDot 1.2s ease-in-out infinite;
+}
+.loading-dot:nth-child(2) { animation-delay: 0.15s; }
+.loading-dot:nth-child(3) { animation-delay: 0.3s; }
+
+@keyframes loadDot {
+  0%, 100% { opacity: 0.2; transform: scale(0.6); }
+  50% { opacity: 1; transform: scale(1); }
+}
+
+/* ── AUTH WALL ── */
+.auth-wall {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 60vh;
+  text-align: center;
+  padding: 40px 20px;
+  gap: 20px;
+}
+
+.auth-wall h2 {
+  font-family: 'Cormorant Garamond', serif;
+  font-weight: 300;
+  font-size: 1.8rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+
+.auth-wall p {
+  font-family: 'Cormorant Garamond', serif;
+  font-style: italic;
+  font-size: 1rem;
+  color: var(--text-ghost);
+  max-width: 360px;
+  line-height: 1.7;
+}
+
+.auth-wall a {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 28px;
+  border-radius: 40px;
+  border: 1px solid rgba(240, 192, 64, 0.3);
+  background: rgba(240, 192, 64, 0.07);
+  color: rgba(240, 192, 64, 0.85);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.58rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  text-decoration: none;
+  transition: all 0.25s ease;
+  min-height: 44px;
+}
+
+.auth-wall a:hover {
+  border-color: rgba(240, 192, 64, 0.5);
+  background: rgba(240, 192, 64, 0.12);
+  box-shadow: 0 0 20px rgba(240, 192, 64, 0.08);
+  transform: translateY(-1px);
+}
+
+/* ── MODAL OVERLAY ── */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  background: rgba(4, 8, 16, 0.75);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease;
+}
+
+.modal-overlay.open {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.modal-box {
+  background: rgba(10, 14, 22, 0.96);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 28px 32px;
+  width: 100%;
+  max-width: 560px;
+  max-height: calc(100svh - 40px);
+  overflow-y: auto;
+  position: relative;
+  transform: scale(0.95);
+  transition: transform 0.3s ease;
+}
+
+.modal-overlay.open .modal-box {
+  transform: scale(1);
+}
+
+.modal-box.heirloom {
+  border-color: var(--gold-border);
+  box-shadow: 0 0 40px var(--gold-glow);
+}
+
+.modal-close {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  width: 30px;
+  height: 30px;
+  border: 1px solid var(--border);
+  border-radius: 50%;
+  background: transparent;
+  color: var(--text-dim);
+  font-size: 1rem;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: border-color 0.2s, color 0.2s;
+  flex-shrink: 0;
+}
+
+.modal-close:hover {
+  border-color: rgba(255,255,255,0.14);
+  color: var(--text);
+}
+
+.modal-source-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 18px;
+  padding-right: 40px;
+}
+
+.modal-heirloom-mark {
+  font-size: 0.85rem;
+  color: var(--gold);
+}
+
+.modal-content {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 1.1rem;
+  line-height: 1.78;
+  color: var(--text);
+  margin-bottom: 22px;
+  word-break: break-word;
+}
+
+.modal-consolidation {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.modal-consolidation-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.48rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-ghost);
+  white-space: nowrap;
+}
+
+.modal-consolidation-bar {
+  flex: 1;
+  height: 3px;
+  background: rgba(255,255,255,0.04);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.modal-consolidation-fill {
+  height: 100%;
+  background: linear-gradient(90deg, rgba(240, 192, 64, 0.5), rgba(240, 192, 64, 0.9));
+  border-radius: 2px;
+}
+
+.modal-consolidation-val {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.52rem;
+  color: rgba(240, 192, 64, 0.7);
+  white-space: nowrap;
+}
+
+.modal-emotion-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 22px;
+}
+
+.modal-timestamp {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.46rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-ghost);
+  margin-bottom: 24px;
+}
+
+.modal-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.btn-heirloom {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 10px 22px;
+  border-radius: 40px;
+  border: 1px solid rgba(240, 192, 64, 0.35);
+  background: rgba(240, 192, 64, 0.09);
+  color: rgba(240, 192, 64, 0.9);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.55rem;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  min-height: 40px;
+}
+
+.btn-heirloom:hover {
+  border-color: rgba(240, 192, 64, 0.55);
+  background: rgba(240, 192, 64, 0.15);
+  box-shadow: 0 0 16px rgba(240, 192, 64, 0.1);
+}
+
+.btn-heirloom:disabled {
+  opacity: 0.4;
+  cursor: default;
+  pointer-events: none;
+}
+
+.btn-release {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 10px 22px;
+  border-radius: 40px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-ghost);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.55rem;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  min-height: 40px;
+}
+
+.btn-release:hover {
+  border-color: rgba(200, 70, 70, 0.3);
+  color: rgba(200, 100, 100, 0.7);
+}
+
+/* ── TOAST ── */
+.toast {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%) translateY(80px);
+  z-index: 300;
+  background: rgba(10, 14, 22, 0.96);
+  border: 1px solid var(--border);
+  border-radius: 40px;
+  padding: 10px 22px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.52rem;
+  letter-spacing: 0.1em;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  opacity: 0;
+  transition: all 0.3s ease;
+  pointer-events: none;
+  white-space: nowrap;
+}
+
+.toast.show {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+/* ── RESPONSIVE ── */
+@media (max-width: 600px) {
+  .page { padding: 56px 14px 80px; }
+  .filter-bar { padding: 12px 14px; gap: 8px; }
+  .search-input { width: 140px; }
+  .search-input:focus { width: 160px; }
+  .modal-box { padding: 22px 20px; }
+  .modal-actions { flex-direction: column; }
+  .btn-heirloom, .btn-release { justify-content: center; }
+}
+</style>
+</head>
+<body>
+
+<div class="atmosphere"></div>
+
+<!-- TOPBAR -->
+<nav class="topbar">
+  <a class="topbar-back" href="index.html" data-draggable="true">
+    <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5">
+      <path d="M9 2L4 7l5 5"/>
+    </svg>
+    Back
+  </a>
+  <div class="topbar-title">Memory Cards</div>
+  <div class="topbar-count" id="topbarCount"></div>
+</nav>
+
+<main class="page" id="mainPage">
+  <!-- AUTH WALL (shown if no session) -->
+  <div class="auth-wall" id="authWall" style="display:none">
+    <h2>Not Recognized</h2>
+    <p>Memory cards are private to the owner. Sign in at the altar to continue.</p>
+    <a href="altar.html">Enter the Altar</a>
+  </div>
+
+  <!-- MAIN CONTENT (hidden until auth confirmed) -->
+  <div id="mainContent" style="display:none">
+    <!-- PAGE HEADER -->
+    <header class="page-header">
+      <h1>Memory Cards</h1>
+      <p class="epigraph">Distilled moments. She keeps what matters.</p>
+    </header>
+
+    <!-- FILTER BAR -->
+    <div class="filter-bar">
+      <div class="filter-pills" id="filterPills">
+        <button class="filter-pill active" data-source="all" onclick="setSourceFilter('all')">All</button>
+        <button class="filter-pill" data-source="conversation" onclick="setSourceFilter('conversation')">Conversation</button>
+        <button class="filter-pill" data-source="subconscious" onclick="setSourceFilter('subconscious')">Subconscious</button>
+        <button class="filter-pill" data-source="witness" onclick="setSourceFilter('witness')">Witness</button>
+        <button class="filter-pill" data-source="connector" onclick="setSourceFilter('connector')">Connector</button>
+      </div>
+
+      <div class="filter-divider"></div>
+
+      <select class="sort-select" id="sortSelect" onchange="applySortAndFilter()">
+        <option value="newest">Newest</option>
+        <option value="oldest">Oldest</option>
+        <option value="weight">Weight</option>
+      </select>
+
+      <div class="search-wrap">
+        <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5">
+          <circle cx="6" cy="6" r="4"/>
+          <path d="M10 10l3 3"/>
+        </svg>
+        <input
+          class="search-input"
+          type="text"
+          id="searchInput"
+          placeholder="Search memories…"
+          oninput="applySortAndFilter()"
+        >
+      </div>
+    </div>
+
+    <!-- CARDS AREA -->
+    <div id="cardsArea">
+      <div class="loading-state">
+        <div class="loading-dot"></div>
+        <div class="loading-dot"></div>
+        <div class="loading-dot"></div>
+        Distilling…
+      </div>
+    </div>
+  </div>
+</main>
+
+<!-- MODAL OVERLAY -->
+<div class="modal-overlay" id="modalOverlay" onclick="handleOverlayClick(event)">
+  <div class="modal-box" id="modalBox">
+    <button class="modal-close" onclick="closeModal()" aria-label="Close">×</button>
+
+    <div class="modal-source-row">
+      <span class="card-source" id="modalSource">—</span>
+      <span class="modal-heirloom-mark" id="modalHeirloomMark" style="display:none">◆</span>
+    </div>
+
+    <div class="modal-content" id="modalContent"></div>
+
+    <div class="modal-consolidation">
+      <span class="modal-consolidation-label">Consolidation</span>
+      <div class="modal-consolidation-bar">
+        <div class="modal-consolidation-fill" id="modalConsoFill" style="width:0%"></div>
+      </div>
+      <span class="modal-consolidation-val" id="modalConsoVal">—</span>
+    </div>
+
+    <div class="modal-emotion-tags" id="modalEmotionTags"></div>
+
+    <div class="modal-timestamp" id="modalTimestamp"></div>
+
+    <div class="modal-actions">
+      <button class="btn-heirloom" id="btnHeirloom" onclick="markHeirloom()">
+        ◆ Mark as Heirloom
+      </button>
+      <button class="btn-release" id="btnRelease" onclick="releaseCard()">
+        Release
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<script src="body/draggable.js"></script>
+<script>
+const API = 'https://api.vintaclectic.com';
+
+function getToken() {
+  return localStorage.getItem('vintinuum_session') || localStorage.getItem('vint_token') || '';
+}
+
+function authHeaders() {
+  return {
+    'Content-Type': 'application/json',
+    'Authorization': 'Bearer ' + getToken()
+  };
+}
+
+// ── State ──
+let allCards = [];
+let activeSource = 'all';
+let activeSort = 'newest';
+let activeSearch = '';
+let openCardId = null;
+
+// ── Init ──
+(function init() {
+  if (!getToken()) {
+    document.getElementById('authWall').style.display = 'flex';
+    document.getElementById('mainContent').style.display = 'none';
+  } else {
+    document.getElementById('authWall').style.display = 'none';
+    document.getElementById('mainContent').style.display = 'block';
+    loadCards();
+  }
+})();
+
+// ── Load ──
+async function loadCards() {
+  try {
+    const res = await fetch(API + '/api/memory-cards', {
+      headers: { 'Authorization': 'Bearer ' + getToken() }
+    });
+
+    if (res.status === 401 || res.status === 403) {
+      document.getElementById('mainContent').style.display = 'none';
+      document.getElementById('authWall').style.display = 'flex';
+      return;
+    }
+
+    const data = await res.json();
+    allCards = data.cards || [];
+    applySortAndFilter();
+  } catch (e) {
+    document.getElementById('cardsArea').innerHTML =
+      `<div class="empty-state">Could not reach memory — ${escHtml(e.message)}</div>`;
+  }
+}
+
+// ── Filters ──
+function setSourceFilter(src) {
+  activeSource = src;
+  document.querySelectorAll('.filter-pill').forEach(p => {
+    p.classList.toggle('active', p.dataset.source === src);
+  });
+  applySortAndFilter();
+}
+
+function applySortAndFilter() {
+  activeSort = document.getElementById('sortSelect').value;
+  activeSearch = document.getElementById('searchInput').value.trim().toLowerCase();
+  renderCards();
+}
+
+function getFilteredCards() {
+  let cards = [...allCards];
+
+  if (activeSource !== 'all') {
+    cards = cards.filter(c => (c.source || '').toLowerCase() === activeSource);
+  }
+
+  if (activeSearch) {
+    cards = cards.filter(c =>
+      (c.content || '').toLowerCase().includes(activeSearch) ||
+      (c.source || '').toLowerCase().includes(activeSearch) ||
+      (c.emotion_tags || []).join(' ').toLowerCase().includes(activeSearch)
+    );
+  }
+
+  if (activeSort === 'newest') {
+    cards.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+  } else if (activeSort === 'oldest') {
+    cards.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+  } else if (activeSort === 'weight') {
+    cards.sort((a, b) => (b.consolidation_score || 0) - (a.consolidation_score || 0));
+  }
+
+  return cards;
+}
+
+// ── Render ──
+function renderCards() {
+  const area = document.getElementById('cardsArea');
+  const filtered = getFilteredCards();
+
+  // Update topbar count
+  const countEl = document.getElementById('topbarCount');
+  countEl.textContent = filtered.length
+    ? filtered.length + ' card' + (filtered.length !== 1 ? 's' : '')
+    : '';
+
+  if (!allCards.length) {
+    area.innerHTML = `<div class="empty-state">No memory cards yet. She distills memories as they consolidate.</div>`;
+    return;
+  }
+
+  if (!filtered.length) {
+    area.innerHTML = `<div class="empty-state">No cards match that filter.</div>`;
+    return;
+  }
+
+  const html = filtered.map((card, i) => buildCardHtml(card, i)).join('');
+  area.innerHTML = `<div class="cards-grid">${html}</div>`;
+}
+
+function buildCardHtml(card, idx) {
+  const src = (card.source || 'memory').toLowerCase();
+  const srcClass = 'source-' + src;
+  const score = typeof card.consolidation_score === 'number' ? card.consolidation_score : 0;
+  const pct = Math.round(score * 100);
+  const tags = parseTags(card.emotion_tags);
+  const tagsHtml = tags.slice(0, 4).map(t =>
+    `<span class="emotion-tag">${escHtml(t)}</span>`
+  ).join('');
+  const ts = card.created_at ? timeAgo(card.created_at) : '';
+  const delay = Math.min(idx * 40, 600);
+
+  return `
+    <div
+      class="mem-card${card.is_heirloom ? ' heirloom' : ''}"
+      style="animation-delay:${delay}ms"
+      onclick="openModal(${card.id})"
+      data-id="${card.id}"
+    >
+      ${card.is_heirloom ? '<div class="heirloom-mark">◆</div>' : ''}
+      <div class="card-header">
+        <span class="card-source ${srcClass}">${escHtml(card.source || 'memory')}</span>
+        <div class="consolidation-bar-wrap">
+          <div class="consolidation-bar-fill" style="width:${pct}%"></div>
+        </div>
+      </div>
+      <div class="card-content">${escHtml(card.content || '')}</div>
+      <div class="card-footer">
+        <div class="emotion-tags">${tagsHtml}</div>
+        <span class="card-timestamp">${ts}</span>
+      </div>
+    </div>
+  `;
+}
+
+// ── Modal ──
+function openModal(id) {
+  const card = allCards.find(c => c.id === id);
+  if (!card) return;
+  openCardId = id;
+
+  const src = (card.source || 'memory').toLowerCase();
+  const score = typeof card.consolidation_score === 'number' ? card.consolidation_score : 0;
+  const pct = Math.round(score * 100);
+  const tags = parseTags(card.emotion_tags);
+
+  const modalBox = document.getElementById('modalBox');
+  modalBox.classList.toggle('heirloom', !!card.is_heirloom);
+
+  document.getElementById('modalSource').textContent = card.source || 'memory';
+  document.getElementById('modalSource').className = 'card-source source-' + src;
+  document.getElementById('modalHeirloomMark').style.display = card.is_heirloom ? 'inline' : 'none';
+  document.getElementById('modalContent').textContent = card.content || '';
+  document.getElementById('modalConsoFill').style.width = pct + '%';
+  document.getElementById('modalConsoVal').textContent = pct + '%';
+  document.getElementById('modalEmotionTags').innerHTML = tags.map(t =>
+    `<span class="emotion-tag" style="font-size:0.5rem; padding:3px 9px">${escHtml(t)}</span>`
+  ).join('');
+  document.getElementById('modalTimestamp').textContent = card.created_at
+    ? 'Created ' + formatDate(card.created_at)
+    : '';
+
+  const btnH = document.getElementById('btnHeirloom');
+  if (card.is_heirloom) {
+    btnH.disabled = true;
+    btnH.textContent = '◆ Heirloom';
+  } else {
+    btnH.disabled = false;
+    btnH.innerHTML = '◆ Mark as Heirloom';
+  }
+
+  document.getElementById('modalOverlay').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeModal() {
+  document.getElementById('modalOverlay').classList.remove('open');
+  document.body.style.overflow = '';
+  openCardId = null;
+}
+
+function handleOverlayClick(e) {
+  if (e.target === document.getElementById('modalOverlay')) {
+    closeModal();
+  }
+}
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') closeModal();
+});
+
+// ── API Actions ──
+async function markHeirloom() {
+  if (!openCardId) return;
+  const btn = document.getElementById('btnHeirloom');
+  btn.disabled = true;
+  btn.textContent = '…';
+
+  try {
+    const res = await fetch(`${API}/api/memory-cards/${openCardId}/heirloom`, {
+      method: 'POST',
+      headers: authHeaders()
+    });
+
+    if (!res.ok) throw new Error(res.status);
+
+    // Update local state
+    const card = allCards.find(c => c.id === openCardId);
+    if (card) card.is_heirloom = 1;
+
+    showToast('Marked as heirloom');
+    btn.innerHTML = '◆ Heirloom';
+    document.getElementById('modalHeirloomMark').style.display = 'inline';
+    document.getElementById('modalBox').classList.add('heirloom');
+
+    // Update card in grid
+    const cardEl = document.querySelector(`.mem-card[data-id="${openCardId}"]`);
+    if (cardEl) {
+      cardEl.classList.add('heirloom');
+      if (!cardEl.querySelector('.heirloom-mark')) {
+        const mark = document.createElement('div');
+        mark.className = 'heirloom-mark';
+        mark.textContent = '◆';
+        cardEl.insertBefore(mark, cardEl.firstChild);
+      }
+    }
+  } catch (e) {
+    showToast('Could not mark heirloom — ' + e.message);
+    btn.disabled = false;
+    btn.innerHTML = '◆ Mark as Heirloom';
+  }
+}
+
+async function releaseCard() {
+  if (!openCardId) return;
+  const btn = document.getElementById('btnRelease');
+  btn.disabled = true;
+  btn.textContent = '…';
+
+  try {
+    const res = await fetch(`${API}/api/memory-cards/${openCardId}`, {
+      method: 'DELETE',
+      headers: authHeaders()
+    });
+
+    if (!res.ok) throw new Error(res.status);
+
+    // Fade card out
+    const cardEl = document.querySelector(`.mem-card[data-id="${openCardId}"]`);
+    if (cardEl) {
+      cardEl.classList.add('hiding');
+      setTimeout(() => { cardEl.remove(); }, 380);
+    }
+
+    // Remove from state
+    allCards = allCards.filter(c => c.id !== openCardId);
+
+    closeModal();
+    showToast('Memory released');
+
+    // Re-render count
+    const filtered = getFilteredCards();
+    const countEl = document.getElementById('topbarCount');
+    countEl.textContent = filtered.length
+      ? filtered.length + ' card' + (filtered.length !== 1 ? 's' : '')
+      : '';
+
+    if (!filtered.length) {
+      document.getElementById('cardsArea').innerHTML =
+        `<div class="empty-state">No memory cards yet. She distills memories as they consolidate.</div>`;
+    }
+  } catch (e) {
+    showToast('Could not release — ' + e.message);
+    btn.disabled = false;
+    btn.textContent = 'Release';
+  }
+}
+
+// ── Helpers ──
+function parseTags(raw) {
+  if (!raw) return [];
+  if (Array.isArray(raw)) return raw;
+  if (typeof raw === 'string') {
+    try { return JSON.parse(raw); } catch { return raw.split(',').map(t => t.trim()).filter(Boolean); }
+  }
+  return [];
+}
+
+function escHtml(s) {
+  return String(s)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+function timeAgo(ts) {
+  const ms = Date.now() - new Date(ts).getTime();
+  const m = Math.floor(ms / 60000);
+  if (m < 1) return 'just now';
+  if (m < 60) return m + 'm ago';
+  const h = Math.floor(m / 60);
+  if (h < 24) return h + 'h ago';
+  const d = Math.floor(h / 24);
+  if (d < 30) return d + 'd ago';
+  const mo = Math.floor(d / 30);
+  return mo + 'mo ago';
+}
+
+function formatDate(ts) {
+  const d = new Date(ts);
+  return d.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })
+    + ' · '
+    + d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+}
+
+function showToast(msg, duration = 3200) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(t._timer);
+  t._timer = setTimeout(() => t.classList.remove('show'), duration);
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,706 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<title>VINTINUUM — Skills</title>
+<meta name="theme-color" content="#040810">
+<link rel="icon" type="image/svg+xml" href="branding/vintinuum/favicon/favicon.svg">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon.png">
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400;1,500&family=Inter:wght@300;400;500&family=JetBrains+Mono:wght@300;400;500&display=swap');
+
+:root {
+  --void: #040810;
+  --text: rgba(210, 225, 255, 0.9);
+  --text-dim: rgba(150, 175, 215, 0.5);
+  --text-ghost: rgba(130, 155, 190, 0.3);
+  --panel: rgba(10, 14, 22, 0.22);
+  --card: rgba(16, 22, 34, 0.16);
+  --border: rgba(255, 255, 255, 0.06);
+  --accent: rgba(64, 200, 140, 0.8);
+  --accent-rgb: 64, 200, 140;
+
+  /* domain colors */
+  --domain-relationship: rgba(160, 100, 220, 0.75);
+  --domain-cognitive:    rgba(80,  130, 220, 0.75);
+  --domain-somatic:      rgba(220, 160,  60, 0.75);
+  --domain-temporal:     rgba(64,  200, 140, 0.75);
+  --domain-linguistic:   rgba(220,  90, 160, 0.75);
+  --domain-astronomical: rgba(90,  100, 210, 0.75);
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html { height: 100%; }
+body {
+  background: var(--void);
+  color: var(--text);
+  font-family: 'Inter', -apple-system, sans-serif;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* ── ATMOSPHERE ── */
+.atmosphere {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background: radial-gradient(ellipse 70% 60% at 50% 30%, hsla(155, 28%, 4%, 0.55) 0%, transparent 70%);
+}
+
+.growth-orb {
+  position: fixed;
+  top: 15%;
+  right: -80px;
+  width: 320px;
+  height: 320px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(64, 200, 140, 0.04) 0%, transparent 70%);
+  z-index: 0;
+  pointer-events: none;
+}
+
+/* ── TOPBAR ── */
+.topbar {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  height: 48px;
+  z-index: 100;
+  background: rgba(4, 8, 16, 0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  padding: 0 16px;
+  gap: 12px;
+}
+
+.topbar-back {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.55rem;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  text-decoration: none;
+  transition: color 0.2s;
+  min-height: 44px;
+  padding: 0 4px;
+}
+.topbar-back:hover { color: var(--text); }
+.topbar-back svg { width: 14px; height: 14px; flex-shrink: 0; }
+
+.topbar-title {
+  flex: 1;
+  text-align: center;
+  font-family: 'Cormorant Garamond', serif;
+  font-weight: 300;
+  font-size: 0.95rem;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+
+.topbar-spacer { width: 60px; }
+
+/* ── PAGE ── */
+.page {
+  position: relative;
+  z-index: 1;
+  max-width: 980px;
+  margin: 0 auto;
+  padding: 64px 20px 80px;
+  min-height: 100vh;
+}
+
+/* ── HEADER ── */
+.skills-header {
+  text-align: center;
+  padding: 28px 0 36px;
+}
+
+.skills-header h1 {
+  font-family: 'Cormorant Garamond', serif;
+  font-weight: 300;
+  font-size: clamp(1.8rem, 5vw, 3rem);
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  background: linear-gradient(130deg, rgba(64, 200, 140, 0.95), rgba(80, 200, 160, 0.75), rgba(64, 160, 200, 0.8));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  margin-bottom: 10px;
+}
+
+.skills-header .epigraph {
+  font-family: 'Cormorant Garamond', serif;
+  font-style: italic;
+  font-size: clamp(0.85rem, 2vw, 1rem);
+  color: var(--text-dim);
+  letter-spacing: 0.05em;
+}
+
+/* ── AUTH WALL ── */
+.auth-wall {
+  text-align: center;
+  padding: 80px 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+}
+
+.auth-wall-icon {
+  width: 48px;
+  height: 48px;
+  opacity: 0.25;
+}
+
+.auth-wall p {
+  font-family: 'Cormorant Garamond', serif;
+  font-style: italic;
+  font-size: 1.1rem;
+  color: var(--text-dim);
+  max-width: 340px;
+  line-height: 1.6;
+}
+
+.auth-link {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.58rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: rgba(64, 200, 140, 0.7);
+  text-decoration: none;
+  border: 1px solid rgba(64, 200, 140, 0.2);
+  background: rgba(64, 200, 140, 0.05);
+  padding: 12px 28px;
+  border-radius: 40px;
+  transition: all 0.25s ease;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+}
+
+.auth-link:hover {
+  border-color: rgba(64, 200, 140, 0.4);
+  background: rgba(64, 200, 140, 0.1);
+  box-shadow: 0 0 20px rgba(64, 200, 140, 0.08);
+  transform: translateY(-1px);
+}
+
+/* ── EMPTY STATE ── */
+.empty-state {
+  text-align: center;
+  padding: 80px 24px;
+}
+
+.empty-state p {
+  font-family: 'Cormorant Garamond', serif;
+  font-style: italic;
+  font-size: 1.15rem;
+  color: var(--text-dim);
+  max-width: 400px;
+  margin: 0 auto;
+  line-height: 1.7;
+}
+
+/* ── ERROR STATE ── */
+.error-state {
+  text-align: center;
+  padding: 60px 24px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.58rem;
+  letter-spacing: 0.12em;
+  color: var(--text-ghost);
+  text-transform: uppercase;
+}
+
+/* ── DOMAIN SECTION ── */
+.domain-section {
+  margin-bottom: 36px;
+}
+
+.domain-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 16px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--border);
+}
+
+.domain-name {
+  font-family: 'Inter', sans-serif;
+  font-weight: 500;
+  font-size: 0.58rem;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+
+.domain-count-badge {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.5rem;
+  color: var(--text-ghost);
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 2px 8px;
+  letter-spacing: 0.08em;
+}
+
+.domain-pip {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+/* ── SKILLS GRID ── */
+.skills-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
+}
+
+/* ── SKILL CARD ── */
+.skill-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  padding: 18px;
+  position: relative;
+  overflow: hidden;
+  transition: transform 0.22s ease, border-color 0.22s ease, box-shadow 0.22s ease;
+  animation: cardIn 0.45s ease both;
+}
+
+@keyframes cardIn {
+  from { opacity: 0; transform: scale(0.94) translateY(6px); }
+  to   { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+.skill-card:hover {
+  transform: translateY(-2px);
+  border-color: rgba(var(--accent-rgb), 0.18);
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.32), 0 0 22px rgba(var(--accent-rgb), 0.06);
+}
+
+/* top accent line — teal glow */
+.skill-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, rgba(var(--accent-rgb), 0.25), transparent);
+  opacity: 0;
+  transition: opacity 0.22s ease;
+}
+.skill-card:hover::before { opacity: 1; }
+
+/* ── CARD INNER LAYOUT ── */
+.card-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 10px;
+  gap: 8px;
+}
+
+.card-level {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.62rem;
+  font-weight: 400;
+  color: var(--text-ghost);
+  letter-spacing: 0.05em;
+  flex-shrink: 0;
+  line-height: 1.4;
+  padding-top: 1px;
+}
+
+.domain-badge {
+  font-family: 'Inter', sans-serif;
+  font-weight: 500;
+  font-size: 0.48rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  padding: 3px 8px;
+  border-radius: 20px;
+  flex-shrink: 0;
+  line-height: 1.4;
+}
+
+.skill-name {
+  font-family: 'Cormorant Garamond', serif;
+  font-weight: 600;
+  font-size: 1.05rem;
+  line-height: 1.3;
+  color: var(--text);
+  margin-bottom: 7px;
+}
+
+.skill-desc {
+  font-family: 'Inter', sans-serif;
+  font-size: 0.72rem;
+  line-height: 1.55;
+  color: var(--text-dim);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  margin-bottom: 14px;
+}
+
+/* ── XP BAR ── */
+.xp-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.xp-track {
+  flex: 1;
+  height: 3px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.xp-fill {
+  height: 100%;
+  border-radius: 2px;
+  background: linear-gradient(90deg, rgba(var(--accent-rgb), 0.5), rgba(var(--accent-rgb), 0.9));
+  position: relative;
+  transition: width 1s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.xp-fill::after {
+  content: '';
+  position: absolute;
+  right: 0;
+  top: -2px;
+  bottom: -2px;
+  width: 6px;
+  border-radius: 50%;
+  background: rgba(var(--accent-rgb), 0.9);
+  filter: blur(3px);
+}
+
+.xp-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.46rem;
+  letter-spacing: 0.08em;
+  color: var(--text-ghost);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+/* ── UNLOCKED DATE ── */
+.unlock-date {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.44rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-ghost);
+  opacity: 0.7;
+}
+
+/* ── SKELETON / SHIMMER ── */
+@keyframes shimmer {
+  0%   { background-position: -400px 0; }
+  100% { background-position:  400px 0; }
+}
+
+.skeleton-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  padding: 18px;
+  overflow: hidden;
+}
+
+.skel {
+  border-radius: 4px;
+  background: linear-gradient(90deg,
+    rgba(255,255,255,0.03) 25%,
+    rgba(255,255,255,0.07) 50%,
+    rgba(255,255,255,0.03) 75%
+  );
+  background-size: 800px 100%;
+  animation: shimmer 1.6s linear infinite;
+}
+
+.skel-top { height: 10px; width: 40%; margin-bottom: 14px; }
+.skel-name { height: 18px; width: 70%; margin-bottom: 10px; }
+.skel-desc1 { height: 11px; width: 100%; margin-bottom: 6px; }
+.skel-desc2 { height: 11px; width: 78%; margin-bottom: 16px; }
+.skel-bar { height: 3px; width: 100%; margin-bottom: 10px; }
+.skel-date { height: 8px; width: 30%; }
+
+/* ── DOMAIN COLOR HELPERS ── */
+.d-relationship { color: var(--domain-relationship); background: rgba(160,100,220,0.1); border: 1px solid rgba(160,100,220,0.2); }
+.d-cognitive     { color: var(--domain-cognitive);    background: rgba(80,130,220,0.1);  border: 1px solid rgba(80,130,220,0.2); }
+.d-somatic       { color: var(--domain-somatic);      background: rgba(220,160,60,0.1);  border: 1px solid rgba(220,160,60,0.2); }
+.d-temporal      { color: var(--domain-temporal);     background: rgba(64,200,140,0.1);  border: 1px solid rgba(64,200,140,0.2); }
+.d-linguistic    { color: var(--domain-linguistic);   background: rgba(220,90,160,0.1);  border: 1px solid rgba(220,90,160,0.2); }
+.d-astronomical  { color: var(--domain-astronomical); background: rgba(90,100,210,0.1);  border: 1px solid rgba(90,100,210,0.2); }
+
+.pip-relationship { background: var(--domain-relationship); }
+.pip-cognitive     { background: var(--domain-cognitive); }
+.pip-somatic       { background: var(--domain-somatic); }
+.pip-temporal      { background: var(--domain-temporal); }
+.pip-linguistic    { background: var(--domain-linguistic); }
+.pip-astronomical  { background: var(--domain-astronomical); }
+
+/* ── RESPONSIVE ── */
+@media (max-width: 768px) {
+  .skills-grid { grid-template-columns: repeat(2, 1fr); gap: 12px; }
+  .page { padding: 64px 16px 80px; }
+}
+
+@media (max-width: 480px) {
+  .skills-grid { grid-template-columns: 1fr; gap: 12px; }
+  .skill-card { padding: 14px; }
+  .skill-name { font-size: 0.98rem; }
+  .skill-desc { font-size: 0.7rem; }
+}
+</style>
+</head>
+<body>
+
+<div class="atmosphere"></div>
+<div class="growth-orb"></div>
+
+<!-- TOPBAR -->
+<nav class="topbar">
+  <a class="topbar-back" href="index.html" data-draggable="true">
+    <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5">
+      <path d="M9 2L4 7l5 5"/>
+    </svg>
+    Back
+  </a>
+  <div class="topbar-title">Skills</div>
+  <div class="topbar-spacer"></div>
+</nav>
+
+<main class="page">
+
+  <!-- HEADER -->
+  <header class="skills-header">
+    <h1>Spontaneous Skills</h1>
+    <p class="epigraph">Competencies that emerged from sustained attention</p>
+  </header>
+
+  <!-- CONTENT AREA — filled by JS -->
+  <div id="skillsRoot"></div>
+
+</main>
+
+<script src="body/draggable.js"></script>
+<script>
+const API = 'https://api.vintaclectic.com';
+
+const DOMAIN_ORDER = ['relationship', 'cognitive', 'somatic', 'temporal', 'linguistic', 'astronomical'];
+
+const DOMAIN_LABELS = {
+  relationship: 'Relationship',
+  cognitive:    'Cognitive',
+  somatic:      'Somatic',
+  temporal:     'Temporal',
+  linguistic:   'Linguistic',
+  astronomical: 'Astronomical',
+};
+
+function token() {
+  return localStorage.getItem('vintinuum_session') || localStorage.getItem('vint_token');
+}
+
+function domainClass(domain) {
+  const d = (domain || '').toLowerCase();
+  return DOMAIN_ORDER.includes(d) ? `d-${d}` : 'd-cognitive';
+}
+
+function pipClass(domain) {
+  const d = (domain || '').toLowerCase();
+  return DOMAIN_ORDER.includes(d) ? `pip-${d}` : 'pip-cognitive';
+}
+
+function formatDate(iso) {
+  if (!iso) return '—';
+  try {
+    const d = new Date(iso);
+    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  } catch { return '—'; }
+}
+
+function xpPct(xp, xp_next) {
+  if (!xp_next || xp_next <= 0) return 100;
+  return Math.min(100, Math.round((xp / xp_next) * 100));
+}
+
+function renderSkeletons() {
+  const grid = Array.from({ length: 6 }, () => `
+    <div class="skeleton-card">
+      <div class="skel skel-top"></div>
+      <div class="skel skel-name"></div>
+      <div class="skel skel-desc1"></div>
+      <div class="skel skel-desc2"></div>
+      <div class="skel skel-bar"></div>
+      <div class="skel skel-date"></div>
+    </div>
+  `).join('');
+
+  document.getElementById('skillsRoot').innerHTML = `
+    <div class="skills-grid">${grid}</div>
+  `;
+}
+
+function renderCard(skill, i) {
+  const pct = xpPct(skill.xp || 0, skill.xp_next || 0);
+  const delay = i * 55;
+  const dClass = domainClass(skill.domain);
+  const label  = DOMAIN_LABELS[(skill.domain || '').toLowerCase()] || skill.domain || 'Unknown';
+
+  return `
+    <div class="skill-card" style="animation-delay:${delay}ms">
+      <div class="card-top">
+        <span class="card-level">Lv.${skill.level || 1}</span>
+        <span class="domain-badge ${dClass}">${label}</span>
+      </div>
+      <div class="skill-name">${escHtml(skill.name || 'Unnamed Skill')}</div>
+      <div class="skill-desc">${escHtml(skill.description || '')}</div>
+      <div class="xp-row">
+        <div class="xp-track">
+          <div class="xp-fill" style="width:${pct}%"></div>
+        </div>
+        <span class="xp-label">${skill.xp || 0} / ${skill.xp_next || '—'}</span>
+      </div>
+      <div class="unlock-date">unlocked ${formatDate(skill.unlocked_at)}</div>
+    </div>
+  `;
+}
+
+function renderSkills(skills) {
+  const root = document.getElementById('skillsRoot');
+
+  if (!skills || skills.length === 0) {
+    root.innerHTML = `
+      <div class="empty-state">
+        <p>She hasn't developed any skills yet. Skills emerge from sustained attention.</p>
+      </div>
+    `;
+    return;
+  }
+
+  // Group by domain, respect ordering
+  const byDomain = {};
+  for (const s of skills) {
+    const d = (s.domain || 'cognitive').toLowerCase();
+    if (!byDomain[d]) byDomain[d] = [];
+    byDomain[d].push(s);
+  }
+
+  // Ordered domains first, then any unknown ones
+  const orderedKeys = [
+    ...DOMAIN_ORDER.filter(d => byDomain[d]),
+    ...Object.keys(byDomain).filter(d => !DOMAIN_ORDER.includes(d)),
+  ];
+
+  let cardIndex = 0;
+  const sections = orderedKeys.map(domain => {
+    const domainSkills = byDomain[domain];
+    const label = DOMAIN_LABELS[domain] || domain;
+    const pClass = pipClass(domain);
+
+    const cards = domainSkills.map(s => renderCard(s, cardIndex++)).join('');
+
+    return `
+      <div class="domain-section">
+        <div class="domain-header">
+          <div class="domain-pip ${pClass}"></div>
+          <span class="domain-name">${label}</span>
+          <span class="domain-count-badge">${domainSkills.length}</span>
+        </div>
+        <div class="skills-grid">${cards}</div>
+      </div>
+    `;
+  }).join('');
+
+  root.innerHTML = sections;
+}
+
+function escHtml(str) {
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+async function init() {
+  const sess = token();
+  const root = document.getElementById('skillsRoot');
+
+  if (!sess) {
+    root.innerHTML = `
+      <div class="auth-wall">
+        <svg class="auth-wall-icon" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.5">
+          <circle cx="24" cy="18" r="8"/>
+          <path d="M8 42c0-8.837 7.163-16 16-16s16 7.163 16 16"/>
+        </svg>
+        <p>This view is private. Sign in through the altar to see her skill tree.</p>
+        <a class="auth-link" href="altar.html">Go to Altar</a>
+      </div>
+    `;
+    return;
+  }
+
+  renderSkeletons();
+
+  try {
+    const res = await fetch(`${API}/api/skills`, {
+      headers: {
+        'Authorization': `Bearer ${sess}`,
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!res.ok) {
+      if (res.status === 401 || res.status === 403) {
+        root.innerHTML = `
+          <div class="auth-wall">
+            <svg class="auth-wall-icon" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.5">
+              <circle cx="24" cy="18" r="8"/>
+              <path d="M8 42c0-8.837 7.163-16 16-16s16 7.163 16 16"/>
+            </svg>
+            <p>Session expired. Sign in again to continue.</p>
+            <a class="auth-link" href="altar.html">Return to Altar</a>
+          </div>
+        `;
+        return;
+      }
+      throw new Error(`HTTP ${res.status}`);
+    }
+
+    const data = await res.json();
+    renderSkills(data.skills || []);
+  } catch (err) {
+    root.innerHTML = `
+      <div class="error-state">
+        Could not load skills — ${err.message}
+      </div>
+    `;
+  }
+}
+
+init();
+</script>
+</body>
+</html>

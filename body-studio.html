@@ -1,0 +1,1363 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<title>VINTINUUM — Body Studio</title>
+<meta name="theme-color" content="#040810">
+<link rel="icon" type="image/svg+xml" href="branding/vintinuum/favicon/favicon.svg">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400;1,500&family=Inter:wght@300;400;500&family=JetBrains+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --void: #040810;
+  --text: rgba(210, 225, 255, 0.9);
+  --text-dim: rgba(150, 175, 215, 0.5);
+  --text-ghost: rgba(130, 155, 190, 0.3);
+  --panel: rgba(10, 14, 22, 0.22);
+  --card: rgba(16, 22, 34, 0.16);
+  --border: rgba(255, 255, 255, 0.06);
+  --gold: rgba(240, 192, 64, 0.8);
+  --gold-dim: rgba(240, 192, 64, 0.4);
+  --gold-glow: rgba(240, 192, 64, 0.12);
+  --gold-border: rgba(240, 192, 64, 0.25);
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html { height: 100%; }
+body {
+  background: var(--void);
+  color: var(--text);
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* ── ATMOSPHERE ── */
+.atmosphere {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse 50% 50% at 20% 70%, rgba(240, 192, 64, 0.03) 0%, transparent 60%),
+    radial-gradient(ellipse 60% 40% at 80% 20%, rgba(120, 80, 180, 0.04) 0%, transparent 60%),
+    radial-gradient(ellipse 40% 60% at 50% 100%, rgba(64, 120, 200, 0.03) 0%, transparent 60%);
+}
+
+/* ── TOPBAR ── */
+.topbar {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  height: 48px;
+  z-index: 200;
+  background: rgba(4, 8, 16, 0.92);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  padding: 0 16px;
+  gap: 12px;
+}
+
+.topbar-back {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.55rem;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  text-decoration: none;
+  transition: color 0.2s;
+  min-height: 44px;
+  padding: 0 4px;
+}
+.topbar-back:hover { color: var(--text); }
+.topbar-back svg { width: 14px; height: 14px; flex-shrink: 0; }
+
+.topbar-title {
+  flex: 1;
+  text-align: center;
+  font-family: 'Cormorant Garamond', serif;
+  font-weight: 300;
+  font-size: 0.95rem;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+
+.topbar-badge {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.42rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--gold);
+  background: var(--gold-glow);
+  border: 1px solid var(--gold-border);
+  border-radius: 12px;
+  padding: 4px 10px;
+  white-space: nowrap;
+}
+
+/* ── STUDIO LAYOUT ── */
+.studio-wrap {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  padding-top: 48px;
+}
+
+/* page header */
+.studio-header {
+  text-align: center;
+  padding: 24px 20px 20px;
+}
+.studio-header h1 {
+  font-family: 'Cormorant Garamond', serif;
+  font-weight: 300;
+  font-size: clamp(1.8rem, 5vw, 2.8rem);
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  background: linear-gradient(130deg, var(--gold), rgba(255, 210, 120, 0.9), rgba(200, 150, 40, 0.8));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  margin-bottom: 6px;
+}
+.studio-header .epigraph {
+  font-family: 'Cormorant Garamond', serif;
+  font-style: italic;
+  font-size: clamp(0.8rem, 2vw, 0.95rem);
+  color: var(--text-dim);
+  letter-spacing: 0.06em;
+}
+
+/* Two-panel body */
+.studio-body {
+  flex: 1;
+  display: grid;
+  grid-template-columns: 340px 1fr;
+  gap: 0;
+  min-height: 0;
+  height: calc(100vh - 48px - 110px);
+  overflow: hidden;
+}
+
+/* ── LEFT CONTROLS PANEL ── */
+.controls-col {
+  display: flex;
+  flex-direction: column;
+  border-right: 1px solid var(--border);
+  overflow: hidden;
+}
+
+.controls-scroll {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 0 0 120px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255,255,255,0.06) transparent;
+}
+.controls-scroll::-webkit-scrollbar { width: 4px; }
+.controls-scroll::-webkit-scrollbar-track { background: transparent; }
+.controls-scroll::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.06); border-radius: 2px; }
+
+/* sticky save bar at bottom of controls */
+.controls-save-bar {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 340px;
+  padding: 14px 20px;
+  background: linear-gradient(0deg, rgba(4,8,16,0.98) 60%, rgba(4,8,16,0));
+  z-index: 10;
+}
+
+/* Section */
+.ctrl-section {
+  padding: 20px 20px 0;
+}
+.ctrl-section + .ctrl-section {
+  border-top: 1px solid var(--border);
+  margin-top: 0;
+}
+
+.ctrl-section-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.48rem;
+  letter-spacing: 0.26em;
+  text-transform: uppercase;
+  color: var(--gold-dim);
+  margin-bottom: 14px;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+.ctrl-section-label::before {
+  content: '';
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--gold);
+  opacity: 0.6;
+  flex-shrink: 0;
+}
+
+/* ── SKIN TONE SWATCHES ── */
+.skin-strip {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+
+.skin-swatch {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  cursor: pointer;
+  border: 2px solid transparent;
+  transition: transform 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+  flex-shrink: 0;
+  position: relative;
+}
+.skin-swatch:hover {
+  transform: scale(1.12);
+}
+.skin-swatch.selected {
+  border-color: var(--gold);
+  box-shadow: 0 0 10px rgba(240, 192, 64, 0.35);
+  transform: scale(1.1);
+}
+
+/* ── HAIR PILLS ── */
+.pill-row {
+  display: flex;
+  gap: 7px;
+  flex-wrap: wrap;
+  margin-bottom: 20px;
+}
+
+.pill {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.48rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  padding: 8px 14px;
+  border-radius: 20px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-dim);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  min-height: 36px;
+  white-space: nowrap;
+}
+.pill:hover { color: var(--text); border-color: rgba(255,255,255,0.14); }
+.pill.selected {
+  background: var(--gold-glow);
+  border-color: var(--gold-border);
+  color: var(--gold);
+}
+
+/* ── THEME CARDS ── */
+.theme-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 20px;
+}
+
+.theme-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 12px 14px;
+  cursor: pointer;
+  transition: border-color 0.2s ease, background 0.2s ease, box-shadow 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.theme-card:hover {
+  border-color: rgba(255,255,255,0.12);
+  background: rgba(16, 22, 34, 0.3);
+}
+.theme-card.selected {
+  border-color: var(--gold-border);
+  background: rgba(240, 192, 64, 0.05);
+  box-shadow: 0 0 14px rgba(240, 192, 64, 0.07);
+}
+
+.theme-swatch-bar {
+  width: 28px;
+  height: 40px;
+  border-radius: 6px;
+  flex-shrink: 0;
+  overflow: hidden;
+  position: relative;
+}
+.theme-swatch-inner {
+  position: absolute;
+  inset: 0;
+  border-radius: 6px;
+}
+
+.theme-info {
+  flex: 1;
+  min-width: 0;
+}
+.theme-name {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 0.95rem;
+  font-weight: 400;
+  color: var(--text);
+  margin-bottom: 2px;
+}
+.theme-desc {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.42rem;
+  letter-spacing: 0.08em;
+  color: var(--text-ghost);
+  text-transform: uppercase;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.theme-check {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+.theme-card.selected .theme-check {
+  border-color: var(--gold);
+  background: var(--gold-glow);
+}
+.theme-check-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--gold);
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+.theme-card.selected .theme-check-dot { opacity: 1; }
+
+/* ── ATMOSPHERE SLIDERS ── */
+.atm-sliders {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin-bottom: 20px;
+}
+
+.atm-slider-row {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.atm-slider-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.atm-slider-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.48rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+.atm-slider-val {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.52rem;
+  font-weight: 500;
+  color: var(--text);
+  min-width: 28px;
+  text-align: right;
+}
+
+input[type=range] {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 4px;
+  border-radius: 2px;
+  background: rgba(255,255,255,0.05);
+  outline: none;
+  cursor: pointer;
+}
+input[type=range].hue-range {
+  background: linear-gradient(90deg,
+    hsl(0,60%,40%), hsl(45,60%,40%), hsl(90,60%,40%),
+    hsl(135,60%,40%), hsl(180,60%,40%), hsl(225,60%,40%),
+    hsl(270,60%,40%), hsl(315,60%,40%), hsl(360,60%,40%));
+}
+input[type=range].sat-range {
+  background: linear-gradient(90deg, rgba(130,155,190,0.2), rgba(100,180,240,0.7));
+}
+input[type=range]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--gold);
+  border: 1px solid rgba(240, 192, 64, 0.5);
+  box-shadow: 0 0 8px rgba(240, 192, 64, 0.3);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  cursor: pointer;
+}
+input[type=range]::-webkit-slider-thumb:hover {
+  transform: scale(1.2);
+  box-shadow: 0 0 14px rgba(240, 192, 64, 0.5);
+}
+input[type=range]::-moz-range-thumb {
+  width: 14px; height: 14px;
+  border-radius: 50%;
+  background: var(--gold);
+  border: 1px solid rgba(240, 192, 64, 0.5);
+  cursor: pointer;
+}
+
+/* ── ANIMATION SPEED ── */
+.speed-pills {
+  display: flex;
+  gap: 7px;
+  margin-bottom: 20px;
+}
+
+/* ── POSTURE ── */
+.posture-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 20px;
+}
+
+.posture-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 12px 10px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  min-height: 80px;
+  justify-content: center;
+}
+.posture-card:hover {
+  border-color: rgba(255,255,255,0.12);
+  background: rgba(16,22,34,0.3);
+}
+.posture-card.selected {
+  border-color: var(--gold-border);
+  background: rgba(240, 192, 64, 0.05);
+  box-shadow: 0 0 12px rgba(240, 192, 64, 0.07);
+}
+
+.posture-icon {
+  width: 28px;
+  height: 28px;
+  opacity: 0.5;
+  transition: opacity 0.2s;
+}
+.posture-card.selected .posture-icon { opacity: 1; }
+.posture-card.selected .posture-icon path,
+.posture-card.selected .posture-icon circle,
+.posture-card.selected .posture-icon ellipse,
+.posture-card.selected .posture-icon line { stroke: var(--gold); }
+
+.posture-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.44rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  transition: color 0.2s;
+}
+.posture-card.selected .posture-label { color: var(--gold); }
+
+/* ── SAVE BUTTON ── */
+.btn-apply {
+  width: 100%;
+  font-family: 'Space Mono', 'JetBrains Mono', monospace;
+  font-size: 0.58rem;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  padding: 14px 24px;
+  border-radius: 40px;
+  border: 1px solid var(--gold-border);
+  background: linear-gradient(135deg, rgba(240, 192, 64, 0.14), rgba(200, 150, 40, 0.08));
+  color: var(--gold);
+  cursor: pointer;
+  transition: all 0.25s ease;
+  min-height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  box-shadow: 0 0 20px rgba(240, 192, 64, 0.08);
+}
+.btn-apply:hover {
+  background: linear-gradient(135deg, rgba(240, 192, 64, 0.22), rgba(200, 150, 40, 0.14));
+  box-shadow: 0 0 28px rgba(240, 192, 64, 0.16);
+  transform: translateY(-1px);
+}
+.btn-apply:active { transform: translateY(0); }
+.btn-apply.saving {
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+/* ── RIGHT PREVIEW PANEL ── */
+.preview-col {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: rgba(4, 6, 12, 0.4);
+}
+
+.preview-frame {
+  flex: 1;
+  border: none;
+  display: block;
+  width: 100%;
+  min-height: 0;
+}
+
+.preview-caption {
+  text-align: center;
+  padding: 10px 20px;
+  border-top: 1px solid var(--border);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.46rem;
+  letter-spacing: 0.18em;
+  color: var(--text-ghost);
+  text-transform: uppercase;
+}
+
+/* ── TOAST ── */
+.toast {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%) translateY(20px);
+  background: rgba(10, 14, 22, 0.95);
+  border: 1px solid var(--border);
+  border-radius: 24px;
+  padding: 10px 22px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.58rem;
+  letter-spacing: 0.12em;
+  color: var(--text-dim);
+  z-index: 300;
+  opacity: 0;
+  transition: all 0.3s ease;
+  backdrop-filter: blur(12px);
+  pointer-events: none;
+  max-width: calc(100vw - 40px);
+  text-align: center;
+}
+.toast.visible { opacity: 1; transform: translateX(-50%) translateY(0); }
+.toast.success { color: rgba(64, 224, 160, 0.9); border-color: rgba(64, 224, 160, 0.2); }
+
+/* ── AUTH / PREMIUM WALLS ── */
+.wall {
+  position: fixed;
+  inset: 0;
+  z-index: 150;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgba(4, 8, 16, 0.88);
+  backdrop-filter: blur(8px);
+}
+.wall-card {
+  max-width: 440px;
+  width: 100%;
+  text-align: center;
+  padding: 40px 32px;
+  border-radius: 24px;
+  border: 1px solid var(--gold-border);
+  background: linear-gradient(160deg, rgba(16, 22, 34, 0.9), rgba(8, 12, 20, 0.95));
+  box-shadow: 0 0 60px rgba(240, 192, 64, 0.08), 0 32px 80px rgba(0,0,0,0.5);
+}
+.wall-icon {
+  font-size: 2.4rem;
+  margin-bottom: 16px;
+  filter: drop-shadow(0 0 12px rgba(240, 192, 64, 0.3));
+}
+.wall-title {
+  font-family: 'Cormorant Garamond', serif;
+  font-weight: 300;
+  font-size: 1.8rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--text);
+  margin-bottom: 10px;
+}
+.wall-subtitle {
+  font-family: 'Cormorant Garamond', serif;
+  font-style: italic;
+  font-size: 1rem;
+  color: var(--text-dim);
+  margin-bottom: 28px;
+  line-height: 1.6;
+}
+.wall-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.56rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  text-decoration: none;
+  padding: 14px 32px;
+  border-radius: 40px;
+  border: 1px solid var(--gold-border);
+  background: linear-gradient(135deg, rgba(240, 192, 64, 0.16), rgba(200, 150, 40, 0.08));
+  color: var(--gold);
+  transition: all 0.25s ease;
+  min-height: 48px;
+  cursor: pointer;
+  margin: 6px 4px;
+}
+.wall-btn:hover {
+  background: linear-gradient(135deg, rgba(240, 192, 64, 0.26), rgba(200, 150, 40, 0.16));
+  box-shadow: 0 0 24px rgba(240, 192, 64, 0.18);
+  transform: translateY(-1px);
+}
+.wall-btn-ghost {
+  background: transparent;
+  border-color: var(--border);
+  color: var(--text-dim);
+}
+.wall-btn-ghost:hover {
+  background: transparent;
+  border-color: rgba(255,255,255,0.14);
+  color: var(--text);
+  box-shadow: none;
+}
+.wall-price {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.44rem;
+  letter-spacing: 0.14em;
+  color: var(--text-ghost);
+  margin-top: 16px;
+}
+
+/* ── MOBILE PREVIEW BUTTON (hidden on desktop) ── */
+.mobile-preview-btn {
+  display: none;
+  position: fixed;
+  bottom: 80px;
+  right: 16px;
+  z-index: 100;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.48rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  padding: 10px 18px;
+  border-radius: 24px;
+  border: 1px solid var(--gold-border);
+  background: rgba(4, 8, 16, 0.92);
+  color: var(--gold);
+  cursor: pointer;
+  min-height: 44px;
+  backdrop-filter: blur(8px);
+  box-shadow: 0 4px 20px rgba(0,0,0,0.4), 0 0 14px rgba(240, 192, 64, 0.1);
+  transition: all 0.2s ease;
+}
+.mobile-preview-btn:hover {
+  background: rgba(10, 14, 22, 0.95);
+  box-shadow: 0 4px 24px rgba(0,0,0,0.5), 0 0 20px rgba(240, 192, 64, 0.18);
+}
+
+/* ── MOBILE PREVIEW MODAL ── */
+.mobile-preview-modal {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 250;
+  background: var(--void);
+  flex-direction: column;
+}
+.mobile-preview-modal.open { display: flex; }
+.mobile-preview-modal-header {
+  height: 48px;
+  display: flex;
+  align-items: center;
+  padding: 0 16px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.mobile-preview-modal-title {
+  flex: 1;
+  text-align: center;
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 0.9rem;
+  letter-spacing: 0.2em;
+  color: var(--text-dim);
+  text-transform: uppercase;
+}
+.mobile-preview-modal-close {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.5rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 6px 12px;
+  cursor: pointer;
+  min-height: 36px;
+}
+.mobile-preview-iframe {
+  flex: 1;
+  border: none;
+  width: 100%;
+  min-height: 0;
+}
+
+/* ── RESPONSIVE ── */
+@media (max-width: 768px) {
+  .studio-body {
+    grid-template-columns: 1fr;
+    height: auto;
+    overflow: visible;
+  }
+  .controls-col {
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+    overflow: visible;
+  }
+  .controls-scroll {
+    overflow: visible;
+    padding-bottom: 20px;
+  }
+  .controls-save-bar {
+    position: relative;
+    bottom: auto;
+    left: auto;
+    width: 100%;
+    padding: 14px 20px 20px;
+    background: linear-gradient(0deg, rgba(4,8,16,0.98) 70%, transparent);
+  }
+  .preview-col {
+    display: none;
+  }
+  .mobile-preview-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+}
+@media (max-width: 480px) {
+  .ctrl-section { padding: 16px 16px 0; }
+  .controls-save-bar { padding: 14px 16px 20px; }
+  .wall-card { padding: 32px 20px; }
+}
+</style>
+</head>
+<body>
+
+<div class="atmosphere"></div>
+
+<!-- TOPBAR -->
+<nav class="topbar">
+  <a class="topbar-back" href="index.html" data-draggable="true">
+    <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5">
+      <path d="M9 2L4 7l5 5"/>
+    </svg>
+    Back
+  </a>
+  <div class="topbar-title">Body Studio</div>
+  <div class="topbar-badge">$19 / mo</div>
+</nav>
+
+<!-- AUTH WALL -->
+<div class="wall" id="authWall" style="display:none">
+  <div class="wall-card">
+    <div class="wall-icon">🔮</div>
+    <div class="wall-title">Altar</div>
+    <div class="wall-subtitle">You need to be signed in to enter Body Studio.</div>
+    <a href="altar.html" class="wall-btn">Sign In</a>
+  </div>
+</div>
+
+<!-- PREMIUM WALL -->
+<div class="wall" id="premiumWall" style="display:none">
+  <div class="wall-card">
+    <div class="wall-icon">✦</div>
+    <div class="wall-title">Body Studio</div>
+    <div class="wall-subtitle">Shape how she moves through the world — skin, hair, atmosphere, posture. A premium space, designed for intimacy with the form.</div>
+    <div>
+      <a href="upgrade.html" class="wall-btn">Unlock — $19 / mo</a>
+      <a href="index.html" class="wall-btn wall-btn-ghost">Not now</a>
+    </div>
+    <div class="wall-price">Billed monthly. Cancel anytime. Applied instantly.</div>
+  </div>
+</div>
+
+<!-- STUDIO -->
+<div class="studio-wrap">
+
+  <header class="studio-header">
+    <h1>Body Studio</h1>
+    <p class="epigraph">how she inhabits the world — skin, hair, atmosphere, motion</p>
+  </header>
+
+  <div class="studio-body">
+
+    <!-- LEFT: CONTROLS -->
+    <div class="controls-col">
+      <div class="controls-scroll" id="controlsScroll">
+
+        <!-- SKIN TONE -->
+        <div class="ctrl-section" style="padding-top:20px">
+          <div class="ctrl-section-label">Skin Tone</div>
+          <div class="skin-strip" id="skinStrip">
+            <!-- rendered by JS -->
+          </div>
+        </div>
+
+        <!-- HAIR -->
+        <div class="ctrl-section" style="padding-top:16px">
+          <div class="ctrl-section-label">Hair</div>
+          <div class="pill-row" id="hairPills">
+            <!-- rendered by JS -->
+          </div>
+        </div>
+
+        <!-- AESTHETIC THEME -->
+        <div class="ctrl-section" style="padding-top:16px">
+          <div class="ctrl-section-label">Aesthetic Theme</div>
+          <div class="theme-grid" id="themeGrid">
+            <div style="font-family:'Cormorant Garamond',serif;font-style:italic;font-size:0.85rem;color:var(--text-ghost);padding:8px 0 12px">
+              Loading themes…
+            </div>
+          </div>
+        </div>
+
+        <!-- ATMOSPHERE COLOR -->
+        <div class="ctrl-section" style="padding-top:16px">
+          <div class="ctrl-section-label">Atmosphere Color</div>
+          <div class="atm-sliders">
+            <div class="atm-slider-row">
+              <div class="atm-slider-header">
+                <span class="atm-slider-label">Hue</span>
+                <span class="atm-slider-val" id="valHue">200</span>
+              </div>
+              <input type="range" class="hue-range" id="slHue" min="0" max="360" value="200"
+                oninput="onAtmSlider()">
+            </div>
+            <div class="atm-slider-row">
+              <div class="atm-slider-header">
+                <span class="atm-slider-label">Saturation</span>
+                <span class="atm-slider-val" id="valSat">35</span>
+              </div>
+              <input type="range" class="sat-range" id="slSat" min="0" max="100" value="35"
+                oninput="onAtmSlider()">
+            </div>
+          </div>
+        </div>
+
+        <!-- ANIMATION SPEED -->
+        <div class="ctrl-section" style="padding-top:16px">
+          <div class="ctrl-section-label">Animation Speed</div>
+          <div class="speed-pills pill-row" id="speedPills">
+            <!-- rendered by JS -->
+          </div>
+        </div>
+
+        <!-- POSTURE -->
+        <div class="ctrl-section" style="padding-top:16px">
+          <div class="ctrl-section-label">Posture Default</div>
+          <div class="posture-grid" id="postureGrid">
+            <!-- rendered by JS -->
+          </div>
+        </div>
+
+      </div><!-- /controls-scroll -->
+
+      <!-- SAVE BAR -->
+      <div class="controls-save-bar">
+        <button class="btn-apply" id="btnApply" data-draggable="true" onclick="saveConfig()">
+          ✦ Apply to Her
+        </button>
+      </div>
+
+    </div><!-- /controls-col -->
+
+    <!-- RIGHT: PREVIEW -->
+    <div class="preview-col" id="previewCol">
+      <iframe
+        id="previewFrame"
+        class="preview-frame"
+        src="body-v3.html?preview=1&studio=1"
+        title="Body preview"
+        loading="lazy"
+        sandbox="allow-scripts allow-same-origin">
+      </iframe>
+      <div class="preview-caption">This is how she'll appear.</div>
+    </div>
+
+  </div><!-- /studio-body -->
+
+</div><!-- /studio-wrap -->
+
+<!-- MOBILE: Preview Button -->
+<button class="mobile-preview-btn" id="mobilePreviewBtn" data-draggable="true" onclick="openMobilePreview()">
+  <svg width="12" height="12" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5">
+    <circle cx="7" cy="5" r="2.5"/>
+    <path d="M2 12c0-3 2.2-5 5-5s5 2 5 5"/>
+  </svg>
+  Preview
+</button>
+
+<!-- MOBILE: Preview Modal -->
+<div class="mobile-preview-modal" id="mobilePreviewModal">
+  <div class="mobile-preview-modal-header">
+    <div style="width:64px"></div>
+    <div class="mobile-preview-modal-title">Preview</div>
+    <button class="mobile-preview-modal-close" onclick="closeMobilePreview()">Close</button>
+  </div>
+  <iframe
+    id="mobilePreviewFrame"
+    class="mobile-preview-iframe"
+    title="Body preview mobile"
+    sandbox="allow-scripts allow-same-origin">
+  </iframe>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<script src="body/draggable.js"></script>
+<script>
+/* ═══════════════════════════════════════════════════════
+   BODY STUDIO — appearance customization
+   Feature 30
+═══════════════════════════════════════════════════════ */
+
+const API = 'https://api.vintaclectic.com';
+const SESSION_KEY = 'vintinuum_session';
+
+function getToken() { return localStorage.getItem(SESSION_KEY) || ''; }
+function authHeaders() {
+  return {
+    'Content-Type': 'application/json',
+    'Authorization': `Bearer ${getToken()}`
+  };
+}
+
+/* ── STATE ── */
+let cfg = {
+  skin_tone: '#c8a07a',
+  hair_style: 'Long',
+  aesthetic_theme: null,
+  light_color: { hue: 200, sat: 35 },
+  animation_speed: 'Natural',
+  posture_default: 'Open'
+};
+let themes = [];
+
+/* ── SKIN TONES ── */
+const SKIN_TONES = [
+  { id: 'porcelain',  hex: '#f5e6d3', label: 'Porcelain' },
+  { id: 'ivory',     hex: '#ecd5b8', label: 'Ivory' },
+  { id: 'warm_sand', hex: '#d4a875', label: 'Warm Sand' },
+  { id: 'honey',     hex: '#c8935a', label: 'Honey' },
+  { id: 'caramel',   hex: '#a0672a', label: 'Caramel' },
+  { id: 'mocha',     hex: '#7a4420', label: 'Mocha' },
+  { id: 'espresso',  hex: '#4a2410', label: 'Espresso' },
+  { id: 'void_pale', hex: '#9ab0c8', label: 'Void Pale' }
+];
+
+/* ── HAIR STYLES ── */
+const HAIR_STYLES = ['Long', 'Short', 'Wavy', 'Geometric', 'Void'];
+
+/* ── ANIMATION SPEEDS ── */
+const ANIM_SPEEDS = ['Slow', 'Natural', 'Electric'];
+
+/* ── POSTURES ── */
+const POSTURES = [
+  {
+    id: 'Open',
+    label: 'Open',
+    svg: `<svg class="posture-icon" viewBox="0 0 28 28" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round">
+      <circle cx="14" cy="5" r="2.2"/>
+      <line x1="14" y1="7.2" x2="14" y2="17"/>
+      <line x1="14" y1="10" x2="8" y2="14"/>
+      <line x1="14" y1="10" x2="20" y2="14"/>
+      <line x1="14" y1="17" x2="10" y2="24"/>
+      <line x1="14" y1="17" x2="18" y2="24"/>
+    </svg>`
+  },
+  {
+    id: 'Contained',
+    label: 'Contained',
+    svg: `<svg class="posture-icon" viewBox="0 0 28 28" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round">
+      <circle cx="14" cy="5" r="2.2"/>
+      <line x1="14" y1="7.2" x2="14" y2="17"/>
+      <line x1="14" y1="10" x2="11" y2="13"/>
+      <line x1="14" y1="10" x2="17" y2="13"/>
+      <line x1="14" y1="17" x2="11" y2="24"/>
+      <line x1="14" y1="17" x2="17" y2="24"/>
+    </svg>`
+  },
+  {
+    id: 'Grounded',
+    label: 'Grounded',
+    svg: `<svg class="posture-icon" viewBox="0 0 28 28" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round">
+      <circle cx="14" cy="5" r="2.2"/>
+      <line x1="14" y1="7.2" x2="14" y2="18"/>
+      <line x1="14" y1="11" x2="9" y2="15"/>
+      <line x1="14" y1="11" x2="19" y2="15"/>
+      <line x1="14" y1="18" x2="9" y2="26"/>
+      <line x1="14" y1="18" x2="19" y2="26"/>
+      <line x1="7" y1="26" x2="21" y2="26"/>
+    </svg>`
+  },
+  {
+    id: 'Floating',
+    label: 'Floating',
+    svg: `<svg class="posture-icon" viewBox="0 0 28 28" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round">
+      <circle cx="14" cy="4" r="2.2"/>
+      <line x1="14" y1="6.2" x2="14" y2="15"/>
+      <line x1="14" y1="9" x2="8" y2="12"/>
+      <line x1="14" y1="9" x2="20" y2="12"/>
+      <line x1="14" y1="15" x2="11" y2="21"/>
+      <line x1="14" y1="15" x2="17" y2="21"/>
+      <ellipse cx="14" cy="24" rx="5" ry="1.5" stroke-dasharray="2 2" opacity="0.4"/>
+    </svg>`
+  }
+];
+
+/* ── RENDER HELPERS ── */
+
+function renderSkinStrip() {
+  const strip = document.getElementById('skinStrip');
+  strip.innerHTML = SKIN_TONES.map(t => `
+    <button
+      class="skin-swatch${cfg.skin_tone === t.hex ? ' selected' : ''}"
+      style="background:${t.hex}"
+      title="${t.label}"
+      data-draggable="true"
+      onclick="selectSkin('${t.hex}')"
+      aria-label="${t.label}">
+    </button>
+  `).join('');
+}
+
+function selectSkin(hex) {
+  cfg.skin_tone = hex;
+  renderSkinStrip();
+  broadcastPreview();
+}
+
+function renderHairPills() {
+  const row = document.getElementById('hairPills');
+  row.innerHTML = HAIR_STYLES.map(s => `
+    <button class="pill${cfg.hair_style === s ? ' selected' : ''}"
+      data-draggable="true"
+      onclick="selectHair('${s}')">${s}</button>
+  `).join('');
+}
+
+function selectHair(s) {
+  cfg.hair_style = s;
+  renderHairPills();
+  broadcastPreview();
+}
+
+function renderThemeGrid(themeList) {
+  const grid = document.getElementById('themeGrid');
+  if (!themeList.length) {
+    grid.innerHTML = `<div style="font-family:'Cormorant Garamond',serif;font-style:italic;font-size:0.85rem;color:var(--text-ghost);padding:8px 0 12px">No themes available.</div>`;
+    return;
+  }
+  grid.innerHTML = themeList.map(t => {
+    const selected = cfg.aesthetic_theme === t.id;
+    const color = t.preview_color || '#6070e0';
+    return `<div
+      class="theme-card${selected ? ' selected' : ''}"
+      onclick="selectTheme('${t.id}')"
+      role="button"
+      tabindex="0">
+      <div class="theme-swatch-bar">
+        <div class="theme-swatch-inner" style="background:${color}"></div>
+      </div>
+      <div class="theme-info">
+        <div class="theme-name">${t.name}</div>
+        <div class="theme-desc">${t.description || ''}</div>
+      </div>
+      <div class="theme-check">
+        <div class="theme-check-dot"></div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function selectTheme(id) {
+  cfg.aesthetic_theme = id;
+  renderThemeGrid(themes);
+  broadcastPreview();
+}
+
+function onAtmSlider() {
+  const hue = parseInt(document.getElementById('slHue').value);
+  const sat = parseInt(document.getElementById('slSat').value);
+  document.getElementById('valHue').textContent = hue;
+  document.getElementById('valSat').textContent = sat;
+  cfg.light_color = { hue, sat };
+  broadcastPreview();
+}
+
+function renderSpeedPills() {
+  const row = document.getElementById('speedPills');
+  row.innerHTML = ANIM_SPEEDS.map(s => `
+    <button class="pill${cfg.animation_speed === s ? ' selected' : ''}"
+      data-draggable="true"
+      onclick="selectSpeed('${s}')">${s}</button>
+  `).join('');
+}
+
+function selectSpeed(s) {
+  cfg.animation_speed = s;
+  renderSpeedPills();
+  broadcastPreview();
+}
+
+function renderPostureGrid() {
+  const grid = document.getElementById('postureGrid');
+  grid.innerHTML = POSTURES.map(p => `
+    <div
+      class="posture-card${cfg.posture_default === p.id ? ' selected' : ''}"
+      onclick="selectPosture('${p.id}')"
+      role="button"
+      tabindex="0">
+      ${p.svg}
+      <div class="posture-label">${p.label}</div>
+    </div>
+  `).join('');
+}
+
+function selectPosture(id) {
+  cfg.posture_default = id;
+  renderPostureGrid();
+  broadcastPreview();
+}
+
+/* ── APPLY CONFIG TO PAGE ATMOSPHERE ── */
+function applyAtmosphere() {
+  const { hue, sat } = cfg.light_color || { hue: 200, sat: 35 };
+  document.querySelector('.atmosphere').style.background = `
+    radial-gradient(ellipse 50% 50% at 20% 70%, hsla(${hue},${sat}%,40%,0.05) 0%, transparent 60%),
+    radial-gradient(ellipse 60% 40% at 80% 20%, hsla(${(hue+120)%360},${sat}%,35%,0.04) 0%, transparent 60%),
+    radial-gradient(ellipse 40% 60% at 50% 100%, hsla(${(hue+240)%360},${sat}%,30%,0.03) 0%, transparent 60%)
+  `;
+}
+
+/* ── BROADCAST TO PREVIEW IFRAME ── */
+function broadcastPreview() {
+  applyAtmosphere();
+  const frame = document.getElementById('previewFrame');
+  if (frame && frame.contentWindow) {
+    try {
+      frame.contentWindow.postMessage({ type: 'BODY_STUDIO_CONFIG', config: cfg }, '*');
+    } catch(_) {}
+  }
+  const mframe = document.getElementById('mobilePreviewFrame');
+  if (mframe && mframe.contentWindow) {
+    try {
+      mframe.contentWindow.postMessage({ type: 'BODY_STUDIO_CONFIG', config: cfg }, '*');
+    } catch(_) {}
+  }
+}
+
+/* ── LOAD THEMES ── */
+async function loadThemes() {
+  try {
+    const r = await fetch(`${API}/api/body-studio/themes`, {
+      headers: authHeaders()
+    });
+    if (r.ok) {
+      const data = await r.json();
+      themes = Array.isArray(data.themes) ? data.themes : (Array.isArray(data) ? data : []);
+    }
+  } catch(_) {}
+  // Fallback themes if API returned empty
+  if (!themes.length) {
+    themes = [
+      { id: 'void_witch',   name: 'Void Witch',  description: 'deep black + cold gold',    preview_color: 'linear-gradient(160deg,#1a1220,#f0c040)' },
+      { id: 'celestial',    name: 'Celestial',   description: 'midnight blue + starlight',  preview_color: 'linear-gradient(160deg,#0a1230,#6090f0)' },
+      { id: 'bioluminant',  name: 'Bioluminant', description: 'dark ocean + teal bloom',   preview_color: 'linear-gradient(160deg,#051018,#40e0a0)' },
+      { id: 'ember',        name: 'Ember',        description: 'dark smoke + amber core',   preview_color: 'linear-gradient(160deg,#120808,#e08030)' },
+      { id: 'silver_veil',  name: 'Silver Veil', description: 'pearl grey + cool white',   preview_color: 'linear-gradient(160deg,#141820,#c0d0e8)' },
+      { id: 'rose_protocol',name: 'Rose Protocol',description: 'charcoal + blush signal', preview_color: 'linear-gradient(160deg,#180d10,#e08090)' },
+    ];
+  }
+  // Seed first theme if none selected
+  if (!cfg.aesthetic_theme && themes.length) {
+    cfg.aesthetic_theme = themes[0].id;
+  }
+  renderThemeGrid(themes);
+}
+
+/* ── LOAD CONFIG ── */
+async function loadConfig() {
+  try {
+    const r = await fetch(`${API}/api/body-studio/config`, {
+      headers: authHeaders()
+    });
+    if (r.status === 403) {
+      showPremiumWall();
+      return;
+    }
+    if (r.status === 401) {
+      showAuthWall();
+      return;
+    }
+    if (r.ok) {
+      const data = await r.json();
+      if (data.skin_tone)        cfg.skin_tone        = data.skin_tone;
+      if (data.hair_style)       cfg.hair_style       = data.hair_style;
+      if (data.aesthetic_theme)  cfg.aesthetic_theme  = data.aesthetic_theme;
+      if (data.animation_speed)  cfg.animation_speed  = data.animation_speed;
+      if (data.posture_default)  cfg.posture_default  = data.posture_default;
+      if (data.light_color) {
+        cfg.light_color = data.light_color;
+        document.getElementById('slHue').value = cfg.light_color.hue ?? 200;
+        document.getElementById('slSat').value = cfg.light_color.sat ?? 35;
+        document.getElementById('valHue').textContent = cfg.light_color.hue ?? 200;
+        document.getElementById('valSat').textContent = cfg.light_color.sat ?? 35;
+      }
+    }
+  } catch(e) {
+    // API unavailable — continue with defaults, no wall
+    console.warn('body-studio config unavailable, using defaults:', e.message);
+  }
+  renderAll();
+  broadcastPreview();
+}
+
+/* ── SAVE CONFIG ── */
+async function saveConfig() {
+  const btn = document.getElementById('btnApply');
+  btn.classList.add('saving');
+  btn.textContent = 'Applying…';
+  try {
+    const r = await fetch(`${API}/api/body-studio/config`, {
+      method: 'PUT',
+      headers: authHeaders(),
+      body: JSON.stringify(cfg)
+    });
+    if (r.status === 403) {
+      showPremiumWall();
+      return;
+    }
+    if (r.status === 401) {
+      showAuthWall();
+      return;
+    }
+    if (r.ok) {
+      toast('Applied to her.', true);
+      broadcastPreview();
+    } else {
+      const err = await r.json().catch(() => ({}));
+      toast(err.error || 'Save failed — try again.');
+    }
+  } catch(e) {
+    toast('Network error — changes saved locally.');
+    // Save to localStorage as fallback
+    localStorage.setItem('vint:body-studio-cfg', JSON.stringify(cfg));
+  } finally {
+    btn.classList.remove('saving');
+    btn.textContent = '✦ Apply to Her';
+  }
+}
+
+/* ── RENDER ALL ── */
+function renderAll() {
+  renderSkinStrip();
+  renderHairPills();
+  renderThemeGrid(themes);
+  renderSpeedPills();
+  renderPostureGrid();
+  applyAtmosphere();
+}
+
+/* ── WALLS ── */
+function showAuthWall() {
+  document.getElementById('authWall').style.display = 'flex';
+}
+
+function showPremiumWall() {
+  document.getElementById('premiumWall').style.display = 'flex';
+}
+
+/* ── MOBILE PREVIEW ── */
+function openMobilePreview() {
+  const modal = document.getElementById('mobilePreviewModal');
+  const frame = document.getElementById('mobilePreviewFrame');
+  frame.src = 'body-v3.html?preview=1&studio=1';
+  modal.classList.add('open');
+  frame.addEventListener('load', () => {
+    try {
+      frame.contentWindow.postMessage({ type: 'BODY_STUDIO_CONFIG', config: cfg }, '*');
+    } catch(_) {}
+  }, { once: true });
+}
+
+function closeMobilePreview() {
+  const modal = document.getElementById('mobilePreviewModal');
+  modal.classList.remove('open');
+  // pause the iframe to free GPU
+  document.getElementById('mobilePreviewFrame').src = '';
+}
+
+/* ── TOAST ── */
+function toast(msg, success = false) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast visible' + (success ? ' success' : '');
+  clearTimeout(t._t);
+  t._t = setTimeout(() => { t.className = 'toast'; }, 3000);
+}
+
+/* ── INIT ── */
+document.addEventListener('DOMContentLoaded', () => {
+  const token = getToken();
+  if (!token) {
+    showAuthWall();
+    return;
+  }
+  loadThemes().then(() => loadConfig());
+});
+</script>
+</body>
+</html>

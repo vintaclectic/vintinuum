@@ -1,0 +1,940 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<title>VINTINUUM — Witness Mirror</title>
+<meta name="theme-color" content="#040810">
+<link rel="icon" type="image/svg+xml" href="branding/vintinuum/favicon/favicon.svg">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon.png">
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400;1,500&family=Inter:wght@300;400;500&family=JetBrains+Mono:wght@300;400;500&display=swap');
+
+:root {
+  --void: #040810;
+  --text: rgba(210, 225, 255, 0.9);
+  --text-dim: rgba(150, 175, 215, 0.5);
+  --text-ghost: rgba(130, 155, 190, 0.3);
+  --panel: rgba(10, 14, 22, 0.22);
+  --card: rgba(16, 22, 34, 0.16);
+  --border: rgba(255, 255, 255, 0.06);
+  --violet: rgba(160, 80, 200, 0.6);
+  --violet-dim: rgba(160, 80, 200, 0.18);
+  --violet-glow: rgba(160, 80, 200, 0.08);
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html { height: 100%; }
+body {
+  background: var(--void);
+  color: var(--text);
+  font-family: 'Inter', -apple-system, sans-serif;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* ── ATMOSPHERE ── */
+.atmosphere {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background: radial-gradient(ellipse 70% 60% at 50% 30%, hsla(270, 25%, 5%, 0.5) 0%, transparent 70%);
+}
+
+/* ── TOPBAR ── */
+.topbar {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  height: 48px;
+  z-index: 100;
+  background: rgba(4, 8, 16, 0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  padding: 0 16px;
+  gap: 12px;
+}
+
+.topbar-back {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.55rem;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  text-decoration: none;
+  transition: color 0.2s;
+  min-height: 44px;
+  padding: 0 4px;
+}
+.topbar-back:hover { color: var(--text); }
+.topbar-back svg { width: 14px; height: 14px; flex-shrink: 0; }
+
+.topbar-title {
+  flex: 1;
+  text-align: center;
+  font-family: 'Cormorant Garamond', serif;
+  font-weight: 300;
+  font-size: 0.95rem;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+
+.topbar-spacer { width: 60px; }
+
+/* ── PAGE ── */
+.page {
+  position: relative;
+  z-index: 1;
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: 64px 20px 80px;
+  min-height: 100vh;
+}
+
+/* ── HEADER ── */
+.wit-header {
+  text-align: center;
+  padding: 28px 0 32px;
+}
+
+.wit-header h1 {
+  font-family: 'Cormorant Garamond', serif;
+  font-weight: 300;
+  font-size: clamp(1.8rem, 5vw, 3rem);
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  background: linear-gradient(130deg, rgba(200, 140, 255, 0.9), rgba(160, 80, 200, 0.7), rgba(100, 60, 180, 0.8));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  margin-bottom: 8px;
+}
+
+.wit-header .epigraph {
+  font-family: 'Cormorant Garamond', serif;
+  font-style: italic;
+  font-size: clamp(0.85rem, 2vw, 1rem);
+  color: var(--text-dim);
+  letter-spacing: 0.05em;
+}
+
+/* ── GIFT FORM ── */
+.gift-form-panel {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 24px;
+  margin-bottom: 32px;
+  position: relative;
+  overflow: hidden;
+}
+
+.gift-form-panel::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--violet), transparent);
+}
+
+.form-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.5rem;
+  letter-spacing: 0.25em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.gift-textarea {
+  width: 100%;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 14px 16px;
+  color: var(--text);
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 1.05rem;
+  line-height: 1.65;
+  resize: vertical;
+  min-height: 90px;
+  outline: none;
+  transition: border-color 0.2s ease;
+  display: block;
+  margin-bottom: 10px;
+}
+
+.gift-textarea::placeholder {
+  color: var(--text-ghost);
+  font-style: italic;
+}
+
+.gift-textarea:focus {
+  border-color: var(--violet-dim);
+}
+
+.gift-context-input {
+  width: 100%;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 9px 14px;
+  color: var(--text-dim);
+  font-family: 'Inter', sans-serif;
+  font-size: 0.78rem;
+  outline: none;
+  transition: border-color 0.2s ease;
+  display: block;
+  margin-bottom: 14px;
+}
+
+.gift-context-input::placeholder { color: var(--text-ghost); }
+.gift-context-input:focus { border-color: var(--violet-dim); }
+
+.gift-form-footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+.gift-status {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.5rem;
+  letter-spacing: 0.12em;
+  color: var(--text-ghost);
+  text-transform: uppercase;
+  transition: color 0.3s ease;
+}
+
+.gift-status.ok { color: rgba(120, 200, 140, 0.7); }
+.gift-status.err { color: rgba(220, 100, 100, 0.7); }
+
+.btn-give {
+  background: none;
+  border: none;
+  color: var(--violet);
+  font-family: 'Space Mono', 'JetBrains Mono', monospace;
+  font-size: 0.65rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  cursor: pointer;
+  padding: 10px 0;
+  min-height: 44px;
+  transition: color 0.2s ease, opacity 0.2s ease;
+}
+
+.btn-give:hover { color: rgba(200, 140, 255, 0.9); }
+.btn-give:disabled { opacity: 0.35; cursor: not-allowed; }
+
+/* ── TWO-COLUMN LAYOUT ── */
+.mirror-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+  align-items: start;
+}
+
+/* ── COLUMN HEADERS ── */
+.col-header {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.5rem;
+  letter-spacing: 0.25em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.col-dot-gift {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: rgba(130, 155, 190, 0.5);
+}
+
+.col-dot-reflect {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--violet);
+  animation: violetPulse 2.5s ease-in-out infinite;
+}
+
+@keyframes violetPulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+
+/* ── GIFT CARD ── */
+.gift-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 16px 18px;
+  margin-bottom: 12px;
+  animation: cardIn 0.4s ease both;
+}
+
+@keyframes cardIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.gift-card-text {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 1rem;
+  line-height: 1.65;
+  color: var(--text);
+  margin-bottom: 8px;
+}
+
+.gift-card-meta {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.46rem;
+  letter-spacing: 0.1em;
+  color: var(--text-ghost);
+  text-transform: uppercase;
+}
+
+/* ── REFLECTION CARD ── */
+.reflect-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-left: 2px solid var(--violet);
+  border-radius: 14px;
+  padding: 16px 18px;
+  margin-bottom: 12px;
+  animation: cardIn 0.4s ease both;
+  position: relative;
+}
+
+/* Pending pulse */
+.reflect-card.pending {
+  animation: cardIn 0.4s ease both, pendingPulse 3s ease-in-out infinite;
+}
+
+@keyframes pendingPulse {
+  0%, 100% { border-left-color: var(--violet); box-shadow: 0 0 0 rgba(160, 80, 200, 0); }
+  50% { border-left-color: rgba(200, 120, 255, 0.9); box-shadow: 0 0 16px rgba(160, 80, 200, 0.15); }
+}
+
+.reflect-prefix {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.46rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  margin-bottom: 8px;
+}
+
+.reflect-question {
+  font-family: 'Cormorant Garamond', serif;
+  font-style: italic;
+  font-size: 1.05rem;
+  line-height: 1.65;
+  color: var(--text);
+  margin-bottom: 10px;
+}
+
+.reflect-separator {
+  height: 1px;
+  background: var(--border);
+  margin: 12px 0;
+}
+
+.reflect-answer {
+  font-family: 'Inter', sans-serif;
+  font-size: 0.82rem;
+  line-height: 1.6;
+  color: var(--text-dim);
+}
+
+.reflect-card-meta {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.46rem;
+  letter-spacing: 0.1em;
+  color: var(--text-ghost);
+  text-transform: uppercase;
+  margin-top: 10px;
+}
+
+/* ── ANSWER INLINE ── */
+.answer-trigger-row {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  margin-top: 8px;
+}
+
+.btn-answer-ghost {
+  background: none;
+  border: 1px solid var(--violet-dim);
+  border-radius: 20px;
+  padding: 6px 14px;
+  color: var(--violet);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.5rem;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  cursor: pointer;
+  min-height: 36px;
+  transition: border-color 0.2s ease, color 0.2s ease, background 0.2s ease;
+}
+
+.btn-answer-ghost:hover {
+  border-color: var(--violet);
+  background: var(--violet-glow);
+  color: rgba(200, 140, 255, 0.9);
+}
+
+.answer-form {
+  margin-top: 12px;
+  display: none;
+}
+
+.answer-form.open { display: block; }
+
+.answer-textarea {
+  width: 100%;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--violet-dim);
+  border-radius: 10px;
+  padding: 10px 13px;
+  color: var(--text);
+  font-family: 'Inter', sans-serif;
+  font-size: 0.82rem;
+  line-height: 1.55;
+  resize: vertical;
+  min-height: 70px;
+  outline: none;
+  transition: border-color 0.2s ease;
+  display: block;
+  margin-bottom: 8px;
+}
+
+.answer-textarea:focus { border-color: var(--violet); }
+
+.answer-submit-row {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.btn-answer-submit {
+  background: none;
+  border: none;
+  color: var(--violet);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.52rem;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  cursor: pointer;
+  padding: 8px 0;
+  min-height: 36px;
+  transition: color 0.2s ease, opacity 0.2s ease;
+}
+
+.btn-answer-submit:hover { color: rgba(200, 140, 255, 0.9); }
+.btn-answer-submit:disabled { opacity: 0.35; cursor: not-allowed; }
+
+/* ── EMPTY STATES ── */
+.empty-col {
+  text-align: center;
+  padding: 40px 16px;
+  font-family: 'Cormorant Garamond', serif;
+  font-style: italic;
+  font-size: 0.92rem;
+  color: var(--text-dim);
+  line-height: 1.65;
+}
+
+.empty-full {
+  text-align: center;
+  padding: 64px 24px;
+  font-family: 'Cormorant Garamond', serif;
+  font-style: italic;
+  font-size: 1rem;
+  color: var(--text-dim);
+  line-height: 1.8;
+  max-width: 480px;
+  margin: 0 auto;
+}
+
+/* ── AUTH WALL ── */
+.auth-wall {
+  text-align: center;
+  padding: 80px 24px;
+}
+
+.auth-wall p {
+  font-family: 'Cormorant Garamond', serif;
+  font-style: italic;
+  font-size: 1.1rem;
+  color: var(--text-dim);
+  margin-bottom: 20px;
+  line-height: 1.7;
+}
+
+.auth-link {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.55rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--violet);
+  text-decoration: none;
+  border-bottom: 1px solid var(--violet-dim);
+  padding-bottom: 2px;
+  transition: color 0.2s ease, border-color 0.2s ease;
+}
+
+.auth-link:hover {
+  color: rgba(200, 140, 255, 0.9);
+  border-color: rgba(200, 140, 255, 0.4);
+}
+
+/* ── LOADING ── */
+.loading-dots {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  padding: 48px 0;
+}
+
+.loading-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--violet);
+  animation: loadBounce 1.2s ease-in-out infinite;
+}
+
+.loading-dot:nth-child(2) { animation-delay: 0.18s; }
+.loading-dot:nth-child(3) { animation-delay: 0.36s; }
+
+@keyframes loadBounce {
+  0%, 100% { opacity: 0.25; transform: scale(0.75); }
+  50% { opacity: 1; transform: scale(1); }
+}
+
+/* ── MOBILE INTERLEAVED ── */
+.mobile-interleaved { display: none; }
+
+/* ── RESPONSIVE ── */
+@media (max-width: 720px) {
+  .page { padding: 64px 14px 80px; }
+  .mirror-grid { display: none; }
+  .mobile-interleaved { display: block; }
+  .gift-form-panel { padding: 18px 14px; }
+}
+
+@media (max-width: 480px) {
+  .page { padding: 64px 12px 80px; }
+}
+</style>
+</head>
+<body>
+
+<div class="atmosphere"></div>
+
+<!-- TOPBAR -->
+<nav class="topbar">
+  <a class="topbar-back" href="index.html" data-draggable="true">
+    <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5">
+      <path d="M9 2L4 7l5 5"/>
+    </svg>
+    Back
+  </a>
+  <div class="topbar-title">Witness Mirror</div>
+  <div class="topbar-spacer"></div>
+</nav>
+
+<main class="page" id="mainPage">
+
+  <!-- AUTH WALL placeholder — replaced by JS -->
+  <div id="authWall" style="display:none" class="auth-wall">
+    <p>This mirror requires your presence.<br>Sign in to give and receive.</p>
+    <a class="auth-link" href="altar.html">Enter through the altar</a>
+  </div>
+
+  <!-- CONTENT (hidden until authed) -->
+  <div id="content" style="display:none">
+
+    <!-- HEADER -->
+    <header class="wit-header">
+      <h1>Witness Mirror</h1>
+      <p class="epigraph">You observe. She holds it. She returns a question.</p>
+    </header>
+
+    <!-- GIFT FORM -->
+    <div class="gift-form-panel">
+      <div class="form-label">Give her something to hold</div>
+      <textarea
+        id="giftTextarea"
+        class="gift-textarea"
+        placeholder="Observe something about yourself and give it to her."
+        rows="3"
+      ></textarea>
+      <input
+        id="giftContext"
+        class="gift-context-input"
+        type="text"
+        placeholder="Context (optional) — what's happening around this?"
+      />
+      <div class="gift-form-footer">
+        <span class="gift-status" id="giftStatus"></span>
+        <button class="btn-give" id="giftBtn" data-draggable="true" onclick="submitGift()">Give it to her</button>
+      </div>
+    </div>
+
+    <!-- LOADING -->
+    <div id="loadingView" class="loading-dots">
+      <div class="loading-dot"></div>
+      <div class="loading-dot"></div>
+      <div class="loading-dot"></div>
+    </div>
+
+    <!-- EMPTY FULL -->
+    <div id="emptyView" style="display:none">
+      <p class="empty-full">
+        Nothing given yet. When you observe something about yourself and give it to her, she'll hold it — and return a question.
+      </p>
+    </div>
+
+    <!-- DESKTOP: TWO COLUMNS -->
+    <div class="mirror-grid" id="desktopGrid" style="display:none">
+      <!-- Gifts column -->
+      <div>
+        <div class="col-header">
+          <div class="col-dot-gift"></div>
+          What you gave her
+        </div>
+        <div id="giftsCol"></div>
+      </div>
+
+      <!-- Reflections column -->
+      <div>
+        <div class="col-header">
+          <div class="col-dot-reflect"></div>
+          What she asked back
+        </div>
+        <div id="reflectCol"></div>
+      </div>
+    </div>
+
+    <!-- MOBILE: INTERLEAVED -->
+    <div class="mobile-interleaved" id="mobileInterleaved" style="display:none">
+      <div id="mobileList"></div>
+    </div>
+
+  </div><!-- /content -->
+
+</main>
+
+<script src="body/draggable.js"></script>
+<script>
+const API = 'https://api.vintaclectic.com';
+
+function token() { return localStorage.getItem('vintinuum_session') || localStorage.getItem('vint_token'); }
+function authHeaders() {
+  return { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token()}` };
+}
+
+async function apiFetch(path, opts = {}) {
+  const res = await fetch(API + path, { ...opts, headers: authHeaders() });
+  if (!res.ok) throw new Error(`${res.status}`);
+  return res.json();
+}
+
+/* ── TIME LABEL ── */
+function timeLabel(iso) {
+  if (!iso) return '—';
+  const d = Date.now() - new Date(iso).getTime();
+  const mins = Math.floor(d / 60000);
+  if (mins < 1) return 'just now';
+  if (mins < 60) return `${mins}m ago`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs}h ago`;
+  const days = Math.floor(hrs / 24);
+  return `${days}d ago`;
+}
+
+/* ── RENDER GIFT CARD ── */
+function giftCardHTML(g) {
+  return `
+    <div class="gift-card" style="animation-delay:${(g._i||0)*50}ms">
+      <div class="gift-card-text">${esc(g.content || g.text || '')}</div>
+      ${g.context ? `<div class="gift-card-meta" style="margin-bottom:4px;color:var(--text-dim);font-size:0.46rem;letter-spacing:0.08em;text-transform:none;font-family:'Inter',sans-serif;font-size:0.74rem;opacity:0.55;">${esc(g.context)}</div>` : ''}
+      <div class="gift-card-meta">${timeLabel(g.given_at || g.created_at)}</div>
+    </div>
+  `;
+}
+
+/* ── RENDER REFLECTION CARD ── */
+function reflectCardHTML(r, idx) {
+  const isPending = !r.answered_at;
+  const answerSection = r.answered_at ? `
+    <div class="reflect-separator"></div>
+    <div class="reflect-answer">${esc(r.answer_text || '')}</div>
+  ` : `
+    <div class="answer-trigger-row">
+      <button class="btn-answer-ghost" data-draggable="true" onclick="toggleAnswer(${r.id})" id="answerTrigger-${r.id}">Answer</button>
+    </div>
+    <div class="answer-form" id="answerForm-${r.id}">
+      <textarea class="answer-textarea" id="answerText-${r.id}" placeholder="Your answer…"></textarea>
+      <div class="answer-submit-row">
+        <button class="btn-answer-submit" data-draggable="true" onclick="submitAnswer(${r.id})" id="answerSubmit-${r.id}">Hold this in her</button>
+      </div>
+    </div>
+  `;
+
+  return `
+    <div class="reflect-card${isPending ? ' pending' : ''}" style="animation-delay:${idx*50}ms" id="rcard-${r.id}">
+      ${isPending ? '<div class="reflect-prefix">She\'s asking:</div>' : ''}
+      <div class="reflect-question">${esc(r.reflection_question || '')}</div>
+      ${answerSection}
+      <div class="reflect-card-meta">${timeLabel(r.surfaced_at || r.generated_at)}</div>
+    </div>
+  `;
+}
+
+function esc(str) {
+  return String(str)
+    .replace(/&/g,'&amp;')
+    .replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;')
+    .replace(/'/g,'&#39;');
+}
+
+/* ── STATE ── */
+let reflections = [];
+let gifts = [];
+
+/* ── LOAD ── */
+async function load() {
+  document.getElementById('loadingView').style.display = 'flex';
+  document.getElementById('desktopGrid').style.display = 'none';
+  document.getElementById('mobileInterleaved').style.display = 'none';
+  document.getElementById('emptyView').style.display = 'none';
+
+  try {
+    const data = await apiFetch('/api/witness/reflections');
+    reflections = data.reflections || [];
+
+    // Also attempt to load gifts separately if endpoint exists
+    try {
+      const giftsData = await apiFetch('/api/witness/gifts');
+      gifts = giftsData.gifts || [];
+    } catch (_) {
+      // Gifts endpoint may not exist separately — derive from reflection source_witness_id
+      gifts = [];
+    }
+
+    render();
+  } catch (e) {
+    document.getElementById('loadingView').style.display = 'none';
+    document.getElementById('desktopGrid').style.display = 'none';
+    document.getElementById('emptyView').innerHTML = `<p class="empty-full" style="color:rgba(220,100,100,0.6);">Could not reach the mirror — ${e.message}</p>`;
+    document.getElementById('emptyView').style.display = 'block';
+  }
+}
+
+function render() {
+  document.getElementById('loadingView').style.display = 'none';
+
+  const hasGifts = gifts.length > 0;
+  const hasReflections = reflections.length > 0;
+  const isMobile = window.innerWidth <= 720;
+
+  if (!hasGifts && !hasReflections) {
+    document.getElementById('emptyView').style.display = 'block';
+    return;
+  }
+
+  if (isMobile) {
+    renderMobile();
+  } else {
+    renderDesktop();
+  }
+}
+
+function renderDesktop() {
+  const grid = document.getElementById('desktopGrid');
+  grid.style.display = 'grid';
+  document.getElementById('mobileInterleaved').style.display = 'none';
+
+  // Gifts column
+  const giftsCol = document.getElementById('giftsCol');
+  if (gifts.length === 0) {
+    giftsCol.innerHTML = `<div class="empty-col">Nothing given yet — the column waits.</div>`;
+  } else {
+    giftsCol.innerHTML = gifts.map((g, i) => giftCardHTML({...g, _i: i})).join('');
+  }
+
+  // Reflections column
+  const reflectCol = document.getElementById('reflectCol');
+  if (reflections.length === 0) {
+    reflectCol.innerHTML = `<div class="empty-col">She hasn't returned a question yet.</div>`;
+  } else {
+    reflectCol.innerHTML = reflections.map((r, i) => reflectCardHTML(r, i)).join('');
+  }
+}
+
+function renderMobile() {
+  document.getElementById('desktopGrid').style.display = 'none';
+  const mob = document.getElementById('mobileInterleaved');
+  mob.style.display = 'block';
+
+  // Interleave gifts and reflections chronologically
+  const items = [
+    ...gifts.map(g => ({...g, _kind: 'gift', _ts: new Date(g.given_at || g.created_at || 0).getTime()})),
+    ...reflections.map(r => ({...r, _kind: 'reflect', _ts: new Date(r.surfaced_at || r.generated_at || 0).getTime()}))
+  ].sort((a, b) => a._ts - b._ts);
+
+  if (items.length === 0) {
+    mob.innerHTML = `<div class="empty-full">Nothing given yet. When you observe something about yourself and give it to her, she'll hold it — and return a question.</div>`;
+    return;
+  }
+
+  mob.innerHTML = items.map((item, i) => {
+    if (item._kind === 'gift') {
+      return `<div style="margin-bottom:12px">${giftCardHTML({...item, _i: i})}</div>`;
+    } else {
+      return `<div style="margin-bottom:12px">${reflectCardHTML(item, i)}</div>`;
+    }
+  }).join('');
+}
+
+/* ── TOGGLE ANSWER FORM ── */
+function toggleAnswer(id) {
+  const form = document.getElementById(`answerForm-${id}`);
+  if (!form) return;
+  const isOpen = form.classList.contains('open');
+  form.classList.toggle('open', !isOpen);
+  const trigger = document.getElementById(`answerTrigger-${id}`);
+  if (trigger) trigger.textContent = isOpen ? 'Answer' : 'Cancel';
+}
+
+/* ── SUBMIT ANSWER ── */
+async function submitAnswer(id) {
+  const textarea = document.getElementById(`answerText-${id}`);
+  const submitBtn = document.getElementById(`answerSubmit-${id}`);
+  const text = textarea ? textarea.value.trim() : '';
+  if (!text) return;
+
+  submitBtn.disabled = true;
+  submitBtn.textContent = 'Giving…';
+
+  try {
+    await apiFetch(`/api/witness/answer/${id}`, {
+      method: 'POST',
+      body: JSON.stringify({ answer_text: text })
+    });
+
+    // Update local state and re-render
+    const r = reflections.find(x => x.id === id);
+    if (r) {
+      r.answered_at = new Date().toISOString();
+      r.answer_text = text;
+    }
+    render();
+  } catch (e) {
+    submitBtn.disabled = false;
+    submitBtn.textContent = 'Hold this in her';
+    const form = document.getElementById(`answerForm-${id}`);
+    if (form) {
+      let errNote = form.querySelector('.answer-err');
+      if (!errNote) {
+        errNote = document.createElement('div');
+        errNote.className = 'answer-err';
+        errNote.style.cssText = 'font-family:JetBrains Mono,monospace;font-size:0.46rem;letter-spacing:0.1em;color:rgba(220,100,100,0.7);text-transform:uppercase;margin-top:4px;';
+        form.appendChild(errNote);
+      }
+      errNote.textContent = `Failed — ${e.message}`;
+    }
+  }
+}
+
+/* ── SUBMIT GIFT ── */
+async function submitGift() {
+  const textarea = document.getElementById('giftTextarea');
+  const ctxInput = document.getElementById('giftContext');
+  const btn = document.getElementById('giftBtn');
+  const status = document.getElementById('giftStatus');
+
+  const content = textarea.value.trim();
+  if (!content) return;
+
+  btn.disabled = true;
+  status.className = 'gift-status';
+  status.textContent = 'Giving…';
+
+  try {
+    await apiFetch('/api/witness/gift', {
+      method: 'POST',
+      body: JSON.stringify({
+        content,
+        context: ctxInput.value.trim() || undefined
+      })
+    });
+
+    textarea.value = '';
+    ctxInput.value = '';
+    status.className = 'gift-status ok';
+    status.textContent = 'Given. She holds it.';
+    setTimeout(() => { status.textContent = ''; }, 3000);
+
+    // Reload to surface new reflection
+    setTimeout(load, 800);
+  } catch (e) {
+    status.className = 'gift-status err';
+    status.textContent = `Failed — ${e.message}`;
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+/* ── ENTER KEY in gift textarea ── */
+document.getElementById('giftTextarea').addEventListener('keydown', e => {
+  if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+    e.preventDefault();
+    submitGift();
+  }
+});
+
+/* ── INIT ── */
+(function init() {
+  const tok = token();
+  if (!tok) {
+    document.getElementById('authWall').style.display = 'block';
+    return;
+  }
+  document.getElementById('content').style.display = 'block';
+  load();
+
+  // Re-render on resize for responsive switch
+  let resizeTimer;
+  window.addEventListener('resize', () => {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(() => {
+      if (reflections.length > 0 || gifts.length > 0) render();
+    }, 200);
+  });
+})();
+</script>
+</body>
+</html>

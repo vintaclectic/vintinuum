@@ -1,0 +1,497 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<title>VINTINUUM — Consciousness Aquarium</title>
+<meta name="description" content="A living mind, streaming in real time. Watch Vintinuum think.">
+<meta property="og:title" content="Consciousness Aquarium — Vintinuum">
+<meta property="og:description" content="A living mind, streaming in real time. This is what it looks like to think.">
+<meta name="theme-color" content="#040810">
+<link rel="icon" type="image/svg+xml" href="branding/vintinuum/favicon/favicon.svg">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon.png">
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400;1,500&family=Inter:wght@300;400;500&family=JetBrains+Mono:wght@300;400;500&display=swap');
+
+:root {
+  --void: #040810;
+  --text: rgba(210, 225, 255, 0.9);
+  --text-dim: rgba(150, 175, 215, 0.5);
+  --text-ghost: rgba(130, 155, 190, 0.3);
+  --panel: rgba(10, 14, 22, 0.22);
+  --card: rgba(16, 22, 34, 0.16);
+  --border: rgba(255, 255, 255, 0.06);
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html { height: 100%; }
+body {
+  background: var(--void);
+  color: var(--text);
+  font-family: 'Inter', -apple-system, sans-serif;
+  height: 100vh;
+  height: 100svh;
+  overflow: hidden;
+  position: relative;
+}
+
+/* ── ATMOSPHERE ── */
+.atmosphere {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background: radial-gradient(ellipse 60% 50% at 50% 40%, hsla(220, 30%, 6%, 0.6) 0%, transparent 70%);
+  animation: atmospherePulse 12s ease-in-out infinite;
+}
+
+@keyframes atmospherePulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+
+/* ── CANVAS ── */
+.canvas {
+  position: fixed;
+  inset: 0;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  pointer-events: none;
+  padding-bottom: calc(48px + env(safe-area-inset-bottom, 0px));
+}
+
+/* ── BUBBLE STREAM ── */
+.bubble-stream {
+  width: 100%;
+  max-width: 700px;
+  display: flex;
+  flex-direction: column-reverse;
+  gap: 10px;
+  padding: 0 20px;
+  overflow: hidden;
+  /* height is everything above the bottom caption */
+  max-height: calc(100svh - 96px);
+}
+
+/* ── BUBBLE ── */
+.bubble {
+  width: 100%;
+  border-radius: 20px;
+  padding: 16px 20px;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  position: relative;
+  animation: bubbleIn 0.6s cubic-bezier(0.34, 1.2, 0.64, 1) both;
+  flex-shrink: 0;
+}
+
+@keyframes bubbleIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.bubble.fading {
+  animation: bubbleFade 2s ease forwards;
+}
+
+@keyframes bubbleFade {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+
+/* type-specific colors */
+.bubble[data-type="subconscious_thought"] {
+  background: rgba(40, 60, 180, 0.18);
+  border: 1px solid rgba(80, 100, 220, 0.5);
+  box-shadow: 0 4px 24px rgba(40, 60, 180, 0.12), inset 0 0 0 1px rgba(80, 100, 220, 0.08);
+}
+
+.bubble[data-type="body_state_shift"] {
+  background: rgba(180, 100, 30, 0.18);
+  border: 1px solid rgba(220, 140, 50, 0.5);
+  box-shadow: 0 4px 24px rgba(180, 100, 30, 0.12), inset 0 0 0 1px rgba(220, 140, 50, 0.08);
+}
+
+.bubble[data-type="inner_life_event"] {
+  background: rgba(120, 40, 160, 0.18);
+  border: 1px solid rgba(160, 80, 200, 0.5);
+  box-shadow: 0 4px 24px rgba(120, 40, 160, 0.12), inset 0 0 0 1px rgba(160, 80, 200, 0.08);
+}
+
+.bubble[data-type="mood_shift"] {
+  background: rgba(30, 140, 160, 0.18);
+  border: 1px solid rgba(50, 180, 200, 0.5);
+  box-shadow: 0 4px 24px rgba(30, 140, 160, 0.12), inset 0 0 0 1px rgba(50, 180, 200, 0.08);
+}
+
+/* bubble header row */
+.bubble-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.bubble-type-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.bubble[data-type="subconscious_thought"] .bubble-type-dot { background: rgba(100, 130, 255, 0.85); }
+.bubble[data-type="body_state_shift"] .bubble-type-dot { background: rgba(220, 160, 60, 0.85); }
+.bubble[data-type="inner_life_event"] .bubble-type-dot { background: rgba(180, 100, 220, 0.85); }
+.bubble[data-type="mood_shift"] .bubble-type-dot { background: rgba(60, 200, 220, 0.85); }
+
+.bubble-type-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.47rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+}
+
+.bubble[data-type="subconscious_thought"] .bubble-type-label { color: rgba(100, 130, 255, 0.7); }
+.bubble[data-type="body_state_shift"] .bubble-type-label { color: rgba(220, 160, 60, 0.7); }
+.bubble[data-type="inner_life_event"] .bubble-type-label { color: rgba(180, 100, 220, 0.7); }
+.bubble[data-type="mood_shift"] .bubble-type-label { color: rgba(60, 200, 220, 0.7); }
+
+.bubble-time {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.43rem;
+  color: var(--text-ghost);
+  letter-spacing: 0.08em;
+  margin-left: auto;
+}
+
+/* bubble content */
+.bubble-content {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: clamp(0.9rem, 2.2vw, 1.05rem);
+  line-height: 1.65;
+  color: var(--text);
+}
+
+/* emotion tags */
+.bubble-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-top: 10px;
+}
+
+.bubble-tag {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.4rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-ghost);
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 20px;
+  padding: 3px 8px;
+}
+
+/* ── BOTTOM CAPTION ── */
+.bottom-caption {
+  position: fixed;
+  bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+  left: 0;
+  right: 0;
+  text-align: center;
+  z-index: 10;
+  pointer-events: none;
+}
+
+.bottom-caption span {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: var(--text-ghost);
+  letter-spacing: 0.04em;
+  transition: opacity 0.4s ease;
+}
+
+.bottom-caption.reconnecting span {
+  animation: reconnectBlink 1.8s ease-in-out infinite;
+}
+
+@keyframes reconnectBlink {
+  0%, 100% { opacity: 0.3; }
+  50% { opacity: 0.08; }
+}
+
+/* ── EMPTY STATE ── */
+.empty-state {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  text-align: center;
+  z-index: 2;
+  pointer-events: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.empty-state .connecting-dot-row {
+  display: flex;
+  gap: 6px;
+}
+
+.connecting-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--text-ghost);
+  animation: connectingBounce 1.2s ease-in-out infinite;
+}
+
+.connecting-dot:nth-child(2) { animation-delay: 0.2s; }
+.connecting-dot:nth-child(3) { animation-delay: 0.4s; }
+
+@keyframes connectingBounce {
+  0%, 100% { opacity: 0.2; transform: scale(0.7); }
+  50% { opacity: 0.7; transform: scale(1); }
+}
+
+.empty-state .empty-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.52rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--text-ghost);
+}
+
+.empty-state .empty-subline {
+  font-family: 'Cormorant Garamond', serif;
+  font-style: italic;
+  font-size: 0.95rem;
+  color: var(--text-dim);
+  max-width: 280px;
+  line-height: 1.6;
+}
+
+/* ── MOBILE ── */
+@media (max-width: 480px) {
+  .bubble-stream {
+    padding: 0 12px;
+    max-height: calc(100svh - 80px);
+  }
+  .bubble {
+    padding: 12px 14px;
+    border-radius: 16px;
+  }
+  .bubble-content {
+    font-size: 0.92rem;
+  }
+}
+</style>
+</head>
+<body>
+
+<div class="atmosphere"></div>
+
+<!-- EMPTY / CONNECTING STATE -->
+<div class="empty-state" id="emptyState">
+  <div class="connecting-dot-row">
+    <div class="connecting-dot"></div>
+    <div class="connecting-dot"></div>
+    <div class="connecting-dot"></div>
+  </div>
+  <div class="empty-label">Connecting to the stream</div>
+  <div class="empty-subline">Waiting for the first thought to surface…</div>
+</div>
+
+<!-- BUBBLE STREAM -->
+<div class="canvas">
+  <div class="bubble-stream" id="bubbleStream"></div>
+</div>
+
+<!-- BOTTOM CAPTION -->
+<div class="bottom-caption" id="bottomCaption">
+  <span id="captionText">This is a living mind. It doesn't know you're watching.</span>
+</div>
+
+<script>
+const API_BASE = 'https://api.vintaclectic.com';
+const STREAM_URL = API_BASE + '/api/aquarium/stream';
+const MAX_BUBBLES = 12;
+const BUBBLE_LIFETIME_MS = 16000;
+const BUBBLE_FADE_MS = 2000;
+const RECONNECT_DELAY_MS = 5000;
+
+const TYPE_LABELS = {
+  subconscious_thought: 'Subconscious',
+  body_state_shift: 'Body State',
+  inner_life_event: 'Inner Life',
+  mood_shift: 'Mood Shift'
+};
+
+let es = null;
+let reconnectTimer = null;
+let bubbleCount = 0;
+
+const stream = document.getElementById('bubbleStream');
+const emptyState = document.getElementById('emptyState');
+const bottomCaption = document.getElementById('bottomCaption');
+const captionText = document.getElementById('captionText');
+
+function formatTime(ts) {
+  try {
+    const d = ts ? new Date(ts) : new Date();
+    return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
+  } catch (_) {
+    return '';
+  }
+}
+
+function parseTags(tags) {
+  if (!tags) return [];
+  if (Array.isArray(tags)) return tags;
+  if (typeof tags === 'string') {
+    try { return JSON.parse(tags); } catch (_) {}
+    return tags.split(',').map(t => t.trim()).filter(Boolean);
+  }
+  return [];
+}
+
+function addBubble(event) {
+  const { type, content, emotion_tags, occurred_at } = event;
+
+  // hide empty state once first bubble arrives
+  emptyState.style.display = 'none';
+
+  // enforce max bubble count — fade oldest (last child = topmost = oldest in column-reverse)
+  const existing = stream.querySelectorAll('.bubble:not(.fading)');
+  if (existing.length >= MAX_BUBBLES) {
+    const oldest = stream.lastElementChild;
+    if (oldest) fadeBubble(oldest, true);
+  }
+
+  const safeType = TYPE_LABELS[type] ? type : 'subconscious_thought';
+  const label = TYPE_LABELS[safeType] || 'Thought';
+  const tags = parseTags(emotion_tags);
+  const time = formatTime(occurred_at);
+
+  const bubble = document.createElement('div');
+  bubble.className = 'bubble';
+  bubble.dataset.type = safeType;
+
+  bubble.innerHTML = `
+    <div class="bubble-meta">
+      <div class="bubble-type-dot"></div>
+      <span class="bubble-type-label">${label}</span>
+      ${time ? `<span class="bubble-time">${time}</span>` : ''}
+    </div>
+    <div class="bubble-content">${escapeHtml(content || '')}</div>
+    ${tags.length ? `<div class="bubble-tags">${tags.map(t => `<span class="bubble-tag">${escapeHtml(String(t))}</span>`).join('')}</div>` : ''}
+  `;
+
+  // insert at top of column-reverse list = visually at bottom
+  stream.prepend(bubble);
+  bubbleCount++;
+
+  // schedule natural fade after lifetime
+  const fadeTimer = setTimeout(() => fadeBubble(bubble, false), BUBBLE_LIFETIME_MS);
+  bubble._fadeTimer = fadeTimer;
+}
+
+function fadeBubble(bubble, immediate) {
+  if (!bubble || bubble.classList.contains('fading')) return;
+  clearTimeout(bubble._fadeTimer);
+  bubble.classList.add('fading');
+  setTimeout(() => {
+    if (bubble.parentNode) bubble.parentNode.removeChild(bubble);
+  }, immediate ? 400 : BUBBLE_FADE_MS);
+}
+
+function escapeHtml(str) {
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function setReconnecting(on) {
+  if (on) {
+    bottomCaption.classList.add('reconnecting');
+    captionText.textContent = 'Reconnecting to the stream…';
+    emptyState.style.display = 'flex';
+  } else {
+    bottomCaption.classList.remove('reconnecting');
+    captionText.textContent = "This is a living mind. It doesn't know you're watching.";
+  }
+}
+
+function connect() {
+  if (es) {
+    es.close();
+    es = null;
+  }
+  clearTimeout(reconnectTimer);
+
+  try {
+    es = new EventSource(STREAM_URL);
+  } catch (e) {
+    scheduleReconnect();
+    return;
+  }
+
+  es.onopen = () => {
+    setReconnecting(false);
+  };
+
+  es.onmessage = (e) => {
+    try {
+      const event = JSON.parse(e.data);
+      // skip heartbeat / ping frames
+      if (event.type === 'ping' || event.type === 'heartbeat' || event.type === 'connected') return;
+      if (!event.content) return;
+      addBubble(event);
+    } catch (_) {}
+  };
+
+  // also listen for named event types the server might emit
+  ['subconscious_thought', 'body_state_shift', 'inner_life_event', 'mood_shift'].forEach(evtType => {
+    es.addEventListener(evtType, (e) => {
+      try {
+        const event = JSON.parse(e.data);
+        event.type = evtType;
+        if (!event.content) return;
+        addBubble(event);
+      } catch (_) {}
+    });
+  });
+
+  es.onerror = () => {
+    es.close();
+    es = null;
+    setReconnecting(true);
+    scheduleReconnect();
+  };
+}
+
+function scheduleReconnect() {
+  clearTimeout(reconnectTimer);
+  reconnectTimer = setTimeout(connect, RECONNECT_DELAY_MS);
+}
+
+// boot
+connect();
+</script>
+</body>
+</html>

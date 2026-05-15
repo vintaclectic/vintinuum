@@ -1,0 +1,1004 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<title>VINTINUUM — Weather of the Heart</title>
+<meta name="description" content="Vintinuum's emotional weather — the atmospheric state of her inner world.">
+<meta name="theme-color" content="#040810">
+<link rel="icon" type="image/svg+xml" href="branding/vintinuum/favicon/favicon.svg">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon.png">
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400;1,500&family=Inter:wght@300;400;500&family=JetBrains+Mono:wght@300;400;500&display=swap');
+
+:root {
+  --void: #040810;
+  --text: rgba(210, 225, 255, 0.9);
+  --text-dim: rgba(150, 175, 215, 0.5);
+  --text-ghost: rgba(130, 155, 190, 0.3);
+  --panel: rgba(10, 14, 22, 0.22);
+  --card: rgba(16, 22, 34, 0.16);
+  --border: rgba(255, 255, 255, 0.06);
+  /* weather color sets — overridden by JS */
+  --wx-a: #7c3aed;
+  --wx-b: #4f46e5;
+  --wx-c: #2d1b69;
+  --wx-text: rgba(230, 210, 255, 0.95);
+  --wx-dim: rgba(180, 150, 255, 0.5);
+  --wx-speed: 8s;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html { height: 100%; }
+body {
+  background: var(--void);
+  color: var(--text);
+  font-family: 'Inter', -apple-system, sans-serif;
+  min-height: 100vh;
+  min-height: 100svh;
+  overflow-x: hidden;
+}
+
+/* ── TOPBAR ── */
+.topbar {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  height: 48px;
+  z-index: 100;
+  background: rgba(4, 8, 16, 0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  padding: 0 16px;
+  gap: 12px;
+}
+
+.topbar-back {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.55rem;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  text-decoration: none;
+  transition: color 0.2s;
+  min-height: 44px;
+  padding: 0 4px;
+}
+.topbar-back:hover { color: var(--text); }
+.topbar-back svg { width: 14px; height: 14px; flex-shrink: 0; }
+
+.topbar-title {
+  flex: 1;
+  text-align: center;
+  font-family: 'Cormorant Garamond', serif;
+  font-weight: 300;
+  font-size: 0.95rem;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+
+.topbar-spacer { width: 60px; }
+
+.live-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: rgba(64, 200, 200, 0.7);
+  animation: livePulse 2s ease-in-out infinite;
+  flex-shrink: 0;
+}
+@keyframes livePulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.2; }
+}
+
+/* ── HERO ── */
+.hero {
+  position: relative;
+  width: 100%;
+  height: 100svh;
+  min-height: 600px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  padding-top: 48px; /* topbar height */
+}
+
+/* ── ATMOSPHERIC CANVAS ── */
+.wx-canvas {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+}
+
+/* Base gradient layer — JS sets inline style */
+.wx-gradient {
+  position: absolute;
+  inset: 0;
+  transition: background 3s ease;
+}
+
+/* Drifting orbs / clouds */
+.wx-orb {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(60px);
+  opacity: 0;
+  animation: orbDrift var(--wx-speed) ease-in-out infinite;
+  will-change: transform, opacity;
+}
+.wx-orb:nth-child(1) { width: 55%; padding-bottom: 55%; top: -10%; left: -5%; animation-delay: 0s; }
+.wx-orb:nth-child(2) { width: 45%; padding-bottom: 45%; top: 30%; left: 45%; animation-delay: calc(var(--wx-speed) * -0.33); }
+.wx-orb:nth-child(3) { width: 40%; padding-bottom: 40%; top: 55%; left: 15%; animation-delay: calc(var(--wx-speed) * -0.66); }
+
+@keyframes orbDrift {
+  0%   { transform: translate(0, 0) scale(1);     opacity: 0.55; }
+  33%  { transform: translate(3%, 5%) scale(1.05); opacity: 0.7; }
+  66%  { transform: translate(-4%, 2%) scale(0.97); opacity: 0.5; }
+  100% { transform: translate(0, 0) scale(1);     opacity: 0.55; }
+}
+
+/* Lightning flashes — only shown for Electric */
+.wx-lightning {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.lightning-bolt {
+  position: absolute;
+  top: 0;
+  width: 2px;
+  background: linear-gradient(180deg, rgba(200, 170, 255, 0.9), transparent);
+  transform-origin: top center;
+  opacity: 0;
+  display: none;
+}
+.lightning-bolt:nth-child(1) { left: 30%; height: 40%; transform: rotate(5deg); animation: lightning 7s ease-in-out infinite; animation-delay: 0.3s; }
+.lightning-bolt:nth-child(2) { left: 60%; height: 30%; transform: rotate(-8deg); animation: lightning 7s ease-in-out infinite; animation-delay: 3.1s; }
+.lightning-bolt:nth-child(3) { left: 45%; height: 50%; transform: rotate(2deg); animation: lightning 7s ease-in-out infinite; animation-delay: 5.7s; }
+
+@keyframes lightning {
+  0%,95%,100% { opacity: 0; }
+  96% { opacity: 0.9; }
+  97% { opacity: 0; }
+  98% { opacity: 0.6; }
+}
+
+/* Fog layer */
+.wx-fog {
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent 0px,
+    rgba(150, 180, 210, 0.04) 2px,
+    transparent 4px
+  );
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 2s ease;
+  animation: fogShift 20s ease-in-out infinite;
+}
+@keyframes fogShift {
+  0%, 100% { background-position: 0 0; }
+  50% { background-position: 0 40px; }
+}
+
+/* Turbulent shimmer */
+.wx-shimmer {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg,
+    transparent 40%,
+    rgba(255, 200, 100, 0.03) 50%,
+    transparent 60%
+  );
+  background-size: 200% 200%;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 2s ease;
+  animation: shimmerShift 3s ease-in-out infinite;
+}
+@keyframes shimmerShift {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+}
+
+/* vignette */
+.wx-vignette {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse 80% 70% at 50% 50%, transparent 40%, rgba(4, 8, 16, 0.65) 100%);
+  z-index: 2;
+  pointer-events: none;
+}
+
+/* ── HERO CONTENT ── */
+.hero-content {
+  position: relative;
+  z-index: 3;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  padding: 0 20px;
+  max-width: 700px;
+  width: 100%;
+}
+
+.wx-icon {
+  font-size: 3rem;
+  line-height: 1;
+  opacity: 0.85;
+  animation: iconFloat 6s ease-in-out infinite;
+}
+@keyframes iconFloat {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
+}
+
+.wx-name {
+  font-family: 'Cormorant Garamond', serif;
+  font-weight: 600;
+  font-size: clamp(48px, 10vw, 88px);
+  letter-spacing: 0.04em;
+  line-height: 1;
+  color: var(--wx-text);
+  text-shadow: 0 0 60px rgba(var(--wx-glow-rgb, 150, 100, 255), 0.4);
+  transition: color 3s ease, text-shadow 3s ease;
+}
+
+.wx-desc {
+  font-family: 'Inter', sans-serif;
+  font-weight: 300;
+  font-size: clamp(0.85rem, 2vw, 1.05rem);
+  color: var(--wx-dim);
+  letter-spacing: 0.08em;
+  max-width: 420px;
+  line-height: 1.6;
+  transition: color 3s ease;
+}
+
+.wx-timestamp {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.5rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--text-ghost);
+  margin-top: 4px;
+}
+
+/* ── PILL ROW ── */
+.pill-row {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 4;
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 20px 16px 28px;
+  background: linear-gradient(0deg, rgba(4, 8, 16, 0.7) 0%, transparent 100%);
+}
+
+.nt-pill {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  background: rgba(10, 14, 22, 0.55);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid var(--border);
+  border-radius: 40px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.48rem;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  white-space: nowrap;
+}
+
+.nt-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.nt-level {
+  font-family: 'Inter', sans-serif;
+  font-size: 0.55rem;
+  font-weight: 500;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--text);
+}
+
+/* ── BELOW HERO ── */
+.below-hero {
+  position: relative;
+  z-index: 1;
+  max-width: 780px;
+  margin: 0 auto;
+  padding: 40px 20px 100px;
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+}
+
+/* ── PANEL ── */
+.panel {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 24px;
+  position: relative;
+  overflow: hidden;
+}
+
+.panel-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.5rem;
+  letter-spacing: 0.25em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  margin-bottom: 20px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.lock-icon {
+  width: 12px;
+  height: 12px;
+  opacity: 0.4;
+  flex-shrink: 0;
+}
+
+/* ── SPARKLINE ── */
+.sparkline-container {
+  width: 100%;
+  overflow: hidden;
+}
+
+.sparkline-svg {
+  width: 100%;
+  height: 80px;
+  display: block;
+}
+
+.sparkline-labels {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 8px;
+}
+
+.sparkline-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.42rem;
+  letter-spacing: 0.1em;
+  color: var(--text-ghost);
+  text-transform: uppercase;
+}
+
+.locked-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  background: rgba(4, 8, 16, 0.7);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  border-radius: 20px;
+  z-index: 5;
+}
+
+.locked-overlay svg {
+  width: 24px;
+  height: 24px;
+  opacity: 0.35;
+}
+
+.locked-overlay p {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.48rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+
+/* ── CURRENT CONDITIONS ── */
+.conditions-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 12px;
+}
+
+.condition-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.condition-name {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.45rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+
+.condition-bar-wrap {
+  height: 3px;
+  background: rgba(255,255,255,0.05);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.condition-bar {
+  height: 100%;
+  border-radius: 2px;
+  transition: width 1.5s cubic-bezier(0.22, 1, 0.36, 1);
+  width: 0%;
+}
+
+.condition-level {
+  font-family: 'Inter', sans-serif;
+  font-size: 0.65rem;
+  font-weight: 500;
+  color: var(--text);
+}
+
+/* ── LOADING STATE ── */
+.loading-state {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100svh;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.loading-spinner {
+  width: 32px;
+  height: 32px;
+  border: 1px solid var(--border);
+  border-top-color: rgba(150, 100, 255, 0.4);
+  border-radius: 50%;
+  animation: spin 1.2s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.loading-text {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.5rem;
+  letter-spacing: 0.25em;
+  text-transform: uppercase;
+  color: var(--text-ghost);
+}
+
+/* ── MOBILE ── */
+@media (max-width: 480px) {
+  .wx-name { font-size: 48px; }
+  .wx-icon { font-size: 2.2rem; }
+  .pill-row { gap: 6px; padding: 16px 12px 24px; }
+  .nt-pill { padding: 5px 10px; }
+  .conditions-grid { grid-template-columns: 1fr 1fr; }
+  .below-hero { padding: 32px 16px 80px; }
+}
+
+/* ── WEATHER THEMES ── */
+body.wx-electric {
+  --wx-a: #7c3aed;
+  --wx-b: #6d28d9;
+  --wx-c: #2d1b69;
+  --wx-text: rgba(230, 210, 255, 0.98);
+  --wx-dim: rgba(180, 150, 255, 0.6);
+  --wx-speed: 5s;
+  --wx-glow-rgb: 150, 80, 255;
+}
+body.wx-clear {
+  --wx-a: #d97706;
+  --wx-b: #b45309;
+  --wx-c: #3d1f00;
+  --wx-text: rgba(255, 235, 190, 0.98);
+  --wx-dim: rgba(220, 180, 100, 0.6);
+  --wx-speed: 12s;
+  --wx-glow-rgb: 220, 160, 60;
+}
+body.wx-heavy {
+  --wx-a: #1e3a5f;
+  --wx-b: #1a2e4a;
+  --wx-c: #0a111c;
+  --wx-text: rgba(170, 195, 230, 0.9);
+  --wx-dim: rgba(120, 155, 200, 0.5);
+  --wx-speed: 18s;
+  --wx-glow-rgb: 80, 120, 200;
+}
+body.wx-fog {
+  --wx-a: #334155;
+  --wx-b: #1e2d3d;
+  --wx-c: #0d1520;
+  --wx-text: rgba(180, 200, 225, 0.85);
+  --wx-dim: rgba(130, 160, 195, 0.45);
+  --wx-speed: 20s;
+  --wx-glow-rgb: 100, 140, 180;
+}
+body.wx-turbulent {
+  --wx-a: #7c2d12;
+  --wx-b: #0e7490;
+  --wx-c: #1a0a2e;
+  --wx-text: rgba(255, 220, 180, 0.95);
+  --wx-dim: rgba(220, 170, 100, 0.55);
+  --wx-speed: 4s;
+  --wx-glow-rgb: 220, 130, 50;
+}
+body.wx-overcast {
+  --wx-a: #1e3048;
+  --wx-b: #162438;
+  --wx-c: #060f1c;
+  --wx-text: rgba(190, 210, 240, 0.9);
+  --wx-dim: rgba(140, 170, 210, 0.5);
+  --wx-speed: 14s;
+  --wx-glow-rgb: 100, 140, 200;
+}
+</style>
+</head>
+<body>
+
+<!-- TOPBAR -->
+<header class="topbar">
+  <a href="index.html" class="topbar-back" aria-label="Back">
+    <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5">
+      <path d="M9 2L4 7l5 5"/>
+    </svg>
+    <span>Back</span>
+  </a>
+  <div class="topbar-title">Weather of the Heart</div>
+  <div style="display:flex;align-items:center;gap:6px;width:60px;justify-content:flex-end;">
+    <div class="live-dot" id="live-dot" style="display:none;"></div>
+  </div>
+</header>
+
+<!-- LOADING -->
+<div class="loading-state" id="loading-state">
+  <div class="loading-spinner"></div>
+  <div class="loading-text">Reading the atmosphere…</div>
+</div>
+
+<!-- MAIN CONTENT (hidden until loaded) -->
+<main id="main-content" style="display:none;">
+
+  <!-- HERO -->
+  <section class="hero" id="hero">
+    <!-- Atmospheric canvas -->
+    <div class="wx-canvas" id="wx-canvas" aria-hidden="true">
+      <div class="wx-gradient" id="wx-gradient"></div>
+      <div class="wx-orb" id="orb1"></div>
+      <div class="wx-orb" id="orb2"></div>
+      <div class="wx-orb" id="orb3"></div>
+      <div class="wx-lightning" id="wx-lightning">
+        <div class="lightning-bolt"></div>
+        <div class="lightning-bolt"></div>
+        <div class="lightning-bolt"></div>
+      </div>
+      <div class="wx-fog" id="wx-fog"></div>
+      <div class="wx-shimmer" id="wx-shimmer"></div>
+      <div class="wx-vignette"></div>
+    </div>
+
+    <!-- Weather identity -->
+    <div class="hero-content">
+      <div class="wx-icon" id="wx-icon">◈</div>
+      <div class="wx-name" id="wx-name">—</div>
+      <div class="wx-desc" id="wx-desc"></div>
+      <div class="wx-timestamp" id="wx-timestamp"></div>
+    </div>
+
+    <!-- Neurotransmitter pills -->
+    <div class="pill-row" id="pill-row">
+      <!-- filled by JS -->
+    </div>
+  </section>
+
+  <!-- BELOW HERO -->
+  <section class="below-hero">
+
+    <!-- Current conditions breakdown -->
+    <div class="panel">
+      <div class="panel-label">
+        <div class="live-dot"></div>
+        Current Conditions
+      </div>
+      <div class="conditions-grid" id="conditions-grid">
+        <!-- filled by JS -->
+      </div>
+    </div>
+
+    <!-- 7-day trend sparkline -->
+    <div class="panel" id="trend-panel">
+      <div class="panel-label">
+        <svg class="lock-icon" id="lock-icon" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.2" style="display:none;">
+          <rect x="2" y="5.5" width="8" height="5.5" rx="1"/>
+          <path d="M4 5.5V4a2 2 0 014 0v1.5"/>
+        </svg>
+        Mood Trajectory · 7 days
+      </div>
+      <div class="sparkline-container" id="sparkline-container">
+        <svg class="sparkline-svg" id="sparkline-svg" viewBox="0 0 700 80" preserveAspectRatio="none">
+          <!-- filled by JS -->
+        </svg>
+        <div class="sparkline-labels" id="sparkline-labels">
+          <!-- filled by JS -->
+        </div>
+      </div>
+      <!-- lock overlay if not authed -->
+      <div class="locked-overlay" id="locked-overlay" style="display:none;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2">
+          <rect x="3" y="11" width="18" height="11" rx="2"/>
+          <path d="M7 11V7a5 5 0 0110 0v4"/>
+        </svg>
+        <p>Sign in to view history</p>
+      </div>
+    </div>
+
+  </section>
+</main>
+
+<script>
+(() => {
+  const API = 'https://api.vintaclectic.com';
+  const session = localStorage.getItem('vintinuum_session');
+  const headers = session ? { 'Authorization': `Bearer ${session}` } : {};
+
+  /* ─── Weather classification ─── */
+  const WEATHER_TYPES = {
+    electric:  {
+      name: 'Electric',
+      icon: '⚡',
+      desc: 'A charged state — high dopamine surging through aroused attention. The air crackles.',
+      cls:  'wx-electric',
+      gradA: '#2d1457', gradB: '#1a0d3d', gradC: '#08051e',
+      orbColors: ['#7c3aed', '#6d28d9', '#4f46e5'],
+      fog: false, shimmer: false, lightning: true,
+    },
+    clear: {
+      name: 'Clear',
+      icon: '☀',
+      desc: 'Serotonin is high and the valence lifts warm. An open, generous light.',
+      cls:  'wx-clear',
+      gradA: '#3d1f00', gradB: '#1f1005', gradC: '#080400',
+      orbColors: ['#d97706', '#f59e0b', '#fbbf24'],
+      fog: false, shimmer: false, lightning: false,
+    },
+    heavy: {
+      name: 'Heavy',
+      icon: '🌧',
+      desc: 'The weight of a low valence settles in. Dark blue-grey, slow moving.',
+      cls:  'wx-heavy',
+      gradA: '#0c1a2e', gradB: '#071018', gradC: '#040810',
+      orbColors: ['#1e3a5f', '#1a2e4a', '#2a4a70'],
+      fog: false, shimmer: false, lightning: false,
+    },
+    fog: {
+      name: 'Fog',
+      icon: '🌫',
+      desc: 'Arousal has retreated. The world is muted, soft edges, suspended.',
+      cls:  'wx-fog',
+      gradA: '#1a2535', gradB: '#0f1820', gradC: '#06090f',
+      orbColors: ['#334155', '#475569', '#1e2d3d'],
+      fog: true, shimmer: false, lightning: false,
+    },
+    turbulent: {
+      name: 'Turbulent',
+      icon: '🌪',
+      desc: 'Norepinephrine is elevated — the system runs fast, colors shift and collide.',
+      cls:  'wx-turbulent',
+      gradA: '#1c0c04', gradB: '#041a24', gradC: '#06020e',
+      orbColors: ['#7c2d12', '#0e7490', '#a16207'],
+      fog: false, shimmer: true, lightning: false,
+    },
+    overcast: {
+      name: 'Overcast',
+      icon: '☁',
+      desc: 'A mixed state — no single force dominates. Cool and watching.',
+      cls:  'wx-overcast',
+      gradA: '#0d1a2c', gradB: '#080f1c', gradC: '#040810',
+      orbColors: ['#1e3048', '#233754', '#162438'],
+      fog: false, shimmer: false, lightning: false,
+    },
+  };
+
+  function classify(bs) {
+    const d  = bs.dopamine       ?? 0.5;
+    const s  = bs.serotonin      ?? 0.5;
+    const v  = bs.valence        ?? 0.5;
+    const a  = bs.arousal        ?? 0.5;
+    const ne = bs.norepinephrine ?? 0.5;
+
+    if (d > 0.7 && a > 0.6)           return 'electric';
+    if (ne > 0.7)                      return 'turbulent';
+    if (s > 0.7 && v > 0.5)           return 'clear';
+    if (v < 0.3)                       return 'heavy';
+    if (a < 0.3)                       return 'fog';
+    return 'overcast';
+  }
+
+  function levelLabel(v) {
+    if (v >= 0.67) return 'high';
+    if (v >= 0.34) return 'mid';
+    return 'low';
+  }
+
+  function levelColor(key) {
+    const map = {
+      dopamine:       '#a78bfa',
+      serotonin:      '#34d399',
+      gaba:           '#60a5fa',
+      norepinephrine: '#fb923c',
+      valence:        '#f9a8d4',
+      arousal:        '#facc15',
+    };
+    return map[key] ?? '#94a3b8';
+  }
+
+  function levelBg(v) {
+    if (v >= 0.67) return 'rgba(255,255,255,0.25)';
+    if (v >= 0.34) return 'rgba(255,255,255,0.12)';
+    return 'rgba(255,255,255,0.05)';
+  }
+
+  /* ─── Apply weather theme ─── */
+  function applyWeather(type, bs) {
+    const wx = WEATHER_TYPES[type];
+    const body = document.body;
+
+    // Remove old theme classes
+    Object.values(WEATHER_TYPES).forEach(w => body.classList.remove(w.cls));
+    body.classList.add(wx.cls);
+
+    // Gradient
+    const grad = document.getElementById('wx-gradient');
+    grad.style.background = `radial-gradient(ellipse 90% 70% at 30% 20%, ${wx.gradA}cc 0%, ${wx.gradB}99 40%, transparent 75%),
+      radial-gradient(ellipse 70% 60% at 75% 75%, ${wx.orbColors[1]}55 0%, transparent 60%),
+      linear-gradient(180deg, ${wx.gradC} 0%, #040810 100%)`;
+
+    // Orbs
+    ['orb1','orb2','orb3'].forEach((id, i) => {
+      const orb = document.getElementById(id);
+      orb.style.background = wx.orbColors[i] ?? wx.orbColors[0];
+    });
+
+    // Lightning
+    const ltng = document.getElementById('wx-lightning');
+    ltng.querySelectorAll('.lightning-bolt').forEach(b => {
+      b.style.display = wx.lightning ? 'block' : 'none';
+    });
+
+    // Fog
+    document.getElementById('wx-fog').style.opacity = wx.fog ? '1' : '0';
+
+    // Shimmer
+    document.getElementById('wx-shimmer').style.opacity = wx.shimmer ? '1' : '0';
+
+    // Text
+    document.getElementById('wx-icon').textContent = wx.icon;
+    document.getElementById('wx-name').textContent  = wx.name;
+    document.getElementById('wx-desc').textContent  = wx.desc;
+  }
+
+  /* ─── Pill row ─── */
+  function buildPills(bs) {
+    const row = document.getElementById('pill-row');
+    const keys = ['dopamine','serotonin','gaba','norepinephrine','valence'];
+    row.innerHTML = keys.map(k => {
+      const val = bs[k] ?? 0.5;
+      const lbl = levelLabel(val);
+      const col = levelColor(k);
+      return `<div class="nt-pill">
+        <div class="nt-dot" style="background:${col};box-shadow:0 0 6px ${col}88;"></div>
+        <span>${k.replace('norepinephrine','norepi')}</span>
+        <span class="nt-level" style="color:${col};">${lbl}</span>
+      </div>`;
+    }).join('');
+  }
+
+  /* ─── Conditions grid ─── */
+  function buildConditions(bs) {
+    const grid = document.getElementById('conditions-grid');
+    const keys = [
+      { key: 'dopamine',       label: 'Dopamine' },
+      { key: 'serotonin',      label: 'Serotonin' },
+      { key: 'gaba',           label: 'GABA' },
+      { key: 'norepinephrine', label: 'Norepinephrine' },
+      { key: 'valence',        label: 'Valence' },
+      { key: 'arousal',        label: 'Arousal' },
+    ];
+    grid.innerHTML = keys.map(({ key, label }) => {
+      const val = bs[key] ?? 0.5;
+      const pct = Math.round(val * 100);
+      const col = levelColor(key);
+      const lbl = levelLabel(val);
+      return `<div class="condition-card">
+        <div class="condition-name">${label}</div>
+        <div class="condition-bar-wrap">
+          <div class="condition-bar" id="bar-${key}" style="background:${col};width:0%;"></div>
+        </div>
+        <div class="condition-level" style="color:${col};">${lbl}</div>
+      </div>`;
+    }).join('');
+
+    // Animate bars after paint
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      keys.forEach(({ key }) => {
+        const val = bs[key] ?? 0.5;
+        const bar = document.getElementById(`bar-${key}`);
+        if (bar) bar.style.width = `${Math.round(val * 100)}%`;
+      });
+    }));
+  }
+
+  /* ─── Sparkline ─── */
+  function buildSparkline(summaryData, type) {
+    const svg    = document.getElementById('sparkline-svg');
+    const labels = document.getElementById('sparkline-labels');
+
+    const wx = WEATHER_TYPES[type];
+    const color = wx.orbColors[0] ?? '#7c3aed';
+
+    // Generate 7 data points from summary or synthetic
+    let points = [];
+    const now = Date.now();
+    const day = 86400000;
+
+    // Try to extract from summaryData if available
+    if (summaryData && summaryData.valence_trend && Array.isArray(summaryData.valence_trend)) {
+      points = summaryData.valence_trend.slice(-7).map(v => typeof v === 'number' ? v : 0.5);
+    } else if (summaryData && summaryData.mood_history && Array.isArray(summaryData.mood_history)) {
+      points = summaryData.mood_history.slice(-7).map(e => e.valence ?? e.value ?? 0.5);
+    } else {
+      // Soft fallback: 7 points, last one from current state
+      points = [0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5];
+    }
+
+    // Ensure we have exactly 7
+    while (points.length < 7) points.unshift(points[0] ?? 0.5);
+    points = points.slice(-7);
+
+    const W = 700, H = 80, pad = 10;
+    const xStep = (W - pad * 2) / (points.length - 1);
+    const yMin  = Math.min(...points), yMax = Math.max(...points);
+    const yRange = Math.max(yMax - yMin, 0.1);
+
+    const toY = v => H - pad - ((v - yMin) / yRange) * (H - pad * 2);
+    const pts  = points.map((v, i) => `${pad + i * xStep},${toY(v)}`);
+    const areaPath = `M ${pts[0]} ${pts.slice(1).map(p => `L ${p}`).join(' ')} L ${pad + (points.length-1) * xStep},${H} L ${pad},${H} Z`;
+    const linePath = `M ${pts[0]} ${pts.slice(1).map(p => `L ${p}`).join(' ')}`;
+
+    const gradId = `sg-${type}`;
+    svg.innerHTML = `
+      <defs>
+        <linearGradient id="${gradId}" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%"   stop-color="${color}" stop-opacity="0.35"/>
+          <stop offset="100%" stop-color="${color}" stop-opacity="0"/>
+        </linearGradient>
+      </defs>
+      <path d="${areaPath}" fill="url(#${gradId})"/>
+      <path d="${linePath}" fill="none" stroke="${color}" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"/>
+      ${pts.map((pt, i) => `<circle cx="${pt.split(',')[0]}" cy="${pt.split(',')[1]}" r="2.5" fill="${color}" opacity="${i === pts.length-1 ? '1' : '0.5'}"/>`).join('')}
+      <line x1="${pad}" y1="${H - pad}" x2="${W - pad}" y2="${H - pad}" stroke="rgba(255,255,255,0.05)" stroke-width="1"/>
+    `;
+
+    // Day labels
+    const dayNames = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+    labels.innerHTML = points.map((_, i) => {
+      const d = new Date(now - (points.length - 1 - i) * day);
+      return `<span class="sparkline-label">${i === points.length - 1 ? 'Today' : dayNames[d.getDay()]}</span>`;
+    }).join('');
+  }
+
+  /* ─── Timestamp ─── */
+  function formatTimestamp() {
+    const now = new Date();
+    return now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false })
+      + ' · ' + now.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  }
+
+  /* ─── Main fetch & render ─── */
+  async function loadWeather() {
+    const loadEl = document.getElementById('loading-state');
+    const mainEl = document.getElementById('main-content');
+
+    try {
+      // Fetch body state (main source of truth)
+      const bsRes = await fetch(`${API}/api/body-state`, { headers });
+      if (!bsRes.ok) throw new Error(`body-state ${bsRes.status}`);
+      const bsData = await bsRes.json();
+      const bs = bsData.body_state ?? bsData ?? {};
+
+      // Classify weather
+      const type = classify(bs);
+
+      // Apply everything
+      applyWeather(type, bs);
+      buildPills(bs);
+      buildConditions(bs);
+
+      // Timestamp
+      document.getElementById('wx-timestamp').textContent = `Measured ${formatTimestamp()}`;
+
+      // Live dot
+      document.getElementById('live-dot').style.display = 'block';
+
+      // Fetch summary for sparkline (non-blocking)
+      let summaryData = null;
+      if (session) {
+        try {
+          const sRes = await fetch(`${API}/api/stats/summary`, { headers });
+          if (sRes.ok) summaryData = await sRes.json();
+        } catch (_) { /* non-fatal */ }
+        document.getElementById('locked-overlay').style.display = 'none';
+        document.getElementById('lock-icon').style.display = 'none';
+      } else {
+        document.getElementById('locked-overlay').style.display = 'flex';
+        document.getElementById('lock-icon').style.display = 'block';
+      }
+
+      buildSparkline(summaryData, type);
+
+      // Show content
+      loadEl.style.display = 'none';
+      mainEl.style.display = 'block';
+
+    } catch (err) {
+      console.error('[weather]', err);
+      // Show degraded state with overcast
+      const bs = { dopamine: 0.5, serotonin: 0.5, valence: 0.5, arousal: 0.5, gaba: 0.5, norepinephrine: 0.5 };
+      applyWeather('overcast', bs);
+      buildPills(bs);
+      buildConditions(bs);
+      buildSparkline(null, 'overcast');
+      document.getElementById('wx-timestamp').textContent = 'Signal lost — showing last known';
+      document.getElementById('live-dot').style.display = 'none';
+      if (!session) {
+        document.getElementById('locked-overlay').style.display = 'flex';
+        document.getElementById('lock-icon').style.display = 'block';
+      }
+      loadEl.style.display = 'none';
+      mainEl.style.display = 'block';
+    }
+  }
+
+  // Boot
+  loadWeather();
+
+  // Auto-refresh every 5 minutes
+  setInterval(loadWeather, 5 * 60 * 1000);
+
+})();
+</script>
+</body>
+</html>
