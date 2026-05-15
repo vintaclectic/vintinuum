@@ -1049,7 +1049,7 @@ button{font-family:inherit;color:inherit}
 .term-masterkey-prompt input:focus{border-color:#00d4ff;box-shadow:0 0 8px rgba(0,212,255,.2);}
 .term-masterkey-prompt .mk-submit{background:#1e3a5a;border:1px solid #00d4ff;color:#00d4ff;border-radius:6px;padding:8px 18px;cursor:pointer;font:13px monospace;align-self:flex-start;}
 </style>
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/xterm@5.5.0/css/xterm.min.css" crossorigin="anonymous"/>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/xterm@5.3.0/css/xterm.min.css" crossorigin="anonymous"/>
 </head>
 <body>
 
@@ -1370,6 +1370,7 @@ const Panel = (() => {
     body.innerHTML = '';
   }
   function close(){
+    _teardownAudio();
     el.classList.remove('open');
     body.innerHTML = '';
     currentMode = null;
@@ -1558,43 +1559,76 @@ function loadVideoURL(url){
 }
 function renderVideoFiles(files){
   renderVideo();
+  const fileArr = Array.from(files);
   const wrap = document.getElementById('vwrap');
+  if (!wrap) return;
   wrap.innerHTML = '';
   const v = document.createElement('video');
   v.controls = true;
-  v.src = URL.createObjectURL(files[0]);
+  v.style.cssText = 'width:100%;max-height:340px;background:#000;border-radius:6px;';
+  v.src = URL.createObjectURL(fileArr[0]);
   v.play().catch(()=>{});
   wrap.appendChild(v);
+  if (fileArr.length > 1) {
+    const pl = document.createElement('div');
+    pl.className = 'playlist';
+    pl.style.cssText = 'overflow-y:auto;max-height:120px;margin-top:6px;';
+    fileArr.forEach((f, i) => {
+      const it = document.createElement('div');
+      it.className = 'item' + (i === 0 ? ' active' : '');
+      it.textContent = '▶  ' + f.name;
+      it.onclick = () => {
+        pl.querySelectorAll('.item').forEach(n => n.classList.remove('active'));
+        it.classList.add('active');
+        v.src = URL.createObjectURL(f);
+        v.play().catch(()=>{});
+      };
+      pl.appendChild(it);
+    });
+    wrap.appendChild(pl);
+  }
 }
 
-let audioCtx, audioAnalyser, audioRaf;
-function stopAudioViz(){
-  if (audioRaf) cancelAnimationFrame(audioRaf);
-  audioRaf = null;
+let _audioState = null; // { ctx, analyser, sourceNode, rafId }
+
+function _teardownAudio(){
+  if (!_audioState) return;
+  if (_audioState.rafId) cancelAnimationFrame(_audioState.rafId);
+  try { _audioState.sourceNode && _audioState.sourceNode.disconnect(); } catch(_){}
+  try { _audioState.analyser  && _audioState.analyser.disconnect();  } catch(_){}
+  try { _audioState.ctx.state !== 'closed' && _audioState.ctx.close(); } catch(_){}
+  _audioState = null;
 }
+
 function renderAudio(){
+  _teardownAudio();
   Panel.open('audio', 'visualizer');
   const c = Panel.content();
   c.innerHTML = `
     <div class="url-row">
-      <input id="au" type="text" placeholder="https://…  (mp3 / wav / ogg)" />
+      <input id="au" type="text" placeholder="https://…  (mp3 / wav / ogg / flac)" />
       <button id="ag">load</button>
     </div>
-    <div class="media-wrap">
-      <canvas id="aviz" width="900" height="120"></canvas>
-      <audio id="ael" controls style="width:100%"></audio>
-      <div class="playlist" id="apl"></div>
+    <div class="media-wrap" style="flex-direction:column;display:flex;gap:8px;">
+      <canvas id="aviz" style="width:100%;height:80px;display:block;border-radius:6px;background:#040810;"></canvas>
+      <audio id="ael" controls style="width:100%;"></audio>
+      <div class="playlist" id="apl" style="overflow-y:auto;max-height:160px;"></div>
     </div>
   `;
   document.getElementById('ag').onclick = () => {
     const url = document.getElementById('au').value.trim();
-    if (url) loadAudioSrc(url, url.split('/').pop());
+    if (url) loadAudioSrc(url, url.split('/').pop() || url);
+  };
+  document.getElementById('au').onkeydown = e => {
+    if (e.key === 'Enter') document.getElementById('ag').click();
   };
 }
+
 function renderAudioFiles(files){
   renderAudio();
   const pl = document.getElementById('apl');
-  files.forEach((f, i) => {
+  const fileArr = Array.from(files);
+  fileArr.forEach((f, i) => {
     const it = document.createElement('div');
     it.className = 'item' + (i === 0 ? ' active' : '');
     it.textContent = '♫  ' + f.name;
@@ -1605,45 +1639,76 @@ function renderAudioFiles(files){
     };
     pl.appendChild(it);
   });
-  loadAudioSrc(URL.createObjectURL(files[0]), files[0].name);
+  loadAudioSrc(URL.createObjectURL(fileArr[0]), fileArr[0].name);
 }
+
 function loadAudioSrc(src, label){
   const a = document.getElementById('ael');
+  if (!a) return;
+
+  // Always rebuild the audio graph for the current <audio> element
+  // Reusing the old context/sourceNode after innerHTML change causes InvalidStateError
+  if (_audioState) {
+    if (_audioState.rafId) cancelAnimationFrame(_audioState.rafId);
+    _audioState.rafId = null;
+    try { _audioState.sourceNode.disconnect(); } catch(_){}
+    try { _audioState.analyser.disconnect();  } catch(_){}
+    // Keep context alive — just detach nodes
+    _audioState.sourceNode = null;
+    _audioState.analyser   = null;
+  }
+
   a.src = src;
+  a.load();
+
+  try {
+    const ctx = (_audioState && _audioState.ctx.state !== 'closed')
+      ? _audioState.ctx
+      : new (window.AudioContext || window.webkitAudioContext)();
+    const source   = ctx.createMediaElementSource(a);
+    const analyser = ctx.createAnalyser();
+    analyser.fftSize = 256;
+    source.connect(analyser);
+    analyser.connect(ctx.destination);
+    _audioState = { ctx, sourceNode: source, analyser, rafId: null };
+    drawAudioViz();
+  } catch(e) {
+    // Fallback: just play without visualizer
+    console.warn('[audio] Web Audio setup failed:', e.message);
+    _audioState = null;
+  }
+
   a.play().catch(()=>{});
-  try{
-    if (!audioCtx){
-      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-      const source = audioCtx.createMediaElementSource(a);
-      audioAnalyser = audioCtx.createAnalyser();
-      audioAnalyser.fftSize = 128;
-      source.connect(audioAnalyser);
-      audioAnalyser.connect(audioCtx.destination);
-    }
-  }catch(_){}
-  drawAudioViz();
 }
+
 function drawAudioViz(){
   const cv = document.getElementById('aviz');
-  if (!cv || !audioAnalyser) return;
-  const ctx = cv.getContext('2d');
-  const bufferLength = audioAnalyser.frequencyBinCount;
-  const data = new Uint8Array(bufferLength);
-  stopAudioViz();
+  if (!cv || !_audioState || !_audioState.analyser) return;
+  const ctx2d = cv.getContext('2d');
+  // Match canvas buffer to CSS display size
+  cv.width  = cv.offsetWidth  || 500;
+  cv.height = cv.offsetHeight || 80;
+  const analyser = _audioState.analyser;
+  const bufLen   = analyser.frequencyBinCount;
+  const data     = new Uint8Array(bufLen);
+
+  if (_audioState.rafId) cancelAnimationFrame(_audioState.rafId);
+
   function draw(){
-    audioRaf = requestAnimationFrame(draw);
-    audioAnalyser.getByteFrequencyData(data);
-    ctx.clearRect(0,0,cv.width,cv.height);
-    const barW = (cv.width / bufferLength) * 1.4;
-    let x = 0;
-    for (let i=0;i<bufferLength;i++){
-      const h = (data[i] / 255) * cv.height;
-      const grad = ctx.createLinearGradient(0, cv.height-h, 0, cv.height);
-      grad.addColorStop(0, '#7ee0ff');
-      grad.addColorStop(1, '#3a5a9a');
-      ctx.fillStyle = grad;
-      ctx.fillRect(x, cv.height-h, barW-1, h);
-      x += barW;
+    _audioState.rafId = requestAnimationFrame(draw);
+    analyser.getByteFrequencyData(data);
+    const W = cv.width, H = cv.height;
+    ctx2d.fillStyle = '#040810';
+    ctx2d.fillRect(0, 0, W, H);
+    const barW = W / bufLen;
+    for (let i = 0; i < bufLen; i++){
+      const h = (data[i] / 255) * H;
+      const grad = ctx2d.createLinearGradient(0, H - h, 0, H);
+      grad.addColorStop(0, '#00d4ff');
+      grad.addColorStop(0.5, '#4090f0');
+      grad.addColorStop(1, '#0a1830');
+      ctx2d.fillStyle = grad;
+      ctx2d.fillRect(i * barW, H - h, barW - 1, h);
     }
   }
   draw();
@@ -1810,7 +1875,7 @@ class VintTerminal {
     if (!window.Terminal) {
       await new Promise((res, rej) => {
         const s = document.createElement('script');
-        s.src = 'https://cdn.jsdelivr.net/npm/xterm@5.5.0/lib/xterm.min.js';
+        s.src = 'https://cdn.jsdelivr.net/npm/xterm@5.3.0/lib/xterm.min.js';
         s.crossOrigin = 'anonymous';
         s.onload = res; s.onerror = rej;
         document.head.appendChild(s);
@@ -1819,7 +1884,7 @@ class VintTerminal {
     if (!window.FitAddon) {
       await new Promise((res, rej) => {
         const s = document.createElement('script');
-        s.src = 'https://cdn.jsdelivr.net/npm/xterm-addon-fit@0.10.0/lib/xterm-addon-fit.min.js';
+        s.src = 'https://cdn.jsdelivr.net/npm/xterm-addon-fit@0.8.0/lib/xterm-addon-fit.js';
         s.crossOrigin = 'anonymous';
         s.onload = res; s.onerror = rej;
         document.head.appendChild(s);
@@ -1957,7 +2022,9 @@ class VintTerminal {
     });
 
     if (window.FitAddon) {
-      this.fitAddon = new window.FitAddon.FitAddon();
+      // UMD bundle: window.FitAddon = { FitAddon: class } OR window.FitAddon = class
+      const FA = window.FitAddon.FitAddon || window.FitAddon;
+      this.fitAddon = new FA();
       this.term.loadAddon(this.fitAddon);
     }
     this.term.open(mount);
@@ -2132,7 +2199,7 @@ const MODES = {
 document.querySelectorAll('#media-dock button').forEach(b => {
   b.addEventListener('click', () => {
     const m = b.dataset.mode;
-    stopAudioViz();
+    _teardownAudio();
     if (MODES[m]) MODES[m]();
   });
 });
