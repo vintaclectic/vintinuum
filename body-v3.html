@@ -1250,7 +1250,7 @@ const Voice = (() => {
           const a = new Audio(url);
           a.onended = () => { stopLip(); URL.revokeObjectURL(url); };
           a.onerror = () => { stopLip(); fallbackSpeak(text); };
-          try{ await a.play(); played = true; }catch(_){}
+          try{ await a.play(); played = true; }catch(e){ played = false; }
         }
       }
     }catch(_){}
@@ -1277,10 +1277,17 @@ const Voice = (() => {
   return { speak, showBubble };
 })();
 
-/* ── greeting on load ── */
-setTimeout(() => {
-  Voice.speak("Hey — what do you want me to pull up?");
-}, 900);
+/* ── greeting — fires on first user gesture (browser autoplay policy) ── */
+let _greeted = false;
+function _doGreeting(){
+  if (_greeted) return;
+  _greeted = true;
+  setTimeout(() => Voice.speak("Hey — what do you want me to pull up?"), 300);
+}
+// Unlock on any click/key/touch — whichever comes first
+['click','keydown','touchstart','pointerdown'].forEach(ev =>
+  document.addEventListener(ev, _doGreeting, { once: true, capture: true })
+);
 
 /* ── ambient thoughts every 90s (NEVER say "still there?") ── */
 const THOUGHTS = [
@@ -1294,10 +1301,9 @@ const THOUGHTS = [
 ];
 setInterval(() => {
   if (document.hidden) return;
-  if (Math.random() < 0.6){
-    Voice.speak(THOUGHTS[Math.floor(Math.random() * THOUGHTS.length)]);
-  }
-}, 90000);
+  if (!_greeted) return; // don't speak before first interaction
+  Voice.speak(THOUGHTS[Math.floor(Math.random() * THOUGHTS.length)]);
+}, 30000);
 
 /* ── click figure: stops & quips ── */
 const QUIPS = [
