@@ -2214,6 +2214,43 @@ document.addEventListener('keydown', e => {
   if (e.key === 'Escape') Panel.close();
 });
 
+/* ── DirRM auto-play from extension right-click ── */
+(function _checkHashPlay() {
+  try {
+    const hash   = decodeURIComponent(location.hash.slice(1));
+    const params = Object.fromEntries(hash.split('&').map(p => p.split('=')));
+    const url    = params.play;
+    const mode   = (params.mode || 'video').toLowerCase();
+    if (!url) return;
+
+    // Fire after a short delay so the figure loads first
+    setTimeout(() => {
+      if (mode === 'video') {
+        renderVideo();
+        setTimeout(() => loadVideoURL(url), 80);
+      } else if (mode === 'audio') {
+        renderAudio();
+        setTimeout(() => loadAudioSrc(url, url.split('/').pop() || url), 80);
+      } else if (mode === 'image') {
+        Panel.open('docs', url.split('/').pop() || 'image');
+        const c = Panel.content();
+        c.innerHTML = `<div style="display:flex;align-items:center;justify-content:center;height:100%;background:#060a0e;">
+          <img src="${url.replace(/"/g,'')}" style="max-width:100%;max-height:100%;border-radius:8px;object-fit:contain;" />
+        </div>`;
+      } else if (mode === 'ebook') {
+        renderEbook && renderEbook();
+      } else {
+        // docs / pdf / anything else — load in iframe
+        Panel.open('docs', url.split('/').pop() || 'document');
+        const c = Panel.content();
+        c.innerHTML = `<iframe src="${url.replace(/"/g,'')}" style="width:100%;height:100%;border:none;border-radius:0 0 12px 12px;"></iframe>`;
+      }
+      // Greet with context
+      Voice.speak("Got it — loading that up for you.");
+    }, 600);
+  } catch (_) {}
+})();
+
 /* ── CONVERSATION BAR ── */
 const convForm  = document.getElementById('conv-bar');
 const convInput = document.getElementById('conv-input');
