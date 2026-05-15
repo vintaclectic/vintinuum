@@ -487,6 +487,7 @@
       <div class="chat-head">
         <h2>conversation</h2>
         <span class="meta">/chat/once</span>
+        <button id="dirrmOpenBtn" type="button" title="Open DirRM media player" style="margin-left:auto;background:rgba(245,166,35,0.1);border:1px solid rgba(245,166,35,0.25);color:#F5A623;border-radius:8px;padding:4px 10px;font-size:12px;font-weight:600;cursor:pointer;letter-spacing:0.04em;transition:background 0.15s;">DirRM</button>
       </div>
       <div class="thread" id="thread" role="log" aria-live="polite">
         <div class="msg system">awake. ask me anything.</div>
@@ -1089,6 +1090,68 @@
   } else {
     boot();
   }
+})();
+</script>
+
+<!-- DirRM Player — gold/amber floating media player (non-blocking, no backdrop) -->
+<iframe id="dirrmFrame" src="dirrm-player.html" style="display:none;position:fixed;bottom:20px;right:20px;width:520px;height:340px;border:none;z-index:9998;border-radius:16px;box-shadow:0 8px 32px rgba(0,0,0,0.5),0 0 1px rgba(245,166,35,0.3);pointer-events:auto;" allow="autoplay;fullscreen"></iframe>
+<script>
+// DirRM message bridge — mode changes resize iframe, close hides it
+window.addEventListener('message', function(e) {
+  if (!e.data || !e.data.action) return;
+  var f = document.getElementById('dirrmFrame');
+  if (!f) return;
+  if (e.data.action === 'playerClosed') {
+    f.style.display = 'none';
+  } else if (e.data.action === 'modeChanged') {
+    switch (e.data.mode) {
+      case 'theater':
+        f.style.width = '100vw'; f.style.height = '100svh';
+        f.style.top = '0'; f.style.left = '0';
+        f.style.right = 'auto'; f.style.bottom = 'auto';
+        f.style.borderRadius = '0';
+        break;
+      case 'main':
+        f.style.width = '860px'; f.style.height = '520px';
+        f.style.top = '60px'; f.style.right = '20px';
+        f.style.left = 'auto'; f.style.bottom = 'auto';
+        f.style.borderRadius = '16px';
+        break;
+      case 'mini':
+        f.style.width = '380px'; f.style.height = '180px';
+        f.style.bottom = '20px'; f.style.right = '20px';
+        f.style.top = 'auto'; f.style.left = 'auto';
+        f.style.borderRadius = '16px';
+        break;
+      case 'pip':
+        f.style.width = '320px'; f.style.height = '180px';
+        f.style.bottom = '20px'; f.style.right = '20px';
+        f.style.top = 'auto'; f.style.left = 'auto';
+        f.style.borderRadius = '12px';
+        break;
+    }
+  }
+});
+
+// DirRM open button
+(function(){
+  var btn = document.getElementById('dirrmOpenBtn');
+  if (!btn) return;
+  btn.addEventListener('click', function(){
+    var f = document.getElementById('dirrmFrame');
+    if (!f) return;
+    if (f.style.display === 'none' || !f.style.display) {
+      f.style.display = 'block';
+      f.style.width = '520px';
+      f.style.height = '340px';
+      f.style.bottom = '20px';
+      f.style.right = '20px';
+      f.style.top = 'auto';
+      f.style.left = 'auto';
+    } else {
+      f.style.display = 'none';
+    }
+  });
 })();
 </script>
 
