@@ -92,18 +92,17 @@
       letter-spacing: 0.05em;
       user-select: none;
       -webkit-user-select: none;
-      animation: heyVintaBreathe 3.2s ease-in-out infinite;
+      /* NO animation here — breathing moved to .hv-inner so draggable.js
+         translate3d on this element is never clobbered by CSS animation. */
       transition:
         background 220ms ease,
-        box-shadow 220ms ease,
-        transform 120ms ease;
+        box-shadow 220ms ease;
     }
     #hey-vinta-btn .hv-glyph {
       pointer-events: none;
       text-shadow: 0 0 8px rgba(180, 150, 255, 0.6);
     }
     #hey-vinta-btn.listening {
-      animation: heyVintaPulse 0.9s ease-in-out infinite;
       box-shadow:
         0 6px 20px rgba(0, 0, 0, 0.5),
         0 0 0 6px rgba(140, 110, 220, 0.25),
@@ -156,6 +155,22 @@
       0%, 100% { transform: scale(1.0); }
       50%      { transform: scale(1.08); }
     }
+    /* Breathing lives on the inner glyph wrapper so the outer button's
+       transform (used by draggable.js for translate3d positioning) is
+       never clobbered by the animation. */
+    #hey-vinta-btn .hv-inner {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+      height: 100%;
+      border-radius: inherit;
+      animation: heyVintaBreathe 3.2s ease-in-out infinite;
+      pointer-events: none;
+    }
+    #hey-vinta-btn.listening .hv-inner {
+      animation: heyVintaPulse 0.9s ease-in-out infinite;
+    }
     #hey-vinta-bubble {
       position: fixed;
       right: 88px;
@@ -201,7 +216,7 @@
   btn.title = 'Hey Vinta — tap to listen';
   btn.setAttribute('aria-label', 'Hey Vinta wake button');
   btn.setAttribute('data-drag', '1');     // pick up draggable.js
-  btn.innerHTML = '<span class="hv-glyph">V</span>';
+  btn.innerHTML = '<span class="hv-inner"><span class="hv-glyph">V</span></span>';
 
   const bubble = document.createElement('div');
   bubble.id = 'hey-vinta-bubble';
