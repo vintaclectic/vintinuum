@@ -1129,14 +1129,14 @@ button{font-family:inherit;color:inherit}
   <div><span class="label">BRAIN</span> <span class="val" id="hud-brain">…</span></div>
 </div>
 
-<div id="media-dock" role="toolbar" aria-label="Media Suite">
-  <button data-mode="file"     data-draggable="true" aria-label="Open file"><span class="dock-ico">📁</span>Open</button>
-  <button data-mode="video"    data-draggable="true" aria-label="Video"><span class="dock-ico">🎬</span>Video</button>
-  <button data-mode="audio"    data-draggable="true" aria-label="Audio"><span class="dock-ico">🎵</span>Audio</button>
-  <button data-mode="docs"     data-draggable="true" aria-label="Documents"><span class="dock-ico">📄</span>Docs</button>
-  <button data-mode="ebook"    data-draggable="true" aria-label="Books"><span class="dock-ico">📚</span>Books</button>
-  <button data-mode="terminal" data-draggable="true" aria-label="Terminal"><span class="dock-ico">💻</span>Terminal</button>
-  <button data-mode="drive"    data-draggable="true" aria-label="Google Drive"><span class="dock-ico">☁️</span>Drive</button>
+<div id="media-dock" role="toolbar" aria-label="Media Suite" data-drag-container="false">
+  <button data-mode="file"     data-drag-skip="1" aria-label="Open file"><span class="dock-ico">📁</span>Open</button>
+  <button data-mode="video"    data-drag-skip="1" aria-label="Video"><span class="dock-ico">🎬</span>Video</button>
+  <button data-mode="audio"    data-drag-skip="1" aria-label="Audio"><span class="dock-ico">🎵</span>Audio</button>
+  <button data-mode="docs"     data-drag-skip="1" aria-label="Documents"><span class="dock-ico">📄</span>Docs</button>
+  <button data-mode="ebook"    data-drag-skip="1" aria-label="Books"><span class="dock-ico">📚</span>Books</button>
+  <button data-mode="terminal" data-drag-skip="1" aria-label="Terminal"><span class="dock-ico">💻</span>Terminal</button>
+  <button data-mode="drive"    data-drag-skip="1" aria-label="Google Drive"><span class="dock-ico">☁️</span>Drive</button>
 </div>
 
 <form id="conv-bar" autocomplete="off">
@@ -2302,6 +2302,24 @@ const MODES = {
   terminal: renderTerminal,
   drive:    renderDrive,
 };
+// Clear any stale draggable transforms on dock buttons — they live inside a
+// scrollable container and must not have independent translate3d offsets.
+(function clearDockDragState(){
+  try {
+    const key = 'vint:layout:' + (location.pathname || '/');
+    const stored = JSON.parse(localStorage.getItem(key) || '{}');
+    let changed = false;
+    document.querySelectorAll('#media-dock button').forEach(b => {
+      const id = b.id || ('[data-mode="' + b.dataset.mode + '"]');
+      if (stored[id]) { delete stored[id]; changed = true; }
+      b.style.transform = '';
+      b.dataset.dragX = '0';
+      b.dataset.dragY = '0';
+    });
+    if (changed) localStorage.setItem(key, JSON.stringify(stored));
+  } catch(_){}
+})();
+
 document.querySelectorAll('#media-dock button').forEach(b => {
   b.addEventListener('click', () => {
     const m = b.dataset.mode;
