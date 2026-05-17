@@ -538,7 +538,11 @@
     var utterance = new Utterance(nodes.utterance);
     var mic = null;
 
-    // Continuous mode toggle
+    // Continuous mode — ON by default. Tap orb to stop, tap again to start.
+    _continuousMode = true;
+    nodes.contToggle.setAttribute('data-active', '1');
+    nodes.contToggle.textContent = '⟳ continuous · on';
+
     nodes.contToggle.addEventListener('click', function () {
       _continuousMode = !_continuousMode;
       nodes.contToggle.setAttribute('data-active', _continuousMode ? '1' : '0');
