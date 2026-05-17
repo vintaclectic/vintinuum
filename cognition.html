@@ -881,17 +881,21 @@ function paintTiers(snap) {
   }
 }
 
-function paintSavings(snap) {
-  const r = snap.router || {};
-  const dist = r.tier_distribution_24h || {};
-  const calls = (r.sample_calls && r.sample_calls.length) || 0;
-  const saved = (dist.local || 0) * calls * 0.018 * 30;
-  document.getElementById('savings-num').textContent = '$' + saved.toFixed(2);
-  if (saved <= 0) {
+function paintSavings(snap, healthData) {
+  // Use real session savings from /api/health if available
+  const savedUSD = healthData?.savedUSD ?? 0;
+  const costUSD  = healthData?.costUSD  ?? 0;
+  const localN   = healthData?.local    ?? 0;
+  const cloudN   = healthData?.cloud    ?? 0;
+  const total    = localN + cloudN;
+
+  document.getElementById('savings-num').textContent = '$' + savedUSD.toFixed(2);
+  if (savedUSD <= 0 && total === 0) {
     document.getElementById('savings-note').textContent = 'Activates once local traffic flows — Phase 2 onward.';
   } else {
+    const localPct = total > 0 ? Math.round((localN / total) * 100) : 0;
     document.getElementById('savings-note').textContent =
-      'Estimated from local share × $0.018/call × 30-day projection.';
+      `${localN} local · ${cloudN} cloud · ${localPct}% free · $${costUSD.toFixed(4)} paid API this session`;
   }
 }
 
@@ -1214,7 +1218,10 @@ document.getElementById('btn-refresh').addEventListener('click', () => {
 
 // ─── LOADERS ──────────────────────────────────────────────────────────────────
 async function loadCognitionHealth() {
-  const data = await apiFetch('/api/cognition/health');
+  const [data, healthData] = await Promise.all([
+    apiFetch('/api/cognition/health'),
+    apiFetch('/api/health'),
+  ]);
   const dot = document.getElementById('status-dot');
   if (data.__err || data.__404 || !data.ok) {
     dot.className = 'dead';
@@ -1222,7 +1229,7 @@ async function loadCognitionHealth() {
     paintEngines({});
     paintRouter({});
     paintTiers({});
-    paintSavings({});
+    paintSavings({}, healthData);
     paintPhaseTable(0);
     return;
   }
@@ -1232,7 +1239,7 @@ async function loadCognitionHealth() {
   paintEngines(data);
   paintRouter(data);
   paintTiers(data);
-  paintSavings(data);
+  paintSavings(data, healthData);
   paintPhaseTable(phase);
 }
 
