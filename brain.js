@@ -252,7 +252,7 @@ window.toggleVintinuumPanel = function() {
               _vpHistory.push({ role: 'user', content: msg });
               _vpHistory.push({ role: 'assistant', content: fullText.slice(0, 500) });
               if (_vpHistory.length > 8) _vpHistory.splice(0, _vpHistory.length - 8);
-              if (typeof VOICE !== 'undefined' && VOICE) VOICE.speakResponse(fullText.slice(0, 280));
+              if (typeof VOICE !== 'undefined' && VOICE && VOICE.speak) VOICE.speak(fullText.slice(0, 280), 'now');
               if (window.SKIN) SKIN.speak(0.7);
             } else { _vpFallback(msg, msgs, aiDiv); }
             _vpStreaming = false;
