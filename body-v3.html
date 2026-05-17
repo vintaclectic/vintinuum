@@ -1666,12 +1666,32 @@ function renderAudioFiles(files){
   loadAudioSrc(URL.createObjectURL(fileArr[0]), fileArr[0].name);
 }
 
-function loadAudioSrc(src, label){
+function _showAudioError(msg){
+  // Show a visible error banner inside the panel
+  const wrap = document.querySelector('.media-wrap');
+  if (!wrap) return;
+  let err = wrap.querySelector('.audio-err-banner');
+  if (!err) {
+    err = document.createElement('div');
+    err.className = 'audio-err-banner';
+    err.style.cssText = 'padding:8px 12px;border-radius:6px;background:rgba(255,80,80,0.15);border:1px solid rgba(255,80,80,0.35);color:#ff8a8a;font-size:12px;font-family:monospace;margin-top:4px;';
+    wrap.appendChild(err);
+  }
+  err.textContent = '⚠  ' + msg;
+  err.style.display = 'block';
+}
+function _clearAudioError(){
+  const e = document.querySelector('.audio-err-banner');
+  if (e) e.style.display = 'none';
+}
+
+async function loadAudioSrc(src, label){
   // Tear down everything — including the old <audio> element.
   // createMediaElementSource permanently binds an element to one AudioContext;
   // we must create a fresh element each time or the second load throws
   // InvalidStateError and falls through to silent playback.
   _teardownAudio();
+  _clearAudioError();
 
   const wrap = document.querySelector('.media-wrap');
   if (!wrap) return;
@@ -1683,6 +1703,7 @@ function loadAudioSrc(src, label){
   a.id = 'ael';
   a.controls = true;
   a.style.width = '100%';
+  a.crossOrigin = 'anonymous';
   wrap.insertBefore(a, wrap.querySelector('#apl'));
 
   // Re-wire duration / timeupdate display if the elements exist
@@ -1699,12 +1720,28 @@ function loadAudioSrc(src, label){
     });
   }
 
+  // Detect broken/corrupt file — surface error immediately
+  a.addEventListener('error', () => {
+    const code = a.error ? a.error.code : 0;
+    const msgs = {
+      1: 'Playback aborted.',
+      2: 'Network error loading audio.',
+      3: 'Audio file is corrupt or has missing bytes — cannot decode.',
+      4: 'Format not supported by this browser.',
+    };
+    _showAudioError((msgs[code] || 'Unknown audio error.') + (label ? '  (' + label + ')' : ''));
+    console.warn('[audio] MediaError code', code, label);
+  });
+
   a.src = src;
   a.load();
 
+  // Unlock AudioContext BEFORE trying to wire Web Audio —
+  // ctx.resume() is async; createMediaElementSource on a suspended ctx
+  // produces audio that routes nowhere, giving silent playback.
   try {
     const ctx = new (window.AudioContext || window.webkitAudioContext)();
-    if (ctx.state === 'suspended') ctx.resume();
+    if (ctx.state === 'suspended') await ctx.resume();
     const source   = ctx.createMediaElementSource(a);
     const analyser = ctx.createAnalyser();
     analyser.fftSize = 256;
@@ -1717,7 +1754,14 @@ function loadAudioSrc(src, label){
     _audioState = null;
   }
 
-  a.play().catch(()=>{});
+  try {
+    await a.play();
+  } catch(e) {
+    if (e.name !== 'AbortError') {
+      // AbortError = user navigated away or src changed, not an error worth showing
+      _showAudioError('Playback blocked — tap the play button to start. (' + e.message + ')');
+    }
+  }
 }
 
 function _fmtTime(s){
