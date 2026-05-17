@@ -575,11 +575,13 @@
     try {
       return localStorage.getItem('vint_access_token')
           || localStorage.getItem('vint_token')
+          || localStorage.getItem('vint_access')
+          || localStorage.getItem('soul_auth_token')
           || '';
     } catch(_){ return ''; }
   }
   function authHeaders(extra){
-    var h = Object.assign({}, extra || {});
+    var h = Object.assign({ 'ngrok-skip-browser-warning': '1' }, extra || {});
     var t = token();
     if (t) h['Authorization'] = 'Bearer ' + t;
     return h;
@@ -594,11 +596,24 @@
     } catch(_){ $date.textContent = ''; }
   })();
 
-  // ---- tier from localstorage if present ----
-  try {
-    var tier = localStorage.getItem('vint_tier') || localStorage.getItem('tier') || 'free';
-    $tier.textContent = 'tier: ' + tier.toLowerCase();
-  } catch(_){}
+  // ---- tier: verify from server, fall back to localStorage ----
+  (function resolveTier(){
+    var cached = 'free';
+    try { cached = localStorage.getItem('vint_tier') || localStorage.getItem('tier') || 'free'; } catch(_){}
+    $tier.textContent = 'tier: ' + cached.toLowerCase();
+    // Always verify against server — localStorage can be stale or missing
+    fetch(API + '/api/auth/whoami', { credentials: 'include', headers: authHeaders() })
+      .then(function(r){ return r.ok ? r.json() : null; })
+      .then(function(d){
+        if (!d) return;
+        var serverTier = (d.user && d.user.tier) ? d.user.tier.toLowerCase() : null;
+        if (serverTier) {
+          $tier.textContent = 'tier: ' + serverTier;
+          try { localStorage.setItem('vint_tier', serverTier); } catch(_){}
+        }
+      })
+      .catch(function(){});
+  })();
 
   // ---- thread helpers ----
   var typingCounter = 0;
@@ -1068,6 +1083,37 @@
     }
     return el;
   };
+
+  // ---- session recovery: if no token in localStorage, try cookies ----
+  // Brain.html sets vint_access_token on login. If the user has a valid
+  // session cookie but cleared localStorage, whoami returns the user and
+  // we can issue a fresh token via the refresh endpoint.
+  (function recoverSession(){
+    if (token()) return; // already have a token
+    fetch(API + '/api/auth/whoami', { credentials: 'include', headers: { 'ngrok-skip-browser-warning': '1' } })
+      .then(function(r){ return r.ok ? r.json() : null; })
+      .then(function(d){
+        if (!d || !d.user) return;
+        // If the server knows who we are (via cookie/session), try to get a fresh token
+        fetch(API + '/api/auth/refresh', {
+          method: 'POST',
+          credentials: 'include',
+          headers: { 'ngrok-skip-browser-warning': '1' }
+        }).then(function(r){ return r.ok ? r.json() : null; })
+          .then(function(tokens){
+            if (tokens && tokens.accessToken) {
+              try {
+                localStorage.setItem('vint_access_token', tokens.accessToken);
+                localStorage.setItem('vint_access', tokens.accessToken);
+                if (tokens.user && tokens.user.tier) {
+                  localStorage.setItem('vint_tier', tokens.user.tier);
+                  $tier.textContent = 'tier: ' + tokens.user.tier.toLowerCase();
+                }
+              } catch(_){}
+            }
+          }).catch(function(){});
+      }).catch(function(){});
+  })();
 
   // ---- boot ----
   function boot(){
