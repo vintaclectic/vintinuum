@@ -959,11 +959,22 @@
     (function loop(){ orbRAF = requestAnimationFrame(loop); drawOrb(); })();
   }
 
-  // --- mic ---
+  // --- mic / continuous conversation ---
   var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
   var _rec = null;
   var _micActive = false;
   var _lastFinal = '';
+  var _convoMode = false; // true = auto-restart mic after every reply
+
+  function _updateMicBtn(){
+    if (_convoMode){
+      orbMicBtn.textContent = _micActive ? '■ listening…' : '■ conversation on';
+      orbMicBtn.classList.add('active');
+    } else {
+      orbMicBtn.textContent = '⬤ tap to speak';
+      orbMicBtn.classList.remove('active');
+    }
+  }
 
   function startMic(){
     if (_micActive) return;
@@ -975,16 +986,15 @@
     }
     _lastFinal = '';
     _rec = new SR();
-    _rec.continuous = true;
+    _rec.continuous = false; // one utterance at a time — browser is more reliable this way
     _rec.interimResults = true;
-    _rec.lang = 'en-US';
+    _rec.lang = navigator.language || 'en-US';
 
     _rec.onstart = function(){
       _micActive = true;
       setOrbState('listening');
       showUtterance('listening…');
-      orbMicBtn.textContent = '■ stop';
-      orbMicBtn.classList.add('active');
+      _updateMicBtn();
     };
 
     _rec.onresult = function(ev){
@@ -1005,9 +1015,19 @@
 
     _rec.onerror = function(e){
       _micActive = false;
-      orbMicBtn.textContent = '⬤ tap to speak';
-      orbMicBtn.classList.remove('active');
-      if (e.error === 'no-speech'){ setOrbState('idle'); showUtterance(''); return; }
+      if (e.error === 'no-speech'){
+        // silence — if in convo mode, restart immediately
+        if (_convoMode && orbState !== 'thinking' && orbState !== 'speaking'){
+          setTimeout(startMic, 200);
+        } else {
+          setOrbState('idle');
+          showUtterance('');
+          _updateMicBtn();
+        }
+        return;
+      }
+      _convoMode = false;
+      _updateMicBtn();
       showUtterance('mic blocked — type below');
       setOrbState('idle');
       setTimeout(function(){ showUtterance(''); }, 3000);
@@ -1015,31 +1035,41 @@
 
     _rec.onend = function(){
       _micActive = false;
-      orbMicBtn.textContent = '⬤ tap to speak';
-      orbMicBtn.classList.remove('active');
+      _updateMicBtn();
+      // Only reset to idle if we're not already moving to thinking/speaking
       if (orbState === 'listening') setOrbState('idle');
     };
 
     try { _rec.start(); } catch(e){
       _micActive = false;
+      _convoMode = false;
       setOrbState('idle');
+      _updateMicBtn();
       showUtterance('mic error — type below');
       setTimeout(function(){ showUtterance(''); }, 3000);
     }
   }
 
   function stopMic(){
+    _convoMode = false;
     _micActive = false;
     if (_rec){ try { _rec.stop(); } catch(_){} }
-    orbMicBtn.textContent = '⬤ tap to speak';
-    orbMicBtn.classList.remove('active');
+    _updateMicBtn();
     setOrbState('idle');
+    showUtterance('');
   }
 
   function orbTap(){
     if (orbState === 'thinking') return; // busy
-    if (_micActive) { stopMic(); return; }
+    if (_convoMode){
+      // second tap = end conversation mode
+      stopMic();
+      return;
+    }
     if (window.__markInteracted) window.__markInteracted();
+    // First tap = enter continuous conversation mode
+    _convoMode = true;
+    _updateMicBtn();
     startMic();
   }
 
@@ -1061,8 +1091,7 @@
     return _origSend(text);
   };
 
-  // After reply arrives, set orb to speaking then idle
-  // We patch appendMessage to detect jarvis replies
+  // After reply arrives, set orb to speaking then idle (or back to listening in convo mode)
   var _origAppend = appendMessage;
   appendMessage = function(role, text){
     var el = _origAppend(role, text);
@@ -1070,15 +1099,21 @@
       setOrbState('speaking');
       showUtterance(text.slice(0, 160) + (text.length > 160 ? '…' : ''));
       orbMouthAmp = 0.8;
-      // Amp ticks during speech
       var ampTick = setInterval(function(){ orbMouthAmp = 0.35 + Math.random() * 0.55; }, 100);
       var dwell = Math.min(3200, 900 + text.length * 20);
       setTimeout(function(){
         clearInterval(ampTick);
         orbMouthAmp = 0;
-        setOrbState('idle');
-        // fade utterance out after another 4s
-        setTimeout(function(){ showUtterance(''); }, 4000);
+        if (_convoMode){
+          // Auto-restart listening — the conversation continues
+          showUtterance('your turn…');
+          setTimeout(function(){
+            if (_convoMode) startMic();
+          }, 300);
+        } else {
+          setOrbState('idle');
+          setTimeout(function(){ showUtterance(''); }, 4000);
+        }
       }, dwell);
     }
     return el;
@@ -1123,8 +1158,8 @@
     startOrb();
     // greeting
     setTimeout(function(){
-      showUtterance('online. tap to speak, or type below.');
-      setTimeout(function(){ showUtterance(''); }, 5000);
+      showUtterance('tap once to talk. tap again to stop.');
+      setTimeout(function(){ showUtterance(''); }, 4000);
     }, 800);
     if (window.matchMedia && !window.matchMedia('(max-width:600px)').matches){
       try { $input.focus(); } catch(_){}
