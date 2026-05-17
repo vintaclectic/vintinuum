@@ -2366,13 +2366,13 @@ convForm.addEventListener('submit', async e => {
   Voice.showBubble('…', 1200);
   let replyText = '';
   try{
-    // try streaming endpoint first
-    const r = await fetch(API + '/api/chat/stream', {
+    // SSE streaming via /chat
+    const r = await fetch(API + '/chat', {
       method:'POST',
       headers:{'Content-Type':'application/json'},
       body: JSON.stringify({message:text, source:'body-v3'})
     });
-    if (r.ok && r.body && r.headers.get('content-type')?.includes('text/event-stream')){
+    if (r.ok && r.body){
       const reader = r.body.getReader();
       const dec = new TextDecoder();
       let buf = '';
@@ -2392,15 +2392,6 @@ convForm.addEventListener('submit', async e => {
           }
         }
       }
-    } else {
-      // fallback to non-streaming
-      const r2 = await fetch(API + '/api/chat', {
-        method:'POST',
-        headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({message:text, source:'body-v3'})
-      });
-      const j = await r2.json().catch(()=>({}));
-      replyText = j.reply || j.response || j.text || j.message || '';
     }
   }catch(_){}
   if (replyText){

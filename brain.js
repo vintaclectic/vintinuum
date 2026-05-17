@@ -42170,6 +42170,8 @@ window.addEventListener('message', function(event) {
     console.log('[VINTINUUM] API: ' + window.__VINTINUUM_API_BASE);
   }
 
+  const API_BASE = window.__VINTINUUM_API_BASE;
+
   // ── Elements ──
   const btn = document.getElementById('vint-chat-btn');
   const panel = document.getElementById('vint-chat-panel');
