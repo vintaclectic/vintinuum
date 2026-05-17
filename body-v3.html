@@ -1686,6 +1686,13 @@ function _clearAudioError(){
 }
 
 async function loadAudioSrc(src, label){
+  // YouTube URLs cannot be decoded as audio — reroute to video panel
+  if (/youtube\.com|youtu\.be/i.test(src)){
+    renderVideo();
+    setTimeout(() => loadVideoURL(src), 80);
+    return;
+  }
+
   // Tear down everything — including the old <audio> element.
   // createMediaElementSource permanently binds an element to one AudioContext;
   // we must create a fresh element each time or the second load throws
@@ -2419,11 +2426,65 @@ const convInput = document.getElementById('conv-input');
 const convMic   = document.getElementById('conv-mic');
 const hudState  = document.getElementById('hud-state');
 
+/* ── Local intent router — handles media commands without hitting /chat ── */
+function _localIntent(text){
+  const t = text.trim().toLowerCase();
+
+  // "play X on youtube" / "play youtube X" / "search youtube for X" / "youtube X"
+  const ytPatterns = [
+    /^(?:play|put on|open|search|find|pull up|show me?)\s+(.+?)\s+on\s+youtube$/i,
+    /^(?:play|put on|open|search|find|pull up|show me?)\s+youtube\s+(?:for\s+)?(.+)$/i,
+    /^youtube\s+(?:search\s+(?:for\s+)?)?(.+)$/i,
+    /^(?:play|put on)\s+(.+?)\s+(?:video|music video|song|track)$/i,
+  ];
+  for (const re of ytPatterns){
+    const m = text.trim().match(re);
+    if (m){
+      const query = m[1].trim();
+      const searchUrl = 'https://www.youtube.com/results?search_query=' + encodeURIComponent(query);
+      // Open in video panel so user picks the right result
+      renderVideo();
+      setTimeout(() => {
+        const wrap = document.getElementById('vwrap');
+        if (!wrap) return;
+        wrap.innerHTML = '';
+        const ifr = document.createElement('iframe');
+        // Use YouTube search embed — opens search results inside the panel
+        ifr.src = 'https://www.youtube.com/embed?listType=search&list=' + encodeURIComponent(query) + '&autoplay=1';
+        ifr.allow = 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture';
+        ifr.allowFullscreen = true;
+        ifr.style.cssText = 'width:100%;height:100%;border:none;border-radius:0 0 12px 12px;min-height:320px;';
+        wrap.appendChild(ifr);
+        // Also put the URL in the input for reference
+        const vu = document.getElementById('vu');
+        if (vu) vu.value = searchUrl;
+      }, 80);
+      Voice.speak('On it — pulling up ' + query + ' on YouTube.');
+      hudState.textContent = 'playing';
+      return true;
+    }
+  }
+
+  // "open video" / "video panel"
+  if (/^(?:open\s+)?video(?:\s+panel)?$/.test(t)){ renderVideo(); return true; }
+  // "open audio" / "audio panel"
+  if (/^(?:open\s+)?audio(?:\s+panel)?$/.test(t)){ renderAudio(); return true; }
+  // "open docs" / "open terminal"
+  if (/^(?:open\s+)?(?:docs?|documents?)(?:\s+panel)?$/.test(t)){ MODES.docs && MODES.docs(); return true; }
+  if (/^(?:open\s+)?terminal$/.test(t)){ MODES.term && MODES.term(); return true; }
+
+  return false; // not handled locally
+}
+
 convForm.addEventListener('submit', async e => {
   e.preventDefault();
   const text = convInput.value.trim();
   if (!text) return;
   convInput.value = '';
+
+  // Try local intent first — no round-trip needed
+  if (_localIntent(text)) return;
+
   hudState.textContent = 'thinking';
   Voice.showBubble('…', 1200);
   let replyText = '';
