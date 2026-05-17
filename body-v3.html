@@ -2538,7 +2538,7 @@ convForm.addEventListener('submit', async e => {
     }
   }catch(_){}
   if (replyText){
-    if (window.__vintTerm) window.__vintTerm.print('vint → ' + replyText, 'ok');
+    if (window.__vintTerm && typeof window.__vintTerm.print === 'function') window.__vintTerm.print('vint → ' + replyText, 'ok');
     Voice.speak(replyText);
   }
   hudState.textContent = 'walking';
