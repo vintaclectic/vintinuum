@@ -1710,7 +1710,10 @@ async function loadAudioSrc(src, label){
   a.id = 'ael';
   a.controls = true;
   a.style.width = '100%';
-  a.crossOrigin = 'anonymous';
+  // Do NOT set crossOrigin here — non-CORS servers (most direct MP3 links)
+  // will fail a CORS preflight and the browser reports "no supported source."
+  // The plain <audio> element can play cross-origin URLs fine without it.
+  // We only need CORS mode if Web Audio's createMediaElementSource succeeds.
   wrap.insertBefore(a, wrap.querySelector('#apl'));
 
   // Re-wire duration / timeupdate display if the elements exist
@@ -1727,12 +1730,13 @@ async function loadAudioSrc(src, label){
     });
   }
 
-  // Detect broken/corrupt file — surface error immediately
+  // Detect broken/corrupt file — surface error immediately, but only after
+  // load has been attempted (error fires before or after depending on browser)
   a.addEventListener('error', () => {
     const code = a.error ? a.error.code : 0;
     const msgs = {
       1: 'Playback aborted.',
-      2: 'Network error loading audio.',
+      2: 'Network error — server may be down or blocking the request.',
       3: 'Audio file is corrupt or has missing bytes — cannot decode.',
       4: 'Format not supported by this browser.',
     };
@@ -1743,12 +1747,15 @@ async function loadAudioSrc(src, label){
   a.src = src;
   a.load();
 
-  // Unlock AudioContext BEFORE trying to wire Web Audio —
-  // ctx.resume() is async; createMediaElementSource on a suspended ctx
-  // produces audio that routes nowhere, giving silent playback.
+  // Try Web Audio for visualizer — but it requires CORS headers from the server.
+  // If the server doesn't send them, createMediaElementSource throws a SecurityError.
+  // In that case we fall back gracefully: audio still plays via <audio> controls,
+  // we just don't get the visualizer canvas.
   try {
     const ctx = new (window.AudioContext || window.webkitAudioContext)();
     if (ctx.state === 'suspended') await ctx.resume();
+    // Attempt CORS mode first for Web Audio
+    a.crossOrigin = 'anonymous';
     const source   = ctx.createMediaElementSource(a);
     const analyser = ctx.createAnalyser();
     analyser.fftSize = 256;
@@ -1757,16 +1764,29 @@ async function loadAudioSrc(src, label){
     _audioState = { ctx, sourceNode: source, analyser, rafId: null };
     drawAudioViz();
   } catch(e) {
-    console.warn('[audio] Web Audio setup failed:', e.message);
+    // SecurityError = no CORS headers — that's fine, audio still plays
+    // InvalidStateError = already captured — also fine
+    console.info('[audio] Web Audio unavailable (no CORS or already captured):', e.message);
+    // Clear crossOrigin so the element can load without preflight
+    a.removeAttribute('crossorigin');
+    a.load();
     _audioState = null;
+    // Hide the canvas since we have no analyser
+    const cv = document.getElementById('aviz');
+    if (cv) cv.style.opacity = '0.15';
   }
 
+  // Auto-play — NotAllowedError means browser needs a user gesture first,
+  // which is fine: the <audio controls> bar lets them tap play themselves.
+  // Don't show an error for that — the controls are right there.
   try {
     await a.play();
   } catch(e) {
-    if (e.name !== 'AbortError') {
-      // AbortError = user navigated away or src changed, not an error worth showing
-      _showAudioError('Playback blocked — tap the play button to start. (' + e.message + ')');
+    if (e.name === 'NotAllowedError'){
+      // Browser autoplay policy — controls visible, user can tap play
+      console.info('[audio] Autoplay blocked by browser policy — user can tap play');
+    } else if (e.name !== 'AbortError') {
+      _showAudioError('Could not start playback: ' + e.message);
     }
   }
 }
