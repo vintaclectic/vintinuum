@@ -3005,6 +3005,7 @@ if ('serviceWorker' in navigator && _onGitHubPages) {
 
 <a id="learningFooterLink" href="learning.html" class="learning-footer-link" title="Live learning feed — every channel where Vintinuum learns right now">LIVE LEARN</a>
 <a id="statsFooterLink" href="stats.html" class="stats-footer-link" title="System statistics &amp; performance metrics">STATS</a>
+<button id="pairPhoneBtn" title="Pair your phone" style="display:none;">⊕ PAIR</button>
 
 <script>
 // ── ONE-SCREEN LAYOUT WIRING ──
@@ -3815,7 +3816,7 @@ setTimeout(function() {
     if (!dock) return;
     // vint-chat-btn = unified V orb (draggable, floating) — not docked
     // vintinuumBtn = hidden (merged into vint-chat-btn)
-    var order = ['voiceToggle', '__spacer__', 'reproToggle', 'learningFooterLink'];
+    var order = ['voiceToggle', '__spacer__', 'reproToggle', 'learningFooterLink', 'pairPhoneBtn'];
     order.forEach(function(id, idx){
       if (id === '__spacer__'){
         var sp = document.createElement('span');
@@ -3843,6 +3844,77 @@ setTimeout(function() {
   } else {
     reparentDock();
   }
+})();
+</script>
+
+<!-- ── PAIR PHONE MODAL ─────────────────────────────────────────────────── -->
+<div id="pairModal" style="display:none;position:fixed;inset:0;z-index:10010;background:rgba(0,0,0,0.7);backdrop-filter:blur(6px);align-items:center;justify-content:center;padding:20px;">
+  <div style="background:#0a0f1e;border:1px solid rgba(79,195,247,0.2);border-radius:20px;padding:28px 24px;width:100%;max-width:340px;text-align:center;">
+    <div style="font-size:.6rem;letter-spacing:.3em;text-transform:uppercase;color:rgba(79,195,247,0.6);margin-bottom:16px;">PAIR A PHONE</div>
+    <div id="pairQR" style="margin:0 auto 14px;width:180px;height:180px;background:rgba(255,255,255,0.04);border-radius:12px;display:flex;align-items:center;justify-content:center;">
+      <span style="font-size:.7rem;color:rgba(255,255,255,0.25);">generating…</span>
+    </div>
+    <div id="pairCode" style="font-family:monospace;font-size:1.4rem;letter-spacing:.2em;color:#4fc3f7;margin-bottom:8px;">—</div>
+    <div style="font-size:.65rem;color:rgba(255,255,255,0.3);margin-bottom:16px;">Open the Vintinuum app on your phone and enter this code, or scan the QR.</div>
+    <div id="pairModalStatus" style="font-size:.7rem;color:rgba(255,255,255,0.4);margin-bottom:16px;min-height:1em;"></div>
+    <button onclick="document.getElementById('pairModal').style.display='none'" style="padding:10px 24px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:10px;color:rgba(255,255,255,0.5);cursor:pointer;font-size:.75rem;font-family:monospace;">CLOSE</button>
+  </div>
+</div>
+<script>
+(function(){
+  var btn = document.getElementById('pairPhoneBtn');
+  if (!btn) return;
+  btn.style.display = '';
+
+  btn.addEventListener('click', async function(){
+    var modal = document.getElementById('pairModal');
+    var codeEl = document.getElementById('pairCode');
+    var qrEl   = document.getElementById('pairQR');
+    var statEl = document.getElementById('pairModalStatus');
+    codeEl.textContent = '…';
+    qrEl.innerHTML = '<span style="font-size:.7rem;color:rgba(255,255,255,0.25);">generating…</span>';
+    statEl.textContent = '';
+    modal.style.display = 'flex';
+
+    try {
+      var apiBase = (window.VINT_API || 'https://api.vintaclectic.com');
+      var tok = localStorage.getItem('vint_access_token') || '';
+      var r = await fetch(apiBase + '/api/v2/device/pair-issue', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...(tok ? { Authorization: 'Bearer ' + tok } : {}) },
+      });
+      var d = await r.json();
+      if (!r.ok || !d.code) throw new Error(d.error || 'failed');
+      codeEl.textContent = d.code;
+      var pairUrl = d.pairUrl || (apiBase + '/pair?code=' + d.code);
+      qrEl.innerHTML = '<img alt="pair QR" width="180" height="180" style="border-radius:10px;background:#fff;padding:8px;" src="https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=' + encodeURIComponent(pairUrl) + '">';
+      statEl.textContent = 'Expires in 5 minutes. Open phone.html → enter code, or scan QR.';
+
+      // Poll for redemption
+      var pollTimer = setInterval(async function(){
+        try {
+          var pr = await fetch(apiBase + '/api/v2/device/pair-status?code=' + d.code, {
+            headers: tok ? { Authorization: 'Bearer ' + tok } : {}
+          });
+          if (pr.ok) {
+            var pd = await pr.json();
+            if (pd.redeemed) {
+              clearInterval(pollTimer);
+              statEl.style.color = 'rgba(100,255,160,0.9)';
+              statEl.textContent = '✓ Phone paired!';
+              setTimeout(function(){ modal.style.display = 'none'; statEl.style.color = ''; }, 2000);
+            }
+          }
+        } catch(_){}
+      }, 3000);
+      // Stop polling after 6 min
+      setTimeout(function(){ clearInterval(pollTimer); }, 360000);
+    } catch(e) {
+      codeEl.textContent = 'error';
+      statEl.style.color = 'rgba(255,100,100,0.8)';
+      statEl.textContent = e.message;
+    }
+  });
 })();
 </script>
 
