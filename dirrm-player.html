@@ -24,7 +24,7 @@
 
     body {
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      background: transparent;
+      background: var(--dirrm-bg-solid);
       color: var(--dirrm-text);
       overflow: hidden;
     }
@@ -573,6 +573,30 @@
       align-items: center;
       justify-content: center;
     }
+
+    /* ============================================
+       MOBILE RESPONSIVE
+       ============================================ */
+    @media (max-width: 900px) {
+      .dirrm-player[data-mode="main"] {
+        width: 100vw !important;
+        height: 100vh !important;
+        min-width: unset;
+        min-height: unset;
+        border-radius: 0;
+        top: 0 !important;
+        left: 0 !important;
+      }
+      .dirrm-resize { display: none; }
+      .dirrm-titlebar { cursor: default; }
+    }
+
+    @media (max-width: 480px) {
+      .dirrm-btn { width: 36px; height: 36px; font-size: 16px; }
+      .dirrm-btn--play { width: 48px; height: 48px; font-size: 20px; }
+      .dirrm-volume { display: none; }
+      .dirrm-skip { padding: 6px 10px; font-size: 11px; }
+    }
   </style>
     <!-- API base bootstrap — auto-attaches every visitor to api.vintaclectic.com -->
     <script src="body/api_base.js?v=v20260429-council"></script>
@@ -801,24 +825,24 @@
       }
 
       detectMediaType(url, providedType) {
-        if (providedType) return providedType;
-        
-        const ext = url.split('.').pop().toLowerCase().split('?')[0];
-        
-        const types = {
-          video: ['mp4', 'webm', 'mkv', 'avi', 'mov', 'm4v', 'ogv'],
-          audio: ['mp3', 'wav', 'ogg', 'flac', 'aac', 'm4a', 'opus'],
-          image: ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg', 'bmp'],
-          pdf: ['pdf'],
-          ebook: ['epub', 'mobi'],
-          document: ['doc', 'docx', 'txt', 'rtf', 'odt'],
-          code: ['js', 'ts', 'py', 'java', 'c', 'cpp', 'h', 'css', 'html', 'json', 'xml', 'md']
-        };
-        
-        for (const [type, exts] of Object.entries(types)) {
-          if (exts.includes(ext)) return type;
-        }
-        
+        // Normalize aliases from extension context menu
+        const aliases = { docs: 'pdf', document: 'pdf', ebook: 'ebook' };
+        if (providedType) return aliases[providedType] ?? providedType;
+
+        try {
+          const path = new URL(url).pathname;
+          const ext = path.split('.').pop().toLowerCase().split('?')[0];
+          const types = {
+            video: ['mp4', 'webm', 'mkv', 'avi', 'mov', 'm4v', 'ogv', 'm3u8', 'ts', '3gp', 'wmv', 'flv'],
+            audio: ['mp3', 'wav', 'ogg', 'flac', 'aac', 'm4a', 'opus', 'wma', 'aiff', 'mid', 'midi'],
+            image: ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg', 'bmp', 'ico', 'tiff', 'avif'],
+            pdf:   ['pdf'],
+            ebook: ['epub', 'mobi', 'azw3', 'fb2'],
+          };
+          for (const [type, exts] of Object.entries(types)) {
+            if (exts.includes(ext)) return type;
+          }
+        } catch (_) {}
         return 'unknown';
       }
 
@@ -1141,10 +1165,12 @@
 
       // Positioning
       centerPlayer() {
-        const w = this.player.offsetWidth;
-        const h = this.player.offsetHeight;
-        this.player.style.left = `${(window.innerWidth - w) / 2}px`;
-        this.player.style.top = `${(window.innerHeight - h) / 2}px`;
+        // On mobile (<= 900px) the CSS makes it fullscreen — no JS centering needed
+        if (window.innerWidth <= 900) return;
+        const w = this.player.offsetWidth || 860;
+        const h = this.player.offsetHeight || 520;
+        this.player.style.left = `${Math.max(0, (window.innerWidth - w) / 2)}px`;
+        this.player.style.top = `${Math.max(0, (window.innerHeight - h) / 2)}px`;
       }
 
       // Drag functionality

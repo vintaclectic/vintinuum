@@ -2407,10 +2407,11 @@ document.addEventListener('keydown', e => {
 /* ── DirRM auto-play from extension right-click ── */
 (function _checkHashPlay() {
   try {
-    const hash   = decodeURIComponent(location.hash.slice(1));
-    const params = Object.fromEntries(hash.split('&').map(p => p.split('=')));
-    const url    = params.play;
-    const mode   = (params.mode || 'video').toLowerCase();
+    // Use URLSearchParams on the raw hash — don't decode first, URL values contain '=' chars
+    const rawHash = location.hash.slice(1);
+    const params  = new URLSearchParams(rawHash);
+    const url     = params.get('play');
+    const mode    = (params.get('mode') || 'video').toLowerCase();
     if (!url) return;
 
     // Fire after a short delay so the figure loads first
