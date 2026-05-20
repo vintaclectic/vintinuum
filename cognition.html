@@ -1187,8 +1187,9 @@ document.getElementById('btn-corpus').addEventListener('click', async () => {
     resp.textContent = 'error: ' + data.__err;
   } else {
     resp.className = 'corpus-response show';
-    const pct = data.pairs || data.pair_count;
-    resp.textContent = '✓ corpus built' + (pct ? ' — ' + pct + ' pairs' : '') + (data.path ? '  →  ' + data.path : '');
+    const pct = data.pairs || data.pair_count || data.manifest?.counts?.records || data.manifest?.counts?.windows;
+    const outPath = data.path || data.manifest?.options?.out;
+    resp.textContent = '✓ corpus built' + (pct ? ' — ' + pct + ' pairs' : '') + (outPath ? '  →  ' + outPath : '');
     loadCorpus();
   }
 });
