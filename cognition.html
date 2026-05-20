@@ -982,7 +982,7 @@ function paintFeed(items) {
     card.className = 'feed-card ' + channel;
     // ts is Unix seconds — convert to ms for Date
     const tsMs = item.ts ? item.ts * 1000 : null;
-    const snippet = (item.content || '').slice(0, 160);
+    const snippet = item.content || ''; // no truncation — show full content
     card.innerHTML = `
       <div class="fc-top">
         <span class="fc-type">${channel}</span>
@@ -990,7 +990,7 @@ function paintFeed(items) {
         <span class="fc-time">${timeAgo(tsMs)}</span>
       </div>
       ${item.title ? `<div class="fc-title">${item.title}</div>` : ''}
-      <div class="fc-snippet">${snippet || '—'}</div>
+      <div class="fc-snippet" style="white-space:pre-wrap; word-break:break-word;">${snippet || '—'}</div>
     `;
     el.appendChild(card);
   }
@@ -1017,18 +1017,25 @@ function paintEvolution(data) {
     return;
   }
 
-  const runs = data.runs || [];
-  const lastEntry = runs.length ? runs[runs.length - 1] : null;
+  // API returns runs newest-first (server does .slice(-10).reverse())
+  const runs = (data.runs || []).slice().sort((a, b) => new Date(b.date) - new Date(a.date)); // ensure newest first
+  const lastEntry = runs.length ? runs[0] : null;
   const lastRun = lastEntry ? lastEntry.date : null;
   const runCount = runs.length;
+
   function deriveStatus(lines) {
     if (!lines || !lines.length) return '—';
-    const joined = lines.join(' ');
-    return /error/i.test(joined) ? 'error' : 'complete';
+    // "complete" = last meaningful line says Crystallization complete
+    const joined = lines.join('\n');
+    if (/Crystallization complete/i.test(joined)) return 'complete';
+    // Only flag as error if there was a fatal error (not just a warning/fallback)
+    if (/fatal error|Cannot open DB|process\.exit/i.test(joined)) return 'error';
+    return 'complete';
   }
+
   const lastStatus = lastEntry ? deriveStatus(lastEntry.lines) : '—';
   const stats = [
-    { k: 'next run', v: '3:00 AM' },
+    { k: 'next run', v: data.next_run || '3:00 AM' },
     { k: 'last run', v: fmtDate(lastRun) },
     { k: 'total runs', v: runCount || '—' },
     { k: 'last status', v: lastStatus },
@@ -1040,19 +1047,28 @@ function paintEvolution(data) {
     grid.appendChild(div);
   }
 
-  const recent = runs.slice(-5).reverse();
+  // Show most recent 10 runs, newest first, all log lines visible
+  const recent = runs.slice(0, 10);
   for (const e of recent) {
     const status = deriveStatus(e.lines);
-    const lastLine = (e.lines || []).filter(l => l && l.trim()).slice(-1)[0] || '';
+    const allLines = (e.lines || []).filter(l => l && l.trim());
     const div = document.createElement('div');
     div.className = 'evo-entry';
-    div.innerHTML = `
+    div.style.cssText = 'flex-direction:column; align-items:flex-start; gap:4px;';
+    const header = document.createElement('div');
+    header.style.cssText = 'display:flex; gap:8px; align-items:center; flex-wrap:wrap;';
+    header.innerHTML = `
       <span class="ee-date">${fmtDate(e.date)}</span>
-      <span class="ee-status ${status === 'complete' ? 'complete' : 'failed'}">
-        ${status}
-      </span>
-      ${lastLine ? `<span class="ee-note">${lastLine}</span>` : ''}
+      <span class="ee-status ${status === 'complete' ? 'complete' : 'failed'}">${status}</span>
     `;
+    div.appendChild(header);
+    // Show all log lines, no truncation
+    if (allLines.length) {
+      const log = document.createElement('div');
+      log.style.cssText = 'font-size:0.56rem; color:var(--dimmer); font-family:var(--mono); white-space:pre-wrap; word-break:break-word; line-height:1.5; width:100%;';
+      log.textContent = allLines.join('\n');
+      div.appendChild(log);
+    }
     entries.appendChild(div);
   }
   if (!recent.length) {
@@ -1123,7 +1139,7 @@ document.getElementById('btn-teach').addEventListener('click', async () => {
     resp.className = 'teach-response show error';
     resp.textContent = 'error: ' + data.__err;
   } else {
-    const snippet = text.slice(0, 80);
+    const snippet = text; // no truncation
     resp.className = 'teach-response show success';
     resp.textContent = '✦ Vinta absorbed: "' + snippet + (text.length > 80 ? '…' : '') + '"';
     document.getElementById('teach-text').value = '';
@@ -1132,7 +1148,7 @@ document.getElementById('btn-teach').addEventListener('click', async () => {
     paintRecentTeachings();
     if (data.items || data.recent) {
       recentTeachings = (data.items || data.recent).slice(0, 5).map(i => ({
-        source: i.source, snippet: (i.text || i.snippet || '').slice(0, 80), ts: i.ts || i.created_at,
+        source: i.source, snippet: i.text || i.snippet || '', ts: i.ts || i.created_at,
       }));
       paintRecentTeachings();
     }
