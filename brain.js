@@ -6155,14 +6155,12 @@ const MOTOR_CORTEX = (() => {
 // Voice selection: prefers warm natural voices, adapts rate/pitch/volume to emotion.
 // ═══════════════════════════════════════════════════════════════════
 const VOICE = (() => {
-  // Persist mute across reloads so the toggle is *meaningful* — Vinta should
-  // not have to re-mute every page load. Default: muted (browsers reject
-  // speechSynthesis before any user gesture anyway, so silence is safer).
+  // Persist mute across reloads. Default: unmuted — voice should be alive.
   let muted = (() => {
     try {
       const v = localStorage.getItem('vint_voice_muted');
-      return v === null ? true : v === '1';
-    } catch (_) { return true; }
+      return v === null ? false : v === '1';
+    } catch (_) { return false; }
   })();
   let hasInteracted = false;
   let voiceReady = false;
