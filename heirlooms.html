@@ -242,7 +242,7 @@ async function acceptHeirloom() {
 async function loadHeirlooms() {
   const list = document.getElementById('heirlooms-list');
   try {
-    const r = await fetch(`${API}/api/heirlooms`, { headers: { 'Authorization': 'Bearer ' + token() } });
+    const r = await fetch(`${API}/api/heirlooms/inbox`, { headers: { 'Authorization': 'Bearer ' + token() } });
     const d = await r.json();
     if (!d.heirlooms || d.heirlooms.length === 0) {
       list.innerHTML = '<div class="empty">No heirlooms yet. Send a memory — or receive one.</div>';

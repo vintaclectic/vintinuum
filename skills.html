@@ -665,7 +665,7 @@ async function init() {
   renderSkeletons();
 
   try {
-    const res = await fetch(`${API}/api/skills`, {
+    const res = await fetch(`${API}/api/skill-gaps`, {
       headers: {
         'Authorization': `Bearer ${sess}`,
         'Content-Type': 'application/json',

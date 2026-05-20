@@ -914,8 +914,16 @@ async function sealMessage() {
 // ── LOAD SESSIONS ──
 async function loadSessions() {
   try {
-    const data = await apiFetch('/api/tidal/sessions');
-    renderSessions(data.sessions || []);
+    // /api/tidal/sessions doesn't exist — fetch pending+unlocked and merge
+    const [pending, unlocked] = await Promise.allSettled([
+      apiFetch('/api/tidal/pending'),
+      apiFetch('/api/tidal/unlocked'),
+    ]);
+    const sessions = [
+      ...((pending.status === 'fulfilled' ? pending.value.sessions : null) || []),
+      ...((unlocked.status === 'fulfilled' ? unlocked.value.sessions : null) || []),
+    ];
+    renderSessions(sessions);
   } catch (e) {
     document.getElementById('sessionsArea').innerHTML =
       `<div class="state-msg">The tide is unreadable — ${e.message}</div>`;

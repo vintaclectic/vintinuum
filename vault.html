@@ -705,7 +705,7 @@ input[type="range"].weight-slider::-moz-range-thumb {
 
   // ── LOAD STATS ──
   function loadStats() {
-    fetch(API + '/api/vault/stats', { headers: authHeaders() })
+    fetch(API + '/api/vault/status', { headers: authHeaders() })
       .then(function (r) { return r.ok ? r.json() : null; })
       .then(function (data) {
         if (!data) return;
@@ -737,7 +737,7 @@ input[type="range"].weight-slider::-moz-range-thumb {
       emotional_weight: parseInt(weightSlider.value, 10)
     };
 
-    fetch(API + '/api/vault/confess', {
+    fetch(API + '/api/vault/seal', {
       method: 'POST',
       headers: authHeaders(),
       body: JSON.stringify(payload)
