@@ -9008,7 +9008,7 @@ BODY_METRICS.forEach((m,i) => {
   const w=document.createElement('div');
   w.className='emo-item';
   w.innerHTML=`<div class="emo-label"><span class="emo-name">${m.name}</span><span class="emo-pct" id="bp${i}">${Math.round(val)}%</span></div>
-  <div class="emo-track"><div class="emo-bar" id="bb${i}" style="width:${val}%;background:${m.color};box-shadow:0 0 7px ${m.color}44"></div></div>
+  <div class="emo-track"><div class="emo-bar" id="bb${i}" style="--bar-color:${m.color};width:${val}%;background:${m.color};box-shadow:0 0 7px ${m.color}44"></div></div>
   <div class="emo-tip">${m.tip}</div>`;
   emoContainer.appendChild(w);
 });
