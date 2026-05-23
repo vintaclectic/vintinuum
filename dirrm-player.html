@@ -1181,6 +1181,62 @@
             const id = host === 'dai.ly' ? u.pathname.slice(1) : (u.pathname.match(/\/video\/([^/?]+)/) || [])[1];
             if (id) return { kind: 'Dailymotion', embedUrl: `https://www.dailymotion.com/embed/video/${id}?autoplay=1` };
           }
+
+          // TikTok — regular videos (live requires app; show info card via fallback)
+          if (host === 'tiktok.com' || host === 'vm.tiktok.com') {
+            const vidMatch = u.pathname.match(/\/video\/(\d+)/);
+            if (vidMatch) {
+              return { kind: 'TikTok', embedUrl: `https://www.tiktok.com/embed/v2/${vidMatch[1]}` };
+            }
+            // TikTok live — not embeddable; return null so loadUnknown shows open-in-browser
+          }
+
+          // Facebook public videos
+          if (host === 'facebook.com' || host === 'fb.watch') {
+            const fbUrl = host === 'fb.watch'
+              ? `https://www.facebook.com/watch/?v=${u.pathname.slice(1)}`
+              : url;
+            return { kind: 'Facebook', embedUrl: `https://www.facebook.com/plugins/video.php?href=${encodeURIComponent(fbUrl)}&show_text=false&autoplay=true&allowFullScreen=true` };
+          }
+
+          // Rumble
+          if (host === 'rumble.com') {
+            const embedMatch = u.pathname.match(/\/embed\/([^/?]+)/);
+            const vidMatch = u.pathname.match(/\/v([a-z0-9]+)-/i);
+            if (embedMatch) return { kind: 'Rumble', embedUrl: `https://rumble.com/embed/${embedMatch[1]}/` };
+            if (vidMatch) return { kind: 'Rumble', embedUrl: `https://rumble.com/embed/v${vidMatch[1]}/` };
+          }
+
+          // Kick.com
+          if (host === 'kick.com') {
+            const parts = u.pathname.split('/').filter(Boolean);
+            if (parts.length >= 1) {
+              // /channel/clipId or just /channel
+              const channel = parts[0];
+              if (parts[1] === 'clips' && parts[2]) {
+                return { kind: 'Kick', embedUrl: `https://player.kick.com/clip?clip=${parts[2]}` };
+              }
+              return { kind: 'Kick', embedUrl: `https://player.kick.com/${channel}` };
+            }
+          }
+
+          // X (Twitter) — videos and spaces (best-effort; may need login)
+          if (host === 'twitter.com' || host === 'x.com') {
+            // Spaces can't be embedded; regular tweets with video use the tweet embed
+            const tweetMatch = u.pathname.match(/\/status\/(\d+)/);
+            if (tweetMatch) {
+              return { kind: 'X', embedUrl: `https://platform.twitter.com/embed/Tweet.html?id=${tweetMatch[1]}&theme=dark` };
+            }
+          }
+
+          // Instagram — public reels/posts (limited; requires login for most content)
+          if (host === 'instagram.com') {
+            const reelMatch = u.pathname.match(/\/(p|reel|tv)\/([^/?]+)/);
+            if (reelMatch) {
+              return { kind: 'Instagram', embedUrl: `https://www.instagram.com/${reelMatch[1]}/${reelMatch[2]}/embed/` };
+            }
+          }
+
         } catch (_) {}
         return null;
       }
