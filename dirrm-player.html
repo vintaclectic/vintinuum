@@ -200,33 +200,28 @@
       max-height: 100%;
     }
 
-    /* Audio visualizer placeholder */
+    /* Audio visualizer — full canvas */
     .dirrm-audio-visualizer {
       position: absolute;
       inset: 0;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      background: linear-gradient(135deg, rgba(13, 11, 8, 0.95) 0%, rgba(30, 25, 18, 0.95) 100%);
+      background: #000;
     }
 
-    .dirrm-audio-bars {
-      display: flex;
-      align-items: flex-end;
-      gap: 4px;
-      height: 80px;
+    .dirrm-audio-visualizer canvas {
+      width: 100%;
+      height: 100%;
+      display: block;
     }
 
-    .dirrm-audio-bar {
-      width: 6px;
-      background: linear-gradient(0deg, var(--dirrm-gold) 0%, var(--dirrm-gold-dim) 100%);
-      border-radius: 3px;
-      animation: audioBar 0.8s ease-in-out infinite;
-    }
-
-    @keyframes audioBar {
-      0%, 100% { height: 20%; }
-      50% { height: 100%; }
+    .dirrm-viz-label {
+      position: absolute;
+      bottom: 10px;
+      right: 14px;
+      font-size: 10px;
+      letter-spacing: 0.1em;
+      color: rgba(245, 166, 35, 0.4);
+      pointer-events: none;
+      text-transform: uppercase;
     }
 
     /* PDF/Ebook viewer */
@@ -611,6 +606,9 @@
         <div class="dirrm-subtitle" id="media-subtitle"></div>
       </div>
       <div class="dirrm-titlebar-right">
+        <button class="dirrm-btn" id="btn-viz" title="Change Visualizer" style="display:none">
+          <span class="icon" id="viz-icon">◈</span>
+        </button>
         <button class="dirrm-btn" id="btn-pip" title="Picture in Picture">
           <span class="icon">⧉</span>
         </button>
@@ -753,6 +751,7 @@
         document.getElementById('btn-pip').addEventListener('click', () => this.setMode('pip'));
         document.getElementById('btn-theater').addEventListener('click', () => this.setMode('theater'));
         document.getElementById('btn-fullscreen').addEventListener('click', () => this.toggleFullscreen());
+        document.getElementById('btn-viz').addEventListener('click', () => this.cycleViz());
         
         // Transport controls
         document.getElementById('btn-play').addEventListener('click', () => this.togglePlay());
@@ -927,63 +926,263 @@
       }
 
       async loadAudio(url) {
-        // Create audio element
+        // Try without crossOrigin first — if server doesn't send CORS headers,
+        // crossOrigin='anonymous' causes a load error even though plain fetch works.
+        // We attempt Web Audio; if blocked, fall back to a time-based fake analyser.
         const audio = document.createElement('audio');
-        audio.src = url;
         audio.volume = this.volume;
-        
-        // Create visualizer
-        const visualizer = document.createElement('div');
-        visualizer.className = 'dirrm-audio-visualizer';
-        visualizer.innerHTML = `
-          <div class="dirrm-audio-bars">
-            ${Array(12).fill(0).map((_, i) => 
-              `<div class="dirrm-audio-bar" style="animation-delay: ${i * 0.1}s; height: ${20 + Math.random() * 60}%"></div>`
-            ).join('')}
-          </div>
-        `;
-        
+
+        // Build visualizer container
+        const vizWrap = document.createElement('div');
+        vizWrap.className = 'dirrm-audio-visualizer';
+        const canvas = document.createElement('canvas');
+        const label = document.createElement('div');
+        label.className = 'dirrm-viz-label';
+        vizWrap.appendChild(canvas);
+        vizWrap.appendChild(label);
+        this.mediaContainer.appendChild(vizWrap);
+        this.mediaContainer.appendChild(audio);
+        this.mediaElement = audio;
+        this._vizCanvas = canvas;
+        this._vizLabel = label;
+
+        // Web Audio setup — try with CORS, fall back without
+        let analyser = null, dataArray = null, rafId = null;
+        let fakeMode = false; // true when CORS blocked Web Audio
+        const setupAudio = () => {
+          if (analyser) return;
+          try {
+            const actx = new (window.AudioContext || window.webkitAudioContext)();
+            const src = actx.createMediaElementSource(audio);
+            analyser = actx.createAnalyser();
+            analyser.fftSize = 2048;
+            analyser.smoothingTimeConstant = 0.8;
+            src.connect(analyser);
+            analyser.connect(actx.destination);
+            dataArray = new Uint8Array(analyser.frequencyBinCount);
+            this._analyser = analyser;
+            this._dataArray = dataArray;
+          } catch(e) {
+            console.warn('WebAudio blocked (CORS or policy):', e);
+            fakeMode = true;
+            // Build a synthetic frequency array that pulses to simulated beat
+            dataArray = new Uint8Array(1024);
+            this._dataArray = dataArray;
+          }
+        };
+
+        // Load audio — no crossOrigin by default so it plays from any server
+        audio.src = url;
+
+        // Canvas resize
+        const resizeCanvas = () => {
+          const r = vizWrap.getBoundingClientRect();
+          if (r.width && r.height) {
+            canvas.width = r.width * devicePixelRatio;
+            canvas.height = r.height * devicePixelRatio;
+          }
+        };
+        new ResizeObserver(resizeCanvas).observe(vizWrap);
+        resizeCanvas();
+
+        // Viz modes
+        const VIZ_MODES = ['bars', 'wave', 'radial', 'mirror', 'particles'];
+        const VIZ_LABELS = { bars:'Bars', wave:'Wave', radial:'Radial', mirror:'Mirror', particles:'Particles' };
+        this._vizMode = this._vizMode || 'bars';
+        this._vizModeList = VIZ_MODES;
+        label.textContent = VIZ_LABELS[this._vizMode];
+        document.getElementById('btn-viz').style.display = '';
+
+        // Particle state
+        const particles = Array.from({length: 80}, () => ({
+          x: Math.random(), y: Math.random() + 0.2,
+          vx: (Math.random() - 0.5) * 0.002,
+          vy: -(Math.random() * 0.003 + 0.001),
+          size: Math.random() * 3 + 1, life: Math.random(),
+        }));
+
+        const GOLD = '#F5A623';
+        const GOLD2 = 'rgba(245,166,35,';
+
+        const draw = () => {
+          rafId = requestAnimationFrame(draw);
+          const W = canvas.width, H = canvas.height;
+          const ctx = canvas.getContext('2d');
+          const playing = this.isPlaying;
+
+          if (!dataArray) { ctx.fillStyle='#000'; ctx.fillRect(0,0,W,H); return; }
+
+          if (fakeMode && playing) {
+            // Synthesize frequency data: bass pulse + treble shimmer
+            const t = performance.now() / 1000;
+            const beat = 0.5 + 0.5 * Math.sin(t * 6.28 * 1.8); // ~108bpm base
+            const beat2 = 0.5 + 0.5 * Math.sin(t * 6.28 * 3.6);
+            for (let i = 0; i < dataArray.length; i++) {
+              const norm = i / dataArray.length;
+              let v = 0;
+              if (norm < 0.08) v = beat * 220 + Math.random() * 30;          // bass
+              else if (norm < 0.2) v = beat * 140 + Math.random() * 40;       // low-mid
+              else if (norm < 0.5) v = beat2 * 80 + Math.random() * 50;       // mid
+              else v = (0.3 + 0.3 * Math.sin(t*5 + i)) * 60 + Math.random()*20; // high
+              dataArray[i] = Math.min(255, Math.max(0, v));
+            }
+          } else if (!fakeMode && analyser) {
+            analyser.getByteFrequencyData(dataArray);
+          } else if (!playing) {
+            // Decay to silence when paused
+            for (let i = 0; i < dataArray.length; i++) dataArray[i] = Math.max(0, dataArray[i] - 4);
+          }
+          const mode = this._vizMode;
+
+          ctx.fillStyle = 'rgba(0,0,0,0.18)';
+          ctx.fillRect(0, 0, W, H);
+
+          if (mode === 'bars') {
+            const bars = Math.floor(W / (4 * devicePixelRatio));
+            const bw = W / bars;
+            for (let i = 0; i < bars; i++) {
+              const v = dataArray[Math.floor(i * dataArray.length / bars)] / 255;
+              const h = v * H * 0.85;
+              const x = i * bw;
+              const grad = ctx.createLinearGradient(0, H, 0, H - h);
+              grad.addColorStop(0, GOLD2 + '0.9)');
+              grad.addColorStop(1, GOLD2 + '0.3)');
+              ctx.fillStyle = grad;
+              ctx.fillRect(x + 1, H - h, bw - 2, h);
+            }
+
+          } else if (mode === 'wave') {
+            analyser.getByteTimeDomainData(dataArray);
+            ctx.strokeStyle = GOLD;
+            ctx.lineWidth = 2 * devicePixelRatio;
+            ctx.shadowColor = GOLD;
+            ctx.shadowBlur = 8;
+            ctx.beginPath();
+            const step = W / dataArray.length;
+            for (let i = 0; i < dataArray.length; i++) {
+              const y = (dataArray[i] / 128) * (H / 2);
+              i === 0 ? ctx.moveTo(0, y) : ctx.lineTo(i * step, y);
+            }
+            ctx.stroke();
+            ctx.shadowBlur = 0;
+
+          } else if (mode === 'radial') {
+            const cx = W / 2, cy = H / 2;
+            const R = Math.min(W, H) * 0.3;
+            const bars = 128;
+            ctx.strokeStyle = GOLD;
+            ctx.lineWidth = 1.5 * devicePixelRatio;
+            for (let i = 0; i < bars; i++) {
+              const angle = (i / bars) * Math.PI * 2 - Math.PI / 2;
+              const v = dataArray[Math.floor(i * dataArray.length / bars)] / 255;
+              const len = v * R * 1.2;
+              const cos = Math.cos(angle), sin = Math.sin(angle);
+              ctx.globalAlpha = 0.4 + v * 0.6;
+              ctx.beginPath();
+              ctx.moveTo(cx + cos * R, cy + sin * R);
+              ctx.lineTo(cx + cos * (R + len), cy + sin * (R + len));
+              ctx.stroke();
+            }
+            ctx.globalAlpha = 1;
+            // Core glow
+            const avg = dataArray.slice(0, 64).reduce((a,b) => a+b, 0) / 64 / 255;
+            const grd = ctx.createRadialGradient(cx, cy, 0, cx, cy, R * 0.6);
+            grd.addColorStop(0, GOLD2 + (avg * 0.6) + ')');
+            grd.addColorStop(1, 'transparent');
+            ctx.fillStyle = grd;
+            ctx.beginPath(); ctx.arc(cx, cy, R * 0.6, 0, Math.PI*2); ctx.fill();
+
+          } else if (mode === 'mirror') {
+            const bars = Math.floor(W / (3 * devicePixelRatio));
+            const bw = W / bars;
+            const cy = H / 2;
+            for (let i = 0; i < bars; i++) {
+              const v = dataArray[Math.floor(i * dataArray.length / bars)] / 255;
+              const h = v * cy * 0.95;
+              const x = i * bw;
+              const grad = ctx.createLinearGradient(0, cy, 0, cy - h);
+              grad.addColorStop(0, GOLD2 + '0.9)');
+              grad.addColorStop(1, GOLD2 + '0.1)');
+              ctx.fillStyle = grad;
+              ctx.fillRect(x + 1, cy - h, bw - 2, h);      // top half
+              ctx.fillRect(x + 1, cy,     bw - 2, h);      // bottom mirror
+            }
+            // Center line
+            ctx.strokeStyle = GOLD2 + '0.2)';
+            ctx.lineWidth = 1;
+            ctx.beginPath(); ctx.moveTo(0, cy); ctx.lineTo(W, cy); ctx.stroke();
+
+          } else if (mode === 'particles') {
+            const avg = dataArray.slice(0, 128).reduce((a,b)=>a+b,0)/128/255;
+            particles.forEach(p => {
+              p.vy -= avg * 0.005;
+              p.x += p.vx; p.y += p.vy;
+              p.life -= 0.004;
+              if (p.life <= 0 || p.y < -0.05) {
+                p.x = Math.random(); p.y = 1.05;
+                p.vx = (Math.random()-0.5)*0.002;
+                p.vy = -(Math.random()*0.003+0.001) - avg*0.01;
+                p.size = Math.random()*3+1; p.life = 1;
+              }
+              ctx.globalAlpha = p.life * (0.4 + avg * 0.6);
+              ctx.fillStyle = GOLD;
+              ctx.shadowColor = GOLD; ctx.shadowBlur = 6;
+              ctx.beginPath();
+              ctx.arc(p.x*W, p.y*H, p.size*devicePixelRatio, 0, Math.PI*2);
+              ctx.fill();
+            });
+            ctx.globalAlpha = 1; ctx.shadowBlur = 0;
+          }
+        };
+
+        audio.addEventListener('play', () => {
+          setupAudio();
+          this.isPlaying = true;
+          this.playIcon.textContent = '⏸';
+          if (!rafId) draw();
+        });
+
+        audio.addEventListener('pause', () => {
+          this.isPlaying = false;
+          this.playIcon.textContent = '▶';
+        });
+
+        audio.addEventListener('ended', () => {
+          this.isPlaying = false;
+          this.playIcon.textContent = '▶';
+        });
+
         audio.addEventListener('loadedmetadata', () => {
           this.loading.style.display = 'none';
           this.timeDuration.textContent = this.formatTime(audio.duration);
         });
-        
+
         audio.addEventListener('timeupdate', () => {
           const progress = (audio.currentTime / audio.duration) * 100;
           this.seekFill.style.width = `${progress}%`;
           this.timeCurrent.textContent = this.formatTime(audio.currentTime);
         });
-        
-        audio.addEventListener('play', () => {
-          this.isPlaying = true;
-          this.playIcon.textContent = '⏸';
-          visualizer.querySelectorAll('.dirrm-audio-bar').forEach(bar => {
-            bar.style.animationPlayState = 'running';
-          });
-        });
-        
-        audio.addEventListener('pause', () => {
-          this.isPlaying = false;
-          this.playIcon.textContent = '▶';
-          visualizer.querySelectorAll('.dirrm-audio-bar').forEach(bar => {
-            bar.style.animationPlayState = 'paused';
-          });
-        });
-        
-        audio.addEventListener('ended', () => {
-          this.isPlaying = false;
-          this.playIcon.textContent = '▶';
-        });
-        
-        this.mediaContainer.appendChild(visualizer);
-        this.mediaContainer.appendChild(audio);
-        this.mediaElement = audio;
-        
+
+        // Start idle draw loop so canvas isn't blank before play
+        draw();
+
         try {
           await audio.play();
+          setupAudio();
         } catch (e) {
           console.log('Autoplay blocked');
         }
+      }
+
+      cycleViz() {
+        const modes = this._vizModeList || ['bars','wave','radial','mirror','particles'];
+        const labels = { bars:'Bars', wave:'Wave', radial:'Radial', mirror:'Mirror', particles:'Particles' };
+        const icons  = { bars:'▮▮▮', wave:'〜', radial:'◎', mirror:'⊟', particles:'✦' };
+        const idx = (modes.indexOf(this._vizMode) + 1) % modes.length;
+        this._vizMode = modes[idx];
+        if (this._vizLabel) this._vizLabel.textContent = labels[this._vizMode];
+        const icon = document.getElementById('viz-icon');
+        if (icon) icon.textContent = icons[this._vizMode];
       }
 
       async loadImage(url) {
