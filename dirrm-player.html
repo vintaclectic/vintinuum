@@ -1271,11 +1271,13 @@
           stream: 'stream', live: 'stream', code: 'text', markdown: 'text',
           model3d: 'model', '3d': 'model'
         };
-        if (providedType && providedType !== 'auto') return aliases[providedType] ?? providedType;
 
-        // Platform / embed detection first — wins over extension
+        // Embed detection ALWAYS wins — YouTube/TikTok/etc must go through iframe,
+        // not raw <video>. providedType is a hint, not an override for known platforms.
         const embedKind = this.detectEmbed(url);
         if (embedKind) return 'embed';
+
+        if (providedType && providedType !== 'auto') return aliases[providedType] ?? providedType;
 
         const u = (url || '').toLowerCase().split('?')[0].split('#')[0];
         const ext = u.split('.').pop();
