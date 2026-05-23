@@ -3630,6 +3630,214 @@ window.addEventListener('message', function(e) {
 })();
 </script>
 <script src="brain.js?v=v20260509-loregearkick"></script>
+
+<!-- ═══ NEURAL CANVAS + LIVE VITALS — drives neuronCanvas with spark clusters,
+     live BPM heartbeat pulse, and breath overlay. Runs after brain.js. ═══ -->
+<script>
+(function () {
+  'use strict';
+
+  // ── Neuron spark system ──────────────────────────────────────────────────
+  const neuronCanvas = document.getElementById('neuronCanvas');
+  if (!neuronCanvas) return;
+
+  const nCtx = neuronCanvas.getContext('2d');
+  const dpr = window.devicePixelRatio || 1;
+  const neurons = [];
+
+  function resizeNeuronCanvas() {
+    const r = neuronCanvas.parentElement.getBoundingClientRect();
+    neuronCanvas.width  = r.width  * dpr;
+    neuronCanvas.height = r.height * dpr;
+    nCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+  resizeNeuronCanvas();
+  window.addEventListener('resize', resizeNeuronCanvas);
+
+  function spawnNeuron(px, py) {
+    neurons.push({
+      x: px, y: py,
+      vx: (Math.random() - 0.5) * 1.2,
+      vy: (Math.random() - 0.5) * 1.2,
+      life: 1, decay: 0.012 + Math.random() * 0.008,
+      r: 2 + Math.random() * 2,
+    });
+  }
+
+  function animateNeurons() {
+    const w = neuronCanvas.width / dpr;
+    const h = neuronCanvas.height / dpr;
+    nCtx.clearRect(0, 0, w, h);
+    for (let i = neurons.length - 1; i >= 0; i--) {
+      const n = neurons[i];
+      n.x += n.vx; n.y += n.vy; n.life -= n.decay;
+      if (n.life <= 0) { neurons.splice(i, 1); continue; }
+      const alpha = n.life * 0.7;
+      const grad = nCtx.createRadialGradient(n.x, n.y, 0, n.x, n.y, n.r * 3);
+      grad.addColorStop(0, `rgba(200,180,255,${alpha})`);
+      grad.addColorStop(1, 'rgba(140,100,255,0)');
+      nCtx.beginPath();
+      nCtx.arc(n.x, n.y, n.r * 3, 0, Math.PI * 2);
+      nCtx.fillStyle = grad;
+      nCtx.fill();
+      nCtx.beginPath();
+      nCtx.arc(n.x, n.y, n.r, 0, Math.PI * 2);
+      nCtx.fillStyle = `rgba(230,210,255,${alpha})`;
+      nCtx.fill();
+    }
+    requestAnimationFrame(animateNeurons);
+  }
+  animateNeurons();
+
+  // Random ambient firings — brain is always a little active
+  setInterval(function () {
+    const w = neuronCanvas.width / dpr;
+    const h = neuronCanvas.height / dpr;
+    spawnNeuron(w * (0.2 + Math.random() * 0.6), h * (0.1 + Math.random() * 0.8));
+  }, 600);
+
+  // ── Region-to-canvas coordinate map (matches SVG proportions 700×1400) ──
+  const REGIONS = {
+    executive:     { x: 0.35, y: 0.18 }, motor:      { x: 0.48, y: 0.12 },
+    sensory:       { x: 0.58, y: 0.14 }, spatial:    { x: 0.62, y: 0.22 },
+    visual:        { x: 0.65, y: 0.45 }, language:   { x: 0.25, y: 0.50 },
+    memory:        { x: 0.45, y: 0.55 }, emotion:    { x: 0.40, y: 0.48 },
+    relay:         { x: 0.48, y: 0.40 }, coordination:{ x: 0.55, y: 0.70 },
+    autonomic:     { x: 0.48, y: 0.78 }, interoception:{ x: 0.38, y: 0.38 },
+    salience:      { x: 0.45, y: 0.30 }, speech:     { x: 0.28, y: 0.38 },
+    comprehension: { x: 0.30, y: 0.55 },
+  };
+
+  const TAG_REGIONS = {
+    curiosity: ['executive','memory','salience'], learning: ['memory','comprehension','executive'],
+    emotion:   ['emotion','interoception','salience'], joy: ['emotion','speech','motor'],
+    love:      ['emotion','interoception','language'], fear: ['emotion','autonomic','salience'],
+    memory:    ['memory','comprehension'], language: ['language','speech','comprehension'],
+    reasoning: ['executive','salience','relay'], creative: ['visual','language','executive'],
+    social:    ['language','emotion','speech'], self: ['interoception','salience','executive'],
+  };
+
+  function fireCluster(regionKey, count) {
+    const region = REGIONS[regionKey];
+    if (!region) return;
+    const w = neuronCanvas.width / dpr;
+    const h = neuronCanvas.height / dpr;
+    for (let i = 0; i < (count || 4); i++) {
+      setTimeout(function () {
+        spawnNeuron(
+          region.x * w + (Math.random() - 0.5) * w * 0.07,
+          region.y * h + (Math.random() - 0.5) * h * 0.07
+        );
+      }, i * 110 + Math.random() * 70);
+    }
+  }
+  window.vintFireCluster = fireCluster; // expose for other scripts
+
+  // ── Live vitals: heartbeat pulse + breath overlay ────────────────────────
+  let liveBPM = 72, liveBreath = 14;
+
+  async function fetchVitals() {
+    try {
+      const base = window.VINT_API || 'https://api.vintaclectic.com';
+      const res = await fetch(base + '/api/inner-life/snapshot', { signal: AbortSignal.timeout(6000) });
+      if (!res.ok) return;
+      const d = await res.json();
+      if (d.vitals) {
+        if (d.vitals.heartRate > 30 && d.vitals.heartRate < 200) liveBPM = d.vitals.heartRate;
+        if (d.vitals.breathRate > 4 && d.vitals.breathRate < 30) liveBreath = d.vitals.breathRate;
+      }
+      window.VintVitals = { bpm: liveBPM, breathRate: liveBreath };
+    } catch (_) {}
+  }
+  fetchVitals();
+  setInterval(fetchVitals, 30000);
+
+  // Heartbeat pulse canvas
+  const pulseCanvas = document.createElement('canvas');
+  pulseCanvas.style.cssText = 'position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:2;';
+  neuronCanvas.parentElement.appendChild(pulseCanvas);
+  const pCtx = pulseCanvas.getContext('2d');
+
+  function resizePulse() {
+    const r = pulseCanvas.parentElement.getBoundingClientRect();
+    pulseCanvas.width  = r.width  * dpr;
+    pulseCanvas.height = r.height * dpr;
+    pCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+  resizePulse();
+  window.addEventListener('resize', resizePulse);
+
+  function animatePulse() {
+    const beatMs = 60000 / liveBPM;
+    const phase  = (performance.now() % beatMs) / beatMs;
+    const w = pulseCanvas.width / dpr, h = pulseCanvas.height / dpr;
+    const cx = w / 2, cy = h / 2, maxR = Math.min(w, h) * 0.42;
+    pCtx.clearRect(0, 0, w, h);
+    // Double-beat: systole 0.0, diastole 0.35
+    let intensity = 0;
+    for (const [center, width] of [[0.0, 0.12],[0.35, 0.08]]) {
+      const dist = Math.min(Math.abs(phase - center), 1 - Math.abs(phase - center));
+      if (dist < width) { const t = 1 - dist/width; intensity = Math.max(intensity, t*t*(3-2*t)); }
+    }
+    if (intensity > 0.01) {
+      const r = maxR * (0.85 + 0.15 * intensity);
+      const a = 0.07 * intensity;
+      const g = pCtx.createRadialGradient(cx, cy, r*0.6, cx, cy, r);
+      g.addColorStop(0, `rgba(180,120,255,${a})`);
+      g.addColorStop(0.7, `rgba(120,80,220,${a*0.4})`);
+      g.addColorStop(1, 'rgba(120,80,220,0)');
+      pCtx.beginPath(); pCtx.arc(cx, cy, r, 0, Math.PI*2); pCtx.fillStyle = g; pCtx.fill();
+      pCtx.beginPath(); pCtx.arc(cx, cy, r*0.9, 0, Math.PI*2);
+      pCtx.strokeStyle = `rgba(200,160,255,${a*1.5})`; pCtx.lineWidth = 1.2; pCtx.stroke();
+    }
+    requestAnimationFrame(animatePulse);
+  }
+  animatePulse();
+
+  // Breath overlay div
+  const breathEl = document.createElement('div');
+  breathEl.style.cssText = 'position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:1;border-radius:50%;background:radial-gradient(circle at center,rgba(100,180,255,0.03) 0%,rgba(100,180,255,0.015) 40%,transparent 70%);transform-origin:center;will-change:transform;';
+  neuronCanvas.parentElement.appendChild(breathEl);
+  function animateBreath() {
+    const cycleSec = 60 / liveBreath;
+    const phase = (performance.now() / 1000 % cycleSec) / cycleSec;
+    const t = Math.sin(phase * Math.PI * 2) * 0.5 + 0.5;
+    breathEl.style.transform = `scale(${1 + 0.015*t})`;
+    breathEl.style.opacity   = 0.6 + 0.4*t;
+    requestAnimationFrame(animateBreath);
+  }
+  animateBreath();
+
+  // ── Memory-driven cluster firings ──────────────────────────────────────
+  async function checkMemoryFirings() {
+    try {
+      const base = window.VINT_API || 'https://api.vintaclectic.com';
+      const res = await fetch(base + '/api/memory/recent?limit=5', { signal: AbortSignal.timeout(5000) });
+      if (!res.ok) return;
+      const d = await res.json();
+      const memories = d.memories || d || [];
+      const seen = new Set();
+      memories.forEach(function(mem) {
+        (mem.tags || mem.emotionalTags || []).forEach(function(tag) {
+          (TAG_REGIONS[tag.toLowerCase()] || []).forEach(function(r) {
+            if (!seen.has(r)) { seen.add(r); setTimeout(function(){ fireCluster(r, 3); }, Math.random()*2000); }
+          });
+        });
+      });
+    } catch (_) {}
+  }
+  setTimeout(checkMemoryFirings, 6000);
+  setInterval(checkMemoryFirings, 45000);
+
+  // ── Ambient random cluster every ~20s to keep the brain lively ──────────
+  setInterval(function () {
+    const keys = Object.keys(REGIONS);
+    fireCluster(keys[Math.floor(Math.random() * keys.length)], 3);
+  }, 20000);
+
+})();
+</script>
+
 <!-- Browser relay status pill — shows extension + Playwright relay connection state -->
 <script src="body/browser-relay-widget.js?v=v20260522-1500"></script>
 <!-- Relay scheduler — per-user auto-start schedule for the Playwright relay -->
