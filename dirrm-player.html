@@ -1207,17 +1207,32 @@
             if (vidMatch) return { kind: 'Rumble', embedUrl: `https://rumble.com/embed/v${vidMatch[1]}/` };
           }
 
-          // Kick.com
+          // Kick.com — player.kick.com requires ?channel=name&parent=<host>
           if (host === 'kick.com') {
+            const parent = 'vintaclectic.github.io';
             const parts = u.pathname.split('/').filter(Boolean);
-            if (parts.length >= 1) {
-              // /channel/clipId or just /channel
-              const channel = parts[0];
-              if (parts[1] === 'clips' && parts[2]) {
-                return { kind: 'Kick', embedUrl: `https://player.kick.com/clip?clip=${parts[2]}` };
-              }
-              return { kind: 'Kick', embedUrl: `https://player.kick.com/${channel}` };
+            if (!parts.length) break; // homepage — not embeddable
+            const channel = parts[0];
+
+            // VOD: kick.com/video/VODID or kick.com/channel/videos/VODID
+            const vodMatch = u.pathname.match(/\/(?:video|videos)\/([a-z0-9-]+)/i);
+            if (vodMatch) {
+              return { kind: 'Kick', embedUrl: `https://player.kick.com/?vod=${vodMatch[1]}&parent=${parent}` };
             }
+
+            // Clip: kick.com/clip/CLIPID or kick.com/channel/clips/CLIPID
+            const clipMatch = u.pathname.match(/\/clips?\/([a-z0-9-]+)/i);
+            if (clipMatch) {
+              return { kind: 'Kick', embedUrl: `https://player.kick.com/?clip=${clipMatch[1]}&parent=${parent}` };
+            }
+
+            // Category / category browse page — not a stream, skip
+            if (channel === 'categories' || channel === 'browse' || channel === 'search') {
+              return null;
+            }
+
+            // Live channel: kick.com/channelname (or kick.com/channelname/anything)
+            return { kind: 'Kick', embedUrl: `https://player.kick.com/?channel=${channel}&parent=${parent}&autoplay=true&muted=false` };
           }
 
           // X (Twitter) — videos and spaces (best-effort; may need login)
