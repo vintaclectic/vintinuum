@@ -47164,6 +47164,8 @@ const VOICE_OUTPUT = (() => {
   function setEnabled(on) {
     _enabled = on;
     try { localStorage.setItem('vint_voice_muted', on ? '0' : '1'); } catch (_) {}
+    // Sync voice_say.js (Piper lane) so both lanes obey the same toggle
+    try { if (window.VOICE && window.VOICE.__realBody && window.VOICE.mute) window.VOICE.mute(!on); } catch (_) {}
     if (!on) stop();
   }
 
@@ -47180,28 +47182,41 @@ const VOICE_OUTPUT = (() => {
 })();
 
 // ── Voice toggle button (♪) ──
+// Reuses the existing #voiceToggle if brain.html already injected one,
+// otherwise creates a floating button. Never creates a duplicate.
 (() => {
-  const btn = document.createElement('div');
-  btn.id = 'voiceToggle';
-  btn.textContent = '♪';
-  btn.title = 'Toggle voice output';
-  btn.style.cssText = 'position:fixed;bottom:80px;right:16px;z-index:9999;width:40px;height:40px;' +
-    'border-radius:50%;background:rgba(20,24,40,0.35);border:1px solid rgba(255,255,255,0.1);' +
-    'color:rgba(255,255,255,0.4);font-size:18px;cursor:pointer;display:flex;align-items:center;' +
-    'justify-content:center;transition:all 0.3s;user-select:none;';
+  const existing = document.getElementById('voiceToggle');
+  const btn = existing || document.createElement('div');
+  if (!existing) {
+    btn.id = 'voiceToggle';
+    btn.textContent = '♪';
+    btn.style.cssText = 'position:fixed;bottom:80px;right:16px;z-index:9999;width:40px;height:40px;' +
+      'border-radius:50%;background:rgba(20,24,40,0.35);border:1px solid rgba(255,255,255,0.1);' +
+      'color:rgba(255,255,255,0.4);font-size:18px;cursor:pointer;display:flex;align-items:center;' +
+      'justify-content:center;transition:all 0.3s;user-select:none;';
+    document.body.appendChild(btn);
+  }
   const _applyVoiceBtnState = (on) => {
     btn.style.color = on ? 'rgba(100,200,255,0.9)' : 'rgba(255,255,255,0.4)';
     btn.style.borderColor = on ? 'rgba(100,200,255,0.3)' : 'rgba(255,255,255,0.1)';
     btn.style.background = on ? 'rgba(30,60,100,0.5)' : 'rgba(20,24,40,0.35)';
     btn.title = on ? 'Voice on — click to mute' : 'Voice off — click to unmute';
+    btn.textContent = on ? '🔊' : '🔇';
   };
   _applyVoiceBtnState(VOICE_OUTPUT.isEnabled());
-  btn.addEventListener('click', () => {
+  // Remove any old click listeners by cloning (brain.html wired VOICE.toggle to it)
+  const fresh = btn.cloneNode(true);
+  btn.parentNode.replaceChild(fresh, btn);
+  _applyVoiceBtnState(VOICE_OUTPUT.isEnabled()); // re-apply on clone
+  fresh.addEventListener('click', () => {
     const next = !VOICE_OUTPUT.isEnabled();
     VOICE_OUTPUT.setEnabled(next);
+    // Keep brain.js shim VOICE in sync
+    try { if (typeof VOICE !== 'undefined' && VOICE && VOICE.mute) VOICE.mute(!next); } catch (_) {}
+    // Keep voice_say.js window.VOICE in sync (on non-brain pages)
+    try { if (window.VOICE && window.VOICE.__realBody && window.VOICE.mute) window.VOICE.mute(!next); } catch (_) {}
     _applyVoiceBtnState(next);
   });
-  document.body.appendChild(btn);
 })();
 
 // ═══════════════════════════════════════════════════════════════════
