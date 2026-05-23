@@ -44,6 +44,9 @@
       flex-direction: column;
       z-index: 9999;
       transition: border-radius 0.2s ease;
+      /* Never escape the viewport — applies to every mode and every drag/resize. */
+      max-width: 100vw;
+      max-height: 100svh;
     }
 
     .dirrm-player[data-mode="main"] {
@@ -70,9 +73,9 @@
 
     .dirrm-player[data-mode="theater"] {
       width: 100vw;
-      height: 100vh;
+      height: 100svh;
       min-width: 100vw;
-      min-height: 100vh;
+      min-height: 100svh;
       border-radius: 0;
       top: 0 !important;
       left: 0 !important;
@@ -722,10 +725,181 @@
       to { transform: rotate(360deg); }
     }
 
+    /* Vintinuum gold orb — the alive loading state */
+    .dirrm-loading-orb {
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      background: radial-gradient(circle at 35% 30%, rgba(245,166,35,0.35), rgba(245,166,35,0.08) 70%);
+      border: 2px solid rgba(245, 166, 35, 0.4);
+      box-shadow: 0 0 24px rgba(245, 166, 35, 0.25), inset 0 0 18px rgba(245, 166, 35, 0.18);
+      animation: orbPulse 1.6s ease-in-out infinite;
+    }
+
+    @keyframes orbPulse {
+      0%, 100% {
+        transform: scale(0.92);
+        box-shadow: 0 0 16px rgba(245, 166, 35, 0.18), inset 0 0 12px rgba(245, 166, 35, 0.12);
+        border-color: rgba(245, 166, 35, 0.3);
+      }
+      50% {
+        transform: scale(1.06);
+        box-shadow: 0 0 32px rgba(245, 166, 35, 0.45), inset 0 0 22px rgba(245, 166, 35, 0.25);
+        border-color: rgba(245, 166, 35, 0.55);
+      }
+    }
+
     .dirrm-loading-text {
+      font-family: 'Space Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
       font-size: 12px;
       color: var(--dirrm-text-muted);
-      letter-spacing: 0.05em;
+      letter-spacing: 0.06em;
+      text-align: center;
+      max-width: 80%;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    /* ============================================
+       ERROR CARD — beautiful failure state
+       ============================================ */
+    .dirrm-error-card {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 14px;
+      padding: 28px;
+      background: rgba(13, 11, 8, 0.94);
+      z-index: 6;
+      text-align: center;
+    }
+    .dirrm-error-icon {
+      width: 56px;
+      height: 56px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 28px;
+      background: rgba(245, 90, 60, 0.12);
+      border: 1.5px solid rgba(245, 90, 60, 0.4);
+      color: #f5a06b;
+    }
+    .dirrm-error-title {
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--dirrm-text);
+      letter-spacing: 0.02em;
+    }
+    .dirrm-error-msg {
+      font-size: 12px;
+      color: var(--dirrm-text-muted);
+      max-width: 92%;
+      line-height: 1.5;
+    }
+    .dirrm-error-url {
+      font-family: 'Space Mono', ui-monospace, monospace;
+      font-size: 11px;
+      color: rgba(245, 166, 35, 0.75);
+      background: rgba(245, 166, 35, 0.06);
+      border: 1px solid rgba(245, 166, 35, 0.18);
+      padding: 6px 10px;
+      border-radius: 6px;
+      max-width: 92%;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      direction: rtl;
+      text-align: left;
+    }
+    .dirrm-error-actions {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      justify-content: center;
+      margin-top: 4px;
+    }
+    .dirrm-error-btn {
+      font-family: inherit;
+      font-size: 12px;
+      font-weight: 600;
+      padding: 8px 14px;
+      border-radius: 8px;
+      cursor: pointer;
+      background: linear-gradient(135deg, rgba(245,166,35,0.25), rgba(245,166,35,0.1));
+      border: 1px solid var(--dirrm-border);
+      color: var(--dirrm-gold);
+      text-decoration: none;
+      transition: all 0.15s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .dirrm-error-btn:hover {
+      background: linear-gradient(135deg, rgba(245,166,35,0.4), rgba(245,166,35,0.18));
+      transform: translateY(-1px);
+    }
+    .dirrm-error-btn--ghost {
+      background: transparent;
+      color: var(--dirrm-text-muted);
+      border-color: rgba(240, 230, 211, 0.18);
+    }
+    .dirrm-error-btn--ghost:hover {
+      color: var(--dirrm-text);
+      border-color: rgba(240, 230, 211, 0.35);
+      background: rgba(240, 230, 211, 0.05);
+    }
+
+    /* ============================================
+       KEYBOARD SHORTCUT LEGEND
+       ============================================ */
+    .dirrm-kbd-legend {
+      position: absolute;
+      bottom: 12px;
+      left: 12px;
+      z-index: 7;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 10px;
+      background: rgba(13, 11, 8, 0.78);
+      backdrop-filter: blur(8px);
+      border: 1px solid rgba(245, 166, 35, 0.18);
+      border-radius: 8px;
+      font-family: 'Space Mono', ui-monospace, monospace;
+      font-size: 10px;
+      color: var(--dirrm-text-muted);
+      letter-spacing: 0.04em;
+      pointer-events: none;
+      opacity: 0;
+      transform: translateY(4px);
+      transition: opacity 0.25s ease, transform 0.25s ease;
+      max-width: calc(100% - 24px);
+      overflow: hidden;
+    }
+    .dirrm-kbd-legend.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+    .dirrm-kbd-legend kbd {
+      font-family: inherit;
+      background: rgba(245, 166, 35, 0.14);
+      color: var(--dirrm-gold);
+      border: 1px solid rgba(245, 166, 35, 0.28);
+      border-radius: 3px;
+      padding: 1px 5px;
+      font-size: 9px;
+      letter-spacing: 0.02em;
+    }
+    .dirrm-kbd-legend span {
+      margin-right: 4px;
+    }
+    @media (max-width: 480px) {
+      .dirrm-kbd-legend { display: none; }
     }
 
     /* ============================================
@@ -802,9 +976,11 @@
        MOBILE RESPONSIVE
        ============================================ */
     @media (max-width: 900px) {
-      .dirrm-player[data-mode="main"] {
+      .dirrm-player[data-mode="main"],
+      .dirrm-player[data-mode="mini"],
+      .dirrm-player[data-mode="pip"] {
         width: 100vw !important;
-        height: 100vh !important;
+        height: 100svh !important;
         min-width: unset;
         min-height: unset;
         border-radius: 0;
@@ -820,6 +996,13 @@
       .dirrm-btn--play { width: 48px; height: 48px; font-size: 20px; }
       .dirrm-volume { display: none; }
       .dirrm-skip { padding: 6px 10px; font-size: 11px; }
+    }
+
+    /* Mode switching buttons make no sense at full-screen mobile */
+    @media (max-width: 640px) {
+      #btn-mini, #btn-pip, #btn-maximize, #btn-theater {
+        display: none !important;
+      }
     }
   </style>
     <!-- API base bootstrap — auto-attaches every visitor to api.vintaclectic.com -->
@@ -865,10 +1048,17 @@
     <!-- Media Container -->
     <div class="dirrm-media-container" id="media-container">
       <div class="dirrm-loading" id="loading">
-        <div class="dirrm-spinner"></div>
+        <div class="dirrm-loading-orb"></div>
         <div class="dirrm-loading-text">Loading media...</div>
       </div>
       <!-- Media element will be injected here -->
+      <div class="dirrm-kbd-legend" id="kbd-legend" aria-hidden="true">
+        <span><kbd>Space</kbd>/<kbd>K</kbd> play</span>
+        <span><kbd>&larr;</kbd><kbd>&rarr;</kbd> seek</span>
+        <span><kbd>&uarr;</kbd><kbd>&darr;</kbd> vol</span>
+        <span><kbd>M</kbd> mute</span>
+        <span><kbd>F</kbd> fullscreen</span>
+      </div>
     </div>
 
     <!-- Controls -->
@@ -942,6 +1132,7 @@
         this.mediaContainer = document.getElementById('media-container');
         this.loading = document.getElementById('loading');
         this.controls = document.getElementById('controls');
+        this.kbdLegend = document.getElementById('kbd-legend');
         
         this.mediaTitle = document.getElementById('media-title');
         this.mediaSubtitle = document.getElementById('media-subtitle');
@@ -977,6 +1168,19 @@
         this.bindEvents();
         this.centerPlayer();
         this.loadFromUrl();
+        // Show keyboard legend briefly on first paint, then auto-hide
+        this.showKbdLegend(4000);
+      }
+
+      showKbdLegend(timeoutMs) {
+        if (!this.kbdLegend) return;
+        this.kbdLegend.classList.add('visible');
+        if (this._kbdLegendTimer) clearTimeout(this._kbdLegendTimer);
+        if (timeoutMs > 0) {
+          this._kbdLegendTimer = setTimeout(() => {
+            this.kbdLegend.classList.remove('visible');
+          }, timeoutMs);
+        }
       }
 
       bindEvents() {
@@ -1301,18 +1505,21 @@
       }
 
       async loadMedia(url, title, type) {
+        const resolvedTitle = title || this.extractTitle(url);
         this.loading.style.display = 'flex';
         this.loading.innerHTML = `
-          <div class="dirrm-spinner"></div>
-          <div class="dirrm-loading-text">Loading media...</div>
+          <div class="dirrm-loading-orb"></div>
+          <div class="dirrm-loading-text">Loading ${this.escapeHtml(resolvedTitle)}...</div>
         `;
-        this.mediaTitle.textContent = title || this.extractTitle(url);
+        this.mediaTitle.textContent = resolvedTitle;
         this.mediaType = this.detectMediaType(url, type);
         this.mediaSubtitle.textContent = '';
         this.setBadge(null);
+        this._lastUrl = url;
+        this._lastTitle = resolvedTitle;
 
-        // Clear any prior media + injected containers
-        this.mediaContainer.querySelectorAll('video, audio, img, iframe, .dirrm-audio-visualizer, .dirrm-document-viewer, .dirrm-embed, .dirrm-model-wrap, .dirrm-text-viewer, .dirrm-info-card').forEach(n => n.remove());
+        // Clear any prior media + injected containers (including error cards)
+        this.mediaContainer.querySelectorAll('video, audio, img, iframe, .dirrm-audio-visualizer, .dirrm-document-viewer, .dirrm-embed, .dirrm-model-wrap, .dirrm-text-viewer, .dirrm-info-card, .dirrm-error-card').forEach(n => n.remove());
         // Reset controls visibility (image/pdf/etc hide them; new load resets)
         this.controls.style.display = '';
         document.getElementById('btn-viz').style.display = 'none';
@@ -1367,9 +1574,62 @@
           }
         } catch (err) {
           console.error('Failed to load media:', err);
-          this.loading.style.display = 'flex';
-          this.loading.querySelector('.dirrm-loading-text').textContent = 'Failed to load media';
+          this.showErrorCard(url, err && err.message ? err.message : 'Could not load this media.');
         }
+      }
+
+      /**
+       * Beautiful error state — shown when fetch/load fails or media element errors out.
+       * Provides direct download + copy URL escape hatches.
+       */
+      showErrorCard(url, message) {
+        this.loading.style.display = 'none';
+        this.controls.style.display = 'none';
+        // Remove any prior error card to avoid stacking
+        this.mediaContainer.querySelectorAll('.dirrm-error-card').forEach(n => n.remove());
+
+        const truncatedUrl = url || '';
+        const card = document.createElement('div');
+        card.className = 'dirrm-error-card';
+        card.innerHTML = `
+          <div class="dirrm-error-icon">!</div>
+          <div class="dirrm-error-title">This one didn't open.</div>
+          <div class="dirrm-error-msg">${this.escapeHtml(message || 'The media could not be loaded in the player.')}</div>
+          <div class="dirrm-error-url" title="${this.escapeHtml(truncatedUrl)}">${this.escapeHtml(truncatedUrl)}</div>
+          <div class="dirrm-error-actions">
+            <a class="dirrm-error-btn" href="${this.escapeHtml(truncatedUrl)}" target="_blank" rel="noopener" download>
+              Try Direct Download
+            </a>
+            <button class="dirrm-error-btn dirrm-error-btn--ghost" data-action="copy">
+              Copy URL
+            </button>
+            <button class="dirrm-error-btn dirrm-error-btn--ghost" data-action="retry">
+              Retry
+            </button>
+          </div>
+        `;
+
+        const copyBtn = card.querySelector('[data-action="copy"]');
+        if (copyBtn) {
+          copyBtn.addEventListener('click', async () => {
+            try {
+              await navigator.clipboard.writeText(truncatedUrl);
+              copyBtn.textContent = 'Copied';
+              setTimeout(() => { copyBtn.textContent = 'Copy URL'; }, 1600);
+            } catch (_) {
+              copyBtn.textContent = 'Copy failed';
+              setTimeout(() => { copyBtn.textContent = 'Copy URL'; }, 1600);
+            }
+          });
+        }
+        const retryBtn = card.querySelector('[data-action="retry"]');
+        if (retryBtn) {
+          retryBtn.addEventListener('click', () => {
+            this.loadMedia(this._lastUrl, this._lastTitle, this.mediaType);
+          });
+        }
+
+        this.mediaContainer.appendChild(card);
       }
 
       async loadVideo(url) {
@@ -2132,7 +2392,7 @@
       _updateLoading(text) {
         const el = this.loading.querySelector('.dirrm-loading-text');
         if (el) el.textContent = text;
-        else this.loading.innerHTML = `<div class="dirrm-spinner"></div><div class="dirrm-loading-text">${text}</div>`;
+        else this.loading.innerHTML = `<div class="dirrm-loading-orb"></div><div class="dirrm-loading-text">${this.escapeHtml(text)}</div>`;
         this.loading.style.display = 'flex';
       }
 
@@ -2429,16 +2689,16 @@
 
       onResize(e) {
         if (!this.isResizing) return;
-        
+
         const dx = e.clientX - this.startPos.x;
         const dy = e.clientY - this.startPos.y;
         const dir = this.resizeDir;
-        
+
         let newWidth = this.startRect.width;
         let newHeight = this.startRect.height;
         let newLeft = this.startRect.left;
         let newTop = this.startRect.top;
-        
+
         // Calculate new dimensions based on resize direction
         if (dir.includes('e')) newWidth = this.startRect.width + dx;
         if (dir.includes('w')) {
@@ -2450,11 +2710,37 @@
           newHeight = this.startRect.height - dy;
           newTop = this.startRect.top + dy;
         }
-        
+
         // Apply min constraints
         const minW = parseInt(getComputedStyle(this.player).minWidth) || 200;
         const minH = parseInt(getComputedStyle(this.player).minHeight) || 120;
-        
+
+        // Apply max constraints — the player must never escape the viewport.
+        // Anti-overlap rule: no edge may cross the viewport boundary.
+        const vw = window.innerWidth;
+        const vh = window.innerHeight;
+        // West edge: left cannot go below 0; clamp width accordingly.
+        if (dir.includes('w') && newLeft < 0) {
+          newWidth = newWidth + newLeft; // shrink by overshoot
+          newLeft = 0;
+        }
+        // North edge: top cannot go below 0; clamp height accordingly.
+        if (dir.includes('n') && newTop < 0) {
+          newHeight = newHeight + newTop;
+          newTop = 0;
+        }
+        // East edge: left + width cannot exceed viewport width.
+        if (dir.includes('e') && (this.startRect.left + newWidth) > vw) {
+          newWidth = vw - this.startRect.left;
+        }
+        // South edge: top + height cannot exceed viewport height.
+        if (dir.includes('s') && (this.startRect.top + newHeight) > vh) {
+          newHeight = vh - this.startRect.top;
+        }
+        // Absolute clamp regardless of direction.
+        newWidth = Math.min(newWidth, vw);
+        newHeight = Math.min(newHeight, vh);
+
         if (newWidth >= minW) {
           this.player.style.width = `${newWidth}px`;
           if (dir.includes('w')) this.player.style.left = `${newLeft}px`;
@@ -2474,7 +2760,11 @@
       // Keyboard shortcuts
       handleKeyboard(e) {
         if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
-        
+
+        // Surface the legend on first key, auto-hide after 4s
+        const legendKeys = [' ', 'k', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'm', 'f'];
+        if (legendKeys.includes(e.key)) this.showKbdLegend(4000);
+
         switch (e.key) {
           case ' ':
           case 'k':
