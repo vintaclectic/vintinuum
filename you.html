@@ -17,7 +17,9 @@
   }
   * { box-sizing: border-box; }
   html, body { margin: 0; padding: 0; background: var(--bg); color: var(--text); font-family: 'Space Mono', monospace; min-height: 100%; }
-  body { padding: max(20px, env(safe-area-inset-top, 20px)) 16px calc(80px + env(safe-area-inset-bottom, 0px)); }
+  /* Top padding clears the shared fixed topbar (body/topbar.js, 56px).
+     Bottom padding clears the mobile bottom nav (mobile_nav.js, 56px + safe area). */
+  body { padding: calc(72px + env(safe-area-inset-top, 0px)) 16px calc(80px + env(safe-area-inset-bottom, 0px)); }
   .page { max-width: 720px; margin: 0 auto; }
   h1 { font-family: 'Cormorant Garamond', serif; font-style: italic; font-size: 2.4rem; font-weight: 400; letter-spacing: 0.02em; margin: 32px 0 8px; color: var(--accent); }
   .sub { color: var(--dim); font-size: 0.7rem; letter-spacing: 0.22em; text-transform: uppercase; margin-bottom: 28px; }

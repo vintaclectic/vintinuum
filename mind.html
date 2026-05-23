@@ -103,7 +103,9 @@ body {
   z-index: 1;
   max-width: 1200px;
   margin: 0 auto;
-  padding: 24px 20px 100px;
+  /* Top clears fixed topbar (56px). Bottom clears mobile nav (56px) +
+     stacked .mode-tabs bar (~52px) + safe area, with breathing room. */
+  padding: calc(72px + env(safe-area-inset-top, 0px)) 20px calc(140px + env(safe-area-inset-bottom, 0px));
   min-height: 100vh;
 }
 
@@ -790,11 +792,13 @@ body {
   .sigil { width: 40px; height: 40px; }
 
   .mode-tabs {
+    /* Sits ABOVE the shared mobile bottom nav (mobile_nav.js, 56px + safe area).
+       Never overlaps the dock. z-index lower than mobile nav (100) on purpose. */
     position: fixed;
-    bottom: 0;
+    bottom: calc(56px + env(safe-area-inset-bottom, 0px));
     left: 0;
     right: 0;
-    z-index: 100;
+    z-index: 90;
     background: rgba(4, 8, 16, 0.92);
     border-top: 1px solid var(--border);
     margin: 0;

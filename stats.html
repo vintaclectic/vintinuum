@@ -56,7 +56,9 @@ body {
   z-index: 1;
   max-width: 1400px;
   margin: 0 auto;
-  padding: 32px 20px 80px;
+  /* Top padding clears the fixed topbar (56px) + liveEmotionBar (~28px).
+     Bottom padding clears the mobile bottom dock (56px + safe area). */
+  padding: calc(96px + env(safe-area-inset-top, 0px)) 20px calc(80px + env(safe-area-inset-bottom, 0px));
 }
 
 /* ── HEADER ── */
@@ -2456,8 +2458,12 @@ body {
   // Polls /api/body every 8s and shows Claude's current emotional state at top
   const emotionBar = document.createElement('div');
   emotionBar.id = 'liveEmotionBar';
+  // Sits BELOW the shared topbar (body/topbar.js, 56px tall, fixed top:0).
+  // Never overlaps. z-index < topbar's so dropdowns from the bar stay on top.
   emotionBar.style.cssText = `
-    position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+    position: fixed;
+    top: calc(56px + env(safe-area-inset-top, 0px));
+    left: 0; right: 0; z-index: 90;
     padding: 6px 20px; display: flex; align-items: center; gap: 16px;
     background: rgba(4,6,12,0.85); border-bottom: 1px solid rgba(255,255,255,0.05);
     font-family: 'Space Mono', monospace; font-size: 0.45rem; letter-spacing: 0.2em;
