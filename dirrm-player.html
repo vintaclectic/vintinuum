@@ -1218,7 +1218,7 @@
           if (host === 'kick.com') {
             const parent = 'vintaclectic.github.io';
             const parts = u.pathname.split('/').filter(Boolean);
-            if (!parts.length) break; // homepage — not embeddable
+            if (!parts.length) return null; // homepage — not embeddable
             const channel = parts[0];
 
             // VOD: kick.com/video/VODID or kick.com/channel/videos/VODID
