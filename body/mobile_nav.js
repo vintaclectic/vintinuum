@@ -85,9 +85,9 @@
       z-index: ${(root.Shell && root.Shell.Z && root.Shell.Z.shell) || 100};
       height: calc(56px + env(safe-area-inset-bottom, 0px));
       padding-bottom: env(safe-area-inset-bottom, 0px);
-      background: rgba(8,12,20,0.85);
-      backdrop-filter: blur(12px);
-      -webkit-backdrop-filter: blur(12px);
+      background: rgba(8,12,20,0.82);
+      backdrop-filter: blur(16px) saturate(1.2);
+      -webkit-backdrop-filter: blur(16px) saturate(1.2);
       border-top: 1px solid rgba(124,207,255,0.14);
       align-items: stretch; justify-content: space-around;
       gap: 0;
@@ -101,8 +101,12 @@
       a.setAttribute('aria-label', t.label);
       a.setAttribute('data-tab', t.id);
       const isActive = t.id === active;
+      // Active tab: glowing top-border in #4fc3f7 (Vinta directive 2026-05-23)
+      // — not just an opacity bump. Reads as "the body knows where you are."
+      const ACCENT = '#4fc3f7';
       a.style.cssText = `
         flex: 1 1 0;
+        position: relative;
         display: flex; flex-direction: column;
         align-items: center; justify-content: center;
         gap: 2px;
@@ -110,12 +114,18 @@
         font-family: 'Space Mono', monospace;
         font-size: 0.55rem;
         letter-spacing: 0.18em;
-        color: ${isActive ? '#7ccfff' : 'rgba(180,200,230,0.55)'};
-        background: ${isActive ? 'rgba(124,207,255,0.06)' : 'transparent'};
-        border-top: 2px solid ${isActive ? '#7ccfff' : 'transparent'};
+        color: ${isActive ? ACCENT : 'rgba(180,200,230,0.55)'};
+        background: ${isActive
+          ? 'linear-gradient(180deg, rgba(79,195,247,0.10) 0%, rgba(79,195,247,0) 60%)'
+          : 'transparent'};
+        border-top: 2px solid ${isActive ? ACCENT : 'transparent'};
+        box-shadow: ${isActive
+          ? 'inset 0 2px 12px -2px rgba(79,195,247,0.55), 0 -1px 10px rgba(79,195,247,0.35)'
+          : 'none'};
         transition: all 180ms cubic-bezier(0.16,1,0.3,1);
         padding: 6px 4px 4px;
         min-height: 44px;
+        -webkit-tap-highlight-color: transparent;
       `;
       a.innerHTML = `
         <span style="font-size:1rem;line-height:1;opacity:${isActive ? '1' : '0.85'};">${t.glyph}</span>

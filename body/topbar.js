@@ -50,6 +50,7 @@
       align-items: center;
       gap: 8px;
       height: 56px;
+      transition: height 220ms cubic-bezier(.4,0,.2,1);
       padding: 0 max(12px, env(safe-area-inset-right, 12px))
                0 max(12px, env(safe-area-inset-left, 12px));
       background: linear-gradient(180deg, rgba(1,3,6,0.92), rgba(1,3,6,0.55));
@@ -107,6 +108,27 @@
       console.log('[topbar] vitals click — connectors ready=' + ready + '/4', c);
     });
     left.appendChild(vitals);
+
+    // Brain-health pill — live, polled every 30s against /api/health (with
+    // /api/stats/summary fallback). Online = green, offline = red. The pill
+    // text rides at .45rem with the wide tracking so it reads as a status
+    // strip, not a button. Helios-10 sync mandate 2026-05-23.
+    const brainPill = makePill('topBrainPill', {
+      ariaLabel: 'Brain (API) health',
+      borderColor: 'rgba(124,255,180,0.22)',
+      color: 'rgba(124,255,180,0.85)',
+      dotColor: 'rgba(180,180,200,0.55)',
+      label: 'BRAIN · CHECKING',
+    });
+    const brainLabel = document.getElementById('topBrainPillLabel');
+    if (brainLabel) {
+      brainLabel.style.fontSize = '.45rem';
+      brainLabel.style.letterSpacing = '.18em';
+      brainLabel.style.textTransform = 'uppercase';
+    }
+    brainPill.addEventListener('click', () => { pollBrainHealth(true); });
+    left.appendChild(brainPill);
+    refs.brain = brainPill;
 
     // Inject brandPulse keyframe so the brand mark glows on every page
     // (brain.html has it inline, but mind/stats/chat/learning/you don't).
@@ -373,7 +395,7 @@
       border-left: 1px solid rgba(124,207,255,0.18);
       box-shadow: -16px 0 48px rgba(0,0,0,0.55);
       transform: translateX(100%);
-      transition: transform 280ms cubic-bezier(0.16,1,0.3,1);
+      transition: transform 0.28s cubic-bezier(.4,0,.2,1);
       display: flex; flex-direction: column;
       padding: max(16px, env(safe-area-inset-top, 16px))
               max(16px, env(safe-area-inset-right, 16px))
@@ -614,13 +636,13 @@
     const label = $('topAuthPillLabel');
     if (auth.signedIn && auth.user) {
       const name = (auth.user.name || auth.user.email || 'You').toString();
-      const tier = (auth.user.tier || auth.tier || 'free').toString();
+      const tier = (auth.user.tier || auth.tier || 'free').toString().toLowerCase();
       const nice = name.length > 16 ? name.slice(0, 14) + '…' : name;
       label.textContent = nice.toUpperCase();
-      // Tier glow
+      // Tier glow (dot accent)
       const glow = tier === 'owner' ? '#ffe07c'
-                 : tier === 'god'   ? '#b47cff'
-                 : tier === 'premium' ? '#7ccfff'
+                 : tier === 'god'   ? '#ffd54f'
+                 : tier === 'premium' ? '#4fc3f7'
                  : '#7cffb4';
       if (dot) {
         dot.style.background = glow;
@@ -628,6 +650,17 @@
       }
       refs.auth.style.borderColor = `${glow}55`;
       refs.auth.style.color = glow;
+      // Tier box-shadow glow on the pill itself (Vinta directive 2026-05-23).
+      //   FREE    = none
+      //   PREMIUM = 0 0 12px rgba(79,195,247,0.25)
+      //   GOD     = 0 0 18px rgba(255,213,79,0.30)
+      //   OWNER   = treat as GOD-level glow (slightly warmer)
+      let shadow = 'none';
+      if (tier === 'premium') shadow = '0 0 12px rgba(79,195,247,0.25)';
+      else if (tier === 'god') shadow = '0 0 18px rgba(255,213,79,0.30)';
+      else if (tier === 'owner') shadow = '0 0 20px rgba(255,224,124,0.35)';
+      refs.auth.style.boxShadow = shadow;
+      refs.auth.style.transition = (refs.auth.style.transition || '') + ', box-shadow 320ms ease';
     } else {
       label.textContent = 'SIGN IN';
       if (dot) {
@@ -636,6 +669,7 @@
       }
       refs.auth.style.borderColor = 'rgba(124,207,255,0.28)';
       refs.auth.style.color = 'rgba(124,207,255,0.85)';
+      refs.auth.style.boxShadow = 'none';
     }
   }
 
@@ -677,15 +711,85 @@
     if (!refs.header) return;
     const v = Shell.get('viewport');
     if (v.mobile) {
+      // Mobile: 52px shell to match body grid (Vinta directive 2026-05-23).
+      refs.header.style.height = '52px';
       refs.header.style.padding = '6px max(8px, env(safe-area-inset-right, 8px)) 6px max(8px, env(safe-area-inset-left, 8px))';
       // Hide lore pill text on mobile, keep menu
       const lore = $('topLorePillLabel');
       if (lore) lore.style.display = 'none';
+      // Hide vitals pill label on phones — BRAIN pill carries the live status
+      const brainLabel = $('topBrainPillLabel');
+      if (brainLabel) brainLabel.style.fontSize = '.45rem';
+      // Move the SSE seam to follow the new height
+      const seam = $('topShellSeam');
+      if (seam) seam.style.top = 'calc(52px + env(safe-area-inset-top, 0px))';
     } else {
+      refs.header.style.height = '56px';
       refs.header.style.padding = '8px max(12px, env(safe-area-inset-right, 12px)) 8px max(12px, env(safe-area-inset-left, 12px))';
       const lore = $('topLorePillLabel');
       if (lore) lore.style.display = '';
+      const seam = $('topShellSeam');
+      if (seam) seam.style.top = 'calc(56px + env(safe-area-inset-top, 0px))';
     }
+  }
+
+  // ── Brain health polling ─────────────────────────────────────────────────
+  // Every 30s, ping /api/health. If it 200s, the pill goes green: BRAIN · ONLINE.
+  // Otherwise red: BRAIN · OFFLINE. Backs off when tab is hidden.
+  // Vinta directive 2026-05-23 — the topbar should always tell the truth
+  // about whether the body's brain is reachable.
+  let _brainPollTimer = null;
+  let _brainInFlight = false;
+  async function pollBrainHealth(forceNow) {
+    if (_brainInFlight) return;
+    if (!refs.brain) return;
+    _brainInFlight = true;
+    const dot = $('topBrainPillDot');
+    const label = $('topBrainPillLabel');
+    const base = Shell.getApiBase();
+    let online = false;
+    try {
+      // 5s deadline so a hung brain doesn't block the pill forever.
+      const ctrl = new AbortController();
+      const t = setTimeout(() => ctrl.abort(), 5000);
+      let res;
+      try {
+        res = await fetch(base + '/api/health', { signal: ctrl.signal, cache: 'no-store' });
+        if (!res || !res.ok) {
+          // Fallback to /api/stats/summary if /api/health isn't mounted
+          res = await fetch(base + '/api/stats/summary', { signal: ctrl.signal, cache: 'no-store' });
+        }
+        online = !!(res && res.ok);
+      } finally { clearTimeout(t); }
+    } catch (_) {
+      online = false;
+    }
+    const green = '#7cffb4';
+    const red   = '#ff6464';
+    const color = online ? green : red;
+    if (label) {
+      label.textContent = online ? 'BRAIN · ONLINE' : 'BRAIN · OFFLINE';
+      label.style.fontSize = '.45rem';
+      label.style.letterSpacing = '.18em';
+      label.style.textTransform = 'uppercase';
+    }
+    if (dot) {
+      dot.style.background = color;
+      dot.style.boxShadow = `0 0 8px ${color}`;
+    }
+    refs.brain.style.borderColor = color + '55';
+    refs.brain.style.color = color;
+    _brainInFlight = false;
+  }
+  function startBrainHealthLoop() {
+    if (_brainPollTimer) return;
+    pollBrainHealth(true);
+    _brainPollTimer = setInterval(() => {
+      if (document.visibilityState === 'visible') pollBrainHealth(false);
+    }, 30000);
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') pollBrainHealth(false);
+    });
   }
 
   // ── Universal Lore overlay (works on every page) ─────────────────────────
@@ -801,6 +905,7 @@
     refreshAuthPill();
     refreshVitalsPill();
     applyMobileLayout();
+    startBrainHealthLoop();
 
     // Subscribe to Shell state
     Shell.subscribe('auth', () => { refreshAuthPill(); refreshDrawerContent(); });
