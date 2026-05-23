@@ -4155,6 +4155,8 @@ setTimeout(function() {
       el.style.zIndex = '';
       // Mark CTA for grid centering
       if (id === 'learningFooterLink') el.classList.add('dock-cta');
+      // Show pairPhoneBtn only after it's safely inside the dock
+      if (id === 'pairPhoneBtn') el.style.display = '';
       dock.appendChild(el);
     });
   }
@@ -4183,7 +4185,7 @@ setTimeout(function() {
 (function(){
   var btn = document.getElementById('pairPhoneBtn');
   if (!btn) return;
-  btn.style.display = '';
+  // display:'' is set by reparentDock() after the button is safely inside the dock
 
   btn.addEventListener('click', async function(){
     var modal = document.getElementById('pairModal');
