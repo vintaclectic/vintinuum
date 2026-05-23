@@ -1101,6 +1101,12 @@
         // Platform fallbacks for bare URLs without extension
         if (/v\.redd\.it/.test(url)) return 'video';
 
+        // TikTok Live — goes through yt-dlp extraction
+        if (/tiktok\.com\/@[^/]+\/live/i.test(url) || /vm\.tiktok\.com/i.test(url)) return 'tiktok-live';
+
+        // Generic yt-dlp extraction fallback for social/streaming URLs with no extension
+        if (/tiktok\.com|instagram\.com\/reel|facebook\.com\/watch|rumble\.com\/v/i.test(url)) return 'ytdlp';
+
         // Last resort: assume video (browser will try, then fallback chain kicks in)
         return 'unknown';
       }
@@ -1182,13 +1188,14 @@
             if (id) return { kind: 'Dailymotion', embedUrl: `https://www.dailymotion.com/embed/video/${id}?autoplay=1` };
           }
 
-          // TikTok — regular videos (live requires app; show info card via fallback)
+          // TikTok — regular videos embed; live goes through yt-dlp extraction
           if (host === 'tiktok.com' || host === 'vm.tiktok.com') {
             const vidMatch = u.pathname.match(/\/video\/(\d+)/);
             if (vidMatch) {
               return { kind: 'TikTok', embedUrl: `https://www.tiktok.com/embed/v2/${vidMatch[1]}` };
             }
-            // TikTok live — not embeddable; return null so loadUnknown shows open-in-browser
+            // /live URL — handled by the 'tiktok-live' media type, not as embed
+            return null;
           }
 
           // Facebook public videos
@@ -1348,6 +1355,12 @@
               break;
             case 'torrent':
               this.loadTorrent(url);
+              break;
+            case 'tiktok-live':
+              await this.loadTikTokLive(url);
+              break;
+            case 'ytdlp':
+              await this.loadYtDlp(url);
               break;
             default:
               await this.loadUnknown(url);
@@ -2022,6 +2035,105 @@
         `;
         this.mediaContainer.appendChild(card);
         this.controls.style.display = 'none';
+      }
+
+      /**
+       * TikTok Live — resolves the live stream URL via the brain's yt-dlp endpoint,
+       * then plays it as an HLS stream. Shows a clear "not live" card if offline.
+       */
+      async loadTikTokLive(url) {
+        this.setBadge('TikTok Live');
+        this._updateLoading('Extracting TikTok Live stream via yt-dlp…');
+
+        // Extract @username from URL
+        const usernameMatch = url.match(/@([^/?#]+)/);
+        const username = usernameMatch ? usernameMatch[1] : null;
+
+        const apiBase = window.__VINTINUUM_API_BASE || window.VINTINUUM_API || window.__VINT_API || 'https://api.vintaclectic.com';
+        const endpoint = username
+          ? `${apiBase}/api/stream/tiktok-live?username=${encodeURIComponent(username)}`
+          : `${apiBase}/api/stream/extract?url=${encodeURIComponent(url)}`;
+
+        let data;
+        try {
+          const resp = await fetch(endpoint, { credentials: 'include' });
+          data = await resp.json();
+        } catch (e) {
+          return this._showLiveOfflineCard(url, username, 'Could not reach brain API. Is the brain running?');
+        }
+
+        if (!data.ok) {
+          if (data.error === 'not_live') {
+            return this._showLiveOfflineCard(url, username, data.message || 'Not currently live.');
+          }
+          if (data.error === 'private') {
+            return this._showLiveOfflineCard(url, username, 'This account is private or requires login.');
+          }
+          return this._showLiveOfflineCard(url, username, data.message || 'Extraction failed.');
+        }
+
+        // Got a stream URL — update title and play as HLS/video
+        if (data.title) this.mediaTitle.textContent = data.title;
+        await this.loadStream(data.streamUrl);
+      }
+
+      /**
+       * Generic yt-dlp extraction for URLs that have no embeddable format
+       * but yt-dlp can handle (Facebook Watch, Rumble, etc.)
+       */
+      async loadYtDlp(url) {
+        this.setBadge('Extracting…');
+        this._updateLoading('Extracting stream URL…');
+
+        const apiBase = window.__VINTINUUM_API_BASE || window.VINTINUUM_API || window.__VINT_API || 'https://api.vintaclectic.com';
+        const endpoint = `${apiBase}/api/stream/extract?url=${encodeURIComponent(url)}`;
+
+        let data;
+        try {
+          const resp = await fetch(endpoint, { credentials: 'include' });
+          data = await resp.json();
+        } catch (e) {
+          return this.loadUnknown(url, 'Could not reach brain API for extraction.');
+        }
+
+        if (!data.ok || !data.streamUrl) {
+          return this.loadUnknown(url, data.message || 'Could not extract stream URL.');
+        }
+
+        if (data.title) this.mediaTitle.textContent = data.title;
+        this.setBadge('Video');
+        await this.loadStream(data.streamUrl);
+      }
+
+      /** Shows a friendly "not live right now" card with a retry button */
+      _showLiveOfflineCard(url, username, reason) {
+        this.loading.style.display = 'none';
+        this.controls.style.display = 'none';
+        this.setBadge('TikTok Live');
+
+        const card = document.createElement('div');
+        card.className = 'dirrm-info-card';
+        card.innerHTML = `
+          <div class="dirrm-info-icon" style="font-size:2rem;margin-bottom:12px;">📵</div>
+          <div class="dirrm-info-title">${username ? '@' + username : 'TikTok Live'}</div>
+          <div class="dirrm-info-meta" style="margin-top:8px;color:rgba(240,230,211,0.6);">${reason}</div>
+          <div style="margin-top:18px;display:flex;gap:10px;flex-wrap:wrap;justify-content:center;">
+            <button class="dirrm-action-btn" onclick="window.__dirrm && window.__dirrm.load('${url.replace(/'/g,"\\'")}')">
+              Retry
+            </button>
+            <a class="dirrm-action-btn" href="${url}" target="_blank" rel="noopener">
+              Open on TikTok
+            </a>
+          </div>
+        `;
+        this.mediaContainer.appendChild(card);
+      }
+
+      _updateLoading(text) {
+        const el = this.loading.querySelector('.dirrm-loading-text');
+        if (el) el.textContent = text;
+        else this.loading.innerHTML = `<div class="dirrm-spinner"></div><div class="dirrm-loading-text">${text}</div>`;
+        this.loading.style.display = 'flex';
       }
 
       /**
