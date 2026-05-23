@@ -2375,6 +2375,19 @@ LAYERS.forEach(l => {
   layerGrid.appendChild(btn);
 });
 
+// Wire the layer toggle button
+const _layerToggleBtn = document.getElementById('layerToggleBtn');
+const _layerPanel = document.getElementById('layerPanel');
+if (_layerToggleBtn && _layerPanel) {
+  _layerToggleBtn.addEventListener('click', () => {
+    const open = _layerPanel.style.display === 'block';
+    _layerPanel.style.display = open ? 'none' : 'block';
+    _layerToggleBtn.style.borderColor = open ? 'rgba(255,255,255,0.1)' : 'rgba(255,255,255,0.3)';
+    _layerToggleBtn.style.color = open ? 'rgba(218,228,255,0.6)' : 'rgba(218,228,255,1)';
+    _layerToggleBtn.style.background = open ? 'rgba(255,255,255,0.04)' : 'rgba(255,255,255,0.08)';
+  });
+}
+
 function applyLayers() {
   // Protein nodes
   PROTEIN_NODES.forEach(p => {
