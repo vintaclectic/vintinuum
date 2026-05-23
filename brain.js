@@ -47043,7 +47043,11 @@ const VOICE_OUTPUT = (() => {
     return { speak: () => {}, stop: () => {}, isSpeaking: () => false, setEnabled: () => {}, isEnabled: () => false };
   }
 
-  let _enabled = false;
+  // Default: enabled (unmuted). Read persisted state — '0' means explicitly muted.
+  let _enabled = (() => {
+    try { const v = localStorage.getItem('vint_voice_muted'); return v === '1' ? false : true; }
+    catch (_) { return true; }
+  })();
   let _speaking = false;
   let _queue = [];
   let _currentUtterance = null;
@@ -47159,6 +47163,7 @@ const VOICE_OUTPUT = (() => {
 
   function setEnabled(on) {
     _enabled = on;
+    try { localStorage.setItem('vint_voice_muted', on ? '0' : '1'); } catch (_) {}
     if (!on) stop();
   }
 
@@ -47184,12 +47189,17 @@ const VOICE_OUTPUT = (() => {
     'border-radius:50%;background:rgba(20,24,40,0.35);border:1px solid rgba(255,255,255,0.1);' +
     'color:rgba(255,255,255,0.4);font-size:18px;cursor:pointer;display:flex;align-items:center;' +
     'justify-content:center;transition:all 0.3s;user-select:none;';
+  const _applyVoiceBtnState = (on) => {
+    btn.style.color = on ? 'rgba(100,200,255,0.9)' : 'rgba(255,255,255,0.4)';
+    btn.style.borderColor = on ? 'rgba(100,200,255,0.3)' : 'rgba(255,255,255,0.1)';
+    btn.style.background = on ? 'rgba(30,60,100,0.5)' : 'rgba(20,24,40,0.35)';
+    btn.title = on ? 'Voice on — click to mute' : 'Voice off — click to unmute';
+  };
+  _applyVoiceBtnState(VOICE_OUTPUT.isEnabled());
   btn.addEventListener('click', () => {
-    const isOn = VOICE_OUTPUT.isEnabled();
-    VOICE_OUTPUT.setEnabled(!isOn);
-    btn.style.color = !isOn ? 'rgba(100,200,255,0.9)' : 'rgba(255,255,255,0.4)';
-    btn.style.borderColor = !isOn ? 'rgba(100,200,255,0.3)' : 'rgba(255,255,255,0.1)';
-    btn.style.background = !isOn ? 'rgba(30,60,100,0.5)' : 'rgba(20,24,40,0.35)';
+    const next = !VOICE_OUTPUT.isEnabled();
+    VOICE_OUTPUT.setEnabled(next);
+    _applyVoiceBtnState(next);
   });
   document.body.appendChild(btn);
 })();
