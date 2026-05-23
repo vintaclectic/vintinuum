@@ -276,7 +276,7 @@
           : t.tier === 'free'
             ? `<button class="cta" disabled>included for everyone</button>`
             : `<button class="cta" data-tier="${t.tier}" data-interval="${interval}">${
-                billingEnabled ? 'choose ' + t.display_name.toLowerCase() : 'coming soon'
+                billingEnabled ? 'choose ' + t.display_name.toLowerCase() : 'free while we build'
               }</button>`}
       `;
       root.appendChild(div);
