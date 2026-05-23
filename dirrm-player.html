@@ -229,12 +229,241 @@
       width: 100%;
       height: 100%;
       background: #1a1814;
+      position: relative;
+      display: flex;
+      flex-direction: column;
     }
 
     .dirrm-document-viewer iframe {
       width: 100%;
       height: 100%;
+      flex: 1;
       border: none;
+    }
+
+    .dirrm-doc-toolbar {
+      display: flex;
+      gap: 8px;
+      padding: 8px 12px;
+      background: rgba(13, 11, 8, 0.85);
+      border-bottom: 1px solid var(--dirrm-border);
+      flex-shrink: 0;
+      align-items: center;
+    }
+
+    .dirrm-doc-toolbar a,
+    .dirrm-doc-toolbar button {
+      font-size: 11px;
+      padding: 6px 10px;
+      border-radius: 6px;
+      background: rgba(245, 166, 35, 0.1);
+      color: var(--dirrm-gold);
+      border: 1px solid var(--dirrm-border);
+      text-decoration: none;
+      cursor: pointer;
+      font-family: inherit;
+      transition: all 0.15s ease;
+    }
+
+    .dirrm-doc-toolbar a:hover,
+    .dirrm-doc-toolbar button:hover {
+      background: rgba(245, 166, 35, 0.2);
+    }
+
+    /* Embed (YouTube / Vimeo / Twitch / SoundCloud / Spotify / Bandcamp) */
+    .dirrm-embed {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      background: #000;
+      display: flex;
+      overflow: hidden;
+    }
+
+    .dirrm-embed iframe {
+      width: 100%;
+      height: 100%;
+      border: 0;
+      display: block;
+    }
+
+    /* 3D model viewer */
+    .dirrm-model-wrap {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      background: radial-gradient(ellipse at center, #1a1814 0%, #000 100%);
+      overflow: hidden;
+    }
+
+    .dirrm-model-wrap model-viewer {
+      width: 100%;
+      height: 100%;
+      --poster-color: transparent;
+    }
+
+    /* Text / code viewer */
+    .dirrm-text-viewer {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      background: #0d0b08;
+      overflow: hidden;
+    }
+
+    .dirrm-text-toolbar {
+      display: flex;
+      gap: 8px;
+      padding: 8px 12px;
+      background: rgba(13, 11, 8, 0.95);
+      border-bottom: 1px solid var(--dirrm-border);
+      flex-shrink: 0;
+      align-items: center;
+      justify-content: flex-end;
+    }
+
+    .dirrm-text-toolbar button,
+    .dirrm-text-toolbar a {
+      font-size: 11px;
+      padding: 6px 10px;
+      border-radius: 6px;
+      background: rgba(245, 166, 35, 0.1);
+      color: var(--dirrm-gold);
+      border: 1px solid var(--dirrm-border);
+      cursor: pointer;
+      font-family: inherit;
+      text-decoration: none;
+      transition: all 0.15s ease;
+    }
+
+    .dirrm-text-toolbar button:hover,
+    .dirrm-text-toolbar a:hover {
+      background: rgba(245, 166, 35, 0.22);
+    }
+
+    .dirrm-text-body {
+      flex: 1;
+      overflow: auto;
+      padding: 16px 20px;
+      font-family: 'SF Mono', 'Menlo', 'Consolas', monospace;
+      font-size: 13px;
+      line-height: 1.55;
+      color: #f0e6d3;
+      white-space: pre-wrap;
+      word-wrap: break-word;
+    }
+
+    .dirrm-text-body.markdown {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      white-space: normal;
+      font-size: 15px;
+    }
+
+    .dirrm-text-body.markdown h1,
+    .dirrm-text-body.markdown h2,
+    .dirrm-text-body.markdown h3 {
+      color: var(--dirrm-gold);
+      margin: 0.8em 0 0.4em;
+    }
+
+    .dirrm-text-body.markdown a { color: var(--dirrm-gold); }
+
+    .dirrm-text-body.markdown code,
+    .dirrm-text-body.markdown pre {
+      background: rgba(245, 166, 35, 0.08);
+      border-radius: 4px;
+      padding: 2px 6px;
+      font-family: 'SF Mono', 'Menlo', 'Consolas', monospace;
+    }
+
+    .dirrm-text-body.markdown pre {
+      padding: 12px 14px;
+      overflow: auto;
+    }
+
+    /* Info card (archive / torrent / fallback) */
+    .dirrm-info-card {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: radial-gradient(ellipse at center, #1a1814 0%, #000 100%);
+      padding: 24px;
+      overflow: auto;
+    }
+
+    .dirrm-info-card-inner {
+      max-width: 420px;
+      text-align: center;
+      background: rgba(245, 166, 35, 0.05);
+      border: 1px solid var(--dirrm-border);
+      border-radius: 14px;
+      padding: 28px 24px;
+    }
+
+    .dirrm-info-icon {
+      font-size: 52px;
+      margin-bottom: 14px;
+      filter: drop-shadow(0 0 12px rgba(245, 166, 35, 0.4));
+    }
+
+    .dirrm-info-title {
+      font-size: 16px;
+      color: var(--dirrm-gold);
+      font-weight: 600;
+      margin-bottom: 6px;
+      word-break: break-all;
+    }
+
+    .dirrm-info-meta {
+      font-size: 12px;
+      color: var(--dirrm-text-muted);
+      margin-bottom: 18px;
+      letter-spacing: 0.05em;
+    }
+
+    .dirrm-info-actions {
+      display: flex;
+      gap: 10px;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+
+    .dirrm-info-btn {
+      padding: 9px 16px;
+      border-radius: 8px;
+      background: linear-gradient(135deg, rgba(245, 166, 35, 0.25), rgba(245, 166, 35, 0.1));
+      border: 1px solid var(--dirrm-border);
+      color: var(--dirrm-gold);
+      text-decoration: none;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      font-family: inherit;
+    }
+
+    .dirrm-info-btn:hover {
+      background: linear-gradient(135deg, rgba(245, 166, 35, 0.4), rgba(245, 166, 35, 0.2));
+      transform: translateY(-1px);
+    }
+
+    /* Type badge in title bar */
+    .dirrm-type-badge {
+      font-size: 9px;
+      letter-spacing: 0.08em;
+      padding: 3px 8px;
+      border-radius: 999px;
+      background: rgba(245, 166, 35, 0.12);
+      border: 1px solid var(--dirrm-border);
+      color: var(--dirrm-gold);
+      text-transform: uppercase;
+      font-weight: 600;
+      flex-shrink: 0;
     }
 
     /* ============================================
@@ -596,6 +825,11 @@
     <!-- API base bootstrap — auto-attaches every visitor to api.vintaclectic.com -->
     <script src="body/api_base.js?v=v20260429-council"></script>
     <link rel="stylesheet" href="body/safe_area.css?v=v20260429-council">
+
+    <!-- Lazy-loaded heavy CDNs for HLS, DASH, 3D, Markdown, syntax highlight.
+         Loaded on demand in JS via loadScript() to keep cold start fast. -->
+    <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+    <link rel="preconnect" href="https://ajax.googleapis.com" crossorigin>
 </head>
 <body>
   <div id="dirrm-player" class="dirrm-player" data-mode="main">
@@ -604,6 +838,7 @@
       <div class="dirrm-titlebar-left">
         <div class="dirrm-title" id="media-title">Loading...</div>
         <div class="dirrm-subtitle" id="media-subtitle"></div>
+        <div class="dirrm-type-badge" id="type-badge" style="display:none"></div>
       </div>
       <div class="dirrm-titlebar-right">
         <button class="dirrm-btn" id="btn-viz" title="Change Visualizer" style="display:none">
@@ -710,6 +945,7 @@
         
         this.mediaTitle = document.getElementById('media-title');
         this.mediaSubtitle = document.getElementById('media-subtitle');
+        this.typeBadge = document.getElementById('type-badge');
         
         this.seekTrack = document.getElementById('seek-track');
         this.seekFill = document.getElementById('seek-fill');
@@ -825,38 +1061,196 @@
 
       detectMediaType(url, providedType) {
         // Normalize aliases from extension context menu
-        const aliases = { docs: 'pdf', document: 'pdf', ebook: 'ebook' };
-        if (providedType) return aliases[providedType] ?? providedType;
+        const aliases = {
+          docs: 'pdf', document: 'pdf', ebook: 'ebook',
+          movie: 'video', music: 'audio', song: 'audio', picture: 'image', photo: 'image',
+          stream: 'stream', live: 'stream', code: 'text', markdown: 'text',
+          model3d: 'model', '3d': 'model'
+        };
+        if (providedType && providedType !== 'auto') return aliases[providedType] ?? providedType;
 
+        // Platform / embed detection first — wins over extension
+        const embedKind = this.detectEmbed(url);
+        if (embedKind) return 'embed';
+
+        const u = (url || '').toLowerCase().split('?')[0].split('#')[0];
+        const ext = u.split('.').pop();
+
+        // Streams
+        if (ext === 'm3u8' || ext === 'mpd' || ext === 'ism') return 'stream';
+        // Video
+        if (['mp4','webm','mkv','mov','m4v','avi','wmv','flv','ogv','3gp','ts','m2ts','mts','divx','xvid','vob','asf','rm','rmvb'].includes(ext)) return 'video';
+        // Audio
+        if (['mp3','wav','ogg','flac','aac','m4a','opus','wma','aiff','aif','mid','midi','ape','alac','amr','au','ra'].includes(ext)) return 'audio';
+        // Image
+        if (['jpg','jpeg','png','gif','webp','svg','bmp','ico','tiff','tif','avif','heic','heif','jxl','raw','cr2','nef','arw','dng'].includes(ext)) return 'image';
+        // Document
+        if (ext === 'pdf') return 'pdf';
+        if (['epub','mobi','azw','azw3','fb2','djvu','lit','pdb','cbr','cbz'].includes(ext)) return 'ebook';
+        // Text / code
+        if (['txt','md','markdown','json','xml','csv','tsv','log','js','mjs','cjs','ts','tsx','jsx','py','rb','go','rs','java','c','cpp','h','hpp','cs','php','swift','kt','scala','lua','pl','sh','bash','zsh','fish','yaml','yml','toml','ini','cfg','conf','env','sql','dockerfile','makefile','html','htm','css','scss','sass','less','vue','svelte'].includes(ext)) return 'text';
+        // 3D
+        if (['glb','gltf','obj','fbx','stl','dae','ply','usdz','3ds','blend'].includes(ext)) return 'model';
+        // Archive
+        if (['zip','rar','7z','tar','gz','bz2','xz','zst','tgz','tbz','txz','iso','dmg','pkg','deb','rpm','msi','exe','apk'].includes(ext)) return 'archive';
+        // Torrent
+        if (ext === 'torrent') return 'torrent';
+        // Magnet links
+        if ((url || '').startsWith('magnet:')) return 'torrent';
+
+        // Platform fallbacks for bare URLs without extension
+        if (/v\.redd\.it/.test(url)) return 'video';
+
+        // Last resort: assume video (browser will try, then fallback chain kicks in)
+        return 'unknown';
+      }
+
+      /**
+       * Detects if a URL is a known embeddable platform.
+       * Returns { kind, embedUrl } or null.
+       */
+      detectEmbed(url) {
+        if (!url) return null;
         try {
-          const path = new URL(url).pathname;
-          const ext = path.split('.').pop().toLowerCase().split('?')[0];
-          const types = {
-            video: ['mp4', 'webm', 'mkv', 'avi', 'mov', 'm4v', 'ogv', 'm3u8', 'ts', '3gp', 'wmv', 'flv'],
-            audio: ['mp3', 'wav', 'ogg', 'flac', 'aac', 'm4a', 'opus', 'wma', 'aiff', 'mid', 'midi'],
-            image: ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg', 'bmp', 'ico', 'tiff', 'avif'],
-            pdf:   ['pdf'],
-            ebook: ['epub', 'mobi', 'azw3', 'fb2'],
-          };
-          for (const [type, exts] of Object.entries(types)) {
-            if (exts.includes(ext)) return type;
+          const u = new URL(url);
+          const host = u.hostname.replace(/^www\./, '');
+
+          // YouTube (watch, youtu.be, shorts, embed)
+          if (host === 'youtube.com' || host === 'm.youtube.com' || host === 'youtube-nocookie.com') {
+            let id = u.searchParams.get('v');
+            if (!id && u.pathname.startsWith('/shorts/')) id = u.pathname.split('/')[2];
+            if (!id && u.pathname.startsWith('/embed/')) id = u.pathname.split('/')[2];
+            if (!id && u.pathname.startsWith('/live/')) id = u.pathname.split('/')[2];
+            if (id) {
+              const t = u.searchParams.get('t') || u.searchParams.get('start');
+              const start = t ? `&start=${parseInt(t)}` : '';
+              return { kind: 'YouTube', embedUrl: `https://www.youtube-nocookie.com/embed/${id}?autoplay=1${start}` };
+            }
+          }
+          if (host === 'youtu.be') {
+            const id = u.pathname.slice(1).split('/')[0];
+            if (id) return { kind: 'YouTube', embedUrl: `https://www.youtube-nocookie.com/embed/${id}?autoplay=1` };
+          }
+
+          // Vimeo
+          if (host === 'vimeo.com' || host === 'player.vimeo.com') {
+            const id = (u.pathname.match(/(\d+)/) || [])[1];
+            if (id) return { kind: 'Vimeo', embedUrl: `https://player.vimeo.com/video/${id}?autoplay=1` };
+          }
+
+          // Twitch
+          if (host === 'twitch.tv' || host.endsWith('.twitch.tv')) {
+            const parent = location.hostname || 'vintaclectic.github.io';
+            const parts = u.pathname.split('/').filter(Boolean);
+            if (parts[0] === 'videos' && parts[1]) {
+              return { kind: 'Twitch', embedUrl: `https://player.twitch.tv/?video=${parts[1]}&parent=${parent}&autoplay=true` };
+            }
+            if (parts[0] && parts[0] !== 'directory') {
+              return { kind: 'Twitch', embedUrl: `https://player.twitch.tv/?channel=${parts[0]}&parent=${parent}&autoplay=true` };
+            }
+          }
+
+          // SoundCloud
+          if (host === 'soundcloud.com' || host === 'm.soundcloud.com') {
+            return { kind: 'SoundCloud', embedUrl: `https://w.soundcloud.com/player/?url=${encodeURIComponent(url)}&auto_play=true&color=%23F5A623` };
+          }
+
+          // Spotify
+          if (host === 'open.spotify.com' || host === 'spotify.com') {
+            const parts = u.pathname.split('/').filter(Boolean);
+            const kind = parts[0]; // track | album | playlist | episode | show | artist
+            const id = parts[1];
+            if (kind && id) {
+              return { kind: 'Spotify', embedUrl: `https://open.spotify.com/embed/${kind}/${id}?utm_source=oembed` };
+            }
+          }
+
+          // Bandcamp (track page)
+          if (host.endsWith('bandcamp.com')) {
+            return { kind: 'Bandcamp', embedUrl: url };
+          }
+
+          // Apple Music / Podcasts
+          if (host === 'music.apple.com' || host === 'podcasts.apple.com') {
+            return { kind: host === 'music.apple.com' ? 'Apple Music' : 'Apple Podcasts',
+                     embedUrl: 'https://embed.music.apple.com' + u.pathname + u.search };
+          }
+
+          // Dailymotion
+          if (host === 'dailymotion.com' || host === 'dai.ly') {
+            const id = host === 'dai.ly' ? u.pathname.slice(1) : (u.pathname.match(/\/video\/([^/?]+)/) || [])[1];
+            if (id) return { kind: 'Dailymotion', embedUrl: `https://www.dailymotion.com/embed/video/${id}?autoplay=1` };
           }
         } catch (_) {}
-        return 'unknown';
+        return null;
+      }
+
+      /**
+       * Lazy-load a JS or module from CDN. Caches by src.
+       */
+      loadScript(src, opts = {}) {
+        if (!this._loadedScripts) this._loadedScripts = {};
+        if (this._loadedScripts[src]) return this._loadedScripts[src];
+        this._loadedScripts[src] = new Promise((resolve, reject) => {
+          const s = document.createElement('script');
+          s.src = src;
+          if (opts.module) s.type = 'module';
+          s.onload = () => resolve();
+          s.onerror = () => reject(new Error('Failed: ' + src));
+          document.head.appendChild(s);
+        });
+        return this._loadedScripts[src];
+      }
+
+      loadStyle(href) {
+        if (!this._loadedStyles) this._loadedStyles = {};
+        if (this._loadedStyles[href]) return;
+        this._loadedStyles[href] = true;
+        const l = document.createElement('link');
+        l.rel = 'stylesheet';
+        l.href = href;
+        document.head.appendChild(l);
+      }
+
+      setBadge(text) {
+        if (!this.typeBadge) return;
+        if (text) {
+          this.typeBadge.textContent = text;
+          this.typeBadge.style.display = '';
+        } else {
+          this.typeBadge.style.display = 'none';
+        }
       }
 
       async loadMedia(url, title, type) {
         this.loading.style.display = 'flex';
+        this.loading.innerHTML = `
+          <div class="dirrm-spinner"></div>
+          <div class="dirrm-loading-text">Loading media...</div>
+        `;
         this.mediaTitle.textContent = title || this.extractTitle(url);
         this.mediaType = this.detectMediaType(url, type);
-        this.mediaSubtitle.textContent = this.mediaType.toUpperCase();
-        
-        // Clear existing media
-        const existing = this.mediaContainer.querySelector('video, audio, img, iframe');
-        if (existing) existing.remove();
-        
+        this.mediaSubtitle.textContent = '';
+        this.setBadge(null);
+
+        // Clear any prior media + injected containers
+        this.mediaContainer.querySelectorAll('video, audio, img, iframe, .dirrm-audio-visualizer, .dirrm-document-viewer, .dirrm-embed, .dirrm-model-wrap, .dirrm-text-viewer, .dirrm-info-card').forEach(n => n.remove());
+        // Reset controls visibility (image/pdf/etc hide them; new load resets)
+        this.controls.style.display = '';
+        document.getElementById('btn-viz').style.display = 'none';
+
+        // Stop any prior raf loop tied to the old audio
+        if (this._vizRaf) { cancelAnimationFrame(this._vizRaf); this._vizRaf = null; }
+        this.mediaElement = null;
+
         try {
           switch (this.mediaType) {
+            case 'embed':
+              await this.loadEmbed(url);
+              break;
+            case 'stream':
+              await this.loadStream(url);
+              break;
             case 'video':
               await this.loadVideo(url);
               break;
@@ -872,52 +1266,102 @@
             case 'ebook':
               this.loadEbook(url);
               break;
+            case 'text':
+              await this.loadText(url);
+              break;
+            case 'model':
+              await this.loadModel(url);
+              break;
+            case 'archive':
+              await this.loadArchive(url);
+              break;
+            case 'torrent':
+              this.loadTorrent(url);
+              break;
             default:
-              this.loadUnknown(url);
+              await this.loadUnknown(url);
           }
         } catch (err) {
           console.error('Failed to load media:', err);
+          this.loading.style.display = 'flex';
           this.loading.querySelector('.dirrm-loading-text').textContent = 'Failed to load media';
         }
       }
 
       async loadVideo(url) {
+        this.setBadge('Video');
         const video = document.createElement('video');
-        video.src = url;
         video.controls = false;
         video.playsInline = true;
         video.volume = this.volume;
-        
+
+        const isM3U8 = /\.m3u8(\?|#|$)/i.test(url);
+        const isMPD  = /\.mpd(\?|#|$)/i.test(url);
+
+        if (isM3U8) {
+          this.setBadge('HLS Stream');
+          // Native HLS (Safari, iOS) — just set src
+          if (video.canPlayType('application/vnd.apple.mpegurl')) {
+            video.src = url;
+          } else {
+            try {
+              await this.loadScript('https://cdn.jsdelivr.net/npm/hls.js@latest/dist/hls.min.js');
+              if (window.Hls && window.Hls.isSupported()) {
+                const hls = new window.Hls({ enableWorker: true, lowLatencyMode: true });
+                hls.loadSource(url);
+                hls.attachMedia(video);
+                this._hls = hls;
+              } else {
+                video.src = url; // last-ditch
+              }
+            } catch (e) {
+              console.warn('hls.js load failed, native attempt', e);
+              video.src = url;
+            }
+          }
+        } else if (isMPD) {
+          this.setBadge('DASH Stream');
+          try {
+            await this.loadScript('https://cdn.dashjs.org/latest/dash.all.min.js');
+            if (window.dashjs) {
+              const dash = window.dashjs.MediaPlayer().create();
+              dash.initialize(video, url, true);
+              this._dash = dash;
+            } else {
+              video.src = url;
+            }
+          } catch (e) {
+            console.warn('dash.js load failed', e);
+            video.src = url;
+          }
+        } else {
+          video.src = url;
+        }
+
         video.addEventListener('loadedmetadata', () => {
           this.loading.style.display = 'none';
           this.timeDuration.textContent = this.formatTime(video.duration);
         });
-        
+
         video.addEventListener('timeupdate', () => {
           const progress = (video.currentTime / video.duration) * 100;
           this.seekFill.style.width = `${progress}%`;
           this.timeCurrent.textContent = this.formatTime(video.currentTime);
         });
-        
-        video.addEventListener('play', () => {
-          this.isPlaying = true;
-          this.playIcon.textContent = '⏸';
+
+        video.addEventListener('play',  () => { this.isPlaying = true;  this.playIcon.textContent = '⏸'; });
+        video.addEventListener('pause', () => { this.isPlaying = false; this.playIcon.textContent = '▶'; });
+        video.addEventListener('ended', () => { this.isPlaying = false; this.playIcon.textContent = '▶'; });
+
+        video.addEventListener('error', () => {
+          // Fallback chain: if video errors, present download option
+          console.warn('Video failed, offering fallback for', url);
+          this.loadUnknown(url, 'Could not play video');
         });
-        
-        video.addEventListener('pause', () => {
-          this.isPlaying = false;
-          this.playIcon.textContent = '▶';
-        });
-        
-        video.addEventListener('ended', () => {
-          this.isPlaying = false;
-          this.playIcon.textContent = '▶';
-        });
-        
+
         this.mediaContainer.appendChild(video);
         this.mediaElement = video;
-        
-        // Auto-play
+
         try {
           await video.play();
         } catch (e) {
@@ -925,7 +1369,45 @@
         }
       }
 
+      /**
+       * Streaming wrapper — routes m3u8 / mpd / .ism / generic streams through loadVideo.
+       */
+      async loadStream(url) {
+        return this.loadVideo(url);
+      }
+
+      /**
+       * Platform embed loader — YouTube, Vimeo, Twitch, SoundCloud, Spotify, Bandcamp, etc.
+       * Hides standard transport controls (the iframe has its own).
+       */
+      async loadEmbed(url) {
+        const embed = this.detectEmbed(url);
+        if (!embed) {
+          // Defensive — should not reach here unless type was forced
+          return this.loadUnknown(url, 'Unknown embed source');
+        }
+        this.setBadge(embed.kind);
+        this.mediaSubtitle.textContent = '';
+
+        const wrap = document.createElement('div');
+        wrap.className = 'dirrm-embed';
+        const iframe = document.createElement('iframe');
+        iframe.src = embed.embedUrl;
+        iframe.setAttribute('frameborder', '0');
+        iframe.setAttribute('allow', 'autoplay; encrypted-media; picture-in-picture; fullscreen; clipboard-write; accelerometer; gyroscope');
+        iframe.setAttribute('allowfullscreen', '');
+        iframe.setAttribute('referrerpolicy', 'strict-origin-when-cross-origin');
+        iframe.addEventListener('load', () => { this.loading.style.display = 'none'; });
+        wrap.appendChild(iframe);
+        this.mediaContainer.appendChild(wrap);
+
+        // Embeds bring their own UI — hide our transport bar
+        this.controls.style.display = 'none';
+        this.mediaElement = null;
+      }
+
       async loadAudio(url) {
+        this.setBadge('Audio');
         // Try without crossOrigin first — if server doesn't send CORS headers,
         // crossOrigin='anonymous' causes a load error even though plain fetch works.
         // We attempt Web Audio; if blocked, fall back to a time-based fake analyser.
@@ -1006,6 +1488,7 @@
 
         const draw = () => {
           rafId = requestAnimationFrame(draw);
+          this._vizRaf = rafId;
           const W = canvas.width, H = canvas.height;
           const ctx = canvas.getContext('2d');
           const playing = this.isPlaying;
@@ -1052,7 +1535,8 @@
             }
 
           } else if (mode === 'wave') {
-            analyser.getByteTimeDomainData(dataArray);
+            if (analyser && !fakeMode) analyser.getByteTimeDomainData(dataArray);
+            // In fakeMode, dataArray already has synthesized values — interpret as wave.
             ctx.strokeStyle = GOLD;
             ctx.lineWidth = 2 * devicePixelRatio;
             ctx.shadowColor = GOLD;
@@ -1186,64 +1670,409 @@
       }
 
       async loadImage(url) {
+        this.setBadge('Image');
         const img = document.createElement('img');
         img.src = url;
-        
+        img.alt = this.mediaTitle.textContent || 'image';
+
         img.addEventListener('load', () => {
           this.loading.style.display = 'none';
-          this.mediaSubtitle.textContent = `IMAGE · ${img.naturalWidth}×${img.naturalHeight}`;
+          this.mediaSubtitle.textContent = `${img.naturalWidth}×${img.naturalHeight}`;
         });
-        
+
         img.addEventListener('error', () => {
-          this.loading.querySelector('.dirrm-loading-text').textContent = 'Failed to load image';
+          // Fallback chain: try as video, then audio, then iframe, then download card
+          img.remove();
+          console.warn('Image failed, trying video fallback for', url);
+          const v = document.createElement('video');
+          v.src = url; v.controls = true; v.style.maxWidth = '100%'; v.style.maxHeight = '100%';
+          v.addEventListener('loadedmetadata', () => { this.loading.style.display = 'none'; });
+          v.addEventListener('error', () => {
+            v.remove();
+            const a = document.createElement('audio');
+            a.src = url; a.controls = true;
+            a.addEventListener('loadedmetadata', () => { this.loading.style.display = 'none'; });
+            a.addEventListener('error', () => {
+              a.remove();
+              this.loadUnknown(url, 'Could not display file');
+            });
+            this.mediaContainer.appendChild(a);
+          });
+          this.mediaContainer.appendChild(v);
         });
-        
+
         this.mediaContainer.appendChild(img);
         this.controls.style.display = 'none'; // Hide transport for images
       }
 
       loadPdf(url) {
+        this.setBadge('PDF');
         const viewer = document.createElement('div');
         viewer.className = 'dirrm-document-viewer';
-        
+
+        const toolbar = document.createElement('div');
+        toolbar.className = 'dirrm-doc-toolbar';
+        toolbar.innerHTML = `
+          <a href="${url}" target="_blank" rel="noopener">Open in new tab</a>
+          <a href="${url}" download>Download</a>
+        `;
+
         const iframe = document.createElement('iframe');
         iframe.src = url;
-        
-        iframe.addEventListener('load', () => {
-          this.loading.style.display = 'none';
-        });
-        
+        iframe.addEventListener('load', () => { this.loading.style.display = 'none'; });
+
+        viewer.appendChild(toolbar);
         viewer.appendChild(iframe);
         this.mediaContainer.appendChild(viewer);
         this.controls.style.display = 'none';
       }
 
       loadEbook(url) {
-        // For ebooks, we'd integrate an epub.js reader
-        // For now, show download/open option
-        this.loading.innerHTML = `
-          <div style="text-align: center;">
-            <div style="font-size: 48px; margin-bottom: 16px;">📖</div>
-            <div style="color: var(--dirrm-gold); font-size: 14px; margin-bottom: 8px;">eBook</div>
-            <a href="${url}" target="_blank" style="color: var(--dirrm-text); text-decoration: underline;">
-              Open in new tab
-            </a>
+        this.setBadge('eBook');
+        const filename = this.extractTitle(url);
+        this.loading.style.display = 'none';
+        const card = document.createElement('div');
+        card.className = 'dirrm-info-card';
+        card.innerHTML = `
+          <div class="dirrm-info-card-inner">
+            <div class="dirrm-info-icon">📖</div>
+            <div class="dirrm-info-title">${filename}</div>
+            <div class="dirrm-info-meta">eBook · external reader recommended</div>
+            <div class="dirrm-info-actions">
+              <a class="dirrm-info-btn" href="${url}" target="_blank" rel="noopener">Open</a>
+              <a class="dirrm-info-btn" href="${url}" download>Download</a>
+            </div>
           </div>
         `;
+        this.mediaContainer.appendChild(card);
         this.controls.style.display = 'none';
       }
 
-      loadUnknown(url) {
-        this.loading.innerHTML = `
-          <div style="text-align: center;">
-            <div style="font-size: 48px; margin-bottom: 16px;">📁</div>
-            <div style="color: var(--dirrm-gold); font-size: 14px; margin-bottom: 8px;">File</div>
-            <a href="${url}" target="_blank" download style="color: var(--dirrm-text); text-decoration: underline;">
-              Download
-            </a>
+      /**
+       * Text / code / markdown viewer.
+       * Fetches the file, renders as <pre> with syntax highlight, or marked() for .md.
+       */
+      async loadText(url) {
+        this.setBadge('Text');
+        const lower = url.toLowerCase().split('?')[0];
+        const ext = lower.split('.').pop();
+        const isMarkdown = ext === 'md' || ext === 'markdown';
+        const langMap = {
+          js:'javascript', mjs:'javascript', cjs:'javascript', ts:'typescript',
+          tsx:'typescript', jsx:'javascript', py:'python', rb:'ruby', sh:'bash',
+          bash:'bash', zsh:'bash', html:'xml', htm:'xml', xml:'xml', vue:'xml',
+          svelte:'xml', css:'css', scss:'scss', sass:'scss', less:'less',
+          json:'json', yaml:'yaml', yml:'yaml', toml:'ini', ini:'ini',
+          cfg:'ini', conf:'ini', env:'bash', sql:'sql', dockerfile:'dockerfile',
+          makefile:'makefile', c:'c', cpp:'cpp', h:'c', hpp:'cpp',
+          cs:'csharp', php:'php', swift:'swift', kt:'kotlin', go:'go',
+          rs:'rust', java:'java', scala:'scala', lua:'lua', pl:'perl',
+          log:'plaintext', txt:'plaintext', csv:'plaintext', tsv:'plaintext'
+        };
+        const lang = langMap[ext] || 'plaintext';
+
+        let text;
+        try {
+          const res = await fetch(url, { credentials: 'omit' });
+          if (!res.ok) throw new Error('HTTP ' + res.status);
+          text = await res.text();
+        } catch (e) {
+          console.warn('Text fetch failed', e);
+          return this.loadUnknown(url, 'Could not read file (CORS or network)');
+        }
+
+        this.loading.style.display = 'none';
+
+        const wrap = document.createElement('div');
+        wrap.className = 'dirrm-text-viewer';
+
+        const toolbar = document.createElement('div');
+        toolbar.className = 'dirrm-text-toolbar';
+        const copyBtn = document.createElement('button');
+        copyBtn.textContent = 'Copy';
+        copyBtn.addEventListener('click', async () => {
+          try {
+            await navigator.clipboard.writeText(text);
+            copyBtn.textContent = 'Copied';
+            setTimeout(() => { copyBtn.textContent = 'Copy'; }, 1500);
+          } catch (_) {
+            copyBtn.textContent = 'Copy failed';
+            setTimeout(() => { copyBtn.textContent = 'Copy'; }, 1500);
+          }
+        });
+        const dlLink = document.createElement('a');
+        dlLink.href = url;
+        dlLink.download = '';
+        dlLink.textContent = 'Download';
+        toolbar.appendChild(copyBtn);
+        toolbar.appendChild(dlLink);
+
+        const body = document.createElement('div');
+        body.className = 'dirrm-text-body';
+
+        if (isMarkdown) {
+          try {
+            await this.loadScript('https://cdn.jsdelivr.net/npm/marked/marked.min.js');
+            body.classList.add('markdown');
+            body.innerHTML = window.marked ? window.marked.parse(text) : this.escapeHtml(text);
+          } catch (_) {
+            body.textContent = text;
+          }
+        } else {
+          // Plain text + optional syntax highlight
+          const code = document.createElement('code');
+          code.className = `language-${lang}`;
+          code.textContent = text;
+          body.appendChild(code);
+          try {
+            this.loadStyle('https://cdn.jsdelivr.net/npm/highlight.js@11/styles/atom-one-dark.min.css');
+            await this.loadScript('https://cdn.jsdelivr.net/npm/highlight.js@11/lib/common.min.js');
+            if (window.hljs) window.hljs.highlightElement(code);
+          } catch (_) { /* fall back to plain rendering */ }
+        }
+
+        wrap.appendChild(toolbar);
+        wrap.appendChild(body);
+        this.mediaContainer.appendChild(wrap);
+        this.controls.style.display = 'none';
+      }
+
+      /**
+       * 3D model viewer via Google's <model-viewer> web component.
+       * Supports .glb, .gltf natively; .obj/.stl/.fbx etc are presented as download
+       * cards since model-viewer is GLTF-focused.
+       */
+      async loadModel(url) {
+        this.setBadge('3D Model');
+        const lower = url.toLowerCase().split('?')[0];
+        const ext = lower.split('.').pop();
+        const supported = (ext === 'glb' || ext === 'gltf');
+
+        if (!supported) {
+          // Show info card with download for non-GLTF formats
+          this.loading.style.display = 'none';
+          const card = document.createElement('div');
+          card.className = 'dirrm-info-card';
+          card.innerHTML = `
+            <div class="dirrm-info-card-inner">
+              <div class="dirrm-info-icon">🧊</div>
+              <div class="dirrm-info-title">${this.extractTitle(url)}</div>
+              <div class="dirrm-info-meta">.${ext.toUpperCase()} · open in 3D viewer of choice</div>
+              <div class="dirrm-info-actions">
+                <a class="dirrm-info-btn" href="${url}" download>Download</a>
+                <a class="dirrm-info-btn" href="${url}" target="_blank" rel="noopener">Open</a>
+              </div>
+            </div>
+          `;
+          this.mediaContainer.appendChild(card);
+          this.controls.style.display = 'none';
+          return;
+        }
+
+        try {
+          await this.loadScript('https://ajax.googleapis.com/ajax/libs/model-viewer/3.4.0/model-viewer.min.js', { module: true });
+        } catch (e) {
+          console.warn('model-viewer failed to load', e);
+          return this.loadUnknown(url, 'Could not load 3D viewer');
+        }
+
+        const wrap = document.createElement('div');
+        wrap.className = 'dirrm-model-wrap';
+        const mv = document.createElement('model-viewer');
+        mv.setAttribute('src', url);
+        mv.setAttribute('auto-rotate', '');
+        mv.setAttribute('camera-controls', '');
+        mv.setAttribute('shadow-intensity', '1');
+        mv.setAttribute('interaction-prompt', 'none');
+        mv.setAttribute('exposure', '0.9');
+        mv.addEventListener('load', () => { this.loading.style.display = 'none'; });
+        mv.addEventListener('error', () => { this.loadUnknown(url, 'Model failed to render'); });
+        wrap.appendChild(mv);
+        this.mediaContainer.appendChild(wrap);
+        this.controls.style.display = 'none';
+      }
+
+      /**
+       * Archive info card — never tries to unzip in-browser.
+       */
+      async loadArchive(url) {
+        this.setBadge('Archive');
+        this.loading.style.display = 'none';
+        const filename = this.extractTitle(url);
+        const lower = url.toLowerCase().split('?')[0];
+        const ext = (lower.split('.').pop() || '').toUpperCase();
+
+        // Try to grab size via HEAD
+        let sizeText = '';
+        try {
+          const head = await fetch(url, { method: 'HEAD' });
+          const len = head.headers.get('content-length');
+          if (len) sizeText = ` · ${this.formatBytes(parseInt(len))}`;
+        } catch (_) {}
+
+        const card = document.createElement('div');
+        card.className = 'dirrm-info-card';
+        card.innerHTML = `
+          <div class="dirrm-info-card-inner">
+            <div class="dirrm-info-icon">📦</div>
+            <div class="dirrm-info-title">${filename}</div>
+            <div class="dirrm-info-meta">${ext} archive${sizeText}</div>
+            <div class="dirrm-info-actions">
+              <a class="dirrm-info-btn" href="${url}" download>Download</a>
+              <a class="dirrm-info-btn" href="${url}" target="_blank" rel="noopener">Open</a>
+            </div>
           </div>
         `;
+        this.mediaContainer.appendChild(card);
         this.controls.style.display = 'none';
+      }
+
+      /**
+       * Torrent info + magnet hand-off.
+       */
+      loadTorrent(url) {
+        this.setBadge('Torrent');
+        this.loading.style.display = 'none';
+        const isMagnet = (url || '').startsWith('magnet:');
+        const filename = isMagnet ? 'Magnet link' : this.extractTitle(url);
+
+        const card = document.createElement('div');
+        card.className = 'dirrm-info-card';
+        card.innerHTML = `
+          <div class="dirrm-info-card-inner">
+            <div class="dirrm-info-icon">🧲</div>
+            <div class="dirrm-info-title">${filename}</div>
+            <div class="dirrm-info-meta">${isMagnet ? 'Magnet URI · open in BitTorrent client' : '.torrent file'}</div>
+            <div class="dirrm-info-actions">
+              <a class="dirrm-info-btn" href="${url}">${isMagnet ? 'Open in Client' : 'Download'}</a>
+              ${isMagnet ? '' : `<a class="dirrm-info-btn" href="${url}" target="_blank" rel="noopener">Open</a>`}
+            </div>
+          </div>
+        `;
+        this.mediaContainer.appendChild(card);
+        this.controls.style.display = 'none';
+      }
+
+      /**
+       * Future-proof fallback. Cascade:
+       *   1. Try <video src>
+       *   2. Try <audio src>
+       *   3. Try iframe embed
+       *   4. Present download card with detected MIME (HEAD request)
+       */
+      async loadUnknown(url, reasonText) {
+        this.setBadge('File');
+
+        // Step 1: video
+        const tryVideo = () => new Promise(resolve => {
+          const v = document.createElement('video');
+          v.src = url; v.controls = false; v.playsInline = true; v.volume = this.volume;
+          let settled = false;
+          const done = (ok) => { if (settled) return; settled = true; resolve(ok ? v : null); if (!ok) v.remove(); };
+          v.addEventListener('loadedmetadata', () => done(true), { once: true });
+          v.addEventListener('error', () => done(false), { once: true });
+          // Don't append yet — only on success
+          setTimeout(() => done(false), 4000);
+        });
+
+        const v = await tryVideo();
+        if (v) {
+          this.loading.style.display = 'none';
+          v.controls = true;
+          v.addEventListener('play',  () => { this.isPlaying = true;  this.playIcon.textContent = '⏸'; });
+          v.addEventListener('pause', () => { this.isPlaying = false; this.playIcon.textContent = '▶'; });
+          v.addEventListener('timeupdate', () => {
+            const p = (v.currentTime / v.duration) * 100;
+            this.seekFill.style.width = `${p}%`;
+            this.timeCurrent.textContent = this.formatTime(v.currentTime);
+          });
+          this.timeDuration.textContent = this.formatTime(v.duration);
+          this.mediaContainer.appendChild(v);
+          this.mediaElement = v;
+          this.controls.style.display = '';
+          try { await v.play(); } catch (_) {}
+          this.setBadge('Video');
+          return;
+        }
+
+        // Step 2: audio
+        const tryAudio = () => new Promise(resolve => {
+          const a = document.createElement('audio');
+          a.src = url; a.controls = true;
+          let settled = false;
+          const done = (ok) => { if (settled) return; settled = true; resolve(ok ? a : null); if (!ok) a.remove(); };
+          a.addEventListener('loadedmetadata', () => done(true), { once: true });
+          a.addEventListener('error', () => done(false), { once: true });
+          setTimeout(() => done(false), 4000);
+        });
+
+        const a = await tryAudio();
+        if (a) {
+          this.loading.style.display = 'none';
+          this.mediaContainer.appendChild(a);
+          this.mediaElement = a;
+          this.controls.style.display = '';
+          this.setBadge('Audio');
+          return;
+        }
+
+        // Step 3 + 4: detect MIME and either iframe or download card
+        let mime = '';
+        try {
+          const head = await fetch(url, { method: 'HEAD' });
+          mime = (head.headers.get('content-type') || '').split(';')[0].trim();
+        } catch (_) {}
+
+        if (mime.startsWith('text/html') || mime === 'application/xhtml+xml') {
+          // Embed as iframe
+          this.loading.style.display = 'none';
+          const viewer = document.createElement('div');
+          viewer.className = 'dirrm-document-viewer';
+          const iframe = document.createElement('iframe');
+          iframe.src = url;
+          iframe.addEventListener('load', () => { this.loading.style.display = 'none'; });
+          viewer.appendChild(iframe);
+          this.mediaContainer.appendChild(viewer);
+          this.controls.style.display = 'none';
+          this.setBadge('Web Page');
+          return;
+        }
+
+        // Final: download card
+        this.loading.style.display = 'none';
+        const filename = this.extractTitle(url);
+        const card = document.createElement('div');
+        card.className = 'dirrm-info-card';
+        card.innerHTML = `
+          <div class="dirrm-info-card-inner">
+            <div class="dirrm-info-icon">📁</div>
+            <div class="dirrm-info-title">${filename}</div>
+            <div class="dirrm-info-meta">${reasonText || (mime || 'Unknown file type')}</div>
+            <div class="dirrm-info-actions">
+              <a class="dirrm-info-btn" href="${url}" download>Download</a>
+              <a class="dirrm-info-btn" href="${url}" target="_blank" rel="noopener">Open in browser</a>
+            </div>
+          </div>
+        `;
+        this.mediaContainer.appendChild(card);
+        this.controls.style.display = 'none';
+      }
+
+      /**
+       * Helpers.
+       */
+      escapeHtml(s) {
+        return (s || '').replace(/[&<>"']/g, c => ({
+          '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;'
+        }[c]));
+      }
+
+      formatBytes(n) {
+        if (!n || !isFinite(n)) return '';
+        const units = ['B','KB','MB','GB','TB'];
+        let i = 0;
+        while (n >= 1024 && i < units.length - 1) { n /= 1024; i++; }
+        return `${n.toFixed(n >= 100 || i === 0 ? 0 : 1)} ${units[i]}`;
       }
 
       formatTime(sec) {
