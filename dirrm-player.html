@@ -1327,20 +1327,23 @@
           const u = new URL(url);
           const host = u.hostname.replace(/^www\./, '');
 
-          // YouTube (watch, youtu.be, shorts, embed)
-          if (host === 'youtube.com' || host === 'm.youtube.com' || host === 'youtube-nocookie.com') {
+          // YouTube (watch, youtu.be, shorts, embed, music, live)
+          if (host === 'youtube.com' || host === 'm.youtube.com' || host === 'music.youtube.com' || host === 'youtube-nocookie.com') {
             let id = u.searchParams.get('v');
             if (!id && u.pathname.startsWith('/shorts/')) id = u.pathname.split('/')[2];
             if (!id && u.pathname.startsWith('/embed/')) id = u.pathname.split('/')[2];
             if (!id && u.pathname.startsWith('/live/')) id = u.pathname.split('/')[2];
+            if (!id && u.pathname.startsWith('/watch')) id = u.searchParams.get('v'); // belt+suspenders
             if (id) {
               const t = u.searchParams.get('t') || u.searchParams.get('start');
               const start = t ? `&start=${parseInt(t)}` : '';
               return { kind: 'YouTube', embedUrl: `https://www.youtube-nocookie.com/embed/${id}?autoplay=1${start}` };
             }
+            // Channel/playlist/homepage — not embeddable as a specific video
+            return null;
           }
           if (host === 'youtu.be') {
-            const id = u.pathname.slice(1).split('/')[0];
+            const id = u.pathname.slice(1).split('?')[0].split('/')[0];
             if (id) return { kind: 'YouTube', embedUrl: `https://www.youtube-nocookie.com/embed/${id}?autoplay=1` };
           }
 
