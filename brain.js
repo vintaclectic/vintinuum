@@ -42367,9 +42367,8 @@ window.addEventListener('message', function(event) {
       if (action === 'free') {
         closeTierOverlay();
       } else {
-        // Open Stripe checkout or payment flow
-        // For now, show placeholder — replace with real Stripe link
-        window.open('https://buy.stripe.com/placeholder_' + action, '_blank');
+        // Route to upgrade page — billing wires up once Stripe keys are in .env
+        window.location.href = 'upgrade.html?tier=' + encodeURIComponent(action);
       }
     });
   });
