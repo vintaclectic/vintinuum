@@ -998,12 +998,40 @@
       .dirrm-skip { padding: 6px 10px; font-size: 11px; }
     }
 
-    /* Mode switching buttons make no sense at full-screen mobile */
+    /* Mode buttons — compact icon-only on mobile, still accessible */
     @media (max-width: 640px) {
       #btn-mini, #btn-pip, #btn-maximize, #btn-theater {
-        display: none !important;
+        width: 32px !important;
+        height: 32px !important;
+        font-size: 14px !important;
+        padding: 0 !important;
       }
     }
+
+    /* Platform badge */
+    #dirrm-platform-badge {
+      position: absolute;
+      top: 6px;
+      right: 6px;
+      font-size: 8px;
+      font-family: 'JetBrains Mono', monospace, sans-serif;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+      padding: 2px 6px;
+      border-radius: 4px;
+      background: rgba(0,0,0,0.6);
+      z-index: 15;
+      pointer-events: none;
+      display: none;
+      line-height: 1.4;
+    }
+    #dirrm-platform-badge[data-platform="youtube"] { color: #ff4444; display: block; }
+    #dirrm-platform-badge[data-platform="tiktok"]  { color: #25f4ee; display: block; }
+    #dirrm-platform-badge[data-platform="twitch"]  { color: #9146ff; display: block; }
+    #dirrm-platform-badge[data-platform="direct"]  { color: #4ecdc4; display: block; }
+    #dirrm-platform-badge[data-platform="audio"]   { color: #f7b731; display: block; }
+    #dirrm-platform-badge[data-platform="embed"]   { color: #aaa;    display: block; }
   </style>
     <!-- API base bootstrap — auto-attaches every visitor to api.vintaclectic.com -->
     <script src="body/api_base.js?v=v20260429-council"></script>
@@ -1051,6 +1079,8 @@
         <div class="dirrm-loading-orb"></div>
         <div class="dirrm-loading-text">Loading media...</div>
       </div>
+      <!-- Platform badge — top-right corner of media area -->
+      <div id="dirrm-platform-badge"></div>
       <!-- Media element will be injected here -->
       <div class="dirrm-kbd-legend" id="kbd-legend" aria-hidden="true">
         <span><kbd>Space</kbd>/<kbd>K</kbd> play</span>
@@ -1581,6 +1611,32 @@
           console.error('Failed to load media:', err);
           this.showErrorCard(url, err && err.message ? err.message : 'Could not load this media.');
         }
+        // Update platform badge
+        this._updatePlatformBadge(url);
+      }
+
+      _updatePlatformBadge(url) {
+        const badge = document.getElementById('dirrm-platform-badge');
+        if (!badge) return;
+        badge.removeAttribute('data-platform');
+        badge.textContent = '';
+        if (!url) return;
+        const u = url.toLowerCase();
+        let platform, label;
+        if (/youtube\.com|youtu\.be|music\.youtube\.com/.test(u))           { platform = 'youtube';  label = 'YouTube'; }
+        else if (/tiktok\.com/.test(u))                                      { platform = 'tiktok';   label = 'TikTok'; }
+        else if (/twitch\.tv/.test(u))                                       { platform = 'twitch';   label = 'Twitch'; }
+        else if (/kick\.com/.test(u))                                        { platform = 'embed';    label = 'Kick'; }
+        else if (/vimeo\.com/.test(u))                                       { platform = 'embed';    label = 'Vimeo'; }
+        else if (/soundcloud\.com/.test(u))                                  { platform = 'audio';    label = 'SoundCloud'; }
+        else if (/spotify\.com/.test(u))                                     { platform = 'embed';    label = 'Spotify'; }
+        else if (/\.(mp3|wav|ogg|flac|aac|m4a|opus)(\?|$)/.test(u))        { platform = 'audio';    label = 'Audio'; }
+        else if (/\.(mp4|webm|mkv|mov|m4v|ts)(\?|$)/.test(u))              { platform = 'direct';   label = 'Direct'; }
+        else if (/\.(m3u8|mpd)(\?|$)/.test(u))                              { platform = 'direct';   label = 'HLS/DASH'; }
+        else if (this.mediaType === 'embed')                                 { platform = 'embed';    label = 'Embed'; }
+        else return; // no badge for unknown
+        badge.dataset.platform = platform;
+        badge.textContent = label;
       }
 
       /**
