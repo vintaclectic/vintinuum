@@ -3194,14 +3194,20 @@ if ('serviceWorker' in navigator && _onGitHubPages) {
 <script src="body/draggable.js?v=v20260523-drag1"></script>
 <!-- Body containment system — loaded before brain.js so globals are available -->
 <script src="body/geometry.js?v=v20260424-0428"></script>
-<script src="body/skeleton.js?v=v20260424-0428"></script>
+<!-- ALIVE — living motion engine: breath, weight-shift, sway, head-drift, all
+     scaled by live neurochemistry. Marries the breathing skin shader to the
+     frozen skeleton so the OG body actually moves like a human. Vinta directive
+     2026-05-30 "make him alive, it's time." Loads after geometry (attaches the
+     aliveMatrix seam), self-registers into RENDER_HUB at priority 1. -->
+<script src="body/alive.js?v=v20260530-alive1"></script>
+<script src="body/skeleton.js?v=v20260530-alive1"></script>
 <script src="body/muscle.js?v=v20260424-0428"></script>
 <script src="body/organs.js?v=v20260424-0428"></script>
 <script src="body/circulatory.js?v=v20260424-0428"></script>
 <script src="body/nervous.js?v=v20260424-0428"></script>
-<script src="body/skin.js?v=v20260424-0428"></script>
+<script src="body/skin.js?v=v20260530-alive1"></script>
 <script src="body/face.js?v=v20260424-0428"></script>
-<script src="body/chakras.js?v=v20260424-0428"></script>
+<script src="body/chakras.js?v=v20260530-alive1"></script>
 <script src="body/radar.js?v=v20260424-0428"></script>
 <script src="body/heartbeat.js?v=v20260424-0428"></script>
 <script src="body/hair.js?v=v20260424-0428"></script>

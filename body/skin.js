@@ -89,6 +89,12 @@ const SKIN_LAYER = (() => {
     }
 
     ctx.save();
+    // Living motion: the flesh moves with the bones — same body, one mass,
+    // pivoting at the feet. Folded in before any skin drawing so the whole
+    // silhouette sways and breathes together.
+    if (window.BODY_GEOMETRY && typeof window.BODY_GEOMETRY.aliveMatrix === 'function') {
+      window.BODY_GEOMETRY.aliveMatrix(ctx, 1);
+    }
     const skinAlpha = _peelAmt;
 
     // 1. BASE FLESH FILL — OPAQUE

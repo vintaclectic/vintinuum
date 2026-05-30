@@ -91,6 +91,12 @@ const CHAKRA_LAYER = (() => {
     const breathWave = (Math.sin(breathPhase) + 1) / 2;
 
     ctx.save();
+    // Living motion: the spine-lights ride with the body so the chakra column
+    // moves with the flesh and bone — one living mass. Applied before the clip
+    // so the silhouette clip-path travels with the motion too.
+    if (window.BODY_GEOMETRY && typeof window.BODY_GEOMETRY.aliveMatrix === 'function') {
+      window.BODY_GEOMETRY.aliveMatrix(ctx, 1);
+    }
     // Clip all chakra rendering to body silhouette — no glow escapes
     if (!_clipPath) _clipPath = _buildClip();
     if (_clipPath) ctx.clip(_clipPath);

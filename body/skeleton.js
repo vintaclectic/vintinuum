@@ -556,6 +556,10 @@ const BODY_SKELETON = (() => {
     const baseAlpha = 0.6 + _pulsePhase * 0.15;  // Bones are fairly visible
 
     ctx.save();
+    // Living motion: the whole skeleton breathes, shifts weight, and sways as
+    // one mass pivoting at the feet. BODY_ALIVE publishes the offsets; this
+    // folds them in. weight=1 → bones take the full body motion.
+    if (G && typeof G.aliveMatrix === 'function') G.aliveMatrix(ctx, 1);
 
     // Draw layers bottom to top
     drawMarrowGlow(ctx, baseAlpha, ts);
