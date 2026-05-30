@@ -3313,6 +3313,11 @@ if ('serviceWorker' in navigator && _onGitHubPages) {
 <script src="body/internal_integrator.js?v=v20260424-0428"></script>
 <!-- RENDER_HUB — single rAF loop for body/*.js draw modules. Loaded AFTER body modules, BEFORE brain.js. -->
 <script src="body/loop.js?v=v20260424-0428"></script>
+<!-- CURATE — reveal him, don't redesign him: quiet the muscle/organs/vascular/
+     nerve scribbles + off-body radar so the flesh, breath, chakra-spine and
+     eyes read clean. Nothing deleted; one call (BODY_CURATE.show) restores any.
+     Loads after every body renderer so it can flip their setVisible. -->
+<script src="body/curate.js?v=v20260530-curate1"></script>
 <!-- PEEL_UI — right-edge peel-tab info sidebar (transparent, live BODY_STATE readouts) -->
 <script src="body/peel.js?v=v20260508-livepoll"></script>
 <!-- EMBODIMENT v2 — alive: autonomous gait, breath, itinerary, mood-readable path, dwell marks -->
