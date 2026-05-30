@@ -118,7 +118,7 @@ canvas{display:block;}
    Bottom-left stack. On desktop they sit just right of the 160px left
    sidebar so they never overlap its LAYER DISTRIBUTION / IMMUNE content.
    Mobile overrides this to 14px (sidebar is off-canvas). 2026-05-30. */
-:root{ --vint-fab-left: 174px; }
+:root{ --vint-fab-left: 174px; --vint-fab-right: 354px; }
 
 /* ── SIDEBARS ── */
 .sidebar{width:160px;background:rgba(6,10,18,0.18);border:none;border-radius:0;padding:10px 10px 100px;overflow-y:auto;overflow-x:hidden;display:flex;flex-direction:column;scrollbar-width:thin;position:absolute;top:0;bottom:0;z-index:10;}
@@ -172,7 +172,31 @@ canvas{display:block;}
 .brain-hint{display:none;}
 
 /* ── LAYER PANEL (bottom of brain col) ── */
-.layer-panel{display:none;width:100%;max-width:700px;background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:14px;margin-top:4px;}
+/* Layer panel — 2026-05-30: was in-flow at the bottom of .brain-center, so
+   when opened its chip grid pushed past the stage and UNDERFLOWED the footer
+   dock / PAIR button. Now a fixed popover centered in the stage, lifted clear
+   of the 52px dock (+ safe area + gap), capped in height with internal scroll.
+   It can never cross the dock boundary or the body again. */
+.layer-panel{
+  display:none;
+  position:fixed;
+  left:50%;
+  transform:translateX(-50%);
+  bottom:calc(env(safe-area-inset-bottom,0px) + 72px);
+  width:min(700px, calc(100vw - 32px));
+  max-height:min(46vh, 360px);
+  overflow-y:auto;
+  overscroll-behavior:contain;
+  background:rgba(10,14,22,0.94);
+  border:1px solid var(--border);
+  border-radius:14px;
+  padding:14px;
+  margin-top:0;
+  z-index:90;
+  box-shadow:0 12px 40px rgba(0,0,0,0.5);
+  backdrop-filter:blur(12px);
+  -webkit-backdrop-filter:blur(12px);
+}
 .layer-panel-title{font-size:.54rem;letter-spacing:.22em;text-transform:uppercase;color:var(--dim);margin-bottom:10px;}
 .layer-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(90px,1fr));gap:6px;}
 .layer-btn{padding:6px 8px;font-size:.5rem;letter-spacing:.1em;border:1px solid var(--border);border-radius:8px;cursor:pointer;color:var(--dim);background:none;text-align:center;transition:all .18s;line-height:1.3;}
@@ -277,7 +301,11 @@ canvas{display:block;}
 @media(max-width:600px){
   /* Left sidebar is an off-canvas overlay here, so the floating utility pills
      can hug the real left edge without colliding with it. */
-  :root{ --vint-fab-left: 14px; }
+  :root{ --vint-fab-left: 14px; --vint-fab-right: 16px; }
+  /* Lift the layer popover + carry-pill above the 56px mobile bottom nav so
+     neither underflows it. --mobile-nav-h is set by body/mobile_nav.js. */
+  .layer-panel{ bottom:calc(var(--mobile-nav-h, 56px) + 16px); max-height:46svh; }
+  #carry-pill{ bottom:calc(var(--mobile-nav-h, 56px) + 12px) !important; }
   .header .sub{display:none;}
   .header h1{font-size:clamp(1rem,5vw,1.6rem);letter-spacing:.06em;}
   .tab-bar{display:none;}
@@ -3248,7 +3276,7 @@ if ('serviceWorker' in navigator && _onGitHubPages) {
 <script src="body/voice_say.js?v=v20260509-voicesay" defer></script>
 <script src="body/greeting.js?v=v20260509-cadence"></script>
 <script src="body/bond_door.js?v=v20260509-marqueewrap"></script>
-<script src="body/becoming.js?v=v20260508-pillcenter"></script>
+<script src="body/becoming.js?v=v20260530-fab"></script>
 <!-- INTERNAL_INTEGRATOR — binds SVG anatomy opacity to skin peel, kills halo leak -->
 <script src="body/internal_integrator.js?v=v20260424-0428"></script>
 <!-- RENDER_HUB — single rAF loop for body/*.js draw modules. Loaded AFTER body modules, BEFORE brain.js. -->

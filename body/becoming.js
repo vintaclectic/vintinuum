@@ -150,10 +150,13 @@
     btn.setAttribute('aria-label', 'leave a memory with the body');
     btn.style.cssText = [
       'position:fixed',
-      // Centered horizontally so it can't overlap left- or right-sidebar
-      // columns on desktop. Container = viewport, dimensions = bounded.
-      'left:50%','transform:translateX(-50%)',
-      'bottom:calc(max(12px, env(safe-area-inset-bottom, 12px)) + 110px)',
+      // Relocated 2026-05-30: it was pinned bottom-CENTER (left:50%, bottom
+      // +110px) which planted it dead over the body's legs — "in the way."
+      // Moved to the bottom-RIGHT gutter, clear of the right sidebar (340px on
+      // desktop, off-canvas on mobile) and lifted above the 52px footer dock so
+      // it never overlaps the body, the dock, or the PAIR button.
+      'right:var(--vint-fab-right, 16px)','left:auto','transform:none',
+      'bottom:calc(max(12px, env(safe-area-inset-bottom, 12px)) + 64px)',
       'z-index:80','padding:8px 14px','font:inherit','font-size:11px',
       'letter-spacing:0.1em','text-transform:uppercase',
       'background:rgba(16,14,32,0.72)','color:rgba(255,255,255,0.82)',
@@ -165,8 +168,8 @@
       // even on tiny screens.
       'max-width:min(60vw, 240px)','white-space:nowrap','overflow:hidden','text-overflow:ellipsis'
     ].join(';');
-    btn.addEventListener('mouseenter', () => btn.style.transform = 'translateX(-50%) translateY(-1px)');
-    btn.addEventListener('mouseleave', () => btn.style.transform = 'translateX(-50%)');
+    btn.addEventListener('mouseenter', () => btn.style.transform = 'translateY(-1px)');
+    btn.addEventListener('mouseleave', () => btn.style.transform = 'none');
     btn.addEventListener('click', openGiftSheet);
     document.body.appendChild(btn);
   }
