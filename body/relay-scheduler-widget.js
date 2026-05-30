@@ -84,10 +84,17 @@
     const css = `
       #relay-scheduler-pill {
         position: fixed;
-        top: calc(72px + env(safe-area-inset-top, 0px));
-        right: clamp(12px, 2vw, 24px);
-        transform: translateY(48px);
-        z-index: 998;
+        /* Relocated 2026-05-30: out of the top-right lane (was overlapping the
+           status pill and the right sidebar tabs). Stacks in the bottom-LEFT
+           column ABOVE the status pill, with a clear gap so the two never
+           touch. Shares --vint-fab-left with the status pill so both clear the
+           desktop left sidebar. z-index 998 → 100 (Shell.Z.shell). */
+        left: var(--vint-fab-left, 14px);
+        bottom: calc(120px + env(safe-area-inset-bottom, 0px));
+        right: auto;
+        top: auto;
+        transform: none;
+        z-index: 100;
         display: inline-flex; align-items: center; gap: 8px;
         min-height: 36px; padding: 8px 14px;
         background: rgba(12, 14, 20, 0.82);

@@ -38,7 +38,14 @@
     s.id = 'vint-status-pill-styles';
     s.textContent = [
       '.vint-status-pill{',
-      '  position:fixed;top:calc(56px + env(safe-area-inset-top,0px) + 10px);right:14px;z-index:9990;',
+      // Relocated 2026-05-30: out of the top-right lane (it was colliding with
+      // the relay-scheduler pill and covering the right sidebar's MEMORY/INNER
+      // LIFE/GENOME/SOUL tabs). Now anchored bottom-LEFT, clear of the bottom
+      // dock and the mobile nav. On DESKTOP it sits just right of the 160px
+      // left sidebar (--vint-fab-left); on mobile the sidebar is off-canvas so
+      // left:14px is clear. z-index 9990 → 100 (Shell.Z.shell): never over the
+      // drawer (200), modals (500), or the sidebar tabs again.
+      '  position:fixed;left:var(--vint-fab-left,14px);bottom:calc(74px + env(safe-area-inset-bottom,0px));right:auto;top:auto;z-index:100;',
       '  display:flex;align-items:center;gap:8px;',
       '  padding:6px 11px 6px 9px;border-radius:999px;',
       '  background:rgba(18,18,28,.78);',

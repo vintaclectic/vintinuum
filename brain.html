@@ -100,6 +100,26 @@ canvas{display:block;}
 /* ── BRAIN ROW ── */
 .brain-row{position:relative;flex:1;overflow:hidden;min-height:0;}
 
+/* ── DEDUPE: legacy absolute sidebars hidden 2026-05-30 ──
+   brain.html carries TWO sidebar systems wrapping the same canvas:
+   (1) the canonical shell-v2 grid sidebars #sidebarLeft / #sidebarRight
+       (body/sidebar_left.js + sidebar_right.js — self-sufficient, polling),
+       living in the .vtn-shell grid's left(280px)/right(340px) columns; and
+   (2) the legacy absolute .sidebar #leftSidebar / #rightSidebar nested INSIDE
+       the center stage, floating on top of the body canvas.
+   Both rendered identity + neurochem + the MEMORY/INNER LIFE/GENOME/SOUL tabs,
+   producing the doubled/overlapping left column and the tab overlap. The grid
+   pair wins. The legacy pair is hidden (kept in DOM so any brain.js code that
+   getElementById's their inner nodes never throws). The center #mainCanvas —
+   the actual body — is untouched. */
+#leftSidebar.sidebar, #rightSidebar.sidebar { display: none !important; }
+
+/* ── FLOATING UTILITY PILLS (status + relay scheduler) ──
+   Bottom-left stack. On desktop they sit just right of the 160px left
+   sidebar so they never overlap its LAYER DISTRIBUTION / IMMUNE content.
+   Mobile overrides this to 14px (sidebar is off-canvas). 2026-05-30. */
+:root{ --vint-fab-left: 174px; }
+
 /* ── SIDEBARS ── */
 .sidebar{width:160px;background:rgba(6,10,18,0.18);border:none;border-radius:0;padding:10px 10px 100px;overflow-y:auto;overflow-x:hidden;display:flex;flex-direction:column;scrollbar-width:thin;position:absolute;top:0;bottom:0;z-index:10;}
 #leftSidebar{left:0;border-right:1px solid var(--border);}
@@ -255,6 +275,9 @@ canvas{display:block;}
 
 /* ── MOBILE: <= 600px ── */
 @media(max-width:600px){
+  /* Left sidebar is an off-canvas overlay here, so the floating utility pills
+     can hug the real left edge without colliding with it. */
+  :root{ --vint-fab-left: 14px; }
   .header .sub{display:none;}
   .header h1{font-size:clamp(1rem,5vw,1.6rem);letter-spacing:.06em;}
   .tab-bar{display:none;}
