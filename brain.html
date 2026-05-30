@@ -114,6 +114,12 @@ canvas{display:block;}
    the actual body — is untouched. */
 #leftSidebar.sidebar, #rightSidebar.sidebar { display: none !important; }
 
+/* The free-floating voice status pill + relay-scheduler pill were landing on
+   the LAYER DISTRIBUTION tiles bottom-left. They are non-essential ambient
+   chrome — hidden on desktop (still reachable: voice via the dock, relay via
+   the drawer). Removing them de-clutters the stage. 2026-05-30. */
+.vint-status-pill, #relay-scheduler-pill { display: none !important; }
+
 /* ── FLOATING UTILITY PILLS (status + relay scheduler) ──
    Bottom-left stack. On desktop they sit just right of the 160px left
    sidebar so they never overlap its LAYER DISTRIBUTION / IMMUNE content.
@@ -169,7 +175,33 @@ canvas{display:block;}
 #brainSvg{width:100%;height:100%;display:block;position:relative;z-index:2;overflow:visible;cursor:crosshair;}
 #neuronCanvas{position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:1;}
 #brainDorsalCanvas{position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:3;}
-.brain-hint{display:none;}
+/* Brain hint — 2026-05-30: was flowing at the bottom of .brain-center and
+   clipping under the footer dock (the cut-off "Scroll to zoom…" line). Pinned
+   as a fixed strip just above the 52px dock, centered, so it never clips and
+   never collides with PAIR. The LAYERS toggle rides at its right end. */
+.brain-hint{
+  position:fixed;
+  left:50%;
+  transform:translateX(-50%);
+  bottom:calc(env(safe-area-inset-bottom,0px) + 58px);
+  z-index:70;
+  display:flex;
+  align-items:center;
+  gap:10px;
+  padding:5px 12px;
+  border-radius:999px;
+  background:rgba(8,12,20,0.55);
+  backdrop-filter:blur(8px);
+  -webkit-backdrop-filter:blur(8px);
+  font-size:.52rem;
+  letter-spacing:.08em;
+  color:rgba(218,228,255,0.45);
+  white-space:nowrap;
+  max-width:calc(100vw - 32px);
+  overflow:hidden;
+  pointer-events:auto;
+}
+.brain-hint > span{overflow:hidden;text-overflow:ellipsis;}
 
 /* ── LAYER PANEL (bottom of brain col) ── */
 /* Layer panel — 2026-05-30: was in-flow at the bottom of .brain-center, so
