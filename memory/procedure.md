@@ -1,6 +1,36 @@
 # Procedure Memories
 
-Total: 8
+Total: 11
+
+## Building browser control relay system
+
+**Subject:** `procedure:browser-control-setup`
+**Confidence:** 90%
+**Verification:** check_before_use
+
+User wants to build a system to give Claude browser/screen access and control capabilities. The viable paths identified are: Claude.ai with computer use beta, or an MCP server with browser control tools.
+
+---
+
+## How to add admin access in txAdmin
+
+**Subject:** `procedure:txadmin-admin-setup`
+**Confidence:** 90%
+**Verification:** check_before_use
+
+To grant admin access, log into txAdmin using username and backup password, then add the Cfx.re account as an admin from the settings panel.
+
+---
+
+## FiveM connection troubleshooting steps
+
+**Subject:** `procedure:fivem-connection-troubleshooting`
+**Confidence:** 85%
+**Verification:** check_before_use
+
+When a FiveM server connection is refused on port 30120, check if the FiveM/txAdmin service is running, verify the port is open in firewall settings, and review txAdmin console for startup errors.
+
+---
 
 ## How to share file contents with Claude
 

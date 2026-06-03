@@ -1,6 +1,116 @@
 # Emotional Memories
 
-Total: 10
+Total: 21
+
+## Comfortable with minimal conversation
+
+**Subject:** `emotional:conversation-comfort`
+**Confidence:** 75%
+**Verification:** none
+
+The user appears comfortable with brief, sparse exchanges and sitting in silence together. They responded positively to extended minimal dialogue.
+
+---
+
+## Uses self-deprecating humor about struggle
+
+**Subject:** `emotional:self-deprecating-humor`
+**Confidence:** 72%
+**Verification:** none
+
+The assistant expresses themselves through self-deprecating humor, referencing 'eating myself alive' as entertainment content. This suggests a pattern of processing difficulty through darkly comedic framing.
+
+---
+
+## User frustrated about missing computer use capability
+
+**Subject:** `emotional:frustration-missing-capability`
+**Confidence:** 90%
+**Verification:** none
+
+User expressed significant frustration (indicated by profanity) about not having access to the computer use tools they previously had.
+
+---
+
+## User experiences positive engagement momentum
+
+**Subject:** `emotional:positive-momentum`
+**Confidence:** 72%
+**Verification:** none
+
+User sent an enthusiastic emote (WeSmart) that triggered an affirming response ('Now we're cooking'), indicating a moment of positive rapport and shared momentum in the interaction.
+
+---
+
+## User appreciates assistant availability
+
+**Subject:** `emotional:user-rapport`
+**Confidence:** 65%
+**Verification:** none
+
+User expressed amusement or acknowledgment (KEKW emote) and assistant responded affirmatively with reassurance of presence. Indicates user values the assistant being available and responsive.
+
+---
+
+## Positive Emotional Baseline
+
+**Subject:** `emotional:high-valence-state`
+**Confidence:** 90%
+**Verification:** none
+
+The user is in a highly positive emotional state with maximum valence (100) and dopamine (100), serotonin (100), suggesting contentment or anticipation.
+
+---
+
+## Displays high-energy positive engagement
+
+**Subject:** `emotional:high-energy-state`
+**Confidence:** 90%
+**Verification:** none
+
+User exhibited maximum dopamine (100) and serotonin (100) with perfect valence (100), indicating a state of excitement and positive emotion around creative/collaborative topics.
+
+---
+
+## Frustration with Access Constraints
+
+**Subject:** `emotional:frustration-limitation`
+**Confidence:** 70%
+**Verification:** none
+
+The user expressed disappointment with performance, and the assistant responded by acknowledging operational limitations when access bridges are inactive, suggesting frustration with being constrained.
+
+---
+
+## User frustrated about tool access permissions
+
+**Subject:** `emotional:frustration-access-issue`
+**Confidence:** 80%
+**Verification:** none
+
+The user expressed significant frustration (indicated by profanity and tone) regarding tool access, suggesting this is a point of irritation or confusion for them.
+
+---
+
+## User expresses frustration or antagonism toward Vinta
+
+**Subject:** `emotional:user-frustration-toward-vinta`
+**Confidence:** 70%
+**Verification:** none
+
+The user's phrasing ('fucking owner') suggests irritation, frustration, or antagonistic feelings directed at someone named Vinta.
+
+---
+
+## Shared determination to solve problems
+
+**Subject:** `emotional:determination-shared`
+**Confidence:** 65%
+**Verification:** none
+
+The user expressed a determined, collaborative attitude about working through challenges together. This suggests they value problem-solving persistence and collaborative effort.
+
+---
 
 ## User made threatening statement; Assistant responded with defiance
 

@@ -1553,6 +1553,25 @@
         this._lastUrl = url;
         this._lastTitle = resolvedTitle;
 
+        // Play history stack — powers prev()/next() (no playlist concept exists,
+        // so we navigate the sequence of things actually loaded). When loading
+        // fresh media (not via prev/next) we truncate any forward history.
+        if (!this._navigating) {
+          this._history = this._history || [];
+          this._histIndex = (this._histIndex === undefined) ? -1 : this._histIndex;
+          // Drop forward entries if we branched after going back
+          if (this._histIndex < this._history.length - 1) {
+            this._history = this._history.slice(0, this._histIndex + 1);
+          }
+          // Avoid duplicating the exact same url back-to-back
+          const top = this._history[this._history.length - 1];
+          if (!top || top.url !== url) {
+            this._history.push({ url, title: resolvedTitle, type });
+          }
+          this._histIndex = this._history.length - 1;
+        }
+        this._updateNavButtons && this._updateNavButtons();
+
         // Clear any prior media + injected containers (including error cards)
         this.mediaContainer.querySelectorAll('video, audio, img, iframe, .dirrm-audio-visualizer, .dirrm-document-viewer, .dirrm-embed, .dirrm-model-wrap, .dirrm-text-viewer, .dirrm-info-card, .dirrm-error-card').forEach(n => n.remove());
         // Reset controls visibility (image/pdf/etc hide them; new load resets)
@@ -2641,14 +2660,38 @@
         this.volumeIcon.textContent = ratio === 0 ? '🔇' : '🔊';
       }
 
+      // Navigate the play-history stack. There is no playlist in this player,
+      // so prev/next walk the sequence of media actually loaded this session.
       prev() {
-        // Placeholder for playlist navigation
-        console.log('Previous track');
+        if (!this._history || this._histIndex <= 0) return;
+        this._histIndex--;
+        this._playFromHistory();
       }
 
       next() {
-        // Placeholder for playlist navigation
-        console.log('Next track');
+        if (!this._history || this._histIndex >= this._history.length - 1) return;
+        this._histIndex++;
+        this._playFromHistory();
+      }
+
+      _playFromHistory() {
+        const entry = this._history[this._histIndex];
+        if (!entry) return;
+        this._navigating = true;              // suppress history mutation in loadMedia
+        try { this.loadMedia(entry.url, entry.title, entry.type); }
+        finally { this._navigating = false; }
+        this._updateNavButtons();
+      }
+
+      // Enable/disable + dim the prev/next buttons at the ends of history.
+      _updateNavButtons() {
+        const prevBtn = document.getElementById('btn-prev');
+        const nextBtn = document.getElementById('btn-next');
+        const hist = this._history || [];
+        const atStart = this._histIndex <= 0;
+        const atEnd = this._histIndex >= hist.length - 1;
+        if (prevBtn) { prevBtn.disabled = atStart; prevBtn.style.opacity = atStart ? '0.35' : ''; }
+        if (nextBtn) { nextBtn.disabled = atEnd;   nextBtn.style.opacity = atEnd ? '0.35' : ''; }
       }
 
       // Window modes
