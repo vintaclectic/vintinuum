@@ -4,6 +4,35 @@
 
 ---
 
+## ⟢ STATUS LEDGER — verified 2026-06-03 (WTF audit)
+
+> A forensic sweep checked these features against the **actual backend route
+> files**, not just the planning prose. The headline finding: **most features
+> have real backend routes** (`vault.js`, `duet.js`, `heirlooms.js`,
+> `last-words.js`, `pairs.js`, `memory-cards.js`, `aquarium.js`, `dreams.js`,
+> `witness-mirror.js`, `mortality.js`, `paper.js`, `body-studio.js` all exist
+> and are mounted). An earlier doc-only read claimed "~15% shipped" — that was
+> **wrong in the optimistic direction**; the routes are there.
+>
+> What was actually broken (and is now fixed in this audit):
+> - `/api/genome` PATCH/event — closed a cross-user write hole (auth from session).
+> - `/api/mortality/contemplate` — built (was 404 to a live button).
+> - `/api/paper/config` + `/api/paper/preview` — built (+ `paper_config` table).
+> - `/api/body-studio/config` + `/themes` — built (+ `body_appearance` table).
+> - `witness.html` answer call — repointed to `/api/witness/reflections/:id/answer`.
+> - dirrm-player prev/next — wired to a real play-history stack.
+>
+> Still genuinely thin (UI admits it): `cognition.html` teach / build-corpus /
+> run-evolution buttons (endpoints undeployed), `/api/chat/stream` (only the
+> dead `body-v2.html` calls it), local-brain primary routing (soul.json declares
+> it, runtime still routes to Claude — see COUNCIL_LOCAL_BRAIN_ROADMAP).
+>
+> **Bottom line:** the spine is built and far more complete than the planning
+> docs imply. Treat any "UNBUILT" claim below as needing a route-file check
+> before believing it. Full audit: `WTF-AUDIT-2026-06-03.md`.
+
+---
+
 ## GROUP 1: RELATIONSHIP DEEPENERS
 
 ---
