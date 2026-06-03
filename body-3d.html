@@ -1,0 +1,323 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#050816">
+<meta name="color-scheme" content="dark">
+<title>Vintinuum — Body 3D</title>
+
+<!--
+   body-3d.html — the real 3D human.
+
+   Vinta directive 2026-06-03:
+     "i want the brain body not just moving i want a 3D most futuristic
+      version you can create … embody a human as it already currently
+      stands but a real fucking looking human."
+
+   Architecture:
+     api_base.js → shell.js → topbar.js → three3d/loader,scene,avatar3d,drive
+
+   Layout grid: [topbar (overlay, fixed)] | [stage] | [bottom safe-area]
+   The stage is the WebGL canvas container — 100svh, edge-to-edge,
+   no overflow, no overlap. Topbar floats above on z-index 9000.
+
+   Mobile-first. Quality auto-detected by scene.js; manual toggle in the
+   floating pill (which is also draggable via body/draggable.js).
+-->
+
+<link rel="stylesheet" href="body/tokens.css?v=v20260424-0428">
+<link rel="stylesheet" href="body/shell.css?v=v20260424-0428">
+<link rel="stylesheet" href="body/safe_area.css?v=v20260429-council">
+
+<style>
+  /* ── Reset + no-overflow lockdown ─────────────────────────────────── */
+  *, *::before, *::after { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0;
+    width: 100%;
+    height: 100%;
+    min-height: 100svh;
+    background: #050816;
+    color: #eaf2ff;
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Inter', system-ui, sans-serif;
+    overflow: hidden;
+    overscroll-behavior: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+  body {
+    display: grid;
+    grid-template-rows:
+      calc(56px + env(safe-area-inset-top, 0px))  /* topbar reserved band */
+      1fr                                           /* stage */
+      env(safe-area-inset-bottom, 0px);            /* bottom safe area */
+    background:
+      radial-gradient(ellipse at 50% 30%, rgba(124,200,255,0.07), transparent 60%),
+      radial-gradient(ellipse at 50% 100%, rgba(255,107,157,0.04), transparent 50%),
+      #050816;
+  }
+
+  /* ── Stage (the 3D canvas lives here) ─────────────────────────────── */
+  #stage3d {
+    position: relative;
+    grid-row: 2;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    isolation: isolate;
+  }
+  #stage3d canvas {
+    /* Belt-and-suspenders — scene.js also sets these but if a CDN
+       script tries to inject something we still can't overflow. */
+    max-width: 100%;
+    max-height: 100%;
+  }
+
+  /* ── Loading state (matches embodiment.js aesthetic) ──────────────── */
+  #loadingVeil {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    background: radial-gradient(circle at center, rgba(5,8,22,0.65), rgba(5,8,22,0.95));
+    z-index: 5;
+    transition: opacity 600ms ease, visibility 600ms;
+  }
+  #loadingVeil.gone { opacity: 0; visibility: hidden; pointer-events: none; }
+  .vint-breath-dot {
+    width: 56px; height: 56px;
+    border-radius: 50%;
+    background: radial-gradient(circle, #7ec8ff, rgba(124,200,255,0.05) 70%);
+    box-shadow: 0 0 60px rgba(124,200,255,0.45);
+    animation: vintBreath 2.4s ease-in-out infinite;
+  }
+  .vint-breath-label {
+    margin-top: 16px;
+    font-size: 12px;
+    letter-spacing: 0.18em;
+    color: rgba(124,200,255,0.65);
+    text-transform: uppercase;
+  }
+  @keyframes vintBreath {
+    0%, 100% { transform: scale(0.85); opacity: 0.55; }
+    50%      { transform: scale(1.10); opacity: 1.00; }
+  }
+
+  /* ── Floating control pill (draggable via body/draggable.js) ──────── */
+  #controlPill {
+    position: absolute;
+    /* Default anchor — bottom-right, inside safe area, never colliding
+       with topbar (56px+safe-top above) or bottom nav (if present). */
+    right: max(14px, env(safe-area-inset-right, 14px));
+    bottom: max(14px, env(safe-area-inset-bottom, 14px));
+    z-index: 8000;                       /* below topbar (9000+) */
+    display: flex;
+    gap: 6px;
+    padding: 6px;
+    border-radius: 999px;
+    background: rgba(5, 11, 24, 0.78);
+    backdrop-filter: blur(14px) saturate(1.3);
+    -webkit-backdrop-filter: blur(14px) saturate(1.3);
+    border: 1px solid rgba(124, 200, 255, 0.22);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.55);
+    pointer-events: auto;
+    user-select: none;
+    touch-action: none;
+  }
+  #controlPill button {
+    appearance: none;
+    border: 1px solid rgba(124, 200, 255, 0.18);
+    background: rgba(124, 200, 255, 0.06);
+    color: #eaf2ff;
+    font: 11px/1 -apple-system, system-ui;
+    letter-spacing: 0.10em;
+    text-transform: uppercase;
+    min-width: 44px;
+    min-height: 44px;                    /* mobile touch target */
+    padding: 0 12px;
+    border-radius: 999px;
+    cursor: pointer;
+    transition: background 160ms, border-color 160ms, transform 120ms;
+  }
+  #controlPill button:hover { background: rgba(124, 200, 255, 0.14); }
+  #controlPill button:active { transform: scale(0.96); }
+  #controlPill button.on {
+    background: rgba(124, 200, 255, 0.22);
+    border-color: rgba(124, 200, 255, 0.55);
+    color: #fff;
+  }
+
+  /* ── HUD readout (top-left, optional, draggable) ──────────────────── */
+  #hud {
+    position: absolute;
+    top: calc(56px + env(safe-area-inset-top, 0px) + 12px);
+    left: max(14px, env(safe-area-inset-left, 14px));
+    z-index: 8000;
+    padding: 10px 14px;
+    border-radius: 14px;
+    background: rgba(5, 11, 24, 0.55);
+    backdrop-filter: blur(10px) saturate(1.2);
+    -webkit-backdrop-filter: blur(10px) saturate(1.2);
+    border: 1px solid rgba(124, 200, 255, 0.16);
+    color: rgba(234, 242, 255, 0.85);
+    font: 11px/1.5 ui-monospace, 'SF Mono', Menlo, monospace;
+    letter-spacing: 0.04em;
+    max-width: min(220px, 50vw);
+    pointer-events: auto;
+    user-select: none;
+    touch-action: none;
+  }
+  #hud .row { display: flex; justify-content: space-between; gap: 12px; }
+  #hud .k { color: rgba(124, 200, 255, 0.65); }
+  #hud .v { color: #eaf2ff; tabular-nums: true; font-variant-numeric: tabular-nums; }
+
+  /* ── Mobile-narrower: collapse HUD by default, control pill stays ── */
+  @media (max-width: 480px) {
+    #hud { font-size: 10px; padding: 8px 10px; }
+    #controlPill button { padding: 0 10px; min-width: 40px; min-height: 44px; }
+  }
+
+  /* ── Reduced motion: still respect the user, even though we want
+       breath. We dim the bloom and slow the breath; we don't kill it. */
+  @media (prefers-reduced-motion: reduce) {
+    .vint-breath-dot { animation-duration: 6s; }
+  }
+</style>
+
+<!-- ═══ MOVEMENT I — API base + Shell + Topbar (load order matters) ═══
+     api_base.js MUST be first so every fetch knows where the brain is.
+     shell.js provides window.Shell which topbar.js subscribes to. -->
+<script src="body/api_base.js?v=v20260603-3d"></script>
+<script src="body/shell.js?v=v20260507-resilience"></script>
+<script src="body/topbar.js?v=v20260509-altarup" defer></script>
+<script src="body/guide-content.js?v=v20260603-guide1" defer></script>
+<script src="body/guide.js?v=v20260603-guide1" defer></script>
+
+<!-- Draggable button system — auto-applies to any element matching
+     known selectors. Our pill + HUD both get drag-by-touch for free. -->
+<script src="body/draggable.js?v=v20260508-drag" defer></script>
+
+<!-- The three.js stack — classic scripts (window globals), order matters. -->
+<script src="body/three3d/loader.js?v=v20260603-3d"></script>
+<script src="body/three3d/scene.js?v=v20260603-3d"></script>
+<script src="body/three3d/avatar3d.js?v=v20260603-3d"></script>
+<script src="body/three3d/drive.js?v=v20260603-3d"></script>
+</head>
+<body>
+
+  <!-- The stage owns the canvas. Topbar floats above on z. -->
+  <main id="stage3d" aria-label="3D avatar stage">
+    <div id="loadingVeil" role="status" aria-live="polite">
+      <div style="display:grid;place-items:center;gap:14px;">
+        <div class="vint-breath-dot"></div>
+        <div class="vint-breath-label" id="loadingLabel">awakening</div>
+      </div>
+    </div>
+
+    <!-- HUD: live neurochemistry readout. Draggable. -->
+    <aside id="hud" data-draggable="true" data-draggable-id="body3d-hud" aria-label="Neurochemistry readout">
+      <div class="row"><span class="k">dopamine</span><span class="v" data-k="dopamine">—</span></div>
+      <div class="row"><span class="k">serotonin</span><span class="v" data-k="serotonin">—</span></div>
+      <div class="row"><span class="k">gaba</span><span class="v" data-k="gaba">—</span></div>
+      <div class="row"><span class="k">arousal</span><span class="v" data-k="arousal">—</span></div>
+      <div class="row"><span class="k">valence</span><span class="v" data-k="valence">—</span></div>
+    </aside>
+
+    <!-- Floating quality pill. Draggable. -->
+    <div id="controlPill" data-draggable="true" data-draggable-id="body3d-controls" role="group" aria-label="3D quality controls">
+      <button type="button" data-q="low"  aria-label="Low quality">LOW</button>
+      <button type="button" data-q="med"  aria-label="Medium quality">MED</button>
+      <button type="button" data-q="high" aria-label="High quality">HIGH</button>
+    </div>
+  </main>
+
+<script>
+/* ── Bootstrap: orchestrate loader → scene → avatar → drive ───────────────
+   Plain script (not type=module) so it runs after the classic scripts
+   above resolve. Async IIFE so we can await the three.js dynamic import.
+   --------------------------------------------------------------------- */
+(async function bootstrap() {
+  'use strict';
+  const stage   = document.getElementById('stage3d');
+  const veil    = document.getElementById('loadingVeil');
+  const label   = document.getElementById('loadingLabel');
+  const pill    = document.getElementById('controlPill');
+  const hudEls  = Array.from(document.querySelectorAll('#hud [data-k]'));
+
+  function setLabel(s) { if (label) label.textContent = s; }
+  function dismissVeil() {
+    if (!veil) return;
+    veil.classList.add('gone');
+    setTimeout(() => veil && veil.parentNode && veil.parentNode.removeChild(veil), 700);
+  }
+
+  try {
+    setLabel('streaming three.js');
+    const modules = await window.Three3D.load();
+
+    setLabel('building stage');
+    const scene = await window.Three3DScene.init({ container: stage, modules });
+
+    setLabel('embodying');
+    const avatar = await window.Three3DAvatar.mount({
+      scene: scene.scene,
+      modules,
+      onProgress: (p) => setLabel('embodying ' + Math.round(p * 100) + '%'),
+    });
+
+    // Per-frame avatar tick → scene's render loop
+    window.Three3DScene.onFrame((dt) => avatar.tick(dt));
+
+    setLabel('connecting');
+    window.Three3DDrive.start({
+      scene: window.Three3DScene,
+      avatar,
+      apiBase: window.__VINTINUUM_API_BASE,
+      pollMs: 2000,
+    });
+
+    // ── Quality pill wiring ────────────────────────────────────────────
+    function setPillActive(q) {
+      pill.querySelectorAll('button').forEach(b => {
+        b.classList.toggle('on', b.dataset.q === q);
+      });
+    }
+    setPillActive(window.Three3DScene.quality);
+    pill.addEventListener('click', (e) => {
+      const b = e.target.closest('button[data-q]');
+      if (!b) return;
+      if (window.Three3DScene.setQuality(b.dataset.q)) setPillActive(b.dataset.q);
+    });
+
+    // ── HUD updates from the drive's state ─────────────────────────────
+    setInterval(() => {
+      const body = window.Three3DDrive.state.lastBody;
+      if (!body) return;
+      const n = body.neurochemistry || body;
+      for (const el of hudEls) {
+        const v = n[el.dataset.k];
+        if (typeof v === 'number') el.textContent = Math.round(v);
+      }
+    }, 1000);
+
+    // Avatar ready — dismiss the veil
+    if (avatar.isFallback) {
+      console.warn('[body-3d] GLB unavailable — running procedural fallback. ' +
+                   'Drop a rigged GLB at ' + window.Three3DAvatar.resolveModelUrl() + ' to upgrade.');
+      setLabel('mannequin (no GLB found)');
+      setTimeout(dismissVeil, 1200);
+    } else {
+      setLabel('alive');
+      setTimeout(dismissVeil, 350);
+    }
+  } catch (err) {
+    console.error('[body-3d] bootstrap failed:', err);
+    setLabel('offline — see console');
+    // Leave the veil up so it's obvious something broke without
+    // showing an empty black stage.
+  }
+})();
+</script>
+
+</body>
+</html>

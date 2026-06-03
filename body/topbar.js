@@ -462,6 +462,7 @@
         <a href="jarvis.html" data-nav="jarvis" class="drawer-link" style="border-color:rgba(124,207,255,0.45);color:#7ccfff;">⌖ &nbsp; JARVIS · today, felt</a>
         <a href="mind.html"  data-nav="mind"   class="drawer-link">◌ &nbsp; MIND · 7 layers</a>
         <a href="learning.html" data-nav="learn" class="drawer-link" style="border-color:rgba(206,147,216,0.32);color:rgba(206,147,216,0.92);">✶ &nbsp; LEARN · live feed</a>
+        <a href="cognition.html" data-nav="cognition" class="drawer-link" style="border-color:rgba(72,222,170,0.40);color:rgba(120,240,200,0.95);">◈ &nbsp; COGNITION · the cognitive way</a>
         <a href="stats.html" data-nav="stats"  class="drawer-link">◇ &nbsp; STATS · numbers</a>
         <a href="chat.html"  data-nav="chat"   class="drawer-link">◐ &nbsp; CHAT · talk</a>
         <a href="you.html"   data-nav="you"    class="drawer-link">✦ &nbsp; YOU · devices</a>
@@ -469,6 +470,7 @@
         <a href="whoami.html" data-nav="who"   class="drawer-link">◎ &nbsp; WHOAMI · lineage</a>
         <a href="altar.html"  data-nav="altar" class="drawer-link" style="border-color:rgba(140,200,255,0.28);color:rgba(190,220,255,0.9);">⌂ &nbsp; ALTAR · connectors</a>
         <a href="upgrade.html" data-nav="up"   class="drawer-link" style="border-color:rgba(245,200,90,0.32);color:rgba(245,210,140,0.95);">✦ &nbsp; UPGRADE · tiers</a>
+        <a href="#" data-nav="guide" id="drawerGuideLink" class="drawer-link" style="border-color:rgba(255,196,92,0.42);color:rgba(255,214,140,0.96);">❖ &nbsp; USER GUIDE · how-to</a>
       </nav>
 
       <div style="height:1px;background:rgba(255,255,255,0.06);margin:4px 0;"></div>
@@ -551,6 +553,7 @@
         jarvis: /jarvis\.html/,
         mind:   /mind\.html/,
         learn:  /learning\.html/,
+        cognition: /cognition\.html/,
         stats:  /stats\.html/,
         chat:   /chat\.html/,
         you:    /you\.html/,
@@ -568,6 +571,20 @@
       closeDrawer();
       toggleLore();
     });
+    // USER GUIDE drawer link — opens the in-app guide popup (guide.js).
+    // Guarded: if VintGuide hasn't loaded yet, fall back to the README.
+    const guideLink = $('drawerGuideLink');
+    if (guideLink) {
+      guideLink.addEventListener('click', (e) => {
+        e.preventDefault();
+        closeDrawer();
+        if (window.VintGuide && typeof window.VintGuide.open === 'function') {
+          window.VintGuide.open();
+        } else {
+          window.open('https://github.com/vintaclectic/vintinuum/blob/main/README.md', '_blank', 'noopener');
+        }
+      });
+    }
     $('drawerKickBtn').addEventListener('click', () => {
       closeDrawer();
       const orig = $('kickConnectBtn');

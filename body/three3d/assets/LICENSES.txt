@@ -1,0 +1,10 @@
+ASSET PROVENANCE & LICENSES (FRUGAL-MAX, 2026-06-03)
+
+riggedfigure-cc0.glb  CC0 1.0 (public domain) Khronos glTF-Sample-Assets. NO attribution required. NO face morphs.
+xbot.glb              Mixamo "X Bot" via threejs.org examples. Adobe Mixamo license: free use, redistribution of the rig itself is gray-area. Has 7 anims, 1 skin, NO face morphs. Treat as DEV/PLACEHOLDER only.
+cesiumman.glb         CC-BY 4.0 (Cesium/AGI) glTF-Sample-Assets. MUST credit "Cesium" if shipped. NO face morphs.
+
+PRIMARY PICK FOR PRODUCTION: Ready Player Me (NOT downloadable here - host DNS-blocked in sandbox).
+  URL: https://models.readyplayer.me/<avatarId>.glb?morphTargets=ARKit,Oculus%20Visemes&useDracoMeshCompression=true&textureSizeLimit=1024&pose=A
+  License: free for registered developers (commercial OK). Anonymous website avatars are CC BY-NC-SA only.
+  Has ARKit blendshapes (face) + standard humanoid rig. ~2-5MB w/ draco. This is the real human with face morphs.

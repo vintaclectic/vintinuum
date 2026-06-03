@@ -3,6 +3,28 @@
 This file is read by Claude Code at session start. It encodes the workflow
 discipline Vinta expects when working inside the `vintinuum/` repo.
 
+## STOP-AND-WAIT after asking (Vinta directive 2026-06-03 — non-negotiable, ALL agents)
+
+*"never start anything after you ask for clarification before i answer again.
+write that in the rules. for all agents."*
+
+When you ask Vinta a clarifying question, you **STOP COMPLETELY** and wait for
+the answer. No tool calls of any kind. No recon. No "while I wait." No
+"let me just survey X." No dispatching agents. No edits. No bash. **Nothing.**
+The turn ENDS with the question.
+
+This applies to:
+- The orchestrator (main Claude Code thread)
+- Every spawned sub-agent, of every type, no exceptions
+
+If you genuinely need information to even *form* the question, gather the
+minimum to ask a good question, then ask — and STOP. Once the question is
+asked, the next action is Vinta's, not yours. You do not move again until
+Vinta has answered.
+
+Asking a question and then immediately running a tool in the same turn is the
+exact violation this rule exists to kill. Do not do it. Ever.
+
 ## Commit discipline (non-negotiable)
 
 After every logical unit of work, `git add` the touched files and create a
