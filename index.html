@@ -58,6 +58,8 @@
             min-height: 100vh;
             min-height: 100svh;
             overflow-x: hidden;
+            overscroll-behavior-y: contain;
+            -webkit-text-size-adjust: 100%;
             -webkit-font-smoothing: antialiased;
         }
 
@@ -358,6 +360,20 @@
             min-height: 180px;
         }
 
+        /* On touch devices: no compositor-layer 3D, no will-change,
+           no transition on transform — the card stays put while the
+           page scrolls. Tap = navigate, drag = scroll. Nothing fights. */
+        @media (hover: none), (pointer: coarse) {
+            .card {
+                will-change: auto;
+                transform: none !important;
+                transform-style: flat;
+                transition: border-color 0.3s ease, box-shadow 0.3s ease;
+                -webkit-tap-highlight-color: transparent;
+            }
+            .card::before { display: none; }
+        }
+
         /* Alive shimmer layer */
         .card::before {
             content: '';
@@ -374,16 +390,25 @@
             pointer-events: none;
         }
 
-        .card:hover::before {
-            opacity: 1;
-        }
+        /* Hover/tilt effects ONLY on real pointer devices.
+           On touch, :hover fires-and-sticks on tap, dragging cards
+           up/around under the finger and fighting the scroll. Gate it. */
+        @media (hover: hover) and (pointer: fine) {
+            .card:hover::before {
+                opacity: 1;
+            }
 
-        .card:hover {
-            transform: translateY(-4px) scale(1.01);
-            border-color: rgba(166, 124, 255, 0.2);
-            box-shadow:
-                0 8px 32px rgba(0, 0, 0, 0.4),
-                0 0 0 1px rgba(166, 124, 255, 0.1);
+            .card:hover {
+                transform: translateY(-4px) scale(1.01);
+                border-color: rgba(166, 124, 255, 0.2);
+                box-shadow:
+                    0 8px 32px rgba(0, 0, 0, 0.4),
+                    0 0 0 1px rgba(166, 124, 255, 0.1);
+            }
+
+            .card:hover::after {
+                opacity: 0.6;
+            }
         }
 
         /* Card accent stripe top */
@@ -397,10 +422,6 @@
             background: linear-gradient(90deg, transparent, var(--card-accent, var(--vint-accent)), transparent);
             opacity: 0;
             transition: opacity 0.4s ease;
-        }
-
-        .card:hover::after {
-            opacity: 0.6;
         }
 
         /* Hero card sizing */
