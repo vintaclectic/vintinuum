@@ -840,7 +840,7 @@ async function submitAnswer(id) {
   submitBtn.textContent = 'Giving…';
 
   try {
-    await apiFetch(`/api/witness/answer/${id}`, {
+    await apiFetch(`/api/witness/reflections/${id}/answer`, {
       method: 'POST',
       body: JSON.stringify({ answer_text: text })
     });
