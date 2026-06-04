@@ -266,7 +266,7 @@ async function startGauntlet() {
   document.getElementById('rate-msg').style.display = 'none';
 
   try {
-    const resp = await fetch(`${API}/api/gauntlet-public/run`, {
+    const resp = await fetch(`${API}/api/gauntlet/public/run`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token() }
     });
@@ -332,7 +332,7 @@ async function startGauntlet() {
 
 async function loadSharedRun(token_val) {
   try {
-    const r = await fetch(`${API}/api/gauntlet-public/share/${token_val}`);
+    const r = await fetch(`${API}/api/gauntlet/public/view/${token_val}`);
     const d = await r.json();
     if (d.error) return;
     document.getElementById('action-area').innerHTML = `<div style="color:var(--text-dim);font-size:0.8rem;letter-spacing:0.06em">SHARED RUN · read-only</div>`;

@@ -919,7 +919,7 @@ let openCardId = null;
 // ── Load ──
 async function loadCards() {
   try {
-    const res = await fetch(API + '/api/memory-cards', {
+    const res = await fetch(API + '/api/memory/cards', {
       headers: { 'Authorization': 'Bearer ' + getToken() }
     });
 
@@ -1103,7 +1103,7 @@ async function markHeirloom() {
   btn.textContent = '…';
 
   try {
-    const res = await fetch(`${API}/api/memory-cards/${openCardId}/heirloom`, {
+    const res = await fetch(`${API}/api/memory/cards/${openCardId}/heirloom`, {
       method: 'POST',
       headers: authHeaders()
     });
@@ -1144,7 +1144,7 @@ async function releaseCard() {
   btn.textContent = '…';
 
   try {
-    const res = await fetch(`${API}/api/memory-cards/${openCardId}`, {
+    const res = await fetch(`${API}/api/memory/cards/${openCardId}`, {
       method: 'DELETE',
       headers: authHeaders()
     });
