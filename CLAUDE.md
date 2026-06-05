@@ -388,3 +388,72 @@ Do NOT `cp -r` the folder — it will choke on `.git` object names under NTFS.
 - `~/vintinuum-api/soul.json` (read-only identity anchor)
 - The crystallization at the bottom of `~/.claude/agents/vintinuum.md`
   — written by `daily-evolution.js` cron at 3:00 AM
+
+## DirRM Player — the universal media surface (Vinta directive 2026-06-05)
+
+**"i want it to become the go to most optimized successfull profitabl
+addicting eye catchy media player of all time and it will as it stands
+currently in dirhaven app so i want it exactly asw it currently is most
+updated in dirhaven app all across and everywhere media is played in
+vintinuum across all its mediums extensions and all"**
+
+### The canonical player
+- Source of truth: `~/vintinuum/dirrm-player.html` (105 KB, version with 5 visualizers + 4 modes + full mediatype coverage)
+- Live URL: `https://vintaclectic.github.io/vintinuum/dirrm-player.html`
+- Modes: `main` (860×520), `mini` (380px), `pip` (corner overlay), `theater` (fullscreen)
+- Visualizers (audio): `bars`, `wave`, `radial`, `mirror`, `particles`
+- Mediatypes: video, audio, image, pdf, ebook, stream (HLS/DASH), 3d-model, document, iframe-embed, text — every type DirHaven's open-directory crawler can encounter.
+
+### The standing order
+**Anywhere in Vintinuum that plays or could play media → route through DirRM.** No `<video>` or `<audio>` tag should appear in any new UI surface. No second player implementation should exist anywhere. The canonical player handles everything.
+
+### The launcher library
+`~/vintinuum/dirrm-launch.js` — UMD library, single function `dirrmLaunch.open({url, title, type, mode, embedIn, autoplay})`. Used by:
+- Browser pages (brain.html, jarvis.html, mobile, pulse)
+- Extension content scripts (when they need to show media)
+- Extension service worker (when context menu fires)
+
+Returns a handle with `load()`, `setMode()`, `play()`, `pause()`, `stop()`, `close()`, `on(event, cb)`.
+
+### Invocation contracts (two paths)
+
+**1. URL params** (extension popup, links, deep links):
+```
+https://vintaclectic.github.io/vintinuum/dirrm-player.html?url=<URL>&title=<TITLE>&type=<TYPE>&mode=<MODE>&autoplay=1
+```
+
+**2. Iframe + postMessage** (in-page embed):
+```js
+iframe.contentWindow.postMessage({action:'load', url, title, type}, '*');
+iframe.contentWindow.postMessage({action:'setMode', mode:'mini'}, '*');
+```
+
+Inbound events from player: `ready`, `playStarted`, `progress`, `mediaEnded`, `modeChanged`, `playerClosed`.
+
+### Already-routed surfaces (do not duplicate)
+- `~/vintinuum/brain.html` → iframe + postMessage
+- `~/vintinuum/jarvis.html` → iframe + postMessage
+- `~/vintinuum-extension/background.js` (context menus) → `cmdPlayInDirRM` → popup window
+- `~/vintinuum-extension/sidepanel/panel.js` (media grab list) → `VINTINUUM_CMD: PLAY_IN_DIRRM`
+
+### Surfaces to add to (todo or in progress)
+- Mobile / PWA surfaces — when built, use `dirrm-launch.js` directly
+- Pulse — when revived
+- Kick orb panel (auto-clip review, viewer-posted links)
+- `/mind.html` memory archive (replay audio/video memories)
+- `/letters.html` (continuity letters with audio attachments) — when built
+- DirHaven leaves browser — when Stage B perceiver lands
+
+### Telemetry (U3 — play history + memory hook)
+Every play event POSTs to `/api/dirrm/play-event` so the brain knows:
+- What was played
+- For how long
+- Whether it was finished or abandoned
+- Optional: an experiential memory is recorded for media watched for ≥30s
+This is what makes DirRM "addicting and long-lasting" — Vintinuum *remembers* what was watched together.
+
+### Future innovations on the player itself
+- Auto-show DirHaven leaves feed when launched without a URL (browse-from-empty-state)
+- Shareable "now playing" cards (memory_cards integration)
+- "Mood-matched" playlists from memory_vectors emotional valence
+- Cross-device handoff via WebSocket (start on phone, continue on desktop)

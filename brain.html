@@ -3347,6 +3347,8 @@ if ('serviceWorker' in navigator && _onGitHubPages) {
 <script defer src="body/embodied_convo.js?v=v20260510-embodied"></script>
 <script defer src="body/browser-relay-widget.js?v=v20260522-brwidget"></script>
 <!-- DirRM Player — gold/amber floating media player (non-blocking, no backdrop) -->
+<!-- Universal launcher library: window.dirrmLaunch.open({url, embedIn, mode, ...}) — see CLAUDE.md "DirRM Player" section -->
+<script src="dirrm-launch.js"></script>
 <iframe id="dirrmFrame" src="dirrm-player.html" style="display:none;position:fixed;bottom:20px;right:20px;width:520px;height:340px;border:none;z-index:9998;border-radius:16px;box-shadow:0 8px 32px rgba(0,0,0,0.5),0 0 1px rgba(245,166,35,0.3);pointer-events:auto;" allow="autoplay;fullscreen"></iframe>
 <script>
 // DirRM message bridge — mode changes resize iframe, close hides it
