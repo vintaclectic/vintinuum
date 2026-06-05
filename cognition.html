@@ -937,7 +937,7 @@ function paintModels(data) {
 function paintCorpus(data) {
   const el = document.getElementById('corpus-stats');
   if (!data || data.__404 || data.__err) {
-    el.innerHTML = '<div class="unavailable">corpus stats unavailable — endpoint not yet deployed</div>';
+    el.innerHTML = '<div class="unavailable">corpus stats unavailable — ' + (data && data.__err ? data.__err : 'brain unreachable') + '</div>';
     return;
   }
   el.innerHTML = '';
@@ -1012,7 +1012,7 @@ function paintEvolution(data) {
     `;
     const note = document.createElement('div');
     note.className = 'unavailable';
-    note.textContent = 'evolution endpoint not yet deployed — runs at 3:00 AM via cron';
+    note.textContent = 'evolution log unavailable — runs nightly at 3:00 AM via cron (sign in to trigger manually)';
     entries.appendChild(note);
     return;
   }
@@ -1134,7 +1134,7 @@ document.getElementById('btn-teach').addEventListener('click', async () => {
   document.getElementById('btn-teach').disabled = false;
   if (data.__404) {
     resp.className = 'teach-response show error';
-    resp.textContent = '/api/learning/teach not yet deployed';
+    resp.textContent = '/api/learning/teach returned 404 — brain may be redeploying';
   } else if (data.__err) {
     resp.className = 'teach-response show error';
     resp.textContent = 'error: ' + data.__err;
@@ -1181,7 +1181,7 @@ document.getElementById('btn-corpus').addEventListener('click', async () => {
   document.getElementById('btn-corpus').disabled = false;
   if (data.__404) {
     resp.className = 'corpus-response show error';
-    resp.textContent = '/api/learning/export-v2 not yet deployed';
+    resp.textContent = '/api/learning/export-v2 returned 404 — brain may be redeploying';
   } else if (data.__err) {
     resp.className = 'corpus-response show error';
     resp.textContent = 'error: ' + data.__err;
@@ -1217,7 +1217,10 @@ document.getElementById('btn-evolve').addEventListener('click', async () => {
   document.getElementById('btn-evolve').disabled = false;
   if (data.__404) {
     resp.className = 'evo-response show error';
-    resp.textContent = '/api/evolution/trigger not yet deployed — evolution runs at 3am';
+    resp.textContent = '/api/evolution/trigger returned 404 — brain may be redeploying';
+  } else if (data.__err && /401|auth/i.test(data.__err)) {
+    resp.className = 'evo-response show error';
+    resp.textContent = 'sign in required — owner-only endpoint';
   } else if (data.__err) {
     resp.className = 'evo-response show error';
     resp.textContent = 'error: ' + data.__err;
