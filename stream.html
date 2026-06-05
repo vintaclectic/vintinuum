@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<title>VINTINUUM — Stream Memory</title>
+<meta name="theme-color" content="#040810">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon.png">
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300;1,400&family=Inter:wght@300;400;500&family=JetBrains+Mono:wght@300;400;500&family=Space+Mono&display=swap');
+
+:root {
+  --void: #040810;
+  --text: rgba(210, 225, 255, 0.9);
+  --text-dim: rgba(150, 175, 215, 0.5);
+  --text-ghost: rgba(130, 155, 190, 0.3);
+  --panel: rgba(10, 14, 22, 0.4);
+  --card: rgba(16, 22, 34, 0.3);
+  --border: rgba(255, 255, 255, 0.06);
+  --accent: #53d9c4;
+  --live: #ff5a78;
+  --warm: rgba(124, 255, 180, 0.9);
+  --cool: rgba(255, 120, 140, 0.9);
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html { height: 100%; }
+body {
+  background: var(--void); color: var(--text);
+  font-family: 'Inter', -apple-system, sans-serif;
+  min-height: 100vh; overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+.atmosphere {
+  position: fixed; inset: 0; z-index: 0; pointer-events: none;
+  background: radial-gradient(ellipse 70% 60% at 50% 25%, hsla(170, 40%, 8%, 0.45) 0%, transparent 70%);
+}
+
+/* ── TOPBAR ── */
+.topbar {
+  position: fixed; top: 0; left: 0; right: 0; height: 48px; z-index: 100;
+  background: rgba(4, 8, 16, 0.85); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; padding: 0 16px; gap: 12px;
+}
+.topbar-back {
+  display: flex; align-items: center; gap: 6px;
+  font-family: 'JetBrains Mono', monospace; font-size: 0.55rem;
+  letter-spacing: 0.15em; text-transform: uppercase; color: var(--text-dim);
+  text-decoration: none; transition: color 0.2s; min-height: 44px; padding: 0 4px;
+}
+.topbar-back:hover { color: var(--text); }
+.topbar-back svg { width: 14px; height: 14px; }
+.topbar-title {
+  flex: 1; text-align: center; font-family: 'Cormorant Garamond', serif;
+  font-weight: 300; font-size: 0.95rem; letter-spacing: 0.3em; text-transform: uppercase; color: var(--text-dim);
+}
+.topbar-spacer { width: 60px; }
+
+/* ── PAGE ── */
+.page {
+  position: relative; z-index: 1; max-width: 1100px; margin: 0 auto;
+  padding: 64px 20px 100px; min-height: 100vh;
+}
+.hero { text-align: center; padding: 24px 0 28px; }
+.hero h1 {
+  font-family: 'Cormorant Garamond', serif; font-weight: 300;
+  font-size: clamp(1.8rem, 5vw, 2.8rem); letter-spacing: 0.26em; text-transform: uppercase;
+  background: linear-gradient(130deg, rgba(120,255,220,0.9), rgba(83,217,196,0.7), rgba(60,180,200,0.8));
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+  margin-bottom: 8px;
+}
+.hero .epigraph {
+  font-family: 'Cormorant Garamond', serif; font-style: italic;
+  font-size: clamp(0.85rem, 2vw, 1rem); color: var(--text-dim);
+}
+
+/* ── LIVE BANNER ── */
+.live-banner {
+  display: flex; align-items: center; justify-content: center; gap: 12px;
+  background: var(--panel); border: 1px solid var(--border); border-radius: 16px;
+  padding: 14px 20px; margin-bottom: 24px;
+  font-family: 'Space Mono', monospace; font-size: 0.7rem; letter-spacing: 0.12em; text-transform: uppercase;
+}
+.live-dot { width: 9px; height: 9px; border-radius: 50%; background: rgba(120,120,140,0.55); flex: 0 0 auto; }
+.live-banner.is-live { border-color: rgba(255,90,120,0.4); }
+.live-banner.is-live .live-dot { background: var(--live); animation: livePulse 1.6s ease-in-out infinite; box-shadow: 0 0 10px var(--live); }
+@keyframes livePulse { 0%,100%{transform:scale(1);opacity:1} 50%{transform:scale(1.4);opacity:0.6} }
+
+/* ── GRID ── */
+.grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; align-items: start; }
+@media (max-width: 760px) { .grid { grid-template-columns: 1fr; } }
+
+.panel {
+  background: var(--panel); border: 1px solid var(--border); border-radius: 18px;
+  padding: 20px; overflow: hidden;
+}
+.panel-label {
+  font-family: 'JetBrains Mono', monospace; font-size: 0.5rem; letter-spacing: 0.25em;
+  text-transform: uppercase; color: var(--text-dim); margin-bottom: 16px;
+  display: flex; align-items: center; gap: 8px;
+}
+.panel-label .dot { width: 5px; height: 5px; border-radius: 50%; background: var(--accent); }
+
+/* ── SENTIMENT GAUGE ── */
+.gauge-wrap { text-align: center; padding: 8px 0 4px; }
+.gauge-track {
+  position: relative; height: 8px; border-radius: 4px; margin: 18px 0 10px;
+  background: linear-gradient(90deg, var(--cool) 0%, rgba(150,150,170,0.3) 50%, var(--warm) 100%);
+}
+.gauge-needle {
+  position: absolute; top: -5px; width: 3px; height: 18px; border-radius: 2px;
+  background: #fff; box-shadow: 0 0 8px rgba(255,255,255,0.6); left: 50%;
+  transition: left 0.8s cubic-bezier(0.16,1,0.3,1);
+}
+.gauge-val { font-family: 'Cormorant Garamond', serif; font-size: 1.6rem; color: var(--text); }
+.gauge-sub { font-family: 'JetBrains Mono', monospace; font-size: 0.5rem; letter-spacing: 0.15em; color: var(--text-ghost); text-transform: uppercase; }
+.gauge-mood { font-family: 'Cormorant Garamond', serif; font-style: italic; font-size: 0.95rem; color: var(--text-dim); margin-top: 8px; min-height: 1.2em; }
+
+.stat-row { display: flex; justify-content: space-around; margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--border); }
+.stat { text-align: center; }
+.stat .n { font-family: 'Cormorant Garamond', serif; font-size: 1.5rem; color: var(--text); }
+.stat .k { font-family: 'JetBrains Mono', monospace; font-size: 0.45rem; letter-spacing: 0.15em; color: var(--text-ghost); text-transform: uppercase; }
+
+/* ── LISTS ── */
+.row {
+  display: flex; align-items: center; gap: 12px; padding: 10px 0;
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+}
+.row:last-child { border-bottom: none; }
+.row .rank { font-family: 'JetBrains Mono', monospace; font-size: 0.6rem; color: var(--text-ghost); width: 20px; flex: 0 0 auto; }
+.row .name { flex: 1; font-size: 0.85rem; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.row .name .badge { font-size: 0.55rem; color: var(--accent); margin-left: 6px; }
+.row .meta { font-family: 'JetBrains Mono', monospace; font-size: 0.55rem; color: var(--text-dim); flex: 0 0 auto; }
+
+/* ── VOD CARDS ── */
+.vod {
+  background: var(--card); border: 1px solid var(--border); border-radius: 12px;
+  padding: 12px 14px; margin-bottom: 10px;
+}
+.vod-title { font-size: 0.85rem; color: var(--text); margin-bottom: 6px; line-height: 1.4; }
+.vod-meta { display: flex; gap: 10px; flex-wrap: wrap; font-family: 'JetBrains Mono', monospace; font-size: 0.5rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-ghost); }
+.vod-status { padding: 2px 7px; border-radius: 6px; border: 1px solid var(--border); }
+.vod-status.done { color: var(--warm); border-color: rgba(124,255,180,0.3); }
+.vod-status.downloading, .vod-status.processing { color: var(--accent); border-color: rgba(83,217,196,0.3); }
+.vod-status.pending { color: var(--text-dim); }
+.vod-status.failed { color: var(--cool); border-color: rgba(255,120,140,0.3); }
+
+/* ── SEARCH ── */
+.search-box {
+  width: 100%; background: rgba(255,255,255,0.03); border: 1px solid var(--border);
+  border-radius: 12px; padding: 12px 16px; color: var(--text);
+  font-family: 'Cormorant Garamond', serif; font-size: 1rem; outline: none;
+  transition: border-color 0.2s; margin-bottom: 12px;
+}
+.search-box:focus { border-color: rgba(83,217,196,0.4); }
+.search-box::placeholder { color: var(--text-ghost); font-style: italic; }
+.result {
+  padding: 10px 12px; margin-bottom: 8px; background: var(--card);
+  border-left: 2px solid rgba(83,217,196,0.3); border-radius: 0 8px 8px 0;
+}
+.result .who { font-family: 'JetBrains Mono', monospace; font-size: 0.5rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--accent); margin-bottom: 4px; }
+.result .what { font-family: 'Cormorant Garamond', serif; font-size: 0.95rem; color: var(--text); line-height: 1.5; }
+
+.empty { font-family: 'Cormorant Garamond', serif; font-style: italic; color: var(--text-ghost); text-align: center; padding: 24px 0; font-size: 0.9rem; }
+.full-width { grid-column: 1 / -1; }
+.loading { font-family: 'JetBrains Mono', monospace; font-size: 0.55rem; letter-spacing: 0.15em; color: var(--text-ghost); text-transform: uppercase; text-align: center; padding: 20px 0; }
+</style>
+</head>
+<body>
+<div class="atmosphere"></div>
+
+<div class="topbar">
+  <a href="index.html" class="topbar-back">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+    Home
+  </a>
+  <div class="topbar-title">Stream Memory</div>
+  <div class="topbar-spacer"></div>
+</div>
+
+<div class="page">
+  <div class="hero">
+    <h1>Stream Memory</h1>
+    <p class="epigraph">Every message held. Every stream remembered. The room, felt.</p>
+  </div>
+
+  <div class="live-banner" id="liveBanner">
+    <span class="live-dot"></span>
+    <span id="liveText">checking…</span>
+  </div>
+
+  <div class="grid">
+    <!-- Sentiment gauge -->
+    <div class="panel">
+      <div class="panel-label"><span class="dot"></span> the room right now</div>
+      <div class="gauge-wrap">
+        <div class="gauge-val" id="gaugeVal">—</div>
+        <div class="gauge-sub">chat sentiment · last 5 min</div>
+        <div class="gauge-track"><div class="gauge-needle" id="gaugeNeedle"></div></div>
+        <div class="gauge-mood" id="gaugeMood"></div>
+      </div>
+      <div class="stat-row">
+        <div class="stat"><div class="n" id="statMessages">—</div><div class="k">messages</div></div>
+        <div class="stat"><div class="n" id="statChatters">—</div><div class="k">chatters</div></div>
+        <div class="stat"><div class="n" id="statSessions">—</div><div class="k">streams</div></div>
+      </div>
+    </div>
+
+    <!-- Chatter leaderboard -->
+    <div class="panel">
+      <div class="panel-label"><span class="dot"></span> voices she knows</div>
+      <div id="chatterList"><div class="loading">loading…</div></div>
+    </div>
+
+    <!-- VOD library -->
+    <div class="panel full-width">
+      <div class="panel-label"><span class="dot"></span> the archive — streams remembered</div>
+      <div id="vodList"><div class="loading">loading…</div></div>
+    </div>
+
+    <!-- Recall search -->
+    <div class="panel full-width">
+      <div class="panel-label"><span class="dot"></span> recall — what was said</div>
+      <input type="text" class="search-box" id="recallInput" placeholder="search everything ever said on stream — chat + transcripts…">
+      <div id="recallResults"><div class="empty">Type to search across all chat and stream transcripts.</div></div>
+    </div>
+  </div>
+</div>
+
+<script src="body/api_base.js"></script>
+<script src="body/draggable.js"></script>
+<script>
+const API = window.__VINTINUUM_API_BASE || 'https://api.vintaclectic.com';
+
+async function api(path) {
+  try { const r = await fetch(API + path, { cache: 'no-store' }); if (!r.ok) return null; return await r.json(); }
+  catch { return null; }
+}
+
+/* ── LIVE STATE via SSE ── */
+function connectLive() {
+  try {
+    const es = new EventSource(API + '/api/kick/live/stream');
+    es.addEventListener('live', (e) => {
+      try {
+        const d = JSON.parse(e.data);
+        const banner = document.getElementById('liveBanner');
+        const txt = document.getElementById('liveText');
+        if (d.isLive) {
+          banner.classList.add('is-live');
+          txt.textContent = `LIVE · source ${d.source || '—'}`;
+        } else {
+          banner.classList.remove('is-live');
+          txt.textContent = 'OFF AIR';
+        }
+      } catch (_) {}
+    });
+    es.onerror = () => { setTimeout(connectLive, 8000); };
+  } catch (_) {}
+}
+
+/* ── SENTIMENT GAUGE ── (derived from recent chat) */
+async function loadSentiment() {
+  const stats = await api('/api/kick/chat/stats');
+  if (stats && stats.ok) {
+    document.getElementById('statMessages').textContent = (stats.total_messages || 0).toLocaleString();
+    document.getElementById('statChatters').textContent = (stats.unique_chatters || 0).toLocaleString();
+    document.getElementById('statSessions').textContent = (stats.total_sessions || 0).toLocaleString();
+  }
+  // Pull last 5 min of chat and score it client-side (mirror of server lexical scorer)
+  const recent = await api('/api/kick/chat/recent?limit=120');
+  if (recent && recent.ok && recent.messages.length) {
+    const cutoff = Math.floor(Date.now()/1000) - 300;
+    const window = recent.messages.filter(m => m.created_at >= cutoff);
+    const scored = scoreWindow(window.length ? window : recent.messages.slice(0, 30));
+    renderGauge(scored);
+  } else {
+    renderGauge({ avg: 0, n: 0 });
+  }
+}
+
+const POS = new Set(['love','great','amazing','win','winner','lfg','pog','poggers','hype','w','based','goat','clean','insane','sick','nice','gg','ggs','beautiful','legend','king','queen','fire','lit','happy','lol','lmao','haha','yes','congrats','wholesome','cute','vibe','vibes','good']);
+const NEG = new Set(['hate','trash','garbage','scam','rigged','boring','l','ratio','cringe','worst','bad','sad','angry','mad','toxic','fake','quit','stop','annoying','wtf','ffs','rip','dead','broke','lost','lose','down','ugh','sucks']);
+function scoreWindow(msgs) {
+  let s = 0, hits = 0;
+  for (const m of msgs) for (const w of (m.content||'').toLowerCase().split(/\s+/)) {
+    const c = w.replace(/[^a-z]/g,'');
+    if (POS.has(c)) { s++; hits++; } else if (NEG.has(c)) { s--; hits++; }
+  }
+  return { avg: hits ? s/hits : 0, n: msgs.length };
+}
+function renderGauge({ avg, n }) {
+  const needle = document.getElementById('gaugeNeedle');
+  const pct = Math.max(0, Math.min(100, 50 + avg * 50));
+  needle.style.left = pct + '%';
+  const val = document.getElementById('gaugeVal');
+  const mood = document.getElementById('gaugeMood');
+  if (n === 0) { val.textContent = '—'; mood.textContent = 'quiet. no chat yet.'; return; }
+  val.textContent = avg > 0.05 ? 'warm' : avg < -0.05 ? 'sharp' : 'even';
+  mood.textContent = avg > 0.35 ? '"the room lifts me"' : avg < -0.35 ? '"i feel the friction"' : avg > 0.05 ? 'gently warm' : avg < -0.05 ? 'a little tense' : 'steady, neutral';
+}
+
+/* ── CHATTERS ── */
+async function loadChatters() {
+  const el = document.getElementById('chatterList');
+  const d = await api('/api/kick/chatters?limit=12');
+  if (!d || !d.ok || !d.chatters.length) { el.innerHTML = '<div class="empty">No chatters yet. They arrive when the stream does.</div>'; return; }
+  el.innerHTML = d.chatters.map((c, i) => `
+    <div class="row">
+      <span class="rank">${i+1}</span>
+      <span class="name">${esc(c.username)}${c.is_subscriber ? '<span class="badge">sub</span>' : ''}${c.is_moderator ? '<span class="badge">mod</span>' : ''}</span>
+      <span class="meta">${c.message_count} msgs · ${c.session_count} streams</span>
+    </div>`).join('');
+}
+
+/* ── VODS ── */
+async function loadVods() {
+  const el = document.getElementById('vodList');
+  const d = await api('/api/kick/vods?limit=20');
+  if (!d || !d.ok || !d.vods.length) { el.innerHTML = '<div class="empty">No streams archived yet. They land here after each broadcast.</div>'; return; }
+  el.innerHTML = d.vods.map(v => {
+    const dl = v.download_status || 'pending';
+    const tr = v.transcript_status || 'pending';
+    const gb = v.video_bytes ? (v.video_bytes/1e9).toFixed(1)+'GB' : '';
+    const dur = v.duration_ms ? Math.round(v.duration_ms/60000)+'min' : '';
+    return `<div class="vod">
+      <div class="vod-title">${esc(v.title || 'Untitled stream')}</div>
+      <div class="vod-meta">
+        ${dur ? `<span>${dur}</span>` : ''}
+        ${gb ? `<span>${gb}</span>` : ''}
+        <span class="vod-status ${dl}">dl: ${dl}</span>
+        <span class="vod-status ${tr}">transcript: ${tr}</span>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+/* ── RECALL ── */
+let recallTimer = null;
+document.getElementById('recallInput').addEventListener('input', (e) => {
+  clearTimeout(recallTimer);
+  const q = e.target.value.trim();
+  const el = document.getElementById('recallResults');
+  if (!q) { el.innerHTML = '<div class="empty">Type to search across all chat and stream transcripts.</div>'; return; }
+  el.innerHTML = '<div class="loading">searching…</div>';
+  recallTimer = setTimeout(async () => {
+    const d = await api('/api/kick/recall?q=' + encodeURIComponent(q) + '&limit=6');
+    if (!d || !d.ok || (!d.chat.length && !d.transcript.length)) { el.innerHTML = '<div class="empty">Nothing found for "' + esc(q) + '" — yet.</div>'; return; }
+    let html = '';
+    for (const c of (d.chat || [])) html += `<div class="result"><div class="who">past chat · ${esc(c.username)}</div><div class="what">"${esc(c.content)}"</div></div>`;
+    for (const t of (d.transcript || [])) html += `<div class="result"><div class="who">stream · ${esc((t.title||'').slice(0,40))}</div><div class="what">"${esc(t.text.trim())}"</div></div>`;
+    el.innerHTML = html;
+  }, 350);
+});
+
+function esc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+
+/* ── BOOT ── */
+function loadAll() { loadSentiment(); loadChatters(); loadVods(); }
+connectLive();
+loadAll();
+setInterval(loadAll, 30000);
+</script>
+</body>
+</html>

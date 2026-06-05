@@ -1097,12 +1097,17 @@
       try { return localStorage.getItem('vint:masterKey') || ''; } catch { return ''; }
     })();
 
-    let data = null;
+    let data = null, ingest = null;
     try {
       const headers = { 'Accept': 'application/json' };
       if (masterKey) headers['X-Master-Key'] = masterKey;
       const r = await fetch(base + '/api/kick/clip/diag', { headers, cache: 'no-store' });
       if (r.ok) data = await r.json();
+      // Also pull VOD/clip ingest status (Phase 2/3) — owner-gated.
+      try {
+        const ri = await fetch(base + '/api/kick/ingest/status', { headers, cache: 'no-store' });
+        if (ri.ok) ingest = await ri.json();
+      } catch (_) {}
     } catch (_) {}
 
     if (data) {
@@ -1110,13 +1115,23 @@
       const cache = data.cache || {};
       const buf = data.buffer || {};
       const relay = data.relay || {};
-      const rowsHtml = [
+      const rows = [
         ['stream', cache.isLive ? 'LIVE' : 'off air', cache.isLive ? 'good' : 'bad'],
         ['source', cache.source || '—', cache.source ? '' : 'bad'],
         ['buffer', buf.buffer_running ? `running · ${buf.buffer_segments || 0} seg` : 'not running', buf.buffer_running ? 'good' : 'bad'],
         ['relay',  relay.connected ? 'connected' : 'disconnected', relay.connected ? 'good' : 'bad'],
         ['clips',  String(buf.clip_count || 0), ''],
-      ].map(([k, v, cls]) =>
+      ];
+      // Append ingest rows when present.
+      if (ingest && ingest.ok && ingest.vods) {
+        const v = ingest.vods;
+        const cur = ingest.ingest && ingest.ingest.current;
+        rows.push(['vods', `${v.downloaded || 0} dl · ${v.transcribed || 0} txt`, '']);
+        if (v.total_bytes) rows.push(['archive', `${(v.total_bytes/1e9).toFixed(1)}GB`, '']);
+        if (cur && cur.phase) rows.push(['ingesting', cur.phase, 'good']);
+        else if (v.pending) rows.push(['queued', String(v.pending), '']);
+      }
+      const rowsHtml = rows.map(([k, v, cls]) =>
         `<div class="row"><span class="k">${k}</span><span class="v${cls ? ' ' + cls : ''}">${v}</span></div>`
       ).join('');
       diag.innerHTML = rowsHtml + `<div class="verdict">${(data.verdict || '').replace(/</g, '&lt;')}</div>`;
