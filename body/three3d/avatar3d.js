@@ -56,26 +56,59 @@
   // and load THAT first. Falls through to the static candidates (human.glb,
   // CC0, procedural) when the user hasn't made one yet or is logged out.
   // This is the whole point of the pivot: your face, not a shared mannequin.
-  async function resolveLiveAvatarUrl() {
+  function _token() { try { return localStorage.getItem('vint_access_token') || localStorage.getItem('vint_token'); } catch (_) { return null; } }
+  function _apiBase() { return (global.__VINTINUUM_API_BASE || '').replace(/\/$/, ''); }
+  function _abs(url) { if (!url) return null; const b = _apiBase(); return url.startsWith('http') ? url : b + url; }
+
+  // Detect a reasonable render context from the device + a global space hint.
+  function _detectContext() {
+    let device = 'desktop';
     try {
-      const base = (global.__VINTINUUM_API_BASE || '').replace(/\/$/, '');
-      if (!base) return null;
-      let token = null;
-      try { token = localStorage.getItem('vint_access_token') || localStorage.getItem('vint_token'); } catch (_) {}
-      if (!token) return null; // logged out → no personal avatar
-      const r = await fetch(base + '/api/avatar', {
-        headers: { 'Authorization': 'Bearer ' + token },
+      const mobile = /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent) || (window.innerWidth || 9999) < 720;
+      device = mobile ? 'mobile' : 'desktop';
+    } catch (_) {}
+    const space = (global.__VINTINUUM_SPACE) || {};
+    return {
+      device,
+      needs_locomotion: space.needsLocomotion === true,
+      detail_budget: space.detailBudget || (device === 'mobile' ? 'med' : 'high'),
+    };
+  }
+
+  // Resolve the best form for the context. SERVER picks (client trusts).
+  // Returns { glbUrl, form, hasLocomotion, fallbackUsed } or null. Falls back
+  // to GET /api/avatar .active (older brain), then to static candidates upstream.
+  async function resolveLiveAvatar(ctx) {
+    const base = _apiBase(); const token = _token();
+    if (!base || !token) return null; // logged out → static mannequin
+    ctx = ctx || _detectContext();
+    try {
+      const r = await fetch(base + '/api/avatar/form/resolve', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+        body: JSON.stringify(ctx),
       });
-      if (!r.ok) return null;
-      const data = await r.json();
-      const active = data && data.active;
-      if (active && active.status === 'ready' && active.glbUrl) {
-        // glbUrl is brain-relative (/avatars/file/glb/<id>) → absolutize
-        return active.glbUrl.startsWith('http') ? active.glbUrl : base + active.glbUrl;
+      if (r.ok) {
+        const d = await r.json();
+        if (d && d.form && d.form.glbUrl) {
+          return { glbUrl: _abs(d.form.glbUrl), form: d.chosen, hasLocomotion: !!d.form.hasLocomotion, fallbackUsed: d.fallbackUsed || null };
+        }
       }
-    } catch (_) { /* network/logged-out — fall through to static */ }
+    } catch (_) {}
+    try {
+      const r = await fetch(base + '/api/avatar', { headers: { 'Authorization': 'Bearer ' + token } });
+      if (r.ok) {
+        const data = await r.json();
+        const a = data && data.active;
+        if (a && a.status === 'ready' && a.glbUrl) {
+          return { glbUrl: _abs(a.glbUrl), form: a.form || 'bust', hasLocomotion: !!a.hasLocomotion, fallbackUsed: null };
+        }
+      }
+    } catch (_) {}
     return null;
   }
+
+  async function resolveLiveAvatarUrl() { const a = await resolveLiveAvatar(); return a ? a.glbUrl : null; }
 
   // ── Futuristic skin shader (extends MeshPhysicalMaterial) ────────────────
   // Adds:
@@ -273,10 +306,14 @@
   async function mount({ scene, modules, onProgress }) {
     const { THREE, GLTFLoader, DRACOLoader, KTX2Loader } = modules;
     const candidates = resolveCandidateUrls();
-    // Prepend the logged-in user's OWN pipeline-generated avatar if they have one.
+    // Prepend the logged-in user's OWN pipeline avatar, form-resolved for context.
+    let liveAvatar = null;
     try {
-      const liveUrl = await resolveLiveAvatarUrl();
-      if (liveUrl) { candidates.unshift(liveUrl); console.log('[avatar3d] live avatar:', liveUrl); }
+      liveAvatar = await resolveLiveAvatar();
+      if (liveAvatar && liveAvatar.glbUrl) {
+        candidates.unshift(liveAvatar.glbUrl);
+        console.log('[avatar3d] live avatar:', liveAvatar.form, liveAvatar.glbUrl, liveAvatar.fallbackUsed ? '(' + liveAvatar.fallbackUsed + ')' : '');
+      }
     } catch (_) {}
     console.log('[avatar3d] candidate models:', candidates);
 
@@ -322,6 +359,10 @@
       console.warn('[avatar3d] all GLB candidates failed, building procedural fallback');
     }
     handle.modelUrl = usedUrl;
+    // record which form rendered (so drive.js / world can choose locomotion vs in-place)
+    handle.form = (liveAvatar && usedUrl === liveAvatar.glbUrl) ? liveAvatar.form : null;
+    handle.hasLocomotion = !!(liveAvatar && usedUrl === liveAvatar.glbUrl && liveAvatar.hasLocomotion);
+    handle.bustOnProxy = !!(liveAvatar && usedUrl === liveAvatar.glbUrl && liveAvatar.fallbackUsed === 'bust_on_proxy');
 
     if (loaded) {
       const root = loaded.scene || loaded.scenes[0];
