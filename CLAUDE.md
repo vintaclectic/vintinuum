@@ -54,13 +54,24 @@ correlation trivial when something breaks.
 
 ## Push discipline
 
-`git push` is gated by Vinta's confirmation. After committing, you may either:
-1. Wait for Vinta to say "push it" / "ship it" / "deploy"
-2. Ask explicitly: *"Want me to push N commits to origin/main?"*
+**Standing order (Vinta directive 2026-06-04): push after each batch, no
+asking.** Once a logical batch of work is committed (one or more related
+commits across the two repos), push it to `origin/main` immediately — do
+not wait for confirmation, do not ask "want me to push N commits?". Just
+push. This supersedes the old gated-confirmation flow.
 
-Never push silently. Never `git push --force` to `main`. Never push if
-`git status --short` shows untracked files containing `.env`, `*.key`,
-`*.pem`, or anything obviously secret.
+A "batch" = the set of commits that completes a coherent unit of work (e.g.
+a feature + its frontend wiring, a bug-fix sweep, a refactor). Commit per
+logical unit as always, then push the batch when the unit is done.
+
+Still inviolable even under the auto-push order:
+- Never `git push --force` to `main`.
+- Never push if `git status --short` shows untracked files containing
+  `.env`, `*.key`, `*.pem`, or anything obviously secret — fix `.gitignore`
+  first, then push.
+- Never push a batch that fails its own smoke test or leaves the brain
+  unhealthy (`vint-health.sh` must be green, or the breakage is the thing
+  being fixed and is documented in the commit).
 
 ## Files that must never be committed
 
