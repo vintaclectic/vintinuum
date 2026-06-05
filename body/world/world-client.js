@@ -29,6 +29,9 @@
 
     const mods = await global.Three3D.load();
     THREE = mods.THREE;
+    World._mods = mods;
+    // preload the shared walking rig so bodies appear fast
+    if (global.RiggedPresence) global.RiggedPresence.preload(mods);
 
     // ── scene ──
     scene = new THREE.Scene();
@@ -128,26 +131,27 @@
     return g;
   }
 
-  function _makeUserPresence(name) {
+  // Build a walking body. bustUrl optional (the user's real face on the rig).
+  function _makeUserPresence(name, bustUrl) {
     const g = new THREE.Group();
-    if (avatarGlbUrl && global.Three3D) {
-      // load the real avatar mesh asynchronously
-      global.Three3D.load().then(m => {
-        const loader = new m.GLTFLoader();
-        loader.load(avatarGlbUrl, (gltf) => {
-          const root = gltf.scene; root.scale.setScalar(1.0);
-          // Hunyuan bust → place at head height, sitting on shoulders
-          root.position.y = 0; g.add(root);
-        }, undefined, () => _fallbackBody(g));
-      }).catch(() => _fallbackBody(g));
-    } else { _fallbackBody(g); }
     const label = _makeLabel(name); g.add(label); g.userData.label = label;
+    // build the rigged walking body asynchronously; show a soft body until ready
+    const placeholder = _fallbackBody(g);
+    if (global.RiggedPresence && World._mods) {
+      global.RiggedPresence.create({ THREE, mods: World._mods, bustUrl: bustUrl || null })
+        .then(rig => {
+          if (placeholder && placeholder.parent) placeholder.parent.remove(placeholder);
+          g.add(rig.root); g.userData.rig = rig;
+        })
+        .catch(e => console.warn('[world] rig build failed:', e && e.message));
+    }
     return g;
   }
   function _fallbackBody(g) {
     const mat = new THREE.MeshStandardMaterial({ color: 0xbfae9c, roughness: 0.7 });
     const body = new THREE.Mesh(new THREE.CapsuleGeometry(0.28, 1.1, 6, 12), mat);
     body.position.y = 0.85; g.add(body);
+    return body;
   }
 
   function _makeLabel(text) {
@@ -178,6 +182,10 @@
           const g = _makeAgentPresence(a); g.position.set(a.x, 0, a.z); scene.add(g);
           agents.set(a.id, { group: g, target: { x: a.x, z: a.z, yaw: a.yaw || 0 }, name: a.name });
         });
+        // build MY own walking body — wearing my real face if I have one
+        World._selfBody = _makeUserPresence('you', avatarGlbUrl);
+        World._selfBody.position.set(me.x, 0, me.z);
+        scene.add(World._selfBody);
       } else if (m.t === 'presence') {
         (m.agents || []).forEach(a => { const A = agents.get(a.id); if (A) A.target = { x: a.x, z: a.z, yaw: a.yaw || 0 }; });
         (m.users || []).forEach(u => {
@@ -230,6 +238,7 @@
     if (keys['s'] || keys['arrowdown']) fwd -= 1;
     if (keys['a']) str -= 1; if (keys['d']) str += 1;
     if (keys['arrowleft']) me.yaw += 1.6 * dt; if (keys['arrowright']) me.yaw -= 1.6 * dt;
+    World._moving = !!(fwd || str);
     if (fwd || str) {
       me.x += (Math.sin(me.yaw) * fwd + Math.cos(me.yaw) * str) * sp;
       me.z += (Math.cos(me.yaw) * fwd - Math.sin(me.yaw) * str) * sp;
@@ -245,7 +254,23 @@
 
     // lerp others + agents toward their targets
     const lerp = (g, t) => { if (!t) return; g.position.x += (t.x - g.position.x) * 0.18; g.position.z += (t.z - g.position.z) * 0.18; if (t.yaw != null) g.rotation.y = t.yaw; };
-    for (const O of others.values()) lerp(O.group, O.target);
+    for (const O of others.values()) {
+      // detect their movement from positional delta → pick walk/idle
+      const before = O.group.position.x + O.group.position.z;
+      lerp(O.group, O.target);
+      const moved = Math.abs((O.group.position.x + O.group.position.z) - before) > 0.004 * 60 * dt;
+      const rig = O.group.userData && O.group.userData.rig;
+      if (rig) { rig.play(moved ? 'walk' : 'idle'); rig.update(dt); }
+    }
+    // MY body: follow me, face my heading, walk when moving, advance mixer
+    if (World._selfBody) {
+      const sb = World._selfBody;
+      sb.position.x += (me.x - sb.position.x) * 0.4;
+      sb.position.z += (me.z - sb.position.z) * 0.4;
+      sb.rotation.y = me.yaw;
+      const rig = sb.userData && sb.userData.rig;
+      if (rig) { rig.play(World._moving ? 'walk' : 'idle'); rig.update(dt); }
+    }
     const tnow = clock.elapsedTime;
     for (const A of agents.values()) {
       lerp(A.group, A.target);

@@ -46,6 +46,7 @@
   // dynamic `import()` resolves in parallel.
   const SPECS = {
     THREE:           '/build/three.module.js',
+    SkeletonUtils:   '/examples/jsm/utils/SkeletonUtils.js',
     GLTFLoader:      '/examples/jsm/loaders/GLTFLoader.js',
     DRACOLoader:     '/examples/jsm/loaders/DRACOLoader.js',
     KTX2Loader:      '/examples/jsm/loaders/KTX2Loader.js',
