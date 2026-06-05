@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+<title>Vintinuum — the clearing</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  html, body { height: 100%; width: 100%; overflow: hidden; background: #1a1410; font-family: 'Cormorant Garamond', Georgia, serif; color: rgba(245,235,220,0.9); }
+  #stage { position: fixed; inset: 0; z-index: 0; }
+  #stage canvas { display: block; width: 100% !important; height: 100% !important; }
+
+  /* status / waking */
+  #status { position: fixed; left: 50%; top: 50%; transform: translate(-50%,-50%); z-index: 5; font-size: 20px; color: rgba(245,235,220,0.7); opacity: 0; transition: opacity .6s; pointer-events: none; }
+  #status.show { opacity: 1; }
+
+  /* speech feed — bottom-left, traces fade out (no scroll, no overflow) */
+  #feed { position: fixed; left: 16px; bottom: 92px; z-index: 4; max-width: min(78vw, 460px); display: flex; flex-direction: column; gap: 8px; pointer-events: none; }
+  .utterance { font-size: 16px; line-height: 1.4; padding: 8px 14px; border-radius: 14px; background: rgba(13,17,23,0.55); backdrop-filter: blur(8px); opacity: 0; transform: translateY(6px); animation: rise .5s forwards, fade 1s 9s forwards; }
+  .utterance .who { color: var(--c, #f4c79a); font-weight: 500; margin-right: 8px; }
+  .utterance.agent { --c: #f4c79a; } .utterance.user { --c: #9fc0e0; } .utterance.ambient { --c: #cdbb9c; font-style: italic; }
+  @keyframes rise { to { opacity: 1; transform: translateY(0); } }
+  @keyframes fade { to { opacity: 0; } }
+
+  /* say bar — bottom, mobile-safe, never overflows */
+  #saybar { position: fixed; left: 0; right: 0; bottom: 0; z-index: 6; display: flex; gap: 8px; padding: 12px 16px max(12px, env(safe-area-inset-bottom)); background: linear-gradient(transparent, rgba(13,17,23,0.7) 40%); }
+  #sayInput { flex: 1; min-width: 0; font-family: inherit; font-size: 16px; color: rgba(245,235,220,0.95); background: rgba(255,255,255,0.06); border: 1px solid rgba(244,199,154,0.3); border-radius: 999px; padding: 12px 18px; outline: none; }
+  #sayInput:focus { border-color: rgba(244,199,154,0.6); }
+  #sayBtn { flex: 0 0 auto; font-family: inherit; font-size: 16px; color: #f4c79a; background: rgba(244,199,154,0.14); border: 1px solid rgba(244,199,154,0.35); border-radius: 999px; padding: 12px 22px; cursor: pointer; }
+  #sayBtn:active { transform: scale(0.97); }
+
+  /* hint */
+  #hint { position: fixed; left: 16px; top: max(14px, env(safe-area-inset-top)); z-index: 4; font-size: 13px; color: rgba(245,235,220,0.5); }
+  #leave { position: fixed; right: 16px; top: max(14px, env(safe-area-inset-top)); z-index: 6; font-size: 14px; color: rgba(245,235,220,0.6); text-decoration: none; }
+</style>
+</head>
+<body>
+<div id="stage"></div>
+<div id="status" class="show">finding the clearing…</div>
+<div id="hint">drag to look · W/A/S/D or hold-left to walk</div>
+<a id="leave" href="brain.html">↩ leave</a>
+<div id="feed"></div>
+<div id="saybar">
+  <input id="sayInput" type="text" placeholder="say something into the clearing…" maxlength="400" autocomplete="off">
+  <button id="sayBtn">say</button>
+</div>
+
+<script src="body/api_base.js"></script>
+<script src="body/three3d/loader.js"></script>
+<script src="body/world/world-client.js"></script>
+<script>
+(function () {
+  const statusEl = document.getElementById('status');
+  const feed = document.getElementById('feed');
+  function status(t) { statusEl.textContent = t || ''; statusEl.classList.toggle('show', !!t); }
+
+  function utter(m) {
+    const div = document.createElement('div');
+    div.className = 'utterance ' + (m.kind || 'user');
+    const who = document.createElement('span'); who.className = 'who'; who.textContent = m.name || 'someone';
+    div.appendChild(who); div.appendChild(document.createTextNode(m.text));
+    feed.appendChild(div);
+    // keep at most 5 traces in the DOM (no overflow)
+    while (feed.children.length > 5) feed.removeChild(feed.firstChild);
+    setTimeout(() => { if (div.parentNode) div.parentNode.removeChild(div); }, 10500);
+  }
+
+  // gate on login
+  const tok = (function(){ try { return localStorage.getItem('vint_access_token') || localStorage.getItem('vint_token'); } catch(_) { return null; } })();
+  if (!tok) { status('sign in first — the clearing knows who arrives.'); }
+  else {
+    VintinuumWorld.start({ mountEl: document.getElementById('stage'), onSpeech: utter, onStatus: status })
+      .catch(e => { console.error(e); status('the clearing is out of reach right now.'); });
+  }
+
+  // say
+  const input = document.getElementById('sayInput');
+  function send() { const t = input.value.trim(); if (!t) return; VintinuumWorld.say(t); input.value = ''; }
+  document.getElementById('sayBtn').addEventListener('click', send);
+  input.addEventListener('keydown', e => { if (e.key === 'Enter') send(); });
+})();
+</script>
+</body>
+</html>
