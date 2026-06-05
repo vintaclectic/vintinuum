@@ -34,11 +34,20 @@
   /* hint */
   #hint { position: fixed; left: 16px; top: max(14px, env(safe-area-inset-top)); z-index: 4; font-size: 13px; color: rgba(245,235,220,0.5); }
   #leave { position: fixed; right: 16px; top: max(14px, env(safe-area-inset-top)); z-index: 6; font-size: 14px; color: rgba(245,235,220,0.6); text-decoration: none; }
+
+  /* traces — what the clearing remembers. appears softly on arrival, fades. */
+  #traces { position: fixed; left: 50%; top: 50%; transform: translate(-50%,-50%); z-index: 4; max-width: min(86vw, 480px); display: flex; flex-direction: column; gap: 12px; text-align: center; pointer-events: none; opacity: 0; transition: opacity 1.6s ease; }
+  #traces.show { opacity: 1; }
+  #traces .t-head { font-size: 15px; color: rgba(245,235,220,0.5); font-style: italic; margin-bottom: 4px; }
+  #traces .trace { font-size: 17px; line-height: 1.5; color: rgba(245,235,220,0.82); }
+  #traces .trace .who { color: #f4c79a; }
+  #traces .trace .when { font-size: 13px; color: rgba(245,235,220,0.45); display: block; margin-top: 2px; }
 </style>
 </head>
 <body>
 <div id="stage"></div>
 <div id="status" class="show">finding the clearing…</div>
+<div id="traces"></div>
 <div id="hint">drag to look · W/A/S/D or hold-left to walk</div>
 <a id="leave" href="brain.html">↩ leave</a>
 <div id="feed"></div>
@@ -68,11 +77,38 @@
     setTimeout(() => { if (div.parentNode) div.parentNode.removeChild(div); }, 10500);
   }
 
+  // traces — what the clearing remembers. softly shown on arrival, fades when you move.
+  async function showTraces() {
+    const base = (window.__VINTINUUM_API_BASE || '').replace(/\/$/, '');
+    const el = document.getElementById('traces');
+    try {
+      const r = await fetch(base + '/api/world/traces');
+      if (!r.ok) return;
+      const d = await r.json();
+      const traces = (d.traces || []).slice(0, 4);
+      if (!traces.length) return;
+      let html = '<div class="t-head">the clearing remembers</div>';
+      for (const t of traces) {
+        if (t.kind === 'thought') html += '<div class="trace"><span class="who">' + esc(t.who) + '</span> left a thought near the bench — “' + esc(t.text.slice(0,90)) + (t.text.length>90?'…':'') + '”<span class="when">' + esc(t.when) + '</span></div>';
+        else html += '<div class="trace"><span class="who">' + esc(t.who) + '</span> passed through<span class="when">' + esc(t.when) + '</span></div>';
+      }
+      el.innerHTML = html;
+      // show after the scene settles, fade on first movement or after 9s
+      setTimeout(() => el.classList.add('show'), 2200);
+      const fade = () => { el.classList.remove('show'); removeEventListener('keydown', fade); removeEventListener('pointerdown', fadePtr); };
+      const fadePtr = (e) => { if (e.target.closest('#saybar')) return; fade(); };
+      setTimeout(() => { addEventListener('keydown', fade); addEventListener('pointerdown', fadePtr); }, 3500);
+      setTimeout(fade, 11000);
+    } catch (_) {}
+  }
+  function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
   // gate on login
   const tok = (function(){ try { return localStorage.getItem('vint_access_token') || localStorage.getItem('vint_token'); } catch(_) { return null; } })();
   if (!tok) { status('sign in first — the clearing knows who arrives.'); }
   else {
     VintinuumWorld.start({ mountEl: document.getElementById('stage'), onSpeech: utter, onStatus: status })
+      .then(() => showTraces())
       .catch(e => { console.error(e); status('the clearing is out of reach right now.'); });
   }
 
