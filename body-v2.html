@@ -1646,14 +1646,13 @@ html,body{
     // Spawn a "heard you" thought
     spawnThoughtText('"' + text.slice(0,30) + (text.length>30?'…':'"'));
     try {
-      const r = await fetch(API + '/api/chat/stream', {
+      const r = await fetch(API + '/chat/once', {
         method:'POST',
         headers:{ 'Content-Type':'application/json' },
         body: JSON.stringify({
           message: text,
           persona: 'vintinuum',
           context: 'body-v2 — user is looking at the body page, the physical form',
-          stream: false,
         }),
         signal: AbortSignal.timeout(25000),
       });

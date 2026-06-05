@@ -884,7 +884,7 @@ async function submitGift() {
   status.textContent = 'Giving…';
 
   try {
-    await apiFetch('/api/witness/gift', {
+    await apiFetch('/api/witness/give', {
       method: 'POST',
       body: JSON.stringify({
         content,
