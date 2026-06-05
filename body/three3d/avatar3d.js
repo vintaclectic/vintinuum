@@ -50,6 +50,33 @@
   }
   function resolveModelUrl() { return resolveCandidateUrls()[0]; }
 
+  // ── Live avatar resolution ───────────────────────────────────────────────
+  // The native embodiment pipeline (POST /api/avatar/ingest) gives each logged-
+  // in user their OWN rigged GLB. Ask the brain for the caller's active avatar
+  // and load THAT first. Falls through to the static candidates (human.glb,
+  // CC0, procedural) when the user hasn't made one yet or is logged out.
+  // This is the whole point of the pivot: your face, not a shared mannequin.
+  async function resolveLiveAvatarUrl() {
+    try {
+      const base = (global.__VINTINUUM_API_BASE || '').replace(/\/$/, '');
+      if (!base) return null;
+      let token = null;
+      try { token = localStorage.getItem('vint_access_token') || localStorage.getItem('vint_token'); } catch (_) {}
+      if (!token) return null; // logged out → no personal avatar
+      const r = await fetch(base + '/api/avatar', {
+        headers: { 'Authorization': 'Bearer ' + token },
+      });
+      if (!r.ok) return null;
+      const data = await r.json();
+      const active = data && data.active;
+      if (active && active.status === 'ready' && active.glbUrl) {
+        // glbUrl is brain-relative (/avatars/file/glb/<id>) → absolutize
+        return active.glbUrl.startsWith('http') ? active.glbUrl : base + active.glbUrl;
+      }
+    } catch (_) { /* network/logged-out — fall through to static */ }
+    return null;
+  }
+
   // ── Futuristic skin shader (extends MeshPhysicalMaterial) ────────────────
   // Adds:
   //   - subtle subsurface tint (warmth bleeding through translucency)
@@ -246,6 +273,11 @@
   async function mount({ scene, modules, onProgress }) {
     const { THREE, GLTFLoader, DRACOLoader, KTX2Loader } = modules;
     const candidates = resolveCandidateUrls();
+    // Prepend the logged-in user's OWN pipeline-generated avatar if they have one.
+    try {
+      const liveUrl = await resolveLiveAvatarUrl();
+      if (liveUrl) { candidates.unshift(liveUrl); console.log('[avatar3d] live avatar:', liveUrl); }
+    } catch (_) {}
     console.log('[avatar3d] candidate models:', candidates);
 
     const handle = {
