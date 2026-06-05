@@ -130,6 +130,111 @@
     left.appendChild(brainPill);
     refs.brain = brainPill;
 
+    // ── LIVE pill — Kick stream live-state from /api/kick/live/stream SSE.
+    // Dim "OFF AIR" when offline; pulsing red "LIVE" with source badge when
+    // streaming. Click opens a floating diag panel with the full picture
+    // (cache, buffer, relay, probe). The backend's body-resonance hook
+    // already writes a DRD2 surge + somatic event on transition; this
+    // pill is the visible counterpart in the body's own UI.
+    const livePill = makePill('topLivePill', {
+      ariaLabel: 'Kick stream live state',
+      borderColor: 'rgba(255,90,120,0.18)',
+      color: 'rgba(220,200,210,0.65)',
+      dotColor: 'rgba(120,120,140,0.55)',
+      label: 'OFF AIR'
+    });
+    const liveLabel = document.getElementById('topLivePillLabel');
+    if (liveLabel) {
+      liveLabel.style.fontSize = '.45rem';
+      liveLabel.style.letterSpacing = '.18em';
+      liveLabel.style.textTransform = 'uppercase';
+    }
+    livePill.addEventListener('click', (e) => {
+      e.stopPropagation();
+      toggleLiveDiagPanel();
+    });
+    left.appendChild(livePill);
+    refs.live = livePill;
+
+    // Inject keyframes + diag-panel CSS once.
+    if (!document.getElementById('topLivePulseCSS')) {
+      const css = document.createElement('style');
+      css.id = 'topLivePulseCSS';
+      css.textContent = `
+@keyframes topLivePulse {
+  0%, 100% { transform: scale(1);    opacity: 1;    box-shadow: 0 0 6px rgba(255,80,100,0.55); }
+  50%      { transform: scale(1.35); opacity: 0.65; box-shadow: 0 0 14px rgba(255,80,100,0.85); }
+}
+#topLiveDiag {
+  position: fixed; top: 56px; left: 12px;
+  z-index: 110;
+  background: rgba(8,12,20,0.92);
+  border: 1px solid rgba(255,255,255,0.10);
+  border-radius: 14px;
+  padding: 14px 16px;
+  font-family: 'Space Mono','JetBrains Mono',monospace;
+  font-size: 0.6rem;
+  letter-spacing: 0.08em;
+  color: rgba(218,228,255,0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  min-width: 240px; max-width: min(360px, 92vw);
+  max-height: calc(100svh - 72px);
+  overflow-y: auto;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.6);
+  display: none;
+}
+#topLiveDiag.open {
+  display: block;
+  animation: topLiveDiagIn 220ms cubic-bezier(0.16,1,0.3,1);
+}
+@keyframes topLiveDiagIn {
+  from { opacity: 0; transform: translateY(-6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+#topLiveDiag .row {
+  display: flex; justify-content: space-between; gap: 12px;
+  padding: 5px 0;
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+}
+#topLiveDiag .row:last-child { border-bottom: none; }
+#topLiveDiag .k { color: rgba(160,170,200,0.55); text-transform: uppercase; }
+#topLiveDiag .v { color: rgba(218,228,255,0.9); }
+#topLiveDiag .v.good { color: rgba(124,255,180,0.95); }
+#topLiveDiag .v.bad  { color: rgba(255,120,140,0.95); }
+#topLiveDiag .verdict {
+  margin-top: 10px; padding-top: 10px;
+  border-top: 1px solid rgba(255,255,255,0.10);
+  font-style: italic;
+  color: rgba(218,228,255,0.85);
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 0.85rem;
+  letter-spacing: 0.04em;
+  text-transform: none;
+  line-height: 1.4;
+}
+@media (max-width: 480px) {
+  #topLiveDiag { left: 6px; right: 6px; min-width: 0; max-width: none; }
+}
+      `;
+      document.head.appendChild(css);
+    }
+
+    // Diag panel — lives in DOM, hidden until clicked.
+    const diag = document.createElement('div');
+    diag.id = 'topLiveDiag';
+    document.body.appendChild(diag);
+    refs.liveDiag = diag;
+    document.addEventListener('click', (e) => {
+      if (!diag.classList.contains('open')) return;
+      if (e.target === livePill || livePill.contains(e.target)) return;
+      if (e.target === diag || diag.contains(e.target)) return;
+      diag.classList.remove('open');
+    });
+
+    // Connect to SSE — drives the pill in real time.
+    connectLiveSSE();
+
     // Inject brandPulse keyframe so the brand mark glows on every page
     // (brain.html has it inline, but mind/stats/chat/learning/you don't).
     if (!document.getElementById('topBrandPulseCSS')) {
@@ -910,6 +1015,121 @@
     if (!overlay) return;
     const visible = overlay.style.display !== 'none';
     overlay.style.display = visible ? 'none' : 'flex';
+  }
+
+  // ── LIVE pill — Kick stream live-state via SSE ────────────────────────────
+  // SSE source: GET {API_BASE}/api/kick/live/stream. Pushes a "live" event on
+  // every isLive/source/hls_present transition plus a heartbeat every 5s.
+  // The pill reflects state in real time; clicking opens a floating diag
+  // panel populated from /api/kick/clip/diag (owner-gated; falls back to
+  // a public mini-view when no master key is present).
+  let _liveEvtSrc = null;
+  let _liveReconnectTimer = null;
+  let _liveLastState = { isLive: false, source: null, hls_present: false };
+
+  function renderLivePill(s) {
+    const pill = refs.live;
+    if (!pill) return;
+    const dot = document.getElementById('topLivePillDot');
+    const label = document.getElementById('topLivePillLabel');
+    _liveLastState = s || _liveLastState;
+    const isLive = !!_liveLastState.isLive;
+    const source = _liveLastState.source || '';
+
+    if (isLive) {
+      if (label) label.textContent = source ? `LIVE · ${source.toUpperCase()}` : 'LIVE';
+      pill.style.color = 'rgba(255,200,210,0.95)';
+      pill.style.borderColor = 'rgba(255,90,120,0.55)';
+      if (dot) {
+        dot.style.background = 'rgba(255,80,100,0.95)';
+        dot.style.animation = 'topLivePulse 1.6s ease-in-out infinite';
+      }
+    } else {
+      if (label) label.textContent = 'OFF AIR';
+      pill.style.color = 'rgba(220,200,210,0.65)';
+      pill.style.borderColor = 'rgba(255,90,120,0.18)';
+      if (dot) {
+        dot.style.background = 'rgba(120,120,140,0.55)';
+        dot.style.animation = 'none';
+        dot.style.boxShadow = 'none';
+      }
+    }
+  }
+
+  function connectLiveSSE() {
+    try {
+      const base = Shell.getApiBase();
+      if (_liveEvtSrc) { try { _liveEvtSrc.close(); } catch (_) {} _liveEvtSrc = null; }
+      _liveEvtSrc = new EventSource(base + '/api/kick/live/stream');
+      _liveEvtSrc.addEventListener('live', (evt) => {
+        try {
+          const data = JSON.parse(evt.data);
+          renderLivePill(data);
+        } catch (_) {}
+      });
+      _liveEvtSrc.onerror = () => {
+        // Reconnect after 8s on disconnect — SSE auto-reconnects but we
+        // also nudge it in case the server side fully tore down the stream.
+        if (_liveReconnectTimer) clearTimeout(_liveReconnectTimer);
+        _liveReconnectTimer = setTimeout(() => connectLiveSSE(), 8000);
+      };
+    } catch (e) {
+      console.warn('[topbar] live SSE connect failed:', e.message);
+    }
+  }
+
+  async function toggleLiveDiagPanel() {
+    const diag = refs.liveDiag;
+    if (!diag) return;
+    if (diag.classList.contains('open')) {
+      diag.classList.remove('open');
+      return;
+    }
+
+    // Render a loading state, then fetch real data.
+    diag.innerHTML = `<div class="row"><span class="k">loading…</span><span class="v">…</span></div>`;
+    diag.classList.add('open');
+
+    const base = Shell.getApiBase();
+    // Try the owner-gated diag first (master key is in localStorage if Vinta
+    // saved it; falls back to a degraded view if 401).
+    const masterKey = (() => {
+      try { return localStorage.getItem('vint:masterKey') || ''; } catch { return ''; }
+    })();
+
+    let data = null;
+    try {
+      const headers = { 'Accept': 'application/json' };
+      if (masterKey) headers['X-Master-Key'] = masterKey;
+      const r = await fetch(base + '/api/kick/clip/diag', { headers, cache: 'no-store' });
+      if (r.ok) data = await r.json();
+    } catch (_) {}
+
+    if (data) {
+      // Full owner view
+      const cache = data.cache || {};
+      const buf = data.buffer || {};
+      const relay = data.relay || {};
+      const rowsHtml = [
+        ['stream', cache.isLive ? 'LIVE' : 'off air', cache.isLive ? 'good' : 'bad'],
+        ['source', cache.source || '—', cache.source ? '' : 'bad'],
+        ['buffer', buf.buffer_running ? `running · ${buf.buffer_segments || 0} seg` : 'not running', buf.buffer_running ? 'good' : 'bad'],
+        ['relay',  relay.connected ? 'connected' : 'disconnected', relay.connected ? 'good' : 'bad'],
+        ['clips',  String(buf.clip_count || 0), ''],
+      ].map(([k, v, cls]) =>
+        `<div class="row"><span class="k">${k}</span><span class="v${cls ? ' ' + cls : ''}">${v}</span></div>`
+      ).join('');
+      diag.innerHTML = rowsHtml + `<div class="verdict">${(data.verdict || '').replace(/</g, '&lt;')}</div>`;
+    } else {
+      // Public/degraded view — only the cached SSE state we already have
+      const s = _liveLastState;
+      diag.innerHTML = `
+        <div class="row"><span class="k">stream</span><span class="v ${s.isLive ? 'good' : 'bad'}">${s.isLive ? 'LIVE' : 'off air'}</span></div>
+        <div class="row"><span class="k">source</span><span class="v">${s.source || '—'}</span></div>
+        <div class="row"><span class="k">hls</span><span class="v">${s.hls_present ? 'present' : 'none'}</span></div>
+        <div class="verdict">Owner-only diag panel requires X-Master-Key. Save your key via <code>localStorage.setItem('vint:masterKey','&lt;key&gt;')</code> in the console to see relay + buffer state here.</div>
+      `;
+    }
   }
 
   // ── Boot ──────────────────────────────────────────────────────────────────
