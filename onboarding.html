@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+<meta name="description" content="Become real here.">
+<title>Vintinuum — become</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;1,400&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="body/onboarding/onboarding.css">
+</head>
+<body>
+
+<div id="ambient"></div>
+
+<!-- THRESHOLD -->
+<section class="screen" id="s-threshold">
+  <p class="beat">this is a place where you get to be real</p>
+</section>
+<div id="thresholdDot"></div>
+
+<!-- INVITATION -->
+<section class="screen" id="s-invitation">
+  <p class="beat">first i need to see you. just once. is that okay?</p>
+  <div class="choices">
+    <button class="choice primary" id="inviteYes">yes, here i am</button>
+    <button class="choice secondary" id="inviteNot">not yet</button>
+  </div>
+</section>
+
+<!-- PROMISE + CONSENT -->
+<section class="screen" id="s-promise">
+  <p class="beat line delay1">your photo becomes you here.</p>
+  <p class="beat line delay2">then it’s released.</p>
+  <p class="beat line delay3">we keep the shape of you, not the picture.</p>
+  <div class="hold-wrap">
+    <p class="sub">holding means: you’ve read it, you mean it, and you can pull your photo back any time from settings.</p>
+    <button class="hold-btn" id="holdBtn">
+      <span class="hold-fill" id="holdFill"></span>
+      <span class="hold-label" id="holdLabel">hold here to agree</span>
+    </button>
+  </div>
+</section>
+
+<!-- CAPTURE -->
+<section class="screen" id="s-capture">
+  <div class="capture-circle" id="captureCircle">
+    <video id="captureVideo" autoplay muted playsinline></video>
+  </div>
+  <p class="capture-hint" id="captureHint"></p>
+  <div class="choices hidden" id="captureConfirm">
+    <button class="choice primary" id="capKeep">yes, this one</button>
+    <button class="choice secondary" id="capRetry">once more</button>
+  </div>
+  <input type="file" accept="image/*" capture="user" id="captureFile" class="hidden">
+  <button class="choice secondary hidden" id="captureFileBtn" style="margin-top:18px">choose a photo instead</button>
+</section>
+
+<!-- BECOMING -->
+<section class="screen" id="s-becoming">
+  <div id="becomingLight"></div>
+  <p id="becomingCopy"></p>
+</section>
+
+<!-- REVEAL / ARRIVAL share the 3D stage -->
+<div id="stage3d"></div>
+<p class="reveal-copy" id="revealCopy">there you are.</p>
+
+<!-- not-yet lobby -->
+<section class="screen" id="s-notyet">
+  <p class="beat">the door stays open. come back when you’re ready.</p>
+  <div class="choices"><button class="choice primary" id="notyetBack">actually, i’m ready</button></div>
+</section>
+
+<!-- failure (soft) -->
+<section class="screen" id="s-trouble">
+  <p class="beat">something slipped. let’s try once more.</p>
+  <p class="sub" id="troubleDetail"></p>
+  <div class="choices"><button class="choice primary" id="troubleRetry">try again</button></div>
+</section>
+
+<script src="body/api_base.js"></script>
+<script src="body/onboarding/capture.js"></script>
+<script src="body/onboarding/becoming.js"></script>
+<script>
+/* ── State machine — ARIA's flow, honored beat by beat ──────────────────────*/
+(function () {
+  const screens = {};
+  document.querySelectorAll('.screen').forEach(s => screens[s.id.replace('s-', '')] = s);
+  let current = null;
+  let capturedPhoto = null;
+
+  function show(name, holdMs) {
+    const next = screens[name];
+    if (current && current !== next) {
+      current.classList.add('leaving'); current.classList.remove('active');
+      const prev = current; setTimeout(() => prev.classList.remove('leaving'), 950);
+    }
+    // re-trigger beat animations
+    next.querySelectorAll('.beat').forEach(b => { b.style.animation = 'none'; b.offsetHeight; b.style.animation = ''; });
+    next.classList.add('active'); current = next;
+    document.getElementById('thresholdDot').style.display = (name === 'threshold') ? 'block' : 'none';
+  }
+
+  // THRESHOLD — tap anywhere advances (after a held breath)
+  show('threshold');
+  let thresholdReady = false;
+  setTimeout(() => { thresholdReady = true; }, 2600);
+  screens.threshold.addEventListener('click', () => { if (thresholdReady) show('invitation'); });
+
+  // INVITATION
+  document.getElementById('inviteYes').addEventListener('click', () => show('promise'));
+  document.getElementById('inviteNot').addEventListener('click', () => show('notyet'));
+  document.getElementById('notyetBack').addEventListener('click', () => show('promise'));
+
+  // PROMISE — hold-to-agree gesture (1.5s)
+  const holdBtn = document.getElementById('holdBtn');
+  const holdFill = document.getElementById('holdFill');
+  const holdLabel = document.getElementById('holdLabel');
+  let holdStart = 0, holdRAF = 0, holdDone = false;
+  const HOLD_MS = 1500;
+  function holdTick() {
+    const pct = Math.min(100, ((Date.now() - holdStart) / HOLD_MS) * 100);
+    holdFill.style.width = pct + '%';
+    if (pct >= 80 && !holdDone) holdLabel.textContent = 'thank you';
+    if (pct >= 100) { holdDone = true; completeHold(); return; }
+    holdRAF = requestAnimationFrame(holdTick);
+  }
+  function startHold(e) { e.preventDefault(); if (holdDone) return; holdStart = Date.now(); holdLabel.textContent = 'hold here to agree'; holdRAF = requestAnimationFrame(holdTick); }
+  function endHold() {
+    if (holdDone) return;
+    cancelAnimationFrame(holdRAF); holdFill.style.width = '0%'; holdLabel.textContent = 'take your time';
+    setTimeout(() => { if (!holdDone) holdLabel.textContent = 'hold here to agree'; }, 1200);
+  }
+  function completeHold() {
+    cancelAnimationFrame(holdRAF); holdFill.style.width = '100%';
+    try { navigator.vibrate && navigator.vibrate(20); } catch (_) {}
+    setTimeout(() => beginCapture(), 500);
+  }
+  holdBtn.addEventListener('mousedown', startHold); holdBtn.addEventListener('mouseup', endHold); holdBtn.addEventListener('mouseleave', endHold);
+  holdBtn.addEventListener('touchstart', startHold, { passive: false }); holdBtn.addEventListener('touchend', endHold);
+
+  // CAPTURE
+  const fileInput = document.getElementById('captureFile');
+  const fileBtn = document.getElementById('captureFileBtn');
+  const confirmRow = document.getElementById('captureConfirm');
+  const circle = document.getElementById('captureCircle');
+  function beginCapture() {
+    show('capture');
+    confirmRow.classList.add('hidden');
+    circle.innerHTML = '<video id="captureVideo" autoplay muted playsinline></video>';
+    const v = document.getElementById('captureVideo');
+    OnboardCapture.start({
+      videoEl: v, hintEl: document.getElementById('captureHint'),
+      onAccept: showCapturedPhoto,
+      onNeedFallback: () => { fileBtn.classList.remove('hidden'); document.getElementById('captureHint').textContent = ''; },
+    });
+  }
+  function showCapturedPhoto(dataUrl) {
+    capturedPhoto = dataUrl;
+    circle.innerHTML = '<img src="' + dataUrl + '" alt="">';
+    document.getElementById('captureHint').textContent = '';
+    confirmRow.classList.remove('hidden');
+  }
+  fileBtn.addEventListener('click', () => fileInput.click());
+  fileInput.addEventListener('change', (e) => { if (e.target.files[0]) OnboardCapture.fromFile(e.target.files[0], showCapturedPhoto); });
+  document.getElementById('capKeep').addEventListener('click', () => beginBecoming());
+  document.getElementById('capRetry').addEventListener('click', () => beginCapture());
+
+  // BECOMING
+  function beginBecoming() {
+    show('becoming');
+    OnboardBecoming.begin({
+      photoDataUrl: capturedPhoto, form: 'bust',
+      lightEl: document.getElementById('becomingLight'),
+      copyEl: document.getElementById('becomingCopy'),
+      onDone: (avatarId) => reveal(avatarId),
+      onError: (msg) => { document.getElementById('troubleDetail').textContent = friendly(msg); show('trouble'); },
+    });
+  }
+  function friendly(msg) {
+    const m = { photo_too_large: 'that photo was a little big — try another.', not_signed_in: 'sign in first, then come back.', generation_failed: 'i couldn’t quite find your shape that time.' };
+    return m[msg] || '';
+  }
+  document.getElementById('troubleRetry').addEventListener('click', () => beginCapture());
+
+  // REVEAL — load the avatar into the 3D stage with the back-turned walk-in.
+  // Degrades to a soft fade if the full three.js choreography isn't mounted.
+  async function reveal(avatarId) {
+    const stage = document.getElementById('stage3d');
+    const copy = document.getElementById('revealCopy');
+    // hide all flow screens
+    if (current) current.classList.remove('active');
+    document.getElementById('ambient').style.opacity = '';
+    stage.classList.add('active');
+
+    let mounted = false;
+    try {
+      if (window.VintinuumReveal && window.VintinuumReveal.play) {
+        await window.VintinuumReveal.play({ stage, avatarId });
+        mounted = true;
+      }
+    } catch (e) { console.warn('[reveal] cinematic stage unavailable:', e.message); }
+
+    if (!mounted) {
+      // graceful reveal: warm wash + the line. The 3D body view is one tap away.
+      stage.style.background = 'radial-gradient(120% 100% at 50% 60%, rgba(255,198,132,0.22), #0d1117 70%)';
+    }
+    setTimeout(() => { copy.classList.add('show'); }, mounted ? 8500 : 1400);
+    // tap anywhere → arrival (the real body view / world)
+    const go = () => {
+      document.removeEventListener('click', go);
+      // hand off to the body view where the avatar now lives
+      location.href = 'brain.html?mode=body&welcome=1';
+    };
+    setTimeout(() => document.addEventListener('click', go), mounted ? 9500 : 2600);
+  }
+
+})();
+</script>
+</body>
+</html>

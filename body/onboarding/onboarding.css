@@ -1,0 +1,174 @@
+/* ════════════════════════════════════════════════════════════════════════════
+   ONBOARDING — the embodiment flow. Built to ARIA's spec.
+   "Nothing performs for the user. Everything inhabits."
+   Mobile-first. No overflow, ever. Soft everywhere except the eye-contact beat.
+   ════════════════════════════════════════════════════════════════════════════ */
+
+:root {
+  --ambient-warm: #f4c79a;
+  --ambient-cool: #7a9bb8;
+  --ground: #0d1117;
+  --text-held: rgba(245, 235, 220, 0.88);
+  --text-soft: rgba(245, 235, 220, 0.55);
+  --golden: rgb(255, 198, 132);
+  --serif: 'Cormorant Garamond', 'Lora', Georgia, 'Times New Roman', serif;
+  --sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+html, body {
+  height: 100%;
+  width: 100%;
+  overflow: hidden;               /* no-overflow rule: the flow never scrolls */
+  background: var(--ground);
+  color: var(--text-held);
+  font-family: var(--serif);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* The breathing ambient — lives behind every screen */
+#ambient {
+  position: fixed; inset: 0; z-index: 0; pointer-events: none;
+  background: radial-gradient(120% 120% at 50% 40%, var(--ambient-warm) 0%, transparent 60%),
+              radial-gradient(140% 140% at 50% 100%, var(--ambient-cool) 0%, transparent 55%);
+  opacity: 0.0;
+  animation: breathe 6000ms ease-in-out infinite alternate;
+}
+@keyframes breathe {
+  from { opacity: 0.18; transform: scale(1.0); }
+  to   { opacity: 0.40; transform: scale(1.06); }
+}
+
+/* Screen container — exactly one visible at a time, centered, clipped to viewport */
+.screen {
+  position: fixed; inset: 0; z-index: 1;
+  display: none;
+  flex-direction: column; align-items: center; justify-content: center;
+  text-align: center;
+  padding: max(24px, env(safe-area-inset-top)) 24px max(24px, env(safe-area-inset-bottom));
+  opacity: 0;
+  transition: opacity 900ms ease;
+}
+.screen.active { display: flex; opacity: 1; }
+.screen.leaving { opacity: 0; }
+
+/* Emotional copy — serif, never bold, never uppercase, generous line-height */
+.beat {
+  font-family: var(--serif);
+  font-size: clamp(22px, 6vw, 34px);
+  font-weight: 400;
+  line-height: 1.6;
+  color: var(--text-held);
+  max-width: 22ch;
+  opacity: 0;
+  animation: rise 1200ms ease forwards;
+}
+.beat.line { display: block; }
+.beat.delay1 { animation-delay: 0.8s; }
+.beat.delay2 { animation-delay: 1.6s; }
+.beat.delay3 { animation-delay: 2.4s; }
+@keyframes rise { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+
+.sub {
+  font-family: var(--sans);
+  font-size: 13px; line-height: 1.7;
+  color: var(--text-soft);
+  max-width: 30ch;
+  margin-top: 18px;
+}
+
+/* Soft pill choices — no border, breathing underline */
+.choices { display: flex; gap: 22px; margin-top: 40px; flex-wrap: wrap; justify-content: center; }
+.choice {
+  font-family: var(--serif);
+  font-size: clamp(18px, 4.5vw, 22px);
+  color: var(--text-held);
+  background: none; border: none; cursor: pointer;
+  padding: 10px 4px; position: relative;
+  transition: color 240ms ease;
+}
+.choice::after {
+  content: ''; position: absolute; left: 0; right: 0; bottom: 2px; height: 1px;
+  background: var(--golden); opacity: 0.0;
+  animation: underline-breathe 6000ms ease-in-out infinite alternate;
+}
+.choice.primary::after { opacity: 0.5; }
+.choice.secondary { color: var(--text-soft); }
+.choice:active { color: var(--golden); }
+@keyframes underline-breathe { from { opacity: 0.2; } to { opacity: 0.6; } }
+
+/* Threshold pulse dot */
+#thresholdDot {
+  position: fixed; left: 50%; bottom: 8vh; transform: translateX(-50%);
+  width: 7px; height: 7px; border-radius: 50%;
+  background: var(--text-held); z-index: 2;
+  animation: dot-breathe 6000ms ease-in-out infinite alternate;
+}
+@keyframes dot-breathe { from { opacity: 0.25; transform: translateX(-50%) scale(0.85); } to { opacity: 0.75; transform: translateX(-50%) scale(1.15); } }
+
+/* ── Hold-to-agree consent gesture ── */
+.hold-wrap { margin-top: 34px; display: flex; flex-direction: column; align-items: center; gap: 14px; }
+.hold-btn {
+  position: relative; overflow: hidden;
+  font-family: var(--serif); font-size: 19px; color: var(--text-held);
+  background: rgba(255,255,255,0.04); border: 1px solid rgba(244,199,154,0.35);
+  border-radius: 999px; padding: 16px 38px; cursor: pointer;
+  user-select: none; -webkit-user-select: none; touch-action: none;
+  max-width: 90vw;
+}
+.hold-fill {
+  position: absolute; inset: 0; z-index: 0;
+  background: linear-gradient(90deg, rgba(244,199,154,0.45), rgba(255,198,132,0.30));
+  width: 0%; transition: width 80ms linear;
+}
+.hold-label { position: relative; z-index: 1; }
+
+/* ── Capture ── */
+.capture-circle {
+  position: relative;
+  width: 78vw; max-width: 420px; aspect-ratio: 1; border-radius: 50%;
+  overflow: hidden;
+  box-shadow: 0 0 0 100vmax rgba(13,17,23,0.62);   /* vignette: dark everywhere outside */
+  -webkit-mask-image: radial-gradient(circle, #000 70%, transparent 72%);
+          mask-image: radial-gradient(circle, #000 70%, transparent 72%);
+}
+.capture-circle video, .capture-circle img, .capture-circle canvas {
+  width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); /* mirror selfie */
+}
+.capture-hint {
+  font-family: var(--sans); font-size: 13px; color: var(--text-soft);
+  margin-top: 22px; min-height: 18px; opacity: 0; transition: opacity 500ms ease;
+}
+.capture-hint.show { opacity: 1; }
+
+/* ── Becoming: the point of light IS the progress ── */
+#becomingLight {
+  width: 4px; height: 4px; border-radius: 50%;
+  background: radial-gradient(circle, #fff 0%, var(--golden) 40%, transparent 72%);
+  box-shadow: 0 0 40px 12px rgba(255,198,132,0.5);
+  transition: width 600ms ease, height 600ms ease;
+  animation: light-breathe 3000ms ease-in-out infinite alternate;
+}
+@keyframes light-breathe { from { filter: brightness(0.85); } to { filter: brightness(1.25); } }
+#becomingCopy {
+  font-family: var(--serif); font-style: italic; font-size: 17px;
+  color: var(--text-held); margin-top: 48px; min-height: 24px;
+  opacity: 0; transition: opacity 700ms ease;
+}
+#becomingCopy.show { opacity: 1; }
+
+/* ── Reveal & Arrival host the 3D canvas full-bleed ── */
+#stage3d { position: fixed; inset: 0; z-index: 1; display: none; }
+#stage3d.active { display: block; }
+.reveal-copy {
+  position: fixed; left: 0; right: 0; bottom: 16vh; z-index: 3;
+  text-align: center; font-family: var(--serif); font-size: clamp(22px, 6vw, 30px);
+  color: var(--text-held); opacity: 0; transition: opacity 1400ms ease;
+  pointer-events: none; padding: 0 24px;
+}
+.reveal-copy.show { opacity: 1; }
+
+/* utility */
+.hidden { display: none !important; }
+button:focus-visible, .choice:focus-visible { outline: 1px solid var(--golden); outline-offset: 4px; }
