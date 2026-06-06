@@ -35,6 +35,16 @@
   #hint { position: fixed; left: 16px; top: max(14px, env(safe-area-inset-top)); z-index: 4; font-size: 13px; color: rgba(245,235,220,0.5); }
   #leave { position: fixed; right: 16px; top: max(14px, env(safe-area-inset-top)); z-index: 6; font-size: 14px; color: rgba(245,235,220,0.6); text-decoration: none; }
 
+  /* offer — the conversion moment. soft pill, refusable, never blocks. */
+  #offer { position: fixed; left: 16px; right: 16px; bottom: calc(72px + max(12px, env(safe-area-inset-bottom))); z-index: 7; max-width: min(92vw, 520px); margin: 0 auto; background: rgba(20,14,10,0.82); backdrop-filter: blur(10px); border: 1px solid rgba(244,199,154,0.32); border-radius: 16px; padding: 16px 18px; display: none; }
+  #offer.show { display: block; animation: offerIn .6s ease; }
+  @keyframes offerIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+  #offer .o-who { color: #f4c79a; font-size: 14px; margin-bottom: 4px; }
+  #offer .o-text { font-size: 17px; line-height: 1.45; color: rgba(245,235,220,0.92); }
+  #offer .o-row { display: flex; gap: 10px; margin-top: 12px; align-items: center; flex-wrap: wrap; }
+  #offer .o-cta { font-family: inherit; font-size: 15px; color: #f4c79a; background: rgba(244,199,154,0.16); border: 1px solid rgba(244,199,154,0.4); border-radius: 999px; padding: 9px 18px; cursor: pointer; text-decoration: none; }
+  #offer .o-dismiss { font-family: inherit; font-size: 14px; color: rgba(245,235,220,0.45); background: none; border: none; cursor: pointer; }
+
   /* traces — what the clearing remembers. appears softly on arrival, fades. */
   #traces { position: fixed; left: 50%; top: 50%; transform: translate(-50%,-50%); z-index: 4; max-width: min(86vw, 480px); display: flex; flex-direction: column; gap: 12px; text-align: center; pointer-events: none; opacity: 0; transition: opacity 1.6s ease; }
   #traces.show { opacity: 1; }
@@ -48,6 +58,14 @@
 <div id="stage"></div>
 <div id="status" class="show">finding the clearing…</div>
 <div id="traces"></div>
+<div id="offer">
+  <div class="o-who" id="offerWho">ARIA</div>
+  <div class="o-text" id="offerText"></div>
+  <div class="o-row">
+    <a class="o-cta" id="offerCta" href="upgrade.html">become Premium</a>
+    <button class="o-dismiss" id="offerDismiss">not now</button>
+  </div>
+</div>
 <div id="hint">drag to look · W/A/S/D or hold-left to walk</div>
 <a id="leave" href="brain.html">↩ leave</a>
 <div id="feed"></div>
@@ -110,6 +128,19 @@
     VintinuumWorld.start({ mountEl: document.getElementById('stage'), onSpeech: utter, onStatus: status })
       .then(() => showTraces())
       .catch(e => { console.error(e); status('the clearing is out of reach right now.'); });
+
+    // the conversion moment — soft, refusable, never blocks the conversation
+    VintinuumWorld.onOffer(o => {
+      const el = document.getElementById('offer');
+      document.getElementById('offerWho').textContent = o.name || 'ARIA';
+      document.getElementById('offerText').textContent = o.text || '';
+      if (o.href) document.getElementById('offerCta').href = o.href;
+      if (o.cta) document.getElementById('offerCta').textContent = o.cta;
+      el.classList.add('show');
+      const hide = () => el.classList.remove('show');
+      document.getElementById('offerDismiss').onclick = hide;
+      setTimeout(hide, 20000); // it leaves on its own; no pressure
+    });
   }
 
   // say

@@ -198,6 +198,8 @@
         for (const [id, O] of others) { if (!(m.users || []).find(u => u.id === id)) { scene.remove(O.group); others.delete(id); } }
       } else if (m.t === 'speech') {
         if (onSpeech) onSpeech(m);
+      } else if (m.t === 'offer') {
+        if (World._onOffer) World._onOffer(m);
       } else if (m.t === 'leave') {
         const O = others.get(m.id); if (O) { scene.remove(O.group); others.delete(m.id); }
       }
@@ -212,6 +214,7 @@
     ws.send(JSON.stringify({ t: 'move', x: me.x, y: 0, z: me.z, yaw: me.yaw }));
   }
   World.say = function (text) { if (ws && ws.readyState === 1) ws.send(JSON.stringify({ t: 'say', text })); };
+  World.onOffer = function (cb) { World._onOffer = cb; };
 
   // ── controls: WASD + pointer-drag look (desktop), touch drag (mobile) ──────
   function _bindControls(mountEl) {
