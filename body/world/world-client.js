@@ -211,6 +211,10 @@
       if (m.t === 'hello') {
         selfId = m.selfId;
         if (m.spawn) { me.x = m.spawn.x; me.z = m.spawn.z; me.yaw = m.spawn.yaw; }
+        // idempotent: clear any prior agents/self (reconnect must not duplicate them)
+        for (const A of agents.values()) scene.remove(A.group);
+        agents.clear();
+        if (World._selfBody) { scene.remove(World._selfBody); World._selfBody = null; }
         (m.agents || []).forEach(a => {
           const g = _makeAgentPresence(a); g.position.set(a.x, 0, a.z); scene.add(g);
           agents.set(a.id, { group: g, target: { x: a.x, z: a.z, yaw: a.yaw || 0 }, name: a.name });
