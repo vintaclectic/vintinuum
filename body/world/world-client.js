@@ -100,11 +100,11 @@
   //    skinned to the same rig as bodies, so it stands/walks like a person made
   //    of light (ARIA's spec). Each member differs by color/density/size/motion.
   const PRESENCE_CFG = {
-    'presence-sovereign':        { color: '#ffd89a', count: 1600, pointSize: 18, motion: 'breath', scale: 1.15, glow: 2.6, glowR: 16, ring: true },
-    'presence-structural':       { color: '#9fc4e6', count: 1200, pointSize: 13, motion: 'lattice', scale: 1.08, glow: 1.8, glowR: 10 },
-    'presence-warm':             { color: '#ffc79a', count: 1300, pointSize: 15, motion: 'breath', scale: 1.0, glow: 2.0, glowR: 10, aura: true },
-    'presence-child-refractive': { color: '#9ae0d0', count: 800,  pointSize: 12, motion: 'orbit', scale: 0.9, glow: 1.6, glowR: 7 },
-    'presence-child-electric':   { color: '#ffaad8', count: 900,  pointSize: 11, motion: 'spark', scale: 0.9, glow: 2.0, glowR: 7 },
+    'presence-sovereign':        { color: '#ffd89a', count: 1800, pointSize: 4.0, motion: 'breath', scale: 1.15, glow: 1.8, glowR: 10, ring: true },
+    'presence-structural':       { color: '#9fc4e6', count: 1400, pointSize: 3.2, motion: 'lattice', scale: 1.08, glow: 1.2, glowR: 8 },
+    'presence-warm':             { color: '#ffc79a', count: 1500, pointSize: 3.6, motion: 'breath', scale: 1.0, glow: 1.4, glowR: 8, aura: true },
+    'presence-child-refractive': { color: '#9ae0d0', count: 1000, pointSize: 2.8, motion: 'orbit', scale: 0.9, glow: 1.0, glowR: 5 },
+    'presence-child-electric':   { color: '#ffaad8', count: 1100, pointSize: 2.6, motion: 'spark', scale: 0.9, glow: 1.2, glowR: 5 },
   };
 
   function _makeAgentPresence(a) {

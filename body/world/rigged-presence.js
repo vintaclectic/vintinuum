@@ -170,7 +170,7 @@
           vSeed = aSeed;
           vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
           float breath = (uMotion == 0) ? (0.85 + 0.25*sin(uTime*1.5)) : 1.0;
-          gl_PointSize = uSize * breath * (300.0 / -mvPosition.z);
+          gl_PointSize = clamp(uSize * breath * (90.0 / -mvPosition.z), 1.0, 9.0);
           gl_Position = projectionMatrix * mvPosition;
         }`,
       fragmentShader: `
