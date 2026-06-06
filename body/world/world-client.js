@@ -214,6 +214,7 @@
       let m; try { m = JSON.parse(ev.data); } catch (_) { return; }
       if (m.t === 'hello') {
         selfId = m.selfId;
+        World._selfName = m.selfName || 'you';
         if (m.spawn) { me.x = m.spawn.x; me.z = m.spawn.z; me.yaw = m.spawn.yaw; }
         // idempotent: clear any prior agents/self (reconnect must not duplicate them)
         for (const A of agents.values()) scene.remove(A.group);
@@ -223,8 +224,8 @@
           const g = _makeAgentPresence(a); g.position.set(a.x, 0, a.z); scene.add(g);
           agents.set(a.id, { group: g, target: { x: a.x, z: a.z, yaw: a.yaw || 0 }, name: a.name });
         });
-        // build MY own walking body — wearing my real face if I have one
-        World._selfBody = _makeUserPresence('you', avatarGlbUrl);
+        // build MY own walking body — labeled with my real username (DirHaven), not "you"
+        World._selfBody = _makeUserPresence(World._selfName, avatarGlbUrl);
         World._selfBody.position.set(me.x, 0, me.z);
         scene.add(World._selfBody);
       } else if (m.t === 'presence') {
