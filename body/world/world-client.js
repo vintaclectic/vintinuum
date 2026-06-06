@@ -190,7 +190,9 @@
     ctx.fillStyle = '#fbf2e4';
     ctx.fillText(String(text || '').toUpperCase(), 256, 64);
     const tex = new THREE.CanvasTexture(c); tex.colorSpace = THREE.SRGBColorSpace;
-    tex.minFilter = THREE.LinearFilter; tex.needsUpdate = true;
+    tex.minFilter = THREE.LinearFilter; tex.magFilter = THREE.LinearFilter;
+    tex.wrapS = THREE.ClampToEdgeWrapping; tex.wrapT = THREE.ClampToEdgeWrapping; // no repeat-smear
+    tex.generateMipmaps = false; tex.needsUpdate = true;
     const spr = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent: true, depthTest: false, depthWrite: false }));
     spr.renderOrder = 999;
     spr.scale.set(1.5, 0.375, 1); spr.position.y = 2.4;
