@@ -79,34 +79,47 @@
     }
 
     if (bustUrl) {
-      // hide the xbot mesh — we only want its skeleton driving motion
-      root.traverse(o => { if (o.isMesh || o.isSkinnedMesh) o.visible = false; });
-      // mount the bust on the head bone
+      // KEEP the robot body visible — we mount the user's face as the HEAD, on the
+      // same walking body everyone has. (Vinta: "that face should become the face
+      // of the robot body you built for all users.")
       try {
         const bustGltf = await new Promise((res, rej) => new mods.GLTFLoader().load(bustUrl, res, undefined, rej));
         const bust = bustGltf.scene;
-        // Hunyuan bust is roughly head+shoulders, ~1.5–2 units tall in its own space.
-        // Scale + offset so it sits where xbot's head is.
+        bust.traverse(o => { if (o.isMesh) { o.frustumCulled = false; o.renderOrder = 1; } });
+
         const mount = headBone || neckBone;
         if (mount) {
-          // normalize bust size: measure its bbox height, scale to ~0.45 (head size)
+          // Measure the rig's actual head size (from head bone to head-top) so the
+          // face scales to MATCH the robot head — never oversized, never tiny.
+          let headTopY = null;
+          root.traverse(o => { if (o.isBone && /HeadTop/i.test(o.name)) { o.updateWorldMatrix(true, false); headTopY = o.getWorldPosition(new THREE.Vector3()).y; } });
+          mount.updateWorldMatrix(true, false);
+          const headBaseY = mount.getWorldPosition(new THREE.Vector3()).y;
+          // robot head height in world units (fallback ~0.22 if HeadTop missing)
+          const headHeight = (headTopY != null) ? Math.max(0.12, headTopY - headBaseY) : 0.22;
+          // target the face to be ~2.0x head height (Hunyuan bust includes neck/shoulders)
           const box = new THREE.Box3().setFromObject(bust);
-          const h = Math.max(0.001, box.max.y - box.min.y);
-          const s = 0.5 / h;
+          const faceH = Math.max(0.001, box.max.y - box.min.y);
+          const sLocal = (headHeight * 2.0) / faceH;
+          // account for the head bone's own world scale so local scale lands right
+          const headScale = mount.getWorldScale(new THREE.Vector3()).y || 1;
+          const s = sLocal / headScale;
           bust.scale.setScalar(s);
-          // recenter so the face sits on the neck
+          // seat the face so its lower third sits at the neck, centered on the head
           const center = box.getCenter(new THREE.Vector3());
-          bust.position.set(-center.x * s, -center.y * s + 0.12, -center.z * s);
+          bust.position.set(-center.x * s, -box.min.y * s - headHeight * 0.35, -center.z * s);
+          // hide ONLY the robot's head/neck mesh region so the face replaces it cleanly.
+          // (xbot has one skinned mesh for the whole body; we can't easily hide just the
+          //  head verts, so we keep the body and let the face overlay the head area —
+          //  sized to cover it. The robot head is small + the face covers it.)
           mount.add(bust);
           handle.bust = bust;
         } else {
-          // no head bone — just float the bust at head height on the root
-          bust.position.y = 1.5; root.add(bust);
+          bust.position.y = 1.55; bust.scale.setScalar(0.4); root.add(bust);
           handle.bust = bust;
         }
       } catch (e) {
-        console.warn('[rigged-presence] bust load failed, showing rig body:', e && e.message);
-        root.traverse(o => { if (o.isMesh || o.isSkinnedMesh) o.visible = true; });
+        console.warn('[rigged-presence] face load failed, robot keeps default head:', e && e.message);
       }
     }
 

@@ -185,17 +185,23 @@
   }
 
   function _makeLabel(text) {
-    const c = document.createElement('canvas'); c.width = 512; c.height = 128;
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    const W = 512, H = 128;
+    const c = document.createElement('canvas'); c.width = W * dpr; c.height = H * dpr;
     const ctx = c.getContext('2d');
-    ctx.clearRect(0, 0, 512, 128);
-    ctx.font = 'bold 48px Georgia, serif';
+    ctx.scale(dpr, dpr);
+    ctx.clearRect(0, 0, W, H);
+    ctx.font = '600 46px Georgia, serif';
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    ctx.shadowColor = 'rgba(0,0,0,0.85)'; ctx.shadowBlur = 10;
+    // crisp single render: a dark stroke outline (not blur) for legibility, then fill
+    const s = String(text || '').toUpperCase();
+    ctx.lineWidth = 6; ctx.strokeStyle = 'rgba(0,0,0,0.9)'; ctx.lineJoin = 'round';
+    ctx.strokeText(s, W / 2, H / 2);
     ctx.fillStyle = '#fbf2e4';
-    ctx.fillText(String(text || '').toUpperCase(), 256, 64);
+    ctx.fillText(s, W / 2, H / 2);
     const tex = new THREE.CanvasTexture(c); tex.colorSpace = THREE.SRGBColorSpace;
     tex.minFilter = THREE.LinearFilter; tex.magFilter = THREE.LinearFilter;
-    tex.wrapS = THREE.ClampToEdgeWrapping; tex.wrapT = THREE.ClampToEdgeWrapping; // no repeat-smear
+    tex.wrapS = THREE.ClampToEdgeWrapping; tex.wrapT = THREE.ClampToEdgeWrapping;
     tex.generateMipmaps = false; tex.needsUpdate = true;
     const spr = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent: true, depthTest: false, depthWrite: false }));
     spr.renderOrder = 999;
