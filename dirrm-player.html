@@ -1278,6 +1278,14 @@
           this.play();
         } else if (action === 'pause') {
           this.pause();
+        } else if (action === 'stop') {
+          // Stop = pause + rewind to start. Matches dirrm-launch handle.stop().
+          try {
+            if (this.mediaElement) {
+              this.mediaElement.pause();
+              this.mediaElement.currentTime = 0;
+            }
+          } catch {}
         } else if (action === 'close') {
           this.close();
         }
@@ -1290,6 +1298,95 @@
           return decodeURIComponent(filename.replace(/\.[^.]+$/, '').replace(/[_-]/g, ' '));
         } catch {
           return 'Unknown';
+        }
+      }
+
+      // ── PLAY TELEMETRY (U3 — feeds the memory hook) ────────────────────────
+      // Every play start/progress/end POSTs to /api/dirrm/play-event so the
+      // brain records what was watched and, for ≥30s watches, turns it into a
+      // shared experiential memory. This is what makes DirRM "addicting and
+      // long-lasting" — Vintinuum REMEMBERS what you watched together.
+      _telemetryApiBase() {
+        return window.__VINTINUUM_API_BASE || window.VINTINUUM_API || window.__VINT_API || 'https://api.vintaclectic.com';
+      }
+      _detectSurface() {
+        // Best-effort: how is this player being shown?
+        try {
+          if (window.parent !== window) {
+            const h = (document.referrer || '').toLowerCase();
+            if (h.includes('brain')) return 'brain';
+            if (h.includes('jarvis')) return 'jarvis';
+            return 'iframe';
+          }
+          const ref = (document.referrer || '').toLowerCase();
+          if (ref.includes('kick.com')) return 'kick';
+          if (/android|iphone|ipad|mobile/i.test(navigator.userAgent)) return 'mobile';
+          return 'tab';
+        } catch { return 'unknown'; }
+      }
+      _newPlaySession(url, title, type) {
+        this._playSession = {
+          id: 'dp-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 8),
+          url, title, type,
+          startedAt: Date.now(),
+          watched: 0,           // cumulative seconds actually played
+          lastTick: null,       // last timeupdate timestamp for delta accumulation
+          duration: 0,
+          ended: false,
+        };
+      }
+      _postPlayEvent(event, extra = {}) {
+        const s = this._playSession;
+        if (!s) return;
+        const body = {
+          session_id: s.id,
+          url: s.url,
+          title: s.title,
+          media_type: s.type || this.mediaType,
+          event,
+          position_seconds: extra.position || 0,
+          duration_seconds: s.duration || extra.duration || 0,
+          watched_seconds: s.watched || 0,
+          surface: this._detectSurface(),
+          mode: this.mode || 'main',
+        };
+        try {
+          // keepalive so 'end'/'abandoned' survives a tab close
+          fetch(this._telemetryApiBase() + '/api/dirrm/play-event', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body),
+            keepalive: true,
+            credentials: 'omit',
+          }).catch(() => {});
+        } catch {}
+      }
+      // Attach watch-time accounting to whatever media element just loaded.
+      _attachTelemetry(el) {
+        if (!el || !this._playSession) return;
+        const s = this._playSession;
+        const tick = () => {
+          const now = Date.now();
+          if (s.lastTick && !el.paused) {
+            const delta = (now - s.lastTick) / 1000;
+            if (delta > 0 && delta < 5) s.watched += delta;  // ignore big jumps (seeks)
+          }
+          s.lastTick = now;
+          if (el.duration && isFinite(el.duration)) s.duration = el.duration;
+        };
+        el.addEventListener('play',  () => { s.lastTick = Date.now(); this._postPlayEvent('start', { position: el.currentTime }); });
+        el.addEventListener('timeupdate', tick);
+        el.addEventListener('pause', () => { tick(); /* pause is not an end */ });
+        el.addEventListener('ended', () => { tick(); s.ended = true; this._postPlayEvent('end', { position: el.currentTime, duration: el.duration }); });
+        // Abandoned: tab close / navigation while still watching ≥10s
+        if (!this._beforeUnloadBound) {
+          this._beforeUnloadBound = true;
+          window.addEventListener('beforeunload', () => {
+            const cur = this._playSession;
+            if (cur && !cur.ended && cur.watched >= 10) {
+              this._postPlayEvent('abandoned', {});
+            }
+          });
         }
       }
 
@@ -1553,6 +1650,9 @@
         this._lastUrl = url;
         this._lastTitle = resolvedTitle;
 
+        // Start a new telemetry session for this media (U3 play history + memory hook)
+        this._newPlaySession(url, resolvedTitle, this.mediaType);
+
         // Play history stack — powers prev()/next() (no playlist concept exists,
         // so we navigate the sequence of things actually loaded). When loading
         // fresh media (not via prev/next) we truncate any forward history.
@@ -1785,6 +1885,7 @@
 
         this.mediaContainer.appendChild(video);
         this.mediaElement = video;
+        this._attachTelemetry(video);
 
         try {
           await video.play();
@@ -1849,6 +1950,7 @@
         this.mediaContainer.appendChild(vizWrap);
         this.mediaContainer.appendChild(audio);
         this.mediaElement = audio;
+        this._attachTelemetry(audio);
         this._vizCanvas = canvas;
         this._vizLabel = label;
 
