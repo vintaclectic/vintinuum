@@ -81,6 +81,9 @@
 </section>
 
 <script src="body/api_base.js"></script>
+<script src="body/three3d/loader.js"></script>
+<script src="body/onboarding/reveal.js"></script>
+<script src="body/onboarding/arrival-card.js"></script>
 <script src="body/onboarding/capture.js"></script>
 <script src="body/onboarding/becoming.js"></script>
 <script>
@@ -198,6 +201,8 @@
     let mounted = false;
     try {
       if (window.VintinuumReveal && window.VintinuumReveal.play) {
+        // The Becoming: nebula → collapse onto your face → the turn. Resolves
+        // the instant the face looks at you — so the line lands right then.
         await window.VintinuumReveal.play({ stage, avatarId });
         mounted = true;
       }
@@ -207,14 +212,19 @@
       // graceful reveal: warm wash + the line. The 3D body view is one tap away.
       stage.style.background = 'radial-gradient(120% 100% at 50% 60%, rgba(255,198,132,0.22), #0d1117 70%)';
     }
-    setTimeout(() => { copy.classList.add('show'); }, mounted ? 8500 : 1400);
+    // copy lands at eye-contact (play already resolved there) or after the wash
+    setTimeout(() => { copy.classList.add('show'); generateArrivalCard(avatarId); }, mounted ? 600 : 1400);
     // tap anywhere → arrival (the real body view / world)
     const go = () => {
       document.removeEventListener('click', go);
-      // hand off to the body view where the avatar now lives
       location.href = 'brain.html?mode=body&welcome=1';
     };
-    setTimeout(() => document.addEventListener('click', go), mounted ? 9500 : 2600);
+    setTimeout(() => document.addEventListener('click', go), mounted ? 2200 : 2600);
+  }
+
+  // ── HELIOS's viral surface: the Arrival Card ──
+  function generateArrivalCard(avatarId) {
+    try { if (window.ArrivalCard && window.ArrivalCard.offer) window.ArrivalCard.offer(avatarId, 'there you are.'); } catch (_) {}
   }
 
 })();
