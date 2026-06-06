@@ -110,12 +110,20 @@
       }
     }
 
-    handle.play = function (name, fade = 0.3) {
+    handle._rate = 1;
+    handle.play = function (name, fade = 0.25) {
       const next = actions[name] || actions.idle;
-      if (!next || handle._current === next) return;
+      if (!next) return;
+      if (handle._current === next) return;
       next.reset().fadeIn(fade).play();
+      next.timeScale = handle._rate;
       if (handle._current) handle._current.fadeOut(fade);
       handle._current = next;
+    };
+    // match animation playback speed to real movement speed (no foot-sliding)
+    handle.setRate = function (rate) {
+      handle._rate = Math.max(0.3, Math.min(2.2, rate || 1));
+      if (handle._current) handle._current.timeScale = handle._rate;
     };
     handle._t = 0;
     handle.update = function (dt) {

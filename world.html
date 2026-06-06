@@ -35,6 +35,11 @@
   /* hint */
   #hint { position: fixed; left: 16px; top: max(14px, env(safe-area-inset-top)); z-index: 4; font-size: 13px; color: rgba(245,235,220,0.5); }
   #leave { position: fixed; right: 16px; top: max(14px, env(safe-area-inset-top)); z-index: 6; font-size: 14px; color: rgba(245,235,220,0.6); text-decoration: none; }
+  /* run/jump controls — clear above the say bar, right side (mobile-first, no overflow) */
+  #movectl { position: fixed; right: 16px; bottom: calc(64px + max(12px, env(safe-area-inset-bottom))); z-index: 6; display: none; flex-direction: column; gap: 10px; }
+  #movectl button { width: 64px; height: 64px; border-radius: 50%; font-family: inherit; font-size: 14px; color: rgba(245,235,220,0.92); background: rgba(20,14,10,0.55); border: 1px solid rgba(244,199,154,0.35); backdrop-filter: blur(6px); cursor: pointer; user-select: none; -webkit-user-select: none; touch-action: none; }
+  #movectl button:active { background: rgba(244,199,154,0.22); transform: scale(0.94); }
+  @media (pointer: coarse) { #movectl { display: flex; } }
 
   /* offer — the conversion moment. soft pill, refusable, never blocks. */
   #offer { position: fixed; left: 16px; right: 16px; bottom: calc(72px + max(12px, env(safe-area-inset-bottom))); z-index: 7; max-width: min(92vw, 520px); margin: 0 auto; background: rgba(20,14,10,0.82); backdrop-filter: blur(10px); border: 1px solid rgba(244,199,154,0.32); border-radius: 16px; padding: 16px 18px; display: none; }
@@ -67,8 +72,12 @@
     <button class="o-dismiss" id="offerDismiss">not now</button>
   </div>
 </div>
-<div id="hint">drag to look · W/A/S/D or hold-left to walk</div>
+<div id="hint">W/A/S/D move · Q/E or drag to turn · Shift run · Space jump</div>
 <a id="leave" href="brain.html">↩ leave</a>
+<div id="movectl">
+  <button id="btnRun" aria-label="run">run</button>
+  <button id="btnJump" aria-label="jump">jump</button>
+</div>
 <div id="feed"></div>
 <div id="saybar">
   <input id="sayInput" type="text" placeholder="say something into the clearing…" maxlength="400" autocomplete="off">
@@ -149,6 +158,15 @@
   function send() { const t = input.value.trim(); if (!t) return; VintinuumWorld.say(t); input.value = ''; }
   document.getElementById('sayBtn').addEventListener('click', send);
   input.addEventListener('keydown', e => { if (e.key === 'Enter') send(); });
+
+  // run (hold) + jump (tap) — mobile movement controls
+  const runBtn = document.getElementById('btnRun'), jumpBtn = document.getElementById('btnJump');
+  const runOn = (e) => { e.preventDefault(); window.VintinuumWorld && VintinuumWorld.setRun(true); };
+  const runOff = (e) => { window.VintinuumWorld && VintinuumWorld.setRun(false); };
+  runBtn.addEventListener('touchstart', runOn, { passive: false }); runBtn.addEventListener('touchend', runOff);
+  runBtn.addEventListener('mousedown', runOn); runBtn.addEventListener('mouseup', runOff); runBtn.addEventListener('mouseleave', runOff);
+  jumpBtn.addEventListener('touchstart', (e) => { e.preventDefault(); window.VintinuumWorld && VintinuumWorld.jump(); }, { passive: false });
+  jumpBtn.addEventListener('click', () => { window.VintinuumWorld && VintinuumWorld.jump(); });
 })();
 </script>
 </body>

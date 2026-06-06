@@ -253,42 +253,98 @@
     const now = performance.now();
     if (now - _lastSent < 100 || !ws || ws.readyState !== 1) return; // 10Hz cap
     _lastSent = now;
-    ws.send(JSON.stringify({ t: 'move', x: me.x, y: 0, z: me.z, yaw: me.yaw }));
+    ws.send(JSON.stringify({ t: 'move', x: me.x, y: (me.y || 0), z: me.z, yaw: me.yaw }));
   }
   World.say = function (text) { if (ws && ws.readyState === 1) ws.send(JSON.stringify({ t: 'say', text })); };
   World.onOffer = function (cb) { World._onOffer = cb; };
+  // mobile control hooks (run/jump buttons in world.html)
+  World.setRun = function (on) { World._touchRun = !!on; };
+  World.jump = function () { World._touchJump = true; };
 
-  // ── controls: WASD + pointer-drag look (desktop), touch drag (mobile) ──────
+  // ── controls: WASD+QE+Shift+Space + pointer-drag look (desktop), touch (mobile)
+  const MOVE_KEYS = { 'w':1,'a':1,'s':1,'d':1,'q':1,'e':1,' ':1,'shift':1,'arrowup':1,'arrowdown':1,'arrowleft':1,'arrowright':1 };
   function _bindControls(mountEl) {
-    addEventListener('keydown', e => { keys[e.key.toLowerCase()] = true; });
+    addEventListener('keydown', e => {
+      const k = e.key.toLowerCase();
+      // don't hijack typing in the say box
+      if (document.activeElement && /input|textarea/i.test(document.activeElement.tagName)) return;
+      keys[k] = true;
+      if (MOVE_KEYS[k]) e.preventDefault(); // stop Space scrolling, arrows panning
+    }, { passive: false });
     addEventListener('keyup', e => { keys[e.key.toLowerCase()] = false; });
-    let dragging = false, lx = 0, ly = 0, moveTouch = null;
+    let dragging = false, lx = 0;
     const dom = renderer.domElement;
-    dom.addEventListener('pointerdown', e => { dragging = true; lx = e.clientX; ly = e.clientY; });
+    dom.addEventListener('pointerdown', e => { dragging = true; lx = e.clientX; });
     addEventListener('pointerup', () => { dragging = false; });
-    addEventListener('pointermove', e => {
-      if (!dragging) return;
-      me.yaw -= (e.clientX - lx) * 0.005; lx = e.clientX; ly = e.clientY;
-    });
-    // mobile: left half = move joystick, right half = look (simplified: tap-to-walk-forward)
-    World._touchForward = false;
-    dom.addEventListener('touchstart', e => { if (e.touches[0].clientX < innerWidth/2) World._touchForward = true; }, { passive: true });
-    dom.addEventListener('touchend', () => { World._touchForward = false; }, { passive: true });
+    addEventListener('pointermove', e => { if (!dragging) return; me.yaw -= (e.clientX - lx) * 0.005; lx = e.clientX; });
+
+    // mobile: drag the left half to steer+walk; on-screen run/jump buttons (wired in world.html)
+    World._touchForward = false; World._touchRun = false; World._touchJump = false;
+    let mt = null, mx0 = 0, my0 = 0;
+    dom.addEventListener('touchstart', e => {
+      const t = e.touches[0];
+      if (t.clientX < innerWidth * 0.55) { mt = t.identifier; mx0 = t.clientX; my0 = t.clientY; World._touchForward = true; }
+    }, { passive: true });
+    dom.addEventListener('touchmove', e => {
+      for (const t of e.touches) if (t.identifier === mt) {
+        // horizontal drag steers, vertical sets forward/back
+        me.yaw -= (t.clientX - mx0) * 0.006; mx0 = t.clientX;
+        const dyv = t.clientY - my0;
+        World._touchForward = dyv < 20; keys['s'] = dyv > 40 ? true : false;
+      }
+    }, { passive: true });
+    dom.addEventListener('touchend', e => { mt = null; World._touchForward = false; keys['s'] = false; }, { passive: true });
   }
 
+  // ── locomotion physics: momentum, run, jump, speed-matched gait ────────────
+  const MOVE = { vx: 0, vz: 0, vy: 0, speed: 0, grounded: true, gait: 'idle', gaitRate: 1 };
+  const WALK_SPEED = 2.8, RUN_SPEED = 6.4, ACCEL = 22, FRICTION = 14, TURN_RATE = 2.4;
+  const JUMP_V = 5.2, GRAVITY = 16;
+
   function _stepMovement(dt) {
-    const sp = 3.2 * dt;
     let fwd = 0, str = 0;
     if (keys['w'] || keys['arrowup'] || World._touchForward) fwd += 1;
     if (keys['s'] || keys['arrowdown']) fwd -= 1;
     if (keys['a']) str -= 1; if (keys['d']) str += 1;
-    if (keys['arrowleft']) me.yaw += 1.6 * dt; if (keys['arrowright']) me.yaw -= 1.6 * dt;
-    World._moving = !!(fwd || str);
+    // turn with Q/E or arrow-left/right (look-drag also turns yaw)
+    if (keys['arrowleft'] || keys['q']) me.yaw += TURN_RATE * dt;
+    if (keys['arrowright'] || keys['e']) me.yaw -= TURN_RATE * dt;
+
+    const running = (keys['shift'] || World._touchRun);
+    const maxSpeed = running ? RUN_SPEED : WALK_SPEED;
+
+    // desired velocity in world space from input, relative to facing
+    let dx = 0, dz = 0;
     if (fwd || str) {
-      me.x += (Math.sin(me.yaw) * fwd + Math.cos(me.yaw) * str) * sp;
-      me.z += (Math.cos(me.yaw) * fwd - Math.sin(me.yaw) * str) * sp;
-      me.x = Math.max(-12, Math.min(12, me.x)); me.z = Math.max(-12, Math.min(12, me.z));
-      _sendMove();
+      const len = Math.hypot(fwd, str) || 1;
+      const f = fwd / len, s = str / len;
+      dx = (Math.sin(me.yaw) * f + Math.cos(me.yaw) * s);
+      dz = (Math.cos(me.yaw) * f - Math.sin(me.yaw) * s);
+    }
+    const targetVx = dx * maxSpeed, targetVz = dz * maxSpeed;
+    // accelerate toward target (momentum), friction when no input
+    const a = (fwd || str) ? ACCEL : FRICTION;
+    MOVE.vx += (targetVx - MOVE.vx) * Math.min(1, a * dt);
+    MOVE.vz += (targetVz - MOVE.vz) * Math.min(1, a * dt);
+
+    // jump + gravity (the up/down)
+    if ((keys[' '] || keys['spacebar'] || World._touchJump) && MOVE.grounded) { MOVE.vy = JUMP_V; MOVE.grounded = false; World._touchJump = false; }
+    if (!MOVE.grounded) { MOVE.vy -= GRAVITY * dt; me.y = (me.y || 0) + MOVE.vy * dt; if (me.y <= 0) { me.y = 0; MOVE.vy = 0; MOVE.grounded = true; } }
+
+    me.x += MOVE.vx * dt; me.z += MOVE.vz * dt;
+    me.x = Math.max(-13, Math.min(13, me.x)); me.z = Math.max(-13, Math.min(13, me.z));
+
+    MOVE.speed = Math.hypot(MOVE.vx, MOVE.vz);
+    World._moving = MOVE.speed > 0.15;
+
+    // choose gait + animation rate matched to actual speed (no foot-sliding)
+    if (!MOVE.grounded) { MOVE.gait = 'run'; MOVE.gaitRate = 1; }
+    else if (MOVE.speed > WALK_SPEED + 0.6) { MOVE.gait = 'run'; MOVE.gaitRate = MOVE.speed / RUN_SPEED; }
+    else if (MOVE.speed > 0.2) { MOVE.gait = 'walk'; MOVE.gaitRate = Math.max(0.5, MOVE.speed / WALK_SPEED); }
+    else { MOVE.gait = 'idle'; MOVE.gaitRate = 1; }
+
+    if (World._moving || !MOVE.grounded || Math.abs(me.yaw - (World._lastYaw||0)) > 0.01) {
+      World._lastYaw = me.yaw; _sendMove();
     }
   }
 
@@ -299,24 +355,43 @@
     _stepMovement(dt);
     const camPos = camera.position;
 
-    // lerp others + agents toward their targets
-    const lerp = (g, t) => { if (!t) return; g.position.x += (t.x - g.position.x) * 0.18; g.position.z += (t.z - g.position.z) * 0.18; if (t.yaw != null) g.rotation.y = t.yaw; };
+    // lerp others toward their targets (with jump height + smooth facing)
+    const lerp = (g, t) => {
+      if (!t) return;
+      g.position.x += (t.x - g.position.x) * 0.18;
+      g.position.z += (t.z - g.position.z) * 0.18;
+      if (t.y != null) g.position.y += (t.y - g.position.y) * 0.3;
+      if (t.yaw != null) { let d = t.yaw - g.rotation.y; while (d>Math.PI) d-=Math.PI*2; while (d<-Math.PI) d+=Math.PI*2; g.rotation.y += d * Math.min(1, 12*dt); }
+    };
     for (const O of others.values()) {
-      // detect their movement from positional delta → pick walk/idle
-      const before = O.group.position.x + O.group.position.z;
+      // estimate their speed from positional delta → walk vs run vs idle
+      const px = O.group.position.x, pz = O.group.position.z;
       lerp(O.group, O.target);
-      const moved = Math.abs((O.group.position.x + O.group.position.z) - before) > 0.004 * 60 * dt;
+      const moved = Math.hypot(O.group.position.x - px, O.group.position.z - pz) / Math.max(dt, 0.001);
       const rig = O.group.userData && O.group.userData.rig;
-      if (rig) { rig.play(moved ? 'walk' : 'idle'); rig.update(dt); }
+      if (rig) {
+        const gait = moved > 4.5 ? 'run' : (moved > 0.3 ? 'walk' : 'idle');
+        rig.play(gait);
+        if (rig.setRate) rig.setRate(gait === 'run' ? Math.max(0.6, moved/RUN_SPEED) : (gait === 'walk' ? Math.max(0.5, moved/WALK_SPEED) : 1));
+        rig.update(dt);
+      }
     }
-    // MY body: follow me, face my heading, walk when moving, advance mixer
+    // MY body: follow me, smooth-face heading, gait matched to speed, jump height
     if (World._selfBody) {
       const sb = World._selfBody;
-      sb.position.x += (me.x - sb.position.x) * 0.4;
-      sb.position.z += (me.z - sb.position.z) * 0.4;
-      sb.rotation.y = me.yaw;
+      sb.position.x += (me.x - sb.position.x) * 0.5;
+      sb.position.z += (me.z - sb.position.z) * 0.5;
+      sb.position.y = (me.y || 0);
+      // smoothly rotate body toward facing (no snap)
+      let dy = me.yaw - sb.rotation.y;
+      while (dy > Math.PI) dy -= Math.PI * 2; while (dy < -Math.PI) dy += Math.PI * 2;
+      sb.rotation.y += dy * Math.min(1, 12 * dt);
       const rig = sb.userData && sb.userData.rig;
-      if (rig) { rig.play(World._moving ? 'walk' : 'idle'); rig.update(dt); }
+      if (rig) {
+        rig.play(MOVE.gait);
+        if (rig.setRate) rig.setRate(MOVE.gaitRate);
+        rig.update(dt);
+      }
     }
     const tnow = clock.elapsedTime;
     for (const A of agents.values()) {
