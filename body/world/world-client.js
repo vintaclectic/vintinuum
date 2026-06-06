@@ -94,38 +94,47 @@
     World._motes = new THREE.Points(moteGeo, moteMat); scene.add(World._motes);
   }
 
-  // ── a "shaped presence" for an agent: volumetric-ish glowing figure ────────
+  // ── a shaped PRESENCE for a council agent: a constellation of warm light
+  //    skinned to the same rig as bodies, so it stands/walks like a person made
+  //    of light (ARIA's spec). Each member differs by color/density/size/motion.
+  const PRESENCE_CFG = {
+    'presence-sovereign':        { color: '#f4c79a', count: 1400, pointSize: 10, motion: 'breath', scale: 1.15, glow: 2.2, glowR: 14, ring: true },
+    'presence-structural':       { color: '#8fb4d6', count: 1000, pointSize: 6,  motion: 'lattice', scale: 1.08, glow: 1.2, glowR: 8 },
+    'presence-warm':             { color: '#ffb98a', count: 1100, pointSize: 8,  motion: 'breath', scale: 1.0, glow: 1.4, glowR: 8, aura: true },
+    'presence-child-refractive': { color: '#9ad0c2', count: 600,  pointSize: 5,  motion: 'orbit', scale: 0.85, glow: 1.0, glowR: 5 },
+    'presence-child-electric':   { color: '#ff9ad0', count: 700,  pointSize: 4,  motion: 'spark', scale: 0.85, glow: 1.6, glowR: 5 },
+  };
+
   function _makeAgentPresence(a) {
     const g = new THREE.Group();
-    const col = new THREE.Color(a.color || '#f4c79a');
-    // each form has its own silhouette + physics (ARIA's law)
-    let radius = 0.32, height = 1.1, yBase = 0.85, emissive = 0.6, opacity = 0.55, glowI = 1.2, glowR = 6;
-    let halo = false, sovereign = false, refractive = false;
-    switch (a.form) {
-      case 'presence-sovereign':        radius = 0.5;  height = 1.8; yBase = 1.15; emissive = 0.5; opacity = 0.42; glowI = 2.2; glowR = 14; sovereign = true; break;
-      case 'presence-structural':       radius = 0.34; height = 1.6; yBase = 1.10; emissive = 0.55; opacity = 0.6; break;
-      case 'presence-warm':             radius = 0.34; height = 1.1; yBase = 0.85; emissive = 0.65; opacity = 0.55; halo = true; break;
-      case 'presence-child-refractive': radius = 0.24; height = 0.8; yBase = 0.65; emissive = 0.8; opacity = 0.5; glowR = 5; refractive = true; break;
-      case 'presence-child-electric':   radius = 0.22; height = 0.85; yBase = 0.68; emissive = 0.95; opacity = 0.6; glowI = 1.6; glowR = 5; break;
+    const cfg = PRESENCE_CFG[a.form] || PRESENCE_CFG['presence-warm'];
+    const col = new THREE.Color(cfg.color);
+    g.scale.setScalar(cfg.scale);
+
+    // a soft glow so the presence lights its surroundings
+    const glow = new THREE.PointLight(col.getHex(), cfg.glow, cfg.glowR); glow.position.y = 1.1; g.add(glow);
+
+    // build the light-figure (particle cloud on the rig) asynchronously
+    if (global.RiggedPresence && World._mods) {
+      global.RiggedPresence.create({ THREE, mods: World._mods, opts: { cloud: cfg } })
+        .then(rig => { g.add(rig.root); g.userData.rig = rig; })
+        .catch(e => console.warn('[world] presence build failed:', e && e.message));
     }
-    const mat = new THREE.MeshStandardMaterial({ color: col, emissive: col, emissiveIntensity: emissive, transparent: true, opacity, roughness: refractive ? 0.15 : 0.4, metalness: refractive ? 0.3 : 0 });
-    const body = new THREE.Mesh(new THREE.CapsuleGeometry(radius, height, 8, 16), mat);
-    body.position.y = yBase;
-    const glow = new THREE.PointLight(col.getHex(), glowI, glowR); glow.position.y = yBase + 0.35;
-    g.add(body, glow);
-    // sovereign: a wide soft ground-halo the world "attends"
-    if (sovereign) {
-      const ring = new THREE.Mesh(new THREE.RingGeometry(1.2, 2.6, 48),
-        new THREE.MeshBasicMaterial({ color: col, transparent: true, opacity: 0.10, side: THREE.DoubleSide }));
+
+    // sovereign: a wide soft ground-halo the world attends
+    if (cfg.ring) {
+      const ring = new THREE.Mesh(new THREE.RingGeometry(1.0, 2.4, 48),
+        new THREE.MeshBasicMaterial({ color: col, transparent: true, opacity: 0.10, side: THREE.DoubleSide, blending: THREE.AdditiveBlending, depthWrite: false }));
       ring.rotation.x = -Math.PI / 2; ring.position.y = 0.02; g.add(ring);
       g.userData.ring = ring;
     }
-    if (halo) {
-      const aura = new THREE.Mesh(new THREE.SphereGeometry(0.7, 16, 16),
-        new THREE.MeshBasicMaterial({ color: col, transparent: true, opacity: 0.08 }));
-      aura.position.y = yBase; g.add(aura);
+    if (cfg.aura) {
+      const aura = new THREE.Mesh(new THREE.SphereGeometry(0.85, 16, 16),
+        new THREE.MeshBasicMaterial({ color: col, transparent: true, opacity: 0.06, blending: THREE.AdditiveBlending, depthWrite: false }));
+      aura.position.y = 1.0; g.add(aura);
     }
-    g.userData.body = body; g.userData.form = a.form;
+
+    g.userData.form = a.form;
     g.userData.label = _makeLabel(a.name);
     g.add(g.userData.label);
     return g;
@@ -155,14 +164,24 @@
   }
 
   function _makeLabel(text) {
-    const c = document.createElement('canvas'); c.width = 256; c.height = 64;
-    const ctx = c.getContext('2d');
-    ctx.font = '500 30px Cormorant Garamond, Georgia, serif';
-    ctx.fillStyle = 'rgba(245,235,220,0.92)'; ctx.textAlign = 'center';
-    ctx.fillText(text, 128, 42);
+    const c = document.createElement('canvas'); c.width = 512; c.height = 128;
     const tex = new THREE.CanvasTexture(c); tex.colorSpace = THREE.SRGBColorSpace;
-    const spr = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent: true }));
-    spr.scale.set(2, 0.5, 1); spr.position.y = 2.2;
+    const draw = () => {
+      const ctx = c.getContext('2d');
+      ctx.clearRect(0, 0, 512, 128);
+      ctx.font = '500 52px Georgia, "Times New Roman", serif';
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.shadowColor = 'rgba(0,0,0,0.6)'; ctx.shadowBlur = 8;
+      ctx.fillStyle = 'rgba(245,235,220,0.95)';
+      ctx.fillText(text, 256, 70);
+      tex.needsUpdate = true;
+    };
+    draw();
+    // redraw once the serif web font settles (kills the smeared-fallback look)
+    if (document.fonts && document.fonts.ready) document.fonts.ready.then(draw).catch(() => {});
+    const spr = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent: true, depthTest: false, depthWrite: false }));
+    spr.renderOrder = 999;
+    spr.scale.set(1.6, 0.4, 1); spr.position.y = 2.35;
     return spr;
   }
 
@@ -277,15 +296,11 @@
     const tnow = clock.elapsedTime;
     for (const A of agents.values()) {
       lerp(A.group, A.target);
-      // per-form life: each presence breathes/flickers/shimmers in its own way
-      const ud = A.group.userData; const body = ud && ud.body;
-      if (body && body.material) {
-        const f = ud.form;
-        if (f === 'presence-child-electric') body.material.emissiveIntensity = 0.8 + Math.abs(Math.sin(tnow * 7)) * 0.5; // restless flicker
-        else if (f === 'presence-child-refractive') { body.material.emissiveIntensity = 0.7 + Math.sin(tnow * 1.5) * 0.2; A.group.rotation.y += dt * 0.4; } // slow shimmer-spin
-        else if (f === 'presence-sovereign') { if (ud.ring) ud.ring.material.opacity = 0.08 + Math.sin(tnow * 0.5) * 0.04; body.material.emissiveIntensity = 0.45 + Math.sin(tnow * 0.6) * 0.12; } // slow attended breath
-        else body.material.emissiveIntensity = 0.55 + Math.sin(tnow * 0.8) * 0.12; // gentle
-      }
+      const ud = A.group.userData;
+      // drive the light-figure: idle animation + cloud resample (so it breathes/walks as light)
+      if (ud && ud.rig) { ud.rig.play('idle'); ud.rig.update(dt); }
+      // sovereign ring breathes
+      if (ud && ud.ring) ud.ring.material.opacity = 0.08 + Math.sin(tnow * 0.5) * 0.04;
     }
     if (World._motes) World._motes.rotation.y += dt * 0.02;
 
