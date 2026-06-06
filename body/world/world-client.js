@@ -39,10 +39,14 @@
     scene.fog = new THREE.Fog(0x2a2018, 12, 48);
 
     camera = new THREE.PerspectiveCamera(55, 1, 0.1, 200);
-    renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
-    renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+    const isMobile = /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent) || (innerWidth < 720);
+    renderer = new THREE.WebGLRenderer({ antialias: !isMobile, alpha: false, powerPreference: 'high-performance' });
+    renderer.setPixelRatio(Math.min(devicePixelRatio, isMobile ? 1.5 : 2)); // helios: cap DPR on mobile
     renderer.outputColorSpace = THREE.SRGBColorSpace;
+    World._isMobile = isMobile;
     mountEl.appendChild(renderer.domElement);
+    // pause rendering when the tab is hidden (zero GPU when not looking)
+    document.addEventListener('visibilitychange', () => { World._hidden = (document.visibilityState !== 'visible'); });
     clock = new THREE.Clock();
 
     _buildClearing();
@@ -289,8 +293,10 @@
 
   function _loop() {
     requestAnimationFrame(_loop);
+    if (World._hidden) return;                        // zero GPU when tab hidden
     const dt = Math.min(clock.getDelta(), 0.05);
     _stepMovement(dt);
+    const camPos = camera.position;
 
     // lerp others + agents toward their targets
     const lerp = (g, t) => { if (!t) return; g.position.x += (t.x - g.position.x) * 0.18; g.position.z += (t.z - g.position.z) * 0.18; if (t.yaw != null) g.rotation.y = t.yaw; };
@@ -315,11 +321,16 @@
     for (const A of agents.values()) {
       lerp(A.group, A.target);
       const ud = A.group.userData;
-      // drive the light-figure: idle animation + cloud resample (so it breathes/walks as light)
-      if (ud && ud.rig) { ud.rig.play('idle'); ud.rig.update(dt); }
-      // sovereign ring breathes
+      // LOD: distant agents update their animation at a lower rate (helios's perf pass)
+      const dist = Math.hypot(A.group.position.x - camPos.x, A.group.position.z - camPos.z);
+      if (ud && ud.rig) {
+        const near = dist < 14;
+        // far agents: tick every 3rd frame with scaled dt (still alive, cheaper)
+        if (near || (World._frame % 3 === 0)) { ud.rig.play('idle'); ud.rig.update(near ? dt : dt * 3); }
+      }
       if (ud && ud.ring) ud.ring.material.opacity = 0.08 + Math.sin(tnow * 0.5) * 0.04;
     }
+    World._frame = (World._frame || 0) + 1;
     if (World._motes) World._motes.rotation.y += dt * 0.02;
 
     // 3rd-person camera trailing behind me
