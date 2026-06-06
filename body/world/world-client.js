@@ -144,23 +144,38 @@
   function _makeUserPresence(name, bustUrl) {
     const g = new THREE.Group();
     const label = _makeLabel(name); g.add(label); g.userData.label = label;
-    // build the rigged walking body asynchronously; show a soft body until ready
     const placeholder = _fallbackBody(g);
-    if (global.RiggedPresence && World._mods) {
-      global.RiggedPresence.create({ THREE, mods: World._mods, bustUrl: bustUrl || null })
-        .then(rig => {
-          if (placeholder && placeholder.parent) placeholder.parent.remove(placeholder);
-          g.add(rig.root); g.userData.rig = rig;
-        })
-        .catch(e => console.warn('[world] rig build failed:', e && e.message));
-    }
+    g.userData.placeholder = placeholder;
+    _attachRig(g, bustUrl, 0);
     return g;
   }
+
+  // attach the rig, retrying if mods/RiggedPresence aren't ready yet (race-proof)
+  function _attachRig(g, bustUrl, tries) {
+    if (g.userData.rig) return;
+    if (!(global.RiggedPresence && World._mods)) {
+      if (tries < 40) return void setTimeout(() => _attachRig(g, bustUrl, tries + 1), 150);
+      return console.warn('[world] rig deps never ready');
+    }
+    global.RiggedPresence.create({ THREE, mods: World._mods, bustUrl: bustUrl || null })
+      .then(rig => {
+        const ph = g.userData.placeholder;
+        if (ph && ph.parent) ph.parent.remove(ph);
+        g.userData.placeholder = null;
+        g.add(rig.root); g.userData.rig = rig;
+        console.log('[world] rig attached' + (bustUrl ? ' (with face)' : ''));
+      })
+      .catch(e => console.warn('[world] rig build failed:', e && (e.message || e)));
+  }
+
+  // a small, human-scaled soft body shown only until the rig loads (NOT a giant pill)
   function _fallbackBody(g) {
-    const mat = new THREE.MeshStandardMaterial({ color: 0xbfae9c, roughness: 0.7 });
-    const body = new THREE.Mesh(new THREE.CapsuleGeometry(0.28, 1.1, 6, 12), mat);
-    body.position.y = 0.85; g.add(body);
-    return body;
+    const mat = new THREE.MeshStandardMaterial({ color: 0xbfae9c, roughness: 0.7, transparent: true, opacity: 0.6 });
+    const grp = new THREE.Group();
+    const torso = new THREE.Mesh(new THREE.CapsuleGeometry(0.16, 0.6, 6, 12), mat); torso.position.y = 1.0;
+    const headM = new THREE.Mesh(new THREE.SphereGeometry(0.13, 12, 12), mat); headM.position.y = 1.55;
+    grp.add(torso, headM); g.add(grp);
+    return grp;
   }
 
   function _makeLabel(text) {
