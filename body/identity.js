@@ -199,6 +199,9 @@
     } else if (lane === 'email') {
       endpoint = '/api/auth/login';
       body = { email: payload.email, password: payload.password };
+    } else if (lane === 'email-signup') {
+      endpoint = '/api/auth/signup';
+      body = { email: payload.email, password: payload.password, username: payload.username };
     } else {
       throw new Error('Unknown bond lane: ' + lane);
     }

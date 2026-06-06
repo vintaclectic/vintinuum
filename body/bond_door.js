@@ -245,12 +245,14 @@
       + '  </div>'
 
       + '  <div data-pane="email" hidden>'
-      + '    <h2>The lane you set up.</h2>'
-      + '    <p class="bd-sub">Email + password — for souls who keep multiple homes.</p>'
+      + '    <h2 data-email-title>The lane you set up.</h2>'
+      + '    <p class="bd-sub" data-email-sub>Email + password — for souls who keep multiple homes.</p>'
       + '    <form autocomplete="off" onsubmit="return false;" data-form="email">'
+      + '      <input type="text" data-field="username" maxlength="24" spellcheck="false" autocomplete="off" placeholder="username (your name in the world)" hidden />'
       + '      <input type="email" data-field="email" maxlength="128" spellcheck="false" autocomplete="username" placeholder="email" inputmode="email" />'
       + '      <input type="password" data-field="password" maxlength="128" spellcheck="false" autocomplete="current-password" placeholder="password" />'
       + '      <button type="submit" class="bd-primary" data-action="bond-email">sign in</button>'
+      + '      <button type="button" class="bd-toggle-signup" data-action="toggle-signup">new here? create an account →</button>'
       + '      <div class="bd-err-msg" data-err="email" role="alert"></div>'
       + '    </form>'
       + '  </div>'
@@ -355,7 +357,8 @@
     }
 
     async function doBond(lane, payload, errField) {
-      var btn = overlay.querySelector('[data-action="bond-' + (lane === 'owner-key' ? 'owner-key' : lane) + '"]');
+      var btnLane = (lane === 'email-signup') ? 'email' : (lane === 'owner-key' ? 'owner-key' : lane);
+      var btn = overlay.querySelector('[data-action="bond-' + btnLane + '"]');
       if (btn) { btn.disabled = true; btn.textContent = 'connecting…'; }
       setErr(errField, '');
       // Council ruling 2026-05-08: surface every failure mode loudly. The
@@ -403,13 +406,36 @@
     });
     overlay.querySelector('[data-field="owner-key"]').addEventListener('keydown', function (e) { if (e.key === 'Enter') overlay.querySelector('[data-action="bond-owner-key"]').click(); });
 
-    overlay.querySelector('[data-action="bond-email"]').addEventListener('click', function () {
+    // signup mode toggle: shows the username field, swaps button + copy
+    var emailSignupMode = false;
+    var toggleBtn = overlay.querySelector('[data-action="toggle-signup"]');
+    var unameField = overlay.querySelector('[data-field="username"]');
+    var emailBtn = overlay.querySelector('[data-action="bond-email"]');
+    if (toggleBtn) toggleBtn.addEventListener('click', function () {
+      emailSignupMode = !emailSignupMode;
+      if (unameField) unameField.hidden = !emailSignupMode;
+      emailBtn.textContent = emailSignupMode ? 'create account' : 'sign in';
+      toggleBtn.textContent = emailSignupMode ? '← already have an account? sign in' : 'new here? create an account →';
+      var t = overlay.querySelector('[data-email-title]'); var s = overlay.querySelector('[data-email-sub]');
+      if (t) t.textContent = emailSignupMode ? 'Make your name here.' : 'The lane you set up.';
+      if (s) s.textContent = emailSignupMode ? 'Pick a username — it’s how the world and the council will know you.' : 'Email + password — for souls who keep multiple homes.';
+      if (emailSignupMode && unameField) unameField.focus();
+    });
+
+    emailBtn.addEventListener('click', function () {
       var em = overlay.querySelector('[data-field="email"]').value.trim();
       var pw = overlay.querySelector('[data-field="password"]').value;
       if (!em || !pw) { setErr('email', 'Email and password.'); return; }
-      doBond('email', { email: em, password: pw }, 'email');
+      if (emailSignupMode) {
+        var uname = (unameField && unameField.value || '').trim();
+        if (!uname || uname.length < 2) { setErr('email', 'Pick a username (2–24 characters).'); return; }
+        if (pw.length < 8) { setErr('email', 'Password must be at least 8 characters.'); return; }
+        doBond('email-signup', { email: em, password: pw, username: uname }, 'email');
+      } else {
+        doBond('email', { email: em, password: pw }, 'email');
+      }
     });
-    overlay.querySelector('[data-field="password"]').addEventListener('keydown', function (e) { if (e.key === 'Enter') overlay.querySelector('[data-action="bond-email"]').click(); });
+    overlay.querySelector('[data-field="password"]').addEventListener('keydown', function (e) { if (e.key === 'Enter') emailBtn.click(); });
   }
 
   // Welcome-back nudge for returning souls who already have a token —
