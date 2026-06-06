@@ -892,6 +892,19 @@ body {
     <script src="body/guide-content.js?v=v20260603-guide1" defer></script>
     <script src="body/guide.js?v=v20260603-guide1" defer></script>
     <script src="body/mobile_nav.js?v=v20260505-onedoor" defer></script>
+    <!-- DirRM universal player launcher — any memory with a media URL plays through it -->
+    <script src="dirrm-launch.js?v=v20260605-universal"></script>
+    <script>
+      // Helper: a memory card whose source/metadata points to a media URL can
+      // call window.playMemoryMedia(url, title) to open it in DirRM. Wired
+      // here so the perceiver's dirhaven perceptions (which carry leaf_url in
+      // metadata) become replayable straight from the memory archive.
+      window.playMemoryMedia = function(url, title) {
+        if (!url || !window.dirrmLaunch) return;
+        try { window.dirrmLaunch.open({ url: url, title: title || '', mode: 'main', autoplay: true }); }
+        catch (e) { console.warn('playMemoryMedia failed', e); }
+      };
+    </script>
     <!-- Phase 6 — ARIA-spec body. -->
 <script src="body/talk_surface.js?v=v20260509-talk-everywhere" data-talk="on" defer></script>
 <script src="body/wander.js?v=v20260509-wander" defer></script>
