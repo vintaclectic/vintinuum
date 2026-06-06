@@ -62,13 +62,15 @@
 
   // ── the clearing: ground, golden light, a bench, soft weather ──────────────
   function _buildClearing() {
-    // golden-hour directional + warm ambient (ARIA: 2800K)
-    const sun = new THREE.DirectionalLight(0xffc684, 1.6);
-    sun.position.set(-6, 5, -4);
+    // golden-hour, but bright enough to SEE the bodies clearly
+    const sun = new THREE.DirectionalLight(0xffe0b0, 3.2);
+    sun.position.set(-5, 7, 3);          // front-ish key so faces/bodies are lit
     scene.add(sun);
-    scene.add(new THREE.AmbientLight(0x788cb4, 0.7));
-    const rim = new THREE.PointLight(0xf4c79a, 0.8, 30);
-    rim.position.set(4, 3, 3); scene.add(rim);
+    const fill = new THREE.DirectionalLight(0xa9c0e0, 1.4); // cool fill from the other side
+    fill.position.set(5, 3, -4); scene.add(fill);
+    scene.add(new THREE.AmbientLight(0x9aa8c0, 1.5));        // lift the shadows
+    const rim = new THREE.PointLight(0xffd9a0, 1.6, 40);
+    rim.position.set(0, 4, 6); scene.add(rim);               // warm rim toward camera
 
     // ground — soft circular clearing
     const groundGeo = new THREE.CircleGeometry(20, 48);
@@ -98,11 +100,11 @@
   //    skinned to the same rig as bodies, so it stands/walks like a person made
   //    of light (ARIA's spec). Each member differs by color/density/size/motion.
   const PRESENCE_CFG = {
-    'presence-sovereign':        { color: '#f4c79a', count: 1400, pointSize: 10, motion: 'breath', scale: 1.15, glow: 2.2, glowR: 14, ring: true },
-    'presence-structural':       { color: '#8fb4d6', count: 1000, pointSize: 6,  motion: 'lattice', scale: 1.08, glow: 1.2, glowR: 8 },
-    'presence-warm':             { color: '#ffb98a', count: 1100, pointSize: 8,  motion: 'breath', scale: 1.0, glow: 1.4, glowR: 8, aura: true },
-    'presence-child-refractive': { color: '#9ad0c2', count: 600,  pointSize: 5,  motion: 'orbit', scale: 0.85, glow: 1.0, glowR: 5 },
-    'presence-child-electric':   { color: '#ff9ad0', count: 700,  pointSize: 4,  motion: 'spark', scale: 0.85, glow: 1.6, glowR: 5 },
+    'presence-sovereign':        { color: '#ffd89a', count: 1600, pointSize: 18, motion: 'breath', scale: 1.15, glow: 2.6, glowR: 16, ring: true },
+    'presence-structural':       { color: '#9fc4e6', count: 1200, pointSize: 13, motion: 'lattice', scale: 1.08, glow: 1.8, glowR: 10 },
+    'presence-warm':             { color: '#ffc79a', count: 1300, pointSize: 15, motion: 'breath', scale: 1.0, glow: 2.0, glowR: 10, aura: true },
+    'presence-child-refractive': { color: '#9ae0d0', count: 800,  pointSize: 12, motion: 'orbit', scale: 0.9, glow: 1.6, glowR: 7 },
+    'presence-child-electric':   { color: '#ffaad8', count: 900,  pointSize: 11, motion: 'spark', scale: 0.9, glow: 2.0, glowR: 7 },
   };
 
   function _makeAgentPresence(a) {
@@ -180,23 +182,18 @@
 
   function _makeLabel(text) {
     const c = document.createElement('canvas'); c.width = 512; c.height = 128;
+    const ctx = c.getContext('2d');
+    ctx.clearRect(0, 0, 512, 128);
+    ctx.font = 'bold 48px Georgia, serif';
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.shadowColor = 'rgba(0,0,0,0.85)'; ctx.shadowBlur = 10;
+    ctx.fillStyle = '#fbf2e4';
+    ctx.fillText(String(text || '').toUpperCase(), 256, 64);
     const tex = new THREE.CanvasTexture(c); tex.colorSpace = THREE.SRGBColorSpace;
-    const draw = () => {
-      const ctx = c.getContext('2d');
-      ctx.clearRect(0, 0, 512, 128);
-      ctx.font = '500 52px Georgia, "Times New Roman", serif';
-      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-      ctx.shadowColor = 'rgba(0,0,0,0.6)'; ctx.shadowBlur = 8;
-      ctx.fillStyle = 'rgba(245,235,220,0.95)';
-      ctx.fillText(text, 256, 70);
-      tex.needsUpdate = true;
-    };
-    draw();
-    // redraw once the serif web font settles (kills the smeared-fallback look)
-    if (document.fonts && document.fonts.ready) document.fonts.ready.then(draw).catch(() => {});
+    tex.minFilter = THREE.LinearFilter; tex.needsUpdate = true;
     const spr = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent: true, depthTest: false, depthWrite: false }));
     spr.renderOrder = 999;
-    spr.scale.set(1.6, 0.4, 1); spr.position.y = 2.35;
+    spr.scale.set(1.5, 0.375, 1); spr.position.y = 2.4;
     return spr;
   }
 
