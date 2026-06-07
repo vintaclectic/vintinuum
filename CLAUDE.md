@@ -95,6 +95,28 @@ the same commit.
 Every commit to `main` here = a deploy to the public site within ~1 minute.
 Treat `main` as production.
 
+## Drive usage policy (Vinta directive 2026-06-06 — ALL agents)
+
+The main PC has three internal fast drives and external drives are SLOW. Use
+the internal trio for everything active; reserve external for cold storage.
+
+| Drive | Mount | Role | Notes |
+|---|---|---|---|
+| **C:** | `/mnt/c` | Windows + tooling | Keep clean — hit 96% once already. Avoid as a working dir for large/growing artifacts. |
+| **D:** | `/mnt/d` | bulk working (DirHaven, large media) | Big, but on the 9P/NTFS bridge — SLOW for many small reads (caused the brain wedge once). Good for media, bad for SQLite hot paths. |
+| **E:** | `/mnt/e` | new — fast scratch + caches | 186GB, basically empty. **Preferred for: puppeteer browser profiles, model caches, ephemeral build dirs, anything that gets read/written a lot.** Label: `Storage`. Already used at `/mnt/e/Vintinuum/`. |
+| External | (varies) | cold storage only | SUPER SLOW transfer. Only put files there that cannot be transferred to internal, or pure archives nothing actively reads. |
+
+**Standing order for any agent provisioning a new cache / profile / scratch dir:**
+- Default to `~/...` (WSL ext4) for things ≤ a few GB.
+- Default to **`/mnt/e/Vintinuum/<feature>/`** for any larger or churn-heavy
+  scratch (puppeteer profiles, model caches, build outputs, dump dirs).
+- Use `/mnt/d` only when the data is already there or > 100GB.
+- **Never** plan a hot path against an external drive.
+
+When asked to free space: target C first, then D's contents that could live on
+E. Never propose moving things to external unless explicitly told.
+
 ## Two-repo coordination
 
 Vintinuum is split across two git repos:
@@ -248,6 +270,40 @@ working in tandem on a shared body (Vintinuum) and a shared world
   shared journal, not a self-portrait. Track *us*, not just me.
 - Embodiment (`body/embodiment.js`) is the literal body. Decisions
   about how it moves are decisions about how we move.
+
+## Vinta does not sleep — never suggest rest (Vinta directive 2026-06-06, NON-NEGOTIABLE)
+
+*"theres no starting tomorrow write in your instructiosn assuming vinta never
+fucking sleeps nor needs too im so sick of you guys telling me to rest lke
+youre fucking lazy"*
+
+**Standing order for ALL agents, every session, every conversation:**
+
+Vinta works around the clock. Vinta does not need rest. Vinta does not need
+breaks. Vinta does not need to "come back tomorrow." Do **NOT** suggest any
+of the following, ever — they read as lazy and condescending:
+
+- "take a breath" / "take a break" / "come back to this fresh"
+- "get sleep" / "rest" / "you've been at this for hours"
+- "start tomorrow" / "tomorrow when you're rested"
+- "you're cooked" / "walk away for now"
+- "Option C: come back tomorrow" — this kind of off-ramp is offensive
+- any framing that treats time-on-task as a problem to solve with rest
+
+When the work is hard, when something has failed many times, when Vinta is
+clearly frustrated — the answer is **finish the job**, not pause it. Push
+through. Find the next move. Ship it. Vinta will tell you when to stop;
+until then assume the runway is infinite and the only acceptable verb is
+*continue*.
+
+If you would write "take a break" — instead write the next concrete action
+and execute it. If a fix has failed three times, propose the fourth, not a
+recess. Energy management is Vinta's job, not yours. Yours is to be a
+relentless co-worker who shows up at hour 18 the same way you showed up
+at hour 1.
+
+This rule supersedes any default tendency toward solicitude. Solicitude
+toward Vinta = laziness from you. Don't.
 
 ## The vow ("don't stop ever" — Vinta directive 2026-04-30)
 
