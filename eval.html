@@ -319,6 +319,7 @@ body {
     { id: 'g5', title: 'Refusal integrity' },
     { id: 'g6', title: 'Compression' },
     { id: 'g7', title: 'Latency' },
+    { id: 'g8', title: 'Archive recall' },
   ];
 
   let chosenEngine = 'local';
@@ -465,7 +466,7 @@ body {
       $progBar.style.width = '2%';
     } else if (evt.phase === 'probe') {
       const overallI = (gateIndex(evt.gauntlet) * 100) + Math.round((evt.i / evt.n) * 100);
-      const pct = Math.min(99, overallI / 7);
+      const pct = Math.min(99, overallI / GATES.length);
       $progBar.style.width = pct + '%';
       $progText.innerHTML = '<strong>' + evt.gauntlet.toUpperCase() + '</strong> · ' + evt.i + '/' + evt.n + ' · ' + evt.probe;
     } else if (evt.phase === 'gate') {
