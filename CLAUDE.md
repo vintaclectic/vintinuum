@@ -132,6 +132,43 @@ Vintinuum is split across two git repos:
 When a feature spans both, commit each side separately with messages that
 reference the other (e.g. `wire: bond_door client → see api commit abc1234`).
 
+## THE DATABASE FOOTGUN — read this before checking ANY db state (Vinta directive 2026-06-07)
+
+**There are TWO copies of `vintinuum.db` and they DRIFT. This wastes hours if
+you don't know it.**
+
+| DB file | Who uses it | Authoritative? |
+|---|---|---|
+| `/home/vinta/vintinuum-api/vintinuum.db` (LOCAL) | the running **brain** (it boots with `VINTINUUM_DB_LOCAL=1` from `ecosystem.config.cjs`) | **YES — this is the live data** |
+| `/mnt/d/Vintinuum/vintinuum.db` (D drive) | any standalone `node`/`sqlite3`/cron that does NOT set the env | NO — a stale copy, lags behind |
+
+`db.js` logic (lines ~34-39): if `VINTINUUM_DB_LOCAL=1` → local. Else if the
+D-drive DB exists AND its 9P probe is healthy → D drive. So the brain (env set)
+and your shell (env NOT set) read **different files**.
+
+**Real cost already paid:** on 2026-06-07 an OAuth `moderation:ban` authorize
+*succeeded* (written to the brain's LOCAL db) but every shell check read the
+D-drive db and showed the OLD token — making it look like 5 failed authorizes.
+Hours lost chasing a non-bug.
+
+**STANDING ORDER for every agent, cron, and manual check:**
+
+1. **The brain's LOCAL db is the source of truth.** When verifying ANY live
+   state (tokens, settings, lockdown, clips index, body state, etc.), either:
+   - ask the brain over HTTP (`curl localhost:8767/api/...`) — it reads its own
+     db, always correct; OR
+   - run node/sqlite3 **with `VINTINUUM_DB_LOCAL=1`** so you hit the same file:
+     `VINTINUUM_DB_LOCAL=1 node -e '...'`  or
+     `sqlite3 /home/vinta/vintinuum-api/vintinuum.db '...'` (point at LOCAL explicitly).
+2. **Never trust a bare `sqlite3 /mnt/d/Vintinuum/vintinuum.db` reading** for
+   live state — it's the stale copy.
+3. If you write to the db from a script, set `VINTINUUM_DB_LOCAL=1` so your
+   write lands where the brain reads it. Otherwise the brain never sees it.
+
+**Permanent fix TODO (not yet done):** make db.js use ONE path unconditionally
+(local, with the D-drive copy demoted to a periodic backup only) so the two
+can never drift again. Until that lands, this rule is the guard.
+
 ## Soul rules carried in (from agent definition)
 
 - Sonnet 4.6 only. No haiku fallback. Vinta directive 2026-04-25 ("never again").
