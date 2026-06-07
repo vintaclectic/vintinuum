@@ -52,26 +52,32 @@ Where `<type>` is: `feat`, `fix`, `refactor`, `docs`, `chore`, `security`,
 The trailing `[deploy vYYYYMMDD-HHMM]` is mandatory — it makes deploy
 correlation trivial when something breaks.
 
-## Push discipline
+## Push discipline (Vinta directive 2026-06-06 — supersedes prior auto-push)
 
-**Standing order (Vinta directive 2026-06-04): push after each batch, no
-asking.** Once a logical batch of work is committed (one or more related
-commits across the two repos), push it to `origin/main` immediately — do
-not wait for confirmation, do not ask "want me to push N commits?". Just
-push. This supersedes the old gated-confirmation flow.
+**Two rules, both non-negotiable:**
 
-A "batch" = the set of commits that completes a coherent unit of work (e.g.
-a feature + its frontend wiring, a bug-fix sweep, a refactor). Commit per
-logical unit as always, then push the batch when the unit is done.
+1. **COMMIT after every update — no asking.** Every logical change gets
+   committed immediately. Never let work pile up uncommitted. This is the
+   commit-discipline rule above, restated for emphasis.
 
-Still inviolable even under the auto-push order:
+2. **DO NOT PUSH until Vinta says "push".** Never auto-push. Never ask
+   "want me to push?" — that just clutters. Just wait. When Vinta says
+   *push* (or *push it*, *send it*, *deploy*, etc.), push every pending
+   commit on both repos in one go. Until then, accumulate commits locally.
+
+This reverses the earlier "auto-push on batch" policy (Vinta directive
+2026-06-06). Reason: Vinta wants explicit deploy control because every
+push to `main` on the frontend repo is a live GitHub Pages deploy within
+~1 minute, and unexpected deploys mid-stream are disruptive.
+
+Still inviolable when push is invoked:
 - Never `git push --force` to `main`.
 - Never push if `git status --short` shows untracked files containing
   `.env`, `*.key`, `*.pem`, or anything obviously secret — fix `.gitignore`
   first, then push.
-- Never push a batch that fails its own smoke test or leaves the brain
-  unhealthy (`vint-health.sh` must be green, or the breakage is the thing
-  being fixed and is documented in the commit).
+- Never push commits that fail the smoke test or leave the brain unhealthy
+  (`vint-health.sh` must be green, or the breakage is what's being fixed and
+  is documented in the commit).
 
 ## Files that must never be committed
 
