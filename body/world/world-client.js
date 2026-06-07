@@ -61,8 +61,20 @@
 
     _connect(status);
     _bindControls(mountEl);
+
+    // proximity voice — signaling rides the same ws; volume set by distance
+    if (global.VintinuumVoice) {
+      global.VintinuumVoice.init({
+        sendSignal: (m) => { if (ws && ws.readyState === 1) ws.send(JSON.stringify(m)); },
+        getMyPos: () => ({ x: me.x, z: me.z }),
+        getPeerPos: (id) => { const O = others.get(id); return O ? { x: O.group.position.x, z: O.group.position.z } : null; },
+      });
+    }
     _loop();
   };
+  // public voice controls for the UI
+  World.micPush = function (on) { return global.VintinuumVoice ? global.VintinuumVoice.setMic(on) : false; };
+  World.cycleVoiceRange = function () { return global.VintinuumVoice ? global.VintinuumVoice.cycleRange() : 'normal'; };
 
   // ── the clearing: ground, golden light, a bench, soft weather ──────────────
   function _buildClearing() {
@@ -226,6 +238,10 @@
         for (const A of agents.values()) scene.remove(A.group);
         agents.clear();
         if (World._selfBody) { scene.remove(World._selfBody); World._selfBody = null; }
+        // race-fix: if a presence tick beat hello and built a "other" body with our
+        // OWN id, kill it now so we don't end up with two selves
+        const dupe = others.get(selfId);
+        if (dupe) { scene.remove(dupe.group); others.delete(selfId); }
         (m.agents || []).forEach(a => {
           const g = _makeAgentPresence(a); g.position.set(a.x, 0, a.z); scene.add(g);
           agents.set(a.id, { group: g, target: { x: a.x, z: a.z, yaw: a.yaw || 0 }, name: a.name });
@@ -236,11 +252,20 @@
         scene.add(World._selfBody);
       } else if (m.t === 'presence') {
         (m.agents || []).forEach(a => { const A = agents.get(a.id); if (A) A.target = { x: a.x, z: a.z, yaw: a.yaw || 0 }; });
+        // selfPrefix kills stale-self bodies: if a prior WS connection of mine
+        // (same userId, different counter) is still in the room broadcast, skip it.
+        const selfPrefix = selfId ? selfId.split(':').slice(0, 2).join(':') + ':' : null;
         (m.users || []).forEach(u => {
           if (u.id === selfId) return;
+          if (selfPrefix && u.id.startsWith(selfPrefix)) return; // stale ghost of me
           let O = others.get(u.id);
           if (!O) { const g = _makeUserPresence(u.name); g.position.set(u.x, 0, u.z); scene.add(g); O = { group: g, target: {} }; others.set(u.id, O); }
-          O.target = { x: u.x, z: u.z, yaw: u.yaw };
+          O.target = { x: u.x, y: (u.y||0), z: u.z, yaw: u.yaw };
+          O.voiceOn = !!u.voiceOn; O.voiceRange = u.voiceRange || 'normal';
+          // connect voice if they (or we) are transmitting
+          if (global.VintinuumVoice && (u.voiceOn || global.VintinuumVoice.isOn())) {
+            global.VintinuumVoice.onPeerState(u.id, { on: u.voiceOn, range: u.voiceRange }, selfId);
+          }
         });
         // remove the gone
         for (const [id, O] of others) { if (!(m.users || []).find(u => u.id === id)) { scene.remove(O.group); others.delete(id); } }
@@ -248,8 +273,13 @@
         if (onSpeech) onSpeech(m);
       } else if (m.t === 'offer') {
         if (World._onOffer) World._onOffer(m);
+      } else if (m.t === 'voice-state') {
+        if (global.VintinuumVoice) global.VintinuumVoice.onPeerState(m.id, { on: m.on, range: m.range }, selfId);
+      } else if (m.t === 'voice-offer' || m.t === 'voice-answer' || m.t === 'voice-ice') {
+        if (global.VintinuumVoice) global.VintinuumVoice.onSignal(m, selfId);
       } else if (m.t === 'leave') {
         const O = others.get(m.id); if (O) { scene.remove(O.group); others.delete(m.id); }
+        if (global.VintinuumVoice) global.VintinuumVoice.removePeer(m.id);
       }
     };
   }
@@ -274,6 +304,7 @@
       const k = e.key.toLowerCase();
       // don't hijack typing in the say box
       if (document.activeElement && /input|textarea/i.test(document.activeElement.tagName)) return;
+      if (k === 'v') { World.cycleCamera(); return; }       // V = cycle camera view
       keys[k] = true;
       if (MOVE_KEYS[k]) e.preventDefault(); // stop Space scrolling, arrows panning
     }, { passive: false });
@@ -415,17 +446,41 @@
     World._frame = (World._frame || 0) + 1;
     if (World._motes) World._motes.rotation.y += dt * 0.02;
 
-    // 3rd-person camera trailing behind me
-    const camDist = 4.5, camH = 2.4;
-    const tx = me.x - Math.sin(me.yaw) * camDist;
-    const tz = me.z - Math.cos(me.yaw) * camDist;
-    camera.position.x += (tx - camera.position.x) * 0.12;
-    camera.position.z += (tz - camera.position.z) * 0.12;
-    camera.position.y += (camH - camera.position.y) * 0.12;
-    camera.lookAt(me.x, 1.2, me.z);
+    // camera modes: 0=3rd-person (behind), 1=1st-person (eyes), 2=selfie (front)
+    const mode = World._camMode || 0;
+    const myY = (me.y || 0);
+    let tx, tz, ty, lookX, lookY, lookZ, ease = 0.12;
+    if (mode === 1) {
+      // first-person: at the head, looking forward
+      tx = me.x + Math.sin(me.yaw) * 0.15; tz = me.z + Math.cos(me.yaw) * 0.15; ty = myY + 1.6;
+      lookX = me.x + Math.sin(me.yaw) * 4; lookZ = me.z + Math.cos(me.yaw) * 4; lookY = myY + 1.55;
+      ease = 0.5;
+      if (World._selfBody) World._selfBody.visible = false; // don't render own head in your eyes
+    } else if (mode === 2) {
+      // selfie: camera in FRONT of you, looking back at your face
+      const d = 2.6;
+      tx = me.x + Math.sin(me.yaw) * d; tz = me.z + Math.cos(me.yaw) * d; ty = myY + 1.55;
+      lookX = me.x; lookZ = me.z; lookY = myY + 1.45;
+      if (World._selfBody) World._selfBody.visible = true;
+    } else {
+      // third-person trailing
+      const camDist = 4.5;
+      tx = me.x - Math.sin(me.yaw) * camDist; tz = me.z - Math.cos(me.yaw) * camDist; ty = 2.4 + myY * 0.5;
+      lookX = me.x; lookZ = me.z; lookY = 1.2 + myY;
+      if (World._selfBody) World._selfBody.visible = true;
+    }
+    camera.position.x += (tx - camera.position.x) * ease;
+    camera.position.z += (tz - camera.position.z) * ease;
+    camera.position.y += (ty - camera.position.y) * ease;
+    camera.lookAt(lookX, lookY, lookZ);
+
+    // proximity voice volumes, recomputed from live positions
+    if (global.VintinuumVoice) global.VintinuumVoice.updateSpatial();
 
     renderer.render(scene, camera);
   }
+  // cycle camera: 3rd → 1st → selfie → 3rd
+  World.cycleCamera = function () { World._camMode = ((World._camMode || 0) + 1) % 3; return World._camMode; };
 
   function _resize(mountEl) {
     const w = mountEl.clientWidth || innerWidth, h = mountEl.clientHeight || innerHeight;
