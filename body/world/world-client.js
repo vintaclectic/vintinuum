@@ -222,14 +222,27 @@
   }
 
   // ── websocket presence ─────────────────────────────────────────────────────
-  function _connect(status) {
-    const base = _base().replace(/^http/, 'ws');
-    ws = new WebSocket(base + '/ws/world?token=' + encodeURIComponent(_token()));
-    ws.onopen = () => status('');
-    ws.onclose = () => { status('the world rests. reconnecting…'); setTimeout(() => _connect(status), 3000); };
+  // CONTRACTS.md: fetch /api/world/hello to learn WHICH shard (wsUrl) + ticket,
+  // so the WS layer can re-platform (→ Cloudflare Durable Objects) without
+  // breaking cached frontends. Falls back to the legacy URL if hello is absent.
+  async function _connect(status) {
+    let wsUrl = null, ticket = _token();
+    try {
+      const r = await fetch(_base() + '/api/world/hello', { headers: { Authorization: 'Bearer ' + _token() } });
+      if (r.ok) { const h = await r.json(); if (h.wsUrl) wsUrl = h.wsUrl; if (h.ticket) ticket = h.ticket; World._sessionEpoch = h.sessionEpoch; World._protoMax = h.protoMax; }
+    } catch (_) {}
+    if (!wsUrl) wsUrl = _base().replace(/^http/, 'ws') + '/ws/world'; // legacy fallback
+    // accept both ?ticket= (frozen) and ?token= (legacy) so any shard works
+    ws = new WebSocket(wsUrl + '?ticket=' + encodeURIComponent(ticket) + '&token=' + encodeURIComponent(_token()) + '&proto=1');
+    let _backoff = 250;
+    ws.onopen = () => { status(''); _backoff = 250; };
+    ws.onclose = () => { status('the world rests. reconnecting…'); setTimeout(() => _connect(status), _backoff); _backoff = Math.min(8000, _backoff * 1.8); };
     ws.onerror = () => {};
     ws.onmessage = (ev) => {
       let m; try { m = JSON.parse(ev.data); } catch (_) { return; }
+      // envelope or flat — both work (frozen contract: data fields hoisted)
+      if (m.data && typeof m.data === 'object') m = Object.assign({}, m.data, { t: m.t, seq: m.seq, room: m.room, ts: m.ts });
+      if (m.seq != null) World._lastSeq = m.seq;
       if (m.t === 'hello') {
         selfId = m.selfId;
         World._selfName = m.selfName || 'you';
