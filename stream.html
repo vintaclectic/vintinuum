@@ -136,15 +136,120 @@ body {
 /* ── VOD CARDS ── */
 .vod {
   background: var(--card); border: 1px solid var(--border); border-radius: 12px;
-  padding: 12px 14px; margin-bottom: 10px;
+  margin-bottom: 10px; overflow: hidden;
 }
-.vod-title { font-size: 0.85rem; color: var(--text); margin-bottom: 6px; line-height: 1.4; }
+.vod-head {
+  padding: 12px 14px; min-height: 44px;
+  cursor: pointer; user-select: none; -webkit-user-select: none;
+  transition: background 0.18s ease, border-color 0.18s ease;
+  display: flex; align-items: flex-start; gap: 12px;
+}
+.vod-head:hover { background: rgba(83,217,196,0.04); }
+.vod-head:focus-visible { outline: 1px solid rgba(83,217,196,0.5); outline-offset: -1px; }
+.vod-head-body { flex: 1; min-width: 0; }
+.vod-head-caret {
+  flex: 0 0 auto; width: 18px; height: 18px; margin-top: 2px;
+  color: var(--text-ghost); transition: transform 0.25s ease, color 0.18s ease;
+}
+.vod.open .vod-head-caret { transform: rotate(90deg); color: var(--accent); }
+.vod-title { font-size: 0.85rem; color: var(--text); margin-bottom: 6px; line-height: 1.4; word-wrap: break-word; }
 .vod-meta { display: flex; gap: 10px; flex-wrap: wrap; font-family: 'JetBrains Mono', monospace; font-size: 0.5rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-ghost); }
 .vod-status { padding: 2px 7px; border-radius: 6px; border: 1px solid var(--border); }
 .vod-status.done { color: var(--warm); border-color: rgba(124,255,180,0.3); }
 .vod-status.downloading, .vod-status.processing { color: var(--accent); border-color: rgba(83,217,196,0.3); }
 .vod-status.pending { color: var(--text-dim); }
 .vod-status.failed { color: var(--cool); border-color: rgba(255,120,140,0.3); }
+
+/* ── TRANSCRIPT VIEWER (expanding panel) ── */
+.transcript {
+  border-top: 1px solid var(--border);
+  background: rgba(4, 8, 16, 0.45);
+  /* Slide-open animation via max-height; capped so it can never overflow its parent */
+  max-height: 0; overflow: hidden;
+  transition: max-height 0.35s cubic-bezier(0.16,1,0.3,1);
+}
+.vod.open .transcript { max-height: 720px; }
+@media (max-width: 760px) { .vod.open .transcript { max-height: 560px; } }
+.transcript-inner { padding: 14px; display: flex; flex-direction: column; gap: 12px; }
+.transcript-search-wrap { position: relative; }
+.transcript-search {
+  width: 100%; background: rgba(255,255,255,0.03); border: 1px solid var(--border);
+  border-radius: 10px; padding: 10px 14px 10px 36px; color: var(--text);
+  font-family: 'Cormorant Garamond', serif; font-size: 0.95rem; outline: none;
+  transition: border-color 0.2s; min-height: 44px;
+}
+.transcript-search:focus { border-color: rgba(83,217,196,0.4); }
+.transcript-search::placeholder { color: var(--text-ghost); font-style: italic; }
+.transcript-search-icon {
+  position: absolute; left: 12px; top: 50%; transform: translateY(-50%);
+  width: 14px; height: 14px; color: var(--text-ghost); pointer-events: none;
+}
+.transcript-stats {
+  font-family: 'JetBrains Mono', monospace; font-size: 0.5rem; letter-spacing: 0.15em;
+  color: var(--text-ghost); text-transform: uppercase; display: flex; gap: 12px; flex-wrap: wrap;
+}
+.transcript-stats b { color: var(--text-dim); font-weight: 400; }
+
+.transcript-feed {
+  /* Internal scroll only — content NEVER overflows the panel.
+     Heights are capped so the panel always fits inside .vod.open's max-height. */
+  max-height: 540px; overflow-y: auto; overflow-x: hidden;
+  padding-right: 6px;
+  scrollbar-width: thin; scrollbar-color: rgba(83,217,196,0.3) transparent;
+  -webkit-overflow-scrolling: touch;
+}
+@media (max-width: 760px) { .transcript-feed { max-height: 400px; } }
+.transcript-feed::-webkit-scrollbar { width: 6px; }
+.transcript-feed::-webkit-scrollbar-track { background: transparent; }
+.transcript-feed::-webkit-scrollbar-thumb { background: rgba(83,217,196,0.25); border-radius: 3px; }
+.transcript-feed::-webkit-scrollbar-thumb:hover { background: rgba(83,217,196,0.45); }
+
+.tline {
+  display: flex; gap: 10px; padding: 6px 8px; border-radius: 6px;
+  align-items: flex-start; line-height: 1.5;
+  border-left: 2px solid transparent;
+}
+.tline + .tline { margin-top: 2px; }
+.tline.speech { border-left-color: rgba(124,255,180,0.35); }
+.tline.chat { border-left-color: rgba(83,217,196,0.35); background: rgba(83,217,196,0.03); }
+.tline.hit { background: rgba(124,255,180,0.08); border-left-color: var(--warm); }
+.tline-ts {
+  flex: 0 0 auto; font-family: 'JetBrains Mono', monospace; font-size: 0.55rem;
+  letter-spacing: 0.05em; color: var(--text-ghost); padding: 2px 6px; border-radius: 4px;
+  background: rgba(255,255,255,0.03); border: 1px solid transparent;
+  cursor: pointer; min-width: 44px; text-align: center;
+  transition: color 0.15s, border-color 0.15s, background 0.15s;
+  align-self: flex-start; margin-top: 2px;
+}
+.tline-ts:hover { color: var(--accent); border-color: rgba(83,217,196,0.3); }
+.tline-ts.copied { color: var(--warm); border-color: rgba(124,255,180,0.4); }
+.tline-body { flex: 1; min-width: 0; }
+.tline-who {
+  font-family: 'JetBrains Mono', monospace; font-size: 0.5rem; letter-spacing: 0.12em;
+  text-transform: uppercase; color: var(--text-ghost); margin-bottom: 2px;
+}
+.tline.speech .tline-who { color: rgba(124,255,180,0.7); }
+.tline.chat .tline-who { color: var(--accent); }
+.tline-text {
+  font-family: 'Cormorant Garamond', serif; font-size: 0.95rem; color: var(--text);
+  word-wrap: break-word; overflow-wrap: anywhere;
+}
+.tline-text mark {
+  background: rgba(124,255,180,0.25); color: var(--text); padding: 0 2px; border-radius: 2px;
+}
+@media (max-width: 480px) {
+  .tline { flex-direction: column; gap: 4px; padding: 8px 8px; }
+  .tline-ts { align-self: flex-start; margin-top: 0; }
+}
+
+.transcript-empty {
+  font-family: 'Cormorant Garamond', serif; font-style: italic; color: var(--text-ghost);
+  text-align: center; padding: 24px 0; font-size: 0.9rem;
+}
+.transcript-loading {
+  font-family: 'JetBrains Mono', monospace; font-size: 0.55rem; letter-spacing: 0.15em;
+  color: var(--text-ghost); text-transform: uppercase; text-align: center; padding: 24px 0;
+}
 
 /* ── SEARCH ── */
 .search-box {
@@ -315,6 +420,9 @@ async function loadChatters() {
 }
 
 /* ── VODS ── */
+const TRANSCRIPT_CACHE = new Map(); // vod_id -> timeline array
+const OPEN_VODS = new Set();        // remembers which vods are open across reloads
+
 async function loadVods() {
   const el = document.getElementById('vodList');
   const d = await api('/api/kick/vods?limit=20');
@@ -324,16 +432,214 @@ async function loadVods() {
     const tr = v.transcript_status || 'pending';
     const gb = v.video_bytes ? (v.video_bytes/1e9).toFixed(1)+'GB' : '';
     const dur = v.duration_ms ? Math.round(v.duration_ms/60000)+'min' : '';
-    return `<div class="vod">
-      <div class="vod-title">${esc(v.title || 'Untitled stream')}</div>
-      <div class="vod-meta">
-        ${dur ? `<span>${dur}</span>` : ''}
-        ${gb ? `<span>${gb}</span>` : ''}
-        <span class="vod-status ${dl}">dl: ${dl}</span>
-        <span class="vod-status ${tr}">transcript: ${tr}</span>
+    const canOpen = tr === 'done';
+    const isOpen = OPEN_VODS.has(v.id);
+    return `<div class="vod${isOpen ? ' open' : ''}" data-vod-id="${v.id}" data-can-open="${canOpen?1:0}">
+      <div class="vod-head" role="button" tabindex="0" aria-expanded="${isOpen?'true':'false'}" aria-controls="tx-${v.id}">
+        <div class="vod-head-body">
+          <div class="vod-title">${esc(v.title || 'Untitled stream')}</div>
+          <div class="vod-meta">
+            ${dur ? `<span>${dur}</span>` : ''}
+            ${gb ? `<span>${gb}</span>` : ''}
+            <span class="vod-status ${dl}">dl: ${dl}</span>
+            <span class="vod-status ${tr}">transcript: ${tr}</span>
+            ${canOpen ? '<span class="vod-status done" style="border-color:rgba(83,217,196,0.3);color:var(--accent)">click to read</span>' : ''}
+          </div>
+        </div>
+        <svg class="vod-head-caret" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
+      </div>
+      <div class="transcript" id="tx-${v.id}" role="region" aria-label="Transcript">
+        <div class="transcript-inner" data-tx-inner="${v.id}">
+          ${isOpen ? '<div class="transcript-loading">opening…</div>' : ''}
+        </div>
       </div>
     </div>`;
   }).join('');
+
+  // Wire up click + keyboard activation on every head
+  el.querySelectorAll('.vod-head').forEach(head => {
+    const card = head.closest('.vod');
+    const vodId = +card.dataset.vodId;
+    const canOpen = card.dataset.canOpen === '1';
+    const activate = (e) => {
+      if (e) { e.preventDefault(); }
+      if (!canOpen) {
+        // Polite signal: transcript not ready yet
+        head.animate(
+          [{ transform: 'translateX(0)' }, { transform: 'translateX(-3px)' }, { transform: 'translateX(3px)' }, { transform: 'translateX(0)' }],
+          { duration: 220, easing: 'ease-out' }
+        );
+        return;
+      }
+      toggleVod(card, vodId);
+    };
+    head.addEventListener('click', activate);
+    head.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') activate(e);
+    });
+  });
+
+  // Re-open any that were open before this refresh
+  for (const vodId of OPEN_VODS) {
+    const card = el.querySelector(`.vod[data-vod-id="${vodId}"]`);
+    if (card && card.dataset.canOpen === '1') {
+      openTranscript(card, vodId);
+    }
+  }
+}
+
+function toggleVod(card, vodId) {
+  if (card.classList.contains('open')) {
+    closeTranscript(card, vodId);
+  } else {
+    openTranscript(card, vodId);
+  }
+}
+
+async function openTranscript(card, vodId) {
+  card.classList.add('open');
+  card.querySelector('.vod-head').setAttribute('aria-expanded', 'true');
+  OPEN_VODS.add(vodId);
+  const inner = card.querySelector(`[data-tx-inner="${vodId}"]`);
+  if (!inner) return;
+
+  // If already rendered (cached), just keep it
+  if (TRANSCRIPT_CACHE.has(vodId) && inner.querySelector('.transcript-feed')) return;
+
+  inner.innerHTML = '<div class="transcript-loading">loading transcript…</div>';
+
+  let timeline = TRANSCRIPT_CACHE.get(vodId);
+  if (!timeline) {
+    const d = await api(`/api/kick/vods/${vodId}/transcript`);
+    if (!d || !d.ok || !Array.isArray(d.timeline)) {
+      inner.innerHTML = '<div class="transcript-empty">Could not load this transcript.</div>';
+      return;
+    }
+    timeline = d.timeline;
+    TRANSCRIPT_CACHE.set(vodId, timeline);
+  }
+
+  renderTranscript(inner, vodId, timeline);
+}
+
+function closeTranscript(card, vodId) {
+  card.classList.remove('open');
+  card.querySelector('.vod-head').setAttribute('aria-expanded', 'false');
+  OPEN_VODS.delete(vodId);
+}
+
+function fmtTime(t) {
+  const s = Math.max(0, Math.floor(t || 0));
+  const h = Math.floor(s / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  const sec = s % 60;
+  const pad = n => String(n).padStart(2, '0');
+  return h > 0 ? `${h}:${pad(m)}:${pad(sec)}` : `${m}:${pad(sec)}`;
+}
+
+function renderTranscript(inner, vodId, timeline) {
+  const speechCount = timeline.filter(x => x.kind === 'speech').length;
+  const chatCount = timeline.filter(x => x.kind === 'chat').length;
+  const lastT = timeline.length ? timeline[timeline.length - 1].t : 0;
+
+  inner.innerHTML = `
+    <div class="transcript-search-wrap">
+      <svg class="transcript-search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+      <input type="text" class="transcript-search" data-tx-search="${vodId}" placeholder="jump-search within this stream…">
+    </div>
+    <div class="transcript-stats">
+      <span><b>${timeline.length.toLocaleString()}</b> lines</span>
+      <span><b>${speechCount.toLocaleString()}</b> spoken</span>
+      <span><b>${chatCount.toLocaleString()}</b> chat</span>
+      <span>duration <b>${fmtTime(lastT)}</b></span>
+      <span data-tx-shown="${vodId}"></span>
+    </div>
+    <div class="transcript-feed" data-tx-feed="${vodId}"></div>
+  `;
+
+  const feed = inner.querySelector(`[data-tx-feed="${vodId}"]`);
+  const shownEl = inner.querySelector(`[data-tx-shown="${vodId}"]`);
+  const searchEl = inner.querySelector(`[data-tx-search="${vodId}"]`);
+
+  let lines = timeline.map((x, i) => ({ i, ...x }));
+  drawLines(feed, shownEl, lines, '');
+
+  let searchTimer = null;
+  searchEl.addEventListener('input', (e) => {
+    clearTimeout(searchTimer);
+    const q = e.target.value.trim().toLowerCase();
+    searchTimer = setTimeout(() => {
+      if (!q) {
+        drawLines(feed, shownEl, lines, '');
+      } else {
+        const filtered = lines.filter(l => (l.text || '').toLowerCase().includes(q) || (l.who || '').toLowerCase().includes(q));
+        drawLines(feed, shownEl, filtered, q);
+      }
+    }, 120);
+  });
+
+  // Click timestamp = copy "mm:ss — text" to clipboard (graceful fallback if unavailable)
+  feed.addEventListener('click', (e) => {
+    const ts = e.target.closest('.tline-ts');
+    if (!ts) return;
+    const line = ts.closest('.tline');
+    const payload = `[${ts.textContent.trim()}] ${line.querySelector('.tline-text').textContent.trim()}`;
+    copyToClipboard(payload);
+    ts.classList.add('copied');
+    setTimeout(() => ts.classList.remove('copied'), 900);
+  });
+}
+
+function drawLines(feed, shownEl, lines, q) {
+  if (!lines.length) {
+    feed.innerHTML = '<div class="transcript-empty">No lines match that search.</div>';
+    if (shownEl) shownEl.innerHTML = '';
+    return;
+  }
+  if (shownEl) shownEl.innerHTML = q ? `· <b>${lines.length.toLocaleString()}</b> match${lines.length===1?'':'es'}` : '';
+  // Build as one big string for speed (timelines can be hundreds–thousands of lines)
+  const out = [];
+  for (const l of lines) {
+    const text = q ? highlight(l.text || '', q) : esc(l.text || '');
+    const who = esc(l.who || (l.kind === 'speech' ? 'vintaclectic' : 'chatter'));
+    out.push(
+      `<div class="tline ${l.kind}${q ? ' hit' : ''}">` +
+        `<span class="tline-ts" title="copy line">${fmtTime(l.t)}</span>` +
+        `<div class="tline-body">` +
+          `<div class="tline-who">${who}</div>` +
+          `<div class="tline-text">${text}</div>` +
+        `</div>` +
+      `</div>`
+    );
+  }
+  feed.innerHTML = out.join('');
+  feed.scrollTop = 0;
+}
+
+function highlight(text, q) {
+  if (!q) return esc(text);
+  const safe = esc(text);
+  const safeQ = esc(q).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  return safe.replace(new RegExp('(' + safeQ + ')', 'gi'), '<mark>$1</mark>');
+}
+
+function copyToClipboard(s) {
+  try {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(s).catch(() => fallbackCopy(s));
+    } else {
+      fallbackCopy(s);
+    }
+  } catch (_) { fallbackCopy(s); }
+}
+function fallbackCopy(s) {
+  try {
+    const ta = document.createElement('textarea');
+    ta.value = s; ta.style.position = 'fixed'; ta.style.opacity = '0';
+    document.body.appendChild(ta); ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+  } catch (_) {}
 }
 
 /* ── RECALL ── */
