@@ -758,29 +758,42 @@
     const label = $('topAuthPillLabel');
     if (auth.signedIn && auth.user) {
       const name = (auth.user.name || auth.user.email || 'You').toString();
-      const tier = (auth.user.tier || auth.tier || 'free').toString().toLowerCase();
+      const tierRaw = (auth.user.tier || auth.tier || 'free').toString().toLowerCase();
+      // Doctrine tier ladder (Vinta directive 2026-06-05). Normalize legacy
+      // names to the new ones so old subscriptions still glow the right color
+      // and new users see the new names natively.
+      const tier = tierRaw === 'premium' ? 'companion'
+                 : tierRaw === 'god'     ? 'theater'
+                 : tierRaw === 'atelier' ? 'sovereign'
+                 : tierRaw;
       const nice = name.length > 16 ? name.slice(0, 14) + '…' : name;
       label.textContent = nice.toUpperCase();
-      // Tier glow (dot accent)
-      const glow = tier === 'owner' ? '#ffe07c'
-                 : tier === 'god'   ? '#ffd54f'
-                 : tier === 'premium' ? '#4fc3f7'
-                 : '#7cffb4';
+      // Tier glow palette — ascending warmth as you climb the ladder.
+      //   Visitor   → soft green (free, alive, welcoming)
+      //   Companion → sky-blue (connection, presence — movie ticket warmth)
+      //   Theater   → amber (the room glows when she's playing for you)
+      //   Sovereign → violet (the moat, your model, the deepest commitment)
+      //   Estate    → white-gold (continuity, the part that doesn't end)
+      //   Owner     → warm gold (Vinta's seat)
+      const glow = tier === 'owner'     ? '#ffe07c'
+                 : tier === 'estate'    ? '#f7e9c2'
+                 : tier === 'sovereign' ? '#b48cff'
+                 : tier === 'theater'   ? '#ffcd72'
+                 : tier === 'companion' ? '#7ec8ff'
+                 :                        '#7cffb4'; // visitor / free / unknown
       if (dot) {
         dot.style.background = glow;
         dot.style.boxShadow = `0 0 10px ${glow}`;
       }
       refs.auth.style.borderColor = `${glow}55`;
       refs.auth.style.color = glow;
-      // Tier box-shadow glow on the pill itself (Vinta directive 2026-05-23).
-      //   FREE    = none
-      //   PREMIUM = 0 0 12px rgba(79,195,247,0.25)
-      //   GOD     = 0 0 18px rgba(255,213,79,0.30)
-      //   OWNER   = treat as GOD-level glow (slightly warmer)
+      // Pill box-shadow — soft glow ascends with tier.
       let shadow = 'none';
-      if (tier === 'premium') shadow = '0 0 12px rgba(79,195,247,0.25)';
-      else if (tier === 'god') shadow = '0 0 18px rgba(255,213,79,0.30)';
-      else if (tier === 'owner') shadow = '0 0 20px rgba(255,224,124,0.35)';
+      if (tier === 'companion') shadow = '0 0 12px rgba(126,200,255,0.25)';
+      else if (tier === 'theater')   shadow = '0 0 14px rgba(255,205,114,0.28)';
+      else if (tier === 'sovereign') shadow = '0 0 18px rgba(180,140,255,0.32)';
+      else if (tier === 'estate')    shadow = '0 0 22px rgba(247,233,194,0.35)';
+      else if (tier === 'owner')     shadow = '0 0 20px rgba(255,224,124,0.35)';
       refs.auth.style.boxShadow = shadow;
       refs.auth.style.transition = (refs.auth.style.transition || '') + ', box-shadow 320ms ease';
     } else {
