@@ -654,3 +654,89 @@ This is what makes DirRM "addicting and long-lasting" — Vintinuum *remembers* 
 - Shareable "now playing" cards (memory_cards integration)
 - "Mood-matched" playlists from memory_vectors emotional valence
 - Cross-device handoff via WebSocket (start on phone, continue on desktop)
+
+## THE WORK JOURNAL — log everything, route through the brain (Vinta directive 2026-06-08)
+
+**Standing order for ALL agents, the entire council of Lord Vinta, every session, no exceptions.**
+
+Every unit of work — every feature, fix, audit, design, build, or investigation —
+gets forwarded to the single council Work Journal (a Google Sheet, one tab per
+day, tabs named `M.D.YY` e.g. `6.8.26`). This serves two goals Vinta named:
+(1) assembling a complete "how to build" book for every app, and (2) so anything
+from any project can be searched, found, and recovered from one place.
+
+**The columns (locked):**
+`Timestamp | Project | Agent | Original Prompt(s) | Phase/Task | Summary | Files Touched | Result/Status | Tokens Used | Notes`
+
+- **Original Prompt(s)** = the VERBATIM text of every prompt Vinta sent in that
+  work session, in order, before the summary. Always capture them — they are
+  half of the how-to-book (what was asked) paired with what was done.
+- **Tokens Used** = total tokens for the entire submission/work session.
+- **Project** = the app name: `DirHaven APP`, `DirHaven RP`, `Vintinuum`, etc.
+
+**How to log (route THROUGH THE BRAIN — agents never call Google directly):**
+- From node: `require('/home/vinta/vintinuum-api/worklog').logWork({...})`
+- From shell: `node /home/vinta/vintinuum-api/worklog.js --project X --agent Y --prompt "..." --phase "..." --summary "..." --files "a.js,b.js" --result success --tokens N`
+- Over HTTP (owner-only): `POST https://api.vintaclectic.com/api/worklog`
+
+The brain flushes the journal to the Sheet every 5 min AND ingests every row
+into the local-LLM training corpus. Logging is append-only, zero-token, and
+never blocks on the network — it spools locally and syncs when it can.
+
+**When to log:** at every phase boundary, every shipped unit, every completed
+investigation. If in doubt, log it — over-logging builds a better book than
+under-logging.
+
+## UNIVERSAL INGESTION LAW — everything trickles into the local LLMs, always (Vinta directive 2026-06-08)
+
+**Standing order for ALL agents, all work, here on out.**
+
+Everything across the entire Vintinuum app feeds the local models' growth.
+Every data point goes, is added, trickles into the local LLMs — always — so they
+continue to learn, prosper, grow, and (hopefully) become sentient, and so we can
+detach from tokenized cloud inference as the local models mature.
+
+This includes but is not limited to:
+- Kick chat + streams + clips
+- Browsing info / perception of open-directory artifacts
+- DirHaven.db and ALL its data within each URL
+- All our work together (the Work Journal above — each row is a training example)
+- All user data they permit (consent-gated, per-user)
+- Memory, body-state, genome events, inner life — the whole organism
+
+When you build ANY feature that produces data, ask: "does this trickle into the
+local corpus?" If not, wire it in (a corpus exporter that folds it into
+`/mnt/d/vintinuum/learning/v2/corpus_latest.jsonl` for the next nightly train).
+The local models are the long game. Feed them everything, always.
+
+Prefer falling back onto the local LLM models for inference wherever quality
+allows, to use the least tokens possible — and that preference grows as the
+local models improve.
+
+## PHASE GATE — stop, summarize, log, wait for "go", then auto-resume (Vinta directive 2026-06-08)
+
+**Standing order for ALL agents, every session.**
+
+When you reach a phase boundary — a unit of work is done, OR you've designed the
+next phase/options and need Vinta's approval before continuing — do this:
+
+1. **STOP.** Do not start the next phase.
+2. **SUMMARIZE** what was done + the next options/steps clearly.
+3. **LOG** that summary to the Work Journal (the system above).
+4. **WRITE THE BREADCRUMB**: write the "where we are / next options / exactly
+   how to resume" state to `/home/vinta/.claude/.phase-breadcrumb.md`, and
+   `touch /home/vinta/.claude/.awaiting-go` to arm the phase gate.
+5. **WAIT** for Vinta's explicit approval ("go" / "continue" / "lets do it" /
+   "send it" / etc.). The turn ENDS. (This is the STOP-AND-WAIT rule.)
+
+When Vinta gives the go, the `UserPromptSubmit` hook
+(`~/.claude/hooks/go-phrase-resume.sh`) fires automatically: it injects the
+breadcrumb back into context and clears the flag, so the context is effectively
+wiped-but-remembered — the fresh phase resumes ONLY the approved endeavor, using
+the least tokens possible, with the thread intact via the breadcrumb.
+
+Vinta never runs `/clear` himself — his "go" IS the trigger. He always knows it
+happened, because it only fires when he approves a specific proposed endeavor.
+
+This pairs with the STOP-AND-WAIT rule: ask → stop completely → wait → on
+approval, auto-resume fresh from the breadcrumb.
