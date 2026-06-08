@@ -1309,6 +1309,31 @@
       _telemetryApiBase() {
         return window.__VINTINUUM_API_BASE || window.VINTINUUM_API || window.__VINT_API || 'https://api.vintaclectic.com';
       }
+      // Rewrite a media URL to go THROUGH the brain's media proxy. The proxy
+      // fetches with cert-checking off + open CORS, so it beats
+      // ERR_CERT_AUTHORITY_INVALID, CORS blocks, and picky open-dir servers.
+      _proxify(url) {
+        if (!url || url.startsWith('blob:') || url.startsWith('data:')) return url;
+        const base = this._telemetryApiBase();
+        if (url.startsWith(base + '/api/media/proxy')) return url; // already proxied
+        return base + '/api/media/proxy?url=' + encodeURIComponent(url);
+      }
+      // Set a media element's src with automatic one-time proxy fallback. When
+      // the direct load errors (bad cert/CORS), swap to the proxied URL once.
+      _setMediaSrc(el, url) {
+        el.dataset.origUrl = url;
+        el.dataset.proxied = '0';
+        const onErr = () => {
+          if (el.dataset.proxied === '1') return; // already retried — give up
+          el.dataset.proxied = '1';
+          const px = this._proxify(url);
+          console.warn('[DirRM] direct load failed, retrying via proxy:', px.slice(0, 80));
+          try { el.src = px; el.load && el.load(); } catch (_) {}
+        };
+        el.addEventListener('error', onErr);
+        if (el.tagName === 'IMG') el.onerror = onErr; // img uses onerror too
+        el.src = url;
+      }
       _detectSurface() {
         // Best-effort: how is this player being shown?
         try {
@@ -1859,7 +1884,8 @@
             video.src = url;
           }
         } else {
-          video.src = url;
+          // Direct video file — auto-retry via brain proxy on bad-cert/CORS.
+          this._setMediaSrc(video, url);
         }
 
         video.addEventListener('loadedmetadata', () => {
@@ -1979,8 +2005,9 @@
           }
         };
 
-        // Load audio — no crossOrigin by default so it plays from any server
-        audio.src = url;
+        // Load audio — no crossOrigin by default so it plays from any server.
+        // Auto-retries via the brain proxy on bad-cert/CORS errors.
+        this._setMediaSrc(audio, url);
 
         // Canvas resize
         const resizeCanvas = () => {
@@ -2198,8 +2225,8 @@
       async loadImage(url) {
         this.setBadge('Image');
         const img = document.createElement('img');
-        img.src = url;
         img.alt = this.mediaTitle.textContent || 'image';
+        this._setMediaSrc(img, url); // auto-retry via proxy on bad-cert/CORS
 
         img.addEventListener('load', () => {
           this.loading.style.display = 'none';
