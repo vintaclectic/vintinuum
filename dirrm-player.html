@@ -1916,7 +1916,8 @@
         try {
           await video.play();
         } catch (e) {
-          console.log('Autoplay blocked, user interaction required');
+          console.log('autoplay blocked — showing tap-to-play', e && e.name);
+          this._showTapToPlay(async () => { try { await video.play(); } catch (_) {} });
         }
       }
 
@@ -2207,8 +2208,37 @@
           await audio.play();
           setupAudio();
         } catch (e) {
-          console.log('Autoplay blocked');
+          // Browsers BLOCK autoplay without a user gesture (NotAllowedError).
+          // Show a tap-to-play overlay so the click that follows satisfies the
+          // gesture requirement and the audio plays. This is the #1 cause of
+          // "loads but won't play".
+          console.log('autoplay blocked — showing tap-to-play', e && e.name);
+          this._showTapToPlay(async () => { try { await audio.play(); setupAudio(); } catch (_) {} });
         }
+      }
+
+      // Big clickable overlay shown when autoplay is blocked. The user's click
+      // is the gesture that lets the media play.
+      _showTapToPlay(onPlay) {
+        try {
+          let ov = this.mediaContainer.querySelector('.dirrm-tap-play');
+          if (ov) ov.remove();
+          ov = document.createElement('div');
+          ov.className = 'dirrm-tap-play';
+          ov.style.cssText = 'position:absolute;inset:0;display:flex;align-items:center;justify-content:center;'
+            + 'flex-direction:column;gap:14px;cursor:pointer;z-index:50;'
+            + 'background:rgba(4,6,12,0.55);backdrop-filter:blur(2px);';
+          ov.innerHTML = '<div style="font-size:54px;color:#F5A623;line-height:1;filter:drop-shadow(0 0 12px rgba(245,166,35,.5))">▶</div>'
+            + '<div style="font-family:\'Space Mono\',monospace;font-size:12px;letter-spacing:.18em;text-transform:uppercase;color:rgba(245,166,35,.85)">tap to play</div>';
+          const go = async (ev) => {
+            ev && ev.stopPropagation();
+            ov.remove();
+            try { await onPlay(); } catch (_) {}
+          };
+          ov.addEventListener('click', go);
+          this.mediaContainer.style.position = this.mediaContainer.style.position || 'relative';
+          this.mediaContainer.appendChild(ov);
+        } catch (_) {}
       }
 
       cycleViz() {
