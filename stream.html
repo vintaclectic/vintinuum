@@ -1226,21 +1226,20 @@ function joinEnrollAudio(samples) {
   return new Blob(clips, { type });
 }
 
-// POST the captured audio for server-side ECAPA embedding. Multipart so the
-// browser sets its own Content-Type/boundary — do NOT force application/json.
+// POST the captured audio for server-side ECAPA embedding. Uses the brain's
+// raw-audio enroll shape (C): the Blob IS the body with an audio/* Content-Type;
+// consent + label ride in the querystring. The brain extracts the resemblyzer
+// embedding from the 3 breaths and stores it (never echoes the vector).
 async function enrollPostAudio(blob) {
-  const fd = new FormData();
   const ext = (blob.type && blob.type.includes('ogg')) ? 'ogg' : 'webm';
-  fd.append('audio', blob, `enroll.${ext}`);
-  fd.append('model', ENROLL.EMB_MODEL);
-  fd.append('label', HOST);
-  fd.append('consent', 'true');
+  const ct = blob.type || ('audio/' + ext);
+  const qs = new URLSearchParams({ consent: '1', label: HOST, audio_format: ext }).toString();
   try {
-    const r = await fetch(API + '/api/voice/enroll', {
+    const r = await fetch(API + '/api/voice/enroll?' + qs, {
       method: 'POST',
       cache: 'no-store',
-      headers: enrollAuthHeaders(),   // x-master-key only; browser owns Content-Type
-      body: fd,
+      headers: Object.assign({ 'Content-Type': ct }, enrollAuthHeaders()),
+      body: blob,                     // raw audio bytes — matches express.raw({type:'audio/*'})
     });
     let body = null; try { body = await r.json(); } catch {}
     return { ok: r.ok, status: r.status, body };
