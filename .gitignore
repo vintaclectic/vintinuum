@@ -6,3 +6,7 @@ node_modules/
 .DS_Store
 *.backup
 *.backup.*
+
+# Conversation/memory dumps — may contain credentials & personal context.
+# Kept local only, never committed (Vinta directive 2026-06-09).
+memory/*.md
