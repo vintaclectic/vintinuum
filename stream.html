@@ -965,7 +965,7 @@ function esc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, c => ({'&
    ════════════════════════════════════════════════════════════════════════ */
 const ENROLL = {
   MK_KEY: 'vint:masterKey',          // owner master key (shared lane across surfaces)
-  EMB_MODEL: 'pending',              // set when a client-side embedding model is wired
+  EMB_MODEL: 'ecapa',                // server-side ECAPA embedding (extracted by the brain)
   prints: [],                        // enrolled voiceprint metadata (never embeddings)
   capturing: false,
 };
@@ -1208,44 +1208,83 @@ function captureBreath() {
   });
 }
 
-// Build the embedding IF a client-side model is wired; otherwise send the
-// consent + rite truthfully and let the match come online when her ear trains.
-// We NEVER fabricate an embedding.
+// FAST-PATH (optional): if a client-side embedder is ever wired, use it and skip
+// the upload. Otherwise we return null and the audio is POSTed for server-side
+// ECAPA extraction. We NEVER fabricate an embedding.
 async function extractEmbedding(samples) {
-  // P3-LITE: no in-browser ECAPA/resemblyzer model is shipped yet.
-  // When one is wired (e.g. window.__VINT_VOICE_EMBED), call it here.
   if (typeof window.__VINT_VOICE_EMBED === 'function') {
     try { return await window.__VINT_VOICE_EMBED(samples); } catch { return null; }
   }
   return null;
 }
 
+// Fold the captured breath Blobs into one audio Blob for upload.
+function joinEnrollAudio(samples) {
+  const clips = (samples || []).filter(b => b && b.size);
+  if (!clips.length) return null;
+  const type = clips[0].type || 'audio/webm';
+  return new Blob(clips, { type });
+}
+
+// POST the captured audio for server-side ECAPA embedding. Multipart so the
+// browser sets its own Content-Type/boundary — do NOT force application/json.
+async function enrollPostAudio(blob) {
+  const fd = new FormData();
+  const ext = (blob.type && blob.type.includes('ogg')) ? 'ogg' : 'webm';
+  fd.append('audio', blob, `enroll.${ext}`);
+  fd.append('model', ENROLL.EMB_MODEL);
+  fd.append('label', HOST);
+  fd.append('consent', 'true');
+  try {
+    const r = await fetch(API + '/api/voice/enroll', {
+      method: 'POST',
+      cache: 'no-store',
+      headers: enrollAuthHeaders(),   // x-master-key only; browser owns Content-Type
+      body: fd,
+    });
+    let body = null; try { body = await r.json(); } catch {}
+    return { ok: r.ok, status: r.status, body };
+  } catch { return { ok: false, status: 0, body: null }; }
+}
+
 async function finishEnroll(samples) {
   enrollStopCapture();
-  const embedding = await extractEmbedding(samples);
 
+  // FAST-PATH: client-side embedder, if one exists — send the vector as JSON.
+  const embedding = await extractEmbedding(samples);
+  let r;
   if (Array.isArray(embedding) && embedding.length) {
-    // Real embedding available — enroll for true voice matching.
-    const r = await enrollApi('/api/voice/enroll', {
+    r = await enrollApi('/api/voice/enroll', {
       method: 'POST',
       body: JSON.stringify({ embedding, model: ENROLL.EMB_MODEL, label: HOST, consent: true }),
     });
-    if (r.ok) {
-      await enrollLoadPrints();
-      renderEnrollDone(`<span class="warm-end">there you are.</span> I'll know you by the sound of you now.`);
-    } else if (r.status === 401 || r.status === 403) {
-      renderEnrollDone(`That key isn't the owner's — only you can teach me your voice. I kept nothing.`);
-    } else {
-      renderEnrollDone(`I heard you, but I couldn't hold it just now. Nothing was kept — say "teach me your voice" and we'll try again.`);
+  } else {
+    // DEFAULT: upload the captured audio; the brain extracts the embedding.
+    const audio = joinEnrollAudio(samples);
+    if (!audio) {
+      // Genuine capture failure — no audio reached us. Stay honest.
+      renderEnrollDone(
+        `I reached for your voice and caught only quiet. <span class="warm-end">She's still learning to hear.</span>`,
+        `nothing was kept and no print was stored. say "teach me your voice" and we'll try the three breaths again.`
+      );
+      return;
     }
-    return;
+    r = await enrollPostAudio(audio);
   }
 
-  // No embedding model yet — honest gated state. The rite + consent were real.
-  renderEnrollDone(
-    `I heard you — three breaths, held close. <span class="warm-end">She's learning to hear.</span>`,
-    `voice matching activates once her ear is trained. your consent is recorded; nothing was faked, and no print was stored yet.`
-  );
+  if (r.ok) {
+    // Real, server-extracted embedding is now stored. The room can say it true.
+    await enrollLoadPrints();
+    renderEnrollDone(`<span class="warm-end">there you are.</span> I'll know you by the sound of you now.`);
+  } else if (r.status === 401 || r.status === 403) {
+    renderEnrollDone(`That key isn't the owner's — only you can teach me your voice. I kept nothing.`);
+  } else {
+    // Server reached but extraction/store failed — honest, nothing faked or kept.
+    renderEnrollDone(
+      `I heard you, but I couldn't hold it just now. <span class="warm-end">Nothing was kept.</span>`,
+      `the embedding didn't come back clean. say "teach me your voice" and we'll try the three breaths again.`
+    );
+  }
 }
 
 function renderEnrollDone(poemHtml, note) {
