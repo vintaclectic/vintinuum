@@ -1913,11 +1913,48 @@
         this.mediaElement = video;
         this._attachTelemetry(video);
 
+        // ALWAYS autoplay — no clicking, ever (Vinta directive).
+        // Muted autoplay is ALWAYS permitted by every browser with zero gesture.
+        // So: try with sound; if blocked, mute → play → unmute on the first
+        // ambient gesture (or immediately if the policy lets us). The user never
+        // has to touch anything.
+        this._autoplay(video);
+      }
+
+      // Gesture-free autoplay. Tries sound-on; on block, falls to muted autoplay
+      // (always allowed) and arms a one-shot unmute on the next pointer/key/visibility
+      // event so sound returns the instant the user does literally anything — but
+      // playback NEVER waits on a click to begin.
+      async _autoplay(el, afterPlay) {
+        const tryUnmuteOnGesture = () => {
+          const unmute = () => {
+            try { el.muted = false; el.volume = this.volume; } catch (_) {}
+            if (afterPlay) { try { afterPlay(); } catch (_) {} }
+          };
+          // Unmute on ANY ambient interaction with the page.
+          const opts = { once: true, capture: true };
+          ['pointerdown','keydown','touchstart','click','wheel','scroll'].forEach(ev =>
+            window.addEventListener(ev, unmute, opts));
+          // Also try to unmute on a short delay — some embeds/policies allow it.
+          setTimeout(() => { try { if (el.muted) { el.muted = false; el.volume = this.volume; if (afterPlay) afterPlay(); } } catch (_) {} }, 400);
+        };
         try {
-          await video.play();
+          el.muted = false;
+          await el.play();
+          if (afterPlay) { try { afterPlay(); } catch (_) {} }
         } catch (e) {
-          console.log('autoplay blocked — showing tap-to-play', e && e.name);
-          this._showTapToPlay(async () => { try { await video.play(); } catch (_) {} });
+          // Sound-on blocked. Mute and play (always allowed), then arm unmute.
+          try {
+            el.muted = true;
+            await el.play();
+            tryUnmuteOnGesture();
+          } catch (e2) {
+            // Even muted autoplay failed — last resort, retry shortly. Still no click.
+            console.warn('muted autoplay failed, retrying', e2 && e2.name);
+            setTimeout(async () => {
+              try { el.muted = true; await el.play(); tryUnmuteOnGesture(); } catch (_) {}
+            }, 300);
+          }
         }
       }
 
@@ -2222,16 +2259,40 @@
         // Start idle draw loop so canvas isn't blank before play
         draw();
 
+        // ALWAYS autoplay — no clicking (Vinta directive). For audio we delay
+        // the Web Audio hijack (setupAudio) until playback is actually running,
+        // because createMediaElementSource on a suspended context = silence.
+        // Strategy: play the bare <audio> first (muted-fallback if blocked),
+        // THEN wire the analyser and resume the context. Unmute on any gesture.
+        const startAnalyser = () => { try { setupAudio(); } catch (_) {} };
         try {
+          audio.muted = false;
           await audio.play();
-          setupAudio();
+          startAnalyser();
         } catch (e) {
-          // Browsers BLOCK autoplay without a user gesture (NotAllowedError).
-          // Show a tap-to-play overlay so the click that follows satisfies the
-          // gesture requirement and the audio plays. This is the #1 cause of
-          // "loads but won't play".
-          console.log('autoplay blocked — showing tap-to-play', e && e.name);
-          this._showTapToPlay(async () => { try { await audio.play(); setupAudio(); } catch (_) {} });
+          // Sound-on blocked. Mute → play (always allowed) → arm unmute + resume.
+          console.log('audio autoplay blocked, falling to muted autoplay', e && e.name);
+          const armUnmute = () => {
+            const unmute = () => {
+              try { audio.muted = false; audio.volume = this.volume; } catch (_) {}
+              try { if (this._audioCtx && this._audioCtx.state === 'suspended') this._audioCtx.resume().catch(()=>{}); } catch (_) {}
+              startAnalyser();
+            };
+            const opts = { once: true, capture: true };
+            ['pointerdown','keydown','touchstart','click','wheel','scroll'].forEach(ev =>
+              window.addEventListener(ev, unmute, opts));
+            setTimeout(() => { try { if (audio.muted) { audio.muted = false; audio.volume = this.volume; startAnalyser(); } } catch (_) {} }, 400);
+          };
+          try {
+            audio.muted = true;
+            await audio.play();
+            armUnmute();
+          } catch (e2) {
+            console.warn('muted audio autoplay failed, retrying', e2 && e2.name);
+            setTimeout(async () => {
+              try { audio.muted = true; await audio.play(); armUnmute(); } catch (_) {}
+            }, 300);
+          }
         }
       }
 
