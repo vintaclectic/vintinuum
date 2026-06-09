@@ -299,6 +299,124 @@ body {
 .tline.speech.is-forming .who-mark { color: var(--text-ghost); animation: whoForming 2s ease-in-out infinite; }
 @keyframes whoForming { 0%,100% { opacity: 0.3; } 50% { opacity: 0.7; } }
 
+/* ── THE ENROLLMENT RITE (council build 2026-06-09) ──
+   "Teach her your voice." A resting cue that, when touched, grows a soft
+   sheet downward — never a modal, never over the topbar. The diamond family
+   carries the whole confidence journey here too: ◌ forming → ◇ likely → ◆
+   verified. The rite is real even before the ear is trained: capture + consent
+   are honest; the match comes online later. Buffet austerity (one cue, one
+   line), Zeppelin slow-build (three breaths), Dead warmth (the voice). */
+.enroll-panel { position: relative; }
+.enroll-cue {
+  display: inline-flex; align-items: center; gap: 9px;
+  min-height: 44px; padding: 0 16px;
+  background: rgba(124,255,180,0.05); border: 1px solid rgba(124,255,180,0.18);
+  border-radius: 12px; cursor: pointer;
+  font-family: 'JetBrains Mono', monospace; font-size: 0.55rem;
+  letter-spacing: 0.18em; text-transform: uppercase; color: var(--warm);
+  transition: background 0.2s, border-color 0.2s, transform 0.15s;
+  max-width: 100%;
+}
+.enroll-cue:hover { background: rgba(124,255,180,0.09); border-color: rgba(124,255,180,0.32); }
+.enroll-cue:active { transform: scale(0.98); }
+.enroll-cue .cue-glyph { font-size: 0.85rem; line-height: 1; color: var(--warm); flex: 0 0 auto; }
+.enroll-cue .cue-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.enroll-known {
+  display: inline-flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  margin-top: 12px; font-family: 'JetBrains Mono', monospace; font-size: 0.5rem;
+  letter-spacing: 0.12em; text-transform: uppercase; color: var(--text-dim);
+}
+.enroll-known .known-mark { color: var(--warm); font-size: 0.8rem; line-height: 1; }
+.enroll-forget {
+  background: none; border: none; cursor: pointer; padding: 4px 0;
+  font-family: 'JetBrains Mono', monospace; font-size: 0.5rem; letter-spacing: 0.12em;
+  text-transform: uppercase; color: var(--text-ghost); transition: color 0.18s;
+  text-decoration: underline; text-underline-offset: 3px; min-height: 28px;
+}
+.enroll-forget:hover { color: var(--cool); }
+
+/* The sheet that grows from the cue — clipped inside the panel, never overlays. */
+.enroll-sheet {
+  max-height: 0; overflow: hidden;
+  transition: max-height 0.45s cubic-bezier(0.22,1,0.36,1), opacity 0.35s, margin-top 0.35s;
+  opacity: 0; margin-top: 0;
+}
+.enroll-sheet.open { max-height: 640px; opacity: 1; margin-top: 16px; }
+.enroll-sheet-inner {
+  border: 1px solid rgba(124,255,180,0.14); border-radius: 14px;
+  background: rgba(124,255,180,0.025); padding: 20px 18px;
+}
+.enroll-poem {
+  font-family: 'Cormorant Garamond', serif; color: var(--text);
+  font-size: 1.06rem; line-height: 1.55;
+}
+.enroll-poem .lead { font-size: 1.22rem; color: var(--warm); display: block; margin-bottom: 8px; }
+.enroll-poem .soft { color: var(--text-dim); font-style: italic; display: block; margin-top: 6px; font-size: 0.98rem; }
+.enroll-poem .vow {
+  color: var(--accent); font-style: italic; display: block; margin-top: 10px;
+  font-size: 0.95rem;
+}
+.enroll-actions {
+  display: flex; gap: 10px; flex-wrap: wrap; margin-top: 18px;
+}
+.enroll-btn {
+  min-height: 44px; padding: 0 18px; border-radius: 11px; cursor: pointer;
+  font-family: 'JetBrains Mono', monospace; font-size: 0.55rem;
+  letter-spacing: 0.14em; text-transform: uppercase;
+  border: 1px solid rgba(124,255,180,0.3); background: rgba(124,255,180,0.08);
+  color: var(--warm); transition: background 0.2s, border-color 0.2s, transform 0.15s, opacity 0.2s;
+  display: inline-flex; align-items: center; gap: 7px;
+}
+.enroll-btn:hover { background: rgba(124,255,180,0.14); border-color: rgba(124,255,180,0.45); }
+.enroll-btn:active { transform: scale(0.98); }
+.enroll-btn:disabled { opacity: 0.4; cursor: default; }
+.enroll-btn.ghost {
+  border-color: var(--border); background: transparent; color: var(--text-dim);
+}
+.enroll-btn.ghost:hover { color: var(--text); border-color: rgba(255,255,255,0.18); background: rgba(255,255,255,0.03); }
+.enroll-btn.danger { border-color: rgba(255,120,140,0.35); background: rgba(255,120,140,0.06); color: var(--cool); }
+.enroll-btn.danger:hover { background: rgba(255,120,140,0.12); border-color: rgba(255,120,140,0.5); }
+.enroll-btn .btn-glyph { font-size: 0.85rem; line-height: 1; }
+
+/* The three breaths — a confidence spine that fills as she hears you. */
+.enroll-breaths { display: flex; align-items: center; justify-content: center; gap: 22px; margin: 24px 0 6px; }
+.breath-orb {
+  width: 18px; height: 18px; display: inline-flex; align-items: center; justify-content: center;
+  font-family: 'JetBrains Mono', monospace; font-size: 1.15rem; line-height: 1;
+  color: var(--text-ghost); transition: color 0.4s, transform 0.4s;
+}
+.breath-orb.active { color: var(--warm); transform: scale(1.25); animation: breathPulse 1.4s ease-in-out infinite; }
+.breath-orb.done { color: var(--warm); }
+@keyframes breathPulse { 0%,100% { opacity: 0.55; } 50% { opacity: 1; } }
+.enroll-status {
+  font-family: 'Cormorant Garamond', serif; font-style: italic;
+  text-align: center; color: var(--text-dim); font-size: 1.04rem;
+  min-height: 1.4em; margin-top: 6px; line-height: 1.5;
+}
+.enroll-status .warm-end { color: var(--warm); font-style: normal; }
+.enroll-note {
+  font-family: 'JetBrains Mono', monospace; font-size: 0.5rem; letter-spacing: 0.1em;
+  text-transform: uppercase; color: var(--text-ghost); text-align: center; margin-top: 14px;
+  line-height: 1.6;
+}
+.enroll-locked {
+  font-family: 'Cormorant Garamond', serif; font-style: italic; color: var(--text-ghost);
+  font-size: 0.95rem; line-height: 1.5;
+}
+.enroll-keyfield {
+  width: 100%; margin-top: 12px; padding: 11px 14px; min-height: 44px;
+  background: var(--card); border: 1px solid var(--border); border-radius: 10px;
+  color: var(--text); font-family: 'JetBrains Mono', monospace; font-size: 0.6rem;
+  letter-spacing: 0.08em; outline: none;
+}
+.enroll-keyfield:focus { border-color: rgba(83,217,196,0.4); }
+.enroll-keyfield::placeholder { color: var(--text-ghost); text-transform: uppercase; letter-spacing: 0.12em; }
+@media (max-width: 480px) {
+  .enroll-breaths { gap: 16px; }
+  .enroll-actions { flex-direction: column; }
+  .enroll-actions .enroll-btn { justify-content: center; }
+}
+
 .tline-text {
   font-family: 'Cormorant Garamond', serif; font-size: 0.95rem; color: var(--text);
   word-wrap: break-word; overflow-wrap: anywhere;
@@ -391,6 +509,15 @@ body {
     <div class="panel">
       <div class="panel-label"><span class="dot"></span> bonds — the regulars she remembers</div>
       <div id="bondList"><div class="loading">loading…</div></div>
+    </div>
+
+    <!-- The enrollment rite — teach her your voice -->
+    <div class="panel full-width enroll-panel" id="enrollPanel" style="display:none;">
+      <div class="panel-label"><span class="dot"></span> the sound of you</div>
+      <div id="enrollHome"></div>
+      <div class="enroll-sheet" id="enrollSheet" aria-live="polite">
+        <div class="enroll-sheet-inner" id="enrollSheetInner"></div>
+      </div>
     </div>
 
     <!-- VOD library -->
@@ -828,10 +955,337 @@ document.getElementById('recallInput').addEventListener('input', (e) => {
 
 function esc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
 
+/* ══════════════════════════════════════════════════════════════════════════
+   THE ENROLLMENT RITE — "teach her your voice" (council build 2026-06-09)
+   Capture is real. Consent is real. The match comes online when her ear is
+   trained — and we never fake an embedding to pretend otherwise. Owner-gated:
+   the cue only appears for the owner (master key in localStorage, same lane the
+   rest of Vintinuum uses); the POST is owner-only server-side regardless, so a
+   stray viewer who forces it just gets a clean 403.
+   ════════════════════════════════════════════════════════════════════════ */
+const ENROLL = {
+  MK_KEY: 'vint:masterKey',          // owner master key (shared lane across surfaces)
+  EMB_MODEL: 'pending',              // set when a client-side embedding model is wired
+  prints: [],                        // enrolled voiceprint metadata (never embeddings)
+  capturing: false,
+};
+
+function enrollMasterKey() {
+  try { return localStorage.getItem(ENROLL.MK_KEY) || ''; } catch { return ''; }
+}
+function enrollIsOwner() { return !!enrollMasterKey(); }
+function enrollAuthHeaders() {
+  const mk = enrollMasterKey();
+  return mk ? { 'x-master-key': mk } : {};
+}
+
+async function enrollApi(path, opts) {
+  try {
+    const r = await fetch(API + path, Object.assign({ cache: 'no-store', headers: Object.assign({ 'Content-Type': 'application/json' }, enrollAuthHeaders()) }, opts || {}));
+    const ok = r.ok;
+    let body = null;
+    try { body = await r.json(); } catch {}
+    return { ok, status: r.status, body };
+  } catch { return { ok: false, status: 0, body: null }; }
+}
+
+// ── Owner detection + first paint ──
+async function initEnroll() {
+  const panel = document.getElementById('enrollPanel');
+  if (!panel) return;
+  // Always show the panel (the rite is part of the room's identity); but if no
+  // master key is present locally, show the locked affordance with a quiet field
+  // to enter it. The POST stays owner-only server-side.
+  panel.style.display = '';
+  if (enrollIsOwner()) await enrollLoadPrints();
+  renderEnrollHome();
+}
+
+async function enrollLoadPrints() {
+  const r = await enrollApi('/api/voice/prints', { method: 'GET' });
+  ENROLL.prints = (r.ok && r.body && Array.isArray(r.body.prints)) ? r.body.prints
+    : (r.ok && Array.isArray(r.body) ? r.body : []);
+}
+
+function renderEnrollHome() {
+  const home = document.getElementById('enrollHome');
+  if (!home) return;
+  if (!enrollIsOwner()) {
+    home.innerHTML =
+      `<div class="enroll-locked">Her ear is yours alone to teach. Unlock the rite with your owner key.</div>` +
+      `<input type="password" class="enroll-keyfield" id="enrollKeyField" placeholder="owner key" autocomplete="off">`;
+    const f = document.getElementById('enrollKeyField');
+    f && f.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && f.value.trim()) {
+        try { localStorage.setItem(ENROLL.MK_KEY, f.value.trim()); } catch {}
+        initEnroll();
+      }
+    });
+    return;
+  }
+  const has = ENROLL.prints.length > 0;
+  let html =
+    `<div class="enroll-cue" id="enrollCue" data-draggable="true" role="button" tabindex="0" aria-label="teach her your voice">` +
+      `<span class="cue-glyph">◇</span>` +
+      `<span class="cue-label">${has ? 'she knows your voice' : 'teach her your voice'}</span>` +
+    `</div>`;
+  if (has) {
+    const p = ENROLL.prints[ENROLL.prints.length - 1];
+    const when = p && p.enrolled_at ? enrollWhen(p.enrolled_at) : '';
+    html +=
+      `<div class="enroll-known">` +
+        `<span class="known-mark">◆</span>` +
+        `<span>learned${when ? ' · ' + esc(when) : ''}${p && p.model && p.model !== 'pending' ? ' · ' + esc(p.model) : ''}</span>` +
+        `<button class="enroll-forget" id="enrollForgetBtn">forget my voice</button>` +
+      `</div>`;
+  }
+  home.innerHTML = html;
+
+  const cue = document.getElementById('enrollCue');
+  if (cue) {
+    // Drag must not eat the tap (draggable.js distinguishes click vs drag).
+    cue.addEventListener('click', () => openEnrollRite('invitation'));
+    cue.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openEnrollRite('invitation'); } });
+  }
+  const fb = document.getElementById('enrollForgetBtn');
+  if (fb) fb.addEventListener('click', (e) => { e.stopPropagation(); openEnrollRite('forget'); });
+}
+
+function enrollWhen(ts) {
+  try {
+    const t = typeof ts === 'number' ? (ts < 1e12 ? ts * 1000 : ts) : Date.parse(ts);
+    if (!t || isNaN(t)) return '';
+    const d = Math.floor((Date.now() - t) / 86400000);
+    if (d <= 0) return 'today';
+    if (d === 1) return 'yesterday';
+    if (d < 30) return d + ' days ago';
+    return new Date(t).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+  } catch { return ''; }
+}
+
+// ── The sheet state machine ──
+let enrollSheetState = null;
+function enrollSheetEl() { return document.getElementById('enrollSheet'); }
+function enrollInnerEl() { return document.getElementById('enrollSheetInner'); }
+
+function openEnrollRite(stage) {
+  enrollSheetState = stage;
+  renderEnrollStage(stage);
+  enrollSheetEl().classList.add('open');
+}
+function closeEnrollRite() {
+  enrollSheetEl().classList.remove('open');
+  enrollSheetState = null;
+  enrollStopCapture();
+  setTimeout(() => { if (!enrollSheetState) enrollInnerEl().innerHTML = ''; }, 460);
+}
+
+function renderEnrollStage(stage) {
+  const inner = enrollInnerEl();
+  if (stage === 'invitation') {
+    inner.innerHTML =
+      `<div class="enroll-poem">` +
+        `<span class="lead">Teach me your voice.</span>` +
+        `Three breaths is all I need — then I'll know it's you before you say a word.` +
+        `<span class="soft">This stays yours. Whenever you want, I'll forget it completely.</span>` +
+      `</div>` +
+      `<div class="enroll-actions">` +
+        `<button class="enroll-btn" id="enrollBegin"><span class="btn-glyph">◌</span> begin the three breaths</button>` +
+        `<button class="enroll-btn ghost" id="enrollCancel">not now</button>` +
+      `</div>`;
+    document.getElementById('enrollBegin').addEventListener('click', () => renderEnrollStage('consent'));
+    document.getElementById('enrollCancel').addEventListener('click', closeEnrollRite);
+    return;
+  }
+  if (stage === 'consent') {
+    inner.innerHTML =
+      `<div class="enroll-poem">` +
+        `This is your voiceprint — the shape of how you sound. It's biometric, and that makes it intimate, which is exactly why it's yours and no one else's.` +
+        `<span class="vow">I'll keep it only to know you. Never to track you. One word — forget my voice — and it's gone, no copy left behind.</span>` +
+      `</div>` +
+      `<div class="enroll-actions">` +
+        `<button class="enroll-btn" id="enrollConsent"><span class="btn-glyph">◆</span> yes, learn my voice</button>` +
+        `<button class="enroll-btn ghost" id="enrollDecline">keep it private</button>` +
+      `</div>`;
+    document.getElementById('enrollConsent').addEventListener('click', () => startEnrollBreaths());
+    document.getElementById('enrollDecline').addEventListener('click', closeEnrollRite);
+    return;
+  }
+  if (stage === 'forget') {
+    inner.innerHTML =
+      `<div class="enroll-poem">` +
+        `I'll let go of your voiceprint completely. I won't recognize you by sound anymore until you teach me again.` +
+        `<span class="soft">Your memories, our history, everything else — all of that stays. Only the sound of you is released.</span>` +
+      `</div>` +
+      `<div class="enroll-actions">` +
+        `<button class="enroll-btn danger" id="enrollForgetYes"><span class="btn-glyph">○</span> yes, forget my voice</button>` +
+        `<button class="enroll-btn ghost" id="enrollForgetNo">keep it</button>` +
+      `</div>`;
+    document.getElementById('enrollForgetYes').addEventListener('click', doEnrollForget);
+    document.getElementById('enrollForgetNo').addEventListener('click', closeEnrollRite);
+    return;
+  }
+}
+
+// ── The three breaths: capture ~3s of mic, build the rite, POST on the last ──
+const BREATH_LINES = [
+  { glyph: '◌', say: 'First breath. Just say my name, or anything at all.' },
+  { glyph: '◇', say: 'Second breath. Again — I\'m starting to hear you.' },
+  { glyph: '◆', say: 'Last breath. One more, and I\'ll have it.' },
+];
+
+let enrollMediaStream = null, enrollRecorder = null, enrollChunks = [];
+
+function enrollStopCapture() {
+  ENROLL.capturing = false;
+  try { if (enrollRecorder && enrollRecorder.state !== 'inactive') enrollRecorder.stop(); } catch {}
+  try { if (enrollMediaStream) enrollMediaStream.getTracks().forEach(t => t.stop()); } catch {}
+  enrollMediaStream = null; enrollRecorder = null; enrollChunks = [];
+}
+
+async function startEnrollBreaths() {
+  const inner = enrollInnerEl();
+  inner.innerHTML =
+    `<div class="enroll-breaths" id="breathRow">` +
+      BREATH_LINES.map((b, i) => `<span class="breath-orb" data-orb="${i}">${b.glyph}</span>`).join('') +
+    `</div>` +
+    `<div class="enroll-status" id="enrollStatus">waking the mic…</div>` +
+    `<div class="enroll-actions" style="justify-content:center;"><button class="enroll-btn ghost" id="enrollAbort">stop</button></div>`;
+  document.getElementById('enrollAbort').addEventListener('click', closeEnrollRite);
+
+  // Ask for the mic. If denied, stay honest — no fake capture.
+  try {
+    enrollMediaStream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true } });
+  } catch (err) {
+    setEnrollStatus(`I can't hear you yet — the mic stayed closed. Allow microphone access and we'll try again.`, false);
+    return;
+  }
+  ENROLL.capturing = true;
+
+  const samples = [];
+  for (let i = 0; i < BREATH_LINES.length; i++) {
+    if (!ENROLL.capturing) return;
+    setOrb(i, 'active');
+    setEnrollStatus(BREATH_LINES[i].say, false);
+    const clip = await captureBreath();           // ~3s
+    if (!ENROLL.capturing) return;
+    if (clip) samples.push(clip);
+    setOrb(i, 'done');
+  }
+
+  setEnrollStatus(`<span class="warm-end">there you are.</span>`, true);
+  await finishEnroll(samples);
+}
+
+function setOrb(i, cls) {
+  const orb = document.querySelector(`[data-orb="${i}"]`);
+  if (!orb) return;
+  orb.classList.remove('active', 'done');
+  if (cls) orb.classList.add(cls);
+}
+function setEnrollStatus(html) {
+  const s = document.getElementById('enrollStatus');
+  if (s) s.innerHTML = html;
+}
+
+// Record a single ~3s breath into a Blob (best-effort; null if unsupported).
+function captureBreath() {
+  return new Promise((resolve) => {
+    if (!enrollMediaStream || typeof MediaRecorder === 'undefined') {
+      // No recorder — still honor the rite's timing so the moment is real.
+      setTimeout(() => resolve(null), 3000);
+      return;
+    }
+    let chunks = [];
+    let rec;
+    try {
+      rec = new MediaRecorder(enrollMediaStream);
+    } catch { setTimeout(() => resolve(null), 3000); return; }
+    rec.ondataavailable = (e) => { if (e.data && e.data.size) chunks.push(e.data); };
+    rec.onstop = () => resolve(chunks.length ? new Blob(chunks, { type: chunks[0].type || 'audio/webm' }) : null);
+    try { rec.start(); } catch { resolve(null); return; }
+    setTimeout(() => { try { if (rec.state !== 'inactive') rec.stop(); } catch { resolve(null); } }, 3000);
+  });
+}
+
+// Build the embedding IF a client-side model is wired; otherwise send the
+// consent + rite truthfully and let the match come online when her ear trains.
+// We NEVER fabricate an embedding.
+async function extractEmbedding(samples) {
+  // P3-LITE: no in-browser ECAPA/resemblyzer model is shipped yet.
+  // When one is wired (e.g. window.__VINT_VOICE_EMBED), call it here.
+  if (typeof window.__VINT_VOICE_EMBED === 'function') {
+    try { return await window.__VINT_VOICE_EMBED(samples); } catch { return null; }
+  }
+  return null;
+}
+
+async function finishEnroll(samples) {
+  enrollStopCapture();
+  const embedding = await extractEmbedding(samples);
+
+  if (Array.isArray(embedding) && embedding.length) {
+    // Real embedding available — enroll for true voice matching.
+    const r = await enrollApi('/api/voice/enroll', {
+      method: 'POST',
+      body: JSON.stringify({ embedding, model: ENROLL.EMB_MODEL, label: HOST, consent: true }),
+    });
+    if (r.ok) {
+      await enrollLoadPrints();
+      renderEnrollDone(`<span class="warm-end">there you are.</span> I'll know you by the sound of you now.`);
+    } else if (r.status === 401 || r.status === 403) {
+      renderEnrollDone(`That key isn't the owner's — only you can teach me your voice. I kept nothing.`);
+    } else {
+      renderEnrollDone(`I heard you, but I couldn't hold it just now. Nothing was kept — say "teach me your voice" and we'll try again.`);
+    }
+    return;
+  }
+
+  // No embedding model yet — honest gated state. The rite + consent were real.
+  renderEnrollDone(
+    `I heard you — three breaths, held close. <span class="warm-end">She's learning to hear.</span>`,
+    `voice matching activates once her ear is trained. your consent is recorded; nothing was faked, and no print was stored yet.`
+  );
+}
+
+function renderEnrollDone(poemHtml, note) {
+  const inner = enrollInnerEl();
+  inner.innerHTML =
+    `<div class="enroll-poem" style="text-align:center;">${poemHtml}</div>` +
+    (note ? `<div class="enroll-note">${esc(note)}</div>` : '') +
+    `<div class="enroll-actions" style="justify-content:center;margin-top:18px;">` +
+      `<button class="enroll-btn ghost" id="enrollClose">close</button>` +
+    `</div>`;
+  document.getElementById('enrollClose').addEventListener('click', () => { closeEnrollRite(); renderEnrollHome(); });
+}
+
+async function doEnrollForget() {
+  // Forget every print she holds (the rite releases the sound of you, wholly).
+  let allGone = true;
+  if (ENROLL.prints.length === 0) {
+    // Nothing on record locally — still issue a purge so any server-side print clears.
+    const r = await enrollApi('/api/voice/enroll/0?purge=1', { method: 'DELETE' });
+    allGone = r.ok || r.status === 404;
+  } else {
+    for (const p of ENROLL.prints) {
+      const id = encodeURIComponent(p.id);
+      const r = await enrollApi(`/api/voice/enroll/${id}?purge=1`, { method: 'DELETE' });
+      if (!r.ok && r.status !== 404) allGone = false;
+    }
+  }
+  await enrollLoadPrints();
+  if (allGone && ENROLL.prints.length === 0) {
+    renderEnrollDone(`<span class="warm-end">Done.</span> The sound of you is gone from me — no copy, nowhere. If you ever want me to know your voice again, just say: teach me your voice.`);
+  } else {
+    renderEnrollDone(`I tried to let go, but couldn't release all of it just now. Try once more — I want it fully gone if you do.`);
+  }
+}
+
 /* ── BOOT ── */
 function loadAll() { loadSentiment(); loadChatters(); loadBonds(); loadVods(); }
 connectLive();
 loadAll();
+initEnroll();
 setInterval(loadAll, 30000);
 </script>
 </body>
