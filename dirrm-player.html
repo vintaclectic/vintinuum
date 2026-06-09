@@ -1988,19 +1988,37 @@
           if (analyser) return;
           try {
             const actx = new (window.AudioContext || window.webkitAudioContext)();
+            this._audioCtx = actx;
+            // CRITICAL: Chrome creates AudioContexts SUSPENDED until a user
+            // gesture. Once we call createMediaElementSource, ALL output routes
+            // through this graph — so if it stays suspended, there is NO SOUND
+            // (this is the "plays no sound" bug). Resume it; the play() click
+            // already counts as the gesture.
+            if (actx.state === 'suspended') actx.resume().catch(() => {});
             const src = actx.createMediaElementSource(audio);
             analyser = actx.createAnalyser();
             analyser.fftSize = 2048;
             analyser.smoothingTimeConstant = 0.8;
+            // src → analyser → destination (speakers). The destination link is
+            // what makes sound come out. Missing it = silent visualizer.
             src.connect(analyser);
             analyser.connect(actx.destination);
             dataArray = new Uint8Array(analyser.frequencyBinCount);
             this._analyser = analyser;
             this._dataArray = dataArray;
+            // Belt-and-suspenders: keep trying to resume on the next ticks in
+            // case the gesture landed slightly after context creation.
+            const kick = () => { if (actx.state === 'suspended') actx.resume().catch(() => {}); };
+            setTimeout(kick, 200); setTimeout(kick, 1000);
+            document.addEventListener('click', kick, { once: true });
           } catch(e) {
-            console.warn('WebAudio blocked (CORS or policy):', e);
+            // createMediaElementSource can THROW on a tainted (cross-origin)
+            // source. In that case we did NOT reroute audio — the <audio>
+            // element plays normally on its own. We just lose the real
+            // analyser and use a synthetic one for the visualizer. SOUND STILL
+            // PLAYS because we never hijacked the output.
+            console.warn('WebAudio analyser unavailable — audio plays direct, viz synthetic:', e && e.name);
             fakeMode = true;
-            // Build a synthetic frequency array that pulses to simulated beat
             dataArray = new Uint8Array(1024);
             this._dataArray = dataArray;
           }
