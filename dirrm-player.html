@@ -54,7 +54,12 @@
       height: 520px;
       min-width: 480px;
       min-height: 320px;
+      /* OG DirHaven incremental sizing: +/- buttons scale this var. */
+      transform: scale(var(--dirrm-scale, 1));
+      transform-origin: center center;
+      transition: transform 0.18s cubic-bezier(.2,.8,.2,1);
     }
+    .dirrm-player[data-mode="mini"] { transform: scale(var(--dirrm-scale-mini, 1)); transform-origin: center center; }
 
     .dirrm-player[data-mode="mini"] {
       width: 380px;
@@ -1055,6 +1060,12 @@
         <button class="dirrm-btn" id="btn-viz" title="Change Visualizer" style="display:none">
           <span class="icon" id="viz-icon">◈</span>
         </button>
+        <button class="dirrm-btn" id="btn-size-down" title="Smaller (OG size −)">
+          <span class="icon">－</span>
+        </button>
+        <button class="dirrm-btn" id="btn-size-up" title="Larger (OG size +)">
+          <span class="icon">＋</span>
+        </button>
         <button class="dirrm-btn" id="btn-pip" title="Picture in Picture">
           <span class="icon">⧉</span>
         </button>
@@ -1222,6 +1233,9 @@
         document.getElementById('btn-theater').addEventListener('click', () => this.setMode('theater'));
         document.getElementById('btn-fullscreen').addEventListener('click', () => this.toggleFullscreen());
         document.getElementById('btn-viz').addEventListener('click', () => this.cycleViz());
+        // OG DirHaven +/- incremental sizing
+        document.getElementById('btn-size-up').addEventListener('click', () => this.nudgeSize(+1));
+        document.getElementById('btn-size-down').addEventListener('click', () => this.nudgeSize(-1));
         
         // Transport controls
         document.getElementById('btn-play').addEventListener('click', () => this.togglePlay());
@@ -3074,8 +3088,35 @@
           this.player.style.height = '100vh';
         }
 
+        // Re-apply any saved incremental scale for this mode.
+        this._applyScale();
+
         // Notify parent frame so it can resize the iframe to match
         window.parent?.postMessage({ action: 'modeChanged', mode: mode }, '*');
+      }
+
+      // OG DirHaven incremental sizing: each click steps the scale by 0.1,
+      // clamped 0.5..2.0, persisted per-mode. Theater/pip ignore (fixed).
+      nudgeSize(dir) {
+        const mode = this.mode || 'main';
+        if (mode === 'pip' || mode === 'theater') return;
+        const key = 'dirrm:scale:' + mode;
+        let s = parseFloat(localStorage.getItem(key) || '1') || 1;
+        s = Math.max(0.5, Math.min(2.0, +(s + dir * 0.1).toFixed(2)));
+        try { localStorage.setItem(key, String(s)); } catch (_) {}
+        this._applyScale();
+        // Tell the parent iframe how big we now want to be, so embeds resize.
+        window.parent?.postMessage({ action: 'scaleChanged', mode, scale: s }, '*');
+      }
+
+      _applyScale() {
+        const mode = this.mode || 'main';
+        const s = parseFloat(localStorage.getItem('dirrm:scale:' + mode) || '1') || 1;
+        const varName = mode === 'mini' ? '--dirrm-scale-mini' : '--dirrm-scale';
+        // Clear both so only the active mode's var applies.
+        this.player.style.removeProperty('--dirrm-scale');
+        this.player.style.removeProperty('--dirrm-scale-mini');
+        if (mode === 'main' || mode === 'mini') this.player.style.setProperty(varName, String(s));
       }
 
       toggleFullscreen() {
