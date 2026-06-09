@@ -1,0 +1,54 @@
+# Normalize line endings in the repository (added 2026-06-09).
+#
+# WHY: prophylactic. This repo is currently all-LF, but it has no EOL policy —
+# so a Windows/WSL editor saving a file with CRLF could later produce a phantom
+# whole-file diff that buries the real change (this exact footgun cost real
+# diagnosis time in the sibling DirHaven repo: a 61,556-line diff that was
+# really a 154-line fix hidden under a CRLF<->LF flip).
+#
+# FIX: git stores ALL text files as LF in the index (eol=lf), regardless of the
+# working-tree line endings the OS/editor uses. Diffs stay truthful and the
+# line-ending flip can never churn a file.
+
+# Auto-detect text vs binary; force LF in the repo for all text.
+* text=auto eol=lf
+
+# Explicit text types (belt-and-suspenders for the common source files).
+*.js     text eol=lf
+*.jsx    text eol=lf
+*.ts     text eol=lf
+*.tsx    text eol=lf
+*.cjs    text eol=lf
+*.mjs    text eol=lf
+*.json   text eol=lf
+*.css    text eol=lf
+*.scss   text eol=lf
+*.html   text eol=lf
+*.md     text eol=lf
+*.yml    text eol=lf
+*.yaml   text eol=lf
+
+# Shell scripts MUST be LF or they break on execution.
+*.sh     text eol=lf
+
+# Binary assets — never touch their bytes / never diff as text.
+*.png    binary
+*.jpg    binary
+*.jpeg   binary
+*.gif    binary
+*.webp   binary
+*.ico    binary
+*.svg    text eol=lf
+*.woff   binary
+*.woff2  binary
+*.ttf    binary
+*.eot    binary
+*.mp4    binary
+*.webm   binary
+*.mp3    binary
+*.wav    binary
+*.pdf    binary
+*.zip    binary
+*.gz     binary
+*.db     binary
+*.sqlite binary
