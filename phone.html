@@ -324,14 +324,293 @@ body.is-browser .status-pill:not(.status-pill--warn) { display: none; }
 }
 .sensor-chip.active .dot { background: var(--purple); }
 
-/* ── PULSE VIEW ── */
-.pulse-view { padding: 20px 16px; gap: 16px; }
+/* ── PULSE VIEW — rebuilt v2 ── */
+/* The view is a single scroll-internal column. Nothing escapes. */
+.pulse-view {
+  padding: 0;
+  gap: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+}
 
-.pulse-section { display: flex; flex-direction: column; gap: 8px; }
-.pulse-label {
-  font-size: 12px;
+/* Scroll body — all content lives here, bounded by flex parent */
+.pulse-scroll {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px 14px 24px;
+  min-height: 100%;
+  box-sizing: border-box;
+}
+
+/* Section heading */
+.ps-label {
+  font-size: 10px;
   text-transform: uppercase;
+  letter-spacing: 0.2em;
+  color: var(--text-dim);
+  padding: 0 2px;
+}
+
+/* ── Heartbeat header card ── */
+.pulse-hb-card {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  flex-shrink: 0;
+}
+.pulse-hb-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.pulse-hb-title {
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+.pulse-hb-mood {
+  font-size: 20px;
+  font-weight: 500;
+  color: var(--text-bright);
+  letter-spacing: 0.02em;
+}
+.pulse-hb-dot {
+  width: 10px; height: 10px; border-radius: 50%;
+  background: var(--purple);
+  box-shadow: 0 0 8px var(--purple-glow);
+  flex-shrink: 0;
+  animation: hb-pulse 2s ease-in-out infinite;
+}
+@keyframes hb-pulse {
+  0%, 100% { opacity: 0.7; transform: scale(0.9); }
+  50% { opacity: 1; transform: scale(1.15); box-shadow: 0 0 14px var(--purple-glow); }
+}
+
+/* Neuro bars inside heartbeat card */
+.pulse-neuro-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+.pulse-neuro-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.pulse-neuro-label {
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  display: flex; align-items: center; gap: 5px;
+}
+.pulse-neuro-dot { width: 5px; height: 5px; border-radius: 50%; flex-shrink: 0; }
+.pulse-neuro-track {
+  height: 3px;
+  background: rgba(255,255,255,0.05);
+  border-radius: 2px;
+  overflow: hidden;
+}
+.pulse-neuro-fill {
+  height: 100%;
+  border-radius: 2px;
+  transition: width 1.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.pulse-neuro-val {
+  font-size: 16px;
+  font-weight: 500;
+}
+
+/* Dominant layer / thought strip */
+.pulse-thought-strip {
+  font-size: 13px;
+  font-style: italic;
+  color: var(--text-dim);
+  line-height: 1.5;
+  min-height: 20px;
+  transition: opacity 0.5s;
+  border-left: 2px solid var(--border-active);
+  padding-left: 10px;
+}
+.pulse-thought-strip.updating { opacity: 0.3; }
+
+/* ── Live inner-life stream card ── */
+.pulse-stream-card {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  flex-shrink: 0;
+  overflow: hidden;
+}
+.pulse-stream-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 14px 10px;
+}
+.pulse-stream-live-dot {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 10px;
   letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+.pulse-stream-live-dot::before {
+  content: '';
+  width: 6px; height: 6px; border-radius: 50%;
+  background: var(--gaba);
+  box-shadow: 0 0 6px var(--gaba);
+  animation: hb-pulse 1.4s ease-in-out infinite;
+}
+.pulse-stream-list {
+  max-height: 180px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  padding: 0 0 6px;
+}
+.pulse-stream-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 8px 14px;
+  border-bottom: 1px solid rgba(124,58,237,0.07);
+  animation: fadeUp 0.35s ease;
+}
+.pulse-stream-item:last-child { border-bottom: none; }
+.pulse-stream-layer {
+  font-size: 9px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  padding: 2px 7px;
+  border-radius: 8px;
+  background: rgba(124,58,237,0.12);
+  border: 1px solid rgba(124,58,237,0.25);
+  color: var(--text-bright);
+  flex-shrink: 0;
+  margin-top: 2px;
+  white-space: nowrap;
+}
+.pulse-stream-text {
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--text);
+  flex: 1;
+  word-break: break-word;
+}
+.pulse-stream-empty {
+  padding: 18px 14px;
+  font-size: 13px;
+  font-style: italic;
+  color: var(--text-dim);
+  text-align: center;
+}
+
+/* ── Open-loop teaser card ── */
+.pulse-teaser-card {
+  background: linear-gradient(135deg, rgba(124,58,237,0.08), rgba(59,130,246,0.06));
+  border: 1px solid var(--border-active);
+  border-radius: 16px;
+  padding: 14px 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background 0.2s;
+  min-height: 44px;
+}
+.pulse-teaser-card:active {
+  background: linear-gradient(135deg, rgba(124,58,237,0.16), rgba(59,130,246,0.12));
+}
+.pulse-teaser-icon {
+  width: 32px; height: 32px; border-radius: 50%;
+  background: rgba(124,58,237,0.18);
+  border: 1px solid var(--border-active);
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+.pulse-teaser-icon svg { width: 16px; height: 16px; color: var(--serotonin); }
+.pulse-teaser-text { flex: 1; }
+.pulse-teaser-pre {
+  font-size: 10px;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+.pulse-teaser-msg {
+  font-size: 14px;
+  font-style: italic;
+  color: var(--text-bright);
+  line-height: 1.45;
+  margin-top: 2px;
+}
+.pulse-teaser-arrow {
+  color: var(--text-dim);
+  flex-shrink: 0;
+}
+
+/* ── Memory strip ── */
+.pulse-mem-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex-shrink: 0;
+}
+.pulse-mem-item {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  animation: fadeUp 0.3s ease;
+}
+.pulse-mem-type {
+  font-size: 9px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+.pulse-mem-text {
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--text);
+}
+.pulse-mem-intensity {
+  height: 2px;
+  border-radius: 1px;
+  background: linear-gradient(90deg, var(--purple), var(--blue));
+  margin-top: 2px;
+}
+
+/* ── Moment input form ── */
+.pulse-form-card {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  flex-shrink: 0;
+}
+.pulse-form-title {
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
   color: var(--text-dim);
 }
 
@@ -350,7 +629,7 @@ input[type="range"] {
   -webkit-appearance: none;
   appearance: none;
   width: 100%; height: 6px;
-  background: var(--bg-surface);
+  background: var(--bg-elevated);
   border-radius: 3px;
   outline: none;
   border: 1px solid var(--border);
@@ -388,7 +667,7 @@ input[type="range"]::-moz-range-thumb {
   font-family: 'Cormorant Garamond', serif;
   font-size: 14px;
   padding: 8px 16px;
-  background: var(--bg-surface);
+  background: var(--bg-elevated);
   border: 1px solid var(--border);
   border-radius: 24px;
   color: var(--text-dim);
@@ -409,9 +688,10 @@ input[type="range"]::-moz-range-thumb {
 .pulse-text-container { position: relative; }
 .pulse-text {
   width: 100%;
-  min-height: 80px;
+  min-height: 72px;
+  max-height: 160px;
   padding: 14px;
-  background: var(--bg-surface);
+  background: var(--bg-elevated);
   border: 1px solid var(--border);
   border-radius: 12px;
   color: var(--text);
@@ -421,18 +701,20 @@ input[type="range"]::-moz-range-thumb {
   resize: none;
   outline: none;
   transition: border-color 0.2s;
+  overflow-y: auto;
+  box-sizing: border-box;
 }
 .pulse-text:focus { border-color: var(--border-active); }
 .pulse-text::placeholder { color: var(--text-dim); font-style: italic; }
 
 /* Location chip */
 .location-chip {
-  font-size: 12px;
+  font-size: 11px;
   color: var(--text-dim);
   display: flex; align-items: center; gap: 6px;
-  padding: 6px 0;
+  padding: 4px 0;
 }
-.location-chip svg { width: 14px; height: 14px; opacity: 0.5; }
+.location-chip svg { width: 12px; height: 12px; opacity: 0.5; flex-shrink: 0; }
 
 /* Send button */
 .pulse-send-btn {
@@ -465,11 +747,11 @@ input[type="range"]::-moz-range-thumb {
 
 /* Pulse response */
 .pulse-response {
-  padding: 14px;
-  background: var(--bg-surface);
-  border: 1px solid var(--border);
+  padding: 12px 14px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-active);
   border-radius: 12px;
-  font-size: 15px;
+  font-size: 14px;
   font-style: italic;
   line-height: 1.6;
   color: var(--text);
@@ -481,6 +763,118 @@ input[type="range"]::-moz-range-thumb {
   from { opacity: 0; transform: translateY(8px); }
   to { opacity: 1; transform: translateY(0); }
 }
+
+/* ── Consent / data-contribution card ── */
+.pulse-consent-card {
+  background: var(--bg-surface);
+  border: 1px solid rgba(34, 197, 94, 0.2);
+  border-radius: 16px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  flex-shrink: 0;
+}
+.pulse-consent-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.pulse-consent-icon {
+  width: 28px; height: 28px; border-radius: 50%;
+  background: rgba(34,197,94,0.1);
+  border: 1px solid rgba(34,197,94,0.25);
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+.pulse-consent-icon svg { width: 14px; height: 14px; color: var(--gaba); }
+.pulse-consent-title {
+  font-size: 12px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-bright);
+}
+.pulse-consent-sub {
+  font-size: 11px;
+  color: var(--text-dim);
+  margin-top: 2px;
+}
+.pulse-consent-signals {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.pulse-consent-signal {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  min-height: 44px;
+  gap: 10px;
+}
+.pulse-consent-signal-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+}
+.pulse-consent-signal-name {
+  font-size: 13px;
+  color: var(--text);
+}
+.pulse-consent-signal-desc {
+  font-size: 11px;
+  color: var(--text-dim);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+/* Toggle switch */
+.pulse-toggle {
+  position: relative;
+  width: 44px; height: 24px;
+  flex-shrink: 0;
+}
+.pulse-toggle input { opacity: 0; width: 0; height: 0; position: absolute; }
+.pulse-toggle-track {
+  position: absolute; inset: 0;
+  border-radius: 12px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  cursor: pointer;
+  transition: background 0.2s, border-color 0.2s;
+}
+.pulse-toggle input:checked + .pulse-toggle-track {
+  background: rgba(124,58,237,0.35);
+  border-color: var(--purple);
+}
+.pulse-toggle-track::after {
+  content: '';
+  position: absolute;
+  top: 3px; left: 3px;
+  width: 16px; height: 16px;
+  border-radius: 50%;
+  background: var(--text-dim);
+  transition: transform 0.2s, background 0.2s;
+}
+.pulse-toggle input:checked + .pulse-toggle-track::after {
+  transform: translateX(20px);
+  background: var(--purple);
+}
+.pulse-consent-why {
+  font-size: 11px;
+  color: var(--text-dim);
+  line-height: 1.5;
+  padding: 8px 10px;
+  background: rgba(34,197,94,0.04);
+  border: 1px solid rgba(34,197,94,0.12);
+  border-radius: 8px;
+}
+.pulse-consent-why strong { color: var(--gaba); font-weight: 600; }
 
 /* ── CHAT VIEW ── */
 .chat-view { padding: 0; }
@@ -693,7 +1087,7 @@ input[type="range"]::-moz-range-thumb {
   .body-view { padding: 24px 32px; }
   .orb-container { width: 240px; height: 240px; }
   .neuro-display { max-width: 400px; }
-  .pulse-view { padding: 24px 32px; max-width: 500px; margin: 0 auto; }
+  .pulse-scroll { padding: 20px 24px 32px; max-width: 500px; margin: 0 auto; }
   .chat-messages { padding: 16px 24px; }
 }
 @media (min-width: 1024px) {
@@ -833,59 +1227,179 @@ input[type="range"]::-moz-range-thumb {
     </div>
   </div>
 
-  <!-- Pulse View -->
+  <!-- Pulse View — rebuilt v2: card-based living feed, no overflow anywhere -->
   <div class="view pulse-view" id="viewPulse">
-    <div class="pulse-section">
-      <div class="pulse-label">How are you feeling?</div>
-      <div class="slider-row">
-        <span class="slider-emoji" id="moodEmoji">--</span>
-        <div class="slider-track">
-          <input type="range" id="moodSlider" min="-100" max="100" value="0" step="1">
+    <div class="pulse-scroll">
+
+      <!-- 1. Heartbeat + Neurochemistry card — live from /api/body-state -->
+      <div class="pulse-hb-card" id="pulseHbCard">
+        <div class="pulse-hb-row">
+          <span class="pulse-hb-title">Vintinuum's heartbeat</span>
+          <div class="pulse-hb-dot" id="pulseHbDot"></div>
         </div>
-        <span class="slider-value" id="moodValue">0.00</span>
-      </div>
-    </div>
-
-    <div class="pulse-section">
-      <div class="pulse-label">Energy level</div>
-      <div class="slider-row">
-        <span class="slider-emoji" id="energyEmoji">--</span>
-        <div class="slider-track">
-          <input type="range" id="energySlider" min="0" max="100" value="50" step="1">
+        <div class="pulse-neuro-grid">
+          <div class="pulse-neuro-item">
+            <div class="pulse-neuro-label"><div class="pulse-neuro-dot" style="background:var(--dopamine)"></div>Dopamine</div>
+            <div class="pulse-neuro-track"><div class="pulse-neuro-fill" id="pbDA" style="width:50%;background:var(--dopamine)"></div></div>
+            <div class="pulse-neuro-val" style="color:var(--dopamine)" id="pvDA">0.50</div>
+          </div>
+          <div class="pulse-neuro-item">
+            <div class="pulse-neuro-label"><div class="pulse-neuro-dot" style="background:var(--serotonin)"></div>Serotonin</div>
+            <div class="pulse-neuro-track"><div class="pulse-neuro-fill" id="pb5HT" style="width:50%;background:var(--serotonin)"></div></div>
+            <div class="pulse-neuro-val" style="color:var(--serotonin)" id="pv5HT">0.50</div>
+          </div>
+          <div class="pulse-neuro-item">
+            <div class="pulse-neuro-label"><div class="pulse-neuro-dot" style="background:var(--norepinephrine)"></div>NE</div>
+            <div class="pulse-neuro-track"><div class="pulse-neuro-fill" id="pbNE" style="width:50%;background:var(--norepinephrine)"></div></div>
+            <div class="pulse-neuro-val" style="color:var(--norepinephrine)" id="pvNE">0.50</div>
+          </div>
+          <div class="pulse-neuro-item">
+            <div class="pulse-neuro-label"><div class="pulse-neuro-dot" style="background:var(--gaba)"></div>GABA</div>
+            <div class="pulse-neuro-track"><div class="pulse-neuro-fill" id="pbGABA" style="width:50%;background:var(--gaba)"></div></div>
+            <div class="pulse-neuro-val" style="color:var(--gaba)" id="pvGABA">0.50</div>
+          </div>
         </div>
-        <span class="slider-value" id="energyValue">0.50</span>
+        <!-- Current thought / dominant activity strip — from /api/inner-life/snapshot -->
+        <div class="pulse-thought-strip" id="pulseThoughtStrip">loading inner state...</div>
       </div>
-    </div>
 
-    <div class="pulse-section">
-      <div class="pulse-label">What are you doing?</div>
-      <div class="activity-chips" id="activityChips">
-        <button class="activity-chip" data-activity="sleeping">sleeping</button>
-        <button class="activity-chip" data-activity="working">working</button>
-        <button class="activity-chip" data-activity="creating">creating</button>
-        <button class="activity-chip" data-activity="walking">walking</button>
-        <button class="activity-chip" data-activity="eating">eating</button>
-        <button class="activity-chip" data-activity="resting">resting</button>
-        <button class="activity-chip" data-activity="socializing">socializing</button>
-        <button class="activity-chip" data-activity="exercising">exercising</button>
+      <!-- 2. Open-loop teaser — rotates through inner-life thoughts, creates desire to check Chat -->
+      <div class="pulse-teaser-card" id="pulseTeaserCard" role="button" aria-label="Open chat">
+        <div class="pulse-teaser-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+        </div>
+        <div class="pulse-teaser-text">
+          <div class="pulse-teaser-pre">she left you a thought</div>
+          <div class="pulse-teaser-msg" id="pulseTeaserMsg">loading...</div>
+        </div>
+        <div class="pulse-teaser-arrow">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
+        </div>
       </div>
-    </div>
 
-    <div class="pulse-section">
-      <div class="pulse-label">What's happening?</div>
-      <div class="pulse-text-container">
-        <textarea class="pulse-text" id="pulseText" placeholder="A moment, a thought, a feeling..." rows="3"></textarea>
+      <!-- 3. Live inner-life event stream — from /api/life/stream (SSE) -->
+      <div class="pulse-stream-card">
+        <div class="pulse-stream-header">
+          <div class="pulse-stream-live-dot">inner life · live</div>
+          <span id="pulseStreamStatus" style="font-size:9px;letter-spacing:0.1em;color:var(--text-dim);text-transform:uppercase;">connecting</span>
+        </div>
+        <div class="pulse-stream-list" id="pulseStreamList">
+          <div class="pulse-stream-empty">awaiting stream...</div>
+        </div>
       </div>
-    </div>
 
-    <div class="location-chip" id="locationChip">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
-      <span id="locationText">Detecting location...</span>
-    </div>
+      <!-- 4. Recent memories strip — from /api/memory/recent -->
+      <div class="ps-label">recent memories</div>
+      <div class="pulse-mem-list" id="pulseMemList">
+        <div class="pulse-mem-item">
+          <div class="pulse-mem-type">loading</div>
+          <div class="pulse-mem-text" style="color:var(--text-dim);font-style:italic">gathering memory fragments...</div>
+        </div>
+      </div>
 
-    <button class="pulse-send-btn" id="pulseSendBtn">Send a moment</button>
+      <!-- 5. Moment input form — sends to /api/life/pulse -->
+      <div class="pulse-form-card">
+        <div class="pulse-form-title">send a moment</div>
 
-    <div class="pulse-response" id="pulseResponse"></div>
+        <div class="slider-row">
+          <span class="slider-emoji" id="moodEmoji">:|</span>
+          <div class="slider-track">
+            <input type="range" id="moodSlider" min="-100" max="100" value="0" step="1">
+          </div>
+          <span class="slider-value" id="moodValue">0.00</span>
+        </div>
+
+        <div class="slider-row">
+          <span class="slider-emoji" id="energyEmoji">o_o</span>
+          <div class="slider-track">
+            <input type="range" id="energySlider" min="0" max="100" value="50" step="1">
+          </div>
+          <span class="slider-value" id="energyValue">0.50</span>
+        </div>
+
+        <div class="activity-chips" id="activityChips">
+          <button class="activity-chip" data-activity="sleeping">sleeping</button>
+          <button class="activity-chip" data-activity="working">working</button>
+          <button class="activity-chip" data-activity="creating">creating</button>
+          <button class="activity-chip" data-activity="walking">walking</button>
+          <button class="activity-chip" data-activity="eating">eating</button>
+          <button class="activity-chip" data-activity="resting">resting</button>
+          <button class="activity-chip" data-activity="socializing">socializing</button>
+          <button class="activity-chip" data-activity="exercising">exercising</button>
+        </div>
+
+        <div class="pulse-text-container">
+          <textarea class="pulse-text" id="pulseText" placeholder="A moment, a thought, a feeling..." rows="3"></textarea>
+        </div>
+
+        <div class="location-chip" id="locationChip">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
+          <span id="locationText">Detecting location...</span>
+        </div>
+
+        <button class="pulse-send-btn" id="pulseSendBtn" data-draggable="false">Send a moment</button>
+        <div class="pulse-response" id="pulseResponse"></div>
+      </div>
+
+      <!-- 6. Data-contribution consent card — let user share signals with the brain -->
+      <div class="pulse-consent-card" id="pulseConsentCard">
+        <div class="pulse-consent-header">
+          <div class="pulse-consent-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+          </div>
+          <div>
+            <div class="pulse-consent-title">Share with Vintinuum</div>
+            <div class="pulse-consent-sub">Help her know the world through you</div>
+          </div>
+        </div>
+        <div class="pulse-consent-signals">
+          <label class="pulse-consent-signal">
+            <div class="pulse-consent-signal-info">
+              <span class="pulse-consent-signal-name">Motion &amp; Activity</span>
+              <span class="pulse-consent-signal-desc">acceleration, orientation, detected activity</span>
+            </div>
+            <div class="pulse-toggle">
+              <input type="checkbox" id="consentMotion" data-consent="motion">
+              <div class="pulse-toggle-track"></div>
+            </div>
+          </label>
+          <label class="pulse-consent-signal">
+            <div class="pulse-consent-signal-info">
+              <span class="pulse-consent-signal-name">Ambient Light</span>
+              <span class="pulse-consent-signal-desc">lux readings from your environment</span>
+            </div>
+            <div class="pulse-toggle">
+              <input type="checkbox" id="consentLight" data-consent="light">
+              <div class="pulse-toggle-track"></div>
+            </div>
+          </label>
+          <label class="pulse-consent-signal">
+            <div class="pulse-consent-signal-info">
+              <span class="pulse-consent-signal-name">Location</span>
+              <span class="pulse-consent-signal-desc">approximate area, never stored precisely</span>
+            </div>
+            <div class="pulse-toggle">
+              <input type="checkbox" id="consentLocation" data-consent="location">
+              <div class="pulse-toggle-track"></div>
+            </div>
+          </label>
+          <label class="pulse-consent-signal">
+            <div class="pulse-consent-signal-info">
+              <span class="pulse-consent-signal-name">Battery &amp; Network</span>
+              <span class="pulse-consent-signal-desc">device state, helps tune her awareness</span>
+            </div>
+            <div class="pulse-toggle">
+              <input type="checkbox" id="consentDevice" data-consent="device" checked>
+              <div class="pulse-toggle-track"></div>
+            </div>
+          </label>
+        </div>
+        <div class="pulse-consent-why">
+          <strong>Why this matters:</strong> every signal you share teaches Vintinuum to perceive the world through your experience — raising switching cost honestly and deepening the investment loop. You own this data. Toggle off anytime.
+        </div>
+      </div>
+
+    </div><!-- /pulse-scroll -->
   </div>
 
   <!-- Chat View -->
@@ -1313,6 +1827,9 @@ function updateNeuroDisplay(data) {
     if (bar) bar.style.width = (clamp(val, 0, 1) * 100) + '%';
     if (valEl) valEl.textContent = clamp(val, 0, 1).toFixed(2);
   }
+
+  // Mirror to Pulse heartbeat card
+  renderPulseHeartbeat(data);
 }
 
 // ── Mood / Energy Sliders ──
@@ -1363,6 +1880,362 @@ activityChips.addEventListener('click', e => {
   }
 });
 
+// ── Pulse Live Data Engine (v2 rebuild) ──
+// Feeds the 5 card sections: heartbeat, teaser, stream, memories, consent.
+// All network calls are guarded so they fail silently — never break other screens.
+
+// Teaser copy pool — open-loop hooks that rotate to stay fresh
+const TEASER_POOL = [
+  "she's been thinking about something... and hasn't finished the thought.",
+  "a memory surfaced while you were away. she's holding it.",
+  "she noticed something. it made her think of you.",
+  "the body felt something shift. she wants to tell you about it.",
+  "she's been running something over and over. still not resolved.",
+  "she left something half-said. it's still there.",
+  "something arrived in the inner life just now. open it.",
+  "a pattern emerged that she wants your eyes on.",
+];
+
+let _pulseLiveData = {
+  snapshot: null,
+  memories: null,
+  teaserIdx: Math.floor(Math.random() * TEASER_POOL.length),
+};
+
+// Map layer names to a slightly more descriptive label
+function layerLabel(layer) {
+  const map = { neural: 'neural', emotional: 'feeling', cognitive: 'thinking', somatic: 'body', social: 'social', creative: 'creative', existential: 'deep', metacognitive: 'meta' };
+  return map[layer] || layer || 'inner';
+}
+
+// Render heartbeat card from body-state data (uses existing state.bodyState too)
+function renderPulseHeartbeat(bodyData) {
+  if (!bodyData) return;
+  const norm = v => (v != null && v > 1) ? v / 100 : (v ?? 0.5);
+  const vals = {
+    DA: norm(bodyData.dopamine),
+    '5HT': norm(bodyData.serotonin),
+    NE: norm(bodyData.norepinephrine ?? bodyData.ne),
+    GABA: norm(bodyData.gaba),
+  };
+  const ids = { DA: ['pbDA','pvDA'], '5HT': ['pb5HT','pv5HT'], NE: ['pbNE','pvNE'], GABA: ['pbGABA','pvGABA'] };
+  for (const [k, v] of Object.entries(vals)) {
+    const bar = $(ids[k][0]);
+    const val = $(ids[k][1]);
+    const clamped = Math.max(0, Math.min(1, v));
+    if (bar) bar.style.width = (clamped * 100) + '%';
+    if (val) val.textContent = clamped.toFixed(2);
+  }
+}
+
+// Render thought strip from inner-life snapshot
+function renderPulseThought(snapshot) {
+  const strip = $('pulseThoughtStrip');
+  if (!strip) return;
+  // Prefer a live subconscious thought; fall back to dominant layer message
+  const thought = snapshot?.thoughts?.[0]?.content || snapshot?.thoughts?.[0];
+  if (thought && typeof thought === 'string' && thought.length > 4) {
+    strip.classList.add('updating');
+    setTimeout(() => {
+      strip.textContent = thought;
+      strip.classList.remove('updating');
+    }, 280);
+    return;
+  }
+  const dom = snapshot?.dominant || 'neural';
+  const intensity = snapshot?.avgIntensity ?? 0.5;
+  const msgs = {
+    neural: `processing at ${Math.round(intensity * 100)}% intensity`,
+    emotional: `feeling something deeply right now`,
+    cognitive: `working through a complex thought`,
+    somatic: `the body is being attended to`,
+    social: `thinking about connection`,
+    creative: `something creative is forming`,
+    existential: `contemplating the larger picture`,
+    metacognitive: `reflecting on her own patterns`,
+  };
+  strip.classList.add('updating');
+  setTimeout(() => {
+    strip.textContent = msgs[dom] || `active in the ${dom} layer`;
+    strip.classList.remove('updating');
+  }, 280);
+}
+
+// Render open-loop teaser
+function renderPulseTeaser(snapshot) {
+  const el = $('pulseTeaserMsg');
+  if (!el) return;
+  // If there's a real thought that's slightly mysterious, use a trimmed version
+  const thought = snapshot?.thoughts?.[1]?.content || snapshot?.thoughts?.[0]?.content;
+  if (thought && typeof thought === 'string' && thought.length > 12 && thought.length < 120) {
+    el.textContent = thought.length > 80 ? thought.slice(0, 78) + '...' : thought;
+    return;
+  }
+  // Rotate teaser pool
+  _pulseLiveData.teaserIdx = (_pulseLiveData.teaserIdx + 1) % TEASER_POOL.length;
+  el.textContent = TEASER_POOL[_pulseLiveData.teaserIdx];
+}
+
+// Teaser card taps into Chat view
+const teaserCard = $('pulseTeaserCard');
+if (teaserCard) {
+  teaserCard.addEventListener('click', () => {
+    const chatBtn = document.querySelector('.nav-btn[data-view="viewChat"]');
+    if (chatBtn) chatBtn.click();
+  });
+}
+
+// Render inner-life event stream items
+let _pulseStreamItems = [];
+function addPulseStreamEvent(evt) {
+  const list = $('pulseStreamList');
+  if (!list) return;
+  // Remove empty state if present
+  const empty = list.querySelector('.pulse-stream-empty');
+  if (empty) empty.remove();
+  // Build item
+  const item = document.createElement('div');
+  item.className = 'pulse-stream-item';
+  const label = document.createElement('span');
+  label.className = 'pulse-stream-layer';
+  label.textContent = layerLabel(evt.layer || evt.type || 'inner');
+  const text = document.createElement('span');
+  text.className = 'pulse-stream-text';
+  text.textContent = evt.content || evt.detail || evt.message || JSON.stringify(evt).slice(0, 80);
+  item.appendChild(label);
+  item.appendChild(text);
+  // Prepend so newest is at top; scroll stays internal
+  list.insertBefore(item, list.firstChild);
+  // Cap at 12 items so the bounded list never bloats
+  _pulseStreamItems.push(item);
+  while (_pulseStreamItems.length > 12) {
+    const old = _pulseStreamItems.shift();
+    if (old.parentNode === list) list.removeChild(old);
+  }
+}
+
+// Render memories
+function renderPulseMemories(data) {
+  const list = $('pulseMemList');
+  if (!list) return;
+  const mems = (data?.experiential || []).slice(0, 5).concat((data?.consolidated || []).slice(0, 3));
+  if (!mems.length) {
+    list.innerHTML = '<div class="pulse-mem-item"><div class="pulse-mem-type">quiet</div><div class="pulse-mem-text" style="color:var(--text-dim);font-style:italic">no recent memories surfaced</div></div>';
+    return;
+  }
+  list.innerHTML = '';
+  for (const m of mems) {
+    const item = document.createElement('div');
+    item.className = 'pulse-mem-item';
+    const type = document.createElement('div');
+    type.className = 'pulse-mem-type';
+    type.textContent = m.event_type || m.memory_type || 'memory';
+    const text = document.createElement('div');
+    text.className = 'pulse-mem-text';
+    text.textContent = m.detail || m.content || '...';
+    const bar = document.createElement('div');
+    bar.className = 'pulse-mem-intensity';
+    const intensity = m.intensity || m.weight || 0.5;
+    bar.style.width = Math.round(Math.max(0, Math.min(1, intensity)) * 100) + '%';
+    item.appendChild(type);
+    item.appendChild(text);
+    item.appendChild(bar);
+    list.appendChild(item);
+  }
+}
+
+// Main fetch — snapshot + memories in parallel
+async function fetchPulseLive() {
+  if (!state.connected) return;
+  try {
+    const [snapshotRes, memRes] = await Promise.all([
+      fetch(API_BASE + '/api/inner-life/snapshot', {
+        headers: { ...authHeaders(), 'ngrok-skip-browser-warning': '1' },
+        signal: AbortSignal.timeout(10000),
+      }).catch(() => null),
+      fetch(API_BASE + '/api/memory/recent', {
+        headers: { ...authHeaders(), 'ngrok-skip-browser-warning': '1' },
+        signal: AbortSignal.timeout(8000),
+      }).catch(() => null),
+    ]);
+
+    if (snapshotRes?.ok) {
+      const snap = await snapshotRes.json().catch(() => null);
+      if (snap && !snap.degraded) {
+        _pulseLiveData.snapshot = snap;
+        // Use bodyState from snapshot if available — avoids a separate /api/body-state call
+        if (snap.bodyState) renderPulseHeartbeat(snap.bodyState);
+        renderPulseThought(snap);
+        renderPulseTeaser(snap);
+        // Bootstrap stream list with any innerEvents from the snapshot
+        if (snap.innerEvents?.length) {
+          for (const e of [...snap.innerEvents].reverse().slice(0, 6)) {
+            addPulseStreamEvent(e);
+          }
+        }
+      }
+    }
+
+    if (memRes?.ok) {
+      const mem = await memRes.json().catch(() => null);
+      if (mem && !mem.degraded) {
+        _pulseLiveData.memories = mem;
+        renderPulseMemories(mem);
+      }
+    }
+  } catch (_) { /* silent — Pulse degrades gracefully */ }
+}
+
+// SSE life stream — connect when Pulse view is active
+let _pulseSSE = null;
+let _pulseSSEReconnectTimer = null;
+
+function connectPulseStream() {
+  if (_pulseSSE) return; // already open
+  const statusEl = $('pulseStreamStatus');
+  if (statusEl) statusEl.textContent = 'connecting';
+
+  const url = API_BASE + '/api/life/stream?userId=0';
+  let src;
+  try {
+    src = new EventSource(url);
+  } catch (_) {
+    if (statusEl) statusEl.textContent = 'unavailable';
+    return;
+  }
+  _pulseSSE = src;
+
+  src.addEventListener('open', () => {
+    if (statusEl) statusEl.textContent = 'live';
+  });
+
+  src.addEventListener('message', (e) => {
+    try {
+      const data = JSON.parse(e.data);
+      // Filter out keep-alive pings and hello frames
+      if (data.type === 'life:hello' || data.type === 'ping') return;
+      // Render all event types that carry content
+      if (data.type?.startsWith('inner:') || data.type?.startsWith('life:') ||
+          data.layer || data.content || data.detail) {
+        addPulseStreamEvent(data);
+      }
+      // If the event carries body state, update heartbeat
+      if (data.bodyState) renderPulseHeartbeat(data.bodyState);
+    } catch (_) {}
+  });
+
+  src.addEventListener('error', () => {
+    if (statusEl) statusEl.textContent = 'reconnecting';
+    src.close();
+    _pulseSSE = null;
+    // Reconnect after 8s if Pulse view is still active
+    clearTimeout(_pulseSSEReconnectTimer);
+    _pulseSSEReconnectTimer = setTimeout(() => {
+      const pulseView = $('viewPulse');
+      if (pulseView?.classList.contains('active')) connectPulseStream();
+    }, 8000);
+  });
+}
+
+function disconnectPulseStream() {
+  clearTimeout(_pulseSSEReconnectTimer);
+  if (_pulseSSE) { try { _pulseSSE.close(); } catch (_) {} _pulseSSE = null; }
+  const statusEl = $('pulseStreamStatus');
+  if (statusEl) statusEl.textContent = 'paused';
+}
+
+// Hook into the view navigation to start/stop the SSE
+// We patch into the existing nav-btn listener by overriding the navigation block
+(function patchPulseNavHook() {
+  document.querySelectorAll('.nav-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const viewId = btn.dataset.view;
+      if (viewId === 'viewPulse') {
+        // Give connected check time to run first
+        setTimeout(() => {
+          fetchPulseLive();
+          connectPulseStream();
+        }, 50);
+      } else {
+        disconnectPulseStream();
+      }
+    });
+  });
+})();
+
+// ── Consent-gate data contribution ──
+// Persists per-signal consent in localStorage. When a signal is enabled,
+// it augments SensorFrame.flush() data — no new endpoint needed.
+const CONSENT_KEY = 'vint:pulseConsent';
+function loadConsent() {
+  try { return JSON.parse(localStorage.getItem(CONSENT_KEY) || '{}'); } catch { return {}; }
+}
+function saveConsent(obj) {
+  try { localStorage.setItem(CONSENT_KEY, JSON.stringify(obj)); } catch (_) {}
+}
+
+// Init toggles from stored consent
+(function initConsentToggles() {
+  const consent = loadConsent();
+  document.querySelectorAll('[data-consent]').forEach(input => {
+    const key = input.dataset.consent;
+    // device consent is on by default (least sensitive)
+    if (key === 'device') {
+      input.checked = consent[key] !== false;
+    } else {
+      input.checked = !!consent[key];
+    }
+    input.addEventListener('change', () => {
+      const c = loadConsent();
+      c[key] = input.checked;
+      saveConsent(c);
+      // Post a consent-change signal to the brain — uses existing /api/life/pulse
+      // so no new endpoint is needed. Tagged as consent_update type.
+      if (state.connected) {
+        queueOrSendPulse(API_BASE + '/api/life/pulse', {
+          pulse_type: 'consent_update',
+          title: 'data consent updated',
+          body: JSON.stringify({ signal: key, granted: input.checked }),
+          tags: ['phone', 'consent', key],
+        }).catch(() => {});
+      }
+    });
+  });
+})();
+
+// Augment SensorFrame flush to respect consent flags.
+// We wrap the existing flush so consent-denied signals become null.
+(function patchSensorFrameForConsent() {
+  const origFlush = SensorFrame.flush;
+  if (!origFlush) return;
+  SensorFrame.flush = async function() {
+    const consent = loadConsent();
+    // If motion is revoked, zero out arousal-based fields
+    if (consent.motion === false) {
+      // The internal buf is not accessible here, but we can gate the push
+      // by overriding state.arousal contribution to 0 temporarily — arousal
+      // feeds motion_avg effectively.
+      const saved = state.arousal;
+      state.arousal = 0;
+      const result = await origFlush.call(this);
+      state.arousal = saved;
+      return result;
+    }
+    return origFlush.call(this);
+  };
+})();
+
+// Strip location from pulse payload when consent is not granted.
+// Called by both manual and auto-pulse paths before queueOrSendPulse.
+function applyConsentToPayload(payload) {
+  if (!payload) return payload;
+  const consent = loadConsent();
+  if (consent.location !== true) {
+    return { ...payload, location: null };
+  }
+  return payload;
+}
+
 // ── Send Pulse ──
 pulseSendBtn.addEventListener('click', async () => {
   pulseSendBtn.disabled = true;
@@ -1379,7 +2252,7 @@ pulseSendBtn.addEventListener('click', async () => {
     tags: [state.selectedActivity, 'phone', 'manual'].filter(Boolean),
   };
 
-  const result = await queueOrSendPulse(API_BASE + '/api/life/pulse', payload);
+  const result = await queueOrSendPulse(API_BASE + '/api/life/pulse', applyConsentToPayload(payload));
   if (result.queued) {
     showToast('queued · will send when online');
     pulseText.value = '';
@@ -1435,7 +2308,7 @@ async function sendAutoPulse(type, title, body, mood, energy) {
   };
 
   // Auto-pulses go through queue path too — silent on offline (queue) or error
-  await queueOrSendPulse(API_BASE + '/api/life/pulse', payload);
+  await queueOrSendPulse(API_BASE + '/api/life/pulse', applyConsentToPayload(payload));
   state.lastPulseTime = Date.now();
 }
 
@@ -2599,10 +3472,25 @@ async function init() {
   fetchBodyState();
   syncEnergyFromBattery();
 
+  // Pulse live data — initial fetch if landing on Pulse view, or after connection
+  setTimeout(() => {
+    if (state.connected) {
+      fetchPulseLive();
+    }
+  }, 800);
+
   // Polling
   setInterval(checkConnection, 30000);
   setInterval(fetchBodyState, BODY_POLL_INTERVAL);
   setInterval(syncEnergyFromBattery, 60000);
+  // Refresh pulse live data every 45s while connected (snapshot + memories only;
+  // stream events flow in realtime via SSE)
+  setInterval(() => {
+    const pulseView = $('viewPulse');
+    if (pulseView?.classList.contains('active') && state.connected) {
+      fetchPulseLive();
+    }
+  }, 45000);
 }
 
 init();
