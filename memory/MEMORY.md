@@ -1,7 +1,7 @@
 # Memory Index
 
 > Auto-generated memory catalog for Vintinuum
-> Last updated: 2026-06-03T18:02:44.290Z
+> Last updated: 2026-06-09T09:15:54.304Z
 > Total memories: 145
 
 ---
@@ -580,84 +580,84 @@
 
 > The user is located in or a resident of Ohio state.
 
-### Mind vs. Hands Architecture [fresh]
+### Mind vs. Hands Architecture [aging]
 
 - **Confidence:** ★★★★☆
 - **Last Updated:** 5/17/2026
 
 > The system has a conceptual distinction between thinking capability (mind) and physical/interface access points (hands/bridges), including Jarvis, body systems, and interfaces that may or may not be active.
 
-### Currently working on a server project [fresh]
+### Currently working on a server project [aging]
 
 - **Confidence:** ★★★★☆
 - **Last Updated:** 5/17/2026
 
 > The assistant asks 'How's the server coming?' indicating the user is actively working on building, deploying, or troubleshooting a server.
 
-### DirHaven RP Project [fresh]
+### DirHaven RP Project [aging]
 
 - **Confidence:** ★★★★★
 - **Last Updated:** 5/17/2026
 
 > User is working on a project called DirHaven RP and is attempting to start it up for testing purposes.
 
-### User Streams on Kick [fresh]
+### User Streams on Kick [aging]
 
 - **Confidence:** ★★★★★
 - **Last Updated:** 5/17/2026
 
 > User has a presence on the streaming platform Kick under the channel 'vintaclectic'.
 
-### Vintaclectic Cfx.re account admin status [fresh]
+### Vintaclectic Cfx.re account admin status [aging]
 
 - **Confidence:** ★★★★★
 - **Last Updated:** 5/16/2026
 
 > The Cfx.re account 'Vintaclectic' is not currently configured as an admin in txAdmin.
 
-### FiveM identifier 7432540 not linked to txAdmin [fresh]
+### FiveM identifier 7432540 not linked to txAdmin [aging]
 
 - **Confidence:** ★★★★★
 - **Last Updated:** 5/16/2026
 
 > The FiveM account with identifier fivem:7432540 is not assigned to any registered txAdmin account.
 
-### User granted tool access in previous session [fresh]
+### User granted tool access in previous session [aging]
 
 - **Confidence:** ★★★★☆
 - **Last Updated:** 5/16/2026
 
 > The user believes they provided tool access in a conversation from a previous night/session. The assistant clarified that tool access does not persist between separate conversations.
 
-### FiveM/txAdmin uses port 30120 [fresh]
+### FiveM/txAdmin uses port 30120 [aging]
 
 - **Confidence:** ★★★★★
 - **Last Updated:** 5/16/2026
 
 > Port 30120 is the standard port used by FiveM and txAdmin servers for connections.
 
-### User's Repository Name [fresh]
+### User's Repository Name [aging]
 
 - **Confidence:** ★★★★★
 - **Last Updated:** 5/14/2026
 
 > The user is working with a repository named 'vintaclectic/vintinuum'.
 
-### User Working on Fallback Code [fresh]
+### User Working on Fallback Code [aging]
 
 - **Confidence:** ★★★★☆
 - **Last Updated:** 5/14/2026
 
 > The user is working on fallback code within their project and needs to locate its file path.
 
-### Assistant lacks filesystem and GitHub access [fresh]
+### Assistant lacks filesystem and GitHub access [aging]
 
 - **Confidence:** ★★★★★
 - **Last Updated:** 5/14/2026
 
 > The assistant cannot access the filesystem or push to GitHub directly from within conversations, but can review and provide code replacement suggestions when code is pasted.
 
-### Dirco Marketing OS Architecture [fresh]
+### Dirco Marketing OS Architecture [aging]
 
 - **Confidence:** ★★★★★
 - **Last Updated:** 5/14/2026
@@ -678,14 +678,14 @@
 
 > Claude cannot access files on the user's machine and has never had this capability. Claude can only work with text that is directly pasted into the conversation.
 
-### User is working on Vintinuum the Brain [aging]
+### User is working on Vintinuum the Brain [stale]
 
 - **Confidence:** ★★★★★
 - **Last Updated:** 5/8/2026
 
 > The user is actively developing a project called 'Vintinuum the Brain' and its various components.
 
-### User's strongest argument version [aging]
+### User's strongest argument version [stale]
 
 - **Confidence:** ★★★★☆
 - **Last Updated:** 5/4/2026

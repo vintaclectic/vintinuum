@@ -132,6 +132,37 @@ body {
 .row .name { flex: 1; font-size: 0.85rem; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .row .name .badge { font-size: 0.55rem; color: var(--accent); margin-left: 6px; }
 .row .meta { font-family: 'JetBrains Mono', monospace; font-size: 0.55rem; color: var(--text-dim); flex: 0 0 auto; }
+.row .name .bond-glyph { color: var(--warm); margin-left: 6px; font-size: 0.7rem; line-height: 1; }
+
+/* ── BONDS — the regulars she remembers ── */
+.bond {
+  border: 1px solid rgba(124,255,180,0.14); border-radius: 10px;
+  background: rgba(124,255,180,0.03); margin-bottom: 10px; overflow: hidden;
+}
+.bond:last-child { margin-bottom: 0; }
+.bond-head {
+  display: flex; align-items: center; gap: 10px; padding: 12px 14px;
+  cursor: pointer; user-select: none;
+}
+.bond-glyph-lg { color: var(--warm); font-size: 0.85rem; flex: 0 0 auto; line-height: 1; }
+.bond-name {
+  flex: 1; min-width: 0; font-family: 'Cormorant Garamond', serif; font-size: 1.05rem;
+  color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.bond-name .badge { font-family: 'JetBrains Mono', monospace; font-size: 0.5rem; color: var(--accent); margin-left: 6px; letter-spacing: 0.1em; text-transform: uppercase; }
+.bond-stat { font-family: 'JetBrains Mono', monospace; font-size: 0.5rem; letter-spacing: 0.1em; color: var(--text-dim); flex: 0 0 auto; text-transform: uppercase; }
+.bond-caret { color: var(--text-ghost); font-size: 0.7rem; flex: 0 0 auto; transition: transform 0.25s ease; }
+.bond.open .bond-caret { transform: rotate(90deg); color: var(--warm); }
+.bond-body {
+  max-height: 0; overflow: hidden; transition: max-height 0.3s ease;
+  border-top: 1px solid transparent;
+}
+.bond.open .bond-body { max-height: 320px; overflow-y: auto; border-top-color: rgba(124,255,180,0.1); }
+.bond-summary {
+  padding: 12px 14px; font-family: 'Cormorant Garamond', serif; font-style: italic;
+  font-size: 0.95rem; line-height: 1.55; color: var(--text-dim);
+}
+.bond-since { display: block; margin-top: 8px; font-family: 'JetBrains Mono', monospace; font-style: normal; font-size: 0.5rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--text-ghost); }
 
 /* ── VOD CARDS ── */
 .vod {
@@ -318,6 +349,12 @@ body {
       <div id="chatterList"><div class="loading">loading…</div></div>
     </div>
 
+    <!-- Bonds — graduated chatters she remembers -->
+    <div class="panel">
+      <div class="panel-label"><span class="dot"></span> bonds — the regulars she remembers</div>
+      <div id="bondList"><div class="loading">loading…</div></div>
+    </div>
+
     <!-- VOD library -->
     <div class="panel full-width">
       <div class="panel-label"><span class="dot"></span> the archive — streams remembered</div>
@@ -414,9 +451,55 @@ async function loadChatters() {
   el.innerHTML = d.chatters.map((c, i) => `
     <div class="row">
       <span class="rank">${i+1}</span>
-      <span class="name">${esc(c.username)}${c.is_subscriber ? '<span class="badge">sub</span>' : ''}${c.is_moderator ? '<span class="badge">mod</span>' : ''}</span>
+      <span class="name">${esc(c.username)}${c.is_subscriber ? '<span class="badge">sub</span>' : ''}${c.is_moderator ? '<span class="badge">mod</span>' : ''}${c.is_bonded ? '<span class="bond-glyph" title="she knows them — a bonded regular">◈</span>' : ''}</span>
       <span class="meta">${c.message_count} msgs · ${c.session_count} streams</span>
     </div>`).join('');
+}
+
+/* ── BONDS — graduated chatters she remembers ── */
+function bondSince(ts) {
+  if (!ts) return '';
+  const d = new Date(ts * 1000);
+  return 'known since ' + d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+}
+async function loadBonds() {
+  const el = document.getElementById('bondList');
+  const d = await api('/api/kick/bonds');
+  if (!d || !d.ok || !d.bonds || !d.bonds.length) {
+    el.innerHTML = '<div class="empty">No bonds yet — they form over many streams.</div>';
+    return;
+  }
+  el.innerHTML = d.bonds.map(b => {
+    const badges = (b.is_subscriber ? '<span class="badge">sub</span>' : '')
+                 + (b.is_moderator ? '<span class="badge">mod</span>' : '');
+    const summary = b.summary
+      ? esc(b.summary)
+      : 'A familiar voice — she crossed the threshold of streams together but the words for it are still forming.';
+    return `<div class="bond">
+      <div class="bond-head" role="button" tabindex="0" aria-expanded="false">
+        <span class="bond-glyph-lg">◈</span>
+        <span class="bond-name">${esc(b.username)}${badges}</span>
+        <span class="bond-stat">${b.message_count} msgs · ${b.session_count} streams</span>
+        <span class="bond-caret">▸</span>
+      </div>
+      <div class="bond-body">
+        <div class="bond-summary">${summary}<span class="bond-since">${bondSince(b.graduated_at)}</span></div>
+      </div>
+    </div>`;
+  }).join('');
+  // Click / keyboard to expand the summary she wrote. Internal scroll only —
+  // .bond-body caps at 320px and scrolls; never bleeds the panel.
+  el.querySelectorAll('.bond-head').forEach(head => {
+    const toggle = () => {
+      const card = head.closest('.bond');
+      const open = card.classList.toggle('open');
+      head.setAttribute('aria-expanded', open ? 'true' : 'false');
+    };
+    head.addEventListener('click', toggle);
+    head.addEventListener('keydown', e => {
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggle(); }
+    });
+  });
 }
 
 /* ── VODS ── */
@@ -663,7 +746,7 @@ document.getElementById('recallInput').addEventListener('input', (e) => {
 function esc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
 
 /* ── BOOT ── */
-function loadAll() { loadSentiment(); loadChatters(); loadVods(); }
+function loadAll() { loadSentiment(); loadChatters(); loadBonds(); loadVods(); }
 connectLive();
 loadAll();
 setInterval(loadAll, 30000);

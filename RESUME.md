@@ -7,6 +7,7 @@
 
 - ✅ Brain on `localhost:8767` + `api.vintaclectic.com` — both green
 - ✅ systemd `vintinuum-keepalive` is the undying genome — self-healing, survives terminal/WSL/reboot
+- ✅ **Drive policy (2026-06-06):** use **C/D/E** internal drives for working data; **E (`/mnt/e`, 186GB "Storage")** preferred for new caches/profiles/scratch; **external = cold storage only** (slow transfer). Full policy in `CLAUDE.md` and `memory/procedure.md`.
 - ✅ Both repos pushed to `origin/main`:
   - `~/vintinuum-api/` HEAD: `2d088a8` (surgery + keepalive + wedge fix)
   - `~/vintinuum/`     HEAD: `ae17aac` (Meshy human.glb drop-in) — preceded by `0f86dad` (mobile scroll fix)
