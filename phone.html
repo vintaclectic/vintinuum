@@ -741,7 +741,7 @@ input[type="range"]::-moz-range-thumb {
   </div>
 
   <!-- Pair Screen — shown when no token, hidden once paired -->
-  <div id="pairScreen" style="display:none;position:fixed;inset:0;z-index:9999;background:#050812;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px;text-align:center;gap:18px;">
+  <div id="pairScreen" style="display:none;position:fixed;inset:0;z-index:9999;background:#050812;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px;text-align:center;gap:18px;overflow:hidden;">
     <div style="font-size:2rem;color:#4fc3f7;">◉</div>
     <div style="font-size:.65rem;letter-spacing:.3em;color:rgba(79,195,247,0.7);text-transform:uppercase;">VINTINUUM</div>
     <div style="font-size:.85rem;color:rgba(218,228,255,0.6);line-height:1.6;max-width:280px;">
@@ -752,12 +752,23 @@ input[type="range"]::-moz-range-thumb {
       <input id="pairCodeInput" type="text" maxlength="16" placeholder="e.g. A3F7C2B9E1D4"
         style="width:100%;background:rgba(255,255,255,0.06);border:1px solid rgba(79,195,247,0.2);border-radius:10px;padding:12px 14px;color:#4fc3f7;font-family:monospace;font-size:1.1rem;letter-spacing:.15em;text-align:center;outline:none;text-transform:uppercase;">
       <button id="pairRedeemBtn"
-        style="margin-top:12px;width:100%;padding:14px;background:rgba(79,195,247,0.15);border:1px solid rgba(79,195,247,0.35);border-radius:10px;color:#4fc3f7;font-size:.85rem;font-family:monospace;letter-spacing:.1em;cursor:pointer;">
+        style="margin-top:12px;width:100%;padding:14px;min-height:44px;background:rgba(79,195,247,0.15);border:1px solid rgba(79,195,247,0.35);border-radius:10px;color:#4fc3f7;font-size:.85rem;font-family:monospace;letter-spacing:.1em;cursor:pointer;">
         PAIR THIS DEVICE
       </button>
+      <!-- In-app QR scanner — shown only when BarcodeDetector is available -->
+      <button id="pairScanBtn"
+        style="display:none;margin-top:8px;width:100%;padding:12px;min-height:44px;background:rgba(79,195,247,0.06);border:1px solid rgba(79,195,247,0.2);border-radius:10px;color:rgba(79,195,247,0.75);font-size:.78rem;font-family:monospace;letter-spacing:.1em;cursor:pointer;">
+        SCAN QR WITH CAMERA
+      </button>
       <div id="pairStatus" style="margin-top:10px;font-size:.72rem;color:rgba(255,255,255,0.35);min-height:1.2em;"></div>
+      <!-- Camera feed for in-app scanner — hidden until activated -->
+      <div id="pairScannerWrap" style="display:none;margin-top:12px;border-radius:10px;overflow:hidden;position:relative;width:100%;max-height:220px;">
+        <video id="pairScannerVideo" autoplay muted playsinline style="width:100%;max-height:220px;object-fit:cover;border-radius:10px;display:block;"></video>
+        <div style="position:absolute;inset:0;border:2px solid rgba(79,195,247,0.5);border-radius:10px;pointer-events:none;"></div>
+        <button id="pairScanCancelBtn" style="position:absolute;top:8px;right:8px;padding:6px 10px;min-height:32px;background:rgba(0,0,0,0.6);border:1px solid rgba(255,255,255,0.2);border-radius:6px;color:rgba(255,255,255,0.7);font-size:.65rem;cursor:pointer;">CANCEL</button>
+      </div>
     </div>
-    <div style="font-size:.62rem;color:rgba(255,255,255,0.2);">Or scan the QR code from brain.html → ⊕ PAIR</div>
+    <div style="font-size:.62rem;color:rgba(255,255,255,0.2);">QR scan opens this page automatically — code will self-pair</div>
   </div>
 
   <!-- Body View -->
@@ -2353,13 +2364,18 @@ function wireEmbodimentCards() {
 // ── Init ──
 // ── Pairing gate ─────────────────────────────────────────────────────────────
 (function () {
-  const screen = document.getElementById('pairScreen');
-  const input  = document.getElementById('pairCodeInput');
-  const btn    = document.getElementById('pairRedeemBtn');
-  const stat   = document.getElementById('pairStatus');
+  const pairScreen    = document.getElementById('pairScreen');
+  const input         = document.getElementById('pairCodeInput');
+  const btn           = document.getElementById('pairRedeemBtn');
+  const scanBtn       = document.getElementById('pairScanBtn');
+  const scannerWrap   = document.getElementById('pairScannerWrap');
+  const scannerVideo  = document.getElementById('pairScannerVideo');
+  const scanCancelBtn = document.getElementById('pairScanCancelBtn');
+  const stat          = document.getElementById('pairStatus');
 
+  // ── Stable device-id ──────────────────────────────────────────────────────
   function deviceId() {
-    const seed = navigator.userAgent + (screen.width||0) + (screen.height||0);
+    const seed = navigator.userAgent + (window.screen.width||0) + (window.screen.height||0);
     let h = 0;
     for (let i = 0; i < seed.length; i++) h = (Math.imul(31, h) + seed.charCodeAt(i)) | 0;
     const id = localStorage.getItem('_vint_did') || ('phone-' + Math.abs(h).toString(36) + Date.now().toString(36));
@@ -2367,19 +2383,16 @@ function wireEmbodimentCards() {
     return id;
   }
 
-  function showPairScreen() { screen.style.display = 'flex'; }
-  function hidePairScreen() { screen.style.display = 'none'; }
+  function showPairScreen() { pairScreen.style.display = 'flex'; }
+  function hidePairScreen() { pairScreen.style.display = 'none'; }
 
-  // Auto-fill code from URL ?code= (phone opens QR link, lands here)
-  try {
-    const urlCode = new URLSearchParams(location.search).get('code');
-    if (urlCode && input) input.value = urlCode.toUpperCase();
-  } catch(_){}
-
-  if (btn) btn.addEventListener('click', async () => {
-    const code = (input.value || '').trim().toUpperCase();
+  // ── Core redeem call — shared by button, auto-redeem and scanner ──────────
+  async function redeemCode(code) {
+    code = (code || '').replace(/\s/g, '').toUpperCase();
     if (!code) { stat.textContent = 'Enter the pairing code first.'; return; }
     btn.disabled = true;
+    if (scanBtn) scanBtn.disabled = true;
+    stat.style.color = 'rgba(255,255,255,0.35)';
     stat.textContent = 'Pairing…';
     try {
       const r = await fetch(API_BASE + '/api/v2/device/pair-redeem', {
@@ -2397,16 +2410,154 @@ function wireEmbodimentCards() {
       } catch(_){}
       stat.style.color = 'rgba(100,255,160,0.8)';
       stat.textContent = '✓ Paired! Loading…';
+      stopScanner();
       setTimeout(() => { hidePairScreen(); }, 800);
     } catch(e) {
       stat.style.color = 'rgba(255,100,100,0.8)';
       stat.textContent = 'Error: ' + e.message;
       btn.disabled = false;
+      if (scanBtn) scanBtn.disabled = false;
     }
-  });
+  }
 
-  // Show pair screen if no token — wait for DOM to be ready
-  if (!TOKEN()) showPairScreen();
+  // ── Extract a pairing code from any string (bare code or full URL) ─────────
+  function extractCode(raw) {
+    raw = (raw || '').trim();
+    if (!raw) return '';
+    // If it looks like a URL, pull the code param from it
+    try {
+      const u = new URL(raw.startsWith('http') ? raw : 'https://x.invalid/?' + raw.split('?')[1]);
+      for (const key of ['code', 'key', 'token', 'pair']) {
+        const v = u.searchParams.get(key);
+        if (v) return v.replace(/\s/g, '').toUpperCase();
+      }
+      // Also check URL hash: ?code=X or #code=X
+      const hash = u.hash.replace('#','');
+      if (hash) {
+        const hp = new URLSearchParams(hash);
+        for (const key of ['code', 'key', 'token', 'pair']) {
+          const v = hp.get(key);
+          if (v) return v.replace(/\s/g, '').toUpperCase();
+        }
+      }
+    } catch(_) {}
+    // Bare code — alphanumeric, 6-16 chars
+    const bare = raw.replace(/\s/g, '').toUpperCase();
+    if (/^[A-Z0-9]{6,16}$/.test(bare)) return bare;
+    return '';
+  }
+
+  // ── Read code from current page URL (search params + hash) ───────────────
+  function codeFromURL() {
+    try {
+      const sp = new URLSearchParams(location.search);
+      for (const key of ['code', 'key', 'token', 'pair']) {
+        const v = sp.get(key);
+        if (v) return v.replace(/\s/g, '').toUpperCase();
+      }
+      // Hash params: phone.html#code=XXXX or phone.html?x=1#code=XXXX
+      const hash = location.hash.replace('#', '');
+      if (hash) {
+        try {
+          const hp = new URLSearchParams(hash);
+          for (const key of ['code', 'key', 'token', 'pair']) {
+            const v = hp.get(key);
+            if (v) return v.replace(/\s/g, '').toUpperCase();
+          }
+        } catch(_) {}
+        // bare hash value (phone.html#ABCD1234)
+        const bare = hash.replace(/\s/g, '').toUpperCase();
+        if (/^[A-Z0-9]{6,16}$/.test(bare)) return bare;
+      }
+    } catch(_) {}
+    return '';
+  }
+
+  // ── Manual button ─────────────────────────────────────────────────────────
+  if (btn) btn.addEventListener('click', () => redeemCode(input.value));
+
+  // ── In-app BarcodeDetector scanner ───────────────────────────────────────
+  let scanStream = null;
+  let scanRAF = null;
+
+  function stopScanner() {
+    if (scanRAF) { cancelAnimationFrame(scanRAF); scanRAF = null; }
+    if (scanStream) { scanStream.getTracks().forEach(t => t.stop()); scanStream = null; }
+    if (scannerWrap) scannerWrap.style.display = 'none';
+    if (scannerVideo) scannerVideo.srcObject = null;
+    if (scanBtn) { scanBtn.textContent = 'SCAN QR WITH CAMERA'; scanBtn.disabled = false; }
+  }
+
+  async function startScanner() {
+    if (!('BarcodeDetector' in window)) return;
+    try {
+      scanStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' }, audio: false });
+      scannerVideo.srcObject = scanStream;
+      scannerWrap.style.display = 'block';
+      scanBtn.textContent = 'SCANNING…';
+      scanBtn.disabled = true;
+      stat.style.color = 'rgba(255,255,255,0.35)';
+      stat.textContent = 'Point camera at the QR code…';
+
+      const detector = new BarcodeDetector({ formats: ['qr_code'] });
+
+      async function tick() {
+        if (!scanStream) return;
+        try {
+          const barcodes = await detector.detect(scannerVideo);
+          if (barcodes.length > 0) {
+            const code = extractCode(barcodes[0].rawValue);
+            if (code) {
+              if (input) input.value = code;
+              stopScanner();
+              await redeemCode(code);
+              return;
+            }
+          }
+        } catch(_) {}
+        scanRAF = requestAnimationFrame(tick);
+      }
+      scanRAF = requestAnimationFrame(tick);
+    } catch(e) {
+      stat.style.color = 'rgba(255,100,100,0.8)';
+      stat.textContent = 'Camera error: ' + (e.message || 'permission denied');
+      stopScanner();
+    }
+  }
+
+  // Show/hide scan button based on BarcodeDetector availability
+  if ('BarcodeDetector' in window && scanBtn) {
+    scanBtn.style.display = 'block';
+    scanBtn.addEventListener('click', startScanner);
+  } else if (scanBtn) {
+    // Show disabled with hint on unsupported browsers
+    scanBtn.style.display = 'block';
+    scanBtn.disabled = true;
+    scanBtn.title = 'In-app scanning requires Chrome/Edge on Android — use your native camera app instead';
+    scanBtn.style.opacity = '0.4';
+    scanBtn.style.cursor = 'default';
+  }
+
+  if (scanCancelBtn) scanCancelBtn.addEventListener('click', stopScanner);
+
+  // ── Auto-redeem: if code is in the URL, fill + fire immediately ───────────
+  const urlCode = codeFromURL();
+  if (urlCode) {
+    if (input) input.value = urlCode;
+    // Already paired? Skip — don't trample existing tokens
+    if (TOKEN()) {
+      // Nothing to do — main app will load normally
+    } else {
+      showPairScreen();
+      stat.style.color = 'rgba(255,255,255,0.35)';
+      stat.textContent = 'Code detected — pairing automatically…';
+      // Small delay: let API_BASE settle (api_base.js may probe async) and DOM paint
+      setTimeout(() => redeemCode(urlCode), 350);
+    }
+  } else {
+    // Normal boot — show pair screen only if no token
+    if (!TOKEN()) showPairScreen();
+  }
 })();
 
 async function init() {
