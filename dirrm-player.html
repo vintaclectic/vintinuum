@@ -1332,6 +1332,24 @@
         if (url.startsWith(base + '/api/media/proxy')) return url; // already proxied
         return base + '/api/media/proxy?url=' + encodeURIComponent(url);
       }
+      // Should we proxy this URL UPFRONT (before even trying direct)? Yes for any
+      // cross-origin http(s) media — open-dir hosts routinely have junk certs
+      // (ERR_CERT_AUTHORITY_INVALID) and no CORS headers, which both break a
+      // direct <audio>/<video> load AND silently MUTE it through Web Audio
+      // (tainted source). Routing through the brain proxy (cert-off + CORS:*)
+      // fixes sound + real visualizer in one move.
+      _shouldProxyUpfront(url) {
+        try {
+          if (!url || url.startsWith('blob:') || url.startsWith('data:')) return false;
+          const u = new URL(url, location.href);
+          if (!/^https?:$/.test(u.protocol)) return false;
+          // Same-origin as the player → no proxy needed.
+          if (u.origin === location.origin) return false;
+          // Already a proxy URL → no.
+          if (url.includes('/api/media/proxy')) return false;
+          return true;
+        } catch (_) { return false; }
+      }
       // Set a media element's src with automatic one-time proxy fallback. When
       // the direct load errors (bad cert/CORS), swap to the proxied URL once.
       _setMediaSrc(el, url) {
@@ -1898,8 +1916,21 @@
             video.src = url;
           }
         } else {
-          // Direct video file — auto-retry via brain proxy on bad-cert/CORS.
-          this._setMediaSrc(video, url);
+          // Direct video file. Cross-origin (open-dir / junk cert) → proxy
+          // upfront with crossOrigin so it loads AND is CORS-clean. Direct
+          // fallback if the proxy itself errors.
+          if (this._shouldProxyUpfront(url)) {
+            video.crossOrigin = 'anonymous';
+            video.dataset.proxied = '1';
+            video.addEventListener('error', () => {
+              if (video.dataset.fellBack === '1') return;
+              video.dataset.fellBack = '1';
+              try { video.removeAttribute('crossorigin'); video.src = url; video.load && video.load(); } catch (_) {}
+            }, { once: true });
+            video.src = this._proxify(url);
+          } else {
+            this._setMediaSrc(video, url);
+          }
         }
 
         video.addEventListener('loadedmetadata', () => {
@@ -2075,9 +2106,29 @@
           }
         };
 
-        // Load audio — no crossOrigin by default so it plays from any server.
-        // Auto-retries via the brain proxy on bad-cert/CORS errors.
-        this._setMediaSrc(audio, url);
+        // Load audio. For cross-origin media (open-dir hosts with junk certs /
+        // no CORS) we proxy UPFRONT through the brain and set crossOrigin so the
+        // Web Audio graph gets a CORS-clean source — that's what restores BOTH
+        // sound and real visualizer reactivity (a tainted source is silently
+        // muted by Chrome when routed through createMediaElementSource).
+        if (this._shouldProxyUpfront(url)) {
+          audio.crossOrigin = 'anonymous';
+          audio.dataset.proxied = '1';
+          audio.dataset.origUrl = url;
+          const px = this._proxify(url);
+          // If even the proxied load errors, fall back to a direct (un-CORS) load
+          // so at least sound plays (viz goes synthetic via fakeMode).
+          audio.addEventListener('error', () => {
+            if (audio.dataset.fellBack === '1') return;
+            audio.dataset.fellBack = '1';
+            console.warn('[DirRM] proxied audio failed, last-ditch direct load');
+            try { audio.removeAttribute('crossorigin'); audio.src = url; audio.load && audio.load(); } catch (_) {}
+          }, { once: true });
+          audio.src = px;
+        } else {
+          // Same-origin or already safe — direct, with one-time proxy retry.
+          this._setMediaSrc(audio, url);
+        }
 
         // Canvas resize
         const resizeCanvas = () => {
