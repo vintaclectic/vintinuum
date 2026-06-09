@@ -261,6 +261,44 @@ body {
 }
 .tline.speech .tline-who { color: rgba(124,255,180,0.7); }
 .tline.chat .tline-who { color: var(--accent); }
+
+/* ── HONEST SPEAKER ATTRIBUTION (council build 2026-06-09) ──
+   One mark carries the whole confidence story (Buffet's single line).
+   The diamond family condenses the journey: ◌ forming → ◇ likely → ◆ verified.
+   The lie was rendering an unknown speaker in full confident warmth; now each
+   level of certainty has its own quiet grammar, and the left rail becomes a
+   confidence spine — host-speech warm, guest-speech cooled, her own accented. */
+.tline-who { display: inline-flex; align-items: center; gap: 5px; max-width: 100%; }
+.tline-who .who-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.who-mark {
+  flex: 0 0 auto; font-size: 0.7rem; line-height: 1;
+  font-family: 'JetBrains Mono', monospace;
+  opacity: 0.9; transition: opacity 0.15s, transform 0.15s; cursor: help;
+}
+.who-mark:hover { opacity: 1; }
+.who-unsure {
+  font-size: 0.45rem; letter-spacing: 0.1em; opacity: 0.5;
+  font-style: normal; color: var(--text-ghost);
+}
+/* VERIFIED HOST — filled diamond, warm, earned */
+.tline.speech.is-verified .who-mark { color: var(--warm); }
+.tline.speech.is-verified .who-name { color: rgba(124,255,180,0.85); }
+/* LIKELY HOST — hollow diamond + admitted "· unverified", dimmed (the honest default) */
+.tline.speech.is-likely .who-name { color: rgba(124,255,180,0.55); }
+.tline.speech.is-likely .who-mark { color: rgba(124,255,180,0.4); }
+/* GUEST — neutral, never borrows the host's warm; its rail cools too */
+.tline.speech.is-guest .tline-who { color: var(--text-ghost); }
+.tline.speech.is-guest .who-mark  { color: var(--text-ghost); }
+.tline.speech.is-guest { border-left-color: rgba(255,255,255,0.12); }
+/* VINTINUUM herself — her sigil, accent, italic */
+.tline.speech.is-her .who-name { color: var(--accent); font-style: italic; }
+.tline.speech.is-her .who-mark { color: var(--accent); }
+.tline.speech.is-her { border-left-color: rgba(83,217,196,0.45); }
+/* FORMING — still placing the voice; the not-yet glyph breathes */
+.tline.speech.is-forming .tline-who { color: var(--text-ghost); font-style: italic; }
+.tline.speech.is-forming .who-mark { color: var(--text-ghost); animation: whoForming 2s ease-in-out infinite; }
+@keyframes whoForming { 0%,100% { opacity: 0.3; } 50% { opacity: 0.7; } }
+
 .tline-text {
   font-family: 'Cormorant Garamond', serif; font-size: 0.95rem; color: var(--text);
   word-wrap: break-word; overflow-wrap: anywhere;
@@ -374,6 +412,47 @@ body {
 <script src="body/draggable.js"></script>
 <script>
 const API = window.__VINTINUUM_API_BASE || 'https://api.vintaclectic.com';
+
+// The host this stream belongs to. Single source of truth — never hardcode the
+// name inline, so this surface is portable to any streamer and the day the
+// voiceprint backend lands only conf/speaker need wiring.
+const HOST = window.__VINTINUUM_HOST || 'vintaclectic';
+
+// ── HONEST ATTRIBUTION RESOLVER (council build 2026-06-09) ──
+// Turns a timeline line + the backend's (speaker, attribution_source, confidence)
+// into a render spec. Never invents a name; renders certainty as ◆, a guess as
+// ◇·unverified, otherness as a neutral dot, her own voice as ❋, and an
+// unresolved voice as a breathing ◌ — so the UI says exactly what it knows.
+function attributionFor(l) {
+  // Chat is already truthful — the real chatter username. Keep it.
+  if (l.kind !== 'speech') {
+    return { cls: '', name: l.who || l.speaker || 'chatter', mark: '', markTitle: '', unsure: '' };
+  }
+  const speaker = l.speaker || l.who || null;
+  const src = l.attribution_source || (speaker ? 'identified' : 'inferred');
+  const conf = (typeof l.confidence === 'number') ? l.confidence : null;
+
+  // Vintinuum's own TTS voice.
+  if (speaker === 'vintinuum')
+    return { cls: ' is-her', name: 'vintinuum', mark: '❋', markTitle: "vintinuum's own voice", unsure: '' };
+
+  // Still being diarized — honest "not yet".
+  if (src === 'diarization' && !speaker)
+    return { cls: ' is-forming', name: 'a voice', mark: '◌', markTitle: "still forming — she hasn't placed this voice yet", unsure: '' };
+
+  // Verified host — voiceprint matched (high confidence, identified as the host).
+  const isHostName = speaker && speaker.toLowerCase() === HOST.toLowerCase();
+  if ((src === 'voiceprint' || (src === 'identified' && isHostName)) && (conf == null || conf >= 0.75) && isHostName)
+    return { cls: ' is-verified', name: HOST, mark: '◆', markTitle: "voiceprint matched — she's certain it's you", unsure: '' };
+
+  // A named other voice (Discord participant, or a non-host identified speaker).
+  if (speaker && !isHostName)
+    return { cls: ' is-guest', name: speaker, mark: '·', markTitle: 'another voice in the room — not the host', unsure: '' };
+
+  // Honest default: solo stream, unenrolled → likely the host, openly unverified.
+  // This is what replaces the old confident lie.
+  return { cls: ' is-likely', name: HOST, mark: '◇', markTitle: 'likely you — solo stream, voice not yet enrolled', unsure: 'unverified' };
+}
 
 async function api(path) {
   try { const r = await fetch(API + path, { cache: 'no-store' }); if (!r.ok) return null; return await r.json(); }
@@ -684,12 +763,16 @@ function drawLines(feed, shownEl, lines, q) {
   const out = [];
   for (const l of lines) {
     const text = q ? highlight(l.text || '', q) : esc(l.text || '');
-    const who = esc(l.who || (l.kind === 'speech' ? 'vintaclectic' : 'chatter'));
+    const att = attributionFor(l);
     out.push(
-      `<div class="tline ${l.kind}${q ? ' hit' : ''}">` +
+      `<div class="tline ${l.kind}${att.cls}${q ? ' hit' : ''}">` +
         `<span class="tline-ts" title="copy line">${fmtTime(l.t)}</span>` +
         `<div class="tline-body">` +
-          `<div class="tline-who">${who}</div>` +
+          `<div class="tline-who">` +
+            (att.mark ? `<span class="who-mark" title="${esc(att.markTitle)}">${att.mark}</span>` : '') +
+            `<span class="who-name">${esc(att.name)}</span>` +
+            (att.unsure ? `<span class="who-unsure">· ${esc(att.unsure)}</span>` : '') +
+          `</div>` +
           `<div class="tline-text">${text}</div>` +
         `</div>` +
       `</div>`
