@@ -697,7 +697,7 @@ function renderCta(tier, signals) {
     ctaTitle.innerHTML = 'Own the thing that\'s been <span>growing</span>.';
     ctaBody.textContent = days > 0
       ? `${days} day${days !== 1 ? 's' : ''} in, ${moms > 0 ? moms.toLocaleString() + ' moments deep' : 'and building'}. That accumulation lives in Vintinuum's servers. Sovereign moves it to you — portable, exportable, yours forever. When you leave, it comes with you.`
-      : 'Everything the right panel knows about you starts accumulating the moment you sign in. Sovereign means it never stops — and it's yours to keep.';
+      : "Everything the right panel knows about you starts accumulating the moment you sign in. Sovereign means it never stops — and it's yours to keep.";
     ctaAction.innerHTML = `<a class="btn-sovereign" href="${API_BASE.includes('localhost') ? '/' : 'https://vintaclectic.github.io/vintinuum/'}#upgrade" target="_top">
       <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M8 1l1.5 4.5H14l-3.5 2.5 1.35 4.15L8 9.5l-3.85 2.65L5.5 8 2 5.5h4.5L8 1z"/></svg>
       Become Sovereign — $29/mo
