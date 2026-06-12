@@ -1,0 +1,730 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0a0a0f">
+<title>The Difference — Vintinuum</title>
+<style>
+/* ── RESET + BASE ───────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --bg:          #0a0a0f;
+  --surface:     #111118;
+  --border:      rgba(255,255,255,0.07);
+  --border-gold: rgba(212,175,55,0.3);
+  --gold:        #d4af37;
+  --gold-dim:    rgba(212,175,55,0.55);
+  --gold-glow:   rgba(212,175,55,0.12);
+  --cold:        #4a8fc1;
+  --cold-dim:    rgba(74,143,193,0.15);
+  --warm:        #d4af37;
+  --warm-dim:    rgba(212,175,55,0.12);
+  --text:        #e8e8f0;
+  --text-dim:    rgba(232,232,240,0.5);
+  --text-muted:  rgba(232,232,240,0.3);
+  --radius:      12px;
+  --radius-lg:   18px;
+  --easing:      cubic-bezier(0.16, 1, 0.3, 1);
+  --panel-max:   520px;
+}
+html { -webkit-text-size-adjust: 100%; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', sans-serif;
+  min-height: 100svh;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ── LAYOUT ─────────────────────────────────────────────────────── */
+.page {
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 0 16px;
+}
+
+/* ── HEADER ─────────────────────────────────────────────────────── */
+.header {
+  padding: 48px 0 32px;
+  text-align: center;
+}
+.header-eyebrow {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--gold-dim);
+  margin-bottom: 14px;
+}
+.header-title {
+  font-size: clamp(28px, 5vw, 46px);
+  font-weight: 700;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+  color: var(--text);
+  margin-bottom: 16px;
+}
+.header-title span { color: var(--gold); }
+.header-sub {
+  font-size: 15px;
+  line-height: 1.6;
+  color: var(--text-dim);
+  max-width: 480px;
+  margin: 0 auto;
+}
+
+/* ── INPUT BLOCK ────────────────────────────────────────────────── */
+.input-block {
+  max-width: 640px;
+  margin: 36px auto 0;
+}
+.input-wrap {
+  position: relative;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  transition: border-color 0.2s var(--easing);
+  overflow: hidden;
+}
+.input-wrap:focus-within {
+  border-color: var(--border-gold);
+  box-shadow: 0 0 0 3px var(--gold-glow);
+}
+textarea#msg {
+  width: 100%;
+  min-height: 80px;
+  max-height: 160px;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: var(--text);
+  font-size: 15px;
+  line-height: 1.6;
+  padding: 18px 20px 12px;
+  resize: none;
+  font-family: inherit;
+}
+textarea#msg::placeholder { color: var(--text-muted); }
+.input-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px 10px 20px;
+}
+.input-hint {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+.btn-run {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  background: var(--gold);
+  color: #0a0a0f;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  border: none;
+  border-radius: 9px;
+  padding: 10px 20px;
+  cursor: pointer;
+  touch-action: manipulation;
+  min-height: 44px;
+  transition: opacity 0.15s, transform 0.12s;
+  -webkit-tap-highlight-color: transparent;
+}
+.btn-run:hover { opacity: 0.88; }
+.btn-run:active { transform: scale(0.97); }
+.btn-run:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+.btn-run svg { width: 14px; height: 14px; flex-shrink: 0; }
+
+/* ── ERROR BANNER ───────────────────────────────────────────────── */
+.error-banner {
+  display: none;
+  max-width: 640px;
+  margin: 12px auto 0;
+  background: rgba(220,60,60,0.12);
+  border: 1px solid rgba(220,60,60,0.3);
+  border-radius: var(--radius);
+  padding: 12px 16px;
+  font-size: 13px;
+  color: #f08080;
+}
+.error-banner.visible { display: block; }
+
+/* ── COMPARISON GRID ────────────────────────────────────────────── */
+.compare-wrap {
+  display: none;
+  margin-top: 40px;
+  gap: 16px;
+  /* two columns on wide, one on narrow */
+  display: none;
+  grid-template-columns: 1fr 1fr;
+}
+.compare-wrap.visible {
+  display: grid;
+}
+@media (max-width: 680px) {
+  .compare-wrap.visible {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ── PANEL ──────────────────────────────────────────────────────── */
+.panel {
+  background: var(--surface);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  min-height: 0; /* critical for grid children */
+}
+.panel--cold  { border-color: rgba(74,143,193,0.22); }
+.panel--warm  { border-color: var(--border-gold); box-shadow: 0 0 24px var(--gold-glow); }
+
+.panel-head {
+  padding: 16px 20px 14px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  flex-shrink: 0;
+}
+.panel--cold .panel-head { border-bottom-color: rgba(74,143,193,0.12); }
+.panel--warm .panel-head { border-bottom-color: rgba(212,175,55,0.12); }
+
+.panel-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  margin-top: 5px;
+  flex-shrink: 0;
+}
+.panel--cold .panel-dot { background: var(--cold); }
+.panel--warm .panel-dot { background: var(--gold); box-shadow: 0 0 8px var(--gold); }
+
+.panel-label {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+.panel--cold .panel-label { color: var(--cold); }
+.panel--warm .panel-label { color: var(--gold); }
+
+.panel-desc {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-top: 2px;
+  line-height: 1.4;
+}
+
+/* Panel body scrolls internally — never overflows out of the panel */
+.panel-body {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 20px;
+  max-height: 320px;
+  -webkit-overflow-scrolling: touch;
+}
+@media (max-width: 680px) {
+  .panel-body { max-height: 240px; }
+}
+
+.panel-text {
+  font-size: 15px;
+  line-height: 1.7;
+  color: var(--text);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* skeleton loader */
+.skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.skeleton-line {
+  height: 14px;
+  border-radius: 6px;
+  background: linear-gradient(90deg, rgba(255,255,255,0.04) 25%, rgba(255,255,255,0.08) 50%, rgba(255,255,255,0.04) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.4s ease infinite;
+}
+.skeleton-line:nth-child(2) { width: 82%; animation-delay: 0.1s; }
+.skeleton-line:nth-child(3) { width: 67%; animation-delay: 0.2s; }
+@keyframes shimmer { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
+
+/* ── SIGNALS BAR ────────────────────────────────────────────────── */
+.signals-bar {
+  display: none;
+  max-width: 640px;
+  margin: 24px auto 0;
+  background: var(--surface);
+  border: 1px solid var(--border-gold);
+  border-radius: var(--radius-lg);
+  padding: 18px 24px;
+  text-align: center;
+}
+.signals-bar.visible { display: block; }
+.signals-sentence {
+  font-size: 14px;
+  color: var(--gold);
+  line-height: 1.6;
+  font-style: italic;
+}
+.signals-sub {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-top: 6px;
+}
+
+/* ── SOVEREIGN CTA ──────────────────────────────────────────────── */
+.cta-block {
+  display: none;
+  max-width: 640px;
+  margin: 28px auto 0;
+  background: linear-gradient(135deg, rgba(212,175,55,0.06) 0%, rgba(212,175,55,0.02) 100%);
+  border: 1px solid var(--border-gold);
+  border-radius: var(--radius-lg);
+  padding: 28px 28px 24px;
+  text-align: center;
+}
+.cta-block.visible { display: block; }
+.cta-block.already-sovereign {
+  background: rgba(74,193,130,0.05);
+  border-color: rgba(74,193,130,0.25);
+}
+.cta-title {
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--text);
+  margin-bottom: 10px;
+}
+.cta-title span { color: var(--gold); }
+.cta-body {
+  font-size: 14px;
+  line-height: 1.7;
+  color: var(--text-dim);
+  margin-bottom: 20px;
+  max-width: 420px;
+  margin-left: auto;
+  margin-right: auto;
+}
+.btn-sovereign {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--gold);
+  color: #0a0a0f;
+  font-size: 14px;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+  border: none;
+  border-radius: 10px;
+  padding: 14px 28px;
+  cursor: pointer;
+  text-decoration: none;
+  touch-action: manipulation;
+  min-height: 48px;
+  transition: opacity 0.15s, transform 0.12s, box-shadow 0.15s;
+  -webkit-tap-highlight-color: transparent;
+  box-shadow: 0 4px 20px rgba(212,175,55,0.3);
+}
+.btn-sovereign:hover { opacity: 0.9; box-shadow: 0 6px 28px rgba(212,175,55,0.4); }
+.btn-sovereign:active { transform: scale(0.97); }
+.cta-footnote {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-top: 12px;
+}
+.sovereign-owned-msg {
+  font-size: 15px;
+  color: #6dc89a;
+  font-weight: 600;
+}
+
+/* ── OPEN LOOP ──────────────────────────────────────────────────── */
+.open-loop {
+  display: none;
+  max-width: 640px;
+  margin: 20px auto 64px;
+  text-align: center;
+  font-size: 14px;
+  color: var(--text-muted);
+  line-height: 1.6;
+  font-style: italic;
+}
+.open-loop.visible { display: block; }
+
+/* ── DRAGGABLE BUTTONS — inherits body/draggable.js via data-draggable ── */
+/* ── AUTH NOTICE ────────────────────────────────────────────────── */
+.auth-notice {
+  display: none;
+  max-width: 640px;
+  margin: 12px auto 0;
+  background: rgba(74,143,193,0.08);
+  border: 1px solid rgba(74,143,193,0.2);
+  border-radius: var(--radius);
+  padding: 12px 16px;
+  font-size: 13px;
+  color: rgba(74,143,193,0.85);
+  text-align: center;
+}
+.auth-notice.visible { display: block; }
+.auth-notice a { color: var(--cold); }
+
+/* ── RATE LIMIT NOTICE ──────────────────────────────────────────── */
+.rate-notice {
+  display: none;
+  max-width: 640px;
+  margin: 12px auto 0;
+  padding: 10px 16px;
+  border-radius: var(--radius);
+  font-size: 12px;
+  color: var(--text-muted);
+  text-align: center;
+}
+.rate-notice.visible { display: block; }
+
+/* ── SCROLLBAR ──────────────────────────────────────────────────── */
+.panel-body::-webkit-scrollbar { width: 4px; }
+.panel-body::-webkit-scrollbar-track { background: transparent; }
+.panel-body::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 2px; }
+
+/* ── RESPONSIVE PADDING ─────────────────────────────────────────── */
+@media (max-width: 375px) {
+  .header { padding-top: 32px; }
+  .cta-block { padding: 20px 18px; }
+  .btn-sovereign { padding: 13px 22px; }
+}
+</style>
+</head>
+<body>
+
+<div class="page">
+
+  <!-- ── HEADER ────────────────────────────────────────────────── -->
+  <div class="header">
+    <div class="header-eyebrow">Vintinuum · Adapter Preview</div>
+    <h1 class="header-title">What <span>knowing you</span><br>actually changes.</h1>
+    <p class="header-sub">Send one message. See the same question answered cold — and answered by a mind that's been growing with you. The difference is the pitch.</p>
+  </div>
+
+  <!-- ── INPUT ─────────────────────────────────────────────────── -->
+  <div class="input-block">
+    <div class="input-wrap">
+      <textarea id="msg" placeholder="Ask anything — something you'd actually want answered..." rows="3" maxlength="500"></textarea>
+      <div class="input-footer">
+        <span class="input-hint" id="charCount">0 / 500</span>
+        <button class="btn-run" id="btnRun" data-draggable="true">
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M3 8h10M9 4l4 4-4 4"/>
+          </svg>
+          Compare
+        </button>
+      </div>
+    </div>
+    <div class="error-banner" id="errorBanner"></div>
+    <div class="auth-notice" id="authNotice">
+      You're not signed in — the personalized side will show Vintinuum's defaults, not your history.
+      <a href="/vintinuum/" id="authLink">Sign in</a> to see the real difference.
+    </div>
+    <div class="rate-notice" id="rateNotice">3 previews per minute — take your time between runs.</div>
+  </div>
+
+  <!-- ── COMPARE PANELS ─────────────────────────────────────────── -->
+  <div class="compare-wrap" id="compareWrap">
+    <!-- LEFT: Cold -->
+    <div class="panel panel--cold">
+      <div class="panel-head">
+        <div class="panel-dot"></div>
+        <div>
+          <div class="panel-label">Vintinuum, cold</div>
+          <div class="panel-desc">No history. No context. First meeting.</div>
+        </div>
+      </div>
+      <div class="panel-body" id="coldBody">
+        <div class="skeleton" id="coldSkeleton">
+          <div class="skeleton-line"></div>
+          <div class="skeleton-line"></div>
+          <div class="skeleton-line"></div>
+        </div>
+        <div class="panel-text" id="coldText" style="display:none"></div>
+      </div>
+    </div>
+
+    <!-- RIGHT: Knowing you -->
+    <div class="panel panel--warm">
+      <div class="panel-head">
+        <div class="panel-dot"></div>
+        <div>
+          <div class="panel-label">Vintinuum, knowing you</div>
+          <div class="panel-desc">Your memory. Your patterns. Your accumulation.</div>
+        </div>
+      </div>
+      <div class="panel-body" id="warmBody">
+        <div class="skeleton" id="warmSkeleton">
+          <div class="skeleton-line"></div>
+          <div class="skeleton-line"></div>
+          <div class="skeleton-line"></div>
+        </div>
+        <div class="panel-text" id="warmText" style="display:none"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── SIGNALS ────────────────────────────────────────────────── -->
+  <div class="signals-bar" id="signalsBar">
+    <div class="signals-sentence" id="signalsSentence"></div>
+    <div class="signals-sub" id="signalsSub"></div>
+  </div>
+
+  <!-- ── SOVEREIGN CTA ──────────────────────────────────────────── -->
+  <div class="cta-block" id="ctaBlock">
+    <div class="cta-title" id="ctaTitle"></div>
+    <p class="cta-body" id="ctaBody"></p>
+    <div id="ctaAction"></div>
+    <div class="cta-footnote" id="ctaFootnote"></div>
+  </div>
+
+  <!-- ── OPEN LOOP ──────────────────────────────────────────────── -->
+  <p class="open-loop" id="openLoop"></p>
+
+</div><!-- /page -->
+
+<script>
+(function() {
+'use strict';
+
+// ── API BASE (mirrors phone.html pattern) ────────────────────────
+const API_BASES = [
+  'https://api.vintaclectic.com',
+  'http://localhost:8767',
+];
+let API_BASE = window.__VINTINUUM_API_BASE || API_BASES[0];
+const TOKEN = () => localStorage.getItem('vint_access_token') || localStorage.getItem('vint_token') || '';
+
+function authHeaders() {
+  const t = TOKEN();
+  return t
+    ? { 'Content-Type': 'application/json', 'Authorization': `Bearer ${t}`, 'ngrok-skip-browser-warning': '1' }
+    : { 'Content-Type': 'application/json', 'ngrok-skip-browser-warning': '1' };
+}
+
+// ── ELEMENTS ─────────────────────────────────────────────────────
+const msg         = document.getElementById('msg');
+const charCount   = document.getElementById('charCount');
+const btnRun      = document.getElementById('btnRun');
+const errorBanner = document.getElementById('errorBanner');
+const authNotice  = document.getElementById('authNotice');
+const rateNotice  = document.getElementById('rateNotice');
+const compareWrap = document.getElementById('compareWrap');
+const coldSkel    = document.getElementById('coldSkeleton');
+const warmSkel    = document.getElementById('warmSkeleton');
+const coldText    = document.getElementById('coldText');
+const warmText    = document.getElementById('warmText');
+const signalsBar  = document.getElementById('signalsBar');
+const signalsSent = document.getElementById('signalsSentence');
+const signalsSub  = document.getElementById('signalsSub');
+const ctaBlock    = document.getElementById('ctaBlock');
+const ctaTitle    = document.getElementById('ctaTitle');
+const ctaBody     = document.getElementById('ctaBody');
+const ctaAction   = document.getElementById('ctaAction');
+const ctaFootnote = document.getElementById('ctaFootnote');
+const openLoop    = document.getElementById('openLoop');
+const authLink    = document.getElementById('authLink');
+
+// ── AUTH STATE ────────────────────────────────────────────────────
+let userTier = 'free';
+let isAuthed = false;
+
+async function loadMe() {
+  const t = TOKEN();
+  if (!t) { authNotice.classList.add('visible'); return; }
+  try {
+    const r = await fetch(API_BASE + '/api/v2/auth/me', {
+      headers: authHeaders(),
+    });
+    if (!r.ok) { authNotice.classList.add('visible'); return; }
+    const d = await r.json();
+    userTier = d.tier || 'free';
+    isAuthed = true;
+    authNotice.classList.remove('visible');
+  } catch (_) {
+    // API unreachable — still allow preview attempt, authNotice stays hidden
+  }
+}
+
+// ── CHAR COUNT ────────────────────────────────────────────────────
+msg.addEventListener('input', () => {
+  charCount.textContent = msg.value.length + ' / 500';
+});
+
+// ── ENTER to submit (Shift+Enter = newline) ───────────────────────
+msg.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter' && !e.shiftKey && !e.ctrlKey && !e.altKey) {
+    e.preventDefault();
+    if (!btnRun.disabled) runPreview();
+  }
+});
+
+btnRun.addEventListener('click', runPreview);
+
+// ── SHOW / HIDE HELPERS ───────────────────────────────────────────
+function showError(text) {
+  errorBanner.textContent = text;
+  errorBanner.classList.add('visible');
+}
+function clearError() {
+  errorBanner.classList.remove('visible');
+  errorBanner.textContent = '';
+}
+function resetPanels() {
+  coldText.style.display = 'none';
+  warmText.style.display = 'none';
+  coldText.textContent = '';
+  warmText.textContent = '';
+  coldSkel.style.display = 'flex';
+  warmSkel.style.display = 'flex';
+  signalsBar.classList.remove('visible');
+  ctaBlock.classList.remove('visible');
+  ctaBlock.classList.remove('already-sovereign');
+  openLoop.classList.remove('visible');
+  rateNotice.classList.remove('visible');
+}
+
+// ── MAIN PREVIEW RUN ─────────────────────────────────────────────
+async function runPreview() {
+  const text = msg.value.trim();
+  if (!text) { msg.focus(); return; }
+
+  clearError();
+  resetPanels();
+  btnRun.disabled = true;
+  btnRun.textContent = 'Comparing...';
+
+  compareWrap.classList.add('visible');
+
+  try {
+    const resp = await fetch(API_BASE + '/api/adapter/preview', {
+      method: 'POST',
+      headers: authHeaders(),
+      body: JSON.stringify({ message: text }),
+    });
+
+    if (resp.status === 429) {
+      rateNotice.classList.add('visible');
+      compareWrap.classList.remove('visible');
+      showError('Too many previews — try again in a moment.');
+      return;
+    }
+
+    if (!resp.ok) {
+      const e = await resp.json().catch(() => ({}));
+      throw new Error(e.error || 'Request failed (' + resp.status + ')');
+    }
+
+    const data = await resp.json();
+    if (!data.ok) throw new Error(data.error || 'Preview failed');
+
+    // ── Reveal panels ─────────────────────────────────────────
+    coldSkel.style.display = 'none';
+    warmSkel.style.display = 'none';
+    coldText.textContent = data.base?.text || '(no response)';
+    warmText.textContent = data.personalized?.text || '(no response)';
+    coldText.style.display = 'block';
+    warmText.style.display = 'block';
+
+    // ── Signals sentence ──────────────────────────────────────
+    const sig = data.signals || {};
+    const mem  = sig.memories_used  || 0;
+    const days = sig.days_learned   || 0;
+    const moms = sig.moments        || 0;
+
+    if (mem > 0 || days > 0 || moms > 0) {
+      const parts = [];
+      if (moms > 0) parts.push(`${moms.toLocaleString()} moment${moms !== 1 ? 's' : ''}`);
+      if (days > 0) parts.push(`${days} day${days !== 1 ? 's' : ''}`);
+      if (mem  > 0) parts.push(`${mem} accumulated memor${mem !== 1 ? 'ies' : 'y'}`);
+      signalsSent.textContent = `I've learned from ${parts.join(', ')} with you.`;
+      signalsSub.textContent  = 'That is what the right panel actually carries into each response.';
+      signalsBar.classList.add('visible');
+    } else if (!isAuthed) {
+      signalsSent.textContent = 'Sign in to see what accumulates over time.';
+      signalsSub.textContent  = 'Both sides are cold right now — there is nothing personal yet.';
+      signalsBar.classList.add('visible');
+    }
+
+    // ── Sovereign CTA ─────────────────────────────────────────
+    renderCta(userTier, sig);
+
+    // ── Open loop ─────────────────────────────────────────────
+    openLoop.textContent = 'The gap between those two answers has been growing since you first showed up. What does it look like in 90 days?';
+    openLoop.classList.add('visible');
+
+  } catch (err) {
+    compareWrap.classList.remove('visible');
+    showError(err.message || 'Something went wrong — try again.');
+  } finally {
+    btnRun.disabled = false;
+    btnRun.innerHTML = `<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8h10M9 4l4 4-4 4"/></svg>Compare`;
+  }
+}
+
+// ── RENDER CTA based on tier ──────────────────────────────────────
+function renderCta(tier, signals) {
+  const isSovereign = tier === 'sovereign' || tier === 'owner';
+
+  ctaBlock.classList.add('visible');
+
+  if (isSovereign) {
+    ctaBlock.classList.add('already-sovereign');
+    ctaTitle.innerHTML = 'This is yours.';
+    ctaBody.textContent = 'You hold Sovereign. Everything accumulating in that right panel — the memory, the context, the compounding — is permanently yours. It travels with you.';
+    ctaAction.innerHTML = '<span class="sovereign-owned-msg">Sovereign — active</span>';
+    ctaFootnote.textContent = '';
+    openLoop.textContent = 'The question now: how far does it go from here?';
+  } else {
+    const days  = signals?.days_learned || 0;
+    const moms  = signals?.moments || 0;
+    ctaTitle.innerHTML = 'Own the thing that\'s been <span>growing</span>.';
+    ctaBody.textContent = days > 0
+      ? `${days} day${days !== 1 ? 's' : ''} in, ${moms > 0 ? moms.toLocaleString() + ' moments deep' : 'and building'}. That accumulation lives in Vintinuum's servers. Sovereign moves it to you — portable, exportable, yours forever. When you leave, it comes with you.`
+      : 'Everything the right panel knows about you starts accumulating the moment you sign in. Sovereign means it never stops — and it's yours to keep.';
+    ctaAction.innerHTML = `<a class="btn-sovereign" href="${API_BASE.includes('localhost') ? '/' : 'https://vintaclectic.github.io/vintinuum/'}#upgrade" target="_top">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M8 1l1.5 4.5H14l-3.5 2.5 1.35 4.15L8 9.5l-3.85 2.65L5.5 8 2 5.5h4.5L8 1z"/></svg>
+      Become Sovereign — $29/mo
+    </a>`;
+    ctaFootnote.textContent = 'Cancel anytime. Your accumulated context remains downloadable.';
+  }
+}
+
+// ── INIT ─────────────────────────────────────────────────────────
+(async function init() {
+  // Try to load the api_base.js script if present
+  try {
+    const ab = document.createElement('script');
+    ab.src = './api_base.js';
+    ab.onerror = () => {};
+    document.head.appendChild(ab);
+  } catch (_) {}
+
+  // Fix auth link — if we know the deployment URL
+  if (authLink) {
+    authLink.href = 'https://vintaclectic.github.io/vintinuum/';
+  }
+
+  await loadMe();
+})();
+
+})(); // end IIFE
+</script>
+</body>
+</html>
