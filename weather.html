@@ -44,17 +44,18 @@ body {
 .topbar {
   position: fixed;
   top: 0; left: 0; right: 0;
-  height: 48px;
+  height: calc(48px + env(safe-area-inset-top, 0px));
   z-index: 100;
   background: rgba(4, 8, 16, 0.85);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   border-bottom: 1px solid var(--border);
   display: flex;
-  align-items: center;
-  padding: 0 16px;
+  align-items: flex-end;
+  padding: env(safe-area-inset-top, 0px) 16px 0;
   gap: 12px;
 }
+.topbar > * { margin-bottom: 6px; }
 
 .topbar-back {
   display: flex;
@@ -67,8 +68,9 @@ body {
   color: var(--text-dim);
   text-decoration: none;
   transition: color 0.2s;
-  min-height: 44px;
+  min-height: 36px;
   padding: 0 4px;
+  -webkit-tap-highlight-color: transparent;
 }
 .topbar-back:hover { color: var(--text); }
 .topbar-back svg { width: 14px; height: 14px; flex-shrink: 0; }
@@ -110,7 +112,7 @@ body {
   align-items: center;
   justify-content: center;
   overflow: hidden;
-  padding-top: 48px; /* topbar height */
+  padding-top: calc(48px + env(safe-area-inset-top, 0px)); /* topbar + notch */
 }
 
 /* ── ATMOSPHERIC CANVAS ── */
@@ -292,7 +294,7 @@ body {
   justify-content: center;
   flex-wrap: wrap;
   gap: 8px;
-  padding: 20px 16px 28px;
+  padding: 20px max(16px, env(safe-area-inset-right, 16px)) max(28px, calc(env(safe-area-inset-bottom, 0px) + 16px)) max(16px, env(safe-area-inset-left, 16px));
   background: linear-gradient(0deg, rgba(4, 8, 16, 0.7) 0%, transparent 100%);
 }
 
@@ -336,7 +338,7 @@ body {
   z-index: 1;
   max-width: 780px;
   margin: 0 auto;
-  padding: 40px 20px 100px;
+  padding: 40px max(20px, env(safe-area-inset-right, 20px)) calc(100px + env(safe-area-inset-bottom, 0px)) max(20px, env(safe-area-inset-left, 20px));
   display: flex;
   flex-direction: column;
   gap: 28px;
@@ -504,10 +506,11 @@ body {
 @media (max-width: 480px) {
   .wx-name { font-size: 48px; }
   .wx-icon { font-size: 2.2rem; }
-  .pill-row { gap: 6px; padding: 16px 12px 24px; }
+  .pill-row { gap: 6px; }
   .nt-pill { padding: 5px 10px; }
   .conditions-grid { grid-template-columns: 1fr 1fr; }
-  .below-hero { padding: 32px 16px 80px; }
+  .below-hero { padding: 32px 14px calc(80px + env(safe-area-inset-bottom, 0px)); }
+  .topbar { padding-left: 12px; padding-right: 12px; }
 }
 
 /* ── WEATHER THEMES ── */
@@ -566,6 +569,8 @@ body.wx-overcast {
   --wx-glow-rgb: 100, 140, 200;
 }
 </style>
+<script src="body/api_base.js?v=v20260429-council"></script>
+<script src="body/mobile_nav.js?v=v20260505-onedoor" defer></script>
 </head>
 <body>
 
