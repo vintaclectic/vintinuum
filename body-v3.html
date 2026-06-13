@@ -671,6 +671,7 @@ button{font-family:inherit;color:inherit}
   font-size:13px;
   white-space:nowrap;
   max-width:280px;
+  max-width:min(280px, calc(100vw - 32px));
   pointer-events:none;
   opacity:0;
   transform-origin:bottom center;
@@ -700,7 +701,8 @@ button{font-family:inherit;color:inherit}
 /* ── HUD ── */
 #hud{
   position:fixed;
-  top:14px;left:14px;
+  top:calc(14px + env(safe-area-inset-top, 0px));
+  left:calc(14px + env(safe-area-inset-left, 0px));
   font:11px/1.4 "JetBrains Mono","SF Mono",monospace;
   color:var(--hud-fg);
   background:rgba(6,10,20,0.6);
@@ -718,7 +720,7 @@ button{font-family:inherit;color:inherit}
 /* ── Media Dock ── */
 #media-dock{
   position:fixed;
-  bottom:78px;
+  bottom:calc(78px + env(safe-area-inset-bottom, 0px));
   left:50%;
   transform:translateX(-50%);
   display:flex;
@@ -771,7 +773,8 @@ button{font-family:inherit;color:inherit}
 /* ── Conversation Bar ── */
 #conv-bar{
   position:fixed;
-  bottom:14px;
+  bottom:calc(14px + env(safe-area-inset-bottom, 0px) + var(--kb-lift, 0px));
+  transition:bottom 0.18s ease;
   left:50%;
   transform:translateX(-50%);
   display:flex;
@@ -791,7 +794,7 @@ button{font-family:inherit;color:inherit}
   background:transparent;
   border:none;
   color:#fff;
-  font-size:14px;
+  font-size:16px; /* iOS: never below 16px or focus zooms the page */
   font-family:inherit;
   padding:8px 4px;
   outline:none;
@@ -820,6 +823,7 @@ button{font-family:inherit;color:inherit}
   right:20px;bottom:140px;
   width:min(560px, calc(100vw - 40px));
   height:min(560px, calc(100vh - 200px));
+  height:min(560px, calc(100svh - 200px));
   background:rgba(6,10,20,0.92);
   border:1px solid rgba(79,195,247,0.45);
   border-radius:14px;
@@ -1009,24 +1013,30 @@ button{font-family:inherit;color:inherit}
   .panel{
     width:calc(100vw - 16px);
     right:8px;left:8px;
-    height:calc(100vh - 200px);
-    bottom:140px;
+    height:calc(100vh - 230px);
+    height:calc(100svh - 230px - env(safe-area-inset-bottom, 0px));
+    bottom:calc(140px + env(safe-area-inset-bottom, 0px));
+    max-height:calc(100svh - 90px - env(safe-area-inset-top, 0px));
   }
   #media-dock{
-    bottom:72px;
+    bottom:calc(72px + env(safe-area-inset-bottom, 0px));
     left:8px;right:8px;
     transform:none;
     max-width:none;
     border-radius:12px;
+    transition:opacity 0.18s ease;
   }
   #media-dock button{padding:10px 12px;font-size:12px}
   #conv-bar{
-    bottom:10px;
+    bottom:calc(10px + env(safe-area-inset-bottom, 0px) + var(--kb-lift, 0px));
     left:8px;right:8px;
     transform:none;
     width:auto;
   }
+  #hud{font-size:10px;padding:6px 9px;max-width:44vw}
 }
+/* when the on-screen keyboard is up, the dock yields — conv-bar owns the space */
+body.kb-open #media-dock{opacity:0;pointer-events:none}
 @media (max-width:380px){
   #figure-wrap{transform-origin:bottom center}
   #figure-inner{transform:scale(0.85);transform-origin:50% 100%}
@@ -1234,7 +1244,16 @@ const Voice = (() => {
 
   function showBubble(text, ms){
     bubble.textContent = text;
+    bubble.style.marginLeft = '0px';
     bubble.classList.add('show');
+    // clamp to viewport — the bubble follows the walker but never bleeds an edge
+    requestAnimationFrame(() => {
+      const r = bubble.getBoundingClientRect();
+      let shift = 0;
+      if (r.left < 8) shift = 8 - r.left;
+      else if (r.right > window.innerWidth - 8) shift = (window.innerWidth - 8) - r.right;
+      if (shift) bubble.style.marginLeft = shift + 'px';
+    });
     clearTimeout(hideTimer);
     hideTimer = setTimeout(() => bubble.classList.remove('show'), ms || 4500);
   }
@@ -1322,7 +1341,7 @@ setInterval(() => {
   if (document.hidden) return;
   if (!_greeted) return; // don't speak before first interaction
   Voice.speak(THOUGHTS[Math.floor(Math.random() * THOUGHTS.length)]);
-}, 30000);
+}, 90000);
 
 /* ── click figure: stops & quips ── */
 const QUIPS = [
@@ -1412,8 +1431,9 @@ const Panel = (() => {
     } else {
       el.style.width  = '96vw';
       el.style.height = 'calc(100vh - 200px)';
+      el.style.height = 'calc(100svh - 200px)'; // svh wins where supported; vh stays as fallback
       el.style.left   = '2vw';
-      el.style.top    = '14px';
+      el.style.top    = 'calc(14px + env(safe-area-inset-top, 0px))';
       el.style.right  = 'auto';
       el.style.bottom = 'auto';
     }
