@@ -59,7 +59,7 @@ body {
   background: var(--void);
   color: var(--text);
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-  min-height: 100vh;
+  min-height: 100vh; min-height: 100svh;
   overflow-x: hidden;
   transition: background 3s ease;
 }
@@ -106,7 +106,7 @@ body {
   /* Top clears fixed topbar (56px). Bottom clears mobile nav (56px) +
      stacked .mode-tabs bar (~52px) + safe area, with breathing room. */
   padding: calc(72px + env(safe-area-inset-top, 0px)) 20px calc(140px + env(safe-area-inset-bottom, 0px));
-  min-height: 100vh;
+  min-height: 100vh; min-height: 100svh;
 }
 
 /* ── HEADER ── */
