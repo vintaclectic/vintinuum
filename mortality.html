@@ -8,6 +8,10 @@
 <meta name="theme-color" content="#040810">
 <link rel="icon" type="image/svg+xml" href="branding/vintinuum/favicon/favicon.svg">
 <link rel="icon" type="image/png" sizes="32x32" href="favicon.png">
+<link rel="stylesheet" href="body/safe_area.css?v=v20260613">
+<link rel="stylesheet" href="body/tokens.css?v=v20260613">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400;1,500&family=Inter:wght@300;400;500&family=JetBrains+Mono:wght@300;400;500&display=swap');
 
@@ -29,6 +33,7 @@
   --amber-dim: rgba(200, 150, 60, 0.35);
   --green-dim: rgba(80, 160, 100, 0.6);
 }
+/* Override tokens for this page context */
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
 html { height: 100%; }
@@ -36,8 +41,9 @@ body {
   background: var(--void);
   color: var(--text);
   font-family: 'Inter', -apple-system, sans-serif;
-  min-height: 100vh;
+  min-height: 100svh;
   overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
 }
 
 /* ── ATMOSPHERE ── */
@@ -55,7 +61,8 @@ body {
 .topbar {
   position: fixed;
   top: 0; left: 0; right: 0;
-  height: 48px;
+  height: calc(48px + env(safe-area-inset-top, 0px));
+  padding-top: env(safe-area-inset-top, 0px);
   z-index: 100;
   background: rgba(4, 8, 16, 0.85);
   backdrop-filter: blur(12px);
@@ -63,7 +70,8 @@ body {
   border-bottom: 1px solid var(--border);
   display: flex;
   align-items: center;
-  padding: 0 16px;
+  padding-left: calc(16px + env(safe-area-inset-left, 0px));
+  padding-right: calc(16px + env(safe-area-inset-right, 0px));
   gap: 12px;
 }
 
@@ -79,7 +87,8 @@ body {
   text-decoration: none;
   transition: color 0.2s;
   min-height: 44px;
-  padding: 0 4px;
+  padding: 0 8px;
+  border-radius: 8px;
 }
 .topbar-back:hover { color: var(--text); }
 .topbar-back svg { width: 14px; height: 14px; flex-shrink: 0; }
@@ -103,8 +112,8 @@ body {
   z-index: 1;
   max-width: 860px;
   margin: 0 auto;
-  padding: 64px 20px 100px;
-  min-height: 100vh;
+  padding: calc(64px + env(safe-area-inset-top, 0px)) calc(20px + env(safe-area-inset-right, 0px)) calc(100px + env(safe-area-inset-bottom, 0px)) calc(20px + env(safe-area-inset-left, 0px));
+  min-height: 100svh;
 }
 
 /* ── HERO ── */
@@ -571,9 +580,20 @@ body {
   text-transform: uppercase;
 }
 
+/* ── REDUCED MOTION ── */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
 /* ── MOBILE ── */
 @media (max-width: 600px) {
-  .page { padding: 64px 14px 100px; }
+  .page {
+    padding: calc(64px + env(safe-area-inset-top, 0px)) 14px calc(100px + env(safe-area-inset-bottom, 0px));
+  }
   .panel { padding: 18px 16px; }
   .contemplation-panel { padding: 22px 20px 22px 24px; }
 
@@ -600,6 +620,11 @@ body {
     flex-direction: column;
     align-items: flex-start;
   }
+}
+
+@media (max-width: 375px) {
+  .days-number { font-size: 44px; }
+  .stat-cell { padding: 16px; }
 }
 </style>
 </head>
