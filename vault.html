@@ -8,6 +8,10 @@
 <meta name="theme-color" content="#040810">
 <link rel="icon" type="image/svg+xml" href="branding/vintinuum/favicon/favicon.svg">
 <link rel="icon" type="image/png" sizes="32x32" href="favicon.png">
+<link rel="stylesheet" href="body/safe_area.css?v=v20260613">
+<link rel="stylesheet" href="body/tokens.css?v=v20260613">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400;1,500&family=Inter:wght@300;400;500&family=JetBrains+Mono:wght@300;400;500&display=swap');
 
@@ -44,8 +48,9 @@ body {
   background: var(--void);
   color: var(--text);
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-  min-height: 100vh;
+  min-height: 100svh;
   overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
 }
 
 /* ── ATMOSPHERE ── */
@@ -84,13 +89,15 @@ body {
 .topbar {
   position: fixed;
   top: 0; left: 0; right: 0;
-  height: 48px;
+  height: calc(48px + env(safe-area-inset-top, 0px));
+  padding-top: env(safe-area-inset-top, 0px);
   z-index: 100;
   background: rgba(4, 8, 16, 0.88);
   border-bottom: 1px solid var(--border);
   display: flex;
   align-items: center;
-  padding: 0 20px;
+  padding-left: calc(20px + env(safe-area-inset-left, 0px));
+  padding-right: calc(20px + env(safe-area-inset-right, 0px));
   gap: 16px;
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
@@ -103,12 +110,15 @@ body {
   text-transform: uppercase;
   color: var(--text-dim);
   text-decoration: none;
-  padding: 6px 12px;
+  padding: 0 12px;
   border: 1px solid var(--border);
   border-radius: 12px;
   transition: all 0.2s ease;
   flex-shrink: 0;
   white-space: nowrap;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
 }
 
 .topbar-back:hover {
@@ -138,8 +148,8 @@ body {
   z-index: 1;
   max-width: 680px;
   margin: 0 auto;
-  padding: 64px 20px 80px;
-  min-height: 100vh;
+  padding: calc(64px + env(safe-area-inset-top, 0px)) calc(20px + env(safe-area-inset-right, 0px)) calc(80px + env(safe-area-inset-bottom, 0px)) calc(20px + env(safe-area-inset-left, 0px));
+  min-height: 100svh;
 }
 
 /* ── STATS BAR ── */
@@ -326,7 +336,7 @@ body {
   color: var(--text);
   font-family: 'Cormorant Garamond', serif;
   font-style: italic;
-  font-size: 1.05rem;
+  font-size: 16px; /* 16px prevents iOS auto-zoom */
   line-height: 1.7;
   resize: none;
   outline: none;
@@ -554,12 +564,27 @@ input[type="range"].weight-slider::-moz-range-thumb {
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.06); border-radius: 2px; }
 
+/* ── REDUCED MOTION ── */
+@media (prefers-reduced-motion: reduce) {
+  .atmosphere-pulse { animation: none !important; }
+  .vault-lock-dot { animation: none !important; }
+  .vault-glow-ring { animation: none !important; }
+  .vault-door-wrap.sealing .vault-spokes-group { animation: none !important; }
+  * { transition-duration: 0.01ms !important; }
+}
+
 /* ── MOBILE ── */
 @media (max-width: 480px) {
-  .page { padding: 64px 14px 60px; }
+  .page { padding: calc(64px + env(safe-area-inset-top, 0px)) 14px calc(60px + env(safe-area-inset-bottom, 0px)); }
   .vault-door-wrap { width: 160px; height: 160px; }
   .vault-svg { width: 160px; height: 160px; }
   .stats-bar { gap: 4px; padding: 8px 14px; }
+}
+
+@media (max-width: 375px) {
+  .vault-door-wrap { width: 140px; height: 140px; }
+  .vault-svg { width: 140px; height: 140px; }
+  .page { padding-left: 12px; padding-right: 12px; }
 }
 </style>
 <script src="body/api_base.js?v=v20260429-council"></script>
