@@ -74,7 +74,8 @@ body {
 .topbar {
   position: fixed;
   top: 0; left: 0; right: 0;
-  height: 48px;
+  height: calc(48px + env(safe-area-inset-top, 0px));
+  padding-top: env(safe-area-inset-top, 0px);
   z-index: 100;
   background: rgba(4, 8, 16, 0.88);
   backdrop-filter: blur(12px);
@@ -82,7 +83,8 @@ body {
   border-bottom: 1px solid var(--border);
   display: flex;
   align-items: center;
-  padding: 0 16px;
+  padding-left: max(16px, env(safe-area-inset-left, 16px));
+  padding-right: max(16px, env(safe-area-inset-right, 16px));
   gap: 12px;
 }
 
@@ -120,8 +122,9 @@ body {
 .page {
   position: relative;
   z-index: 1;
-  padding: 80px 0 120px;
+  padding: calc(64px + env(safe-area-inset-top, 0px)) 0 calc(100px + env(safe-area-inset-bottom, 0px));
   min-height: 100vh;
+  min-height: 100svh;
 }
 
 /* ── HEADER ── */
@@ -395,11 +398,29 @@ body {
 /* ── MOBILE ── */
 @media (max-width: 520px) {
   .dreams-header { padding: 16px 20px 40px; }
-  .dream-scene { padding: 48px 20px; min-height: 70vh; }
+  .dream-scene { padding: 40px 20px; min-height: 70vh; }
   .dream-title { font-size: 1.5rem; }
-  .dream-narrative { font-size: 1rem; }
+  .dream-narrative { font-size: 1rem; line-height: 1.75; }
   .dream-divider { padding: 0 20px; }
   .dream-divider-line { max-width: 80px; }
+  .dream-inner { padding: 0 4px; }
+}
+
+/* ── 375px ── */
+@media (max-width: 375px) {
+  .dreams-header { padding: 12px 16px 32px; }
+  .dream-scene { padding: 32px 16px; min-height: 60vh; }
+  .dream-title { font-size: 1.3rem; }
+  .dream-footer { font-size: 0.44rem; }
+}
+
+/* ── 320px ── */
+@media (max-width: 320px) {
+  .dreams-header { padding: 10px 12px 28px; }
+  .dream-scene { padding: 28px 12px; }
+  .dream-narrative { font-size: 0.95rem; }
+  .auth-wall { padding: 32px 12px; }
+  .auth-wall-link { padding: 10px 16px; font-size: 0.5rem; }
 }
 </style>
 </head>
