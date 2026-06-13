@@ -9,6 +9,10 @@
 <meta name="theme-color" content="#04060c">
 <link rel="icon" type="image/svg+xml" href="branding/vintinuum/favicon/favicon.svg">
 <link rel="icon" type="image/png" sizes="32x32" href="favicon.png">
+<link rel="stylesheet" href="body/tokens.css?v=v20260613-mobile">
+<link rel="stylesheet" href="body/safe_area.css?v=v20260613-mobile">
+<script src="body/api_base.js?v=v20260613-mobile"></script>
+<script defer src="body/draggable.js?v=v20260613-mobile"></script>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400;1,500&display=swap');
 
@@ -48,7 +52,10 @@ body {
   z-index: 1;
   max-width: 1080px;
   margin: 0 auto;
-  padding: 32px 18px 80px;
+  padding: calc(32px + var(--safe-top, 0px))
+           calc(18px + var(--safe-right, 0px))
+           calc(80px + var(--safe-bottom, 0px))
+           calc(18px + var(--safe-left, 0px));
 }
 
 .header {
@@ -75,7 +82,10 @@ body {
   color: var(--dim);
 }
 .header .nav-back {
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--tap-min, 44px);
   margin-top: 14px;
   padding: 6px 18px;
   font-size: 0.55rem;
@@ -262,10 +272,43 @@ body {
 }
 .spark svg { width: 100%; height: 80px; display: block; }
 
+/* ── Truman pulse — the score breathes once when a fresh value lands ── */
+@keyframes gateBreath {
+  0%   { text-shadow: 0 0 0 transparent; opacity: 0.55; }
+  40%  { text-shadow: 0 0 14px var(--gate-color, var(--dim)); opacity: 1; }
+  100% { text-shadow: 0 0 0 transparent; opacity: 1; }
+}
+.gate-score.fresh { animation: gateBreath 1.1s var(--ease-sheet, ease) both; }
+
+/* ── Morrison footer — the open loop ── */
+.loop-line {
+  text-align: center;
+  font-family: 'Cormorant Garamond', serif;
+  font-style: italic;
+  font-size: 0.85rem;
+  color: var(--dimmer);
+  letter-spacing: 0.08em;
+  padding: 28px 12px 0;
+}
+
+.progress, .meta { overflow-wrap: anywhere; }
+
 @media (max-width: 600px) {
-  .gates { grid-template-columns: repeat(2, 1fr); }
+  .gates { grid-template-columns: repeat(2, 1fr); gap: 10px; }
   .controls { flex-direction: column; align-items: stretch; }
-  .btn, .engine-pick { width: 100%; justify-content: center; }
+  .btn { width: 100%; }
+  .engine-pick { width: 100%; display: flex; }
+  .engine-pick button { flex: 1; }
+}
+
+@media (max-width: 360px) {
+  .gate { padding: 12px; }
+  .gate-score { font-size: 1.3rem; }
+  .meta, .progress, .spark { padding: 12px 14px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .gate-score.fresh { animation: none; }
 }
 </style>
 </head>
@@ -300,6 +343,8 @@ body {
     <h3>Trend (last 12 runs)</h3>
     <svg id="spark" viewBox="0 0 600 80" preserveAspectRatio="none"></svg>
   </div>
+
+  <div class="loop-line" id="loop-line">the gates are watching. the next run is already owed.</div>
 </div>
 
 <script>
@@ -376,7 +421,7 @@ body {
       div.innerHTML = `
         <div class="gate-id">${g.id.toUpperCase()}</div>
         <div class="gate-title">${g.title}</div>
-        <div class="gate-score">${e ? e.score.toFixed(2) : '—'}</div>
+        <div class="gate-score${e ? ' fresh' : ''}">${e ? e.score.toFixed(2) : '—'}</div>
         <div class="gate-threshold">threshold ${e ? e.threshold : '—'}</div>
         <div class="gate-pill">${label}</div>
       `;
