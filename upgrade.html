@@ -13,23 +13,27 @@
   <script defer src="body/status_pill.js?v=v20260510-pill"></script>
   <script defer src="body/wake_consent.js?v=v20260510-consent"></script>
   <script src="body/identity.js?v=v20260508-resilience"></script>
+  <link rel="stylesheet" href="body/tokens.css?v=v20260613-mobile">
   <style>
     :root { color-scheme: dark; }
     * { margin:0; padding:0; box-sizing:border-box; }
     html, body { overflow-x:hidden; }
     body {
       background:radial-gradient(ellipse at top, #1a1a2e, #050510);
-      color:rgba(255,255,255,0.92); min-height:100vh;
+      color:rgba(255,255,255,0.92); min-height:100svh;
       font-family:'SF Mono', Menlo, 'Roboto Mono', monospace;
-      padding:max(20px, env(safe-area-inset-top)) 20px max(80px, env(safe-area-inset-bottom));
+      padding:max(20px, env(safe-area-inset-top))
+              max(20px, env(safe-area-inset-right))
+              max(80px, env(safe-area-inset-bottom))
+              max(20px, env(safe-area-inset-left));
       line-height:1.55;
     }
     .wrap { max-width:1100px; margin:0 auto; }
     .nav { font-size:12px; color:rgba(255,255,255,0.5); margin-bottom:8px; }
     a { color:rgba(170,200,255,0.85); text-decoration:none; border-bottom:1px dotted rgba(170,200,255,0.4); }
 
-    h1 { font-size:22px; font-weight:300; letter-spacing:0.18em; text-transform:uppercase; margin:24px 0 8px; color:rgba(255,255,255,0.92); }
-    .lead { color:rgba(255,255,255,0.6); font-size:13px; max-width:680px; margin-bottom:8px; }
+    h1 { font-size:var(--fs-fluid-title, clamp(18px, 4vw + 10px, 22px)); font-weight:300; letter-spacing:0.18em; text-transform:uppercase; margin:24px 0 8px; color:rgba(255,255,255,0.92); }
+    .lead { color:rgba(255,255,255,0.6); font-size:var(--fs-fluid-base, 13px); max-width:680px; margin-bottom:8px; }
     .vow {
       display:inline-block; margin-top:14px;
       font-size:11px; letter-spacing:0.12em; text-transform:uppercase;
@@ -46,6 +50,7 @@
     .interval-toggle button {
       background:transparent; color:rgba(255,255,255,0.55);
       border:none; padding:8px 18px; font-size:11px;
+      min-height:var(--tap-min, 44px);
       letter-spacing:0.14em; text-transform:uppercase;
       cursor:pointer; font-family:inherit; border-radius:999px;
       transition:all 200ms ease;
@@ -118,10 +123,12 @@
       background:rgba(120,120,255,0.16); color:rgba(255,255,255,0.96);
       border:1px solid rgba(120,120,255,0.4); border-radius:10px;
       padding:12px 18px; font-size:11px; letter-spacing:0.16em; text-transform:uppercase;
+      min-height:var(--tap-comfort, 48px);
       cursor:pointer; font-family:inherit;
-      transition:background 180ms ease;
+      transition:background 180ms ease, transform 160ms var(--ease-spring, ease);
     }
     .tier button.cta:hover { background:rgba(120,120,255,0.28); }
+    .tier button.cta:active { transform:scale(0.97); }
     .tier.featured button.cta {
       background:rgba(180,140,255,0.22); border-color:rgba(180,140,255,0.5);
     }
@@ -132,6 +139,31 @@
     .tier .current {
       font-size:10px; letter-spacing:0.18em; text-transform:uppercase;
       color:#7eff9b; padding:6px 0; text-align:center;
+    }
+
+    /* ── The stairway: visual weight builds as the ladder ascends ── */
+    .tier--free { border-color:rgba(255,255,255,0.06); }
+    .tier--free .price { color:rgba(255,255,255,0.7); }
+    .tier--companion { border-color:rgba(140,190,255,0.22); }
+    .tier--companion .perks li::before { color:rgba(140,190,255,0.8); }
+    .tier--theater { border-color:rgba(255,150,200,0.25); }
+    .tier--theater .perks li::before { color:rgba(255,150,200,0.8); }
+    .tier--estate {
+      border-color:rgba(255,200,110,0.45);
+      background:linear-gradient(180deg, rgba(255,200,110,0.07), rgba(255,255,255,0.02));
+      box-shadow:var(--shadow-float, 0 6px 18px rgba(0,0,0,0.45));
+    }
+    .tier--estate .price { color:#ffd98f; }
+    .tier--estate .perks li::before { color:rgba(255,200,110,0.85); }
+    .tier--estate button.cta {
+      background:rgba(255,200,110,0.14); border-color:rgba(255,200,110,0.5);
+    }
+    .tier--estate button.cta:hover { background:rgba(255,200,110,0.26); }
+    .tier--estate::after {
+      content:'the part of you that doesn\'t end';
+      display:block; margin-top:2px;
+      font-size:9px; letter-spacing:0.14em; text-transform:uppercase;
+      color:rgba(255,200,110,0.55); text-align:center;
     }
 
     /* Status banner */
@@ -155,9 +187,24 @@
     .footnote strong { color:rgba(255,255,255,0.7); font-weight:500; }
 
     @media (max-width: 720px) {
-      .tier { min-height:auto; }
-      .tier .price { font-size:26px; }
-      h1 { font-size:18px; }
+      .tiers { grid-template-columns:1fr; gap:14px; }
+      .tier { min-height:auto; padding:20px 18px; }
+      .tier .price { font-size:28px; }
+      .tier .desc { min-height:auto; }
+      .interval-toggle { width:100%; justify-content:center; }
+      .interval-toggle button { flex:1; padding:8px 10px; }
+      .save-pill { margin-left:6px; }
+      /* CTA stays in the thumb zone of each stacked card — full width */
+      .tier button.cta { width:100%; }
+    }
+    @media (max-width: 360px) {
+      body { padding-left:max(14px, env(safe-area-inset-left)); padding-right:max(14px, env(safe-area-inset-right)); }
+      .tier { padding:18px 14px; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .tier, .tier button.cta, .interval-toggle button { transition:none; }
+      .tier:hover { transform:none; }
+      .tier button.cta:active { transform:none; }
     }
   </style>
   <link rel="stylesheet" href="body/safe_area.css?v=v20260429-council">
@@ -318,7 +365,7 @@
       const tagline = TAGLINES[t.tier] || t.description || '';
 
       const div = document.createElement('div');
-      div.className = 'tier' + (featured ? ' featured' : '');
+      div.className = 'tier tier--' + t.tier + (featured ? ' featured' : '');
       div.innerHTML = `
         <div class="name">${(t.display_name || t.tier).toUpperCase()}</div>
         <div class="price">${price}<small>${sub}</small></div>
