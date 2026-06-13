@@ -203,7 +203,7 @@ body {
   text-transform: uppercase;
   cursor: pointer;
   transition: all 0.25s ease;
-  min-height: 40px;
+  min-height: 44px;
 }
 
 .mode-btn.active {
@@ -564,13 +564,46 @@ input[type=range]::-moz-range-thumb {
   50% { opacity: 1; transform: scale(1); }
 }
 
+/* ── iOS safe area ── */
+.page {
+  padding-bottom: max(80px, calc(60px + env(safe-area-inset-bottom)));
+}
+
+/* ── Prose measure cap: never wider than ~65ch ── */
+.result-content {
+  max-width: 65ch;
+  line-height: 1.72;
+}
+
+/* ── Margin note: Morrison open-loop ── */
+.res-header::after {
+  content: attr(data-resonance-note);
+  display: block;
+  font-family: 'Cormorant Garamond', serif;
+  font-style: italic;
+  font-size: clamp(0.72rem, 1.8vw, 0.82rem);
+  color: var(--text-ghost);
+  letter-spacing: 0.04em;
+  margin-top: 10px;
+  opacity: 0.7;
+  min-height: 1em;
+}
+
 @media (max-width: 480px) {
-  .page { padding: 64px 16px 80px; }
+  .page { padding: 64px 16px max(80px, calc(60px + env(safe-area-inset-bottom))); }
   .panel { padding: 18px 14px; }
   .slider-grid { grid-template-columns: 1fr; gap: 14px; }
   .results-grid { grid-template-columns: 1fr; }
   .mode-toggle { margin-left: 0; margin-right: 0; max-width: 100%; }
   .search-row { flex-direction: column; align-items: flex-start; }
+  /* inline max-width:460px paragraph — clamp it */
+  .panel p[style] { max-width: 100% !important; }
+}
+
+@media (max-width: 340px) {
+  .res-header h1 { letter-spacing: 0.14em; }
+  .mode-toggle { padding: 3px; }
+  .mode-btn { padding: 8px 10px; font-size: 0.5rem; letter-spacing: 0.08em; }
 }
 </style>
 </head>
@@ -815,6 +848,20 @@ async function runSearch() {
 
 // Init
 setMode('current');
+
+// ── MARGIN NOTE: Morrison open-loop (the sonar never fully resolves) ──
+(function resonanceNote() {
+  const h = new Date().getHours();
+  let note = '';
+  if (h < 6) note = 'the body is quietest now — the signal carries furthest';
+  else if (h < 10) note = 'morning neurochemistry skews toward retrieval';
+  else if (h < 14) note = 'the frequency is clearest around this time';
+  else if (h < 18) note = 'the afternoon haze softens the edges of what matches';
+  else if (h < 22) note = 'evenings resonate differently — memory prefers the dark';
+  else note = 'something is still finding its way back at this hour';
+  const hdr = document.querySelector('.res-header');
+  if (hdr) hdr.setAttribute('data-resonance-note', note);
+})();
 </script>
 </body>
 </html>
