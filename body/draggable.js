@@ -123,7 +123,10 @@
     function endDrag() {
       if (!dragging) return;
       dragging = false;
+      // Spring settle: the scale pop releases with overshoot, not a snap
+      el.style.transition = 'transform 180ms cubic-bezier(0.34, 1.56, 0.64, 1)';
       el.style.transform  = '';
+      setTimeout(function () { el.style.transition = ''; }, 200);
       el.style.cursor     = '';
       el.style.zIndex     = '';
       document.body.style.cursor = '';
@@ -212,6 +215,11 @@
   }
   window.addEventListener('resize', reclampAll, { passive: true });
   window.addEventListener('orientationchange', reclampAll, { passive: true });
+  // On-screen keyboard shrinks the VISUAL viewport without firing window
+  // resize on iOS — reclamp there too so no button hides behind the keys.
+  if (window.visualViewport) {
+    window.visualViewport.addEventListener('resize', reclampAll, { passive: true });
+  }
 
   var observer = new MutationObserver(function (mutations) {
     mutations.forEach(function (m) {
@@ -237,5 +245,5 @@
     init();
   }
 
-  window.VintDraggable = { apply: makeDraggable };
+  window.VintDraggable = { apply: makeDraggable, reclamp: reclampAll };
 })();

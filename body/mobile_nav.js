@@ -133,6 +133,10 @@
       `;
       a.addEventListener('mouseenter', () => { if (!isActive) a.style.color = 'rgba(218,228,255,0.85)'; });
       a.addEventListener('mouseleave', () => { if (!isActive) a.style.color = 'rgba(180,200,230,0.55)'; });
+      // Haptic tick on departure — the body acknowledges the touch
+      a.addEventListener('click', () => {
+        try { navigator.vibrate && navigator.vibrate(8); } catch (_) {}
+      });
       bar.appendChild(a);
     }
   }
@@ -169,6 +173,14 @@
         #leftSidebar, #rightSidebar { padding-bottom: calc(var(--mobile-nav-h, 0px) + 24px); }
         /* Top header gets a subtle shadow on mobile so it floats above scroll */
         #topShell { box-shadow: 0 2px 18px rgba(0,0,0,0.45); }
+        /* Tab press: spring pop — glyph lifts, then overshoots back */
+        #mobileBottomBar a:active {
+          transform: translateY(-2px) scale(0.94);
+          transition: transform var(--dur-pop, 180ms) var(--ease-spring, cubic-bezier(0.34,1.56,0.64,1));
+        }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        #mobileBottomBar a, #mobileBottomBar a:active { transition-duration: 1ms !important; }
       }
     `;
     document.head.appendChild(style);
