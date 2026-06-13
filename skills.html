@@ -66,7 +66,8 @@ body {
 .topbar {
   position: fixed;
   top: 0; left: 0; right: 0;
-  height: 48px;
+  height: calc(48px + env(safe-area-inset-top, 0px));
+  padding-top: env(safe-area-inset-top, 0px);
   z-index: 100;
   background: rgba(4, 8, 16, 0.85);
   backdrop-filter: blur(12px);
@@ -74,7 +75,8 @@ body {
   border-bottom: 1px solid var(--border);
   display: flex;
   align-items: center;
-  padding: 0 16px;
+  padding-left: max(16px, env(safe-area-inset-left, 16px));
+  padding-right: max(16px, env(safe-area-inset-right, 16px));
   gap: 12px;
 }
 
@@ -114,8 +116,9 @@ body {
   z-index: 1;
   max-width: 980px;
   margin: 0 auto;
-  padding: 64px 20px 80px;
+  padding: calc(64px + env(safe-area-inset-top, 0px)) 20px calc(80px + env(safe-area-inset-bottom, 0px));
   min-height: 100vh;
+  min-height: 100svh;
 }
 
 /* ── HEADER ── */
@@ -462,14 +465,32 @@ body {
 /* ── RESPONSIVE ── */
 @media (max-width: 768px) {
   .skills-grid { grid-template-columns: repeat(2, 1fr); gap: 12px; }
-  .page { padding: 64px 16px 80px; }
+  .page { padding: calc(64px + env(safe-area-inset-top,0px)) 16px calc(80px + env(safe-area-inset-bottom,0px)); }
 }
 
 @media (max-width: 480px) {
-  .skills-grid { grid-template-columns: 1fr; gap: 12px; }
+  .skills-grid { grid-template-columns: 1fr; gap: 10px; }
   .skill-card { padding: 14px; }
   .skill-name { font-size: 0.98rem; }
   .skill-desc { font-size: 0.7rem; }
+  .skills-header { padding: 20px 0 28px; }
+}
+
+/* ── 375px ── */
+@media (max-width: 375px) {
+  .page { padding: calc(56px + env(safe-area-inset-top,0px)) 12px calc(72px + env(safe-area-inset-bottom,0px)); }
+  .skill-card { padding: 12px; border-radius: 14px; }
+  .skill-name { font-size: 0.92rem; }
+  .domain-badge { font-size: 0.44rem; padding: 2px 6px; }
+}
+
+/* ── 320px ── */
+@media (max-width: 320px) {
+  .page { padding: calc(52px + env(safe-area-inset-top,0px)) 10px calc(68px + env(safe-area-inset-bottom,0px)); }
+  .skills-grid { gap: 8px; }
+  .skill-card { padding: 10px; border-radius: 12px; }
+  .xp-label { display: none; }
+  .domain-count-badge { display: none; }
 }
 </style>
 </head>
