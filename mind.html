@@ -865,6 +865,30 @@ body {
 @media (min-width: 1440px) {
   .page { max-width: 1320px; }
 }
+
+/* ── MEMORY ENTRY: collapse 3-col → stack at 375px ── */
+@media (max-width: 375px) {
+  .memory-entry {
+    grid-template-columns: auto 1fr;
+  }
+  .memory-fresh { display: none; }
+  .evo-day {
+    grid-template-columns: 50px 64px 1fr 20px;
+    gap: 4px;
+    font-size: 0.44rem;
+  }
+  .evo-memory { font-size: 0.7rem; }
+  .crystal-text { font-size: 0.88rem; }
+}
+
+/* ── TOPBAR safe-area ── */
+@media (max-width: 1280px) {
+  /* ensure topbar inner content respects safe areas on all iOS viewports */
+  .page {
+    padding-left: max(20px, env(safe-area-inset-left, 20px));
+    padding-right: max(20px, env(safe-area-inset-right, 20px));
+  }
+}
 </style>
     <!-- API base bootstrap — auto-attaches every visitor to api.vintaclectic.com -->
     <script src="body/api_base.js?v=v20260429-council"></script>
