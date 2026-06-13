@@ -119,6 +119,37 @@
   --z-nodes:       70;
   --z-tooltips:    90;
   --z-modal:      100;
+
+  /* ── Mobile shell z-stack (matches shell.css/mobile_nav.js literals — do
+        not change the numbers, they are the shipped contract) ───────────── */
+  --z-scrim:       90;   /* .vtn-sheet-scrim                                */
+  --z-pill:        95;   /* .vtn-mobile-pill floating toggles               */
+  --z-sheet:      100;   /* .vtn-sidebar-* bottom sheets when open          */
+  --z-nav:        100;   /* #mobileBottomBar 5-tab nav                      */
+
+  /* ── Touch ergonomics ───────────────────────────────────────────────── */
+  --tap-min:      44px;  /* Apple HIG floor — non-negotiable                */
+  --tap-comfort:  48px;  /* primary actions in the thumb zone              */
+  --tap-gap:      8px;   /* minimum gutter between adjacent targets        */
+
+  /* ── Fluid type — holds at 320px, breathes to desktop ───────────────── */
+  --fs-fluid-sm:    clamp(12px, 0.6vw + 10px, 13px);
+  --fs-fluid-base:  clamp(13px, 0.8vw + 11px, 15px);
+  --fs-fluid-lg:    clamp(15px, 1.2vw + 12px, 18px);
+  --fs-fluid-xl:    clamp(18px, 2vw + 13px, 24px);
+  --fs-fluid-title: clamp(22px, 4vw + 12px, 36px);
+  --fs-fluid-hero:  clamp(2.4rem, 11.5vw, 9rem);
+
+  /* ── Motion — the pop and the glide ─────────────────────────────────── */
+  --ease-spring:  cubic-bezier(0.34, 1.56, 0.64, 1);  /* overshoot pop      */
+  --ease-sheet:   cubic-bezier(0.32, 0.72, 0, 1);     /* iOS-sheet glide    */
+  --dur-pop:      180ms;
+  --dur-sheet:    320ms;
+
+  /* ── Elevation — dark-void shadows, one per altitude ────────────────── */
+  --shadow-float: 0 6px 18px rgba(0, 0, 0, 0.45);
+  --shadow-sheet: 0 -12px 40px rgba(0, 0, 0, 0.55);
+  --shadow-pop:   0 2px 10px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(124, 207, 255, 0.10);
 }
 
 /* Utility classes shared across UI modules */
