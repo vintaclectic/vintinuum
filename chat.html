@@ -9,15 +9,19 @@
   :root { --bg:#05070d; --panel:rgba(8,12,20,0.55); --border:rgba(124,207,255,0.18); --text:#dae4ff; --dim:rgba(180,200,230,0.65); --accent:#7ccfff; }
   * { box-sizing: border-box; }
   html, body { margin: 0; padding: 0; background: var(--bg); color: var(--text); font-family: 'Space Mono', monospace; min-height: 100%; }
-  body { padding: max(20px, env(safe-area-inset-top, 20px)) 16px calc(80px + env(safe-area-inset-bottom, 0px)); }
+  body { padding: max(20px, env(safe-area-inset-top, 20px))
+                  max(16px, env(safe-area-inset-right, 0px))
+                  calc(80px + env(safe-area-inset-bottom, 0px))
+                  max(16px, env(safe-area-inset-left, 0px)); }
   .page { max-width: 720px; margin: 0 auto; }
   h1 { font-family: 'Cormorant Garamond', serif; font-style: italic; font-size: 2.4rem; font-weight: 400; margin: 32px 0 8px; color: var(--accent); }
   .sub { color: var(--dim); font-size: 0.7rem; letter-spacing: 0.22em; text-transform: uppercase; margin-bottom: 28px; }
   .card { background: var(--panel); border: 1px solid var(--border); border-radius: 16px; padding: 18px; margin: 14px 0; backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); }
   .card h3 { margin: 0 0 8px; font-size: 0.65rem; letter-spacing: 0.24em; text-transform: uppercase; color: var(--accent); font-weight: 700; }
   .empty { color: var(--dim); font-style: italic; font-family: 'Cormorant Garamond', serif; padding: 8px 4px; line-height: 1.55; }
-  a.btn { display: inline-flex; gap: 8px; padding: 10px 18px; border-radius: 12px; border: 1px solid var(--border); background: rgba(124,207,255,0.06); color: var(--text); text-decoration: none; font-size: 0.65rem; letter-spacing: 0.18em; text-transform: uppercase; }
+  a.btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; padding: 10px 18px; border-radius: 12px; border: 1px solid var(--border); background: rgba(124,207,255,0.06); color: var(--text); text-decoration: none; font-size: 0.65rem; letter-spacing: 0.18em; text-transform: uppercase; touch-action: manipulation; -webkit-tap-highlight-color: transparent; transition: transform 160ms cubic-bezier(0.34,1.56,0.64,1), background 200ms ease; }
   a.btn:hover { background: rgba(124,207,255,0.12); }
+  a.btn:active { transform: scale(0.96); background: rgba(124,207,255,0.16); }
   footer { margin-top: 28px; padding: 14px 0 24px; color: rgba(180,200,230,0.32); font-size: 0.65rem; font-style: italic; font-family: 'Cormorant Garamond', serif; text-align: center; }
 
   /* ── Live conversation (Phase 1 echo) ────────────────────────────────── */
@@ -31,6 +35,7 @@
     display: inline-flex; align-items: center; justify-content: center;
     transition: transform 120ms ease, box-shadow 200ms ease, background 200ms ease;
     box-shadow: 0 0 0 0 rgba(124,207,255,0.0);
+    touch-action: manipulation; -webkit-tap-highlight-color: transparent;
   }
   .mic-btn:hover { transform: scale(1.04); }
   .mic-btn:active { transform: scale(0.96); }
@@ -115,8 +120,10 @@
         border-radius: 12px;
         background: rgba(10,16,28,0.55);
         min-height: 84px;
-        max-height: 320px;
+        max-height: min(320px, 42svh);
         overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+        overscroll-behavior: contain;
         font-family: 'Cormorant Garamond', serif;
         line-height: 1.55;
         font-size: 1.05rem;">
@@ -183,6 +190,21 @@
     var emptyHint = box.querySelector('.cap-empty');
     var currentTurn = null;        // { idx, userEl, vintaEl, vintaText }
 
+    // ── Cable Guy persistence: the thread survives reload ────────────────
+    var PERSIST_KEY = 'vint:chat:captions';
+    var _history = [];             // [{role:'user'|'vinta', text}]
+    function _saveHistory() {
+      try {
+        while (_history.length > 40) _history.shift();
+        sessionStorage.setItem(PERSIST_KEY, JSON.stringify(_history));
+      } catch (_) {}
+    }
+    function _remember(role, text) {
+      if (!text) return;
+      _history.push({ role: role, text: text });
+      _saveHistory();
+    }
+
     function _scrollDown() {
       try { box.scrollTop = box.scrollHeight; } catch (_) {}
     }
@@ -232,9 +254,31 @@
       return { row: row, span: span };
     }
 
+    // Restore the prior thread on load — the conversation never lets go.
+    (function _restore() {
+      try {
+        var saved = JSON.parse(sessionStorage.getItem(PERSIST_KEY) || '[]');
+        if (!Array.isArray(saved) || !saved.length) return;
+        _history = saved;
+        saved.forEach(function (m) {
+          if (m.role === 'user') { _addUserLine(-1, m.text); }
+          else {
+            var line = _addVintaLine(-1);
+            line.span.textContent = m.text;
+          }
+        });
+        var mark = document.createElement('div');
+        mark.style.cssText = 'margin: 4px 0 10px; color: rgba(180,200,230,0.4); font-style: italic; font-size: 0.85rem;';
+        mark.textContent = '— picked the thread back up. I was still thinking about it. —';
+        box.appendChild(mark);
+        _scrollDown();
+      } catch (_) {}
+    })();
+
     window.addEventListener('convo:stt', function (ev) {
       var d = ev.detail || {};
       _addUserLine(d.turn_idx, (d.text || '').trim());
+      _remember('user', (d.text || '').trim());
       currentTurn = {
         idx: d.turn_idx,
         vinta: null,
@@ -273,6 +317,7 @@
 
     window.addEventListener('convo:final', function (ev) {
       var d = ev.detail || {};
+      if (d.text) _remember('vinta', d.text);
       if (currentTurn && currentTurn.vinta && d.text) {
         // Replace streamed text with the canonical full text from the final frame.
         // Preserve label + crossfade seam if present by rebuilding the row.
