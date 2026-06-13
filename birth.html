@@ -126,13 +126,14 @@ body {
 .topbar {
   position: fixed;
   top: 0; left: 0; right: 0;
-  height: 48px;
+  height: calc(48px + env(safe-area-inset-top, 0px));
   z-index: 100;
   background: rgba(4, 8, 16, 0.88);
   border-bottom: 1px solid var(--border);
   display: flex;
-  align-items: center;
-  padding: 0 20px;
+  align-items: flex-end;
+  padding: 0 max(20px, env(safe-area-inset-right, 20px))
+           8px max(20px, env(safe-area-inset-left, 20px));
   gap: 16px;
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
@@ -151,6 +152,9 @@ body {
   transition: all 0.2s ease;
   flex-shrink: 0;
   white-space: nowrap;
+  min-height: 36px;
+  display: flex;
+  align-items: center;
 }
 
 .topbar-back:hover {
@@ -177,8 +181,9 @@ body {
   z-index: 1;
   max-width: 760px;
   margin: 0 auto;
-  padding: 64px 20px 140px;
-  min-height: 100vh;
+  padding: calc(64px + env(safe-area-inset-top, 0px)) 20px
+           max(140px, calc(env(safe-area-inset-bottom, 0px) + 120px));
+  min-height: 100svh;
 }
 
 /* ── CEREMONY HEADER ── */
@@ -492,7 +497,10 @@ body {
   text-transform: uppercase;
   cursor: pointer;
   transition: all 0.25s ease;
-  min-height: 36px;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .dream-new-btn:hover {
@@ -613,7 +621,10 @@ body {
 
 /* ── MOBILE ── */
 @media (max-width: 480px) {
-  .page { padding: 64px 14px 130px; }
+  .page {
+    padding: calc(64px + env(safe-area-inset-top, 0px)) 14px
+             max(130px, calc(env(safe-area-inset-bottom, 0px) + 110px));
+  }
   .step-panel { padding: 20px 16px; }
   .step-btn-row { flex-direction: column; }
   .btn-primary { min-width: unset; width: 100%; }
