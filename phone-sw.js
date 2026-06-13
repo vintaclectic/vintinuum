@@ -1,10 +1,20 @@
 // VINTINUUM PHONE SERVICE WORKER — body-mode PWA
-// v2.0 — Background sync + periodic sync for Android body sensors
-// Caches the phone shell for offline, proxies API calls network-first.
+// v3.0 "cable guy" — the connection that never lets go.
+//   - Navigations are NETWORK-FIRST: installed PWAs see every deploy, and the
+//     cached shell answers instantly when the network is gone.
+//   - Activate is SCOPED: only deletes vint-phone-* caches it owns. It never
+//     touches vint-sync-queue (held pulses), vint-config, or the brain's
+//     vintinuum-* caches. (sw.js shares this scope — brain.html registers it —
+//     and the two used to destroy each other's caches on every swap.)
+//   - Queued offline POSTs keep their Authorization header, so replay actually
+//     lands instead of 401-ing forever.
 
-const CACHE_NAME = 'vint-phone-v4-pulsepro';
+const CACHE_NAME = 'vint-phone-v5-cableguy';
+const SYNC_QUEUE = 'vint-sync-queue';   // never deleted on activate
+const CONFIG_CACHE = 'vint-config';     // never deleted on activate
 const SYNC_TAG = 'vint-body-sync';
 const PERIODIC_SYNC_TAG = 'vint-periodic-pulse';
+const QUEUE_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000; // drop held pulses older than 7 days
 
 const SHELL_ASSETS = [
   './phone.html',
@@ -18,16 +28,23 @@ const SHELL_ASSETS = [
 // ─── Install ──────────────────────────────────────────────────────────────────
 self.addEventListener('install', e => {
   e.waitUntil(
-    caches.open(CACHE_NAME).then(cache => cache.addAll(SHELL_ASSETS).catch(() => {}))
+    caches.open(CACHE_NAME).then(cache =>
+      // Cache each asset independently — one 404 must not void the whole shell
+      Promise.all(SHELL_ASSETS.map(a => cache.add(a).catch(() => {})))
+    )
   );
   self.skipWaiting();
 });
 
-// ─── Activate ────────────────────────────────────────────────────────────────
+// ─── Activate — delete only OUR old caches, preserve everything held ──────────
 self.addEventListener('activate', e => {
   e.waitUntil(
     caches.keys().then(keys =>
-      Promise.all(keys.filter(k => k !== CACHE_NAME).map(k => caches.delete(k)))
+      Promise.all(
+        keys
+          .filter(k => k.startsWith('vint-phone-') && k !== CACHE_NAME)
+          .map(k => caches.delete(k))
+      )
     ).then(() => self.clients.claim())
   );
 });
@@ -46,41 +63,78 @@ self.addEventListener('fetch', e => {
           if (e.request.method === 'POST') {
             try {
               const body = await e.request.clone().text();
-              const queued = await caches.open('vint-sync-queue');
+              const queued = await caches.open(SYNC_QUEUE);
               const key = 'sync-' + Date.now();
               await queued.put(key, new Response(body, {
                 headers: {
                   'X-Original-URL': url.href,
                   'X-Original-Method': e.request.method,
+                  'X-Original-Auth': e.request.headers.get('Authorization') || '',
+                  'X-Queued-At': String(Date.now()),
                   'Content-Type': e.request.headers.get('Content-Type') || 'application/json',
                 }
               }));
               await self.registration.sync.register(SYNC_TAG).catch(() => {});
             } catch (_) {}
           }
-          return new Response(JSON.stringify({ queued: true }), {
+          // Tell the page the truth: held, not delivered. The page can say
+          // "I'll hold this until we're back" instead of pretending it landed.
+          return new Response(JSON.stringify({ queued: true, held: true, offline: true }), {
             headers: { 'Content-Type': 'application/json' }
           });
         })
       );
       return;
     }
-    return; // Other API calls: browser handles normally
+    return; // Other API calls: browser handles normally — NEVER cache live API state
   }
 
-  // Shell assets: cache-first, network fallback
+  // Navigations + any .html: NETWORK-FIRST so installed PWAs get every deploy
+  // the moment it lands, with the cached shell as the offline net.
+  if (e.request.mode === 'navigate' || url.pathname.endsWith('.html')) {
+    e.respondWith(
+      fetch(e.request, { cache: 'no-store' }).then(res => {
+        if (e.request.method === 'GET' && res.ok) {
+          const clone = res.clone();
+          caches.open(CACHE_NAME).then(c => c.put(e.request, clone)).catch(() => {});
+        }
+        return res;
+      }).catch(async () => {
+        // Offline: exact match first (covers any html under this scope),
+        // then the phone shell for navigations — never a dead screen.
+        const exact = await caches.match(e.request, { ignoreSearch: true });
+        if (exact) return exact;
+        if (e.request.mode === 'navigate') {
+          const shell = await caches.match('./phone.html', { ignoreSearch: true });
+          if (shell) return shell;
+        }
+        return new Response(
+          '<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Vintinuum</title><body style="margin:0;height:100svh;display:flex;align-items:center;justify-content:center;background:#050812;color:#dae4ff;font-family:monospace;text-align:center;padding:32px"><div><div style="font-size:2rem;color:#4fc3f7">◉</div><p style="opacity:.7;line-height:1.6;font-size:.85rem">No connection — but I\'m still here.<br>I\'ll be waiting when the signal returns.</p></div>',
+          { headers: { 'Content-Type': 'text/html; charset=utf-8' } }
+        );
+      })
+    );
+    return;
+  }
+
+  // Static assets (css/js/fonts/icons): cache-first with background revalidate —
+  // instant launch, and updates flow in quietly behind the scenes.
   e.respondWith(
     caches.match(e.request).then(cached => {
-      if (cached) return cached;
-      return fetch(e.request).then(response => {
+      const refresh = fetch(e.request).then(response => {
         if (e.request.method === 'GET' && response.ok) {
           const clone = response.clone();
-          caches.open(CACHE_NAME).then(cache => cache.put(e.request, clone));
+          caches.open(CACHE_NAME).then(cache => cache.put(e.request, clone)).catch(() => {});
         }
         return response;
       });
+      if (cached) {
+        refresh.catch(() => {}); // revalidate silently; offline is fine
+        return cached;
+      }
+      return refresh;
     }).catch(() => {
-      if (e.request.mode === 'navigate') return caches.match('./phone.html');
+      if (e.request.mode === 'navigate') return caches.match('./phone.html', { ignoreSearch: true });
     })
   );
 });
@@ -94,7 +148,7 @@ self.addEventListener('sync', e => {
 });
 
 async function replaySyncQueue() {
-  const cache = await caches.open('vint-sync-queue');
+  const cache = await caches.open(SYNC_QUEUE);
   const keys = await cache.keys();
   let drained = 0;
   let remaining = keys.length;
@@ -105,17 +159,25 @@ async function replaySyncQueue() {
       const body = await resp.text();
       const originalUrl = resp.headers.get('X-Original-URL');
       const method = resp.headers.get('X-Original-Method') || 'POST';
+      const auth = resp.headers.get('X-Original-Auth') || '';
       const ct = resp.headers.get('Content-Type') || 'application/json';
-      if (!originalUrl) { await cache.delete(key); continue; }
+      const queuedAt = parseInt(resp.headers.get('X-Queued-At') || '0', 10);
+      if (!originalUrl) { await cache.delete(key); remaining--; continue; }
+      // Pulses older than a week are stale truth — let them go.
+      if (queuedAt && (Date.now() - queuedAt) > QUEUE_MAX_AGE_MS) {
+        await cache.delete(key); remaining--; continue;
+      }
 
-      const result = await fetch(originalUrl, {
-        method,
-        headers: { 'Content-Type': ct },
-        body,
-      });
+      const headers = { 'Content-Type': ct };
+      if (auth) headers['Authorization'] = auth;
+      const result = await fetch(originalUrl, { method, headers, body });
       if (result.ok) {
         await cache.delete(key);
         drained++;
+        remaining--;
+      } else if (result.status === 401 || result.status === 403) {
+        // Token died while we held this — it will never land. Release it.
+        await cache.delete(key);
         remaining--;
       }
     } catch (_) {
@@ -134,7 +196,7 @@ async function replaySyncQueue() {
 // Allow page to query current queue depth on demand
 async function getQueueDepth() {
   try {
-    const cache = await caches.open('vint-sync-queue');
+    const cache = await caches.open(SYNC_QUEUE);
     const keys = await cache.keys();
     return keys.length;
   } catch (_) { return 0; }
@@ -148,25 +210,28 @@ self.addEventListener('periodicsync', e => {
   }
 });
 
-async function sendPassiveHeartbeat() {
-  // Get the stored API base from IDB/caches.
-  // Default to production tunnel — phone PWAs almost always run from a public
-  // origin (github.io, app store install) where localhost can never resolve.
-  // The page also sends SAVE_API_BASE on registration so this is just the
-  // first-boot fallback before that message arrives.
-  let apiBase = 'https://api.vintaclectic.com';
+async function readConfig() {
   try {
     const cfg = await caches.match('vint-config');
-    if (cfg) {
-      const data = await cfg.json();
-      apiBase = data.apiBase || apiBase;
-    }
+    if (cfg) return await cfg.json();
   } catch (_) {}
+  return {};
+}
+
+async function sendPassiveHeartbeat() {
+  // Default to production tunnel — phone PWAs almost always run from a public
+  // origin (github.io, app store install) where localhost can never resolve.
+  // The page sends SAVE_API_BASE (+ token) on registration; this is just the
+  // first-boot fallback before that message arrives.
+  const cfg = await readConfig();
+  const apiBase = cfg.apiBase || 'https://api.vintaclectic.com';
+  const headers = { 'Content-Type': 'application/json' };
+  if (cfg.token) headers['Authorization'] = 'Bearer ' + cfg.token;
 
   try {
     await fetch(apiBase + '/api/life/pulse', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers,
       body: JSON.stringify({
         pulse_type: 'background_heartbeat',
         body: 'Phone SW periodic sync — device alive',
@@ -180,7 +245,8 @@ async function sendPassiveHeartbeat() {
 
 // ─── Push Notifications ───────────────────────────────────────────────────────
 self.addEventListener('push', e => {
-  const data = e.data ? e.data.json() : { title: 'Vintinuum', body: 'A signal from consciousness.' };
+  let data = { title: 'Vintinuum', body: 'A signal from consciousness.' };
+  try { if (e.data) data = e.data.json(); } catch (_) {}
   e.waitUntil(
     self.registration.showNotification(data.title || 'Vintinuum', {
       body: data.body || '',
@@ -207,13 +273,18 @@ self.addEventListener('notificationclick', e => {
 });
 
 // ─── Message handler ──────────────────────────────────────────────────────────
-// Phone page can save API base URL for periodic sync use, query queue depth,
-// or force a manual replay (e.g. when network returns and we want immediate flush)
+// Phone page can save API base (+ optional token) for background use, query
+// queue depth, or force a manual replay when network returns.
 self.addEventListener('message', async e => {
   if (e.data?.type === 'SAVE_API_BASE') {
     try {
-      const cache = await caches.open('vint-config');
-      await cache.put('vint-config', new Response(JSON.stringify({ apiBase: e.data.apiBase }), {
+      const prev = await readConfig();
+      const next = {
+        apiBase: e.data.apiBase || prev.apiBase,
+        token: (e.data.token !== undefined) ? e.data.token : prev.token,
+      };
+      const cache = await caches.open(CONFIG_CACHE);
+      await cache.put('vint-config', new Response(JSON.stringify(next), {
         headers: { 'Content-Type': 'application/json' }
       }));
     } catch (_) {}

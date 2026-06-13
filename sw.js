@@ -2,7 +2,7 @@
 // Intercepts all requests, forces fresh brain.js/brain.html on every deploy,
 // caches assets intelligently, and acts as a local proxy layer.
 
-const CACHE_NAME = 'vintinuum-v20260514-2230';
+const CACHE_NAME = 'vintinuum-v20260613-0010';
 const BRAIN_ASSETS = ['/vintinuum/brain.html', '/vintinuum/brain.js'];
 
 // ── Install: pre-cache nothing (fetch-first strategy) ──
@@ -10,11 +10,20 @@ self.addEventListener('install', e => {
   self.skipWaiting(); // activate immediately, don't wait for old SW to die
 });
 
-// ── Activate: delete all old caches ──
+// ── Activate: delete only OUR old caches ──
+// phone-sw.js shares this scope (phone.html registers it; registering either
+// replaces the other). The old "delete everything not mine" purge destroyed
+// the phone's vint-sync-queue (held offline pulses), vint-config, and shell
+// cache on every swap. Scope the cleanup to vintinuum-* so the two SWs can
+// trade control without destroying each other's held state.
 self.addEventListener('activate', e => {
   e.waitUntil(
     caches.keys().then(keys =>
-      Promise.all(keys.filter(k => k !== CACHE_NAME).map(k => caches.delete(k)))
+      Promise.all(
+        keys
+          .filter(k => k.startsWith('vintinuum-') && k !== CACHE_NAME)
+          .map(k => caches.delete(k))
+      )
     ).then(() => self.clients.claim()) // take control of all open tabs immediately
   );
 });
@@ -49,8 +58,8 @@ self.addEventListener('fetch', e => {
     return;
   }
 
-  // Static assets (fonts, icons, etc.) — cache-first
-  if (url.origin === location.origin) {
+  // Static assets (fonts, icons, etc.) — cache-first (GET only; cache.put throws on POST)
+  if (url.origin === location.origin && e.request.method === 'GET') {
     e.respondWith(
       caches.match(e.request).then(cached => {
         if (cached) return cached;
