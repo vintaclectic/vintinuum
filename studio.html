@@ -50,15 +50,16 @@ body {
 .topbar {
   position: fixed;
   top: 0; left: 0; right: 0;
-  height: 48px;
+  height: calc(48px + env(safe-area-inset-top, 0px));
   z-index: 100;
   background: rgba(4, 8, 16, 0.92);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   border-bottom: 1px solid var(--border);
   display: flex;
-  align-items: center;
-  padding: 0 16px;
+  align-items: flex-end;
+  padding: 0 max(16px, env(safe-area-inset-right, 16px))
+           8px max(16px, env(safe-area-inset-left, 16px));
   gap: 12px;
 }
 
@@ -74,6 +75,9 @@ body {
   border-radius: 20px;
   transition: all 0.2s ease;
   white-space: nowrap;
+  min-height: 36px;
+  display: flex;
+  align-items: center;
 }
 .topbar-back:hover { color: var(--text); border-color: rgba(255,255,255,0.15); }
 
@@ -109,8 +113,9 @@ body {
   z-index: 1;
   max-width: 1100px;
   margin: 0 auto;
-  padding: 64px 20px 40px;
-  min-height: 100vh;
+  padding: calc(64px + env(safe-area-inset-top, 0px)) 20px
+           max(40px, calc(env(safe-area-inset-bottom, 0px) + 24px));
+  min-height: 100svh;
 }
 
 /* ── HEADER ── */
@@ -350,7 +355,8 @@ input[type=range]::-moz-range-thumb {
 .input-field {
   flex: 1;
   font-family: 'JetBrains Mono', monospace;
-  font-size: 0.65rem;
+  /* 16px minimum prevents iOS auto-zoom on focus */
+  font-size: max(0.65rem, 16px);
   letter-spacing: 0.06em;
   background: rgba(255,255,255,0.04);
   border: 1px solid var(--border);
@@ -488,7 +494,9 @@ input[type=range]::-moz-range-thumb {
   color: var(--text-dim);
   cursor: pointer;
   transition: all 0.2s;
-  min-height: 32px;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
 }
 .btn-sm:hover { color: var(--text); border-color: rgba(255,255,255,0.14); }
 .btn-sm.apply:hover { color: var(--serotonin); border-color: rgba(64, 224, 160, 0.3); }
@@ -506,7 +514,7 @@ input[type=range]::-moz-range-thumb {
 /* ── TOAST ── */
 .toast {
   position: fixed;
-  bottom: 24px;
+  bottom: max(24px, calc(env(safe-area-inset-bottom, 0px) + 16px));
   left: 50%;
   transform: translateX(-50%) translateY(20px);
   background: rgba(10, 14, 22, 0.92);
