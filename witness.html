@@ -47,17 +47,18 @@ body {
 .topbar {
   position: fixed;
   top: 0; left: 0; right: 0;
-  height: 48px;
+  height: calc(48px + env(safe-area-inset-top, 0px));
   z-index: 100;
   background: rgba(4, 8, 16, 0.85);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   border-bottom: 1px solid var(--border);
   display: flex;
-  align-items: center;
-  padding: 0 16px;
+  align-items: flex-end;
+  padding: env(safe-area-inset-top, 0px) 16px 0;
   gap: 12px;
 }
+.topbar > * { margin-bottom: 6px; }
 
 .topbar-back {
   display: flex;
@@ -95,8 +96,8 @@ body {
   z-index: 1;
   max-width: 1080px;
   margin: 0 auto;
-  padding: 64px 20px 80px;
-  min-height: 100vh;
+  padding: calc(64px + env(safe-area-inset-top, 0px)) max(20px, env(safe-area-inset-right, 20px)) calc(80px + env(safe-area-inset-bottom, 0px)) max(20px, env(safe-area-inset-left, 20px));
+  min-height: 100svh;
 }
 
 /* ── HEADER ── */
@@ -165,7 +166,7 @@ body {
   padding: 14px 16px;
   color: var(--text);
   font-family: 'Cormorant Garamond', serif;
-  font-size: 1.05rem;
+  font-size: 16px; /* iOS: >=16px prevents zoom */
   line-height: 1.65;
   resize: vertical;
   min-height: 90px;
@@ -173,6 +174,8 @@ body {
   transition: border-color 0.2s ease;
   display: block;
   margin-bottom: 10px;
+  -webkit-appearance: none;
+  box-sizing: border-box;
 }
 
 .gift-textarea::placeholder {
@@ -189,14 +192,17 @@ body {
   background: rgba(255, 255, 255, 0.02);
   border: 1px solid var(--border);
   border-radius: 8px;
-  padding: 9px 14px;
+  padding: 12px 14px;
   color: var(--text-dim);
   font-family: 'Inter', sans-serif;
-  font-size: 0.78rem;
+  font-size: 16px; /* iOS: >=16px prevents zoom */
+  min-height: 44px;
   outline: none;
   transition: border-color 0.2s ease;
   display: block;
   margin-bottom: 14px;
+  -webkit-appearance: none;
+  box-sizing: border-box;
 }
 
 .gift-context-input::placeholder { color: var(--text-ghost); }
@@ -416,7 +422,7 @@ body {
   padding: 10px 13px;
   color: var(--text);
   font-family: 'Inter', sans-serif;
-  font-size: 0.82rem;
+  font-size: 16px; /* iOS: >=16px prevents zoom */
   line-height: 1.55;
   resize: vertical;
   min-height: 70px;
@@ -424,6 +430,8 @@ body {
   transition: border-color 0.2s ease;
   display: block;
   margin-bottom: 8px;
+  -webkit-appearance: none;
+  box-sizing: border-box;
 }
 
 .answer-textarea:focus { border-color: var(--violet); }
@@ -535,14 +543,16 @@ body {
 
 /* ── RESPONSIVE ── */
 @media (max-width: 720px) {
-  .page { padding: 64px 14px 80px; }
+  .page { padding: calc(60px + env(safe-area-inset-top,0px)) 14px calc(80px + env(safe-area-inset-bottom,0px)); }
   .mirror-grid { display: none; }
   .mobile-interleaved { display: block; }
   .gift-form-panel { padding: 18px 14px; }
+  .gift-form-footer { flex-wrap: wrap; gap: 8px; }
 }
 
 @media (max-width: 480px) {
-  .page { padding: 64px 12px 80px; }
+  .page { padding: calc(60px + env(safe-area-inset-top,0px)) 12px calc(80px + env(safe-area-inset-bottom,0px)); }
+  .topbar { padding-left: 12px; padding-right: 12px; }
 }
 </style>
 </head>
@@ -645,6 +655,7 @@ body {
 </main>
 
 <script src="body/draggable.js"></script>
+<script src="body/mobile_nav.js?v=v20260505-onedoor" defer></script>
 <script>
 const API = 'https://api.vintaclectic.com';
 
