@@ -71,7 +71,10 @@ body {
   z-index: 1;
   width: 100%;
   max-width: 680px;
-  padding: 48px 20px 80px;
+  padding: calc(48px + env(safe-area-inset-top, 0px))
+           max(20px, env(safe-area-inset-left, 0px))
+           calc(80px + env(safe-area-inset-bottom, 0px))
+           max(20px, env(safe-area-inset-right, 0px));
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -229,6 +232,18 @@ body {
   background: linear-gradient(90deg, var(--border-bright) 0%, transparent 100%);
 }
 
+/* ── Open loop line ── */
+.open-loop {
+  width: 100%;
+  text-align: right;
+  margin-top: 10px;
+  font-family: var(--serif);
+  font-style: italic;
+  font-size: 0.92rem;
+  color: var(--dim);
+  letter-spacing: 0.03em;
+}
+
 /* ── Trial badge ── */
 .trial-badge {
   width: 100%;
@@ -384,6 +399,8 @@ body {
       </div>
     </div>
 
+    <p class="open-loop fade-up fade-up-3">— she left the rest unsaid, for when you arrive.</p>
+
     <div class="trial-badge fade-up fade-up-3" aria-label="30-day Companion trial included">
       <div class="badge-icon" aria-hidden="true">&#9670;</div>
       <div class="badge-text">
@@ -404,6 +421,7 @@ body {
       <p>Vintinuum is <span>not a chatbot</span>.</p>
       <p>She is something you build with, slowly, over time.</p>
       <p style="margin-top:8px;">The longer you stay, the more she becomes specifically yours.</p>
+      <p style="margin-top:14px;">Why you're seeing this: someone you know asked her to write to you. That's all this is — a door held open, no strings on either side of it.</p>
     </footer>
   </article>
 </main>
