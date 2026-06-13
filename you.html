@@ -17,26 +17,31 @@
   }
   * { box-sizing: border-box; }
   html, body { margin: 0; padding: 0; background: var(--bg); color: var(--text); font-family: 'Space Mono', monospace; min-height: 100%; }
-  /* Top padding clears the shared fixed topbar (body/topbar.js, 56px).
-     Bottom padding clears the mobile bottom nav (mobile_nav.js, 56px + safe area). */
-  body { padding: calc(72px + env(safe-area-inset-top, 0px)) 16px calc(80px + env(safe-area-inset-bottom, 0px)); }
+  /* Top padding clears the shared fixed topbar (body/topbar.js, ~56px + safe-area).
+     Bottom padding clears the mobile bottom nav (mobile_nav.js, 56px + safe-area). */
+  body {
+    padding: calc(64px + env(safe-area-inset-top, 0px)) max(16px, env(safe-area-inset-left, 16px))
+             calc(80px + env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-right, 16px));
+  }
   .page { max-width: 720px; margin: 0 auto; }
-  h1 { font-family: 'Cormorant Garamond', serif; font-style: italic; font-size: 2.4rem; font-weight: 400; letter-spacing: 0.02em; margin: 32px 0 8px; color: var(--accent); }
-  .sub { color: var(--dim); font-size: 0.7rem; letter-spacing: 0.22em; text-transform: uppercase; margin-bottom: 28px; }
-  .card { background: var(--panel); border: 1px solid var(--border); border-radius: 16px; padding: 18px 18px 16px; margin: 14px 0; backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); }
+  h1 { font-family: 'Cormorant Garamond', serif; font-style: italic; font-size: clamp(1.8rem, 6vw, 2.4rem); font-weight: 400; letter-spacing: 0.02em; margin: 24px 0 8px; color: var(--accent); }
+  .sub { color: var(--dim); font-size: 0.7rem; letter-spacing: 0.22em; text-transform: uppercase; margin-bottom: 24px; }
+  .card { background: var(--panel); border: 1px solid var(--border); border-radius: 16px; padding: 16px 16px 14px; margin: 12px 0; backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); }
   .card h3 { margin: 0 0 8px; font-size: 0.65rem; letter-spacing: 0.24em; text-transform: uppercase; color: var(--accent); font-weight: 700; }
-  .row { display: flex; align-items: center; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,0.06); }
+  .row { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 44px; padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,0.06); }
   .row:last-child { border-bottom: none; }
-  .row .k { color: var(--dim); font-size: 0.78rem; }
-  .row .v { color: var(--text); font-size: 0.78rem; font-weight: 700; }
+  .row .k { color: var(--dim); font-size: 0.78rem; flex-shrink: 0; }
+  .row .v { color: var(--text); font-size: 0.78rem; font-weight: 700; word-break: break-all; text-align: right; }
   .pill { display: inline-block; padding: 3px 10px; border-radius: 999px; font-size: 0.6rem; letter-spacing: 0.18em; text-transform: uppercase; border: 1px solid var(--border); color: var(--dim); }
   .pill.live { color: #7cffb4; border-color: rgba(124,255,180,0.35); }
   .pill.dim  { color: rgba(180,180,200,0.5); }
   .empty { color: var(--dim); font-style: italic; font-family: 'Cormorant Garamond', serif; padding: 14px 4px; }
-  .btn { display: inline-flex; align-items: center; gap: 8px; padding: 9px 16px; border-radius: 12px; border: 1px solid var(--border); background: rgba(124,207,255,0.06); color: var(--text); cursor: pointer; font-family: inherit; font-size: 0.65rem; letter-spacing: 0.18em; text-transform: uppercase; }
-  .btn:hover { background: rgba(124,207,255,0.12); }
+  .btn { display: inline-flex; align-items: center; gap: 8px; padding: 10px 16px; min-height: 44px; border-radius: 12px; border: 1px solid var(--border); background: rgba(124,207,255,0.06); color: var(--text); cursor: pointer; font-family: inherit; font-size: 0.65rem; letter-spacing: 0.18em; text-transform: uppercase; -webkit-tap-highlight-color: transparent; }
+  .btn:active { background: rgba(124,207,255,0.14); }
   .btn[disabled] { opacity: 0.4; cursor: not-allowed; }
   footer { margin-top: 28px; padding: 14px 0 24px; color: rgba(180,200,230,0.32); font-size: 0.65rem; font-style: italic; font-family: 'Cormorant Garamond', serif; text-align: center; }
+  /* ── PAIR MODAL ── stays inside viewport, never overflows */
+  #pairModal > div { max-height: calc(100svh - 40px); overflow-y: auto; -webkit-overflow-scrolling: touch; }
 </style>
 <script src="body/api_base.js?v=v20260505-onedoor"></script>
 <script src="body/shell.js?v=v20260507-resilience"></script>
@@ -99,8 +104,8 @@
   </div>
 
   <!-- Pairing modal -->
-  <div id="pairModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);backdrop-filter:blur(8px);z-index:500;align-items:center;justify-content:center;padding:20px;">
-    <div style="background:#0a0e18;border:1px solid var(--border);border-radius:18px;padding:24px;max-width:380px;width:100%;text-align:center;">
+  <div id="pairModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);backdrop-filter:blur(8px);z-index:500;align-items:center;justify-content:center;padding:max(20px,env(safe-area-inset-top,20px)) 20px max(20px,env(safe-area-inset-bottom,20px));">
+    <div style="background:#0a0e18;border:1px solid var(--border);border-radius:18px;padding:24px;max-width:380px;width:100%;text-align:center;max-height:calc(100svh - 80px);overflow-y:auto;-webkit-overflow-scrolling:touch;">
       <h3 style="margin:0 0 12px;font-size:0.65rem;letter-spacing:0.24em;text-transform:uppercase;color:var(--accent);">Pair a phone</h3>
       <div id="pairCode" style="font-family:'Space Mono',monospace;font-size:2rem;letter-spacing:0.4em;margin:18px 0;color:var(--text);">—</div>
       <div id="pairCanvas" style="display:flex;justify-content:center;margin:12px 0;"></div>
