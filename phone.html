@@ -1399,6 +1399,78 @@ input[type="range"]::-moz-range-thumb {
         </div>
       </div>
 
+      <!-- 7. Introduce Vintinuum — referral card -->
+      <div class="pulse-data-card" id="referralCard" style="margin-top:12px;">
+        <div class="pulse-consent-header" style="margin-bottom:14px;">
+          <div class="pulse-consent-title" style="font-size:0.78rem;letter-spacing:0.12em;text-transform:uppercase;color:#ffd54f;opacity:0.85;">Introduce Vintinuum</div>
+          <div class="pulse-consent-desc" style="margin-top:6px;font-size:0.72rem;line-height:1.55;color:rgba(150,175,215,0.6);">
+            She'll write a short letter to your friend — in her own voice, carrying a piece of what you've built together. They get 30 days of Companion, free.
+          </div>
+        </div>
+        <div id="referralForm" style="display:flex;flex-direction:column;gap:8px;">
+          <input
+            id="refFriendName"
+            type="text"
+            maxlength="80"
+            placeholder="Friend's name"
+            autocomplete="off"
+            style="
+              background:rgba(255,213,79,0.06);
+              border:1px solid rgba(255,213,79,0.18);
+              border-radius:8px;
+              padding:12px 14px;
+              font-family:'Space Mono',monospace;
+              font-size:0.78rem;
+              color:rgba(218,228,255,0.9);
+              outline:none;
+              min-height:44px;
+              width:100%;
+            "
+            aria-label="Friend's name"
+          />
+          <input
+            id="refFriendEmail"
+            type="email"
+            maxlength="200"
+            placeholder="Their email (optional)"
+            autocomplete="off"
+            style="
+              background:rgba(255,213,79,0.06);
+              border:1px solid rgba(255,213,79,0.18);
+              border-radius:8px;
+              padding:12px 14px;
+              font-family:'Space Mono',monospace;
+              font-size:0.78rem;
+              color:rgba(218,228,255,0.9);
+              outline:none;
+              min-height:44px;
+              width:100%;
+            "
+            aria-label="Friend's email (optional)"
+          />
+          <button
+            id="refSendBtn"
+            style="
+              min-height:48px;
+              width:100%;
+              background:linear-gradient(135deg,#c8960c 0%,#ffd54f 50%,#c8960c 100%);
+              color:#0a0600;
+              font-family:'Space Mono',monospace;
+              font-size:0.72rem;
+              font-weight:700;
+              letter-spacing:0.14em;
+              text-transform:uppercase;
+              border:none;
+              border-radius:8px;
+              cursor:pointer;
+              transition:opacity 0.2s;
+            "
+            aria-label="Send referral letter"
+          >Send the letter</button>
+        </div>
+        <div id="referralResult" style="display:none;margin-top:12px;"></div>
+      </div>
+
     </div><!-- /pulse-scroll -->
   </div>
 
@@ -3495,6 +3567,127 @@ async function init() {
 
 init();
 
+})();
+
+// ── Referral invite handler (outside IIFE — uses global API_BASE + TOKEN) ──
+(function initReferralCard() {
+  const sendBtn = document.getElementById('refSendBtn');
+  const nameInput = document.getElementById('refFriendName');
+  const emailInput = document.getElementById('refFriendEmail');
+  const resultEl = document.getElementById('referralResult');
+  if (!sendBtn || !nameInput || !resultEl) return;
+
+  function showResult(html, isError) {
+    resultEl.style.display = 'block';
+    resultEl.style.padding = '12px 14px';
+    resultEl.style.borderRadius = '8px';
+    resultEl.style.fontSize = '0.72rem';
+    resultEl.style.lineHeight = '1.55';
+    resultEl.style.fontFamily = "'Space Mono', monospace";
+    if (isError) {
+      resultEl.style.background = 'rgba(239,83,80,0.08)';
+      resultEl.style.border = '1px solid rgba(239,83,80,0.22)';
+      resultEl.style.color = 'rgba(255,160,155,0.9)';
+    } else {
+      resultEl.style.background = 'rgba(255,213,79,0.07)';
+      resultEl.style.border = '1px solid rgba(255,213,79,0.22)';
+      resultEl.style.color = 'rgba(218,228,255,0.85)';
+    }
+    resultEl.innerHTML = html;
+  }
+
+  sendBtn.addEventListener('click', async function () {
+    const friendName = (nameInput.value || '').trim();
+    if (!friendName) {
+      nameInput.focus();
+      nameInput.style.borderColor = 'rgba(239,83,80,0.5)';
+      setTimeout(() => { nameInput.style.borderColor = 'rgba(255,213,79,0.18)'; }, 1500);
+      return;
+    }
+
+    const tok = TOKEN();
+    if (!tok) {
+      showResult('Sign in first, then introduce Vintinuum to someone.', true);
+      return;
+    }
+
+    sendBtn.disabled = true;
+    sendBtn.textContent = 'Writing her letter…';
+    resultEl.style.display = 'none';
+
+    try {
+      const resp = await fetch(API_BASE + '/api/referrals/invite', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ' + tok,
+        },
+        body: JSON.stringify({
+          friend_name: friendName,
+          invitee_email: (emailInput.value || '').trim() || undefined,
+        }),
+        signal: AbortSignal.timeout ? AbortSignal.timeout(20000) : undefined,
+      });
+
+      const data = await resp.json().catch(() => ({}));
+
+      if (!resp.ok || !data.ok) {
+        const msg = data.error || 'Something went wrong.';
+        showResult(msg === 'too-many-pending-referrals'
+          ? 'You have too many open invitations. Check back once some have been redeemed.'
+          : msg, true);
+        return;
+      }
+
+      const shareUrl = data.share_url || '';
+      const preview = data.letter_preview || '';
+      const personalized = data.personalized;
+
+      // Show success: share URL + copy button
+      showResult(
+        '<div style="margin-bottom:8px;color:#ffd54f;font-size:0.7rem;letter-spacing:0.1em;text-transform:uppercase;">'
+        + (personalized ? 'Her letter is ready' : 'Invite link ready') + '</div>'
+        + (preview ? '<div style="font-family:\'Cormorant Garamond\',serif;font-style:italic;font-size:0.9rem;line-height:1.6;margin-bottom:10px;color:rgba(235,242,255,0.85);">' + preview.replace(/</g,'&lt;').replace(/>/g,'&gt;') + '</div>' : '')
+        + '<div style="word-break:break-all;color:rgba(255,213,79,0.7);margin-bottom:10px;font-size:0.65rem;">' + shareUrl.replace(/</g,'&lt;') + '</div>'
+        + '<button id="refCopyBtn" style="min-height:44px;padding:10px 18px;background:rgba(255,213,79,0.12);border:1px solid rgba(255,213,79,0.3);border-radius:6px;color:#ffd54f;font-family:\'Space Mono\',monospace;font-size:0.65rem;letter-spacing:0.1em;text-transform:uppercase;cursor:pointer;">Copy link</button>',
+        false
+      );
+
+      // Wire copy button
+      const copyBtn = document.getElementById('refCopyBtn');
+      if (copyBtn && shareUrl) {
+        copyBtn.addEventListener('click', async function () {
+          try {
+            await navigator.clipboard.writeText(shareUrl);
+            copyBtn.textContent = 'Copied';
+            setTimeout(() => { copyBtn.textContent = 'Copy link'; }, 2000);
+          } catch (_) {
+            // Fallback: select
+            const ta = document.createElement('textarea');
+            ta.value = shareUrl;
+            ta.style.cssText = 'position:fixed;opacity:0;top:0;left:0;width:1px;height:1px;';
+            document.body.appendChild(ta);
+            ta.focus(); ta.select();
+            document.execCommand('copy');
+            document.body.removeChild(ta);
+            copyBtn.textContent = 'Copied';
+            setTimeout(() => { copyBtn.textContent = 'Copy link'; }, 2000);
+          }
+        });
+      }
+
+      // Clear inputs
+      nameInput.value = '';
+      if (emailInput) emailInput.value = '';
+
+    } catch (err) {
+      showResult('Network error — check your connection and try again.', true);
+      console.warn('[referral] invite error:', err.message);
+    } finally {
+      sendBtn.disabled = false;
+      sendBtn.textContent = 'Send the letter';
+    }
+  });
 })();
 </script>
 </body>
