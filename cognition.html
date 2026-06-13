@@ -54,17 +54,23 @@ body {
 .topbar {
   position: fixed;
   top: 0; left: 0; right: 0;
-  height: var(--topbar-h);
+  height: calc(var(--topbar-h) + env(safe-area-inset-top, 0px));
+  padding-top: env(safe-area-inset-top, 0px);
   background: rgba(4, 8, 16, 0.88);
   backdrop-filter: blur(18px);
   -webkit-backdrop-filter: blur(18px);
   border-bottom: 1px solid var(--border);
   display: flex;
   align-items: center;
-  padding: 0 20px;
+  padding-left: max(20px, env(safe-area-inset-left, 20px));
+  padding-right: max(20px, env(safe-area-inset-right, 20px));
   gap: 16px;
   z-index: 900;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
 }
+.topbar::-webkit-scrollbar { display: none; }
 .topbar-title {
   font-family: 'Cormorant Garamond', serif;
   font-style: italic;
@@ -100,7 +106,8 @@ body {
 .page {
   max-width: 1100px;
   margin: 0 auto;
-  padding: calc(var(--topbar-h) + 28px) 20px 80px;
+  padding: calc(var(--topbar-h) + env(safe-area-inset-top, 0px) + 28px) 20px calc(80px + env(safe-area-inset-bottom, 0px));
+  min-height: 100svh;
 }
 
 /* ─── SECTION HEADER ─── */
@@ -514,10 +521,42 @@ body {
   .ladder { grid-template-columns: repeat(3, 1fr); }
   .rung::after { display: none; }
   .status-two-col { grid-template-columns: 1fr; }
+  .page { padding-left: 16px; padding-right: 16px; }
 }
+
 @media (max-width: 520px) {
   .ladder { grid-template-columns: repeat(2, 1fr); }
   .topbar-title { font-size: 0.95rem; }
+  .panel { padding: 14px 16px; }
+  .section-head h2 { font-size: 1.1rem; }
+  .savings-tile .s-num { font-size: 2.2rem; }
+}
+
+/* ── 375px ── */
+@media (max-width: 375px) {
+  .ladder { grid-template-columns: repeat(2, 1fr); gap: 6px; }
+  .rung { padding: 10px 6px; }
+  .rung-num { font-size: 1.4rem; }
+  .rung-name { font-size: 0.44rem; }
+  .engines-grid { grid-template-columns: 1fr; }
+  .corpus-stats { grid-template-columns: repeat(2, 1fr); }
+  .page { padding-left: 12px; padding-right: 12px; }
+  .tier-bar-label { width: 52px; font-size: 0.44rem; }
+}
+
+/* ── 320px ── */
+@media (max-width: 320px) {
+  .ladder { grid-template-columns: repeat(2, 1fr); gap: 4px; }
+  .page { padding-left: 10px; padding-right: 10px; }
+  .panel { padding: 12px 12px; border-radius: 10px; }
+  .btn { padding: 7px 14px; font-size: 0.52rem; }
+  .corpus-stats { grid-template-columns: 1fr; }
+  .savings-tile .s-num { font-size: 1.8rem; }
+}
+
+/* ── iOS input zoom prevention ── */
+.teach-textarea, .teach-select {
+  font-size: max(16px, 0.82rem);
 }
 </style>
 </head>
