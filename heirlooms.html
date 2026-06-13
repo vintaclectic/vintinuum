@@ -6,144 +6,329 @@
 <title>VINTINUUM — Heirlooms</title>
 <meta name="theme-color" content="#040810">
 <link rel="icon" type="image/svg+xml" href="branding/vintinuum/favicon/favicon.svg">
+<link rel="stylesheet" href="body/safe_area.css?v=v20260613">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=Inter:wght@300;400;500&family=JetBrains+Mono:wght@300;400&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="body/tokens.css?v=v20260613">
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=Inter:wght@300;400;500&family=JetBrains+Mono:wght@300;400&display=swap');
-
 :root {
-  --void: #040810;
-  --text: rgba(210,225,255,0.9);
-  --text-dim: rgba(150,175,215,0.5);
-  --panel: rgba(10,14,22,0.5);
-  --card: rgba(16,22,34,0.4);
-  --border: rgba(255,255,255,0.06);
   --gold: #c8a040;
   --gold-dim: rgba(200,160,64,0.3);
-  --glow: rgba(200,160,64,0.15);
+  --gold-ghost: rgba(200,160,64,0.1);
 }
+
 * { margin:0; padding:0; box-sizing:border-box; }
 html { height:100%; }
 body {
-  background: var(--void);
-  color: var(--text);
-  font-family: 'Inter', sans-serif;
-  min-height: 100vh;
+  background: var(--bg-void);
+  color: var(--text-primary);
+  font-family: var(--font-body);
+  min-height: 100svh;
   overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
 }
+
+/* ── ATMOSPHERE ── */
 .atmosphere {
   position: fixed; inset: 0; z-index: 0; pointer-events: none;
   background: radial-gradient(ellipse 70% 50% at 50% 30%, rgba(200,160,64,0.04) 0%, transparent 70%);
 }
+
+/* ── TOPBAR ── */
 .topbar {
-  position: fixed; top: 0; left: 0; right: 0; height: 48px; z-index: 100;
-  background: rgba(4,8,16,0.92); backdrop-filter: blur(12px);
-  border-bottom: 1px solid var(--border);
-  display: flex; align-items: center; padding: 0 20px; gap: 16px;
+  position: fixed; top: 0; left: 0; right: 0;
+  height: calc(48px + var(--safe-top));
+  padding-top: var(--safe-top);
+  z-index: var(--z-modal);
+  background: rgba(4,8,16,0.92);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--border-subtle);
+  display: flex; align-items: center;
+  padding-left: calc(20px + var(--safe-left));
+  padding-right: calc(20px + var(--safe-right));
+  gap: 16px;
 }
-.topbar a { color: var(--text-dim); text-decoration: none; font-size: 0.75rem; letter-spacing: 0.08em; transition: color 0.2s; }
-.topbar a:hover { color: var(--gold); }
+
+.topbar-back {
+  color: var(--text-secondary);
+  text-decoration: none;
+  font-family: var(--font-mono);
+  font-size: var(--fs-fluid-sm);
+  letter-spacing: var(--tracking-wide);
+  text-transform: uppercase;
+  transition: color 0.2s;
+  min-height: var(--tap-min);
+  display: flex; align-items: center;
+  padding: 0 4px;
+  flex-shrink: 0;
+}
+.topbar-back:hover { color: var(--gold); }
+
 .topbar-title {
-  font-family: 'Cormorant Garamond', serif; font-size: 1rem; letter-spacing: 0.15em;
-  color: var(--gold); flex: 1; text-align: center;
+  font-family: 'Cormorant Garamond', serif;
+  font-size: var(--fs-fluid-lg);
+  letter-spacing: 0.15em;
+  color: var(--gold);
+  flex: 1; text-align: center;
 }
-.page { padding: 64px 20px 40px; max-width: 900px; margin: 0 auto; position: relative; z-index: 1; }
 
-h2 { font-family:'Cormorant Garamond',serif; font-weight:300; font-size:1.5rem; color:var(--gold); margin-bottom:8px; letter-spacing:0.08em; }
-.sub { color: var(--text-dim); font-size: 0.8rem; margin-bottom: 24px; }
+.topbar-tag {
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  color: var(--text-tertiary);
+  letter-spacing: 0.05em;
+  flex-shrink: 0;
+}
 
+/* ── PAGE ── */
+.page {
+  padding: calc(64px + var(--safe-top)) calc(20px + var(--safe-right)) calc(40px + var(--safe-bottom)) calc(20px + var(--safe-left));
+  max-width: 900px;
+  margin: 0 auto;
+  position: relative; z-index: 1;
+}
+
+/* ── HEADINGS ── */
+h2 {
+  font-family: 'Cormorant Garamond', serif;
+  font-weight: 300;
+  font-size: var(--fs-fluid-xl);
+  color: var(--gold);
+  margin-bottom: 8px;
+  letter-spacing: 0.08em;
+}
+.sub {
+  color: var(--text-secondary);
+  font-size: var(--fs-fluid-base);
+  margin-bottom: 24px;
+  line-height: 1.6;
+}
 .section { margin-bottom: 40px; }
 
-/* Send form */
+/* ── SEND FORM ── */
 .send-form {
-  background: var(--card); border: 1px solid var(--gold-dim); border-radius: 12px; padding: 24px;
+  background: var(--bg-panel-card);
+  border: 1px solid var(--gold-dim);
+  border-radius: var(--radius-lg, 12px);
+  padding: 24px;
+  box-shadow: var(--shadow-float);
 }
 .field-group { margin-bottom: 16px; }
-.field-group label { display: block; font-size: 0.75rem; color: var(--text-dim); margin-bottom: 6px; letter-spacing: 0.06em; text-transform: uppercase; }
-.field-group input, .field-group textarea {
-  width: 100%; background: rgba(255,255,255,0.04); border: 1px solid var(--border);
-  border-radius: 8px; color: var(--text); font-family: inherit; font-size: 0.9rem;
-  padding: 10px 14px; outline: none; transition: border-color 0.2s; resize: vertical;
+.field-group label {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  color: var(--text-secondary);
+  margin-bottom: 6px;
+  letter-spacing: var(--tracking-wide);
+  text-transform: uppercase;
 }
-.field-group input:focus, .field-group textarea:focus { border-color: var(--gold-dim); }
+.field-group input,
+.field-group textarea {
+  width: 100%;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+  color: var(--text-primary);
+  font-family: var(--font-body);
+  font-size: var(--fs-lg); /* 16px — prevents iOS zoom */
+  padding: 10px 14px;
+  outline: none;
+  transition: border-color 0.2s;
+  resize: vertical;
+  min-height: var(--tap-min);
+}
+.field-group input:focus,
+.field-group textarea:focus { border-color: var(--gold-dim); }
 .field-group textarea { min-height: 100px; }
 .row { display: flex; gap: 12px; flex-wrap: wrap; }
 .row .field-group { flex: 1; min-width: 200px; }
 
+/* ── BUTTONS ── */
 .btn {
-  padding: 10px 24px; border-radius: 8px; border: none; cursor: pointer;
-  font-family: inherit; font-size: 0.85rem; letter-spacing: 0.06em;
-  transition: all 0.2s; display: inline-flex; align-items: center; gap: 8px;
+  min-height: var(--tap-comfort);
+  padding: 0 24px;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  font-family: var(--font-body);
+  font-size: var(--fs-fluid-base);
+  letter-spacing: 0.04em;
+  transition: all 0.2s var(--ease-spring);
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
 }
-.btn-gold { background: var(--gold); color: #040810; font-weight: 500; }
-.btn-gold:hover { background: #d4aa50; transform: translateY(-1px); }
-.btn-outline { background: transparent; border: 1px solid var(--border); color: var(--text-dim); }
-.btn-outline:hover { border-color: var(--gold-dim); color: var(--text); }
+.btn-gold {
+  background: var(--gold);
+  color: #040810;
+  font-weight: var(--fw-medium);
+}
+.btn-gold:hover {
+  background: #d4aa50;
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-pop);
+}
+.btn-gold:active { transform: translateY(0); }
+.btn-outline {
+  background: transparent;
+  border: 1px solid var(--border-subtle);
+  color: var(--text-secondary);
+}
+.btn-outline:hover { border-color: var(--gold-dim); color: var(--text-primary); }
 
-/* Heirloom cards */
+/* ── HEIRLOOM CARDS ── */
 .heirlooms-grid { display: grid; gap: 16px; }
 .heirloom-card {
-  background: var(--card); border: 1px solid var(--border); border-radius: 12px;
-  padding: 20px; transition: border-color 0.2s;
+  background: var(--bg-panel-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg, 12px);
+  padding: 20px;
+  transition: border-color 0.2s, box-shadow 0.2s;
 }
-.heirloom-card:hover { border-color: var(--gold-dim); }
+.heirloom-card:hover {
+  border-color: var(--gold-dim);
+  box-shadow: var(--shadow-float);
+}
 .heirloom-card.received { border-left: 3px solid var(--gold); }
 .heirloom-card.sent { border-left: 3px solid rgba(150,175,215,0.4); }
-.hc-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px; gap: 12px; }
-.hc-title { font-family: 'Cormorant Garamond', serif; font-size: 1.1rem; color: var(--text); }
+
+.hc-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 12px;
+  gap: 12px;
+}
+.hc-title {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: var(--fs-fluid-lg);
+  color: var(--text-primary);
+}
 .hc-badge {
-  font-size: 0.65rem; letter-spacing: 0.08em; text-transform: uppercase; padding: 2px 8px;
-  border-radius: 4px; white-space: nowrap;
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  letter-spacing: var(--tracking-wide);
+  text-transform: uppercase;
+  padding: 3px 9px;
+  border-radius: 4px;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 .badge-received { background: var(--gold-dim); color: var(--gold); }
-.badge-sent { background: rgba(150,175,215,0.1); color: var(--text-dim); }
+.badge-sent { background: rgba(150,175,215,0.1); color: var(--text-secondary); }
+
 .hc-content {
-  font-family: 'Cormorant Garamond', serif; font-style: italic; font-size: 1rem;
-  color: rgba(210,225,255,0.75); line-height: 1.7; margin-bottom: 12px;
+  font-family: 'Cormorant Garamond', serif;
+  font-style: italic;
+  font-size: var(--fs-fluid-base);
+  color: rgba(210,225,255,0.75);
+  line-height: 1.7;
+  margin-bottom: 12px;
 }
-.hc-meta { font-size: 0.72rem; color: var(--text-dim); display: flex; gap: 16px; flex-wrap: wrap; }
+.hc-meta {
+  font-size: var(--fs-sm);
+  color: var(--text-secondary);
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+}
 .hc-provenance {
-  margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border);
-  font-family: 'JetBrains Mono', monospace; font-size: 0.68rem; color: var(--text-dim);
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border-subtle);
+  font-family: var(--font-mono);
+  font-size: var(--fs-sm);
+  color: var(--text-secondary);
   word-break: break-all;
 }
-.hc-actions { margin-top: 12px; display: flex; gap: 8px; flex-wrap: wrap; }
+.hc-actions {
+  margin-top: 12px;
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
 .hc-accept {
-  appearance: none; cursor: pointer; max-width: 100%;
+  appearance: none;
+  cursor: pointer;
   background: linear-gradient(135deg, rgba(200,160,64,0.22), rgba(200,160,64,0.08));
-  border: 1px solid var(--gold-dim); border-radius: 10px;
-  color: var(--gold, #e6c873); font-size: 0.8rem; font-weight: 600;
-  letter-spacing: 0.04em; padding: 9px 16px; transition: filter .15s ease, transform .15s ease;
+  border: 1px solid var(--gold-dim);
+  border-radius: 10px;
+  color: var(--gold);
+  font-family: var(--font-body);
+  font-size: var(--fs-fluid-base);
+  font-weight: var(--fw-semibold);
+  letter-spacing: 0.04em;
+  padding: 9px 16px;
+  min-height: var(--tap-min);
+  transition: filter 0.15s var(--ease-spring), transform 0.15s var(--ease-spring);
 }
 .hc-accept:hover { filter: brightness(1.18); }
 .hc-accept:active { transform: scale(0.97); }
 .hc-accept:disabled { opacity: 0.5; cursor: default; }
 
-/* Accept form */
-.accept-form {
-  background: rgba(200,160,64,0.05); border: 1px dashed var(--gold-dim); border-radius: 12px; padding: 20px;
-}
-
+/* ── TOAST ── */
 .toast {
-  position: fixed; bottom: 24px; right: 24px; z-index: 200;
-  background: rgba(16,22,34,0.95); border: 1px solid var(--gold-dim);
-  border-radius: 10px; padding: 12px 20px; font-size: 0.85rem; color: var(--text);
-  transform: translateY(80px); opacity: 0; transition: all 0.3s; max-width: 300px;
+  position: fixed;
+  bottom: calc(24px + var(--safe-bottom));
+  right: calc(24px + var(--safe-right));
+  z-index: calc(var(--z-modal) + 10);
+  background: rgba(16,22,34,0.95);
+  border: 1px solid var(--gold-dim);
+  border-radius: 10px;
+  padding: 12px 20px;
+  font-family: var(--font-mono);
+  font-size: var(--fs-sm);
+  color: var(--text-primary);
+  transform: translateY(80px);
+  opacity: 0;
+  transition: all 0.3s var(--ease-sheet);
+  max-width: min(300px, calc(100vw - 48px));
+  box-shadow: var(--shadow-sheet);
 }
 .toast.show { transform: translateY(0); opacity: 1; }
 
-.empty { text-align: center; padding: 40px; color: var(--text-dim); font-size: 0.85rem; font-style: italic; }
-.divider { border: none; border-top: 1px solid var(--border); margin: 32px 0; }
+/* ── UTILS ── */
+.empty {
+  text-align: center;
+  padding: 40px;
+  color: var(--text-secondary);
+  font-family: 'Cormorant Garamond', serif;
+  font-style: italic;
+  font-size: var(--fs-fluid-base);
+}
+.divider { border: none; border-top: 1px solid var(--border-subtle); margin: 32px 0; }
+
+/* ── REDUCED MOTION ── */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* ── MOBILE ── */
+@media (max-width: 600px) {
+  .page { padding: calc(64px + var(--safe-top)) 16px calc(32px + var(--safe-bottom)); }
+  .send-form { padding: 16px; }
+  .row { flex-direction: column; }
+  .row .field-group { min-width: unset; }
+  .topbar-tag { display: none; }
+}
 </style>
 </head>
 <body>
 <div class="atmosphere"></div>
 
-<nav class="topbar">
-  <a href="index.html">← home</a>
+<nav class="topbar" role="navigation" aria-label="Site navigation">
+  <a href="index.html" class="topbar-back" data-draggable="true" aria-label="Back to home">← home</a>
   <div class="topbar-title">HEIRLOOMS</div>
-  <span style="font-size:0.7rem; color:var(--text-dim); letter-spacing:0.05em;">memory gifts</span>
+  <span class="topbar-tag">memory gifts</span>
 </nav>
 
-<div class="page">
+<main class="page" role="main">
 
   <!-- Send an Heirloom -->
   <div class="section">
@@ -151,24 +336,24 @@ h2 { font-family:'Cormorant Garamond',serif; font-weight:300; font-size:1.5rem; 
     <p class="sub">A memory you give away. It carries provenance — every hand it passes through is recorded in its chain. The recipient installs it into their own memory.</p>
     <div class="send-form">
       <div class="field-group">
-        <label>Memory Content</label>
-        <textarea id="send-content" placeholder="The thing you want to pass on…"></textarea>
+        <label for="send-content">Memory Content</label>
+        <textarea id="send-content" placeholder="The thing you want to pass on…" rows="4" autocomplete="off"></textarea>
       </div>
       <div class="row">
         <div class="field-group">
-          <label>Recipient User ID</label>
-          <input type="number" id="send-recipient" placeholder="User ID">
+          <label for="send-recipient">Recipient User ID</label>
+          <input type="number" id="send-recipient" placeholder="User ID" autocomplete="off">
         </div>
         <div class="field-group">
-          <label>Importance (0–1)</label>
-          <input type="number" id="send-importance" value="0.8" min="0" max="1" step="0.1">
+          <label for="send-importance">Importance (0–1)</label>
+          <input type="number" id="send-importance" value="0.8" min="0" max="1" step="0.1" autocomplete="off">
         </div>
       </div>
       <div class="field-group">
-        <label>Memory Type</label>
-        <input type="text" id="send-type" value="episodic" placeholder="episodic, semantic, emotional…">
+        <label for="send-type">Memory Type</label>
+        <input type="text" id="send-type" value="episodic" placeholder="episodic, semantic, emotional…" autocomplete="off">
       </div>
-      <button class="btn btn-gold" onclick="sendHeirloom()" data-draggable="true">Send Heirloom</button>
+      <button class="btn btn-gold" onclick="sendHeirloom()" data-draggable="true" aria-label="Send heirloom memory">Send Heirloom</button>
     </div>
   </div>
 
@@ -186,15 +371,16 @@ h2 { font-family:'Cormorant Garamond',serif; font-weight:300; font-size:1.5rem; 
   <div class="section">
     <h2>Heirloom Registry</h2>
     <p class="sub">All heirlooms in your lineage — sent and received.</p>
-    <div id="heirlooms-list" class="heirlooms-grid">
+    <div id="heirlooms-list" class="heirlooms-grid" role="list" aria-live="polite" aria-label="Heirloom registry">
       <div class="empty">Loading heirloom registry…</div>
     </div>
   </div>
-</div>
 
-<div class="toast" id="toast"></div>
+</main>
 
-<script src="body/draggable.js"></script>
+<div class="toast" id="toast" role="status" aria-live="polite" aria-atomic="true"></div>
+
+<script src="body/draggable.js?v=v20260613"></script>
 <script>
 const API = 'https://api.vintaclectic.com';
 function token() { return localStorage.getItem('vint_token') || ''; }
