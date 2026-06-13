@@ -7,11 +7,16 @@
    How it works:
    - Auto-applies to all [data-draggable="true"] elements
    - Also auto-applies to known FAB/pill selectors
-   - Press-and-hold 250ms mouse / 350ms touch OR 6px/8px movement starts drag
+   - Mouse: press-and-hold 250ms OR 6px movement starts drag
+   - Touch: press-and-hold 350ms (still finger) starts drag. Movement before
+     the hold completes CANCELS the hold and lets native scroll win — this is
+     what keeps pages full of draggable cards scrollable on phones. Once the
+     hold fires (haptic tick + scale pop), the finger owns the element.
    - Short tap/click still fires normally — drag does NOT eat clicks
-   - Position clamped to viewport with 8px safe margin
+   - Position clamped to viewport with 8px safe margin, re-clamped on every
+     resize/orientation change so a button can never strand off-screen
    - Persisted to localStorage: vint:btnpos:<id>
-   - Shift+double-click OR 1.2s long-press resets to authored default position
+   - Shift+double-click OR 1.2s still long-press resets to authored default
    - Visual: scale(1.05) + cursor:grabbing during drag
    ═══════════════════════════════════════════════════════════════════════════ */
 (function () {
@@ -65,12 +70,19 @@
     el.style.bottom = '';
   }
 
+  var managed = [];
+
   function makeDraggable(el) {
     if (el._vintDrag) return;
     el._vintDrag = true;
+    managed.push(el);
     el.style.userSelect = 'none';
     el.style.webkitUserSelect = 'none';
-    el.style.touchAction = 'none';
+    /* pan-y (NOT none): vertical scroll must keep working when a swipe starts
+       on a draggable element — index.html is wall-to-wall draggable cards on
+       mobile and touchAction:none made the whole page unscrollable from them.
+       Drag entry on touch is hold-gated below, so pan-y costs nothing. */
+    el.style.touchAction = 'pan-y';
 
     // Snapshot default authored pos before localStorage restore
     var rect0 = el.getBoundingClientRect();
@@ -99,6 +111,7 @@
       el.style.zIndex     = '999999';
       document.body.style.cursor = 'grabbing';
       document.body.style.userSelect = 'none';
+      try { navigator.vibrate && navigator.vibrate(12); } catch (_) {}
     }
     function moveDrag(cx, cy) {
       if (!dragging) return;
@@ -144,20 +157,29 @@
     document.addEventListener('mouseup', function () { clearTimeout(holdTimer); holdTimer = null; endDrag(); });
     el.addEventListener('dblclick', function (e) { if (e.shiftKey) { e.preventDefault(); resetPos(); } });
 
-    // Touch
+    // Touch — drag entry is HOLD-ONLY. Movement before the hold completes
+    // means the user is scrolling: cancel the hold AND the reset timer and
+    // get out of the way. (Movement-initiated drag on touch ate page scroll
+    // on every card-grid surface — fixed 2026-06-12.)
     el.addEventListener('touchstart', function (e) {
       var t = e.touches[0];
       startClient = { x: t.clientX, y: t.clientY };
-      holdTimer   = setTimeout(function () { beginDrag(t.clientX, t.clientY); }, HOLD_MS_TOUCH);
+      holdTimer   = setTimeout(function () { holdTimer = null; beginDrag(t.clientX, t.clientY); }, HOLD_MS_TOUCH);
       resetTimer  = setTimeout(function () { if (!dragging) resetPos(); }, RESET_HOLD_MS);
     }, { passive: true });
     el.addEventListener('touchmove', function (e) {
       var t = e.touches[0];
-      if (holdTimer) {
+      if (!dragging) {
         var d = Math.hypot(t.clientX - startClient.x, t.clientY - startClient.y);
-        if (d >= DRAG_PX_TOUCH) { clearTimeout(holdTimer); holdTimer = null; beginDrag(t.clientX, t.clientY); }
+        if (d >= DRAG_PX_TOUCH) {
+          // Finger is scrolling, not holding — surrender to native pan.
+          clearTimeout(holdTimer);  holdTimer  = null;
+          clearTimeout(resetTimer); resetTimer = null;
+        }
+        return;
       }
-      if (dragging) { e.preventDefault(); moveDrag(t.clientX, t.clientY); }
+      e.preventDefault();
+      moveDrag(t.clientX, t.clientY);
     }, { passive: false });
     el.addEventListener('touchend', function (e) {
       clearTimeout(holdTimer); holdTimer = null;
@@ -169,6 +191,27 @@
   function mountAll() {
     try { document.querySelectorAll(AUTO_SELECTORS).forEach(makeDraggable); } catch (_) {}
   }
+
+  // Viewport changed (rotation, keyboard, resize): re-clamp every element the
+  // user has repositioned so nothing strands off-screen. No-overflow law.
+  var reclampT = null;
+  function reclampAll() {
+    clearTimeout(reclampT);
+    reclampT = setTimeout(function () {
+      managed.forEach(function (el) {
+        if (!el.isConnected || el.style.position !== 'fixed') return;
+        var r = el.getBoundingClientRect();
+        if (!r.width && !r.height) return; // hidden — nothing to clamp
+        var c = clamp(r.left, r.top, r.width, r.height);
+        if (c.x !== r.left || c.y !== r.top) {
+          applyPos(el, c.x, c.y);
+          savePos(el.id || el.dataset.draggableId, c.x, c.y);
+        }
+      });
+    }, 120);
+  }
+  window.addEventListener('resize', reclampAll, { passive: true });
+  window.addEventListener('orientationchange', reclampAll, { passive: true });
 
   var observer = new MutationObserver(function (mutations) {
     mutations.forEach(function (m) {
