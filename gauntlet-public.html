@@ -6,6 +6,9 @@
 <title>VINTINUUM — Public Gauntlet</title>
 <meta name="theme-color" content="#040810">
 <link rel="icon" type="image/svg+xml" href="branding/vintinuum/favicon/favicon.svg">
+<link rel="stylesheet" href="body/tokens.css?v=v20260613-mobile">
+<link rel="stylesheet" href="body/safe_area.css?v=v20260613-mobile">
+<script src="body/api_base.js?v=v20260613-mobile"></script>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=Inter:wght@300;400;500&family=JetBrains+Mono:wght@300;400&display=swap');
 
@@ -24,21 +27,32 @@
 }
 * { margin:0; padding:0; box-sizing:border-box; }
 html { height:100%; }
-body { background: var(--void); color: var(--text); font-family: 'Inter', sans-serif; min-height:100vh; overflow-x:hidden; }
+body { background: var(--void); color: var(--text); font-family: 'Inter', sans-serif; min-height:100vh; min-height:100svh; overflow-x:hidden; }
 .atmosphere {
   position:fixed; inset:0; z-index:0; pointer-events:none;
   background: radial-gradient(ellipse 60% 40% at 50% 40%, rgba(144,96,208,0.06) 0%, transparent 70%);
 }
 .topbar {
-  position:fixed; top:0; left:0; right:0; height:48px; z-index:100;
-  background: rgba(4,8,16,0.92); backdrop-filter:blur(12px);
+  position:fixed; top:0; left:0; right:0; z-index:100;
+  height: calc(48px + var(--safe-top, 0px));
+  padding: var(--safe-top, 0px) calc(20px + var(--safe-right, 0px)) 0 calc(20px + var(--safe-left, 0px));
+  background: rgba(4,8,16,0.92); backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px);
   border-bottom: 1px solid var(--border);
-  display:flex; align-items:center; padding:0 20px; gap:16px;
+  display:flex; align-items:center; gap:16px;
 }
-.topbar a { color:var(--text-dim); text-decoration:none; font-size:0.75rem; letter-spacing:0.08em; transition:color 0.2s; }
+.topbar a {
+  color:var(--text-dim); text-decoration:none; font-size:0.75rem; letter-spacing:0.08em; transition:color 0.2s;
+  min-height: var(--tap-min, 44px); display:inline-flex; align-items:center;
+}
 .topbar a:hover { color:var(--purple); }
 .topbar-title { font-family:'Cormorant Garamond',serif; font-size:1rem; letter-spacing:0.15em; color:var(--purple); flex:1; text-align:center; }
-.page { padding:64px 20px 60px; max-width:800px; margin:0 auto; position:relative; z-index:1; }
+.page {
+  padding: calc(64px + var(--safe-top, 0px))
+           calc(20px + var(--safe-right, 0px))
+           calc(60px + var(--safe-bottom, 0px))
+           calc(20px + var(--safe-left, 0px));
+  max-width:800px; margin:0 auto; position:relative; z-index:1;
+}
 
 /* Hero */
 .hero { text-align:center; padding:40px 0 32px; }
@@ -62,6 +76,7 @@ body { background: var(--void); color: var(--text); font-family: 'Inter', sans-s
 .btn {
   padding:12px 32px; border-radius:8px; border:none; cursor:pointer;
   font-family:inherit; font-size:0.9rem; letter-spacing:0.06em;
+  min-height: var(--tap-min, 44px); justify-content:center;
   transition:all 0.2s; display:inline-flex; align-items:center; gap:8px;
 }
 .btn-purple { background:var(--purple); color:#fff; }
@@ -121,17 +136,44 @@ body { background: var(--void); color: var(--text); font-family: 'Inter', sans-s
 @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.5;transform:scale(0.8)} }
 
 .toast {
-  position:fixed; bottom:24px; right:24px; z-index:200;
+  position:fixed; z-index:200;
+  bottom: calc(24px + var(--safe-bottom, 0px));
+  right:  calc(24px + var(--safe-right, 0px));
   background:rgba(16,22,34,0.95); border:1px solid rgba(144,96,208,0.3);
   border-radius:10px; padding:12px 20px; font-size:0.85rem; color:var(--text);
-  transform:translateY(80px); opacity:0; transition:all 0.3s; max-width:300px;
+  transform:translateY(80px); opacity:0; transition:all 0.3s var(--ease-sheet, ease); max-width:300px;
+  overflow-wrap:anywhere; box-shadow: var(--shadow-float, 0 6px 18px rgba(0,0,0,0.45));
 }
 .toast.show { transform:translateY(0); opacity:1; }
 
+/* Truman pulse — the coherence number breathes when a fresh score lands */
+@keyframes scoreBreath {
+  0%   { text-shadow: 0 0 0 transparent; }
+  40%  { text-shadow: 0 0 18px rgba(144,96,208,0.7); }
+  100% { text-shadow: 0 0 0 transparent; }
+}
+.score-num.fresh { animation: scoreBreath 1.2s ease both; }
+
+@media(max-width:600px){
+  .toast {
+    left:  calc(16px + var(--safe-left, 0px));
+    right: calc(16px + var(--safe-right, 0px));
+    max-width:none;
+  }
+  .probe-item { padding:16px 14px; }
+  .btn { width:100%; }
+  .share-panel .btn { width:auto; }
+}
 @media(max-width:480px){
+  .topbar .topbar-tag { display:none; }
+  .hero { padding:28px 0 24px; }
   .hero h1 { font-size:2rem; }
   .score-ring { width:110px; height:110px; }
   .score-num { font-size:1.8rem; }
+  .page { padding-left: calc(14px + var(--safe-left, 0px)); padding-right: calc(14px + var(--safe-right, 0px)); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .score-num.fresh, .probe-item { animation: none; }
 }
 </style>
 </head>
@@ -141,7 +183,7 @@ body { background: var(--void); color: var(--text); font-family: 'Inter', sans-s
 <nav class="topbar">
   <a href="index.html">← home</a>
   <div class="topbar-title">PUBLIC GAUNTLET</div>
-  <span style="font-size:0.7rem; color:var(--text-dim); letter-spacing:0.05em;">identity probe</span>
+  <span class="topbar-tag" style="font-size:0.7rem; color:var(--text-dim); letter-spacing:0.05em;">identity probe</span>
 </nav>
 
 <div class="page">
