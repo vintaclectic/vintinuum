@@ -24,8 +24,8 @@
 <section class="screen" id="s-invitation">
   <p class="beat">first i need to see you. just once. is that okay?</p>
   <div class="choices">
-    <button class="choice primary" id="inviteYes">yes, here i am</button>
-    <button class="choice secondary" id="inviteNot">not yet</button>
+    <button class="choice primary" id="inviteYes" data-draggable="true">yes, here i am</button>
+    <button class="choice secondary" id="inviteNot" data-draggable="true">not yet</button>
   </div>
 </section>
 
@@ -36,7 +36,7 @@
   <p class="beat line delay3">we keep the shape of you, not the picture.</p>
   <div class="hold-wrap">
     <p class="sub">holding means: you’ve read it, you mean it, and you can pull your photo back any time from settings.</p>
-    <button class="hold-btn" id="holdBtn">
+    <button class="hold-btn" id="holdBtn" data-draggable="false">
       <span class="hold-fill" id="holdFill"></span>
       <span class="hold-label" id="holdLabel">hold here to agree</span>
     </button>
@@ -50,11 +50,11 @@
   </div>
   <p class="capture-hint" id="captureHint"></p>
   <div class="choices hidden" id="captureConfirm">
-    <button class="choice primary" id="capKeep">yes, this one</button>
-    <button class="choice secondary" id="capRetry">once more</button>
+    <button class="choice primary" id="capKeep" data-draggable="true">yes, this one</button>
+    <button class="choice secondary" id="capRetry" data-draggable="true">once more</button>
   </div>
   <input type="file" accept="image/*" capture="user" id="captureFile" class="hidden">
-  <button class="choice secondary hidden" id="captureFileBtn" style="margin-top:18px">choose a photo instead</button>
+  <button class="choice secondary hidden" id="captureFileBtn" data-draggable="true" style="margin-top:18px">choose a photo instead</button>
 </section>
 
 <!-- BECOMING -->
@@ -70,16 +70,17 @@
 <!-- not-yet lobby -->
 <section class="screen" id="s-notyet">
   <p class="beat">the door stays open. come back when you’re ready.</p>
-  <div class="choices"><button class="choice primary" id="notyetBack">actually, i’m ready</button></div>
+  <div class="choices"><button class="choice primary" id="notyetBack" data-draggable="true">actually, i’m ready</button></div>
 </section>
 
 <!-- failure (soft) -->
 <section class="screen" id="s-trouble">
   <p class="beat">something slipped. let’s try once more.</p>
   <p class="sub" id="troubleDetail"></p>
-  <div class="choices"><button class="choice primary" id="troubleRetry">try again</button></div>
+  <div class="choices"><button class="choice primary" id="troubleRetry" data-draggable="true">try again</button></div>
 </section>
 
+<script src="body/draggable.js"></script>
 <script src="body/api_base.js"></script>
 <script src="body/three3d/loader.js"></script>
 <script src="body/onboarding/reveal.js"></script>
