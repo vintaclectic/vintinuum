@@ -7,6 +7,8 @@
 <title>VINTINUUM — Ghost Mode</title>
 <meta name="theme-color" content="#040810">
 <link rel="icon" type="image/svg+xml" href="branding/vintinuum/favicon/favicon.svg">
+<link rel="stylesheet" href="body/safe_area.css?v=v20260613">
+<link rel="stylesheet" href="body/tokens.css?v=v20260613">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400;1,500&family=Inter:wght@300;400;500&family=JetBrains+Mono:wght@300;400;500&display=swap" rel="stylesheet">
@@ -31,8 +33,9 @@ body {
   background: var(--void);
   color: var(--text);
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-  min-height: 100vh;
+  min-height: 100svh;
   overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
 }
 
 /* ── ATMOSPHERE ── */
@@ -54,7 +57,8 @@ body {
 .topbar {
   position: fixed;
   top: 0; left: 0; right: 0;
-  height: 48px;
+  height: calc(48px + env(safe-area-inset-top, 0px));
+  padding-top: env(safe-area-inset-top, 0px);
   z-index: 100;
   background: rgba(4, 8, 16, 0.92);
   backdrop-filter: blur(12px);
@@ -62,7 +66,8 @@ body {
   border-bottom: 1px solid var(--border);
   display: flex;
   align-items: center;
-  padding: 0 16px;
+  padding-left: calc(16px + env(safe-area-inset-left, 0px));
+  padding-right: calc(16px + env(safe-area-inset-right, 0px));
   gap: 12px;
 }
 
@@ -73,11 +78,14 @@ body {
   text-transform: uppercase;
   color: var(--text-dim);
   text-decoration: none;
-  padding: 6px 12px;
+  padding: 0 12px;
   border: 1px solid var(--border);
   border-radius: 20px;
   transition: all 0.2s ease;
   white-space: nowrap;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
 }
 .topbar-back:hover { color: var(--text); border-color: rgba(255,255,255,0.15); }
 
@@ -118,8 +126,8 @@ body {
   z-index: 1;
   max-width: 860px;
   margin: 0 auto;
-  padding: 64px 20px 60px;
-  min-height: 100vh;
+  padding: calc(64px + env(safe-area-inset-top, 0px)) calc(20px + env(safe-area-inset-right, 0px)) calc(60px + env(safe-area-inset-bottom, 0px)) calc(20px + env(safe-area-inset-left, 0px));
+  min-height: 100svh;
 }
 
 /* ── HEADER ── */
@@ -368,6 +376,41 @@ body {
   background: rgba(255,255,255,0.015);
 }
 
+/* On small screens, table becomes stacked cards */
+@media (max-width: 560px) {
+  .beneficiary-table thead { display: none; }
+  .beneficiary-table, .beneficiary-table tbody, .beneficiary-table tr, .beneficiary-table td {
+    display: block;
+    width: 100%;
+  }
+  .beneficiary-table tr {
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px 14px;
+    margin-bottom: 10px;
+    background: rgba(255,255,255,0.015);
+  }
+  .beneficiary-table tr:hover { background: rgba(255,255,255,0.025); }
+  .beneficiary-table td {
+    padding: 4px 0;
+    border-bottom: none;
+    font-size: 0.75rem;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .beneficiary-table td::before {
+    content: attr(data-label);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.4rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--text-ghost);
+    min-width: 72px;
+    flex-shrink: 0;
+  }
+}
+
 .access-pill {
   display: inline-block;
   font-family: 'JetBrains Mono', monospace;
@@ -406,11 +449,30 @@ body {
 }
 @media (max-width: 520px) {
   .add-beneficiary-form { grid-template-columns: 1fr; }
+  .page { padding-left: calc(16px + env(safe-area-inset-left, 0px)); padding-right: calc(16px + env(safe-area-inset-right, 0px)); }
+}
+
+@media (max-width: 375px) {
+  .header h1 { letter-spacing: 0.15em; }
+  .ghost-status-section { padding: 24px 16px; }
+  .panel { padding: 16px 14px; }
+}
+
+/* ── REDUCED MOTION ── */
+@media (prefers-reduced-motion: reduce) {
+  .atmosphere, .atmosphere.active-mode { animation: none !important; }
+  .topbar-ghost-pill.active { animation: none !important; }
+  .header h1.active-glow { animation: none !important; text-shadow: 0 0 30px rgba(200,215,255,0.2); }
+  .ghost-shimmer { animation: none !important; }
+  .ghost-glyph { animation: none !important; }
+  .status-word { animation: none !important; }
+  .vault-lock-dot { animation: none !important; }
+  * { transition-duration: 0.01ms !important; }
 }
 
 .input-field {
   font-family: 'Inter', sans-serif;
-  font-size: 0.7rem;
+  font-size: 16px; /* 16px prevents iOS auto-zoom */
   background: rgba(255,255,255,0.03);
   border: 1px solid var(--border);
   border-radius: 10px;
@@ -422,7 +484,7 @@ body {
   width: 100%;
 }
 .input-field:focus { border-color: rgba(180, 195, 230, 0.3); }
-.input-field::placeholder { color: var(--text-ghost); font-size: 0.65rem; }
+.input-field::placeholder { color: var(--text-ghost); font-size: 0.875rem; }
 
 .form-row-full {
   grid-column: 1 / -1;
@@ -545,10 +607,29 @@ body {
 }
 .confirm-cancel:hover { color: var(--text-dim); }
 
+/* ── BOTTOM SHEET ON MOBILE ── */
+@media (max-width: 600px) {
+  .confirm-overlay {
+    align-items: flex-end;
+    padding: 0;
+  }
+  .confirm-box {
+    border-radius: 20px 20px 0 0;
+    max-width: 100%;
+    width: 100%;
+    padding: 28px 24px calc(24px + env(safe-area-inset-bottom, 0px));
+    animation: sheetIn 0.32s cubic-bezier(0.32, 0.72, 0, 1);
+  }
+  @keyframes sheetIn {
+    from { transform: translateY(100%); }
+    to { transform: translateY(0); }
+  }
+}
+
 /* ── TOAST ── */
 .toast {
   position: fixed;
-  bottom: 24px;
+  bottom: calc(24px + env(safe-area-inset-bottom, 0px));
   left: 50%;
   transform: translateX(-50%) translateY(20px);
   background: rgba(8, 10, 20, 0.94);
@@ -568,6 +649,7 @@ body {
   text-align: center;
 }
 .toast.visible { opacity: 1; transform: translateX(-50%) translateY(0); }
+.toast { max-width: calc(100vw - 40px); }
 </style>
 </head>
 <body>
@@ -830,11 +912,11 @@ function renderBeneficiaries(items) {
     const accepted = b.accepted_at ? new Date(b.accepted_at).toLocaleDateString() : '—';
     const expires = b.expires_at ? new Date(b.expires_at).toLocaleDateString() : 'never';
     return `<tr>
-      <td>${escHtml(b.beneficiary_email || b.email || '—')}</td>
-      <td>${escHtml(b.beneficiary_name || b.name || '—')}</td>
-      <td><span class="access-pill ${accessClass}">${b.access_level || 'read_only'}</span></td>
-      <td>${accepted}</td>
-      <td>${expires}</td>
+      <td data-label="Email">${escHtml(b.beneficiary_email || b.email || '—')}</td>
+      <td data-label="Name">${escHtml(b.beneficiary_name || b.name || '—')}</td>
+      <td data-label="Access"><span class="access-pill ${accessClass}">${b.access_level || 'read_only'}</span></td>
+      <td data-label="Accepted">${accepted}</td>
+      <td data-label="Expires">${expires}</td>
     </tr>`;
   }).join('');
 }
