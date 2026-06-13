@@ -13,44 +13,76 @@
   <script defer src="body/status_pill.js?v=v20260510-pill"></script>
   <script defer src="body/wake_consent.js?v=v20260510-consent"></script>
   <script src="body/identity.js?v=v20260508-resilience"></script>
+  <link rel="stylesheet" href="body/safe_area.css?v=v20260613">
+  <link rel="stylesheet" href="body/tokens.css?v=v20260613">
   <style>
     :root { color-scheme: dark; }
     * { margin:0; padding:0; box-sizing:border-box; }
-    html, body { overflow-x:hidden; }
+    html, body { overflow-x:hidden; -webkit-font-smoothing:antialiased; }
     body {
-      background:radial-gradient(ellipse at top, #1a1a2e, #050510);
-      color:rgba(255,255,255,0.92); min-height:100vh;
-      font-family:'SF Mono', Menlo, 'Roboto Mono', monospace;
-      padding:max(20px, env(safe-area-inset-top)) 20px max(80px, env(safe-area-inset-bottom));
+      background: radial-gradient(ellipse at top, #1a1a2e, #050510);
+      color: var(--text-primary);
+      min-height: 100svh;
+      font-family: var(--font-mono);
+      padding:
+        max(20px, env(safe-area-inset-top))
+        max(20px, env(safe-area-inset-right))
+        max(80px, env(safe-area-inset-bottom))
+        max(20px, env(safe-area-inset-left));
       line-height:1.55;
     }
     .wrap { max-width:1100px; margin:0 auto; }
-    .nav { font-size:12px; color:rgba(255,255,255,0.5); margin-bottom:8px; }
-    a { color:rgba(170,200,255,0.85); text-decoration:none; border-bottom:1px dotted rgba(170,200,255,0.4); }
+    .nav {
+      font-size: var(--fs-sm);
+      color: var(--text-secondary);
+      margin-bottom:8px;
+    }
+    a {
+      color: rgba(170,200,255,0.85);
+      text-decoration:none;
+      border-bottom:1px dotted rgba(170,200,255,0.4);
+    }
 
-    h1 { font-size:22px; font-weight:300; letter-spacing:0.18em; text-transform:uppercase; margin:24px 0 8px; color:rgba(255,255,255,0.92); }
-    .lead { color:rgba(255,255,255,0.6); font-size:13px; max-width:680px; margin-bottom:18px; }
+    h1 {
+      font-size: var(--fs-fluid-xl);
+      font-weight: var(--fw-light);
+      letter-spacing: var(--tracking-wider);
+      text-transform:uppercase;
+      margin:24px 0 8px;
+      color: var(--text-primary);
+    }
+    .lead {
+      color: var(--text-secondary);
+      font-size: var(--fs-fluid-base);
+      max-width:680px;
+      margin-bottom:18px;
+      line-height:1.6;
+    }
 
     /* Body-part group headers */
-    .group {
-      margin-top:32px;
-    }
+    .group { margin-top:32px; }
     .group-head {
       display:flex; align-items:baseline; gap:14px;
       padding-bottom:10px;
-      border-bottom:1px solid rgba(255,255,255,0.08);
+      border-bottom:1px solid var(--border-subtle);
       margin-bottom:14px;
+      flex-wrap: wrap;
     }
     .group-head .glyph {
-      font-size:18px; color:rgba(180,140,255,0.85);
+      font-size: var(--fs-xl);
+      color:rgba(180,140,255,0.85);
       width:28px; text-align:center;
+      flex-shrink: 0;
     }
     .group-head .label {
-      font-size:11px; letter-spacing:0.2em; text-transform:uppercase;
-      color:rgba(255,255,255,0.7);
+      font-size: var(--fs-fluid-sm);
+      letter-spacing: var(--tracking-wider);
+      text-transform:uppercase;
+      color: var(--text-primary);
     }
     .group-head .desc {
-      font-size:11px; color:rgba(255,255,255,0.4);
+      font-size: var(--fs-fluid-sm);
+      color: var(--text-tertiary);
       letter-spacing:0.04em;
     }
 
@@ -60,13 +92,17 @@
       grid-template-columns:repeat(auto-fill, minmax(240px, 1fr));
     }
     .card {
-      background:rgba(255,255,255,0.03);
-      border:1px solid rgba(255,255,255,0.08);
+      background: var(--bg-panel-card);
+      border:1px solid var(--border-subtle);
       border-radius:12px; padding:16px;
       display:flex; flex-direction:column; gap:10px;
-      transition:border-color 200ms ease, transform 200ms ease;
+      transition:border-color 200ms var(--ease-spring), transform 200ms var(--ease-spring), box-shadow 200ms;
     }
-    .card:hover { border-color:rgba(120,120,255,0.3); transform:translateY(-1px); }
+    .card:hover {
+      border-color:rgba(120,120,255,0.3);
+      transform:translateY(-1px);
+      box-shadow: var(--shadow-pop);
+    }
     .card.connected { border-color:rgba(126,255,155,0.32); background:rgba(126,255,155,0.04); }
     .card.expired   { border-color:rgba(255,180,100,0.32); background:rgba(255,180,100,0.04); }
     .card.unconfigured { opacity:0.62; }
@@ -76,12 +112,13 @@
       gap:10px;
     }
     .card .name {
-      font-size:13px; letter-spacing:0.06em;
-      color:rgba(255,255,255,0.95);
+      font-size: var(--fs-fluid-base);
+      letter-spacing:0.06em;
+      color: var(--text-primary);
     }
     .card .status-dot {
       width:8px; height:8px; border-radius:50%;
-      background:rgba(255,255,255,0.18);
+      background: rgba(255,255,255,0.18);
       flex-shrink:0;
     }
     .card.connected .status-dot { background:#7eff9b; box-shadow:0 0 8px rgba(126,255,155,0.6); }
@@ -89,17 +126,20 @@
     .card.unconfigured .status-dot { background:rgba(255,255,255,0.1); }
 
     .card .desc {
-      font-size:11px; color:rgba(255,255,255,0.55);
+      font-size: var(--fs-fluid-sm);
+      color: var(--text-secondary);
       line-height:1.55; min-height:36px;
     }
 
     .card .meta {
-      font-size:10px; letter-spacing:0.08em; text-transform:uppercase;
-      color:rgba(255,255,255,0.35);
+      font-size: var(--fs-xs);
+      letter-spacing:0.08em; text-transform:uppercase;
+      color: var(--text-tertiary);
       display:flex; gap:10px; flex-wrap:wrap;
     }
     .card .meta .pill {
-      padding:2px 7px; border:1px solid rgba(255,255,255,0.1);
+      padding:2px 7px;
+      border:1px solid var(--border-subtle);
       border-radius:999px;
     }
 
@@ -107,37 +147,63 @@
       display:flex; gap:8px; margin-top:auto; padding-top:8px;
     }
     .card button {
-      flex:1; background:rgba(120,120,255,0.16); color:rgba(255,255,255,0.95);
-      border:1px solid rgba(120,120,255,0.4); border-radius:8px;
-      padding:8px 12px; font-size:10px; letter-spacing:0.14em; text-transform:uppercase;
-      cursor:pointer; font-family:inherit;
+      flex:1;
+      background:rgba(120,120,255,0.16);
+      color: var(--text-primary);
+      border:1px solid rgba(120,120,255,0.4);
+      border-radius:8px;
+      padding:8px 12px;
+      font-size: var(--fs-xs);
+      letter-spacing: var(--tracking-wide);
+      text-transform:uppercase;
+      cursor:pointer;
+      font-family:inherit;
+      min-height: var(--tap-min);
+      transition: background 0.2s;
     }
     .card button:hover { background:rgba(120,120,255,0.28); }
     .card button.danger {
-      background:rgba(255,120,120,0.12); border-color:rgba(255,120,120,0.32);
+      background:rgba(255,120,120,0.12);
+      border-color:rgba(255,120,120,0.32);
     }
     .card button.danger:hover { background:rgba(255,120,120,0.22); }
     .card button:disabled { opacity:0.45; cursor:not-allowed; }
 
     .empty {
       grid-column:1/-1; padding:32px; text-align:center;
-      color:rgba(255,255,255,0.4); font-size:12px;
-      border:1px dashed rgba(255,255,255,0.12); border-radius:12px;
+      color: var(--text-tertiary);
+      font-size: var(--fs-fluid-sm);
+      border:1px dashed var(--border-subtle);
+      border-radius:12px;
     }
 
     .footnote {
       margin-top:42px; padding-top:18px;
-      border-top:1px solid rgba(255,255,255,0.06);
-      font-size:11px; color:rgba(255,255,255,0.45); line-height:1.7;
+      border-top:1px solid var(--border-subtle);
+      font-size: var(--fs-fluid-sm);
+      color: var(--text-tertiary);
+      line-height:1.7;
     }
-    .footnote strong { color:rgba(255,255,255,0.7); font-weight:500; }
+    .footnote strong { color: var(--text-secondary); font-weight: var(--fw-medium); }
+
+    /* ── REDUCED MOTION ── */
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        transition-duration: 0.01ms !important;
+      }
+    }
 
     @media (max-width: 720px) {
       .grid { grid-template-columns:1fr; }
-      h1 { font-size:18px; }
+      h1 { font-size: var(--fs-fluid-xl); }
+      .group-head { gap: 8px; }
+    }
+
+    @media (max-width: 375px) {
+      .grid { grid-template-columns:1fr; }
     }
   </style>
-  <link rel="stylesheet" href="body/safe_area.css?v=v20260429-council">
 </head>
 <body>
   <div class="wrap">
