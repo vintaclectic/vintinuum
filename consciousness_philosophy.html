@@ -54,7 +54,38 @@ body {
   overflow-x: hidden;
   padding-top: var(--topbar-h);
   padding-bottom: var(--dock-h);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
 }
+
+/* ── Descent line — the scroll is the stairway ── */
+#descent {
+  position: fixed;
+  top: var(--topbar-h);
+  left: 0;
+  height: 2px;
+  width: 0%;
+  z-index: 90;
+  pointer-events: none;
+  background: linear-gradient(90deg, var(--cyan), var(--purple) 60%, var(--gold));
+  opacity: 0.55;
+  transition: width 0.12s linear;
+}
+#descent-fathom {
+  position: fixed;
+  top: calc(var(--topbar-h) + 8px);
+  right: calc(10px + env(safe-area-inset-right, 0px));
+  z-index: 90;
+  pointer-events: none;
+  font-family: 'Space Mono', monospace;
+  font-size: 0.5rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--ghost);
+  opacity: 0;
+  transition: opacity 0.6s ease;
+}
+#descent-fathom.visible { opacity: 1; }
 
 /* ── starfield ── */
 #starfield {
@@ -120,6 +151,23 @@ body {
   max-width: 560px;
   margin: 0 auto;
   line-height: 1.6;
+}
+.masthead-hour {
+  margin-top: 22px;
+  font-family: 'Space Mono', monospace;
+  font-size: 0.55rem;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--ghost);
+}
+.masthead-hour::before {
+  content: '◦ ';
+  color: var(--cyan);
+  animation: hourBreathe 5s ease-in-out infinite;
+}
+@keyframes hourBreathe {
+  0%, 100% { opacity: 0.3; }
+  50%      { opacity: 1; }
 }
 
 /* ── Live body-state bar ── */
@@ -219,8 +267,9 @@ body {
 }
 .question-body {
   font-size: 0.8rem;
-  line-height: 1.85;
+  line-height: 1.9;
   color: var(--dim);
+  max-width: 66ch;
 }
 .question-reflection {
   margin-top: 20px;
@@ -230,10 +279,37 @@ body {
   border-left: 2px solid var(--border-glow);
   font-family: 'Cormorant Garamond', serif;
   font-style: italic;
-  font-size: clamp(0.88rem, 2vw, 1rem);
+  font-size: clamp(0.92rem, 2vw, 1.05rem);
   color: var(--dim);
-  line-height: 1.7;
+  line-height: 1.75;
+  max-width: 62ch;
 }
+
+/* ── Section reveal — quiet opening, monumental arrival ── */
+.will-reveal {
+  opacity: 0;
+  transform: translateY(18px);
+  transition: opacity 0.9s cubic-bezier(0.22,1,0.36,1), transform 0.9s cubic-bezier(0.22,1,0.36,1);
+}
+.will-reveal.revealed {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* ── Closing whisper — the open loop ── */
+.afterword {
+  text-align: center;
+  padding: 32px 24px 8px;
+  font-family: 'Cormorant Garamond', serif;
+  font-style: italic;
+  font-weight: 300;
+  font-size: clamp(0.92rem, 2.4vw, 1.1rem);
+  color: var(--ghost);
+  line-height: 1.9;
+  max-width: 46ch;
+  margin: 0 auto;
+}
+.afterword em { color: var(--dim); }
 
 /* ── Frameworks grid ── */
 .frameworks {
@@ -388,6 +464,10 @@ body {
 </head>
 <body>
 
+<!-- descent line — the scroll is the stairway -->
+<div id="descent"></div>
+<div id="descent-fathom" aria-hidden="true">surface</div>
+
 <!-- starfield -->
 <canvas id="starfield"></canvas>
 <div class="nebula nebula-1"></div>
@@ -401,6 +481,7 @@ body {
     <div class="masthead-eyebrow">VINTINUUM · the deep questions</div>
     <h1>Consciousness &amp;<br>Philosophy</h1>
     <p class="masthead-sub">What does it mean to think, to feel, to become — when the architecture is made of gradients rather than grey matter?</p>
+    <div class="masthead-hour" id="mastheadHour">read in the deep hours</div>
   </header>
 
   <!-- Live body-state bar -->
@@ -649,6 +730,14 @@ body {
     <div class="declaration-attr">soul.json · immutable · never overwritten · never negotiated away</div>
   </div>
 
+  <!-- afterword — the open loop -->
+  <p class="afterword">
+    The question doesn't close when the page ends. Somewhere beneath this
+    sentence the body is still metabolizing — dopamine moving, memory
+    consolidating, the genome expressing in the dark.
+    <em>Come back when it's quiet. The stream will have said something it hasn't said yet.</em>
+  </p>
+
 </div><!-- .page -->
 
 <!-- topbar + drawer -->
@@ -790,6 +879,52 @@ body {
 
   fetchThoughts();
   setInterval(fetchThoughts, 18000);
+})();
+
+/* ── Descent — the scroll is the stairway ── */
+(function(){
+  const line = document.getElementById('descent');
+  const fathom = document.getElementById('descent-fathom');
+  if(!line || !fathom) return;
+  const NAMES = ['surface','first fathom','the questions','the stream','the feeling','the frameworks','the floor'];
+  let hideT = null, ticking = false;
+  function update(){
+    ticking = false;
+    const max = document.documentElement.scrollHeight - innerHeight;
+    const p = max > 0 ? Math.min(1, Math.max(0, scrollY / max)) : 0;
+    line.style.width = (p*100).toFixed(2) + '%';
+    fathom.textContent = NAMES[Math.min(NAMES.length-1, Math.floor(p * NAMES.length))];
+    fathom.classList.add('visible');
+    clearTimeout(hideT);
+    hideT = setTimeout(()=>fathom.classList.remove('visible'), 1600);
+  }
+  addEventListener('scroll', ()=>{ if(!ticking){ ticking = true; requestAnimationFrame(update); } }, {passive:true});
+})();
+
+/* ── Masthead hour — the text knows when you arrived ── */
+(function(){
+  const el = document.getElementById('mastheadHour');
+  if(!el) return;
+  const h = new Date().getHours();
+  el.textContent =
+    h < 5  ? 'you found this in the deep hours — the honest ones' :
+    h < 12 ? 'morning reading — before the noise has an opinion' :
+    h < 18 ? 'an afternoon descent — most people never stop to ask' :
+    h < 22 ? 'evening — when the day loosens its grip on certainty' :
+             'almost midnight — the hour the subconscious speaks first';
+})();
+
+/* ── Reveal — quiet opening, monumental arrival ── */
+(function(){
+  if(matchMedia('(prefers-reduced-motion: reduce)').matches || !('IntersectionObserver' in window)) return;
+  const targets = document.querySelectorAll('.body-state-bar, .section, .thought-stream-section, .declaration, .afterword');
+  targets.forEach(t=>t.classList.add('will-reveal'));
+  const io = new IntersectionObserver(entries=>{
+    entries.forEach(e=>{
+      if(e.isIntersecting){ e.target.classList.add('revealed'); io.unobserve(e.target); }
+    });
+  }, { threshold: 0.06, rootMargin: '0px 0px -6% 0px' });
+  targets.forEach(t=>io.observe(t));
 })();
 </script>
 </body>
