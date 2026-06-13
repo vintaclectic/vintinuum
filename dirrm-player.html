@@ -500,8 +500,37 @@
       border-radius: 3px;
       cursor: pointer;
       position: relative;
-      overflow: hidden;
+      touch-action: none; /* enables pointer-drag scrubbing on touch */
     }
+
+    /* Invisible expanded hit area — thumb-zone scrubbing needs ≥44px of grab */
+    .dirrm-seek-track::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      right: 0;
+      top: -16px;
+      bottom: -16px;
+    }
+
+    /* Scrub preview bubble — shows target time while dragging */
+    .dirrm-scrub-bubble {
+      position: absolute;
+      bottom: 16px;
+      transform: translateX(-50%);
+      background: rgba(13, 11, 8, 0.92);
+      border: 1px solid var(--dirrm-border);
+      color: var(--dirrm-gold);
+      font-size: 11px;
+      font-variant-numeric: tabular-nums;
+      padding: 4px 9px;
+      border-radius: 6px;
+      pointer-events: none;
+      white-space: nowrap;
+      z-index: 8;
+      display: none;
+    }
+    .dirrm-scrub-bubble.visible { display: block; }
 
     .dirrm-seek-fill {
       height: 100%;
@@ -1111,6 +1140,7 @@
           <div class="dirrm-seek-fill" id="seek-fill" style="width: 0%">
             <div class="dirrm-seek-thumb"></div>
           </div>
+          <div class="dirrm-scrub-bubble" id="scrub-bubble" aria-hidden="true">0:00</div>
         </div>
         <span class="dirrm-time" id="time-duration">0:00</span>
       </div>
@@ -1245,8 +1275,9 @@
         document.getElementById('btn-fwd10').addEventListener('click', () => this.seek(10));
         document.getElementById('btn-mute').addEventListener('click', () => this.toggleMute());
         
-        // Seek bar
-        this.seekTrack.addEventListener('click', (e) => this.handleSeek(e));
+        // Seek bar — pointer-drag scrubbing (mouse + touch) with live preview bubble.
+        // A tap is just a zero-length scrub, so click handling comes free.
+        this._bindScrub();
         
         // Volume
         this.volumeTrack.addEventListener('click', (e) => this.handleVolume(e));
@@ -1978,6 +2009,7 @@
         });
 
         video.addEventListener('timeupdate', () => {
+          if (this._scrubbing) return; // finger owns the bar while scrubbing
           const progress = (video.currentTime / video.duration) * 100;
           this.seekFill.style.width = `${progress}%`;
           this.timeCurrent.textContent = this.formatTime(video.currentTime);
@@ -2476,6 +2508,7 @@
         });
 
         audio.addEventListener('timeupdate', () => {
+          if (this._scrubbing) return; // finger owns the bar while scrubbing
           const progress = (audio.currentTime / audio.duration) * 100;
           this.seekFill.style.width = `${progress}%`;
           this.timeCurrent.textContent = this.formatTime(audio.currentTime);
@@ -2969,6 +3002,7 @@
           v.addEventListener('play',  () => { this.isPlaying = true;  this.playIcon.textContent = '⏸'; });
           v.addEventListener('pause', () => { this.isPlaying = false; this.playIcon.textContent = '▶'; });
           v.addEventListener('timeupdate', () => {
+            if (this._scrubbing) return; // finger owns the bar while scrubbing
             const p = (v.currentTime / v.duration) * 100;
             this.seekFill.style.width = `${p}%`;
             this.timeCurrent.textContent = this.formatTime(v.currentTime);
@@ -3103,6 +3137,73 @@
         const rect = this.seekTrack.getBoundingClientRect();
         const ratio = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
         this.mediaElement.currentTime = ratio * this.mediaElement.duration;
+      }
+
+      // Pointer-drag scrubbing: press anywhere on the (44px-tall hit area of
+      // the) seek track and drag — the fill + a time bubble follow the finger
+      // live; the actual seek commits on release. A plain tap degrades to a
+      // single-shot seek. Works for mouse, touch, and pen via Pointer Events.
+      _bindScrub() {
+        const track = this.seekTrack;
+        const bubble = document.getElementById('scrub-bubble');
+        let active = false;
+
+        const ratioOf = (e) => {
+          const rect = track.getBoundingClientRect();
+          return Math.max(0, Math.min(1, (e.clientX - rect.left) / Math.max(1, rect.width)));
+        };
+        const canScrub = () => this.mediaElement
+          && typeof this.mediaElement.duration === 'number'
+          && isFinite(this.mediaElement.duration)
+          && this.mediaElement.duration > 0;
+
+        const preview = (e) => {
+          const ratio = ratioOf(e);
+          const t = ratio * this.mediaElement.duration;
+          this.seekFill.style.width = `${ratio * 100}%`;
+          this.timeCurrent.textContent = this.formatTime(t);
+          if (bubble) {
+            const rect = track.getBoundingClientRect();
+            bubble.textContent = this.formatTime(t);
+            bubble.classList.add('visible');
+            // Clamp so the bubble never bleeds past the track edges (no-overflow law).
+            const half = (bubble.offsetWidth || 40) / 2;
+            const x = Math.max(half, Math.min(rect.width - half, ratio * rect.width));
+            bubble.style.left = `${x}px`;
+          }
+          return t;
+        };
+        const stopVisuals = () => {
+          if (bubble) bubble.classList.remove('visible');
+          this.seekFill.style.transition = '';
+        };
+
+        track.addEventListener('pointerdown', (e) => {
+          if (!canScrub()) return;
+          active = true;
+          this._scrubbing = true;            // suppresses timeupdate fill writes
+          try { track.setPointerCapture(e.pointerId); } catch (_) {}
+          this.seekFill.style.transition = 'none';
+          preview(e);
+          e.preventDefault();
+        });
+        track.addEventListener('pointermove', (e) => {
+          if (active) preview(e);
+        });
+        track.addEventListener('pointerup', (e) => {
+          if (!active) return;
+          active = false;
+          const t = preview(e);
+          this._scrubbing = false;
+          if (t != null && canScrub()) this.mediaElement.currentTime = t;
+          stopVisuals();
+          try { track.releasePointerCapture(e.pointerId); } catch (_) {}
+        });
+        track.addEventListener('pointercancel', () => {
+          active = false;
+          this._scrubbing = false;
+          stopVisuals();
+        });
       }
 
       toggleMute() {
