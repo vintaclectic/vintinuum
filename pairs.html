@@ -91,17 +91,20 @@ body {
 .topbar {
   position: fixed;
   top: 0; left: 0; right: 0;
-  height: 48px;
+  height: calc(48px + env(safe-area-inset-top, 0px));
   z-index: 100;
   background: rgba(4, 8, 16, 0.88);
   border-bottom: 1px solid var(--border);
   display: flex;
-  align-items: center;
-  padding: 0 20px;
+  align-items: flex-end;
+  padding: 0 20px 0;
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-bottom: 0;
   gap: 16px;
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
 }
+.topbar > * { margin-bottom: 6px; }
 
 .topbar-back {
   font-family: 'JetBrains Mono', monospace;
@@ -110,12 +113,16 @@ body {
   text-transform: uppercase;
   color: var(--text-dim);
   text-decoration: none;
-  padding: 6px 12px;
+  padding: 8px 12px;
   border: 1px solid var(--border);
   border-radius: 12px;
   transition: all 0.2s ease;
   flex-shrink: 0;
   white-space: nowrap;
+  min-height: 36px;
+  display: flex;
+  align-items: center;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .topbar-back:hover {
@@ -142,8 +149,8 @@ body {
   z-index: 1;
   max-width: 1100px;
   margin: 0 auto;
-  padding: 64px 20px 60px;
-  min-height: 100vh;
+  padding: calc(64px + env(safe-area-inset-top, 0px)) max(20px, env(safe-area-inset-right, 20px)) calc(80px + env(safe-area-inset-bottom, 0px)) max(20px, env(safe-area-inset-left, 20px));
+  min-height: 100svh;
 }
 
 /* ── PAGE HEADER ── */
@@ -310,13 +317,14 @@ body {
   border-radius: 8px;
   color: var(--text);
   font-family: 'JetBrains Mono', monospace;
-  font-size: 0.55rem;
+  font-size: 16px; /* iOS: must be >=16px to prevent auto-zoom */
   letter-spacing: 0.05em;
   outline: none;
   transition: border-color 0.25s ease;
   display: block;
   box-sizing: border-box;
   margin-bottom: 10px;
+  -webkit-appearance: none;
 }
 
 .accept-input:focus {
@@ -460,7 +468,7 @@ body {
   color: var(--text);
   font-family: 'Cormorant Garamond', serif;
   font-style: italic;
-  font-size: 1rem;
+  font-size: 16px; /* iOS: must be >=16px to prevent auto-zoom */
   line-height: 1.6;
   resize: none;
   outline: none;
@@ -469,6 +477,7 @@ body {
   box-sizing: border-box;
   margin-bottom: 10px;
   overflow: hidden auto;
+  -webkit-appearance: none;
 }
 
 .plant-textarea::placeholder { color: var(--text-ghost); font-style: italic; }
@@ -492,19 +501,20 @@ body {
 }
 
 .vis-select {
-  padding: 7px 10px;
+  padding: 10px 10px;
   background: rgba(4, 8, 16, 0.6);
   border: 1px solid var(--border);
   border-radius: 8px;
   color: var(--text-dim);
   font-family: 'JetBrains Mono', monospace;
-  font-size: 0.48rem;
+  font-size: 16px; /* iOS: >=16px prevents zoom */
   letter-spacing: 0.05em;
   outline: none;
   cursor: pointer;
   transition: border-color 0.25s ease;
   flex: 1;
   min-width: 120px;
+  min-height: 44px;
 }
 
 .vis-select:focus { border-color: rgba(var(--rose-glow), 0.3); }
@@ -613,9 +623,15 @@ body {
   }
 }
 
-@media (max-width: 480px) {
-  .page { padding: 64px 14px 50px; }
+@media (max-width: 600px) {
+  .topbar { padding: 0 14px 0; }
+  .topbar > * { margin-bottom: 6px; }
+  .page { padding: calc(60px + env(safe-area-inset-top,0px)) 14px calc(80px + env(safe-area-inset-bottom,0px)); }
+  .panel { padding: 16px 14px; }
+  .plant-form { padding: 14px; }
   .memory-grid { grid-template-columns: 1fr; }
+  .visibility-row { flex-direction: column; align-items: flex-start; }
+  .vis-select { width: 100%; }
 }
 </style>
 <script src="body/api_base.js?v=v20260429-council"></script>
@@ -623,6 +639,7 @@ body {
 <script src="body/topbar.js?v=v20260509-altarup" defer></script>
 <script src="body/guide-content.js?v=v20260603-guide1" defer></script>
 <script src="body/guide.js?v=v20260603-guide1" defer></script>
+<script src="body/mobile_nav.js?v=v20260505-onedoor" defer></script>
 </head>
 <body>
 
