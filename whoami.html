@@ -40,14 +40,27 @@
       border:1px solid rgba(120,120,255,0.4); border-radius:10px;
       padding:11px 18px; font-size:12px; letter-spacing:0.1em; text-transform:uppercase;
       cursor:pointer; font-family:inherit;
+      min-height:44px;
+      -webkit-tap-highlight-color:transparent;
+      transition:transform 180ms cubic-bezier(0.34,1.56,0.64,1), background 0.15s;
     }
     button:hover { background:rgba(120,120,255,0.28); }
+    button:active { transform:scale(0.95); }
     a { color:rgba(170,200,255,0.85); text-decoration:none; border-bottom:1px dotted rgba(170,200,255,0.4); }
     .nav { font-size:12px; color:rgba(255,255,255,0.5); margin-bottom:8px; }
+    .nav a { display:inline-flex; align-items:center; min-height:44px; padding-right:12px; }
+    .row { cursor:pointer; -webkit-tap-highlight-color:transparent; min-height:44px; align-items:center; }
+    .row.copied span:last-child { color:#7eff9b; }
+    .foot { margin-top:28px; font-size:11px; color:rgba(255,255,255,0.35); }
+    .foot a { color:rgba(170,200,255,0.6); }
     @media (max-width: 639px) {
-      pre { font-size:12px; }
+      /* Phone: JSON wraps instead of forcing sideways scroll — one-thumb readable */
+      pre { font-size:12px; white-space:pre-wrap; word-break:break-all; }
       .row { font-size:12px; }
+      /* Thumb-zone: actions become full-width stacked targets */
+      .actions button { flex:1 1 100%; min-height:48px; }
     }
+    @media (prefers-reduced-motion: reduce) { button { transition-duration:1ms; } }
   </style>
     <link rel="stylesheet" href="body/safe_area.css?v=v20260429-council">
 </head>
@@ -71,6 +84,8 @@
       <button id="signout">sign out (purge everything)</button>
       <button id="bond">open bond door</button>
     </div>
+
+    <p class="foot">this is the raw truth — tap any row to copy it. the human view of you lives in <a href="you.html">you.html →</a></p>
   </div>
 
   <script src="body/bond_door.js?v=v20260509-marqueewrap"></script>
@@ -80,7 +95,19 @@
       var a = document.createElement('span'); a.textContent = k;
       var b = document.createElement('span'); b.textContent = v == null ? '—' : String(v);
       if (cls) b.classList.add(cls);
-      d.appendChild(a); d.appendChild(b); return d;
+      d.appendChild(a); d.appendChild(b);
+      // Tap-to-copy — long values are unreadable on phones; copying is the
+      // thing you actually want from a truth window on mobile.
+      d.addEventListener('click', function () {
+        var text = b.textContent || '';
+        try {
+          navigator.clipboard && navigator.clipboard.writeText(text);
+          navigator.vibrate && navigator.vibrate(8);
+        } catch (_) {}
+        d.classList.add('copied');
+        setTimeout(function () { d.classList.remove('copied'); }, 700);
+      });
+      return d;
     }
     async function refresh() {
       var c = document.getElementById('client'); c.innerHTML = '';
