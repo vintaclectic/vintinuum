@@ -773,7 +773,8 @@ html,body{
 /* ── HUD ──────────────────────────────────────────────────────── */
 #vint-stats{
   position:fixed;
-  top:18px;right:18px;
+  top:max(18px, calc(env(safe-area-inset-top, 0px) + 10px));
+  right:max(18px, calc(env(safe-area-inset-right, 0px) + 10px));
   min-width:230px;
   padding:14px 16px;
   background:rgba(6,8,15,.55);
@@ -818,8 +819,11 @@ html,body{
 /* Back-to-index pill */
 #vint-back{
   position:fixed;
-  top:18px;left:18px;
+  top:max(18px, calc(env(safe-area-inset-top, 0px) + 10px));
+  left:max(18px, calc(env(safe-area-inset-left, 0px) + 10px));
   padding:8px 14px;
+  min-height:44px;
+  display:flex;align-items:center;
   font-family:"JetBrains Mono","Courier New",monospace;
   font-size:11px;
   letter-spacing:1px;
@@ -844,14 +848,16 @@ html,body{
   }
   #vint-stats{
     top:auto;
-    bottom:14px;
-    right:14px;
-    left:14px;
+    bottom:max(14px, calc(env(safe-area-inset-bottom, 0px) + 10px));
+    right:max(14px, calc(env(safe-area-inset-right, 0px) + 8px));
+    left:max(14px, calc(env(safe-area-inset-left, 0px) + 8px));
     min-width:0;
     font-size:10px;
   }
   #vint-back{
     font-size:10px;padding:7px 12px;
+    top:max(14px, calc(env(safe-area-inset-top, 0px) + 8px));
+    left:max(14px, calc(env(safe-area-inset-left, 0px) + 8px));
   }
 }
 @media (max-width:420px){
@@ -862,7 +868,7 @@ html,body{
 
 /* Reduced motion — slow the figure but never disable; she walks. */
 @media (prefers-reduced-motion:reduce){
-  *{ animation-duration:1.6x !important; }
+  *{ animation-duration:1.6s !important; }
 }
 
 /* ════════════════════════════════════════════════════════════════════════
@@ -1580,7 +1586,9 @@ html,body{
   const convStyle = document.createElement('style');
   convStyle.textContent = `
     #vint-conv{
-      position:fixed;bottom:18px;left:50%;transform:translateX(-50%);
+      position:fixed;
+      bottom:max(18px, calc(env(safe-area-inset-bottom, 0px) + 12px));
+      left:50%;transform:translateX(-50%);
       display:flex;align-items:center;gap:8px;
       background:rgba(6,8,15,0.88);
       border:1px solid rgba(79,195,247,0.22);
@@ -1593,11 +1601,15 @@ html,body{
       background:none;border:none;font-size:20px;cursor:pointer;
       padding:4px 6px;border-radius:50%;transition:background 0.18s;
       line-height:1;color:#fff;
+      min-width:44px;min-height:44px;
+      display:flex;align-items:center;justify-content:center;
     }
     #vint-conv button:hover{ background:rgba(255,255,255,0.1); }
     #vint-text-in{
       background:transparent;border:none;outline:none;
-      color:#e8f4ff;font-size:14px;width:220px;
+      color:#e8f4ff;
+      /* 16px prevents iOS from auto-zooming on focus */
+      font-size:16px;width:220px;
       font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
     }
     #vint-text-in::placeholder{ color:rgba(255,255,255,0.28); }
@@ -1615,7 +1627,7 @@ html,body{
       50%{box-shadow:0 0 20px rgba(230,57,70,0.8);}
     }
     @media(max-width:480px){
-      #vint-text-in{width:130px;}
+      #vint-text-in{width:120px;}
       #vint-conv{padding:6px 10px;}
     }
   `;
