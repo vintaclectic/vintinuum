@@ -78,7 +78,9 @@ body {
   z-index: 1;
   max-width: 1280px;
   margin: 0 auto;
-  padding: 32px 18px 80px;
+  padding: calc(32px + env(safe-area-inset-top, 0px)) 18px calc(80px + env(safe-area-inset-bottom, 0px));
+  padding-left: max(18px, env(safe-area-inset-left, 18px));
+  padding-right: max(18px, env(safe-area-inset-right, 18px));
 }
 
 /* ── HEADER ── */
@@ -581,7 +583,8 @@ body {
 /* ── STATUS LINE ── */
 .status {
   position: fixed;
-  bottom: 14px;
+  /* clears mobile nav (56px) + safe area, with breathing room */
+  bottom: calc(70px + env(safe-area-inset-bottom, 0px));
   left: 50%;
   transform: translateX(-50%);
   padding: 6px 14px;
@@ -594,6 +597,7 @@ body {
   color: var(--dim);
   z-index: 50;
   pointer-events: none;
+  white-space: nowrap;
 }
 .status .dot {
   display: inline-block;
@@ -818,6 +822,63 @@ body {
 ::-webkit-scrollbar-track { background: rgba(0,0,0,0.2); }
 ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 4px; }
 ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.15); }
+
+/* ── iOS input zoom prevention ── */
+.search-box input,
+.teach-input,
+.teach-source {
+  font-size: max(16px, 0.78rem);
+}
+
+/* ── MOBILE: 768px ── */
+@media (max-width: 768px) {
+  .wing { padding-top: calc(20px + env(safe-area-inset-top, 0px)); padding-bottom: calc(100px + env(safe-area-inset-bottom, 0px)); }
+  .header h1 { font-size: clamp(1.6rem, 6vw, 2.8rem); }
+  .hero { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+  .modal { padding: 20px 18px 18px; max-height: 90svh; }
+  .modal-meta { grid-template-columns: 1fr; }
+  .controls { gap: 8px; }
+  .search-box { flex: 1 1 200px; }
+}
+
+/* ── 480px ── */
+@media (max-width: 480px) {
+  .wing { padding-left: 14px; padding-right: 14px; }
+  .hero { grid-template-columns: repeat(2, 1fr); gap: 8px; }
+  .hero-card { padding: 12px 14px; border-radius: 12px; }
+  .hero-value { font-size: 1.2rem; }
+  .channels { gap: 4px; }
+  .channel-pill { font-size: 0.5rem; padding: 4px 10px 4px 18px; }
+  .entry { padding: 12px 14px 12px 12px; }
+  .entry-title { font-size: 0.85rem; }
+  .entry-content { font-size: 0.68rem; }
+  .local-brain-grid { grid-template-columns: 1fr; }
+  .teach-row { flex-direction: column; }
+  .teach-source { flex: 0 0 auto; width: 100%; }
+}
+
+/* ── 375px ── */
+@media (max-width: 375px) {
+  .wing { padding-left: 12px; padding-right: 12px; }
+  .hero { grid-template-columns: 1fr 1fr; gap: 6px; }
+  .hero-card { padding: 10px 12px; }
+  .hero-value { font-size: 1.1rem; }
+  .controls { flex-direction: column; align-items: stretch; }
+  .search-box { max-width: 100%; }
+  .channels { justify-content: flex-start; overflow-x: auto; flex-wrap: nowrap; padding-bottom: 4px; }
+  .channels::-webkit-scrollbar { display: none; }
+}
+
+/* ── 320px ── */
+@media (max-width: 320px) {
+  .wing { padding-left: 10px; padding-right: 10px; }
+  .hero { grid-template-columns: 1fr; }
+  .hero-card { padding: 8px 10px; }
+  .entry-head { flex-direction: column; gap: 4px; }
+  .entry-time { align-self: flex-end; }
+  .modal { padding: 14px 12px; }
+  .corpus-row { flex-direction: column; gap: 6px; }
+}
 </style>
 <script src="body/api_base.js?v=v20260508-2355-livelearn"></script>
 <script src="body/shell.js?v=v20260508-2355-livelearn"></script>
