@@ -652,7 +652,12 @@ body {
 
 /* ── RESPONSIVE ── */
 @media (max-width: 768px) {
-  .observatory { padding: 16px 12px 60px; }
+  /* preserve safe-area env() at mobile widths */
+  .observatory {
+    padding: calc(16px + env(safe-area-inset-top, 0px)) 12px calc(80px + env(safe-area-inset-bottom, 0px));
+    padding-left: max(12px, env(safe-area-inset-left, 12px));
+    padding-right: max(12px, env(safe-area-inset-right, 12px));
+  }
   .metric-grid { grid-template-columns: 1fr; gap: 14px; }
   .card { padding: 18px; }
   .heatmap { grid-template-columns: repeat(12, 1fr); }
@@ -662,6 +667,9 @@ body {
   .daily-chart { height: 70px; }
   .quote-container { padding: 14px 16px; }
   .cosmic-time { font-size: 1rem; }
+  /* tables: internal scroll, no page overflow */
+  .pdepth-table, .top-users { display: block; overflow-x: auto; }
+  .neuro-grid { grid-template-columns: repeat(2, 1fr); }
 }
 
 @media (max-width: 480px) {
@@ -669,6 +677,56 @@ body {
   .filter-pill { padding: 5px 12px; font-size: 0.5rem; }
   .heatmap { grid-template-columns: repeat(8, 1fr); }
   .heatmap-labels { grid-template-columns: repeat(8, 1fr); }
+  .gene-row { grid-template-columns: 80px 1fr 32px; gap: 6px; }
+  .neuro-grid { grid-template-columns: 1fr; }
+  .body-state-grid { grid-template-columns: repeat(2, 1fr); }
+  .depth-ring-wrap { gap: 14px; }
+  .filters { gap: 4px; }
+  .persona-name { width: 70px; }
+  .trait-name { width: 80px; }
+}
+
+/* ── 375px ── */
+@media (max-width: 375px) {
+  .observatory {
+    padding: calc(12px + env(safe-area-inset-top, 0px)) 10px calc(72px + env(safe-area-inset-bottom, 0px));
+  }
+  .card { padding: 14px; border-radius: 14px; }
+  .card-value { font-size: 1.3rem; }
+  .heatmap { grid-template-columns: repeat(6, 1fr); }
+  .heatmap-labels { grid-template-columns: repeat(6, 1fr); }
+  .gene-row { grid-template-columns: 68px 1fr 28px; gap: 4px; }
+  .gene-name { font-size: 0.44rem; }
+  .gene-stat-grid { grid-template-columns: repeat(3, 1fr); gap: 6px; }
+  .phi-label { width: 90px; font-size: 0.64rem; }
+  .neuro-derived { gap: 8px; }
+  .neuro-derived-item { min-width: 60px; }
+  .soul-queue-stats { gap: 10px; }
+  .mem-health-stats { gap: 8px; }
+  .depth-ring-wrap { flex-direction: column; gap: 12px; }
+  .funnel-label { width: 60px; font-size: 0.48rem; }
+  .bond-tiers { gap: 8px; }
+}
+
+/* ── 320px ── */
+@media (max-width: 320px) {
+  .observatory {
+    padding: calc(10px + env(safe-area-inset-top, 0px)) 8px calc(68px + env(safe-area-inset-bottom, 0px));
+  }
+  .card { padding: 12px; border-radius: 12px; }
+  .card-value { font-size: 1.2rem; }
+  .heatmap { grid-template-columns: repeat(4, 1fr); }
+  .heatmap-labels { display: none; }
+  .gene-row { grid-template-columns: 56px 1fr 26px; gap: 3px; }
+  .gene-name { font-size: 0.4rem; }
+  .gene-stat-grid { grid-template-columns: repeat(2, 1fr); }
+  .filters { gap: 3px; }
+  .filter-pill { padding: 4px 8px; font-size: 0.45rem; }
+  .metric-grid { gap: 10px; }
+  .inner-feed { max-height: 260px; }
+  .soul-q-list { max-height: 200px; }
+  .persona-name { width: 54px; font-size: 0.52rem; }
+  .phi-label { width: 76px; font-size: 0.6rem; }
 }
 
 /* ── REDUCED MOTION ── */
