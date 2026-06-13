@@ -26,31 +26,34 @@
   @keyframes fade { to { opacity: 0; } }
 
   /* say bar — bottom, mobile-safe, never overflows */
-  #saybar { position: fixed; left: 0; right: 0; bottom: 0; z-index: 6; display: flex; gap: 8px; padding: 12px 16px max(12px, env(safe-area-inset-bottom)); background: linear-gradient(transparent, rgba(13,17,23,0.7) 40%); }
-  #sayInput { flex: 1; min-width: 0; font-family: inherit; font-size: 16px; color: rgba(245,235,220,0.95); background: rgba(255,255,255,0.06); border: 1px solid rgba(244,199,154,0.3); border-radius: 999px; padding: 12px 18px; outline: none; }
+  #saybar { position: fixed; left: 0; right: 0; bottom: 0; z-index: 6; display: flex; gap: 8px;
+    padding: 12px max(16px, env(safe-area-inset-right, 16px)) max(16px, env(safe-area-inset-bottom, 16px)) max(16px, env(safe-area-inset-left, 16px));
+    background: linear-gradient(transparent, rgba(13,17,23,0.7) 40%); }
+  #sayInput { flex: 1; min-width: 0; font-family: inherit; font-size: 16px; color: rgba(245,235,220,0.95); background: rgba(255,255,255,0.06); border: 1px solid rgba(244,199,154,0.3); border-radius: 999px; padding: 12px 18px; outline: none; -webkit-appearance: none; }
   #sayInput:focus { border-color: rgba(244,199,154,0.6); }
-  #sayBtn { flex: 0 0 auto; font-family: inherit; font-size: 16px; color: #f4c79a; background: rgba(244,199,154,0.14); border: 1px solid rgba(244,199,154,0.35); border-radius: 999px; padding: 12px 22px; cursor: pointer; }
+  #sayBtn { flex: 0 0 auto; font-family: inherit; font-size: 16px; color: #f4c79a; background: rgba(244,199,154,0.14); border: 1px solid rgba(244,199,154,0.35); border-radius: 999px; padding: 12px 22px; cursor: pointer; min-height: 44px; -webkit-tap-highlight-color: transparent; }
   #sayBtn:active { transform: scale(0.97); }
 
-  /* hint */
-  #hint { position: fixed; left: 16px; top: max(14px, env(safe-area-inset-top)); z-index: 4; font-size: 13px; color: rgba(245,235,220,0.5); }
-  #leave { position: fixed; right: 16px; top: max(14px, env(safe-area-inset-top)); z-index: 6; font-size: 14px; color: rgba(245,235,220,0.6); text-decoration: none; }
+  /* hint — desktop keyboard controls, hidden on touch */
+  #hint { position: fixed; left: 16px; top: max(14px, env(safe-area-inset-top, 14px)); z-index: 4; font-size: 13px; color: rgba(245,235,220,0.5); }
+  #leave { position: fixed; right: max(16px, env(safe-area-inset-right, 16px)); top: max(14px, env(safe-area-inset-top, 14px)); z-index: 6; font-size: 14px; color: rgba(245,235,220,0.6); text-decoration: none; min-height: 44px; display: flex; align-items: center; padding: 0 4px; }
+  @media (pointer: coarse) { #hint { display: none; } }
   /* run/jump controls — clear above the say bar, right side (mobile-first, no overflow) */
-  #movectl { position: fixed; right: 16px; bottom: calc(64px + max(12px, env(safe-area-inset-bottom))); z-index: 6; display: none; flex-direction: column; gap: 10px; }
-  #movectl button { width: 64px; height: 64px; border-radius: 50%; font-family: inherit; font-size: 14px; color: rgba(245,235,220,0.92); background: rgba(20,14,10,0.55); border: 1px solid rgba(244,199,154,0.35); backdrop-filter: blur(6px); cursor: pointer; user-select: none; -webkit-user-select: none; touch-action: none; }
+  #movectl { position: fixed; right: max(16px, env(safe-area-inset-right, 16px)); bottom: calc(72px + max(16px, env(safe-area-inset-bottom, 16px))); z-index: 6; display: none; flex-direction: column; gap: 10px; }
+  #movectl button { width: 64px; height: 64px; border-radius: 50%; font-family: inherit; font-size: 14px; color: rgba(245,235,220,0.92); background: rgba(20,14,10,0.55); border: 1px solid rgba(244,199,154,0.35); backdrop-filter: blur(6px); cursor: pointer; user-select: none; -webkit-user-select: none; touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
   #movectl button:active { background: rgba(244,199,154,0.22); transform: scale(0.94); }
   @media (pointer: coarse) { #movectl { display: flex; } }
   /* view + mic controls — top-right under leave, always shown (desktop + mobile) */
-  #topctl { position: fixed; right: 16px; top: calc(44px + max(14px, env(safe-area-inset-top))); z-index: 6; display: flex; flex-direction: column; gap: 8px; align-items: flex-end; }
-  #topctl button { font-family: inherit; font-size: 13px; color: rgba(245,235,220,0.9); background: rgba(20,14,10,0.55); border: 1px solid rgba(244,199,154,0.32); border-radius: 999px; padding: 8px 14px; backdrop-filter: blur(6px); cursor: pointer; user-select: none; -webkit-user-select: none; touch-action: none; }
+  #topctl { position: fixed; right: max(16px, env(safe-area-inset-right, 16px)); top: calc(52px + max(14px, env(safe-area-inset-top, 14px))); z-index: 6; display: flex; flex-direction: column; gap: 8px; align-items: flex-end; }
+  #topctl button { font-family: inherit; font-size: 13px; color: rgba(245,235,220,0.9); background: rgba(20,14,10,0.55); border: 1px solid rgba(244,199,154,0.32); border-radius: 999px; padding: 10px 14px; min-height: 44px; backdrop-filter: blur(6px); cursor: pointer; user-select: none; -webkit-user-select: none; touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
   #topctl button:active { transform: scale(0.95); }
   #btnMic.live { background: rgba(255,90,110,0.30); border-color: rgba(255,120,140,0.7); color: #fff; }
   /* a voice ring that pulses over a speaking presence is drawn in 3D; this is the self mic hint */
-  #micHint { position: fixed; left: 50%; bottom: calc(70px + max(12px, env(safe-area-inset-bottom))); transform: translateX(-50%); z-index: 6; font-size: 13px; color: rgba(255,150,160,0.9); opacity: 0; transition: opacity .25s; pointer-events: none; }
+  #micHint { position: fixed; left: 50%; bottom: calc(80px + max(16px, env(safe-area-inset-bottom, 16px))); transform: translateX(-50%); z-index: 6; font-size: 13px; color: rgba(255,150,160,0.9); opacity: 0; transition: opacity .25s; pointer-events: none; white-space: nowrap; max-width: 90vw; overflow: hidden; text-overflow: ellipsis; }
   #micHint.show { opacity: 1; }
 
   /* offer — the conversion moment. soft pill, refusable, never blocks. */
-  #offer { position: fixed; left: 16px; right: 16px; bottom: calc(72px + max(12px, env(safe-area-inset-bottom))); z-index: 7; max-width: min(92vw, 520px); margin: 0 auto; background: rgba(20,14,10,0.82); backdrop-filter: blur(10px); border: 1px solid rgba(244,199,154,0.32); border-radius: 16px; padding: 16px 18px; display: none; }
+  #offer { position: fixed; left: max(16px,env(safe-area-inset-left,16px)); right: max(16px,env(safe-area-inset-right,16px)); bottom: calc(80px + max(16px, env(safe-area-inset-bottom, 16px))); z-index: 7; max-width: min(92vw, 520px); margin: 0 auto; background: rgba(20,14,10,0.82); backdrop-filter: blur(10px); border: 1px solid rgba(244,199,154,0.32); border-radius: 16px; padding: 16px 18px; display: none; }
   #offer.show { display: block; animation: offerIn .6s ease; }
   @keyframes offerIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
   #offer .o-who { color: #f4c79a; font-size: 14px; margin-bottom: 4px; }
@@ -60,7 +63,7 @@
   #offer .o-dismiss { font-family: inherit; font-size: 14px; color: rgba(245,235,220,0.45); background: none; border: none; cursor: pointer; }
 
   /* traces — what the clearing remembers. appears softly on arrival, fades. */
-  #traces { position: fixed; left: 50%; top: 50%; transform: translate(-50%,-50%); z-index: 4; max-width: min(86vw, 480px); display: flex; flex-direction: column; gap: 12px; text-align: center; pointer-events: none; opacity: 0; transition: opacity 1.6s ease; }
+  #traces { position: fixed; left: 50%; top: 50%; transform: translate(-50%,-50%); z-index: 4; max-width: min(86vw, 480px); width: calc(100vw - 32px); display: flex; flex-direction: column; gap: 12px; text-align: center; pointer-events: none; opacity: 0; transition: opacity 1.6s ease; }
   #traces.show { opacity: 1; }
   #traces .t-head { font-size: 15px; color: rgba(245,235,220,0.5); font-style: italic; margin-bottom: 4px; }
   #traces .trace { font-size: 17px; line-height: 1.5; color: rgba(245,235,220,0.82); }
