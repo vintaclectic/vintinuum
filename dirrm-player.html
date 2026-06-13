@@ -1390,6 +1390,12 @@
           lastTick: null,       // last timeupdate timestamp for delta accumulation
           duration: 0,
           ended: false,
+          // ── DWELL/TASTE signal (growth-frontier) ──
+          seekEvents: [],       // [{from_s,to_s}] every skip/rewind — taste fingerprint
+          seekFrom: null,       // position captured at 'seeking', resolved at 'seeked'
+          abandonAt: null,      // currentTime when abandoned / ended early
+          replayCount: 0,       // restarts after >50% watched (love signal)
+          maxProgressPct: 0,    // furthest fractional progress reached (for replay detect)
         };
       }
       _postPlayEvent(event, extra = {}) {
@@ -1406,6 +1412,11 @@
           watched_seconds: s.watched || 0,
           surface: this._detectSurface(),
           mode: this.mode || 'main',
+          // ── DWELL/TASTE signal ──
+          abandon_at_seconds: s.abandonAt,
+          seek_events: (s.seekEvents && s.seekEvents.length) ? JSON.stringify(s.seekEvents.slice(0, 60)) : null,
+          replay_count: s.replayCount || 0,
+          completed: (s.duration > 0 && (s.watched / s.duration) >= 0.9) ? 1 : 0,
         };
         try {
           // keepalive so 'end'/'abandoned' survives a tab close
@@ -1430,18 +1441,46 @@
           }
           s.lastTick = now;
           if (el.duration && isFinite(el.duration)) s.duration = el.duration;
+          // Track furthest progress for replay detection.
+          if (el.duration > 0) {
+            const pct = el.currentTime / el.duration;
+            if (pct > s.maxProgressPct) s.maxProgressPct = pct;
+          }
         };
         el.addEventListener('play',  () => { s.lastTick = Date.now(); this._postPlayEvent('start', { position: el.currentTime }); });
         el.addEventListener('timeupdate', tick);
         el.addEventListener('pause', () => { tick(); /* pause is not an end */ });
         el.addEventListener('ended', () => { tick(); s.ended = true; this._postPlayEvent('end', { position: el.currentTime, duration: el.duration }); });
-        // Abandoned: tab close / navigation while still watching ≥10s
+
+        // ── SEEK capture (taste signal): 'seeking' marks the FROM, 'seeked' the TO.
+        el.addEventListener('seeking', () => {
+          // currentTime has already moved by 'seeking', so use the last known
+          // play position as FROM. We snapshot it on each tick via lastPos.
+          s.seekFrom = (s._lastPos != null) ? s._lastPos : el.currentTime;
+        });
+        el.addEventListener('seeked', () => {
+          const to = el.currentTime;
+          const from = (s.seekFrom != null) ? s.seekFrom : to;
+          // Ignore micro-seeks (<1.5s) — those are just scrub noise, not taste.
+          if (Math.abs(to - from) >= 1.5 && s.seekEvents.length < 60) {
+            s.seekEvents.push({ from_s: Math.round(from * 10) / 10, to_s: Math.round(to * 10) / 10 });
+          }
+          // Replay detection: jumped back near start after watching >50%.
+          if (to < 3 && s.maxProgressPct > 0.5) s.replayCount++;
+          s.seekFrom = null;
+        });
+        // Keep a running last-known position for accurate seek FROM.
+        el.addEventListener('timeupdate', () => { if (!el.seeking) s._lastPos = el.currentTime; });
+
+        // Abandoned: tab close / navigation while still watching ≥10s. Record
+        // the abandon position so the brain learns WHERE people bail.
         if (!this._beforeUnloadBound) {
           this._beforeUnloadBound = true;
           window.addEventListener('beforeunload', () => {
             const cur = this._playSession;
             if (cur && !cur.ended && cur.watched >= 10) {
-              this._postPlayEvent('abandoned', {});
+              cur.abandonAt = (this.mediaElement && isFinite(this.mediaElement.currentTime)) ? this.mediaElement.currentTime : null;
+              this._postPlayEvent('abandoned', { position: cur.abandonAt || 0 });
             }
           });
         }
