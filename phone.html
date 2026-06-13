@@ -937,7 +937,7 @@ input[type="range"]::-moz-range-thumb {
   color: var(--text-dim);
   cursor: pointer;
   transition: all 0.2s;
-  min-height: 36px;
+  min-height: 44px;
 }
 .persona-btn.active {
   border-color: var(--purple);
@@ -951,7 +951,7 @@ input[type="range"]::-moz-range-thumb {
   align-items: flex-end;
   gap: 8px;
   padding: 10px 16px;
-  padding-bottom: calc(10px + var(--safe-bottom));
+  /* .app already pads the safe-area bottom — adding it again double-insets */
   border-top: 1px solid var(--border);
   background: var(--bg);
   flex-shrink: 0;
@@ -1135,7 +1135,7 @@ input[type="range"]::-moz-range-thumb {
   </div>
 
   <!-- Pair Screen — shown when no token, hidden once paired -->
-  <div id="pairScreen" style="display:none;position:fixed;inset:0;z-index:9999;background:#050812;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px;text-align:center;gap:18px;overflow:hidden;">
+  <div id="pairScreen" style="display:none;position:fixed;inset:0;z-index:9999;background:#050812;flex-direction:column;align-items:center;justify-content:center;padding:32px;text-align:center;gap:18px;overflow:hidden;">
     <div style="font-size:2rem;color:#4fc3f7;">◉</div>
     <div style="font-size:.65rem;letter-spacing:.3em;color:rgba(79,195,247,0.7);text-transform:uppercase;">VINTINUUM</div>
     <div style="font-size:.85rem;color:rgba(218,228,255,0.6);line-height:1.6;max-width:280px;">
@@ -3569,8 +3569,11 @@ init();
 
 })();
 
-// ── Referral invite handler (outside IIFE — uses global API_BASE + TOKEN) ──
+// ── Referral invite handler (self-contained — the main engine's API_BASE and
+// TOKEN are scoped inside its IIFE and are NOT visible here; derive our own) ──
 (function initReferralCard() {
+  const API_BASE = window.__VINTINUUM_API_BASE || 'https://api.vintaclectic.com';
+  const TOKEN = () => localStorage.getItem('vint_access_token') || localStorage.getItem('vint_token') || '';
   const sendBtn = document.getElementById('refSendBtn');
   const nameInput = document.getElementById('refFriendName');
   const emailInput = document.getElementById('refFriendEmail');
