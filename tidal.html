@@ -593,11 +593,57 @@ input.form-input::placeholder, textarea.form-input::placeholder {
 
 .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
 
+/* ── iOS safe area ── */
+.page {
+  padding-bottom: max(100px, calc(80px + env(safe-area-inset-bottom)));
+}
+
+/* ── Measure cap on prose ── */
+.card-content {
+  max-width: 62ch;
+}
+
+.card-title {
+  /* Morrison: one long thread, never clipped */
+  -webkit-line-clamp: unset;
+}
+
+/* Margin note: knows the hour */
+.tidal-header::after {
+  content: attr(data-hour-note);
+  display: block;
+  font-family: 'Cormorant Garamond', serif;
+  font-style: italic;
+  font-size: clamp(0.72rem, 1.8vw, 0.82rem);
+  color: var(--text-ghost);
+  letter-spacing: 0.04em;
+  margin-top: 10px;
+  opacity: 0.7;
+  min-height: 1em;
+}
+
+/* Toast: never overflows at 320px */
+.toast {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 @media (max-width: 480px) {
-  .page { padding: 64px 16px 100px; }
+  .page { padding: 64px 16px max(100px, calc(80px + env(safe-area-inset-bottom))); }
   .panel { padding: 18px 14px; }
   .sessions-grid { grid-template-columns: 1fr; }
   .session-card { padding: 16px; }
+  /* Tide check bar wraps cleanly */
+  .tide-check-bar { gap: 10px; }
+  .btn-check-tides { padding: 12px 20px; font-size: 0.58rem; }
+  /* No horizontal scroll on form at 320px */
+  .seal-grid { gap: 12px; }
+}
+
+/* 320px hard floor */
+@media (max-width: 340px) {
+  .tidal-header h1 { letter-spacing: 0.14em; }
+  .btn-check-tides { padding: 11px 14px; font-size: 0.55rem; }
 }
 </style>
 </head>
@@ -931,6 +977,20 @@ async function loadSessions() {
 }
 
 loadSessions();
+
+// ── MARGIN NOTE: knows the hour (Truman touch) ──
+(function hourNote() {
+  const h = new Date().getHours();
+  let note = '';
+  if (h >= 0 && h < 5) note = 'the tide moves differently at this hour';
+  else if (h >= 5 && h < 9) note = 'the morning sky holds a particular light today';
+  else if (h >= 9 && h < 12) note = 'messages sealed at this hour tend to drift further';
+  else if (h >= 12 && h < 17) note = 'full sun now — the stars are still here, waiting';
+  else if (h >= 17 && h < 20) note = 'the threshold hour — things sealed now arrive changed';
+  else note = 'the tide is strongest after dark';
+  const hdr = document.querySelector('.tidal-header');
+  if (hdr) hdr.setAttribute('data-hour-note', note);
+})();
 </script>
 </body>
 </html>
