@@ -235,7 +235,7 @@ body {
 
 .panel-left-compose {
   width: 100%;
-  padding: 8px 14px;
+  padding: 0 14px;
   border: 1px solid rgba(var(--lw-amber), 0.2);
   border-radius: 10px;
   background: rgba(var(--lw-amber), 0.04);
@@ -246,8 +246,10 @@ body {
   text-transform: uppercase;
   cursor: pointer;
   transition: all 0.2s ease;
-  min-height: 36px;
+  min-height: 44px;
   text-align: left;
+  display: flex;
+  align-items: center;
 }
 .panel-left-compose:hover {
   border-color: rgba(var(--lw-amber), 0.4);
@@ -703,7 +705,7 @@ body {
 }
 
 .confirm-yes {
-  padding: 8px 18px;
+  padding: 0 18px;
   border: 1px solid rgba(200, 80, 80, 0.35);
   border-radius: 8px;
   background: rgba(200, 80, 80, 0.07);
@@ -714,12 +716,14 @@ body {
   text-transform: uppercase;
   cursor: pointer;
   transition: all 0.2s ease;
-  min-height: 36px;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
 }
 .confirm-yes:hover { background: rgba(200, 80, 80, 0.14); }
 
 .confirm-no {
-  padding: 8px 18px;
+  padding: 0 18px;
   border: 1px solid var(--border);
   border-radius: 8px;
   background: transparent;
@@ -730,7 +734,9 @@ body {
   text-transform: uppercase;
   cursor: pointer;
   transition: all 0.2s ease;
-  min-height: 36px;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
 }
 .confirm-no:hover { border-color: rgba(255,255,255,0.15); color: var(--text); }
 

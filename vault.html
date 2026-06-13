@@ -523,7 +523,7 @@ input[type="range"].weight-slider::-moz-range-thumb {
 
 .sealed-dismiss {
   margin-top: 8px;
-  padding: 8px 20px;
+  padding: 0 20px;
   background: transparent;
   border: 1px solid var(--border);
   border-radius: 8px;
@@ -534,7 +534,9 @@ input[type="range"].weight-slider::-moz-range-thumb {
   text-transform: uppercase;
   cursor: pointer;
   transition: all 0.2s ease;
-  min-height: 36px;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
 }
 
 .sealed-dismiss:hover {
