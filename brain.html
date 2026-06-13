@@ -3499,6 +3499,24 @@ window.addEventListener('message', function(e) {
     try { window.dispatchEvent(new CustomEvent('vint:auth', { detail: payload })); } catch (_) {}
     // Fire greeting hook (body/greeting.js listens on document)
     try { document.dispatchEvent(new CustomEvent('vintinuum:identity-changed', { detail: payload })); } catch (_) {}
+    // ── REFERRAL REDEEM (growth-frontier #4): if this user arrived via a
+    // "Vintinuum introduces herself" link (?ref=<token>), auto-redeem now that
+    // they have a token — granting the 30-day Companion trial. One-shot.
+    try {
+      var refTok = new URLSearchParams(location.search).get('ref');
+      if (refTok && payload.accessToken && !localStorage.getItem('vint_ref_redeemed')) {
+        localStorage.setItem('vint_ref_redeemed', refTok);
+        var apiBase = (window.Shell && Shell.apiBase) || 'https://api.vintaclectic.com';
+        fetch(apiBase + '/api/referrals/redeem/' + encodeURIComponent(refTok), {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + payload.accessToken },
+        }).then(function (r) { return r.json(); }).then(function (d) {
+          if (d && d.ok && d.trial_days) {
+            try { window.dispatchEvent(new CustomEvent('vint:toast', { detail: { msg: d.message || (d.trial_days + ' days of Companion, on the house.') } })); } catch (_) {}
+          }
+        }).catch(function () { /* non-fatal — they can still use the app */ });
+      }
+    } catch (_) {}
   }
   function clearSession() {
     localStorage.removeItem(TOKEN_KEY);
