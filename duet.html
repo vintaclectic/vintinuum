@@ -4,638 +4,1063 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
-<title>VINTINUUM — The Duet</title>
+<title>VINTINUUM — DirMegle Haven</title>
 <meta name="theme-color" content="#040810">
 <link rel="icon" type="image/svg+xml" href="branding/vintinuum/favicon/favicon.svg">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400;1,500&family=Inter:wght@300;400;500&family=JetBrains+Mono:wght@300;400;500&display=swap" rel="stylesheet">
 <style>
+/* ═══════════════════════════════════════════════════════
+   DIRMEGLE HAVEN — design tokens
+   Truman palette: deep cobalt void, silver presence glow
+   Bernard Buffet: angular cards, stark lines, zero noise
+   ═══════════════════════════════════════════════════════ */
 :root {
-  --void: #040810;
-  --text: rgba(210, 225, 255, 0.9);
-  --text-dim: rgba(150, 175, 215, 0.5);
-  --text-ghost: rgba(130, 155, 190, 0.3);
-  --panel: rgba(10, 14, 22, 0.22);
-  --card: rgba(16, 22, 34, 0.16);
-  --border: rgba(255, 255, 255, 0.06);
-  --crimson: #8b1a2f;
-  --crimson-bright: #c0243d;
-  --crimson-glow: rgba(139, 26, 47, 0.4);
-  --gold: #c8a040;
-  --spotlight: rgba(255, 240, 200, 0.06);
+  --void:         #040810;
+  --deep:         #060a14;
+  --panel:        rgba(10, 14, 22, 0.22);
+  --card:         rgba(14, 19, 30, 0.20);
+  --card-hover:   rgba(18, 24, 38, 0.32);
+  --border:       rgba(255, 255, 255, 0.06);
+  --border-soft:  rgba(255, 255, 255, 0.10);
+  --text:         rgba(210, 225, 255, 0.90);
+  --text-dim:     rgba(150, 175, 215, 0.55);
+  --text-ghost:   rgba(120, 145, 180, 0.32);
+
+  --crimson:       #8b1a2f;
+  --crimson-b:     #c0243d;
+  --crimson-glow:  rgba(139, 26, 47, 0.35);
+  --gold:          #c8a040;
+  --gold-glow:     rgba(200, 160, 64, 0.20);
+
+  /* presence tiers */
+  --heat-0:  rgba(80, 100, 140, 0.0);
+  --heat-hi: rgba(192, 36, 61, 0.55);
+  --boost:   rgba(200, 160, 64, 0.70);
+  --online:  #40e0a0;
+
+  /* spring ease (Truman pop) */
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --ease-sheet:  cubic-bezier(0.22, 1, 0.36, 1);
+
+  /* spacing */
+  --s1: 4px;  --s2: 8px;  --s3: 12px;  --s4: 16px;
+  --s5: 20px; --s6: 24px; --s8: 32px;  --s10: 40px;
+
+  /* tap target */
+  --tap: 44px;
+  --safe-top:    env(safe-area-inset-top,    0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left:   env(safe-area-inset-left,   0px);
+  --safe-right:  env(safe-area-inset-right,  0px);
 }
 
-* { margin: 0; padding: 0; box-sizing: border-box; }
-html { scroll-behavior: smooth; height: 100%; }
-
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+html { height: 100%; -webkit-text-size-adjust: 100%; }
 body {
   background: var(--void);
   color: var(--text);
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-  min-height: 100vh;
+  min-height: 100svh;
   overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
 }
 
-/* ── TOPBAR ── */
+/* ── ATMOSPHERE ─────────────────────────────────────── */
+.atmosphere {
+  position: fixed; inset: 0; z-index: 0; pointer-events: none;
+  background:
+    radial-gradient(ellipse 70% 50% at 50% 0%, rgba(40,10,60,0.25) 0%, transparent 70%),
+    radial-gradient(ellipse 60% 40% at 80% 100%, rgba(60,5,12,0.20) 0%, transparent 70%);
+}
+
+/* ── TOPBAR ──────────────────────────────────────────── */
 .topbar {
   position: fixed;
   top: 0; left: 0; right: 0;
-  height: calc(48px + env(safe-area-inset-top, 0px));
-  z-index: 100;
-  background: rgba(4, 8, 16, 0.92);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+  height: calc(48px + var(--safe-top));
+  z-index: 200;
+  background: rgba(4, 8, 16, 0.94);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
   border-bottom: 1px solid var(--border);
   display: flex;
   align-items: center;
-  padding: env(safe-area-inset-top, 0px)
-           max(16px, env(safe-area-inset-right, 0px))
-           0
-           max(16px, env(safe-area-inset-left, 0px));
-  gap: 12px;
+  padding-top: var(--safe-top);
+  padding-left: max(var(--s4), var(--safe-left));
+  padding-right: max(var(--s4), var(--safe-right));
+  gap: var(--s3);
+  overflow: hidden;
 }
 
 .topbar-back {
   font-family: 'JetBrains Mono', monospace;
-  font-size: 0.55rem;
+  font-size: 0.52rem;
   letter-spacing: 0.18em;
   text-transform: uppercase;
   color: var(--text-dim);
   text-decoration: none;
   padding: 6px 12px;
   min-height: 36px;
-  display: inline-flex;
-  align-items: center;
+  display: inline-flex; align-items: center;
   border: 1px solid var(--border);
   border-radius: 20px;
-  transition: all 0.2s ease;
   white-space: nowrap;
+  transition: color 0.2s, border-color 0.2s;
   touch-action: manipulation;
   -webkit-tap-highlight-color: transparent;
+  flex-shrink: 0;
 }
-.topbar-back:hover { color: var(--text); border-color: rgba(255,255,255,0.15); }
+.topbar-back:hover { color: var(--text); border-color: var(--border-soft); }
 
-.topbar-title {
+.topbar-brand {
   font-family: 'Cormorant Garamond', serif;
   font-weight: 400;
   font-size: 1rem;
-  letter-spacing: 0.2em;
+  letter-spacing: 0.22em;
   color: var(--text);
   flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .topbar-status {
+  display: flex; align-items: center; gap: 6px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.48rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  flex-shrink: 0;
+}
+
+.live-dot {
+  width: 5px; height: 5px;
+  border-radius: 50%;
+  background: var(--text-ghost);
+  flex-shrink: 0;
+}
+.live-dot.on    { background: var(--online); animation: breathe 2s ease-in-out infinite; }
+.live-dot.warm  { background: var(--crimson-b); animation: breathe 1.6s ease-in-out infinite; }
+
+@keyframes breathe {
+  0%,100% { opacity: 1; transform: scale(1); }
+  50%      { opacity: 0.3; transform: scale(0.7); }
+}
+
+/* ── PAGE SHELL ─────────────────────────────────────── */
+.page {
+  position: relative; z-index: 1;
+  max-width: 1140px;
+  margin: 0 auto;
+  padding:
+    calc(64px + var(--safe-top))
+    max(var(--s5), var(--safe-right))
+    calc(var(--s10) + var(--safe-bottom))
+    max(var(--s5), var(--safe-left));
+  min-height: 100svh;
+}
+
+/* ── SURFACE SWITCH ─────────────────────────────────── */
+/* Three views: #v-feed | #v-handshake | #v-stage */
+.view { display: none; }
+.view.active { display: block; animation: fadeSlide 0.28s var(--ease-sheet) both; }
+@keyframes fadeSlide {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ── NAV TABS ───────────────────────────────────────── */
+.haven-tabs {
+  display: flex;
+  gap: var(--s2);
+  margin-bottom: var(--s6);
+  border-bottom: 1px solid var(--border);
+  overflow-x: auto;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+.haven-tabs::-webkit-scrollbar { display: none; }
+
+.tab-btn {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.52rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  padding: var(--s3) var(--s4);
+  min-height: var(--tap);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: color 0.2s, border-color 0.2s;
+  display: flex; align-items: center; gap: 6px;
+  -webkit-tap-highlight-color: transparent;
+}
+.tab-btn:hover { color: var(--text); }
+.tab-btn.active {
+  color: var(--text);
+  border-bottom-color: var(--crimson-b);
+}
+.tab-badge {
+  background: var(--crimson-b);
+  color: #fff;
+  font-size: 0.45rem;
+  padding: 1px 5px;
+  border-radius: 10px;
+  min-width: 16px;
+  text-align: center;
+  display: none;
+}
+.tab-badge.visible { display: inline-block; }
+
+/* ── SECTION HEADER ─────────────────────────────────── */
+.section-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: var(--s5);
+  gap: var(--s4);
+  flex-wrap: wrap;
+}
+.section-title {
+  font-family: 'Cormorant Garamond', serif;
+  font-weight: 300;
+  font-size: clamp(1.4rem, 4vw, 2rem);
+  letter-spacing: 0.18em;
+  color: var(--text);
+}
+.section-sub {
+  font-family: 'Cormorant Garamond', serif;
+  font-style: italic;
+  font-size: 0.8rem;
+  color: var(--text-dim);
+  letter-spacing: 0.06em;
+}
+
+/* ── PRESENCE GRID (Feed) ───────────────────────────── */
+.presence-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 260px), 1fr));
+  gap: var(--s4);
+  margin-bottom: var(--s6);
+}
+
+/* ── PRESENCE CARD ──────────────────────────────────── */
+.pcard {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: var(--s4);
+  cursor: pointer;
+  transition: background 0.22s, border-color 0.22s, box-shadow 0.22s, transform 0.18s var(--ease-spring);
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: var(--s3);
+  /* heat glow via inline CSS var(--pcard-heat) set per-card */
+}
+.pcard::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 16px;
+  box-shadow: inset 0 0 40px var(--pcard-heat, transparent);
+  pointer-events: none;
+  transition: box-shadow 0.4s ease;
+}
+.pcard:hover {
+  background: var(--card-hover);
+  border-color: rgba(255,255,255,0.12);
+  transform: translateY(-2px) scale(1.01);
+}
+.pcard:active { transform: scale(0.98); }
+
+.pcard.boosted {
+  border-color: rgba(200,160,64,0.28);
+}
+.pcard.boosted::after {
+  content: '✦';
+  position: absolute;
+  top: var(--s3); right: var(--s3);
+  font-size: 0.7rem;
+  color: var(--gold);
+  text-shadow: 0 0 8px var(--gold-glow);
+  pointer-events: none;
+}
+
+/* card header row */
+.pcard-top {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--s3);
+}
+.pcard-avatar {
+  font-size: 2.2rem;
+  line-height: 1;
+  flex-shrink: 0;
+  position: relative;
+}
+.pcard-avatar-online {
+  position: absolute;
+  bottom: 0; right: -2px;
+  width: 10px; height: 10px;
+  border-radius: 50%;
+  background: var(--text-ghost);
+  border: 2px solid var(--void);
+  transition: background 0.3s;
+}
+.pcard-avatar-online.on { background: var(--online); }
+
+.pcard-info { flex: 1; min-width: 0; }
+.pcard-name {
+  font-family: 'Cormorant Garamond', serif;
+  font-weight: 500;
+  font-size: 1.05rem;
+  color: var(--text);
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.pcard-mood {
+  font-family: 'Inter', sans-serif;
+  font-size: 0.65rem;
+  color: var(--text-dim);
+  margin-top: 2px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.pcard-heat-bar {
+  height: 2px;
+  border-radius: 1px;
+  background: linear-gradient(to right, transparent, var(--pcard-heat-color, transparent));
+  margin-top: var(--s1);
+  opacity: 0.7;
+}
+
+/* bio */
+.pcard-bio {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 0.82rem;
+  font-style: italic;
+  color: var(--text-dim);
+  line-height: 1.4;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+/* vibe tags */
+.pcard-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s1);
+}
+.pcard-tag {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.42rem;
+  letter-spacing: 0.10em;
+  text-transform: uppercase;
+  color: var(--text-ghost);
+  background: rgba(255,255,255,0.04);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 2px 7px;
+}
+
+/* accent stripe per card color */
+.pcard-accent {
+  height: 3px;
+  border-radius: 0 0 12px 12px;
+  position: absolute;
+  bottom: 0; left: 0; right: 0;
+  opacity: 0.45;
+}
+
+/* request CTA on card */
+.pcard-cta {
+  display: flex;
+  align-items: center;
+  gap: var(--s2);
+  margin-top: auto;
+}
+.pcard-request-btn {
   font-family: 'JetBrains Mono', monospace;
   font-size: 0.5rem;
   letter-spacing: 0.14em;
   text-transform: uppercase;
   color: var(--text-dim);
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.status-dot {
-  width: 5px;
-  height: 5px;
-  border-radius: 50%;
-  background: var(--text-ghost);
-}
-.status-dot.connected { background: #40e0a0; animation: pulse 1.6s ease-in-out infinite; }
-.status-dot.active { background: var(--crimson-bright); animation: pulse 1.6s ease-in-out infinite; }
-
-@keyframes pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.3; }
-}
-
-/* ── ATMOSPHERE ── */
-.atmosphere {
-  position: fixed; inset: 0; z-index: 0; pointer-events: none;
-  background: radial-gradient(ellipse 80% 60% at 50% 40%, rgba(60, 5, 12, 0.3) 0%, transparent 70%);
-}
-
-.curtain-left, .curtain-right {
-  position: fixed;
-  top: 0; bottom: 0;
-  width: clamp(20px, 3vw, 48px);
-  z-index: 1;
-  pointer-events: none;
-}
-.curtain-left {
-  left: 0;
-  background: linear-gradient(to right, rgba(60, 5, 12, 0.6), transparent);
-}
-.curtain-right {
-  right: 0;
-  background: linear-gradient(to left, rgba(60, 5, 12, 0.6), transparent);
-}
-
-/* ── PAGE ── */
-.page {
-  position: relative;
-  z-index: 2;
-  max-width: 1100px;
-  margin: 0 auto;
-  padding: calc(64px + env(safe-area-inset-top, 0px))
-           max(20px, env(safe-area-inset-right, 0px))
-           calc(40px + env(safe-area-inset-bottom, 0px))
-           max(20px, env(safe-area-inset-left, 0px));
-  min-height: 100svh;
-}
-
-/* ── HEADER ── */
-.header {
-  text-align: center;
-  padding: 16px 0 28px;
-}
-
-.header h1 {
-  font-family: 'Cormorant Garamond', serif;
-  font-weight: 300;
-  font-size: clamp(1.8rem, 5vw, 3rem);
-  letter-spacing: 0.28em;
-  background: linear-gradient(130deg, #c8a040, #8b1a2f, #c0243d);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-  margin-bottom: 4px;
-}
-
-.header .epigraph {
-  font-family: 'Cormorant Garamond', serif;
-  font-style: italic;
-  font-weight: 300;
-  font-size: clamp(0.7rem, 1.6vw, 0.9rem);
-  color: var(--text-dim);
-  letter-spacing: 0.08em;
-}
-
-/* ── ROOM CONTROLS ── */
-.room-controls {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
-  justify-content: center;
-  margin-bottom: 24px;
-}
-
-.btn {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 0.58rem;
-  font-weight: 400;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-  padding: 10px 20px;
-  border: 1px solid var(--border);
-  border-radius: 24px;
   background: transparent;
-  color: var(--text-dim);
-  cursor: pointer;
-  transition: all 0.25s ease;
-  min-height: 44px;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  white-space: nowrap;
-}
-
-.btn:hover {
-  color: var(--text);
-  border-color: rgba(255,255,255,0.18);
-}
-
-.btn-crimson {
-  border-color: var(--crimson);
-  color: #e06070;
-  background: rgba(139, 26, 47, 0.08);
-}
-.btn-crimson:hover {
-  background: rgba(139, 26, 47, 0.18);
-  border-color: var(--crimson-bright);
-  color: #ff8090;
-  box-shadow: 0 0 18px rgba(139, 26, 47, 0.3);
-}
-
-.btn-gold {
-  border-color: rgba(200, 160, 64, 0.4);
-  color: var(--gold);
-  background: rgba(200, 160, 64, 0.06);
-}
-.btn-gold:hover {
-  background: rgba(200, 160, 64, 0.14);
-  box-shadow: 0 0 18px rgba(200, 160, 64, 0.2);
-}
-
-/* ── TOKEN DISPLAY ── */
-.token-display {
-  background: rgba(139, 26, 47, 0.06);
-  border: 1px solid rgba(139, 26, 47, 0.2);
-  border-radius: 16px;
-  padding: 16px 20px;
-  margin-bottom: 20px;
-  display: none;
-}
-.token-display.visible { display: block; animation: fadeIn 0.3s ease; }
-
-.token-label {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 0.5rem;
-  letter-spacing: 0.2em;
-  text-transform: uppercase;
-  color: var(--text-dim);
-  margin-bottom: 8px;
-}
-
-.token-value {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 0.9rem;
-  font-weight: 500;
-  color: var(--gold);
-  letter-spacing: 0.1em;
-  word-break: break-all;
-  margin-bottom: 8px;
-}
-
-.token-url {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 0.55rem;
-  color: var(--text-dim);
-  word-break: break-all;
-}
-
-/* ── JOIN FORM ── */
-.join-form {
-  display: none;
-  background: var(--panel);
   border: 1px solid var(--border);
-  border-radius: 16px;
-  padding: 16px 20px;
-  margin-bottom: 20px;
-  gap: 10px;
-  align-items: center;
-  flex-wrap: wrap;
-}
-.join-form.visible { display: flex; animation: fadeIn 0.3s ease; }
-
-.input-field {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 0.7rem;
-  letter-spacing: 0.06em;
-  background: rgba(255,255,255,0.04);
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: 10px 14px;
-  color: var(--text);
-  outline: none;
-  transition: border-color 0.2s;
-  min-height: 44px;
-}
-.input-field:focus { border-color: rgba(139, 26, 47, 0.5); }
-.input-field::placeholder { color: var(--text-ghost); }
-
-/* ── THEATER LAYOUT ── */
-.theater {
-  display: grid;
-  grid-template-columns: 180px 1fr 180px;
-  gap: 16px;
-  margin-bottom: 24px;
-  align-items: start;
-}
-
-@media (max-width: 700px) {
-  .theater {
-    grid-template-columns: 1fr;
-  }
-  .speaker-wing { order: 2; }
-  .transcript-stage { order: 1; }
-}
-
-/* ── SPEAKER WINGS ── */
-.speaker-wing {
-  background: var(--panel);
-  border: 1px solid var(--border);
-  border-radius: 16px;
-  padding: 16px;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.speaker-wing.wing-a { border-color: rgba(200, 160, 64, 0.15); }
-.speaker-wing.wing-b { border-color: rgba(139, 26, 47, 0.15); }
-
-.wing-label {
-  font-family: 'Cormorant Garamond', serif;
-  font-size: 1.8rem;
-  font-weight: 300;
-  text-align: center;
-  line-height: 1;
-}
-.wing-a .wing-label { color: var(--gold); }
-.wing-b .wing-label { color: #e06070; }
-
-.wing-title {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 0.45rem;
-  letter-spacing: 0.2em;
-  text-transform: uppercase;
-  color: var(--text-dim);
-  text-align: center;
-}
-
-.speak-form {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.speak-input {
-  font-family: 'Inter', sans-serif;
-  font-size: 0.75rem;
-  background: rgba(255,255,255,0.04);
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: 8px 10px;
-  color: var(--text);
-  resize: none;
-  outline: none;
-  min-height: 70px;
-  transition: border-color 0.2s;
-  width: 100%;
-}
-.wing-a .speak-input:focus { border-color: rgba(200, 160, 64, 0.4); }
-.wing-b .speak-input:focus { border-color: rgba(139, 26, 47, 0.4); }
-.speak-input::placeholder { color: var(--text-ghost); font-size: 0.65rem; }
-
-.btn-speak-a {
-  border-color: rgba(200, 160, 64, 0.3);
-  color: var(--gold);
-  background: rgba(200, 160, 64, 0.06);
-  justify-content: center;
-}
-.btn-speak-a:hover { background: rgba(200, 160, 64, 0.14); }
-
-.btn-speak-b {
-  border-color: rgba(192, 36, 61, 0.3);
-  color: #e06070;
-  background: rgba(139, 26, 47, 0.06);
-  justify-content: center;
-}
-.btn-speak-b:hover { background: rgba(139, 26, 47, 0.14); }
-
-/* ── TRANSCRIPT STAGE ── */
-.transcript-stage {
-  background: rgba(6, 3, 8, 0.5);
-  border: 1px solid rgba(255,255,255,0.04);
   border-radius: 20px;
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-  height: 500px;
-  box-shadow: 0 0 60px rgba(200, 160, 64, 0.04) inset;
-  position: relative;
-}
-
-.stage-header {
-  padding: 12px 16px;
-  border-bottom: 1px solid var(--border);
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  background: rgba(10, 4, 8, 0.4);
-  flex-shrink: 0;
-}
-
-.stage-title {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 0.5rem;
-  letter-spacing: 0.22em;
-  text-transform: uppercase;
-  color: var(--text-dim);
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.stage-token-badge {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 0.45rem;
-  letter-spacing: 0.1em;
-  color: var(--gold);
-  opacity: 0.7;
-}
-
-.transcript-scroll {
+  padding: 7px 14px;
+  min-height: var(--tap);
+  cursor: pointer;
+  transition: all 0.2s;
   flex: 1;
-  overflow-y: auto;
-  overflow-x: hidden;
-  padding: 16px;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  scroll-behavior: smooth;
+  -webkit-tap-highlight-color: transparent;
 }
-
-.transcript-scroll::-webkit-scrollbar { width: 3px; }
-.transcript-scroll::-webkit-scrollbar-track { background: transparent; }
-.transcript-scroll::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 2px; }
-
-.utterance {
-  display: flex;
-  gap: 10px;
-  align-items: flex-start;
-  animation: utterIn 0.3s ease;
-}
-
-@keyframes utterIn {
-  from { opacity: 0; transform: translateY(6px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
-.utterance.speaker-a { flex-direction: row; }
-.utterance.speaker-b { flex-direction: row-reverse; }
-
-.utter-tag {
-  font-family: 'Cormorant Garamond', serif;
-  font-size: 1.1rem;
-  font-weight: 400;
-  line-height: 1;
-  flex-shrink: 0;
-  padding-top: 2px;
-}
-.speaker-a .utter-tag { color: var(--gold); }
-.speaker-b .utter-tag { color: #e06070; }
-
-.utter-bubble {
-  border-radius: 12px;
-  padding: 8px 12px;
-  max-width: calc(100% - 40px);
-}
-.speaker-a .utter-bubble {
-  background: rgba(200, 160, 64, 0.06);
-  border: 1px solid rgba(200, 160, 64, 0.12);
-}
-.speaker-b .utter-bubble {
-  background: rgba(139, 26, 47, 0.08);
-  border: 1px solid rgba(139, 26, 47, 0.18);
-}
-
-.utter-text {
-  font-family: 'Cormorant Garamond', serif;
-  font-size: 0.95rem;
-  font-weight: 300;
-  line-height: 1.5;
+.pcard-request-btn:hover {
   color: var(--text);
-  word-break: break-word;
+  border-color: var(--crimson-b);
+  background: var(--crimson-glow);
 }
-
-.utter-time {
+.pcard-requests-count {
   font-family: 'JetBrains Mono', monospace;
   font-size: 0.42rem;
   color: var(--text-ghost);
-  letter-spacing: 0.06em;
-  margin-top: 3px;
+  letter-spacing: 0.08em;
+  white-space: nowrap;
 }
 
-.stage-empty {
-  flex: 1;
-  display: flex;
+/* ── UPSELL STRIP ───────────────────────────────────── */
+.upsell-strip {
+  display: none;
+  background: linear-gradient(135deg, rgba(139,26,47,0.08), rgba(200,160,64,0.06));
+  border: 1px solid rgba(200,160,64,0.18);
+  border-radius: 14px;
+  padding: var(--s4) var(--s5);
+  margin-bottom: var(--s6);
+  text-align: center;
+  gap: var(--s3);
   flex-direction: column;
   align-items: center;
-  justify-content: center;
-  gap: 8px;
-  padding: 20px;
 }
-
-.stage-empty-icon {
-  font-size: 2.5rem;
-  opacity: 0.15;
-}
-
-.stage-empty-text {
+.upsell-strip.visible { display: flex; }
+.upsell-strip-text {
   font-family: 'Cormorant Garamond', serif;
   font-style: italic;
-  font-size: 0.85rem;
-  color: var(--text-ghost);
-  text-align: center;
+  font-size: 0.9rem;
+  color: var(--text-dim);
 }
-
-.system-event {
-  text-align: center;
-  padding: 6px;
-}
-.system-event-text {
+.upsell-strip-link {
   font-family: 'JetBrains Mono', monospace;
-  font-size: 0.45rem;
+  font-size: 0.5rem;
   letter-spacing: 0.18em;
   text-transform: uppercase;
-  color: var(--text-ghost);
+  color: var(--gold);
+  text-decoration: none;
+  padding: 8px 20px;
+  border: 1px solid rgba(200,160,64,0.30);
+  border-radius: 20px;
+  min-height: var(--tap);
+  display: inline-flex; align-items: center;
+  transition: background 0.2s, box-shadow 0.2s;
+}
+.upsell-strip-link:hover {
+  background: rgba(200,160,64,0.10);
+  box-shadow: 0 0 16px rgba(200,160,64,0.15);
 }
 
-/* ── PANEL ── */
-.panel {
-  background: var(--panel);
+/* ── FEED META ──────────────────────────────────────── */
+.feed-meta {
+  display: flex; align-items: center; gap: var(--s3);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.46rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-ghost);
+  margin-bottom: var(--s5);
+}
+.feed-refresh-btn {
+  margin-left: auto;
+  background: transparent;
   border: 1px solid var(--border);
   border-radius: 20px;
-  padding: 20px;
-  margin-bottom: 20px;
-  overflow: hidden;
-}
-
-.panel-title {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 0.5rem;
-  font-weight: 400;
-  letter-spacing: 0.25em;
-  text-transform: uppercase;
   color: var(--text-dim);
-  margin-bottom: 14px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.46rem;
+  letter-spacing: 0.12em;
+  padding: 5px 12px;
+  min-height: 36px;
+  cursor: pointer;
+  transition: all 0.2s;
+  -webkit-tap-highlight-color: transparent;
+}
+.feed-refresh-btn:hover { color: var(--text); border-color: var(--border-soft); }
+
+/* ── MY PRESENCE STRIP ──────────────────────────────── */
+.my-presence-strip {
+  background: rgba(10,14,22,0.18);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: var(--s4) var(--s5);
+  margin-bottom: var(--s5);
   display: flex;
+  gap: var(--s4);
   align-items: center;
-  gap: 8px;
+  flex-wrap: wrap;
+}
+.my-presence-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.46rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--text-ghost);
+}
+.my-longing-nums {
+  display: flex; gap: var(--s4);
+  flex: 1;
+}
+.longing-num {
+  display: flex; flex-direction: column; gap: 2px;
+}
+.longing-n {
+  font-family: 'Cormorant Garamond', serif;
+  font-weight: 500;
+  font-size: 1.2rem;
+  color: var(--gold);
+  line-height: 1;
+}
+.longing-l {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.4rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-ghost);
+}
+.my-presence-toggle {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.48rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  color: var(--text-dim);
+  padding: 7px 14px;
+  min-height: var(--tap);
+  cursor: pointer;
+  transition: all 0.2s;
+  -webkit-tap-highlight-color: transparent;
+}
+.my-presence-toggle.public {
+  border-color: var(--online);
+  color: var(--online);
+  background: rgba(64,224,160,0.06);
+}
+.my-presence-toggle:hover { color: var(--text); }
+
+/* ── REQUEST MODAL ──────────────────────────────────── */
+.modal-overlay {
+  position: fixed; inset: 0; z-index: 500;
+  background: rgba(4,8,16,0.75);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  display: none;
+  align-items: flex-end;
+  justify-content: center;
+  padding: 0 0 var(--safe-bottom);
+}
+.modal-overlay.open { display: flex; }
+.modal-sheet {
+  width: 100%;
+  max-width: 540px;
+  background: rgba(8,12,20,0.97);
+  border: 1px solid var(--border);
+  border-radius: 20px 20px 0 0;
+  padding: var(--s6) var(--s6) max(var(--s6), var(--safe-bottom));
+  animation: sheetUp 0.3s var(--ease-sheet) both;
+  max-height: 90svh;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+.modal-sheet.pill { border-radius: 20px; max-width: 420px; margin: auto; }
+@keyframes sheetUp {
+  from { transform: translateY(100%); opacity: 0; }
+  to   { transform: translateY(0);   opacity: 1; }
+}
+.modal-pill-up {
+  animation: pillPop 0.3s var(--ease-spring) both;
+}
+@keyframes pillPop {
+  from { transform: scale(0.92); opacity: 0; }
+  to   { transform: scale(1);    opacity: 1; }
+}
+.modal-handle {
+  width: 36px; height: 4px;
+  background: var(--border-soft);
+  border-radius: 2px;
+  margin: 0 auto var(--s5);
+}
+.modal-title {
+  font-family: 'Cormorant Garamond', serif;
+  font-weight: 300;
+  font-size: 1.3rem;
+  letter-spacing: 0.14em;
+  color: var(--text);
+  margin-bottom: var(--s2);
+}
+.modal-sub {
+  font-family: 'Cormorant Garamond', serif;
+  font-style: italic;
+  font-size: 0.78rem;
+  color: var(--text-dim);
+  margin-bottom: var(--s5);
+}
+.modal-target-avatar {
+  font-size: 2.6rem;
+  line-height: 1;
+  margin-bottom: var(--s3);
+  text-shadow: 0 0 20px rgba(255,255,255,0.12);
+  display: block;
+}
+.modal-target-name {
+  font-family: 'Cormorant Garamond', serif;
+  font-weight: 500;
+  font-size: 1rem;
+  color: var(--text);
+  margin-bottom: var(--s1);
+}
+.modal-target-mood {
+  font-family: 'Inter', sans-serif;
+  font-size: 0.62rem;
+  color: var(--text-dim);
+  margin-bottom: var(--s5);
 }
 
-/* ── HISTORY ── */
-.history-grid {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.history-item {
-  background: var(--card);
+.modal-input {
+  width: 100%;
+  font-family: 'Inter', sans-serif;
+  font-size: 1rem; /* 16px iOS no-zoom */
+  background: rgba(255,255,255,0.04);
   border: 1px solid var(--border);
   border-radius: 12px;
-  padding: 12px 14px;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  cursor: pointer;
-  transition: border-color 0.2s, background 0.2s;
+  padding: var(--s3) var(--s4);
+  color: var(--text);
+  outline: none;
+  resize: none;
+  min-height: 80px;
+  transition: border-color 0.2s;
+  -webkit-appearance: none;
 }
-.history-item:hover {
-  border-color: rgba(139, 26, 47, 0.3);
-  background: rgba(16, 22, 34, 0.3);
-}
-
-.history-token {
+.modal-input:focus { border-color: rgba(139,26,47,0.4); }
+.modal-input::placeholder { color: var(--text-ghost); }
+.modal-char-count {
   font-family: 'JetBrains Mono', monospace;
-  font-size: 0.6rem;
-  color: var(--gold);
-  letter-spacing: 0.06em;
-  min-width: 80px;
+  font-size: 0.42rem;
+  color: var(--text-ghost);
+  letter-spacing: 0.08em;
+  text-align: right;
+  margin-top: var(--s1);
+  margin-bottom: var(--s4);
 }
-
-.history-meta {
+.modal-actions {
+  display: flex; gap: var(--s3); flex-wrap: wrap;
+}
+.btn-send {
   flex: 1;
-  min-width: 0;
-}
-
-.history-time {
   font-family: 'JetBrains Mono', monospace;
-  font-size: 0.5rem;
+  font-size: 0.52rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  background: rgba(139,26,47,0.12);
+  border: 1px solid var(--crimson-b);
+  border-radius: 24px;
+  color: #e06070;
+  padding: 12px 20px;
+  min-height: var(--tap);
+  cursor: pointer;
+  transition: background 0.2s, box-shadow 0.2s;
+  -webkit-tap-highlight-color: transparent;
+}
+.btn-send:hover { background: rgba(139,26,47,0.22); box-shadow: 0 0 16px var(--crimson-glow); }
+.btn-cancel {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.52rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 24px;
   color: var(--text-dim);
-  letter-spacing: 0.06em;
+  padding: 12px 18px;
+  min-height: var(--tap);
+  cursor: pointer;
+  transition: all 0.2s;
+  -webkit-tap-highlight-color: transparent;
+}
+.btn-cancel:hover { color: var(--text); border-color: var(--border-soft); }
+
+/* ── HANDSHAKE VIEW ─────────────────────────────────── */
+.request-lists {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--s5);
+  margin-bottom: var(--s6);
+}
+@media (max-width: 600px) {
+  .request-lists { grid-template-columns: 1fr; }
+}
+.req-section-title {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.48rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  margin-bottom: var(--s4);
+  display: flex; align-items: center; gap: var(--s2);
+}
+.req-list { display: flex; flex-direction: column; gap: var(--s3); }
+.req-empty {
+  font-family: 'Cormorant Garamond', serif;
+  font-style: italic;
+  font-size: 0.82rem;
+  color: var(--text-ghost);
+  padding: var(--s4) 0;
 }
 
-.history-count {
+/* request card */
+.req-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: var(--s4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--s3);
+  animation: utterIn 0.3s var(--ease-spring) both;
+}
+@keyframes utterIn {
+  from { opacity: 0; transform: translateY(6px) scale(0.97); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+.req-card.incoming { border-color: rgba(139,26,47,0.18); }
+.req-card.outgoing { border-color: rgba(200,160,64,0.10); }
+
+.req-card-top { display: flex; align-items: flex-start; gap: var(--s3); }
+.req-card-ava { font-size: 1.8rem; line-height: 1; flex-shrink: 0; }
+.req-card-info { flex: 1; min-width: 0; }
+.req-card-name {
+  font-family: 'Cormorant Garamond', serif;
+  font-weight: 500;
+  font-size: 0.95rem;
+  color: var(--text);
+}
+.req-card-time {
   font-family: 'JetBrains Mono', monospace;
-  font-size: 0.45rem;
+  font-size: 0.4rem;
   color: var(--text-ghost);
   letter-spacing: 0.08em;
   margin-top: 2px;
 }
+.req-card-status {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.42rem;
+  letter-spacing: 0.10em;
+  text-transform: uppercase;
+  color: var(--text-ghost);
+  margin-top: 2px;
+}
+.req-card-status.pending { color: var(--gold); }
+.req-card-status.accepted { color: var(--online); }
+.req-card-status.denied { color: var(--text-ghost); }
 
-.history-empty {
+.req-opener {
+  font-family: 'Cormorant Garamond', serif;
+  font-style: italic;
+  font-size: 0.82rem;
+  color: var(--text-dim);
+  line-height: 1.4;
+  padding: var(--s2) var(--s3);
+  border-left: 2px solid rgba(139,26,47,0.25);
+}
+
+.req-actions { display: flex; gap: var(--s2); }
+.btn-accept {
+  flex: 1;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.48rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  background: rgba(64,224,160,0.06);
+  border: 1px solid rgba(64,224,160,0.28);
+  border-radius: 20px;
+  color: var(--online);
+  padding: 8px 14px;
+  min-height: var(--tap);
+  cursor: pointer;
+  transition: all 0.2s var(--ease-spring);
+  -webkit-tap-highlight-color: transparent;
+}
+.btn-accept:hover { background: rgba(64,224,160,0.14); box-shadow: 0 0 12px rgba(64,224,160,0.12); }
+.btn-decline {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.48rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  color: var(--text-ghost);
+  padding: 8px 14px;
+  min-height: var(--tap);
+  cursor: pointer;
+  transition: all 0.2s;
+  -webkit-tap-highlight-color: transparent;
+}
+.btn-decline:hover { border-color: rgba(139,26,47,0.25); color: var(--text-dim); }
+
+/* ── PRIVATE STAGE (chat) ───────────────────────────── */
+.stage-topbar {
+  display: flex;
+  align-items: center;
+  gap: var(--s4);
+  margin-bottom: var(--s4);
+  padding: var(--s4);
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  flex-wrap: wrap;
+}
+.stage-partner-ava { font-size: 2rem; line-height: 1; flex-shrink: 0; }
+.stage-partner-info { flex: 1; min-width: 0; }
+.stage-partner-name {
+  font-family: 'Cormorant Garamond', serif;
+  font-weight: 500;
+  font-size: 1rem;
+  color: var(--text);
+}
+.stage-partner-mood {
+  font-family: 'Inter', sans-serif;
+  font-size: 0.62rem;
+  color: var(--text-dim);
+  margin-top: 2px;
+}
+.stage-video-cta {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.5rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  background: transparent;
+  border: 1px solid rgba(200,160,64,0.25);
+  border-radius: 20px;
+  color: var(--gold);
+  padding: 8px 16px;
+  min-height: var(--tap);
+  cursor: pointer;
+  transition: all 0.2s var(--ease-spring);
+  display: flex; align-items: center; gap: 6px;
+  -webkit-tap-highlight-color: transparent;
+  flex-shrink: 0;
+}
+.stage-video-cta:hover { background: rgba(200,160,64,0.10); box-shadow: 0 0 16px rgba(200,160,64,0.12); }
+.stage-end-btn {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.46rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  background: transparent;
+  border: 1px solid rgba(139,26,47,0.25);
+  border-radius: 20px;
+  color: rgba(192,36,61,0.6);
+  padding: 8px 14px;
+  min-height: var(--tap);
+  cursor: pointer;
+  transition: all 0.2s;
+  -webkit-tap-highlight-color: transparent;
+  flex-shrink: 0;
+}
+.stage-end-btn:hover { background: rgba(139,26,47,0.10); color: var(--crimson-b); }
+
+/* chat transcript */
+.chat-stage {
+  background: rgba(6,3,8,0.45);
+  border: 1px solid rgba(255,255,255,0.04);
+  border-radius: 18px;
+  display: flex;
+  flex-direction: column;
+  height: min(520px, calc(100svh - 320px - var(--safe-top) - var(--safe-bottom)));
+  overflow: hidden;
+}
+.chat-scroll {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: var(--s4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--s3);
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
+}
+.chat-scroll::-webkit-scrollbar { width: 3px; }
+.chat-scroll::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.07); border-radius: 2px; }
+
+.chat-empty {
+  flex: 1;
+  display: flex; align-items: center; justify-content: center;
+  padding: var(--s8);
+  text-align: center;
+}
+.chat-empty-text {
   font-family: 'Cormorant Garamond', serif;
   font-style: italic;
   font-size: 0.85rem;
   color: var(--text-ghost);
+}
+.chat-msg {
+  display: flex;
+  gap: var(--s2);
+  align-items: flex-end;
+  animation: utterIn 0.25s var(--ease-spring) both;
+}
+.chat-msg.me { flex-direction: row-reverse; }
+.chat-bubble {
+  max-width: min(72%, 360px);
+  padding: var(--s2) var(--s3) var(--s1);
+  border-radius: 14px;
+}
+.chat-msg.me .chat-bubble {
+  background: rgba(139,26,47,0.14);
+  border: 1px solid rgba(192,36,61,0.18);
+  border-bottom-right-radius: 4px;
+}
+.chat-msg.them .chat-bubble {
+  background: rgba(200,160,64,0.07);
+  border: 1px solid rgba(200,160,64,0.10);
+  border-bottom-left-radius: 4px;
+}
+.chat-text {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 0.92rem;
+  font-weight: 300;
+  line-height: 1.48;
+  color: var(--text);
+  word-break: break-word;
+}
+.chat-time {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.38rem;
+  color: var(--text-ghost);
+  letter-spacing: 0.06em;
+  margin-top: 2px;
+  text-align: right;
+}
+.sys-event {
   text-align: center;
-  padding: 16px 0;
+  padding: var(--s1) 0;
+}
+.sys-event-text {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.4rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--text-ghost);
 }
 
-/* ── TOAST ── */
+/* chat input row */
+.chat-input-row {
+  display: flex;
+  gap: var(--s2);
+  padding: var(--s3) var(--s4);
+  border-top: 1px solid var(--border);
+  align-items: flex-end;
+  flex-shrink: 0;
+}
+.chat-input {
+  flex: 1;
+  font-family: 'Inter', sans-serif;
+  font-size: 1rem; /* 16px iOS */
+  background: rgba(255,255,255,0.04);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 10px 14px;
+  color: var(--text);
+  resize: none;
+  outline: none;
+  min-height: 44px;
+  max-height: 120px;
+  transition: border-color 0.2s;
+  -webkit-appearance: none;
+  overflow-y: auto;
+}
+.chat-input:focus { border-color: rgba(139,26,47,0.40); }
+.chat-input::placeholder { color: var(--text-ghost); font-size: 0.8rem; }
+.chat-send-btn {
+  background: rgba(139,26,47,0.14);
+  border: 1px solid var(--crimson-b);
+  border-radius: 12px;
+  color: #e06070;
+  font-size: 1.1rem;
+  min-width: var(--tap); min-height: var(--tap);
+  cursor: pointer;
+  transition: background 0.2s, box-shadow 0.2s;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+  -webkit-tap-highlight-color: transparent;
+}
+.chat-send-btn:hover { background: rgba(139,26,47,0.26); box-shadow: 0 0 12px var(--crimson-glow); }
+
+/* ── VIDEO UPSELL ───────────────────────────────────── */
+.video-upsell {
+  display: none;
+  background: linear-gradient(135deg, rgba(200,160,64,0.06), rgba(80,30,80,0.08));
+  border: 1px solid rgba(200,160,64,0.18);
+  border-radius: 16px;
+  padding: var(--s5) var(--s6);
+  text-align: center;
+  gap: var(--s3);
+  flex-direction: column;
+  align-items: center;
+  margin-top: var(--s4);
+}
+.video-upsell.visible { display: flex; animation: pillPop 0.35s var(--ease-spring) both; }
+.video-upsell-icon { font-size: 2rem; }
+.video-upsell-text {
+  font-family: 'Cormorant Garamond', serif;
+  font-style: italic;
+  font-size: 0.88rem;
+  color: var(--text-dim);
+  line-height: 1.5;
+}
+.video-upsell-link {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.5rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--gold);
+  text-decoration: none;
+  padding: 10px 22px;
+  border: 1px solid rgba(200,160,64,0.30);
+  border-radius: 24px;
+  min-height: var(--tap);
+  display: inline-flex; align-items: center;
+  transition: background 0.2s, box-shadow 0.2s;
+}
+.video-upsell-link:hover {
+  background: rgba(200,160,64,0.10);
+  box-shadow: 0 0 18px rgba(200,160,64,0.15);
+}
+
+/* ── TOAST ──────────────────────────────────────────── */
 .toast {
   position: fixed;
-  bottom: 24px;
+  bottom: max(24px, var(--safe-bottom));
   left: 50%;
   transform: translateX(-50%) translateY(20px);
-  background: rgba(10, 14, 22, 0.92);
-  border: 1px solid var(--border);
+  background: rgba(8,12,20,0.94);
+  border: 1px solid var(--border-soft);
   border-radius: 24px;
   padding: 10px 20px;
   font-family: 'JetBrains Mono', monospace;
-  font-size: 0.6rem;
-  letter-spacing: 0.12em;
+  font-size: 0.58rem;
+  letter-spacing: 0.10em;
   color: var(--text-dim);
-  z-index: 200;
+  z-index: 800;
   opacity: 0;
-  transition: all 0.3s ease;
-  backdrop-filter: blur(12px);
   pointer-events: none;
+  transition: opacity 0.25s, transform 0.25s var(--ease-spring);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
   max-width: calc(100vw - 40px);
   text-align: center;
   white-space: nowrap;
@@ -645,417 +1070,1327 @@ body {
   transform: translateX(-50%) translateY(0);
 }
 
-@keyframes fadeIn {
-  from { opacity: 0; transform: translateY(-6px); }
-  to { opacity: 1; transform: translateY(0); }
+/* ── SKELETON ───────────────────────────────────────── */
+.skeleton {
+  background: linear-gradient(90deg,
+    rgba(255,255,255,0.04) 25%,
+    rgba(255,255,255,0.08) 50%,
+    rgba(255,255,255,0.04) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.4s ease infinite;
+  border-radius: 8px;
+}
+@keyframes shimmer {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+.skel-card {
+  height: 180px; border-radius: 16px;
 }
 
-/* ── LOADING STATE ── */
-.loading-dots::after {
-  content: '';
-  animation: dots 1.2s steps(4, end) infinite;
+/* ── MOBILE ≤ 375px ─────────────────────────────────── */
+@media (max-width: 375px) {
+  .topbar-brand { font-size: 0.85rem; letter-spacing: 0.14em; }
+  .section-title { font-size: 1.3rem; }
+  .pcard { padding: var(--s3); }
+  .modal-sheet { padding: var(--s5) var(--s4) max(var(--s5), var(--safe-bottom)); }
+  .chat-stage { height: min(400px, calc(100svh - 300px - var(--safe-top) - var(--safe-bottom))); }
 }
-@keyframes dots {
-  0%   { content: ''; }
-  25%  { content: '.'; }
-  50%  { content: '..'; }
-  75%  { content: '...'; }
-  100% { content: ''; }
+
+/* ── PROFILE EDITOR (inline, feed view) ─────────────── */
+.profile-editor {
+  display: none;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: var(--s5);
+  margin-bottom: var(--s5);
+  gap: var(--s4);
+  flex-direction: column;
 }
+.profile-editor.visible { display: flex; animation: fadeSlide 0.25s var(--ease-sheet) both; }
+.profile-editor-title {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.48rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+.profile-fields {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--s3);
+}
+@media (max-width: 480px) {
+  .profile-fields { grid-template-columns: 1fr; }
+}
+.profile-field { display: flex; flex-direction: column; gap: var(--s1); }
+.profile-field label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.4rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--text-ghost);
+}
+.profile-field input, .profile-field textarea {
+  font-family: 'Inter', sans-serif;
+  font-size: 1rem;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: var(--s2) var(--s3);
+  color: var(--text);
+  outline: none;
+  min-height: var(--tap);
+  resize: none;
+  -webkit-appearance: none;
+  transition: border-color 0.2s;
+}
+.profile-field input:focus, .profile-field textarea:focus { border-color: rgba(139,26,47,0.40); }
+.profile-field input::placeholder, .profile-field textarea::placeholder { color: var(--text-ghost); }
+.profile-editor-actions { display: flex; gap: var(--s3); }
+.btn-save {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.5rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  background: rgba(139,26,47,0.10);
+  border: 1px solid var(--crimson);
+  border-radius: 20px;
+  color: #e06070;
+  padding: 8px 18px;
+  min-height: var(--tap);
+  cursor: pointer;
+  transition: all 0.2s;
+  -webkit-tap-highlight-color: transparent;
+}
+.btn-save:hover { background: rgba(139,26,47,0.20); }
+.btn-secondary {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.5rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  color: var(--text-dim);
+  padding: 8px 16px;
+  min-height: var(--tap);
+  cursor: pointer;
+  transition: all 0.2s;
+  -webkit-tap-highlight-color: transparent;
+}
+.btn-secondary:hover { color: var(--text); border-color: var(--border-soft); }
+
+/* ── INCOMING REQUEST ALERT ─────────────────────────── */
+.alert-banner {
+  display: none;
+  position: fixed;
+  top: calc(54px + var(--safe-top));
+  left: 50%; transform: translateX(-50%);
+  max-width: min(420px, calc(100vw - 32px));
+  width: 100%;
+  background: rgba(8,12,20,0.96);
+  border: 1px solid rgba(192,36,61,0.35);
+  border-radius: 16px;
+  padding: var(--s4) var(--s5);
+  z-index: 600;
+  gap: var(--s3);
+  align-items: center;
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  box-shadow: 0 8px 40px rgba(139,26,47,0.25);
+}
+.alert-banner.visible { display: flex; animation: pillPop 0.35s var(--ease-spring) both; }
+.alert-ava { font-size: 1.8rem; flex-shrink: 0; }
+.alert-body { flex: 1; min-width: 0; }
+.alert-title {
+  font-family: 'Cormorant Garamond', serif;
+  font-weight: 500;
+  font-size: 0.88rem;
+  color: var(--text);
+}
+.alert-sub {
+  font-family: 'Cormorant Garamond', serif;
+  font-style: italic;
+  font-size: 0.72rem;
+  color: var(--text-dim);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.alert-btns { display: flex; gap: var(--s2); flex-shrink: 0; }
+.alert-accept-btn {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.44rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  background: rgba(64,224,160,0.10);
+  border: 1px solid rgba(64,224,160,0.30);
+  border-radius: 16px;
+  color: var(--online);
+  padding: 7px 12px;
+  min-height: var(--tap);
+  cursor: pointer;
+  transition: all 0.2s var(--ease-spring);
+  -webkit-tap-highlight-color: transparent;
+}
+.alert-accept-btn:hover { background: rgba(64,224,160,0.18); }
+.alert-dismiss-btn {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.44rem;
+  letter-spacing: 0.10em;
+  text-transform: uppercase;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  color: var(--text-ghost);
+  padding: 7px 10px;
+  min-height: var(--tap);
+  cursor: pointer;
+  transition: all 0.2s;
+  -webkit-tap-highlight-color: transparent;
+}
+.alert-dismiss-btn:hover { color: var(--text-dim); }
 </style>
 </head>
 <body>
 
 <div class="atmosphere"></div>
-<div class="curtain-left"></div>
-<div class="curtain-right"></div>
 
+<!-- TOPBAR -->
 <nav class="topbar">
   <a href="index.html" class="topbar-back" data-draggable="true">← Index</a>
-  <span class="topbar-title">THE DUET</span>
+  <span class="topbar-brand" id="topbarBrand">DIRMEGLE HAVEN</span>
   <div class="topbar-status">
-    <div class="status-dot" id="sseStatusDot"></div>
-    <span id="sseStatusLabel">OFFLINE</span>
+    <div class="live-dot" id="inboxDot"></div>
+    <span id="inboxLabel">OFFLINE</span>
   </div>
 </nav>
 
+<!-- INCOMING REQUEST ALERT -->
+<div class="alert-banner" id="alertBanner">
+  <span class="alert-ava" id="alertAva">👤</span>
+  <div class="alert-body">
+    <div class="alert-title" id="alertTitle">New request</div>
+    <div class="alert-sub" id="alertSub"></div>
+  </div>
+  <div class="alert-btns">
+    <button class="alert-accept-btn" data-draggable="true" onclick="alertAccept()">Accept</button>
+    <button class="alert-dismiss-btn" data-draggable="true" onclick="alertDismiss()">Later</button>
+  </div>
+</div>
+
+<!-- MAIN PAGE -->
 <div class="page">
 
-  <!-- HEADER -->
-  <header class="header">
-    <h1>The Duet</h1>
-    <p class="epigraph">two voices, one stage, one unbroken thread</p>
-  </header>
-
-  <!-- ROOM CONTROLS -->
-  <div class="room-controls">
-    <button class="btn btn-crimson" id="btnCreateRoom" data-draggable="true" onclick="createRoom()">
-      ◈ Create Room
+  <!-- NAV TABS -->
+  <nav class="haven-tabs" role="tablist">
+    <button class="tab-btn active" data-draggable="true" onclick="switchView('feed')" role="tab">
+      ◈ Haven
     </button>
-    <button class="btn" id="btnToggleJoin" data-draggable="true" onclick="toggleJoinForm()">
-      ↳ Join as B
+    <button class="tab-btn" data-draggable="true" onclick="switchView('handshake')" role="tab" id="tabHandshake">
+      ⇄ Requests
+      <span class="tab-badge" id="badgeIncoming">0</span>
     </button>
-    <button class="btn btn-gold" id="btnEndDuet" data-draggable="true" onclick="endDuet()" style="display:none">
-      ◻ End Duet
+    <button class="tab-btn" data-draggable="true" onclick="switchView('stage')" role="tab" id="tabStage" style="display:none">
+      ✦ Stage
     </button>
-    <button class="btn" id="btnRefreshHistory" data-draggable="true" onclick="loadHistory()">
-      ↺ History
+    <button class="tab-btn" data-draggable="true" onclick="toggleProfileEditor()" role="tab" id="tabProfile">
+      ◻ Profile
     </button>
-  </div>
+  </nav>
 
-  <!-- TOKEN DISPLAY -->
-  <div class="token-display" id="tokenDisplay">
-    <div class="token-label">Room Token — share with your partner</div>
-    <div class="token-value" id="tokenValue">—</div>
-    <div class="token-url" id="tokenUrl">—</div>
-  </div>
+  <!-- ═══════════════ FEED VIEW ═══════════════ -->
+  <div class="view active" id="v-feed">
 
-  <!-- JOIN FORM -->
-  <div class="join-form" id="joinForm">
-    <input class="input-field" id="joinTokenInput" placeholder="enter room token" style="flex:1; min-width:160px">
-    <button class="btn btn-crimson" data-draggable="true" onclick="joinRoom()">Join</button>
-  </div>
-
-  <!-- THEATER -->
-  <div class="theater">
-
-    <!-- WING A -->
-    <div class="speaker-wing wing-a">
-      <div class="wing-label">A</div>
-      <div class="wing-title">You · Speaker A</div>
-      <div class="speak-form">
-        <textarea class="speak-input" id="speakInputA" placeholder="speak as A…" rows="3"></textarea>
-        <button class="btn btn-speak-a" data-draggable="true" onclick="speak('A')">
-          ◈ Speak as A
-        </button>
-      </div>
-    </div>
-
-    <!-- TRANSCRIPT STAGE -->
-    <div class="transcript-stage">
-      <div class="stage-header">
-        <div class="stage-title">
-          <div class="status-dot" id="stageDot"></div>
-          Live Transcript
+    <!-- profile editor (collapsible) -->
+    <div class="profile-editor" id="profileEditor">
+      <div class="profile-editor-title">My Presence</div>
+      <div class="profile-fields">
+        <div class="profile-field">
+          <label>Display Name (≤32)</label>
+          <input type="text" id="peDisplayName" maxlength="32" placeholder="how they see you">
         </div>
-        <div class="stage-token-badge" id="stageBadge">no room</div>
-      </div>
-      <div id="transcriptContainer">
-        <div class="stage-empty" id="transcriptEmpty">
-          <div class="stage-empty-icon">⟐</div>
-          <div class="stage-empty-text">The stage awaits.<br>Create or join a room to begin.</div>
+        <div class="profile-field">
+          <label>Avatar (≤8 emoji)</label>
+          <input type="text" id="peAvatar" maxlength="8" placeholder="🌙">
+        </div>
+        <div class="profile-field" style="grid-column: 1/-1">
+          <label>Bio (≤240)</label>
+          <textarea id="peBio" maxlength="240" rows="2" placeholder="a few words about what you're here for"></textarea>
+        </div>
+        <div class="profile-field">
+          <label>Mood (≤48)</label>
+          <input type="text" id="peMood" maxlength="48" placeholder="what's alive in you right now">
+        </div>
+        <div class="profile-field">
+          <label>Accent Color (#hex)</label>
+          <input type="text" id="peAccent" maxlength="7" placeholder="#c0243d">
+        </div>
+        <div class="profile-field" style="grid-column: 1/-1">
+          <label>Vibe Tags (comma-separated, ≤8 tags)</label>
+          <input type="text" id="peVibeTags" placeholder="film, jazz, late nights, philosophy">
         </div>
       </div>
-      <div class="transcript-scroll" id="transcriptScroll" style="display:none"></div>
+      <div class="profile-editor-actions">
+        <button class="btn-save" data-draggable="true" onclick="saveProfile()">Save Presence</button>
+        <button class="btn-secondary" data-draggable="true" id="btnTogglePublic" onclick="togglePublic()">Go Public</button>
+        <button class="btn-secondary" data-draggable="true" onclick="toggleProfileEditor()">Close</button>
+      </div>
     </div>
 
-    <!-- WING B -->
-    <div class="speaker-wing wing-b">
-      <div class="wing-label">B</div>
-      <div class="wing-title">Partner · Speaker B</div>
-      <div class="speak-form">
-        <textarea class="speak-input" id="speakInputB" placeholder="speak as B…" rows="3"></textarea>
-        <button class="btn btn-speak-b" data-draggable="true" onclick="speak('B')">
-          ◈ Speak as B
-        </button>
+    <!-- my longing numbers strip -->
+    <div class="my-presence-strip" id="myPresenceStrip" style="display:none">
+      <div class="my-longing-nums">
+        <div class="longing-num">
+          <span class="longing-n" id="myViewCount">—</span>
+          <span class="longing-l">viewed</span>
+        </div>
+        <div class="longing-num">
+          <span class="longing-n" id="myRequestCount">—</span>
+          <span class="longing-l">requests</span>
+        </div>
+      </div>
+      <button class="my-presence-toggle" id="btnPublicStatus" data-draggable="true" onclick="togglePublic()">Go Public</button>
+    </div>
+
+    <!-- feed header -->
+    <div class="section-head">
+      <div>
+        <div class="section-title">The Haven</div>
+        <div class="section-sub">presences collecting, the feed watches back</div>
+      </div>
+    </div>
+
+    <!-- feed meta -->
+    <div class="feed-meta">
+      <div class="live-dot" id="feedDot"></div>
+      <span id="feedCount">loading…</span>
+      <button class="feed-refresh-btn" data-draggable="true" onclick="loadFeed(true)">↺ Refresh</button>
+    </div>
+
+    <!-- upsell strip -->
+    <div class="upsell-strip" id="upsellStrip">
+      <div class="upsell-strip-text">You've seen all the presences available on this tier.<br>Upgrade to Theater to see everyone in the haven.</div>
+      <a href="upgrade.html" class="upsell-strip-link">See all presences — upgrade to Theater</a>
+    </div>
+
+    <!-- presence grid -->
+    <div class="presence-grid" id="presenceGrid">
+      <!-- skeleton placeholders -->
+      <div class="skel-card skeleton"></div>
+      <div class="skel-card skeleton"></div>
+      <div class="skel-card skeleton"></div>
+      <div class="skel-card skeleton"></div>
+    </div>
+
+  </div>
+
+  <!-- ═══════════════ HANDSHAKE VIEW ═══════════════ -->
+  <div class="view" id="v-handshake">
+
+    <div class="section-head">
+      <div>
+        <div class="section-title">Requests</div>
+        <div class="section-sub">who's reaching, who you've reached</div>
+      </div>
+      <button class="btn-secondary" data-draggable="true" onclick="loadRequests()">↺ Refresh</button>
+    </div>
+
+    <div class="request-lists">
+      <div>
+        <div class="req-section-title">
+          <div class="live-dot warm" style="display:none" id="incomingDot"></div>
+          Incoming
+        </div>
+        <div class="req-list" id="incomingList">
+          <div class="req-empty">No incoming requests.</div>
+        </div>
+      </div>
+      <div>
+        <div class="req-section-title">Outgoing</div>
+        <div class="req-list" id="outgoingList">
+          <div class="req-empty">No outgoing requests.</div>
+        </div>
       </div>
     </div>
 
   </div>
 
-  <!-- HISTORY PANEL -->
-  <div class="panel">
-    <div class="panel-title">
-      <span class="live-dot" style="width:5px;height:5px;border-radius:50%;background:rgba(139,26,47,0.6);display:inline-block"></span>
-      Past Duets
+  <!-- ═══════════════ PRIVATE STAGE ═══════════════ -->
+  <div class="view" id="v-stage">
+
+    <!-- partner info + video CTA -->
+    <div class="stage-topbar" id="stageTopbar">
+      <span class="stage-partner-ava" id="stagePartnerAva">👤</span>
+      <div class="stage-partner-info">
+        <div class="stage-partner-name" id="stagePartnerName">—</div>
+        <div class="stage-partner-mood" id="stagePartnerMood"></div>
+      </div>
+      <button class="stage-video-cta" id="btnGoVideo" data-draggable="true" onclick="goVideo()">
+        ✦ go to video
+      </button>
+      <button class="stage-end-btn" data-draggable="true" onclick="leaveStage()">◻ leave</button>
     </div>
-    <div class="history-grid" id="historyGrid">
-      <div class="history-empty">No past duets yet.</div>
+
+    <!-- video upsell (shown when not eligible) -->
+    <div class="video-upsell" id="videoUpsell">
+      <div class="video-upsell-icon">✦</div>
+      <div class="video-upsell-text" id="videoUpsellText">They're Theater. Meet them face to face.</div>
+      <a href="upgrade.html" class="video-upsell-link">Upgrade to Theater →</a>
     </div>
+
+    <!-- chat transcript -->
+    <div class="chat-stage">
+      <div class="chat-scroll" id="chatScroll">
+        <div class="chat-empty" id="chatEmpty">
+          <div class="chat-empty-text">The stage awaits.<br>Your thread begins here.</div>
+        </div>
+      </div>
+      <div class="chat-input-row">
+        <textarea
+          class="chat-input"
+          id="chatInput"
+          placeholder="say something…"
+          rows="1"
+          maxlength="2000"
+          aria-label="Send a message"
+        ></textarea>
+        <button class="chat-send-btn" data-draggable="true" onclick="sendMessage()" aria-label="Send">◈</button>
+      </div>
+    </div>
+
   </div>
 
+</div><!-- /page -->
+
+<!-- REQUEST MODAL (bottom sheet on mobile) -->
+<div class="modal-overlay" id="requestModal" onclick="closeRequestModal(event)">
+  <div class="modal-sheet" id="requestSheet" onclick="e => e.stopPropagation()">
+    <div class="modal-handle"></div>
+    <span class="modal-target-avatar" id="modalAvatar">👤</span>
+    <div class="modal-target-name" id="modalName">—</div>
+    <div class="modal-target-mood" id="modalMood"></div>
+    <div class="modal-title">Send a request</div>
+    <div class="modal-sub">They'll see your opener before deciding.</div>
+    <textarea
+      class="modal-input"
+      id="openerInput"
+      placeholder="what brings you here tonight…"
+      maxlength="200"
+      rows="3"
+      aria-label="Opening message"
+    ></textarea>
+    <div class="modal-char-count"><span id="openerCount">0</span>/200</div>
+    <div class="modal-actions">
+      <button class="btn-send" data-draggable="true" onclick="sendRequest()">◈ Send Request</button>
+      <button class="btn-cancel" data-draggable="true" onclick="closeRequestModal()">Cancel</button>
+    </div>
+  </div>
 </div>
 
 <div class="toast" id="toast"></div>
 
 <script src="body/draggable.js"></script>
+<script src="dirrm-launch.js"></script>
 <script>
-const API = 'https://api.vintaclectic.com';
-function getToken() { return localStorage.getItem('vint_token') || ''; }
-function headers() { return { 'Content-Type': 'application/json', 'Authorization': `Bearer ${getToken()}` }; }
+/* ════════════════════════════════════════════════════════════
+   DIRMEGLE HAVEN — client
+   Three surfaces:
+     1. Feed       (/api/megle/discover) + presence/heartbeat
+     2. Handshake  (requests/incoming + outgoing) + inbox SSE
+     3. Stage      (duet SSE + speak + WebRTC video)
+   ════════════════════════════════════════════════════════════ */
 
+/* ── CONSTANTS ──────────────────────────────────────── */
+const API = (function() {
+  try {
+    if (window.API_BASE) return window.API_BASE;
+  } catch(_) {}
+  return window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+    ? 'http://localhost:8767'
+    : 'https://api.vintaclectic.com';
+})();
+
+function getToken()  { return localStorage.getItem('vint_token') || ''; }
+function authHdrs()  { return { 'Content-Type': 'application/json', 'Authorization': `Bearer ${getToken()}` }; }
+
+/* ── STATE ──────────────────────────────────────────── */
+let myProfile       = null;
+let inboxSSE        = null;
+let duetSSE         = null;
 let currentRoomToken = null;
-let sseSource = null;
-let transcriptEntries = [];
+let partnerMeta     = {};          // { display_name, avatar, mood, user_id }
+let pendingRequestTarget = null;   // { user_id, display_name, avatar, mood }
+let alertPendingReq  = null;       // { id, from_user, display_name, avatar, opener }
+let feedTimer        = null;
+let heartbeatTimer   = null;
+let incomingCount    = 0;
 
-// ── ROOM CREATION ──
-async function createRoom() {
-  const btn = document.getElementById('btnCreateRoom');
-  btn.textContent = '…Creating';
-  btn.disabled = true;
+// WebRTC state
+let pc              = null;
+let localStream     = null;
+let dirrmHandle     = null;
+
+/* ── VIEW ROUTER ────────────────────────────────────── */
+function switchView(name) {
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('v-' + name).classList.add('active');
+  const idx = { feed: 0, handshake: 1, stage: 2, profile: 3 };
+  const tabs = document.querySelectorAll('.tab-btn');
+  if (name === 'feed')       tabs[0].classList.add('active');
+  if (name === 'handshake') { tabs[1].classList.add('active'); loadRequests(); }
+  if (name === 'stage')      tabs[2].classList.add('active');
+  // profile tab is a toggle, not a real view
+}
+
+/* ── TOAST ──────────────────────────────────────────── */
+function toast(msg, dur = 2800) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('visible');
+  clearTimeout(t._t);
+  t._t = setTimeout(() => t.classList.remove('visible'), dur);
+}
+
+/* ════════════════════════════════════════════════════
+   SECTION 1 — FEED
+   ════════════════════════════════════════════════════ */
+
+async function loadMyProfile() {
+  if (!getToken()) return;
   try {
-    const r = await fetch(`${API}/api/duet/create`, { method: 'POST', headers: headers() });
-    const data = await r.json();
-    if (!r.ok) throw new Error(data.error || 'failed');
-    currentRoomToken = data.room_token;
-    document.getElementById('tokenValue').textContent = data.room_token;
-    document.getElementById('tokenUrl').textContent = data.watch_url || `${window.location.origin}/duet.html?token=${data.room_token}`;
-    document.getElementById('tokenDisplay').classList.add('visible');
-    document.getElementById('btnEndDuet').style.display = 'flex';
-    document.getElementById('stageBadge').textContent = data.room_token.slice(0,12) + '…';
-    connectSSE(data.room_token);
-    showTranscript();
-    toast('Room created. Share the token.');
-  } catch(e) {
-    toast('Error: ' + e.message);
+    const r = await fetch(`${API}/api/megle/profile/me`, { headers: authHdrs() });
+    if (!r.ok) return;
+    const d = await r.json();
+    myProfile = d.profile;
+    renderMyStrip();
+  } catch(_) {}
+}
+
+function renderMyStrip() {
+  if (!myProfile) return;
+  const strip = document.getElementById('myPresenceStrip');
+  strip.style.display = 'flex';
+  document.getElementById('myViewCount').textContent    = myProfile.view_count    ?? 0;
+  document.getElementById('myRequestCount').textContent = myProfile.request_count ?? 0;
+  const btn = document.getElementById('btnPublicStatus');
+  if (myProfile.is_public) {
+    btn.textContent = 'Go Private';
+    btn.classList.add('public');
+  } else {
+    btn.textContent = 'Go Public';
+    btn.classList.remove('public');
   }
-  btn.textContent = '◈ Create Room';
-  btn.disabled = false;
+
+  // pre-fill editor
+  document.getElementById('peDisplayName').value = myProfile.display_name || '';
+  document.getElementById('peAvatar').value       = myProfile.avatar || '';
+  document.getElementById('peBio').value          = myProfile.bio || '';
+  document.getElementById('peMood').value         = myProfile.mood || '';
+  document.getElementById('peAccent').value       = myProfile.accent_color || '';
+  document.getElementById('peVibeTags').value     = (myProfile.vibe_tags || []).join(', ');
 }
 
-// ── JOIN ROOM ──
-function toggleJoinForm() {
-  const f = document.getElementById('joinForm');
-  f.classList.toggle('visible');
-}
-
-async function joinRoom() {
-  const token = document.getElementById('joinTokenInput').value.trim();
-  if (!token) { toast('Enter a token first.'); return; }
+async function togglePublic() {
+  if (!myProfile) { toast('Log in to set your presence.'); return; }
+  const newPublic = !myProfile.is_public;
   try {
-    const r = await fetch(`${API}/api/duet/join/${token}`, { method: 'POST', headers: headers() });
-    const data = await r.json();
-    if (!r.ok) throw new Error(data.error || 'failed');
-    currentRoomToken = token;
-    document.getElementById('stageBadge').textContent = token.slice(0,12) + '…';
-    document.getElementById('joinForm').classList.remove('visible');
-    document.getElementById('btnEndDuet').style.display = 'flex';
-    connectSSE(token);
-    showTranscript();
-    toast('Joined room as B.');
+    const r = await fetch(`${API}/api/megle/profile`, {
+      method: 'PUT',
+      headers: authHdrs(),
+      body: JSON.stringify({ is_public: newPublic })
+    });
+    if (!r.ok) { const d = await r.json(); throw new Error(d.error || 'failed'); }
+    const d = await r.json();
+    myProfile = d.profile;
+    renderMyStrip();
+    toast(newPublic ? 'You are now visible in the haven.' : 'Presence hidden.');
+    if (newPublic) startHeartbeat();
+  } catch(e) { toast('Error: ' + e.message); }
+}
+
+async function saveProfile() {
+  const body = {
+    display_name: document.getElementById('peDisplayName').value.trim().slice(0,32),
+    avatar:       document.getElementById('peAvatar').value.trim().slice(0,8),
+    bio:          document.getElementById('peBio').value.trim().slice(0,240),
+    mood:         document.getElementById('peMood').value.trim().slice(0,48),
+    accent_color: document.getElementById('peAccent').value.trim().slice(0,7),
+    vibe_tags:    document.getElementById('peVibeTags').value.split(',').map(t=>t.trim()).filter(Boolean).slice(0,8)
+  };
+  try {
+    const r = await fetch(`${API}/api/megle/profile`, {
+      method: 'PUT', headers: authHdrs(), body: JSON.stringify(body)
+    });
+    if (!r.ok) { const d = await r.json(); throw new Error(d.error || 'failed'); }
+    const d = await r.json();
+    myProfile = d.profile;
+    renderMyStrip();
+    toast('Presence saved.');
+    toggleProfileEditor(false);
+    loadFeed(true);
+  } catch(e) { toast('Error: ' + e.message); }
+}
+
+function toggleProfileEditor(forceOpen) {
+  const ed = document.getElementById('profileEditor');
+  const open = forceOpen !== undefined ? forceOpen : !ed.classList.contains('visible');
+  ed.classList.toggle('visible', open);
+}
+
+async function loadFeed(force = false) {
+  const grid = document.getElementById('presenceGrid');
+  if (force) {
+    grid.innerHTML = '<div class="skel-card skeleton"></div>'.repeat(4);
+  }
+  try {
+    const r = await fetch(`${API}/api/megle/discover`, { headers: authHdrs() });
+    if (!r.ok) throw new Error('failed');
+    const d = await r.json();
+
+    document.getElementById('feedCount').textContent =
+      `${d.presences.length} presence${d.presences.length !== 1 ? 's' : ''} in the haven`;
+
+    const dot = document.getElementById('feedDot');
+    dot.classList.add('on');
+
+    // upsell strip
+    const strip = document.getElementById('upsellStrip');
+    strip.classList.toggle('visible', !!(d.has_more && d.tier_gate && d.tier_gate.premium_required));
+
+    if (!d.presences.length) {
+      grid.innerHTML = `<div style="grid-column:1/-1; padding:var(--s8) 0; text-align:center">
+        <p style="font-family:'Cormorant Garamond',serif;font-style:italic;font-size:0.88rem;color:var(--text-ghost)">
+          The haven is quiet right now. Check back soon.
+        </p>
+      </div>`;
+      return;
+    }
+
+    grid.innerHTML = d.presences.map(p => renderPresenceCard(p)).join('');
   } catch(e) {
-    toast('Error: ' + e.message);
+    document.getElementById('feedCount').textContent = 'haven unreachable';
+    if (force) grid.innerHTML = `<div style="grid-column:1/-1;padding:var(--s8) 0;text-align:center">
+      <p style="font-family:'Cormorant Garamond',serif;font-style:italic;font-size:0.88rem;color:var(--text-ghost)">
+        Could not reach the haven. ${getToken() ? '' : 'Log in to see presences.'}
+      </p>
+    </div>`;
   }
 }
 
-// ── SSE ──
-function connectSSE(token) {
-  if (sseSource) { sseSource.close(); }
-  const dot = document.getElementById('sseStatusDot');
-  const label = document.getElementById('sseStatusLabel');
-  const stageDot = document.getElementById('stageDot');
+function renderPresenceCard(p) {
+  const heat  = parseFloat(p.heat) || 0;
+  const heatR = Math.round(heat * 255);
+  const heatAlpha = (heat * 0.55).toFixed(2);
+  const heatColor = `rgba(${heatR}, ${Math.round(heat*36)}, ${Math.round(heat*80)}, ${heatAlpha})`;
+  const heatLineColor = heat > 0.3 ? `rgba(192,36,61,${(heat*0.8).toFixed(2)})` : `rgba(100,120,160,${(heat*0.5).toFixed(2)})`;
+  const accent = p.accent_color || '#8b1a2f';
+  const safeAccent = /^#[0-9a-f]{3,6}$/i.test(accent) ? accent : '#8b1a2f';
+  const tags = (p.vibe_tags || []).slice(0,5).map(t => `<span class="pcard-tag">${escHtml(t)}</span>`).join('');
+  const bio  = p.bio ? `<div class="pcard-bio">${escHtml(p.bio)}</div>` : '';
 
-  const url = `${API}/api/duet/watch/${token}`;
-  sseSource = new EventSource(url + (getToken() ? `?token=${getToken()}` : ''));
+  return `<div class="pcard ${p.boosted ? 'boosted' : ''}"
+    style="--pcard-heat:${heatColor};--pcard-heat-color:${heatLineColor}"
+    onclick="openRequestModal(${JSON.stringify(JSON.stringify(p))})">
+    <div class="pcard-top">
+      <div class="pcard-avatar">${escHtml(p.avatar || '👤')}
+        <div class="pcard-avatar-online ${p.online ? 'on' : ''}"></div>
+      </div>
+      <div class="pcard-info">
+        <div class="pcard-name">${escHtml(p.display_name || 'Anonymous')}</div>
+        ${p.mood ? `<div class="pcard-mood">${escHtml(p.mood)}</div>` : ''}
+        <div class="pcard-heat-bar"></div>
+      </div>
+    </div>
+    ${bio}
+    ${tags ? `<div class="pcard-tags">${tags}</div>` : ''}
+    <div class="pcard-cta">
+      <button class="pcard-request-btn">◈ request chat</button>
+      <span class="pcard-requests-count">${p.request_count || 0} req</span>
+    </div>
+    <div class="pcard-accent" style="background:${safeAccent}"></div>
+  </div>`;
+}
 
-  sseSource.onopen = () => {
-    dot.className = 'status-dot connected';
-    stageDot.className = 'status-dot connected';
+function escHtml(str) {
+  const d = document.createElement('div');
+  d.textContent = str;
+  return d.innerHTML;
+}
+
+function startFeedPoller() {
+  clearInterval(feedTimer);
+  feedTimer = setInterval(() => loadFeed(false), 15000);
+}
+
+/* ── HEARTBEAT ──────────────────────────────────────── */
+function startHeartbeat() {
+  clearInterval(heartbeatTimer);
+  pingHeartbeat();
+  heartbeatTimer = setInterval(pingHeartbeat, 20000);
+}
+
+async function pingHeartbeat() {
+  if (!getToken()) return;
+  try {
+    await fetch(`${API}/api/megle/presence/heartbeat`, {
+      method: 'POST',
+      headers: authHdrs(),
+      body: JSON.stringify({ available: true })
+    });
+  } catch(_) {}
+}
+
+/* ════════════════════════════════════════════════════
+   REQUEST MODAL
+   ════════════════════════════════════════════════════ */
+
+function openRequestModal(presenceJson) {
+  const p = JSON.parse(presenceJson);
+  pendingRequestTarget = p;
+  document.getElementById('modalAvatar').textContent = p.avatar || '👤';
+  document.getElementById('modalName').textContent   = p.display_name || 'Anonymous';
+  document.getElementById('modalMood').textContent   = p.mood || '';
+  document.getElementById('openerInput').value = '';
+  document.getElementById('openerCount').textContent = '0';
+  document.getElementById('requestModal').classList.add('open');
+  setTimeout(() => document.getElementById('openerInput').focus(), 80);
+}
+
+function closeRequestModal(e) {
+  if (e && e.target !== document.getElementById('requestModal')) return;
+  document.getElementById('requestModal').classList.remove('open');
+  pendingRequestTarget = null;
+}
+
+document.getElementById('openerInput').addEventListener('input', function() {
+  document.getElementById('openerCount').textContent = this.value.length;
+});
+
+async function sendRequest() {
+  if (!getToken()) { toast('Log in to send requests.'); closeRequestModal(); return; }
+  if (!pendingRequestTarget) return;
+  const opener = document.getElementById('openerInput').value.trim().slice(0,200);
+  const userId = pendingRequestTarget.user_id;
+  try {
+    const r = await fetch(`${API}/api/megle/request/${userId}`, {
+      method: 'POST',
+      headers: authHdrs(),
+      body: JSON.stringify({ opener })
+    });
+    const d = await r.json();
+    if (r.status === 409) { toast('Request already pending.'); closeRequestModal(); return; }
+    if (r.status === 429) { toast(d.message || 'Slow down — too many requests.'); closeRequestModal(); return; }
+    if (r.status === 403) { toast('This presence is unavailable.'); closeRequestModal(); return; }
+    if (!r.ok) throw new Error(d.error || 'failed');
+    toast('Request sent. Waiting…');
+    closeRequestModal();
+    // switch to handshake to watch outgoing
+    switchView('handshake');
+  } catch(e) { toast('Error: ' + e.message); }
+}
+
+/* ════════════════════════════════════════════════════
+   SECTION 2 — HANDSHAKE
+   ════════════════════════════════════════════════════ */
+
+async function loadRequests() {
+  await Promise.all([ loadIncoming(), loadOutgoing() ]);
+}
+
+async function loadIncoming() {
+  try {
+    const r = await fetch(`${API}/api/megle/requests/incoming`, { headers: authHdrs() });
+    if (!r.ok) return;
+    const d = await r.json();
+    renderIncoming(d.requests || []);
+  } catch(_) {}
+}
+
+function renderIncoming(reqs) {
+  const list = document.getElementById('incomingList');
+  const dot  = document.getElementById('incomingDot');
+  incomingCount = reqs.length;
+  updateIncomingBadge();
+
+  if (!reqs.length) {
+    list.innerHTML = '<div class="req-empty">No incoming requests.</div>';
+    dot.style.display = 'none';
+    return;
+  }
+  dot.style.display = 'block';
+  list.innerHTML = reqs.map(req => `
+    <div class="req-card incoming" id="reqIn-${req.id}">
+      <div class="req-card-top">
+        <span class="req-card-ava">${escHtml(req.avatar || '👤')}</span>
+        <div class="req-card-info">
+          <div class="req-card-name">${escHtml(req.display_name || 'Someone')}</div>
+          <div class="req-card-time">${formatTime(req.created_at)}</div>
+        </div>
+      </div>
+      ${req.opener ? `<div class="req-opener">${escHtml(req.opener)}</div>` : ''}
+      <div class="req-actions">
+        <button class="btn-accept" data-draggable="true" onclick="acceptRequest('${req.id}', ${JSON.stringify(JSON.stringify({ display_name: req.display_name, avatar: req.avatar, mood: req.mood, user_id: req.from_user }))})">
+          Accept
+        </button>
+        <button class="btn-decline" data-draggable="true" onclick="denyRequest('${req.id}')">
+          Not now
+        </button>
+      </div>
+    </div>
+  `).join('');
+}
+
+async function loadOutgoing() {
+  try {
+    const r = await fetch(`${API}/api/megle/requests/outgoing`, { headers: authHdrs() });
+    if (!r.ok) return;
+    const d = await r.json();
+    renderOutgoing(d.requests || []);
+  } catch(_) {}
+}
+
+function renderOutgoing(reqs) {
+  const list = document.getElementById('outgoingList');
+  if (!reqs.length) {
+    list.innerHTML = '<div class="req-empty">No outgoing requests.</div>';
+    return;
+  }
+  list.innerHTML = reqs.map(req => `
+    <div class="req-card outgoing">
+      <div class="req-card-top">
+        <span class="req-card-ava">${escHtml(req.avatar || '👤')}</span>
+        <div class="req-card-info">
+          <div class="req-card-name">${escHtml(req.display_name || 'Someone')}</div>
+          <div class="req-card-time">${formatTime(req.created_at)}</div>
+          <div class="req-card-status ${req.status}">${req.status}</div>
+        </div>
+      </div>
+      ${req.status === 'accepted' && req.room_token
+        ? `<button class="btn-accept" data-draggable="true" style="margin-top:var(--s2)"
+             onclick="enterStage('${req.room_token}', ${JSON.stringify(JSON.stringify({ display_name: req.display_name, avatar: req.avatar }))})">
+             Enter Stage →
+           </button>`
+        : ''}
+    </div>
+  `).join('');
+}
+
+function updateIncomingBadge() {
+  const badge = document.getElementById('badgeIncoming');
+  if (incomingCount > 0) {
+    badge.textContent = incomingCount;
+    badge.classList.add('visible');
+  } else {
+    badge.classList.remove('visible');
+  }
+}
+
+async function acceptRequest(reqId, metaJson) {
+  const meta = JSON.parse(metaJson);
+  try {
+    const r = await fetch(`${API}/api/megle/request/${reqId}/accept`, {
+      method: 'POST', headers: authHdrs()
+    });
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.error || 'failed');
+    toast('Accepted! Opening stage…');
+    enterStage(d.room_token, JSON.stringify(meta));
+  } catch(e) { toast('Error: ' + e.message); }
+}
+
+async function denyRequest(reqId) {
+  try {
+    await fetch(`${API}/api/megle/request/${reqId}/deny`, {
+      method: 'POST', headers: authHdrs()
+    });
+    toast('Request declined gently.');
+    loadIncoming();
+  } catch(e) { toast('Could not decline: ' + e.message); }
+}
+
+function formatTime(iso) {
+  if (!iso) return '';
+  try { return new Date(iso).toLocaleTimeString([], { hour:'2-digit', minute:'2-digit' }); } catch(_) { return ''; }
+}
+
+/* ════════════════════════════════════════════════════
+   INBOX SSE — /api/megle/inbox
+   ════════════════════════════════════════════════════ */
+
+function startInboxSSE() {
+  if (!getToken()) return;
+  if (inboxSSE) { inboxSSE.close(); }
+
+  const url = `${API}/api/megle/inbox?token=${encodeURIComponent(getToken())}`;
+  inboxSSE = new EventSource(url);
+
+  const dot   = document.getElementById('inboxDot');
+  const label = document.getElementById('inboxLabel');
+
+  inboxSSE.onopen = () => {
+    dot.classList.add('on');
     label.textContent = 'LIVE';
   };
-
-  sseSource.onmessage = (e) => {
-    try {
-      const event = JSON.parse(e.data);
-      handleSSEEvent(event);
-    } catch(_) {}
+  inboxSSE.onerror = () => {
+    dot.classList.remove('on');
+    label.textContent = 'RECONNECTING';
+    // EventSource auto-reconnects
   };
 
-  sseSource.onerror = () => {
-    dot.className = 'status-dot active';
-    stageDot.className = 'status-dot';
+  // inbox:connected
+  inboxSSE.addEventListener('inbox:connected', () => {
+    dot.classList.add('on');
+    label.textContent = 'LIVE';
+  });
+
+  // request:new — someone wants to chat with me
+  inboxSSE.addEventListener('request:new', (e) => {
+    try {
+      const data = JSON.parse(e.data);
+      // bump incoming count
+      incomingCount++;
+      updateIncomingBadge();
+      // show alert banner
+      showAlertBanner(data);
+      // if on handshake view, refresh
+      if (document.getElementById('v-handshake').classList.contains('active')) {
+        loadIncoming();
+      }
+    } catch(_) {}
+  });
+
+  // request:accepted — my request was accepted → auto-join stage
+  inboxSSE.addEventListener('request:accepted', (e) => {
+    try {
+      const data = JSON.parse(e.data);
+      if (data.room_token) {
+        toast('Request accepted! Entering stage…');
+        // find partner meta from outgoing list
+        const meta = JSON.stringify({ display_name: '', avatar: '👤' });
+        enterStage(data.room_token, meta);
+      }
+    } catch(_) {}
+  });
+
+  // request:denied
+  inboxSSE.addEventListener('request:denied', (e) => {
+    try {
+      const data = JSON.parse(e.data);
+      const retryMin = data.retry_after ? Math.ceil(data.retry_after / 60) : 5;
+      toast(`Not available right now. Try again in ${retryMin}m.`);
+      loadOutgoing();
+    } catch(_) {}
+  });
+
+  // video:invite — partner wants video
+  inboxSSE.addEventListener('video:invite', (e) => {
+    try {
+      const data = JSON.parse(e.data);
+      if (currentRoomToken === data.room_token) {
+        handleVideoInvite(data);
+      }
+    } catch(_) {}
+  });
+
+  // video:signal — WebRTC signaling relay
+  inboxSSE.addEventListener('video:signal', (e) => {
+    try {
+      const data = JSON.parse(e.data);
+      handleVideoSignal(data);
+    } catch(_) {}
+  });
+
+  // reconnect watchdog: if silent >60s reconnect
+  let lastHeartbeat = Date.now();
+  inboxSSE.addEventListener('heartbeat', () => { lastHeartbeat = Date.now(); });
+  setInterval(() => {
+    if (Date.now() - lastHeartbeat > 65000) {
+      inboxSSE.close();
+      startInboxSSE();
+    }
+  }, 30000);
+}
+
+/* ── ALERT BANNER ───────────────────────────────────── */
+function showAlertBanner(data) {
+  alertPendingReq = data;
+  document.getElementById('alertAva').textContent   = data.avatar || '👤';
+  document.getElementById('alertTitle').textContent = `${data.display_name || 'Someone'} wants to chat`;
+  document.getElementById('alertSub').textContent   = data.opener || '';
+  document.getElementById('alertBanner').classList.add('visible');
+  // auto-dismiss after 12s
+  clearTimeout(window._alertTimer);
+  window._alertTimer = setTimeout(alertDismiss, 12000);
+}
+
+function alertDismiss() {
+  document.getElementById('alertBanner').classList.remove('visible');
+  alertPendingReq = null;
+}
+
+async function alertAccept() {
+  if (!alertPendingReq) return;
+  const req = alertPendingReq;
+  alertDismiss();
+  // find the request id from incoming list or use the request_id field
+  const reqId = req.request_id;
+  if (!reqId) { toast('Switch to Requests tab to accept.'); switchView('handshake'); return; }
+  await acceptRequest(reqId, JSON.stringify({ display_name: req.display_name, avatar: req.avatar, mood: req.mood || '', user_id: req.from_user }));
+}
+
+/* ════════════════════════════════════════════════════
+   SECTION 3 — PRIVATE STAGE
+   ════════════════════════════════════════════════════ */
+
+function enterStage(roomToken, metaJson) {
+  const meta = typeof metaJson === 'string' ? JSON.parse(metaJson) : metaJson;
+  currentRoomToken = roomToken;
+  partnerMeta = meta;
+
+  // show stage tab
+  document.getElementById('tabStage').style.display = 'flex';
+  switchView('stage');
+
+  // update stage topbar
+  document.getElementById('stagePartnerAva').textContent  = meta.avatar || '👤';
+  document.getElementById('stagePartnerName').textContent = meta.display_name || 'Your partner';
+  document.getElementById('stagePartnerMood').textContent = meta.mood || '';
+
+  // clear chat
+  const scroll = document.getElementById('chatScroll');
+  scroll.innerHTML = '';
+  const empty = document.createElement('div');
+  empty.className = 'chat-empty';
+  empty.innerHTML = '<div class="chat-empty-text">The stage awaits.<br>Your thread begins here.</div>';
+  scroll.appendChild(empty);
+
+  // hide video upsell initially
+  document.getElementById('videoUpsell').classList.remove('visible');
+
+  // check video eligibility
+  checkVideoEligibility();
+
+  // connect to duet SSE (existing duet flow)
+  connectDuetSSE(roomToken);
+
+  toast('You are on stage.');
+}
+
+async function checkVideoEligibility() {
+  if (!getToken()) return;
+  try {
+    const r = await fetch(`${API}/api/megle/profile/me`, { headers: authHdrs() });
+    if (!r.ok) return;
+    const d = await r.json();
+    myProfile = d.profile;
+    const eligible = myProfile && myProfile.video_eligible;
+    document.getElementById('btnGoVideo').style.display = eligible ? 'flex' : 'none';
+    if (!eligible) {
+      // show upsell
+      const upsell = document.getElementById('videoUpsell');
+      document.getElementById('videoUpsellText').textContent =
+        `They're in the haven. Meet them face to face. Upgrade to Theater to start video.`;
+      upsell.classList.add('visible');
+    }
+  } catch(_) {}
+}
+
+/* ── DUET SSE (private chat transcript) ─────────────── */
+function connectDuetSSE(token) {
+  if (duetSSE) { duetSSE.close(); duetSSE = null; }
+
+  const dot   = document.getElementById('inboxDot');
+  const label = document.getElementById('inboxLabel');
+
+  const url = `${API}/api/duet/watch/${token}${getToken() ? '?token=' + encodeURIComponent(getToken()) : ''}`;
+  duetSSE = new EventSource(url);
+
+  duetSSE.onopen = () => {
+    dot.classList.add('on');
+    label.textContent = 'LIVE';
+  };
+  duetSSE.onerror = () => {
     label.textContent = 'RECONNECTING';
-    setTimeout(() => {
-      if (currentRoomToken) connectSSE(currentRoomToken);
-    }, 3000);
+    setTimeout(() => { if (currentRoomToken === token) connectDuetSSE(token); }, 3000);
+  };
+  duetSSE.onmessage = (e) => {
+    try { handleDuetEvent(JSON.parse(e.data)); } catch(_) {}
   };
 }
 
-function handleSSEEvent(event) {
-  if (event.type === 'utterance') {
-    appendUtterance(event.speaker, event.text, event.at);
-  } else if (event.type === 'partner_joined') {
-    appendSystemEvent('Partner has joined the stage.');
-  } else if (event.type === 'ended') {
-    appendSystemEvent('The duet has ended.');
-    const dot = document.getElementById('sseStatusDot');
-    const label = document.getElementById('sseStatusLabel');
-    dot.className = 'status-dot';
-    label.textContent = 'ENDED';
-    if (sseSource) { sseSource.close(); sseSource = null; }
-    loadHistory();
-  } else if (event.type === 'transcript') {
-    if (event.entries && event.entries.length) {
-      transcriptEntries = [];
-      const scroll = document.getElementById('transcriptScroll');
+function handleDuetEvent(ev) {
+  if (ev.type === 'utterance') {
+    appendChatMsg(ev.speaker, ev.text, ev.at);
+  } else if (ev.type === 'partner_joined') {
+    appendSysEvent('Your partner has entered.');
+  } else if (ev.type === 'ended') {
+    appendSysEvent('The stage has closed.');
+    if (duetSSE) { duetSSE.close(); duetSSE = null; }
+  } else if (ev.type === 'transcript') {
+    if (ev.entries && ev.entries.length) {
+      const scroll = document.getElementById('chatScroll');
       scroll.innerHTML = '';
-      event.entries.forEach(e => appendUtterance(e.speaker, e.text, e.at));
+      ev.entries.forEach(e => appendChatMsg(e.speaker, e.text, e.at));
     }
   }
 }
 
-// ── SPEAK ──
-async function speak(speaker) {
-  if (!currentRoomToken) { toast('No active room. Create or join first.'); return; }
-  const inputId = speaker === 'A' ? 'speakInputA' : 'speakInputB';
-  const input = document.getElementById(inputId);
-  const text = input.value.trim();
-  if (!text) { toast('Enter something to say.'); return; }
+function appendChatMsg(speaker, text, at) {
+  const scroll = document.getElementById('chatScroll');
+  // remove empty state
+  const empty = scroll.querySelector('.chat-empty');
+  if (empty) empty.remove();
+
+  // determine if "me" — speaker A = host (my side when I created room)
+  // We mark messages from 'A' as 'me' for simplicity (in a real impl
+  // the server would return a speaker id; for now mirror duet convention)
+  const isMe = (speaker === 'A');
+  const div = document.createElement('div');
+  div.className = `chat-msg ${isMe ? 'me' : 'them'}`;
+
+  const bubble = document.createElement('div');
+  bubble.className = 'chat-bubble';
+
+  const textEl = document.createElement('div');
+  textEl.className = 'chat-text';
+  textEl.textContent = text;
+
+  const timeEl = document.createElement('div');
+  timeEl.className = 'chat-time';
+  timeEl.textContent = at ? new Date(at).toLocaleTimeString([], { hour:'2-digit', minute:'2-digit' }) : '';
+
+  bubble.appendChild(textEl);
+  bubble.appendChild(timeEl);
+  div.appendChild(bubble);
+  scroll.appendChild(div);
+  scroll.scrollTop = scroll.scrollHeight;
+}
+
+function appendSysEvent(msg) {
+  const scroll = document.getElementById('chatScroll');
+  const div = document.createElement('div');
+  div.className = 'sys-event';
+  div.innerHTML = `<span class="sys-event-text">— ${escHtml(msg)} —</span>`;
+  scroll.appendChild(div);
+  scroll.scrollTop = scroll.scrollHeight;
+}
+
+async function sendMessage() {
+  if (!currentRoomToken) { toast('No active stage.'); return; }
+  const input = document.getElementById('chatInput');
+  const text  = input.value.trim();
+  if (!text) return;
   try {
     const r = await fetch(`${API}/api/duet/${currentRoomToken}/speak`, {
       method: 'POST',
-      headers: headers(),
-      body: JSON.stringify({ text, speaker })
+      headers: authHdrs(),
+      body: JSON.stringify({ text, speaker: 'A' })
     });
     if (!r.ok) {
       const d = await r.json();
       throw new Error(d.error || 'failed');
     }
     input.value = '';
-  } catch(e) {
-    toast('Error: ' + e.message);
+    input.style.height = 'auto';
+  } catch(e) { toast('Error: ' + e.message); }
+}
+
+async function leaveStage() {
+  if (duetSSE) { duetSSE.close(); duetSSE = null; }
+  if (pc) { pc.close(); pc = null; }
+  if (localStream) { localStream.getTracks().forEach(t => t.stop()); localStream = null; }
+  if (dirrmHandle) { try { dirrmHandle.close(); } catch(_) {} dirrmHandle = null; }
+  if (currentRoomToken) {
+    try {
+      await fetch(`${API}/api/duet/${currentRoomToken}/end`, {
+        method: 'POST', headers: authHdrs()
+      });
+    } catch(_) {}
   }
+  currentRoomToken = null;
+  document.getElementById('tabStage').style.display = 'none';
+  switchView('feed');
+  toast('Left the stage.');
 }
 
-// ── TRANSCRIPT RENDERING ──
-function showTranscript() {
-  document.getElementById('transcriptEmpty').style.display = 'none';
-  document.getElementById('transcriptContainer').style.display = 'none';
-  document.getElementById('transcriptScroll').style.display = 'flex';
-}
+/* ── AUTO-RESIZE CHAT INPUT ─────────────────────────── */
+document.getElementById('chatInput').addEventListener('input', function() {
+  this.style.height = 'auto';
+  this.style.height = Math.min(this.scrollHeight, 120) + 'px';
+});
+document.getElementById('chatInput').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
+});
 
-function appendUtterance(speaker, text, at) {
-  const scroll = document.getElementById('transcriptScroll');
-  const div = document.createElement('div');
-  div.className = `utterance speaker-${speaker.toLowerCase()}`;
+/* ════════════════════════════════════════════════════
+   VIDEO — WebRTC + DirRM live type
+   ════════════════════════════════════════════════════ */
 
-  const tag = document.createElement('div');
-  tag.className = 'utter-tag';
-  tag.textContent = speaker;
-
-  const bubble = document.createElement('div');
-  bubble.className = 'utter-bubble';
-
-  const textEl = document.createElement('div');
-  textEl.className = 'utter-text';
-  textEl.textContent = text;
-
-  const timeEl = document.createElement('div');
-  timeEl.className = 'utter-time';
-  timeEl.textContent = at ? new Date(at).toLocaleTimeString([], { hour:'2-digit', minute:'2-digit', second:'2-digit' }) : '';
-
-  bubble.appendChild(textEl);
-  bubble.appendChild(timeEl);
-  div.appendChild(tag);
-  div.appendChild(bubble);
-  scroll.appendChild(div);
-  scroll.scrollTop = scroll.scrollHeight;
-}
-
-function appendSystemEvent(msg) {
-  const scroll = document.getElementById('transcriptScroll');
-  const div = document.createElement('div');
-  div.className = 'system-event';
-  const span = document.createElement('div');
-  span.className = 'system-event-text';
-  span.textContent = '— ' + msg + ' —';
-  div.appendChild(span);
-  scroll.appendChild(div);
-  scroll.scrollTop = scroll.scrollHeight;
-}
-
-// ── END DUET ──
-async function endDuet() {
+async function goVideo() {
   if (!currentRoomToken) return;
-  try {
-    await fetch(`${API}/api/duet/${currentRoomToken}/end`, { method: 'POST', headers: headers() });
-    toast('Duet ended.');
-    document.getElementById('btnEndDuet').style.display = 'none';
-    currentRoomToken = null;
-    if (sseSource) { sseSource.close(); sseSource = null; }
-    document.getElementById('sseStatusDot').className = 'status-dot';
-    document.getElementById('sseStatusLabel').textContent = 'OFFLINE';
-    loadHistory();
-  } catch(e) {
-    toast('Error: ' + e.message);
-  }
-}
-
-// ── HISTORY ──
-async function loadHistory() {
-  try {
-    const r = await fetch(`${API}/api/duet/history`, { headers: headers() });
-    if (!r.ok) return;
-    const data = await r.json();
-    const items = Array.isArray(data) ? data : (data.duets || data.history || []);
-    renderHistory(items);
-  } catch(_) {}
-}
-
-function renderHistory(items) {
-  const grid = document.getElementById('historyGrid');
-  if (!items.length) {
-    grid.innerHTML = '<div class="history-empty">No past duets yet.</div>';
+  if (!myProfile || !myProfile.video_eligible) {
+    document.getElementById('videoUpsell').classList.add('visible');
     return;
   }
-  grid.innerHTML = items.map(item => `
-    <div class="history-item" onclick="loadDuet('${item.token || item.room_token}')">
-      <div class="history-token">${(item.token || item.room_token || '').slice(0,10)}…</div>
-      <div class="history-meta">
-        <div class="history-time">${item.created_at ? new Date(item.created_at).toLocaleString() : '—'}</div>
-        <div class="history-count">${item.utterance_count || 0} utterances</div>
-      </div>
-    </div>
-  `).join('');
-}
-
-async function loadDuet(token) {
-  if (!token) return;
-  currentRoomToken = token;
-  document.getElementById('stageBadge').textContent = token.slice(0,12) + '…';
-  showTranscript();
-  document.getElementById('transcriptScroll').innerHTML = '';
   try {
-    const r = await fetch(`${API}/api/duet/watch/${token}`, { headers: headers() });
-    if (r.ok) {
-      const data = await r.json();
-      const entries = data.entries || data.transcript || [];
-      entries.forEach(e => appendUtterance(e.speaker, e.text, e.at));
+    // 1. fetch TURN credentials
+    const turnR = await fetch(`${API}/api/megle/turn-credentials`, { headers: authHdrs() });
+    if (!turnR.ok) {
+      const td = await turnR.json();
+      if (turnR.status === 503) {
+        toast('TURN server not yet configured — video limited to LAN.');
+      } else {
+        throw new Error(td.error || 'turn fetch failed');
+      }
     }
-  } catch(_) {}
+    const turnData = turnR.ok ? await turnR.json() : { iceServers: [] };
+    const iceServers = turnData.iceServers || [];
+
+    // 2. signal video/start to partner
+    const startR = await fetch(`${API}/api/megle/video/${currentRoomToken}/start`, {
+      method: 'POST', headers: authHdrs()
+    });
+    if (!startR.ok) {
+      const sd = await startR.json();
+      if (startR.status === 402) {
+        document.getElementById('videoUpsellText').textContent =
+          'Video requires Theater tier. Upgrade to go face to face.';
+        document.getElementById('videoUpsell').classList.add('visible');
+        return;
+      }
+      throw new Error(sd.error || 'start failed');
+    }
+
+    // 3. set up RTCPeerConnection + getUserMedia (initiator)
+    await setupWebRTCInitiator(iceServers);
+    toast('Video connecting…');
+  } catch(e) { toast('Video error: ' + e.message); }
 }
 
-// ── TOAST ──
-function toast(msg) {
-  const t = document.getElementById('toast');
-  t.textContent = msg;
-  t.classList.add('visible');
-  clearTimeout(t._timer);
-  t._timer = setTimeout(() => t.classList.remove('visible'), 2800);
+async function setupWebRTCInitiator(iceServers) {
+  pc = new RTCPeerConnection({ iceServers });
+  localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+  localStream.getTracks().forEach(track => pc.addTrack(track, localStream));
+
+  pc.ontrack = (e) => { openDirRMStream(e.streams[0]); };
+  pc.onicecandidate = async (e) => {
+    if (e.candidate) {
+      await sendSignal({ type: 'ice', candidate: {
+        candidate:     e.candidate.candidate,
+        sdpMid:        e.candidate.sdpMid,
+        sdpMLineIndex: e.candidate.sdpMLineIndex
+      }});
+    }
+  };
+
+  const offer = await pc.createOffer();
+  await pc.setLocalDescription(offer);
+  await sendSignal({ type: 'offer', sdp: offer });
 }
 
-// ── ENTER KEY SUPPORT ──
-document.addEventListener('DOMContentLoaded', () => {
-  loadHistory();
+async function handleVideoInvite(data) {
+  // receiver side: partner invited us to video
+  const yes = confirm(`${partnerMeta.display_name || 'Your partner'} wants to video chat. Accept?`);
+  if (!yes) return;
 
-  // Ctrl+Enter to speak
-  document.getElementById('speakInputA').addEventListener('keydown', e => {
-    if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) speak('A');
+  try {
+    const turnR = await fetch(`${API}/api/megle/turn-credentials`, { headers: authHdrs() });
+    const turnData = turnR.ok ? await turnR.json() : { iceServers: [] };
+
+    pc = new RTCPeerConnection({ iceServers: turnData.iceServers || [] });
+    localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+    localStream.getTracks().forEach(t => pc.addTrack(t, localStream));
+
+    pc.ontrack = (e) => { openDirRMStream(e.streams[0]); };
+    pc.onicecandidate = async (e) => {
+      if (e.candidate) {
+        await sendSignal({ type: 'ice', candidate: {
+          candidate:     e.candidate.candidate,
+          sdpMid:        e.candidate.sdpMid,
+          sdpMLineIndex: e.candidate.sdpMLineIndex
+        }});
+      }
+    };
+    // wait for offer from initiator via video:signal
+    window._pendingPCReceiver = true;
+  } catch(e) { toast('Video setup failed: ' + e.message); }
+}
+
+async function handleVideoSignal(data) {
+  if (!pc) return;
+  try {
+    if (data.subtype === 'offer') {
+      await pc.setRemoteDescription(new RTCSessionDescription({ type: 'offer', sdp: data.sdp }));
+      const answer = await pc.createAnswer();
+      await pc.setLocalDescription(answer);
+      await sendSignal({ type: 'answer', sdp: answer });
+    } else if (data.subtype === 'answer') {
+      await pc.setRemoteDescription(new RTCSessionDescription({ type: 'answer', sdp: data.sdp }));
+    } else if (data.subtype === 'ice' && data.candidate) {
+      await pc.addIceCandidate(new RTCIceCandidate(data.candidate));
+    }
+  } catch(e) { console.warn('signal error:', e); }
+}
+
+async function sendSignal(payload) {
+  if (!currentRoomToken) return;
+  try {
+    await fetch(`${API}/api/megle/video/${currentRoomToken}/signal`, {
+      method: 'POST',
+      headers: authHdrs(),
+      body: JSON.stringify(payload)
+    });
+  } catch(e) { console.warn('signal send failed:', e); }
+}
+
+function openDirRMStream(remoteStream) {
+  const name = partnerMeta.display_name || 'Partner';
+  dirrmHandle = dirrmLaunch.open({
+    type:     'live',
+    title:    `Live: ${name}`,
+    mode:     'theater',
+    autoplay: true,
+    stream:   remoteStream
   });
-  document.getElementById('speakInputB').addEventListener('keydown', e => {
-    if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) speak('B');
-  });
-  document.getElementById('joinTokenInput').addEventListener('keydown', e => {
-    if (e.key === 'Enter') joinRoom();
+  // local self-view — DirRM pip of local stream
+  if (localStream && dirrmHandle && typeof dirrmHandle.setLocalStream === 'function') {
+    dirrmHandle.setLocalStream(localStream);
+  }
+  toast('Video live.');
+}
+
+/* ════════════════════════════════════════════════════
+   INIT
+   ════════════════════════════════════════════════════ */
+document.addEventListener('DOMContentLoaded', async () => {
+  // load feed immediately
+  loadFeed(true);
+  startFeedPoller();
+
+  // load my profile + start heartbeat
+  await loadMyProfile();
+  if (getToken() && myProfile && myProfile.is_public) startHeartbeat();
+  if (getToken()) startInboxSSE();
+
+  // opener modal: click overlay to close
+  document.getElementById('requestModal').addEventListener('click', function(e) {
+    if (e.target === this) closeRequestModal();
   });
 
-  // Auto-join from URL param
+  // auto-join from URL ?room= param (deep link after accepted request)
   const params = new URLSearchParams(window.location.search);
-  const token = params.get('token');
-  if (token) {
-    document.getElementById('joinTokenInput').value = token;
-    document.getElementById('joinForm').classList.add('visible');
-    toast('Token detected — click Join to enter.');
+  const roomParam = params.get('room');
+  if (roomParam) {
+    enterStage(roomParam, JSON.stringify({ display_name: 'Partner', avatar: '👤' }));
+  }
+
+  // show my presence strip even when not logged in (with zeroes)
+  if (!getToken()) {
+    document.getElementById('feedCount').textContent = 'log in to see presences';
   }
 });
 </script>
