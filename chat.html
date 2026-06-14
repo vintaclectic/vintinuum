@@ -55,6 +55,7 @@
 <script src="body/identity.js?v=v20260508-resilience"></script>
 <script src="body/devices.js?v=v20260508-presence"></script>
 <script src="body/voice_say.js?v=v20260509-voicesay" defer></script>
+<script src="body/she_speaks.js?v=v20260614-speak" defer></script>
 <script src="body/greeting.js?v=v20260509-cadence"></script>
 <script defer src="body/draggable.js?v=v20260508-2330-mvfix"></script>
 <script defer src="body/hey_vinta.js?v=v20260510-passive"></script>
@@ -318,6 +319,13 @@
     window.addEventListener('convo:final', function (ev) {
       var d = ev.detail || {};
       if (d.text) _remember('vinta', d.text);
+      // Speak the finished reply (Vinta 2026-06-14: voice everywhere). If this
+      // turn came from the mic FSM it's already spoken as streamed PCM, so mark
+      // source='voice' and VINT_SAY will only do the visual, not double-speak.
+      if (d.text && window.VINT_SAY) {
+        var _src = (d.spoken || d.fromVoice || (window.talk && window.talk.isActive && window.talk.isActive())) ? 'voice' : 'text';
+        window.VINT_SAY(d.text, _src);
+      }
       if (currentTurn && currentTurn.vinta && d.text) {
         // Replace streamed text with the canonical full text from the final frame.
         // Preserve label + crossfade seam if present by rebuilding the row.

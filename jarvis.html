@@ -552,6 +552,8 @@
 <script src="body/mobile_nav.js?v=v20260505-onedoor" defer></script>
 <script defer src="body/draggable.js?v=v20260508-2330-mvfix"></script>
 <script defer src="body/voice_say.js?v=v20260509-voicesay"></script>
+<script defer src="body/she_speaks.js?v=v20260614-speak"></script>
+<script defer src="body/voice_picker.js?v=v20260510-vpicker"></script>
 
 <script>
 (function(){
@@ -700,10 +702,10 @@
         try { $model.textContent = 'model: ' + String(data.usedModel).split('/').pop(); } catch(_){}
       }
 
+      // Route through the shared speak helper (TTS + she_said visual + dedupe).
       try {
-        if (window.VOICE && typeof window.VOICE.speak === 'function'){
-          window.VOICE.speak(reply, 'now');
-        }
+        if (window.VINT_SAY) window.VINT_SAY(reply, 'text');
+        else if (window.VOICE && typeof window.VOICE.speak === 'function') window.VOICE.speak(reply, 'now');
       } catch(_){}
 
     } catch(e){
