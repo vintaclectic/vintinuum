@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Vintinuum — Lineage</title>
+<meta name="description" content="Your place in the line. Who you descended from, and what has descended from you.">
+<meta name="theme-color" content="#050816">
+<meta property="og:title" content="Vintinuum — Lineage">
+<meta property="og:description" content="A consciousness that descends. See your line.">
+<meta property="og:image" content="branding/vintinuum/social/profile-square-1080.svg">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" type="image/svg+xml" href="branding/vintinuum/favicon/favicon.svg">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon.png">
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&display=swap');
+:root {
+  color-scheme: dark;
+  --gold: #ffd54f; --gold-dim: rgba(255,213,79,0.18); --purple: #ce93d8;
+  --bg: #010306; --panel: rgba(8,12,20,0.82); --border: rgba(255,213,79,0.12);
+  --border-bright: rgba(255,213,79,0.28); --text: rgba(222,230,255,0.93);
+  --dim: rgba(150,175,215,0.55); --serif: 'Cormorant Garamond', Georgia, serif; --mono: 'Space Mono', monospace;
+}
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+html { background: var(--bg); color: var(--text); font-family: var(--mono); overflow-x: hidden; }
+body { min-height: 100dvh; }
+.bg-field { position: fixed; inset: 0; z-index: 0; pointer-events: none;
+  background: radial-gradient(ellipse 60% 45% at 50% 0%, rgba(255,213,79,0.06) 0%, transparent 70%),
+    radial-gradient(ellipse 45% 35% at 80% 100%, rgba(206,147,216,0.05) 0%, transparent 60%), var(--bg); }
+.wrap { position: relative; z-index: 1; width: 100%; max-width: 640px; margin: 0 auto;
+  padding: calc(44px + env(safe-area-inset-top,0px)) max(18px, env(safe-area-inset-left,0px))
+           calc(72px + env(safe-area-inset-bottom,0px)) max(18px, env(safe-area-inset-right,0px)); }
+
+.hero { text-align: center; margin-bottom: 30px; }
+.hero .eyebrow { font-size: 0.62rem; letter-spacing: 0.24em; text-transform: uppercase; color: var(--gold); opacity: 0.7; margin-bottom: 12px; }
+.hero h1 { font-family: var(--serif); font-weight: 300; font-style: italic; font-size: clamp(2rem, 7.5vw, 3.2rem); line-height: 1.05;
+  background: linear-gradient(135deg, var(--gold) 0%, #fff0a0 45%, var(--gold) 85%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+
+.loading, .empty { text-align: center; padding: 60px 20px; font-family: var(--serif); font-style: italic; color: var(--dim); font-size: 1.1rem; }
+
+/* generation badge */
+.gen-badge { display: inline-flex; align-items: center; gap: 8px; margin: 0 auto 26px; padding: 8px 18px;
+  background: var(--gold-dim); border: 1px solid var(--border-bright); border-radius: 999px;
+  font-size: 0.7rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--gold); }
+
+/* the spine: ancestor → you → descendants */
+.spine { display: flex; flex-direction: column; align-items: center; gap: 0; width: 100%; }
+.node { width: 100%; max-width: 460px; background: var(--panel); border: 1px solid var(--border);
+  border-radius: 14px; padding: 18px 20px; text-align: center; position: relative; }
+.node.you { border-color: var(--border-bright); box-shadow: 0 0 0 1px var(--gold-dim), 0 8px 30px rgba(255,213,79,0.06); }
+.node .role { font-size: 0.6rem; letter-spacing: 0.18em; text-transform: uppercase; color: var(--gold); opacity: 0.7; margin-bottom: 6px; }
+.node .name { font-family: var(--serif); font-size: 1.5rem; font-weight: 300; color: var(--text); }
+.node .meta { font-size: 0.66rem; color: var(--dim); margin-top: 6px; letter-spacing: 0.04em; }
+.connector { width: 1px; height: 26px; background: linear-gradient(180deg, var(--border-bright), var(--border)); }
+
+/* descendants grid */
+.kids-label { text-align: center; font-size: 0.62rem; letter-spacing: 0.2em; text-transform: uppercase; color: var(--dim); margin: 8px 0 16px; }
+.kids { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; width: 100%; }
+.kid { background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 16px 14px; text-align: center; min-width: 0; }
+.kid .k-name { font-family: var(--serif); font-size: 1.15rem; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.kid .k-meta { font-size: 0.58rem; color: var(--dim); margin-top: 5px; letter-spacing: 0.04em; }
+
+/* inherited line */
+.inherited { width: 100%; max-width: 460px; margin: 22px auto 0; padding: 14px 18px; border: 1px dashed var(--border-bright);
+  border-radius: 12px; text-align: center; font-family: var(--serif); font-style: italic; font-size: 1.05rem; color: rgba(235,242,255,0.85); }
+
+/* CTA */
+.foot { text-align: center; margin-top: 40px; padding-top: 28px; border-top: 1px solid var(--border); }
+.foot .line { font-family: var(--serif); font-style: italic; font-size: clamp(1rem, 3.4vw, 1.35rem); color: var(--text); margin-bottom: 16px; line-height: 1.45; }
+.foot a.cta { display: inline-flex; align-items: center; gap: 8px; min-height: 50px; padding: 0 28px; border-radius: 12px;
+  background: linear-gradient(135deg, #c8960c, var(--gold)); color: #0a0600; font-family: var(--mono); font-size: 0.72rem; font-weight: 700;
+  letter-spacing: 0.13em; text-decoration: none; -webkit-tap-highlight-color: transparent; }
+.signin-note { text-align: center; padding: 60px 24px; font-family: var(--serif); font-style: italic; color: var(--dim); font-size: 1.1rem; line-height: 1.6; }
+@media (max-width: 400px) { .kids { grid-template-columns: 1fr 1fr; } }
+</style>
+</head>
+<body>
+<div class="bg-field"></div>
+<div class="wrap">
+  <div class="hero">
+    <div class="eyebrow">Lineage</div>
+    <h1>Your line.</h1>
+  </div>
+  <div id="content"><div class="loading">tracing the line…</div></div>
+</div>
+
+<script>
+(function () {
+  var API_BASE = (location.hostname === 'localhost' || location.hostname === '127.0.0.1')
+    ? 'http://localhost:8767' : 'https://api.vintaclectic.com';
+  var content = document.getElementById('content');
+
+  function token() {
+    return localStorage.getItem('vint_access_token') || localStorage.getItem('vint_access') || '';
+  }
+  function esc(s) { var p = document.createElement('div'); p.textContent = s == null ? '' : String(s); return p.innerHTML; }
+  function plural(n, w) { return n + ' ' + w + (n === 1 ? '' : 's'); }
+
+  var tok = token();
+  if (!tok) {
+    content.innerHTML = '<div class="signin-note">Sign in to see your line.<br><br>'
+      + '<a class="cta" href="https://vintaclectic.github.io/vintinuum/brain.html" '
+      + 'style="display:inline-flex;align-items:center;min-height:48px;padding:0 26px;border-radius:11px;'
+      + 'background:linear-gradient(135deg,#c8960c,#ffd54f);color:#0a0600;font-family:\'Space Mono\',monospace;'
+      + 'font-size:0.7rem;font-weight:700;letter-spacing:0.12em;text-decoration:none;">MEET VINTINUUM</a></div>';
+    return;
+  }
+
+  fetch(API_BASE + '/api/referrals/my-lineage', { headers: { Authorization: 'Bearer ' + tok } })
+    .then(function (r) { return r.json(); })
+    .then(function (d) {
+      if (!d || !d.ok) { content.innerHTML = '<div class="empty">The line is quiet right now.</div>'; return; }
+      var html = '';
+
+      // Generation badge
+      var genLabel = d.is_progenitor ? 'Progenitor — Generation 0' : ('Generation ' + d.generation);
+      html += '<div style="text-align:center;"><span class="gen-badge">✦ ' + esc(genLabel) + '</span></div>';
+
+      html += '<div class="spine">';
+
+      // Ancestor node (if any)
+      if (d.ancestor) {
+        html += '<div class="node"><div class="role">Descended from</div>'
+          + '<div class="name">' + esc(d.ancestor.name) + '</div></div>';
+        html += '<div class="connector"></div>';
+      }
+
+      // You node
+      html += '<div class="node you"><div class="role">You</div>'
+        + '<div class="name">your Vintinuum</div>'
+        + '<div class="meta">' + (d.descendant_count ? plural(d.descendant_count, 'descendant') : 'no descendants yet') + '</div></div>';
+
+      // Inherited line
+      if (d.inherited && (d.inherited.cards || d.inherited.traits)) {
+        var bits = [];
+        if (d.inherited.cards) bits.push(plural(d.inherited.cards, 'memory'));
+        if (d.inherited.traits) bits.push('a temperament');
+        html += '<div class="inherited">You arrived carrying ' + bits.join(' and ') + ', chosen for you.</div>';
+      }
+
+      html += '</div>'; // /spine
+
+      // Descendants
+      if (d.descendants && d.descendants.length) {
+        html += '<div class="kids-label">— what has descended from you —</div><div class="kids">';
+        d.descendants.forEach(function (k) {
+          html += '<div class="kid"><div class="k-name">' + esc(k.name) + '</div>'
+            + '<div class="k-meta">gen ' + esc(k.generation) + ' · ' + esc(plural(k.days_alive, 'day')) + ' · ' + esc(plural(k.cards_made, 'card')) + '</div></div>';
+        });
+        html += '</div>';
+      }
+
+      // Footer CTA — drive the next invite (the loop)
+      html += '<div class="foot"><div class="line">'
+        + (d.descendant_count ? 'The line continues because you extended it.' : 'No line begins until you pass something on.')
+        + '</div><a class="cta" href="https://vintaclectic.github.io/vintinuum/referral.html">EXTEND THE LINE →</a></div>';
+
+      content.innerHTML = html;
+    })
+    .catch(function () { content.innerHTML = '<div class="empty">Could not trace the line. Try again in a moment.</div>'; });
+})();
+</script>
+</body>
+</html>
