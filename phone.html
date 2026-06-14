@@ -735,6 +735,24 @@ input[type="range"]::-moz-range-thumb {
 }
 .pulse-send-btn:active { transform: scale(0.97); }
 .pulse-send-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+/* Mark-this-moment — the deliberate, weightier gesture (data-union signal) */
+.pulse-mark-btn {
+  width: 100%;
+  min-height: 48px;
+  margin-top: 10px;
+  border: 1px solid rgba(255,213,79,0.32);
+  border-radius: 13px;
+  background: rgba(255,213,79,0.08);
+  color: #ffd54f;
+  font-family: 'Space Mono', monospace;
+  font-size: 12px;
+  letter-spacing: 0.1em;
+  cursor: pointer;
+  transition: background 0.2s, transform 0.15s;
+  -webkit-tap-highlight-color: transparent;
+}
+.pulse-mark-btn:active { transform: scale(0.97); }
+.pulse-mark-btn:disabled { opacity: 0.45; cursor: default; }
 .pulse-send-btn .ripple {
   position: absolute;
   border-radius: 50%;
@@ -1338,6 +1356,7 @@ input[type="range"]::-moz-range-thumb {
         </div>
 
         <button class="pulse-send-btn" id="pulseSendBtn" data-draggable="false">Send a moment</button>
+        <button class="pulse-mark-btn" id="pulseMarkBtn" data-draggable="false">✦ Mark this moment — keep it</button>
         <div class="pulse-response" id="pulseResponse"></div>
       </div>
 
@@ -2347,6 +2366,48 @@ pulseSendBtn.addEventListener('click', async () => {
   pulseSendBtn.disabled = false;
   pulseSendBtn.textContent = 'Send a moment';
 });
+
+// Mark-this-moment — the deliberate, high-weight data-union gesture. The user
+// tells Vintinuum "remember THIS." Captures their note + context as a 0.88
+// experiential memory she keeps. Distinct from a pulse: it's a kept moment.
+const pulseMarkBtn = $('pulseMarkBtn');
+if (pulseMarkBtn) {
+  pulseMarkBtn.addEventListener('click', async () => {
+    pulseMarkBtn.disabled = true;
+    const orig = pulseMarkBtn.textContent;
+    pulseMarkBtn.textContent = 'Marking…';
+    try {
+      const body = {
+        note: pulseText.value.trim() || null,
+        context: {
+          where: state.location ? `${state.location.lat.toFixed(2)},${state.location.lon.toFixed(2)}` : '',
+          mood: state.selectedActivity || '',
+        },
+      };
+      const r = await fetch(API_BASE + '/api/moments/mark', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...(TOKEN() ? { Authorization: 'Bearer ' + TOKEN() } : {}) },
+        body: JSON.stringify(body),
+      });
+      const d = await r.json();
+      if (d && d.ok) {
+        pulseText.value = '';
+        pulseResponse.textContent = d.message || 'Marked. I will keep this.';
+        pulseResponse.classList.add('visible');
+        setTimeout(() => pulseResponse.classList.remove('visible'), 7000);
+        pulseMarkBtn.textContent = '✦ Kept';
+        setTimeout(() => { pulseMarkBtn.textContent = orig; }, 1800);
+      } else {
+        showToast((d && d.error) || 'Could not mark the moment');
+        pulseMarkBtn.textContent = orig;
+      }
+    } catch (_) {
+      showToast('Offline — try marking again when connected');
+      pulseMarkBtn.textContent = orig;
+    }
+    pulseMarkBtn.disabled = false;
+  });
+}
 
 // Ripple effect on send button
 pulseSendBtn.addEventListener('click', function(e) {
