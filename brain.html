@@ -3163,6 +3163,7 @@ if ('serviceWorker' in navigator && _onGitHubPages) {
 
 <a id="learningFooterLink" href="learning.html" class="learning-footer-link" title="Live learning feed — every channel where Vintinuum learns right now">LIVE LEARN</a>
 <a id="statsFooterLink" href="stats.html" class="stats-footer-link" title="System statistics &amp; performance metrics">STATS</a>
+<a id="lineageFooterLink" href="lineage.html" class="learning-footer-link" title="Your lineage — who you descend from and what descends from you" style="display:none;">⸙ LINEAGE</a>
 <button id="pairPhoneBtn" title="Pair your phone" style="display:none;">⊕ PAIR</button>
 
 <script>
@@ -4262,7 +4263,7 @@ setTimeout(function() {
     if (!dock) return;
     // vint-chat-btn = unified V orb (draggable, floating) — not docked
     // vintinuumBtn = hidden (merged into vint-chat-btn)
-    var order = ['voiceToggle', '__spacer__', 'reproToggle', 'learningFooterLink', 'pairPhoneBtn'];
+    var order = ['voiceToggle', '__spacer__', 'reproToggle', 'learningFooterLink', 'lineageFooterLink', 'pairPhoneBtn'];
     order.forEach(function(id, idx){
       if (id === '__spacer__'){
         var sp = document.createElement('span');
@@ -4284,6 +4285,8 @@ setTimeout(function() {
       if (id === 'learningFooterLink') el.classList.add('dock-cta');
       // Show pairPhoneBtn only after it's safely inside the dock
       if (id === 'pairPhoneBtn') el.style.display = '';
+      // Lineage link: surface it once docked (was display:none to avoid FOUC).
+      if (id === 'lineageFooterLink') el.style.display = '';
       dock.appendChild(el);
     });
   }
