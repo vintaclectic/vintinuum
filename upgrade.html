@@ -148,6 +148,16 @@
     .tier--companion .perks li::before { color:rgba(140,190,255,0.8); }
     .tier--theater { border-color:rgba(255,150,200,0.25); }
     .tier--theater .perks li::before { color:rgba(255,150,200,0.8); }
+    /* DirMegle video row gets extra visual weight in Theater */
+    .tier--theater .perks li:last-child { color:rgba(255,180,220,0.95); font-weight:500; }
+    .tier--theater .perks li:last-child::before { color:rgba(255,150,200,1); }
+    /* Sovereign perk styles — the crown tier */
+    .tier--sovereign { border-color:rgba(200,160,64,0.38); }
+    .tier--sovereign .perks li::before { color:rgba(200,160,64,0.85); }
+    .tier--sovereign .price { color:rgba(220,185,100,0.95); }
+    /* DirMegle Boost row gets extra weight in Sovereign */
+    .tier--sovereign .perks li:last-child { color:rgba(220,185,100,0.95); font-weight:500; }
+    .tier--sovereign .perks li:last-child::before { color:rgba(200,160,64,1); }
     .tier--estate {
       border-color:rgba(255,200,110,0.45);
       background:linear-gradient(180deg, rgba(255,200,110,0.07), rgba(255,255,255,0.02));
@@ -297,6 +307,7 @@
       'cross-device handoff (phone → desktop)',
       'downloadable memory cards',
       'four-mode player (main / mini / pip / theater)',
+      'DirMegle Haven — 1:1 video chat · meet your connections face to face',
     ],
     sovereign: [
       'everything in Theater',
@@ -305,6 +316,7 @@
       'compounding IP — daily more uniquely yours',
       'unlimited witness sessions',
       'first access to new forms',
+      'DirMegle Boost — seen first by everyone · presence glow · crown in the haven',
     ],
     estate: [
       'everything in Sovereign',
@@ -324,8 +336,8 @@
   const TAGLINES = {
     free:      "come in. she'll remember you.",
     companion: 'she keeps you. you keep her.',
-    theater:   'the room knows what to play.',
-    sovereign: 'her brain learns yours. you own the model.',
+    theater:   'the room knows what to play. the haven opens face to face.',
+    sovereign: 'her brain learns yours. you own the model. the haven sees you first.',
     estate:    "the part of you that doesn't end.",
   };
 
