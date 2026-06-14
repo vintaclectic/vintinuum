@@ -3591,6 +3591,15 @@ window.addEventListener('message', function(e) {
       }
       setSession(res.data);
       if (msg) { msg.style.color = 'rgba(120,220,140,0.95)'; msg.textContent = 'Welcome' + (res.data.user && res.data.user.name ? ', ' + res.data.user.name : '') + '.'; }
+      // First-run onboarding: a brand-new account that hasn't been through the
+      // begin flow goes to welcome.html (meet → mark → make → invite). Returning
+      // sign-ins, or anyone already onboarded, stay right here.
+      var isNew = (state.mode === 'signup');
+      var onboarded = false; try { onboarded = localStorage.getItem('vint_onboarded') === '1'; } catch (_) {}
+      if (isNew && !onboarded) {
+        setTimeout(function () { location.href = 'welcome.html'; }, 800);
+        return;
+      }
       setTimeout(function () { closeAuth(); if (msg) msg.style.color = ''; }, 700);
     } catch (e) {
       if (msg) msg.textContent = (e && e.name === 'AbortError') ? 'Network timed out — brain may be slow.' : ('Network error: ' + (e && e.message || 'unknown'));
