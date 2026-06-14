@@ -367,8 +367,8 @@ canvas{display:block;}
      stripped by JS, but legacy mobile-only !important rules used to fight
      that. Now all neutralized: the dock owns positioning, these elements
      stay sized for tap targets only. */
-  #footerDock #voiceToggle,
-  #footerDock #reproToggle{ width:40px!important;height:40px!important;font-size:0.95rem!important; }
+  #footerDock #vintVoice,
+  #footerDock #reproToggle{ width:auto!important;min-width:44px!important;height:44px!important;font-size:0.95rem!important; }
   /* Panels (vintinuumPanel / vint-chat-panel / reproPanel) still float —
      they're popovers, not chrome — but anchor above the dock band. */
   #vintinuumPanel{bottom:calc(72px + env(safe-area-inset-bottom,0px))!important;left:12px!important;width:calc(100vw - 24px)!important;max-height:calc(100svh - 220px)!important;}
@@ -620,9 +620,9 @@ if ('serviceWorker' in navigator && _onGitHubPages) {
     }
   </script>
 
-  <!-- TALK TO CLAUDE — floating button + panel -->
-  <!-- VOICE MUTE TOGGLE -->
-  <button id="voiceToggle" title="Toggle voice output (text-to-speech)" style="position:fixed;bottom:24px;left:24px;z-index:1000;background:rgba(8,12,20,0.25);border:1px solid rgba(255,255,255,0.08);border-radius:50%;width:36px;height:36px;cursor:pointer;font-size:1rem;display:flex;align-items:center;justify-content:center;color:rgba(218,228,255,0.7);transition:all .2s;padding:0;">🔊</button>
+  <!-- VOICE CONTROL — the single unified button (body/voice_button.js) renders
+       #vintVoice at runtime: tap=mute toggle, caret=multi-voice picker. The old
+       orphaned #voiceToggle (wired to nothing) was removed 2026-06-14. -->
 
   <!-- REPRODUCTIVE CONTROL PANEL -->
   <button id="reproToggle" title="Reproductive system panel" style="display:none!important;position:fixed;bottom:24px;left:66px;z-index:1004;background:rgba(6,10,18,0.55);border:1px solid rgba(206,147,216,0.3);border-radius:50%;width:36px;height:36px;cursor:pointer;font-size:1rem;align-items:center;justify-content:center;color:rgba(206,147,216,0.7);transition:all .2s;padding:0;">💜</button>
@@ -3345,6 +3345,7 @@ if ('serviceWorker' in navigator && _onGitHubPages) {
 <script defer src="body/diag.js?v=v20260510-diag"></script>
 <script defer src="body/status_pill.js?v=v20260510-pill"></script>
 <script defer src="body/wake_consent.js?v=v20260510-consent"></script>
+<script defer src="body/voice_button.js?v=v20260614-onebtn"></script>
 <script defer src="body/voice_picker.js?v=v20260510-vpicker"></script>
 <script defer src="body/embodied_convo.js?v=v20260510-embodied"></script>
 <script defer src="body/browser-relay-widget.js?v=v20260522-brwidget"></script>
@@ -4009,7 +4010,7 @@ setTimeout(function() {
 
   // Elements to make draggable: [id, saveKey, isDragHandle (false = whole element is handle)]
   const DRAGGABLE_CONFIG = [
-    { id: 'voiceToggle',      key: 'drag_voiceToggle',   panel: null },
+    { id: 'vintVoice',        key: 'drag_vintVoice',     panel: null },
     { id: 'reproToggle',      key: 'drag_reproToggle',   panel: null },
     // vint-chat-btn is the unified V orb — draggable, opens chat panel
     { id: 'vint-chat-btn',    key: 'drag_vOrb',          panel: 'vint-chat-panel', panelKey: 'drag_chatPanel' },
@@ -4175,20 +4176,23 @@ setTimeout(function() {
     }
   }
 
-  // Reset positions button — double-tap voiceToggle resets all to defaults
-  let voiceToggleTaps = 0;
+  // Reset positions — double-tap the unified voice button (#vintVoice, rendered
+  // at runtime by body/voice_button.js) resets all drag positions to defaults.
   document.addEventListener('DOMContentLoaded', () => {
     setTimeout(initDraggables, 300);
 
-    const vt = document.getElementById('voiceToggle');
-    if (vt) {
+    function wireReset() {
+      const vt = document.getElementById('vintVoice');
+      if (!vt) { setTimeout(wireReset, 400); return; } // button mounts async
+      if (vt.__resetWired) return; vt.__resetWired = true;
       vt.addEventListener('dblclick', () => {
         const keys = DRAGGABLE_CONFIG.map(c => c.key);
-        keys.push('drag_vexModal','drag_dirrmFrame','drag_dirrmPicker');
+        keys.push('drag_vexModal','drag_dirrmFrame','drag_dirrmPicker','vint:btnpos:vintVoice');
         keys.forEach(k => { try { localStorage.removeItem(k); } catch {} });
         location.reload();
       });
     }
+    wireReset();
   });
 
   // Re-clamp positions on resize
@@ -4273,7 +4277,7 @@ setTimeout(function() {
     if (!dock) return;
     // vint-chat-btn = unified V orb (draggable, floating) — not docked
     // vintinuumBtn = hidden (merged into vint-chat-btn)
-    var order = ['voiceToggle', '__spacer__', 'reproToggle', 'learningFooterLink', 'lineageFooterLink', 'pairPhoneBtn'];
+    var order = ['vintVoice', '__spacer__', 'reproToggle', 'learningFooterLink', 'lineageFooterLink', 'pairPhoneBtn'];
     order.forEach(function(id, idx){
       if (id === '__spacer__'){
         var sp = document.createElement('span');

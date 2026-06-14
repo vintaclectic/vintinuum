@@ -38,7 +38,7 @@
     '.vint-fab',
     '.vint-pill-draggable',
     '#vint-chat-btn',
-    '#voiceToggle',
+    '#vintVoice',
     '.browser-relay-pill',
     '.relay-scheduler-pill',
   ].join(',');

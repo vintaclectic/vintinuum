@@ -305,6 +305,13 @@
     if (!document.body) return false;
     injectStyles();
 
+    // Vinta 2026-06-14: when the unified voice button (voice_button.js) is on the
+    // page, it owns the control — suppress this standalone ♫ button so there is
+    // exactly ONE voice control. The panel + open()/close() API still exist; the
+    // unified button calls VOICE_PICKER.open(). We still create a hidden btn ref
+    // so internal references (outside-click guard) stay valid.
+    var unified = !!window.__VINT_VOICE_BUTTON;
+
     btn = document.createElement('button');
     btn.type = 'button';
     btn.className = 'vint-vp-btn';
@@ -313,7 +320,8 @@
     btn.setAttribute('data-drag', '1');
     btn.textContent = '♫';
     btn.addEventListener('click', toggle);
-    document.body.appendChild(btn);
+    if (unified) { btn.style.display = 'none'; btn.setAttribute('aria-hidden', 'true'); }
+    else { document.body.appendChild(btn); }
 
     panel = document.createElement('div');
     panel.className = 'vint-vp-panel';

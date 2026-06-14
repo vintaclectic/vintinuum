@@ -349,7 +349,7 @@
     { sel: '#vintinuumBtn',              weight: 0.6,  kind: 'pill' },
     // Chat + voice + mic — the user-facing channels
     { sel: '#vint-chat-btn',             weight: 0.5,  kind: 'chat' },
-    { sel: '#voiceToggle',               weight: 0.4,  kind: 'voice' },
+    { sel: '#vintVoice',                 weight: 0.4,  kind: 'voice' },
     { sel: '#micBtn',                    weight: 0.4,  kind: 'mic' },
     { sel: '#reproToggle',               weight: 0.45, kind: 'repro' },
     // Carry pill — the becoming arc
