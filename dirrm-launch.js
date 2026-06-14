@@ -214,6 +214,18 @@
       play()  { return postToPlayer({ action: 'play' }); },
       pause() { return postToPlayer({ action: 'pause' }); },
       stop()  { return postToPlayer({ action: 'stop' }); },
+      /**
+       * Attach or replace the local self-view PIP in a live session.
+       * For non-live sessions this is a no-op — the handle signature is uniform.
+       * Uses the same registry+postMessage path as the initial stream handoff.
+       */
+      setLocalStream(ls) {
+        if (!ls || typeof window === 'undefined') return;
+        if (!window.__DIRRM_LIVE_STREAMS) window.__DIRRM_LIVE_STREAMS = {};
+        const lk = 'ls_' + Date.now() + '_' + Math.random().toString(36).slice(2, 9);
+        window.__DIRRM_LIVE_STREAMS[lk] = ls;
+        return postToPlayer({ action: 'setLocalStream', localStreamKey: lk });
+      },
       close() {
         closed = true;
         if (surface === 'iframe' && iframe && iframe.parentNode) {
@@ -238,6 +250,24 @@
     };
   }
 
+  // ── LIVE STREAM REGISTRY (same-page MediaStream handoff) ─────────────────
+  // MediaStream objects cannot be serialised through JSON (postMessage), so we
+  // keep a window-scoped registry keyed by a random ID. dirrm-launch writes the
+  // stream here, sends the key over postMessage, and the embedded player iframe
+  // reads it synchronously — both windows are the SAME document origin, so the
+  // shared window object is accessible without any cross-origin restriction.
+  //
+  // Entries are deleted by the player immediately after consumption so the ref
+  // doesn't leak (the underlying MediaStream is still referenced by the player's
+  // video.srcObject). The registry is initialised lazily here.
+  function _liveStreamKey(stream) {
+    if (!hasDOM()) return null;
+    if (!window.__DIRRM_LIVE_STREAMS) window.__DIRRM_LIVE_STREAMS = {};
+    const key = 'ls_' + Date.now() + '_' + Math.random().toString(36).slice(2, 9);
+    window.__DIRRM_LIVE_STREAMS[key] = stream;
+    return key;
+  }
+
   // ── OPEN — the one function callers use ───────────────────────────────────
   async function open(opts = {}) {
     const {
@@ -249,14 +279,28 @@
       embedIn = null,        // DOM element | 'newtab' | 'popup' | null (default: popup if no DOM, iframe in body if DOM)
       popupWidth = 900,
       popupHeight = 560,
+      // Live WebRTC options — only used when type:'live'
+      stream = null,         // RTCPeerConnection remote MediaStream
+      localStream = null,    // local getUserMedia stream for self-view PIP (optional)
     } = opts;
 
     const finalType = type || detectType(url);
     const playerUrl = buildPlayerUrl({ url, title, type: finalType, mode, autoplay });
 
     // ── Decision tree for HOW to surface the player ────────────────────────
+    // LIVE streams with a MediaStream object MUST use a same-page embed — postMessage
+    // cannot transfer a MediaStream across a cross-origin (or even same-origin) iframe
+    // boundary. The stream is passed via the window.__DIRRM_LIVE_STREAMS registry in
+    // the same document so the player iframe can read it as a live JS object reference.
+    const isLiveStream = finalType === 'live' && stream instanceof (
+      (typeof MediaStream !== 'undefined') ? MediaStream : Object
+    );
+
     let surface;
-    if (embedIn === 'newtab') {
+    if (isLiveStream && hasDOM()) {
+      // Force same-page iframe — this is the only path that can hand over a MediaStream.
+      surface = 'iframe-live';
+    } else if (embedIn === 'newtab') {
       surface = 'newtab';
     } else if (embedIn === 'popup') {
       surface = 'popup';
@@ -273,6 +317,81 @@
     }
 
     // ── Execute the surface choice ─────────────────────────────────────────
+    if (surface === 'iframe-live') {
+      // Same-page live embed.
+      // 1. Embed the player as an iframe (same origin as the caller — GitHub Pages or localhost).
+      // 2. Register the MediaStream in window.__DIRRM_LIVE_STREAMS so the iframe can
+      //    pick it up via the shared window object.
+      // 3. Send a 'loadLive' postMessage with the registry key — not the stream itself.
+      // 4. The player reads the stream by key and deletes the registry entry immediately.
+      const streamKey    = _liveStreamKey(stream);
+      const localKey     = localStream ? _liveStreamKey(localStream) : null;
+
+      const parent = (embedIn && typeof embedIn === 'object' && embedIn.appendChild)
+        ? embedIn
+        : document.body;
+
+      // Use theater mode for live video by default, or the caller's specified mode
+      const liveMode = VALID_MODES.includes(mode) ? mode : 'theater';
+      const livePlayerUrl = buildPlayerUrl({ url: '', title, type: 'live', mode: liveMode, autoplay: true });
+
+      const iframe = document.createElement('iframe');
+      iframe.id = 'dirrm-launch-live-' + Math.random().toString(36).slice(2, 8);
+      iframe.src = livePlayerUrl;
+      iframe.allow = 'autoplay; fullscreen; camera; microphone; picture-in-picture';
+      iframe.style.cssText = (embedIn && typeof embedIn === 'object' && embedIn.appendChild)
+        ? 'width:100%;height:100%;border:none;background:#000;'
+        : 'position:fixed;inset:0;width:100vw;height:100svh;border:none;z-index:9999;background:#000;';
+      parent.appendChild(iframe);
+
+      const handle = createHandle({ surface: 'iframe', iframe, popupWin: null, target: iframe });
+
+      // Wait for the player to signal it's ready, then send the live stream keys.
+      // We do NOT wait indefinitely — 10s timeout, then fire anyway.
+      let sent = false;
+      const sendLoadLive = () => {
+        if (sent) return;
+        sent = true;
+        try {
+          iframe.contentWindow.postMessage({
+            action: 'loadLive',
+            streamKey,
+            localStreamKey: localKey || undefined,
+            url: '',
+            title: title || 'Live',
+          }, '*');
+        } catch (e) {
+          console.warn('[dirrm-launch] loadLive postMessage failed', e);
+        }
+      };
+
+      // Listen for 'ready' from the iframe, send immediately on receipt.
+      const readyListener = (ev) => {
+        if (ev.source !== iframe.contentWindow) return;
+        const data = ev.data || {};
+        if (data.action === 'ready') {
+          window.removeEventListener('message', readyListener);
+          sendLoadLive();
+        }
+      };
+      window.addEventListener('message', readyListener);
+      // Fallback: if 'ready' doesn't arrive in 2s, send anyway (page might be cached)
+      setTimeout(() => {
+        window.removeEventListener('message', readyListener);
+        sendLoadLive();
+      }, 2000);
+
+      // Augment handle with setLocalStream for live sessions
+      handle.setLocalStream = (ls) => {
+        const lk = _liveStreamKey(ls);
+        try {
+          iframe.contentWindow.postMessage({ action: 'setLocalStream', localStreamKey: lk }, '*');
+        } catch (e) { console.warn('[dirrm-launch] setLocalStream postMessage failed', e); }
+      };
+
+      return handle;
+    }
+
     if (surface === 'newtab') {
       if (isExtensionContext() && chrome.tabs && chrome.tabs.create) {
         const tab = await chrome.tabs.create({ url: playerUrl, active: true });

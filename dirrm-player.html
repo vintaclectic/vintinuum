@@ -796,6 +796,118 @@
     }
 
     /* ============================================
+       LIVE MEDIA TYPE — WebRTC MediaStream
+       ============================================ */
+
+    /* LIVE badge — pulsing red dot + LIVE text */
+    .dirrm-live-badge {
+      position: absolute;
+      top: 12px;
+      left: 12px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(13, 11, 8, 0.72);
+      backdrop-filter: blur(8px);
+      border: 1px solid rgba(220, 38, 38, 0.5);
+      border-radius: 20px;
+      padding: 4px 10px 4px 6px;
+      z-index: 10;
+      pointer-events: none;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      color: #ff4444;
+      text-transform: uppercase;
+    }
+    .dirrm-live-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #ff2222;
+      box-shadow: 0 0 8px rgba(255, 34, 34, 0.8);
+      animation: livePulse 1.4s ease-in-out infinite;
+      flex-shrink: 0;
+    }
+    @keyframes livePulse {
+      0%, 100% { opacity: 1; transform: scale(1); box-shadow: 0 0 8px rgba(255,34,34,0.8); }
+      50%       { opacity: 0.55; transform: scale(0.78); box-shadow: 0 0 3px rgba(255,34,34,0.3); }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .dirrm-live-dot { animation: none; }
+    }
+
+    /* The main remote video element for live type */
+    .dirrm-live-video {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      background: #000;
+      display: block;
+    }
+
+    /* Self-view PIP — local camera feed, bottom-right corner of media container */
+    .dirrm-selfview {
+      position: absolute;
+      bottom: 8px;
+      right: 8px;
+      width: 120px;
+      height: 90px;
+      border-radius: 8px;
+      overflow: hidden;
+      border: 2px solid rgba(245, 166, 35, 0.5);
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.6);
+      z-index: 11;
+      background: #111;
+      /* Safe-area bottom clamped by the controls bar — stays in viewport */
+      cursor: move;
+    }
+    .dirrm-selfview video {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      transform: scaleX(-1); /* mirror local camera */
+      display: block;
+    }
+    /* Responsive selfview sizing */
+    @media (max-width: 375px) {
+      .dirrm-selfview { width: 80px; height: 60px; bottom: 6px; right: 6px; }
+    }
+    @media (max-width: 768px) {
+      .dirrm-selfview { width: 96px; height: 72px; }
+    }
+
+    /* Call-ended card */
+    .dirrm-call-ended {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      background: rgba(13, 11, 8, 0.9);
+      z-index: 8;
+      text-align: center;
+      padding: 24px;
+    }
+    .dirrm-call-ended-icon {
+      font-size: 2.5rem;
+      line-height: 1;
+    }
+    .dirrm-call-ended-title {
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--dirrm-text);
+    }
+    .dirrm-call-ended-meta {
+      font-size: 13px;
+      color: var(--dirrm-text-muted);
+    }
+
+    /* ============================================
        ERROR CARD — beautiful failure state
        ============================================ */
     .dirrm-error-card {
@@ -1223,6 +1335,11 @@
         this.mediaElement = null;
         this.mediaType = null;
         this.isPlaying = false;
+        // Live WebRTC state — set before loadMedia('', title, 'live') is called
+        this._pendingLiveStream = null;
+        this._pendingLocalStream = null;
+        this._liveStream = null;
+        this._localStream = null;
         this.isMuted = false;
         this.volume = 1;
         this.isDragging = false;
@@ -1314,9 +1431,32 @@
 
       handleMessage(event) {
         const { action, url, title, type, mode } = event.data || {};
-        
+
         if (action === 'load') {
           this.loadMedia(url, title, type);
+        } else if (action === 'loadLive') {
+          // Same-page live stream handoff from dirrm-launch.js.
+          // The MediaStream cannot cross postMessage JSON boundaries, so dirrm-launch
+          // stores it in window.__DIRRM_LIVE_STREAMS[streamKey] before sending this
+          // message. We pull it by key here, never via serialised JSON.
+          const key = (event.data || {}).streamKey;
+          const localKey = (event.data || {}).localStreamKey;
+          const stream = key && window.__DIRRM_LIVE_STREAMS && window.__DIRRM_LIVE_STREAMS[key];
+          const localStream = localKey && window.__DIRRM_LIVE_STREAMS && window.__DIRRM_LIVE_STREAMS[localKey];
+          if (stream) {
+            this._pendingLiveStream = stream;
+            this._pendingLocalStream = localStream || null;
+            // Clean up registry slot once consumed
+            delete window.__DIRRM_LIVE_STREAMS[key];
+            if (localKey) delete window.__DIRRM_LIVE_STREAMS[localKey];
+          }
+          this.loadMedia(url || '', title || 'Live', 'live');
+        } else if (action === 'setLocalStream') {
+          // Attach / replace the local self-view stream without reloading the whole player.
+          const lkey = (event.data || {}).localStreamKey;
+          const ls = lkey && window.__DIRRM_LIVE_STREAMS && window.__DIRRM_LIVE_STREAMS[lkey];
+          if (lkey) delete window.__DIRRM_LIVE_STREAMS[lkey];
+          this._attachSelfView(ls || null);
         } else if (action === 'setMode') {
           this.setMode(mode);
         } else if (action === 'play') {
@@ -1522,7 +1662,7 @@
         const aliases = {
           docs: 'pdf', document: 'pdf', ebook: 'ebook',
           movie: 'video', music: 'audio', song: 'audio', picture: 'image', photo: 'image',
-          stream: 'stream', live: 'stream', code: 'text', markdown: 'text',
+          stream: 'stream', code: 'text', markdown: 'text',
           model3d: 'model', '3d': 'model'
         };
 
@@ -1799,8 +1939,17 @@
         }
         this._updateNavButtons && this._updateNavButtons();
 
-        // Clear any prior media + injected containers (including error cards)
-        this.mediaContainer.querySelectorAll('video, audio, img, iframe, .dirrm-audio-visualizer, .dirrm-document-viewer, .dirrm-embed, .dirrm-model-wrap, .dirrm-text-viewer, .dirrm-info-card, .dirrm-error-card').forEach(n => n.remove());
+        // Clear any prior media + injected containers (including error cards, live overlays)
+        this.mediaContainer.querySelectorAll(
+          'video, audio, img, iframe, .dirrm-audio-visualizer, .dirrm-document-viewer, ' +
+          '.dirrm-embed, .dirrm-model-wrap, .dirrm-text-viewer, .dirrm-info-card, ' +
+          '.dirrm-error-card, .dirrm-live-badge, .dirrm-selfview, .dirrm-call-ended'
+        ).forEach(n => n.remove());
+        // Restore seek bar visibility (live mode hides it; next media should see it again)
+        const seekContainerRestore = this.controls && this.controls.querySelector('.dirrm-seek-container');
+        if (seekContainerRestore) seekContainerRestore.style.display = '';
+        const skipBtnsRestore = this.controls && this.controls.querySelectorAll('#btn-back10, #btn-fwd10, #btn-prev, #btn-next');
+        if (skipBtnsRestore) skipBtnsRestore.forEach(b => { b.style.display = ''; });
         // Reset controls visibility (image/pdf/etc hide them; new load resets)
         this.controls.style.display = '';
         document.getElementById('btn-viz').style.display = 'none';
@@ -1811,6 +1960,10 @@
 
         try {
           switch (this.mediaType) {
+            case 'live':
+              // WebRTC MediaStream — stream object passed via _pendingLiveStream, not a URL.
+              await this.loadLiveStream(this._pendingLiveStream || null, this._pendingLocalStream || null);
+              break;
             case 'embed':
               await this.loadEmbed(url);
               break;
@@ -2079,6 +2232,212 @@
        */
       async loadStream(url) {
         return this.loadVideo(url);
+      }
+
+      /**
+       * Live WebRTC MediaStream handler.
+       *
+       * Called for type:'live'. `stream` is a live RTCPeerConnection remote MediaStream
+       * (or any MediaStream from getUserMedia / synthetic). `localStream` is the optional
+       * local camera feed that appears as a small self-view PIP overlay.
+       *
+       * Mechanism: dirrm-launch.js stores MediaStream objects in window.__DIRRM_LIVE_STREAMS
+       * (keyed by a random ID) in the SAME document, then sends a postMessage with that key.
+       * handleMessage() retrieves them here — no cross-origin boundary is crossed, so the
+       * MediaStream object transfers cleanly. This is the ONLY safe path for MediaStream
+       * handoff; JSON serialisation of a MediaStream is impossible.
+       *
+       * Controls: seek bar is hidden (live = no timeline). Mute/unmute and mode switch
+       * (main/mini/pip/theater) continue to work normally. The LIVE badge pulses.
+       */
+      async loadLiveStream(stream, localStream) {
+        this._liveStream = stream;
+        this._localStream = localStream || null;
+
+        // ── Seek controls OFF for live — no timeline ──────────────────────────
+        const seekContainer = this.controls && this.controls.querySelector('.dirrm-seek-container');
+        if (seekContainer) seekContainer.style.display = 'none';
+        // Skip/prev/next hidden for live
+        const skipBtns = this.controls && this.controls.querySelectorAll('#btn-back10, #btn-fwd10, #btn-prev, #btn-next');
+        if (skipBtns) skipBtns.forEach(b => { b.style.display = 'none'; });
+
+        this.setBadge('LIVE');
+
+        if (!stream) {
+          this._showCallEnded('No stream received.');
+          return;
+        }
+
+        // ── Remote video element ───────────────────────────────────────────────
+        const video = document.createElement('video');
+        video.className = 'dirrm-live-video';
+        video.playsInline = true;
+        video.autoplay = true;
+        video.muted = false;   // remote stream: NOT muted (user wants to hear the other person)
+        video.volume = this.volume;
+        video.srcObject = stream;
+
+        // ── LIVE badge overlay ─────────────────────────────────────────────────
+        const badge = document.createElement('div');
+        badge.className = 'dirrm-live-badge';
+        badge.setAttribute('aria-label', 'Live stream active');
+        badge.innerHTML = '<span class="dirrm-live-dot" aria-hidden="true"></span>LIVE';
+
+        this.mediaContainer.appendChild(video);
+        this.mediaContainer.appendChild(badge);
+
+        this.mediaElement = video;
+        this.loading.style.display = 'none';
+
+        // Autoplay (remote stream, so muted=false — but if blocked, mute then arm unmute)
+        try {
+          await video.play();
+          this.isPlaying = true;
+          this.playIcon.textContent = '⏸';
+        } catch {
+          video.muted = true;
+          try {
+            await video.play();
+            this.isPlaying = true;
+            this.playIcon.textContent = '⏸';
+            // Arm unmute on next gesture
+            const unmute = () => { try { video.muted = false; video.volume = this.volume; } catch (_) {} };
+            ['pointerdown','keydown','touchstart'].forEach(ev =>
+              window.addEventListener(ev, unmute, { once: true, capture: true }));
+          } catch (e) {
+            console.warn('[dirrm] live autoplay fully blocked', e);
+          }
+        }
+
+        // ── Track ended → call ended card ──────────────────────────────────────
+        const checkEnded = () => {
+          const tracks = stream.getTracks();
+          const allEnded = tracks.length > 0 && tracks.every(t => t.readyState === 'ended');
+          if (allEnded) this._showCallEnded();
+        };
+        stream.getTracks().forEach(t => {
+          t.addEventListener('ended', checkEnded);
+        });
+        // Also watch for the stream losing all tracks dynamically
+        stream.addEventListener('removetrack', () => {
+          const remaining = stream.getTracks().filter(t => t.readyState !== 'ended');
+          if (remaining.length === 0) this._showCallEnded();
+        });
+
+        // ── Self-view PIP overlay ──────────────────────────────────────────────
+        this._attachSelfView(this._localStream);
+
+        // ── Volume sync ────────────────────────────────────────────────────────
+        video.addEventListener('volumechange', () => {
+          this.isMuted = video.muted || video.volume === 0;
+          this.volumeIcon.textContent = this.isMuted ? '🔇' : '🔊';
+        });
+      }
+
+      /**
+       * Attach or replace the self-view PIP (local camera) inside the media container.
+       * Safe to call multiple times — removes the previous self-view first.
+       * Calling with null removes the self-view entirely.
+       */
+      _attachSelfView(localStream) {
+        // Remove any existing self-view
+        this.mediaContainer.querySelectorAll('.dirrm-selfview').forEach(el => el.remove());
+        if (!localStream) return;
+
+        this._localStream = localStream;
+
+        const wrap = document.createElement('div');
+        wrap.className = 'dirrm-selfview';
+        wrap.title = 'Your camera (drag to reposition)';
+        wrap.setAttribute('aria-label', 'Self view');
+
+        const selfVideo = document.createElement('video');
+        selfVideo.playsInline = true;
+        selfVideo.muted = true;       // local stream — always muted to prevent feedback
+        selfVideo.autoplay = true;
+        selfVideo.srcObject = localStream;
+
+        wrap.appendChild(selfVideo);
+        this.mediaContainer.appendChild(wrap);
+
+        selfVideo.play().catch(() => {});
+
+        // Simple drag-to-reposition for the self-view PIP within the media container.
+        // Clamped so it NEVER escapes the media container bounds (no-overflow rule).
+        let dragging = false, ox = 0, oy = 0, startRight = 0, startBottom = 0;
+        const onDown = (e) => {
+          dragging = true;
+          const touch = e.touches ? e.touches[0] : e;
+          ox = touch.clientX;
+          oy = touch.clientY;
+          const cs = getComputedStyle(wrap);
+          startRight  = parseInt(cs.right,  10) || 8;
+          startBottom = parseInt(cs.bottom, 10) || 8;
+          e.preventDefault();
+        };
+        const onMove = (e) => {
+          if (!dragging) return;
+          const touch = e.touches ? e.touches[0] : e;
+          const dx = touch.clientX - ox;
+          const dy = touch.clientY - oy;
+          const parent = this.mediaContainer;
+          const pw = parent.offsetWidth;
+          const ph = parent.offsetHeight;
+          const ww = wrap.offsetWidth;
+          const wh = wrap.offsetHeight;
+          const newRight  = Math.max(4, Math.min(pw - ww - 4, startRight  - dx));
+          const newBottom = Math.max(4, Math.min(ph - wh - 4, startBottom + dy));
+          wrap.style.right  = newRight  + 'px';
+          wrap.style.bottom = newBottom + 'px';
+          wrap.style.left   = 'auto';
+          wrap.style.top    = 'auto';
+          e.preventDefault();
+        };
+        const onUp = () => { dragging = false; };
+        wrap.addEventListener('mousedown',  onDown);
+        wrap.addEventListener('touchstart', onDown, { passive: false });
+        document.addEventListener('mousemove',  onMove);
+        document.addEventListener('touchmove',  onMove, { passive: false });
+        document.addEventListener('mouseup',  onUp);
+        document.addEventListener('touchend', onUp);
+      }
+
+      /**
+       * Show the "call ended" state. Replaces the live video with an info card.
+       * The controls bar stays for mute/close (user may want to dismiss).
+       */
+      _showCallEnded(reason) {
+        // Remove live badge if still present
+        this.mediaContainer.querySelectorAll('.dirrm-live-badge, .dirrm-selfview').forEach(el => el.remove());
+        // Pause the frozen video if still attached
+        if (this.mediaElement && this.mediaElement.pause) {
+          try { this.mediaElement.pause(); } catch (_) {}
+        }
+
+        // Remove the live video element
+        this.mediaContainer.querySelectorAll('video.dirrm-live-video').forEach(el => el.remove());
+
+        // Don't stack call-ended cards
+        this.mediaContainer.querySelectorAll('.dirrm-call-ended').forEach(el => el.remove());
+
+        const card = document.createElement('div');
+        card.className = 'dirrm-call-ended';
+        card.innerHTML = `
+          <div class="dirrm-call-ended-icon" aria-hidden="true">📵</div>
+          <div class="dirrm-call-ended-title">Call Ended</div>
+          <div class="dirrm-call-ended-meta">${reason ? this.escapeHtml(reason) : 'The connection was closed.'}</div>
+        `;
+        this.mediaContainer.appendChild(card);
+
+        this.isPlaying = false;
+        this.playIcon.textContent = '▶';
+
+        // Re-show seek container for next non-live load
+        const seekContainer = this.controls && this.controls.querySelector('.dirrm-seek-container');
+        if (seekContainer) seekContainer.style.display = '';
+
+        // Emit liveEnded event to parent so DirMegle can clean up peer connection
+        window.parent?.postMessage({ action: 'liveEnded' }, '*');
       }
 
       /**
@@ -3527,8 +3886,30 @@
         player.volume = Math.max(0, Math.min(1, v));
         if (player.mediaElement) player.mediaElement.volume = player.volume;
         player.volumeFill.style.width = `${player.volume * 100}%`;
-      }
+      },
+      /**
+       * Primary entry point for live WebRTC streams (same-page only).
+       * Called by dirrm-launch.js after embedding the player in the current document.
+       * `stream`      — RTCPeerConnection remote MediaStream (required)
+       * `localStream` — local getUserMedia stream for self-view PIP (optional)
+       * `title`       — display title, e.g. "Live: Vinta" (optional)
+       */
+      loadLive: (stream, localStream, title) => {
+        player._pendingLiveStream = stream || null;
+        player._pendingLocalStream = localStream || null;
+        player.loadMedia('', title || 'Live', 'live');
+      },
+      /**
+       * Attach or swap the local self-view PIP after a live session has started.
+       * Safe to call at any time during an active live session.
+       */
+      setLocalStream: (localStream) => {
+        player._attachSelfView(localStream || null);
+      },
     };
+
+    // Also expose as window.__dirrm for backward compat with info-card retry buttons
+    window.__dirrm = window.DirRM;
   </script>
 </body>
 </html>
