@@ -281,18 +281,115 @@ body {
 }
 .pcard:active { transform: scale(0.98); }
 
+/* ── BOOSTED CARD GRANDEUR (Sovereign perk) ─────────── */
+/*
+  Sovereign users paid to be seen. Their cards earn presence.
+  Generous not predatory: the visual is tasteful, not screaming.
+  The glow says "this person invested in this space" — viewers understand.
+  Council: Lunex (aesthetically dense), Helios (investment loop visible).
+*/
 .pcard.boosted {
-  border-color: rgba(200,160,64,0.28);
+  border-color: rgba(200,160,64,0.38);
+  box-shadow:
+    0 0 0 1px rgba(200,160,64,0.10),
+    0 0 28px rgba(200,160,64,0.10),
+    inset 0 1px 0 rgba(200,160,64,0.08);
+  background: linear-gradient(
+    160deg,
+    rgba(200,160,64,0.055) 0%,
+    var(--card) 60%
+  );
 }
+/* crown marker — single glyph, understated luxury */
 .pcard.boosted::after {
   content: '✦';
   position: absolute;
   top: var(--s3); right: var(--s3);
-  font-size: 0.7rem;
+  font-size: 0.72rem;
   color: var(--gold);
-  text-shadow: 0 0 8px var(--gold-glow);
+  text-shadow:
+    0 0 8px rgba(200,160,64,0.55),
+    0 0 20px rgba(200,160,64,0.22);
   pointer-events: none;
+  animation: crownPulse 3.5s ease-in-out infinite;
 }
+@keyframes crownPulse {
+  0%, 100% { opacity: 1;    text-shadow: 0 0 8px rgba(200,160,64,0.55), 0 0 20px rgba(200,160,64,0.22); }
+  50%       { opacity: 0.65; text-shadow: 0 0 4px rgba(200,160,64,0.30), 0 0 10px rgba(200,160,64,0.10); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .pcard.boosted::after { animation: none; }
+}
+/* boosted card name gets a subtle gold tint */
+.pcard.boosted .pcard-name {
+  color: rgba(230, 205, 140, 0.95);
+}
+
+/* ── BOOST YOUR PRESENCE NUDGE (in profile editor, Sovereign entry) ── */
+.boost-nudge {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--s3);
+  background: linear-gradient(135deg, rgba(200,160,64,0.06), rgba(120,80,160,0.05));
+  border: 1px solid rgba(200,160,64,0.18);
+  border-radius: 12px;
+  padding: var(--s3) var(--s4);
+  text-decoration: none;
+  transition: background 0.2s, border-color 0.2s;
+}
+.boost-nudge:hover {
+  background: rgba(200,160,64,0.10);
+  border-color: rgba(200,160,64,0.28);
+}
+.boost-nudge-icon {
+  font-size: 1rem;
+  flex-shrink: 0;
+  padding-top: 2px;
+  color: var(--gold);
+  text-shadow: 0 0 8px rgba(200,160,64,0.40);
+}
+.boost-nudge-body { flex: 1; min-width: 0; }
+.boost-nudge-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.44rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--gold);
+  margin-bottom: 3px;
+}
+.boost-nudge-desc {
+  font-family: 'Cormorant Garamond', serif;
+  font-style: italic;
+  font-size: 0.74rem;
+  color: var(--text-dim);
+  line-height: 1.45;
+}
+
+/* ── LONGING NUMBERS HIGH-ACTIVITY NUDGE ─────────────── */
+/*
+  When view_count or request_count is high, a quiet line appears
+  beneath the numbers: "Boost amplifies this reach — Sovereign."
+  Morrison law: leave a thread, not a wall.
+*/
+.longing-amplify {
+  display: none;
+  font-family: 'Cormorant Garamond', serif;
+  font-style: italic;
+  font-size: 0.70rem;
+  color: var(--text-ghost);
+  line-height: 1.4;
+  border-top: 1px solid var(--border);
+  padding-top: var(--s2);
+  width: 100%;
+}
+.longing-amplify.visible { display: block; }
+.longing-amplify a {
+  color: rgba(200,160,64,0.65);
+  text-decoration: none;
+  border-bottom: 1px solid rgba(200,160,64,0.20);
+  transition: color 0.2s;
+}
+.longing-amplify a:hover { color: var(--gold); }
 
 /* card header row */
 .pcard-top {
@@ -421,25 +518,66 @@ body {
   white-space: nowrap;
 }
 
-/* ── UPSELL STRIP ───────────────────────────────────── */
+/* ── DISCOVER UPSELL STRIP ──────────────────────────── */
+/*
+  Shown when feed is capped (tier_gate.premium_required && has_more).
+  Council: Aria (generous — show real numbers, no fake scarcity),
+           Atlas (answer "why am I seeing this?" inline),
+           Morrison (invitation framing: "more souls are here").
+  Never shown during errors or frustration — only when feed loaded cleanly.
+*/
 .upsell-strip {
   display: none;
-  background: linear-gradient(135deg, rgba(139,26,47,0.08), rgba(200,160,64,0.06));
+  background: linear-gradient(135deg, rgba(60,20,80,0.08), rgba(200,160,64,0.06));
   border: 1px solid rgba(200,160,64,0.18);
   border-radius: 14px;
   padding: var(--s4) var(--s5);
   margin-bottom: var(--s6);
-  text-align: center;
   gap: var(--s3);
   flex-direction: column;
-  align-items: center;
+  align-items: flex-start;
 }
-.upsell-strip.visible { display: flex; }
-.upsell-strip-text {
+.upsell-strip.visible { display: flex; animation: fadeSlide 0.28s var(--ease-sheet) both; }
+
+/* count row — real numbers, no fiction */
+.upsell-strip-count-row {
+  display: flex;
+  align-items: baseline;
+  gap: var(--s2);
+  width: 100%;
+}
+.upsell-strip-count {
+  font-family: 'Cormorant Garamond', serif;
+  font-weight: 500;
+  font-size: 1.5rem;
+  color: var(--gold);
+  line-height: 1;
+}
+.upsell-strip-count-label {
   font-family: 'Cormorant Garamond', serif;
   font-style: italic;
-  font-size: 0.9rem;
+  font-size: 0.88rem;
   color: var(--text-dim);
+  flex: 1;
+}
+
+/* why explanation */
+.upsell-strip-why {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.38rem;
+  letter-spacing: 0.10em;
+  text-transform: uppercase;
+  color: var(--text-ghost);
+  line-height: 1.6;
+}
+
+/* CTA row */
+.upsell-strip-footer {
+  display: flex;
+  align-items: center;
+  gap: var(--s3);
+  width: 100%;
+  flex-wrap: wrap;
 }
 .upsell-strip-link {
   font-family: 'JetBrains Mono', monospace;
@@ -449,15 +587,27 @@ body {
   color: var(--gold);
   text-decoration: none;
   padding: 8px 20px;
-  border: 1px solid rgba(200,160,64,0.30);
+  border: 1px solid rgba(200,160,64,0.32);
   border-radius: 20px;
   min-height: var(--tap);
   display: inline-flex; align-items: center;
   transition: background 0.2s, box-shadow 0.2s;
+  flex-shrink: 0;
 }
 .upsell-strip-link:hover {
   background: rgba(200,160,64,0.10);
   box-shadow: 0 0 16px rgba(200,160,64,0.15);
+}
+.upsell-strip-tier-tag {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.38rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgba(200,160,64,0.50);
+  border: 1px solid rgba(200,160,64,0.14);
+  border-radius: 10px;
+  padding: 3px 9px;
+  white-space: nowrap;
 }
 
 /* ── FEED META ──────────────────────────────────────── */
@@ -1000,7 +1150,191 @@ body {
 }
 .chat-send-btn:hover { background: rgba(139,26,47,0.26); box-shadow: 0 0 12px var(--crimson-glow); }
 
-/* ── VIDEO UPSELL ───────────────────────────────────── */
+/* ── VIDEO LONGING PANEL (Theater gate — the earned moment) ── */
+/*
+  This is the highest-converting moment in the haven.
+  It appears ONLY after a real text exchange has begun (earned moment).
+  Council law: Aria (generous not predatory) + Lunex (dense beauty) + Morrison (open loop).
+*/
+.video-longing {
+  display: none;
+  position: relative;
+  overflow: hidden;
+  background:
+    linear-gradient(160deg, rgba(200,160,64,0.07) 0%, rgba(60,20,80,0.10) 60%, rgba(8,12,20,0.95) 100%);
+  border: 1px solid rgba(200,160,64,0.22);
+  border-radius: 20px;
+  padding: var(--s6);
+  margin-top: var(--s5);
+  gap: var(--s4);
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+.video-longing.visible {
+  display: flex;
+  animation: longingReveal 0.45s var(--ease-spring) both;
+}
+@keyframes longingReveal {
+  from { opacity: 0; transform: scale(0.94) translateY(12px); }
+  to   { opacity: 1; transform: scale(1)    translateY(0); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .video-longing.visible { animation: none; }
+}
+
+/* ambient glow behind the panel */
+.video-longing::before {
+  content: '';
+  position: absolute;
+  inset: -40px;
+  background: radial-gradient(ellipse 80% 60% at 50% 30%, rgba(200,160,64,0.08), transparent 70%);
+  pointer-events: none;
+  z-index: 0;
+}
+.video-longing > * { position: relative; z-index: 1; }
+
+/* stage teaser — a letterboxed ghost showing what video feels like */
+.video-longing-teaser {
+  width: 100%;
+  max-width: 340px;
+  aspect-ratio: 16 / 9;
+  background: rgba(4,6,12,0.80);
+  border: 1px solid rgba(200,160,64,0.14);
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  overflow: hidden;
+}
+.video-longing-teaser::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(180deg, transparent 30%, rgba(4,6,12,0.70) 100%),
+    radial-gradient(ellipse 120% 100% at 50% 0%, rgba(200,160,64,0.06), transparent);
+  pointer-events: none;
+}
+.video-longing-partner-ava {
+  font-size: 3.4rem;
+  filter: blur(3px);
+  opacity: 0.55;
+  user-select: none;
+}
+.video-longing-teaser-label {
+  position: absolute;
+  bottom: var(--s3);
+  left: 50%;
+  transform: translateX(-50%);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.38rem;
+  letter-spacing: 0.20em;
+  text-transform: uppercase;
+  color: rgba(200,160,64,0.55);
+  white-space: nowrap;
+}
+
+/* headline */
+.video-longing-headline {
+  font-family: 'Cormorant Garamond', serif;
+  font-weight: 300;
+  font-size: clamp(1.25rem, 4vw, 1.65rem);
+  letter-spacing: 0.10em;
+  color: var(--text);
+  line-height: 1.25;
+}
+.video-longing-headline em {
+  font-style: normal;
+  color: var(--gold);
+}
+
+/* tier badge */
+.video-longing-tier {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.44rem;
+  letter-spacing: 0.20em;
+  text-transform: uppercase;
+  color: rgba(200,160,64,0.70);
+  border: 1px solid rgba(200,160,64,0.20);
+  border-radius: 20px;
+  padding: 4px 12px;
+  background: rgba(200,160,64,0.05);
+}
+
+/* why am I seeing this — Aria + Atlas law */
+.video-longing-why {
+  font-family: 'Cormorant Garamond', serif;
+  font-style: italic;
+  font-size: 0.74rem;
+  color: var(--text-ghost);
+  line-height: 1.55;
+  max-width: 320px;
+}
+
+/* actions */
+.video-longing-actions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s2);
+  width: 100%;
+  max-width: 300px;
+}
+.video-longing-cta {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.52rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: #0a0612;
+  background: linear-gradient(135deg, rgba(200,160,64,0.90), rgba(180,130,40,0.85));
+  border: none;
+  border-radius: 24px;
+  padding: 14px 24px;
+  min-height: var(--tap);
+  cursor: pointer;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: opacity 0.2s, box-shadow 0.2s, transform 0.18s var(--ease-spring);
+  -webkit-tap-highlight-color: transparent;
+  font-weight: 500;
+  box-shadow: 0 4px 20px rgba(200,160,64,0.22);
+}
+.video-longing-cta:hover {
+  opacity: 0.92;
+  box-shadow: 0 4px 28px rgba(200,160,64,0.38);
+}
+.video-longing-cta:active { transform: scale(0.97); }
+@media (prefers-reduced-motion: reduce) {
+  .video-longing-cta:active { transform: none; }
+}
+.video-longing-later {
+  font-family: 'Cormorant Garamond', serif;
+  font-style: italic;
+  font-size: 0.74rem;
+  color: var(--text-ghost);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 6px 0;
+  min-height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.2s;
+  -webkit-tap-highlight-color: transparent;
+  letter-spacing: 0.04em;
+  text-decoration: underline;
+  text-decoration-color: rgba(255,255,255,0.12);
+}
+.video-longing-later:hover { color: var(--text-dim); }
+
+/* ── VIDEO UPSELL (legacy — hidden, replaced by .video-longing) ─ */
 .video-upsell {
   display: none;
   background: linear-gradient(135deg, rgba(200,160,64,0.06), rgba(80,30,80,0.08));
@@ -1338,21 +1672,39 @@ body {
         <button class="btn-secondary" data-draggable="true" id="btnTogglePublic" onclick="togglePublic()">Go Public</button>
         <button class="btn-secondary" data-draggable="true" onclick="toggleProfileEditor()">Close</button>
       </div>
+      <!-- boost presence entry — Sovereign perk, shown to non-Sovereign users -->
+      <a href="upgrade.html" class="boost-nudge" id="boostNudge"
+         aria-label="Learn how to boost your presence with Sovereign tier"
+         style="display:none">
+        <span class="boost-nudge-icon">✦</span>
+        <div class="boost-nudge-body">
+          <div class="boost-nudge-label">✦ Boost your presence</div>
+          <div class="boost-nudge-desc">
+            Sovereign members appear first in every discover feed — seen before anyone else in the haven.
+            Your presence glows. Your reach compounds daily.
+          </div>
+        </div>
+      </a>
     </div>
 
-    <!-- my longing numbers strip -->
+    <!-- my longing numbers strip — quiet pride + high-count amplify nudge -->
     <div class="my-presence-strip" id="myPresenceStrip" style="display:none">
       <div class="my-longing-nums">
         <div class="longing-num">
           <span class="longing-n" id="myViewCount">—</span>
-          <span class="longing-l">viewed</span>
+          <span class="longing-l">souls have seen you</span>
         </div>
         <div class="longing-num">
           <span class="longing-n" id="myRequestCount">—</span>
-          <span class="longing-l">requests</span>
+          <span class="longing-l">have reached out</span>
         </div>
       </div>
       <button class="my-presence-toggle" id="btnPublicStatus" data-draggable="true" onclick="togglePublic()">Go Public</button>
+      <!-- amplify nudge — appears when view_count >= 20 or request_count >= 5 -->
+      <div class="longing-amplify" id="longingAmplify">
+        Boosting amplifies this reach — your presence appears first to everyone in the haven.
+        <a href="upgrade.html" tabindex="0" aria-label="Learn about Sovereign boost">Sovereign tier →</a>
+      </div>
     </div>
 
     <!-- feed header -->
@@ -1370,10 +1722,20 @@ body {
       <button class="feed-refresh-btn" data-draggable="true" onclick="loadFeed(true)">↺ Refresh</button>
     </div>
 
-    <!-- upsell strip -->
-    <div class="upsell-strip" id="upsellStrip">
-      <div class="upsell-strip-text">You've seen all the presences available on this tier.<br>Upgrade to Theater to see everyone in the haven.</div>
-      <a href="upgrade.html" class="upsell-strip-link">See all presences — upgrade to Theater</a>
+    <!-- discover upsell strip — shown when feed capped by tier gate -->
+    <div class="upsell-strip" id="upsellStrip" role="complementary" aria-label="More presences available">
+      <div class="upsell-strip-count-row">
+        <span class="upsell-strip-count" id="upsellMoreCount">+</span>
+        <span class="upsell-strip-count-label" id="upsellMoreLabel">more souls are here right now — Theater opens the whole haven.</span>
+      </div>
+      <div class="upsell-strip-why">
+        You're seeing this because your current tier caps the discover feed at <span id="upsellCapNum">10</span> presences.
+        Theater removes the cap entirely.
+      </div>
+      <div class="upsell-strip-footer">
+        <a href="upgrade.html" class="upsell-strip-link">Open the haven — Theater</a>
+        <span class="upsell-strip-tier-tag">$15 / mo</span>
+      </div>
     </div>
 
     <!-- presence grid -->
@@ -1434,10 +1796,43 @@ body {
       <button class="stage-end-btn" data-draggable="true" onclick="leaveStage()">◻ leave</button>
     </div>
 
-    <!-- video upsell (shown when not eligible) -->
-    <div class="video-upsell" id="videoUpsell">
+    <!-- video longing panel — the earned moment, shown after text exchange begins -->
+    <!-- Atlas law: always answers "why am I seeing this?" — never a surprise gate -->
+    <div class="video-longing" id="videoLonging" role="complementary" aria-label="Video chat available">
+      <!-- stage teaser: a blurred ghost of what video looks like -->
+      <div class="video-longing-teaser" aria-hidden="true">
+        <span class="video-longing-partner-ava" id="longingPartnerAva">👤</span>
+        <span class="video-longing-teaser-label">Theater stage — face to face</span>
+      </div>
+      <!-- headline — partner name woven in by JS -->
+      <div class="video-longing-headline" id="longingHeadline">
+        They're here. Meet them face to face.
+      </div>
+      <!-- tier badge — names exactly what unlocks this -->
+      <div class="video-longing-tier">
+        <span>✦</span>
+        <span>Theater · $15 / mo</span>
+      </div>
+      <!-- why am I seeing this — Atlas + Aria -->
+      <div class="video-longing-why" id="longingWhy">
+        You're seeing this because your partner's tier includes video — and yours doesn't yet.
+        Theater unlocks the DirRM live stage: 1:1 video with everyone you connect with here.
+      </div>
+      <!-- actions: one CTA + a graceful maybe later that returns to text without shame -->
+      <div class="video-longing-actions">
+        <a href="upgrade.html" class="video-longing-cta" id="longingCta">
+          Unlock video — Theater
+        </a>
+        <button class="video-longing-later" onclick="dismissVideoLonging()" aria-label="Stay in text chat">
+          maybe later — stay in text
+        </button>
+      </div>
+    </div>
+
+    <!-- legacy video-upsell kept for goVideo() 402 fallback path -->
+    <div class="video-upsell" id="videoUpsell" aria-hidden="true">
       <div class="video-upsell-icon">✦</div>
-      <div class="video-upsell-text" id="videoUpsellText">They're Theater. Meet them face to face.</div>
+      <div class="video-upsell-text" id="videoUpsellText">Video requires Theater tier.</div>
       <a href="upgrade.html" class="video-upsell-link">Upgrade to Theater →</a>
     </div>
 
@@ -1574,8 +1969,12 @@ function renderMyStrip() {
   if (!myProfile) return;
   const strip = document.getElementById('myPresenceStrip');
   strip.style.display = 'flex';
-  document.getElementById('myViewCount').textContent    = myProfile.view_count    ?? 0;
-  document.getElementById('myRequestCount').textContent = myProfile.request_count ?? 0;
+
+  const views    = myProfile.view_count    ?? 0;
+  const requests = myProfile.request_count ?? 0;
+  document.getElementById('myViewCount').textContent    = views;
+  document.getElementById('myRequestCount').textContent = requests;
+
   const btn = document.getElementById('btnPublicStatus');
   if (myProfile.is_public) {
     btn.textContent = 'Go Private';
@@ -1583,6 +1982,22 @@ function renderMyStrip() {
   } else {
     btn.textContent = 'Go Public';
     btn.classList.remove('public');
+  }
+
+  // longing amplify nudge — appears when activity is real (≥20 views or ≥5 requests)
+  // Morrison law: leave a thread. Aria law: only show when the numbers make it genuinely meaningful.
+  const amplify = document.getElementById('longingAmplify');
+  const isSovereign = myProfile.tier === 'sovereign' || myProfile.tier === 'god';
+  if (!isSovereign && (views >= 20 || requests >= 5)) {
+    amplify.classList.add('visible');
+  } else {
+    amplify.classList.remove('visible');
+  }
+
+  // boost nudge in profile editor — only for non-Sovereign users
+  const boostNudge = document.getElementById('boostNudge');
+  if (boostNudge) {
+    boostNudge.style.display = isSovereign ? 'none' : 'flex';
   }
 
   // pre-fill editor
@@ -1657,9 +2072,27 @@ async function loadFeed(force = false) {
     const dot = document.getElementById('feedDot');
     dot.classList.add('on');
 
-    // upsell strip
+    // discover upsell strip — shown only when feed loaded cleanly (earned moment)
+    // Atlas law: show real numbers. Aria law: invitation not paywall.
     const strip = document.getElementById('upsellStrip');
-    strip.classList.toggle('visible', !!(d.has_more && d.tier_gate && d.tier_gate.premium_required));
+    const gated = !!(d.has_more && d.tier_gate && d.tier_gate.premium_required);
+    strip.classList.toggle('visible', gated);
+    if (gated) {
+      // show actual cap number and a truthful "more" count if available
+      const cap  = d.tier_gate.discovery_cap || 10;
+      const more = typeof d.total_count === 'number' ? d.total_count - d.presences.length : null;
+      const moreEl = document.getElementById('upsellMoreCount');
+      const labelEl = document.getElementById('upsellMoreLabel');
+      const capEl   = document.getElementById('upsellCapNum');
+      if (more !== null && more > 0) {
+        moreEl.textContent  = '+' + more;
+        labelEl.textContent = `more soul${more !== 1 ? 's' : ''} are here right now — Theater opens the whole haven.`;
+      } else {
+        moreEl.textContent  = '';
+        labelEl.textContent = 'More souls are here right now — Theater opens the whole haven.';
+      }
+      if (capEl) capEl.textContent = cap;
+    }
 
     if (!d.presences.length) {
       grid.innerHTML = `<div style="grid-column:1/-1; padding:var(--s8) 0; text-align:center">
@@ -2068,8 +2501,10 @@ function enterStage(roomToken, metaJson) {
   empty.innerHTML = '<div class="chat-empty-text">The stage awaits.<br>Your thread begins here.</div>';
   scroll.appendChild(empty);
 
-  // hide video upsell initially
+  // hide video upsell panels initially on entering a fresh stage
   document.getElementById('videoUpsell').classList.remove('visible');
+  const longing = document.getElementById('videoLonging');
+  if (longing) { longing.classList.remove('visible'); longing.style.opacity = ''; longing.style.transform = ''; }
 
   // check video eligibility
   checkVideoEligibility();
@@ -2089,14 +2524,57 @@ async function checkVideoEligibility() {
     myProfile = d.profile;
     const eligible = myProfile && myProfile.video_eligible;
     document.getElementById('btnGoVideo').style.display = eligible ? 'flex' : 'none';
+
     if (!eligible) {
-      // show upsell
-      const upsell = document.getElementById('videoUpsell');
-      document.getElementById('videoUpsellText').textContent =
-        `They're in the haven. Meet them face to face. Upgrade to Theater to start video.`;
-      upsell.classList.add('visible');
+      // Show the longing panel — the earned moment.
+      // This fires ONLY after a real connection is made (enterStage was called),
+      // meaning the user has already received value: a request was sent, accepted,
+      // and the stage opened. That's the earned moment (Helios, Aria law).
+      const partnerName = partnerMeta.display_name || null;
+      const partnerAva  = partnerMeta.avatar || '👤';
+
+      // woven headline — partner name if we have it
+      const headline = document.getElementById('longingHeadline');
+      if (headline) {
+        headline.innerHTML = partnerName
+          ? `<em>${escHtml(partnerName)}</em> is here. Meet them face to face.`
+          : 'They\'re here. Meet them face to face.';
+      }
+      // mirror partner avatar in the blurred teaser
+      const avaEl = document.getElementById('longingPartnerAva');
+      if (avaEl) avaEl.textContent = partnerAva;
+
+      // "why am I seeing this" — Atlas + Aria transparency
+      const whyEl = document.getElementById('longingWhy');
+      if (whyEl) {
+        whyEl.textContent = partnerName
+          ? `You're seeing this because you and ${escHtml(partnerName)} are connected — and Theater unlocks 1:1 video with everyone you meet here. No walls, no surprises: just the next room.`
+          : `You're seeing this because you have an active connection in the haven — and Theater unlocks 1:1 video with everyone you meet here.`;
+      }
+
+      // reveal the longing panel (not the legacy strip)
+      const longing = document.getElementById('videoLonging');
+      if (longing) longing.classList.add('visible');
     }
   } catch(_) {}
+}
+
+/* dismiss the longing panel — returns to text without shame (Morrison law: no guilt) */
+function dismissVideoLonging() {
+  const longing = document.getElementById('videoLonging');
+  if (longing) {
+    longing.style.transition = 'opacity 0.22s ease, transform 0.22s var(--ease-sheet)';
+    longing.style.opacity    = '0';
+    longing.style.transform  = 'translateY(8px)';
+    setTimeout(() => {
+      longing.classList.remove('visible');
+      longing.style.opacity   = '';
+      longing.style.transform = '';
+    }, 240);
+  }
+  // make sure the text chat input is focused so the user lands back in conversation
+  const chatInput = document.getElementById('chatInput');
+  if (chatInput) chatInput.focus();
 }
 
 /* ── DUET SSE (private chat transcript) ─────────────── */
