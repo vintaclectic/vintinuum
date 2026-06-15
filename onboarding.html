@@ -48,13 +48,13 @@
   <div class="capture-circle" id="captureCircle">
     <video id="captureVideo" autoplay muted playsinline></video>
   </div>
-  <p class="capture-hint" id="captureHint"></p>
+  <p class="capture-hint" id="captureHint">to become the clearing, give me a face — take a photo, or upload one.</p>
   <div class="choices hidden" id="captureConfirm">
     <button class="choice primary" id="capKeep" data-draggable="true">yes, this one</button>
     <button class="choice secondary" id="capRetry" data-draggable="true">once more</button>
   </div>
   <input type="file" accept="image/*" capture="user" id="captureFile" class="hidden">
-  <button class="choice secondary hidden" id="captureFileBtn" data-draggable="true" style="margin-top:18px">choose a photo instead</button>
+  <button class="choice secondary" id="captureFileBtn" data-draggable="true" style="margin-top:18px">upload a photo instead</button>
 </section>
 
 <!-- BECOMING -->
@@ -151,6 +151,7 @@
   const confirmRow = document.getElementById('captureConfirm');
   const circle = document.getElementById('captureCircle');
   function beginCapture() {
+    capturedPhoto = null;               // fresh attempt — no stale photo
     show('capture');
     confirmRow.classList.add('hidden');
     circle.innerHTML = '<video id="captureVideo" autoplay muted playsinline></video>';
@@ -174,6 +175,15 @@
 
   // BECOMING
   function beginBecoming() {
+    // HARD REQUIREMENT (Vinta 2026-06-15): no face, no becoming. The clearing is
+    // grown FROM the user's photo — you cannot proceed without taking or
+    // uploading one. Guard here so nothing can skip the capture.
+    if (!capturedPhoto) {
+      show('capture');
+      const h = document.getElementById('captureHint');
+      if (h) h.textContent = 'i need your face first — take a photo or upload one to become.';
+      return;
+    }
     show('becoming');
     OnboardBecoming.begin({
       photoDataUrl: capturedPhoto, form: 'bust',
@@ -184,7 +194,14 @@
     });
   }
   function friendly(msg) {
-    const m = { photo_too_large: 'that photo was a little big — try another.', not_signed_in: 'sign in first, then come back.', generation_failed: 'i couldn’t quite find your shape that time.' };
+    const m = {
+      photo_too_large: 'that photo was a little big — try another.',
+      photo_too_small: 'that photo was too small to read your face — take a clearer one, or upload a bigger photo.',
+      not_an_image: 'that wasn’t a photo i could read — try a real face image.',
+      degenerate_head: 'i couldn’t find a real face in that — take a clear, front-on photo and try again.',
+      not_signed_in: 'sign in first, then come back.',
+      generation_failed: 'i couldn’t quite find your shape that time — try a clearer face photo.',
+    };
     return m[msg] || '';
   }
   document.getElementById('troubleRetry').addEventListener('click', () => beginCapture());
