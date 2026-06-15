@@ -103,24 +103,40 @@
           const headBaseY = mount.getWorldPosition(new THREE.Vector3()).y;
           const headHeight = (headTopY != null) ? Math.max(0.12, headTopY - headBaseY) : 0.22;
 
-          // Measure the generated mesh.
+          // Measure the generated mesh on ALL axes.
           const box = new THREE.Box3().setFromObject(bust);
-          const meshH = Math.max(0.001, box.max.y - box.min.y);
-          // Hunyuan busts are mostly head with some neck/shoulder. The HEAD itself
-          // is ~the top 55% of the bust. Scale so that head portion ≈ the rig head
-          // (×1.15 so it reads full and confident, never tiny). This lands the head
-          // at head size instead of the whole bust being 2× — the core mold fix.
-          const headPortion = 0.55;
-          const sLocal = (headHeight * 1.15) / (meshH * headPortion);
+          const dim = box.getSize(new THREE.Vector3());
+          const meshH = Math.max(0.001, dim.y);
+          const meshW = Math.max(0.001, dim.x);
+          const meshD = Math.max(0.001, dim.z);
+          const maxDim = Math.max(meshH, meshW, meshD);
+          const minDim = Math.max(0.0001, Math.min(meshH, meshW, meshD));
+
+          // SANITY GATE: a real head/bust is roughly head-shaped — its largest
+          // dimension is at most ~3x its smallest. A degenerate generation (bad
+          // input photo) comes back as a flat/stretched slab with a huge aspect
+          // ratio. If so, DO NOT mount it as a head (that's the world-spanning
+          // slab bug) — bail to the clean default robot head.
+          const aspect = maxDim / minDim;
+          if (aspect > 4.0 || !isFinite(aspect)) {
+            console.warn('[rigged-presence] generated head is degenerate (aspect ' + aspect.toFixed(1) + ') — keeping default head');
+            try { bust.traverse(o => { if (o.geometry) o.geometry.dispose && o.geometry.dispose(); }); } catch (_) {}
+            handle.bust = null;
+            handle._headDegenerate = true;
+          } else {
+          // FIT the WHOLE mesh inside a head-sized box (scale by the LARGEST
+          // dimension, not just height) so a wide/deep mesh can never sprawl.
+          // Target: the head fills ~1.25 head-heights at its largest extent.
+          const targetMax = headHeight * 1.25;
+          const sLocal = targetMax / maxDim;
           const headScale = mount.getWorldScale(new THREE.Vector3()).y || 1;
           const s = sLocal / headScale;
           bust.scale.setScalar(s);
 
-          // Seat it: center horizontally on the head bone, and sink it so the
-          // head sits AT the head (lower face/neck dips to the neck joint), letting
-          // the generated neck flow into the body instead of hovering above it.
+          // Seat it: center horizontally on the head bone, sink it so the head
+          // sits AT the head and the neck flows into the body.
           const center = box.getCenter(new THREE.Vector3());
-          bust.position.set(-center.x * s, -box.min.y * s - headHeight * 0.55, -center.z * s);
+          bust.position.set(-center.x * s, -box.min.y * s - headHeight * 0.45, -center.z * s);
 
           // Capture the molded base transform so the live editor can re-seat from
           // it (preview without rebuilding the rig).
@@ -142,15 +158,10 @@
           }
           handle._headBaseHeight = headHeight;
 
-          // Hide the robot's HEAD region so the real face replaces it. xbot is one
-          // skinned mesh, so we hide verts above the neck by skinning weight: any
-          // vertex dominated by the Head bone gets pushed to a degenerate position.
-          // Cheaper + robust path: dim/shrink the original head by tagging the mesh
-          // so the face fully covers — plus we add a collar to seal the seam.
+          // Hide the robot's HEAD region so the real face replaces it.
           _hideRigHead(THREE, root, mount);
 
-          // Tone-matched neck collar — samples the bust's lower-face color and
-          // bridges face→body so there's no floating-head gap. Sized to the neck.
+          // Tone-matched neck collar — bridges face→body so there's no gap.
           try {
             const collar = _makeNeckCollar(THREE, bust, headHeight, s);
             if (collar) mount.add(collar);
@@ -158,6 +169,7 @@
 
           mount.add(bust);
           handle.bust = bust;
+          } // end non-degenerate mount
         } else {
           bust.position.y = 1.55; bust.scale.setScalar(0.4); root.add(bust);
           handle.bust = bust;
