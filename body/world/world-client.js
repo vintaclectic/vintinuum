@@ -30,11 +30,14 @@
     const mods = await global.Three3D.load();
     THREE = mods.THREE;
     World._mods = mods;
+    World._THREE = THREE;
+    World._me = me; // expose for world-mvp placement (claim/place at player pos)
     // preload the shared walking rig so bodies appear fast
     if (global.RiggedPresence) global.RiggedPresence.preload(mods);
 
     // ── scene ──
     scene = new THREE.Scene();
+    World._scene = scene;
     scene.background = new THREE.Color(0x1a1410);
     scene.fog = new THREE.Fog(0x2a2018, 12, 48);
 
@@ -319,9 +322,78 @@
       } else if (m.t === 'leave') {
         const O = others.get(m.id); if (O) { scene.remove(O.group); others.delete(m.id); }
         if (global.VintinuumVoice) global.VintinuumVoice.removePeer(m.id);
+      } else if (m.t && m.t.indexOf('world:') === 0) {
+        _onWorldMsg(m);
       }
     };
+    // ask for our world state once connected (starter pack + structures)
+    setTimeout(() => { try { World.send({ t: 'world:hello' }); } catch (_) {} }, 600);
   }
+
+  // ── WORLD MVP client: render structures + relay state to the HUD ─────────────
+  function _onWorldMsg(m) {
+    if (m.t === 'world:state') {
+      World._resident = m.resident;
+      if (Array.isArray(m.structures)) { m.structures.forEach(_renderStruct); }
+      try { window.dispatchEvent(new CustomEvent('vint:world-state', { detail: m })); } catch (_) {}
+    } else if (m.t === 'world:struct') {
+      _renderStruct(m.struct);
+      try { window.dispatchEvent(new CustomEvent('vint:world-struct', { detail: m.struct })); } catch (_) {}
+    } else if (m.t === 'world:harvest:ok') {
+      try { window.dispatchEvent(new CustomEvent('vint:world-harvest', { detail: m })); } catch (_) {}
+    } else if (m.t === 'world:refine:ok') {
+      try { window.dispatchEvent(new CustomEvent('vint:world-refine', { detail: m })); } catch (_) {}
+    } else if (m.t === 'world:err') {
+      try { window.dispatchEvent(new CustomEvent('vint:world-err', { detail: m })); } catch (_) {}
+    }
+  }
+
+  const _structMeshes = new Map(); // id → mesh
+  function _renderStruct(s) {
+    if (!s || _structMeshes.has(s.id) || !World._scene) return;
+    const THREE = World._THREE || (window.THREE);
+    if (!THREE) return;
+    let mesh;
+    if (s.kind === 'hearth') {
+      // a glowing claimed plot: a soft disc + warm core
+      const g = new THREE.Group();
+      const disc = new THREE.Mesh(new THREE.CylinderGeometry(2, 2, 0.05, 28),
+        new THREE.MeshStandardMaterial({ color: 0x2a3a4a, emissive: 0x1a4a6a, emissiveIntensity: 0.5, transparent: true, opacity: 0.5 }));
+      const core = new THREE.Mesh(new THREE.IcosahedronGeometry(0.28, 1),
+        new THREE.MeshStandardMaterial({ color: 0xffd479, emissive: 0xff9a3d, emissiveIntensity: 1.2 }));
+      core.position.y = 0.4; g.add(disc, core); mesh = g;
+    } else if (s.kind === 'wall') {
+      mesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1.2, 0.12),
+        new THREE.MeshStandardMaterial({ color: 0x6fb8e0, emissive: 0x1a3a5a, emissiveIntensity: 0.4, transparent: true, opacity: 0.85 }));
+      mesh.position.y = 0.6;
+    } else if (s.kind === 'floor') {
+      mesh = new THREE.Mesh(new THREE.BoxGeometry(1, 0.08, 1),
+        new THREE.MeshStandardMaterial({ color: 0x3a4a5a, emissive: 0x0a2a4a, emissiveIntensity: 0.3 }));
+      mesh.position.y = 0.04;
+    } else if (s.kind === 'light') {
+      const g = new THREE.Group();
+      const post = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 1.0, 8), new THREE.MeshStandardMaterial({ color: 0x445566 }));
+      post.position.y = 0.5;
+      const bulb = new THREE.Mesh(new THREE.SphereGeometry(0.12, 12, 12), new THREE.MeshStandardMaterial({ color: 0xfff0c0, emissive: 0xffd479, emissiveIntensity: 2 }));
+      bulb.position.y = 1.05; g.add(post, bulb);
+      const pl = new THREE.PointLight(0xffd479, 0.8, 4); pl.position.y = 1.05; g.add(pl); mesh = g;
+    } else if (s.kind === 'shelf') {
+      mesh = new THREE.Mesh(new THREE.BoxGeometry(1, 0.6, 0.25),
+        new THREE.MeshStandardMaterial({ color: 0x8a7a5a, emissive: 0x2a1a0a, emissiveIntensity: 0.3 }));
+      mesh.position.y = 0.6;
+    } else { return; }
+    mesh.position.x = s.x; mesh.position.z = s.z; if (s.y) mesh.position.y += s.y;
+    mesh.rotation.y = s.rot || 0;
+    World._scene.add(mesh);
+    _structMeshes.set(s.id, mesh);
+  }
+
+  // public: send any world message to the server (used by the HUD)
+  World.send = function (m) { if (ws && ws.readyState === 1) ws.send(JSON.stringify(m)); };
+  World.claimHere = function () { World.send({ t: 'world:claim', x: World._me ? World._me.x : 0, z: World._me ? World._me.z : 0 }); };
+  World.placeHere = function (kind) { const me = World._me || {}; World.send({ t: 'world:place', kind, x: me.x || 0, z: me.z || 0, rot: me.yaw || 0 }); };
+  World.harvest = function () { World.send({ t: 'world:harvest' }); };
+  World.refine = function (amount) { World.send({ t: 'world:refine', amount: amount || null }); };
 
   let _lastSent = 0;
   function _sendMove() {
