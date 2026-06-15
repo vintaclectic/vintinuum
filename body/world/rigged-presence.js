@@ -40,7 +40,7 @@
   //   bustUrl   → mount a real face on the head (users)
   //   opts.cloud → render as a particle constellation (council presences):
   //                { color, count, pointSize, motion: 'breath'|'lattice'|'drift'|'orbit'|'spark' }
-  RP.create = async function ({ THREE, mods, bustUrl, opts = {} }) {
+  RP.create = async function ({ THREE, mods, bustUrl, headAdjust = null, opts = {} }) {
     const tmpl = await _loadRigTemplate(mods);
     const SkeletonUtils = mods.SkeletonUtils;
 
@@ -122,6 +122,26 @@
           const center = box.getCenter(new THREE.Vector3());
           bust.position.set(-center.x * s, -box.min.y * s - headHeight * 0.55, -center.z * s);
 
+          // Capture the molded base transform so the live editor can re-seat from
+          // it (preview without rebuilding the rig).
+          handle._baseBust = {
+            scale: { x: bust.scale.x, y: bust.scale.y, z: bust.scale.z },
+            pos:   { x: bust.position.x, y: bust.position.y, z: bust.position.z },
+            rotY:  bust.rotation.y,
+          };
+
+          // Apply the user's head-editor overrides on top of the molded base
+          // (offsetY/offsetX in head-heights, scale multiplier, rotY radians).
+          if (headAdjust) {
+            const aS = Math.max(0.6, Math.min(1.8, +headAdjust.scale || 1));
+            bust.scale.multiplyScalar(aS);
+            bust.position.y += (+headAdjust.offsetY || 0) * headHeight;
+            bust.position.x += (+headAdjust.offsetX || 0) * headHeight;
+            bust.rotation.y += (+headAdjust.rotY || 0);
+            handle._headAdjust = headAdjust;
+          }
+          handle._headBaseHeight = headHeight;
+
           // Hide the robot's HEAD region so the real face replaces it. xbot is one
           // skinned mesh, so we hide verts above the neck by skinning weight: any
           // vertex dominated by the Head bone gets pushed to a degenerate position.
@@ -169,6 +189,23 @@
       if (handle.lightMat && handle.lightMat.userData.uTime) { handle._t += dt; handle.lightMat.userData.uTime.value = handle._t; }
     };
     handle.dispose = function () { mixer.stopAllAction(); };
+
+    // Live head-editor preview: re-seat the molded head from a fresh adjust
+    // object without rebuilding the rig. Used by the head editor sliders.
+    handle.setHeadAdjust = function (adj) {
+      if (!handle.bust || !handle._baseBust) return;
+      const b = handle.bust, base = handle._baseBust, hh = handle._headBaseHeight || 0.22;
+      b.scale.set(base.scale.x, base.scale.y, base.scale.z);
+      b.position.set(base.pos.x, base.pos.y, base.pos.z);
+      b.rotation.y = base.rotY;
+      if (adj) {
+        b.scale.multiplyScalar(Math.max(0.6, Math.min(1.8, +adj.scale || 1)));
+        b.position.y += (+adj.offsetY || 0) * hh;
+        b.position.x += (+adj.offsetX || 0) * hh;
+        b.rotation.y += (+adj.rotY || 0);
+      }
+      handle._headAdjust = adj || null;
+    };
 
     // start idle
     handle.play('idle', 0);

@@ -99,11 +99,15 @@
   <input id="sayInput" type="text" placeholder="say something into the clearing…" maxlength="400" autocomplete="off">
   <button id="sayBtn">say</button>
 </div>
+<button id="editHeadBtn" data-draggable="true" title="Adjust how your face sits on your body"
+  style="position:fixed;top:calc(14px + env(safe-area-inset-top,0px));right:calc(14px + env(safe-area-inset-right,0px));z-index:1500;min-height:44px;padding:0 16px;border-radius:22px;background:rgba(8,12,20,0.7);border:1px solid rgba(79,195,247,0.35);color:#9fdcff;font-size:13px;cursor:pointer;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);">◐ edit head</button>
 
 <script src="body/api_base.js"></script>
 <script src="body/three3d/loader.js"></script>
 <script src="body/world/rigged-presence.js"></script>
 <script src="body/world/voice.js"></script>
+<script src="body/head_editor.js"></script>
+<script src="body/draggable.js"></script>
 <script src="body/world/world-client.js"></script>
 <script>
 (function () {
@@ -175,6 +179,10 @@
   function send() { const t = input.value.trim(); if (!t) return; VintinuumWorld.say(t); input.value = ''; }
   document.getElementById('sayBtn').addEventListener('click', send);
   input.addEventListener('keydown', e => { if (e.key === 'Enter') send(); });
+
+  // edit-head → open the head-mold editor with live 3D preview on your own avatar
+  const ehb = document.getElementById('editHeadBtn');
+  if (ehb) ehb.addEventListener('click', () => { try { VintinuumWorld.editHead(); } catch (_) {} });
 
   // run (hold) + jump (tap) — mobile movement controls
   const runBtn = document.getElementById('btnRun'), jumpBtn = document.getElementById('btnJump');

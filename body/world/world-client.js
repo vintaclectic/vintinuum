@@ -56,7 +56,14 @@
     // try to load the user's own avatar glb for their presence
     try {
       const r = await fetch(_base() + '/api/avatar', { headers: { Authorization: 'Bearer ' + _token() } });
-      if (r.ok) { const d = await r.json(); if (d.active && d.active.glbUrl) avatarGlbUrl = d.active.glbUrl.startsWith('http') ? d.active.glbUrl : _base() + d.active.glbUrl; }
+      if (r.ok) {
+        const d = await r.json();
+        if (d.active && d.active.glbUrl) {
+          avatarGlbUrl = d.active.glbUrl.startsWith('http') ? d.active.glbUrl : _base() + d.active.glbUrl;
+          World._myAvatarId = d.active.avatarId || null;
+          World._myHeadAdjust = d.active.headAdjust || null; // saved head-mold edits
+        }
+      }
     } catch (_) {}
 
     _connect(status);
@@ -159,40 +166,58 @@
   }
 
   // Build a walking body. bustUrl optional (the user's real face on the rig).
-  function _makeUserPresence(name, bustUrl) {
+  // headAdjust optional (the user's saved head-mold edits).
+  function _makeUserPresence(name, bustUrl, headAdjust) {
     const g = new THREE.Group();
     const label = _makeLabel(name); g.add(label); g.userData.label = label;
     const placeholder = _fallbackBody(g);
     g.userData.placeholder = placeholder;
-    _attachRig(g, bustUrl, 0);
+    _attachRig(g, bustUrl, 0, headAdjust);
     return g;
   }
 
   // attach the rig, retrying if mods/RiggedPresence aren't ready yet (race-proof)
-  function _attachRig(g, bustUrl, tries) {
+  function _attachRig(g, bustUrl, tries, headAdjust) {
     if (g.userData.rig) return;
     if (!(global.RiggedPresence && World._mods)) {
-      if (tries < 40) return void setTimeout(() => _attachRig(g, bustUrl, tries + 1), 150);
+      if (tries < 40) return void setTimeout(() => _attachRig(g, bustUrl, tries + 1, headAdjust), 150);
       return console.warn('[world] rig deps never ready');
     }
-    global.RiggedPresence.create({ THREE, mods: World._mods, bustUrl: bustUrl || null })
+    global.RiggedPresence.create({ THREE, mods: World._mods, bustUrl: bustUrl || null, headAdjust: headAdjust || null })
       .then(rig => {
         const ph = g.userData.placeholder;
         if (ph && ph.parent) ph.parent.remove(ph);
         g.userData.placeholder = null;
         g.add(rig.root); g.userData.rig = rig;
+        if (g.userData.isSelf) World._selfRig = rig; // editor hooks live preview here
         console.log('[world] rig attached' + (bustUrl ? ' (with face)' : ''));
       })
       .catch(e => console.warn('[world] rig build failed:', e && (e.message || e)));
   }
 
   // a small, human-scaled soft body shown only until the rig loads (NOT a giant pill)
+  // A BEAUTIFUL "becoming" placeholder (Vinta 2026-06-15: never an ugly square).
+  // Instead of a dead-grey body, a luminous sculpted figure that shimmers like
+  // it's forming — reads as "your real self is on its way", not a broken render.
   function _fallbackBody(g) {
-    const mat = new THREE.MeshStandardMaterial({ color: 0xbfae9c, roughness: 0.7, transparent: true, opacity: 0.6 });
     const grp = new THREE.Group();
-    const torso = new THREE.Mesh(new THREE.CapsuleGeometry(0.16, 0.6, 6, 12), mat); torso.position.y = 1.0;
-    const headM = new THREE.Mesh(new THREE.SphereGeometry(0.13, 12, 12), mat); headM.position.y = 1.55;
+    const mat = new THREE.MeshStandardMaterial({
+      color: 0x5fb8e8, emissive: 0x2a6a9a, emissiveIntensity: 0.6,
+      roughness: 0.35, metalness: 0.1, transparent: true, opacity: 0.55,
+    });
+    const torso = new THREE.Mesh(new THREE.CapsuleGeometry(0.16, 0.6, 8, 16), mat); torso.position.y = 1.0;
+    // a sculpted (slightly elongated) head, not a flat sprite — it MOLDS by design
+    const headM = new THREE.Mesh(new THREE.SphereGeometry(0.135, 24, 20), mat);
+    headM.scale.set(0.92, 1.12, 0.95); headM.position.y = 1.55;
     grp.add(torso, headM); g.add(grp);
+    // shimmer: gentle breath of opacity + emissive so it feels alive while forming
+    grp.userData._t = 0;
+    grp.userData._shimmer = (dt) => {
+      grp.userData._t += dt;
+      const b = 0.5 + 0.18 * Math.sin(grp.userData._t * 2.2);
+      mat.opacity = 0.42 + 0.2 * b;
+      mat.emissiveIntensity = 0.4 + 0.5 * b;
+    };
     return grp;
   }
 
@@ -260,7 +285,8 @@
           agents.set(a.id, { group: g, target: { x: a.x, z: a.z, yaw: a.yaw || 0 }, name: a.name });
         });
         // build MY own walking body — labeled with my real username (DirHaven), not "you"
-        World._selfBody = _makeUserPresence(World._selfName, avatarGlbUrl);
+        World._selfBody = _makeUserPresence(World._selfName, avatarGlbUrl, World._myHeadAdjust);
+        World._selfBody.userData.isSelf = true;
         World._selfBody.position.set(me.x, 0, me.z);
         scene.add(World._selfBody);
       } else if (m.t === 'presence') {
@@ -441,6 +467,8 @@
         rig.play(MOVE.gait);
         if (rig.setRate) rig.setRate(MOVE.gaitRate);
         rig.update(dt);
+      } else if (sb.userData && sb.userData.placeholder && sb.userData.placeholder.userData._shimmer) {
+        sb.userData.placeholder.userData._shimmer(dt); // becoming-shimmer while the real face loads
       }
     }
     const tnow = clock.elapsedTime;
@@ -494,6 +522,18 @@
   }
   // cycle camera: 3rd → 1st → selfie → 3rd
   World.cycleCamera = function () { World._camMode = ((World._camMode || 0) + 1) % 3; return World._camMode; };
+
+  // Open the head-mold editor on the user's own avatar with live 3D preview.
+  World.editHead = function () {
+    if (!window.HeadEditor) { console.warn('[world] HeadEditor not loaded'); return; }
+    if (!World._myAvatarId) { console.warn('[world] no avatar to edit yet'); return; }
+    window.HeadEditor.open({
+      avatarId: World._myAvatarId,
+      presence: World._selfRig || null,
+      adjust: World._myHeadAdjust || null,
+      base: _base(),
+    });
+  };
 
   function _resize(mountEl) {
     const w = mountEl.clientWidth || innerWidth, h = mountEl.clientHeight || innerHeight;
