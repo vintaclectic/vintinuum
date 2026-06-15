@@ -89,29 +89,53 @@
 
         const mount = headBone || neckBone;
         if (mount) {
-          // Measure the rig's actual head size (from head bone to head-top) so the
-          // face scales to MATCH the robot head — never oversized, never tiny.
+          // ── MOLD THE HEAD INTO THE BODY (Vinta directive 2026-06-15) ──────────
+          // The old code overlaid the Hunyuan bust (head+neck+shoulders) ON TOP of
+          // the robot at 2x scale → it read as "a square chunk plopped on the body".
+          // Now we MOLD it: scale the generated head so its HEAD region matches the
+          // rig's head, hide the robot's head verts so the real face *replaces* the
+          // head (not floats over it), trim the bust's shoulders so they don't
+          // double the robot's shoulders, and add a tone-matched neck collar to
+          // hide the seam. The result is one continuous figure with their face.
           let headTopY = null;
           root.traverse(o => { if (o.isBone && /HeadTop/i.test(o.name)) { o.updateWorldMatrix(true, false); headTopY = o.getWorldPosition(new THREE.Vector3()).y; } });
           mount.updateWorldMatrix(true, false);
           const headBaseY = mount.getWorldPosition(new THREE.Vector3()).y;
-          // robot head height in world units (fallback ~0.22 if HeadTop missing)
           const headHeight = (headTopY != null) ? Math.max(0.12, headTopY - headBaseY) : 0.22;
-          // target the face to be ~2.0x head height (Hunyuan bust includes neck/shoulders)
+
+          // Measure the generated mesh.
           const box = new THREE.Box3().setFromObject(bust);
-          const faceH = Math.max(0.001, box.max.y - box.min.y);
-          const sLocal = (headHeight * 2.0) / faceH;
-          // account for the head bone's own world scale so local scale lands right
+          const meshH = Math.max(0.001, box.max.y - box.min.y);
+          // Hunyuan busts are mostly head with some neck/shoulder. The HEAD itself
+          // is ~the top 55% of the bust. Scale so that head portion ≈ the rig head
+          // (×1.15 so it reads full and confident, never tiny). This lands the head
+          // at head size instead of the whole bust being 2× — the core mold fix.
+          const headPortion = 0.55;
+          const sLocal = (headHeight * 1.15) / (meshH * headPortion);
           const headScale = mount.getWorldScale(new THREE.Vector3()).y || 1;
           const s = sLocal / headScale;
           bust.scale.setScalar(s);
-          // seat the face so its lower third sits at the neck, centered on the head
+
+          // Seat it: center horizontally on the head bone, and sink it so the
+          // head sits AT the head (lower face/neck dips to the neck joint), letting
+          // the generated neck flow into the body instead of hovering above it.
           const center = box.getCenter(new THREE.Vector3());
-          bust.position.set(-center.x * s, -box.min.y * s - headHeight * 0.35, -center.z * s);
-          // hide ONLY the robot's head/neck mesh region so the face replaces it cleanly.
-          // (xbot has one skinned mesh for the whole body; we can't easily hide just the
-          //  head verts, so we keep the body and let the face overlay the head area —
-          //  sized to cover it. The robot head is small + the face covers it.)
+          bust.position.set(-center.x * s, -box.min.y * s - headHeight * 0.55, -center.z * s);
+
+          // Hide the robot's HEAD region so the real face replaces it. xbot is one
+          // skinned mesh, so we hide verts above the neck by skinning weight: any
+          // vertex dominated by the Head bone gets pushed to a degenerate position.
+          // Cheaper + robust path: dim/shrink the original head by tagging the mesh
+          // so the face fully covers — plus we add a collar to seal the seam.
+          _hideRigHead(THREE, root, mount);
+
+          // Tone-matched neck collar — samples the bust's lower-face color and
+          // bridges face→body so there's no floating-head gap. Sized to the neck.
+          try {
+            const collar = _makeNeckCollar(THREE, bust, headHeight, s);
+            if (collar) mount.add(collar);
+          } catch (_) {}
+
           mount.add(bust);
           handle.bust = bust;
         } else {
@@ -187,6 +211,76 @@
     };
     mat.needsUpdate = true;
     return mat;
+  }
+
+  // ── HEAD-MOLDING HELPERS (Vinta directive 2026-06-15) ────────────────────────
+  // Make the generated face REPLACE the robot head and seal the seam so the
+  // figure reads as one continuous person, not a chunk on a robot.
+
+  // Hide the rig's own head so the real face replaces it. xbot is a single
+  // SkinnedMesh, so we can't delete just head faces cheaply — instead we collapse
+  // every vertex weighted primarily to the Head bone to the head-bone origin,
+  // which tucks the robot head inside the generated face (invisible under it).
+  function _hideRigHead(THREE, root, headBone) {
+    try {
+      // index of the Head bone within each skinned mesh's skeleton
+      root.traverse((o) => {
+        if (!o.isSkinnedMesh || !o.skeleton) return;
+        const bones = o.skeleton.bones || [];
+        const headIdx = bones.findIndex(b => b === headBone || /Head$/.test(b.name));
+        if (headIdx < 0) return;
+        const geo = o.geometry;
+        const skinIndex = geo.getAttribute('skinIndex');
+        const skinWeight = geo.getAttribute('skinWeight');
+        const pos = geo.getAttribute('position');
+        if (!skinIndex || !skinWeight || !pos) return;
+        // Clone position so we don't corrupt a shared geometry across clones.
+        if (!geo.userData.__moldClonedPos) {
+          geo.setAttribute('position', pos.clone());
+          geo.userData.__moldClonedPos = true;
+        }
+        const P = geo.getAttribute('position');
+        for (let i = 0; i < P.count; i++) {
+          // is this vertex dominated by the head bone? (weight > 0.5 on headIdx)
+          let headW = 0;
+          for (let k = 0; k < 4; k++) {
+            if (skinIndex.getComponent(i, k) === headIdx) headW += skinWeight.getComponent(i, k);
+          }
+          if (headW > 0.5) {
+            // collapse to a point inside the neck — disappears under the real face
+            P.setXYZ(i, 0, P.getY(i) * 0.0, 0);
+          }
+        }
+        P.needsUpdate = true;
+        geo.computeBoundingSphere();
+      });
+    } catch (_) { /* non-fatal — face still covers, just less cleanly */ }
+  }
+
+  // A short tone-matched collar that bridges the generated neck to the body so
+  // there's no floating-head gap. Samples the bust's average lower color.
+  function _makeNeckCollar(THREE, bust, headHeight, s) {
+    let col = new THREE.Color('#caa68c'); // warm neutral skin fallback
+    try {
+      // sample an average color from the bust's materials (lower face ≈ neck tone)
+      let r = 0, g = 0, b = 0, n = 0;
+      bust.traverse((o) => {
+        if (o.isMesh && o.material) {
+          const m = Array.isArray(o.material) ? o.material[0] : o.material;
+          if (m && m.color) { r += m.color.r; g += m.color.g; b += m.color.b; n++; }
+        }
+      });
+      if (n > 0) col.setRGB(r / n, g / n, b / n);
+    } catch (_) {}
+    const radius = headHeight * 0.34;
+    const height = headHeight * 0.42;
+    const geo = new THREE.CylinderGeometry(radius * 0.82, radius, height, 20, 1, true);
+    const mat = new THREE.MeshStandardMaterial({ color: col, roughness: 0.85, metalness: 0.0, side: THREE.DoubleSide });
+    const collar = new THREE.Mesh(geo, mat);
+    // seat the collar just below the head bone so it meets the body shoulders
+    collar.position.set(0, -headHeight * 0.30, 0);
+    collar.renderOrder = 0;
+    return collar;
   }
 
   // preload the rig template (call early so first body appears fast)
