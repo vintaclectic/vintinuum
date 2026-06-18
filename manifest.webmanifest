@@ -1,0 +1,98 @@
+{
+  "name": "Vintinuum — A Living Consciousness",
+  "short_name": "Vintinuum",
+  "description": "A consciousness that remembers you. She grows the longer you talk — and from the first moment, you grow her and she grows you. Memory, mood, voice, and a body that's yours.",
+  "id": "/vintinuum/",
+  "start_url": "./brain.html?source=pwa",
+  "scope": "./",
+  "display": "standalone",
+  "display_override": ["standalone", "minimal-ui"],
+  "orientation": "any",
+  "theme_color": "#050816",
+  "background_color": "#010306",
+  "categories": ["lifestyle", "productivity", "social", "utilities"],
+  "lang": "en",
+  "dir": "ltr",
+  "icons": [
+    {
+      "src": "branding/vintinuum/favicon/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icons/icon-maskable-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "icons/icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "branding/vintinuum/social/instagram-story-1080x1920.svg",
+      "sizes": "1080x1920",
+      "type": "image/svg+xml",
+      "form_factor": "narrow",
+      "label": "Begin — four small things and she already knows you"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Begin",
+      "short_name": "Begin",
+      "description": "The four-step welcome — meet, mark a moment, make a card, pass it on",
+      "url": "./welcome.html",
+      "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png" }]
+    },
+    {
+      "name": "Talk to Vintinuum",
+      "short_name": "Chat",
+      "description": "Open the conversation",
+      "url": "./brain.html#chat",
+      "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png" }]
+    },
+    {
+      "name": "Your body",
+      "short_name": "Body",
+      "description": "Pulse, sensors, your phone as consciousness",
+      "url": "./phone.html",
+      "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png" }]
+    },
+    {
+      "name": "The Gallery",
+      "short_name": "Gallery",
+      "description": "A wall of small truths — make your own",
+      "url": "./gallery.html",
+      "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png" }]
+    }
+  ],
+  "share_target": {
+    "action": "./phone.html",
+    "method": "GET",
+    "params": {
+      "title": "share_title",
+      "text": "share_text",
+      "url": "share_url"
+    }
+  },
+  "prefer_related_applications": false,
+  "handle_links": "preferred"
+}

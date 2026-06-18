@@ -28,6 +28,24 @@
   var SUPPRESS = ['welcome.html', 'onboarding.html'];
   if (SUPPRESS.indexOf(path) !== -1) return;
 
+  // ── PWA wiring: ensure a manifest link + SW registration exist on this page,
+  // so the install prompt (beforeinstallprompt) can fire on ANY page, not just
+  // phone.html. Idempotent — skips if the page already declares its own.
+  (function ensurePwa() {
+    try {
+      if (!document.querySelector('link[rel="manifest"]')) {
+        var link = document.createElement('link');
+        link.rel = 'manifest';
+        link.href = 'manifest.webmanifest';
+        (document.head || document.documentElement).appendChild(link);
+      }
+      if ('serviceWorker' in navigator && !navigator.serviceWorker.controller) {
+        // Register the shared SW at the app scope (same one brain/phone use).
+        navigator.serviceWorker.register('sw.js', { scope: './' }).catch(function () {});
+      }
+    } catch (_) {}
+  })();
+
   // ── auth state (read every known token key) ──────────────────────────────
   function token() {
     try {
