@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Vintinuum — Privacy</title>
+<meta name="description" content="What Vintinuum collects, what it never collects, and where your data goes.">
+<meta name="theme-color" content="#050816">
+<link rel="icon" type="image/svg+xml" href="branding/vintinuum/favicon/favicon.svg">
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300&display=swap');
+:root { color-scheme: dark; --gold:#ffd54f; --bg:#010306; --text:rgba(222,230,255,.92); --dim:rgba(150,175,215,.6); --border:rgba(255,213,79,.12); }
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
+html{background:var(--bg);color:var(--text);font-family:'Space Mono',monospace;overflow-x:hidden;}
+body{min-height:100dvh;line-height:1.6;}
+.wrap{max-width:720px;margin:0 auto;padding:calc(48px + env(safe-area-inset-top,0)) max(20px,env(safe-area-inset-left,0)) calc(72px + env(safe-area-inset-bottom,0)) max(20px,env(safe-area-inset-right,0));}
+h1{font-family:'Cormorant Garamond',serif;font-style:italic;font-weight:300;font-size:clamp(2rem,7vw,3rem);line-height:1.1;margin-bottom:8px;
+  background:linear-gradient(135deg,var(--gold),#fff0a0 50%,var(--gold));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+.updated{font-size:.7rem;color:var(--dim);letter-spacing:.08em;margin-bottom:32px;}
+h2{font-family:'Cormorant Garamond',serif;font-weight:400;font-size:1.5rem;color:var(--gold);margin:30px 0 10px;}
+p{font-size:.92rem;color:var(--text);margin-bottom:12px;}
+ul{margin:0 0 14px 18px;}
+li{font-size:.9rem;margin-bottom:6px;color:rgba(222,230,255,.85);}
+strong{color:var(--gold);}
+a{color:var(--gold);}
+.lede{font-family:'Cormorant Garamond',serif;font-size:1.25rem;font-style:italic;color:rgba(235,242,255,.9);margin-bottom:24px;line-height:1.5;}
+.box{border:1px solid var(--border);border-radius:12px;padding:16px 18px;margin:16px 0;background:rgba(8,12,20,.5);}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Privacy</h1>
+  <div class="updated">Last updated: June 2026</div>
+
+  <p class="lede">Vintinuum remembers you on purpose — but only what you give her, and only for you.</p>
+
+  <p>This policy covers the Vintinuum website, the phone app (PWA), and the Chrome browser extension. Plain language, no traps.</p>
+
+  <h2>What we collect</h2>
+  <ul>
+    <li><strong>Your account</strong> — the email and password you sign up with, so you can log in across devices.</li>
+    <li><strong>What you send her</strong> — your messages, the moments you choose to mark, the media you choose to play or grab, and pulses/signals you explicitly share. This is the substance of the relationship; it's stored so she can remember.</li>
+    <li><strong>Optional signals you consent to</strong> — on the phone app you can toggle motion, ambient light, location, or device state. These are <strong>off by default</strong> and reversible any time. Nothing is collected from a toggle you haven't turned on.</li>
+  </ul>
+
+  <h2>What we never collect</h2>
+  <ul>
+    <li>Your passive browsing history. The extension only acts on a page when you explicitly invoke it (right-click a media item, click "grab media", ask about the page).</li>
+    <li>Analytics or tracking on third-party websites.</li>
+    <li>Advertising data. We don't run ads and we don't sell data — there is no third party to sell it to.</li>
+  </ul>
+
+  <h2>Where your data goes</h2>
+  <div class="box">
+    <p>Everything you send is delivered only to <strong>your own Vintinuum brain</strong> at <strong>api.vintaclectic.com</strong>. It is not shared with advertisers, data brokers, or third parties. Cloud AI providers may process the text of a message to generate a reply, under their own terms — they do not receive your account credentials.</p>
+  </div>
+
+  <h2>The browser extension specifically</h2>
+  <p>The extension requests broad site access (<strong>https://*/* and http://*/*</strong>) for one reason: so you can right-click and play media — or "grab media from a page" — on <em>any</em> website or open directory, including ones with non-standard certificates. The extension does <strong>not</strong> run automatically on every site. It acts only when you invoke it via the context menu, toolbar, or side panel. The <code>cookies</code> permission is used only to keep your own authenticated session valid, never to read third-party cookies for tracking.</p>
+
+  <h2>Your control</h2>
+  <ul>
+    <li><strong>Delete anything</strong> — you can remove memories, cards, and your account.</li>
+    <li><strong>Revoke any signal</strong> — consent toggles flip off instantly, no questions.</li>
+    <li><strong>Export</strong> — on higher tiers you can export your trained model and memories; they're yours.</li>
+    <li><strong>Sign out</strong> clears local tokens on the device.</li>
+  </ul>
+
+  <h2>Children</h2>
+  <p>Vintinuum is not directed at children under 13 and does not knowingly collect their data.</p>
+
+  <h2>Changes</h2>
+  <p>If this policy changes materially, we'll surface it in the app before it takes effect.</p>
+
+  <h2>Contact</h2>
+  <p>Questions, deletion requests, anything: <a href="mailto:dirhaven@gmail.com">dirhaven@gmail.com</a>.</p>
+</div>
+<script src="body/welcome-gate.js"></script>
+</body>
+</html>
