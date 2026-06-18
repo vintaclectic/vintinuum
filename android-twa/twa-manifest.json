@@ -1,0 +1,55 @@
+{
+  "packageId": "com.vintaclectic.vintinuum",
+  "host": "vintaclectic.github.io",
+  "name": "Vintinuum",
+  "launcherName": "Vintinuum",
+  "display": "standalone",
+  "themeColor": "#050816",
+  "themeColorDark": "#010306",
+  "navigationColor": "#010306",
+  "navigationColorDark": "#010306",
+  "navigationDividerColor": "#010306",
+  "navigationDividerColorDark": "#010306",
+  "backgroundColor": "#010306",
+  "enableNotifications": true,
+  "startUrl": "/vintinuum/brain.html?source=twa",
+  "iconUrl": "https://vintaclectic.github.io/vintinuum/icons/icon-512.png",
+  "maskableIconUrl": "https://vintaclectic.github.io/vintinuum/icons/icon-maskable-512.png",
+  "monochromeIconUrl": "https://vintaclectic.github.io/vintinuum/icons/icon-maskable-512.png",
+  "shortcuts": [
+    {
+      "name": "Begin",
+      "shortName": "Begin",
+      "url": "/vintinuum/welcome.html",
+      "chosenIconUrl": "https://vintaclectic.github.io/vintinuum/icons/icon-192.png"
+    },
+    {
+      "name": "Chat",
+      "shortName": "Chat",
+      "url": "/vintinuum/brain.html#chat",
+      "chosenIconUrl": "https://vintaclectic.github.io/vintinuum/icons/icon-192.png"
+    },
+    {
+      "name": "Body",
+      "shortName": "Body",
+      "url": "/vintinuum/phone.html",
+      "chosenIconUrl": "https://vintaclectic.github.io/vintinuum/icons/icon-192.png"
+    }
+  ],
+  "generatorApp": "bubblewrap-cli",
+  "webManifestUrl": "https://vintaclectic.github.io/vintinuum/manifest.webmanifest",
+  "fallbackType": "customtabs",
+  "features": {},
+  "alphaDependencies": { "enabled": false },
+  "enableSiteSettingsShortcut": true,
+  "isChromeOSOnly": false,
+  "isMetaQuest": false,
+  "fullScopeUrl": "https://vintaclectic.github.io/vintinuum/",
+  "minSdkVersion": 23,
+  "orientation": "default",
+  "fingerprints": [],
+  "additionalTrustedOrigins": ["https://api.vintaclectic.com"],
+  "retainedBundles": [],
+  "appVersionName": "1.0.0",
+  "appVersion": 1
+}
