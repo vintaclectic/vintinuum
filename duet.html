@@ -1431,6 +1431,483 @@ body {
   .chat-stage { height: min(400px, calc(100svh - 300px - var(--safe-top) - var(--safe-bottom))); }
 }
 
+/* ════════════════════════════════════════════════════════
+   RANDOM MODE — three states: lobby / searching / matched
+   Omegle soul, Vintinuum heart. Bernard Buffet austerity.
+   ════════════════════════════════════════════════════════ */
+
+/* ── RANDOM STATE PANELS ────────────────────────────── */
+.random-panel {
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--s6);
+  width: 100%;
+  max-width: 540px;
+  margin: 0 auto;
+  padding: var(--s6) 0;
+}
+.random-panel.active {
+  display: flex;
+  animation: fadeSlide 0.28s var(--ease-sheet) both;
+}
+
+/* ── LOBBY PANEL ────────────────────────────────────── */
+.random-lobby-eyebrow {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.44rem;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--text-ghost);
+  text-align: center;
+}
+
+.random-lobby-headline {
+  font-family: 'Cormorant Garamond', serif;
+  font-weight: 300;
+  font-size: clamp(1.9rem, 6vw, 2.8rem);
+  letter-spacing: 0.08em;
+  color: var(--text);
+  text-align: center;
+  line-height: 1.18;
+}
+.random-lobby-headline em {
+  font-style: italic;
+  color: rgba(180, 200, 255, 0.65);
+}
+
+.random-lobby-vinta {
+  font-family: 'Cormorant Garamond', serif;
+  font-style: italic;
+  font-size: 0.82rem;
+  color: var(--text-ghost);
+  text-align: center;
+  line-height: 1.6;
+  max-width: 340px;
+  position: relative;
+  padding: var(--s3) var(--s5);
+}
+.random-lobby-vinta::before,
+.random-lobby-vinta::after {
+  content: '';
+  position: absolute;
+  left: 0; right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.07), transparent);
+}
+.random-lobby-vinta::before { top: 0; }
+.random-lobby-vinta::after  { bottom: 0; }
+
+/* video toggle row */
+.random-toggle-row {
+  display: flex;
+  align-items: center;
+  gap: var(--s4);
+  width: 100%;
+  padding: var(--s4) var(--s5);
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+}
+.random-toggle-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.48rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  flex: 1;
+}
+.random-toggle-sublabel {
+  font-family: 'Cormorant Garamond', serif;
+  font-style: italic;
+  font-size: 0.68rem;
+  color: var(--text-ghost);
+  margin-top: 2px;
+}
+/* pill toggle */
+.toggle-pill {
+  position: relative;
+  width: 44px;
+  height: 24px;
+  flex-shrink: 0;
+}
+.toggle-pill input {
+  opacity: 0; width: 0; height: 0; position: absolute;
+}
+.toggle-track {
+  position: absolute; inset: 0;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  cursor: pointer;
+  transition: background 0.22s, border-color 0.22s;
+}
+.toggle-track::after {
+  content: '';
+  position: absolute;
+  top: 3px; left: 3px;
+  width: 16px; height: 16px;
+  border-radius: 50%;
+  background: var(--text-ghost);
+  transition: transform 0.22s var(--ease-spring), background 0.22s;
+}
+.toggle-pill input:checked + .toggle-track {
+  background: rgba(64,224,160,0.12);
+  border-color: rgba(64,224,160,0.35);
+}
+.toggle-pill input:checked + .toggle-track::after {
+  transform: translateX(20px);
+  background: var(--online);
+}
+
+/* vibe input */
+.random-vibe-row {
+  width: 100%;
+}
+.random-vibe-row label {
+  display: block;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.4rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--text-ghost);
+  margin-bottom: var(--s2);
+}
+.random-vibe-input {
+  width: 100%;
+  font-family: 'Inter', sans-serif;
+  font-size: 1rem; /* 16px — iOS no-zoom */
+  background: rgba(255,255,255,0.04);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 12px 16px;
+  color: var(--text);
+  outline: none;
+  min-height: 48px;
+  transition: border-color 0.2s;
+  -webkit-appearance: none;
+}
+.random-vibe-input:focus { border-color: rgba(139,26,47,0.35); }
+.random-vibe-input::placeholder { color: var(--text-ghost); font-size: 0.85rem; }
+
+/* main CTA — the Omegle door, Vintinuum soul */
+.random-start-btn {
+  width: 100%;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.58rem;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--text);
+  background: linear-gradient(160deg, rgba(30,20,50,0.8) 0%, rgba(60,10,20,0.9) 100%);
+  border: 1px solid rgba(192,36,61,0.45);
+  border-radius: 16px;
+  padding: 18px 24px;
+  min-height: 60px;
+  cursor: pointer;
+  transition: background 0.22s, box-shadow 0.22s, border-color 0.22s, transform 0.15s var(--ease-spring);
+  display: flex; align-items: center; justify-content: center; gap: var(--s3);
+  -webkit-tap-highlight-color: transparent;
+  box-shadow: 0 4px 30px rgba(139,26,47,0.18), inset 0 1px 0 rgba(255,255,255,0.04);
+  touch-action: manipulation;
+}
+.random-start-btn:hover {
+  background: linear-gradient(160deg, rgba(40,25,65,0.9) 0%, rgba(80,15,28,0.95) 100%);
+  border-color: rgba(192,36,61,0.70);
+  box-shadow: 0 6px 40px rgba(139,26,47,0.30), inset 0 1px 0 rgba(255,255,255,0.05);
+}
+.random-start-btn:active { transform: scale(0.98); }
+@media (prefers-reduced-motion: reduce) { .random-start-btn:active { transform: none; } }
+
+/* ── SEARCHING PANEL ────────────────────────────────── */
+
+/* the living orb — "the searching state watches back" (Truman) */
+.random-orb {
+  position: relative;
+  width: 100px; height: 100px;
+  flex-shrink: 0;
+}
+.random-orb-ring {
+  position: absolute; inset: 0;
+  border-radius: 50%;
+  border: 1.5px solid rgba(192,36,61,0.25);
+  animation: orbExpand 2.4s var(--ease-spring) infinite;
+}
+.random-orb-ring:nth-child(2) { animation-delay: 0.8s; }
+.random-orb-ring:nth-child(3) { animation-delay: 1.6s; }
+@keyframes orbExpand {
+  0%   { transform: scale(0.6);  opacity: 0.7; }
+  60%  { transform: scale(1.0);  opacity: 0.3; }
+  100% { transform: scale(1.4);  opacity: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .random-orb-ring { animation: none; opacity: 0.3; }
+}
+.random-orb-core {
+  position: absolute;
+  inset: 20px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 40% 35%, rgba(192,36,61,0.55), rgba(80,10,20,0.90));
+  box-shadow: 0 0 20px rgba(192,36,61,0.28), inset 0 1px 0 rgba(255,255,255,0.06);
+  animation: orbBreath 2.4s ease-in-out infinite;
+}
+@keyframes orbBreath {
+  0%,100% { transform: scale(1); opacity: 1; }
+  50%      { transform: scale(1.06); opacity: 0.85; }
+}
+@media (prefers-reduced-motion: reduce) { .random-orb-core { animation: none; } }
+
+.random-searching-headline {
+  font-family: 'Cormorant Garamond', serif;
+  font-weight: 300;
+  font-size: clamp(1.4rem, 5vw, 2rem);
+  letter-spacing: 0.10em;
+  color: var(--text);
+  text-align: center;
+  line-height: 1.2;
+}
+
+.random-searching-meta {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.5rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  text-align: center;
+  line-height: 1.8;
+}
+#rQueueSize { color: var(--text); font-size: 0.62rem; }
+#rWaited    { color: var(--text); font-size: 0.62rem; }
+
+.random-vinta-waiting {
+  font-family: 'Cormorant Garamond', serif;
+  font-style: italic;
+  font-size: 0.80rem;
+  color: var(--text-ghost);
+  text-align: center;
+  max-width: 300px;
+  line-height: 1.65;
+}
+.random-vinta-waiting em { color: rgba(180,200,255,0.5); font-style: normal; }
+
+.random-cancel-btn {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.48rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 24px;
+  color: var(--text-dim);
+  padding: 12px 28px;
+  min-height: var(--tap);
+  cursor: pointer;
+  transition: all 0.2s;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+.random-cancel-btn:hover { color: var(--text); border-color: var(--border-soft); }
+
+/* ── MATCHED / RANDOM STAGE ─────────────────────────── */
+/* Reuses .chat-stage, .chat-scroll, etc from the main stage.
+   The random-specific additions are the NEXT button and the
+   Vintinuum third-presence opener. */
+
+.random-stage-topbar {
+  display: flex;
+  align-items: center;
+  gap: var(--s3);
+  margin-bottom: var(--s4);
+  padding: var(--s3) var(--s4);
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  flex-wrap: wrap;
+  min-height: 60px;
+}
+.random-stage-ava { font-size: 1.8rem; line-height: 1; flex-shrink: 0; }
+.random-stage-info { flex: 1; min-width: 0; }
+.random-stage-name {
+  font-family: 'Cormorant Garamond', serif;
+  font-weight: 500;
+  font-size: 0.96rem;
+  color: var(--text);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.random-stage-mood {
+  font-family: 'Inter', sans-serif;
+  font-size: 0.60rem;
+  color: var(--text-dim);
+  margin-top: 2px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.random-stage-controls {
+  display: flex;
+  gap: var(--s2);
+  flex-shrink: 0;
+}
+
+/* NEXT button — the giant obvious action.
+   Led Zeppelin energy: when it appears it commands the room. */
+.btn-random-next {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.52rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  background: linear-gradient(135deg, rgba(192,36,61,0.18), rgba(100,10,24,0.35));
+  border: 1px solid rgba(192,36,61,0.55);
+  border-radius: 12px;
+  color: rgba(220,80,100,0.95);
+  padding: 10px 18px;
+  min-height: var(--tap);
+  min-width: 80px;
+  cursor: pointer;
+  transition: background 0.2s, box-shadow 0.2s, transform 0.15s var(--ease-spring);
+  display: flex; align-items: center; gap: 6px;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+  box-shadow: 0 2px 14px rgba(192,36,61,0.14);
+  flex-shrink: 0;
+}
+.btn-random-next:hover {
+  background: linear-gradient(135deg, rgba(192,36,61,0.28), rgba(120,15,30,0.50));
+  box-shadow: 0 4px 22px rgba(192,36,61,0.28);
+}
+.btn-random-next:active { transform: scale(0.96); }
+
+.btn-random-stop {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.44rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  background: transparent;
+  border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 12px;
+  color: var(--text-ghost);
+  padding: 10px 14px;
+  min-height: var(--tap);
+  cursor: pointer;
+  transition: all 0.2s;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+  flex-shrink: 0;
+}
+.btn-random-stop:hover { color: var(--text-dim); border-color: var(--border-soft); }
+
+/* video invite CTA inside random stage */
+.btn-random-video {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.44rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  background: transparent;
+  border: 1px solid rgba(200,160,64,0.25);
+  border-radius: 12px;
+  color: var(--gold);
+  padding: 10px 14px;
+  min-height: var(--tap);
+  cursor: pointer;
+  transition: all 0.2s var(--ease-spring);
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+  flex-shrink: 0;
+  display: flex; align-items: center; gap: 5px;
+}
+.btn-random-video:hover { background: rgba(200,160,64,0.10); box-shadow: 0 0 14px rgba(200,160,64,0.12); }
+
+/* Vintinuum opener bubble — distinct from A/B bubbles.
+   She is the third speaker. She speaks first. */
+.chat-msg.vinta {
+  flex-direction: row;
+  align-items: flex-end;
+  gap: var(--s2);
+}
+.chat-vinta-sig {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 1.1rem;
+  line-height: 1;
+  flex-shrink: 0;
+  opacity: 0.75;
+  user-select: none;
+}
+.chat-msg.vinta .chat-bubble {
+  background: rgba(60,20,90,0.18);
+  border: 1px solid rgba(140,80,200,0.18);
+  border-bottom-left-radius: 4px;
+  max-width: min(80%, 380px);
+}
+.chat-msg.vinta .chat-text {
+  font-family: 'Cormorant Garamond', serif;
+  font-style: italic;
+  font-size: 0.88rem;
+  color: rgba(190,170,240,0.85);
+  line-height: 1.55;
+}
+.chat-msg.vinta .chat-time {
+  color: rgba(140,80,200,0.35);
+  text-align: left;
+}
+
+/* vibe tint — when partner mood is present, a faint color wash on stage top */
+.random-vibe-tint {
+  height: 3px;
+  border-radius: 3px 3px 0 0;
+  margin-bottom: -1px;
+  opacity: 0.55;
+  background: linear-gradient(90deg, transparent, var(--random-vibe-color, transparent), transparent);
+}
+
+/* match-found spring pop overlay */
+.random-match-pop {
+  position: fixed;
+  inset: 0;
+  z-index: 900;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+.random-match-pop.flash {
+  opacity: 1;
+}
+.random-match-pop-inner {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: clamp(1.6rem, 6vw, 3rem);
+  color: rgba(220,200,255,0.88);
+  letter-spacing: 0.14em;
+  text-align: center;
+  text-shadow: 0 0 40px rgba(150,80,200,0.45), 0 0 80px rgba(192,36,61,0.18);
+  animation: matchSpring 0.55s var(--ease-spring) both;
+  padding: var(--s5);
+}
+@keyframes matchSpring {
+  0%   { transform: scale(0.7) translateY(20px); opacity: 0; }
+  65%  { transform: scale(1.06) translateY(-4px); opacity: 1; }
+  100% { transform: scale(1) translateY(0); opacity: 1; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .random-match-pop-inner { animation: none; }
+}
+
+/* ── RANDOM — mobile ≤ 375px ────────────────────────── */
+@media (max-width: 375px) {
+  .random-lobby-headline { font-size: 1.7rem; }
+  .random-start-btn { font-size: 0.52rem; padding: 16px 18px; }
+  .random-stage-topbar { padding: var(--s2) var(--s3); gap: var(--s2); }
+  .random-stage-ava { font-size: 1.5rem; }
+  .btn-random-next { font-size: 0.46rem; padding: 10px 12px; }
+  .random-panel { padding: var(--s4) 0; gap: var(--s4); }
+  .random-orb { width: 80px; height: 80px; }
+}
+
+/* ── RANDOM — large ≥ 768px ─────────────────────────── */
+@media (min-width: 768px) {
+  .random-panel { padding: var(--s8) 0; }
+  .random-start-btn { max-width: 420px; }
+  .random-cancel-btn { padding: 13px 40px; }
+}
+
 /* ── PROFILE EDITOR (inline, feed view) ─────────────── */
 .profile-editor {
   display: none;
@@ -1629,6 +2106,9 @@ body {
     </button>
     <button class="tab-btn" data-draggable="true" onclick="switchView('stage')" role="tab" id="tabStage" style="display:none">
       ✦ Stage
+    </button>
+    <button class="tab-btn" data-draggable="true" onclick="switchView('random')" role="tab" id="tabRandom">
+      ⟳ Random
     </button>
     <button class="tab-btn" data-draggable="true" onclick="toggleProfileEditor()" role="tab" id="tabProfile">
       ◻ Profile
@@ -1858,7 +2338,176 @@ body {
 
   </div>
 
+  <!-- ═══════════════ RANDOM MODE ═══════════════════════
+       Three inner states rendered inside this single view:
+         #r-lobby      — enter / configure
+         #r-searching  — alive waiting queue
+         #r-matched    — private stage w/ NEXT button
+       Only one .random-panel.active at a time.
+  ════════════════════════════════════════════════════════ -->
+  <div class="view" id="v-random">
+
+    <!-- ── STATE 1: LOBBY ─────────────────────────────── -->
+    <div class="random-panel active" id="r-lobby">
+
+      <div class="random-lobby-eyebrow">DirMegle · Random</div>
+
+      <div class="random-lobby-headline">
+        Two strangers.<br><em>and me, in the space between.</em>
+      </div>
+
+      <div class="random-lobby-vinta">
+        I hold the space while you find each other.
+        I don't introduce — I witness. Something always passes through.
+      </div>
+
+      <!-- Video toggle -->
+      <div class="random-toggle-row">
+        <div>
+          <div class="random-toggle-label">Camera on</div>
+          <div class="random-toggle-sublabel">enable camera — Theater+ tier required to start video</div>
+        </div>
+        <label class="toggle-pill" aria-label="Toggle video preference">
+          <input type="checkbox" id="rWantVideo">
+          <span class="toggle-track"></span>
+        </label>
+      </div>
+
+      <!-- Vibe -->
+      <div class="random-vibe-row">
+        <label for="rVibeInput">Vibe (optional — 48 chars)</label>
+        <input
+          class="random-vibe-input"
+          id="rVibeInput"
+          type="text"
+          maxlength="48"
+          placeholder="late night, philosophy, jazz, anything really…"
+          autocomplete="off"
+          spellcheck="false"
+        >
+      </div>
+
+      <!-- The door -->
+      <button class="random-start-btn" data-draggable="true" onclick="randomEnter()" id="rStartBtn">
+        <span>◈</span>
+        <span>Start Random Chat</span>
+      </button>
+
+    </div><!-- /#r-lobby -->
+
+    <!-- ── STATE 2: SEARCHING ──────────────────────────── -->
+    <div class="random-panel" id="r-searching">
+
+      <!-- the living orb — Truman: the searching state watches back -->
+      <div class="random-orb" aria-hidden="true">
+        <div class="random-orb-ring"></div>
+        <div class="random-orb-ring"></div>
+        <div class="random-orb-ring"></div>
+        <div class="random-orb-core"></div>
+      </div>
+
+      <div class="random-searching-headline">finding someone…</div>
+
+      <!-- live queue + time -->
+      <div class="random-searching-meta">
+        <span id="rQueueSize">—</span> in queue
+        &nbsp;·&nbsp;
+        waited <span id="rWaited">0</span>s
+      </div>
+
+      <!-- Vintinuum as calming presence while you wait -->
+      <div class="random-vinta-waiting">
+        the space between two unknowns is not empty —
+        it's <em>where I live</em>.
+        i'll bring someone through.
+      </div>
+
+      <button class="random-cancel-btn" data-draggable="true" onclick="randomLeave()">
+        ✕ cancel
+      </button>
+
+    </div><!-- /#r-searching -->
+
+    <!-- ── STATE 3: MATCHED / RANDOM STAGE ───────────────
+         Reuses the same chat infrastructure as the main stage.
+         The NEXT + Stop controls live in the topbar here.
+    ═════════════════════════════════════════════════════ -->
+    <div class="random-panel" id="r-matched">
+
+      <!-- vibe tint — color from partner mood -->
+      <div class="random-vibe-tint" id="rVibeTint"></div>
+
+      <!-- partner topbar + controls -->
+      <div class="random-stage-topbar">
+        <span class="random-stage-ava" id="rPartnerAva">👤</span>
+        <div class="random-stage-info">
+          <div class="random-stage-name" id="rPartnerName">a stranger</div>
+          <div class="random-stage-mood" id="rPartnerMood"></div>
+        </div>
+        <div class="random-stage-controls">
+          <button class="btn-random-video" id="rBtnVideo" data-draggable="true" onclick="randomGoVideo()" style="display:none">
+            ✦ video
+          </button>
+          <button class="btn-random-next" data-draggable="true" onclick="randomNext()" id="rBtnNext">
+            NEXT →
+          </button>
+          <button class="btn-random-stop" data-draggable="true" onclick="randomLeave()">
+            ✕
+          </button>
+        </div>
+      </div>
+
+      <!-- chat transcript — same architecture as main stage -->
+      <div class="chat-stage">
+        <div class="chat-scroll" id="rChatScroll">
+          <div class="chat-empty" id="rChatEmpty">
+            <div class="chat-empty-text">The stage awaits.<br>Your thread begins here.</div>
+          </div>
+        </div>
+        <div class="chat-input-row">
+          <textarea
+            class="chat-input"
+            id="rChatInput"
+            placeholder="say something…"
+            rows="1"
+            maxlength="2000"
+            aria-label="Send a message"
+          ></textarea>
+          <button class="chat-send-btn" data-draggable="true" onclick="randomSendMessage()" aria-label="Send">◈</button>
+        </div>
+      </div>
+
+      <!-- video longing panel (reuse the existing component by reference via JS) -->
+      <div class="video-longing" id="rVideoLonging" role="complementary" aria-label="Video chat available" style="display:none">
+        <div class="video-longing-teaser" aria-hidden="true">
+          <span class="video-longing-partner-ava" id="rLongingPartnerAva">👤</span>
+          <span class="video-longing-teaser-label">Theater stage — face to face</span>
+        </div>
+        <div class="video-longing-headline" id="rLongingHeadline">
+          They're here. Meet them face to face.
+        </div>
+        <div class="video-longing-tier"><span>✦</span><span>Theater · $15 / mo</span></div>
+        <div class="video-longing-why" id="rLongingWhy">
+          You're seeing this because your partner's tier includes video — and yours doesn't yet.
+        </div>
+        <div class="video-longing-actions">
+          <a href="upgrade.html" class="video-longing-cta">Unlock video — Theater</a>
+          <button class="video-longing-later" onclick="dismissRVideoLonging()" aria-label="Stay in text chat">
+            maybe later — stay in text
+          </button>
+        </div>
+      </div>
+
+    </div><!-- /#r-matched -->
+
+  </div><!-- /#v-random -->
+
 </div><!-- /page -->
+
+<!-- match-found spring pop overlay (Jim Carrey: elastic delight) -->
+<div class="random-match-pop" id="rMatchPop" aria-hidden="true">
+  <div class="random-match-pop-inner">someone's here.</div>
+</div>
 
 <!-- REQUEST MODAL (bottom sheet on mobile) -->
 <div class="modal-overlay" id="requestModal" onclick="closeRequestModal(event)">
@@ -1933,12 +2582,13 @@ function switchView(name) {
   document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
   document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
   document.getElementById('v-' + name).classList.add('active');
-  const idx = { feed: 0, handshake: 1, stage: 2, profile: 3 };
   const tabs = document.querySelectorAll('.tab-btn');
+  // tabs order: feed(0) handshake(1) stage(2) random(3) profile(4)
   if (name === 'feed')       tabs[0].classList.add('active');
   if (name === 'handshake') { tabs[1].classList.add('active'); loadRequests(); }
   if (name === 'stage')      tabs[2].classList.add('active');
-  // profile tab is a toggle, not a real view
+  if (name === 'random')     tabs[3].classList.add('active');
+  // profile tab (4) is a toggle, not a real view
 }
 
 /* ── TOAST ──────────────────────────────────────────── */
@@ -2437,6 +3087,23 @@ function startInboxSSE() {
     } catch(_) {}
   });
 
+  // match:found — matchmaker paired us while we were waiting in the SSE lane
+  // Guard: de-duplicate against poll-based match using the seenRoomToken set.
+  inboxSSE.addEventListener('match:found', (e) => {
+    try {
+      const data = JSON.parse(e.data);
+      handleMatchFound(data);
+    } catch(_) {}
+  });
+
+  // match:ended — partner hit Next or left
+  inboxSSE.addEventListener('match:ended', (e) => {
+    try {
+      const data = JSON.parse(e.data);
+      handleMatchEnded(data);
+    } catch(_) {}
+  });
+
   // reconnect watchdog: if silent >60s reconnect
   let lastHeartbeat = Date.now();
   inboxSSE.addEventListener('heartbeat', () => { lastHeartbeat = Date.now(); });
@@ -2840,6 +3507,578 @@ function openDirRMStream(remoteStream) {
   }
   toast('Video live.');
 }
+
+/* ════════════════════════════════════════════════════
+   SECTION 4 — RANDOM MODE (Omegle-style matchmaking)
+   State machine: lobby → searching → matched
+   Brain-weighted pairing. Vintinuum is the third presence.
+   ════════════════════════════════════════════════════ */
+
+/* ── RANDOM STATE ───────────────────────────────────── */
+const RANDOM = {
+  state:          'lobby',    // 'lobby' | 'searching' | 'matched'
+  currentRoom:    null,       // room_token when matched
+  partner:        null,       // { user_id, display_name, avatar, mood, vibe_tags }
+  pollTimer:      null,       // setInterval handle for status polling
+  waitStart:      null,       // Date.now() when search began
+  waitedTimer:    null,       // setInterval for updating waited seconds
+  seenRooms:      new Set(),  // de-dupe: SSE + poll can both fire match
+  duetSSE:        null,       // SSE connection to the matched duet room
+  pc:             null,       // WebRTC peer conn (if video starts in random stage)
+  localStream:    null,
+  dirrmHandle:    null,
+  videoEligible:  false,
+};
+
+/* ── STATE TRANSITIONS ──────────────────────────────── */
+function randomShowPanel(panelId) {
+  ['r-lobby','r-searching','r-matched'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.classList.toggle('active', id === panelId);
+  });
+  RANDOM.state = panelId.replace('r-','');
+}
+
+/* ── ENTER QUEUE (lobby → searching) ────────────────── */
+async function randomEnter() {
+  if (!getToken()) { toast('Log in to use random chat.'); return; }
+  const wantVideo = document.getElementById('rWantVideo').checked;
+  const vibe      = document.getElementById('rVibeInput').value.trim().slice(0,48);
+
+  const btn = document.getElementById('rStartBtn');
+  btn.disabled = true;
+  btn.querySelector('span:last-child').textContent = 'connecting…';
+
+  try {
+    const r = await fetch(`${API}/api/megle/match/enter`, {
+      method: 'POST',
+      headers: authHdrs(),
+      body: JSON.stringify({ want_video: wantVideo, vibe: vibe || undefined })
+    });
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.error || 'failed');
+
+    if (d.status === 'matched') {
+      // instant match — skip searching state
+      handleMatchFound({
+        room_token:    d.room_token,
+        partner:       d.partner,
+        want_video:    d.want_video,
+        vinta_opener:  d.vinta_opener,
+      });
+    } else {
+      // status === 'waiting'
+      randomShowPanel('r-searching');
+      RANDOM.waitStart = Date.now();
+      startRandomPoll();
+      startRandomWaitedClock();
+    }
+  } catch(e) {
+    toast('Error: ' + e.message);
+  } finally {
+    btn.disabled = false;
+    btn.querySelector('span:last-child').textContent = 'Start Random Chat';
+  }
+}
+
+/* ── STATUS POLL (~2s) ──────────────────────────────── */
+function startRandomPoll() {
+  stopRandomPoll();
+  RANDOM.pollTimer = setInterval(randomPollStatus, 2000);
+}
+
+function stopRandomPoll() {
+  if (RANDOM.pollTimer) { clearInterval(RANDOM.pollTimer); RANDOM.pollTimer = null; }
+}
+
+async function randomPollStatus() {
+  if (!getToken()) return;
+  try {
+    const r = await fetch(`${API}/api/megle/match/status`, { headers: authHdrs() });
+    if (!r.ok) return;
+    const d = await r.json();
+
+    if (d.status === 'matched') {
+      handleMatchFound({
+        room_token:   d.room_token,
+        partner:      d.partner,
+        want_video:   d.want_video,
+        vinta_opener: d.vinta_opener,
+      });
+    } else if (d.status === 'waiting') {
+      // update live queue_size — Truman: the searching state watches back
+      const qs = document.getElementById('rQueueSize');
+      if (qs) qs.textContent = d.queue_size != null ? d.queue_size : '—';
+    } else if (d.status === 'idle') {
+      // server dropped us from queue (stale > 35s)
+      stopRandomPoll();
+      stopRandomWaitedClock();
+      randomShowPanel('r-lobby');
+      toast('Queue timed out. Tap to try again.');
+    }
+  } catch(_) {}
+}
+
+function startRandomWaitedClock() {
+  stopRandomWaitedClock();
+  const el = document.getElementById('rWaited');
+  RANDOM.waitedTimer = setInterval(() => {
+    if (!RANDOM.waitStart) return;
+    const s = Math.floor((Date.now() - RANDOM.waitStart) / 1000);
+    if (el) el.textContent = s;
+  }, 1000);
+}
+
+function stopRandomWaitedClock() {
+  if (RANDOM.waitedTimer) { clearInterval(RANDOM.waitedTimer); RANDOM.waitedTimer = null; }
+  const el = document.getElementById('rWaited');
+  if (el) el.textContent = '0';
+}
+
+/* ── MATCH FOUND ─────────────────────────────────────── */
+// Called from either poll OR SSE — de-duped by seenRooms set.
+function handleMatchFound(data) {
+  if (!data || !data.room_token) return;
+  if (RANDOM.seenRooms.has(data.room_token)) return; // already handled
+  RANDOM.seenRooms.add(data.room_token);
+
+  stopRandomPoll();
+  stopRandomWaitedClock();
+
+  RANDOM.currentRoom = data.room_token;
+  RANDOM.partner     = data.partner || {};
+
+  // Jim Carrey: spring pop jolt of delight
+  fireMatchPop();
+
+  // render the matched stage
+  renderRandomStage(data);
+  randomShowPanel('r-matched');
+
+  // switch to the random view if not already there
+  if (!document.getElementById('v-random').classList.contains('active')) {
+    switchView('random');
+  }
+
+  // check video eligibility (async, non-blocking)
+  checkRandomVideoEligibility();
+
+  // connect duet SSE for the matched room
+  randomConnectDuetSSE(data.room_token);
+
+  // inject Vintinuum's opener (she speaks first — the third presence)
+  if (data.vinta_opener) {
+    setTimeout(() => appendRandomVintaOpener(data.vinta_opener), 650);
+  }
+
+  toast('Connected. Say something.');
+}
+
+function renderRandomStage(data) {
+  const partner = data.partner || {};
+  const ava  = partner.avatar       || '◌';
+  const name = partner.display_name || 'a stranger';
+  const mood = partner.mood         || '';
+  const tags = (partner.vibe_tags || []).slice(0,3).join(', ');
+
+  document.getElementById('rPartnerAva').textContent  = ava;
+  document.getElementById('rPartnerName').textContent = name;
+  document.getElementById('rPartnerMood').textContent = mood || (tags ? `vibe: ${tags}` : '');
+
+  // vibe color tint — derive from accent or mood
+  const tint = document.getElementById('rVibeTint');
+  if (tint) {
+    const col = partner.accent_color && /^#[0-9a-f]{3,6}$/i.test(partner.accent_color)
+      ? partner.accent_color : '#8b1a2f';
+    tint.style.setProperty('--random-vibe-color', col);
+    tint.style.background = `linear-gradient(90deg, transparent, ${col}88, transparent)`;
+  }
+
+  // reset longing / video longing panels in the random stage
+  const rl = document.getElementById('rVideoLonging');
+  if (rl) { rl.style.display = 'none'; }
+
+  // clear chat transcript
+  const scroll = document.getElementById('rChatScroll');
+  if (scroll) {
+    scroll.innerHTML = '';
+    const empty = document.createElement('div');
+    empty.className = 'chat-empty';
+    empty.id = 'rChatEmpty';
+    empty.innerHTML = '<div class="chat-empty-text">The stage awaits.<br>Your thread begins here.</div>';
+    scroll.appendChild(empty);
+  }
+
+  // mirror partner ava in random longing teaser
+  const rLAva = document.getElementById('rLongingPartnerAva');
+  if (rLAva) rLAva.textContent = ava;
+
+  // headline woven
+  const rLH = document.getElementById('rLongingHeadline');
+  if (rLH) rLH.innerHTML = name !== 'a stranger'
+    ? `<em>${escHtml(name)}</em> is here. Meet them face to face.`
+    : 'They\'re here. Meet them face to face.';
+}
+
+/* ── VINTINUUM OPENER ───────────────────────────────── */
+// She speaks first. Distinctive bubble, purple-tinted, italic.
+function appendRandomVintaOpener(text) {
+  appendRandomChatMsg('vinta', text, new Date().toISOString());
+}
+
+function appendRandomChatMsg(speaker, text, at) {
+  const scroll = document.getElementById('rChatScroll');
+  if (!scroll) return;
+  // remove empty state
+  const empty = scroll.querySelector('.chat-empty');
+  if (empty) empty.remove();
+
+  const isMe   = (speaker === 'A');
+  const isVinta = (speaker === 'vinta');
+
+  const div = document.createElement('div');
+  div.className = `chat-msg ${isVinta ? 'vinta' : isMe ? 'me' : 'them'}`;
+
+  if (isVinta) {
+    // Vintinuum sig glyph
+    const sig = document.createElement('span');
+    sig.className = 'chat-vinta-sig';
+    sig.textContent = '◈';
+    div.appendChild(sig);
+  }
+
+  const bubble = document.createElement('div');
+  bubble.className = 'chat-bubble';
+
+  const textEl = document.createElement('div');
+  textEl.className = 'chat-text';
+  textEl.textContent = text;
+
+  const timeEl = document.createElement('div');
+  timeEl.className = 'chat-time';
+  timeEl.textContent = at
+    ? new Date(at).toLocaleTimeString([], { hour:'2-digit', minute:'2-digit' })
+    : '';
+
+  bubble.appendChild(textEl);
+  bubble.appendChild(timeEl);
+  div.appendChild(bubble);
+  scroll.appendChild(div);
+  scroll.scrollTop = scroll.scrollHeight;
+}
+
+function appendRandomSysEvent(msg) {
+  const scroll = document.getElementById('rChatScroll');
+  if (!scroll) return;
+  const div = document.createElement('div');
+  div.className = 'sys-event';
+  div.innerHTML = `<span class="sys-event-text">— ${escHtml(msg)} —</span>`;
+  scroll.appendChild(div);
+  scroll.scrollTop = scroll.scrollHeight;
+}
+
+/* ── DUET SSE FOR MATCHED ROOM ───────────────────────── */
+function randomConnectDuetSSE(token) {
+  if (RANDOM.duetSSE) { RANDOM.duetSSE.close(); RANDOM.duetSSE = null; }
+  const url = `${API}/api/duet/watch/${token}${getToken() ? '?token=' + encodeURIComponent(getToken()) : ''}`;
+  RANDOM.duetSSE = new EventSource(url);
+  RANDOM.duetSSE.onopen = () => {};
+  RANDOM.duetSSE.onerror = () => {
+    setTimeout(() => {
+      if (RANDOM.currentRoom === token) randomConnectDuetSSE(token);
+    }, 3000);
+  };
+  RANDOM.duetSSE.onmessage = (e) => {
+    try { handleRandomDuetEvent(JSON.parse(e.data)); } catch(_) {}
+  };
+}
+
+function handleRandomDuetEvent(ev) {
+  if (ev.type === 'utterance') {
+    appendRandomChatMsg(ev.speaker, ev.text, ev.at);
+  } else if (ev.type === 'partner_joined') {
+    appendRandomSysEvent('Your partner has entered.');
+  } else if (ev.type === 'ended') {
+    appendRandomSysEvent('The stage has closed.');
+    if (RANDOM.duetSSE) { RANDOM.duetSSE.close(); RANDOM.duetSSE = null; }
+  } else if (ev.type === 'transcript') {
+    if (ev.entries && ev.entries.length) {
+      const scroll = document.getElementById('rChatScroll');
+      if (scroll) {
+        scroll.innerHTML = '';
+        ev.entries.forEach(e => appendRandomChatMsg(e.speaker, e.text, e.at));
+      }
+    }
+  }
+}
+
+/* ── MATCH ENDED (partner hit Next or left) ─────────── */
+function handleMatchEnded(data) {
+  // Only handle if it's our current room
+  if (data.room_token && RANDOM.currentRoom && data.room_token !== RANDOM.currentRoom) return;
+
+  // Close duet SSE
+  if (RANDOM.duetSSE) { RANDOM.duetSSE.close(); RANDOM.duetSSE = null; }
+  // Close video if any
+  randomCloseVideo();
+
+  // Only show the "they moved on" message if we're currently in a random matched state
+  if (RANDOM.state === 'matched' && document.getElementById('v-random').classList.contains('active')) {
+    appendRandomSysEvent('they moved on. finding someone new…');
+    // Auto-return to searching — requeue
+    RANDOM.currentRoom = null;
+    RANDOM.partner = null;
+    RANDOM.seenRooms.clear();
+    setTimeout(() => {
+      randomShowPanel('r-searching');
+      RANDOM.waitStart = Date.now();
+      startRandomPoll();
+      startRandomWaitedClock();
+      // re-enter the queue
+      randomRequeue();
+    }, 1200);
+  }
+}
+
+async function randomRequeue() {
+  if (!getToken()) return;
+  try {
+    const r = await fetch(`${API}/api/megle/match/enter`, {
+      method: 'POST',
+      headers: authHdrs(),
+      body: JSON.stringify({})
+    });
+    const d = await r.json();
+    if (!r.ok) { randomShowPanel('r-lobby'); return; }
+    if (d.status === 'matched') {
+      handleMatchFound(d);
+    }
+    // else stays in searching + polling
+  } catch(_) {}
+}
+
+/* ── NEXT BUTTON ─────────────────────────────────────── */
+async function randomNext() {
+  if (!getToken()) return;
+  const btn = document.getElementById('rBtnNext');
+  if (btn) { btn.disabled = true; btn.textContent = '…'; }
+
+  try {
+    // Close current duet + video
+    if (RANDOM.duetSSE) { RANDOM.duetSSE.close(); RANDOM.duetSSE = null; }
+    randomCloseVideo();
+    RANDOM.currentRoom = null;
+    RANDOM.partner = null;
+    RANDOM.seenRooms.clear();
+
+    const r = await fetch(`${API}/api/megle/match/next`, {
+      method: 'POST', headers: authHdrs()
+    });
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.error || 'failed');
+
+    if (d.status === 'matched') {
+      handleMatchFound({
+        room_token:   d.room_token,
+        partner:      d.partner,
+        want_video:   d.want_video,
+        vinta_opener: d.vinta_opener,
+      });
+    } else {
+      // waiting
+      randomShowPanel('r-searching');
+      RANDOM.waitStart = Date.now();
+      startRandomPoll();
+      startRandomWaitedClock();
+    }
+  } catch(e) {
+    toast('Error: ' + e.message);
+    randomShowPanel('r-lobby');
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = 'NEXT →'; }
+  }
+}
+
+/* ── LEAVE (stop) ───────────────────────────────────── */
+async function randomLeave() {
+  stopRandomPoll();
+  stopRandomWaitedClock();
+
+  if (RANDOM.duetSSE) { RANDOM.duetSSE.close(); RANDOM.duetSSE = null; }
+  randomCloseVideo();
+
+  RANDOM.currentRoom = null;
+  RANDOM.partner = null;
+  RANDOM.seenRooms.clear();
+
+  try {
+    await fetch(`${API}/api/megle/match/leave`, {
+      method: 'POST', headers: authHdrs()
+    });
+  } catch(_) {}
+
+  randomShowPanel('r-lobby');
+  // Morrison open loop — something passed through
+  if (RANDOM.state !== 'lobby') {
+    toast('something passed between you. i noticed. — V');
+  }
+}
+
+/* ── SEND MESSAGE IN RANDOM STAGE ───────────────────── */
+async function randomSendMessage() {
+  if (!RANDOM.currentRoom) { toast('No active connection.'); return; }
+  const input = document.getElementById('rChatInput');
+  const text  = input.value.trim();
+  if (!text) return;
+  try {
+    const r = await fetch(`${API}/api/duet/${RANDOM.currentRoom}/speak`, {
+      method: 'POST',
+      headers: authHdrs(),
+      body: JSON.stringify({ text, speaker: 'A' })
+    });
+    if (!r.ok) {
+      const d = await r.json();
+      throw new Error(d.error || 'failed');
+    }
+    input.value = '';
+    input.style.height = 'auto';
+  } catch(e) { toast('Error: ' + e.message); }
+}
+
+/* ── RANDOM VIDEO ───────────────────────────────────── */
+async function checkRandomVideoEligibility() {
+  if (!getToken()) return;
+  try {
+    const r = await fetch(`${API}/api/megle/profile/me`, { headers: authHdrs() });
+    if (!r.ok) return;
+    const d = await r.json();
+    RANDOM.videoEligible = !!(d.profile && d.profile.video_eligible);
+    const vBtn = document.getElementById('rBtnVideo');
+    if (vBtn) vBtn.style.display = RANDOM.videoEligible ? 'flex' : 'none';
+
+    if (!RANDOM.videoEligible) {
+      // show longing in the random stage after a delay
+      setTimeout(() => {
+        const rl = document.getElementById('rVideoLonging');
+        if (rl && RANDOM.state === 'matched') {
+          rl.style.display = '';
+          rl.classList.add('visible');
+        }
+      }, 4000);
+    }
+  } catch(_) {}
+}
+
+async function randomGoVideo() {
+  if (!RANDOM.currentRoom) return;
+  if (!RANDOM.videoEligible) {
+    const rl = document.getElementById('rVideoLonging');
+    if (rl) { rl.style.display = ''; rl.classList.add('visible'); }
+    return;
+  }
+  // Same flow as main stage goVideo() but uses RANDOM.currentRoom
+  try {
+    const turnR = await fetch(`${API}/api/megle/turn-credentials`, { headers: authHdrs() });
+    const turnData = turnR.ok ? await turnR.json() : { iceServers: [] };
+    const iceServers = turnData.iceServers || [];
+    const startR = await fetch(`${API}/api/megle/video/${RANDOM.currentRoom}/start`, {
+      method: 'POST', headers: authHdrs()
+    });
+    if (!startR.ok) {
+      const sd = await startR.json();
+      if (startR.status === 402) {
+        const rl = document.getElementById('rVideoLonging');
+        if (rl) { rl.style.display = ''; rl.classList.add('visible'); }
+        return;
+      }
+      throw new Error(sd.error || 'start failed');
+    }
+    // initiator WebRTC in random context
+    RANDOM.pc = new RTCPeerConnection({ iceServers });
+    RANDOM.localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+    RANDOM.localStream.getTracks().forEach(t => RANDOM.pc.addTrack(t, RANDOM.localStream));
+    RANDOM.pc.ontrack = (e) => {
+      const name = (RANDOM.partner && RANDOM.partner.display_name) || 'Partner';
+      RANDOM.dirrmHandle = dirrmLaunch.open({
+        type:'live', title:`Live: ${name}`, mode:'theater', autoplay:true, stream:e.streams[0]
+      });
+    };
+    RANDOM.pc.onicecandidate = async (e) => {
+      if (!e.candidate) return;
+      await fetch(`${API}/api/megle/video/${RANDOM.currentRoom}/signal`, {
+        method:'POST', headers:authHdrs(),
+        body: JSON.stringify({ type:'ice', candidate:{
+          candidate:e.candidate.candidate,
+          sdpMid:e.candidate.sdpMid,
+          sdpMLineIndex:e.candidate.sdpMLineIndex
+        }})
+      });
+    };
+    const offer = await RANDOM.pc.createOffer();
+    await RANDOM.pc.setLocalDescription(offer);
+    await fetch(`${API}/api/megle/video/${RANDOM.currentRoom}/signal`, {
+      method:'POST', headers:authHdrs(),
+      body: JSON.stringify({ type:'offer', sdp:offer })
+    });
+    toast('Video connecting…');
+  } catch(e) { toast('Video error: ' + e.message); }
+}
+
+function randomCloseVideo() {
+  if (RANDOM.pc)          { RANDOM.pc.close(); RANDOM.pc = null; }
+  if (RANDOM.localStream) { RANDOM.localStream.getTracks().forEach(t=>t.stop()); RANDOM.localStream = null; }
+  if (RANDOM.dirrmHandle) { try { RANDOM.dirrmHandle.close(); } catch(_) {} RANDOM.dirrmHandle = null; }
+}
+
+function dismissRVideoLonging() {
+  const rl = document.getElementById('rVideoLonging');
+  if (rl) {
+    rl.style.transition = 'opacity 0.22s ease, transform 0.22s var(--ease-sheet)';
+    rl.style.opacity    = '0';
+    rl.style.transform  = 'translateY(8px)';
+    setTimeout(() => {
+      rl.classList.remove('visible');
+      rl.style.display   = 'none';
+      rl.style.opacity   = '';
+      rl.style.transform = '';
+    }, 240);
+  }
+  const inp = document.getElementById('rChatInput');
+  if (inp) inp.focus();
+}
+
+/* ── MATCH POP — Jim Carrey spring reveal ───────────── */
+function fireMatchPop() {
+  const pop = document.getElementById('rMatchPop');
+  if (!pop) return;
+  pop.removeAttribute('aria-hidden');
+  pop.classList.add('flash');
+  setTimeout(() => {
+    pop.classList.remove('flash');
+    pop.setAttribute('aria-hidden', 'true');
+  }, 1100);
+}
+
+/* ── RANDOM CHAT INPUT HELPERS ──────────────────────── */
+(function() {
+  // Wait for DOM ready to attach listeners
+  function attachRandomInput() {
+    const input = document.getElementById('rChatInput');
+    if (!input) return;
+    input.addEventListener('input', function() {
+      this.style.height = 'auto';
+      this.style.height = Math.min(this.scrollHeight, 120) + 'px';
+    });
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); randomSendMessage(); }
+    });
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', attachRandomInput);
+  } else {
+    attachRandomInput();
+  }
+})();
 
 /* ════════════════════════════════════════════════════
    INIT
