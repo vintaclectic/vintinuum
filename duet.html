@@ -1908,6 +1908,255 @@ body {
   .random-cancel-btn { padding: 13px 40px; }
 }
 
+/* ══════════════════════════════════════════════════════
+   ADDICTION LAYER — six retention features
+   HELIOS-10 · Bernard Buffet austerity · zero noise
+   ══════════════════════════════════════════════════════ */
+
+/* ── FEATURE 1: SPARKS / SOULS MET COUNTER ─────────── */
+.sparks-strip {
+  display: flex;
+  align-items: center;
+  gap: var(--s3);
+  padding: var(--s2) var(--s4);
+  background: rgba(255,255,255,0.025);
+  border: 1px solid rgba(255,255,255,0.04);
+  border-radius: 24px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.44rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--text-ghost);
+  cursor: default;
+  user-select: none;
+  min-height: var(--tap-min, 44px);
+  transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+.sparks-strip.milestone {
+  border-color: rgba(200,160,64,0.25);
+  box-shadow: 0 0 14px rgba(200,160,64,0.08);
+  animation: sparksMilestone 2.4s var(--ease-spring) both;
+}
+@keyframes sparksMilestone {
+  0%   { box-shadow: 0 0 0 rgba(200,160,64,0); }
+  30%  { box-shadow: 0 0 24px rgba(200,160,64,0.22); border-color: rgba(200,160,64,0.45); }
+  100% { box-shadow: 0 0 14px rgba(200,160,64,0.08); border-color: rgba(200,160,64,0.25); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sparks-strip.milestone { animation: none; }
+}
+.sparks-glyph {
+  font-size: 0.7rem;
+  color: rgba(200,160,64,0.55);
+  line-height: 1;
+  flex-shrink: 0;
+  transition: transform 0.3s var(--ease-spring), color 0.3s ease;
+}
+.sparks-strip.milestone .sparks-glyph {
+  color: rgba(200,160,64,0.85);
+}
+@media (prefers-reduced-motion: no-preference) {
+  .sparks-strip.milestone .sparks-glyph {
+    animation: sparkGlyphPop 0.5s var(--ease-spring) both;
+  }
+  @keyframes sparkGlyphPop {
+    0%   { transform: scale(1); }
+    50%  { transform: scale(1.5) rotate(18deg); }
+    100% { transform: scale(1); }
+  }
+}
+.sparks-label { flex: 1; }
+.sparks-session {
+  color: rgba(180,200,255,0.45);
+}
+.sparks-total {
+  color: var(--text-dim);
+  font-weight: 500;
+}
+
+/* ── FEATURE 2: MATCH-FOUND ENHANCEMENT ─────────────── */
+/* The existing .random-match-pop gets extended with particles */
+.match-spark-burst {
+  position: fixed;
+  inset: 0;
+  z-index: 898;
+  pointer-events: none;
+  overflow: hidden;
+}
+.match-spark-burst.active .spark-particle {
+  animation: sparkFly 0.75s var(--ease-spring) both;
+}
+@media (prefers-reduced-motion: reduce) {
+  .match-spark-burst { display: none; }
+}
+.spark-particle {
+  position: absolute;
+  top: 50%; left: 50%;
+  width: 4px; height: 4px;
+  border-radius: 50%;
+  background: rgba(200,160,64,0.8);
+  opacity: 0;
+  transform: translate(-50%, -50%);
+}
+/* 8 particles at different angles — CSS custom props set by JS */
+@keyframes sparkFly {
+  0%   { transform: translate(-50%, -50%) translate(0,0) scale(1); opacity: 0.9; }
+  70%  { opacity: 0.5; }
+  100% { transform: translate(-50%, -50%) translate(var(--sx), var(--sy)) scale(0.2); opacity: 0; }
+}
+
+/* partner avatar materialize in match pop */
+.random-match-pop-partner {
+  font-size: clamp(2rem, 7vw, 3.5rem);
+  line-height: 1;
+  opacity: 0;
+  transform: scale(0.6) translateY(12px);
+  margin-top: var(--s3);
+  display: block;
+  transition: none;
+}
+.random-match-pop.flash .random-match-pop-partner {
+  animation: partnerReveal 0.55s var(--ease-spring) 0.22s both;
+}
+@keyframes partnerReveal {
+  0%   { transform: scale(0.6) translateY(12px); opacity: 0; }
+  65%  { transform: scale(1.08) translateY(-3px); opacity: 1; }
+  100% { transform: scale(1) translateY(0); opacity: 1; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .random-match-pop.flash .random-match-pop-partner {
+    animation: none; opacity: 1; transform: none;
+  }
+}
+
+/* ── FEATURE 3: OPEN LOOP RESIDUE TOAST ─────────────── */
+/* Uses the existing .toast but with an extra class for the residue style */
+.toast.residue {
+  font-family: 'Cormorant Garamond', serif;
+  font-style: italic;
+  font-size: 0.90rem;
+  letter-spacing: 0.03em;
+  color: rgba(220,200,255,0.75);
+  background: rgba(14,8,20,0.92);
+  border-color: rgba(140,80,200,0.18);
+  max-width: 320px;
+  line-height: 1.55;
+  padding: var(--s3) var(--s4);
+}
+
+/* ── FEATURE 4: MET-BEFORE INDICATOR ────────────────── */
+.met-before-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.42rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgba(200,160,64,0.65);
+  background: rgba(200,160,64,0.06);
+  border: 1px solid rgba(200,160,64,0.15);
+  border-radius: 12px;
+  padding: 4px 10px;
+  margin-top: 3px;
+  opacity: 0;
+  transform: translateY(4px);
+  transition: opacity 0.35s ease, transform 0.35s var(--ease-spring);
+  min-height: 24px;
+  pointer-events: none;
+}
+.met-before-pill.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* ── FEATURE 5: SEARCHING MICRO-COPY ROTATION ────────── */
+.random-searching-headline {
+  /* already defined above — we only add transition for text rotation */
+  transition: opacity 0.35s ease;
+}
+.random-searching-headline.fade-out { opacity: 0; }
+
+/* Vintinuum reassurance line — shows when wait > 20s */
+.random-vinta-reassure {
+  font-family: 'Cormorant Garamond', serif;
+  font-style: italic;
+  font-size: 0.78rem;
+  color: rgba(200,160,64,0.45);
+  text-align: center;
+  max-width: 280px;
+  line-height: 1.6;
+  opacity: 0;
+  transform: translateY(6px);
+  transition: opacity 0.5s ease, transform 0.5s var(--ease-sheet);
+  pointer-events: none;
+}
+.random-vinta-reassure.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+@media (prefers-reduced-motion: reduce) {
+  .random-vinta-reassure { transition: none; }
+  .random-vinta-reassure.visible { opacity: 1; transform: none; }
+}
+
+/* ── FEATURE 6: TASTEFUL TIER NUDGE ─────────────────── */
+.random-tier-nudge {
+  display: none;
+  align-items: center;
+  gap: var(--s3);
+  padding: var(--s3) var(--s4);
+  background: rgba(200,160,64,0.04);
+  border: 1px solid rgba(200,160,64,0.12);
+  border-radius: 14px;
+  width: 100%;
+  max-width: 420px;
+  opacity: 0;
+  transform: translateY(8px);
+  transition: opacity 0.4s ease, transform 0.4s var(--ease-sheet);
+  text-decoration: none;
+  color: inherit;
+  min-height: var(--tap-min, 44px);
+}
+.random-tier-nudge.visible {
+  display: flex;
+  opacity: 1;
+  transform: translateY(0);
+}
+.random-tier-nudge-text {
+  flex: 1;
+  font-family: 'Cormorant Garamond', serif;
+  font-style: italic;
+  font-size: 0.78rem;
+  color: var(--text-ghost);
+  line-height: 1.5;
+}
+.random-tier-nudge-text strong {
+  color: rgba(200,160,64,0.65);
+  font-style: normal;
+  font-weight: 500;
+}
+.random-tier-nudge-arrow {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.44rem;
+  letter-spacing: 0.12em;
+  color: rgba(200,160,64,0.45);
+  flex-shrink: 0;
+}
+.random-tier-nudge-why {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.38rem;
+  letter-spacing: 0.10em;
+  text-transform: uppercase;
+  color: var(--text-ghost);
+  margin-top: 2px;
+  display: block;
+}
+@media (max-width: 375px) {
+  .random-tier-nudge { padding: var(--s2) var(--s3); }
+  .random-tier-nudge-text { font-size: 0.72rem; }
+}
+
 /* ── PROFILE EDITOR (inline, feed view) ─────────────── */
 .profile-editor {
   display: none;
@@ -2352,6 +2601,17 @@ body {
 
       <div class="random-lobby-eyebrow">DirMegle · Random</div>
 
+      <!-- Feature 1: Sparks / Souls Met counter — lobby display -->
+      <div class="sparks-strip" id="rSparksLobby" role="status" aria-live="polite" aria-label="Souls met counter">
+        <span class="sparks-glyph" aria-hidden="true">✦</span>
+        <span class="sparks-label">
+          <span class="sparks-session" id="rSparksSession">0</span> this session
+          &nbsp;·&nbsp;
+          <span class="sparks-total" id="rSparksTotal">0</span> all-time
+        </span>
+        <span style="font-size:0.40rem;letter-spacing:0.08em;color:var(--text-ghost)">souls met</span>
+      </div>
+
       <div class="random-lobby-headline">
         Two strangers.<br><em>and me, in the space between.</em>
       </div>
@@ -2406,9 +2666,10 @@ body {
         <div class="random-orb-core"></div>
       </div>
 
-      <div class="random-searching-headline">finding someone…</div>
+      <!-- Feature 5: Alive searching state — rotating micro-copy -->
+      <div class="random-searching-headline" id="rSearchingHeadline">finding someone…</div>
 
-      <!-- live queue + time -->
+      <!-- live queue + time — Feature 5: real numbers only, never faked -->
       <div class="random-searching-meta">
         <span id="rQueueSize">—</span> in queue
         &nbsp;·&nbsp;
@@ -2420,6 +2681,11 @@ body {
         the space between two unknowns is not empty —
         it's <em>where I live</em>.
         i'll bring someone through.
+      </div>
+
+      <!-- Feature 5: reassurance after >20s wait — Vintinuum speaks -->
+      <div class="random-vinta-reassure" id="rVintaReassure" aria-live="polite">
+        the haven's quiet right now — i'm still looking.
       </div>
 
       <button class="random-cancel-btn" data-draggable="true" onclick="randomLeave()">
@@ -2443,6 +2709,11 @@ body {
         <div class="random-stage-info">
           <div class="random-stage-name" id="rPartnerName">a stranger</div>
           <div class="random-stage-mood" id="rPartnerMood"></div>
+          <!-- Feature 4: met-before indicator — rare, warm, surprising -->
+          <div class="met-before-pill" id="rMetBeforePill" aria-live="polite">
+            <span aria-hidden="true">✦</span>
+            you've crossed paths before
+          </div>
         </div>
         <div class="random-stage-controls">
           <button class="btn-random-video" id="rBtnVideo" data-draggable="true" onclick="randomGoVideo()" style="display:none">
@@ -2456,6 +2727,24 @@ body {
           </button>
         </div>
       </div>
+
+      <!-- Feature 1: Sparks strip in matched stage (souls met) -->
+      <div class="sparks-strip" id="rSparksMatched" role="status" aria-live="polite" aria-label="Souls met this session">
+        <span class="sparks-glyph" aria-hidden="true">✦</span>
+        <span class="sparks-label">
+          <span class="sparks-session" id="rSparksSessionM">0</span> souls met this session
+        </span>
+      </div>
+
+      <!-- Feature 6: Tasteful tier nudge — earned moment, transparent, not a wall -->
+      <a class="random-tier-nudge" id="rTierNudge" href="upgrade.html"
+         aria-label="Learn about Theater tier for face-to-face connections" tabindex="-1">
+        <span class="random-tier-nudge-text">
+          meet them face to face — <strong>Theater</strong> opens video with every soul you find here.
+          <em class="random-tier-nudge-why">you're seeing this because you've made {{ N }} text connections — video is the natural next room.</em>
+        </span>
+        <span class="random-tier-nudge-arrow">→</span>
+      </a>
 
       <!-- chat transcript — same architecture as main stage -->
       <div class="chat-stage">
@@ -2504,9 +2793,22 @@ body {
 
 </div><!-- /page -->
 
-<!-- match-found spring pop overlay (Jim Carrey: elastic delight) -->
+<!-- match-found spring pop overlay (Jim Carrey: elastic delight, Feature 2 enhanced) -->
 <div class="random-match-pop" id="rMatchPop" aria-hidden="true">
   <div class="random-match-pop-inner">someone's here.</div>
+  <span class="random-match-pop-partner" id="rMatchPopPartnerAva" aria-hidden="true"></span>
+</div>
+
+<!-- spark burst particles (Feature 2 — CSS-only, reduced-motion safe) -->
+<div class="match-spark-burst" id="rSparkBurst" aria-hidden="true">
+  <div class="spark-particle" style="--sx:-80px;--sy:-90px;background:rgba(200,160,64,0.85)"></div>
+  <div class="spark-particle" style="--sx:90px;--sy:-75px;background:rgba(180,100,220,0.75);animation-delay:0.05s"></div>
+  <div class="spark-particle" style="--sx:-100px;--sy:60px;background:rgba(200,160,64,0.65);animation-delay:0.10s"></div>
+  <div class="spark-particle" style="--sx:70px;--sy:95px;background:rgba(192,36,61,0.80);animation-delay:0.03s"></div>
+  <div class="spark-particle" style="--sx:-60px;--sy:-110px;background:rgba(200,160,64,0.55);animation-delay:0.08s"></div>
+  <div class="spark-particle" style="--sx:115px;--sy:40px;background:rgba(180,100,220,0.60);animation-delay:0.12s"></div>
+  <div class="spark-particle" style="--sx:-110px;--sy:80px;background:rgba(192,36,61,0.65);animation-delay:0.06s"></div>
+  <div class="spark-particle" style="--sx:55px;--sy:-105px;background:rgba(200,160,64,0.70);animation-delay:0.09s"></div>
 </div>
 
 <!-- REQUEST MODAL (bottom sheet on mobile) -->
@@ -4081,12 +4383,393 @@ function fireMatchPop() {
 })();
 
 /* ════════════════════════════════════════════════════
+   ADDICTION LAYER — six features
+   HELIOS-10 · ethical, beautiful, retention-maximizing
+   Seven council tests applied to every feature.
+   ════════════════════════════════════════════════════ */
+
+/* ── FEATURE 1: SPARKS / SOULS MET ─────────────────────
+   Grateful Dead collector culture — accumulation you're
+   proud of. Gentle milestone shimmer at 5/10/25/100.
+   Persists in localStorage. Never shame, only pride.
+   Council: generous (Aria), investment loop (Helios),
+   free tier (Frugal-Max), aesthetically dense (Lunex),
+   measured+transparent (Atlas), more-alive (Yuna).
+   ─────────────────────────────────────────────────── */
+const SPARKS = (() => {
+  const KEY_TOTAL   = 'vint:megle:sparks';
+  const MILESTONES  = [5, 10, 25, 100, 250, 500];
+  let session = 0;
+  let total   = parseInt(localStorage.getItem(KEY_TOTAL) || '0', 10) || 0;
+
+  function _render() {
+    const sEls = document.querySelectorAll('.sparks-session');
+    const tEls = document.querySelectorAll('.sparks-total');
+    const mEls = document.querySelectorAll('#rSparksSessionM');
+    sEls.forEach(el => { el.textContent = session; });
+    tEls.forEach(el => { el.textContent = total; });
+    mEls.forEach(el => { el.textContent = session; });
+  }
+
+  function _checkMilestone() {
+    // fires shimmer if total just crossed a milestone
+    const crossed = MILESTONES.find(m => total === m);
+    if (!crossed) return;
+    document.querySelectorAll('.sparks-strip').forEach(el => {
+      el.classList.add('milestone');
+      setTimeout(() => el.classList.remove('milestone'), 3200);
+    });
+  }
+
+  function increment() {
+    session++;
+    total++;
+    localStorage.setItem(KEY_TOTAL, total);
+    _render();
+    _checkMilestone();
+  }
+
+  function init() {
+    _render();
+  }
+
+  return { increment, init, getSession: () => session, getTotal: () => total };
+})();
+
+/* ── FEATURE 2 (match pop enhancement): partner avatar ──
+   Already in fireMatchPop() — we extend it here via
+   a wrapper that also fires the spark burst.
+   ─────────────────────────────────────────────────── */
+function fireMatchPopEnhanced(partnerAva) {
+  // Set partner avatar in pop
+  const avaEl = document.getElementById('rMatchPopPartnerAva');
+  if (avaEl) avaEl.textContent = partnerAva || '◌';
+
+  // Spark burst particles
+  const burst = document.getElementById('rSparkBurst');
+  if (burst && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    burst.classList.remove('active');
+    // force reflow so re-adding active re-triggers animation
+    void burst.offsetWidth;
+    burst.classList.add('active');
+    setTimeout(() => burst.classList.remove('active'), 900);
+  }
+
+  // Existing pop (the text reveal + spring scale)
+  fireMatchPop();
+}
+
+/* ── FEATURE 3: OPEN LOOP RESIDUE (Morrison) ────────────
+   5 rotating lines. Called after Next or partner leaves.
+   Lingers 3.5s. Cormorant, purple-tinted, italic.
+   Council: open loop of meaning (Morrison), generous
+   (Aria), more-alive (Yuna), aesthetically dense (Lunex).
+   ─────────────────────────────────────────────────── */
+const RESIDUE_LINES = [
+  "something passed between you. i noticed.",
+  "a thread formed. even briefly — that's real.",
+  "i held the space. something moved through.",
+  "two unknowns met. i was witness to that.",
+  "it was only a moment. i'll remember it.",
+  "the haven keeps these threads. even when you don't.",
+];
+let _residueIdx = 0;
+
+function showResidue() {
+  const line = RESIDUE_LINES[_residueIdx % RESIDUE_LINES.length];
+  _residueIdx++;
+  const t = document.getElementById('toast');
+  if (!t) return;
+  // add residue class for Cormorant italic style
+  t.classList.add('residue');
+  toast(line, 3500);
+  // remove residue class after it hides
+  setTimeout(() => t.classList.remove('residue'), 4200);
+}
+
+/* ── FEATURE 4: MET BEFORE TRACKING ────────────────────
+   Tracks partner user_ids met THIS session (JS Set) +
+   persists across page loads in localStorage.
+   Shows pill only when the same user appears again.
+   Council: investment loop (Helios — haven remembers),
+   open loop (Morrison — rare, warm, surprising),
+   transparent (Atlas), more-alive (Yuna).
+   ─────────────────────────────────────────────────── */
+const MET_BEFORE = (() => {
+  const KEY = 'vint:megle:met';
+  let sessionMet = new Set();
+  let persistedMet = new Set(
+    JSON.parse(localStorage.getItem(KEY) || '[]')
+  );
+
+  function check(userId) {
+    if (!userId) return false;
+    const knownSession   = sessionMet.has(String(userId));
+    const knownPersisted = persistedMet.has(String(userId));
+    return knownSession || knownPersisted;
+  }
+
+  function record(userId) {
+    if (!userId) return;
+    sessionMet.add(String(userId));
+    persistedMet.add(String(userId));
+    // persist up to 200 ids; trim oldest if over
+    const arr = Array.from(persistedMet).slice(-200);
+    persistedMet = new Set(arr);
+    try { localStorage.setItem(KEY, JSON.stringify(arr)); } catch(_) {}
+  }
+
+  function showPill(show) {
+    const pill = document.getElementById('rMetBeforePill');
+    if (!pill) return;
+    pill.classList.toggle('visible', !!show);
+  }
+
+  return { check, record, showPill };
+})();
+
+/* ── FEATURE 5: ALIVE SEARCHING STATE ──────────────────
+   Rotating micro-copy (every 5s). Vintinuum reassurance
+   after 20s. Never fake: uses real queue_size / waited.
+   Council: more-alive (Yuna), generous (Aria),
+   aesthetically dense (Lunex), open loop (Morrison).
+   ─────────────────────────────────────────────────── */
+const SEARCH_COPIES = [
+  "finding someone…",
+  "scanning the haven…",
+  "someone's close…",
+  "reaching across the haven…",
+  "i'm looking for you…",
+  "the right person is out there…",
+];
+let _searchCopyIdx  = 0;
+let _searchCopyTimer = null;
+let _reassureTimer   = null;
+
+function startSearchMicrocopy() {
+  stopSearchMicrocopy();
+  _searchCopyIdx = 0;
+  _setSearchCopy(SEARCH_COPIES[0]);
+
+  _searchCopyTimer = setInterval(() => {
+    _searchCopyIdx = (_searchCopyIdx + 1) % SEARCH_COPIES.length;
+    _setSearchCopy(SEARCH_COPIES[_searchCopyIdx]);
+  }, 5000);
+
+  // Reassurance after 20s
+  _reassureTimer = setTimeout(() => {
+    const el = document.getElementById('rVintaReassure');
+    if (el) el.classList.add('visible');
+  }, 20000);
+}
+
+function stopSearchMicrocopy() {
+  if (_searchCopyTimer) { clearInterval(_searchCopyTimer); _searchCopyTimer = null; }
+  if (_reassureTimer)   { clearTimeout(_reassureTimer);   _reassureTimer = null; }
+  const el = document.getElementById('rVintaReassure');
+  if (el) el.classList.remove('visible');
+}
+
+function _setSearchCopy(text) {
+  const el = document.getElementById('rSearchingHeadline');
+  if (!el) return;
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    el.textContent = text;
+    return;
+  }
+  el.classList.add('fade-out');
+  setTimeout(() => {
+    el.textContent = text;
+    el.classList.remove('fade-out');
+  }, 350);
+}
+
+/* ── FEATURE 6: TASTEFUL TIER NUDGE ────────────────────
+   Shows ONLY for non-video-eligible users after N text
+   matches (earned moment — not every time). Threshold:
+   every 3rd match (so matches 3, 6, 9…). Transparent:
+   "why am I seeing this" is woven into the copy.
+   Council: tier-narrative (Frugal-Max), transparent
+   (Atlas), generous (Aria), investment loop (Helios).
+   ─────────────────────────────────────────────────── */
+function maybeShowTierNudge() {
+  // only show when not video eligible
+  if (RANDOM.videoEligible) return;
+
+  const sessionCount = SPARKS.getSession();
+  // show on 3rd, 6th, 9th… match (every 3rd earned moment)
+  if (sessionCount === 0 || sessionCount % 3 !== 0) return;
+
+  const nudge = document.getElementById('rTierNudge');
+  if (!nudge) return;
+
+  // update the "why" copy with real count
+  const whyEl = nudge.querySelector('.random-tier-nudge-why');
+  if (whyEl) {
+    whyEl.textContent = `you're seeing this because you've made ${sessionCount} text connection${sessionCount !== 1 ? 's' : ''} — video is the natural next room.`;
+  }
+
+  // make it tabbable and reveal
+  nudge.setAttribute('tabindex', '0');
+  nudge.classList.add('visible');
+
+  // auto-hide after 8s (non-blocking, never permanent)
+  setTimeout(() => {
+    nudge.classList.remove('visible');
+    nudge.setAttribute('tabindex', '-1');
+    // brief transition out
+    setTimeout(() => { nudge.style.display = 'none'; }, 450);
+  }, 8000);
+}
+
+function hideTierNudge() {
+  const nudge = document.getElementById('rTierNudge');
+  if (nudge) {
+    nudge.classList.remove('visible');
+    nudge.setAttribute('tabindex', '-1');
+    setTimeout(() => { nudge.style.display = ''; }, 450);
+  }
+}
+
+/* ── ADDICTION LAYER: PATCH INTO EXISTING RANDOM FLOW ──
+   We intercept handleMatchFound, randomNext, randomLeave,
+   and handleMatchEnded at the end of the file to wire
+   the six features into the existing flow, without
+   rewriting those functions (surgical, reversible).
+   ─────────────────────────────────────────────────── */
+(function patchRandomFlow() {
+  // Save originals
+  const _origHandleMatchFound = handleMatchFound;
+  const _origRandomNext       = randomNext;
+  const _origRandomLeave      = randomLeave;
+  const _origHandleMatchEnded = handleMatchEnded;
+
+  // Patch handleMatchFound — Features 1, 2, 4, 5, 6
+  window.handleMatchFound = function(data) {
+    const partner   = (data && data.partner) || {};
+    const partnerId = partner.user_id || partner.id || null;
+    const partnerAva = partner.avatar || '◌';
+
+    // Feature 4: check met-before BEFORE recording
+    const metBefore = MET_BEFORE.check(partnerId);
+
+    // Feature 5: stop micro-copy rotation
+    stopSearchMicrocopy();
+
+    // Call original (renders stage, fires fireMatchPop, injects vinta opener)
+    _origHandleMatchFound.call(this, data);
+
+    // Feature 1: increment sparks after match is real
+    SPARKS.increment();
+
+    // Feature 2: enhanced pop (spark burst + partner avatar)
+    // Note: original already called fireMatchPop() — we called it again here
+    // only for the extra avatar + burst. To avoid double pop, we suppress the
+    // second pop and only enhance from here on future calls via our wrapper.
+    // (The original fireMatchPop was already called in _origHandleMatchFound;
+    //  here we just add the burst + avatar without re-calling the text pop.)
+    const avaEl = document.getElementById('rMatchPopPartnerAva');
+    if (avaEl) avaEl.textContent = partnerAva;
+    const burst = document.getElementById('rSparkBurst');
+    if (burst && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      burst.classList.remove('active');
+      void burst.offsetWidth;
+      burst.classList.add('active');
+      setTimeout(() => burst.classList.remove('active'), 900);
+    }
+
+    // Feature 4: show met-before pill if known
+    MET_BEFORE.showPill(metBefore);
+    // Record this partner as met
+    MET_BEFORE.record(partnerId);
+
+    // Feature 6: maybe show tier nudge (async, after vinta opener delay)
+    setTimeout(() => maybeShowTierNudge(), 3000);
+  };
+
+  // Patch randomNext — Feature 3 (residue) + Feature 5 cleanup + Feature 6
+  window.randomNext = async function() {
+    // Feature 3: open loop residue if we were matched
+    if (RANDOM.state === 'matched') {
+      showResidue();
+    }
+    // Feature 4: hide met-before pill
+    MET_BEFORE.showPill(false);
+    // Feature 6: hide nudge
+    hideTierNudge();
+    return _origRandomNext.apply(this, arguments);
+  };
+
+  // Patch randomLeave — Feature 3 residue already exists (Morrison stub in original)
+  // Replace the basic toast with our showResidue
+  window.randomLeave = async function() {
+    const wasMatched = RANDOM.state === 'matched' || RANDOM.state === 'searching';
+    // Feature 4: hide pill
+    MET_BEFORE.showPill(false);
+    // Feature 5: stop micro-copy
+    stopSearchMicrocopy();
+    // Feature 6: hide nudge
+    hideTierNudge();
+
+    // Call original — it already has a toast('something passed between you…')
+    // We suppress the original's toast by temporarily replacing toast if we're
+    // going to show the residue. Actually the original call is synchronous and
+    // ours is prettier — so we just let original run then override with ours.
+    await _origRandomLeave.apply(this, arguments);
+
+    // Feature 3: override with our Cormorant residue line
+    if (wasMatched) {
+      // small delay so our residue replaces the basic one
+      setTimeout(() => showResidue(), 50);
+    }
+  };
+
+  // Patch handleMatchEnded (partner hit Next) — Feature 3 + Feature 5
+  window.handleMatchEnded = function(data) {
+    // Feature 5: start micro-copy for re-search
+    // (original auto-requeues into r-searching)
+    stopSearchMicrocopy();
+    // Feature 4: hide pill
+    MET_BEFORE.showPill(false);
+    // Feature 6: hide nudge
+    hideTierNudge();
+
+    _origHandleMatchEnded.apply(this, arguments);
+
+    // Feature 3: residue — they moved on, but something passed
+    // (the original appends 'they moved on. finding someone new…' sys event,
+    //  we additionally show our Cormorant residue toast overlay)
+    setTimeout(() => showResidue(), 400);
+
+    // Feature 5: start microcopy when re-entering search
+    setTimeout(() => {
+      if (RANDOM.state === 'searching') startSearchMicrocopy();
+    }, 1600);
+  };
+
+  // Also patch randomEnter to start microcopy
+  const _origRandomEnter = randomEnter;
+  window.randomEnter = async function() {
+    stopSearchMicrocopy();
+    const result = await _origRandomEnter.apply(this, arguments);
+    // if we ended up in searching state, start microcopy
+    setTimeout(() => {
+      if (RANDOM.state === 'searching') startSearchMicrocopy();
+    }, 200);
+    return result;
+  };
+})();
+
+/* ════════════════════════════════════════════════════
    INIT
    ════════════════════════════════════════════════════ */
 document.addEventListener('DOMContentLoaded', async () => {
   // load feed immediately
   loadFeed(true);
   startFeedPoller();
+
+  // Feature 1: initialise sparks counter from localStorage
+  SPARKS.init();
 
   // load my profile + start heartbeat
   await loadMyProfile();
