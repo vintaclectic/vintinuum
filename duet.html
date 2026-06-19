@@ -7,6 +7,12 @@
 <title>VINTINUUM — DirMegle Haven</title>
 <meta name="theme-color" content="#040810">
 <link rel="icon" type="image/svg+xml" href="branding/vintinuum/favicon/favicon.svg">
+<!-- App auth/identity: provides window.API_BASE + window.SOUL_AUTH (token, bond,
+     whoami, signOut). Without these the page was inert — it read a token key that
+     is never written. Load BEFORE the page's inline script. -->
+<script src="body/api_base.js?v=v20260618-megle"></script>
+<script src="body/identity.js?v=v20260618-megle"></script>
+<script src="body/bond_door.js?v=v20260618-megle"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400;1,500&family=Inter:wght@300;400;500&family=JetBrains+Mono:wght@300;400;500&display=swap" rel="stylesheet">
@@ -2851,15 +2857,28 @@ body {
 
 /* ── CONSTANTS ──────────────────────────────────────── */
 const API = (function() {
+  // body/api_base.js sets __VINTINUUM_API_BASE (canonical) + VINTINUUM_API (alias).
   try {
-    if (window.API_BASE) return window.API_BASE;
+    if (window.__VINTINUUM_API_BASE) return window.__VINTINUUM_API_BASE;
+    if (window.VINTINUUM_API)        return window.VINTINUUM_API;
+    if (window.API_BASE)             return window.API_BASE;
   } catch(_) {}
   return window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
     ? 'http://localhost:8767'
     : 'https://api.vintaclectic.com';
 })();
 
-function getToken()  { return localStorage.getItem('vint_token') || ''; }
+// Token: the app stores the access token under 'soul_auth_token' (canonical,
+// via body/identity.js → window.SOUL_AUTH) and mirrors it to 'vint_access_token'.
+// The old token-room duet read 'vint_token' which is NEVER written — so the whole
+// page was inert even when logged in. Read the real key, with fallbacks.
+function getToken()  {
+  try { if (window.SOUL_AUTH && window.SOUL_AUTH.token) { const t = window.SOUL_AUTH.token(); if (t) return t; } } catch(_) {}
+  return localStorage.getItem('soul_auth_token')
+      || localStorage.getItem('vint_access_token')
+      || localStorage.getItem('vint_token')
+      || '';
+}
 function authHdrs()  { return { 'Content-Type': 'application/json', 'Authorization': `Bearer ${getToken()}` }; }
 
 /* ── STATE ──────────────────────────────────────────── */
@@ -3841,9 +3860,17 @@ function randomShowPanel(panelId) {
   RANDOM.state = panelId.replace('r-','');
 }
 
+// Open the app's canonical sign-in UI (body/bond_door.js). Used wherever the
+// page needs a token — instead of a dead toast, actually let them log in.
+function promptLogin(msg) {
+  if (msg) toast(msg);
+  try { if (window.BOND_DOOR && window.BOND_DOOR.show) { window.BOND_DOOR.show(); return true; } } catch(_) {}
+  return false;
+}
+
 /* ── ENTER QUEUE (lobby → searching) ────────────────── */
 async function randomEnter() {
-  if (!getToken()) { toast('Log in to use random chat.'); return; }
+  if (!getToken()) { promptLogin('Sign in to meet someone.'); return; }
   const wantVideo = document.getElementById('rWantVideo').checked;
   const vibe      = document.getElementById('rVibeInput').value.trim().slice(0,48);
 
