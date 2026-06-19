@@ -10,3 +10,11 @@ node_modules/
 # Conversation/memory dumps — may contain credentials & personal context.
 # Kept local only, never committed (Vinta directive 2026-06-09).
 memory/*.md
+
+# Android signing key — NEVER commit
+android-twa/android.keystore
+android-twa/*.aab
+android-twa/*.apk
+android-twa/app/
+android-twa/build/
+android-twa/.gradle/

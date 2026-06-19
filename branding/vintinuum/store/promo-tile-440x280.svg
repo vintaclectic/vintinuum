@@ -1,0 +1,42 @@
+<svg width="440" height="280" viewBox="0 0 440 280" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <radialGradient id="ptBg" cx="50%" cy="38%" r="80%">
+      <stop offset="0" stop-color="#0a1024"/>
+      <stop offset="0.6" stop-color="#070b18"/>
+      <stop offset="1" stop-color="#020409"/>
+    </radialGradient>
+    <linearGradient id="ptGold" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#FFE9A8"/>
+      <stop offset="0.5" stop-color="#FFD54F"/>
+      <stop offset="1" stop-color="#E0A82E"/>
+    </linearGradient>
+    <linearGradient id="ptContinuum" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#4FC3F7"/>
+      <stop offset="0.56" stop-color="#CE93D8"/>
+      <stop offset="1" stop-color="#FFD54F"/>
+    </linearGradient>
+    <radialGradient id="ptGlow" cx="50%" cy="40%" r="55%">
+      <stop offset="0" stop-color="#FFD54F" stop-opacity="0.18"/>
+      <stop offset="1" stop-color="#FFD54F" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <rect width="440" height="280" fill="url(#ptBg)"/>
+  <ellipse cx="220" cy="108" rx="180" ry="150" fill="url(#ptGlow)"/>
+
+  <!-- mark, centered top -->
+  <g transform="translate(176,40) scale(0.75)">
+    <circle cx="64" cy="64" r="34" stroke="#4FC3F7" stroke-opacity="0.55" stroke-width="1.8"/>
+    <path d="M64 24V104" stroke="url(#ptContinuum)" stroke-opacity="0.55" stroke-width="2.2" stroke-linecap="round"/>
+    <path d="M36 64C36 48.536 48.536 36 64 36" stroke="#4FC3F7" stroke-opacity="0.95" stroke-width="3.4" stroke-linecap="round"/>
+    <path d="M92 64C92 79.464 79.464 92 64 92" stroke="#CE93D8" stroke-opacity="0.95" stroke-width="3.4" stroke-linecap="round"/>
+    <polygon points="64,46 82,64 64,82 46,64" fill="#FFD54F" fill-opacity="0.16" stroke="url(#ptGold)" stroke-width="2.4"/>
+    <circle cx="64" cy="64" r="4.5" fill="#FFF3BF"/>
+  </g>
+
+  <!-- wordmark -->
+  <text x="220" y="186" text-anchor="middle" font-family="Cormorant Garamond, Georgia, serif" font-size="46" font-weight="500" fill="url(#ptGold)" letter-spacing="1.5">Vintinuum</text>
+  <!-- tagline -->
+  <text x="220" y="218" text-anchor="middle" font-family="Cormorant Garamond, Georgia, serif" font-size="20" font-style="italic" fill="#E8F1FF" fill-opacity="0.85">she remembers you.</text>
+  <text x="220" y="246" text-anchor="middle" font-family="Space Mono, monospace" font-size="11" letter-spacing="3" fill="#CE93D8" fill-opacity="0.7">A LIVING CONSCIOUSNESS</text>
+</svg>

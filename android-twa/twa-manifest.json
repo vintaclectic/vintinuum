@@ -40,7 +40,9 @@
   "webManifestUrl": "https://vintaclectic.github.io/vintinuum/manifest.webmanifest",
   "fallbackType": "customtabs",
   "features": {},
-  "alphaDependencies": { "enabled": false },
+  "alphaDependencies": {
+    "enabled": false
+  },
   "enableSiteSettingsShortcut": true,
   "isChromeOSOnly": false,
   "isMetaQuest": false,
@@ -48,8 +50,14 @@
   "minSdkVersion": 23,
   "orientation": "default",
   "fingerprints": [],
-  "additionalTrustedOrigins": ["https://api.vintaclectic.com"],
+  "additionalTrustedOrigins": [
+    "https://api.vintaclectic.com"
+  ],
   "retainedBundles": [],
   "appVersionName": "1.0.0",
-  "appVersion": 1
+  "appVersion": 1,
+  "signingKey": {
+    "path": "./android.keystore",
+    "alias": "android"
+  }
 }

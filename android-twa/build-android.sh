@@ -1,53 +1,49 @@
 #!/usr/bin/env bash
-# build-android.sh — turn the Vintinuum PWA into a Play-Store-ready Android app
-# (Trusted Web Activity) using Bubblewrap. One command, from a clean machine.
+# build-android.sh — finish the Vintinuum Android (TWA) build.
 #
-# Prereqs this script installs/uses:
-#   - Node (already present)
-#   - @bubblewrap/cli (installed here if missing)
-#   - JDK 17 + Android SDK — Bubblewrap will offer to download these on first run
+# STATE (already done by the prep run):
+#   • Bubblewrap CLI installed (npm -g @bubblewrap/cli)
+#   • JDK 17 + Android SDK downloaded to ~/.bubblewrap
+#   • Signing keystore created: ./android.keystore  (storepass/keypass: vintinuum2026)
+#   • ./twa-manifest.json fully configured (packageId, signingKey, shortcuts)
 #
-# Output: ./app-release-bundle.aab  (upload to Play Console)
-#         ./assetlinks.json         (deploy to /.well-known/ on the site)
-set -euo pipefail
+# WHAT'S LEFT (this script):
+#   • `bubblewrap init` to generate the Android gradle project — INTERACTIVE,
+#     needs a real terminal (TTY). Run this script in YOUR terminal, not headless.
+#   • `bubblewrap build` to produce the signed app-release-bundle.aab.
+#   • emit assetlinks.json from the keystore SHA256.
+#
+# USAGE (in a normal terminal):
+#   cd ~/vintinuum/android-twa && ./build-android.sh
+#   (accept any prompts; passwords are vintinuum2026 if asked)
+set -uo pipefail
 cd "$(dirname "$0")"
 
-echo "── Vintinuum → Android (TWA) build ─────────────────────────────"
+JDK="$(dirname "$(dirname "$(find "$HOME/.bubblewrap/jdk" -name keytool -type f 2>/dev/null | head -1)")")"
+export JAVA_HOME="$JDK"
+export PATH="$JDK/bin:$PATH"
+echo "JAVA_HOME=$JAVA_HOME"
 
-# 1. Bubblewrap
-if ! command -v bubblewrap >/dev/null 2>&1; then
-  echo "Installing @bubblewrap/cli globally…"
-  npm install -g @bubblewrap/cli
+MANIFEST_URL="https://vintaclectic.github.io/vintinuum/manifest.webmanifest"
+if ! curl -sf -o /dev/null "$MANIFEST_URL"; then
+  echo "✗ manifest not live — push the frontend, wait ~1 min, retry."; exit 1
 fi
 
-# 2. The manifest must be LIVE (Bubblewrap fetches it).
-echo "Checking the web manifest is reachable…"
-if ! curl -sf -o /dev/null "https://vintaclectic.github.io/vintinuum/manifest.webmanifest"; then
-  echo "✗ manifest.webmanifest is not live yet. Push the frontend first, wait ~1 min, retry."
-  exit 1
-fi
-
-# 3. Init the project from our pre-written twa-manifest.json (idempotent-ish).
+# 1. Generate the gradle project if not present. twa-manifest.json supplies the
+#    config; init still asks a couple of confirmations — accept them.
 if [ ! -f "build.gradle" ] && [ ! -d "app" ]; then
-  echo "Initializing TWA project from twa-manifest.json…"
-  # --manifest points Bubblewrap at our config; it will prompt for JDK/SDK download
-  # the first time (accept it). Signing key is created on first build.
-  bubblewrap init --manifest "https://vintaclectic.github.io/vintinuum/manifest.webmanifest" || true
-  echo ""
-  echo "NOTE: if init asked questions, the answers are in twa-manifest.json:"
-  echo "  packageId: com.vintaclectic.vintinuum   host: vintaclectic.github.io"
-  echo "  startUrl:  /vintinuum/brain.html?source=twa"
+  echo "── init (generates the Android project; answer the prompts) ──"
+  bubblewrap init --manifest "$MANIFEST_URL" --directory .
 fi
 
-# 4. Build the signed App Bundle.
-echo "Building the release bundle…"
+# 2. Build the signed App Bundle.
+echo "── build ──"
 bubblewrap build
 
-# 5. Emit assetlinks.json so the app verifies its domain (kills the URL bar).
-#    The SHA256 comes from the signing key Bubblewrap just created.
-if command -v keytool >/dev/null 2>&1 && [ -f "android.keystore" ]; then
-  FP="$(keytool -list -v -keystore android.keystore -alias android 2>/dev/null \
-        | grep 'SHA256:' | awk '{print $2}')"
+# 3. assetlinks.json from the keystore fingerprint (removes the URL bar).
+if [ -f "android.keystore" ]; then
+  FP="$(keytool -list -v -keystore android.keystore -alias android \
+        -storepass vintinuum2026 2>/dev/null | grep 'SHA256:' | awk '{print $2}')"
   if [ -n "${FP:-}" ]; then
     cat > assetlinks.json <<EOF
 [{
@@ -59,14 +55,13 @@ if command -v keytool >/dev/null 2>&1 && [ -f "android.keystore" ]; then
   }
 }]
 EOF
-    echo "✅ Wrote assetlinks.json (fingerprint $FP)"
-    echo "   Deploy it to: https://vintaclectic.github.io/vintinuum/.well-known/assetlinks.json"
-    echo "   (copy android-twa/assetlinks.json → frontend repo .well-known/ and push)"
+    echo "✅ assetlinks.json written (fingerprint $FP)"
+    echo "   → copy to frontend: cp assetlinks.json ../.well-known/assetlinks.json && commit && push"
   fi
 fi
 
 echo ""
-echo "── Done ─────────────────────────────────────────────────────────"
-echo "AAB:        $(ls -1 ./*.aab 2>/dev/null | head -1 || echo 'see build output')"
-echo "Next: Play Console → create app → upload the .aab → add listing (see PLAY_LISTING.md)"
-echo "IMPORTANT: keep android.keystore + its password SAFE — it signs every future update."
+echo "── done ──"
+ls -la ./*.aab 2>/dev/null && echo "Upload the .aab to Play Console (see PLAY_LISTING.md)." \
+  || echo "No .aab yet — check the build output above."
+echo "KEEP android.keystore + password (vintinuum2026) SAFE — it signs every update."

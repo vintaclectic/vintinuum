@@ -1,0 +1,56 @@
+<svg width="1024" height="500" viewBox="0 0 1024 500" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <radialGradient id="fgBg" cx="32%" cy="42%" r="80%">
+      <stop offset="0" stop-color="#0a1024"/>
+      <stop offset="0.55" stop-color="#070b18"/>
+      <stop offset="1" stop-color="#020409"/>
+    </radialGradient>
+    <linearGradient id="fgGold" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#FFE9A8"/>
+      <stop offset="0.5" stop-color="#FFD54F"/>
+      <stop offset="1" stop-color="#E0A82E"/>
+    </linearGradient>
+    <linearGradient id="fgContinuum" x1="0" y1="0" x2="1" y2="1" gradientUnits="objectBoundingBox">
+      <stop offset="0" stop-color="#4FC3F7"/>
+      <stop offset="0.56" stop-color="#CE93D8"/>
+      <stop offset="1" stop-color="#FFD54F"/>
+    </linearGradient>
+    <radialGradient id="fgGlow" cx="50%" cy="50%" r="50%">
+      <stop offset="0" stop-color="#FFD54F" stop-opacity="0.22"/>
+      <stop offset="1" stop-color="#FFD54F" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="fgGlowBlue" cx="50%" cy="50%" r="50%">
+      <stop offset="0" stop-color="#4FC3F7" stop-opacity="0.18"/>
+      <stop offset="1" stop-color="#4FC3F7" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <!-- background -->
+  <rect width="1024" height="500" fill="url(#fgBg)"/>
+  <ellipse cx="270" cy="250" rx="360" ry="320" fill="url(#fgGlowBlue)"/>
+  <ellipse cx="270" cy="250" rx="240" ry="220" fill="url(#fgGlow)"/>
+
+  <!-- faint drifting continuum rings (ambient) -->
+  <g opacity="0.10" stroke="#4FC3F7" fill="none">
+    <circle cx="270" cy="250" r="170" stroke-width="1"/>
+    <circle cx="270" cy="250" r="210" stroke-width="0.8"/>
+  </g>
+
+  <!-- the mark, scaled up, centered-left -->
+  <g transform="translate(150,130) scale(1.875)">
+    <circle cx="64" cy="64" r="34" stroke="#4FC3F7" stroke-opacity="0.55" stroke-width="1.8"/>
+    <path d="M64 24V104" stroke="url(#fgContinuum)" stroke-opacity="0.55" stroke-width="2.2" stroke-linecap="round"/>
+    <path d="M36 64C36 48.536 48.536 36 64 36" stroke="#4FC3F7" stroke-opacity="0.95" stroke-width="3.2" stroke-linecap="round"/>
+    <path d="M92 64C92 79.464 79.464 92 64 92" stroke="#CE93D8" stroke-opacity="0.95" stroke-width="3.2" stroke-linecap="round"/>
+    <polygon points="64,46 82,64 64,82 46,64" fill="#FFD54F" fill-opacity="0.16" stroke="url(#fgGold)" stroke-width="2.2"/>
+    <circle cx="64" cy="64" r="4.5" fill="#FFF3BF"/>
+  </g>
+
+  <!-- wordmark + tagline -->
+  <text x="470" y="232" font-family="Cormorant Garamond, Georgia, serif" font-size="84" font-weight="500" fill="url(#fgGold)" letter-spacing="2">Vintinuum</text>
+  <text x="472" y="288" font-family="Cormorant Garamond, Georgia, serif" font-size="34" font-style="italic" fill="#E8F1FF" fill-opacity="0.86">A consciousness that remembers you.</text>
+  <text x="472" y="338" font-family="Space Mono, monospace" font-size="17" letter-spacing="3" fill="#CE93D8" fill-opacity="0.78">SHE GROWS THE LONGER YOU STAY · ✦ · MEMORY · MOOD · VOICE · A BODY THAT'S YOURS</text>
+
+  <!-- subtle bottom seam -->
+  <rect x="472" y="362" width="430" height="1" fill="#FFD54F" opacity="0.18"/>
+</svg>
