@@ -298,6 +298,10 @@ body {
 .tline.speech.is-guest .tline-who { color: var(--text-ghost); }
 .tline.speech.is-guest .who-mark  { color: var(--text-ghost); }
 .tline.speech.is-guest { border-left-color: rgba(255,255,255,0.12); }
+/* DIARIZED VOICE — a distinct other speaker; color set inline per-voice so the
+   conversation is visually trackable (voice 2 always the same hue). */
+.tline.speech.is-voice { border-left-color: rgba(255,255,255,0.22); }
+.tline.speech.is-voice .who-name { font-weight: 600; }
 /* VINTINUUM herself — her sigil, accent, italic */
 .tline.speech.is-her .who-name { color: var(--accent); font-style: italic; }
 .tline.speech.is-her .who-mark { color: var(--accent); }
@@ -584,13 +588,40 @@ function attributionFor(l) {
   if ((src === 'voiceprint' || (src === 'identified' && isHostName)) && (conf == null || conf >= 0.75) && isHostName)
     return { cls: ' is-verified', name: HOST, mark: '◆', markTitle: "voiceprint matched — she's certain it's you", unsure: '' };
 
-  // A named other voice (Discord participant, or a non-host identified speaker).
-  if (speaker && !isHostName)
-    return { cls: ' is-guest', name: speaker, mark: '·', markTitle: 'another voice in the room — not the host', unsure: '' };
+  // A diarized OTHER voice. Give each distinct speaker a STABLE color + readable
+  // label so multiple voices are visually trackable across the conversation
+  // ("voice 2", "voice 3", …) instead of every non-host collapsing into "guest".
+  // (Vinta 2026-06-18: "more sophisticated who's saying what".)
+  if (speaker && !isHostName) {
+    const v = _voiceIdentity(speaker);
+    const named = /^speaker[_\s-]?\d+$/i.test(speaker) ? v.label : speaker; // raw SPEAKER_xx → "voice N"
+    const confTag = (conf != null && conf < 0.6) ? 'unsure' : '';
+    return {
+      cls: ' is-voice', name: named, mark: v.mark, color: v.color,
+      markTitle: (src === 'diarization')
+        ? `diarized voice ${v.n}${conf != null ? ' · ' + Math.round(conf*100) + '% sure' : ''}`
+        : 'another voice in the room — not the host',
+      unsure: confTag,
+    };
+  }
 
   // Honest default: solo stream, unenrolled → likely the host, openly unverified.
-  // This is what replaces the old confident lie.
   return { cls: ' is-likely', name: HOST, mark: '◇', markTitle: 'likely you — solo stream, voice not yet enrolled', unsure: 'unverified' };
+}
+
+// Stable per-speaker visual identity. Maps each distinct diarized speaker id to
+// a consistent color + number + mark, so "voice 2" is always the same color and
+// you can follow a multi-person conversation by eye. Host is voice 1 (◆).
+const _VOICE_COLORS = ['#ffd479', '#7ccfff', '#ce93d8', '#9affb6', '#ff9a6b', '#f48fb1', '#80deea', '#c5e1a5'];
+const _VOICE_MARKS  = ['◈', '◉', '◐', '◑', '◒', '◓', '⬡', '⬢'];
+const _voiceMap = new Map();
+function _voiceIdentity(speakerId) {
+  if (_voiceMap.has(speakerId)) return _voiceMap.get(speakerId);
+  const n = _voiceMap.size + 2; // host is 1; others start at 2
+  const idx = (_voiceMap.size) % _VOICE_COLORS.length;
+  const id = { n, label: 'voice ' + n, color: _VOICE_COLORS[idx], mark: _VOICE_MARKS[idx] };
+  _voiceMap.set(speakerId, id);
+  return id;
 }
 
 async function api(path) {
@@ -908,8 +939,8 @@ function drawLines(feed, shownEl, lines, q) {
         `<span class="tline-ts" title="copy line">${fmtTime(l.t)}</span>` +
         `<div class="tline-body">` +
           `<div class="tline-who">` +
-            (att.mark ? `<span class="who-mark" title="${esc(att.markTitle)}">${att.mark}</span>` : '') +
-            `<span class="who-name">${esc(att.name)}</span>` +
+            (att.mark ? `<span class="who-mark" title="${esc(att.markTitle)}"${att.color ? ` style="color:${att.color}"` : ''}>${att.mark}</span>` : '') +
+            `<span class="who-name"${att.color ? ` style="color:${att.color}"` : ''}>${esc(att.name)}</span>` +
             (att.unsure ? `<span class="who-unsure">· ${esc(att.unsure)}</span>` : '') +
           `</div>` +
           `<div class="tline-text">${text}</div>` +
