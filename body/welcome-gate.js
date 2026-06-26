@@ -61,6 +61,10 @@
       localStorage.setItem('vint_access_token', t);
       localStorage.setItem('soul_auth_token', t);
     } catch (_) {}
+    // Make the 'vint:auth' event real (this module + brain.html's login-wall
+    // listen for it). Lets the pill→dot swap + the wall react in-tab without
+    // depending solely on the post-sign-in reload.
+    try { window.dispatchEvent(new Event('vint:auth')); } catch (_) {}
   }
   function ls(k, v) { try { if (v === undefined) return localStorage.getItem(k); localStorage.setItem(k, v); } catch (_) { return null; } }
 

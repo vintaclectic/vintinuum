@@ -357,7 +357,7 @@ canvas{display:block;}
   #brainSvg{width:100%;height:100%;}
   /* Dorsal brain canvas: constrain to body area on mobile */
   #brainDorsalCanvas{max-width:100%!important;overflow:hidden;}
-  #mobileBottomBar{display:flex;}
+  /* #mobileBottomBar intentionally NOT shown — LESS BUTTONS (Vinta 2026-06-26) */
   .node-panel{padding:16px 12px;width:min(380px,96vw);}
   .deep-sections{grid-template-columns:1fr;padding:12px 12px 50px;}
   .deep-section{padding:18px 14px;}
@@ -416,7 +416,9 @@ canvas{display:block;}
 }
 
 /* LESS BUTTONS (Vinta 2026-06-26): hide the floating-button clutter on brain.
-   Keeps the V chat orb + the ✦ account/login button. Nothing else floats. */
+   Keeps ONLY: the V chat orb (#vint-chat-btn), the ✦ account/login button
+   (#vwg-pill/#vwg-dot), the topbar header (brand + lore), and the single
+   #footerDock toolbar. Everything else floating is gone. */
 #hey-vinta-btn,
 .vint-vp-btn,
 #vintVoice,
@@ -428,7 +430,27 @@ canvas{display:block;}
 #loreToggle,
 #reproToggle,
 #carry-pill,
-#pairPhoneBtn { display: none !important; }
+#pairPhoneBtn,
+#statsFooterLink,           /* stray fixed bottom-right "STATS" link — lives in topbar drawer instead */
+#sensorBanner { display: none !important; }
+
+/* Kill the media-query force-show of the legacy mobile toggle row.
+   Without this, the #footerDock rule at ~4281 re-paints #mobileBottomBar
+   on small screens, undoing the hide above. The toggles are duplicated by
+   the topbar drawer + dock, so they stay GONE on every breakpoint. */
+@media(max-width:600px){
+  #mobileBottomBar{ display: none !important; }
+}
+
+/* ── LOGIN WALL (Vinta 2026-06-26: "login... behind a wall") ──
+   When logged OUT, the page is dead-clean: only the ✦ login pill + the V orb.
+   The dock and any other chrome hide until the user signs in. <body> gets
+   .vint-guest from the auth probe below; welcome-gate's #vwg-pill/#vwg-dot
+   and #vint-chat-btn are deliberately NOT hidden. */
+body.vint-guest #footerDock,
+body.vint-guest #statsFooterLink,
+body.vint-guest #learningFooterLink,
+body.vint-guest #lineageFooterLink { display: none !important; }
 </style>
 <script>
 // ── VINTINUUM FAUX SERVER ─────────────────────────────────────────────────────
@@ -4278,7 +4300,7 @@ setTimeout(function() {
       grid-column: 1 / -1 !important;
       position: static !important;
       bottom: auto !important;
-      display: flex !important;
+      display: none !important;   /* LESS BUTTONS (Vinta 2026-06-26): legacy toggle row stays gone on mobile too */
     }
     #footerDock{ padding-bottom: 8px; }
   }
@@ -4400,5 +4422,29 @@ setTimeout(function() {
 </script>
 
   <script src="body/welcome-gate.js"></script>
+
+  <!-- LOGIN WALL probe (Vinta 2026-06-26): toggle body.vint-guest from auth
+       state so a logged-out brain.html shows only the ✦ login + V orb.
+       Reads the same token keys welcome-gate uses; re-checks on its event. -->
+  <script>
+  (function(){
+    function signedIn(){
+      try {
+        return !!(localStorage.getItem('vint_token')
+          || localStorage.getItem('vint_access_token')
+          || localStorage.getItem('soul_auth_token'));
+      } catch(_) { return true; } // storage blocked → don't lock the user out
+    }
+    function applyWall(){
+      document.body.classList.toggle('vint-guest', !signedIn());
+    }
+    applyWall();
+    // welcome-gate fires 'vint:auth' on sign-in; storage event covers other tabs.
+    window.addEventListener('vint:auth', applyWall);
+    window.addEventListener('storage', function(e){
+      if (e.key && e.key.indexOf('token') !== -1) applyWall();
+    });
+  })();
+  </script>
 </body>
 </html>
