@@ -80,6 +80,7 @@
   function markInteracted() {
     if (hasInteracted) return;
     hasInteracted = true;
+    _hideUnlock();
     drain();
   }
   // Capture early — first click/keydown anywhere unlocks audio
@@ -89,9 +90,52 @@
   // Some pages ship with a "wake/talk" button that calls __markInteracted
   window.__markInteracted = markInteracted;
 
+  // ── AUTOPLAY UNLOCK PROMPT (Vinta 2026-06-26) ───────────────────────────────
+  // The #1 reason browser TTS "doesn't work": browser autoplay policy blocks
+  // audio until the user clicks the page. On a tab the user hasn't clicked
+  // (stream overlay, fresh load) speech queues silently and never plays. So:
+  // whenever speech wants to play but we're gesture-locked, show a clear,
+  // impossible-to-miss "🔊 Click to enable voice" button. One click unlocks
+  // audio for the whole session and immediately drains the queue. This is the
+  // correct, user-shippable fix — every audio site does exactly this.
+  var _unlockEl = null;
+  function _showUnlock() {
+    if (hasInteracted || muted || _unlockEl) return;
+    try {
+      _unlockEl = document.createElement('button');
+      _unlockEl.id = 'vint-voice-unlock';
+      _unlockEl.textContent = '🔊 click to enable voice';
+      _unlockEl.setAttribute('aria-label', 'Click to enable Vintinuum voice');
+      _unlockEl.style.cssText = [
+        'position:fixed', 'left:50%', 'top:18px', 'transform:translateX(-50%)',
+        'z-index:2147483647', 'padding:12px 20px', 'min-height:44px',
+        'border-radius:24px', 'border:1px solid rgba(79,195,247,0.5)',
+        'background:rgba(8,12,20,0.92)', 'color:#9fdcff', 'font-size:14px',
+        'font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif',
+        'cursor:pointer', 'box-shadow:0 6px 24px rgba(0,0,0,0.5)',
+        'backdrop-filter:blur(8px)', '-webkit-backdrop-filter:blur(8px)',
+        'animation:vintVoicePulse 1.6s ease-in-out infinite',
+      ].join(';');
+      if (!document.getElementById('vint-voice-unlock-kf')) {
+        var st = document.createElement('style'); st.id = 'vint-voice-unlock-kf';
+        st.textContent = '@keyframes vintVoicePulse{0%,100%{box-shadow:0 6px 24px rgba(0,0,0,0.5),0 0 0 0 rgba(79,195,247,0.4)}50%{box-shadow:0 6px 24px rgba(0,0,0,0.5),0 0 0 8px rgba(79,195,247,0)}}';
+        document.head.appendChild(st);
+      }
+      _unlockEl.addEventListener('click', markInteracted, { once: true });
+      (document.body || document.documentElement).appendChild(_unlockEl);
+    } catch (_) {}
+  }
+  function _hideUnlock() {
+    if (_unlockEl) { try { _unlockEl.remove(); } catch (_) {} _unlockEl = null; }
+  }
+
   function drain() {
-    if (muted) { queue.length = 0; return; }
-    if (!hasInteracted) return;       // wait for first gesture
+    if (muted) { queue.length = 0; _hideUnlock(); return; }
+    if (!hasInteracted) {
+      // Speech is waiting but audio is gesture-locked → prompt the user once.
+      if (queue.length) _showUnlock();
+      return;
+    }
     if (current) return;              // one at a time
     var next = queue.shift();
     if (!next) return;
