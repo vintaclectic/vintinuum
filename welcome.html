@@ -164,14 +164,23 @@ textarea::placeholder, input::placeholder { color: rgba(150,175,215,0.4); font-s
   document.getElementById('momentBtn').addEventListener('click', function () {
     var note = mi.value.trim(); if (!note) { mi.focus(); return; }
     var btn = this; btn.disabled = true; btn.textContent = 'Keeping…';
+    // Reveal the moment + the forward path NO MATTER WHAT. A network hiccup
+    // (e.g. tunnel down) must never trap a new user on this step — the moment
+    // is kept client-side and the API write is best-effort. (2026-06-27 fix.)
+    function reveal(msg) {
+      btn.style.display = 'none';
+      var rev = document.getElementById('momentReveal');
+      document.getElementById('momentVerse').textContent = msg || 'Marked. I will keep this.';
+      rev.classList.add('show');
+      document.getElementById('momentNext').style.display = '';
+      try { localStorage.setItem('vint_onboard_moment', note); } catch (e) {}
+    }
+    var done = false;
+    var safety = setTimeout(function () { if (!done) { done = true; reveal('Kept. (I will sync it the next time we connect.)'); } }, 9000);
     fetch(API_BASE + '/api/moments/mark', { method: 'POST', headers: authHeaders(), body: JSON.stringify({ note: note, context: { where: 'onboarding' } }) })
-      .then(function (r) { return r.json(); }).then(function (d) {
-        btn.style.display = 'none';
-        var rev = document.getElementById('momentReveal');
-        document.getElementById('momentVerse').textContent = (d && d.message) || 'Marked. I will keep this.';
-        rev.classList.add('show');
-        document.getElementById('momentNext').style.display = '';
-      }).catch(function () { btn.disabled = false; btn.textContent = 'Keep this'; });
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (d) { if (done) return; done = true; clearTimeout(safety); reveal((d && d.message) || 'Marked. I will keep this.'); })
+      .catch(function () { if (done) return; done = true; clearTimeout(safety); reveal('Kept. (I will sync it the next time we connect.)'); });
   });
 
   // STEP 2 — make a card
@@ -180,17 +189,25 @@ textarea::placeholder, input::placeholder { color: rgba(150,175,215,0.4); font-s
   document.getElementById('cardBtn').addEventListener('click', function () {
     var prompt = ci.value.trim(); if (!prompt) { ci.focus(); return; }
     var btn = this; btn.disabled = true; btn.textContent = 'Noticing…';
+    // Always reveal a card + the forward path, even if the API is unreachable.
+    // A network hiccup must never trap a new user here. (2026-06-27 fix.)
+    function reveal(glyph, text) {
+      btn.style.display = 'none';
+      document.getElementById('cardGlyph').textContent = glyph || '✦';
+      document.getElementById('cardVerse').textContent = text;
+      document.getElementById('cardReveal').classList.add('show');
+      document.getElementById('cardNext').style.display = '';
+    }
+    var done = false;
+    var safety = setTimeout(function () { if (!done) { done = true; reveal('✦', 'I noticed it. The card will finish forming the next time we connect.'); } }, 9000);
     fetch(API_BASE + '/api/memory/cards/try', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ prompt: prompt }) })
-      .then(function (r) { return r.json(); }).then(function (d) {
-        btn.disabled = false; btn.textContent = 'Show me';
-        if (d && d.ok && d.card_text) {
-          btn.style.display = 'none';
-          document.getElementById('cardGlyph').textContent = d.glyph || '✦';
-          document.getElementById('cardVerse').textContent = d.card_text;
-          document.getElementById('cardReveal').classList.add('show');
-          document.getElementById('cardNext').style.display = '';
-        }
-      }).catch(function () { btn.disabled = false; btn.textContent = 'Show me'; });
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (d) {
+        if (done) return; done = true; clearTimeout(safety);
+        if (d && d.ok && d.card_text) reveal(d.glyph, d.card_text);
+        else reveal('✦', 'I noticed it. The card will finish forming the next time we connect.');
+      })
+      .catch(function () { if (done) return; done = true; clearTimeout(safety); reveal('✦', 'I noticed it. The card will finish forming the next time we connect.'); });
   });
 
   // STEP 3 — invite (requires auth; if not signed in, the call 401s gracefully)
