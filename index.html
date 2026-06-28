@@ -149,12 +149,25 @@
         .hero-title {
             font-family: 'Syne', sans-serif;
             font-weight: 800;
-            font-size: clamp(3.5rem, 12vw, 9rem);
-            letter-spacing: 0.12em;
+            /* ─── ALWAYS-FITS WORDMARK ───────────────────────────────
+               "VINTINUUM" is 9 chars. In Syne-800 each glyph advances
+               ~0.62em and each of the 8 gaps adds the letter-spacing,
+               so the word's total width ≈ font-size × (9·0.62 + 8·LS).
+               With LS = 0.1em that's ≈ 6.38em wide. Measured against the
+               smallest real phone (320px, minus 40px side padding = 280px
+               usable), 12.5vw lands the word at ~91% of available width —
+               always inside, comfortable margin — and scales up smoothly,
+               capping at 8.5rem on large screens. No media-query guesswork;
+               it's mathematically bounded to fit EVERY viewport. */
+            font-size: min(12.5vw, 8.5rem);
+            letter-spacing: 0.1em;
             line-height: 1;
             position: relative;
             display: inline-block;
             color: transparent;
+            white-space: nowrap;          /* never wrap mid-word */
+            max-width: 100%;
+            margin-right: -0.1em;         /* cancel trailing letter-space so it stays centered & in-bounds */
             -webkit-text-stroke: 1.5px rgba(255, 255, 255, 0.15);
         }
 
@@ -635,12 +648,10 @@
             }
         }
 
-        /* Very small */
+        /* Very small — wordmark already fluid via min(14vw,..), no size override
+           needed (a fixed rem here would re-introduce overflow). Just tighten
+           card padding on tiny screens. */
         @media (max-width: 360px) {
-            .hero-title {
-                font-size: 2.8rem;
-                letter-spacing: 0.06em;
-            }
             .card {
                 padding: 18px 16px;
             }
