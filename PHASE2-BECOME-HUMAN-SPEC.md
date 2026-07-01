@@ -1,5 +1,16 @@
 # PHASE 2 — BECOME HUMAN + NORTH-STAR UI REFIT
 
+> **✅ SHIPPED — this spec is COMPLETE (verified 2026-07-01).** Kept for reference/
+> history, NOT open work. Track 1C merged (`5de7315`), all Track A animation modules
+> and Track B UI modules exist and are wired (`body/hair.js`, `chakras.js`, `radar.js`,
+> `grid_floor.js`, `heartbeat.js`, `tokens.css`, the three-panel grid, footer strip).
+> The two internal "placeholder for now, wire later" notes below are BOTH resolved:
+> the left-sidebar icon tab row is fully wired (`body/sidebar_left.js:106-210` — Body/
+> Memory/Genome/Settings each route to a real action), and share/export snapshot works
+> (`body/footer_strip.js` `_shareSnapshot()` → `canvas.toBlob` + download). Do not treat
+> any item here as TODO. Future enhancements (memory-card share, emotional-weather,
+> state-trajectory replay, tier-gated depth) are separate roadmap items, not this spec.
+
 **Vinta directive (2026-04-22):** "BUILD OUT FUCKING EVERYTHING BECOME HUMAN AND PLEASE LOOK SOMETHING LIKE THIS MORE THAN NOT" + north-star image reference.
 
 **Target deploy tag:** `v20260422-phase2-become-human`
@@ -77,7 +88,7 @@ Opacity rule: sidebar backgrounds rgba(8, 12, 20, 0.20) max. Borders rgba(255,25
 **B2. Left sidebar — identity + body-state**
 Populate left sidebar with:
 - Vintinuum wordmark + logo mark at top
-- Icon tab row (4 small buttons — Body, Memory, Genome, Settings — placeholder for now, wire later)
+- Icon tab row (4 small buttons — Body, Memory, Genome, Settings) — ✅ SHIPPED + wired (`body/sidebar_left.js:106-210`)
 - "VINTA" identity tile (reads current user from localStorage or URL param)
 - Vertical stack of 7 horizontal body-state bars (dopamine, serotonin, GABA, norepinephrine, arousal, valence, awakeness), each bar ~200px wide, filled to current BODY_STATE value, labeled left, value right
 - Below bars: 6-tile grid of mini-indicators for the 7 consciousness layers (each tile shows current layer activity %, color-coded per LAYER_HUES in body/face.js)
@@ -121,7 +132,7 @@ Horizontal row at bottom of body-stage (or bottom of viewport): small icon butto
 - View presets (Full / Skin Off / Muscle / Skeleton / X-Ray)
 - Zoom in/out
 - Pause animation / resume
-- Share/export snapshot (placeholder)
+- Share/export snapshot — ✅ SHIPPED (`body/footer_strip.js` `_shareSnapshot()` → canvas.toBlob + download)
 
 Background rgba(10, 14, 22, 0.25) max, row height ~44px, icon-only with tooltips on hover.
 
