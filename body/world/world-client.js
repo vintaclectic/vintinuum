@@ -12,6 +12,9 @@
   const World = {};
   let THREE, scene, camera, renderer, clock;
   let ws = null, selfId = null;
+  World._worldId = 'universe';       // DIRVERSE: which room we're in (room-scoped ws)
+  World._canBuild = true;            // set from world:state; false for visitors
+  let _wsGen = 0;                    // generation guard — a stale ws from before a warp must not touch scene
   const others = new Map();   // id → { group, target:{x,z,yaw}, label }
   const agents = new Map();   // id → { group, target, name }
   let me = { x: 0, y: 0, z: 2.5, yaw: Math.PI };
@@ -22,9 +25,12 @@
   function _base() { return (global.__VINTINUUM_API_BASE || '').replace(/\/$/, ''); }
   function _token() { try { return localStorage.getItem('vint_access_token') || localStorage.getItem('vint_token'); } catch (_) { return null; } }
 
-  World.start = async function ({ mountEl, onSpeech: speechCb, onStatus }) {
+  World.start = async function ({ mountEl, onSpeech: speechCb, onStatus, worldId }) {
     onSpeech = speechCb;
     const status = onStatus || (() => {});
+    World._onStatus = status;         // keep a handle so travelTo can reconnect without re-plumbing the UI
+    World._mountEl = mountEl;
+    if (worldId) World._worldId = String(worldId);
     status('waking the world…');
 
     const mods = await global.Three3D.load();
@@ -254,19 +260,23 @@
   // so the WS layer can re-platform (→ Cloudflare Durable Objects) without
   // breaking cached frontends. Falls back to the legacy URL if hello is absent.
   async function _connect(status) {
+    const gen = _wsGen;                 // capture: if a warp bumps _wsGen, this socket is stale
     let wsUrl = null, ticket = _token();
     try {
       const r = await fetch(_base() + '/api/world/hello', { headers: { Authorization: 'Bearer ' + _token() } });
       if (r.ok) { const h = await r.json(); if (h.wsUrl) wsUrl = h.wsUrl; if (h.ticket) ticket = h.ticket; World._sessionEpoch = h.sessionEpoch; World._protoMax = h.protoMax; }
     } catch (_) {}
+    if (gen !== _wsGen) return;         // a warp happened while hello was in flight — abandon this connect
     if (!wsUrl) wsUrl = _base().replace(/^http/, 'ws') + '/ws/world'; // legacy fallback
     // accept both ?ticket= (frozen) and ?token= (legacy) so any shard works
-    ws = new WebSocket(wsUrl + '?ticket=' + encodeURIComponent(ticket) + '&token=' + encodeURIComponent(_token()) + '&proto=1');
+    // DIRVERSE: &world=<worldId> room-scopes presence/voice/speech/build server-side
+    ws = new WebSocket(wsUrl + '?ticket=' + encodeURIComponent(ticket) + '&token=' + encodeURIComponent(_token()) + '&proto=1' + '&world=' + encodeURIComponent(World._worldId));
     let _backoff = 250;
-    ws.onopen = () => { status(''); _backoff = 250; };
-    ws.onclose = () => { status('the world rests. reconnecting…'); setTimeout(() => _connect(status), _backoff); _backoff = Math.min(8000, _backoff * 1.8); };
+    ws.onopen = () => { if (gen !== _wsGen) { try { ws.close(); } catch (_) {} return; } status(''); _backoff = 250; };
+    ws.onclose = () => { if (gen !== _wsGen) return; status('the world rests. reconnecting…'); setTimeout(() => { if (gen === _wsGen) _connect(status); }, _backoff); _backoff = Math.min(8000, _backoff * 1.8); };
     ws.onerror = () => {};
     ws.onmessage = (ev) => {
+      if (gen !== _wsGen) return;       // ignore any late frame from a socket we've warped away from
       let m; try { m = JSON.parse(ev.data); } catch (_) { return; }
       // envelope or flat — both work (frozen contract: data fields hoisted)
       if (m.data && typeof m.data === 'object') m = Object.assign({}, m.data, { t: m.t, seq: m.seq, room: m.room, ts: m.ts });
@@ -334,6 +344,9 @@
   function _onWorldMsg(m) {
     if (m.t === 'world:state') {
       World._resident = m.resident;
+      // DIRVERSE: server tells us which world we landed in + whether we may build here
+      if (m.worldId != null) World._worldId = String(m.worldId);
+      World._canBuild = (m.canBuild !== false); // default true if omitted (legacy hub)
       if (Array.isArray(m.structures)) { m.structures.forEach(_renderStruct); }
       try { window.dispatchEvent(new CustomEvent('vint:world-state', { detail: m })); } catch (_) {}
     } else if (m.t === 'world:struct') {
@@ -390,6 +403,97 @@
 
   // public: send any world message to the server (used by the HUD)
   World.send = function (m) { if (ws && ws.readyState === 1) ws.send(JSON.stringify(m)); };
+  World.currentWorldId = function () { return World._worldId; };
+  World.canBuild = function () { return World._canBuild !== false; };
+
+  // ── THE WARP ────────────────────────────────────────────────────────────────
+  // Travel to another world: tear down the live socket, wipe the old room's
+  // presences + structures, reconnect to the new room. The engine, renderer and
+  // clearing geometry survive — only the *inhabitants* of the room change.
+  // The cinematic (camera dolly + starfield shimmer) lives in the HUD; this is
+  // the clean mechanical swap it calls at the apex of the transition.
+  World.travelTo = function (worldId) {
+    worldId = String(worldId || 'universe');
+    if (worldId === World._worldId && ws && ws.readyState === 1) return; // already here
+    _wsGen++;                                   // invalidate the current socket + any pending reconnects
+    const gone = ws; ws = null;
+    if (gone) { try { gone.onclose = null; gone.onmessage = null; gone.close(); } catch (_) {} }
+    if (global.VintinuumVoice && global.VintinuumVoice.reset) { try { global.VintinuumVoice.reset(); } catch (_) {} }
+    _teardownRoom();                            // remove other users, agents, structures of the old world
+    World._worldId = worldId;
+    World._canBuild = true;                     // optimistic; world:state will correct for visitors
+    selfId = null;
+    // re-plumb voice to the *new* socket once it exists (getPos closures already reference live `me`)
+    _connect(World._onStatus || (() => {}));
+    setTimeout(() => { try { World.send({ t: 'world:hello' }); } catch (_) {} }, 600);
+    try { window.dispatchEvent(new CustomEvent('vint:world-travel', { detail: { worldId } })); } catch (_) {}
+    return worldId;
+  };
+
+  // ── warp starfield: a burst of streaking stars pulled toward the camera at the
+  //    apex of a jump. Built lazily, only shown during a warp (zero cost idle).
+  let _warp = null; // { points, mat, t, active, vel:Float32Array }
+  function _ensureWarp() {
+    if (_warp || !scene) return;
+    const N = 800;
+    const geo = new THREE.BufferGeometry();
+    const pos = new Float32Array(N * 3), vel = new Float32Array(N);
+    for (let i = 0; i < N; i++) {
+      pos[i*3] = (Math.random() - 0.5) * 40;
+      pos[i*3+1] = (Math.random() - 0.5) * 40;
+      pos[i*3+2] = (Math.random() - 0.5) * 40;
+      vel[i] = 6 + Math.random() * 22;
+    }
+    geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+    const mat = new THREE.PointsMaterial({ color: 0xbfe4ff, size: 0.14, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false });
+    const points = new THREE.Points(geo, mat);
+    points.frustumCulled = false; points.renderOrder = 10; points.visible = false;
+    scene.add(points);
+    _warp = { points, mat, geo, vel, t: 0, active: false };
+  }
+  // phase: call warpFx('start') at the beginning of the dolly, 'stop' to release.
+  World.warpFx = function (phase) {
+    _ensureWarp();
+    if (!_warp) return;
+    if (phase === 'start') { _warp.active = true; _warp.t = 0; _warp.points.visible = true; }
+    else if (phase === 'stop') { _warp.active = false; }
+  };
+  function _stepWarp(dt) {
+    if (!_warp) return;
+    // ease opacity in while active, out when released
+    const target = _warp.active ? 0.9 : 0;
+    _warp.mat.opacity += (target - _warp.mat.opacity) * Math.min(1, dt * 6);
+    if (!_warp.active && _warp.mat.opacity < 0.02) { _warp.points.visible = false; return; }
+    _warp.t += dt;
+    // stream stars along -Z toward the camera, recycling those that pass it
+    const p = _warp.geo.attributes.position.array, cz = camera.position.z, cx = camera.position.x;
+    for (let i = 0; i < _warp.vel.length; i++) {
+      p[i*3+2] += _warp.vel[i] * dt * (_warp.active ? 1 : 0.4);
+      if (p[i*3+2] > cz + 8) { // recycle far ahead of the camera
+        p[i*3]   = cx + (Math.random() - 0.5) * 40;
+        p[i*3+1] = (Math.random() - 0.5) * 40;
+        p[i*3+2] = cz - 30 - Math.random() * 20;
+      }
+    }
+    _warp.geo.attributes.position.needsUpdate = true;
+    // stretch the streaks as speed peaks
+    _warp.mat.size = 0.12 + (_warp.active ? 0.10 : 0) * (0.5 + 0.5 * Math.sin(_warp.t * 8));
+  }
+
+  // Wipe everything that belongs to the *room* (not the engine/self). Called on warp.
+  function _teardownRoom() {
+    for (const O of others.values()) { try { scene.remove(O.group); } catch (_) {} }
+    others.clear();
+    for (const A of agents.values()) { try { scene.remove(A.group); } catch (_) {} }
+    agents.clear();
+    for (const mesh of _structMeshes.values()) { try { World._scene.remove(mesh); } catch (_) {} }
+    _structMeshes.clear();
+    if (World._selfBody) { try { scene.remove(World._selfBody); } catch (_) {} World._selfBody = null; }
+    // reset self to the spawn ring so we don't arrive standing where we left the last world
+    me.x = 0; me.z = 2.5; me.yaw = Math.PI; me.y = 0;
+    if (global.VintinuumVoice && global.VintinuumVoice.clearPeers) { try { global.VintinuumVoice.clearPeers(); } catch (_) {} }
+  }
+
   World.claimHere = function () { World.send({ t: 'world:claim', x: World._me ? World._me.x : 0, z: World._me ? World._me.z : 0 }); };
   World.placeHere = function (kind) { const me = World._me || {}; World.send({ t: 'world:place', kind, x: me.x || 0, z: me.z || 0, rot: me.yaw || 0 }); };
   World.harvest = function () { World.send({ t: 'world:harvest' }); };
@@ -558,6 +662,7 @@
     }
     World._frame = (World._frame || 0) + 1;
     if (World._motes) World._motes.rotation.y += dt * 0.02;
+    _stepWarp(dt);
 
     // camera modes: 0=3rd-person (behind), 1=1st-person (eyes), 2=selfie (front)
     const mode = World._camMode || 0;

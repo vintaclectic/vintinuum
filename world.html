@@ -110,6 +110,7 @@
 <script src="body/draggable.js"></script>
 <script src="body/world/world-client.js"></script>
 <script src="body/world/world-hud.js"></script>
+<script src="body/world/dirverse-hud.js"></script>
 <script>
 (function () {
   const statusEl = document.getElementById('status');
@@ -157,7 +158,10 @@
   const tok = (function(){ try { return localStorage.getItem('vint_access_token') || localStorage.getItem('vint_token'); } catch(_) { return null; } })();
   if (!tok) { status('sign in first — the clearing knows who arrives.'); }
   else {
-    VintinuumWorld.start({ mountEl: document.getElementById('stage'), onSpeech: utter, onStatus: status })
+    // DIRVERSE: ?world=<id> drops you straight into that world (default 'universe' hub)
+    let _wid = 'universe';
+    try { _wid = new URLSearchParams(location.search).get('world') || 'universe'; } catch (_) {}
+    VintinuumWorld.start({ mountEl: document.getElementById('stage'), onSpeech: utter, onStatus: status, worldId: _wid })
       .then(() => showTraces())
       .catch(e => { console.error(e); status('the clearing is out of reach right now.'); });
 

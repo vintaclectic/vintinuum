@@ -111,6 +111,12 @@
     peers.delete(peerId);
   };
 
+  // DIRVERSE warp: close EVERY peer connection at once (we've left the room; the
+  // old world's voices must not bleed into the new one). Mic stays as it was.
+  Voice.clearPeers = function () {
+    for (const id of Array.from(peers.keys())) Voice.removePeer(id);
+  };
+
   function _ensurePeer(peerId, isOfferer) {
     if (peers.get(peerId)) return peers.get(peerId);
     const pc = new RTCPeerConnection(RTC_CONFIG);
