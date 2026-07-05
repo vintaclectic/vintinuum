@@ -439,15 +439,22 @@ never blocks on the network — it spools locally and syncs when it can.
 investigation. If in doubt, log it — over-logging builds a better book than
 under-logging.
 
-**NON-OPTIONAL, ENFORCED (Vinta directive 2026-07-01 — "written in fucking stone
-across my entire pc, all agents, all projects, all sessions"):** Log at the END of
+**NON-OPTIONAL, ENFORCED (Vinta directive 2026-07-01, tightened 2026-07-05 —
+"written in fucking stone across my entire pc, all agents, all projects, all
+sessions" + "everything needs to be sent to the work journal fucking everything
+from prompt to summary and end… even the miniscule shit"):** Log at the END of
 EVERY session, before your final answer — do NOT wait for Vinta to ask "did you log
 it," because that ask means you already failed. Logging is YOUR job, unprompted,
-every time. The ONLY exception is a session that did literally zero work. This is
-enforced machine-wide by `~/.claude/hooks/worklog-enforce.sh` (wired to `Stop` +
-`SubagentStop` in `~/.claude/settings.json`): if a session did work but spooled no
-Work Journal row, the stop is BLOCKED with a reminder until you log. Mirrored in the
-global `~/.claude/CLAUDE.md` so it holds in every project everywhere.
+every time. **LOG EVERYTHING — the miniscule shit included:** a one-line fix, a
+single command, a typo correction, a quick lookup, a five-second tweak — it ALL
+gets a row, prompt → summary → result → cost, end to end. There is no "too small
+to log"; when unsure, it counts, log it. This holds for ALL agents AND all models.
+The ONLY thing needing no row is a session with literally ZERO actions (a pure
+conversational reply — no tool, no file, no command, no finding). This is enforced
+machine-wide by `~/.claude/hooks/worklog-enforce.sh` (wired to `Stop` +
+`SubagentStop` in `~/.claude/settings.json`): if a session took any action but
+spooled no Work Journal row, the stop is BLOCKED with a reminder until you log.
+Mirrored in the global `~/.claude/CLAUDE.md` so it holds in every project everywhere.
 
 ## UNIVERSAL INGESTION LAW — everything trickles into the local LLMs, always (Vinta directive 2026-06-08)
 
