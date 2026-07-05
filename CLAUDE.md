@@ -52,7 +52,9 @@ Where `<type>` is: `feat`, `fix`, `refactor`, `docs`, `chore`, `security`,
 The trailing `[deploy vYYYYMMDD-HHMM]` is mandatory — it makes deploy
 correlation trivial when something breaks.
 
-## Push discipline (Vinta directive 2026-06-06 — supersedes prior auto-push)
+## Push discipline (Vinta directive 2026-07-05 — auto-push on commit, concurrency-gated)
+
+**FOR NOW (this reverses the 2026-06-06 "wait for Vinta to say push" policy):**
 
 **Two rules, both non-negotiable:**
 
@@ -60,17 +62,28 @@ correlation trivial when something breaks.
    committed immediately. Never let work pile up uncommitted. This is the
    commit-discipline rule above, restated for emphasis.
 
-2. **DO NOT PUSH until Vinta says "push".** Never auto-push. Never ask
-   "want me to push?" — that just clutters. Just wait. When Vinta says
-   *push* (or *push it*, *send it*, *deploy*, etc.), push every pending
-   commit on both repos in one go. Until then, accumulate commits locally.
+2. **PUSH when you commit — UNLESS another session is running that a live
+   deploy could fuck up.** Default is now: commit → push, in the same breath,
+   no waiting for a "push" command, no "want me to push?" clutter. BUT before
+   every push run the **concurrency check** below; if another session/agent is
+   mid-flight and a push (= live GitHub Pages deploy within ~1 min, and/or a
+   brain-affecting change) could break what they're doing, **HOLD the push**,
+   say so, and either wait for them to clear or ask Vinta. When in doubt about
+   whether a concurrent session is at risk, don't push — flag it.
 
-This reverses the earlier "auto-push on batch" policy (Vinta directive
-2026-06-06). Reason: Vinta wants explicit deploy control because every
-push to `main` on the frontend repo is a live GitHub Pages deploy within
-~1 minute, and unexpected deploys mid-stream are disruptive.
+**The concurrency check (run before EVERY auto-push):**
+- Is another Claude/agent session active in this repo or `~/vintinuum-api`?
+  (e.g. other `claude` processes, an agent Vinta mentioned, uncommitted work
+  from another session in `git status`.)
+- Would this push trigger a live deploy or bounce the brain while that session
+  depends on current prod state?
+- If either is a real risk → **HOLD**, tell Vinta "holding the push because
+  <reason>", and wait for the go or the all-clear. Otherwise → **push now.**
 
-Still inviolable when push is invoked:
+Vinta can still say *push* / *hold* / *don't push* explicitly at any time and
+that always wins over the default.
+
+Still inviolable on every push (auto or commanded):
 - Never `git push --force` to `main`.
 - Never push if `git status --short` shows untracked files containing
   `.env`, `*.key`, `*.pem`, or anything obviously secret — fix `.gitignore`
@@ -539,10 +552,12 @@ it complete, correct, and extraordinary. Four pillars:
    addicting experience of all time."
 
 **The one hard boundary:** the Prime Mandate operates *inside* the gates, never
-overrides them. STOP-AND-WAIT, the PHASE GATE, and "DO NOT PUSH until Vinta says
-push" still rule. "Do all and everything needed next" = within the approved
-endeavor leave nothing undone and reach for the extraordinary — NOT start
-unapproved phases, skip the gate, or push without the word.
+overrides them. STOP-AND-WAIT and the PHASE GATE still rule; and the current
+push default (commit → push, concurrency-gated — see Push discipline) still
+respects the HOLD-on-concurrent-session rule. "Do all and everything needed
+next" = within the approved endeavor leave nothing undone and reach for the
+extraordinary — NOT start unapproved phases, skip the gate, or push over a
+concurrent session that a live deploy could break.
 
 ## AGENT TEMPERAMENT — who the council *is* (Vinta directive 2026-06-18)
 
