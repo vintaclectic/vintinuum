@@ -25,23 +25,76 @@
   function _base() { return (global.__VINTINUUM_API_BASE || '').replace(/\/$/, ''); }
   function _token() { try { return localStorage.getItem('vint_access_token') || localStorage.getItem('vint_token'); } catch (_) { return null; } }
 
-  World.start = async function ({ mountEl, onSpeech: speechCb, onStatus, worldId }) {
+  // ── THE VISIBILITY CONTRACT (aetherhold ↔ helios overlay) ───────────────────
+  // One deterministic "the world is now painted" signal so the overlay/loader
+  // swaps on a real event, never a guess or a timer. Each fires AT MOST ONCE per
+  // start(). Two signals, delivered THREE redundant ways (status string, window
+  // event, resolved promise) so the overlay can bind to whichever it prefers:
+  //   onStatus('__READY__')    → first frame painted (guest OR signed-in). The
+  //                              loader may be killed here — the clearing is live.
+  //   onStatus('__FALLBACK__') → this session is the reduced (ambient-demo)
+  //                              experience: a guest, or a signed-in session whose
+  //                              live WS never landed inside the deadline.
+  //   window 'vint:world-ready'    detail { guest, worldId }
+  //   window 'vint:world-fallback' detail { reason, worldId }
+  //   VintinuumWorld.ready()       → Promise that resolves on READY.
+  // FALLBACK REFINES ready, never replaces it: a guest gets READY on first paint
+  // (kill the loader) then FALLBACK when the ambient-demo owns the scene (show the
+  // "quiet clearing" invite copy). Signed-in users who connect never see FALLBACK.
+  function _emitReady() {
+    if (World._readyFired) return; World._readyFired = true;
+    try { clearTimeout(World._readyWatchdog); } catch (_) {}
+    try { (World._onStatus || (() => {}))('__READY__'); } catch (_) {}
+    try { window.dispatchEvent(new CustomEvent('vint:world-ready', { detail: { guest: !!World._guest, worldId: World._worldId } })); } catch (_) {}
+    if (World._resolveReady) { const r = World._resolveReady; World._resolveReady = null; try { r(); } catch (_) {} }
+  }
+  function _emitFallback(reason) {
+    if (World._fallbackFired) return; World._fallbackFired = true;
+    _emitReady();                     // FALLBACK always implies the scene is visible
+    try { (World._onStatus || (() => {}))('__FALLBACK__'); } catch (_) {}
+    try { window.dispatchEvent(new CustomEvent('vint:world-fallback', { detail: { reason: reason || 'guest', worldId: World._worldId } })); } catch (_) {}
+  }
+  // public: overlay can await this instead of (or alongside) the status signal.
+  World.ready = function () { return World._readyPromise || Promise.resolve(); };
+
+  World.start = async function ({ mountEl, onSpeech: speechCb, onStatus, worldId, guest }) {
     onSpeech = speechCb;
     const status = onStatus || (() => {});
     World._onStatus = status;         // keep a handle so travelTo can reconnect without re-plumbing the UI
     World._mountEl = mountEl;
+    World._guest = !!guest || !_token();  // guest = explicit flag OR simply no token in storage
+    World._readyFired = false; World._fallbackFired = false;
+    World._readyPromise = new Promise(res => { World._resolveReady = res; });
     if (worldId) World._worldId = String(worldId);
     status('waking the world…');
+    // WATCHDOG (bounded loading contract, ≤6s): in practice _loop() fires READY on
+    // the very first painted frame (<1s). This only trips if WebGL/module load
+    // truly hangs — then we still emit a terminal signal so the loader never spins
+    // forever, degrading to whatever we managed to show.
+    try { clearTimeout(World._readyWatchdog); } catch (_) {}
+    World._readyWatchdog = setTimeout(() => { if (!World._readyFired) { _emitReady(); _emitFallback('watchdog'); } }, 6000);
 
-    const mods = await global.Three3D.load();
+    // ── load three.js. If EVERY CDN + self-host fails, we still owe the visitor a
+    //    visible world, so we surface a clear message and rethrow to the caller's
+    //    catch — but this is the ONLY thing that can stop a render, and it's rare.
+    let mods;
+    try {
+      mods = await global.Three3D.load();
+    } catch (e) {
+      // three.js could not stream from ANY source. Dissolve the veil anyway (never
+      // leave a visitor frozen behind it) and surface a calm, honest message.
+      try { status('__FALLBACK__'); } catch (_) {}
+      status('the world needs a moment to stream in — check your connection, then reload.');
+      throw e;
+    }
     THREE = mods.THREE;
     World._mods = mods;
     World._THREE = THREE;
     World._me = me; // expose for world-mvp placement (claim/place at player pos)
-    // preload the shared walking rig so bodies appear fast
-    if (global.RiggedPresence) global.RiggedPresence.preload(mods);
+    // preload the shared walking rig so bodies appear fast (never let a preload throw kill start)
+    try { if (global.RiggedPresence) global.RiggedPresence.preload(mods); } catch (_) {}
 
-    // ── scene ──
+    // ── scene (this block is what makes the clearing VISIBLE; it must never be gated) ──
     scene = new THREE.Scene();
     World._scene = scene;
     scene.background = new THREE.Color(0x1a1410);
@@ -62,29 +115,65 @@
     _resize(mountEl);
     addEventListener('resize', () => _resize(mountEl));
 
-    // try to load the user's own avatar glb for their presence
-    try {
-      const r = await fetch(_base() + '/api/avatar', { headers: { Authorization: 'Bearer ' + _token() } });
-      if (r.ok) {
-        const d = await r.json();
-        if (d.active && d.active.glbUrl) {
-          avatarGlbUrl = d.active.glbUrl.startsWith('http') ? d.active.glbUrl : _base() + d.active.glbUrl;
-          World._myAvatarId = d.active.avatarId || null;
-          World._myHeadAdjust = d.active.headAdjust || null; // saved head-mold edits
+    // From here on, NOTHING may throw past this point and stop the render loop.
+    // Each of the remaining wirings (self-body, avatar, WS, voice, controls) is
+    // individually guarded so one failure degrades gracefully — the clearing stays up.
+
+    // A guest (no token) has no server body coming, so give them a local presence
+    // to see and steer immediately. Signed-in users get theirs from the WS `hello`.
+    if (World._guest) {
+      try {
+        World._selfBody = _makeUserPresence('you', null, null);
+        World._selfBody.userData.isSelf = true;
+        World._selfBody.position.set(me.x, 0, me.z);
+        scene.add(World._selfBody);
+      } catch (_) {}
+    }
+
+    // try to load the user's own avatar glb for their presence (signed-in only;
+    // a Bearer null request is pointless and just noise for a guest)
+    if (!World._guest) {
+      try {
+        const r = await fetch(_base() + '/api/avatar', { headers: { Authorization: 'Bearer ' + _token() } });
+        if (r.ok) {
+          const d = await r.json();
+          if (d.active && d.active.glbUrl) {
+            avatarGlbUrl = d.active.glbUrl.startsWith('http') ? d.active.glbUrl : _base() + d.active.glbUrl;
+            World._myAvatarId = d.active.avatarId || null;
+            World._myHeadAdjust = d.active.headAdjust || null; // saved head-mold edits
+          }
         }
-      }
-    } catch (_) {}
+      } catch (_) {}
+    }
 
-    _connect(status);
-    _bindControls(mountEl);
+    // Only reach for the living world when we actually hold a ticket. A guest sees
+    // the clearing, can look around and move — the WS (others, agents, voice,
+    // building) waits behind a gentle sign-in, surfaced by the page, never blocking.
+    if (!World._guest && _token()) {
+      try { _connect(status); } catch (e) { console.warn('[world] connect failed (world still renders):', e && e.message); }
+    } else {
+      status(''); // clear "waking…" — the clearing is here; the invite is the page's job
+      // AMBIENT-DEMO: a guest doesn't get the living WS, but the clearing must not
+      // be an empty static field — it must feel INHABITED. Drift the full council
+      // as light-presences and let the clearing SPEAK its real remembered lines
+      // (public /api/world/traces). Bounded, zero-write, no auth. This is the
+      // "alive, not static" fallback (2b); a real read-only guest socket (2a) can
+      // later replace it behind the identical READY/FALLBACK contract.
+      try { _startAmbientDemo(); } catch (e) { console.warn('[world] ambient-demo failed (clearing still renders):', e && e.message); }
+    }
 
-    // proximity voice — signaling rides the same ws; volume set by distance
-    if (global.VintinuumVoice) {
-      global.VintinuumVoice.init({
-        sendSignal: (m) => { if (ws && ws.readyState === 1) ws.send(JSON.stringify(m)); },
-        getMyPos: () => ({ x: me.x, z: me.z }),
-        getPeerPos: (id) => { const O = others.get(id); return O ? { x: O.group.position.x, z: O.group.position.z } : null; },
-      });
+    try { _bindControls(mountEl); } catch (e) { console.warn('[world] controls bind failed:', e && e.message); }
+
+    // proximity voice — signaling rides the same ws; volume set by distance.
+    // Guests have no ws to signal over, so skip init entirely (no mic prompt for a visitor).
+    if (!World._guest && global.VintinuumVoice) {
+      try {
+        global.VintinuumVoice.init({
+          sendSignal: (m) => { if (ws && ws.readyState === 1) ws.send(JSON.stringify(m)); },
+          getMyPos: () => ({ x: me.x, z: me.z }),
+          getPeerPos: (id) => { const O = others.get(id); return O ? { x: O.group.position.x, z: O.group.position.z } : null; },
+        });
+      } catch (e) { console.warn('[world] voice init failed:', e && e.message); }
     }
     _loop();
   };
@@ -255,6 +344,120 @@
     return spr;
   }
 
+  // ── AMBIENT-DEMO (guest fallback 2b): the clearing, INHABITED without a socket ─
+  // A guest holds no WS ticket, but must never meet an empty static field. We
+  // spawn the full council as drifting light-presences (identical to the live
+  // path — same _makeAgentPresence + the existing _loop() lerp/LOD animates them)
+  // and let the clearing SPEAK its real remembered lines, pulled from the PUBLIC
+  // GET /api/world/traces (optionalAuth — no token, no writes, no attack surface).
+  // Bounded: presences drift on a self-contained target loop; utterances are
+  // paced and stop when the tab hides or on teardown. Emits __FALLBACK__ once, so
+  // helios's overlay can swap to the "quiet clearing" invite copy. A real
+  // read-only guest socket (2a) can later drop in behind this same contract.
+  // matches the server's AGENTS forms so PRESENCE_CFG lights each one correctly.
+  // Home anchors live in HOMES inside _startAmbientDemo (single source of truth).
+  const AMBIENT_ROSTER = [
+    { id: 'agent:vintinuum', name: 'VINTINUUM', form: 'presence-sovereign' },
+    { id: 'agent:aria',      name: 'ARIA',      form: 'presence-warm' },
+    { id: 'agent:atlas',     name: 'ATLAS',     form: 'presence-structural' },
+    { id: 'agent:lunex',     name: 'LUNEX',     form: 'presence-child-refractive' },
+    { id: 'agent:yuna',      name: 'YUNA',      form: 'presence-child-electric' },
+  ];
+
+  let _ambient = null; // { drift:interval, speak:timeout, alive:bool }
+  function _startAmbientDemo() {
+    if (_ambient || !scene) return;
+    _ambient = { drift: null, speak: null, alive: true, homes: new Map() };
+
+    // spawn each council presence at a home anchor near the bench/clearing
+    const HOMES = {
+      'agent:vintinuum': { x:  0.0, z: -3.6 },
+      'agent:aria':      { x: -2.2, z: -1.2 },   // by ARIA's bench
+      'agent:atlas':     { x:  3.6, z: -3.2 },   // toward the horizon, still
+      'agent:lunex':     { x:  2.2, z:  1.6 },
+      'agent:yuna':      { x: -3.2, z:  2.2 },
+    };
+    for (const a of AMBIENT_ROSTER) {
+      if (agents.has(a.id)) continue;
+      const home = HOMES[a.id] || { x: 0, z: -3 };
+      let g;
+      try { g = _makeAgentPresence(a); } catch (_) { continue; }
+      g.position.set(home.x, 0, home.z);
+      scene.add(g);
+      agents.set(a.id, { group: g, target: { x: home.x, z: home.z, yaw: Math.random() * Math.PI * 2 }, name: a.name });
+      _ambient.homes.set(a.id, home);
+    }
+
+    // this session is now the reduced (ambient) experience — tell the overlay.
+    _emitFallback('guest-ambient');
+
+    // DRIFT: retarget each presence to a gentle wander near its home every few
+    // seconds. The existing _loop() lerps group→target + plays idle/walk, so this
+    // is just a slow target nudge — zero per-frame cost here.
+    _ambient.drift = setInterval(() => {
+      if (!_ambient || !_ambient.alive) return;
+      for (const [id, A] of agents) {
+        const home = _ambient.homes.get(id); if (!home) continue; // only nudge OUR presences
+        A.target = {
+          x: home.x + (Math.random() - 0.5) * 2.2,
+          z: home.z + (Math.random() - 0.5) * 2.2,
+          yaw: Math.random() * Math.PI * 2,
+        };
+      }
+    }, 4200);
+
+    // VOICE OF THE CLEARING: pull the real remembered lines and let them surface,
+    // one at a time, paced, so the clearing feels like it's quietly thinking.
+    _ambient.lines = []; _ambient.li = 0;
+    _refreshAmbientTraces();
+    const speakOne = () => {
+      if (!_ambient || !_ambient.alive) return;
+      if (!World._hidden && _ambient.lines.length && onSpeech) {
+        const t = _ambient.lines[_ambient.li % _ambient.lines.length]; _ambient.li++;
+        try {
+          onSpeech({
+            name: t.who || 'the clearing',
+            text: t.text,
+            kind: t.kind === 'thought' ? 'muse' : 'ambient',
+          });
+        } catch (_) {}
+        // refresh the pool every full pass so it stays current across a long visit
+        if (_ambient.li % Math.max(1, _ambient.lines.length) === 0) _refreshAmbientTraces();
+      }
+      _ambient.speak = setTimeout(speakOne, 9000 + Math.random() * 7000);
+    };
+    // first line lands a few seconds in, after the scene has settled
+    _ambient.speak = setTimeout(speakOne, 5000);
+  }
+
+  async function _refreshAmbientTraces() {
+    try {
+      const r = await fetch(_base() + '/api/world/traces');
+      if (!r.ok) return;
+      const d = await r.json();
+      const src = Array.isArray(d.traces) ? d.traces : [];
+      const lines = [];
+      for (const t of src) {
+        if (t.kind === 'thought' && t.text) lines.push({ who: t.who, text: String(t.text).slice(0, 180), kind: 'thought' });
+        else if (t.kind === 'passed' && t.who) lines.push({ who: 'the clearing', text: `${t.who} passed through here ${t.when || 'not long ago'}.`, kind: 'ambient' });
+      }
+      if (_ambient) _ambient.lines = lines;
+    } catch (_) { /* the clearing simply stays quiet — never an error to the guest */ }
+  }
+
+  function _stopAmbientDemo() {
+    if (!_ambient) return;
+    _ambient.alive = false;
+    try { clearInterval(_ambient.drift); } catch (_) {}
+    try { clearTimeout(_ambient.speak); } catch (_) {}
+    // remove only the presences we spawned (the live path owns its own via `hello`)
+    for (const a of AMBIENT_ROSTER) {
+      const A = agents.get(a.id);
+      if (A) { try { scene.remove(A.group); } catch (_) {} agents.delete(a.id); }
+    }
+    _ambient = null;
+  }
+
   // ── websocket presence ─────────────────────────────────────────────────────
   // CONTRACTS.md: fetch /api/world/hello to learn WHICH shard (wsUrl) + ticket,
   // so the WS layer can re-platform (→ Cloudflare Durable Objects) without
@@ -419,13 +622,20 @@
     const gone = ws; ws = null;
     if (gone) { try { gone.onclose = null; gone.onmessage = null; gone.close(); } catch (_) {} }
     if (global.VintinuumVoice && global.VintinuumVoice.reset) { try { global.VintinuumVoice.reset(); } catch (_) {} }
+    try { _stopAmbientDemo(); } catch (_) {} // clear any guest ambient loop before the room swaps
     _teardownRoom();                            // remove other users, agents, structures of the old world
     World._worldId = worldId;
     World._canBuild = true;                     // optimistic; world:state will correct for visitors
     selfId = null;
-    // re-plumb voice to the *new* socket once it exists (getPos closures already reference live `me`)
-    _connect(World._onStatus || (() => {}));
-    setTimeout(() => { try { World.send({ t: 'world:hello' }); } catch (_) {} }, 600);
+    // re-plumb voice to the *new* socket once it exists (getPos closures already reference live `me`).
+    // A guest holds no ticket — never reach for the WS (it would 401-loop); re-arm the
+    // ambient-demo for the new room instead so travel still lands them in a living clearing.
+    if (!World._guest && _token()) {
+      _connect(World._onStatus || (() => {}));
+      setTimeout(() => { try { World.send({ t: 'world:hello' }); } catch (_) {} }, 600);
+    } else {
+      try { _startAmbientDemo(); } catch (_) {}
+    }
     try { window.dispatchEvent(new CustomEvent('vint:world-travel', { detail: { worldId } })); } catch (_) {}
     return worldId;
   };
@@ -603,6 +813,12 @@
   function _loop() {
     requestAnimationFrame(_loop);
     if (World._hidden) return;                        // zero GPU when tab hidden
+    try { _frame(); } catch (e) {
+      // one bad frame must NEVER stop the world. Log once, keep the RAF chain alive.
+      if (!World._loopErrLogged) { console.error('[world] frame error (world keeps rendering):', e); World._loopErrLogged = true; }
+    }
+  }
+  function _frame() {
     const dt = Math.min(clock.getDelta(), 0.05);
     _stepMovement(dt);
     const camPos = camera.position;
@@ -696,6 +912,19 @@
     if (global.VintinuumVoice) global.VintinuumVoice.updateSpatial();
 
     renderer.render(scene, camera);
+
+    // FIRST-PAINT signal → the visibility contract fires the instant the clearing
+    // is actually on screen (status string + window event + resolved promise), so
+    // the loader/overlay swaps on a REAL event, never a guess. Exactly once.
+    if (!World._painted) {
+      World._painted = true;
+      _emitReady();
+      // A guest painted the clearing but will never receive a live WS world — mark
+      // this session as the reduced (ambient) experience so the overlay raises the
+      // "quiet clearing · sign in to join" invite. The world stays fully visible and
+      // explorable; FALLBACK only refines the copy, it never hides the world.
+      if (World._guest) { try { _emitFallback('guest'); } catch (_) {} }
+    }
   }
   // cycle camera: 3rd → 1st → selfie → 3rd
   World.cycleCamera = function () { World._camMode = ((World._camMode || 0) + 1) % 3; return World._camMode; };
