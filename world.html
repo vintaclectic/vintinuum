@@ -69,11 +69,91 @@
   #traces .trace { font-size: 17px; line-height: 1.5; color: rgba(245,235,220,0.82); }
   #traces .trace .who { color: #f4c79a; }
   #traces .trace .when { font-size: 13px; color: rgba(245,235,220,0.45); display: block; margin-top: 2px; }
+
+  /* ── loader veil — bounded, breathing, never dead (helios) ──
+     sits over the stage while the first frame paints; dissolves on READY. */
+  #veil { position: fixed; inset: 0; z-index: 8; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; gap: 22px; text-align: center;
+    background: radial-gradient(ellipse 70% 55% at 50% 42%, rgba(42,32,24,0.55) 0%, rgba(20,16,12,0.92) 72%, #14100c 100%);
+    transition: opacity 1s ease; pointer-events: none; }
+  #veil.gone { opacity: 0; }
+  #veil .emberwrap { position: relative; width: 74px; height: 74px; }
+  /* a slow-breathing ember — the clearing's fire, always alive */
+  #veil .ember { position: absolute; inset: 0; border-radius: 50%;
+    background: radial-gradient(circle at 50% 45%, #ffd9a0 0%, #f4a35a 38%, rgba(244,120,60,0.35) 62%, transparent 74%);
+    animation: emberBreath 2.6s ease-in-out infinite; }
+  #veil .ember.r2 { animation-duration: 3.9s; opacity: 0.5; transform: scale(1.35); }
+  @keyframes emberBreath { 0%,100% { transform: scale(0.86); opacity: 0.75; } 50% { transform: scale(1.12); opacity: 1; } }
+  @media (prefers-reduced-motion: reduce) { #veil .ember, #veil .ember.r2 { animation: none; } }
+  #veil .vtext { font-size: clamp(17px, 4.6vw, 21px); color: rgba(245,235,220,0.82); font-style: italic;
+    min-height: 1.4em; max-width: min(84vw, 420px); padding: 0 16px; line-height: 1.4;
+    transition: opacity .5s ease; }
+
+  /* ── guest invitation — a warm doorway, never a wall (helios) ──
+     lower-anchored so the living world breathes above it; refusable; mobile-first. */
+  #invite { position: fixed; left: max(12px, env(safe-area-inset-left,12px)); right: max(12px, env(safe-area-inset-right,12px));
+    bottom: calc(16px + env(safe-area-inset-bottom, 0px)); z-index: 7;
+    max-width: min(94vw, 500px); margin: 0 auto;
+    background: linear-gradient(180deg, rgba(24,18,13,0.72), rgba(18,13,9,0.9));
+    backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+    border: 1px solid rgba(244,199,154,0.28); border-radius: 20px;
+    padding: 18px 18px calc(16px + env(safe-area-inset-bottom,0px));
+    box-shadow: 0 -8px 40px rgba(0,0,0,0.35), 0 0 0 1px rgba(255,255,255,0.02) inset;
+    display: none; }
+  #invite.show { display: block; animation: inviteRise .8s cubic-bezier(.2,.8,.2,1); }
+  @keyframes inviteRise { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: none; } }
+  #invite.min { padding: 10px 14px; }
+  #invite .i-eyebrow { font-size: 11px; letter-spacing: 0.22em; text-transform: uppercase; color: rgba(244,199,154,0.7); margin-bottom: 6px; }
+  #invite .i-head { font-size: clamp(19px, 5vw, 24px); line-height: 1.22; color: rgba(248,240,226,0.96); margin-bottom: 6px; }
+  #invite .i-sub { font-size: clamp(14px, 3.6vw, 16px); line-height: 1.45; color: rgba(245,235,220,0.66); margin-bottom: 14px; }
+  #invite .i-row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+  #invite .i-cta { flex: 1 1 auto; min-width: 0; min-height: 48px; display: flex; align-items: center; justify-content: center;
+    font-family: inherit; font-size: 16px; font-weight: 500; letter-spacing: 0.02em;
+    color: #1a1006; background: linear-gradient(135deg, #f4c79a 0%, #ffdca8 50%, #f0b47e 100%);
+    border: none; border-radius: 999px; padding: 0 24px; cursor: pointer; text-decoration: none;
+    box-shadow: 0 4px 18px rgba(244,180,120,0.28); transition: transform .15s; }
+  #invite .i-cta:active { transform: scale(0.97); }
+  #invite .i-ghost { flex: 0 0 auto; min-height: 48px; display: flex; align-items: center;
+    font-family: inherit; font-size: 14px; color: rgba(245,235,220,0.55);
+    background: none; border: none; cursor: pointer; padding: 0 12px; text-decoration: none; }
+  #invite .i-ghost:active { color: rgba(245,235,220,0.85); }
+  /* the minimized doorway pill — collapses when a guest chooses to just wander */
+  #invite .i-mini { display: none; align-items: center; gap: 10px; }
+  #invite.min .i-full { display: none; }
+  #invite.min .i-mini { display: flex; }
+  #invite .i-mini .m-text { flex: 1 1 auto; min-width: 0; font-size: 14px; color: rgba(245,235,220,0.7);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  #invite .i-mini .m-cta { flex: 0 0 auto; min-height: 44px; display: flex; align-items: center;
+    font-size: 14px; color: #f4c79a; text-decoration: none; padding: 0 6px; }
 </style>
 </head>
 <body>
 <div id="stage"></div>
 <div id="status" class="show">finding the clearing…</div>
+
+<!-- loader veil — bounded, breathing; dissolves the instant the world paints (helios) -->
+<div id="veil">
+  <div class="emberwrap"><div class="ember r2"></div><div class="ember"></div></div>
+  <div class="vtext" id="veilText">finding the clearing…</div>
+</div>
+
+<!-- guest invitation — a warm doorway over a living world, never a wall (helios) -->
+<div id="invite">
+  <div class="i-full">
+    <div class="i-eyebrow" id="inviteEyebrow">the clearing is open</div>
+    <div class="i-head" id="inviteHead">You're standing in someone's world.</div>
+    <div class="i-sub" id="inviteSub">Wander it freely. When you're ready, claim a clearing of your own — it starts empty and becomes yours a little more every day.</div>
+    <div class="i-row">
+      <a class="i-cta" id="inviteCta" href="welcome.html">Claim your world</a>
+      <button class="i-ghost" id="inviteWander" type="button">just look around</button>
+    </div>
+  </div>
+  <div class="i-mini">
+    <span class="m-text">wandering as a guest</span>
+    <a class="m-cta" href="welcome.html">claim your world →</a>
+  </div>
+</div>
+
 <div id="traces"></div>
 <div id="offer">
   <div class="o-who" id="offerWho">ARIA</div>
@@ -115,7 +195,54 @@
 (function () {
   const statusEl = document.getElementById('status');
   const feed = document.getElementById('feed');
-  function status(t) { statusEl.textContent = t || ''; statusEl.classList.toggle('show', !!t); }
+  const veilEl = document.getElementById('veil');
+  const veilTextEl = document.getElementById('veilText');
+  let _veilGone = false;
+  // GRADUATED REASSURANCE — a loader past ~5s reads as broken, so we speak to the
+  // visitor before then. Declared first so the single dismissVeil binding can clear it.
+  const _veilReassure = setTimeout(function () {
+    if (!_veilGone) veilTextEl.textContent = 'almost — the light is still settling…';
+  }, 5000);
+  // dissolve the loader veil exactly once — on READY, FALLBACK, or hard timeout.
+  // ONE canonical binding (let-bound expression, not a reassigned declaration) so no
+  // caller can capture a stale un-wrapped version; the reassure-clear lives inside it.
+  const dismissVeil = function () {
+    if (_veilGone) return; _veilGone = true;
+    clearTimeout(_veilReassure);
+    veilEl.classList.add('gone');
+    setTimeout(() => { if (veilEl.parentNode) veilEl.parentNode.removeChild(veilEl); }, 1100);
+  };
+  // HARD SAFETY NET — the veil can NEVER outlive the world it hides. Aetherhold's
+  // world-client ships a 6s internal watchdog that force-emits READY+FALLBACK if the
+  // first frame never paints (WebGL/module hang). This 6.5s belt-and-suspenders sits
+  // right behind it: if even his status callback is lost, we still dissolve so a
+  // visitor is never trapped staring at a loader. His fires first at 6s; ours covers
+  // the pathological case. Last line against the blank screen.
+  setTimeout(function () {
+    if (!_veilGone) { veilTextEl.textContent = 'the clearing stirs…'; dismissVeil(); }
+  }, 6500);
+  // status feeds both the legacy center text AND the veil, and honors aetherhold's
+  // terminal signals (__READY__ / __FALLBACK__) to dissolve the loader. dismissVeil()
+  // is idempotent, so READY→FALLBACK (FALLBACK always implies READY first) is safe.
+  function status(t) {
+    if (t === '__READY__') { dismissVeil(); return; }
+    if (t === '__FALLBACK__') { if (!_veilGone) veilTextEl.textContent = 'the clearing stirs…'; dismissVeil(); return; }
+    statusEl.textContent = t || ''; statusEl.classList.toggle('show', !!t && _veilGone);
+    if (!_veilGone && t) veilTextEl.textContent = t;
+  }
+  // REDUNDANT BINDINGS (defense-in-depth) — aetherhold emits the same truth on the
+  // window in case the onStatus callback is ever lost. dismissVeil is idempotent, so
+  // these can never double-fire the teardown. Belt, suspenders, and a spare belt.
+  window.addEventListener('vint:world-ready', dismissVeil);
+  window.addEventListener('vint:world-fallback', function () {
+    if (!_veilGone) veilTextEl.textContent = 'the clearing stirs…';
+    dismissVeil();
+    // FALLBACK is the contract's designated moment for the guest invite (aetherhold:
+    // "show your quiet-clearing invite copy"). Raise it HERE — off the signal — not off
+    // start()'s promise, so the doorway can never precede the scene it stands in. The
+    // .then() below is the backup trigger; _guestOverlayShown makes both idempotent.
+    if (isGuest) { try { guestOverlay(); } catch (_) {} }
+  });
 
   function utter(m) {
     const div = document.createElement('div');
@@ -154,29 +281,84 @@
   }
   function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 
-  // gate on login
+  // The world ALWAYS renders — signed-in or signed-out (Vinta directive 2026-07-05:
+  // "never a blank screen"). A guest sees the full 3D clearing and can look around;
+  // only joining the LIVING world (other people, agents, voice, building) needs a
+  // sign-in, surfaced as a gentle overlay INSIDE the world, never a wall in front of it.
   const tok = (function(){ try { return localStorage.getItem('vint_access_token') || localStorage.getItem('vint_token'); } catch(_) { return null; } })();
-  if (!tok) { status('sign in first — the clearing knows who arrives.'); }
-  else {
-    // DIRVERSE: ?world=<id> drops you straight into that world (default 'universe' hub)
-    let _wid = 'universe';
-    try { _wid = new URLSearchParams(location.search).get('world') || 'universe'; } catch (_) {}
-    VintinuumWorld.start({ mountEl: document.getElementById('stage'), onSpeech: utter, onStatus: status, worldId: _wid })
-      .then(() => showTraces())
-      .catch(e => { console.error(e); status('the clearing is out of reach right now.'); });
+  const isGuest = !tok;
 
-    // the conversion moment — soft, refusable, never blocks the conversation
-    VintinuumWorld.onOffer(o => {
-      const el = document.getElementById('offer');
-      document.getElementById('offerWho').textContent = o.name || 'ARIA';
-      document.getElementById('offerText').textContent = o.text || '';
-      if (o.href) document.getElementById('offerCta').href = o.href;
-      if (o.cta) document.getElementById('offerCta').textContent = o.cta;
-      el.classList.add('show');
-      const hide = () => el.classList.remove('show');
-      document.getElementById('offerDismiss').onclick = hide;
-      setTimeout(hide, 20000); // it leaves on its own; no pressure
+  // DIRVERSE: ?world=<id> drops you straight into that world (default 'universe' hub)
+  let _wid = 'universe';
+  try { _wid = new URLSearchParams(location.search).get('world') || 'universe'; } catch (_) {}
+
+  // start() builds the scene locally FIRST; it only reaches for the WS when a
+  // ticket exists. A thrown module never blanks the page — start() catches its
+  // own internals and the loop keeps rendering the clearing.
+  VintinuumWorld.start({ mountEl: document.getElementById('stage'), onSpeech: utter, onStatus: status, worldId: _wid, guest: isGuest })
+    .then(() => { if (!isGuest) showTraces(); else guestOverlay(); })
+    .catch(e => {
+      console.error('[world] start failed:', e);
+      // even if start() throws before building, we still owe the visitor SOMETHING
+      // beautiful — a calm status over the warm ground, never a dead brown box.
+      status('the clearing is drifting just out of reach — try again in a moment.');
+      if (isGuest) guestOverlay();
     });
+
+  // the conversion moment — soft, refusable, never blocks the conversation
+  VintinuumWorld.onOffer(o => {
+    const el = document.getElementById('offer');
+    document.getElementById('offerWho').textContent = o.name || 'ARIA';
+    document.getElementById('offerText').textContent = o.text || '';
+    if (o.href) document.getElementById('offerCta').href = o.href;
+    if (o.cta) document.getElementById('offerCta').textContent = o.cta;
+    el.classList.add('show');
+    const hide = () => el.classList.remove('show');
+    document.getElementById('offerDismiss').onclick = hide;
+    setTimeout(hide, 20000); // it leaves on its own; no pressure
+  });
+
+  // GUEST INVITATION — helios's warm doorway (#invite). Shown only once the 3D
+  // clearing is already visible behind it; it invites, never blocks. The world is
+  // fully explorable underneath, and "just look around" collapses it to a pill.
+  let _guestOverlayShown = false;
+  function guestOverlay() {
+    const el = document.getElementById('invite');
+    if (!el || _guestOverlayShown) return; _guestOverlayShown = true;
+
+    // Guests can look, walk, and feel the clearing — but the WRITE surfaces (say, mic,
+    // build, edit-head, movement pad) belong to the living world and need a sign-in.
+    // Hide them so a guest never taps a dead control (the server also refuses guest
+    // writes — enforced, not merely hidden). UI honesty, not a paywall.
+    ['saybar','movectl','topctl','editHeadBtn','hint'].forEach(function (id) {
+      const n = document.getElementById(id); if (n) n.style.display = 'none';
+    });
+
+    // Rotate the opening line by which world you wandered into (hub vs. someone's world).
+    if (_wid && _wid !== 'universe') {
+      const eb = document.getElementById('inviteEyebrow'); if (eb) eb.textContent = 'you wandered into ' + _wid;
+      const sub = document.getElementById('inviteSub');
+      if (sub) sub.textContent = 'They built this. Wander it freely — then claim a clearing of your own. It starts empty and becomes more yours every single day.';
+    }
+
+    // The earned CTA → the BECOME→NAME signup flow (claim your world), not a bare sign-in.
+    const openWelcome = function (ev) {
+      if (ev) ev.preventDefault();
+      try {
+        if (window.VintWelcomeGate && window.VintWelcomeGate.open) { window.VintWelcomeGate.open('signup'); return; }
+        if (window.__vintOpenSignin) { window.__vintOpenSignin(); return; }
+      } catch (_) {}
+      location.href = 'welcome.html';
+    };
+
+    // let the golden hour land first, then raise the doorway (world already visible).
+    setTimeout(() => el.classList.add('show'), 1400);
+    const wander = document.getElementById('inviteWander');
+    if (wander) wander.onclick = () => { el.classList.add('min'); };
+    const cta = document.getElementById('inviteCta');
+    if (cta) cta.onclick = openWelcome;
+    const mini = el.querySelector('.i-mini .m-cta');
+    if (mini) mini.onclick = openWelcome;
   }
 
   // say
