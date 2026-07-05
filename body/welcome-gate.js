@@ -267,10 +267,19 @@
     document.body.appendChild(pill);
   }
 
+  // Pages that own their own, gentler "way in" and must NOT be ambushed by the
+  // full sign-in modal on first paint. The immersive 3D world (world.html) shows a
+  // living clearing behind a soft in-world invite doorway (#invite) — a modal wall
+  // over the canvas is exactly the "nothing renders" feeling we're killing. The
+  // persistent pill/dot + the in-world CTA (which calls VintWelcomeGate.open) still
+  // give a way in; we only suppress the AUTO-open here. (Vinta 2026-07-05.)
+  var IMMERSIVE = { 'world.html': 1 };
+
   // First-visit welcome: open the sheet once for a brand-new logged-out visitor
   // (unless they dismissed it). Non-blocking — they can close instantly.
   function maybeFirstVisit() {
     if (signedIn()) return;
+    if (IMMERSIVE[path]) return;       // the world greets you in-world, not with a modal
     if (ls('vwg_seen') === '1') return;
     if (ls('vwg_dismissed')) return;
     ls('vwg_seen', '1');
