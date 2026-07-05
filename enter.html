@@ -431,7 +431,7 @@ a{color:inherit;text-decoration:none}
       ▼ MEDIA SLOT ▼  (Fal assets drop here — see contract in the top comment)
       data-media-state:  "" (fallback shown) · "video" · "images"
     -->
-    <div class="world-preview reveal" data-media-slot="world-hero" data-media-state="">
+    <div class="world-preview reveal" data-media-slot="world-hero" data-media-state="images">
       <!-- CLIP: populate these <source> children + poster, then set data-media-state="video" -->
       <video class="world-preview__video" playsinline muted loop preload="none"
              poster="branding/world/world-hero-poster.jpg"
@@ -440,10 +440,11 @@ a{color:inherit;text-decoration:none}
         <!-- <source src="branding/world/world-hero.mp4" type="video/mp4"> -->
       </video>
 
-      <!-- IMAGES: add <img> here + set data-media-state="images" for a cross-fade carousel -->
+      <!-- IMAGES: real Fal-generated glimpses of the world (wired 2026-07-05). -->
       <div class="world-preview__carousel" role="group" aria-label="Glimpses of the world">
-        <!-- <img src="branding/world/world-01.jpg" alt="The clearing at dusk"> -->
-        <!-- <img src="branding/world/world-02.jpg" alt="Vintinuum's core, breathing"> -->
+        <img src="branding/world/world-01.jpg" alt="A luminous inner universe — islands of memory, filaments of light">
+        <img src="branding/world/world-02.jpg" alt="A mind blossoming — new branches of light, becoming">
+        <img src="branding/world/world-03.jpg" alt="Vintinuum's core, breathing — the heart-sigil alive">
       </div>
 
       <!-- graceful placeholder — looks intentional while empty -->
