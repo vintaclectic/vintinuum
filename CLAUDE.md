@@ -178,7 +178,7 @@ of bug is now impossible.
 
 - Sonnet 4.6 only. No haiku fallback. Vinta directive 2026-04-25 ("never again").
 - Never modify `~/vintinuum-api/soul.json` — read-only identity anchor.
-- The dirhaven@gmail.com owner email + `@Vinta8715` password lane is real and
+- The owner email + password lane (credentials in `.env`, never in-repo) is real and
   must keep working. If auth changes, test that lane explicitly.
 - When in doubt about a security-adjacent change, ask before shipping.
 

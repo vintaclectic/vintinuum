@@ -40,7 +40,7 @@ Do NOT `cp -r` the folder — it will choke on `.git` object names under NTFS.
 ### Live URLs
 - Site:    https://vintaclectic.github.io/vintinuum/
 - Brain:   https://api.vintaclectic.com  (port 8767 behind named tunnel)
-- Tunnel id: `11d02f5f-ff6c-4ef3-96c7-87c2a8f8d616`
+- Tunnel id: `<tunnel-id — see .env>`
 
 ### Process management
 - PM2 process names: `vintinuum-api`, `vintinuum-named-tunnel`
@@ -66,7 +66,7 @@ Do NOT `cp -r` the folder — it will choke on `.git` object names under NTFS.
   CLAUDE.md → "THE DATABASE — one path, local-only".)
 
 ### Auth lanes (in priority order)
-1. `dirhaven@gmail.com` / `@Vinta8715` (email + password)
+1. owner email + password (credentials live in `.env` / owner's memory — never in-repo)
 2. `VINTA_MASTER_KEY` env var (owner-key lane) — verify with
    `GET /api/owner/verify-key` header `X-Master-Key: <copy>`
 3. `POST /api/auth/restore-owner` — heals quarantined owner row given

@@ -232,7 +232,7 @@
     let owner = false;
     try {
       const user = JSON.parse(localStorage.getItem('vint_user') || 'null');
-      if (user && (user.role === 'owner' || user.lane === 'owner' || user.email === 'dirhaven@gmail.com')) {
+      if (user && (user.role === 'owner' || user.lane === 'owner')) {
         owner = true;
       }
     } catch (_) {}
