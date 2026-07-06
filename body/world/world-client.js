@@ -115,6 +115,21 @@
     _resize(mountEl);
     addEventListener('resize', () => _resize(mountEl));
 
+    // ── AGENT-LIFE: the living layer. Give the council movement personalities,
+    //    idle rituals, muse-wisps, player-reactivity + the listen/speak arc. This
+    //    is a DRIVER over the same `agents` map world-client already lerps, so it
+    //    animates BOTH the guest ambient roster and the live-WS council with no
+    //    extra wiring. Guarded — if it fails, the world still renders + moves.
+    try {
+      if (global.AgentLife) {
+        global.AgentLife.init({
+          THREE, scene, agents,
+          getPlayer: () => ({ x: me.x, z: me.z, yaw: me.yaw }),
+          isMobile,
+        });
+      }
+    } catch (e) { console.warn('[world] agent-life init failed (world still lives):', e && e.message); }
+
     // From here on, NOTHING may throw past this point and stop the render loop.
     // Each of the remaining wirings (self-body, avatar, WS, voice, controls) is
     // individually guarded so one failure degrades gracefully — the clearing stays up.
@@ -270,6 +285,10 @@
     const label = _makeLabel(name); g.add(label); g.userData.label = label;
     const placeholder = _fallbackBody(g);
     g.userData.placeholder = placeholder;
+    // remember whether this being has a generated face — the Being Forge keeps the
+    // sculptable placeholder head visible for a FACELESS being (that sculpted head
+    // IS its face until they generate one), and hides it once a real face lands.
+    g.userData.hasFace = !!bustUrl;
     _attachRig(g, bustUrl, 0, headAdjust);
     return g;
   }
@@ -284,11 +303,39 @@
     global.RiggedPresence.create({ THREE, mods: World._mods, bustUrl: bustUrl || null, headAdjust: headAdjust || null })
       .then(rig => {
         const ph = g.userData.placeholder;
-        if (ph && ph.parent) ph.parent.remove(ph);
-        g.userData.placeholder = null;
+        // A FACELESS SELF being keeps its sculpted placeholder head as its face
+        // (the Being Forge sculpts + tints it). Perch it on the rig's head bone so
+        // it walks WITH the body, and hide the rig's own head so it reads as one
+        // continuous figure. A being WITH a real face drops the placeholder as before.
+        const faceless = g.userData.isSelf && !bustUrl;
+        if (ph && ph.parent && !faceless) { ph.parent.remove(ph); g.userData.placeholder = null; }
         g.add(rig.root); g.userData.rig = rig;
+        if (faceless && ph) {
+          // A FACELESS being: keep only the SCULPTED HEAD as its face, perched on
+          // the rig's head bone so it walks with the body; drop the placeholder
+          // torso (the robot body IS the torso). One continuous, forge-able figure.
+          try {
+            const sculptHead = ph.userData && ph.userData.__forgeHead;
+            let headBone = null;
+            rig.root.traverse(o => { if (o.isBone && /Head$/.test(o.name)) headBone = o; });
+            if (sculptHead && headBone) {
+              ph.remove(sculptHead);                 // detach head from the placeholder body
+              headBone.add(sculptHead);
+              const ws = headBone.getWorldScale(new THREE.Vector3());
+              const inv = 1 / (ws.y || 1);
+              sculptHead.position.set(0, 0.06 * inv, 0);
+              sculptHead.scale.multiplyScalar(inv * 0.9);
+              rig._forgeHead = sculptHead;
+              g.userData.sculptHead = sculptHead;
+            }
+            if (ph.parent) ph.parent.remove(ph);      // remove the leftover placeholder torso
+            g.userData.placeholder = null;
+          } catch (_) {}
+        }
         if (g.userData.isSelf) World._selfRig = rig; // editor hooks live preview here
-        console.log('[world] rig attached' + (bustUrl ? ' (with face)' : ''));
+        // re-apply any saved being look (morph + tint) now that the rig exists
+        if (g.userData.isSelf) { try { _reapplySavedBeing(); } catch (_) {} }
+        console.log('[world] rig attached' + (bustUrl ? ' (with face)' : faceless ? ' (sculpt-head being)' : ''));
       })
       .catch(e => console.warn('[world] rig build failed:', e && (e.message || e)));
   }
@@ -304,9 +351,15 @@
       roughness: 0.35, metalness: 0.1, transparent: true, opacity: 0.55,
     });
     const torso = new THREE.Mesh(new THREE.CapsuleGeometry(0.16, 0.6, 8, 16), mat); torso.position.y = 1.0;
-    // a sculpted (slightly elongated) head, not a flat sprite — it MOLDS by design
+    // a sculpted (slightly elongated) head, not a flat sprite — it MOLDS by design.
+    // This IS the Being-Forge's sculpt target for a being with no generated face:
+    // the creator morphs THIS head (width/length/depth) + tints the whole figure.
     const headM = new THREE.Mesh(new THREE.SphereGeometry(0.135, 24, 20), mat);
     headM.scale.set(0.92, 1.12, 0.95); headM.position.y = 1.55;
+    headM.userData.__forgeBaseScale = { x: 0.92, y: 1.12, z: 0.95 };
+    mat.userData = mat.userData || {};
+    torso.userData.__forgeTintable = true; headM.userData.__forgeTintable = true;
+    grp.userData.__forgeHead = headM; grp.userData.__forgeMat = mat;
     grp.add(torso, headM); g.add(grp);
     // shimmer: gentle breath of opacity + emissive so it feels alive while forming
     grp.userData._t = 0;
@@ -388,23 +441,26 @@
       _ambient.homes.set(a.id, home);
     }
 
+    // re-apply any saved council tints now that the ambient roster exists (a
+    // guest can recolor the council in the Being Forge; the choice survives reloads)
+    try { setTimeout(() => { try { _reapplySavedBeing(); } catch (_) {} }, 300); } catch (_) {}
+
     // this session is now the reduced (ambient) experience — tell the overlay.
     _emitFallback('guest-ambient');
 
-    // DRIFT: retarget each presence to a gentle wander near its home every few
-    // seconds. The existing _loop() lerps group→target + plays idle/walk, so this
-    // is just a slow target nudge — zero per-frame cost here.
-    _ambient.drift = setInterval(() => {
-      if (!_ambient || !_ambient.alive) return;
-      for (const [id, A] of agents) {
-        const home = _ambient.homes.get(id); if (!home) continue; // only nudge OUR presences
-        A.target = {
-          x: home.x + (Math.random() - 0.5) * 2.2,
-          z: home.z + (Math.random() - 0.5) * 2.2,
-          yaw: Math.random() * Math.PI * 2,
-        };
-      }
-    }, 4200);
+    // MOVEMENT is now owned by AgentLife (personalities, idle rituals, wisps,
+    // player-reactivity) — it chooses each presence's intent every frame in the
+    // loop. No dumb ping-pong interval. If AgentLife somehow failed to load, we
+    // keep a minimal safety-drift so the guest clearing is never frozen.
+    if (!global.AgentLife) {
+      _ambient.drift = setInterval(() => {
+        if (!_ambient || !_ambient.alive) return;
+        for (const [id, A] of agents) {
+          const home = _ambient.homes.get(id); if (!home) continue;
+          A.target = { x: home.x + (Math.random()-0.5)*2.2, z: home.z + (Math.random()-0.5)*2.2, yaw: Math.random()*Math.PI*2 };
+        }
+      }, 4200);
+    }
 
     // VOICE OF THE CLEARING: pull the real remembered lines and let them surface,
     // one at a time, paced, so the clearing feels like it's quietly thinking.
@@ -458,6 +514,25 @@
     _ambient = null;
   }
 
+  // ── incoming speech → light the being, then show the bubble ──────────────────
+  // CONTRACT with the brain (VINTINUUM's parallel work): the server sends
+  //   { t:'speech', actorId, name, text, kind:'agent' }
+  // when an agent replies. We (1) resolve WHICH presence spoke — by actorId if
+  // present, else by matching the display name to a spawned agent — and give it
+  // an animated "speaking" beat (warm swell + regard of the player) synchronized
+  // with its bubble, so the reply visibly BELONGS to a being; then (2) render the
+  // bubble via the page's onSpeech. User/ambient/muse lines just render.
+  function _onAgentSpeech(m) {
+    try {
+      if (m && m.kind === 'agent' && global.AgentLife && global.AgentLife.isReady && global.AgentLife.isReady()) {
+        let id = m.actorId && agents.has(m.actorId) ? m.actorId : null;
+        if (!id && m.name) id = global.AgentLife.idForName(m.name);
+        if (id) global.AgentLife.onAgentSpeak(id, m.text);
+      }
+    } catch (_) {}
+    if (onSpeech) onSpeech(m);
+  }
+
   // ── websocket presence ─────────────────────────────────────────────────────
   // CONTRACTS.md: fetch /api/world/hello to learn WHICH shard (wsUrl) + ticket,
   // so the WS layer can re-platform (→ Cloudflare Durable Objects) without
@@ -489,6 +564,7 @@
         World._selfName = m.selfName || 'you';
         if (m.spawn) { me.x = m.spawn.x; me.z = m.spawn.z; me.yaw = m.spawn.yaw; }
         // idempotent: clear any prior agents/self (reconnect must not duplicate them)
+        try { if (global.AgentLife && global.AgentLife.reset) global.AgentLife.reset(); } catch (_) {}
         for (const A of agents.values()) scene.remove(A.group);
         agents.clear();
         if (World._selfBody) { scene.remove(World._selfBody); World._selfBody = null; }
@@ -505,6 +581,8 @@
         World._selfBody.userData.isSelf = true;
         World._selfBody.position.set(me.x, 0, me.z);
         scene.add(World._selfBody);
+        // re-apply saved council tints for the freshly-spawned live agents
+        try { setTimeout(() => { try { _reapplySavedBeing(); } catch (_) {} }, 300); } catch (_) {}
       } else if (m.t === 'presence') {
         (m.agents || []).forEach(a => { const A = agents.get(a.id); if (A) A.target = { x: a.x, z: a.z, yaw: a.yaw || 0 }; });
         // selfPrefix kills stale-self bodies: if a prior WS connection of mine
@@ -525,7 +603,7 @@
         // remove the gone
         for (const [id, O] of others) { if (!(m.users || []).find(u => u.id === id)) { scene.remove(O.group); others.delete(id); } }
       } else if (m.t === 'speech') {
-        if (onSpeech) onSpeech(m);
+        _onAgentSpeech(m);          // light the speaking being (if it's an agent) + show the bubble
       } else if (m.t === 'offer') {
         if (World._onOffer) World._onOffer(m);
       } else if (m.t === 'voice-state') {
@@ -692,6 +770,7 @@
 
   // Wipe everything that belongs to the *room* (not the engine/self). Called on warp.
   function _teardownRoom() {
+    try { if (global.AgentLife && global.AgentLife.reset) global.AgentLife.reset(); } catch (_) {}
     for (const O of others.values()) { try { scene.remove(O.group); } catch (_) {} }
     others.clear();
     for (const A of agents.values()) { try { scene.remove(A.group); } catch (_) {} }
@@ -716,7 +795,15 @@
     _lastSent = now;
     ws.send(JSON.stringify({ t: 'move', x: me.x, y: (me.y || 0), z: me.z, yaw: me.yaw }));
   }
-  World.say = function (text) { if (ws && ws.readyState === 1) ws.send(JSON.stringify({ t: 'say', text })); };
+  World.say = function (text) {
+    // CLIENT-SIDE REACTIVITY (never dead while the reply generates): the moment
+    // you speak, the nearest in-earshot agent visibly attends — turns to you,
+    // holds a thinking shimmer + rising thought-wisps — so the ~2s until the
+    // brain's reply lands feels ALIVE, not silent. The real reply arrives via the
+    // `speech` WS event (server-authoritative) and snaps them into a speaking beat.
+    try { if (global.AgentLife && global.AgentLife.isReady && global.AgentLife.isReady()) global.AgentLife.onPlayerSay(text); } catch (_) {}
+    if (ws && ws.readyState === 1) ws.send(JSON.stringify({ t: 'say', text }));
+  };
   World.onOffer = function (cb) { World._onOffer = cb; };
   // mobile control hooks (run/jump buttons in world.html)
   World.setRun = function (on) { World._touchRun = !!on; };
@@ -865,16 +952,29 @@
     }
     const tnow = clock.elapsedTime;
     for (const A of agents.values()) {
+      // estimate speed from positional delta so a TRAVELING agent walks and a
+      // resting one idles — no more everyone-stuck-on-idle. (agent-life sets the
+      // targets; the lerp moves them; we read the motion back into the gait.)
+      const apx = A.group.position.x, apz = A.group.position.z;
       lerp(A.group, A.target);
+      const amoved = Math.hypot(A.group.position.x - apx, A.group.position.z - apz) / Math.max(dt, 0.001);
       const ud = A.group.userData;
-      // LOD: distant agents update their animation at a lower rate (helios's perf pass)
       const dist = Math.hypot(A.group.position.x - camPos.x, A.group.position.z - camPos.z);
       if (ud && ud.rig) {
         const near = dist < 14;
+        const gait = amoved > 3.4 ? 'run' : (amoved > 0.28 ? 'walk' : 'idle');
         // far agents: tick every 3rd frame with scaled dt (still alive, cheaper)
-        if (near || (World._frame % 3 === 0)) { ud.rig.play('idle'); ud.rig.update(near ? dt : dt * 3); }
+        if (near || (World._frame % 3 === 0)) {
+          ud.rig.play(gait);
+          if (ud.rig.setRate) ud.rig.setRate(gait === 'idle' ? 1 : Math.max(0.5, amoved / (gait === 'run' ? RUN_SPEED : WALK_SPEED)));
+          ud.rig.update(near ? dt : dt * 3);
+        }
       }
-      if (ud && ud.ring) ud.ring.material.opacity = 0.08 + Math.sin(tnow * 0.5) * 0.04;
+    }
+    // drive the living layer AFTER the lerp (personalities, rituals, wisps,
+    // player-regard, earshot glow, listen/speak arcs). Cheap; guarded.
+    if (global.AgentLife && global.AgentLife.isReady && global.AgentLife.isReady()) {
+      try { global.AgentLife.tick(dt, tnow); } catch (_) {}
     }
     World._frame = (World._frame || 0) + 1;
     if (World._motes) World._motes.rotation.y += dt * 0.02;
@@ -929,17 +1029,103 @@
   // cycle camera: 3rd → 1st → selfie → 3rd
   World.cycleCamera = function () { World._camMode = ((World._camMode || 0) + 1) % 3; return World._camMode; };
 
-  // Open the head-mold editor on the user's own avatar with live 3D preview.
+  // ── THE BEING FORGE ──────────────────────────────────────────────────────────
+  // Open the creator. This ALWAYS opens something — the old code bailed silently
+  // for anyone without an avatar (i.e. everyone). Now:
+  //   • a being WITH a generated face → seat/adjust it (offsetY/X, size, turn)
+  //     AND sculpt its head proportions + recolor the figure.
+  //   • a fresh being with NO face → still a full creation flow: sculpt the head
+  //     (wide/long/round), curate the colors of YOURSELF and each council agent,
+  //     live on the 3D presence. "Provide your own face to your being."
+  // Returns a live-preview harness so the panel can drive the rig without a rebuild.
   World.editHead = function () {
     if (!window.HeadEditor) { console.warn('[world] HeadEditor not loaded'); return; }
-    if (!World._myAvatarId) { console.warn('[world] no avatar to edit yet'); return; }
     window.HeadEditor.open({
-      avatarId: World._myAvatarId,
-      presence: World._selfRig || null,
+      avatarId: World._myAvatarId || null,      // may be null — the forge still opens
+      hasFace: !!World._myAvatarId,
       adjust: World._myHeadAdjust || null,
+      morph: World._myMorph || null,
+      tint: World._myTint || null,
       base: _base(),
+      // live-preview harness — the panel drives THESE, we route to the right target
+      preview: {
+        // seat/adjust the generated face (existing molded-head editor path)
+        setHeadAdjust: (adj) => { try { if (World._selfRig && World._selfRig.setHeadAdjust) World._selfRig.setHeadAdjust(adj); } catch (_) {} },
+        // sculpt head proportions — rig if faced, else the sculpted placeholder head
+        setMorph: (morph) => { World._myMorph = morph; _forgeApplyMorph(morph); },
+        // recolor: 'self' tints your figure; an agent id tints that council member
+        setTint: (who, tint) => { _forgeApplyTint(who, tint); if (who === 'self') World._myTint = tint; },
+      },
+      // the council roster the panel offers color-curation for
+      agents: [...agents.entries()].map(([id, A]) => ({ id, name: A.name })),
     });
   };
+
+  // apply a head morph to the self presence (rig bust if present, else the sculpted
+  // head — whether it's still on the placeholder body or perched on the head bone)
+  function _forgeApplyMorph(morph) {
+    if (!morph) return;
+    try {
+      if (World._selfRig && World._selfRig.setMorph && World._selfRig.bust) { World._selfRig.setMorph(morph); return; }
+      const sb = World._selfBody;
+      let head = sb && sb.userData && sb.userData.sculptHead;              // perched on the bone
+      if (!head) { const ph = sb && sb.userData && sb.userData.placeholder; head = ph && ph.userData && ph.userData.__forgeHead; }
+      if (head) {
+        const b = head.userData.__forgeBaseScale || { x: 1, y: 1, z: 1 };
+        const boneComp = (head.parent && head.parent.isBone) ? (1 / (head.parent.getWorldScale(new THREE.Vector3()).y || 1)) * 0.9 : 1;
+        const wide  = Math.max(0.5, Math.min(1.8, +morph.headWide  || 1));
+        const long  = Math.max(0.5, Math.min(1.8, +morph.headLong  || 1));
+        const round = Math.max(0.5, Math.min(1.8, +morph.headRound || 1));
+        head.scale.set(b.x * wide * boneComp, b.y * long * boneComp, b.z * round * boneComp);
+      }
+    } catch (_) {}
+  }
+
+  // apply a color tint. who='self' → your figure; else an agent id → that presence.
+  function _forgeApplyTint(who, tint) {
+    try {
+      if (who === 'self') {
+        if (World._selfRig && World._selfRig.setTint) { World._selfRig.setTint(tint); }
+        const sb = World._selfBody;
+        // tint the sculpt head's material (perched or on the placeholder body)
+        const c = new THREE.Color(tint);
+        const head = sb && sb.userData && sb.userData.sculptHead;
+        if (head && head.material) { head.material.color.copy(c); if (head.material.emissive) head.material.emissive.copy(c).multiplyScalar(0.45); }
+        const ph = sb && sb.userData && sb.userData.placeholder;
+        const mat = ph && ph.userData && ph.userData.__forgeMat;
+        if (mat) { mat.color.copy(c); if (mat.emissive) mat.emissive.copy(c).multiplyScalar(0.45); }
+        return;
+      }
+      const A = agents.get(who);
+      if (A && A.group) {
+        const ud = A.group.userData;
+        if (ud && ud.rig && ud.rig.setTint) ud.rig.setTint(tint);
+        // also retint the presence glow light + ring so the recolor reads instantly
+        const c = new THREE.Color(tint);
+        A.group.traverse(o => {
+          if (o.isPointLight) o.color.copy(c);
+          if (o === (ud && ud.ring) && o.material) o.material.color.copy(c);
+        });
+      }
+    } catch (_) {}
+  }
+  // expose so the head editor's persistence can read/write self morph+tint
+  World.myBeing = function () { return { avatarId: World._myAvatarId || null, morph: World._myMorph || null, tint: World._myTint || null }; };
+
+  // restore a saved being look (sculpt morph + self/agent tints) from localStorage,
+  // so the being you forged persists across reloads without a server round-trip.
+  function _reapplySavedBeing() {
+    try {
+      const morph = JSON.parse(localStorage.getItem('vint:being:morph') || 'null');
+      const tint  = JSON.parse(localStorage.getItem('vint:being:tint') || 'null');
+      const aTints = JSON.parse(localStorage.getItem('vint:being:agentTints') || '{}') || {};
+      if (morph) { World._myMorph = morph; _forgeApplyMorph(morph); }
+      if (tint)  { World._myTint = tint;  _forgeApplyTint('self', tint); }
+      for (const aid in aTints) _forgeApplyTint(aid, aTints[aid]);
+    } catch (_) {}
+  }
+  // agents can appear AFTER the self body (via hello/ambient) — re-tint them when they land
+  World._reapplySavedBeing = _reapplySavedBeing;
 
   function _resize(mountEl) {
     const w = mountEl.clientWidth || innerWidth, h = mountEl.clientHeight || innerHeight;

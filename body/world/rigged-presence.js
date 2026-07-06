@@ -202,6 +202,53 @@
     };
     handle.dispose = function () { mixer.stopAllAction(); };
 
+    // ── BEING-FORGE hooks (AETHERHOLD 2026-07-06) ────────────────────────────
+    // Let the creator sculpt a being's HEAD PROPORTIONS + recolor the whole
+    // figure live, WITH OR WITHOUT a generated face. This is the "provide your
+    // own face to your being" moment for a fresh being (no avatar yet): the
+    // sculpted placeholder head is a real morphable form, and every light-figure
+    // (self + council) can be re-tinted. All cheap, no rebuild.
+    //   morph = { headWide, headLong, headRound, jaw, brow }  (each ~0.6..1.6)
+    //   tint  = css color string  (recolors the light-figure material / body mat)
+
+    // find a sculptable head mesh: prefer the mounted bust; else the placeholder
+    // sphere; else the rig's own visible head region proxy.
+    handle._forgeHead = null;
+    handle.setMorph = function (morph) {
+      if (!morph) return;
+      const m = handle.bust || handle._forgeHead;
+      if (!m) return;
+      const wide  = Math.max(0.5, Math.min(1.8, +morph.headWide  || 1));
+      const long  = Math.max(0.5, Math.min(1.8, +morph.headLong  || 1));
+      const round = Math.max(0.5, Math.min(1.8, +morph.headRound || 1));
+      // non-uniform head scale = the core GTA-style morph (width / length / depth)
+      const bx = handle._baseBust ? handle._baseBust.scale.x : (handle._forgeBaseScale || 1);
+      const by = handle._baseBust ? handle._baseBust.scale.y : (handle._forgeBaseScale || 1);
+      const bz = handle._baseBust ? handle._baseBust.scale.z : (handle._forgeBaseScale || 1);
+      m.scale.set(bx * wide, by * long, bz * round);
+      handle._morph = morph;
+    };
+
+    handle.setTint = function (tint) {
+      if (!tint) return;
+      try {
+        const c = new THREE.Color(tint);
+        // light-figure council: recolor the additive fresnel material
+        if (handle.lightMat) {
+          handle.lightMat.color.copy(c);
+          if (handle.lightMat.userData.uColor) handle.lightMat.userData.uColor.value.copy(c);
+        }
+        // any placeholder / solid body mesh: tint its material
+        root.traverse(o => {
+          if (o.isMesh && o.material && o.userData.__forgeTintable) {
+            o.material.color.copy(c);
+            if (o.material.emissive) o.material.emissive.copy(c).multiplyScalar(0.4);
+          }
+        });
+        handle._tint = tint;
+      } catch (_) {}
+    };
+
     // Live head-editor preview: re-seat the molded head from a fresh adjust
     // object without rebuilding the rig. Used by the head editor sliders.
     handle.setHeadAdjust = function (adj) {

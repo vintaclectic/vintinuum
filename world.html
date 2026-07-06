@@ -188,6 +188,7 @@
 <script src="body/world/voice.js"></script>
 <script src="body/head_editor.js"></script>
 <script src="body/draggable.js"></script>
+<script src="body/world/agent-life.js"></script>
 <script src="body/world/world-client.js"></script>
 <script src="body/world/world-hud.js"></script>
 <script src="body/world/dirverse-hud.js"></script>
@@ -327,10 +328,16 @@
     if (!el || _guestOverlayShown) return; _guestOverlayShown = true;
 
     // Guests can look, walk, and feel the clearing — but the WRITE surfaces (say, mic,
-    // build, edit-head, movement pad) belong to the living world and need a sign-in.
-    // Hide them so a guest never taps a dead control (the server also refuses guest
-    // writes — enforced, not merely hidden). UI honesty, not a paywall.
-    ['saybar','movectl','topctl','editHeadBtn','hint'].forEach(function (id) {
+    // build, movement pad) belong to the living world and need a sign-in. Hide them so
+    // a guest never taps a dead control (the server also refuses guest writes —
+    // enforced, not merely hidden). UI honesty, not a paywall.
+    //
+    // EDIT-HEAD STAYS (aetherhold 2026-07-06): the Being Forge is a pure client-side
+    // creation flow — a guest CAN sculpt their being's head and curate the council's
+    // colors with zero server write. It's the "provide your own face to your being"
+    // hook that earns the sign-in (the FACE tab's photo capture routes to signup).
+    // Never hide the one inventive creation surface a guest is here to feel.
+    ['saybar','movectl','topctl','hint'].forEach(function (id) {
       const n = document.getElementById(id); if (n) n.style.display = 'none';
     });
 
