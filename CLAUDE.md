@@ -695,3 +695,44 @@ must be **inventive** — never derivative, never the obvious solution, never "h
 everyone else does it." Invent new mechanics, surfaces, retention loops, ways to
 make people feel something and profit cleanly. If it's been done exactly that way,
 push past it. Out-think, out-create, out-imagine. Always.
+
+
+## ⛔ THE NO-COLLISION LAW — ABSOLUTE, INVIOLABLE (Vinta directive 2026-07-06)
+
+*"NEVER, and I mean fucking never, when designing ANYTHING EVER — overlap, overflow, underneath, over top, in between, etc. Nothing should touch anything unless specifically told to, or you ask to make it make sense."*
+
+**This is the FIRST law of every design, every agent, every surface, no exceptions.
+It outranks aesthetic ambition, cleverness, speed, and every other consideration.**
+
+When you design, build, or edit ANY visual/UI surface (a page, panel, modal, HUD,
+button, label, sheet, toast, overlay, card, feed, rail — anything a human sees):
+
+1. **NOTHING touches anything else.** No element may overlap, overflow, sit under,
+   sit over, bleed through, clip into, stack on, or intersect another element —
+   EVER — unless Vinta explicitly designed them to overlay (e.g. a modal over a
+   dimmed backdrop) OR you asked Vinta and got a yes. Two text strings on top of
+   each other (like "NO ACCOUNT TO LOOK" / "NOTHING PHONES HOME" / "STEP 1?" all
+   piled on one another) is an absolute failure and must never ship.
+2. **Every element has its own space and stays in it.** Give each thing a defined
+   box; if content doesn't fit, resize the container, scroll inside it, or compress
+   the content — you NEVER let it spill onto a neighbor.
+3. **Absolutely-positioned / fixed / floating elements are the danger zone.** Any
+   `position:absolute/fixed`, negative margin, transform, or overlapping grid/flex
+   item must be checked against EVERY other positioned element at EVERY breakpoint.
+   Floating buttons, pills, toasts, tooltips, status lines must never land on top
+   of each other or on top of real content.
+4. **Test the collision, don't assume it.** Before shipping, verify at 320 / 375 /
+   768 / 1280 / 1920 px AND with dynamic content (long strings, empty states,
+   loading states, multiple simultaneous overlays). If two things can ever occupy
+   the same pixels, it's broken — fix it before it ships.
+5. **If overlap seems necessary, STOP and ASK.** If a design genuinely needs two
+   things to occupy shared space, do not guess — ask Vinta "these two need to
+   overlay, is that intended?" and wait. Layering is a decision Vinta makes, never
+   an accident you leave in.
+
+**The self-check before ANY UI ships:** "Does every element have its own clear
+space? Does anything touch, overlap, overflow, or stack on anything it wasn't
+explicitly designed to? At every screen size, with every content state?" If the
+answer to the second question is anything but a clean NO — it is not done. Fix it.
+
+There is no such thing as "close enough" here. Overlap is the cardinal sin.
