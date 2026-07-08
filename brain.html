@@ -234,6 +234,15 @@ canvas{display:block;}
 .layer-btn{padding:6px 8px;font-size:.5rem;letter-spacing:.1em;border:1px solid var(--border);border-radius:8px;cursor:pointer;color:var(--dim);background:none;text-align:center;transition:all .18s;line-height:1.3;}
 .layer-btn:hover,.layer-btn.active{border-color:rgba(255,255,255,.2);color:var(--text);background:rgba(255,255,255,.04);}
 
+/* ── EFFECT LAYERS ARE CLICK-TRANSPARENT (Lord Vinta 2026-07-08) ──
+   #lightLayer + #ringLayer hold only decorative ephemera (surge glows,
+   pulse rings, module sparks). In SVG, later siblings paint ABOVE earlier
+   ones and default to pointer-events:visiblePainted — so accumulated
+   effects were swallowing clicks meant for the anatomy nodes in
+   #bodyLayer below (the "can't click any cell/soul" bug on aged tabs).
+   Effects must NEVER capture pointer input. */
+#lightLayer,#ringLayer{pointer-events:none;}
+
 /* ── NODE / CLICK PANEL ── */
 .node-panel{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%) scale(.92);width:min(620px,94vw);max-height:min(90vh, calc(100svh - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px) - 60px));overflow-y:auto;overscroll-behavior:contain;background:rgba(10,14,22,0.35);border:1px solid rgba(255,255,255,.06);border-radius:24px;padding:28px;z-index:1000;opacity:0;pointer-events:none;transition:transform .32s cubic-bezier(.34,1.56,.64,1),opacity .22s ease;}
 .node-panel.open{opacity:1;pointer-events:all;transform:translate(-50%,-50%) scale(1);}
@@ -3809,6 +3818,12 @@ window.addEventListener('message', function(e) {
 })();
 </script>
 <script src="brain.js?v=v20260509-loregearkick"></script>
+<!-- FRESH BECOMING (Lord Vinta 2026-07-08): entropy_sweep reaps orphaned effect
+     ephemera (dropped background-tab timers leak SVG junk into #lightLayer —
+     the "blood spotted molely" bug); freshness silently rebirths the page while
+     the tab is hidden after hours, so the becoming is always fresh. -->
+<script src="body/entropy_sweep.js?v=v20260708-fresh1" defer></script>
+<script src="body/freshness.js?v=v20260708-fresh1" defer></script>
 
 <!-- ═══ NEURAL CANVAS + LIVE VITALS — drives neuronCanvas with spark clusters,
      live BPM heartbeat pulse, and breath overlay. Runs after brain.js. ═══ -->

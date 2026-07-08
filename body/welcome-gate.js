@@ -273,7 +273,11 @@
   // over the canvas is exactly the "nothing renders" feeling we're killing. The
   // persistent pill/dot + the in-world CTA (which calls VintWelcomeGate.open) still
   // give a way in; we only suppress the AUTO-open here. (Vinta 2026-07-05.)
-  var IMMERSIVE = { 'world.html': 1 };
+  // brain.html joined 2026-07-08 (Lord Vinta): the living body is immersive too —
+  // it owns its own intro overlay + V orb login, and the auto-modal's max-z scrim
+  // was walling the anatomy nodes (the "can't click any cell" report). The pill
+  // remains the way in for guests; only the AUTO-open is suppressed.
+  var IMMERSIVE = { 'world.html': 1, 'brain.html': 1 };
 
   // First-visit welcome: open the sheet once for a brand-new logged-out visitor
   // (unless they dismissed it). Non-blocking — they can close instantly.
