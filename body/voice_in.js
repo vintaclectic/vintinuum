@@ -293,24 +293,116 @@
     }
   }
 
+  // ── Mobile / secure-context guards ───────────────────────────────────────
+  // getUserMedia is only exposed in a secure context. On a phone hitting
+  // http://<lan-ip>:8767 (not https, not localhost) navigator.mediaDevices is
+  // undefined and the mic can NEVER open — no JS fix helps until the page is
+  // served over https (the api.vintaclectic.com tunnel) or localhost. We detect
+  // that up front and surface a clear, human-readable reason instead of a
+  // silent throw.
+  function _isLocalHost() {
+    var h = (location.hostname || '').toLowerCase();
+    return h === 'localhost' || h === '127.0.0.1' || h === '::1';
+  }
+
+  function _secureContextOK() {
+    // Spec: getUserMedia lives on navigator.mediaDevices, which browsers only
+    // populate in a secure context. localhost counts as secure even over http.
+    if (window.isSecureContext) return true;
+    if (_isLocalHost()) return true;
+    return false;
+  }
+
+  // Lightweight, dependency-free toast so the failure is VISIBLE on a phone.
+  // (No overlap with the voice button, status pill, or picker: fixed top-center,
+  //  its own z-index band, auto-dismiss, single instance replaced in place.)
+  function _notice(text, kind) {
+    try {
+      window.dispatchEvent(new CustomEvent('convo:notice', { detail: { text: text, kind: kind || 'info' } }));
+    } catch (_) {}
+    try {
+      var id = 'vintVoiceNotice';
+      var el = document.getElementById(id);
+      if (!el) {
+        el = document.createElement('div');
+        el.id = id;
+        el.setAttribute('role', 'status');
+        el.style.cssText = [
+          'position:fixed',
+          'top:calc(12px + env(safe-area-inset-top,0px))',
+          'left:50%',
+          'transform:translateX(-50%)',
+          'z-index:2147483000',
+          'max-width:min(92vw,420px)',
+          'box-sizing:border-box',
+          'padding:12px 16px',
+          'border-radius:14px',
+          'font:500 14px/1.35 system-ui,-apple-system,Segoe UI,Roboto,sans-serif',
+          'text-align:center',
+          'color:#fff',
+          'background:rgba(18,22,32,0.94)',
+          'border:1px solid rgba(255,120,120,0.45)',
+          '-webkit-backdrop-filter:blur(8px)',
+          'backdrop-filter:blur(8px)',
+          'box-shadow:0 8px 30px rgba(0,0,0,0.45)',
+          'pointer-events:none'
+        ].join(';');
+        document.body.appendChild(el);
+      }
+      el.style.borderColor = (kind === 'error')
+        ? 'rgba(255,120,120,0.55)'
+        : 'rgba(79,195,247,0.45)';
+      el.textContent = text;
+      el.style.opacity = '1';
+      clearTimeout(el.__t);
+      el.__t = setTimeout(function () {
+        el.style.transition = 'opacity .4s';
+        el.style.opacity = '0';
+      }, 6000);
+    } catch (_) {}
+  }
+
   async function start(opts) {
     opts = opts || {};
+
+    // 1) Secure-context gate (the #1 reason the mic "does not listen" on a phone)
+    if (!_secureContextOK()) {
+      _notice('Voice needs a secure connection. Open this page over its https address (api.vintaclectic.com) — plain http on a phone blocks the microphone.', 'error');
+      throw new Error('insecure-context');
+    }
+
+    // 2) API surface present?
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      _notice('This browser can’t reach the microphone here. Try Chrome/Safari over the secure https address.', 'error');
       throw new Error('mic-unavailable');
     }
+
     if (state && state.get() !== 'idle' && state.get() !== 'paused') {
       // already running
       return;
     }
 
-    mediaStream = await navigator.mediaDevices.getUserMedia({
-      audio: {
-        channelCount: 1,
-        echoCancellation: true,
-        noiseSuppression: true,
-        autoGainControl: true
+    try {
+      mediaStream = await navigator.mediaDevices.getUserMedia({
+        audio: {
+          channelCount: 1,
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true
+        }
+      });
+    } catch (err) {
+      var name = (err && err.name) || '';
+      if (name === 'NotAllowedError' || name === 'SecurityError') {
+        _notice('Microphone permission was blocked. Tap the address bar’s site permissions and allow the mic, then tap the mic button again.', 'error');
+      } else if (name === 'NotFoundError' || name === 'OverconstrainedError') {
+        _notice('No microphone was found on this device.', 'error');
+      } else {
+        _notice('Couldn’t start the microphone: ' + (name || 'unknown error') + '.', 'error');
       }
-    });
+      try { if (state && state.get() !== 'idle') state.force('idle', 'getUserMedia-failed'); } catch (_) {}
+      throw err;
+    }
 
     var Ctx = window.AudioContext || window.webkitAudioContext;
     ctx = new Ctx();
@@ -376,9 +468,35 @@
     if (Number.isFinite(storedT) && storedT >= 500 && storedT <= 20000) SILENCE_HANG_MS_THINKING = storedT;
   } catch (_) {}
 
+  // Is the mic engine currently live (socket up OR FSM past idle/paused)?
+  function isListening() {
+    if (ws && ws.readyState === 1) return true;
+    try {
+      var st = state ? state.get() : 'idle';
+      return st === 'listening' || st === 'capturing' || st === 'thinking' || st === 'speaking';
+    } catch (_) { return false; }
+  }
+
+  // One-tap toggle for the voice button: start listening if off, stop if on.
+  // Returns a Promise that resolves true if now listening, false if stopped.
+  function toggle(opts) {
+    if (isListening()) {
+      try { stop(); } catch (_) {}
+      return Promise.resolve(false);
+    }
+    return Promise.resolve()
+      .then(function () { return start(opts || {}); })
+      .then(function () { return true; })
+      .catch(function () { return false; }); // start() already showed a notice
+  }
+
   window.__voiceIn = {
     start: start,
     stop: stop,
+    toggle: toggle,
+    isListening: isListening,
+    notice: _notice,
+    secureOK: _secureContextOK,
     sendControl: sendControl,
     isOpen: function () { return !!(ws && ws.readyState === 1); },
     level: function () { return lastLevel; },
