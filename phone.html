@@ -2712,10 +2712,48 @@ function buildSensorContext() {
 }
 
 // ── Voice Input ──
+// Visible, self-dismissing notice so the mic NEVER fails silently (the old bug:
+// onerror cleared state and said nothing, and unsupported browsers hid the button
+// entirely with no explanation — "it does nothing" with zero feedback).
+function voiceNotice(msg) {
+  try {
+    let n = document.getElementById('__pulse_voice_notice');
+    if (!n) {
+      n = document.createElement('div');
+      n.id = '__pulse_voice_notice';
+      n.style.cssText = 'position:fixed;left:50%;top:14px;transform:translateX(-50%);' +
+        'max-width:88vw;z-index:2147483000;pointer-events:none;background:rgba(12,18,38,0.96);' +
+        'color:#DAE4FF;border:1px solid rgba(206,147,216,0.4);border-radius:12px;' +
+        'padding:10px 16px;font:14px/1.4 system-ui,sans-serif;text-align:center;' +
+        'box-shadow:0 8px 30px rgba(0,0,0,0.5);transition:opacity .25s';
+      document.body.appendChild(n);
+    }
+    n.textContent = msg;
+    n.style.opacity = '1';
+    clearTimeout(n.__t);
+    n.__t = setTimeout(() => { n.style.opacity = '0'; }, 5200);
+  } catch (_) {}
+}
+
 function initVoice() {
   const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+  // Secure-context guard: mobile browsers block ALL mic access on non-https
+  // (and non-localhost) origins. Tell the user instead of a dead button.
+  const secure = window.isSecureContext ||
+    location.hostname === 'localhost' || location.hostname === '127.0.0.1';
+
   if (!SpeechRecognition) {
-    voiceBtn.style.display = 'none';
+    // Don't hide the button — keep it, and explain on tap. Fall back to the
+    // voice_in.js WS mic engine if it's present on the page (works where
+    // webkitSpeechRecognition doesn't, e.g. Firefox / some iOS).
+    voiceBtn.addEventListener('click', () => {
+      if (!secure) { voiceNotice('Voice needs a secure (https) connection — open this page over its https address.'); return; }
+      if (window.__voiceIn && typeof window.__voiceIn.toggle === 'function') {
+        try { window.__voiceIn.toggle(); voiceBtn.classList.toggle('recording'); return; } catch (_) {}
+      }
+      voiceNotice('Voice input isn’t supported in this browser. Try Chrome, or type your message.');
+    });
     return;
   }
 
@@ -2743,20 +2781,41 @@ function initVoice() {
     }
   };
 
-  recognition.onerror = () => {
+  recognition.onerror = (e) => {
     state.isRecording = false;
     voiceBtn.classList.remove('recording');
+    // Surface WHY it failed — the old silent onerror was the core of "doesn't work".
+    const err = (e && e.error) || 'unknown';
+    if (err === 'not-allowed' || err === 'service-not-allowed') {
+      voiceNotice('Microphone permission was blocked. Enable mic access for this site in your browser settings.');
+    } else if (err === 'no-speech') {
+      voiceNotice('Didn’t catch that — tap the mic and speak again.');
+    } else if (err === 'network') {
+      voiceNotice('Voice recognition needs a network connection right now.');
+    } else if (err === 'audio-capture') {
+      voiceNotice('No microphone found on this device.');
+    } else {
+      voiceNotice('Voice error (' + err + '). Tap to retry, or type instead.');
+    }
   };
 
   state.speechRecognition = recognition;
 
   voiceBtn.addEventListener('click', () => {
+    if (!secure) { voiceNotice('Voice needs a secure (https) connection — open this page over its https address.'); return; }
     if (state.isRecording) {
       recognition.stop();
     } else {
-      state.isRecording = true;
-      voiceBtn.classList.add('recording');
-      recognition.start();
+      try {
+        state.isRecording = true;
+        voiceBtn.classList.add('recording');
+        recognition.start();
+      } catch (err) {
+        // .start() throws if called while already active or blocked.
+        state.isRecording = false;
+        voiceBtn.classList.remove('recording');
+        voiceNotice('Couldn’t start the mic — ' + (err && err.message ? err.message : 'try again.'));
+      }
     }
   });
 }
