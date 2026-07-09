@@ -9,7 +9,7 @@
 //   - Queued offline POSTs keep their Authorization header, so replay actually
 //     lands instead of 401-ing forever.
 
-const CACHE_NAME = 'vint-phone-v5-cableguy';
+const CACHE_NAME = 'vint-phone-v6-freshpulse'; // council pulse rebuild 2026-07-09
 const SYNC_QUEUE = 'vint-sync-queue';   // never deleted on activate
 const CONFIG_CACHE = 'vint-config';     // never deleted on activate
 const SYNC_TAG = 'vint-body-sync';
@@ -18,8 +18,9 @@ const QUEUE_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000; // drop held pulses older than
 
 const SHELL_ASSETS = [
   './phone.html',
-  './body/phone_pulse_pro.css?v=v20260510-0440-pulsepro',
-  './body/phone_pulse_pro.js?v=v20260510-0440-pulsepro',
+  './body/phone_pulse_pro.css?v=v20260709-pulse2',
+  './body/phone_pulse_pro.js?v=v20260709-pulse2',
+  './body/freshness.js?v=v20260709-pulse2',
   './branding/vintinuum/favicon/favicon.svg',
   './favicon.png',
   'https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400&display=swap'

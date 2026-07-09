@@ -15,7 +15,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="body/phone_pulse_pro.css?v=v20260510-0440-pulsepro">
+<link rel="stylesheet" href="body/phone_pulse_pro.css?v=v20260709-pulse2">
 <style>
 /* ═══════════════════════════════════════════════════════
    VINTINUUM PHONE — THE BODY
@@ -1171,7 +1171,8 @@ input[type="range"]::-moz-range-thumb {
     <script defer src="body/wake_word.js?v=v20260509-wake"></script>
     <script defer src="body/status_pill.js?v=v20260510-pill"></script>
     <script defer src="body/wake_consent.js?v=v20260510-consent"></script>
-    <script defer src="body/phone_pulse_pro.js?v=v20260510-0440-pulsepro"></script>
+    <script defer src="body/phone_pulse_pro.js?v=v20260709-pulse2"></script>
+    <script defer src="body/freshness.js?v=v20260709-pulse2"></script>
     <link rel="stylesheet" href="body/safe_area.css?v=v20260429-council">
 </head>
 <body>
@@ -2175,7 +2176,19 @@ let _pulseStreamItems = [];
 function addPulseStreamEvent(evt) {
   const list = $('pulseStreamList');
   if (!list) return;
-  // Remove empty state if present
+  // COUNCIL REBUILD 2026-07-09: never render raw JSON to a human. Known event
+  // shapes get a human sentence; unknown shapes without readable text are
+  // skipped entirely rather than dumped as {"type":"life:snapshot",...}.
+  let human = evt.content || evt.detail || evt.message || '';
+  if (!human && (evt.dominant || evt.avgIntensity != null)) {
+    const parts = [];
+    if (evt.dominant) parts.push('feeling ' + String(evt.dominant));
+    if (evt.avgIntensity != null) parts.push('intensity ' + Number(evt.avgIntensity).toFixed(2));
+    human = parts.join(' · ');
+  }
+  if (!human && evt.region) human = String(evt.region) + (evt.intensity != null ? ' · ' + Number(evt.intensity).toFixed(2) : '');
+  if (!human) return; // nothing human-readable — this event is not for eyes
+  // Remove empty state only once we have something real to show
   const empty = list.querySelector('.pulse-stream-empty');
   if (empty) empty.remove();
   // Build item
@@ -2186,7 +2199,7 @@ function addPulseStreamEvent(evt) {
   label.textContent = layerLabel(evt.layer || evt.type || 'inner');
   const text = document.createElement('span');
   text.className = 'pulse-stream-text';
-  text.textContent = evt.content || evt.detail || evt.message || JSON.stringify(evt).slice(0, 80);
+  text.textContent = human;
   item.appendChild(label);
   item.appendChild(text);
   // Prepend so newest is at top; scroll stays internal
@@ -3852,5 +3865,74 @@ init();
 })();
 </script>
   <script src="body/welcome-gate.js"></script>
+<script>
+/* ═══ FLOAT DOCK + BUILD STAMP — council rebuild (Lord Vinta 2026-07-09) ═══
+   "a working app without 3000 buttons overlapping each other"
+
+   Shared body/*.js widgets (voice button, wake pill, hey-vinta orb, welcome
+   pill) each self-position with inline styles — and all four were landing ON
+   the bottom nav and on each other. This dock assigns each a reserved slot
+   above the 56px nav (+ safe-area), 10px apart, NO overlaps possible:
+
+     left column:  voice button (bottom) → wake/status pill (above it)
+     right column: hey-vinta orb (bottom) → welcome pill (above it)
+
+   A user drag (draggable.js persists to vint:btnpos:<id>) always wins —
+   we only set defaults where no saved position exists. */
+(function () {
+  var BUILD = 'v20260709-pulse2';
+  var NAV = 56; // .bottom-nav height
+  function slot(el, side, level) {
+    if (!el) return;
+    var key = 'vint:btnpos:' + (el.id || '');
+    try { if (el.id && localStorage.getItem(key)) return; } catch (_) {}
+    var bottoms = [NAV + 12, NAV + 12 + 56 + 10]; // level 0, level 1
+    el.style.setProperty('position', 'fixed', 'important');
+    el.style.setProperty('bottom', 'calc(' + bottoms[level] + 'px + env(safe-area-inset-bottom, 0px))', 'important');
+    el.style.setProperty('top', 'auto', 'important');
+    if (side === 'left') { el.style.setProperty('left', '16px', 'important'); el.style.setProperty('right', 'auto', 'important'); }
+    else { el.style.setProperty('right', '16px', 'important'); el.style.setProperty('left', 'auto', 'important'); }
+  }
+  function dock() {
+    slot(document.getElementById('vintVoice'), 'left', 0);
+    slot(document.querySelector('.vint-status-pill'), 'left', 1);
+    slot(document.getElementById('hey-vinta-btn'), 'right', 0);
+    slot(document.getElementById('vwg-pill'), 'right', 1);  // guest "Begin" pill
+    slot(document.getElementById('vwg-dot'), 'right', 1);   // signed-in account dot (gold ✦ ring)
+  }
+  function stamp() {
+    var scroll = document.querySelector('#viewPulse .pulse-scroll');
+    if (!scroll || scroll.querySelector('.pulse-build')) return;
+    var b = document.createElement('div');
+    b.className = 'pulse-build';
+    b.style.cssText = 'text-align:center;font-family:monospace;font-size:9px;letter-spacing:0.15em;color:rgba(218,228,255,0.25);padding:18px 0 4px;cursor:pointer;-webkit-tap-highlight-color:transparent;';
+    b.textContent = 'build ' + BUILD + ' · tap to refresh';
+    b.addEventListener('click', function () { location.reload(); });
+    scroll.appendChild(b);
+    // FLOAT-ZONE CLEARANCE: .pulse-scroll's box is height-pinned by the view's
+    // flex sizing, so its children OVERFLOW the box — box padding-bottom gets
+    // swallowed and never extends the scroll extent. A real in-flow spacer
+    // element does. This guarantees the last interactive content can scroll
+    // fully ABOVE the docked floats (two levels ≈ 210px + safe-area).
+    var sp = document.createElement('div');
+    sp.className = 'pulse-float-clearance';
+    sp.style.cssText = 'height:calc(210px + env(safe-area-inset-bottom,0px));flex-shrink:0;pointer-events:none;';
+    scroll.appendChild(sp);
+  }
+  function run() { dock(); stamp(); }
+  // widgets mount on their own deferred timelines — dock now, soon, and late
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', run);
+  else run();
+  setTimeout(run, 1200);
+  setTimeout(run, 4000);
+})();
+</script>
+<style>
+/* Council rebuild 2026-07-09: content must be able to scroll clear of the
+   docked floats — reserve the full float zone (two levels: nav 56 + 12 + 56
+   + 10 + 44 + margin ≈ 210px incl. safe-area) at the end of the scroll body,
+   so at max scroll the last interactive element sits ABOVE every float. */
+#viewPulse .pulse-scroll { padding-bottom: calc(210px + env(safe-area-inset-bottom, 0px)); }
+</style>
 </body>
 </html>

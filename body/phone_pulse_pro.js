@@ -119,66 +119,20 @@
     setInterval(refresh, 60 * 1000);
   }
 
-  // ─── 3. BODY MIRROR ─────────────────────────────────────────────────────
-  var ARC_LENGTHS = { dopamine: 264, serotonin: 226, gaba: 188, norepinephrine: 151 };
-  function buildBodyMirror(host) {
-    if (host.querySelector('.pp-body-mirror')) return;
-    var m = el('div', { class: 'pp-body-mirror' });
-    m.innerHTML =
-      '<div class="head"><span>your body, right now</span><span class="src">live</span></div>' +
-      '<div class="canvas-wrap">' +
-      '<svg viewBox="0 0 200 100" preserveAspectRatio="xMidYMid meet" aria-label="Live neurochemistry">' +
-      '  <path class="arc-track" d="M 16 90 A 84 84 0 0 1 184 90" />' +
-      '  <path class="arc-fill" data-arc="dopamine"      d="M 16 90 A 84 84 0 0 1 184 90" stroke-dasharray="264" stroke-dashoffset="264" />' +
-      '  <path class="arc-track" d="M 28 90 A 72 72 0 0 1 172 90" />' +
-      '  <path class="arc-fill" data-arc="serotonin"     d="M 28 90 A 72 72 0 0 1 172 90" stroke-dasharray="226" stroke-dashoffset="226" />' +
-      '  <path class="arc-track" d="M 40 90 A 60 60 0 0 1 160 90" />' +
-      '  <path class="arc-fill" data-arc="gaba"          d="M 40 90 A 60 60 0 0 1 160 90" stroke-dasharray="188" stroke-dashoffset="188" />' +
-      '  <path class="arc-track" d="M 52 90 A 48 48 0 0 1 148 90" />' +
-      '  <path class="arc-fill" data-arc="norepinephrine" d="M 52 90 A 48 48 0 0 1 148 90" stroke-dasharray="151" stroke-dashoffset="151" />' +
-      '</svg></div>' +
-      '<div class="legend">' +
-      '  <div><span class="swatch" style="background:#7ccfff"></span>DA <span class="val" data-val="dopamine">—</span></div>' +
-      '  <div><span class="swatch" style="background:#e74c8a"></span>5HT <span class="val" data-val="serotonin">—</span></div>' +
-      '  <div><span class="swatch" style="background:#2bb673"></span>GABA <span class="val" data-val="gaba">—</span></div>' +
-      '  <div><span class="swatch" style="background:#ff6f3d"></span>NE <span class="val" data-val="norepinephrine">—</span></div>' +
-      '</div>';
-    var anchor = host.querySelector('.pp-jarvis-glance');
-    if (anchor && anchor.nextSibling) host.insertBefore(m, anchor.nextSibling);
-    else host.insertBefore(m, host.children[1] || null);
-
-    function setArc(name, value0to100) {
-      var path = m.querySelector('.arc-fill[data-arc="' + name + '"]');
-      if (!path) return;
-      var len = ARC_LENGTHS[name] || 200;
-      var pct = Math.max(0, Math.min(100, Number(value0to100) || 0)) / 100;
-      path.setAttribute('stroke-dashoffset', String(len * (1 - pct)));
-      var v = m.querySelector('[data-val="' + name + '"]');
-      if (v) v.textContent = Math.round(value0to100);
-    }
-    function refresh() {
-      fetch(api('/api/body-state'), { headers: authHeaders(), credentials: 'include', cache: 'no-store' })
-        .then(function (r) { return r.ok ? r.json() : null; })
-        .then(function (data) {
-          var b = (data && (data.body || data.state || data)) || {};
-          setArc('dopamine',       b.dopamine != null ? b.dopamine : 50);
-          setArc('serotonin',      b.serotonin != null ? b.serotonin : 50);
-          setArc('gaba',           b.gaba != null ? b.gaba : 50);
-          setArc('norepinephrine', b.norepinephrine != null ? b.norepinephrine : 50);
-        })
-        .catch(function () {});
-    }
-    refresh();
-    setInterval(refresh, 12 * 1000);
-  }
+  // ─── 3. BODY MIRROR — retired 2026-07-09 (council rebuild): it duplicated
+  // the four neurochemicals the heartbeat card already shows. One truth, once.
 
   // ─── 4. DAY STRIP ───────────────────────────────────────────────────────
+  // Machine chatter (SW syncs, screen on/off, battery, sensor heartbeats) is
+  // not a "moment" — it polluted the strip with rows like "Phone SW periodic
+  // sync". Only human moments belong here.
+  var MACHINE_PULSE = /periodic sync|screen (off|on)|entering sleep|battery|sensor|heartbeat|service worker|\bsw\b/i;
   function buildDayStrip(host) {
     if (host.querySelector('.pp-day-strip')) return;
     var strip = el('div', { class: 'pp-day-strip' },
       el('div', { class: 'pp-empty' }, 'no pulses yet today — send the first one ↓'));
-    // Mount above the activity chips (between body mirror and slider sections)
-    var anchor = host.querySelector('.pp-body-mirror');
+    // Mount right after the heartbeat card, inside the scroll flow
+    var anchor = host.querySelector('.pulse-hb-card');
     if (anchor && anchor.nextSibling) host.insertBefore(strip, anchor.nextSibling);
     else host.insertBefore(strip, host.children[2] || null);
 
@@ -187,6 +141,10 @@
         .then(function (r) { return r.ok ? r.json() : null; })
         .then(function (data) {
           var items = (data && (data.pulses || data.items || (Array.isArray(data) ? data : []))) || [];
+          items = items.filter(function (p) {
+            var note = (p.note || p.text || p.body || '').toString();
+            return note && !MACHINE_PULSE.test(note);
+          });
           while (strip.firstChild) strip.removeChild(strip.firstChild);
           if (!items.length) {
             strip.appendChild(el('div', { class: 'pp-empty' }, 'no pulses yet today — send the first one ↓'));
@@ -247,12 +205,20 @@
   }
 
   // ─── INIT ───────────────────────────────────────────────────────────────
+  // COUNCIL REBUILD (Lord Vinta 2026-07-09 "unreadable overlapping rows at
+  // top"): widgets used to mount into #viewPulse itself — as SIBLINGS ABOVE
+  // .pulse-scroll, outside the scroll flow and its padding. They stacked
+  // unscrollable + unpadded at the top of the view, clipping against the
+  // topbar and each other. Everything now mounts INSIDE .pulse-scroll, in
+  // flow, in deliberate order. buildBodyMirror was retired: it duplicated the
+  // exact four neurochemicals the heartbeat card already renders (Buffet:
+  // strip to the one line).
   function init() {
-    var host = $('#viewPulse');
-    if (!host) return;
+    var view = $('#viewPulse');
+    if (!view) return;
+    var host = view.querySelector('.pulse-scroll') || view;
     buildStatusLine(host);
     buildJarvisGlance(host);
-    buildBodyMirror(host);
     buildDayStrip(host);
     buildExtensionWhisper(host);
   }
