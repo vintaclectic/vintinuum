@@ -146,6 +146,14 @@
             padding: 0 20px;
         }
 
+/* MOBILE WORDMARK CLAMP (council W4 2026-07-09): the "always fits" math above
+   was measured WRONG on a real 390px viewport — .hero-title rendered 520px wide
+   (left:-62 → "INTINUU"). Below 640px the brand name is clamped hard + tracking
+   tightened; verified fits at 320/375/390. Text floor: 8.8-9.6px labels → 0.7rem. */
+@media (max-width: 640px) {
+  .hero-title { font-size: min(8.2vw, 3.2rem) !important; letter-spacing: 0.02em !important; }
+  .zone-label, .card-tier { font-size: 0.7rem !important; }
+}
         .hero-title {
             font-family: 'Syne', sans-serif;
             font-weight: 800;

@@ -36,7 +36,7 @@
 
   /* hint — desktop keyboard controls, hidden on touch */
   #hint { position: fixed; left: 16px; top: max(14px, env(safe-area-inset-top, 14px)); z-index: 4; font-size: 13px; color: rgba(245,235,220,0.5); }
-  #leave { position: fixed; right: max(16px, env(safe-area-inset-right, 16px)); top: max(14px, env(safe-area-inset-top, 14px)); z-index: 6; font-size: 14px; color: rgba(245,235,220,0.6); text-decoration: none; min-height: 44px; display: flex; align-items: center; padding: 0 4px; }
+  #leave { /* W4 2026-07-09: was top-RIGHT under #editHeadBtn (z1500) — 100% buried, a dead primary control. Opposite corners: leave=LEFT, edit-head=RIGHT. */ position: fixed; left: max(16px, env(safe-area-inset-left, 16px)); top: max(14px, env(safe-area-inset-top, 14px)); z-index: 1600; font-size: 14px; color: rgba(245,235,220,0.6); text-decoration: none; min-height: 44px; display: flex; align-items: center; padding: 0 4px; }
   @media (pointer: coarse) { #hint { display: none; } }
   /* run/jump controls — clear above the say bar, right side (mobile-first, no overflow) */
   #movectl { position: fixed; right: max(16px, env(safe-area-inset-right, 16px)); bottom: calc(72px + max(16px, env(safe-area-inset-bottom, 16px))); z-index: 6; display: none; flex-direction: column; gap: 10px; }
