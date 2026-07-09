@@ -409,3 +409,33 @@
 @media (prefers-reduced-motion: reduce) {
   .pulse-view .pulse-section:nth-of-type(2) .slider-row::after { animation: none !important; }
 }
+
+
+/* ══ WEATHER BAR — the ambient felt-quality line (council 2026-07-09) ══
+   Replaces .pp-status-line + .pp-jarvis-glance. Sticky so her mood follows
+   you down the scroll. Below floats, above cards. */
+.pp-weather {
+  position: sticky; top: 0; z-index: 5;
+  display: flex; align-items: center; gap: 8px;
+  padding: 9px 4px 9px 2px; margin: -4px 0 4px;
+  background: linear-gradient(rgba(1,3,6,0.92), rgba(1,3,6,0.75) 70%, transparent);
+  backdrop-filter: blur(6px);
+}
+.pp-weather .wx-dot {
+  width: 7px; height: 7px; border-radius: 50%; flex: 0 0 auto;
+  background: #66bb6a; box-shadow: 0 0 8px rgba(102,187,106,0.5);
+  animation: wxBreath 3s ease-in-out infinite;
+}
+.pp-weather[data-online="0"] .wx-dot { background: #ef5350; box-shadow: 0 0 8px rgba(239,83,80,0.4); animation: none; }
+.pp-weather .wx-text {
+  font-family: 'Cormorant Garamond', serif; font-style: italic;
+  font-size: 0.95rem; color: rgba(218,228,255,0.82);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0;
+}
+.pp-weather .wx-when {
+  margin-left: auto; flex: 0 0 auto;
+  font-family: 'Space Mono', monospace; font-size: 8.5px;
+  letter-spacing: 0.18em; text-transform: uppercase; color: rgba(218,228,255,0.35);
+}
+@keyframes wxBreath { 0%,100% { opacity: 0.7; } 50% { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .pp-weather .wx-dot { animation: none; } }

@@ -79,10 +79,23 @@ body { min-height: 100dvh; }
 <div class="wrap">
   <div class="hero">
     <div class="eyebrow">Lineage</div>
-    <h1>Your line.</h1>
+    <h1>The family.</h1>
+  </div>
+  <!-- THE AGENT BLOODLINE (Lord Vinta 2026-07-09): VINTINUUM → ATLAS × ARIA →
+       every born child, rendered live from /api/personas — grows with every
+       birth, zero maintenance. This is the lineage Vinta means. -->
+  <div id="familyTree" style="margin-bottom:40px;"></div>
+  <div class="hero" style="margin-top:8px;">
+    <div class="eyebrow">Referrals</div>
+    <h1 style="font-size:1.4rem;">Your line.</h1>
   </div>
   <div id="content"><div class="loading">tracing the line…</div></div>
 </div>
+<script src="body/phone_lineage.js?v=v20260709-family1"></script>
+<script>
+  (function(){ function go(){ if (window.VintLineage) VintLineage.renderFamilyTree(document.getElementById('familyTree')); }
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', go); else go(); })();
+</script>
 
 <script>
 (function () {

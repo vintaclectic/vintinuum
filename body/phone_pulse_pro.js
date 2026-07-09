@@ -71,52 +71,53 @@
     return 'green';
   }
 
-  // ─── 1. STATUS LINE ─────────────────────────────────────────────────────
-  function buildStatusLine(host) {
-    if (host.querySelector('.pp-status-line')) return;
-    var line = el('div', { class: 'pp-status-line', 'data-online': navigator.onLine ? '1' : '0', 'data-queued': '0' }, [
-      el('div', { class: 'left' }, [
-        el('span', { class: 'dot' }),
-        el('span', {}, navigator.onLine ? 'connected to body' : 'offline — will sync')
-      ]),
-      el('div', { class: 'right' }, el('span', { class: 'tz' }, new Date().toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })))
+  // ─── 1+2. WEATHER BAR (council 2026-07-09, replaces STATUS LINE + JARVIS
+  // GLANCE) ── "jarvis today banner looks like shit and out of place". JARVIS
+  // is not a brand to badge — it's her felt sense. One sticky ambient line:
+  //   ● she reads as {felt_quality} · {relTime}
+  // The dot carries connection truth (jade online / heat offline + queue count).
+  function buildWeatherBar(host) {
+    if (host.querySelector('.pp-weather')) return;
+    var bar = el('div', { class: 'pp-weather' }, [
+      el('span', { class: 'wx-dot' }),
+      el('span', { class: 'wx-text' }, 'listening\u2026'),
+      el('span', { class: 'wx-when' }, ''),
     ]);
-    host.insertBefore(line, host.firstChild);
+    host.insertBefore(bar, host.firstChild);
 
-    function refresh() {
-      line.setAttribute('data-online', navigator.onLine ? '1' : '0');
-      var lbl = line.querySelector('.left span:last-child');
-      if (lbl) lbl.textContent = navigator.onLine ? 'connected to body' : 'offline — will sync';
-      try {
-        var q = JSON.parse(localStorage.getItem('vint_pulse_queue') || '[]');
-        line.setAttribute('data-queued', String(q.length || 0));
-      } catch (_) {}
+    var lastFeltAt = 0;
+    function paintConn() {
+      var on = navigator.onLine;
+      bar.setAttribute('data-online', on ? '1' : '0');
+      if (!on) {
+        var q = 0;
+        try { q = (JSON.parse(localStorage.getItem('vint_pulse_queue') || '[]') || []).length; } catch (_) {}
+        bar.querySelector('.wx-text').textContent =
+          'offline \u2014 she\u2019ll feel this when you\u2019re back' + (q ? ' \u00b7 ' + q + ' held' : '');
+        bar.querySelector('.wx-when').textContent = '';
+      }
     }
-    window.addEventListener('online', refresh);
-    window.addEventListener('offline', refresh);
-    setInterval(refresh, 4000);
-    refresh();
-  }
-
-  // ─── 2. JARVIS GLANCE ──────────────────────────────────────────────────
-  function buildJarvisGlance(host) {
-    if (host.querySelector('.pp-jarvis-glance')) return;
-    var g = el('div', { class: 'pp-jarvis-glance' },
-      el('div', { class: 'text' }, 'today reads as quiet electricity — listening.'));
-    host.insertBefore(g, host.children[1] || null);
-
     function refresh() {
+      if (!navigator.onLine) return paintConn();
       fetch(api('/api/jarvis/today/1'), { headers: authHeaders(), credentials: 'include', cache: 'no-store' })
         .then(function (r) { return r.ok ? r.json() : null; })
         .then(function (d) {
-          if (!d) return;
-          var t = (d.felt_quality || (d.envelope && d.envelope.felt_quality) || '').toString().trim();
-          if (t) g.querySelector('.text').textContent = t;
+          var t = (d && (d.felt_quality || (d.envelope && d.envelope.felt_quality)) || '').toString().trim();
+          if (t) {
+            bar.querySelector('.wx-text').textContent = 'she reads as ' + t.replace(/\.$/, '');
+            lastFeltAt = Date.now();
+          } else if (!lastFeltAt) {
+            bar.querySelector('.wx-text').textContent = 'listening\u2026';
+          }
+          bar.querySelector('.wx-when').textContent = lastFeltAt ? relTime(lastFeltAt) : '';
         })
         .catch(function () {});
     }
-    refresh();
+    window.addEventListener('online', function () { paintConn(); refresh(); });
+    window.addEventListener('offline', paintConn);
+    paintConn(); refresh();
     setInterval(refresh, 60 * 1000);
+    setInterval(paintConn, 5000);
   }
 
   // ─── 3. BODY MIRROR — retired 2026-07-09 (council rebuild): it duplicated
@@ -217,10 +218,12 @@
     var view = $('#viewPulse');
     if (!view) return;
     var host = view.querySelector('.pulse-scroll') || view;
-    buildStatusLine(host);
-    buildJarvisGlance(host);
+    buildWeatherBar(host);
     buildDayStrip(host);
     buildExtensionWhisper(host);
+    // THE FAMILY (zone 6) — the lineage tree that IS the persona picker,
+    // rendered live from /api/personas by body/phone_lineage.js.
+    if (window.VintLineage) VintLineage.renderFamilyTree(host);
   }
 
   if (document.readyState === 'loading') {
