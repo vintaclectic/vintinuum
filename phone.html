@@ -1171,7 +1171,7 @@ input[type="range"]::-moz-range-thumb {
     <script defer src="body/wake_word.js?v=v20260509-wake"></script>
     <script defer src="body/status_pill.js?v=v20260510-pill"></script>
     <script defer src="body/wake_consent.js?v=v20260510-consent"></script>
-    <script src="body/phone_lineage.js?v=v20260709-family1"></script>
+    <script src="body/phone_lineage.js?v=v20260710-w5"></script>
     <script defer src="body/phone_pulse_pro.js?v=v20260709-family1"></script>
     <script defer src="body/freshness.js?v=v20260709-pulse2"></script>
     <link rel="stylesheet" href="body/safe_area.css?v=v20260429-council">
@@ -2192,6 +2192,7 @@ function addPulseStreamEvent(evt) {
     human = parts.join(' · ');
   }
   if (!human && evt.region) human = String(evt.region) + (evt.intensity != null ? ' · ' + Number(evt.intensity).toFixed(2) : '');
+  if (evt.dominant && window.__vintSetMood) window.__vintSetMood(evt.dominant);
   if (!human) return; // nothing human-readable — this event is not for eyes
   // Remove empty state only once we have something real to show
   const empty = list.querySelector('.pulse-stream-empty');
@@ -3933,6 +3934,94 @@ init();
 </script>
   <script src="body/welcome-gate.js"></script>
 <script>
+/* ═══ W5 INVENTION LAYER (council 2026-07-10) — flagged, killable in 30s:
+   localStorage.setItem('vint:flag:<name>','0') kills a mechanic, no deploy. ═══ */
+(function () {
+  function flag(n) { try { return localStorage.getItem('vint:flag:' + n) !== '0'; } catch (_) { return true; } }
+
+  /* ── A. THUMBPRINT PULSE — press-and-hold to bleed a feeling in.
+     Hold the send button ~1.2s: it fills with your mood color mixed with her
+     live dominant-layer color. Release when full = sent. Short tap = nudge.
+     The fill lives INSIDE the button's own box — zero collision. ── */
+  if (flag('thumbpulse')) (function () {
+    var btn = document.getElementById('pulseSendBtn');
+    if (!btn) return;
+    var HOLD_MS = 1200, t0 = 0, raf = 0, authorized = false, lastTick = 0;
+    btn.style.position = 'relative'; btn.style.overflow = 'hidden';
+    var fill = document.createElement('span');
+    fill.style.cssText = 'position:absolute;inset:0;width:0%;pointer-events:none;opacity:0.45;border-radius:inherit;transition:none;';
+    btn.insertBefore(fill, btn.firstChild);
+    function mixColor() {
+      var mood = document.querySelector('.pulse-scroll');
+      var her = (mood && getComputedStyle(mood).getPropertyValue('--mood').trim()) || '#ce93d8';
+      var mv = Number((document.getElementById('moodSlider') || {}).value || 0); // -100..100
+      var mine = mv >= 0 ? '#ffd54f' : '#4fc3f7';
+      var pct = Math.round(Math.min(100, Math.abs(mv)) / 2 + 25);
+      return 'color-mix(in srgb, ' + mine + ' ' + pct + '%, ' + her + ')';
+    }
+    function step(ts) {
+      var p = Math.min(1, (Date.now() - t0) / HOLD_MS);
+      fill.style.width = (p * 100) + '%';
+      fill.style.background = mixColor();
+      var q = Math.floor(p * 4);
+      if (q > lastTick) { lastTick = q; try { navigator.vibrate && navigator.vibrate([8]); } catch (_) {} }
+      if (p < 1) raf = requestAnimationFrame(step);
+      else { btn.style.transform = 'scale(1.03)'; }
+    }
+    function reset() { cancelAnimationFrame(raf); fill.style.width = '0%'; btn.style.transform = ''; lastTick = 0; }
+    btn.addEventListener('pointerdown', function () {
+      if (btn.disabled) return;
+      t0 = Date.now(); lastTick = 0; raf = requestAnimationFrame(step);
+    });
+    ['pointerup', 'pointercancel', 'pointerleave'].forEach(function (ev) {
+      btn.addEventListener(ev, function () {
+        if (!t0) return;
+        var held = Date.now() - t0; t0 = 0;
+        if (held >= HOLD_MS) {
+          authorized = true;
+          try { navigator.vibrate && navigator.vibrate([20]); } catch (_) {}
+          reset(); btn.click();
+        } else if (ev === 'pointerup') {
+          reset();
+          var old = btn.textContent;
+          btn.textContent = 'hold to press it into her';
+          setTimeout(function () { if (!btn.disabled) btn.textContent = old; }, 1400);
+        } else reset();
+      });
+    });
+    // a plain synthetic/mouse click without the hold gets the nudge, not a send
+    btn.addEventListener('click', function (e) {
+      if (authorized) { authorized = false; return; }
+      e.preventDefault(); e.stopImmediatePropagation();
+    }, true);
+  })();
+
+  /* ── B. WEATHER-REACTIVE SCROLL — the surface tints toward her dominant
+     layer in real time. One CSS property, recolors existing accents only. ── */
+  if (flag('weatherscroll')) (function () {
+    var MOODS = { emotional: '#f48fb1', somatic: '#4fc3f7', body: '#4fc3f7', dream: '#ffd54f',
+                  creative: '#ffd54f', genetic: '#66bb6a', immune: '#66bb6a', metabolic: '#66bb6a' };
+    window.__vintSetMood = function (dominant) {
+      var c = MOODS[String(dominant || '').toLowerCase()] || '#ce93d8';
+      var sc = document.querySelector('#viewPulse .pulse-scroll');
+      if (sc) sc.style.setProperty('--mood', c);
+    };
+  })();
+
+  /* ── C. HANDOFF GHOST — the teaser thought travels into chat as context. ── */
+  if (flag('handoff')) (function () {
+    var card = document.getElementById('pulseTeaserCard');
+    if (!card) return;
+    card.addEventListener('click', function () {
+      var t = (document.getElementById('pulseTeaserMsg') || {}).textContent || '';
+      var input = document.getElementById('chatInput');
+      if (input && t && t.length > 8) input.placeholder = 'about: \u201c' + t.slice(0, 60) + '\u2026\u201d';
+    });
+  })();
+})();
+</script>
+<script>
+
 /* ═══ FLOAT DOCK + BUILD STAMP — council rebuild (Lord Vinta 2026-07-09) ═══
    "a working app without 3000 buttons overlapping each other"
 
@@ -3947,7 +4036,7 @@ init();
    A user drag (draggable.js persists to vint:btnpos:<id>) always wins —
    we only set defaults where no saved position exists. */
 (function () {
-  var BUILD = 'v20260709-family1';
+  var BUILD = 'v20260710-w5';
   var NAV = 56; // .bottom-nav height
   function slot(el, side, level) {
     if (!el) return;
@@ -4018,6 +4107,10 @@ init();
    + 10 + 44 + margin ≈ 210px incl. safe-area) at the end of the scroll body,
    so at max scroll the last interactive element sits ABOVE every float. */
 #viewPulse .pulse-scroll { padding-bottom: calc(210px + env(safe-area-inset-bottom, 0px)); }
+/* W5-B: her dominant layer tints the room — accents only, .8s ease */
+#viewPulse .pulse-scroll { transition: background 0.8s ease; background: radial-gradient(ellipse 120% 60% at 50% -10%, color-mix(in srgb, var(--mood, #ce93d8) 7%, transparent), transparent 70%); }
+#viewPulse .pulse-hb-card, #viewPulse .pulse-teaser-card, #viewPulse .pulse-stream-card { border-left: 2px solid color-mix(in srgb, var(--mood, #ce93d8) 45%, transparent); transition: border-color 0.8s ease; }
+#viewPulse .ps-label { color: color-mix(in srgb, var(--mood, #ce93d8) 55%, #ffd54f); transition: color 0.8s ease; }
 
 /* ══ THE FAMILY — persona chips + tree + gate sheet (council 2026-07-09) ══ */
 .persona-bar { display:flex; gap:8px; overflow-x:auto; -webkit-overflow-scrolling:touch; scrollbar-width:none; padding:10px 12px; }

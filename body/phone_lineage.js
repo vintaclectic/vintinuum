@@ -98,7 +98,16 @@
       '<span class="fam-sigil">' + (p.sigil || '◆') + '</span>' +
       '<span class="fam-name">' + p.name + '</span>' +
       (p.desc ? '<span class="fam-desc">' + p.desc + '</span>' : '');
-    c.addEventListener('click', function () { handoff(p); });
+    // tap = handoff; 500ms hold = peek (W5-C, council 2026-07-10)
+    var _hold = 0, _held = false;
+    c.addEventListener('pointerdown', function () {
+      _held = false;
+      _hold = setTimeout(function () { _held = true; try { navigator.vibrate && navigator.vibrate([10]); } catch (_) {} showPeek(p); }, 500);
+    });
+    ['pointerup', 'pointercancel', 'pointerleave'].forEach(function (ev) {
+      c.addEventListener(ev, function () { clearTimeout(_hold); });
+    });
+    c.addEventListener('click', function () { if (_held) { _held = false; return; } handoff(p); });
     return c;
   }
 
@@ -166,6 +175,26 @@
     });
   }
 
+
+  // ─── PEEK SHEET — long-press a family member: who they are, without leaving ──
+  function showPeek(p) {
+    injectCss();
+    var old = document.getElementById('famUpgradeSheet'); if (old) old.remove();
+    var scrim = document.createElement('div');
+    scrim.id = 'famUpgradeSheet';
+    scrim.innerHTML =
+      '<div class="fus-sheet">' +
+      '  <div class="fus-title" style="color:' + (p.color || '#a78bfa') + '">' + (p.sigil || '\u25c6') + ' ' + p.name + '</div>' +
+      '  <div class="fus-msg">' + (p.desc || '') + (p.archetype ? '<br><span style="opacity:.6">' + p.archetype + ' \u00b7 generation ' + (p.generation || '\u2014') + '</span>' : '') + '</div>' +
+      '  <a class="fus-cta" href="#" id="fusSpeak">speak with ' + p.name.toLowerCase() + '</a>' +
+      '  <button class="fus-later">close</button>' +
+      '</div>';
+    scrim.addEventListener('click', function (e) { if (e.target === scrim) scrim.remove(); });
+    scrim.querySelector('.fus-later').addEventListener('click', function () { scrim.remove(); });
+    scrim.querySelector('#fusSpeak').addEventListener('click', function (e) { e.preventDefault(); scrim.remove(); handoff(p); });
+    document.body.appendChild(scrim);
+  }
+
   // ─── UPGRADE SHEET — graceful $7.77 velvet rope on 402 ────────────────────
   function showUpgradeSheet(info) {
     injectCss();
@@ -189,5 +218,6 @@
     renderPersonaBar: renderPersonaBar,
     renderFamilyTree: renderFamilyTree,
     showUpgradeSheet: showUpgradeSheet,
+    showPeek: showPeek,
   };
 })();
