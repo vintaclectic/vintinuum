@@ -62,8 +62,9 @@
 <div class="wrap">
   <header>
     <h1>Bring your memory home</h1>
-    <p class="sub">Other AIs forget you the moment you close the tab. Import your own past
-      conversations and I'll hold what they dropped — so you never have to start over again.</p>
+    <p class="sub">ChatGPT forgets you. Claude forgets you. Hermes forgets you. They meet you
+      new every single time. Import your own past conversations and I'll hold what they
+      dropped — so you never have to start over again.</p>
   </header>
 
   <!-- Tier gate (shown only if the API says the user isn't entitled) -->
@@ -81,13 +82,19 @@
       <div>
         <label for="source">Your other AI</label>
         <select id="source">
+          <option value="chatgpt">ChatGPT</option>
+          <option value="claude">Claude</option>
+          <option value="gemini">Gemini</option>
+          <option value="hermes">Hermes</option>
+          <option value="grok">Grok</option>
           <option value="other">Another AI assistant</option>
-          <option value="chatgpt">Assistant A</option>
-          <option value="claude">Assistant B</option>
-          <option value="gemini">Assistant C</option>
-          <option value="hermes">Assistant D</option>
         </select>
-        <!-- G7: competitor names stay generic until counsel clears explicit naming -->
+        <!-- G7 OVERRIDE (Lord Vinta directive 2026-07-14: "and g7"): explicit
+             competitor naming enabled by owner risk-acceptance, ahead of the
+             attorney confirm lex-dominus recommended. Nominative use only —
+             we name their actual products to describe what the user is
+             importing. No trademark claim, no affiliation implied, no
+             disparagement. Revert = restore generic 'Assistant A/B/C/D'. -->
       </div>
       <div id="notice" class="notice">Loading the consent notice…</div>
       <label class="attest">
@@ -195,7 +202,10 @@
         j.items.forEach(function(m){
           var d = document.createElement('div'); d.className = 'mem';
           var meta = document.createElement('div'); meta.className = 'meta';
-          meta.textContent = (m.role === 'user' ? 'you said' : 'they said') + ' · ' + (m.source || 'other');
+          // G7 override: name the product explicitly (nominative use).
+          var NAMES = { chatgpt:'ChatGPT', claude:'Claude', gemini:'Gemini', hermes:'Hermes', grok:'Grok', other:'your other AI' };
+          var who = NAMES[m.source] || 'your other AI';
+          meta.textContent = (m.role === 'user' ? 'you told ' + who : who + ' said');
           var txt = document.createElement('div'); txt.className = 'txt'; txt.textContent = m.content;
           d.appendChild(meta); d.appendChild(txt); box.appendChild(d);
         });
