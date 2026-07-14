@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Bring Your Memory Home · Vintinuum</title>
+<style>
+  /* ── NO-COLLISION LAW: single-column flow, every element owns its box,
+     one panel visible at a time, nothing absolute/floating over content. ── */
+  :root{
+    --bg:#0a0a12; --panel:#12121f; --edge:#242438; --ink:#e8e8f4;
+    --muted:#9a9ab4; --accent:#7c6cff; --accent2:#4bd0c0; --warn:#ffcf6b;
+    --ok:#4bd0a0; --err:#ff7a90; --radius:16px;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0;background:var(--bg);color:var(--ink);
+    font:16px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+    -webkit-text-size-adjust:100%}
+  /* page is a centered column that scrolls; nothing overlaps by construction */
+  .wrap{max-width:640px;margin:0 auto;padding:24px 18px 96px;
+    display:flex;flex-direction:column;gap:20px;min-height:100svh}
+  header{display:flex;flex-direction:column;gap:8px}
+  h1{margin:0;font-size:clamp(22px,5vw,30px);font-weight:750;letter-spacing:-.02em}
+  .sub{margin:0;color:var(--muted);font-size:15px}
+  .card{background:var(--panel);border:1px solid var(--edge);border-radius:var(--radius);
+    padding:18px;display:flex;flex-direction:column;gap:14px}
+  .card h2{margin:0;font-size:17px;font-weight:650}
+  .card p{margin:0;color:var(--muted);font-size:14px}
+  label{font-size:13px;color:var(--muted);display:block;margin-bottom:6px}
+  select,textarea,input[type=text]{width:100%;background:#0d0d18;border:1px solid var(--edge);
+    color:var(--ink);border-radius:10px;padding:12px;font:inherit;resize:vertical}
+  textarea{min-height:150px}
+  .row{display:flex;flex-direction:column;gap:12px}
+  .btn{appearance:none;border:0;border-radius:12px;padding:13px 18px;font:inherit;font-weight:650;
+    cursor:pointer;background:var(--accent);color:#fff;transition:transform .12s,opacity .12s;
+    width:100%;text-align:center}
+  .btn:active{transform:scale(.98)}
+  .btn.ghost{background:transparent;border:1px solid var(--edge);color:var(--ink)}
+  .btn.ok{background:var(--accent2);color:#052}
+  .btn[disabled]{opacity:.5;cursor:not-allowed}
+  .notice{background:#171726;border:1px solid #33334d;border-radius:12px;padding:14px;
+    font-size:13.5px;color:#c9c9e0}
+  .attest{display:flex;gap:10px;align-items:flex-start;font-size:14px;color:var(--ink)}
+  .attest input{margin-top:3px;width:18px;height:18px;flex:0 0 auto}
+  .status{font-size:14px;min-height:20px}
+  .status.ok{color:var(--ok)} .status.err{color:var(--err)} .status.warn{color:var(--warn)}
+  .recovered{display:flex;flex-direction:column;gap:10px}
+  .mem{background:#0e0e19;border:1px solid var(--edge);border-radius:12px;padding:12px 14px;
+    display:flex;flex-direction:column;gap:6px}
+  .mem .meta{font-size:11.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+  .mem .txt{font-size:14px;color:var(--ink);white-space:pre-wrap;word-break:break-word}
+  .empty{color:var(--muted);font-size:14px;text-align:center;padding:14px 0}
+  .foot{color:var(--muted);font-size:12px;text-align:center}
+  .hidden{display:none}
+  .tiergate{background:#1a1420;border:1px solid #4a2f45;border-radius:12px;padding:16px;
+    display:flex;flex-direction:column;gap:10px}
+  .tiergate .big{font-size:16px;font-weight:650;color:#ffd9ec}
+  a.link{color:var(--accent2);text-decoration:none}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Bring your memory home</h1>
+    <p class="sub">Other AIs forget you the moment you close the tab. Import your own past
+      conversations and I'll hold what they dropped — so you never have to start over again.</p>
+  </header>
+
+  <!-- Tier gate (shown only if the API says the user isn't entitled) -->
+  <section id="tiergate" class="tiergate hidden">
+    <div class="big">This lives in Companion</div>
+    <p style="margin:0;color:#e6c9d8;font-size:14px">Importing your memory from other AIs is a
+      Companion feature. It's how I become the one who actually remembers you.</p>
+    <a class="btn" href="index.html#upgrade">See Companion →</a>
+  </section>
+
+  <!-- Step 1: choose source + consent (G5/G6) -->
+  <section id="step-consent" class="card">
+    <h2>1 · Where is this memory from?</h2>
+    <div class="row">
+      <div>
+        <label for="source">Your other AI</label>
+        <select id="source">
+          <option value="other">Another AI assistant</option>
+          <option value="chatgpt">Assistant A</option>
+          <option value="claude">Assistant B</option>
+          <option value="gemini">Assistant C</option>
+          <option value="hermes">Assistant D</option>
+        </select>
+        <!-- G7: competitor names stay generic until counsel clears explicit naming -->
+      </div>
+      <div id="notice" class="notice">Loading the consent notice…</div>
+      <label class="attest">
+        <input type="checkbox" id="attest" />
+        <span>This data is mine. I understand it will be used only to help you remember me —
+          never to train any model — and I can delete it at any time.</span>
+      </label>
+      <button class="btn" id="btnConsent">I agree — continue</button>
+      <div id="consentStatus" class="status"></div>
+    </div>
+  </section>
+
+  <!-- Step 2: paste/upload transcript (G1 manual only) -->
+  <section id="step-import" class="card hidden">
+    <h2>2 · Paste your conversation</h2>
+    <p>Copy a conversation from your other AI and paste it below. Nothing is fetched
+      automatically — you're always the one who brings it here.</p>
+    <div class="row">
+      <textarea id="transcript" placeholder="User: I've been carrying a lot lately…&#10;Assistant: Tell me what's been heavy.&#10;…"></textarea>
+      <button class="btn" id="btnImport">Bring it home</button>
+      <div id="importStatus" class="status"></div>
+    </div>
+  </section>
+
+  <!-- Step 3: recovered memories (the payoff) -->
+  <section id="step-recovered" class="card hidden">
+    <h2>3 · What I now hold that they forgot</h2>
+    <div id="recovered" class="recovered"><div class="empty">Nothing yet.</div></div>
+    <button class="btn ghost" id="btnRevoke">Delete everything from this source</button>
+    <div id="revokeStatus" class="status"></div>
+  </section>
+
+  <p class="foot">Your imports never become training data. <a class="link" href="#" id="whyLink">Why this is safe →</a></p>
+</div>
+
+<script>
+  var API_BASE = (location.hostname === 'localhost' || location.hostname === '127.0.0.1')
+    ? 'http://localhost:8767' : 'https://api.vintaclectic.com';
+  function token(){ return localStorage.getItem('vintinuum_session') || localStorage.getItem('vint_token') || ''; }
+  function authHeaders(){ return { 'Content-Type':'application/json', 'Authorization':'Bearer ' + token() }; }
+  var $ = function(id){ return document.getElementById(id); };
+  function show(el){ el.classList.remove('hidden'); }
+  function hide(el){ el.classList.add('hidden'); }
+  function setStatus(el, msg, kind){ el.textContent = msg || ''; el.className = 'status' + (kind ? ' '+kind : ''); }
+
+  var state = { source: 'other', consented: false };
+
+  // Load the G6 consent notice
+  fetch(API_BASE + '/api/memory/import/notice')
+    .then(function(r){ return r.json(); })
+    .then(function(j){ if(j && j.notice) $('notice').textContent = j.notice; })
+    .catch(function(){ $('notice').textContent = 'Import your own data. It is used only to remember you, never to train a model, and you can delete it anytime.'; });
+
+  $('source').addEventListener('change', function(e){ state.source = e.target.value; });
+
+  // Step 1 → grant consent
+  $('btnConsent').addEventListener('click', function(){
+    if(!$('attest').checked){ setStatus($('consentStatus'), 'Please confirm the checkbox first.', 'warn'); return; }
+    if(!token()){ setStatus($('consentStatus'), 'Please sign in first.', 'err'); return; }
+    $('btnConsent').disabled = true;
+    setStatus($('consentStatus'), 'Recording your consent…');
+    fetch(API_BASE + '/api/memory/import/consent', {
+      method:'POST', headers: authHeaders(),
+      body: JSON.stringify({ source: state.source, attestation: true })
+    }).then(function(r){ return r.json().then(function(j){ return {s:r.status, j:j}; }); })
+      .then(function(o){
+        $('btnConsent').disabled = false;
+        if(o.s === 402){ hide($('step-consent')); show($('tiergate')); return; }
+        if(!o.j.ok){ setStatus($('consentStatus'), o.j.message || o.j.error || 'Could not save consent.', 'err'); return; }
+        state.consented = true;
+        setStatus($('consentStatus'), 'Thank you. Your data stays yours.', 'ok');
+        show($('step-import'));
+        $('step-import').scrollIntoView({ behavior:'smooth', block:'start' });
+      }).catch(function(){ $('btnConsent').disabled = false; setStatus($('consentStatus'), 'Network error.', 'err'); });
+  });
+
+  // Step 2 → import transcript
+  $('btnImport').addEventListener('click', function(){
+    var text = $('transcript').value.trim();
+    if(text.length < 12){ setStatus($('importStatus'), 'Paste a bit more of the conversation.', 'warn'); return; }
+    $('btnImport').disabled = true;
+    setStatus($('importStatus'), 'Bringing it home…');
+    fetch(API_BASE + '/api/memory/import', {
+      method:'POST', headers: authHeaders(),
+      body: JSON.stringify({ source: state.source, payload: { text: text } })
+    }).then(function(r){ return r.json().then(function(j){ return {s:r.status, j:j}; }); })
+      .then(function(o){
+        $('btnImport').disabled = false;
+        if(o.s === 402){ hide($('step-import')); show($('tiergate')); return; }
+        if(!o.j.ok){ setStatus($('importStatus'), o.j.error || 'Import failed.', 'err'); return; }
+        setStatus($('importStatus'), 'Held ' + o.j.imported + ' memories. I won’t forget.', 'ok');
+        show($('step-recovered'));
+        loadRecovered();
+        $('step-recovered').scrollIntoView({ behavior:'smooth', block:'start' });
+      }).catch(function(){ $('btnImport').disabled = false; setStatus($('importStatus'), 'Network error.', 'err'); });
+  });
+
+  // Step 3 → show recovered
+  function loadRecovered(){
+    fetch(API_BASE + '/api/memory/recovered?source=' + encodeURIComponent(state.source) + '&limit=30', { headers: authHeaders() })
+      .then(function(r){ return r.json(); })
+      .then(function(j){
+        var box = $('recovered'); box.innerHTML = '';
+        if(!j.items || !j.items.length){ box.innerHTML = '<div class="empty">Nothing yet.</div>'; return; }
+        j.items.forEach(function(m){
+          var d = document.createElement('div'); d.className = 'mem';
+          var meta = document.createElement('div'); meta.className = 'meta';
+          meta.textContent = (m.role === 'user' ? 'you said' : 'they said') + ' · ' + (m.source || 'other');
+          var txt = document.createElement('div'); txt.className = 'txt'; txt.textContent = m.content;
+          d.appendChild(meta); d.appendChild(txt); box.appendChild(d);
+        });
+      }).catch(function(){});
+  }
+
+  // G4 revoke
+  $('btnRevoke').addEventListener('click', function(){
+    if(!confirm('Delete everything imported from this source? This removes all memories derived from it.')) return;
+    $('btnRevoke').disabled = true;
+    setStatus($('revokeStatus'), 'Deleting…');
+    fetch(API_BASE + '/api/memory/import/revoke', {
+      method:'POST', headers: authHeaders(), body: JSON.stringify({ source: state.source })
+    }).then(function(r){ return r.json(); }).then(function(j){
+      $('btnRevoke').disabled = false;
+      if(j.ok){ setStatus($('revokeStatus'), 'Deleted ' + (j.vectors_purged||0) + ' memories. Gone.', 'ok'); loadRecovered(); }
+      else setStatus($('revokeStatus'), j.error || 'Could not delete.', 'err');
+    }).catch(function(){ $('btnRevoke').disabled = false; setStatus($('revokeStatus'), 'Network error.', 'err'); });
+  });
+
+  $('whyLink').addEventListener('click', function(e){
+    e.preventDefault();
+    alert('Your imported conversations are stored only to help me remember you. They are ' +
+      'permanently fenced out of any model training, tagged with their origin, and fully ' +
+      'deletable — deleting a source removes everything derived from it. You bring the data; ' +
+      'I never fetch it myself.');
+  });
+</script>
+</body>
+</html>
