@@ -29,7 +29,9 @@
   } catch (_) {}
 
   var BTN_ID = 'vintVoice';
-  var btn, iconEl, caretEl;
+  var btn, iconEl, caretEl, dotEl;
+  // VintaBox health (the box owns TTS+STT; the face reports what the box says).
+  var boxHealth = { ok: true, ear: true, mouth: true, checked: false };
 
   function muted() {
     try { return !!(window.VOICE && window.VOICE.muted && window.VOICE.muted()); }
@@ -39,6 +41,50 @@
   function listening() {
     try { return !!(window.__voiceIn && window.__voiceIn.isListening && window.__voiceIn.isListening()); }
     catch (_) { return false; }
+  }
+
+  // ── VintaBox health poll ────────────────────────────────────────────────
+  // The box owns TTS+STT and exposes /api/voice/status ({ ok, mouth, ear }).
+  // If the ear (local Whisper) is down, tapping the mic would fall back to
+  // browser Web Speech or silently fail — so the face wears an honest amber
+  // ring + corner dot instead of pretending the mic is fully live.
+  function apiBase() {
+    try { if (window.API_BASE) return String(window.API_BASE).replace(/\/+$/, ''); } catch (_) {}
+    return '';
+  }
+
+  function applyHealth() {
+    if (!btn) return;
+    // Ear down = the meaningful signal for a mic control. Mouth-down is shown
+    // by voice_say's own muted glyph, so we key the amber state to the ear.
+    var earDown = boxHealth.checked && !boxHealth.ear;
+    btn.classList.toggle('vvb-earless', earDown);
+  }
+
+  function checkBoxHealth() {
+    var url = apiBase() + '/api/voice/status';
+    var done = false;
+    var ctrl = (typeof AbortController !== 'undefined') ? new AbortController() : null;
+    var to = setTimeout(function () { try { ctrl && ctrl.abort(); } catch (_) {} }, 4000);
+    try {
+      fetch(url, { cache: 'no-store', signal: ctrl ? ctrl.signal : undefined })
+        .then(function (r) { return r && r.ok ? r.json() : null; })
+        .then(function (j) {
+          done = true; clearTimeout(to);
+          if (j && typeof j === 'object') {
+            boxHealth = {
+              ok: !!j.ok, ear: (j.ear !== false), mouth: (j.mouth !== false),
+              checked: true
+            };
+          } else {
+            // Endpoint unreachable ≠ ear broken; don't cry wolf. Mark checked
+            // but leave ear "up" so we never show a false amber on a flaky net.
+            boxHealth.checked = true;
+          }
+          applyHealth();
+        })
+        .catch(function () { done = true; clearTimeout(to); boxHealth.checked = true; applyHealth(); });
+    } catch (_) { clearTimeout(to); boxHealth.checked = true; applyHealth(); }
   }
 
   function paint() {
@@ -67,6 +113,8 @@
         window.__voiceIn.toggle({ surface: 'chat' }).then(paint).catch(function () { paint(); });
         // Immediate optimistic repaint; the promise repaints again on resolve.
         paint();
+        // A tap is the moment truth matters most — verify the ear is really up.
+        checkBoxHealth();
         return;
       }
     } catch (_) {}
@@ -96,9 +144,23 @@
     s.textContent = [
       '#' + BTN_ID + '{',
       '  position:fixed;',
-      '  bottom:calc(24px + env(safe-area-inset-bottom,0px));',
+      // ── NO-COLLISION LAW (Vinta 2026-07-06) — this corner is CROWDED. ──────
+      // Three neighbours share the bottom edge and NONE may be touched:
+      //   • mobile_nav.js  — full-width bottom bar, 56px + safe-area, <=700px
+      //   • diag.js        — .vint-diag-pill at left:14px bottom:14px (z 99996)
+      //   • hey_vinta.js   — 56px orb at right:20px bottom:20px
+      // We sit on the LEFT, lifted clear of the diag pill, and (on mobile) fully
+      // ABOVE the nav bar. Desktop keeps the low resting spot since no nav bar
+      // exists there. Numbers are derived from the neighbours, not guessed:
+      //   diag pill = font 11px/1.3 + 7px×2 pad + 1px×2 border ≈ 30px tall,
+      //   anchored bottom:14px → occupies 14..44px. Button at 56px → 56..100px.
+      //   GAP = 12px. Nothing touches anything, at any content length.
+      '  bottom:calc(56px + env(safe-area-inset-bottom,0px));',
       '  left:calc(16px + env(safe-area-inset-left,0px));',
-      '  z-index:1000;',
+      // Above content, BELOW Shell.Z.shell(100)+ chrome? No — the control must
+      // stay tappable over content, so it rides just under the drawer/modal
+      // layer and above the shell bar it now clears geometrically anyway.
+      '  z-index:150;',
       '  display:flex;align-items:center;justify-content:center;gap:2px;',
       '  height:44px;min-width:44px;padding:0 8px;',
       '  border-radius:22px;',
@@ -116,7 +178,20 @@
       '#' + BTN_ID + '.vvb-listening{background:rgba(40,10,14,0.62);box-shadow:0 0 0 0 rgba(255,70,70,0.55);animation:vvbPulse 1.6s ease-out infinite;}',
       '@keyframes vvbPulse{0%{box-shadow:0 0 0 0 rgba(255,70,70,0.55);}70%{box-shadow:0 0 0 12px rgba(255,70,70,0);}100%{box-shadow:0 0 0 0 rgba(255,70,70,0);}}',
       '@media (prefers-reduced-motion:reduce){#' + BTN_ID + '.vvb-listening{animation:none;box-shadow:0 0 0 3px rgba(255,70,70,0.35);}}',
-      '@media (max-width:380px){#' + BTN_ID + '{bottom:calc(18px + env(safe-area-inset-bottom,0px));}}'
+      // ── Mobile: clear the bottom nav ENTIRELY. mobile_nav.js renders a
+      // full-width 56px bar (+safe-area) at bottom:0 for viewports <=700px.
+      // The old rule here dropped the button to 18px — INSIDE that bar, so the
+      // control sat on/behind the nav on every phone. It now sits fully above
+      // it: 56px bar + 12px breathing gap. Nothing touches anything.
+      '@media (max-width:700px){#' + BTN_ID + '{bottom:calc(68px + env(safe-area-inset-bottom,0px));}}',
+      // Very small phones: same clearance, tighter gap so it never crowds chat.
+      '@media (max-width:380px){#' + BTN_ID + '{bottom:calc(64px + env(safe-area-inset-bottom,0px));}}',
+      // ── VintaBox health: when the ear is down, the mic is honest about it ──
+      '#' + BTN_ID + '.vvb-earless{border-color:rgba(255,180,60,0.55)!important;}',
+      '#' + BTN_ID + ' .vvb-dot{position:absolute;top:-2px;right:-2px;width:8px;height:8px;',
+      '  border-radius:50%;background:#ffb43c;box-shadow:0 0 0 2px rgba(8,12,20,0.9);',
+      '  display:none;pointer-events:none;}',
+      '#' + BTN_ID + '.vvb-earless .vvb-dot{display:block;}'
     ].join('\n');
     document.head.appendChild(s);
   }
@@ -154,8 +229,16 @@
     caretEl.className = 'vvb-caret';
     caretEl.textContent = '⌄';
 
+    // VintaBox health dot — rides INSIDE the pill's own box (the pill is
+    // position:fixed, so it is the containing block). It never overlaps a
+    // neighbour; it only marks this control's own corner.
+    dotEl = document.createElement('span');
+    dotEl.className = 'vvb-dot';
+    dotEl.setAttribute('aria-hidden', 'true');
+
     btn.appendChild(iconEl);
     btn.appendChild(caretEl);
+    btn.appendChild(dotEl);
     document.body.appendChild(btn);
 
     // ── Long-press → toggle OUTPUT mute ──────────────────────────────────────
@@ -228,6 +311,16 @@
     // Picker may mount on an 800ms timeout (after us) and re-create its ♫.
     // Sweep legacy controls again shortly after to guarantee a single control.
     setTimeout(removeLegacyControls, 1200);
+
+    // ── VintaBox health: poll the box so the mic never lies about the ear ────
+    // First check after a short settle (let the API/tunnel wake), then a slow
+    // heartbeat. Server-side is cached 10s, so a 60s client poll is featherweight.
+    setTimeout(checkBoxHealth, 2500);
+    setInterval(checkBoxHealth, 60000);
+    // Re-check when the tab returns to foreground (laptop woke, phone unlocked).
+    document.addEventListener('visibilitychange', function () {
+      if (!document.hidden) checkBoxHealth();
+    });
     return true;
   }
 
