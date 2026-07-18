@@ -3418,17 +3418,28 @@ body {
       return;
     }
 
-    const totalFiles = d.totalFiles || d.total_files || 0;
+    // The brain emits { totals:{files,directories,games}, mediaTypes:{...},
+    // contentClassifications:{...}, romSystems:{...}, dateRange:{...} }. Read
+    // that real shape first, then fall back to the older flat keys so this
+    // never regresses if the endpoint shape shifts back.
+    const t = d.totals || {};
+    const totalFiles = t.files || d.totalFiles || d.total_files || 0;
+    const totalDirs = t.directories || d.totalDirs || d.total_dirs || 0;
+    const totalGames = t.games || d.games || 0;
     const totalSize = d.totalSizeGB || d.total_size_gb || (d.totalSizeBytes ? (d.totalSizeBytes / 1073741824).toFixed(1) : null);
-    const lastScan = d.lastScan || d.last_scan || d.scanTime || null;
-    const typeBreakdown = d.byType || d.fileTypes || d.types || {};
+    const lastScan = d.refreshedAt || d.lastScan || d.last_scan || d.scanTime
+      || (d.dateRange && d.dateRange.newest) || null;
+    // Prefer the human-meaningful content classifications; fall back to raw
+    // media types, then legacy flat maps.
+    const typeBreakdown = d.contentClassifications || d.mediaTypes || d.byType || d.fileTypes || d.types || {};
 
     // Build stat rows
     const stats = [
       { key: 'Total Files', val: totalFiles ? formatNumber(totalFiles) : '—' },
+      { key: 'Directories', val: totalDirs ? formatNumber(totalDirs) : '—' },
       { key: 'Archive Size', val: totalSize ? `${totalSize} GB` : '—' },
+      { key: 'Game Systems', val: totalGames ? formatNumber(totalGames) : '—' },
       { key: 'Last Indexed', val: lastScan ? new Date(lastScan).toLocaleString() : '—' },
-      { key: 'Directories', val: d.totalDirs || d.total_dirs ? formatNumber(d.totalDirs || d.total_dirs) : '—' },
     ].filter(s => s.val !== '—');
 
     const statsHtml = stats.map(s => `
