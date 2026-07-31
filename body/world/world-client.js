@@ -1039,8 +1039,14 @@
   //     live on the 3D presence. "Provide your own face to your being."
   // Returns a live-preview harness so the panel can drive the rig without a rebuild.
   World.editHead = function () {
-    if (!window.HeadEditor) { console.warn('[world] HeadEditor not loaded'); return; }
+    if (!window.HeadEditor) { console.warn('[world] HeadEditor not loaded'); return false; }
+    // THE MIRROR (2026-07-30): the forge felt dead because the default camera sits
+    // BEHIND you — you sculpted the back of your own head. While the forge is open
+    // the clearing turns to face you (selfie cam); closing restores your view.
+    const prevCam = World._camMode || 0;
+    World._camMode = 2;
     window.HeadEditor.open({
+      onClose: () => { World._camMode = prevCam; },
       avatarId: World._myAvatarId || null,      // may be null — the forge still opens
       hasFace: !!World._myAvatarId,
       adjust: World._myHeadAdjust || null,
@@ -1059,6 +1065,7 @@
       // the council roster the panel offers color-curation for
       agents: [...agents.entries()].map(([id, A]) => ({ id, name: A.name })),
     });
+    return true;
   };
 
   // apply a head morph to the self presence (rig bust if present, else the sculpted

@@ -99,6 +99,10 @@
 
     var dragging = false, holdTimer = null, resetTimer = null;
     var startClient = { x: 0, y: 0 }, startElPos = { x: 0, y: 0 };
+    var suppressUntil = 0;
+    el.addEventListener('click', function (e) {
+      if (Date.now() < suppressUntil) { e.preventDefault(); e.stopImmediatePropagation(); suppressUntil = 0; }
+    }, true);
 
     function beginDrag(cx, cy) {
       dragging = true;
@@ -123,6 +127,10 @@
     function endDrag() {
       if (!dragging) return;
       dragging = false;
+      // The browser fires a click on mouseup even after a drag (the element moved
+      // WITH the pointer, so down+up land on it) — swallow that one synthetic
+      // click so repositioning a button never triggers its action (2026-07-30).
+      suppressUntil = Date.now() + 400;
       // Spring settle: the scale pop releases with overshoot, not a snap
       el.style.transition = 'transform 180ms cubic-bezier(0.34, 1.56, 0.64, 1)';
       el.style.transform  = '';

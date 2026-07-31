@@ -89,7 +89,10 @@
       '#vintHeadEd .he-cta:active{transform:scale(0.98);}',
       '#vintHeadEd .he-retry{width:calc(100% - 30px);margin:2px 15px 10px;min-height:44px;border-radius:12px;background:none;',
       ' border:1px dashed rgba(255,180,80,0.4);color:rgba(255,200,120,0.9);font-size:12px;cursor:pointer;}',
-      '#vintHeadEd .he-note{padding:2px 15px 10px;font-size:11px;color:rgba(180,200,230,0.5);font-style:italic;line-height:1.5;}'
+      '#vintHeadEd .he-note{padding:2px 15px 10px;font-size:11px;color:rgba(180,200,230,0.5);font-style:italic;line-height:1.5;}',
+      '#vintHeadEd .he-mirror{padding:8px 15px 0;font-size:11px;color:rgba(159,220,255,0.55);letter-spacing:.3px;flex:0 0 auto;}',
+      '#vintHeadEd .he-shuf{background:rgba(206,147,216,0.12);border-color:rgba(206,147,216,0.4);color:#e4bbf0;}',
+      '#vintHeadEd .he-shuf:active{transform:scale(0.97);}'
     ].join('');
     document.head.appendChild(s);
   }
@@ -127,7 +130,7 @@
 
     _state = { cfg: cfg, hasFace: hasFace, preview: preview, avatarId: cfg.avatarId,
                base: cfg.base, adj: adj, morph: morph, selfTint: savedTint,
-               agentTints: agentTints, agents: agentsList };
+               agentTints: agentTints, agents: agentsList, onClose: cfg.onClose || null };
 
     // apply any persisted look immediately so the panel opens in-sync with the world
     try { if (preview.setMorph) preview.setMorph(morph); } catch (_) {}
@@ -155,6 +158,13 @@
       tabs.appendChild(b); tabBtns[t[0]] = b;
     });
     wrap.appendChild(tabs);
+
+    // the mirror line — only when the world handed us a camera to give back
+    if (cfg.onClose) {
+      var mirror = document.createElement('div'); mirror.className = 'he-mirror';
+      mirror.textContent = '🪞 the clearing turns to face you while you forge';
+      wrap.appendChild(mirror);
+    }
 
     // scroll body
     var body = document.createElement('div'); body.className = 'he-body';
@@ -218,9 +228,10 @@
     pColors.appendChild(cnote);
 
     // self
-    pColors.appendChild(mkColorRow('self', 'you', savedTint || '#5fb8e8', function (hex) {
+    var selfRow = mkColorRow('self', 'you', savedTint || '#5fb8e8', function (hex) {
       _state.selfTint = hex; try { if (preview.setTint) preview.setTint('self', hex); } catch (_) {}
-    }));
+    });
+    pColors.appendChild(selfRow);
     // each council agent
     agentsList.forEach(function (a) {
       var cur = agentTints[a.id] || null;
@@ -272,9 +283,21 @@
         try { if (preview.setHeadAdjust) preview.setHeadAdjust(adj); } catch (_) {}
       }
     };
+    // ✦ surprise — roll a tasteful random being, live. one tap of delight; save
+    // only if you love it, reset if you don't. never destructive on its own.
+    var shuf = document.createElement('button'); shuf.className = 'he-btn he-shuf'; shuf.textContent = '✦ surprise';
+    shuf.onclick = function () {
+      var roll = function () { return +(0.75 + Math.random() * 0.6).toFixed(2); };
+      morph.headWide = roll(); morph.headLong = roll(); morph.headRound = roll();
+      _state.morph = morph;
+      morphSliders.forEach(function (sl) { var k = sl.input.dataset.key; sl.input.value = morph[k]; sl.val.textContent = sl.fmt(morph[k]); });
+      try { if (preview.setMorph) preview.setMorph(morph); } catch (_) {}
+      var hex = PALETTE[Math.floor(Math.random() * PALETTE.length)];
+      if (selfRow._pick) selfRow._pick(hex);
+    };
     var save = document.createElement('button'); save.className = 'he-btn he-save'; save.textContent = 'save';
     save.onclick = function () { _saveAll(save); };
-    acts.appendChild(reset); acts.appendChild(save);
+    acts.appendChild(reset); acts.appendChild(shuf); acts.appendChild(save);
     wrap.appendChild(acts);
 
     document.body.appendChild(wrap);
@@ -292,7 +315,14 @@
     return wrap;
   };
 
-  HE.close = function () { if (_el) { _el.remove(); _el = null; } };
+  HE.close = function () {
+    if (_el) { _el.remove(); _el = null; }
+    // hand control back to the world (e.g. restore the camera from mirror mode)
+    if (_state && typeof _state.onClose === 'function') {
+      var cb = _state.onClose; _state.onClose = null;
+      try { cb(); } catch (_) {}
+    }
+  };
 
   // a labeled color-curation row (a name + a dot + swatches). onPick(hex).
   function mkColorRow(id, name, current, onPick) {
@@ -304,17 +334,19 @@
     wn.appendChild(dot); wn.appendChild(nm); row.appendChild(wn);
     var sw = document.createElement('div'); sw.className = 'he-swatches';
     var btns = [];
+    function pick(hex) {
+      btns.forEach(function (o) { o.classList.toggle('on', o.title.toLowerCase() === hex.toLowerCase()); });
+      dot.style.background = hex; dot.style.color = hex;
+      onPick(hex);
+    }
     PALETTE.forEach(function (hex) {
       var b = document.createElement('button'); b.className = 'he-sw'; b.style.background = hex; b.title = hex;
       if (current && current.toLowerCase() === hex.toLowerCase()) b.classList.add('on');
-      b.onclick = function () {
-        btns.forEach(function (o) { o.classList.remove('on'); }); b.classList.add('on');
-        dot.style.background = hex; dot.style.color = hex;
-        onPick(hex);
-      };
+      b.onclick = function () { pick(hex); };
       sw.appendChild(b); btns.push(b);
     });
     row.appendChild(sw);
+    row._pick = pick;   // programmatic pick (✦ surprise drives this)
     return row;
   }
 

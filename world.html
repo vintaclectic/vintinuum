@@ -374,9 +374,18 @@
   document.getElementById('sayBtn').addEventListener('click', send);
   input.addEventListener('keydown', e => { if (e.key === 'Enter') send(); });
 
-  // edit-head → open the head-mold editor with live 3D preview on your own avatar
+  // edit-head → the Being Forge, with the world turned to mirror you. This button
+  // must NEVER be dead: if the world's path throws, open the forge directly; if
+  // even that fails, say so out loud instead of swallowing the click (2026-07-30 —
+  // "edit head does not work or do anything" was a silent catch eating failures).
   const ehb = document.getElementById('editHeadBtn');
-  if (ehb) ehb.addEventListener('click', () => { try { VintinuumWorld.editHead(); } catch (_) {} });
+  if (ehb) ehb.addEventListener('click', () => {
+    try { if (window.VintinuumWorld && VintinuumWorld.editHead()) return; }
+    catch (e) { console.error('[world] editHead failed:', e); }
+    try { if (window.HeadEditor) { HeadEditor.open({ hasFace: false, agents: [] }); return; } }
+    catch (e2) { console.error('[world] forge fallback failed:', e2); }
+    status('the forge could not open — refresh and try again.');
+  });
 
   // run (hold) + jump (tap) — mobile movement controls
   const runBtn = document.getElementById('btnRun'), jumpBtn = document.getElementById('btnJump');
