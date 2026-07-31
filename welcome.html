@@ -287,9 +287,13 @@ textarea::placeholder, input::placeholder { color: rgba(150,175,215,0.4); font-s
       .then(function (d) {
         var el = document.getElementById('agentList');
         if (d.agents && d.agents.length) {
+          // Each name is a live door into that agent's conversation — the moment
+          // someone joins your world you can actually talk to them.
           el.innerHTML = 'In your world: ' + d.agents.map(function (a) {
-            return '<span style="color:' + (a.color || '#a67cff') + '">◈ ' + esc(a.name) + '</span>';
-          }).join(' · ');
+            return '<a href="agents.html?agent=' + encodeURIComponent(a.id) + '" ' +
+              'style="color:' + (a.color || '#a67cff') + ';text-decoration:none;border-bottom:1px dotted currentColor" ' +
+              'title="Talk to ' + esc(a.name) + '">◈ ' + esc(a.name) + '</a>';
+          }).join(' · ') + ' &nbsp;<a href="agents.html" style="color:#4bd0c0;text-decoration:none">talk to them →</a>';
         }
       }).catch(function () {});
   }

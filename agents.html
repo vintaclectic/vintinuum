@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Your Agents · Vintinuum</title>
+<style>
+  /* ── NO-COLLISION LAW ────────────────────────────────────────────────────
+     Two views (roster / conversation), exactly ONE visible at a time. Each is
+     a single-column flow inside a shared centered wrap. Nothing is absolute,
+     fixed, or floating over content — the composer is a flow sibling pinned by
+     flex, not by position:fixed, so it can never land on a message. Every
+     element owns its box; long content scrolls inside its own box.
+     ──────────────────────────────────────────────────────────────────────── */
+  :root{
+    --bg:#0a0a12; --panel:#12121f; --edge:#242438; --ink:#e8e8f4;
+    --muted:#9a9ab4; --accent:#7c6cff; --accent2:#4bd0c0; --warn:#ffcf6b;
+    --ok:#4bd0a0; --err:#ff7a90; --radius:16px;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0;background:var(--bg);color:var(--ink);
+    font:16px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+    -webkit-text-size-adjust:100%}
+  /* 100svh + flex column = the composer sits at the bottom of the FLOW,
+     never over the transcript, and survives the on-screen keyboard. */
+  .wrap{max-width:640px;margin:0 auto;padding:24px 18px 40px;
+    display:flex;flex-direction:column;gap:20px;min-height:100svh}
+  header{display:flex;flex-direction:column;gap:8px}
+  h1{margin:0;font-size:clamp(22px,5vw,30px);font-weight:750;letter-spacing:-.02em}
+  .sub{margin:0;color:var(--muted);font-size:15px}
+  .card{background:var(--panel);border:1px solid var(--edge);border-radius:var(--radius);
+    padding:18px;display:flex;flex-direction:column;gap:14px}
+  .card h2{margin:0;font-size:17px;font-weight:650}
+  .card p{margin:0;color:var(--muted);font-size:14px}
+  .btn{appearance:none;border:0;border-radius:12px;padding:13px 18px;font:inherit;font-weight:650;
+    cursor:pointer;background:var(--accent);color:#fff;transition:transform .12s,opacity .12s;
+    width:100%;text-align:center}
+  .btn:active{transform:scale(.98)}
+  .btn.ghost{background:transparent;border:1px solid var(--edge);color:var(--ink)}
+  .btn[disabled]{opacity:.5;cursor:not-allowed}
+  .status{font-size:14px;min-height:20px}
+  .status.ok{color:var(--ok)} .status.err{color:var(--err)} .status.warn{color:var(--warn)}
+  .empty{color:var(--muted);font-size:14px;text-align:center;padding:14px 0}
+  .foot{color:var(--muted);font-size:12px;text-align:center;margin:0}
+  .hidden{display:none !important}
+  a.link{color:var(--accent2);text-decoration:none}
+
+  /* ── Roster: agent cards. Grid cells own their space; text wraps, never spills. ── */
+  .roster{display:flex;flex-direction:column;gap:12px}
+  .agent{background:var(--panel);border:1px solid var(--edge);border-left:3px solid var(--dot,#a67cff);
+    border-radius:var(--radius);padding:14px 16px;display:flex;flex-direction:column;gap:10px}
+  .agent .top{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;min-width:0}
+  .agent .name{font-size:16px;font-weight:700;color:var(--dot,#a67cff);
+    overflow-wrap:anywhere;min-width:0}
+  .agent .src{font-size:11.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;
+    white-space:nowrap}
+  .agent .desc{margin:0;color:var(--muted);font-size:13.5px;overflow-wrap:anywhere}
+  .agent .acts{display:flex;gap:10px;flex-wrap:wrap}
+  .agent .acts .btn{width:auto;flex:1 1 auto;min-width:120px;padding:10px 16px;font-size:14.5px}
+  .badge{font-size:11px;color:var(--warn);border:1px solid #4a3f22;background:#1d1a10;
+    border-radius:999px;padding:2px 9px;white-space:nowrap}
+
+  /* ── Conversation view ── */
+  .convo{display:flex;flex-direction:column;gap:14px;flex:1 1 auto;min-height:0}
+  .convo-head{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+  .convo-head .who{font-size:19px;font-weight:750;color:var(--dot,#a67cff);
+    overflow-wrap:anywhere;min-width:0;flex:1 1 auto}
+  .convo-head .btn{width:auto;padding:9px 14px;font-size:14px;flex:0 0 auto}
+  /* The transcript scrolls INSIDE its own box — never pushes the composer away. */
+  .thread{background:var(--panel);border:1px solid var(--edge);border-radius:var(--radius);
+    padding:14px;display:flex;flex-direction:column;gap:12px;
+    flex:1 1 auto;min-height:220px;overflow-y:auto;overscroll-behavior:contain}
+  .msg{display:flex;flex-direction:column;gap:4px;max-width:100%}
+  .msg .meta{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em}
+  .msg .txt{font-size:14.5px;white-space:pre-wrap;overflow-wrap:anywhere;
+    border-radius:12px;padding:10px 12px}
+  .msg.user{align-items:flex-end}
+  .msg.user .txt{background:#1c1a3a;border:1px solid #2e2a5a;color:var(--ink)}
+  .msg.agent .txt{background:#0e0e19;border:1px solid var(--edge);color:var(--ink)}
+  .msg .txt.err{border-color:#5a2a36;background:#1d1016;color:var(--err)}
+  .cursor{display:inline-block;width:7px;height:15px;background:var(--accent2);
+    vertical-align:-2px;animation:blink 1s steps(2,start) infinite}
+  @keyframes blink{to{visibility:hidden}}
+  @media (prefers-reduced-motion:reduce){.cursor{animation:none}}
+  /* Composer is a flow sibling — stays under the thread at every size. */
+  .composer{display:flex;gap:10px;align-items:flex-end;flex:0 0 auto}
+  .composer textarea{flex:1 1 auto;min-width:0;background:#0d0d18;border:1px solid var(--edge);
+    color:var(--ink);border-radius:12px;padding:12px;font:inherit;resize:none;
+    min-height:48px;max-height:140px;overflow-y:auto}
+  .composer .btn{width:auto;flex:0 0 auto;padding:13px 20px}
+  @media (max-width:380px){
+    .composer .btn{padding:13px 14px}
+    .agent .acts .btn{min-width:0}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- ══ VIEW 1 · ROSTER ══════════════════════════════════════════════════ -->
+  <div id="view-roster">
+    <header>
+      <h1>Your agents</h1>
+      <p class="sub">The ones you brought in from everywhere else. They live here now — and
+        unlike where they came from, they remember you between visits. Pick one and talk.</p>
+    </header>
+
+    <div id="rosterStatus" class="status" style="margin:14px 0 0"></div>
+    <div id="roster" class="roster" style="margin-top:14px"></div>
+
+    <section id="rosterEmpty" class="card hidden" style="margin-top:16px">
+      <h2>No one here yet</h2>
+      <p>Bring an agent in from Claude, ChatGPT, Gemini, Agentis — or write one from scratch.
+        Whoever you bring becomes a citizen of your world.</p>
+      <a class="btn" href="welcome.html#agents">Bring your agents in →</a>
+    </section>
+
+    <p class="foot" style="margin-top:22px">
+      <a class="link" href="index.html">← Back to Vintinuum</a>
+    </p>
+  </div>
+
+  <!-- ══ VIEW 2 · CONVERSATION (hidden until Talk) ════════════════════════ -->
+  <div id="view-convo" class="convo hidden">
+    <div class="convo-head">
+      <button class="btn ghost" id="btnBack" type="button">← All</button>
+      <span class="who" id="convoWho">—</span>
+      <button class="btn ghost" id="btnClear" type="button" title="Clear this conversation">Clear</button>
+    </div>
+    <div class="thread" id="thread" aria-live="polite"></div>
+    <div id="convoStatus" class="status"></div>
+    <div class="composer">
+      <textarea id="composerInput" rows="1" placeholder="Say something…"
+        aria-label="Message"></textarea>
+      <button class="btn" id="btnSend" type="button">Send</button>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  var API_BASE = (location.hostname === 'localhost' || location.hostname === '127.0.0.1')
+    ? 'http://localhost:8767' : 'https://api.vintaclectic.com';
+  function token(){ return localStorage.getItem('vintinuum_session') || localStorage.getItem('vint_token') || ''; }
+  function authHeaders(){ return { 'Content-Type':'application/json', 'Authorization':'Bearer ' + token() }; }
+  var $ = function(id){ return document.getElementById(id); };
+  function show(el){ el.classList.remove('hidden'); }
+  function hide(el){ el.classList.add('hidden'); }
+  function setStatus(el, msg, kind){ el.textContent = msg || ''; el.className = 'status' + (kind ? ' '+kind : ''); }
+
+  var SOURCE_NAMES = { claude:'Claude', openai:'ChatGPT', chatgpt:'ChatGPT', gemini:'Gemini',
+    agentis:'Agentis', grok:'Grok', custom:'Yours', other:'Elsewhere' };
+
+  var current = null;     // the agent we're talking to
+  var streaming = false;  // guard against double-send
+
+  // ── ROSTER ───────────────────────────────────────────────────────────────
+  function loadRoster(){
+    if(!token()){
+      setStatus($('rosterStatus'), 'Sign in and your agents will be here.', 'warn');
+      show($('rosterEmpty')); return;
+    }
+    setStatus($('rosterStatus'), 'Gathering them…');
+    fetch(API_BASE + '/api/agents/mine', { headers: authHeaders() })
+      .then(function(r){ return r.json().then(function(j){ return {s:r.status, j:j}; }); })
+      .then(function(o){
+        if(o.s === 401){ setStatus($('rosterStatus'), 'Sign in and your agents will be here.', 'warn');
+          show($('rosterEmpty')); return; }
+        var list = (o.j && o.j.agents) || [];
+        setStatus($('rosterStatus'), '');
+        renderRoster(list);
+      })
+      .catch(function(){ setStatus($('rosterStatus'), 'Could not reach the brain. Try again in a moment.', 'err'); });
+  }
+
+  function renderRoster(list){
+    var box = $('roster'); box.innerHTML = '';
+    if(!list.length){ show($('rosterEmpty')); return; }
+    hide($('rosterEmpty'));
+    list.forEach(function(a){
+      var color = a.color || '#a67cff';
+      var el = document.createElement('div');
+      el.className = 'agent'; el.style.setProperty('--dot', color);
+
+      var top = document.createElement('div'); top.className = 'top';
+      var name = document.createElement('span'); name.className = 'name'; name.textContent = a.name;
+      var src = document.createElement('span'); src.className = 'src';
+      src.textContent = SOURCE_NAMES[a.source] || a.source || 'elsewhere';
+      top.appendChild(name); top.appendChild(src);
+      if(a.status === 'paused'){
+        var b = document.createElement('span'); b.className = 'badge'; b.textContent = 'paused';
+        top.appendChild(b);
+      }
+      el.appendChild(top);
+
+      if(a.description){
+        var d = document.createElement('p'); d.className = 'desc'; d.textContent = a.description;
+        el.appendChild(d);
+      }
+
+      var acts = document.createElement('div'); acts.className = 'acts';
+      var talk = document.createElement('button');
+      talk.type = 'button'; talk.className = 'btn'; talk.textContent = 'Talk';
+      if(a.status === 'paused'){ talk.disabled = true; talk.title = a.name + ' is paused.'; }
+      talk.addEventListener('click', function(){ openConvo(a); });
+      acts.appendChild(talk);
+      el.appendChild(acts);
+
+      box.appendChild(el);
+    });
+  }
+
+  // ── CONVERSATION ─────────────────────────────────────────────────────────
+  function openConvo(agent){
+    current = agent;
+    // Scope the accent to the conversation view only — never leak it onto the
+    // roster cards, which each carry their own agent's colour.
+    $('view-convo').style.setProperty('--dot', agent.color || '#a67cff');
+    $('convoWho').textContent = agent.name;
+    $('thread').innerHTML = '';
+    setStatus($('convoStatus'), '');
+    hide($('view-roster')); show($('view-convo'));
+    // Deep-link so a refresh (or a shared link) lands back in this conversation.
+    try { history.replaceState(null, '', '?agent=' + encodeURIComponent(agent.id)); } catch(_){}
+    loadHistory(agent.id);
+    setTimeout(function(){ $('composerInput').focus(); }, 80);
+  }
+
+  function closeConvo(){
+    current = null;
+    hide($('view-convo')); show($('view-roster'));
+    try { history.replaceState(null, '', location.pathname); } catch(_){}
+  }
+
+  function addMsg(role, text, isErr){
+    var m = document.createElement('div'); m.className = 'msg ' + (role === 'user' ? 'user' : 'agent');
+    var meta = document.createElement('div'); meta.className = 'meta';
+    meta.textContent = role === 'user' ? 'you' : (current ? current.name : 'agent');
+    var txt = document.createElement('div'); txt.className = 'txt' + (isErr ? ' err' : '');
+    txt.textContent = text || '';
+    m.appendChild(meta); m.appendChild(txt);
+    $('thread').appendChild(m);
+    scrollThread();
+    return txt;
+  }
+
+  function scrollThread(){ var t = $('thread'); t.scrollTop = t.scrollHeight; }
+
+  function loadHistory(id){
+    setStatus($('convoStatus'), 'Remembering…');
+    fetch(API_BASE + '/api/agents/' + encodeURIComponent(id) + '/messages', { headers: authHeaders() })
+      .then(function(r){ return r.json(); })
+      .then(function(j){
+        setStatus($('convoStatus'), '');
+        var msgs = (j && j.messages) || [];
+        if(!msgs.length){
+          var e = document.createElement('div'); e.className = 'empty';
+          e.textContent = 'Nothing said yet. Start it.';
+          $('thread').appendChild(e);
+          return;
+        }
+        msgs.forEach(function(m){ addMsg(m.role === 'user' ? 'user' : 'agent', m.content); });
+        scrollThread();
+      })
+      .catch(function(){ setStatus($('convoStatus'), ''); });
+  }
+
+  // The round-trip: POST → SSE {delta} frames → [DONE]. Same shape as /chat.
+  function send(){
+    if(streaming || !current) return;
+    var input = $('composerInput');
+    var text = input.value.trim();
+    if(!text) return;
+    if(!token()){ setStatus($('convoStatus'), 'Sign in to talk.', 'warn'); return; }
+
+    var empty = $('thread').querySelector('.empty');
+    if(empty) empty.remove();
+
+    addMsg('user', text);
+    input.value = ''; input.style.height = 'auto';
+    streaming = true; $('btnSend').disabled = true;
+    setStatus($('convoStatus'), '');
+
+    var out = addMsg('agent', '');
+    var cur = document.createElement('span'); cur.className = 'cursor';
+    out.appendChild(cur);
+    var acc = '';
+
+    fetch(API_BASE + '/api/agents/' + encodeURIComponent(current.id) + '/chat', {
+      method:'POST', headers: authHeaders(), body: JSON.stringify({ message: text })
+    }).then(function(r){
+      if(!r.ok || !r.body){
+        return r.json().catch(function(){ return {}; }).then(function(j){
+          throw new Error(j.message || j.error || ('Could not reach ' + current.name + '.'));
+        });
+      }
+      var reader = r.body.getReader(), dec = new TextDecoder(), buf = '';
+      function pump(){
+        return reader.read().then(function(res){
+          if(res.done) return;
+          buf += dec.decode(res.value, { stream:true });
+          var lines = buf.split('\n');
+          buf = lines.pop();               // keep the partial line for the next chunk
+          lines.forEach(function(line){
+            line = line.trim();
+            if(!line || line.charAt(0) === ':') return;   // comments/heartbeats
+            if(line.indexOf('data:') !== 0) return;
+            var payload = line.slice(5).trim();
+            if(payload === '[DONE]') return;
+            try {
+              var d = JSON.parse(payload);
+              if(d.delta){ acc += d.delta; out.textContent = acc; out.appendChild(cur); scrollThread(); }
+              else if(d.error){ throw new Error(d.message || d.error); }
+            } catch(e){
+              if(e instanceof SyntaxError) return;        // ignore non-JSON frames
+              throw e;
+            }
+          });
+          return pump();
+        });
+      }
+      return pump();
+    }).then(function(){
+      cur.remove();
+      if(!acc.trim()){ out.textContent = current.name + ' went quiet.'; out.className = 'txt err'; }
+      finish();
+    }).catch(function(err){
+      cur.remove();
+      out.textContent = (err && err.message) || 'The line dropped.';
+      out.className = 'txt err';
+      finish();
+    });
+
+    function finish(){ streaming = false; $('btnSend').disabled = false; scrollThread();
+      setTimeout(function(){ $('composerInput').focus(); }, 40); }
+  }
+
+  // ── WIRING ───────────────────────────────────────────────────────────────
+  $('btnSend').addEventListener('click', send);
+  $('btnBack').addEventListener('click', closeConvo);
+
+  $('composerInput').addEventListener('keydown', function(e){
+    if(e.key === 'Enter' && !e.shiftKey){ e.preventDefault(); send(); }
+  });
+  // Auto-grow, capped by max-height so it can never eat the thread.
+  $('composerInput').addEventListener('input', function(){
+    this.style.height = 'auto';
+    this.style.height = Math.min(this.scrollHeight, 140) + 'px';
+  });
+
+  $('btnClear').addEventListener('click', function(){
+    if(!current) return;
+    if(!confirm('Clear your conversation with ' + current.name + '? Their memory of it goes with it.')) return;
+    var btn = this; btn.disabled = true;
+    fetch(API_BASE + '/api/agents/' + encodeURIComponent(current.id) + '/messages', {
+      method:'DELETE', headers: authHeaders()
+    }).then(function(r){ return r.json(); })
+      .then(function(j){
+        btn.disabled = false;
+        if(j && j.ok){
+          $('thread').innerHTML = '';
+          var e = document.createElement('div'); e.className = 'empty';
+          e.textContent = 'Cleared. Start again.';
+          $('thread').appendChild(e);
+        } else setStatus($('convoStatus'), (j && j.error) || 'Could not clear.', 'err');
+      })
+      .catch(function(){ btn.disabled = false; setStatus($('convoStatus'), 'Network error.', 'err'); });
+  });
+
+  // Deep link: ?agent=<id> opens straight into that conversation.
+  (function boot(){
+    loadRoster();
+    var want = null;
+    try { want = new URLSearchParams(location.search).get('agent'); } catch(_){}
+    if(want && token()){
+      fetch(API_BASE + '/api/agents/' + encodeURIComponent(want) + '/messages', { headers: authHeaders() })
+        .then(function(r){ return r.ok ? r.json() : null; })
+        .then(function(j){ if(j && j.agent) openConvo(j.agent); })
+        .catch(function(){});
+    }
+  })();
+</script>
+</body>
+</html>
