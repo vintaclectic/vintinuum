@@ -115,6 +115,54 @@ At scale, TURN is provided by **Cloudflare Calls SFU** (don't run our own TURN).
 
 ---
 
+## THE DIRHAVEN DOOR — SESSION HANDOFF (frozen)
+
+DirHaven runs **inside** the world engine: `world.html` raises a full-surface
+in-world panel hosting the DirHaven app in an iframe. The world never leaves
+memory — the socket, the scene, and your body all persist behind the door.
+
+**The two halves**
+| Side | File |
+|---|---|
+| World (sender) | `body/world/dirhaven-door.js` |
+| DirHaven (receiver) | `dirhaven/client/src/vintDoor.js` |
+| DirHaven (exchange) | `dirhaven/server/routes/vint-sso.routes.js` |
+| DirHaven (framing) | `dirhaven/server/config/express.config.js` → `WORLD_FRAME_ANCESTORS` |
+
+**The handshake (frozen)**
+```jsonc
+// DirHaven → world, once its listener is live
+{ "type": "dirhaven:ready" }
+// world → DirHaven, pinned to the resolved origin (NEVER "*")
+{ "type": "vint:session", "token": "<vint JWT>" }
+```
+Then DirHaven `POST /api/auth/vint-exchange { vintToken }` → its own user object.
+
+**The three obligations (inviolable)**
+1. **Origin allowlist both ways.** The world posts only to its one resolved
+   DirHaven origin; DirHaven accepts `vint:session` only from an allowlisted
+   world origin and only from its actual parent. Never `'*'`, never a wildcard.
+2. **The vint token is NEVER a DirHaven session.** It is verified
+   **server-side** against the brain (`/api/auth/me`) and discarded — never
+   decoded-and-trusted locally, never persisted. Fail closed: an unverifiable
+   token grants nothing.
+3. **Idempotent.** The same token exchanged twice resolves the same account and
+   does not stack sessions. Accounts link by vint subject id, **never by email**
+   (email is not proof of ownership — that path is account takeover).
+
+**Framing:** the app shell uses CSP `frame-ancestors` (allowlisted), not
+`X-Frame-Options` (which has no working allowlist form). `/api` responses keep a
+hard `DENY` — nothing should ever frame a JSON endpoint.
+
+**Origin resolution (world side).** As of 2026-07-31 DirHaven has **no public
+origin** (Vite on `localhost:5175`; the tunnel routes only `api.vintaclectic.com`).
+The door therefore resolves: `window.__DIRHAVEN_ORIGIN` → `localStorage['vint:dirhaven-origin']`
+(local hosts only) → `localhost:5175` when the world is local → **null**, and when
+null it says so plainly rather than framing a dead address. No production domain
+is hardcoded until one exists.
+
+---
+
 ## THE THREE INVIOLABLE LAWS (the assembly, unanimous)
 
 1. **The realtime hot path stays free of synchronous LLM calls — FOREVER.**
