@@ -58,6 +58,7 @@
 <script src="body/she_speaks.js?v=v20260614-speak" defer></script>
 <script src="body/greeting.js?v=v20260509-cadence"></script>
 <script defer src="body/draggable.js?v=v20260508-2330-mvfix"></script>
+<script src="body/teach.js?v=v20260731-teach"></script>
 <script defer src="body/hey_vinta.js?v=v20260510-passive"></script>
 <script defer src="body/talk_back.js?v=v20260509-talkback"></script>
 <script defer src="body/she_said.js?v=v20260509-shesaid"></script>
@@ -341,6 +342,18 @@
             currentTurn.vinta.row.appendChild(tag);
           }
         }
+      }
+      // ── TEACH: rate/rewrite this reply so she learns from it ──────────────
+      if (currentTurn && currentTurn.vinta && window.TEACH) {
+        var _row = currentTurn.vinta.row;
+        // Point TEACH at the text span so the label/seam chrome is never
+        // mistaken for her words.
+        _row._teachTextEl = currentTurn.vinta.span;
+        var _prompt = '';
+        for (var _i = _history.length - 1; _i >= 0; _i--) {
+          if (_history[_i].role === 'user') { _prompt = _history[_i].text; break; }
+        }
+        TEACH.attach(_row, { prompt: _prompt, surface: 'chat', persona: 'vintinuum' });
       }
       currentTurn = null;
     });

@@ -42601,6 +42601,7 @@ window.addEventListener('message', function(event) {
 
     let aiDiv = null;
     let firstToken = true;
+    let usedModel = null;   // captured from SSE so TEACH can label the correction
 
     try {
       const headers = { 'Content-Type': 'application/json', 'ngrok-skip-browser-warning': '1' };
@@ -42681,8 +42682,11 @@ window.addEventListener('message', function(event) {
               if (parsed.bodyStateDelta && window.PERSONAL_BODY) {
                 PERSONAL_BODY.applyDelta(parsed.bodyStateDelta);
               }
-              if (parsed.usedModel && typeof MODEL_SELECTOR !== 'undefined') {
-                MODEL_SELECTOR.onModelUsed(parsed.usedModel, parsed.modelLabel);
+              if (parsed.usedModel) {
+                usedModel = parsed.usedModel;
+                if (typeof MODEL_SELECTOR !== 'undefined') {
+                  MODEL_SELECTOR.onModelUsed(parsed.usedModel, parsed.modelLabel);
+                }
               }
               // ── DirRM MEDIA ACTION ──
               if (parsed.mediaAction) {
@@ -42739,6 +42743,19 @@ window.addEventListener('message', function(event) {
           }
         }
         messages.scrollTop = messages.scrollHeight;
+      }
+
+      // ── TEACH: rate/rewrite this reply so she learns from it ──────────────
+      // Attached once the stream is done, carrying the exact prompt that
+      // produced it. Corrections flow to /api/local-brain/feedback → the
+      // few-shot block (immediate) → DPO pairs + corpus (Universal Ingestion).
+      if (aiDiv && window.TEACH) {
+        TEACH.attach(aiDiv, {
+          prompt: text,
+          persona: _activePersona,
+          surface: 'brain-chat',
+          model: usedModel || undefined,
+        });
       }
 
       // Occasionally surface a subconscious whisper after a response
