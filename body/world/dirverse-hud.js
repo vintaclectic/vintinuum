@@ -1464,9 +1464,26 @@
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', mount, { once: true });
   else mount();
 
+  // ── addLauncher — the ONLY sanctioned way for another module to put a button
+  // on the left rail. Exposed because the alternative (each module pinning its
+  // own position:fixed button at a hand-counted `bottom:` offset) is how the
+  // DirHaven door came to sit exactly on top of the build launcher: both landed
+  // in the 318–364px band at z-index 1450. Slots must be allocated by the rail
+  // that measures them, never counted by hand in a file that can't see its
+  // neighbours. Returns the button so callers can show/hide it.
+  function addLauncher(id, label, glyph, onClick) {
+    var existing = document.getElementById(id);
+    if (existing) return existing;            // idempotent: re-mount never doubles
+    var b = makeLauncher(id, label, glyph, onClick);
+    layoutRail();                             // re-measure: the rail just grew
+    return b;
+  }
+
   W.DirverseHUD = {
     open: openWarp, openAgent: openAgent, mount: mount, enabled: enabled,
     openAgents: function () { buildAgentSheet(); _agentSheet.classList.add('open'); showPane('cits'); },
-    goHome: goHome
+    goHome: goHome,
+    addLauncher: addLauncher,
+    relayout: layoutRail
   };
 })();

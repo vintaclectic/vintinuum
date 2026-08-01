@@ -115,19 +115,14 @@
     var s = document.createElement('style');
     s.id = 'dh-styles';
     s.textContent = [
-      // launcher — next free slot on the left rail, below build(262).
-      '#dhDoorBtn{position:fixed;z-index:1450;min-height:46px;min-width:46px;padding:0 14px;',
-      ' left:calc(12px + env(safe-area-inset-left,0px));',
-      ' bottom:calc(318px + env(safe-area-inset-bottom,0px));',
-      ' border-radius:23px;font-family:"Cormorant Garamond",Georgia,serif;font-size:14px;letter-spacing:.02em;',
-      ' color:#ffe0b2;background:rgba(8,12,20,0.72);border:1px solid rgba(255,202,40,0.36);',
-      ' backdrop-filter:blur(9px);-webkit-backdrop-filter:blur(9px);cursor:pointer;',
-      ' display:flex;align-items:center;gap:7px;white-space:nowrap;box-shadow:0 4px 20px rgba(0,0,0,0.35);}',
-      '#dhDoorBtn:active{transform:scale(0.96);}',
-      '#dhDoorBtn .dot{width:7px;height:7px;border-radius:50%;background:#ffca28;box-shadow:0 0 8px #ffca28;}',
-      // On short viewports the rail would run past the top — collapse the label
-      // to the glyph so the stack always fits without overlapping the WorldHUD.
-      '@media(max-height:680px){#dhDoorBtn .dh-lbl{display:none;}#dhDoorBtn{padding:0 13px;}}',
+      // launcher — a .dv-launch flow child of #dvRail. It inherits ALL geometry
+      // (size, radius, font, the max-height:560px label collapse) from the rail's
+      // own stylesheet; the rail measures and allocates the slot. We add only the
+      // amber accent that tells the door apart from its siblings. Deliberately no
+      // position/left/bottom here: hardcoding an offset is what put this button on
+      // top of #dvBuildBtn in the first place.
+      '#dhDoorBtn{color:#ffe0b2;border-color:rgba(255,202,40,0.36);}',
+      '#dhDoorBtn .dot{background:#ffca28;box-shadow:0 0 8px #ffca28;}',
 
       // ── THE PANEL ──────────────────────────────────────────────────────────
       // Its own z-band (1620): above the dv sheets (1600) and veil (1590), below
@@ -192,9 +187,13 @@
   // the door is open. Nothing can overlap something that isn't rendered. The
   // exact set is restored on close, so we never fight another module's state.
   // ═════════════════════════════════════════════════════════════════════════
+  // #dvRail covers every launcher at once (star-map, agents, home, build, and
+  // this door — they are all its flow children now), so hiding the rail hides
+  // the whole column even if the HUD adds a sixth launcher later. Listing the
+  // children individually would silently miss anything added after today.
   var SUPPRESS = [
-    '#dvWarpBtn', '#dvAgentBtn', '#dvBuildBtn', '#dvBuild', '#dhDoorBtn',
-    '#leave', '#editHeadBtn', '#worldHud', '#dvToast'
+    '#dvRail', '#dvBuild',
+    '#leave', '#editHeadBtn', '#worldHud', '#vintWorldHud', '#dvToast'
   ];
   var _hidden = [];
 
@@ -412,17 +411,30 @@
   // ═════════════════════════════════════════════════════════════════════════
   // MOUNT
   // ═════════════════════════════════════════════════════════════════════════
+  // The launcher is a FLOW CHILD OF #dvRail, never its own position:fixed box.
+  // It used to be fixed at bottom:318px — which is precisely slot 4 of the rail
+  // (150 floor + 3×46 + 3×10 gaps), i.e. exactly where #dvBuildBtn renders the
+  // moment you stand on a world you can build in. Same band, same z-index 1450,
+  // same left edge: the two buttons drew on top of each other. Handing the slot
+  // back to the rail is the only fix that stays correct as launchers come and go.
   function mount() {
     if (!enabled()) return;
     injectStyles();
-    var b = document.createElement('button');
-    b.id = 'dhDoorBtn';
-    b.setAttribute('data-draggable', 'true');
-    b.setAttribute('aria-label', 'open DirHaven inside the world');
-    b.innerHTML = '<span class="dot"></span>⌂<span class="dh-lbl"> dirhaven</span>';
-    b.addEventListener('click', function () { toggle(); });
-    document.body.appendChild(b);
+
+    var hud = W.DirverseHUD;
+    if (hud && typeof hud.addLauncher === 'function') {
+      hud.addLauncher('dhDoorBtn', 'dirhaven', '⌂⃝', function () { toggle(); })
+         .setAttribute('aria-label', 'open DirHaven inside the world');
+      return;
+    }
+
+    // The HUD owns the rail; if it hasn't mounted yet, wait for it rather than
+    // falling back to a fixed button (a fallback that overlaps is worse than a
+    // launcher that appears 200ms later). The HUD mounts on DOMContentLoaded or
+    // immediately, so this resolves on the next tick in every real load order.
+    if (_railWaits < 25) { _railWaits++; setTimeout(mount, 80); }
   }
+  var _railWaits = 0;
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', mount, { once: true });
   else mount();
