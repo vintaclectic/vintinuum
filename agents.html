@@ -60,6 +60,13 @@
   .badge{font-size:11px;color:var(--warn);border:1px solid #4a3f22;background:#1d1a10;
     border-radius:999px;padding:2px 9px;white-space:nowrap}
 
+  /* ── Bring-in bar: its own flow row above the roster. Buttons share the row
+     via flex and wrap to their own lines when narrow — they never overlap. ── */
+  .bringin{display:flex;gap:10px;flex-wrap:wrap;align-items:stretch}
+  .bringin .btn{width:auto;flex:1 1 200px;min-width:0;padding:12px 16px;font-size:14.5px;
+    display:inline-flex;align-items:center;justify-content:center;gap:7px;
+    text-decoration:none;overflow-wrap:anywhere}
+
   /* ── Conversation view ── */
   .convo{display:flex;flex-direction:column;gap:14px;flex:1 1 auto;min-height:0}
   .convo-head{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
@@ -105,6 +112,15 @@
         unlike where they came from, they remember you between visits. Pick one and talk.</p>
     </header>
 
+    <!-- Bring-in bar — the permanent door. The Agentis pull used to exist ONLY
+         in onboarding (welcome.html), so anyone past their first visit had no
+         way to click it. It lives here now, always reachable. -->
+    <div class="bringin" style="margin-top:16px">
+      <button class="btn" id="btnImportAgentis" type="button">⚡ Import from Agentis</button>
+      <a class="btn ghost" href="welcome.html#agents">Bring one in by hand</a>
+    </div>
+    <div id="importStatus" class="status" style="margin-top:10px"></div>
+
     <div id="rosterStatus" class="status" style="margin:14px 0 0"></div>
     <div id="roster" class="roster" style="margin-top:14px"></div>
 
@@ -112,7 +128,8 @@
       <h2>No one here yet</h2>
       <p>Bring an agent in from Claude, ChatGPT, Gemini, Agentis — or write one from scratch.
         Whoever you bring becomes a citizen of your world.</p>
-      <a class="btn" href="welcome.html#agents">Bring your agents in →</a>
+      <button class="btn" id="btnImportAgentisEmpty" type="button">⚡ Import from Agentis</button>
+      <a class="btn ghost" href="welcome.html#agents">Add one by hand →</a>
     </section>
 
     <p class="foot" style="margin-top:22px">
@@ -208,6 +225,48 @@
 
       box.appendChild(el);
     });
+  }
+
+  // ── IMPORT FROM AGENTIS ──────────────────────────────────────────────────
+  // The brain already mirrors the user's Agentis agents into user_agents
+  // (POST /api/agents/import/agentis, idempotent by agentis_id). All that was
+  // missing was a trigger outside onboarding. Both buttons share this handler.
+  var importing = false;
+  function importAgentis(btn){
+    if(importing) return;
+    var st = $('importStatus');
+    if(!token()){ setStatus(st, 'Sign in first — the import needs to know whose agents to pull.', 'warn'); return; }
+
+    importing = true;
+    var buttons = [$('btnImportAgentis'), $('btnImportAgentisEmpty')];
+    var labels = buttons.map(function(b){ return b ? b.textContent : ''; });
+    buttons.forEach(function(b){ if(b){ b.disabled = true; b.textContent = 'Summoning…'; } });
+    setStatus(st, '');
+
+    function restore(){
+      importing = false;
+      buttons.forEach(function(b, i){ if(b){ b.disabled = false; b.textContent = labels[i]; } });
+    }
+
+    fetch(API_BASE + '/api/agents/import/agentis', { method:'POST', headers: authHeaders() })
+      .then(function(r){ return r.json().then(function(j){ return {s:r.status, j:j}; }); })
+      .then(function(o){
+        restore();
+        if(o.s === 401){ setStatus(st, 'Sign in first — the import needs to know whose agents to pull.', 'warn'); return; }
+        var j = o.j || {};
+        if(!j.ok){ setStatus(st, j.error || 'The import did not go through.', 'err'); return; }
+        // The endpoint answers ok:true even when Agentis is unreachable — it
+        // carries a `note` instead. Tell the truth in that case, don't claim a win.
+        if(j.note){ setStatus(st, j.note + '.', 'warn'); return; }
+        if(j.imported){
+          setStatus(st, j.imported + ' agent' + (j.imported === 1 ? '' : 's') + ' walked in from Agentis'
+            + (j.skipped ? ' (' + j.skipped + ' already here)' : '') + '.', 'ok');
+          loadRoster();                       // they exist now — show them
+        } else {
+          setStatus(st, j.skipped ? 'Everyone from Agentis is already here.' : 'Nothing new to import.', 'warn');
+        }
+      })
+      .catch(function(){ restore(); setStatus(st, 'Could not reach the brain. Try again in a moment.', 'err'); });
   }
 
   // ── CONVERSATION ─────────────────────────────────────────────────────────
@@ -338,6 +397,8 @@
   // ── WIRING ───────────────────────────────────────────────────────────────
   $('btnSend').addEventListener('click', send);
   $('btnBack').addEventListener('click', closeConvo);
+  $('btnImportAgentis').addEventListener('click', function(){ importAgentis(this); });
+  $('btnImportAgentisEmpty').addEventListener('click', function(){ importAgentis(this); });
 
   $('composerInput').addEventListener('keydown', function(e){
     if(e.key === 'Enter' && !e.shiftKey){ e.preventDefault(); send(); }
