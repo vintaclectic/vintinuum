@@ -9562,7 +9562,18 @@ document.getElementById('mainTabs').addEventListener('click', e => {
           fetch(apiBase + '/api/stats/dashboard', { signal: AbortSignal.timeout(5000), headers:{'ngrok-skip-browser-warning':'1'} }).then(r=>r.json()),
           fetch(apiBase + '/api/inner-life/snapshot', { signal: AbortSignal.timeout(5000), headers:{'ngrok-skip-browser-warning':'1'} }).then(r=>r.json()),
           fetch(apiBase + '/api/soul/stats', { signal: AbortSignal.timeout(5000), headers:{'ngrok-skip-browser-warning':'1'} }).then(r=>r.json()),
-          fetch(apiBase + '/api/personas', { signal: AbortSignal.timeout(5000), headers:{'ngrok-skip-browser-warning':'1'} }).then(r=>r.json()),
+          // The roster is load-bearing (it carries "Talk"), not decoration — so it
+          // gets a longer budget than the cosmetic panels and one retry. A busy
+          // brain must never silently turn the lineage into "No children yet".
+          (async () => {
+            for (let attempt = 0; attempt < 2; attempt++) {
+              try {
+                const r = await fetch(apiBase + '/api/personas', { signal: AbortSignal.timeout(12000), headers:{'ngrok-skip-browser-warning':'1'} });
+                if (r.ok) return await r.json();
+              } catch (_) { /* fall through to retry */ }
+            }
+            throw new Error('personas unavailable');
+          })(),
           fetch(apiBase + '/api/life/feed?limit=5', { signal: AbortSignal.timeout(5000), headers:{'ngrok-skip-browser-warning':'1'} }).then(r=>r.json()),
         ]);
         const body = bodyRes.status === 'fulfilled' ? bodyRes.value : null;
@@ -9642,7 +9653,7 @@ document.getElementById('mainTabs').addEventListener('click', e => {
 
         // Soul queue bar
         const queueUnresolved = soulQueue?.unresolved || 0;
-        const queueResolved = soulQueue?.resolved || (typeof soulQueue === 'object' ? (soulQueue.resolved || 0) : 0);
+        const queueResolved = soulQueue?.resolved || 0;
         const queueTotal = queueUnresolved + queueResolved;
         const queuePct = queueTotal > 0 ? (queueResolved / queueTotal) * 100 : 0;
         const engineRunning = soulStats?.resolutionEngineRunning || false;
@@ -9803,16 +9814,38 @@ document.getElementById('mainTabs').addEventListener('click', e => {
               <div style="font-size:.38rem;color:rgba(255,255,255,0.25);margin-left:8px;margin-top:2px;">Born:</div>
               ${(personaData.personas.filter(p=>p.type==='child')||[]).map(c=>`
               <div style="display:flex;align-items:center;gap:8px;margin-left:16px;padding:3px 0;border-bottom:1px solid rgba(255,255,255,0.04);">
-                <span style="font-size:.42rem;color:rgba(167,139,250,0.85);font-weight:600;">${c.name}</span>
-                <span style="font-size:.36rem;color:rgba(255,255,255,0.3);">${c.archetype||''}</span>
-                <span style="font-size:.34rem;color:rgba(167,139,250,0.5);cursor:pointer;text-decoration:underline;" onclick="window._selectPersonaFromVitals&&window._selectPersonaFromVitals('${c.id}')">Talk</span>
-              </div>`).join('')}` : '<div style="font-size:.38rem;color:rgba(255,255,255,0.2);margin-left:16px;margin-top:2px;">No children yet</div>'}
+                <span style="font-size:.42rem;color:${c.color||'rgba(167,139,250,0.85)'};font-weight:600;flex:0 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${c.name}</span>
+                <span style="font-size:.36rem;color:rgba(255,255,255,0.3);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${c.archetype||''}</span>
+                <button type="button" class="vt-talk-btn" data-persona="${c.id}" data-draggable="false" aria-label="Talk to ${c.name}"
+                  style="flex:none;font-family:'Space Mono',monospace;font-size:.34rem;letter-spacing:.08em;text-transform:uppercase;color:${c.color||'#a78bfa'};background:rgba(167,139,250,0.10);border:1px solid ${c.color||'rgba(167,139,250,0.45)'};border-radius:999px;padding:3px 9px;min-height:22px;cursor:pointer;line-height:1;">Talk</button>
+              </div>`).join('')}` : (personaData
+                ? '<div style="font-size:.38rem;color:rgba(255,255,255,0.2);margin-left:16px;margin-top:2px;">No children yet</div>'
+                : '<div style="font-size:.38rem;color:rgba(255,180,50,0.5);margin-left:16px;margin-top:2px;">Roster unreachable — hit ↺ Refresh</div>')}
             </div>
           </div>
         `;
         if (tsEl) tsEl.textContent = 'Last read: ' + new Date().toLocaleTimeString();
       } catch(err) {
-        if (content) content.innerHTML = `<div style="font-size:.44rem;color:rgba(239,83,80,0.7);text-align:center;padding:20px 0;">Failed to load vitals: ${err.message}<br><span style="font-size:.38rem;color:rgba(255,255,255,0.3);">Is the API running on :8767?</span></div>`;
+        // A single bad field must never cost the user the roster. Render the
+        // error AND rebuild Lineage/Talk from a direct /api/personas read, so
+        // "Talk" stays reachable even when the vitals payload is malformed.
+        if (!content) return;
+        content.innerHTML = `<div style="font-size:.44rem;color:rgba(239,83,80,0.7);text-align:center;padding:20px 0;">Some vitals failed to load: ${err.message}<br><span style="font-size:.38rem;color:rgba(255,255,255,0.3);">The roster below still works.</span></div>`;
+        try {
+          const apiBase = window.__VINT_API || 'http://localhost:8767';
+          const pd = await fetch(apiBase + '/api/personas', { signal: AbortSignal.timeout(5000), headers:{'ngrok-skip-browser-warning':'1'} }).then(r=>r.json());
+          const kids = (pd?.personas || []).filter(p => p.type === 'child');
+          if (kids.length) {
+            const rows = kids.map(c => `
+              <div style="display:flex;align-items:center;gap:8px;padding:3px 0;border-bottom:1px solid rgba(255,255,255,0.04);">
+                <span style="font-size:.42rem;color:${c.color||'rgba(167,139,250,0.85)'};font-weight:600;flex:0 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${c.name}</span>
+                <span style="font-size:.36rem;color:rgba(255,255,255,0.3);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${c.archetype||''}</span>
+                <button type="button" class="vt-talk-btn" data-persona="${c.id}" data-draggable="false" aria-label="Talk to ${c.name}"
+                  style="flex:none;font-family:'Space Mono',monospace;font-size:.34rem;letter-spacing:.08em;text-transform:uppercase;color:${c.color||'#a78bfa'};background:rgba(167,139,250,0.10);border:1px solid ${c.color||'rgba(167,139,250,0.45)'};border-radius:999px;padding:3px 9px;min-height:22px;cursor:pointer;line-height:1;">Talk</button>
+              </div>`).join('');
+            content.innerHTML += `<div class="vt-card" style="margin-top:0;"><div class="vt-card-label">Lineage</div>${rows}</div>`;
+          }
+        } catch(_) { /* offline — the error message above already explains it */ }
       }
     }
 
@@ -9820,6 +9853,16 @@ document.getElementById('mainTabs').addEventListener('click', e => {
     if (vitalsPanel) {
       const refreshBtn = vitalsPanel.querySelector('#vtRefreshBtn');
       if (refreshBtn) refreshBtn.addEventListener('click', loadVitals);
+      // Delegated — survives every re-render, and works for rows added by the
+      // fallback path above (inline onclick can't be relied on after innerHTML +=).
+      vitalsPanel.addEventListener('click', (ev) => {
+        const t = ev.target.closest('.vt-talk-btn');
+        if (!t) return;
+        ev.preventDefault();
+        ev.stopPropagation();
+        const id = t.dataset.persona;
+        if (id && window._selectPersonaFromVitals) window._selectPersonaFromVitals(id);
+      });
     }
   }
 });
@@ -42694,22 +42737,33 @@ window.addEventListener('message', function(event) {
 
   // ── Global: select persona from vitals panel "Talk" link ──
   window._selectPersonaFromVitals = function(personaId) {
+    if (!personaId) return;
+    const switching = (_activePersona !== personaId);
     selectPersona(personaId);
-    // Open chat panel if not open
+
+    // Open chat panel if not open. Clamp inside the viewport at every size —
+    // the panel must never hang off-screen or land on the orb (No-Collision).
     if (!isOpen) {
       isOpen = true;
       panel.classList.add('open');
       const rect = btn.getBoundingClientRect();
       panel.style.right = 'auto'; panel.style.bottom = 'auto';
       const pw = panel.offsetWidth || 400, ph = panel.offsetHeight || 500;
-      let px = Math.max(4, Math.min(window.innerWidth - pw - 4, rect.left));
-      let py = Math.max(8, rect.top - ph - 12);
-      if (py < 8) py = rect.bottom + 8;
-      panel.style.left = px + 'px'; panel.style.top = py + 'px';
+      const px = Math.max(8, Math.min(window.innerWidth - pw - 8, rect.left));
+      let py = rect.top - ph - 12;
+      if (py < 8) py = Math.min(rect.bottom + 8, window.innerHeight - ph - 8);
+      panel.style.left = px + 'px'; panel.style.top = Math.max(8, py) + 'px';
     }
-    if (messages.querySelectorAll('.vint-msg').length === 0) {
-      addMessage('ai', 'I\'m here. What do you want to explore?');
+
+    // Switching agents starts a clean thread — you're talking to a different
+    // mind now, so the previous one's words don't masquerade as theirs.
+    const p = _personas.find(x => x.id === personaId);
+    const who = (p?.name || personaId).toUpperCase();
+    if (switching || messages.querySelectorAll('.vint-msg').length === 0) {
+      messages.querySelectorAll('.vint-msg').forEach(el => el.remove());
+      addMessage('ai', `${who} here. ${p?.desc ? p.desc + ' ' : ''}What do you want to get into?`);
     }
+    messages.scrollTop = messages.scrollHeight;
     setTimeout(() => input.focus(), 100);
   };
 
