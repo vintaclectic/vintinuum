@@ -108,6 +108,19 @@ function probe() {
         !el.children.length &&
         !el.textContent.trim()) return false;
 
+    // AMBIENT BACKDROP layers (consciousness_philosophy.html's .nebula blobs:
+    // 430-604px circles at opacity 0.07 under blur(80px)) are wallpaper. They
+    // drift across each other and under the whole UI by design — that IS the
+    // effect. They are not elements competing for space, so measuring them as
+    // such reports the backdrop colliding with every button on the page.
+    // Identified structurally, never by class name: heavily blurred OR nearly
+    // transparent, non-interactive, textless, and painted behind the content.
+    const blur = /blur\(\s*([\d.]+)px/.exec(cs.filter);
+    const faint = parseFloat(cs.opacity) <= 0.15;
+    const behind = (parseInt(cs.zIndex, 10) || 0) <= 0;
+    if (cs.pointerEvents === 'none' && behind && !el.textContent.trim() &&
+        ((blur && parseFloat(blur[1]) >= 20) || faint)) return false;
+
     return true;
   }
 
@@ -248,7 +261,13 @@ const TOKEN_KEYS = ['vint_token', 'soul_auth_token', 'vint_access_token', 'acces
             const cur = snap();
             stable = (cur === prev) ? stable + 1 : 0;
             prev = cur;
-            if (stable >= 2 && Date.now() - t0 >= 1600) break;
+            // The floor must outlast the SLOWEST deliberate mount, or the sweep is
+            // a coin flip: brain.js starts CONSCIOUSNESS_BRAIN at setTimeout 3000,
+            // so a 1600ms floor measured the page before that button existed —
+            // #consciousness-brain-btn passed and failed on alternating runs for
+            // no code reason. 3400ms clears it with margin; the stability check
+            // still exits early on quiet pages, so only slow pages pay the cost.
+            if (stable >= 2 && Date.now() - t0 >= 3400) break;
           }
         }).catch(() => {});
         try { await page.evaluate(() => window.VintDock && window.VintDock.reflow()); } catch (_) {}

@@ -334,8 +334,19 @@ window.toggleVintinuumPanel = function() {
     stamp.style.cssText = 'position:fixed;bottom:4px;left:50%;transform:translateX(-50%);z-index:99998;background:rgba(0,180,100,0.7);color:#fff;font-family:monospace;font-size:9px;padding:2px 8px;border-radius:4px;pointer-events:none;transition:opacity 3s;opacity:1;';
     stamp.textContent = 'VINT ' + (window.__VINT_VERSION || '?') + ' · btn=' + (vpBtn ? 'OK' : 'MISSING') + ' panel=' + (document.getElementById('vintinuumPanel') ? 'OK' : 'MISSING');
     document.body.appendChild(stamp);
+    // NO-COLLISION LAW (Vinta 2026-08-02): a CENTERED stamp at a hardcoded
+    // bottom:4px lands in the bottom corner stacks' band — it sat on the diag pill
+    // at 320px for the 2.5s it's visible. pointer-events:none hid it from the old
+    // verifier, but the law is about what renders. 'bc' lifts it above both
+    // columns; priority 1 keeps it innermost, under the HUD (5) and hint (10).
+    try {
+      if (window.VintDock) window.VintDock.register(stamp, { corner: 'bc', priority: 1, id: 'vint-version-stamp' });
+    } catch (_) {}
     setTimeout(function() { stamp.style.opacity = '0'; }, 2500);
-    setTimeout(function() { stamp.remove(); }, 6000);
+    setTimeout(function() {
+      try { window.VintDock && window.VintDock.release(stamp); } catch (_) {}
+      stamp.remove();
+    }, 6000);
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', _wireVP);
   else _wireVP();
@@ -50865,6 +50876,15 @@ const CONSCIOUSNESS_HUD = (() => {
       'user-select:none'
     ].join(';');
     document.body.appendChild(el);
+    // NO-COLLISION LAW (Vinta 2026-08-02): a CENTERED bar at a hardcoded
+    // bottom:8px sits in the same band as the bottom corner stacks — it landed on
+    // the diag pill at 320px. pointer-events:none made it invisible to the earlier
+    // verifier, but the law is about what renders, not what accepts taps. The 'bc'
+    // lane keeps its own translateX(-50%) centering and lifts it above both
+    // columns. Priority 5 keeps it the innermost centred item, under .brain-hint.
+    try {
+      if (window.VintDock) window.VintDock.register(el, { corner: 'bc', priority: 5, id: 'consciousness-hud' });
+    } catch (_) {}
     return el;
   }
 
