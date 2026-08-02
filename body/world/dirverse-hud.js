@@ -1380,6 +1380,12 @@
       var pr = panel.getBoundingClientRect();
       if (pr.height > 0 && pr.bottom > 0) top = pr.bottom + 16;
     }
+    // NOTE: #hint (the W/A/S/D keys line) also lives in this left column, below
+    // the panel. It is deliberately NOT folded into this ceiling: the rail starts
+    // where the panel ends, and pushing the rail below the hint too would shorten
+    // the launcher band on exactly the short viewports that can least afford it.
+    // #status keeps clear of the hint by bounding its own width instead — a
+    // horizontal solution to a horizontal problem (see world.html's #status).
 
     // 2) the floor: the live top edge of #saybar + a 12px gutter (it's a
     //    full-width bar, so the rail must clear it vertically, not dodge it).
