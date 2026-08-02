@@ -194,17 +194,42 @@ const TOKEN_KEYS = ['vint_token', 'soul_auth_token', 'vint_access_token', 'acces
 
   const srv = await serve();
   const base = `http://127.0.0.1:${srv.address().port}`;
-  const browser = await puppeteer.launch({
+  let browser = await puppeteer.launch({
     headless: 'new',
     args: ['--no-sandbox', '--disable-dev-shm-usage'],
   });
 
   const failures = [];
   let checks = 0;
+  const skipped = [];
+
+  // Chrome dies on this box when a heavy 3D page lands while other council seats
+  // are also running sweeps (load average 20+). Left unhandled, the whole run
+  // aborts on the crash and every page AFTER it is silently unverified — a sweep
+  // that reports nothing looks exactly like a sweep that found nothing. Relaunch
+  // and carry on, and if a page can't be checked at all, SAY so at the end.
+  async function newPageSafe() {
+    try {
+      return await browser.newPage();
+    } catch (_) {
+      try { await browser.close(); } catch (_) {}
+      browser = await puppeteer.launch({
+        headless: 'new',
+        args: ['--no-sandbox', '--disable-dev-shm-usage'],
+      });
+      return await browser.newPage();
+    }
+  }
 
   for (const file of pages) {
     for (const signedIn of [false, true]) {
-      const page = await browser.newPage();
+      let page;
+      try {
+        page = await newPageSafe();
+      } catch (e) {
+        skipped.push(`${file} (${signedIn ? 'signed-in' : 'guest'}): ${e.message}`);
+        continue;
+      }
       page.on('dialog', d => d.dismiss().catch(() => {}));
       // Pages call the live brain; we're offline-by-design here. Fail fast on
       // API calls so layout settles instead of hanging on network timeouts.
@@ -296,10 +321,21 @@ const TOKEN_KEYS = ['vint_token', 'soul_auth_token', 'vint_access_token', 'acces
   srv.close();
 
   console.log('\n');
+
+  // A skipped page is UNKNOWN, not clean. Report it loudly and fail the run, or a
+  // browser crash quietly converts "never checked" into a green tick.
+  if (skipped.length) {
+    console.log(`⚠ ${skipped.length} render(s) could NOT be checked (browser crash / relaunch failed):`);
+    skipped.forEach(s => console.log('    ' + s));
+    console.log('  Re-run those pages before trusting this result.\n');
+  }
+
   if (!failures.length) {
-    console.log(`✓ collision sweep clean — ${pages.length} pages × ${WIDTHS.length} widths × 2 auth states (${checks} renders)`);
+    const verdict = skipped.length ? '⚠ no collisions found, but coverage is INCOMPLETE'
+                                   : '✓ collision sweep clean';
+    console.log(`${verdict} — ${pages.length} pages × ${WIDTHS.length} widths × 2 auth states (${checks} renders)`);
     console.log(`  widths: ${WIDTHS.join(', ')}`);
-    process.exit(0);
+    process.exit(skipped.length ? 2 : 0);
   }
 
   console.log(`✗ ${failures.length} collision failure(s):\n`);
