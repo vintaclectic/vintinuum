@@ -1680,7 +1680,19 @@ function authHeaders() {
 function showToast(msg, duration = 2500) {
   toast.textContent = msg;
   toast.classList.add('visible');
-  setTimeout(() => toast.classList.remove('visible'), duration);
+  // NO-COLLISION LAW (Vinta 2026-08-02): the CSS pins this to a hardcoded
+  // bottom:80px, which at 320px landed straight on the docked #vint-status-pill.
+  // The 'bc' lane keeps its own left:50%/translateX(-50%) centering and lifts it
+  // above BOTH bottom corner stacks by their real measured height. Registering
+  // here (not at load) is deliberate: the dock skips opacity:0 nodes, so the slot
+  // is only taken while the toast is actually on screen.
+  try {
+    if (window.VintDock) window.VintDock.register(toast, { corner: 'bc', priority: 10, id: 'toast' });
+  } catch (_) {}
+  setTimeout(() => {
+    toast.classList.remove('visible');
+    try { window.VintDock && window.VintDock.release(toast); } catch (_) {}
+  }, duration);
 }
 
 function clamp(v, min, max) { return Math.max(min, Math.min(max, v)); }

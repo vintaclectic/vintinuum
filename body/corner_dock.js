@@ -66,11 +66,33 @@
   // structurally rather than by a hardcoded id list, so a new bar on any surface
   // is cleared automatically instead of being collided with.
   // edge: 'bottom' | 'top'
+  // Edge BARS are walls the stacks lean on, but nothing owned them: a bar that
+  // mounts or resizes after the buttons were placed left the stack sitting inside
+  // it until some unrelated mutation happened to trigger another pass. Observing
+  // each bar the moment it's recognised closes that window — the same guarantee
+  // registered widgets already get from their ResizeObserver.
+  var _barsSeen = null;
+  function observeBar(el) {
+    try {
+      if (!root.ResizeObserver) return;
+      if (!_barsSeen) _barsSeen = new WeakSet();
+      if (_barsSeen.has(el)) return;
+      _barsSeen.add(el);
+      if (!register._ro) register._ro = new ResizeObserver(function () { reflow(); });
+      register._ro.observe(el);
+    } catch (_) {}
+  }
+
   function edgeReserved(edge) {
     var r = 0;
     try {
       var vw = root.innerWidth, vh = root.innerHeight;
-      var all = document.querySelectorAll('body > *');
+      // Scan EVERY fixed element, not just `body > *`. position:fixed escapes its
+      // parent's flow, so a full-width bar is a wall no matter how deeply it's
+      // nested — mind.html's .mode-tabs lives inside div.page, so the old
+      // body-children-only scan never saw it and the docked buttons were laid out
+      // straight through it at 320/375px.
+      var all = document.querySelectorAll('*');
       for (var i = 0; i < all.length; i++) {
         var el = all[i];
         // A docked widget must never be mistaken for the wall it stands against —
@@ -83,10 +105,29 @@
         var b = el.getBoundingClientRect();
         if (b.height <= 0 || b.height >= 200) continue;   // a bar, not a panel/page
         if (b.width < vw * 0.9) continue;                 // must span the width
-        var pinned = (edge === 'bottom') ? Math.abs(b.bottom - vh) <= 2
-                                         : Math.abs(b.top) <= 2;
-        if (!pinned) continue;
-        if (b.height > r) r = b.height;
+
+        // How far this bar reaches INWARD from the edge — not merely whether it
+        // touches it. The old test required bottom≈viewportHeight, so it only saw
+        // bars flush against the edge and was blind to STACKED ones: mind.html's
+        // .mode-tabs sits at bottom:56px (on top of the mobile nav), spans the
+        // full width, and the docked buttons were laid out straight through it.
+        // Measuring the reach covers both cases — a flush bar's reach is just its
+        // own height — and it composes, so two stacked bars yield the taller wall.
+        var reach = (edge === 'bottom') ? (vh - b.top) : b.bottom;
+        if (reach <= 0 || reach >= vh * 0.5) continue;     // not an edge bar
+
+        // The bar must actually BE on this edge. Reach alone doesn't say which
+        // edge it hugs: a 52px top bar has bottom-reach 52 (correct) but a bar
+        // floating mid-screen would also produce a small reach for whichever edge
+        // it happens to be nearer, and would wrongly push that edge's stack. A bar
+        // qualifies only if its far side is within its own height of the edge —
+        // i.e. it is flush, or stacked directly on another bar at that edge.
+        var gap = (edge === 'bottom') ? (vh - b.bottom) : b.top;
+        if (gap > reach) continue;
+
+        // Keep a live handle so geometry changes re-trigger layout (below).
+        observeBar(el);
+        if (reach > r) r = reach;
       }
     } catch (_) {}
     return r;
@@ -205,7 +246,14 @@
 
       // Stack outward from the corner, measuring each element's REAL height,
       // starting clear of the mobile nav and any open corner panel.
-      var offset = EDGE + (isBottom ? ins.bottom + reserveBottom : ins.top + reserveTop);
+      //
+      // reserve* is a REACH measured from the viewport edge (see edgeReserved), so
+      // it already spans the safe-area inset — adding ins.* on top would count that
+      // strip twice and float the whole stack too high. Take whichever wall is
+      // taller: the bare safe-area + margin, or the bar's reach + margin.
+      var reserve = isBottom ? reserveBottom : reserveTop;
+      var inset   = isBottom ? ins.bottom : ins.top;
+      var offset  = EDGE + Math.max(inset, reserve);
       offset = Math.max(offset, avoidExtent(corner));
 
       // A CENTER-lane element spans the middle, so it must clear BOTH corner
