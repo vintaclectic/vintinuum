@@ -2520,10 +2520,15 @@ body {
   const emotionBar = document.createElement('div');
   emotionBar.id = 'liveEmotionBar';
   // Sits BELOW the shared topbar (body/topbar.js, 56px tall, fixed top:0).
-  // Never overlaps. z-index < topbar's so dropdowns from the bar stay on top.
+  // z-index < topbar's so dropdowns from the bar stay on top.
+  // NO-COLLISION LAW (Vinta 2026-08-02): 56px was measured against the topbar
+  // alone and ignored #topShellSeam — a 2px accent line topbar.js pins at that
+  // exact same 56px — so this bar rendered straight through it. Clear the seam
+  // too (56 + 2). The seam's height is the only shared constant here; if it ever
+  // changes, this is the one place that has to follow.
   emotionBar.style.cssText = `
     position: fixed;
-    top: calc(56px + env(safe-area-inset-top, 0px));
+    top: calc(58px + env(safe-area-inset-top, 0px));
     left: 0; right: 0; z-index: 90;
     padding: 6px 20px; display: flex; align-items: center; gap: 16px;
     background: rgba(4,6,12,0.85); border-bottom: 1px solid rgba(255,255,255,0.05);
