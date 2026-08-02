@@ -11,6 +11,48 @@
   'use strict';
   if (window.__vintWelcomeGate) return;            // singleton
   window.__vintWelcomeGate = true;
+  var root = window;
+
+  // ── Carry the corner allocator onto every page ───────────────────────────
+  // welcome-gate.js is the only script included on all 50 surfaces, so it's the
+  // carrier for VintDock (the positional registry that makes bottom-corner
+  // collisions structurally impossible). Injected, not bundled, so the dock
+  // stays independently readable/testable. Idempotent on both sides.
+  (function ensureDock() {
+    try {
+      // Stub FIRST so any widget can call VintDock.register() immediately; calls
+      // are queued and drained the moment the real dock lands.
+      if (!root.VintDock) {
+        root.VintDock = {
+          q: [],
+          register: function (el, o) { root.VintDock.q.push(['register', el, o]); },
+          claim:    function (el, o) { root.VintDock.q.push(['register', el, o]); },
+          avoid:    function (el, o) { root.VintDock.q.push(['avoid', el, o]); },
+          release: function () {}, unavoid: function () {}, reflow: function () {},
+        };
+      }
+      if (root.VintDock.register && !root.VintDock.q) return;   // real dock present
+      if (document.querySelector('script[data-vint-dock]')) return;
+      var s = document.createElement('script');
+      s.src = (function () {
+        // Resolve relative to THIS script so nested paths (e.g. /body/) work.
+        try {
+          var me = document.currentScript || (function () {
+            var all = document.getElementsByTagName('script');
+            for (var i = all.length - 1; i >= 0; i--) {
+              if ((all[i].src || '').indexOf('welcome-gate.js') !== -1) return all[i];
+            }
+            return null;
+          })();
+          if (me && me.src) return me.src.replace(/welcome-gate\.js.*$/, 'corner_dock.js');
+        } catch (_) {}
+        return 'body/corner_dock.js';
+      })();
+      s.setAttribute('data-vint-dock', '1');
+      s.onload = function () { try { root.VintDock && root.VintDock.reflow(); } catch (_) {} };
+      (document.head || document.documentElement).appendChild(s);
+    } catch (_) {}
+  })();
 
   // ── config ──────────────────────────────────────────────────────────────
   var API_BASE = (function () {
@@ -73,15 +115,21 @@
 
   // ── styles (scoped, injected once) ───────────────────────────────────────
   var css = ''
-    + '#vwg-pill{position:fixed;z-index:2147483600;right:max(14px,env(safe-area-inset-right));'
-    + 'bottom:calc(16px + env(safe-area-inset-bottom));display:inline-flex;align-items:center;gap:8px;'
+    // NO-COLLISION LAW: position is owned by VintDock, NOT hardcoded here. The
+    // old right:14px/bottom:16px put this pill directly under hey_vinta's 56px
+    // orb (right:20/bottom:20) on 11 pages. The dock measures and stacks instead.
+    // Fallback anchor (used only until VintDock lands, and on the rare page with
+    // no orb): already clear of hey_vinta's 56px orb, so even the pre-dock frame
+    // never overlaps. The dock overwrites these inline once it registers.
+    + '#vwg-pill,#vwg-dot{right:max(16px,env(safe-area-inset-right));'
+    + 'bottom:calc(88px + env(safe-area-inset-bottom));}'
+    + '#vwg-pill{position:fixed;z-index:2147483600;display:inline-flex;align-items:center;gap:8px;'
     + 'min-height:44px;padding:0 18px;border-radius:999px;border:1px solid rgba(255,213,79,.34);'
     + 'background:linear-gradient(135deg,#c8960c,#ffd54f);color:#0a0600;font-family:"Space Mono",monospace;'
     + 'font-size:12px;font-weight:700;letter-spacing:.1em;cursor:pointer;box-shadow:0 6px 24px rgba(0,0,0,.4);'
     + '-webkit-tap-highlight-color:transparent;transition:transform .15s,opacity .2s;}'
     + '#vwg-pill:active{transform:scale(.96);}'
-    + '#vwg-dot{position:fixed;z-index:2147483600;right:max(14px,env(safe-area-inset-right));'
-    + 'bottom:calc(16px + env(safe-area-inset-bottom));width:34px;height:34px;border-radius:50%;'
+    + '#vwg-dot{position:fixed;z-index:2147483600;width:34px;height:34px;border-radius:50%;'
     + 'display:flex;align-items:center;justify-content:center;border:1px solid rgba(255,213,79,.3);'
     + 'background:rgba(8,12,20,.85);color:#ffd54f;font-family:"Space Mono",monospace;font-size:13px;'
     + 'cursor:pointer;-webkit-tap-highlight-color:transparent;}'
@@ -252,19 +300,37 @@
   function mountPill() {
     injectCss();
     if (signedIn()) {
-      // tiny account dot — unobtrusive, opens sheet to manage/install
-      if (document.getElementById('vwg-pill')) document.getElementById('vwg-pill').remove();
+      // SIGNED IN → the "Begin" pill must not exist anywhere, on any page.
+      // (Vinta 2026-08-01: "remove the begin login button if user is loggedin
+      // across entire app".) Removal is UNCONDITIONAL and runs before the early
+      // return — the old code returned early when the dot already existed, so a
+      // pill left over from a pre-login paint could survive the auth flip.
+      var stale = document.getElementById('vwg-pill');
+      if (stale) { try { root.VintDock && root.VintDock.release(stale); } catch (_) {} stale.remove(); }
       if (document.getElementById('vwg-dot')) return;
       var dot = document.createElement('button'); dot.id = 'vwg-dot'; dot.title = 'Account & install'; dot.textContent = '✦';
       dot.onclick = openSheet;
       document.body.appendChild(dot);
+      dock(dot);
       return;
     }
+    // SIGNED OUT → the pill is the way in; make sure no account dot lingers.
+    var staleDot = document.getElementById('vwg-dot');
+    if (staleDot) { try { root.VintDock && root.VintDock.release(staleDot); } catch (_) {} staleDot.remove(); }
     if (document.getElementById('vwg-pill')) return;
     var pill = document.createElement('button'); pill.id = 'vwg-pill';
     pill.innerHTML = '<span>✦</span><span>Begin</span>';
     pill.onclick = openSheet;
     document.body.appendChild(pill);
+    dock(pill);
+  }
+
+  // The account affordance sits FURTHEST from the corner (high priority number)
+  // so the primary action orb (hey_vinta, priority 10) keeps the thumb-reachable
+  // spot. Position itself is computed by the dock — never hardcoded here.
+  function dock(el) {
+    // Safe whether the real dock has landed or only the queuing stub exists.
+    try { root.VintDock.register(el, { corner: 'br', priority: 40, id: el.id }); } catch (_) {}
   }
 
   // Pages that own their own, gentler "way in" and must NOT be ambushed by the

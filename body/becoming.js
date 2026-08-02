@@ -150,13 +150,11 @@
     btn.setAttribute('aria-label', 'leave a memory with the body');
     btn.style.cssText = [
       'position:fixed',
-      // Relocated 2026-05-30: it was pinned bottom-CENTER (left:50%, bottom
-      // +110px) which planted it dead over the body's legs — "in the way."
-      // Moved to the bottom-RIGHT gutter, clear of the right sidebar (340px on
-      // desktop, off-canvas on mobile) and lifted above the 52px footer dock so
-      // it never overlaps the body, the dock, or the PAIR button.
-      'right:var(--vint-fab-right, 16px)','left:auto','transform:none',
-      'bottom:calc(max(12px, env(safe-area-inset-bottom, 12px)) + 64px)',
+      // Position (bottom/right in the stack) is now owned by VintDock — see the
+      // register() call after append. We no longer hardcode a corner coordinate
+      // (the 2026-05-30 hand-derived right/bottom collided with hey_vinta's orb
+      // and the account pill once those existed). NO-COLLISION LAW in code.
+      'transform:none',
       'z-index:80','padding:8px 14px','font:inherit','font-size:11px',
       'letter-spacing:0.1em','text-transform:uppercase',
       'background:rgba(16,14,32,0.72)','color:rgba(255,255,255,0.82)',
@@ -172,6 +170,10 @@
     btn.addEventListener('mouseleave', () => btn.style.transform = 'none');
     btn.addEventListener('click', openGiftSheet);
     document.body.appendChild(btn);
+    // Register with the corner allocator so it stacks in the bottom-right gutter
+    // without ever overlapping the primary orb (hey_vinta, priority 10) or the
+    // account pill (welcome-gate, priority 40). Priority 30 seats it between them.
+    try { window.VintDock.register(btn, { corner: 'br', priority: 30, id: 'carry-pill' }); } catch (_) {}
   }
 
   // ═════════════════════════════════════════════════════════════════════════
