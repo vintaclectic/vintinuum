@@ -188,6 +188,13 @@
 <button id="editHeadBtn" data-draggable="true" title="Adjust how your face sits on your body"
   style="position:fixed;top:calc(14px + env(safe-area-inset-top,0px));right:calc(14px + env(safe-area-inset-right,0px));z-index:1500;min-height:44px;padding:0 16px;border-radius:22px;background:rgba(8,12,20,0.7);border:1px solid rgba(79,195,247,0.35);color:#9fdcff;font-size:13px;cursor:pointer;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);">◐ edit head</button>
 
+<!-- THE EARLY CLAIM WINDOW: the dock registry must exist before ANY widget asks
+     for a slot. world.html's inline script (below) runs long before
+     welcome-gate.js installs its own stub, so VintDock.avoid(#invite) was hitting
+     `undefined`, getting swallowed by its try/catch, and leaving the account pill
+     sitting under the guest sheet at 320/375px. Loading the stub first closes
+     that window. -->
+<script src="body/dock_stub.js"></script>
 <script src="body/api_base.js"></script>
 <script src="body/three3d/loader.js"></script>
 <script src="body/world/rigged-presence.js"></script>
@@ -366,9 +373,21 @@
     };
 
     // let the golden hour land first, then raise the doorway (world already visible).
-    setTimeout(() => el.classList.add('show'), 1400);
+    // NO-COLLISION LAW: #invite is a CENTERED bottom sheet up to 500px wide, so on
+    // a phone it reaches into BOTH bottom corners — at 375px it sat straight on
+    // top of welcome-gate's docked account pill (97x44 overlap). It's the wrong
+    // shape to dock (full-width sheet, not a button), so it registers as an
+    // OBSTACLE instead: the button stacks start above it and slide back down the
+    // instant it's dismissed. Declared for both corners because it spans both.
+    setTimeout(() => {
+      el.classList.add('show');
+      try {
+        window.VintDock.avoid(el, { corner: 'br' });
+        window.VintDock.avoid(el, { corner: 'bl' });
+      } catch (_) {}
+    }, 1400);
     const wander = document.getElementById('inviteWander');
-    if (wander) wander.onclick = () => { el.classList.add('min'); };
+    if (wander) wander.onclick = () => { el.classList.add('min'); try { window.VintDock.reflow(); } catch (_) {} };
     const cta = document.getElementById('inviteCta');
     if (cta) cta.onclick = openWelcome;
     const mini = el.querySelector('.i-mini .m-cta');

@@ -17,7 +17,15 @@
     s.id = 'vint-worldhud-styles';
     s.textContent = [
       '#vintWorldHud{position:fixed;left:calc(12px + env(safe-area-inset-left,0px));',
-      ' top:calc(64px + env(safe-area-inset-top,0px));z-index:1400;width:228px;max-width:calc(100vw - 24px);',
+      // NO-COLLISION LAW: max-width used to be calc(100vw - 24px), which only
+      // reserved the LEFT gutter. #topctl (world.html) is a fixed 72px-wide
+      // button column pinned to the right at the same top band, so at 320px the
+      // HUD's 228px ran 8px straight through it. The right column is now
+      // reserved too: 12 left gutter + 16 right inset + 72 topctl + 12 breathing
+      // room = 112px. --vint-hud-right-reserve lets a surface without a topctl
+      // (or with a wider one) correct it without editing this file.
+      ' top:calc(64px + env(safe-area-inset-top,0px));z-index:1400;width:228px;',
+      ' max-width:calc(100vw - var(--vint-hud-right-reserve,112px) - env(safe-area-inset-left,0px) - env(safe-area-inset-right,0px));',
       ' background:rgba(6,10,16,0.85);border:1px solid rgba(124,207,255,0.2);border-radius:16px;',
       ' backdrop-filter:blur(9px);-webkit-backdrop-filter:blur(9px);color:#dae4ff;',
       ' font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;overflow:hidden;}',

@@ -360,10 +360,39 @@
   } catch (_) {}
 
   // Late-mounting widgets (and any page that adds one after load) get picked up.
+  //
+  // `attributes` matters as much as `childList`: an obstacle is usually revealed
+  // by a CLASS FLIP, not by being appended. world.html's #invite is in the DOM
+  // from first paint at display:none and becomes visible via `.show` 1.4s later —
+  // childList never fires for that, so the account pill kept the offset computed
+  // while the sheet was still hidden and sat under it at 375px. Watching class/
+  // style on the subtree closes that window for every show/hide panel at once.
+  //
+  // A docked widget's OWN class/style churn (hover, .live, the dock writing
+  // top/bottom) must not feed back into another reflow, or every layout pass
+  // schedules the next one forever.
   try {
     if (root.MutationObserver && document.body) {
-      new MutationObserver(function () { reflow(); })
-        .observe(document.body, { childList: true, subtree: false });
+      new MutationObserver(function (muts) {
+        for (var i = 0; i < muts.length; i++) {
+          var m = muts[i];
+          if (m.type === 'childList') { reflow(); return; }
+          var t = m.target;
+          if (t && t.nodeType === 1 && t.hasAttribute('data-vint-docked')) continue;
+          reflow(); return;
+        }
+      }).observe(document.body, {
+        childList: true, subtree: true,
+        attributes: true, attributeFilter: ['class', 'style', 'hidden'],
+      });
     }
+  } catch (_) {}
+
+  // An obstacle revealed with an entrance animation (#invite's .8s inviteRise)
+  // is measured MID-FLIGHT — its transform still offsets the rect, so the extent
+  // is short. Re-measure once the motion actually settles.
+  try {
+    root.addEventListener('transitionend', function () { reflow(); }, true);
+    root.addEventListener('animationend', function () { reflow(); }, true);
   } catch (_) {}
 })(typeof window !== 'undefined' ? window : globalThis);

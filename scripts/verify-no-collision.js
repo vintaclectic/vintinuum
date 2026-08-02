@@ -33,11 +33,12 @@ const puppeteer = require('/home/vinta/vintinuum-api/node_modules/puppeteer');
 const WIDTHS = (process.env.VERIFY_WIDTHS || '320,375,768,1280,1920')
   .split(',').map(s => parseInt(s.trim(), 10)).filter(Boolean);
 
-// Pages whose whole point is a full-bleed surface with intentional layering
-// (the media player is a deliberate edge-to-edge overlay stack — see the
-// DirRM doctrine in OPERATIONS.md). Excluded from the *overlap* assertion only;
-// they're still checked for the Begin-pill rule.
-const LAYERED_BY_DESIGN = new Set(['dirrm-player.html']);
+// Pages exempt from the overlap assertion (still checked for the Begin-pill
+// rule). Deliberately EMPTY: dirrm-player.html was exempted on the assumption
+// that an edge-to-edge media surface must layer, but it verifies clean, so the
+// exemption was hiding nothing and would only have masked a future regression.
+// Add a page here only with evidence that its layering is intentional.
+const LAYERED_BY_DESIGN = new Set([]);
 
 // ── a tiny static server so pages fetch relative assets exactly as in prod ──
 const MIME = {
@@ -188,7 +189,29 @@ const TOKEN_KEYS = ['vint_token', 'soul_auth_token', 'vint_access_token', 'acces
           await page.goto(`${base}/${file}`, { waitUntil: 'domcontentloaded', timeout: 20000 });
         } catch (_) { continue; }
         // Let async widgets mount, the dock drain its queue, and rAF reflow land.
-        await new Promise(r => setTimeout(r, 1200));
+        //
+        // A FLAT wait is a trap: world.html raises its guest sheet at t=1400ms
+        // with a 0.8s entrance animation, so a 1200ms settle measured the sheet
+        // mid-flight and reported a collision the live page never actually shows
+        // (and would equally MISS one that only appears after the delay). Wait
+        // for the layout to go quiet instead of for the clock: poll every fixed
+        // rect until two consecutive samples match, so whenever the last delayed
+        // panel lands and the dock re-flows, we measure the settled truth.
+        await page.evaluate(async () => {
+          const snap = () => Array.from(document.querySelectorAll('body *'))
+            .filter(el => getComputedStyle(el).position === 'fixed')
+            .map(el => { const r = el.getBoundingClientRect();
+              return `${el.id}:${Math.round(r.x)},${Math.round(r.y)},${Math.round(r.width)},${Math.round(r.height)}`; })
+            .join('|');
+          let prev = '', stable = 0;
+          // ~4.5s ceiling: comfortably past the 1.4s reveal + 0.8s animation.
+          for (let i = 0; i < 30 && stable < 3; i++) {
+            await new Promise(r => setTimeout(r, 150));
+            const cur = snap();
+            stable = (cur === prev) ? stable + 1 : 0;
+            prev = cur;
+          }
+        }).catch(() => {});
         try { await page.evaluate(() => window.VintDock && window.VintDock.reflow()); } catch (_) {}
         await new Promise(r => setTimeout(r, 300));
 
