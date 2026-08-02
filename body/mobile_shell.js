@@ -57,6 +57,21 @@
     document.body.appendChild(pillLeft);
     document.body.appendChild(pillRight);
 
+    // NO-COLLISION LAW (Vinta 2026-08-02): these two pills own the TOP corners on
+    // coarse pointers, but they only said so in CSS — so brain.js's ◉ orb
+    // (hardcoded top:14/right:14) landed straight on the MIND pill. Registering
+    // them makes that corner a claim the dock enforces rather than a convention
+    // other modules have to know about. keepSide preserves the authored 12px
+    // lanes; they're display:none on desktop, so the dock skips them there and
+    // whatever else claims the corner slides back up. Priority 10 = the primary
+    // nav affordance keeps the outermost, most reachable slot.
+    try {
+      if (window.VintDock) {
+        window.VintDock.register(pillLeft,  { corner: 'tl', priority: 10, keepSide: true, id: 'vtn-pill-left' });
+        window.VintDock.register(pillRight, { corner: 'tr', priority: 10, keepSide: true, id: 'vtn-pill-right' });
+      }
+    } catch (_) {}
+
     let openPanel = null; // 'left' | 'right' | null
 
     function emit(name, which) {

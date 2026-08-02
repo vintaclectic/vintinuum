@@ -240,6 +240,13 @@
     btn.appendChild(caretEl);
     btn.appendChild(dotEl);
     document.body.appendChild(btn);
+    // NO-COLLISION LAW: the hand-derived bottom:56px above was arithmetic against
+    // a SNAPSHOT of the neighbours (see the comment block in the CSS) and went
+    // stale — it overlapped #vint-status-pill on chat.html. VintDock measures the
+    // real neighbours every reflow instead. Priority 10 = closest to the corner.
+    try {
+      if (window.VintDock) window.VintDock.register(btn, { corner: 'bl', priority: 10, id: BTN_ID });
+    } catch (_) {}
 
     // ── Long-press → toggle OUTPUT mute ──────────────────────────────────────
     // draggable.js owns a long-press for repositioning, but only fires it once

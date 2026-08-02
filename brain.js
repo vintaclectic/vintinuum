@@ -6488,6 +6488,15 @@ window.MIC = (() => {
   btn.style.cssText = 'position:fixed;bottom:24px;left:108px;z-index:1000;background:rgba(6,10,18,0.55);border:1px solid rgba(255,255,255,0.1);border-radius:50%;width:36px;height:36px;cursor:pointer;font-size:.9rem;display:flex;align-items:center;justify-content:center;color:rgba(218,228,255,0.7);transition:all .2s;padding:0;';
   btn.innerHTML = '🎤';
   document.body.appendChild(btn);
+  // NO-COLLISION LAW (Vinta 2026-08-02): this sat at a hardcoded bottom:24/left:108.
+  // The 2026-08-01 pass docked it but kept that 108px lane (keepSide), which put it
+  // in a private column beside the dock that nothing else could reason about — and
+  // the centred .brain-hint still landed on it at 320..768px. Dropping keepSide puts
+  // it in the real bottom-left stack, so its position is derived from its actual
+  // neighbours instead of a magic offset, and the hint only has to clear ONE column.
+  try {
+    if (window.VintDock) window.VintDock.register(btn, { corner: 'bl', priority: 15, id: 'micBtn' });
+  } catch (_) {}
 
   const panel = document.createElement('div');
   panel.id = 'voicePanel';
@@ -49469,6 +49478,14 @@ const CONSCIOUSNESS_BRAIN = (() => {
       'box-shadow:0 0 20px rgba(80,200,255,0.08);';
     _btn.textContent = '◉';
     _btn.title = 'Consciousness — view the living mind';
+    // NO-COLLISION LAW (Vinta 2026-08-02): the hardcoded top:14/right:14 above is
+    // the exact corner mobile_shell.js's MIND pill claims (right:12, top:+10) on
+    // coarse pointers — the two sat on top of each other at 320/375/768px. Hand
+    // the corner to VintDock and let it stack them. Priority 20 puts this behind
+    // the MIND pill (10), which is the page's primary navigation affordance.
+    try {
+      if (window.VintDock) window.VintDock.register(_btn, { corner: 'tr', priority: 20, id: 'consciousness-brain-btn' });
+    } catch (_) {}
 
     // Hover effect
     _btn.addEventListener('mouseenter', () => {

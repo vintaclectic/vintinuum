@@ -140,6 +140,14 @@
     var wrap = document.createElement('div');
     wrap.id = 'vintHeadEd';
     wrap.setAttribute('data-draggable', 'true');
+    // NO-COLLISION LAW: this 320px panel owns the bottom-right while open, and
+    // world.html also carries the welcome-gate affordance. Declare the panel as
+    // an obstacle so the docked buttons stack ABOVE it instead of underneath —
+    // they slide back down on close.
+    try {
+      if (window.VintDock) window.VintDock.avoid(wrap, { corner: 'br' });
+      else setTimeout(function () { try { window.VintDock && window.VintDock.avoid(wrap, { corner: 'br' }); } catch (_) {} }, 400);
+    } catch (_) {}
 
     // header
     var hd = document.createElement('div'); hd.className = 'he-hd';
@@ -316,7 +324,10 @@
   };
 
   HE.close = function () {
-    if (_el) { _el.remove(); _el = null; }
+    if (_el) {
+      try { window.VintDock && window.VintDock.unavoid(_el); } catch (_) {}
+      _el.remove(); _el = null;
+    }
     // hand control back to the world (e.g. restore the camera from mirror mode)
     if (_state && typeof _state.onClose === 'function') {
       var cb = _state.onClose; _state.onClose = null;

@@ -106,6 +106,12 @@
     if (!document.body) return false;
     injectStyles();
     document.body.appendChild(pill);
+    // NO-COLLISION LAW: bottom-LEFT is shared with the voice button, whose
+    // 56..100px band overlapped this pill's hardcoded bottom:74px on chat.html.
+    // The dock stacks them instead. Priority 20 → sits above the voice button.
+    try {
+      if (window.VintDock) window.VintDock.register(pill, { corner: 'bl', priority: 20, keepSide: true, id: pill.id || 'vint-status-pill' });
+    } catch (_) {}
     return true;
   }
   if (!mount()) document.addEventListener('DOMContentLoaded', mount, { once: true });

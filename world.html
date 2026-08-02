@@ -35,7 +35,13 @@
   #sayBtn:active { transform: scale(0.97); }
 
   /* hint — desktop keyboard controls, hidden on touch */
-  #hint { position: fixed; left: 16px; top: max(14px, env(safe-area-inset-top, 14px)); z-index: 4; font-size: 13px; color: rgba(245,235,220,0.5); }
+  /* NO-COLLISION LAW (Vinta 2026-08-01): #hint sat at the SAME left:16/top:14 as
+     #leave (which moved to this corner on 2026-07-09 to escape #editHeadBtn) —
+     the hint text rendered straight through the LEAVE link. The left column is
+     fully spoken for: #leave owns top 14..58, and #vintWorldHud (world-hud.js)
+     owns top 64.. at width 228. So the hint moves BELOW the HUD, not beside it.
+     It's desktop-only (hidden on coarse pointers) so one clear slot is enough. */
+  #hint { position: fixed; left: max(16px, env(safe-area-inset-left, 16px)); top: calc(max(14px, env(safe-area-inset-top, 14px)) + 260px); z-index: 4; font-size: 13px; color: rgba(245,235,220,0.5); max-width: min(228px, calc(100vw - 32px)); }
   #leave { /* W4 2026-07-09: was top-RIGHT under #editHeadBtn (z1500) — 100% buried, a dead primary control. Opposite corners: leave=LEFT, edit-head=RIGHT. */ position: fixed; left: max(16px, env(safe-area-inset-left, 16px)); top: max(14px, env(safe-area-inset-top, 14px)); z-index: 1600; font-size: 14px; color: rgba(245,235,220,0.6); text-decoration: none; min-height: 44px; display: flex; align-items: center; padding: 0 4px; }
   @media (pointer: coarse) { #hint { display: none; } }
   /* run/jump controls — clear above the say bar, right side (mobile-first, no overflow) */

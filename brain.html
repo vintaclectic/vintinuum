@@ -183,6 +183,10 @@ canvas{display:block;}
   position:fixed;
   left:50%;
   transform:translateX(-50%);
+  /* `bottom` is owned by VintDock's 'bc' (bottom-center) lane — it lifts this bar
+     above BOTH bottom corner stacks, which a fixed 58px offset could not do (at
+     320px the docked #micBtn reached up into this band). Kept as the pre-dock
+     fallback only. */
   bottom:calc(env(safe-area-inset-bottom,0px) + 58px);
   z-index:70;
   display:flex;
@@ -197,6 +201,13 @@ canvas{display:block;}
   letter-spacing:.08em;
   color:rgba(218,228,255,0.45);
   white-space:nowrap;
+  /* NO-COLLISION LAW (Vinta 2026-08-02): this bar is CENTERED, and the 2026-08-01
+     pass tried to keep it off the corner buttons by reserving a hand-computed
+     120px/side — stale arithmetic against a snapshot, and #micBtn still collided
+     at 320..768px. The fix is VERTICAL, not horizontal: this element now sits in
+     VintDock's 'bc' lane, which lifts it above BOTH bottom corner stacks by their
+     real measured height. So it no longer has to dodge them sideways — it just
+     stays inside the viewport and ellipses its text. */
   max-width:calc(100vw - 32px);
   overflow:hidden;
   pointer-events:auto;
@@ -3322,6 +3333,11 @@ if ('serviceWorker' in navigator && _onGitHubPages) {
 <!-- API base bootstrap — must come before any module that talks to the brain. -->
 <script src="body/api_base.js?v=v20260429-council"></script>
 <script src="genome-data.js"></script>
+<!-- VintDock queuing stub — MUST load before any script that mounts a floating
+     widget. brain.js runs synchronously ~600 lines above welcome-gate.js (which
+     used to be what created the stub), so #micBtn's registration silently no-op'd
+     and it kept its hardcoded corner. This makes the registry exist first. -->
+<script src="body/dock_stub.js?v=v20260802-dock1"></script>
 <!-- Draggable system — every button is repositionable (Vinta directive 2026-05-08) -->
 <script src="body/draggable.js?v=v20260523-drag1"></script>
 <!-- Body containment system — loaded before brain.js so globals are available -->
@@ -4462,6 +4478,30 @@ setTimeout(function() {
       document.body.classList.toggle('vint-guest', !signedIn());
     }
     applyWall();
+
+    // NO-COLLISION LAW (Vinta 2026-08-01): brain.html renders its OWN V orb
+    // (#vint-chat-btn at bottom:24/right:24) instead of body/hey_vinta.js, which
+    // this page hides. That hardcoded corner sat directly under welcome-gate's
+    // ✦ pill/dot. Hand it to VintDock so the two stack like everywhere else.
+    // Priority 10 = same slot the hey_vinta orb claims on other surfaces.
+    (function dockOrb(){
+      var orb = document.getElementById('vint-chat-btn');
+      if (!orb) return;
+      try { window.VintDock && window.VintDock.register(orb, { corner:'br', priority:10, id:'vint-chat-btn' }); } catch(_){}
+    })();
+
+    // NO-COLLISION LAW (Vinta 2026-08-02): the centred hint bar carries a 44px
+    // LAYERS button, making it 54px tall — at 320px that band reached down into
+    // the docked #micBtn. Claim the 'bc' (bottom-center) lane so the dock lifts it
+    // above BOTH bottom corner stacks by their measured height, instead of trusting
+    // a fixed 58px offset that knew nothing about the buttons beside it.
+    (function dockHint(){
+      var hint = document.querySelector('.brain-hint');
+      if (!hint) return;
+      if (!hint.id) hint.id = 'brain-hint';
+      try { window.VintDock && window.VintDock.register(hint, { corner:'bc', priority:10, id:'brain-hint' }); } catch(_){}
+    })();
+
     // welcome-gate fires 'vint:auth' on sign-in; storage event covers other tabs.
     window.addEventListener('vint:auth', applyWall);
     window.addEventListener('storage', function(e){

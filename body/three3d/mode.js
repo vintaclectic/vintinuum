@@ -91,6 +91,15 @@
       toggle();
     });
     document.body.appendChild(btn);
+    // NO-COLLISION LAW (Vinta 2026-08-02): the `top: calc(60px + safe-area)` above
+    // was hand-tuned to sit just under the MIND pill — arithmetic against a
+    // snapshot of a neighbour, which broke the moment that pill was docked and
+    // moved. Register instead: priority 30 keeps it below the MIND pill (10) and
+    // the ◉ consciousness orb (20), but now that ordering is derived from real
+    // measured heights every reflow rather than a baked-in 60px.
+    try {
+      if (window.VintDock) window.VintDock.register(btn, { corner: 'tr', priority: 30, id: 'three3dModeBtn' });
+    } catch (_) {}
     state.toggleBtn = btn;
   }
 

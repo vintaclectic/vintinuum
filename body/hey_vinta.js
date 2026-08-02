@@ -226,6 +226,14 @@
     if (!document.body) return false;
     document.body.appendChild(btn);
     document.body.appendChild(bubble);
+    // NO-COLLISION LAW: hand position to VintDock instead of trusting the
+    // hardcoded right:20/bottom:20 above, which sat on top of welcome-gate's
+    // account pill on 11 pages. Priority 10 = the primary action keeps the
+    // closest, most thumb-reachable corner slot; the account affordance (40)
+    // stacks above it. A user drag still overrides the dock entirely.
+    try {
+      if (window.VintDock) window.VintDock.register(btn, { corner: 'br', priority: 10, id: 'hey-vinta-btn' });
+    } catch (_) {}
     return true;
   }
   if (!mount()) {

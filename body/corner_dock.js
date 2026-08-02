@@ -27,7 +27,22 @@
      VintDock.release(el);                 // or el.remove() — auto-reaped
      VintDock.reflow();                    // force a re-layout
 
-   CORNERS: 'br' | 'bl' | 'tr' | 'tl'. Lower priority = closer to the corner.
+   CORNERS: 'br' | 'bl' | 'tr' | 'tl', plus the CENTER lanes 'bc' | 'tc'.
+   Lower priority = closer to the corner.
+
+   THE LIVE PRIORITY MAP — pick a FREE number, never reuse one on a corner a
+   sibling can share a page with. Ties fall back to registration order, which is
+   script-load order, which is not something you should ever depend on.
+
+     br  10 #vint-chat-btn (brain only) / #hey-vinta-btn (everywhere else)
+            └ these two never coexist: brain.html hides #hey-vinta-btn, and
+              the dock skips display:none nodes, so the tie is inert BY DESIGN.
+              Anything NEW on 'br' must not take 10.
+         30 #carry-pill        40 #vwg-pill / #vwg-dot (account, outermost)
+     bl   5 diag pill          10 #vintVoice   15 #micBtn   20 #vint-status-pill
+     tr  10 #vtn-pill-right    20 consciousness btn        30 three3d mode btn
+     tl  10 #vtn-pill-left
+     bc  10 .brain-hint        (center lanes auto-clear BOTH flanking columns)
 */
 (function (root) {
   'use strict';
@@ -140,6 +155,25 @@
     return true;
   }
 
+  // How far the two corner stacks on an edge ('b'|'t') extend inward from it.
+  // Used to lift a CENTER-lane element clear of both flanking columns, since a
+  // centred bar can grow wide enough (or a phone can be narrow enough) that
+  // "centre" and "corner" are the same pixels.
+  function columnHeight(edge) {
+    var max = 0;
+    slots.forEach(function (s) {
+      if (s.corner[0] !== edge) return;
+      if (s.corner[1] === 'c') return;              // other centre items don't count
+      if (!visible(s.el)) return;
+      var r;
+      try { r = s.el.getBoundingClientRect(); } catch (_) { return; }
+      if (!r.height) return;
+      var ext = (edge === 'b') ? (root.innerHeight - r.top) : r.bottom;
+      if (ext > max && ext < root.innerHeight) max = ext;
+    });
+    return max ? max + GUTTER : 0;
+  }
+
   var raf = null;
   function reflow() {
     if (raf) return;                        // coalesce bursts into one frame
@@ -157,18 +191,28 @@
     var reserveBottom = edgeReserved('bottom');
     var reserveTop    = edgeReserved('top');
 
-    ['br', 'bl', 'tr', 'tl'].forEach(function (corner) {
+    // 'bc'/'tc' are CENTER lanes: same vertical stacking, but the element keeps
+    // its own horizontal centering. They're laid out after the corners so a
+    // centered bar can be told how much room the corner stacks actually left it.
+    ['br', 'bl', 'tr', 'tl', 'bc', 'tc'].forEach(function (corner) {
       var mine = slots
         .filter(function (s) { return s.corner === corner && visible(s.el); })
         .sort(function (a, b) { return a.priority - b.priority; });
 
       var isBottom = corner[0] === 'b';
       var isRight  = corner[1] === 'r';
+      var isCenter = corner[1] === 'c';
 
       // Stack outward from the corner, measuring each element's REAL height,
       // starting clear of the mobile nav and any open corner panel.
       var offset = EDGE + (isBottom ? ins.bottom + reserveBottom : ins.top + reserveTop);
       offset = Math.max(offset, avoidExtent(corner));
+
+      // A CENTER-lane element spans the middle, so it must clear BOTH corner
+      // stacks on its edge — not just the reserved bars. Start it above the
+      // tallest corner column so a centred bar can never sit in the same band as
+      // the buttons flanking it (the .brain-hint × #micBtn overlap at 320px).
+      if (isCenter) offset = Math.max(offset, columnHeight(corner[0]));
 
       mine.forEach(function (s) {
         var el = s.el;
@@ -183,8 +227,9 @@
         // The dock owns the STACKING AXIS (top/bottom). The cross axis is only
         // set when the widget hasn't authored its own — e.g. status_pill uses
         // left:var(--vint-fab-left) to clear the desktop sidebar, and stomping
-        // that would push it back under the rail we just cleared.
-        if (!s.keepSide) {
+        // that would push it back under the rail we just cleared. A center-lane
+        // element always keeps its own horizontal placement (that's the point).
+        if (!s.keepSide && !isCenter) {
           var side = EDGE + (isRight ? ins.right : ins.left);
           if (isRight) { el.style.right = side + 'px'; el.style.left = 'auto'; }
           else         { el.style.left  = side + 'px'; el.style.right = 'auto'; }
@@ -194,6 +239,36 @@
         offset += h + GUTTER;               // next widget clears this one entirely
       });
     });
+
+    publishReach();
+  }
+
+  // A CENTERED element (brain.html's .brain-hint, a toast, any middle-of-the-edge
+  // bar) can't be docked — it isn't in a corner stack — but it still has to stay
+  // out of the buttons' way. Hardcoding "reserve 120px" is the same stale
+  // arithmetic this file exists to delete, so instead we publish how far the
+  // docked columns actually REACH inward, as a CSS variable. Centred content
+  // reserves 2× that and is correct forever, including when a widget resizes,
+  // appears, or is dragged away.
+  //   --vint-dock-reach-bottom / --vint-dock-reach-top
+  function publishReach() {
+    try {
+      var vw = root.innerWidth;
+      var reach = { bottom: 0, top: 0 };
+      slots.forEach(function (s) {
+        if (!visible(s.el)) return;
+        var r;
+        try { r = s.el.getBoundingClientRect(); } catch (_) { return; }
+        if (!r.width) return;
+        // How far this widget intrudes from ITS OWN vertical edge.
+        var in_ = (s.corner[1] === 'r') ? (vw - r.left) : r.right;
+        var edge = (s.corner[0] === 'b') ? 'bottom' : 'top';
+        if (in_ > reach[edge]) reach[edge] = in_;
+      });
+      var st = document.documentElement.style;
+      st.setProperty('--vint-dock-reach-bottom', Math.round(reach.bottom) + 'px');
+      st.setProperty('--vint-dock-reach-top', Math.round(reach.top) + 'px');
+    } catch (_) {}
   }
 
   function register(el, opts) {

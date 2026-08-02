@@ -260,6 +260,13 @@
                      ? ' · <span class="red">' + (report.total - report.green) + ' red</span>'
                      : '');
     document.body.appendChild(el);
+    // NO-COLLISION LAW: shares bottom-left with the voice button + status pill.
+    // Priority 5 = innermost; the others stack above it and reclaim the space
+    // when this transient pill removes itself.
+    try {
+      el.id = el.id || 'vint-diag-pill';
+      if (window.VintDock) window.VintDock.register(el, { corner: 'bl', priority: 5, id: el.id });
+    } catch (_) {}
     requestAnimationFrame(function () { el.classList.add('show'); });
     setTimeout(function () {
       el.classList.remove('show');
