@@ -13,7 +13,29 @@
   #stage canvas { display: block; width: 100% !important; height: 100% !important; }
 
   /* status / waking */
-  #status { position: fixed; left: 50%; top: 50%; transform: translate(-50%,-50%); z-index: 5; font-size: 20px; color: rgba(245,235,220,0.7); opacity: 0; transition: opacity .6s; pointer-events: none; }
+  /* NO-COLLISION LAW: #status is viewport-CENTERED with no width limit, so a long
+     message ("the clearing is drifting just out of reach — try again in a moment.")
+     grew sideways until it reached the docked account pill at 320/375px. Two
+     constraints, not one: cap the WIDTH so it stays in the middle column clear of
+     both corner stacks, and cap the HEIGHT so the resulting wrap can't grow into
+     the HUD above or the guest sheet below. Deriving the width from the dock's
+     reach was tried and is wrong here — it squeezed the box to a 70px ribbon that
+     was 264px TALL, trading a horizontal collision for a vertical one. A centred
+     message wants a readable measure, so it gets one, and the band it may occupy
+     is bounded explicitly. */
+  #status { position: fixed; left: 50%; z-index: 5; font-size: 20px; color: rgba(245,235,220,0.7); opacity: 0; transition: opacity .6s; pointer-events: none;
+    width: min(320px, calc(100vw - 32px)); max-height: 30vh; overflow: hidden;
+    text-align: center; text-wrap: balance;
+    /* Anchored to the CENTRE OF THE FREE BAND, not the centre of the viewport.
+       Vertical centring plus a two-line wrap at 320px put its lower edge straight
+       through the docked pill. The band runs from under the WorldHUD (top ~270px)
+       to the top of the bottom stack — --vint-dock-height-bottom, republished by
+       the dock on every reflow (NOT --vint-dock-reach-bottom, which is horizontal
+       intrusion and is a much larger number: a 97px pill reaches 113px inward
+       while standing only 60px tall). The message re-centres itself whenever the
+       buttons below it move, resize, or are dragged away. */
+    top: calc(270px + (100dvh - 270px - var(--vint-dock-height-bottom, 90px) - 24px) / 2);
+    transform: translate(-50%, -50%); }
   #status.show { opacity: 1; }
 
   /* speech feed — bottom-left, traces fade out (no scroll, no overflow) */

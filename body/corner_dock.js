@@ -268,6 +268,15 @@
       var st = document.documentElement.style;
       st.setProperty('--vint-dock-reach-bottom', Math.round(reach.bottom) + 'px');
       st.setProperty('--vint-dock-reach-top', Math.round(reach.top) + 'px');
+
+      // REACH is horizontal (how far a column intrudes from its side edge); it is
+      // the wrong number for anything doing VERTICAL math. world.html's #status
+      // used reach-bottom to find the free band and landed straight on the pill,
+      // because a 97px-wide pill reaches 113px inward while being only 60px tall.
+      // Publish the band the stacks actually occupy so centred content can sit
+      // between them: --vint-dock-height-bottom / -top.
+      st.setProperty('--vint-dock-height-bottom', Math.round(columnHeight('b')) + 'px');
+      st.setProperty('--vint-dock-height-top', Math.round(columnHeight('t')) + 'px');
     } catch (_) {}
   }
 
