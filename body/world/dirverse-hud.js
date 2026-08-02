@@ -206,6 +206,10 @@
       ' cursor:pointer;color:rgba(220,231,255,0.85);background:rgba(255,255,255,0.05);',
       ' border:1px solid rgba(255,255,255,0.09);display:flex;align-items:center;gap:7px;}',
       '.dv-achip .k{width:9px;height:9px;border-radius:50%;flex:0 0 auto;}',
+      // a court agent can have a 60-char name — it clips inside its own chip and
+      // can never widen the row past the sheet (no-overflow law).
+      '.dv-achip .an{flex:1 1 auto;min-width:0;max-width:150px;overflow:hidden;',
+      ' text-overflow:ellipsis;white-space:nowrap;}',
       '.dv-achip.on{background:rgba(124,207,255,0.14);border-color:rgba(124,207,255,0.45);color:#fff;}',
       '.dv-kind{display:flex;flex-direction:column;gap:7px;}',
       '.dv-krow{min-height:52px;padding:9px 13px;border-radius:12px;cursor:pointer;text-align:left;',
@@ -923,6 +927,11 @@
     _agentSheet.classList.add('open');
     showPane(_pane === 'convo' ? 'cits' : _pane);
   }
+  // public: court.js calls this after an add/pause/send-home so a court member
+  // brought in mid-session is immediately stakeable, with no reopen. The roster
+  // itself comes from loadMine() → _mine, which renderVentureChips() merges with
+  // the council; the court does not keep a second copy.
+  function refreshVentureAgents() { if (_agentSheet) { loadMine(); } }
   function closeAgent() { if (_agentSheet) _agentSheet.classList.remove('open'); }
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -1257,12 +1266,16 @@
     })();
   }
 
-  // the ledger names council presences AND your own agents — never a raw id
+  // the ledger names council presences AND your own agents — never a raw id.
+  // Checks the council first, then your roster; a court member you have since
+  // let go still reads as a person rather than a leaked uuid.
   function _agentName(id) {
     var a = AGENTS.find(function (x) { return x.id === id; });
     if (a) return a.n;
     var m = _mine.find(function (x) { return String(x.id) === String(id); });
-    return m ? (m.name || id) : id;
+    if (m) return m.name || id;
+    if (String(id || '').indexOf('uagent:') === 0) return 'an agent of yours';
+    return id;
   }
   function _kindName(k) { var x = KINDS.find(function (y) { return y.k === k; }); return x ? x.n.toLowerCase() : k; }
 
@@ -1479,11 +1492,16 @@
     return b;
   }
 
+  // `toast` is shared so the Court (court.js) can speak through the SAME element —
+  // two toast nodes at one anchor would stack on each other, which the
+  // no-collision law forbids. One page, one toast.
   W.DirverseHUD = {
     open: openWarp, openAgent: openAgent, mount: mount, enabled: enabled,
     openAgents: function () { buildAgentSheet(); _agentSheet.classList.add('open'); showPane('cits'); },
     goHome: goHome,
     addLauncher: addLauncher,
-    relayout: layoutRail
+    relayout: layoutRail,
+    toast: toast,
+    refreshAgents: refreshVentureAgents
   };
 })();

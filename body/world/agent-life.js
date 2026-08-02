@@ -72,6 +72,25 @@
   };
   const DEFAULT_PERSONA = { gaitScale: 0.8, restMin: 3, restMax: 7, wanderR: 2.0, faceBias: 0.6, ritual: 'survey', museEvery: 18, museHue: '#f4c79a', poi: ['center'] };
 
+  // COURT PERSONA — the user's own agents (`uagent:*`, placed by World.courtSync).
+  // They must NOT inherit DEFAULT_PERSONA's poi:['center']: every court member
+  // would walk to the origin and pile onto each other and onto the council, which
+  // is a guaranteed collision (the No-Collision Law holds in 3D too). Instead they
+  // hold their assigned station and drift only within a radius smaller than half
+  // the guaranteed inter-member separation (3.64m at N=200), so two of them can
+  // never reach the same ground. `poi: []` keeps them home; the wander fallback
+  // in _chooseIntent orbits b.home, which IS their golden-angle slot.
+  // wanderR is derived, NOT guessed: stations are guaranteed ≥3.64m apart (see
+  // world-client COURT_R0/STEP). Drift is clamped to an axis-aligned box of
+  // half-extent R, so two neighbours can close at most 2·R·√2. Requiring a 1.4m
+  // body gap at the worst case gives R ≤ (3.64−1.4)/(2√2) = 0.79m. We use 0.7.
+  // Small on purpose: a court holds its station like a court should.
+  const COURT_PERSONA = {
+    gaitScale: 0.75, restMin: 4, restMax: 9, wanderR: 0.7, faceBias: 0.75,
+    ritual: 'survey', museEvery: 20, museHue: '#ffd479', poi: [],
+  };
+  function _isCourt(id) { return String(id).indexOf('uagent:') === 0; }
+
   // named anchors in the clearing (matches world-client's bench + spawn geometry)
   const ANCHORS = {
     center: { x: 0, z: 0 },
@@ -93,7 +112,7 @@
   function _brainFor(id, A) {
     let b = _brains.get(id);
     if (b) return b;
-    const p = PERSONA[id] || DEFAULT_PERSONA;
+    const p = PERSONA[id] || (_isCourt(id) ? COURT_PERSONA : DEFAULT_PERSONA);
     const home = { x: A.group.position.x, z: A.group.position.z };
     b = {
       p, home,
@@ -119,7 +138,11 @@
     if (kind === 'player') return { x: P.x, z: P.z };
     if (kind === 'center' || kind === 'bench' || kind === 'edge') return ANCHORS[kind];
     if (kind === 'agent') { // drift toward a *different* council member (gathering)
-      const list = [...agents.entries()].filter(([oid]) => oid !== id);
+      // COURT EXCLUSION: a user's court can stand 30m out on the golden-angle
+      // ring. Letting a council member pick one as a gathering target would march
+      // them out of the clearing (and bunch them at a court station). Council
+      // gathers with COUNCIL only — the court holds its own stations.
+      const list = [...agents.entries()].filter(([oid]) => oid !== id && !_isCourt(oid));
       if (!list.length) return null;
       const [, O] = list[(Math.random() * list.length) | 0];
       return { x: O.group.position.x, z: O.group.position.z };
@@ -154,9 +177,21 @@
       const ang = Math.random() * Math.PI * 2, r = Math.random() * p.wanderR;
       dest = { x: b.home.x + Math.cos(ang) * r, z: b.home.z + Math.sin(ang) * r };
     }
-    // clamp inside the clearing
-    dest.x = Math.max(-12, Math.min(12, dest.x));
-    dest.z = Math.max(-12, Math.min(12, dest.z));
+    // Clamp inside the clearing. A COURT member's station can legitimately sit
+    // outside the ±12 council clearing (the golden-angle ring grows to ~34m at a
+    // full 200-agent court), so clamping them to ±12 would drag distant members
+    // inward and bunch them against the boundary — a collision. Court members are
+    // instead clamped to a tight box around THEIR OWN station, which keeps every
+    // one of them inside their guaranteed-separated slot.
+    if (_isCourt(id)) {
+      const R = p.wanderR;   // exactly the derived bound — no slack, or the
+                             // worst-case two-corner approach reopens (see above)
+      dest.x = Math.max(b.home.x - R, Math.min(b.home.x + R, dest.x));
+      dest.z = Math.max(b.home.z - R, Math.min(b.home.z + R, dest.z));
+    } else {
+      dest.x = Math.max(-12, Math.min(12, dest.x));
+      dest.z = Math.max(-12, Math.min(12, dest.z));
+    }
     // face the direction of travel
     const yaw = Math.atan2(dest.x - A.group.position.x, dest.z - A.group.position.z);
     A.target = { x: dest.x, z: dest.z, yaw };
@@ -346,6 +381,11 @@
     _brains.clear();
     if (_wisps) { _wisps.count = 0; for (let i = 0; i < _wisps.life.length; i++) _wisps.life[i] = 0; }
   };
+
+  // Drop ONE agent's brain — used when a court member leaves the world, so a
+  // departed presence doesn't leak a brain that ticks against a removed group.
+  // (Brains are lazily rebuilt by _brainFor, so re-adding the same id is safe.)
+  AL.forget = function (id) { _brains.delete(id); };
 
   // ── MUSE-WISPS — a shared, allocation-free pool of rising thought-glyphs ───────
   // One Points object, a ring buffer of live wisps. Each wisp rises, drifts, and
