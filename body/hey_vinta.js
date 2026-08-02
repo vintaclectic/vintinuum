@@ -173,6 +173,10 @@
     }
     #hey-vinta-bubble {
       position: fixed;
+      /* First-paint fallback only. The orb no longer lives at a fixed corner
+         offset — VintDock assigns its slot (and draggable.js lets the user move
+         it anywhere), so these coordinates are re-computed against the orb's
+         real rect every time the bubble is shown. See positionBubble(). */
       right: 88px;
       bottom: calc(28px + env(safe-area-inset-bottom, 0px));
       max-width: 280px;
@@ -281,11 +285,42 @@
 
   // ── Bubble helpers ────────────────────────────────────────
   let bubbleTimer = null;
+  // Anchor the bubble to the orb's ACTUAL position. The orb is dock-assigned
+  // and user-draggable, so any hardcoded offset eventually puts the bubble on
+  // top of it (or off-screen). We place it to the LEFT of the orb, aligned to
+  // its bottom edge; when there isn't room to the left — narrow phones, or the
+  // user dragged the orb to the left edge — it goes ABOVE the orb instead. It
+  // never overlaps the orb and never leaves the viewport. (NO-COLLISION LAW.)
+  function positionBubble() {
+    try {
+      const r = btn.getBoundingClientRect();
+      if (!r.width || !r.height) return;          // orb not painted yet
+      const GAP = 12;
+      const EDGE = 8;
+      const vw = window.innerWidth, vh = window.innerHeight;
+      const room = r.left - GAP - EDGE;           // usable space to the orb's left
+
+      bubble.style.setProperty('top', 'auto', 'important');
+      bubble.style.setProperty('left', 'auto', 'important');
+
+      if (room >= 160) {
+        bubble.style.setProperty('right', Math.round(vw - r.left + GAP) + 'px', 'important');
+        bubble.style.setProperty('bottom', Math.round(Math.max(EDGE, vh - r.bottom)) + 'px', 'important');
+        bubble.style.setProperty('max-width', Math.round(Math.min(280, room)) + 'px', 'important');
+      } else {
+        bubble.style.setProperty('right', Math.round(Math.max(EDGE, vw - r.right)) + 'px', 'important');
+        bubble.style.setProperty('bottom', Math.round(vh - r.top + GAP) + 'px', 'important');
+        bubble.style.setProperty('max-width', 'calc(100vw - ' + (EDGE * 2) + 'px)', 'important');
+      }
+    } catch (_) {}
+  }
+
   function flashBubble(label, text, ms = 3200) {
     const lbl = bubble.querySelector('.hv-label');
     const txt = bubble.querySelector('.hv-text');
     if (lbl) lbl.textContent = label;
     if (txt) txt.textContent = text;
+    positionBubble();
     bubble.classList.add('show');
     if (bubbleTimer) clearTimeout(bubbleTimer);
     bubbleTimer = setTimeout(() => bubble.classList.remove('show'), ms);

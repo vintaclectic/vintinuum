@@ -4037,19 +4037,52 @@ init();
    we only set defaults where no saved position exists. */
 (function () {
   var BUILD = 'v20260710-w5';
-  var NAV = 56; // .bottom-nav height
+  // NO-COLLISION LAW (2026-08-02): this used to hand-compute two fixed "levels"
+  // (NAV+12 and NAV+12+56+10) and stamp them with !important on the 1200ms/
+  // 4000ms re-dock timer below. Two problems, both real: that 56 was the voice
+  // button's ASSUMED height, so a taller widget overlapped its neighbour; and
+  // it re-applied those coordinates on a timer, overwriting the slots VintDock
+  // had already measured — two positioners fighting over the same elements is
+  // the very bug this file was trying to prevent.
+  //
+  // Now phone.html only declares intent (which column, what order) and the dock
+  // measures the rest.
+  //
+  // The old `NAV = 56` constant is gone, but the CLEARANCE it bought is not —
+  // it is now measured instead of guessed. corner_dock's automatic bottom-bar
+  // detection (edgeReserved) only sees `body > *` elements with
+  // position:fixed, and phone's .bottom-nav is neither: it lives inside
+  // div.app and is position:static, pinned by flex layout. So auto-detection
+  // misses it, and dropping the constant without this left every float sitting
+  // 40-44px INSIDE the nav bar. We hand the dock the real element as an
+  // obstacle for both bottom corners; avoidExtent() measures its live rect, so
+  // the clearance follows the bar's actual height (and its safe-area padding)
+  // instead of a number that goes stale.
+  function guardNav() {
+    var nav = document.querySelector('.bottom-nav');
+    if (!nav || !window.VintDock || !window.VintDock.avoid) return false;
+    window.VintDock.avoid(nav, { corner: 'bl' });
+    window.VintDock.avoid(nav, { corner: 'br' });
+    return true;
+  }
   function slot(el, side, level) {
     if (!el) return;
-    var key = 'vint:btnpos:' + (el.id || '');
-    try { if (el.id && localStorage.getItem(key)) return; } catch (_) {}
-    var bottoms = [NAV + 12, NAV + 12 + 56 + 10]; // level 0, level 1
-    el.style.setProperty('position', 'fixed', 'important');
-    el.style.setProperty('bottom', 'calc(' + bottoms[level] + 'px + env(safe-area-inset-bottom, 0px))', 'important');
-    el.style.setProperty('top', 'auto', 'important');
-    if (side === 'left') { el.style.setProperty('left', '16px', 'important'); el.style.setProperty('right', 'auto', 'important'); }
-    else { el.style.setProperty('right', '16px', 'important'); el.style.setProperty('left', 'auto', 'important'); }
+    // level 0 sits closest to the corner. Map onto the dock's documented
+    // priority lanes: bl 10 = #vintVoice, 20 = status pill; br 10 = the orb,
+    // 40 = the account pill/dot (outermost).
+    var priority = side === 'left' ? (level === 0 ? 10 : 20)
+                                   : (level === 0 ? 10 : 40);
+    var opts = { corner: side === 'left' ? 'bl' : 'br', priority: priority, id: el.id || undefined };
+    if (side === 'left') opts.keepSide = true;
+    try {
+      if (window.VintDock) window.VintDock.register(el, opts);
+      else setTimeout(function () { try { window.VintDock && window.VintDock.register(el, opts); } catch (_) {} }, 400);
+    } catch (_) {}
   }
   function dock() {
+    // Declare the nav bar BEFORE handing out slots, so the first layout already
+    // starts above it (otherwise the floats paint inside the bar for a frame).
+    if (!guardNav()) setTimeout(guardNav, 400);
     slot(document.getElementById('vintVoice'), 'left', 0);
     slot(document.querySelector('.vint-status-pill'), 'left', 1);
     slot(document.getElementById('hey-vinta-btn'), 'right', 0);

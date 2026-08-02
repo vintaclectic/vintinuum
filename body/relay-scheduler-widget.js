@@ -84,15 +84,16 @@
     const css = `
       #relay-scheduler-pill {
         position: fixed;
-        /* Relocated 2026-05-30: out of the top-right lane (was overlapping the
-           status pill and the right sidebar tabs). Stacks in the bottom-LEFT
-           column ABOVE the status pill, with a clear gap so the two never
-           touch. Shares --vint-fab-left with the status pill so both clear the
-           desktop left sidebar. z-index 998 → 100 (Shell.Z.shell). */
-        left: var(--vint-fab-left, 14px);
-        bottom: calc(120px + env(safe-area-inset-bottom, 0px));
-        right: auto;
-        top: auto;
+        /* NO PLACEMENT HERE — ON PURPOSE (2026-08-02).
+           This pill used to hardcode a bottom of 120px + safe-area, a
+           hand-count against the status pill's then-current height. On
+           brain.html it shares the bottom-LEFT column with the diag pill (5),
+           the voice button (10) and the status pill (20): four widgets, one
+           guessed number, guaranteed to collide the moment any of them changed
+           size. VintDock.register() below now measures the column and assigns
+           the slot (priority 25), so left/bottom are deliberately absent —
+           re-adding them would fight the allocator and re-break the corner.
+           Layout is the dock's job; this rule only handles appearance. */
         transform: none;
         z-index: 100;
         display: inline-flex; align-items: center; gap: 8px;
@@ -341,6 +342,22 @@
       openModal();
     });
     document.body.appendChild(pill);
+    // NO-COLLISION LAW: take a measured slot in the bottom-left column instead
+    // of trusting the CSS fallback above. Priority 25 — free, and above the
+    // status pill (20) so this pill keeps its authored "sits over the status
+    // pill" order. VintDock is injected async, so fall back to a late retry the
+    // same way the other early-loading widgets do.
+    try {
+      if (window.VintDock) {
+        window.VintDock.register(pill, { corner: 'bl', priority: 25, keepSide: true, id: pill.id });
+      } else {
+        setTimeout(function () {
+          try {
+            window.VintDock && window.VintDock.register(pill, { corner: 'bl', priority: 25, keepSide: true, id: pill.id });
+          } catch (_) {}
+        }, 400);
+      }
+    } catch (_) {}
   }
 
   function buildModal() {
