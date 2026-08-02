@@ -310,6 +310,24 @@
       panel.style.left = 'auto';
     } catch (_) {}
   }
+
+  // The trigger can MOVE while the panel is open — a sibling widget mounts, a
+  // neighbour resizes, the viewport rotates, and VintDock reflows the column
+  // underneath it. Anchoring only at open() would leave the panel behind, sitting
+  // over whatever slid into its place. Re-anchor whenever the geometry can change.
+  try {
+    window.addEventListener('resize', function () {
+      if (panel && panel.classList.contains('show')) anchorPanel();
+    });
+    window.addEventListener('orientationchange', function () {
+      if (panel && panel.classList.contains('show')) anchorPanel();
+    });
+    if (window.ResizeObserver) {
+      new ResizeObserver(function () {
+        if (panel && panel.classList.contains('show')) anchorPanel();
+      }).observe(document.documentElement);
+    }
+  } catch (_) {}
   function close() {
     if (!panel) return;
     panel.classList.remove('show');
