@@ -75,7 +75,39 @@ function probe() {
     const cs = getComputedStyle(el);
     if (cs.display === 'none' || cs.visibility === 'hidden') return false;
     if (parseFloat(cs.opacity) === 0) return false;
-    if (cs.pointerEvents === 'none') return false;   // decorative/pass-through
+    // NOTE: pointer-events:none is NOT an exemption. The no-collision law is about
+    // what the user SEES, not only what they can tap — brain.js's consolidate toast
+    // was pointer-events:none and still rendered straight over the V orb for 3.2s.
+    // Only genuinely invisible things are skipped (handled by the opacity/display
+    // checks above), plus elements with no painted surface of their own: a bare
+    // transparent wrapper can legitimately span other widgets.
+    //
+    // "Own text" means DIRECT text nodes only. el.textContent includes every
+    // descendant's text, so a bare transparent LAYOUT WRAPPER looked painted
+    // purely because of the buttons inside it — that's how world.html's #dvRail
+    // (a pointer-events:none flex column whose .dv-launch children are the real
+    // controls) was reported as a 133x270 box colliding with the HUD and the
+    // guest sheet. The wrapper paints nothing; its children are measured on
+    // their own and are the things that must not overlap.
+    const ownText = Array.from(el.childNodes)
+      .filter(n => n.nodeType === 3).map(n => n.nodeValue).join('').trim();
+    if (cs.backgroundColor === 'rgba(0, 0, 0, 0)' &&
+        cs.backgroundImage === 'none' &&
+        cs.borderStyle === 'none' &&
+        cs.boxShadow === 'none' &&
+        !ownText) return false;
+
+    // Decorative PARTICLE effects (cursor trails, sparks, confetti) are spawned in
+    // swarms that overlap each other by design and carry no content or control.
+    // They are not "elements that must have their own space" in the sense of the
+    // law — the law is about UI the user reads or touches. Identified structurally:
+    // tiny, non-interactive, childless, and pass-through.
+    const r = el.getBoundingClientRect();
+    if (r.width <= 12 && r.height <= 12 &&
+        cs.pointerEvents === 'none' &&
+        !el.children.length &&
+        !el.textContent.trim()) return false;
+
     return true;
   }
 
@@ -203,13 +235,20 @@ const TOKEN_KEYS = ['vint_token', 'soul_auth_token', 'vint_access_token', 'acces
             .map(el => { const r = el.getBoundingClientRect();
               return `${el.id}:${Math.round(r.x)},${Math.round(r.y)},${Math.round(r.width)},${Math.round(r.height)}`; })
             .join('|');
+          // A FLOOR is as important as the ceiling: world.html's sheet is revealed
+          // at t=1400ms, so a page that looks quiet at 600ms is not actually
+          // settled — exiting early there would measure the pre-reveal layout and
+          // miss the collision entirely. Never conclude before 1600ms, then exit
+          // as soon as it's stable (most pages settle immediately after), with a
+          // ~4s ceiling for surfaces that animate forever and never go quiet.
+          const t0 = Date.now();
           let prev = '', stable = 0;
-          // ~4.5s ceiling: comfortably past the 1.4s reveal + 0.8s animation.
-          for (let i = 0; i < 30 && stable < 3; i++) {
+          for (let i = 0; i < 26; i++) {
             await new Promise(r => setTimeout(r, 150));
             const cur = snap();
             stable = (cur === prev) ? stable + 1 : 0;
             prev = cur;
+            if (stable >= 2 && Date.now() - t0 >= 1600) break;
           }
         }).catch(() => {});
         try { await page.evaluate(() => window.VintDock && window.VintDock.reflow()); } catch (_) {}
