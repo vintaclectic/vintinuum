@@ -183,6 +183,15 @@
         '<button class="vwc-yes"  type="button" data-choice="on"   data-draggable="false">let her listen</button>' +
       '</div>';
     document.body.appendChild(el);
+    // NO-COLLISION LAW (Vinta 2026-08-02): a CENTERED bottom banner at a fixed
+    // bottom:18 sits in the same band as the bottom corner stacks (voice button,
+    // mic, status pill on the left; orb + account pill on the right) and can be
+    // up to 440px wide, so on a phone it spans both. 'bc' lifts it above both
+    // columns by their real measured height while keeping its own centering.
+    if (!el.id) el.id = 'vint-wake-consent';
+    try {
+      if (window.VintDock) window.VintDock.register(el, { corner: 'bc', priority: 20, id: el.id });
+    } catch (_) {}
     bannerEl = el;
 
     el.addEventListener('click', function (ev) {

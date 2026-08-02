@@ -6993,6 +6993,13 @@ window.MIC = (() => {
           _fb.style.cssText = 'position:fixed;top:12px;left:50%;transform:translateX(-50%);z-index:99999;background:rgba(20,4,4,0.85);border:1px solid rgba(239,83,80,0.5);border-radius:12px;padding:8px 20px;font-family:monospace;font-size:11px;color:#ef9a9a;cursor:pointer;display:flex;align-items:center;gap:12px;white-space:nowrap;';
           _fb.innerHTML = '🎤 MIC BLOCKED &nbsp;<b style="color:#fff">Click 🔒 lock icon → Microphone → Allow → Reload page</b>&nbsp;<span style="opacity:.4;cursor:pointer" id="_micFixClose">×</span>';
           document.body.appendChild(_fb);
+          // NO-COLLISION LAW (Vinta 2026-08-02): a CENTERED top banner at a fixed
+          // top:12 can land on the top corner stacks (the MIND/BODY pills, the ◉
+          // orb) on narrow screens. The 'tc' lane keeps its own centering but
+          // lifts it clear of BOTH flanking columns by their measured height.
+          try {
+            if (window.VintDock) window.VintDock.register(_fb, { corner: 'tc', priority: 10, id: '_micFixBtn' });
+          } catch (_) {}
           document.getElementById('_micFixClose').addEventListener('click', function(e){ e.stopPropagation(); _fb.remove(); });
         }
         // Fall through to Web Speech so voice still works
@@ -43069,6 +43076,14 @@ function _vtShowToast(msg, color) {
   ].join(';');
   t.textContent = msg;
   document.body.appendChild(t);
+  // NO-COLLISION LAW (Vinta 2026-08-02): bottom:24/right:24 is the V orb's exact
+  // slot — this toast rendered straight over it. It's pointer-events:none so it
+  // never stole a tap, but it still covered the control for 3.2s. Docking it
+  // means it stacks above whatever is in that column and releases the slot when
+  // it removes itself.
+  try {
+    if (window.VintDock) window.VintDock.register(t, { corner: 'br', priority: 60, id: 'vt-toast-consolidate' });
+  } catch (_) {}
   setTimeout(() => { t.style.opacity = '0'; setTimeout(() => t.remove(), 450); }, 3200);
 }
 
@@ -47261,6 +47276,13 @@ const VOICE_OUTPUT = (() => {
       'color:rgba(255,255,255,0.4);font-size:18px;cursor:pointer;display:flex;align-items:center;' +
       'justify-content:center;transition:all 0.3s;user-select:none;';
     document.body.appendChild(btn);
+    // NO-COLLISION LAW (Vinta 2026-08-02): bottom:80/right:16 was hand-picked to
+    // clear a 56px orb at bottom:20 — stale arithmetic the moment anything else
+    // joined that column. Priority 25 puts it between the orb (10) and the
+    // carry-pill (30), positioned by measurement.
+    try {
+      if (window.VintDock) window.VintDock.register(btn, { corner: 'br', priority: 25, id: 'voiceToggle' });
+    } catch (_) {}
   }
   const _applyVoiceBtnState = (on) => {
     btn.style.color = on ? 'rgba(100,200,255,0.9)' : 'rgba(255,255,255,0.4)';
@@ -48596,6 +48618,13 @@ const SOUL_AUTH = (() => {
     el.addEventListener('mouseleave', () => { _orbHover = false; });
     el.addEventListener('click', _showAuthDialog);
     document.body.appendChild(el);
+    // NO-COLLISION LAW (Vinta 2026-08-02): bottom:18/left:18 is the bottom-LEFT
+    // corner, already occupied by #vintVoice (10), #micBtn (15) and the status
+    // pill (20). Priority 25 stacks this 48px orb above them by measurement
+    // instead of landing on whichever of them happens to be on the page.
+    try {
+      if (window.VintDock) window.VintDock.register(el, { corner: 'bl', priority: 25, id: 'soul-bond-indicator' });
+    } catch (_) {}
     _indicator = el;
 
     // Start orb render loop

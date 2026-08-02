@@ -309,11 +309,16 @@
 
   // Declare a panel as an obstacle the docked buttons must stack clear of.
   // (defined below `register`; see VintDock.claim for the load-order-safe entry)
+  // A wide sheet (world.html's #invite: centered, up to 500px) reaches into BOTH
+  // bottom corners on a phone, so it must be declarable as an obstacle for each.
+  // Dedupe is therefore per (element, corner) — keying on the element alone made
+  // the second avoid() silently delete the first, leaving one corner unprotected.
   function avoid(el, opts) {
     if (!el) return;
     opts = opts || {};
-    avoids = avoids.filter(function (a) { return a.el !== el; });
-    avoids.push({ el: el, corner: opts.corner || 'br' });
+    var corner = opts.corner || 'br';
+    avoids = avoids.filter(function (a) { return !(a.el === el && a.corner === corner); });
+    avoids.push({ el: el, corner: corner });
     try {
       if (root.ResizeObserver) {
         if (!register._ro) register._ro = new ResizeObserver(function () { reflow(); });
@@ -337,6 +342,7 @@
     EDGE: EDGE,
     GUTTER: GUTTER,
     _slots: function () { return slots.slice(); },
+    _avoids: function () { return avoids.slice(); },
   };
 
   // Drain anything queued before this file landed.
