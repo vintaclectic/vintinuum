@@ -398,6 +398,13 @@
       // actually intersect, the sheet still (correctly) wins. layoutRail step 2b
       // is the other half, shortening the rail so that intersection is empty.
       'body.dv-sheeting #dvRail{z-index:1570;}',
+      // On short viewports the panel + five launchers + an open sheet genuinely
+      // do not all fit (measured 375×812: 302px of band for 326px of launchers,
+      // which clipped ♔ half outside its own scroll box). Something must yield,
+      // and it is the passive readout, not the only way to change surfaces.
+      // visibility, so no module's layout math shifts — it simply stops painting
+      // while a sheet is up, and comes straight back when the sheet closes.
+      'body.dv-panel-yield #vintWorldHud{visibility:hidden;}',
 
       // toast (shared, above sheets)
       '#dvToast{position:fixed;left:50%;bottom:calc(88px + env(safe-area-inset-bottom,0px));',
@@ -1555,6 +1562,36 @@
     //    RECLAIM space by collapsing the panel gutter, and if it's still short,
     //    we let the rail scroll internally. It never spills onto a neighbour and
     //    it is never unreachable: those are the only two outcomes allowed.
+    //
+    //    An open sheet makes this bite where it never did before: clearing the
+    //    sheet costs the rail ~90px, and at 375×812 that left 302px of band for
+    //    326px of launchers. The rail is column-reverse + overflow-y:auto, so the
+    //    surplus clips off the TOP — ♔ landed half outside its own scroll box and
+    //    a tap at its centre hit the scrim behind it. A launcher you must first
+    //    discover is scrollable is a launcher that isn't there.
+    //
+    //    So something yields, and it is not the rail (a clipped launcher) nor the
+    //    sheet (the collision we came to kill): it is #vintWorldHud, passive
+    //    readout, while the rail is the only way between surfaces. Via a body
+    //    class, never an inline style — the DirHaven door hides that same panel
+    //    and remembers its previous inline visibility, so writing the property
+    //    from here would corrupt what the door saved. On tall viewports `want`
+    //    is ≤ 0 and nothing moves at all.
+    var needH = _rail.scrollHeight || 0;
+    var yieldPanel = false;
+    if (botFloor && needH > 0 && panel) {
+      var want = needH - (vh - top - bot);
+      if (want > 0) {
+        var take = Math.min(want, Math.max(0, top - 8));
+        if (take > 0) {
+          top -= take;
+          var pr2 = panel.getBoundingClientRect();
+          if (pr2.height > 0 && top < pr2.bottom) yieldPanel = true;
+        }
+      }
+    }
+    try { document.body.classList.toggle('dv-panel-yield', yieldPanel); } catch (_) {}
+
     var avail = vh - top - bot;
     if (avail < 46) {
       var need = 46 - avail;
