@@ -301,6 +301,13 @@
       'pointer-events:none'
     ].join(';');
     document.body.appendChild(line);
+    // NO-COLLISION LAW (Vinta 2026-08-02): a centered top toast at a fixed top:20
+    // can sit on the top corner stacks (MIND/BODY pills, the ◉ orb) on narrow
+    // screens. 'tc' keeps its own left:0/right:0/margin:auto centering and only
+    // lifts it clear of both flanking columns.
+    try {
+      if (window.VintDock) window.VintDock.register(line, { corner: 'tc', priority: 20, id: 'bd-welcome-back' });
+    } catch (_) {}
     requestAnimationFrame(function () { line.style.opacity = '1'; });
     setTimeout(function () { line.style.opacity = '0'; }, 2400);
     setTimeout(function () { line.remove(); }, 3200);

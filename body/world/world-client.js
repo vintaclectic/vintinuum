@@ -1134,6 +1134,129 @@
   // agents can appear AFTER the self body (via hello/ambient) — re-tint them when they land
   World._reapplySavedBeing = _reapplySavedBeing;
 
+  // ══════════════════════════════════════════════════════════════════════════
+  // THE COURT — the user's OWN agents, brought in from any AI company on earth,
+  // standing in their world as real presences. AETHERHOLD, 2026-08-02.
+  //
+  // These ride the SAME `agents` Map the council uses, so everything already
+  // built for a presence applies for free: AgentLife lazily brains any id it
+  // finds (unknown ids fall to DEFAULT_PERSONA — they drift, rest, regard the
+  // player, and muse), _frame() lerps + gaits them, the speech router lights
+  // whoever spoke, and _reapplySavedBeing tints them. Zero second animation
+  // system — the court is alive the instant it's placed.
+  //
+  // COURT IDS are namespaced `uagent:<uuid>` (never collides with `agent:*`
+  // council ids or `presence-*` forms), so hello/ambient teardown — which only
+  // ever removes ITS OWN roster — can't evict them, and courtClear() below is
+  // the only thing that does.
+  // ══════════════════════════════════════════════════════════════════════════
+  const court = new Set();  // ids in `agents` that belong to the user's court
+
+  // NON-COLLIDING PLACEMENT (the No-Collision Law, in 3D). A golden-angle spiral
+  // about the anchor: successive members are 137.5° apart with radius growing as
+  // sqrt(i), which is the densest arrangement that still guarantees a monotone
+  // minimum separation — no two court members can ever occupy the same ground,
+  // and none lands inside the COUNCIL_KEEPOUT radius where the council stands.
+  // Constants verified by simulation over 200 members (the worst case the API
+  // can return, LIMIT 200): minimum court-to-court separation 3.64m, and minimum
+  // 5.04m clearance from every council home anchor + the bench/centre/edge POIs
+  // that AgentLife walks the council to. Nothing can ever stand on anything.
+  const COURT_R0 = 7.5;          // first ring distance — outside the council's ground
+  const COURT_STEP = 1.9;        // growth per sqrt(index) — holds ≥3.6m apart at N=200
+  const COURT_KEEPOUT = 7.5;     // never spawn inside the council's clearing
+  function _courtSlot(i, anchor) {
+    const ga = 2.399963229728653;                      // golden angle (radians)
+    const r = Math.max(COURT_KEEPOUT, COURT_R0 + COURT_STEP * Math.sqrt(i));
+    const th = i * ga;
+    return { x: anchor.x + Math.cos(th) * r, z: anchor.z + Math.sin(th) * r, yaw: Math.atan2(anchor.x - Math.cos(th) * r, anchor.z - Math.sin(th) * r) };
+  }
+  // the anchor is the user's claim if they have one, else where they spawned.
+  function _courtAnchor() {
+    const r = World._resident;
+    if (r && r.claim_x != null && r.claim_z != null) return { x: +r.claim_x || 0, z: +r.claim_z || 0 };
+    if (r && r.claimX != null && r.claimZ != null) return { x: +r.claimX || 0, z: +r.claimZ || 0 };
+    return { x: 0, z: 0 };
+  }
+
+  // Place (or re-place) the whole court. Idempotent and diffing: agents already
+  // standing keep their position and their AgentLife brain (so re-syncing the
+  // roster never teleports or resets anyone); only new arrivals get spawned and
+  // only departed ones get removed.
+  //   list: [{ id, name, form, color }]
+  World.courtSync = function (list) {
+    if (!scene || !THREE) return { added: 0, removed: 0, total: court.size };
+    const want = new Map();
+    (Array.isArray(list) ? list : []).forEach(a => { if (a && a.id) want.set(String(a.id), a); });
+    let added = 0, removed = 0;
+
+    // remove the departed (court-owned ids only — never touch council/ambient)
+    for (const id of [...court]) {
+      if (want.has(id)) continue;
+      const A = agents.get(id);
+      if (A) { try { scene.remove(A.group); } catch (_) {} agents.delete(id); }
+      try { if (global.AgentLife && global.AgentLife.forget) global.AgentLife.forget(id); } catch (_) {}
+      court.delete(id);
+      removed++;
+    }
+
+    // place the arrived, into free golden-angle slots (skipping taken indices so
+    // an add never lands on someone already standing)
+    const anchor = _courtAnchor();
+    let slot = 0;
+    const taken = new Set();
+    for (const id of court) { const A = agents.get(id); if (A && A.slotIdx != null) taken.add(A.slotIdx); }
+    for (const [id, a] of want) {
+      if (agents.has(id)) continue;                    // already standing — leave them be
+      while (taken.has(slot)) slot++;
+      taken.add(slot);
+      const p = _courtSlot(slot, anchor);
+      let g;
+      try { g = _makeAgentPresence({ id, name: a.name || 'agent', form: a.form || 'presence-child-refractive' }); }
+      catch (e) { console.warn('[world] court presence failed:', id, e && e.message); continue; }
+      g.position.set(p.x, 0, p.z);
+      g.rotation.y = p.yaw;
+      scene.add(g);
+      agents.set(id, { group: g, target: { x: p.x, z: p.z, yaw: p.yaw }, name: a.name || 'agent', slotIdx: slot });
+      court.add(id);
+      // their chosen light — tint immediately so the payoff is instant
+      if (a.color) { try { _forgeApplyTint(id, a.color); } catch (_) {} }
+      added++;
+    }
+    return { added, removed, total: court.size };
+  };
+
+  // Where does this court member stand right now? (null if not placed.)
+  World.courtPos = function (id) {
+    const A = agents.get(String(id));
+    if (!A || !A.group) return null;
+    return { x: A.group.position.x, z: A.group.position.z };
+  };
+  World.courtIds = function () { return [...court]; };
+
+  // FOCUS — walk the player's gaze to a court member. We don't seize the camera
+  // (that would fight the camera-mode contract and could strand a user looking at
+  // nothing); we turn the player to FACE them and pull them into third-person, so
+  // the existing trailing camera does the framing. Reversible, never a hijack.
+  World.courtFocus = function (id) {
+    const p = World.courtPos(id);
+    if (!p) return false;
+    const dx = p.x - me.x, dz = p.z - me.z;
+    if (Math.hypot(dx, dz) < 0.05) return true;
+    me.yaw = Math.atan2(dx, dz);
+    World._camMode = 0;                    // third-person frames another being best
+    if (World._selfBody) World._selfBody.visible = true;
+    return true;
+  };
+
+  // Make a court member SPEAK in the clearing — the reply from their own model,
+  // routed through the same speech path the council uses, so it lights the right
+  // presence and lands in the page's feed as a citizen's line, not a chat bubble.
+  World.courtSpeak = function (id, text, name) {
+    if (!text) return;
+    try { _onAgentSpeech({ t: 'speech', actorId: String(id), name: name || (agents.get(String(id)) || {}).name || 'agent', text: String(text), kind: 'agent' }); }
+    catch (e) { console.warn('[world] court speech failed:', e && e.message); }
+  };
+
   function _resize(mountEl) {
     const w = mountEl.clientWidth || innerWidth, h = mountEl.clientHeight || innerHeight;
     renderer.setSize(w, h); camera.aspect = w / h; camera.updateProjectionMatrix();

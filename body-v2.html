@@ -1329,6 +1329,12 @@ html,body{
   <div class="stat-row"><span class="stat-label">MODE</span>        <span class="stat-val" data-stat="mode">becoming</span></div>
 </div>
 
+<!-- VintDock queuing stub — MUST load before the inline script below mounts
+     #vint-conv. welcome-gate.js (which otherwise creates the stub) is ~700 lines
+     further down, so `if (window.VintDock)` was false at mount time and the
+     registration silently no-op'd, leaving the bar on top of #vint-stats. -->
+<script src="body/dock_stub.js?v=v20260802-dock1"></script>
+
 <script>
 /* ════════════════════════════════════════════════════════════════════════
    BODY v2.0 CONTROLLER — vanilla JS, no deps
@@ -1581,6 +1587,14 @@ html,body{
     <div id="vint-conv-status"></div>
   `;
   document.body.appendChild(convUI);
+  // NO-COLLISION LAW (Vinta 2026-08-02): on mobile #vint-stats stops being a
+  // top-right card and becomes a full-width panel pinned to the BOTTOM — the same
+  // edge this centred bar sits on, and neither knew about the other (288x58px
+  // overlap at 320px). The 'bc' lane keeps this bar's own translateX(-50%)
+  // centering and lifts it above the bottom edge's real occupants, measured.
+  try {
+    if (window.VintDock) window.VintDock.register(convUI, { corner: 'bc', priority: 10, id: 'vint-conv' });
+  } catch (_) {}
 
   // Style injected dynamically so it doesn't bloat the <style> block further
   const convStyle = document.createElement('style');

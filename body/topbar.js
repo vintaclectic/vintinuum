@@ -33,6 +33,22 @@
   function mount() {
     if ($('topShell')) return; // already mounted
 
+    // NO-COLLISION LAW (Vinta 2026-08-02): the guard above only knew about THIS
+    // module's own header, so a page that hand-rolls its own banner AND loads
+    // this script got two full topbars stacked on the same pixels — birth.html,
+    // pairs.html and vault.html all rendered `header.topbar` (48px) with
+    // #topShell (52px) straight on top of it. If the page already owns a fixed
+    // banner at the top edge, it wins and we stay out; the page's own bar is the
+    // one its layout and padding were written against.
+    try {
+      var own = document.querySelector('header.topbar, header[role="banner"]');
+      if (own) {
+        var cs = getComputedStyle(own);
+        var r = own.getBoundingClientRect();
+        if (cs.position === 'fixed' && r.width >= window.innerWidth * 0.9 && r.top <= 2) return;
+      }
+    } catch (_) {}
+
     const header = document.createElement('header');
     header.id = 'topShell';
     header.setAttribute('role', 'banner');

@@ -33,11 +33,12 @@ const puppeteer = require('/home/vinta/vintinuum-api/node_modules/puppeteer');
 const WIDTHS = (process.env.VERIFY_WIDTHS || '320,375,768,1280,1920')
   .split(',').map(s => parseInt(s.trim(), 10)).filter(Boolean);
 
-// Pages whose whole point is a full-bleed surface with intentional layering
-// (the media player is a deliberate edge-to-edge overlay stack — see the
-// DirRM doctrine in OPERATIONS.md). Excluded from the *overlap* assertion only;
-// they're still checked for the Begin-pill rule.
-const LAYERED_BY_DESIGN = new Set(['dirrm-player.html']);
+// Pages exempt from the overlap assertion (still checked for the Begin-pill
+// rule). Deliberately EMPTY: dirrm-player.html was exempted on the assumption
+// that an edge-to-edge media surface must layer, but it verifies clean, so the
+// exemption was hiding nothing and would only have masked a future regression.
+// Add a page here only with evidence that its layering is intentional.
+const LAYERED_BY_DESIGN = new Set([]);
 
 // ── a tiny static server so pages fetch relative assets exactly as in prod ──
 const MIME = {
@@ -74,7 +75,52 @@ function probe() {
     const cs = getComputedStyle(el);
     if (cs.display === 'none' || cs.visibility === 'hidden') return false;
     if (parseFloat(cs.opacity) === 0) return false;
-    if (cs.pointerEvents === 'none') return false;   // decorative/pass-through
+    // NOTE: pointer-events:none is NOT an exemption. The no-collision law is about
+    // what the user SEES, not only what they can tap — brain.js's consolidate toast
+    // was pointer-events:none and still rendered straight over the V orb for 3.2s.
+    // Only genuinely invisible things are skipped (handled by the opacity/display
+    // checks above), plus elements with no painted surface of their own: a bare
+    // transparent wrapper can legitimately span other widgets.
+    //
+    // "Own text" means DIRECT text nodes only. el.textContent includes every
+    // descendant's text, so a bare transparent LAYOUT WRAPPER looked painted
+    // purely because of the buttons inside it — that's how world.html's #dvRail
+    // (a pointer-events:none flex column whose .dv-launch children are the real
+    // controls) was reported as a 133x270 box colliding with the HUD and the
+    // guest sheet. The wrapper paints nothing; its children are measured on
+    // their own and are the things that must not overlap.
+    const ownText = Array.from(el.childNodes)
+      .filter(n => n.nodeType === 3).map(n => n.nodeValue).join('').trim();
+    if (cs.backgroundColor === 'rgba(0, 0, 0, 0)' &&
+        cs.backgroundImage === 'none' &&
+        cs.borderStyle === 'none' &&
+        cs.boxShadow === 'none' &&
+        !ownText) return false;
+
+    // Decorative PARTICLE effects (cursor trails, sparks, confetti) are spawned in
+    // swarms that overlap each other by design and carry no content or control.
+    // They are not "elements that must have their own space" in the sense of the
+    // law — the law is about UI the user reads or touches. Identified structurally:
+    // tiny, non-interactive, childless, and pass-through.
+    const r = el.getBoundingClientRect();
+    if (r.width <= 12 && r.height <= 12 &&
+        cs.pointerEvents === 'none' &&
+        !el.children.length &&
+        !el.textContent.trim()) return false;
+
+    // AMBIENT BACKDROP layers (consciousness_philosophy.html's .nebula blobs:
+    // 430-604px circles at opacity 0.07 under blur(80px)) are wallpaper. They
+    // drift across each other and under the whole UI by design — that IS the
+    // effect. They are not elements competing for space, so measuring them as
+    // such reports the backdrop colliding with every button on the page.
+    // Identified structurally, never by class name: heavily blurred OR nearly
+    // transparent, non-interactive, textless, and painted behind the content.
+    const blur = /blur\(\s*([\d.]+)px/.exec(cs.filter);
+    const faint = parseFloat(cs.opacity) <= 0.15;
+    const behind = (parseInt(cs.zIndex, 10) || 0) <= 0;
+    if (cs.pointerEvents === 'none' && behind && !el.textContent.trim() &&
+        ((blur && parseFloat(blur[1]) >= 20) || faint)) return false;
+
     return true;
   }
 
@@ -148,17 +194,42 @@ const TOKEN_KEYS = ['vint_token', 'soul_auth_token', 'vint_access_token', 'acces
 
   const srv = await serve();
   const base = `http://127.0.0.1:${srv.address().port}`;
-  const browser = await puppeteer.launch({
+  let browser = await puppeteer.launch({
     headless: 'new',
     args: ['--no-sandbox', '--disable-dev-shm-usage'],
   });
 
   const failures = [];
   let checks = 0;
+  const skipped = [];
+
+  // Chrome dies on this box when a heavy 3D page lands while other council seats
+  // are also running sweeps (load average 20+). Left unhandled, the whole run
+  // aborts on the crash and every page AFTER it is silently unverified — a sweep
+  // that reports nothing looks exactly like a sweep that found nothing. Relaunch
+  // and carry on, and if a page can't be checked at all, SAY so at the end.
+  async function newPageSafe() {
+    try {
+      return await browser.newPage();
+    } catch (_) {
+      try { await browser.close(); } catch (_) {}
+      browser = await puppeteer.launch({
+        headless: 'new',
+        args: ['--no-sandbox', '--disable-dev-shm-usage'],
+      });
+      return await browser.newPage();
+    }
+  }
 
   for (const file of pages) {
     for (const signedIn of [false, true]) {
-      const page = await browser.newPage();
+      let page;
+      try {
+        page = await newPageSafe();
+      } catch (e) {
+        skipped.push(`${file} (${signedIn ? 'signed-in' : 'guest'}): ${e.message}`);
+        continue;
+      }
       page.on('dialog', d => d.dismiss().catch(() => {}));
       // Pages call the live brain; we're offline-by-design here. Fail fast on
       // API calls so layout settles instead of hanging on network timeouts.
@@ -188,7 +259,42 @@ const TOKEN_KEYS = ['vint_token', 'soul_auth_token', 'vint_access_token', 'acces
           await page.goto(`${base}/${file}`, { waitUntil: 'domcontentloaded', timeout: 20000 });
         } catch (_) { continue; }
         // Let async widgets mount, the dock drain its queue, and rAF reflow land.
-        await new Promise(r => setTimeout(r, 1200));
+        //
+        // A FLAT wait is a trap: world.html raises its guest sheet at t=1400ms
+        // with a 0.8s entrance animation, so a 1200ms settle measured the sheet
+        // mid-flight and reported a collision the live page never actually shows
+        // (and would equally MISS one that only appears after the delay). Wait
+        // for the layout to go quiet instead of for the clock: poll every fixed
+        // rect until two consecutive samples match, so whenever the last delayed
+        // panel lands and the dock re-flows, we measure the settled truth.
+        await page.evaluate(async () => {
+          const snap = () => Array.from(document.querySelectorAll('body *'))
+            .filter(el => getComputedStyle(el).position === 'fixed')
+            .map(el => { const r = el.getBoundingClientRect();
+              return `${el.id}:${Math.round(r.x)},${Math.round(r.y)},${Math.round(r.width)},${Math.round(r.height)}`; })
+            .join('|');
+          // A FLOOR is as important as the ceiling: world.html's sheet is revealed
+          // at t=1400ms, so a page that looks quiet at 600ms is not actually
+          // settled — exiting early there would measure the pre-reveal layout and
+          // miss the collision entirely. Never conclude before 1600ms, then exit
+          // as soon as it's stable (most pages settle immediately after), with a
+          // ~4s ceiling for surfaces that animate forever and never go quiet.
+          const t0 = Date.now();
+          let prev = '', stable = 0;
+          for (let i = 0; i < 26; i++) {
+            await new Promise(r => setTimeout(r, 150));
+            const cur = snap();
+            stable = (cur === prev) ? stable + 1 : 0;
+            prev = cur;
+            // The floor must outlast the SLOWEST deliberate mount, or the sweep is
+            // a coin flip: brain.js starts CONSCIOUSNESS_BRAIN at setTimeout 3000,
+            // so a 1600ms floor measured the page before that button existed —
+            // #consciousness-brain-btn passed and failed on alternating runs for
+            // no code reason. 3400ms clears it with margin; the stability check
+            // still exits early on quiet pages, so only slow pages pay the cost.
+            if (stable >= 2 && Date.now() - t0 >= 3400) break;
+          }
+        }).catch(() => {});
         try { await page.evaluate(() => window.VintDock && window.VintDock.reflow()); } catch (_) {}
         await new Promise(r => setTimeout(r, 300));
 
@@ -215,10 +321,21 @@ const TOKEN_KEYS = ['vint_token', 'soul_auth_token', 'vint_access_token', 'acces
   srv.close();
 
   console.log('\n');
+
+  // A skipped page is UNKNOWN, not clean. Report it loudly and fail the run, or a
+  // browser crash quietly converts "never checked" into a green tick.
+  if (skipped.length) {
+    console.log(`⚠ ${skipped.length} render(s) could NOT be checked (browser crash / relaunch failed):`);
+    skipped.forEach(s => console.log('    ' + s));
+    console.log('  Re-run those pages before trusting this result.\n');
+  }
+
   if (!failures.length) {
-    console.log(`✓ collision sweep clean — ${pages.length} pages × ${WIDTHS.length} widths × 2 auth states (${checks} renders)`);
+    const verdict = skipped.length ? '⚠ no collisions found, but coverage is INCOMPLETE'
+                                   : '✓ collision sweep clean';
+    console.log(`${verdict} — ${pages.length} pages × ${WIDTHS.length} widths × 2 auth states (${checks} renders)`);
     console.log(`  widths: ${WIDTHS.join(', ')}`);
-    process.exit(0);
+    process.exit(skipped.length ? 2 : 0);
   }
 
   console.log(`✗ ${failures.length} collision failure(s):\n`);

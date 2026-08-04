@@ -1161,6 +1161,11 @@ input[type="range"]::-moz-range-thumb {
 }
 </style>
     <!-- API base bootstrap — auto-attaches every visitor to api.vintaclectic.com -->
+    <!-- VintDock queuing stub — MUST precede any script that registers a widget.
+         showToast() calls VintDock.register at line ~1690 but welcome-gate.js
+         (which otherwise creates the stub) is at ~3947, so the guard was false and
+         the toast silently kept its hardcoded bottom:80px. -->
+    <script src="body/dock_stub.js?v=v20260802-dock1"></script>
     <script src="body/api_base.js?v=v20260429-council"></script>
     <script defer src="body/voice_say.js?v=v20260626-unlock"></script>
     <script defer src="body/she_speaks.js?v=v20260614-speak"></script>
@@ -1680,7 +1685,19 @@ function authHeaders() {
 function showToast(msg, duration = 2500) {
   toast.textContent = msg;
   toast.classList.add('visible');
-  setTimeout(() => toast.classList.remove('visible'), duration);
+  // NO-COLLISION LAW (Vinta 2026-08-02): the CSS pins this to a hardcoded
+  // bottom:80px, which at 320px landed straight on the docked #vint-status-pill.
+  // The 'bc' lane keeps its own left:50%/translateX(-50%) centering and lifts it
+  // above BOTH bottom corner stacks by their real measured height. Registering
+  // here (not at load) is deliberate: the dock skips opacity:0 nodes, so the slot
+  // is only taken while the toast is actually on screen.
+  try {
+    if (window.VintDock) window.VintDock.register(toast, { corner: 'bc', priority: 10, id: 'toast' });
+  } catch (_) {}
+  setTimeout(() => {
+    toast.classList.remove('visible');
+    try { window.VintDock && window.VintDock.release(toast); } catch (_) {}
+  }, duration);
 }
 
 function clamp(v, min, max) { return Math.max(min, Math.min(max, v)); }

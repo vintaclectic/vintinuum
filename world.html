@@ -13,7 +13,81 @@
   #stage canvas { display: block; width: 100% !important; height: 100% !important; }
 
   /* status / waking */
-  #status { position: fixed; left: 50%; top: 50%; transform: translate(-50%,-50%); z-index: 5; font-size: 20px; color: rgba(245,235,220,0.7); opacity: 0; transition: opacity .6s; pointer-events: none; }
+  /* NO-COLLISION LAW: #status is viewport-CENTERED with no width limit, so a long
+     message ("the clearing is drifting just out of reach — try again in a moment.")
+     grew sideways until it reached the docked account pill at 320/375px. Two
+     constraints, not one: cap the WIDTH so it stays in the middle column clear of
+     both corner stacks, and cap the HEIGHT so the resulting wrap can't grow into
+     the HUD above or the guest sheet below. Deriving the width from the dock's
+     reach was tried and is wrong here — it squeezed the box to a 70px ribbon that
+     was 264px TALL, trading a horizontal collision for a vertical one. A centred
+     message wants a readable measure, so it gets one, and the band it may occupy
+     is bounded explicitly. */
+  #status { position: fixed; z-index: 5; font-size: 20px; color: rgba(245,235,220,0.7); opacity: 0; transition: opacity .6s; pointer-events: none;
+    overflow: hidden; text-align: center; text-wrap: balance;
+    /* centre of the column that starts where the rail ends (see --status-rail) */
+    left: calc(var(--status-rail) + (100vw - var(--status-rail)) / 2);
+    /* THE FREE BAND, measured on both axes.
+
+       VERTICAL — the ceiling is --dv-railtop, not a hardcoded 270. That literal
+       was the live bottom of #vintWorldHud on a TALL viewport, but the panel is
+       content-driven: at 320px signed-in it measures 64->270, so a message
+       centred in a band that starts at 270 put its own top edge at 266, 4px
+       inside the HUD. The panel's real bottom (+16px gutter) is already measured
+       and republished by dirverse-hud's layoutRail() on resize, orientation
+       change and every world:state -- exactly when the panel can grow. 270px
+       remains the pre-mount fallback so the message is never mispositioned
+       before the HUD exists. The floor is --vint-dock-height-bottom (NOT
+       --vint-dock-reach-bottom, which is horizontal intrusion and much larger:
+       a 97px pill reaches 113px inward while standing only 60px tall).
+
+       HORIZONTAL — the box is centred but must clear BOTH side stacks. The left
+       rail (#dvRail) is 133px wide at left:12 and shares this vertical band, so
+       a 320px-wide centred box at 320-375px viewports reached straight across
+       it. Deriving the width from the dock's reach was tried and is wrong -- it
+       squeezed the box to a 70px ribbon 264px tall, trading a horizontal
+       collision for a vertical one. Instead the box is bounded by the widest
+       centre column that leaves the rail (and its mirror on the right) alone,
+       with a readable floor: a centred message wants a real measure.
+
+       CENTRED, BUT CLAMPED. Centring is only safe while the band is taller than
+       the message; on a short window translateY(-50%) walks the box back UP
+       through the ceiling. The clamp must live in the ANCHOR, because
+       translateY(-50%) is the only way CSS centres a box of unknown height and
+       percentages in `top` resolve against the viewport, not the element. So:
+       anchor at the band's midpoint, never above ceiling + half the tallest the
+       box may be. max-height caps the box at the band, so half of it is the most
+       the transform can pull upward -- the anchor cannot land inside the HUD in
+       any content state. Roomy band -> dead centre, as authored; tight band ->
+       sits just under the ceiling and clips inside its own box. */
+    /* The reserved LEFT column: #dvRail is 133px at left:12, so 145 + a 12px
+       gutter. #hint is wider (max-width 228 at left:16 = 244) but is handled on
+       the VERTICAL axis instead — reserving 256px here would leave a 64px ribbon
+       at 320px, the same failure as the symmetric attempt. See --status-hint. */
+    --status-rail: 157px;
+    /* #hint (the W/A/S/D keys line) reaches x244, past the rail, and on a narrow
+       fine-pointer window it sits exactly where a centred message lands. It is
+       display:none on coarse pointers, so a real phone never pays this. Rather
+       than shrink the column to a ribbon, the message starts BELOW the hint on
+       the viewports where the two would otherwise share pixels: 100vw-244 is the
+       room left beside the hint, and below ~180px of it there is no honest way to
+       sit alongside, so the ceiling drops under the hint instead. */
+    --status-hint: clamp(0px, (180px - (100vw - 244px)) * 999, 335px);
+    --status-top: max(var(--dv-railtop, 270px), var(--status-hint));
+    --status-band: max(48px, calc(100dvh - var(--status-top) - var(--vint-dock-height-bottom, 90px) - 24px));
+    /* The rail is on the LEFT ONLY, so the message moves over rather than
+       shrinking symmetrically. Reserving the rail's width on BOTH sides to keep a
+       viewport-centred box was tried and is the 70px-ribbon failure again: at
+       320px the centre column is ~6px wide. Instead the box takes the whole
+       column to the RIGHT of the rail and centres itself in THAT, which keeps a
+       readable measure at every width and still touches nothing. */
+    width: min(320px, calc(100vw - var(--status-rail) - 16px));
+    max-height: min(30vh, var(--status-band));
+    top: max(
+      calc(var(--status-top) + min(30vh, var(--status-band)) / 2),
+      calc(var(--status-top) + var(--status-band) / 2)
+    );
+    transform: translate(-50%, -50%); }
   #status.show { opacity: 1; }
 
   /* speech feed — bottom-left, traces fade out (no scroll, no overflow) */
@@ -188,6 +262,13 @@
 <button id="editHeadBtn" data-draggable="true" title="Adjust how your face sits on your body"
   style="position:fixed;top:calc(14px + env(safe-area-inset-top,0px));right:calc(14px + env(safe-area-inset-right,0px));z-index:1500;min-height:44px;padding:0 16px;border-radius:22px;background:rgba(8,12,20,0.7);border:1px solid rgba(79,195,247,0.35);color:#9fdcff;font-size:13px;cursor:pointer;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);">◐ edit head</button>
 
+<!-- THE EARLY CLAIM WINDOW: the dock registry must exist before ANY widget asks
+     for a slot. world.html's inline script (below) runs long before
+     welcome-gate.js installs its own stub, so VintDock.avoid(#invite) was hitting
+     `undefined`, getting swallowed by its try/catch, and leaving the account pill
+     sitting under the guest sheet at 320/375px. Loading the stub first closes
+     that window. -->
+<script src="body/dock_stub.js"></script>
 <script src="body/api_base.js"></script>
 <script src="body/three3d/loader.js"></script>
 <script src="body/world/rigged-presence.js"></script>
@@ -199,6 +280,7 @@
 <script src="body/world/world-hud.js"></script>
 <script src="body/world/dirverse-hud.js"></script>
 <script src="body/world/dirhaven-door.js"></script>
+<script src="body/world/court.js"></script>
 <script>
 (function () {
   const statusEl = document.getElementById('status');
@@ -366,9 +448,21 @@
     };
 
     // let the golden hour land first, then raise the doorway (world already visible).
-    setTimeout(() => el.classList.add('show'), 1400);
+    // NO-COLLISION LAW: #invite is a CENTERED bottom sheet up to 500px wide, so on
+    // a phone it reaches into BOTH bottom corners — at 375px it sat straight on
+    // top of welcome-gate's docked account pill (97x44 overlap). It's the wrong
+    // shape to dock (full-width sheet, not a button), so it registers as an
+    // OBSTACLE instead: the button stacks start above it and slide back down the
+    // instant it's dismissed. Declared for both corners because it spans both.
+    setTimeout(() => {
+      el.classList.add('show');
+      try {
+        window.VintDock.avoid(el, { corner: 'br' });
+        window.VintDock.avoid(el, { corner: 'bl' });
+      } catch (_) {}
+    }, 1400);
     const wander = document.getElementById('inviteWander');
-    if (wander) wander.onclick = () => { el.classList.add('min'); };
+    if (wander) wander.onclick = () => { el.classList.add('min'); try { window.VintDock.reflow(); } catch (_) {} };
     const cta = document.getElementById('inviteCta');
     if (cta) cta.onclick = openWelcome;
     const mini = el.querySelector('.i-mini .m-cta');

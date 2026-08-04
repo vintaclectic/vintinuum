@@ -303,6 +303,18 @@
 
     (anchor && anchor.parentNode ? anchor.parentNode : document.body).appendChild(pill);
 
+    // NO-COLLISION LAW (Vinta 2026-08-02): the CSS pins this to
+    // top:72px/right:clamp(12px,2vw,24px) — hand-tuned to sit under the top-right
+    // controls, which is the stale-arithmetic pattern VintDock exists to replace.
+    // Only dock it when it actually landed on <body> as a fixed widget; when a
+    // page provides #browser-relay-pill-mount the pill is in normal flow inside
+    // that container and the dock must not touch it.
+    if (!(anchor && anchor.parentNode)) {
+      try {
+        if (window.VintDock) window.VintDock.register(pill, { corner: 'tr', priority: 40, id: 'browser-relay-pill' });
+      } catch (_) {}
+    }
+
     pill.addEventListener('click', (e) => {
       // draggable.js requires a hold to enter drag mode; quick clicks pass.
       // If a drag just ended, suppress the click.

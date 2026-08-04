@@ -288,8 +288,46 @@
   function open() {
     if (!panel) return;
     panel.classList.add('show');
+    anchorPanel();
     refresh().then(render);
   }
+
+  // The panel's CSS pins it to bottom:178px — 48px above the button's own
+  // hardcoded 130px. Once VintDock owns the button's position that gap is a
+  // fiction, so the panel could open on top of whatever is actually docked
+  // there. Anchor it to the trigger's REAL measured rect instead, clamped to the
+  // viewport so it can never bleed off-screen (no-overflow rule).
+  function anchorPanel() {
+    if (!panel || !btn) return;
+    try {
+      if (btn.style.display === 'none' || !btn.isConnected) return;  // unified mode
+      var r = btn.getBoundingClientRect();
+      if (!r.height) return;
+      var GAP = 12;
+      panel.style.bottom = Math.max(8, window.innerHeight - r.top + GAP) + 'px';
+      panel.style.right = Math.max(8, window.innerWidth - r.right) + 'px';
+      panel.style.top = 'auto';
+      panel.style.left = 'auto';
+    } catch (_) {}
+  }
+
+  // The trigger can MOVE while the panel is open — a sibling widget mounts, a
+  // neighbour resizes, the viewport rotates, and VintDock reflows the column
+  // underneath it. Anchoring only at open() would leave the panel behind, sitting
+  // over whatever slid into its place. Re-anchor whenever the geometry can change.
+  try {
+    window.addEventListener('resize', function () {
+      if (panel && panel.classList.contains('show')) anchorPanel();
+    });
+    window.addEventListener('orientationchange', function () {
+      if (panel && panel.classList.contains('show')) anchorPanel();
+    });
+    if (window.ResizeObserver) {
+      new ResizeObserver(function () {
+        if (panel && panel.classList.contains('show')) anchorPanel();
+      }).observe(document.documentElement);
+    }
+  } catch (_) {}
   function close() {
     if (!panel) return;
     panel.classList.remove('show');
@@ -321,7 +359,19 @@
     btn.textContent = '♫';
     btn.addEventListener('click', toggle);
     if (unified) { btn.style.display = 'none'; btn.setAttribute('aria-hidden', 'true'); }
-    else { document.body.appendChild(btn); }
+    else {
+      document.body.appendChild(btn);
+      // NO-COLLISION LAW (Vinta 2026-08-02): .vint-vp-btn hardcodes
+      // bottom:130px;right:16px — the bottom-right column the orb (10), carry-pill
+      // (30) and account pill (40) already occupy. On the pages where the unified
+      // voice button ISN'T present (so this one actually mounts), that 130px was
+      // arithmetic against a stack it can't see. Priority 20 slots it between the
+      // orb and the carry-pill, measured rather than guessed.
+      if (!btn.id) btn.id = 'vint-vp-btn';
+      try {
+        if (window.VintDock) window.VintDock.register(btn, { corner: 'br', priority: 20, id: 'vint-vp-btn' });
+      } catch (_) {}
+    }
 
     panel = document.createElement('div');
     panel.className = 'vint-vp-panel';

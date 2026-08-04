@@ -1,0 +1,26 @@
+#!/usr/bin/env bash
+# NO-COLLISION guard (Vinta directive 2026-08-02): block any commit that
+# reintroduces a hardcoded fixed corner widget.
+#
+# The trigger used to be '^body/.*\.js$', which missed the top-level page scripts
+# — and brain.js is exactly where #consciousness-brain-btn, #voiceToggle,
+# #soul-bond-indicator and the consolidate toast all hardcoded their corners. The
+# lint now scans body/**/*.js recursively plus those page scripts, so the hook
+# has to fire for them too or the guard has a hole the size of the biggest file.
+#
+# NOTE ON SCOPE: the trigger is JS-only because lint-no-collision.js only parses
+# .js — adding .html here would fire a lint that never looks at markup, which is
+# worse than not firing (a green check that proves nothing). Three of the
+# collisions found on 2026-08-02 (world.html's #topctl/#status, phone.html's
+# toast, mind.html's stacked .mode-tabs) lived entirely in page CSS/markup and
+# are only caught by the RUNTIME proof, scripts/verify-no-collision.js, which
+# renders every page and measures real rectangles. That one is too slow for a
+# pre-commit hook (~40 min for 56 pages x 5 widths x 2 auth states) — run it
+# before shipping UI, and treat this hook as the fast static half only.
+if git diff --cached --name-only | grep -qE '^(body/.*\.js|brain\.js|brain_expansion\.js|dirrm-launch\.js)$'; then
+  node "$(git rev-parse --show-toplevel)/scripts/lint-no-collision.js" --quiet || {
+    echo "commit blocked by no-collision lint (see above). Fix, or 'git commit --no-verify' to override.";
+    exit 1;
+  }
+fi
+exit 0
