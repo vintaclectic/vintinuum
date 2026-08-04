@@ -453,10 +453,31 @@
   // ═══════════════════════════════════════════════════════════════════════════
   // FETCH THE ROSTER
   // ═══════════════════════════════════════════════════════════════════════════
+  // Callers pass a cb that renders the pane, so DROPPING that cb leaves the pane
+  // stuck on "calling your court…" forever. The old `if (_loading) return;`
+  // did exactly that whenever open() raced the mount-time auto-load — which is
+  // the common case, since world-ready/world-state both schedule one. THE VIGIL
+  // made it visible (the watch summary needs a loaded roster to say anything
+  // true), but the bug predates it. Now a concurrent call QUEUES its callback
+  // and every queued caller is answered by the one in-flight request.
+  var _waiters = [];
   function loadRoster(cb) {
-    if (isGuest()) { _roster = []; _loaded = true; if (cb) cb(null); return; }
-    if (_loading) return;
+    if (isGuest()) {
+      // Signing out mid-flight must not strand waiters queued while signed in.
+      _roster = []; _loaded = true; _loading = false;
+      var gq = _waiters; _waiters = [];
+      if (cb) { try { cb(null); } catch (_) {} }
+      for (var g = 0; g < gq.length; g++) { try { gq[g](null); } catch (_) {} }
+      return;
+    }
+    if (_loading) { if (cb) _waiters.push(cb); return; }
     _loading = true;
+    function settle(err) {
+      _loading = false; _loaded = true;
+      var q = _waiters; _waiters = [];
+      if (cb) { try { cb(err); } catch (_) {} }
+      for (var i = 0; i < q.length; i++) { try { q[i](err); } catch (_) {} }
+    }
     fetch(base() + '/api/agents/mine', { headers: authHeaders() })
       .then(function (r) {
         if (r.status === 401) throw new Error('unauthorized');
@@ -464,17 +485,15 @@
         return r.json();
       })
       .then(function (d) {
-        _loading = false; _loaded = true;
         _roster = (d && d.agents) || [];
         updateBadge();
         syncWorld();
         ventureRefresh();
-        if (cb) cb(null);
+        settle(null);
       })
       .catch(function (e) {
-        _loading = false; _loaded = true;
         console.warn('[court] roster failed:', e && e.message);
-        if (cb) cb(e);
+        settle(e);
       });
   }
 
