@@ -335,6 +335,12 @@
     buildPanel();
     injectStyles();
     if (_open) return;
+    // The door is inset:0 at z1620, so it covers any bottom sheet rather than
+    // colliding visibly — but the sheet stays mounted underneath and is still
+    // there when you come back out. One surface at a time means the door evicts
+    // it on the way in, exactly like the sheets evict each other.
+    var _hud = W.DirverseHUD;
+    if (_hud && typeof _hud.closeSheets === 'function') _hud.closeSheets('dirhaven');
     _open = true;
     _readyGot = false;
 
@@ -387,6 +393,8 @@
     _open = false;
     if (_watchdog) { clearTimeout(_watchdog); _watchdog = null; }
     if (_panel) _panel.classList.remove('open');
+    var _hud = W.DirverseHUD;
+    if (_hud && typeof _hud.syncSheets === 'function') _hud.syncSheets();
     restoreWorldChrome();
     try { document.body.style.overflow = ''; } catch (_) {}
     try { W.dispatchEvent(new CustomEvent('vint:input-claim', { detail: { by: 'dirhaven-door' } })); } catch (_) {}
@@ -423,6 +431,13 @@
 
     var hud = W.DirverseHUD;
     if (hud && typeof hud.addLauncher === 'function') {
+      // Join the one-surface-at-a-time registry so opening a sheet closes the
+      // door, just as opening the door closes a sheet. The door keeps its own
+      // Escape handler (it has a lifecycle the registry doesn't own); `close()`
+      // is idempotent, so both firing on one keypress is harmless.
+      if (typeof hud.registerSheet === 'function') {
+        hud.registerSheet('dirhaven', function () { return _open; }, close);
+      }
       hud.addLauncher('dhDoorBtn', 'dirhaven', '⌂⃝', function () { toggle(); })
          .setAttribute('aria-label', 'open DirHaven inside the world');
       return;
