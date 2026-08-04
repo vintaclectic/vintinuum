@@ -1380,6 +1380,35 @@
       var pr = panel.getBoundingClientRect();
       if (pr.height > 0 && pr.bottom > 0) top = pr.bottom + 16;
     }
+    // PUBLISH THE PANEL'S REAL BOTTOM (AETHERHOLD 2026-08-04).
+    // #hint (world.html) sat at a HARDCODED top:260px, a literal that happened to
+    // clear the panel on the day it was written. The panel is content-driven, so
+    // the instant THE VIGIL added a survival readout to it the panel grew to
+    // 212–341px tall and ran straight through the hint (measured: 224x2px at
+    // 375/768/1280/1920, 204x18px at 320). The rail already solves exactly this
+    // problem by MEASURING rather than guessing; the hint now shares that
+    // measurement instead of keeping its own stale copy.
+    //
+    // TWO CEILINGS, NOT ONE — this distinction is load-bearing. --dv-railtop is
+    // the RAIL's ceiling, and THE SQUEEZE below deliberately drags it back UP
+    // into the panel on short viewports, because a rail with no height is a dead
+    // control and the rail is allowed to tuck beside the panel to survive.
+    // --vint-hud-bottom is the panel's TRUE bottom edge and is never squeezed.
+    // #status and #hint were both reusing --dv-railtop as their ceiling, so the
+    // squeeze silently handed them a ceiling INSIDE the panel — invisible while
+    // the panel was short, a 55x33px overlap at 320px the moment it grew. Text
+    // that sits BELOW the panel must use the unsqueezed value; only the rail,
+    // which is allowed to tuck, uses the squeezed one.
+    var panelBottom = top;
+    css.setProperty('--vint-hud-bottom', Math.round(panelBottom) + 'px');
+    // #hint is a single desktop-only line that must live in the gap between the
+    // panel's bottom and the say bar. On a short/landscape window that gap can
+    // be zero or negative (measured: the hint rendered 228x32px straight through
+    // #saybar at 812x375 once the vigil grew the panel). CSS cannot compare two
+    // measured pixel values, so the comparison is made HERE — where both are
+    // already known — and published as a display flag. Hiding a convenience line
+    // is the correct outcome when there is no honest room; overlapping never is.
+    css.setProperty('--hint-display', (vh - panelBottom - bot) >= 34 ? 'block' : 'none');
     // NOTE: #hint (the W/A/S/D keys line) also lives in this left column, below
     // the panel. It is deliberately NOT folded into this ceiling: the rail starts
     // where the panel ends, and pushing the rail below the hint too would shorten
@@ -1418,6 +1447,12 @@
   W.addEventListener('resize', scheduleLayout);
   W.addEventListener('orientationchange', scheduleLayout);
   W.addEventListener('vint:world-state', scheduleLayout);
+  // THE VIGIL grows #vintWorldHud: tending flips the tend button's label and can
+  // reveal/hide it entirely, and the world's line rewraps to a different height.
+  // Both change the panel's measured bottom edge — which IS the rail's ceiling
+  // and (via --dv-railtop) #status's ceiling. Re-measure or they collide.
+  W.addEventListener('vint:world-tend', scheduleLayout);
+  W.addEventListener('vint:world-warmth', scheduleLayout);
 
   // ═══════════════════════════════════════════════════════════════════════════
   // BOTTOM-SHEET GRIP — drag-down / swipe-down to dismiss (mobile-native feel)

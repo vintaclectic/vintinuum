@@ -204,9 +204,17 @@
     scene.add(sun);
     const fill = new THREE.DirectionalLight(0xa9c0e0, 1.4); // cool fill from the other side
     fill.position.set(5, 3, -4); scene.add(fill);
-    scene.add(new THREE.AmbientLight(0x9aa8c0, 1.5));        // lift the shadows
+    const amb = new THREE.AmbientLight(0x9aa8c0, 1.5);       // lift the shadows
+    scene.add(amb);
     const rim = new THREE.PointLight(0xffd9a0, 1.6, 40);
     rim.position.set(0, 4, 6); scene.add(rim);               // warm rim toward camera
+    // THE VIGIL keeps handles on the lights it dims. Base intensities are stored
+    // so warmth is always applied as a RATIO of the authored look — the golden
+    // hour is never re-authored, only leaned toward dusk and back.
+    World._warmthRig = {
+      sun, fill, amb, rim,
+      base: { sun: 3.2, fill: 1.4, amb: 1.5, rim: 1.6, fogNear: 12, fogFar: 48, mote: 0.5 },
+    };
 
     // ground — soft circular clearing
     const groundGeo = new THREE.CircleGeometry(20, 48);
@@ -230,6 +238,63 @@
     moteGeo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
     const moteMat = new THREE.PointsMaterial({ color: 0xffd9a0, size: 0.06, transparent: true, opacity: 0.5 });
     World._motes = new THREE.Points(moteGeo, moteMat); scene.add(World._motes);
+    World._warmthRig.moteMat = moteMat;
+  }
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // THE VIGIL — spark, made VISIBLE (AETHERHOLD 2026-08-04)
+  //
+  // A number in a panel is not survival. Survival is walking back into your own
+  // clearing and SEEING that it leaned toward dusk while you were gone — the fog
+  // drawn in close, the golden hour drained toward blue, the motes thinned to
+  // almost nothing — and then watching it come back as you tend your court.
+  //
+  // Warmth is a pure function of server-authoritative spark. The client computes
+  // NO survival; it only renders the number the vigil sent. Every value is a
+  // ratio of the authored golden hour (never a re-authoring), and every change
+  // is EASED over seconds, so the world breathes rather than snapping.
+  //
+  // Floor of 0.34: even an ember-state clearing stays legible and beautiful. A
+  // dim world must never become an unusable or ugly one — that would be
+  // punishment, and the vigil punishes nothing.
+  // ══════════════════════════════════════════════════════════════════════════
+  World._warmth = 1;          // what is currently rendered (eased)
+  World._warmthTarget = 1;    // where spark says it should be
+
+  World.setSpark = function (spark, living) {
+    const s = Math.max(0, Math.min(100, Number(spark) || 0));
+    // a gentle curve: the top half of spark barely dims (so a healthy world
+    // always looks lush), the bottom half is where the loss is really felt.
+    const p = s / 100;
+    World._warmthTarget = 0.34 + 0.66 * (p * p * 0.55 + p * 0.45);
+    World._living = living || World._living || null;
+    try { window.dispatchEvent(new CustomEvent('vint:world-warmth', { detail: { spark: s, warmth: World._warmthTarget, living: World._living } })); } catch (_) {}
+    return World._warmthTarget;
+  };
+
+  function _stepWarmth(dt) {
+    const rig = World._warmthRig;
+    if (!rig || !THREE) return;
+    // ease toward the target (~2.5s to close the gap) — the world never snaps
+    const k = Math.min(1, dt * 0.4);
+    World._warmth += (World._warmthTarget - World._warmth) * k;
+    const w = World._warmth;
+    const b = rig.base;
+    try {
+      rig.sun.intensity = b.sun * (0.42 + 0.58 * w);
+      rig.rim.intensity = b.rim * (0.25 + 0.75 * w);
+      rig.amb.intensity = b.amb * (0.55 + 0.45 * w);
+      // the COOL fill rises as warmth falls — dusk is not just darker, it is
+      // colder. This is the single most legible cue that the world is dimming.
+      rig.fill.intensity = b.fill * (1.5 - 0.5 * w);
+      if (rig.moteMat) rig.moteMat.opacity = b.mote * (0.12 + 0.88 * w);
+      // the fog draws IN as the light fails — the world literally closes around
+      // you, which is the felt meaning of "my reach is shrinking".
+      if (scene && scene.fog) {
+        scene.fog.near = b.fogNear * (0.45 + 0.55 * w);
+        scene.fog.far = b.fogFar * (0.42 + 0.58 * w);
+      }
+    } catch (_) {}
   }
 
   // ── a shaped PRESENCE for a council agent: a constellation of warm light
@@ -629,7 +694,18 @@
       if (m.worldId != null) World._worldId = String(m.worldId);
       World._canBuild = (m.canBuild !== false); // default true if omitted (legacy hub)
       if (Array.isArray(m.structures)) { m.structures.forEach(_renderStruct); }
+      // THE VIGIL: the server's spark drives the world's actual light. `living`
+      // carries the full picture (floor, drift, watchers, reach); spark alone is
+      // the fallback for any older payload that predates the vigil.
+      try {
+        if (m.living) World.setSpark(m.living.spark, m.living);
+        else if (m.resident && m.resident.spark != null) World.setSpark(m.resident.spark, null);
+      } catch (_) {}
       try { window.dispatchEvent(new CustomEvent('vint:world-state', { detail: m })); } catch (_) {}
+    } else if (m.t === 'world:tend:ok') {
+      // tending is a felt moment: the clearing brightens as the watch is set
+      try { if (m.living) World.setSpark(m.living.spark, m.living); } catch (_) {}
+      try { window.dispatchEvent(new CustomEvent('vint:world-tend', { detail: m })); } catch (_) {}
     } else if (m.t === 'world:struct') {
       _renderStruct(m.struct);
       try { window.dispatchEvent(new CustomEvent('vint:world-struct', { detail: m.struct })); } catch (_) {}
@@ -683,7 +759,12 @@
   }
 
   // public: send any world message to the server (used by the HUD)
-  World.send = function (m) { if (ws && ws.readyState === 1) ws.send(JSON.stringify(m)); };
+  World.send = function (m) { if (ws && ws.readyState === 1) { ws.send(JSON.stringify(m)); return true; } return false; };
+  // Is the living socket actually up? Callers that need to know whether an
+  // action REACHED the server (rather than being silently dropped by send's
+  // readyState guard) must ask this before reporting success to a user. The
+  // Court's "set the watch" uses it to choose the WS path vs. the REST fallback.
+  World.isConnected = function () { return !!(ws && ws.readyState === 1); };
   World.currentWorldId = function () { return World._worldId; };
   World.canBuild = function () { return World._canBuild !== false; };
 
@@ -787,6 +868,11 @@
   World.placeHere = function (kind) { const me = World._me || {}; World.send({ t: 'world:place', kind, x: me.x || 0, z: me.z || 0, rot: me.yaw || 0 }); };
   World.harvest = function () { World.send({ t: 'world:harvest' }); };
   World.refine = function (amount) { World.send({ t: 'world:refine', amount: amount || null }); };
+  // THE VIGIL — tend your court. Pass an agentId to set one watch, or nothing to
+  // set them all. The server refreshes every watch and kindles the clearing; the
+  // reply drives the light. This is the survival loop's headline verb.
+  World.tend = function (agentId) { return World.send({ t: 'world:tend', agentId: agentId || null }); };
+  World.living = function () { return World._living || null; };
 
   let _lastSent = 0;
   function _sendMove() {
@@ -978,6 +1064,7 @@
     }
     World._frame = (World._frame || 0) + 1;
     if (World._motes) World._motes.rotation.y += dt * 0.02;
+    _stepWarmth(dt);   // THE VIGIL: spark → light, eased every frame
     _stepWarp(dt);
 
     // camera modes: 0=3rd-person (behind), 1=1st-person (eyes), 2=selfie (front)

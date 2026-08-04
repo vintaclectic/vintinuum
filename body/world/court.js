@@ -539,12 +539,15 @@
         '<div class="ct-actions">' +
           '<button class="ct-mini gold" data-act="talk" data-id="' + esc(a.id) + '">speak with them</button>' +
           '<button class="ct-mini" data-act="focus" data-id="' + esc(a.id) + '">find them</button>' +
+          '<button class="ct-mini" data-act="watch" data-id="' + esc(a.id) + '">' +
+            _watchLabel(a) + '</button>' +
           '<button class="ct-mini" data-act="pause" data-id="' + esc(a.id) + '">' +
             (paused ? 'call them back' : 'send home') + '</button>' +
         '</div>';
     });
     html += '<div class="ct-hint">Tap a name to look their way. They stand where you claimed — ' +
-            'and they keep standing there when you are gone.</div>';
+            'and they keep standing there when you are gone. ' +
+            'Every one on watch holds the light in your clearing while you sleep.</div>';
     p.innerHTML = html;
 
     p.querySelectorAll('.ct-row').forEach(function (r) {
@@ -556,6 +559,7 @@
         var id = b.getAttribute('data-id'), act = b.getAttribute('data-act');
         if (act === 'talk') openTalk(id);
         else if (act === 'focus') focusAgent(id);
+        else if (act === 'watch') setWatch(id, b);
         else if (act === 'pause') togglePause(id, b);
       };
     });
@@ -564,6 +568,69 @@
   function agentById(id) {
     for (var i = 0; i < _roster.length; i++) if (String(_roster[i].id) === String(id)) return _roster[i];
     return null;
+  }
+
+  // ── THE VIGIL — an agent's WATCH (AETHERHOLD 2026-08-04) ────────────────────
+  // This is where "be king of your own agents" stops being a metaphor. Every
+  // agent you brought — from Claude, OpenAI, Gemini, DeepSeek, Qwen, a raw
+  // prompt, your own endpoint — can stand a watch over your clearing. A tended
+  // watch holds the light while you're gone; an untended one fades over ~14
+  // days and the world leans toward dusk. Setting a watch is one tap.
+  //
+  // The strength thresholds MIRROR world/vigil.js (_watchWeight): full for 3
+  // days, fading to nothing by 14. The server is authoritative — this label is
+  // only ever a readout, and the server's reply is what actually moves anything.
+  var WATCH_FULL_DAYS = 3, WATCH_FADE_DAYS = 14;
+  function _watchDays(a) {
+    var t = a && (a.tended_at || a.tendedAt);
+    if (!t) return null;                       // never tended → no claim made
+    return Math.max(0, (Date.now() / 1000 - Number(t)) / 86400);
+  }
+  function _watchLabel(a) {
+    if (a && a.status === 'paused') return 'resting';
+    var d = _watchDays(a);
+    if (d == null) return 'set the watch';
+    if (d <= WATCH_FULL_DAYS) return 'on watch ✦';
+    if (d >= WATCH_FADE_DAYS) return 'watch faded';
+    return 'watch fading';
+  }
+
+  // setWatch — tend ONE agent. Routes through the world socket when we have one
+  // (so the clearing brightens in the same breath), and falls back to the REST
+  // endpoint when there's no live socket. Never a dead control: every failure
+  // speaks. The server refreshes the watch and kindles the world; we only ask.
+  function setWatch(id, btn) {
+    var a = agentById(id);
+    if (!a) { toast('that one is not in the roster anymore.'); return; }
+    if (a.status === 'paused') { toast(esc(a.name) + ' is resting — call them back before setting a watch.'); return; }
+    if (btn) { btn.disabled = true; btn.textContent = 'setting…'; }
+    var done = function (ok, msg) {
+      if (btn) { btn.disabled = false; btn.textContent = ok ? 'on watch ✦' : _watchLabel(a); }
+      if (ok) { a.tended_at = Math.floor(Date.now() / 1000); }
+      toast(msg);
+    };
+    // preferred path: the live world socket — the sky brightens with the tap
+    try {
+      var w = world();
+      if (w && w.tend && w.isConnected && w.isConnected()) {
+        w.tend(id);
+        done(true, esc(a.name) + ' stands watch over your clearing.');
+        return;
+      }
+    } catch (_) {}
+    // fallback: REST (works from anywhere, even with no socket)
+    fetch(base() + '/api/world/vigil/tend', {
+      method: 'POST',
+      headers: Object.assign({ 'Content-Type': 'application/json' }, authHeaders()),
+      body: JSON.stringify({ agentId: id }),
+    }).then(function (r) { return r.ok ? r.json() : r.json().then(function (j) { throw new Error(j.error || 'failed'); }); })
+      .then(function (d) {
+        // feed the freshly-computed picture straight to the HUD + the 3D light
+        try { if (d.living && W.WorldHUD && W.WorldHUD.renderVigil) W.WorldHUD.renderVigil(d.living); } catch (_) {}
+        try { if (d.living && world() && world().setSpark) world().setSpark(d.living.spark, d.living); } catch (_) {}
+        done(true, d.tended ? (esc(a.name) + ' stands watch over your clearing.') : (d.message || 'the watch is set.'));
+      })
+      .catch(function (e) { done(false, 'could not set the watch — ' + (e.message || 'try again')); });
   }
 
   function focusAgent(id) {
