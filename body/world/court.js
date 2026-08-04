@@ -457,16 +457,33 @@
     if (tab === 'add') renderAdd();
   }
 
+  // The Court's sheet is another position:fixed bottom:0 z-1600 surface, so it
+  // opens THROUGH the HUD's sheet owner — which closes whatever else is up
+  // first. Without that hand-off, ♔ over ✦ put two full sheets on identical
+  // pixels. If the HUD isn't there (Court used standalone), we fall back to
+  // opening directly: there is no rail, so there is nothing to collide with.
+  function raise(fn) {
+    var hud = W.DirverseHUD;
+    if (hud && typeof hud.openSheet === 'function') hud.openSheet('court', fn);
+    else fn();
+  }
+
   function open() {
     injectStyles();
-    buildSheet();
-    _sheet.classList.add('open');
-    if (isGuest()) { renderDoorway(); return; }
-    showTab(_tab === 'talk' ? 'roster' : _tab);
-    if (!_loaded) { renderRoster(); loadRoster(function () { renderRoster(); }); }
-    else { renderRoster(); loadRoster(function () { renderRoster(); }); } // always refresh
+    raise(function () {
+      buildSheet();
+      _sheet.classList.add('open');
+      if (isGuest()) { renderDoorway(); return; }
+      showTab(_tab === 'talk' ? 'roster' : _tab);
+      renderRoster();
+      loadRoster(function () { renderRoster(); }); // always refresh
+    });
   }
-  function close() { if (_sheet) _sheet.classList.remove('open'); }
+  function close() {
+    if (_sheet) _sheet.classList.remove('open');
+    var hud = W.DirverseHUD;
+    if (hud && typeof hud.syncSheets === 'function') hud.syncSheets();
+  }
 
   // ── GUEST DOORWAY — what a court IS, and the way in. Never a dead button. ──
   function renderDoorway() {
@@ -1017,7 +1034,11 @@
     function end() {
       if (!dragging) return; dragging = false;
       sheet.style.transition = ''; sheet.style.transform = '';
-      if (dy > 90) sheet.classList.remove('open');
+      if (dy > 90) {
+        sheet.classList.remove('open');
+        var h = W.DirverseHUD;
+        if (h && typeof h.syncSheets === 'function') h.syncSheets();
+      }
     }
     g.addEventListener('touchstart', start, { passive: true });
     g.addEventListener('touchmove', move, { passive: true });
@@ -1047,6 +1068,11 @@
     // structurally impossible instead of searched for.
     var hud = W.DirverseHUD;
     if (hud && typeof hud.addLauncher === 'function') {
+      if (typeof hud.registerSheet === 'function') {
+        hud.registerSheet('court',
+          function () { return !!_sheet && _sheet.classList.contains('open'); },
+          close);
+      }
       var b = hud.addLauncher('ctBtn', 'court', '♔', function () { open(); });
       b.setAttribute('aria-label', 'your court — the agents who answer to you');
       b.setAttribute('title', 'your court — the agents who answer to you');

@@ -380,6 +380,25 @@
       '.dv-prop .pg{font-size:20px;line-height:1;}',
       '.dv-prop .pn{font-size:10.5px;letter-spacing:.02em;}',
 
+      // SHEET SCRIM — the single dimmed backdrop behind whichever sheet is open.
+      // It lives at 1560: under every sheet (1600) and under the warp veil (1590),
+      // over the world canvas and the rail. Tapping it closes the open sheet, which
+      // is the gesture people already expect from a bottom sheet.
+      '#dvScrim{position:fixed;inset:0;z-index:1560;background:rgba(3,5,10,0.5);',
+      ' opacity:0;pointer-events:none;transition:opacity .3s;',
+      ' backdrop-filter:blur(2px);-webkit-backdrop-filter:blur(2px);}',
+      '#dvScrim.show{opacity:1;pointer-events:auto;}',
+      // The rail normally sits at 1450, BELOW the scrim — which would make every
+      // launcher untappable the moment a sheet is up, so the one gesture Lord
+      // Vinta asked for (tap ◈ while ✦ is open, ✦ closes, ◈ opens) would instead
+      // be eaten by the backdrop. While a sheet is open the rail is promoted
+      // above the scrim so switching surfaces stays one tap. It stays BELOW the
+      // sheets (1600), so it can never draw on top of one — which is why this
+      // rule alone is not enough: where the rail's band and the sheet's band
+      // actually intersect, the sheet still (correctly) wins. layoutRail step 2b
+      // is the other half, shortening the rail so that intersection is empty.
+      'body.dv-sheeting #dvRail{z-index:1570;}',
+
       // toast (shared, above sheets)
       '#dvToast{position:fixed;left:50%;bottom:calc(88px + env(safe-area-inset-bottom,0px));',
       ' transform:translateX(-50%) translateY(10px);z-index:1700;max-width:88vw;',
@@ -403,6 +422,110 @@
     ].join('');
     document.head.appendChild(s);
   }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // THE SHEET OWNER — exactly one bottom sheet is open at a time, page-wide
+  // ═══════════════════════════════════════════════════════════════════════════
+  // Every full-width surface in the world (★ star-map, ◈ agents, ♔ court, ⌂⃝
+  // DirHaven) used to open itself independently: `el.classList.add('open')` and
+  // nothing else. Each one is position:fixed, left:0, right:0, bottom:0 at
+  // z-index 1600 — so opening a second launcher while a first sheet was up left
+  // BOTH mounted on identical pixels (measured at 375×812: #dvWarpSheet and
+  // #dvAgentSheet each top 584 → bottom 812, opacity 1, z 1600). Four could
+  // stack. That is the cardinal collision, and no amount of per-module care
+  // fixes it, because no module can see its neighbours.
+  //
+  // So the rail that OWNS the launchers now owns the sheets too. A surface
+  // registers once; opening any registered surface closes every other open one
+  // first. Escape and a tap on the scrim close whatever is open. The invariant
+  // ("at most one open") lives in one place instead of being re-derived — and
+  // every launcher, present or future, inherits it for free.
+  var _sheets = [];        // [{id, isOpen(), close()}]
+  var _scrim = null;
+
+  function scrim() {
+    if (_scrim) return _scrim;
+    _scrim = document.createElement('div');
+    _scrim.id = 'dvScrim';
+    _scrim.addEventListener('click', function () { closeSheets(); });
+    document.body.appendChild(_scrim);
+    return _scrim;
+  }
+
+  // A sheet is "open" per its own truth (a class, a flag) — we never cache it,
+  // because grips, back buttons and internal flows close sheets without telling
+  // us. Asking is always correct; remembering would drift.
+  function registerSheet(id, isOpen, close) {
+    for (var i = 0; i < _sheets.length; i++) if (_sheets[i].id === id) { _sheets[i].isOpen = isOpen; _sheets[i].close = close; return; }
+    _sheets.push({ id: id, isOpen: isOpen, close: close });
+  }
+
+  function anyOpen() {
+    for (var i = 0; i < _sheets.length; i++) { try { if (_sheets[i].isOpen()) return _sheets[i]; } catch (_) {} }
+    return null;
+  }
+
+  // Close every open sheet except `exceptId`. Returns how many it closed.
+  function closeSheets(exceptId) {
+    var n = 0;
+    for (var i = 0; i < _sheets.length; i++) {
+      var s = _sheets[i];
+      if (s.id === exceptId) continue;
+      try { if (s.isOpen()) { s.close(); n++; } } catch (_) {}
+    }
+    syncScrim();
+    return n;
+  }
+
+  // The scrim shows exactly when something is open — checked after every
+  // transition, and on a short beat while sheets settle, so a grip-dismiss or an
+  // internal close can never strand a dimmed layer over a world with no sheet.
+  function syncScrim() {
+    var open = !!anyOpen();
+    scrim().classList.toggle('show', open);
+    // promotes the rail over the scrim so launchers stay one tap away (see the
+    // body.dv-sheeting rule). A body class rather than an inline style so the
+    // rail's own stylesheet keeps owning its z-index in one place.
+    try { document.body.classList.toggle('dv-sheeting', open); } catch (_) {}
+    // and re-measure: an open sheet is a full-width bar the rail has to clear,
+    // exactly like the saybar (see layoutRail step 2b). Without this the bottom
+    // launchers stay under the sheet and are unclickable.
+    try { layoutRail(); } catch (_) {}
+  }
+  // A sheet can close without telling us: the grip swipe-down and a few internal
+  // flows just drop the class. Those paths call syncScrim() directly, but a
+  // short beat while a sheet is up is the belt to that braces — it catches any
+  // future close path nobody remembered to wire, so a dimmed scrim can never
+  // outlive the sheet it dims. It stops the moment nothing is open (usually a
+  // tick or two after the close), and on the next open, so it never accumulates.
+  var _scrimBeat = null;
+  function watchScrim() {
+    clearInterval(_scrimBeat);
+    var ticks = 0;
+    _scrimBeat = setInterval(function () {
+      syncScrim();
+      if (!anyOpen() || ++ticks > 80) { clearInterval(_scrimBeat); _scrimBeat = null; }
+    }, 250);
+  }
+
+  // openSheet(id, fn) — the ONLY sanctioned way to raise a sheet. It evicts
+  // whatever else is up (Lord Vinta's call: opening a second sheet CLOSES the
+  // first), then runs the surface's own open work.
+  function openSheet(id, fn) {
+    closeSheets(id);
+    try { fn(); } finally { syncScrim(); watchScrim(); }
+  }
+
+  // ESC closes the open sheet — the expected way out of any surface, and the one
+  // thing none of the four sheets implemented. The DirHaven door keeps its own
+  // Escape handler (it is a full-screen panel with its own lifecycle); it also
+  // registers here so opening it evicts a sheet and vice-versa.
+  W.addEventListener('keydown', function (e) {
+    if (e.key !== 'Escape') return;
+    if (!anyOpen()) return;
+    e.preventDefault();
+    closeSheets();
+  });
 
   // ═══════════════════════════════════════════════════════════════════════════
   // TOAST
@@ -457,13 +580,15 @@
   }
 
   function openWarp() {
-    buildWarpSheet();
-    _warpSheet.classList.add('open');
-    _warpCursor = null;
-    renderDeed();
-    loadWorlds(false);
+    openSheet('warp', function () {
+      buildWarpSheet();
+      _warpSheet.classList.add('open');
+      _warpCursor = null;
+      renderDeed();
+      loadWorlds(false);
+    });
   }
-  function closeWarp() { if (_warpSheet) _warpSheet.classList.remove('open'); }
+  function closeWarp() { if (_warpSheet) _warpSheet.classList.remove('open'); syncScrim(); }
 
   function loadWorlds(append) {
     if (!_warpBody) return;
@@ -923,16 +1048,18 @@
   }
 
   function openAgent() {
-    buildAgentSheet();
-    _agentSheet.classList.add('open');
-    showPane(_pane === 'convo' ? 'cits' : _pane);
+    openSheet('agent', function () {
+      buildAgentSheet();
+      _agentSheet.classList.add('open');
+      showPane(_pane === 'convo' ? 'cits' : _pane);
+    });
   }
   // public: court.js calls this after an add/pause/send-home so a court member
   // brought in mid-session is immediately stakeable, with no reopen. The roster
   // itself comes from loadMine() → _mine, which renderVentureChips() merges with
   // the council; the court does not keep a second copy.
   function refreshVentureAgents() { if (_agentSheet) { loadMine(); } }
-  function closeAgent() { if (_agentSheet) _agentSheet.classList.remove('open'); }
+  function closeAgent() { if (_agentSheet) _agentSheet.classList.remove('open'); syncScrim(); }
 
   // ═══════════════════════════════════════════════════════════════════════════
   // AGENTIS IN THE WORLD — GAP-1 close. The agents you brought in from Claude,
@@ -1396,6 +1523,32 @@
       if (sr.height > 0) bot = Math.max(88, vh - sr.top + 12);
     }
 
+    // 2b) AN OPEN SHEET IS A FULL-WIDTH BAR TOO. Measured at 375×812 the rail
+    //     runs 336→662 while an open sheet runs 584→812: the bottom launcher
+    //     (616→662) sits INSIDE the sheet's band, so the sheet (z1600) paints
+    //     over it. Raising the rail above 1600 is not the fix — that would draw
+    //     a launcher ON TOP of a sheet, which is the same cardinal collision
+    //     wearing the other hat. The honest fix is the one the saybar already
+    //     gets: the rail YIELDS, shortening its band so it never enters the
+    //     sheet's pixels at all. Every launcher that remains is fully visible
+    //     and fully tappable, which is what makes "tap ◈ while ✦ is open"
+    //     actually work instead of merely appearing to.
+    //
+    //     `botFloor` is the part of the floor the squeeze (step 3) may NOT
+    //     borrow back: leaning on the saybar only looks crowded, but leaning
+    //     into a sheet swallows the launcher whole.
+    var botFloor = 0;
+    if (anyOpen()) {
+      var sel = document.querySelector('#dvWarpSheet.open, #dvAgentSheet.open, #ctSheet.open');
+      if (sel) {
+        var shr = sel.getBoundingClientRect();
+        if (shr.height > 0 && shr.top < vh) {
+          botFloor = vh - shr.top + 12;
+          bot = Math.max(bot, botFloor);
+        }
+      }
+    }
+
     // 3) THE SQUEEZE (landscape phones: 375px tall with a ~190px panel leaves
     //    negative room). A rail with no height is a dead control — as bad as an
     //    overlapping one. So when the band can't hold even one launcher, we
@@ -1408,7 +1561,10 @@
       var giveTop = Math.min(need, Math.max(0, top - 8)); // never above the viewport
       top -= giveTop;
       avail = vh - top - bot;
-      if (avail < 46) bot = Math.max(8, bot - (46 - avail)); // then borrow from the floor
+      // then borrow from the floor — but never past botFloor, or the launcher we
+      // just fought to keep reachable lands under an open sheet, which is worse
+      // than a short rail (the rail can scroll; a covered button cannot be hit).
+      if (avail < 46) bot = Math.max(8, botFloor, bot - (46 - avail));
     }
     css.setProperty('--dv-railtop', Math.round(top) + 'px');
     css.setProperty('--dv-railbot', Math.round(bot) + 'px');
@@ -1435,7 +1591,7 @@
     function end() {
       if (!dragging) return; dragging = false; sheet.style.transition = '';
       sheet.style.transform = '';
-      if (dy > 90) sheet.classList.remove('open');
+      if (dy > 90) { sheet.classList.remove('open'); syncScrim(); }
     }
     grip.addEventListener('touchstart', start, { passive: true });
     grip.addEventListener('touchmove', move, { passive: true });
@@ -1449,6 +1605,11 @@
   function mount() {
     if (!enabled()) return;
     injectStyles();
+    // Our own two sheets join the one-open-at-a-time registry before any
+    // launcher can raise them. `isOpen` reads the live class rather than a flag
+    // so a grip-dismiss is seen correctly.
+    registerSheet('warp', function () { return !!_warpSheet && _warpSheet.classList.contains('open'); }, closeWarp);
+    registerSheet('agent', function () { return !!_agentSheet && _agentSheet.classList.contains('open'); }, closeAgent);
     // The rail is column-reverse, so DOM order = bottom-to-top on screen:
     //   star-map (bottom) · agents · home · build (top, only on your own world)
     makeLauncher('dvWarpBtn', 'star-map', '✦', openWarp);
@@ -1503,11 +1664,21 @@
   // no-collision law forbids. One page, one toast.
   W.DirverseHUD = {
     open: openWarp, openAgent: openAgent, mount: mount, enabled: enabled,
-    openAgents: function () { buildAgentSheet(); _agentSheet.classList.add('open'); showPane('cits'); },
+    openAgents: function () {
+      openSheet('agent', function () { buildAgentSheet(); _agentSheet.classList.add('open'); showPane('cits'); });
+    },
     goHome: goHome,
     addLauncher: addLauncher,
     relayout: layoutRail,
     toast: toast,
-    refreshAgents: refreshVentureAgents
+    refreshAgents: refreshVentureAgents,
+    // ── the shared sheet owner. Any module with a full-width surface MUST
+    // register and open through this, or it will land on top of a sheet that is
+    // already up. `registerSheet(id, isOpen, close)` then `openSheet(id, fn)`.
+    registerSheet: registerSheet,
+    openSheet: openSheet,
+    closeSheets: closeSheets,
+    syncSheets: syncScrim,
+    anySheetOpen: function () { return !!anyOpen(); }
   };
 })();
