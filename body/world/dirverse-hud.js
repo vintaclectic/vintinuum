@@ -404,7 +404,12 @@
       // and it is the passive readout, not the only way to change surfaces.
       // visibility, so no module's layout math shifts — it simply stops painting
       // while a sheet is up, and comes straight back when the sheet closes.
-      'body.dv-panel-yield #vintWorldHud{visibility:hidden;}',
+      // #hint yields with the panel: it lives in the same left column, BELOW the
+      // panel (its top derives from --vint-hud-bottom), so a rail that borrowed
+      // enough ceiling to clear the panel has necessarily walked through the hint
+      // on the way. Measured at 812x375 that left 42x17px of launchers painted on
+      // the W/A/S/D legend. Hiding only the panel would have been half a fix.
+      'body.dv-panel-yield #vintWorldHud,body.dv-panel-yield #hint{visibility:hidden;}',
 
       // toast (shared, above sheets)
       '#dvToast{position:fixed;left:50%;bottom:calc(88px + env(safe-area-inset-bottom,0px));',
@@ -1514,10 +1519,31 @@
       var pr = panel.getBoundingClientRect();
       if (pr.height > 0 && pr.bottom > 0) top = pr.bottom + 16;
     }
-    // NOTE: #hint (the W/A/S/D keys line) also lives in this left column, below
-    // the panel. It is deliberately NOT folded into this ceiling: the rail starts
-    // where the panel ends, and pushing the rail below the hint too would shorten
-    // the launcher band on exactly the short viewports that can least afford it.
+    // #hint (the W/A/S/D keys line) also lives in this left column, below the
+    // panel — and as of THE VIGIL (2026-08-04) it is folded into this ceiling.
+    //
+    // It used to be excluded on the reasoning that the rail starts where the
+    // panel ends and pushing it below the hint would shorten the launcher band.
+    // That held only while #hint sat at a hardcoded top:274px — i.e. ABOVE where
+    // any rail could reach. The vigil made #vintWorldHud content-driven and the
+    // hint now derives its own top from --vint-hud-bottom, so on a tall desktop
+    // a panel with watchers puts the hint at ~600px, squarely inside the rail's
+    // band. Measured at 1280x800 that was a 108x28px overlap of the keys line by
+    // the launchers — two elements, same pixels, exactly the cardinal sin.
+    //
+    // So the ceiling is now the LOWER of the two neighbours in this column. The
+    // hint is desktop-only (hidden on coarse pointers), so this costs the short
+    // touch viewports — the ones that can least afford it — precisely nothing.
+    // NOTE ON THE VISIBILITY TEST: #hint is position:fixed, and a fixed element
+    // ALWAYS reports offsetParent === null — so the `offsetParent !== null` idiom
+    // used for #saybar (which is static) silently reports "hidden" here and the
+    // fold-in never happened. Measured, that left a 16px band of launchers on the
+    // keys line. Fixed elements must be tested by computed display instead.
+    var hint = document.getElementById('hint');
+    if (hint && getComputedStyle(hint).display !== 'none') {
+      var hr = hint.getBoundingClientRect();
+      if (hr.height > 0 && hr.bottom > 0) top = Math.max(top, hr.bottom + 16);
+    }
     // #status keeps clear of the hint by bounding its own width instead — a
     // horizontal solution to a horizontal problem (see world.html's #status).
 
@@ -1590,19 +1616,45 @@
         }
       }
     }
-    try { document.body.classList.toggle('dv-panel-yield', yieldPanel); } catch (_) {}
-
     var avail = vh - top - bot;
     if (avail < 46) {
       var need = 46 - avail;
       var giveTop = Math.min(need, Math.max(0, top - 8)); // never above the viewport
       top -= giveTop;
       avail = vh - top - bot;
+      // THE VIGIL FIX (2026-08-04): borrowing from the ceiling walks the rail UP
+      // into whatever is above it, and above it is #vintWorldHud. Before the
+      // vigil the panel was short enough that this branch almost never fired;
+      // the taller panel makes it fire on every 320x568 signed-in session, and
+      // measured, it put 112x34px of launchers straight on top of the panel (and
+      // the panel on top of #status, which derives its own ceiling from
+      // --dv-railtop). Borrowing without yielding is not a squeeze, it is a
+      // collision. So the SAME rule the open-sheet path already obeys applies
+      // here: if the borrow crosses the panel's live bottom, the panel — passive
+      // readout — yields, because the rail is the only way between surfaces.
+      if (giveTop > 0 && panel) {
+        var pr3 = panel.getBoundingClientRect();
+        if (pr3.height > 0 && top < pr3.bottom) yieldPanel = true;
+      }
+      // #hint sits between the panel and the rail on desktop, so a ceiling
+      // borrow walks through IT first. Measured at 812x375 (landscape phone)
+      // that was a 42x17px band of launchers on the keys line. The hint is a
+      // W/A/S/D legend — the least load-bearing thing in this column, and on a
+      // viewport this short it is pure decoration next to a reachable launcher —
+      // so it yields with the panel. Via the same body class, never an inline
+      // style, so nothing else that touches these elements gets corrupted.
+      if (giveTop > 0 && hint) {
+        var hr2 = hint.getBoundingClientRect();
+        if (hr2.height > 0 && top < hr2.bottom) yieldPanel = true;
+      }
       // then borrow from the floor — but never past botFloor, or the launcher we
       // just fought to keep reachable lands under an open sheet, which is worse
       // than a short rail (the rail can scroll; a covered button cannot be hit).
       if (avail < 46) bot = Math.max(8, botFloor, bot - (46 - avail));
     }
+    // one authoritative write, AFTER every branch that can set it (the squeeze
+    // above can raise it too, so toggling before that was a stale decision).
+    try { document.body.classList.toggle('dv-panel-yield', yieldPanel); } catch (_) {}
     css.setProperty('--dv-railtop', Math.round(top) + 'px');
     css.setProperty('--dv-railbot', Math.round(bot) + 'px');
   }

@@ -625,6 +625,9 @@
   function _onWorldMsg(m) {
     if (m.t === 'world:state') {
       World._resident = m.resident;
+      // THE VIGIL — the server's living picture (spark/floor/drift/watchers/reach).
+      // Absent on a legacy server; every surface must degrade, never throw.
+      if (m.living) World._living = m.living;
       // DIRVERSE: server tells us which world we landed in + whether we may build here
       if (m.worldId != null) World._worldId = String(m.worldId);
       World._canBuild = (m.canBuild !== false); // default true if omitted (legacy hub)
@@ -637,6 +640,14 @@
       try { window.dispatchEvent(new CustomEvent('vint:world-harvest', { detail: m })); } catch (_) {}
     } else if (m.t === 'world:refine:ok') {
       try { window.dispatchEvent(new CustomEvent('vint:world-refine', { detail: m })); } catch (_) {}
+    } else if (m.t === 'world:tend:ok') {
+      // THE VIGIL — tending returns { tended, gained, living }. `living` is the
+      // FULL freshly-reconciled picture, so it supersedes whatever the last
+      // world:state carried: keep it as the authoritative living state rather
+      // than making every surface wait for the next state frame. The client
+      // never derives survival — it only ever republishes what the server sent.
+      if (m.living) World._living = m.living;
+      try { window.dispatchEvent(new CustomEvent('vint:world-tend', { detail: m })); } catch (_) {}
     } else if (m.t === 'world:err') {
       try { window.dispatchEvent(new CustomEvent('vint:world-err', { detail: m })); } catch (_) {}
     }
@@ -787,6 +798,19 @@
   World.placeHere = function (kind) { const me = World._me || {}; World.send({ t: 'world:place', kind, x: me.x || 0, z: me.z || 0, rot: me.yaw || 0 }); };
   World.harvest = function () { World.send({ t: 'world:harvest' }); };
   World.refine = function (amount) { World.send({ t: 'world:refine', amount: amount || null }); };
+  // ── THE VIGIL ───────────────────────────────────────────────────────────────
+  // Tend your court — the headline act of the survival loop. With an agentId it
+  // refreshes THAT agent's watch; without one it refreshes the whole court.
+  // Server-authoritative: we send the intent and render only what comes back
+  // (world:tend:ok → vint:world-tend). No optimistic spark, ever.
+  World.tend = function (agentId) {
+    var m = { t: 'world:tend' };
+    if (agentId) m.agentId = String(agentId);
+    World.send(m);
+  };
+  // the last living picture the SERVER sent (null until the first world:state,
+  // and on a legacy server that doesn't speak the vigil). Read-only to callers.
+  World.living = function () { return World._living || null; };
 
   let _lastSent = 0;
   function _sendMove() {
