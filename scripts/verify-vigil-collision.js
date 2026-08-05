@@ -117,8 +117,37 @@ const LIVING_MAX = {
       { id: 'a12', name: 'Twelfth',  color: '#a67cff', watch: 0.02 },
     ],
     nextAgentPerDay: 3.8,
+    // ── THE CONSEQUENCE TIER's slot cap (AETHERHOLD 2026-08-05) ──────────────
+    // The tier caps how many watches a dim clearing can keep awake; the resting
+    // ones are drawn dimmed BESIDE the awake ones (never removed) plus a caption
+    // explaining they return. That is another orb row's worth of content and a
+    // two-line caption, so the maximal payload must carry it or this harness
+    // would certify a panel shorter than the one that actually ships.
+    slots: 3,
+    resting: 9,
+    resters: [
+      { id: 'r1', name: 'Ninth',    color: '#7ccfff', watch: 0.1 },
+      { id: 'r2', name: 'Tenth',    color: '#57e08c', watch: 0.08 },
+      { id: 'r3', name: 'Eleventh', color: '#ffb066', watch: 0.05 },
+      { id: 'r4', name: 'Twelfth',  color: '#a67cff', watch: 0.02 },
+    ],
   },
   reach: { buildRadius: 4.6, maxStake: 615 },
+  // ── THE CONSEQUENCE TIER band — the loss + the way back, both at their
+  // longest legal strings (the `deep` variant, which is what guttering renders).
+  tier: {
+    state: 'guttering', yield: 0.55, yieldPct: 55, watchSlots: 3, visitors: true,
+    loss: 'little light left to work by — the ground gives grudgingly.',
+    next: { state: 'dimming', yieldPct: 75, at: 30 },
+    boon: null,
+  },
+  watchSlots: 3,
+  // ── THE SLUMBER note — the longest of its two forms (with the wake promise).
+  slumber: {
+    steps: 2, days: 23, sparkState: 'warm', wakesOnArrival: true,
+    line: 'your clearing has been sleeping — no one has walked in for 23 days. it wakes the moment you do.',
+  },
+  safe: true,
   neverDestroyed: true,
 };
 

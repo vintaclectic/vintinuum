@@ -119,7 +119,25 @@
       // A panel squeezed to nothing is as broken as one that overlaps: the
       // currencies and the tend button must stay reachable on a landscape phone.
       // So it never shrinks below a usable height and simply scrolls harder.
-      ' min-height:132px;',
+      //
+      // ── BUT THE FLOOR MUST YIELD TOO (no-collision, the landscape-phone case) ─
+      // A bare `min-height:132px` OUTRANKS max-height in CSS, so on a viewport
+      // shorter than the reserve the max-height computed to 0px and the floor
+      // won — the panel drew 132px tall straight through #dvRail and #hint. It
+      // was a real, measured overlap at 740x360 (panel.bottom=198 vs rail.top=138)
+      // and it fired at every spark state, healthy worlds included.
+      //
+      // So the floor is itself clamped to the room that actually exists: the
+      // available band, or 132px, whichever is SMALLER. On a normal viewport
+      // nothing changes (the band is far bigger than 132px). On a short one the
+      // panel shrinks below its comfortable floor and scrolls harder — which is
+      // the container yielding, exactly as the budget above intends. A cramped
+      // panel is recoverable by scrolling; an overlapping one is not.
+      // (declared twice, vh then dvh, for the same reason max-height is below:
+      //  a browser without dvh keeps the vh value instead of dropping the floor.)
+      ' --wh-avail:calc(100vh - 64px - env(safe-area-inset-top,0px) - var(--wh-reserve));',
+      ' --wh-avail:calc(100dvh - 64px - env(safe-area-inset-top,0px) - var(--wh-reserve));',
+      ' min-height:min(132px, max(64px, var(--wh-avail)));',
       ' display:flex;flex-direction:column;',
       ' background:rgba(6,10,16,0.85);border:1px solid rgba(124,207,255,0.2);border-radius:16px;',
       ' backdrop-filter:blur(9px);-webkit-backdrop-filter:blur(9px);color:#dae4ff;',
@@ -221,6 +239,50 @@
       ' background:rgba(255,212,121,0.09);border:1px solid rgba(255,212,121,0.3);}',
       '#vintWorldHud .wh-ask:active{transform:scale(0.98);}',
       '#vintWorldHud .wh-ask b{color:#fff3dd;}',
+
+      // ── THE CONSEQUENCE TIER — what a dim clearing actually costs ────────────
+      // The loss band. Only rendered when the tier is actually taking something
+      // (never at radiant), so a healthy world carries no scold and the panel
+      // does not grow a permanent guilt row. Own block, own margin — it stacks
+      // in the normal flow inside #whVigil and touches nothing.
+      '#vintWorldHud .wh-tier{margin-top:7px;padding:7px 9px;border-radius:10px;',
+      ' font-size:11px;line-height:1.45;',
+      ' background:rgba(255,176,102,0.08);border:1px solid rgba(255,176,102,0.24);',
+      ' color:rgba(255,214,170,0.9);}',
+      // at the bottom two tiers the band leans red-warm — a real loss, said plainly
+      '#vintWorldHud .wh-tier.deep{background:rgba(199,123,123,0.1);',
+      ' border-color:rgba(199,123,123,0.32);color:rgba(255,201,201,0.92);}',
+      '#vintWorldHud .wh-tier .th{display:flex;align-items:baseline;gap:6px;margin-bottom:3px;}',
+      '#vintWorldHud .wh-tier .tw{font-size:9.5px;letter-spacing:.11em;text-transform:uppercase;',
+      ' color:rgba(255,255,255,0.55);flex:1 1 auto;min-width:0;',
+      ' white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}',
+      '#vintWorldHud .wh-tier .ty{flex:0 0 auto;font-variant-numeric:tabular-nums;font-weight:700;',
+      ' color:#fff3dd;}',
+      '#vintWorldHud .wh-tier .tl{display:block;color:inherit;opacity:0.86;}',
+      // the recovery promise — always present on the band, because the loss is
+      // never allowed to be shown without the way back out of it.
+      '#vintWorldHud .wh-tier .tb{display:block;margin-top:4px;font-size:10.5px;',
+      ' color:rgba(174,240,200,0.88);}',
+      '#vintWorldHud .wh-tier .tb b{color:#b8ffd4;font-variant-numeric:tabular-nums;}',
+
+      // THE SLUMBER — the world slept because nobody walked in. Its own note,
+      // visually distinct from tier loss (blue-quiet, not warning-warm) because
+      // it is not a penalty for doing wrong, it is a world resting.
+      '#vintWorldHud .wh-slumber{margin-top:7px;padding:7px 9px;border-radius:10px;',
+      ' font-size:11px;line-height:1.45;font-style:italic;',
+      ' background:rgba(154,134,216,0.1);border:1px solid rgba(154,134,216,0.28);',
+      ' color:rgba(214,205,255,0.88);}',
+      '#vintWorldHud .wh-slumber b{font-style:normal;color:#e6dcff;}',
+      // the wake promise, the most important sentence a returning player reads
+      '#vintWorldHud .wh-slumber .wk{display:block;margin-top:4px;font-style:normal;',
+      ' font-size:10.5px;color:rgba(174,240,200,0.9);}',
+
+      // RESTING WATCHES — capped by the tier, drawn dimmed and struck rather
+      // than removed, so an agent never appears to have been LOST.
+      '#vintWorldHud .wh-orb.resting{opacity:0.28;filter:grayscale(0.7);',
+      ' box-shadow:0 0 0 1px rgba(255,255,255,0.08) inset;}',
+      '#vintWorldHud .wh-rlabel{font-size:9.5px;letter-spacing:.06em;margin-top:6px;',
+      ' color:rgba(206,224,255,0.42);line-height:1.4;}',
 
       // THE REACH — shown honestly, so a shrinking build radius is understood.
       '#vintWorldHud .wh-reach{display:flex;gap:6px;margin-top:8px;font-size:10px;}',
@@ -518,6 +580,50 @@
     // ── the world's own line
     if (L.line) html += '<div class="wh-line">' + esc(L.line) + '</div>';
 
+    // ── THE CONSEQUENCE TIER — what the dimness actually COSTS ────────────────
+    // Rendered only when the tier is taking something (tier.loss is null at
+    // radiant), so a healthy world carries no scold. The band always states the
+    // loss AND the way out of it in the same breath: showing a player what they
+    // lost without showing them how to get it back is the predatory version of
+    // this feature, and the Retention Doctrine's first test forbids it.
+    var tierInfo = L.tier || null;
+    if (tierInfo && tierInfo.loss) {
+      var deep = (tierInfo.state === 'guttering' || tierInfo.state === 'ember');
+      var back = tierInfo.next;
+      html +=
+        '<div class="wh-tier' + (deep ? ' deep' : '') + '">' +
+          '<div class="th">' +
+            '<span class="tw">the clearing gives less</span>' +
+            '<span class="ty">' + num(tierInfo.yieldPct, 100) + '%</span>' +
+          '</div>' +
+          '<span class="tl">' + esc(tierInfo.loss) + '</span>' +
+          // the way back, always concrete: the next tier and what it restores.
+          (back
+            ? '<span class="tb">' +
+                (back.at != null
+                  ? 'reach <b>' + num(back.at, 0) + '</b> spark and it lifts to <b>' +
+                    esc(back.state) + '</b> — ' + num(back.yieldPct, 100) + '% again.'
+                  : 'lift off your floor and it warms to <b>' + esc(back.state) + '</b>.') +
+              '</span>'
+            : '') +
+        '</div>';
+    }
+
+    // ── THE SLUMBER — the world slept because nobody walked in ────────────────
+    // Its own note, and deliberately NOT styled as a warning: the player did
+    // nothing wrong by having a life. The wake-promise is the payload's own
+    // (`wakesOnArrival`), so the client never invents a reassurance it cannot keep.
+    var sl = L.slumber || null;
+    if (sl) {
+      html +=
+        '<div class="wh-slumber">' +
+          esc(sl.line || 'your clearing has been sleeping.') +
+          (sl.wakesOnArrival
+            ? '<span class="wk">you are here now — it is already waking.</span>'
+            : '') +
+        '</div>';
+    }
+
     // ── WHO STANDS WATCH
     html += '<div class="wh-watch">';
     if (watchers.length) {
@@ -532,10 +638,32 @@
             ' style="background:' + esc(col) + ';opacity:' + (0.35 + 0.65 * wt).toFixed(2) + '"' +
             ' title="' + esc(wch.name || 'a watcher') + ' — watch ' + Math.round(wt * 100) + '%"></span>';
       }
-      if (watchers.length > shown.length) {
-        html += '<span class="wh-wmore">+' + (watchers.length - shown.length) + '</span>';
+      // ── RESTING WATCHES — the slot cap, made visible without making it a loss
+      //    of PROPERTY. A capped agent is drawn dimmed and greyed right beside
+      //    the awake ones, never removed: an agent that vanished from this row
+      //    would read as "I lost an agent", which is exactly the false alarm the
+      //    "nothing is ever destroyed" invariant exists to prevent.
+      var resters = Array.isArray(v.resters) ? v.resters : [];
+      var restShown = resters.slice(0, Math.max(0, 8 - shown.length));
+      for (var j = 0; j < restShown.length; j++) {
+        var rc = restShown[j] || {};
+        var rcol = /^#[0-9a-fA-F]{3,8}$/.test(String(rc.color || '')) ? rc.color : '#ffd479';
+        html +=
+          '<span class="wh-orb resting" style="background:' + esc(rcol) + '"' +
+            ' title="' + esc(rc.name || 'a watcher') + ' — resting; the clearing has no slot for them until it warms"></span>';
       }
+      var hidden = (watchers.length - shown.length) + (resters.length - restShown.length);
+      if (hidden > 0) html += '<span class="wh-wmore">+' + hidden + '</span>';
       html += '</div>';
+      // say WHY they are resting, and that it is temporary — the sentence that
+      // turns a confusing dim orb into an understood, recoverable consequence.
+      if (num(v.resting, 0) > 0) {
+        html += '<div class="wh-rlabel">' +
+          '<b>' + num(v.resting, 0) + '</b> resting — this clearing holds <b>' +
+          num(v.slots, 0) + '</b> watches while it is <b>' + esc(stateOf(L.state).word) +
+          '</b>. they return as it warms; none are lost.' +
+        '</div>';
+      }
     } else {
       html += '<div class="wh-wnone">' +
         (agents
@@ -784,12 +912,23 @@
       _toast('your court was already fresh — their watch holds.');
     }
   });
+  // ── THE CONSEQUENCE TIER, felt at the moment of the swing ──────────────────
+  // When the tier took a cut the server ships `full` (what a radiant clearing
+  // would have paid) beside the actual gain. Saying "2 of 3 — the clearing is
+  // dim" is the whole difference between a player reading STAKES and a player
+  // reading a BUG: an unexplained smaller number is indistinguishable from
+  // broken, and a survival mechanic nobody can attribute teaches nothing.
+  function _cut(d) {
+    return (d && d.full != null && d.yieldPct != null)
+      ? '  ·  of ' + d.full + ' — the clearing is ' + (d.state || 'dim') + ' (' + d.yieldPct + '%)'
+      : '';
+  }
   W.addEventListener('vint:world-harvest', function (e) {
     var d = e.detail || {};
-    _toast(d.artifact ? ('found: ' + d.artifact + '  (+' + d.echo + ' echo)') : ('+' + (d.echo || 0) + ' echo'));
+    _toast((d.artifact ? ('found: ' + d.artifact + '  (+' + d.echo + ' echo)') : ('+' + (d.echo || 0) + ' echo')) + _cut(d));
   });
   W.addEventListener('vint:world-refine', function (e) {
-    var d = e.detail || {}; _toast('refined ' + d.spent + ' echo → ' + d.gained + ' lumen');
+    var d = e.detail || {}; _toast('refined ' + d.spent + ' echo → ' + d.gained + ' lumen' + _cut(d));
   });
   W.addEventListener('vint:world-err', function (e) {
     var det = e.detail || {};
@@ -809,6 +948,15 @@
             ' of your hearth right now. tend your court to widen it.';
     }
     _toast(msg || ('— ' + c));
+  });
+
+  // THE VISITOR GATE — the world you asked for is resting, so you were brought
+  // to the hub instead. The server's own sentence is used verbatim (it is the
+  // one place that knows WHY), and it is framed as that clearing's condition,
+  // never as a rejection of the person who knocked.
+  W.addEventListener('vint:world-gated', function (e) {
+    var g = e.detail || {};
+    _toast(g.message || 'that clearing is resting — try again when it warms.');
   });
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', mount, { once: true });

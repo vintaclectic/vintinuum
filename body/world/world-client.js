@@ -562,6 +562,15 @@
       if (m.t === 'hello') {
         selfId = m.selfId;
         World._selfName = m.selfName || 'you';
+        // ── THE VISITOR GATE — you asked for a resting clearing and landed here.
+        // The server redirected rather than dropping the socket, so the ONE thing
+        // this must never do is leave the player silently somewhere they didn't
+        // choose. Announced as a fact about that world, never as a fault of the
+        // person who tried to visit it.
+        if (m.gated) {
+          World._gated = m.gated;
+          try { window.dispatchEvent(new CustomEvent('vint:world-gated', { detail: m.gated })); } catch (_) {}
+        }
         if (m.spawn) { me.x = m.spawn.x; me.z = m.spawn.z; me.yaw = m.spawn.yaw; }
         // idempotent: clear any prior agents/self (reconnect must not duplicate them)
         try { if (global.AgentLife && global.AgentLife.reset) global.AgentLife.reset(); } catch (_) {}
