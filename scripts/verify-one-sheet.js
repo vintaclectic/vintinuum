@@ -42,6 +42,13 @@ const SURFACES = [
   { id: 'agent',    sel: '#dvAgentSheet', btn: '#dvAgentBtn', open: () => window.DirverseHUD.openAgent() },
   { id: 'court',    sel: '#ctSheet',      btn: '#ctBtn',      open: () => window.VintCourt.open() },
   { id: 'dirhaven', sel: '#dhPanel',      btn: '#dhDoorBtn',  open: () => window.DirHavenDoor.open() },
+  // THE LANTERNS. A fifth full-width sheet at the same z-band as the others, so
+  // it belongs in this proof or the proof is stale the day it shipped: the whole
+  // reason this script exists is that a NEW surface silently joined a stack it
+  // was never measured against. It goes through the same registry (openSheet /
+  // registerSheet), and this is what holds that claim to the same standard as
+  // the four that came before it.
+  { id: 'traces',   sel: '#dvTraceSheet', btn: '#dvTraceBtn', open: () => window.VintTraces.open() },
 ];
 
 const MIME = {
