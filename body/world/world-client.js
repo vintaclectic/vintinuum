@@ -231,6 +231,48 @@
     [-0.7, 0.7].forEach(x => { const leg = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.45, 0.45), wood); leg.position.set(x, 0.22, 0); bench.add(leg); });
     bench.position.set(-2.2, 0, -1.2); bench.rotation.y = 0.4; scene.add(bench);
 
+    /* ── THE LONG WORK — the stone that was here before you ───────────────────
+       THE OPEN LOOP, MADE PHYSICAL (AETHERHOLD 2026-08-05). The ascent's pull is
+       not a progress bar; it is this. A standing stone is in EVERY clearing from
+       the very first second — before you claim, before you build, before you
+       know what the game is. You can walk to it. You cannot read it. Each rung
+       you climb makes one more line of its inscription legible, and the last
+       line answers nothing.
+
+       It is deliberately OFF the bench and OFF the hearth axis (+4.4, -3.6), far
+       enough that it reads as something that was already here rather than part
+       of your camp, close enough to be walked to in a few seconds. It occupies
+       ground nothing else claims: the bench owns (-2.2,-1.2), the hearth is
+       placed by the player at their own position, and the plot is 4x4 around it
+       — so the stone sits well outside any claim's reach at that distance and
+       cannot be built over. Nothing touches it.
+
+       The glow is driven by how much of it you have read (setLongWork below), so
+       the stone visibly wakes as you climb. Until the server says otherwise it
+       sits at its dimmest, which is also the honest state for a brand-new player
+       who has read exactly one unreadable line.                                */
+    const stone = new THREE.Group();
+    const slab = new THREE.Mesh(
+      new THREE.BoxGeometry(0.66, 2.3, 0.34),
+      new THREE.MeshStandardMaterial({ color: 0x4a4658, roughness: 0.85, metalness: 0.05 }));
+    slab.position.y = 1.15;
+    slab.rotation.z = 0.035;                       // leaning, weathered, not new
+    // the marks: a faint emissive face that brightens as the inscription is read
+    const marks = new THREE.Mesh(
+      new THREE.PlaneGeometry(0.5, 2.0),
+      new THREE.MeshStandardMaterial({
+        color: 0xcbbde8, emissive: 0x9a86d8, emissiveIntensity: 0.25,
+        transparent: true, opacity: 0.35, side: THREE.DoubleSide,
+      }));
+    marks.position.set(0, 1.15, 0.18); marks.rotation.z = 0.035;
+    const halo = new THREE.PointLight(0x9a86d8, 0.35, 5);
+    halo.position.set(0, 1.5, 0.3);
+    stone.add(slab, marks, halo);
+    stone.position.set(4.4, 0, -3.6);
+    stone.rotation.y = -0.5;
+    scene.add(stone);
+    World._longWorkRig = { group: stone, marks, halo };
+
     // weather: slow drifting motes of warm light
     const moteGeo = new THREE.BufferGeometry();
     const N = 120, pos = new Float32Array(N * 3);
@@ -270,6 +312,27 @@
     World._living = living || World._living || null;
     try { window.dispatchEvent(new CustomEvent('vint:world-warmth', { detail: { spark: s, warmth: World._warmthTarget, living: World._living } })); } catch (_) {}
     return World._warmthTarget;
+  };
+
+  /* ── THE LONG WORK, IN THE SCENE ────────────────────────────────────────────
+     The stone wakes as you read it. `revealed/total` comes from the server's
+     ladder picture and NOTHING here derives it — same discipline as spark.
+     A brand-new player sees the dimmest state (one unreadable line); a
+     lightwarden sees it fully lit and STILL unanswered, which is the point.  */
+  World.setLongWork = function (lw) {
+    const rig = World._longWorkRig;
+    if (!rig || !lw) return null;
+    const total = Math.max(1, Number(lw.total) || 1);
+    const read = Math.max(0, Math.min(total, Number(lw.revealed) || 0));
+    const p = read / total;
+    try {
+      // the marks brighten and sharpen; never fully opaque, because the stone is
+      // never fully explained.
+      rig.marks.material.emissiveIntensity = 0.25 + 1.5 * p;
+      rig.marks.material.opacity = 0.35 + 0.5 * p;
+      rig.halo.intensity = 0.35 + 1.5 * p;
+    } catch (_) {}
+    return p;
   };
 
   function _stepWarmth(dt) {
@@ -701,6 +764,11 @@
         if (m.living) World.setSpark(m.living.spark, m.living);
         else if (m.resident && m.resident.spark != null) World.setSpark(m.resident.spark, null);
       } catch (_) {}
+      // THE ASCENT: the ladder picture drives the Long Work stone in the scene.
+      // The stone brightens as the inscription becomes legible — the only thing
+      // in the clearing whose light comes from progression rather than spark.
+      World._climb = m.climb || null;
+      try { if (m.climb && m.climb.longWork) World.setLongWork(m.climb.longWork); } catch (_) {}
       try { window.dispatchEvent(new CustomEvent('vint:world-state', { detail: m })); } catch (_) {}
     } else if (m.t === 'world:tend:ok') {
       // tending is a felt moment: the clearing brightens as the watch is set
@@ -717,6 +785,133 @@
       try { window.dispatchEvent(new CustomEvent('vint:world-err', { detail: m })); } catch (_) {}
     }
   }
+
+  /* ── THE ASCENT'S ELEVEN FORMS ──────────────────────────────────────────────
+     One builder per kind the standing ladder unlocks. Deliberately built from
+     the same primitives and the same cool-blue/warm-amber palette as the
+     original five, so a clearing full of tier-5 pieces still reads as the SAME
+     clearing rather than a prop catalogue. Every builder returns a mesh or group
+     positioned relative to y=0 (the caller applies x/z/rot/y), and every one is
+     cheap: boxes, cylinders and one icosahedron, no loaded geometry, so the
+     mobile frame budget is untouched no matter how built-out a world gets.     */
+  const ASCENT_FORMS = {
+    pillar: (T) => {
+      const m = new T.Mesh(new T.CylinderGeometry(0.16, 0.2, 1.6, 10),
+        new T.MeshStandardMaterial({ color: 0x7a8a9a, emissive: 0x16303f, emissiveIntensity: 0.35 }));
+      m.position.y = 0.8; return m;
+    },
+    fence: (T) => {
+      const g = new T.Group();
+      const mat = new T.MeshStandardMaterial({ color: 0x6a7a88, emissive: 0x122430, emissiveIntensity: 0.28 });
+      const rail = new T.Mesh(new T.BoxGeometry(1, 0.07, 0.07), mat);
+      rail.position.y = 0.52; g.add(rail);
+      for (const x of [-0.42, 0.42]) {
+        const p = new T.Mesh(new T.BoxGeometry(0.09, 0.7, 0.09), mat);
+        p.position.set(x, 0.35, 0); g.add(p);
+      }
+      return g;
+    },
+    arch: (T) => {
+      const g = new T.Group();
+      const mat = new T.MeshStandardMaterial({ color: 0x6fb8e0, emissive: 0x1a3a5a, emissiveIntensity: 0.4 });
+      for (const x of [-0.42, 0.42]) {
+        const leg = new T.Mesh(new T.BoxGeometry(0.14, 1.3, 0.14), mat);
+        leg.position.set(x, 0.65, 0); g.add(leg);
+      }
+      const top = new T.Mesh(new T.TorusGeometry(0.42, 0.07, 8, 16, Math.PI), mat);
+      top.position.y = 1.3; g.add(top);
+      return g;
+    },
+    door: (T) => {
+      const g = new T.Group();
+      const frame = new T.Mesh(new T.BoxGeometry(0.9, 1.5, 0.1),
+        new T.MeshStandardMaterial({ color: 0x5a6a7a, emissive: 0x14283a, emissiveIntensity: 0.3 }));
+      frame.position.y = 0.75;
+      const slab = new T.Mesh(new T.BoxGeometry(0.66, 1.26, 0.14),
+        new T.MeshStandardMaterial({ color: 0x8a7a5a, emissive: 0x3a2408, emissiveIntensity: 0.45 }));
+      slab.position.y = 0.66; g.add(frame, slab);
+      return g;
+    },
+    window: (T) => {
+      const g = new T.Group();
+      const frame = new T.Mesh(new T.BoxGeometry(0.9, 0.9, 0.1),
+        new T.MeshStandardMaterial({ color: 0x5a6a7a, emissive: 0x14283a, emissiveIntensity: 0.3 }));
+      const pane = new T.Mesh(new T.BoxGeometry(0.66, 0.66, 0.04),
+        new T.MeshStandardMaterial({
+          color: 0xbfe4ff, emissive: 0x6fb8e0, emissiveIntensity: 0.7,
+          transparent: true, opacity: 0.42,
+        }));
+      pane.position.z = 0.04; g.add(frame, pane);
+      g.position.y = 1.0; return g;
+    },
+    stair: (T) => {
+      const g = new T.Group();
+      const mat = new T.MeshStandardMaterial({ color: 0x4a5a6a, emissive: 0x0e2236, emissiveIntensity: 0.3 });
+      for (let i = 0; i < 4; i++) {
+        const step = new T.Mesh(new T.BoxGeometry(1, 0.16, 0.26), mat);
+        step.position.set(0, 0.08 + i * 0.16, -0.39 + i * 0.26);
+        g.add(step);
+      }
+      return g;
+    },
+    lantern: (T) => {
+      const g = new T.Group();
+      const post = new T.Mesh(new T.CylinderGeometry(0.045, 0.055, 1.4, 8),
+        new T.MeshStandardMaterial({ color: 0x3a4450 }));
+      post.position.y = 0.7;
+      const cage = new T.Mesh(new T.IcosahedronGeometry(0.18, 0),
+        new T.MeshStandardMaterial({ color: 0xfff0c0, emissive: 0xffb066, emissiveIntensity: 2.2 }));
+      cage.position.y = 1.5;
+      const pl = new T.PointLight(0xffb066, 1.1, 6); pl.position.y = 1.5;
+      g.add(post, cage, pl); return g;
+    },
+    planter: (T) => {
+      const g = new T.Group();
+      const pot = new T.Mesh(new T.CylinderGeometry(0.3, 0.24, 0.34, 12),
+        new T.MeshStandardMaterial({ color: 0x6a5a48, emissive: 0x241a10, emissiveIntensity: 0.25 }));
+      pot.position.y = 0.17;
+      const leaf = new T.Mesh(new T.IcosahedronGeometry(0.26, 0),
+        new T.MeshStandardMaterial({ color: 0x5fae7a, emissive: 0x1a4a2a, emissiveIntensity: 0.5 }));
+      leaf.position.y = 0.52; g.add(pot, leaf); return g;
+    },
+    roof: (T) => {
+      // a four-sided pyramid — a cone with 4 radial segments, no extra geometry
+      const m = new T.Mesh(new T.ConeGeometry(0.8, 0.5, 4),
+        new T.MeshStandardMaterial({ color: 0x54606e, emissive: 0x12222f, emissiveIntensity: 0.3 }));
+      m.position.y = 1.45; m.rotation.y = Math.PI / 4; return m;
+    },
+    banner: (T) => {
+      const g = new T.Group();
+      const pole = new T.Mesh(new T.CylinderGeometry(0.04, 0.04, 1.7, 8),
+        new T.MeshStandardMaterial({ color: 0x3a4450 }));
+      pole.position.y = 0.85;
+      const cloth = new T.Mesh(new T.BoxGeometry(0.5, 0.7, 0.03),
+        new T.MeshStandardMaterial({
+          color: 0xf4c79a, emissive: 0xb06a2a, emissiveIntensity: 0.5,
+          side: T.DoubleSide,
+        }));
+      cloth.position.set(0.27, 1.25, 0); g.add(pole, cloth); return g;
+    },
+    beacon: (T) => {
+      // THE ONLY PIECE THAT REACHES PAST YOUR PLOT — it is how a stranger finds
+      // your clearing without a URL, so it is the brightest thing in the world.
+      const g = new T.Group();
+      const base = new T.Mesh(new T.CylinderGeometry(0.34, 0.44, 0.5, 12),
+        new T.MeshStandardMaterial({ color: 0x2e3a48, emissive: 0x16324a, emissiveIntensity: 0.5 }));
+      base.position.y = 0.25;
+      const core = new T.Mesh(new T.IcosahedronGeometry(0.3, 1),
+        new T.MeshStandardMaterial({ color: 0xfff3dd, emissive: 0xffd479, emissiveIntensity: 2.6 }));
+      core.position.y = 0.95;
+      const beam = new T.Mesh(new T.CylinderGeometry(0.06, 0.16, 3.2, 8),
+        new T.MeshStandardMaterial({
+          color: 0xffd479, emissive: 0xffd479, emissiveIntensity: 1.4,
+          transparent: true, opacity: 0.2,
+        }));
+      beam.position.y = 2.6;
+      const pl = new T.PointLight(0xffd479, 2.0, 12); pl.position.y = 1.1;
+      g.add(base, core, beam, pl); return g;
+    },
+  };
 
   const _structMeshes = new Map(); // id → mesh
   function _renderStruct(s) {
@@ -751,7 +946,17 @@
       mesh = new THREE.Mesh(new THREE.BoxGeometry(1, 0.6, 0.25),
         new THREE.MeshStandardMaterial({ color: 0x8a7a5a, emissive: 0x2a1a0a, emissiveIntensity: 0.3 }));
       mesh.position.y = 0.6;
+    } else if (ASCENT_FORMS[s.kind]) {
+      // ── THE ASCENT'S PIECES (AETHERHOLD 2026-08-05) ─────────────────────────
+      // The eleven kinds the ladder unlocks used to fall through to `return` —
+      // so even once the server accepted them they would have been placed,
+      // persisted, broadcast, and then rendered as NOTHING. A piece you earned a
+      // whole tier for and cannot see is worse than one you cannot place. Each
+      // gets a real form, built from the same primitive vocabulary as the
+      // original five so the clearing stays one coherent place.
+      mesh = ASCENT_FORMS[s.kind](THREE);
     } else { return; }
+    if (!mesh) return;
     mesh.position.x = s.x; mesh.position.z = s.z; if (s.y) mesh.position.y += s.y;
     mesh.rotation.y = s.rot || 0;
     World._scene.add(mesh);
@@ -865,7 +1070,11 @@
   }
 
   World.claimHere = function () { World.send({ t: 'world:claim', x: World._me ? World._me.x : 0, z: World._me ? World._me.z : 0 }); };
-  World.placeHere = function (kind) { const me = World._me || {}; World.send({ t: 'world:place', kind, x: me.x || 0, z: me.z || 0, rot: me.yaw || 0 }); };
+  // RETURNS the send result (false when the socket is down and the message was
+  // dropped), so a caller can never report a placement that never left the page.
+  // The build palette relies on this to stop claiming "placed a beacon" into a
+  // dead socket — same discipline the tend button already uses.
+  World.placeHere = function (kind) { const me = World._me || {}; return World.send({ t: 'world:place', kind, x: me.x || 0, z: me.z || 0, rot: me.yaw || 0 }); };
   World.harvest = function () { World.send({ t: 'world:harvest' }); };
   World.refine = function (amount) { World.send({ t: 'world:refine', amount: amount || null }); };
   // THE VIGIL — tend your court. Pass an agentId to set one watch, or nothing to
@@ -873,6 +1082,9 @@
   // reply drives the light. This is the survival loop's headline verb.
   World.tend = function (agentId) { return World.send({ t: 'world:tend', agentId: agentId || null }); };
   World.living = function () { return World._living || null; };
+  // THE ASCENT — the server's ladder picture, as last received. Read-only; the
+  // client never computes a rung, a threshold or an unlock of its own.
+  World.climb = function () { return World._climb || null; };
 
   let _lastSent = 0;
   function _sendMove() {

@@ -337,6 +337,12 @@
 <script src="body/world/dirverse-hud.js"></script>
 <script src="body/world/dirhaven-door.js"></script>
 <script src="body/world/court.js"></script>
+<!-- THE ASCENT — the climb surface. Loads AFTER dirverse-hud (it joins that
+     module's rail via addLauncher and its one-sheet-at-a-time registry) and
+     after court.js, so the rail's DOM order stays star-map · agents · home ·
+     court · ascent and every launcher's slot is allocated by the rail that
+     measures it, never hand-counted here. -->
+<script src="body/world/ascent-hud.js"></script>
 <script>
 (function () {
   const statusEl = document.getElementById('status');
