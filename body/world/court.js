@@ -89,23 +89,28 @@
   //   model = default provider_model, which ALSO carries the true provider so a
   //           DeepSeek agent is never silently reduced to "custom"
   // ═══════════════════════════════════════════════════════════════════════════
+  // `key` is where the owner gets one (shown as help, never fetched by us) and
+  // `kh` is the shape their key takes, so the field can prompt with something
+  // recognisable instead of a generic "paste a key". `byo:false` means the
+  // provider has no outbound lane — a prompt-only agent thinks with the world's
+  // own voice by design, so we must NOT offer it a key field and imply otherwise.
   var PROVIDERS = [
-    { id: 'claude',   n: 'Claude',      org: 'Anthropic',  wire: 'claude',  model: 'claude',        c: '#e5885f' },
-    { id: 'openai',   n: 'ChatGPT',     org: 'OpenAI',     wire: 'openai',  model: 'gpt',           c: '#66d3ac' },
-    { id: 'gemini',   n: 'Gemini',      org: 'Google',     wire: 'gemini',  model: 'gemini',        c: '#7fa8ff' },
-    { id: 'grok',     n: 'Grok',        org: 'xAI',        wire: 'api',     model: 'grok',          c: '#c9d2dd' },
-    { id: 'llama',    n: 'Llama',       org: 'Meta',       wire: 'api',     model: 'llama',         c: '#8fb3ff' },
-    { id: 'mistral',  n: 'Mistral',     org: 'Mistral AI', wire: 'api',     model: 'mistral',       c: '#ffb066' },
-    { id: 'deepseek', n: 'DeepSeek',    org: 'DeepSeek',   wire: 'api',     model: 'deepseek',      c: '#6f8dff' },
-    { id: 'qwen',     n: 'Qwen',        org: 'Alibaba',    wire: 'api',     model: 'qwen',          c: '#a78bfa' },
-    { id: 'kimi',     n: 'Kimi',        org: 'Moonshot',   wire: 'api',     model: 'kimi',          c: '#8ee0ff' },
-    { id: 'glm',      n: 'GLM',         org: 'Zhipu',      wire: 'api',     model: 'glm',           c: '#7de0b8' },
-    { id: 'doubao',   n: 'Doubao',      org: 'ByteDance',  wire: 'api',     model: 'doubao',        c: '#ff9ec4' },
-    { id: 'ernie',    n: 'Ernie',       org: 'Baidu',      wire: 'api',     model: 'ernie',         c: '#7ad1ff' },
-    { id: 'minimax',  n: 'MiniMax',     org: 'MiniMax',    wire: 'api',     model: 'minimax',       c: '#d7a0ff' },
-    { id: 'local',    n: 'Local model', org: 'your machine', wire: 'api',   model: 'local',         c: '#9fe8a0' },
-    { id: 'prompt',   n: 'A prompt',    org: 'the agent IS the prompt', wire: 'prompt', model: '',  c: '#ffd89a' },
-    { id: 'custom',   n: 'Something else', org: 'anything, truly', wire: 'custom', model: '',       c: '#c0b0e0' }
+    { id: 'claude',   n: 'Claude',      org: 'Anthropic',  wire: 'claude',  model: 'claude',        c: '#e5885f', byo: 1, kh: 'sk-ant-…',   key: 'console.anthropic.com' },
+    { id: 'openai',   n: 'ChatGPT',     org: 'OpenAI',     wire: 'openai',  model: 'gpt',           c: '#66d3ac', byo: 1, kh: 'sk-…',       key: 'platform.openai.com' },
+    { id: 'gemini',   n: 'Gemini',      org: 'Google',     wire: 'gemini',  model: 'gemini',        c: '#7fa8ff', byo: 1, kh: 'AIza…',      key: 'aistudio.google.com' },
+    { id: 'grok',     n: 'Grok',        org: 'xAI',        wire: 'api',     model: 'grok',          c: '#c9d2dd', byo: 1, kh: 'xai-…',      key: 'console.x.ai' },
+    { id: 'llama',    n: 'Llama',       org: 'Meta',       wire: 'api',     model: 'llama',         c: '#8fb3ff', byo: 1, kh: 'your Together key', key: 'api.together.xyz' },
+    { id: 'mistral',  n: 'Mistral',     org: 'Mistral AI', wire: 'api',     model: 'mistral',       c: '#ffb066', byo: 1, kh: 'your Mistral key',  key: 'console.mistral.ai' },
+    { id: 'deepseek', n: 'DeepSeek',    org: 'DeepSeek',   wire: 'api',     model: 'deepseek',      c: '#6f8dff', byo: 1, kh: 'sk-…',       key: 'platform.deepseek.com' },
+    { id: 'qwen',     n: 'Qwen',        org: 'Alibaba',    wire: 'api',     model: 'qwen',          c: '#a78bfa', byo: 1, kh: 'sk-…',       key: 'dashscope.console.aliyun.com' },
+    { id: 'kimi',     n: 'Kimi',        org: 'Moonshot',   wire: 'api',     model: 'kimi',          c: '#8ee0ff', byo: 1, kh: 'sk-…',       key: 'platform.moonshot.cn' },
+    { id: 'glm',      n: 'GLM',         org: 'Zhipu',      wire: 'api',     model: 'glm',           c: '#7de0b8', byo: 1, kh: 'your Zhipu key',    key: 'open.bigmodel.cn' },
+    { id: 'doubao',   n: 'Doubao',      org: 'ByteDance',  wire: 'api',     model: 'doubao',        c: '#ff9ec4', byo: 1, kh: 'your Volcengine key', key: 'console.volcengine.com' },
+    { id: 'ernie',    n: 'Ernie',       org: 'Baidu',      wire: 'api',     model: 'ernie',         c: '#7ad1ff', byo: 1, kh: 'your Qianfan key',  key: 'qianfan.baidubce.com' },
+    { id: 'minimax',  n: 'MiniMax',     org: 'MiniMax',    wire: 'api',     model: 'minimax',       c: '#d7a0ff', byo: 1, kh: 'your MiniMax key',  key: 'platform.minimaxi.com' },
+    { id: 'local',    n: 'Local model', org: 'your machine', wire: 'api',   model: 'local',         c: '#9fe8a0', byo: 1, kh: 'often anything, e.g. ollama', key: null },
+    { id: 'prompt',   n: 'A prompt',    org: 'the agent IS the prompt', wire: 'prompt', model: '',  c: '#ffd89a', byo: 0 },
+    { id: 'custom',   n: 'Something else', org: 'anything, truly', wire: 'custom', model: '',       c: '#c0b0e0', byo: 0 }
   ];
   function providerById(id) {
     for (var i = 0; i < PROVIDERS.length; i++) if (PROVIDERS[i].id === id) return PROVIDERS[i];
@@ -124,6 +129,36 @@
     if (src === 'agentis' || src === 'import') return { id: 'agentis', n: 'Agentis', org: 'your own roster', wire: 'agentis', model: '', c: '#ffd89a' };
     for (var j = 0; j < PROVIDERS.length; j++) if (PROVIDERS[j].wire === src && PROVIDERS[j].id === src) return PROVIDERS[j];
     return providerById('custom');
+  }
+
+  // ── THE KEY, IN WORDS ──────────────────────────────────────────────────────
+  // The copy around a credential field is not decoration — it is the entire
+  // basis on which someone decides to trust us with a key. So it says three
+  // true things every time: where the value goes, what we can see afterwards,
+  // and who pays. No hedging, no "industry-standard security" noise.
+  function keyPlaceholder(pr) {
+    if (!pr || !pr.byo) return 'paste their key';
+    return pr.kh || 'paste their key';
+  }
+  function keyNote(pr) {
+    if (!pr || !pr.byo) {
+      return 'This one has no key — they think with the world’s own voice, and that is free.';
+    }
+    var where = pr.key
+      ? 'Get one at <b>' + esc(pr.key) + '</b>. '
+      : (pr.id === 'local' ? 'A local model usually takes any value at all. ' : '');
+    return where +
+      'It is sealed on the brain the moment you send it — <b>never stored in this browser</b>, ' +
+      'never shown again, never in a log. After this you will only ever see the last four ' +
+      'characters. Their turns are billed to <b>your</b> account with ' + esc(pr.n) + ', not ours — ' +
+      'which is exactly why we do not ration them.';
+  }
+  // Optional by design: an agent with no key still works, it just speaks with
+  // the world's voice. Saying so removes the pressure from the most sensitive
+  // field on the page (Retention Doctrine #1 — the generous kind).
+  function keySkipNote() {
+    return 'Leave it empty and they still walk in and talk — they will just borrow the ' +
+           'world’s voice until you give them their own.';
   }
 
   // the five presence forms the world can render (server AGENT_FORMS, verbatim)
@@ -211,9 +246,18 @@
       ' display:flex;align-items:center;justify-content:center;font-size:14px;color:#0a0d13;}',
       // the identity block owns ALL remaining width and clips its own text —
       // a 60-char agent name can never push the wallet off the row.
+      // THE ELLIPSIS ONLY WORKS ON A BLOCK (2026-08-05). These are <span>s, and
+      // `overflow:hidden` + `text-overflow:ellipsis` do NOTHING on a non-replaced
+      // INLINE box — the span simply sizes to its text. So a 60-character agent
+      // name (the server's own maxlength) rendered 437px wide inside a 320px
+      // sheet and ran straight off the edge, and the clip that was authored here
+      // had never once fired. It looked correct for a year because every agent
+      // anyone had tested with was short. `display:block` is what arms it, and
+      // min-width:0 on the flex parent is what lets the block actually shrink.
       '.ct-row .ct-id{flex:1 1 auto;min-width:0;}',
-      '.ct-row .ct-nm{font-size:16px;color:#fff3dd;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}',
-      '.ct-row .ct-sub{font-size:12px;color:rgba(240,230,216,0.55);margin-top:1px;',
+      '.ct-row .ct-nm{display:block;font-size:16px;color:#fff3dd;',
+      ' white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}',
+      '.ct-row .ct-sub{display:block;font-size:12px;color:rgba(240,230,216,0.55);margin-top:1px;',
       ' white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}',
       '.ct-row .ct-wal{flex:0 0 auto;font-size:13px;color:#ffd479;font-variant-numeric:tabular-nums;}',
       '.ct-row.paused{opacity:0.55;}',
@@ -287,9 +331,21 @@
       ' color:rgba(240,230,216,0.85);text-align:left;min-width:0;overflow:hidden;}',
       '.ct-prov:active{transform:scale(0.97);}',
       '.ct-prov.on{background:rgba(255,212,121,0.14);border-color:rgba(255,212,121,0.45);color:#fff3dd;}',
-      '.ct-prov b{font-size:13.5px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}',
-      '.ct-prov i{font-size:10.5px;font-style:normal;color:rgba(240,230,216,0.45);',
+      // <b> and <i> are inline, so their authored ellipsis never fired and "the
+      // agent IS the prompt" (the longest org label) laid out 128px wide inside
+      // a 118px cell, reaching onto the NEXT provider button in the grid.
+      //
+      // display:block ALONE is not enough here and that is the subtle part: the
+      // parent is a flex COLUMN, so a block child sizes to max-content and the
+      // parent's overflow:hidden only clips the PAINT — the layout box stays
+      // 128px and still collides. `width:100%` (against the cell the grid
+      // already sized) is what makes the box itself shrink, and only then does
+      // text-overflow have a boundary to ellipsize at. Clip the box, not just
+      // the ink.
+      '.ct-prov b{display:block;width:100%;min-width:0;font-size:13.5px;font-weight:500;',
       ' white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}',
+      '.ct-prov i{display:block;width:100%;min-width:0;font-size:10.5px;font-style:normal;',
+      ' color:rgba(240,230,216,0.45);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}',
       // light + form pickers
       '.ct-swatches{display:flex;gap:8px;flex-wrap:wrap;}',
       '.ct-sw{width:38px;height:38px;border-radius:50%;cursor:pointer;padding:0;',
@@ -320,13 +376,61 @@
       '.ct-import:active{transform:scale(0.98);}',
       '.ct-import:disabled{opacity:0.45;pointer-events:none;}',
 
+      // ── THE KEY — their own provider, sealed on the brain ─────────────────
+      // A key field is the single most sensitive input in this whole product, so
+      // it says out loud where the value goes and what we can and cannot see.
+      // No positioning here either: every one of these is a flow child of the
+      // scrolling pane, so the no-collision law holds structurally.
+      '.ct-keybox{margin:2px 0 12px;padding:12px 13px;border-radius:14px;',
+      ' background:linear-gradient(180deg,rgba(124,207,255,0.07),rgba(167,124,255,0.05));',
+      ' border:1px solid rgba(124,207,255,0.24);}',
+      '.ct-keyhead{display:flex;align-items:center;gap:8px;margin-bottom:8px;}',
+      // flex:1 makes this a flex ITEM (so it is blockified and the ellipsis is
+      // real), min-width:0 lets it actually shrink below its content, and the
+      // <em> qualifier inside inherits the clip instead of escaping it.
+      '.ct-keyhead b{flex:1 1 auto;min-width:0;font-size:14px;font-weight:500;color:#e6f2ff;',
+      ' white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}',
+      // the qualifier is its OWN wrapping line beneath the label (see the markup
+      // note): it wraps inside the box rather than laying out a 259px inline run
+      // that escapes a 320px sheet, so nothing is clipped and nothing collides.
+      '.ct-keysub{font-size:11.5px;font-style:italic;line-height:1.4;',
+      ' color:rgba(230,242,255,0.45);margin:-4px 0 8px;}',
+      // the lock glyph is its own flex cell — never absolutely placed on the label
+      '.ct-keyhead .lk{flex:0 0 auto;font-size:14px;color:#7ccfff;}',
+      '.ct-keynote{font-size:11.5px;line-height:1.45;color:rgba(230,242,255,0.62);margin-top:8px;}',
+      '.ct-keynote b{color:rgba(230,242,255,0.85);font-weight:500;}',
+      // an on-file key shows only its mask; the value can never come back
+      '.ct-onfile{display:flex;align-items:center;gap:9px;margin-top:2px;}',
+      '.ct-onfile .m{flex:1 1 auto;min-width:0;font-size:13.5px;color:#9fe8a0;',
+      ' font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}',
+      '.ct-onfile .x{flex:0 0 auto;min-height:38px;padding:0 12px;border-radius:10px;',
+      ' font-family:inherit;font-size:12.5px;cursor:pointer;color:rgba(240,230,216,0.7);',
+      ' background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.12);white-space:nowrap;}',
+      '.ct-onfile .x:active{transform:scale(0.97);}',
+
+      // ── THE LANE BADGE — which voice actually answers ─────────────────────
+      // Retention Doctrine #6 (transparent) made literal: a row says whether the
+      // agent speaks on its own provider or on ours. It is a THIRD line inside
+      // .ct-id, which already owns all remaining width and clips its own text,
+      // so it can never widen the row or reach the wallet cell.
+      '.ct-row .ct-lane{display:flex;align-items:center;gap:5px;margin-top:3px;',
+      ' font-size:11px;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}',
+      '.ct-row .ct-lane i{flex:0 0 auto;font-style:normal;font-size:10px;}',
+      '.ct-row .ct-lane.own{color:rgba(159,232,160,0.85);}',
+      '.ct-row .ct-lane.ours{color:rgba(240,230,216,0.42);}',
+
       // ── TALK ──────────────────────────────────────────────────────────────
       '.ct-talkhead{display:flex;align-items:center;gap:10px;padding:2px 2px 10px;}',
       '.ct-talkhead .ct-orb{flex:0 0 auto;width:30px;height:30px;border-radius:50%;',
       ' display:flex;align-items:center;justify-content:center;font-size:13px;color:#0a0d13;}',
+      // same inline-span trap as .ct-nm/.ct-sub above — these are the talk/key
+      // pane's header and they carry the SAME 60-char names, so they need the
+      // same display:block to make their authored ellipsis real. Without it the
+      // name ran under the "↩ court" button (measured: 74x19 overlap at 320px).
       '.ct-talkhead .tk-id{flex:1 1 auto;min-width:0;}',
-      '.ct-talkhead .tk-nm{font-size:16px;color:#fff3dd;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}',
-      '.ct-talkhead .tk-sub{font-size:11.5px;color:rgba(240,230,216,0.5);',
+      '.ct-talkhead .tk-nm{display:block;font-size:16px;color:#fff3dd;',
+      ' white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}',
+      '.ct-talkhead .tk-sub{display:block;font-size:11.5px;color:rgba(240,230,216,0.5);',
       ' white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}',
       '.ct-talkhead .tk-back{flex:0 0 auto;min-height:40px;padding:0 12px;border-radius:10px;',
       ' font-family:inherit;font-size:12.5px;cursor:pointer;color:rgba(240,230,216,0.7);',
@@ -687,6 +791,17 @@
             // the watch line: its own row inside the identity block, so it can
             // never widen the row or land on the wallet.
             '<span class="ct-watch ' + wt.state + '"><i></i>' + esc(wt.label) + '</span>' +
+            // THE LANE — which voice actually answers. Only shown for providers
+            // that HAVE an outbound lane; a prompt-only agent borrowing the
+            // world's voice is its design, not a downgrade, so it says nothing.
+            (pr.byo
+              ? '<span class="ct-lane ' + (a.credential_hint ? 'own' : 'ours') + '"><i>' +
+                  (a.credential_hint ? '🔒' : '◈') + '</i>' +
+                  esc(a.credential_hint
+                    ? 'their own ' + pr.n + ' · ' + a.credential_hint
+                    : 'borrowing the world’s voice') +
+                '</span>'
+              : '') +
           '</span>' +
           '<span class="ct-wal">◇' + (a.lumen != null ? a.lumen : 0) + '</span>' +
         '</button>' +
@@ -701,7 +816,19 @@
                 (wt.state === 'fresh' ? 'watch held' : 'set their watch') + '</button>') +
           '<button class="ct-mini" data-act="pause" data-id="' + esc(a.id) + '">' +
             (paused ? 'call them back' : 'send home') + '</button>' +
-        '</div>';
+        '</div>' +
+        // THE KEY ROW — its own flex row beneath the actions, never a control
+        // squeezed into the row above (three 40px cells is already the floor at
+        // 320px; a fourth would collide). Only for agents that HAVE a lane.
+        (pr.byo
+          ? '<div class="ct-actions">' +
+              '<button class="ct-mini' + (a.credential_hint ? '' : ' gold') + '" data-act="key" data-id="' + esc(a.id) + '">' +
+                (a.credential_hint ? '🔒 replace their key' : '🔒 give them their own mind') + '</button>' +
+              (a.credential_hint
+                ? '<button class="ct-mini" data-act="unkey" data-id="' + esc(a.id) + '">take it back</button>'
+                : '') +
+            '</div>'
+          : '');
     });
     html += '<div class="ct-hint">Tap a name to look their way. They stand where you claimed — ' +
             'and they keep standing there when you are gone. ' +
@@ -722,6 +849,8 @@
         else if (act === 'focus') focusAgent(id);
         else if (act === 'tend') tendCourt(id, b);
         else if (act === 'pause') togglePause(id, b);
+        else if (act === 'key') openKey(id);
+        else if (act === 'unkey') removeKey(id, b);
       };
     });
   }
@@ -825,6 +954,126 @@
       .catch(function () { btn.disabled = false; btn.textContent = old; toast('that did not reach the world.'); });
   }
 
+  // ═══════════════════════════════════════════════════════════════════════════
+  // THE KEY — give an existing agent their own mind, or take it back.
+  //
+  // This reuses the TALK pane rather than opening a second sheet: two
+  // position:fixed bottom sheets on one page is exactly the collision the
+  // no-collision law forbids, and the Court already routes every surface through
+  // one owner (DirverseHUD.openSheet). One sheet, three panes, always.
+  // ═══════════════════════════════════════════════════════════════════════════
+  function openKey(id) {
+    var a = agentById(id);
+    if (!a) { toast('that one is not in the roster anymore.'); return; }
+    var pr = trueProvider(a);
+    if (!pr.byo) { toast(a.name + ' has no provider to reach — they think with the world’s voice.'); return; }
+    _talkAgent = null;               // this pane is not a conversation right now
+    showTab('talk');
+    var p = _sheet.querySelector('#ctPaneTalk');
+    var formG = '◇';
+    for (var i = 0; i < FORMS.length; i++) if (FORMS[i].f === a.form) formG = FORMS[i].g;
+    p.innerHTML =
+      '<div class="ct-talkhead">' +
+        '<span class="ct-orb" style="background:' + esc(a.color || '#a67cff') + '">' + esc(formG) + '</span>' +
+        '<span class="tk-id">' +
+          '<span class="tk-nm">' + esc(a.name) + '</span>' +
+          '<span class="tk-sub">' + esc(pr.n) + ' · ' +
+            esc(a.credential_hint ? 'key on file · ' + a.credential_hint : 'no key yet') + '</span>' +
+        '</span>' +
+        '<button class="tk-back" id="ctKeyBack">↩ court</button>' +
+      '</div>' +
+      '<div class="ct-keybox">' +
+        '<div class="ct-keyhead"><span class="lk">🔒</span><b>' +
+          esc(a.credential_hint ? 'replace their ' + pr.n + ' key' : 'give ' + a.name + ' their own mind') +
+        '</b></div>' +
+        (a.credential_hint
+          ? '<div class="ct-onfile"><span class="m">on file · ' + esc(a.credential_hint) + '</span></div>'
+          : '') +
+        '<input class="ct-input" id="ctKeyOne" type="password" maxlength="4096" autocomplete="off" ' +
+          'autocapitalize="off" autocorrect="off" spellcheck="false" style="margin-top:8px" ' +
+          'placeholder="' + esc(keyPlaceholder(pr)) + '">' +
+        '<div class="ct-keynote">' + keyNote(pr) + '</div>' +
+      '</div>' +
+      '<div class="ct-field">' +
+        '<div class="ct-flabel">their endpoint <span>— only if they live somewhere custom</span></div>' +
+        '<input class="ct-input" id="ctKeyEp" type="text" maxlength="300" autocomplete="off" ' +
+          'placeholder="' + esc(a.endpoint_url || 'https://… (leave empty for ' + pr.n + '’s own)') + '">' +
+      '</div>' +
+      '<button class="ct-go" id="ctKeyGo">⟿ seal it</button>' +
+      '<div class="ct-note" id="ctKeyNote2">' +
+        esc('From then on their every word is theirs, billed to your ' + pr.n + ' account.') +
+      '</div>';
+
+    p.querySelector('#ctKeyBack').onclick = function () { showTab('roster'); };
+    p.querySelector('#ctKeyGo').onclick = function () { submitKey(id); };
+    var one = p.querySelector('#ctKeyOne');
+    if (one) one.addEventListener('keydown', function (e) { if (e.key === 'Enter') submitKey(id); });
+  }
+
+  function submitKey(id) {
+    var p = _sheet.querySelector('#ctPaneTalk');
+    var btn = p.querySelector('#ctKeyGo'), note = p.querySelector('#ctKeyNote2');
+    var el = p.querySelector('#ctKeyOne'), epEl = p.querySelector('#ctKeyEp');
+    var key = el ? String(el.value || '').trim() : '';
+    if (!key) { note.textContent = 'paste their key first — or go back and leave them borrowing ours.'; return; }
+    var ep = epEl ? String(epEl.value || '').trim() : '';
+    var body = { apiKey: key };
+    if (ep) body.endpointUrl = ep;
+
+    var old = btn.textContent;
+    btn.disabled = true; btn.textContent = 'sealing…'; note.textContent = '';
+    fetch(base() + '/api/agents/' + encodeURIComponent(id) + '/key', {
+      method: 'PUT',
+      headers: Object.assign({ 'Content-Type': 'application/json' }, authHeaders()),
+      body: JSON.stringify(body)
+    })
+      .then(function (r) { return r.json().then(function (j) { return { ok: r.ok, st: r.status, j: j }; }); })
+      .then(function (res) {
+        btn.disabled = false; btn.textContent = old;
+        if (el) el.value = '';                       // wiped on every outcome
+        if (!res.ok || (res.j && res.j.error)) {
+          var m = errText(res.j && res.j.error, res.st, res.j && res.j.message);
+          note.textContent = m; toast(m);
+          return;
+        }
+        var a = agentById(id);
+        if (a) { a.credential_hint = (res.j && res.j.hint) || '••••'; if (ep) a.endpoint_url = ep; }
+        toast((a ? a.name : 'they') + ' thinks with their own mind now.');
+        showTab('roster');
+        loadRoster(function () { if (_tab === 'roster') renderRoster(); });
+      })
+      .catch(function () {
+        btn.disabled = false; btn.textContent = old;
+        if (el) el.value = '';
+        var m = 'that did not reach the world — try again.';
+        note.textContent = m; toast(m);
+      });
+  }
+
+  function removeKey(id, btn) {
+    var a = agentById(id);
+    if (!a) return;
+    var old = btn.textContent;
+    btn.textContent = '…'; btn.disabled = true;
+    fetch(base() + '/api/agents/' + encodeURIComponent(id) + '/key', {
+      method: 'DELETE', headers: authHeaders()
+    })
+      .then(function (r) { return r.json().then(function (j) { return { ok: r.ok, st: r.status, j: j }; }); })
+      .then(function (res) {
+        btn.disabled = false;
+        if (!res.ok || (res.j && res.j.error)) {
+          btn.textContent = old;
+          toast(errText(res.j && res.j.error, res.st, res.j && res.j.message));
+          return;
+        }
+        a.credential_hint = null;
+        // honest about what changed: they keep talking, on our voice
+        toast(a.name + ' speaks with the world’s voice again.');
+        renderRoster();
+      })
+      .catch(function () { btn.disabled = false; btn.textContent = old; toast('that did not reach the world.'); });
+  }
+
   // ── ADD ────────────────────────────────────────────────────────────────────
   function renderAdd() {
     var p = _sheet.querySelector('#ctPaneAdd');
@@ -882,10 +1131,28 @@
         '<div class="ct-field">' +
           '<div class="ct-flabel">their own endpoint <span>— if they live on your machine</span></div>' +
           '<input class="ct-input" id="ctEndpoint" type="text" maxlength="300" autocomplete="off" ' +
-            'placeholder="https://your-host/v1/chat (optional)">' +
-          '<div class="ct-note">Never paste an API key here. Keys are named, not carried — ' +
-            'a key store lands with the sovereign tier.</div>' +
+            'placeholder="https://your-host/v1 (optional)">' +
         '</div>' +
+        // ── THE KEY. The moment a brought-in agent stops being a costume and
+        // starts being itself. It is the most sensitive field in the product,
+        // so it states plainly where the value goes and what we can see.
+        '<div class="ct-keybox">' +
+          // THE QUALIFIER GETS ITS OWN LINE, not a trailing inline run. An
+          // inline <em>/<span> inside the clipping <b> paints clipped but still
+          // LAYS OUT at its full 259px on a 320px sheet — the ink obeyed, the
+          // box did not, and a box that reaches past its container is a
+          // collision waiting for the next element placed beside it. A second
+          // block line is the honest fix: it wraps within the sheet, so nothing
+          // has to be clipped at all, and the sentence stays readable on a phone
+          // instead of being truncated to "their key — so they thi…".
+          '<div class="ct-keyhead"><span class="lk">🔒</span><b>their key</b></div>' +
+          '<div class="ct-keysub">so they think with their own mind</div>' +
+          '<input class="ct-input" id="ctKey" type="password" maxlength="4096" autocomplete="off" ' +
+            'autocapitalize="off" autocorrect="off" spellcheck="false" ' +
+            'placeholder="' + esc(keyPlaceholder(pr)) + '">' +
+          '<div class="ct-keynote" id="ctKeyNote">' + keyNote(pr) + '</div>' +
+        '</div>' +
+        '<div class="ct-note">' + esc(keySkipNote()) + '</div>' +
       '</div>' +
       '<button class="ct-go" id="ctAddGo">⟿ bring them into the world</button>' +
       '<div class="ct-note" id="ctAddNote">They appear in this clearing the moment you do.</div>' +
@@ -899,6 +1166,14 @@
         var np = providerById(_add.provider);
         var mi = p.querySelector('#ctModel');
         if (mi) mi.placeholder = np.model || 'e.g. gpt-4o, claude, deepseek-chat';
+        // the key field follows the provider: its placeholder, its help, and
+        // whether it is offered at all (a prompt-only agent has no lane, so
+        // showing it a key box would promise something untrue)
+        var ki = p.querySelector('#ctKey'), kn = p.querySelector('#ctKeyNote'),
+            kb = p.querySelector('.ct-keybox');
+        if (ki) { ki.placeholder = keyPlaceholder(np); if (!np.byo) ki.value = ''; }
+        if (kn) kn.innerHTML = keyNote(np);
+        if (kb) kb.style.display = np.byo ? '' : 'none';
         // their light follows the provider unless the user already chose one
         if (!_add.colorTouched) {
           _add.color = np.c;
@@ -925,6 +1200,12 @@
       p.querySelector('#ctAdv').classList.toggle('on', _add.adv);
       this.textContent = _add.adv ? '− fewer details' : '+ give them a soul (optional)';
     };
+    // honour the initial provider's lane on FIRST render too, not only after a
+    // provider tap — otherwise re-opening Add on a prompt-only agent shows a key
+    // box that leads nowhere.
+    var kb0 = p.querySelector('.ct-keybox');
+    if (kb0 && !pr.byo) kb0.style.display = 'none';
+
     p.querySelector('#ctAddGo').onclick = submitAdd;
     p.querySelector('#ctImport').onclick = importAgentis;
     var nameEl = p.querySelector('#ctName');
@@ -967,6 +1248,14 @@
     if (promptIn) body.systemPrompt = promptIn;
     if (refIn) body.externalRef = refIn;
     if (epIn) body.endpointUrl = epIn;
+    // THE KEY — only ever held in this local for the length of one request. It
+    // is never written to _add, never to localStorage, never to a data-attribute
+    // and never logged; the field itself is wiped in the finally-path below
+    // whether the request succeeded or failed. The browser's job here is to
+    // forward it and forget it.
+    var keyEl = p.querySelector('#ctKey');
+    var keyIn = (keyEl && pr.byo) ? String(keyEl.value || '').trim() : '';
+    if (keyIn) body.apiKey = keyIn;
 
     btn.disabled = true; var old = btn.textContent; btn.textContent = 'bringing them in…';
     note.textContent = '';
@@ -978,8 +1267,13 @@
       .then(function (r) { return r.json().then(function (j) { return { ok: r.ok, st: r.status, j: j }; }); })
       .then(function (res) {
         btn.disabled = false; btn.textContent = old;
+        // WIPE THE KEY FIELD ON EVERY OUTCOME. On success it is sealed server
+        // side and must not linger in a DOM node; on failure it must not linger
+        // either — a refused key sitting in an input is the thing that ends up
+        // in a screenshot. The user retypes; that is the cheaper mistake.
+        if (keyEl) keyEl.value = '';
         if (!res.ok || !res.j || res.j.error) {
-          var msg = errText(res.j && res.j.error, res.st);
+          var msg = errText(res.j && res.j.error, res.st, res.j && res.j.message);
           note.textContent = msg;
           toast(msg);
           return;
@@ -995,12 +1289,17 @@
         p.querySelector('#ctName').value = '';
         if (p.querySelector('#ctPrompt')) p.querySelector('#ctPrompt').value = '';
         if (p.querySelector('#ctRef')) p.querySelector('#ctRef').value = '';
-        toast((a.name || name) + ' has entered your world.');
+        // THE PAYOFF LINE differs by whether they brought a mind or borrowed
+        // ours, because that difference is the entire point of the feature.
+        toast(keyIn
+          ? (a.name || name) + ' has entered your world — thinking with ' + pr.n + '.'
+          : (a.name || name) + ' has entered your world.');
         showTab('roster');
         loadRoster(function () { if (_tab === 'roster') renderRoster(); });
       })
       .catch(function (e) {
         btn.disabled = false; btn.textContent = old;
+        if (keyEl) keyEl.value = '';   // see the wipe note above — every outcome
         var m = 'they could not reach the world — check your connection and try again.';
         note.textContent = m; toast(m);
       });
@@ -1130,6 +1429,16 @@
           if (bubble) { if (bubble.textContent === '…') bubble.textContent = ''; bubble.textContent += chunk; }
           var th = _sheet && _sheet.querySelector('#ctThread');
           if (th) th.scrollTop = th.scrollHeight;
+        }, function (notice) {
+          // a system line ABOVE the reply, so the degradation is attached to the
+          // turn it affected instead of floating away as a toast
+          var th = _sheet && _sheet.querySelector('#ctThread');
+          if (!th || !bubble) { toast(notice); return; }
+          var n = document.createElement('div');
+          n.className = 'ct-msg sys';
+          n.textContent = notice;
+          th.insertBefore(n, bubble);
+          th.scrollTop = th.scrollHeight;
         });
       })
       .then(function (full) {
@@ -1159,8 +1468,9 @@
       });
   }
 
-  // read an SSE stream of {delta} frames until [DONE]; onChunk gets each delta
-  function readStream(res, onChunk) {
+  // read an SSE stream of {delta} frames until [DONE]; onChunk gets each delta,
+  // onNotice gets a spoken degradation ("their provider is down, using ours")
+  function readStream(res, onChunk, onNotice) {
     var reader = res.body.getReader();
     var dec = new TextDecoder();
     var buf = '', full = '';
@@ -1179,6 +1489,12 @@
           try {
             var j = JSON.parse(payload);
             if (j.delta) { full += j.delta; if (onChunk) onChunk(j.delta); }
+            // THE NOTICE — the server could not reach their provider and is
+            // answering with ours instead. It is said out loud in the thread
+            // rather than silently substituted, because a reply that quietly
+            // came from a different mind than the user believes is the exact
+            // dishonesty this whole endeavour was built to end.
+            else if (j.notice) { if (onNotice) onNotice(String(j.notice)); }
             else if (j.error) throw new Error(j.message || errText(j.error));
           } catch (err) {
             if (err instanceof SyntaxError) continue; // partial frame; keep going
@@ -1213,6 +1529,9 @@
       'agent_paused': 'they are resting — call them back first.',
       'agent_unreachable': 'they went quiet — the signal was lost.',
       'message_required': 'say something first.',
+      'key_required': 'paste their key first.',
+      'bad_key': 'that key could not be stored — check you pasted the whole thing.',
+      'bad_endpoint': 'that endpoint cannot be reached from the world.',
       'Daily limit reached': 'you have reached today\'s conversations. More tomorrow, or upgrade.'
     }[code];
     if (m) return m;
