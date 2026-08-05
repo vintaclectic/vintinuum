@@ -209,10 +209,34 @@ const TOKEN_KEYS = ['vint_token', 'vintinuum_token', 'token', 'vint_jwt'];
     // world.html mounts its rail and reveals a guest sheet on a delay; wait for
     // the modules that own the surfaces rather than for a flat clock.
     await page.waitForFunction(
-      () => window.DirverseHUD && window.VintCourt && window.DirHavenDoor,
+      () => window.DirverseHUD && window.VintCourt && window.DirHavenDoor && window.VintTraces,
       { timeout: 20000 }
     ).catch(() => {});
     await new Promise(r => setTimeout(r, 2200));
+    // ── STAND IN A PERSON'S WORLD, NOT THE HUB ────────────────────────────────
+    // The lantern launcher hides in the shared hub on purpose: 'universe' belongs
+    // to everyone, holds no lanterns, and there is nobody to leave one for. That
+    // is correct product behaviour and is NOT relaxed to make a test pass — so
+    // the test goes where the button lives instead. We put the client in a named
+    // world with one lantern in it, which is exactly the state a visitor is in
+    // when this surface is reachable, and the state its collisions matter in.
+    // Nothing here fakes the SHEET; only the world the page thinks it's standing
+    // in, which is the precondition, not the thing under test.
+    await page.evaluate(() => {
+      try {
+        const W = window.VintinuumWorld; if (!W) return;
+        W._worldId = 'verify-world'; W._canTrace = true; W._guest = false;
+        // one lantern present, so the launcher shows for a visitor AND for the
+        // "found something" path — both reasons the button can appear.
+        if (typeof W.traces === 'function' && !W.__verifyTraces) {
+          W.__verifyTraces = [{ id: 1, who: 'a traveler', words: 'i stood here', glyph: 'lantern', at: Math.floor(Date.now() / 1000), dist: 1 }];
+          W.traces = function () { return W.__verifyTraces; };
+        }
+        // ask the module to re-decide, rather than setting display ourselves
+        if (window.VintTraces && window.VintTraces.refresh) window.VintTraces.refresh();
+      } catch (_) {}
+    });
+    await settle();
     // Clear whatever the page opened on its own so each pair starts from zero.
     await page.evaluate(() => { try { window.DirverseHUD.closeSheets(); } catch (_) {} });
     await settle();

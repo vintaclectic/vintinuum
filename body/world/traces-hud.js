@@ -635,6 +635,12 @@
 
   W.VintTraces = {
     open: open, close: close, enabled: enabled,
-    render: render, showFound: showFound, isOpen: isOpen
+    render: render, showFound: showFound, isOpen: isOpen,
+    // Re-evaluate whether the launcher should be showing. Already called on
+    // every world:state and trace event; exported because the one-sheet proof
+    // has to put the page in a world where this button legitimately appears
+    // before it can tap it, and asking the module to re-check is honest where
+    // reaching in to set display would be faking the thing under test.
+    refresh: updateLauncher
   };
 })();

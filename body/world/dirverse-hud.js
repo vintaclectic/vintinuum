@@ -1570,16 +1570,37 @@
     //     `botFloor` is the part of the floor the squeeze (step 3) may NOT
     //     borrow back: leaning on the saybar only looks crowded, but leaning
     //     into a sheet swallows the launcher whole.
+    //     THE SELECTOR USED TO BE A HAND-WRITTEN LIST of the three sheets that
+    //     existed when this was written (#dvWarpSheet, #dvAgentSheet, #ctSheet).
+    //     That made the yield silently incomplete the moment a FOURTH sheet was
+    //     added: THE LANTERNS (#dvTraceSheet) opened, `anyOpen()` was true, the
+    //     querySelector matched nothing, botFloor stayed 0, and the rail sat
+    //     inside the sheet's band with its launchers painted over — measured as
+    //     "#dvScrim covers the launcher" on three ordered pairs. A list that has
+    //     to be edited by whoever adds a surface is a list that will be wrong.
+    //
+    //     So it asks the DOM the same question the law does: is any element with
+    //     the shared sheet class actually open right now? `.dv-sheet` is the one
+    //     scaffold most bottom sheets reuse (warp, agents, and now the lanterns),
+    //     so a new surface built on it is covered the day it ships, with nothing
+    //     to remember. #ctSheet is named explicitly on purpose: the Court keeps
+    //     its own class deliberately (see court.js — "own class so the Court can
+    //     be killed without touching the DIRVERSE stylesheet"), so it can't be
+    //     picked up by the shared selector and has to be listed. #dvTraceSheet is
+    //     belt-and-braces — it does carry .dv-sheet, and naming it costs nothing.
     var botFloor = 0;
     if (anyOpen()) {
-      var sel = document.querySelector('#dvWarpSheet.open, #dvAgentSheet.open, #ctSheet.open');
-      if (sel) {
-        var shr = sel.getBoundingClientRect();
+      // every open sheet, not just the first — the yield must clear the TALLEST
+      // of them, and taking only one would under-shorten the rail if a future
+      // flow ever has two up deliberately.
+      var open = document.querySelectorAll('.dv-sheet.open, #ctSheet.open, #dvTraceSheet.open');
+      for (var oi = 0; oi < open.length; oi++) {
+        var shr = open[oi].getBoundingClientRect();
         if (shr.height > 0 && shr.top < vh) {
-          botFloor = vh - shr.top + 12;
-          bot = Math.max(bot, botFloor);
+          botFloor = Math.max(botFloor, vh - shr.top + 12);
         }
       }
+      if (botFloor > 0) bot = Math.max(bot, botFloor);
     }
 
     // 3) THE SQUEEZE (landscape phones: 375px tall with a ~190px panel leaves
