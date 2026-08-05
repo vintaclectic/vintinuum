@@ -754,7 +754,17 @@
         var w = world();
         if (!w || !w.tend) { _toast('the world is still waking — try again in a moment.'); return; }
         _tendBusy = true; _syncTendBtn();
-        try { w.tend(); } catch (_) { _tendBusy = false; _syncTendBtn(); return; }
+        // World.tend returns FALSE when the socket is down and send() dropped
+        // the message. Unchecked, the button sat on "tending…" for the full 6s
+        // timeout and reverted silently — the act failed and the user was never
+        // told. Never a dead control: say it out loud, immediately.
+        var sent = false;
+        try { sent = w.tend(); } catch (_) { _tendBusy = false; _syncTendBtn(); return; }
+        if (sent === false) {
+          _tendBusy = false; _syncTendBtn();
+          _toast('the clearing is out of reach — reload and try again.');
+          return;
+        }
         // release on the reply; this only fires if the reply never lands, so the
         // button can never be left permanently dead by a dropped socket.
         clearTimeout(_tendT);
@@ -938,6 +948,21 @@
       ? '  ·  of ' + d.full + ' — the clearing is ' + (d.state || 'dim') + ' (' + d.yieldPct + '%)'
       : '';
   }
+  // THE WARMTH ECHO — world-client fires this whenever the SERVER moved spark
+  // (world:state or world:tend:ok), carrying the same `living` picture it just
+  // handed the 3D light. The panel listens so the readout and the sky can never
+  // disagree: if a surface calls World.setSpark directly — the Court's REST tend
+  // fallback does exactly that when the socket is down — this is what keeps the
+  // vigil in step. Still nothing derived: we re-render the server's own object.
+  W.addEventListener('vint:world-warmth', function (e) {
+    var lv = e.detail && e.detail.living;
+    if (!lv || lv === _living) return;   // already the picture we are showing
+    _render(null, lv);
+    // HOMECOMING — if the world paid a re-entry gift it gets its full moment.
+    // showHomecoming self-guards to once per load, so the state frame and this
+    // echo can never both open it.
+    if (num(lv.homecoming, 0) > 0) showHomecoming(lv);
+  });
   W.addEventListener('vint:world-harvest', function (e) {
     var d = e.detail || {};
     _toast((d.artifact ? ('found: ' + d.artifact + '  (+' + d.echo + ' echo)') : ('+' + (d.echo || 0) + ' echo')) + _cut(d));
@@ -979,6 +1004,14 @@
 
   W.WorldHUD = {
     render: _render,
+    // renderVigil stays on the public API: another surface hands the server's
+    // freshly-computed `living` straight in (the Court's REST tend fallback does
+    // this when there is no socket to carry a world:tend:ok back).
+    renderVigil: function (L) {
+      if (L) _living = L;
+      _renderVigil(_living);
+      _syncTendBtn();
+    },
     living: function () { return _living; },
     // exposed so another surface (or a test) can replay the moment deliberately
     showHomecoming: showHomecoming,

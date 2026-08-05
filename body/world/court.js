@@ -745,11 +745,23 @@
     _tending = true;
     var was = btn ? btn.textContent : null;
     if (btn) { btn.textContent = 'tending…'; btn.disabled = true; }
-    try { w.tend(id || null); }
+    // World.tend returns FALSE when the socket is down and the message was
+    // silently dropped by send()'s readyState guard. Without checking it, a
+    // dead socket left the button reading "tending…" for the full 6s timeout
+    // and then reverting with no explanation — the user is told nothing while
+    // the act quietly failed. Fail fast and honestly instead.
+    var sent = false;
+    try { sent = w.tend(id || null); }
     catch (e) {
       _tending = false;
       if (btn) { btn.textContent = was; btn.disabled = false; }
       toast('could not reach the world — try again.');
+      return;
+    }
+    if (sent === false) {
+      _tending = false;
+      if (btn) { btn.textContent = was; btn.disabled = false; }
+      toast('the clearing is out of reach — reload and try again.');
       return;
     }
     // release if the reply never lands, so a dropped socket can never leave the

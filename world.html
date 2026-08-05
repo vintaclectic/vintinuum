@@ -25,8 +25,12 @@
      is bounded explicitly. */
   #status { position: fixed; z-index: 5; font-size: 20px; color: rgba(245,235,220,0.7); opacity: 0; transition: opacity .6s; pointer-events: none;
     overflow: hidden; text-align: center; text-wrap: balance;
-    /* centre of the column that starts where the rail ends (see --status-rail) */
-    left: calc(var(--status-rail) + (100vw - var(--status-rail)) / 2);
+    /* centre of the column that starts where the rail ends and STOPS where the
+       right-hand docked stack begins (--vint-dock-reach-bottom). Centring in the
+       full post-rail column while the box is narrower than that column would
+       push the box back to the right, re-creating the very overlap the narrowed
+       width was added to prevent — the anchor and the measure must agree. */
+    left: calc(var(--status-rail) + (100vw - var(--status-rail) - var(--vint-dock-reach-bottom, 60px)) / 2);
     /* THE FREE BAND, measured on both axes.
 
        VERTICAL — the ceiling is --dv-railtop, not a hardcoded 270. That literal
@@ -73,15 +77,55 @@
        room left beside the hint, and below ~180px of it there is no honest way to
        sit alongside, so the ceiling drops under the hint instead. */
     --status-hint: clamp(0px, (180px - (100vw - 244px)) * 999, 335px);
-    --status-top: max(var(--dv-railtop, 270px), var(--status-hint));
-    --status-band: max(48px, calc(100dvh - var(--status-top) - var(--vint-dock-height-bottom, 90px) - 24px));
+    /* THE CEILING IS THE PANEL'S TRUE BOTTOM, NOT THE RAIL'S (2026-08-04). This
+       used to read --dv-railtop, which is the RAIL's ceiling — and layoutRail's
+       SQUEEZE clause deliberately drags that value back UP into the panel on
+       short viewports so the rail keeps a usable height (a rail with no height is
+       a dead control; the rail is allowed to tuck beside the panel). #status is
+       not allowed to tuck: it is centred text with nothing to scroll. While the
+       panel was ~190px tall the squeeze rarely bit and this was invisible; the
+       moment THE VIGIL grew the panel to 341px at 320px wide, the squeezed
+       ceiling landed INSIDE the panel and the message rendered 55x33px on top of
+       it. --vint-hud-bottom is the panel's real, never-squeezed bottom edge
+       (published by world-hud's publishBottom on every world:state, resize and
+       orientationchange), which is the only honest ceiling for anything that must
+       sit strictly below the panel. */
+    --status-top: max(var(--vint-hud-bottom, 270px), var(--status-hint));
+    /* THE FLOOR must clear the DOCKED CORNER STACKS, not merely the bottom of
+       the viewport (2026-08-04). --vint-dock-height-bottom is the height of the
+       bottom-right column (34px for the bare account dot), which says where the
+       column STARTS relative to the bottom — but the dot is lifted off the bottom
+       edge by the say bar's own clearance, so subtracting only its height left
+       the band running straight down onto it (measured: #status × #vwg-dot,
+       34x26px at 320x568 once THE VIGIL pushed the ceiling down and the box had
+       to grow downward to keep its measure). --vint-dock-reach-bottom is
+       deliberately NOT used here: the file's own history records that it is a
+       HORIZONTAL intrusion and the wrong number for vertical math (a 97px pill
+       reaches 113px inward while standing 60px tall). The honest floor is the
+       taller of the dock column and the say bar's live clearance, which is what
+       actually sits along the bottom edge. */
+    --status-floor: max(var(--vint-dock-height-bottom, 90px), var(--dv-railbot, 150px));
+    --status-band: max(48px, calc(100dvh - var(--status-top) - var(--status-floor) - 24px));
     /* The rail is on the LEFT ONLY, so the message moves over rather than
        shrinking symmetrically. Reserving the rail's width on BOTH sides to keep a
        viewport-centred box was tried and is the 70px-ribbon failure again: at
        320px the centre column is ~6px wide. Instead the box takes the whole
        column to the RIGHT of the rail and centres itself in THAT, which keeps a
        readable measure at every width and still touches nothing. */
-    width: min(320px, calc(100vw - var(--status-rail) - 16px));
+    /* THE RIGHT COLUMN IS RESERVED TOO (2026-08-04). The width used to reserve
+       only --status-rail (the LEFT rail), on the reasoning that the rail is
+       left-only so the box should simply move over. That held while the box sat
+       high in the viewport, above the docked stacks. THE VIGIL pushed the ceiling
+       down (the panel grew), the band bottomed out at its 48px minimum, and the
+       box — still 147px wide and centred in the column right of the rail — ended
+       up reaching x312 at 320px, straight onto welcome-gate's account dot at x270
+       (measured 34x26px). Reserving the right stack too is the *horizontal*
+       answer to a horizontal collision, which this file's own history insists on.
+       The earlier "70px ribbon" failure came from reserving the RAIL's full 157px
+       on both sides; --vint-dock-reach-bottom is the real intrusion of the right
+       stack (~50px for the dot), so the centre column keeps a readable measure
+       instead of collapsing. */
+    width: min(320px, calc(100vw - var(--status-rail) - var(--vint-dock-reach-bottom, 60px) - 16px));
     max-height: min(30vh, var(--status-band));
     top: max(
       calc(var(--status-top) + min(30vh, var(--status-band)) / 2),
