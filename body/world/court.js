@@ -217,6 +217,46 @@
       ' white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}',
       '.ct-row .ct-wal{flex:0 0 auto;font-size:13px;color:#ffd479;font-variant-numeric:tabular-nums;}',
       '.ct-row.paused{opacity:0.55;}',
+
+      // ── THE WATCH (THE VIGIL) ─────────────────────────────────────────────
+      // An agent's watch is now load-bearing: a tended agent holds the world's
+      // light while its king is away, an untended one slowly stops. So every row
+      // says which it is. The line is a THIRD row inside .ct-id — that block
+      // already owns all remaining width and clips its own text, so a 60-char
+      // name and a long watch label still can never reach the wallet cell.
+      '.ct-row .ct-watch{display:flex;align-items:center;gap:5px;margin-top:3px;',
+      ' font-size:11px;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}',
+      '.ct-row .ct-watch i{flex:0 0 auto;width:6px;height:6px;border-radius:50%;font-style:normal;}',
+      '.ct-row .ct-watch.fresh{color:rgba(150,235,185,0.85);}',
+      '.ct-row .ct-watch.fresh i{background:#57e08c;box-shadow:0 0 6px rgba(87,224,140,0.7);}',
+      '.ct-row .ct-watch.fading{color:rgba(255,205,150,0.85);}',
+      '.ct-row .ct-watch.fading i{background:#ffb066;box-shadow:0 0 6px rgba(255,176,102,0.6);}',
+      '.ct-row .ct-watch.cold{color:rgba(240,230,216,0.42);}',
+      '.ct-row .ct-watch.cold i{background:rgba(255,255,255,0.22);}',
+      '.ct-row .ct-watch.off{color:rgba(240,230,216,0.35);}',
+      '.ct-row .ct-watch.off i{background:rgba(255,255,255,0.16);}',
+      '.ct-mini.warm{color:#ffe8b8;background:rgba(87,224,140,0.1);border-color:rgba(87,224,140,0.3);}',
+      '.ct-mini:disabled{opacity:0.5;pointer-events:none;}',
+
+      // ── THE VIGIL SUMMARY — one banner at the head of the roster ───────────
+      // A flow block at the top of the scrolling pane; nothing is positioned, so
+      // it cannot collide with the rows below it or with the sheet chrome above.
+      '.ct-vigil{margin:2px 0 12px;padding:12px 13px;border-radius:14px;',
+      ' background:linear-gradient(180deg,rgba(87,224,140,0.09),rgba(255,212,121,0.05));',
+      ' border:1px solid rgba(87,224,140,0.26);}',
+      '.ct-vigil.dim{background:rgba(255,176,102,0.06);border-color:rgba(255,176,102,0.28);}',
+      '.ct-vtop{display:flex;align-items:center;gap:10px;}',
+      '.ct-vn{flex:0 0 auto;min-width:34px;height:34px;padding:0 6px;border-radius:10px;',
+      ' display:flex;align-items:center;justify-content:center;font-size:19px;line-height:1;',
+      ' color:#0a0d13;background:#57e08c;font-variant-numeric:tabular-nums;}',
+      '.ct-vigil.dim .ct-vn{background:rgba(255,176,102,0.85);}',
+      '.ct-vt{flex:1 1 auto;min-width:0;font-size:14px;line-height:1.35;color:#fff3dd;}',
+      '.ct-vsub{margin-top:7px;font-size:12px;line-height:1.4;color:rgba(240,230,216,0.6);}',
+      '.ct-vtend{width:100%;min-height:44px;margin-top:10px;border-radius:11px;font-family:inherit;',
+      ' font-size:14px;letter-spacing:.03em;cursor:pointer;color:#1a1006;font-weight:600;border:none;',
+      ' background:linear-gradient(90deg,#ffd479,#ffb066);}',
+      '.ct-vtend:active{transform:scale(0.985);}',
+      '.ct-vtend:disabled{opacity:0.5;pointer-events:none;}',
       '.ct-actions{display:flex;gap:7px;margin:-2px 0 9px;padding:0 2px;}',
       '.ct-mini{flex:1 1 0;min-width:0;min-height:40px;border-radius:10px;font-family:inherit;font-size:12.5px;',
       ' cursor:pointer;color:rgba(240,230,216,0.82);background:rgba(255,255,255,0.05);',
@@ -337,6 +377,44 @@
   function activeAgents() {
     return _roster.filter(function (a) { return a && a.status !== 'archived'; });
   }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // THE WATCH — what an agent is actually DOING while you're gone
+  // vigil.js: an active agent's watch is full strength for VIGIL_FULL_DAYS (3)
+  // after it was tended, then fades linearly to nothing by VIGIL_FADE_DAYS (14).
+  // A full watch offsets the world's drain; a faded one offsets nothing. That is
+  // the whole reason the Court matters to survival, so the roster has to SAY it.
+  //
+  // These constants mirror the server's and are used ONLY to choose a word and a
+  // colour for a row. The client never computes spark, drift or the floor from
+  // them — the authoritative watch values come down in living.vigil.watchers,
+  // and the panel renders those. This is presentation of a timestamp the server
+  // already sent, not a second implementation of the loop.
+  // ═══════════════════════════════════════════════════════════════════════════
+  var VIGIL_FULL_DAYS = 3, VIGIL_FADE_DAYS = 14;
+
+  function watchOf(a) {
+    if (!a || a.status !== 'active') return { w: 0, state: 'off', label: 'not standing watch' };
+    var t = a.tended_at || a.updated_at || a.created_at;
+    if (!t) return { w: 1, state: 'fresh', label: 'watch is fresh' };
+    var days = Math.max(0, (Date.now() / 1000 - Number(t)) / 86400);
+    var w = days <= VIGIL_FULL_DAYS ? 1
+          : days >= VIGIL_FADE_DAYS ? 0
+          : 1 - ((days - VIGIL_FULL_DAYS) / (VIGIL_FADE_DAYS - VIGIL_FULL_DAYS));
+    var left = Math.max(0, VIGIL_FADE_DAYS - days);
+    if (w >= 0.999) {
+      var until = Math.max(0, VIGIL_FULL_DAYS - days);
+      return {
+        w: 1, state: 'fresh',
+        label: 'holding the light' + (until < 1 ? ' · fades soon' : ' · full for ' + Math.round(until) + 'd')
+      };
+    }
+    if (w <= 0) return { w: 0, state: 'cold', label: 'watch has gone out — tend to restore it' };
+    return {
+      w: w, state: 'fading',
+      label: 'watch fading · ' + (left < 1 ? 'out within a day' : Math.round(left) + 'd left')
+    };
+  }
   function placeableAgents() {
     // a paused agent is deliberately NOT standing in the world — pausing is how
     // you send someone home. Only active agents are placed.
@@ -375,10 +453,31 @@
   // ═══════════════════════════════════════════════════════════════════════════
   // FETCH THE ROSTER
   // ═══════════════════════════════════════════════════════════════════════════
+  // Callers pass a cb that renders the pane, so DROPPING that cb leaves the pane
+  // stuck on "calling your court…" forever. The old `if (_loading) return;`
+  // did exactly that whenever open() raced the mount-time auto-load — which is
+  // the common case, since world-ready/world-state both schedule one. THE VIGIL
+  // made it visible (the watch summary needs a loaded roster to say anything
+  // true), but the bug predates it. Now a concurrent call QUEUES its callback
+  // and every queued caller is answered by the one in-flight request.
+  var _waiters = [];
   function loadRoster(cb) {
-    if (isGuest()) { _roster = []; _loaded = true; if (cb) cb(null); return; }
-    if (_loading) return;
+    if (isGuest()) {
+      // Signing out mid-flight must not strand waiters queued while signed in.
+      _roster = []; _loaded = true; _loading = false;
+      var gq = _waiters; _waiters = [];
+      if (cb) { try { cb(null); } catch (_) {} }
+      for (var g = 0; g < gq.length; g++) { try { gq[g](null); } catch (_) {} }
+      return;
+    }
+    if (_loading) { if (cb) _waiters.push(cb); return; }
     _loading = true;
+    function settle(err) {
+      _loading = false; _loaded = true;
+      var q = _waiters; _waiters = [];
+      if (cb) { try { cb(err); } catch (_) {} }
+      for (var i = 0; i < q.length; i++) { try { q[i](err); } catch (_) {} }
+    }
     fetch(base() + '/api/agents/mine', { headers: authHeaders() })
       .then(function (r) {
         if (r.status === 401) throw new Error('unauthorized');
@@ -386,17 +485,15 @@
         return r.json();
       })
       .then(function (d) {
-        _loading = false; _loaded = true;
         _roster = (d && d.agents) || [];
         updateBadge();
         syncWorld();
         ventureRefresh();
-        if (cb) cb(null);
+        settle(null);
       })
       .catch(function (e) {
-        _loading = false; _loaded = true;
         console.warn('[court] roster failed:', e && e.message);
-        if (cb) cb(e);
+        settle(e);
       });
   }
 
@@ -468,15 +565,19 @@
     else fn();
   }
 
-  function open() {
+  // `tab` is optional — THE VIGIL's concrete ask ("one more tended agent holds
+  // +N light a day") routes straight here with 'add', so the honest conversion
+  // path is one tap from the number that motivated it, never a hunt.
+  function open(tab) {
     injectStyles();
     raise(function () {
       buildSheet();
       _sheet.classList.add('open');
       if (isGuest()) { renderDoorway(); return; }
-      showTab(_tab === 'talk' ? 'roster' : _tab);
-      renderRoster();
-      loadRoster(function () { renderRoster(); }); // always refresh
+      var want = (tab === 'add' || tab === 'roster') ? tab : (_tab === 'talk' ? 'roster' : _tab);
+      showTab(want);
+      if (want === 'roster') renderRoster();
+      loadRoster(function () { if (_tab === 'roster') renderRoster(); }); // always refresh
     });
   }
   function close() {
@@ -536,13 +637,46 @@
       if (f) f.onclick = function () { showTab('add'); };
       return;
     }
+    // THE WATCH, SUMMARISED. How many of this court are actually holding the
+    // light right now — the one number that connects this sheet to survival.
+    var holding = 0, fading = 0, cold = 0;
+    list.forEach(function (a) {
+      var wt = watchOf(a);
+      if (wt.state === 'fresh') holding++;
+      else if (wt.state === 'fading') fading++;
+      else if (wt.state === 'cold') cold++;
+    });
     var html = '';
+    if (holding || fading || cold) {
+      html +=
+        '<div class="ct-vigil' + (holding ? '' : ' dim') + '">' +
+          '<div class="ct-vtop">' +
+            '<span class="ct-vn">' + holding + '</span>' +
+            '<span class="ct-vt">' +
+              (holding
+                ? (holding === 1 ? 'one stands watch' : holding + ' stand watch') +
+                  ' over your world right now'
+                : 'no one is holding the light in your world') +
+            '</span>' +
+          '</div>' +
+          ((fading || cold)
+            ? '<div class="ct-vsub">' +
+                (fading ? fading + (fading === 1 ? ' watch is fading' : ' watches are fading') : '') +
+                (fading && cold ? ' · ' : '') +
+                (cold ? cold + (cold === 1 ? ' has gone out' : ' have gone out') : '') +
+                ' — tending restores them.' +
+              '</div>'
+            : '') +
+          '<button class="ct-vtend" id="ctTendAll">✦ tend the whole court</button>' +
+        '</div>';
+    }
     list.forEach(function (a) {
       var pr = trueProvider(a);
       var paused = a.status === 'paused';
       var col = a.color || '#a67cff';
       var formG = '◇';
       for (var i = 0; i < FORMS.length; i++) if (FORMS[i].f === a.form) formG = FORMS[i].g;
+      var wt = watchOf(a);
       html +=
         '<button class="ct-row' + (paused ? ' paused' : '') + '" data-id="' + esc(a.id) + '">' +
           '<span class="ct-orb" style="background:' + esc(col) + '">' + esc(formG) + '</span>' +
@@ -550,22 +684,32 @@
             '<span class="ct-nm">' + esc(a.name || 'unnamed') + '</span>' +
             '<span class="ct-sub">' + esc(pr.n) + (paused ? ' · resting' : '') +
               (a.visibility && a.visibility !== 'private' ? ' · ' + esc(a.visibility) : '') + '</span>' +
+            // the watch line: its own row inside the identity block, so it can
+            // never widen the row or land on the wallet.
+            '<span class="ct-watch ' + wt.state + '"><i></i>' + esc(wt.label) + '</span>' +
           '</span>' +
           '<span class="ct-wal">◇' + (a.lumen != null ? a.lumen : 0) + '</span>' +
         '</button>' +
         '<div class="ct-actions">' +
           '<button class="ct-mini gold" data-act="talk" data-id="' + esc(a.id) + '">speak with them</button>' +
-          '<button class="ct-mini" data-act="focus" data-id="' + esc(a.id) + '">find them</button>' +
-          '<button class="ct-mini" data-act="watch" data-id="' + esc(a.id) + '">' +
-            _watchLabel(a) + '</button>' +
+          // per-agent tend — only offered for an agent actually able to stand a
+          // watch. A resting (paused) agent offsets nothing, so tending it would
+          // be a lie; you call them back first.
+          (paused
+            ? '<button class="ct-mini" data-act="focus" data-id="' + esc(a.id) + '">find them</button>'
+            : '<button class="ct-mini warm" data-act="tend" data-id="' + esc(a.id) + '">' +
+                (wt.state === 'fresh' ? 'watch held' : 'set their watch') + '</button>') +
           '<button class="ct-mini" data-act="pause" data-id="' + esc(a.id) + '">' +
             (paused ? 'call them back' : 'send home') + '</button>' +
         '</div>';
     });
     html += '<div class="ct-hint">Tap a name to look their way. They stand where you claimed — ' +
             'and they keep standing there when you are gone. ' +
-            'Every one on watch holds the light in your clearing while you sleep.</div>';
+            'A tended agent holds your world’s light while you sleep; an untended one slowly stops.</div>';
     p.innerHTML = html;
+
+    var ta = p.querySelector('#ctTendAll');
+    if (ta) ta.onclick = function (e) { e.stopPropagation(); tendCourt(null, ta); };
 
     p.querySelectorAll('.ct-row').forEach(function (r) {
       r.onclick = function () { focusAgent(r.getAttribute('data-id')); };
@@ -576,7 +720,7 @@
         var id = b.getAttribute('data-id'), act = b.getAttribute('data-act');
         if (act === 'talk') openTalk(id);
         else if (act === 'focus') focusAgent(id);
-        else if (act === 'watch') setWatch(id, b);
+        else if (act === 'tend') tendCourt(id, b);
         else if (act === 'pause') togglePause(id, b);
       };
     });
@@ -587,68 +731,60 @@
     return null;
   }
 
-  // ── THE VIGIL — an agent's WATCH (AETHERHOLD 2026-08-04) ────────────────────
-  // This is where "be king of your own agents" stops being a metaphor. Every
-  // agent you brought — from Claude, OpenAI, Gemini, DeepSeek, Qwen, a raw
-  // prompt, your own endpoint — can stand a watch over your clearing. A tended
-  // watch holds the light while you're gone; an untended one fades over ~14
-  // days and the world leans toward dusk. Setting a watch is one tap.
-  //
-  // The strength thresholds MIRROR world/vigil.js (_watchWeight): full for 3
-  // days, fading to nothing by 14. The server is authoritative — this label is
-  // only ever a readout, and the server's reply is what actually moves anything.
-  var WATCH_FULL_DAYS = 3, WATCH_FADE_DAYS = 14;
-  function _watchDays(a) {
-    var t = a && (a.tended_at || a.tendedAt);
-    if (!t) return null;                       // never tended → no claim made
-    return Math.max(0, (Date.now() / 1000 - Number(t)) / 86400);
-  }
-  function _watchLabel(a) {
-    if (a && a.status === 'paused') return 'resting';
-    var d = _watchDays(a);
-    if (d == null) return 'set the watch';
-    if (d <= WATCH_FULL_DAYS) return 'on watch ✦';
-    if (d >= WATCH_FADE_DAYS) return 'watch faded';
-    return 'watch fading';
+  // ── TEND — the headline survival act, from the Court ─────────────────────────
+  // With an id it refreshes ONE agent's watch; without one, the whole court.
+  // Server-authoritative: we send the intent and wait. The reply (vint:world-tend)
+  // carries the true `tended_at` effect, so we refresh the roster from the server
+  // rather than stamping the local row — the client never invents a watch.
+  var _tending = false, _tendT = null;
+  function tendCourt(id, btn) {
+    if (_tending) return;
+    if (isGuest()) { toast('sign in to keep a court.'); return; }
+    var w = world();
+    if (!w || !w.tend) { toast('the world is still waking — try again in a moment.'); return; }
+    _tending = true;
+    var was = btn ? btn.textContent : null;
+    if (btn) { btn.textContent = 'tending…'; btn.disabled = true; }
+    // World.tend returns FALSE when the socket is down and the message was
+    // silently dropped by send()'s readyState guard. Without checking it, a
+    // dead socket left the button reading "tending…" for the full 6s timeout
+    // and then reverting with no explanation — the user is told nothing while
+    // the act quietly failed. Fail fast and honestly instead.
+    var sent = false;
+    try { sent = w.tend(id || null); }
+    catch (e) {
+      _tending = false;
+      if (btn) { btn.textContent = was; btn.disabled = false; }
+      toast('could not reach the world — try again.');
+      return;
+    }
+    if (sent === false) {
+      _tending = false;
+      if (btn) { btn.textContent = was; btn.disabled = false; }
+      toast('the clearing is out of reach — reload and try again.');
+      return;
+    }
+    // release if the reply never lands, so a dropped socket can never leave the
+    // control permanently dead.
+    clearTimeout(_tendT);
+    _tendT = setTimeout(function () {
+      _tending = false;
+      if (btn) { try { btn.textContent = was; btn.disabled = false; } catch (_) {} }
+    }, 6000);
   }
 
-  // setWatch — tend ONE agent. Routes through the world socket when we have one
-  // (so the clearing brightens in the same breath), and falls back to the REST
-  // endpoint when there's no live socket. Never a dead control: every failure
-  // speaks. The server refreshes the watch and kindles the world; we only ask.
-  function setWatch(id, btn) {
-    var a = agentById(id);
-    if (!a) { toast('that one is not in the roster anymore.'); return; }
-    if (a.status === 'paused') { toast(esc(a.name) + ' is resting — call them back before setting a watch.'); return; }
-    if (btn) { btn.disabled = true; btn.textContent = 'setting…'; }
-    var done = function (ok, msg) {
-      if (btn) { btn.disabled = false; btn.textContent = ok ? 'on watch ✦' : _watchLabel(a); }
-      if (ok) { a.tended_at = Math.floor(Date.now() / 1000); }
-      toast(msg);
-    };
-    // preferred path: the live world socket — the sky brightens with the tap
-    try {
-      var w = world();
-      if (w && w.tend && w.isConnected && w.isConnected()) {
-        w.tend(id);
-        done(true, esc(a.name) + ' stands watch over your clearing.');
-        return;
-      }
-    } catch (_) {}
-    // fallback: REST (works from anywhere, even with no socket)
-    fetch(base() + '/api/world/vigil/tend', {
-      method: 'POST',
-      headers: Object.assign({ 'Content-Type': 'application/json' }, authHeaders()),
-      body: JSON.stringify({ agentId: id }),
-    }).then(function (r) { return r.ok ? r.json() : r.json().then(function (j) { throw new Error(j.error || 'failed'); }); })
-      .then(function (d) {
-        // feed the freshly-computed picture straight to the HUD + the 3D light
-        try { if (d.living && W.WorldHUD && W.WorldHUD.renderVigil) W.WorldHUD.renderVigil(d.living); } catch (_) {}
-        try { if (d.living && world() && world().setSpark) world().setSpark(d.living.spark, d.living); } catch (_) {}
-        done(true, d.tended ? (esc(a.name) + ' stands watch over your clearing.') : (d.message || 'the watch is set.'));
-      })
-      .catch(function (e) { done(false, 'could not set the watch — ' + (e.message || 'try again')); });
-  }
+  // the server's answer — refresh the roster so every watch line re-reads from
+  // the authoritative tended_at, then re-render if the sheet is showing it.
+  W.addEventListener('vint:world-tend', function (e) {
+    clearTimeout(_tendT); _tending = false;
+    var d = e.detail || {};
+    var n = (typeof d.tended === 'number') ? d.tended : 0;
+    if (n) {
+      toast(n === 1 ? 'their watch is set — they hold the light now.'
+                    : 'you tended ' + n + ' — your court holds the light.');
+    }
+    loadRoster(function () { if (_tab === 'roster' && _sheet && _sheet.classList.contains('open')) renderRoster(); });
+  });
 
   function focusAgent(id) {
     var a = agentById(id);
