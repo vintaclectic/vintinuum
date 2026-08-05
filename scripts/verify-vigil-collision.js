@@ -59,9 +59,15 @@ const puppeteer = require('/home/vinta/vintinuum-api/node_modules/puppeteer');
 
 // 320 and 375 are the phones the law names; 360x640 is the short-viewport case
 // where a tall panel is most likely to run off the bottom.
-const WIDTHS = (process.env.VERIFY_WIDTHS || '320,375,768,1280,1920')
+const WIDTHS = (process.env.VERIFY_WIDTHS || '320,375,740,768,1280,1920')
   .split(',').map(s => parseInt(s.trim(), 10)).filter(Boolean);
-const HEIGHTS = { 320: 568, 375: 667, 768: 1024, 1280: 800, 1920: 1080 };
+// 740x360 is the LANDSCAPE PHONE, and it is not decoration: the consequence
+// tier's extra blocks made the panel content-driven enough that on a viewport
+// shorter than the panel's own reserve, `min-height` outranked `max-height`,
+// max-height computed to 0, and the floor won — a measured overlap of the panel
+// through #dvRail and #hint at every spark state, healthy worlds included. The
+// floor is now clamped to the room that exists; this width is what proves it.
+const HEIGHTS = { 320: 568, 375: 667, 740: 360, 768: 1024, 1280: 800, 1920: 1080 };
 
 const MIME = {
   '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css',
@@ -153,6 +159,34 @@ const LIVING_MAX = {
 
 // the homecoming case — same payload, plus the gift that opens the modal
 const LIVING_HOME = Object.assign({}, LIVING_MAX, { homecoming: 40 });
+
+// ── THE HEALTHY WORLD — the other half of the consequence tier's proof ───────
+// A loss UI that is merely *correct when shown* is only half-built; the half
+// that decides whether players resent it is whether it disappears completely
+// when there is nothing to mourn. A radiant clearing must carry NO tier band,
+// NO slumber note and NO resting orbs — otherwise the panel grows a permanent
+// guilt row and the Retention Doctrine's first test (generous, not predatory)
+// fails no matter how kind the wording is.
+const LIVING_RADIANT = {
+  spark: 100, floor: 60, max: 100, pct: 1,
+  state: 'radiant',
+  line: 'your court holds the light — 5 standing watch.',
+  driftPerDay: -1.2, hoursToFloor: null, homecoming: 0,
+  vigil: {
+    agents: 5, standing: 5, perDay: 6, slots: 8, resting: 0, resters: [],
+    watchers: [
+      { id: 'a1', name: 'First',  color: '#ffd479', watch: 1 },
+      { id: 'a2', name: 'Second', color: '#7ccfff', watch: 0.95 },
+    ],
+    nextAgentPerDay: 1.2,
+  },
+  reach: { buildRadius: 12, maxStake: 900 },
+  tier: {
+    state: 'radiant', yield: 1, yieldPct: 100, watchSlots: 8, visitors: true,
+    loss: null, next: null, boon: null,
+  },
+  watchSlots: 8, slumber: null, safe: true, neverDestroyed: true,
+};
 
 const RESIDENT = { lumen: 128340, echo: 9912, standing: 47, spark: 41.6, claim: null };
 
@@ -279,6 +313,16 @@ function probe() {
       var h = document.getElementById('whHomeWrap');
       return !!(h && h.classList && h.classList.contains('show'));
     })(),
+    // ── THE CONSEQUENCE TIER's three surfaces, counted rather than described,
+    // so the harness can assert they are PRESENT when the world is dim and
+    // ABSENT when it is radiant. Both directions matter: an invisible loss is
+    // not a consequence, and a permanent one is a guilt row.
+    lossUI: {
+      tier: !!document.querySelector('#vintWorldHud .wh-tier'),
+      slumber: !!document.querySelector('#vintWorldHud .wh-slumber'),
+      resting: document.querySelectorAll('#vintWorldHud .wh-orb.resting').length,
+      restLabel: !!document.querySelector('#vintWorldHud .wh-rlabel'),
+    },
     vh,
   };
 }
@@ -295,7 +339,7 @@ function probe() {
   let checks = 0;
 
   for (const w of WIDTHS) {
-    for (const scenario of ['populated', 'homecoming']) {
+    for (const scenario of ['populated', 'homecoming', 'radiant']) {
       const page = await browser.newPage();
       page.on('dialog', d => d.dismiss().catch(() => {}));
       await page.setRequestInterception(true);
@@ -323,7 +367,9 @@ function probe() {
           window.dispatchEvent(new CustomEvent('vint:world-state', {
             detail: { resident, living },
           }));
-        }, scenario === 'homecoming' ? LIVING_HOME : LIVING_MAX, RESIDENT);
+        }, scenario === 'homecoming' ? LIVING_HOME
+           : scenario === 'radiant' ? LIVING_RADIANT
+           : LIVING_MAX, RESIDENT);
 
         // the homecoming is deliberately delayed ~900ms + a paint frame
         await new Promise(r => setTimeout(r, scenario === 'homecoming' ? 1800 : 700));
@@ -393,6 +439,40 @@ function probe() {
             failures.push(`${tag}: #vintWorldHud overflows the viewport ` +
               `(bottom ${res.hud.bottom} > ${res.vh}) — a content-driven panel must scroll internally`);
           }
+          // ── THE LOSS MUST BE VISIBLE. LIVING_MAX is a guttering, slumbering
+          // world with 9 of 12 watches capped; if these do not render, spark
+          // decay has no consequence a player can SEE, which is the exact gap
+          // this task exists to close.
+          if (!res.lossUI.tier) {
+            failures.push(`${tag}: no tier band on a guttering world — the loss is invisible`);
+          }
+          if (!res.lossUI.slumber) {
+            failures.push(`${tag}: no slumber note despite slumber.steps=2`);
+          }
+          if (!res.lossUI.resting) {
+            failures.push(`${tag}: no resting orbs with 9 capped watches — ` +
+              `capped agents vanished instead of dimming, which reads as "I lost an agent"`);
+          }
+          if (!res.lossUI.restLabel) {
+            failures.push(`${tag}: resting watches drawn with no caption explaining they return`);
+          }
+        }
+
+        // ── THE HEALTHY WORLD carries no scold. Absence is the assertion.
+        if (scenario === 'radiant') {
+          if (!res.vigilRendered) {
+            failures.push(`${tag}: the vigil did not render — this run proves nothing`);
+          }
+          if (res.lossUI.tier) {
+            failures.push(`${tag}: a tier band rendered at RADIANT — ` +
+              `a healthy world must carry no permanent guilt row`);
+          }
+          if (res.lossUI.slumber) {
+            failures.push(`${tag}: a slumber note rendered at RADIANT with slumber=null`);
+          }
+          if (res.lossUI.resting || res.lossUI.restLabel) {
+            failures.push(`${tag}: resting watches shown at RADIANT with 8 slots and 5 agents`);
+          }
         }
 
         // THE HOMECOMING is deliberately NOT asserted. Whether the re-entry gift
@@ -424,7 +504,8 @@ function probe() {
     process.exit(1);
   }
   console.log(`✓ vigil collision proof clean — ${checks} renders ` +
-    `(${WIDTHS.length} widths × populated + homecoming)`);
-  console.log(`  widths: ${WIDTHS.join(', ')}`);
+    `(${WIDTHS.length} widths × populated + homecoming + radiant)`);
+  console.log(`  widths: ${WIDTHS.join(', ')} (740 is the landscape phone, 360px tall)`);
+  console.log('  consequence tier: loss shown when guttering, absent when radiant');
   console.log(`  homecoming treatment: ${homecomingSeen.modal} modal, ${homecomingSeen.inline} inline/toast`);
 })();
