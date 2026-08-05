@@ -46,15 +46,31 @@
 
    PROVEN TO GO RED — the acceptance criterion, actually demonstrated.
    A green test that cannot fail is worse than no test, so this suite was
-   mutation-tested against the live brain before it shipped. Four realistic
-   drifts were introduced one at a time and every one was caught (exit 1):
+   mutation-tested against the live brain before it shipped. Every drift below
+   was introduced one at a time and every one was caught (exit 1):
      1. vigil.js  `driftPerDay` renamed → 10 failures (the drift sentence dies)
      2. vigil.js  `vigil.watchers` renamed → 10 failures (the orbs vanish)
      3. vigil.js  the homecoming gift silently stops paying → 2 failures
      4. world-mvp.js `world:tend:ok` stops carrying `living` → 2 failures
-   Each of those four would have left the HUD rendering its silent degraded
-   path in production with no error anywhere. That is precisely the class of
-   failure this file converts into a loud non-zero exit.
+     5. vigil.js  no agent ever counts as standing → 10 failures
+     6. vigil.js  `watchers` truncated to [] while `standing` stays honest
+        (the subtle one: the count is right, the list the orbs render is empty)
+        → 5 failures
+   Each of those would have left the HUD rendering its silent degraded path in
+   production with no error anywhere. That is precisely the class of failure
+   this file converts into a loud non-zero exit.
+
+   AND THE SUITE ITSELF IS GUARDED — the mutation that revealed it.
+   Mutations 5 and 6 originally produced FEWER failures than they should have,
+   because the per-watcher assertions sit inside `if (watchers.length)`: empty
+   the array and those checks are SKIPPED, not failed. The run fell from 273
+   checks to 239 while every surviving check stayed green. So two guards were
+   added: tests that seed a court now demand watchers come back
+   (`expectWatchers`), and MIN_EXPECTED_CHECKS fails any run that asserts less
+   than a healthy one. Verified: with the watcher assertions disabled AND the
+   list emptied, the suite reports zero failures and still exits 1 — "SUITE
+   SHRANK — 239 checks ran, expected at least 277." Before that floor, that
+   same scenario exited 0 and would have shipped green.
 
    USAGE
      node scripts/verify-vigil-server.js          # run the suite
@@ -101,6 +117,19 @@ const { dbRun, dbGet, dbAll } = require(path.join(API, 'db.js'));
 
 const HOUR = 3600, DAY = 86400;
 const now = () => Math.floor(Date.now() / 1000);
+
+/* ── THE COVERAGE FLOOR ───────────────────────────────────────────────────────
+   A suite whose assertions live inside `if (array.length)` guards can LOSE
+   coverage silently: break the thing that fills the array and those checks stop
+   running rather than failing, so the run still exits green — just quieter.
+   That was real here, not hypothetical. Emptying `watchers` in vigil.js took a
+   run from 273 checks to 239 with every surviving check still passing.
+
+   So the count itself is now part of the contract. If a healthy run performs
+   fewer checks than this floor, something stopped being asserted and the suite
+   fails on those grounds alone. Raise this number when you legitimately add
+   assertions; never lower it to make a run pass. */
+const MIN_EXPECTED_CHECKS = 277;
 
 // ── tiny assert harness (no dev-dependency; this must run anywhere) ──────────
 const results = [];
@@ -234,7 +263,12 @@ async function send(msgType, extra, metaOverride) {
    updates only the server's own unit test, this still fails — because the HUD
    is the consumer whose contract we are protecting.
    ════════════════════════════════════════════════════════════════════════════ */
-function assertLivingShape(L, label) {
+/** `expectWatchers` — pass true from any test that seeded a court recent enough
+ *  to be standing watch. It is the difference between "this payload happens to
+ *  have no watchers" (legitimate for a fresh resident) and "the watchers we
+ *  planted did not come back" (a contract break the orbs would render as
+ *  emptiness). Without it an emptied watchers array is a skip, not a failure. */
+function assertLivingShape(L, label, expectWatchers) {
   const p = label ? label + ': ' : '';
   if (!L || typeof L !== 'object') {
     bad(p + '`living` is an object', 'got ' + JSON.stringify(L) +
@@ -293,6 +327,19 @@ function assertLivingShape(L, label) {
           assert(w.watch >= 0 && w.watch <= 1,
             p + 'watcher.watch is a 0..1 ratio', 'got ' + w.watch + ' for ' + w.name);
         }
+      }
+      // THE PER-WATCHER ASSERTIONS ABOVE ONLY RUN IF THE ARRAY IS POPULATED, so
+      // an empty array would SKIP them rather than fail them — the suite would
+      // shrink instead of going red. Measured: emptying `watchers` in vigil.js
+      // dropped the run from 273 checks to 239 while the surviving checks stayed
+      // green. Callers that seeded a court therefore demand watchers explicitly,
+      // which converts that silent coverage loss into a loud failure.
+      if (expectWatchers) {
+        assert(v.watchers.length > 0,
+          p + 'a seeded court actually produces watchers for the HUD to draw',
+          'watchers=[] while standing=' + v.standing + ' agents=' + v.agents +
+          ' — the orbs would silently vanish from the vigil surface, and the ' +
+          'per-watcher checks would be skipped rather than failed.');
       }
       if (v.watchers.length) ok(p + 'watchers carry the fields the orbs render');
       assert(v.watchers.length <= (isNum(v.standing) ? v.standing : v.watchers.length),
@@ -417,7 +464,7 @@ async function testCourtHoldsTheLight() {
   if (!held || !held.living || driftEmpty == null) return;
 
   const L = held.living;
-  assertLivingShape(L, 'with-court');
+  assertLivingShape(L, 'with-court', true);   // five agents tended just now
   assert(L.driftPerDay < driftEmpty,
     'a standing court reduces the drift', 'empty=' + driftEmpty + ' held=' + L.driftPerDay);
   assert(L.vigil.standing > 0, 'the court is counted as standing watch',
@@ -462,7 +509,8 @@ async function testTendOneAgent() {
   assertNum(okf, 'gained', 'tend:ok.gained is a finite number');
   assert(okf.tended === 1, 'tending one agent reports exactly one tended',
     'tended=' + okf.tended);
-  assertLivingShape(okf.living, 'tend:ok');
+  // A tend just refreshed a watch, so watchers CANNOT legitimately be empty here.
+  assertLivingShape(okf.living, 'tend:ok', true);
 
   // The warmth echo (world-hud.js:1196) renders straight off tend:ok.living, so
   // this frame must be a COMPLETE picture, not a partial diff.
@@ -474,7 +522,7 @@ async function testTendOneAgent() {
   // world-mvp sends a follow-up state frame so the whole surface re-renders.
   const st = first('world:state');
   assert(!!st, 'world:tend also emits a world:state so the panel re-renders');
-  if (st) assertLivingShape(st.living, 'post-tend state');
+  if (st) assertLivingShape(st.living, 'post-tend state', true);
 
   // The tend must actually have STAMPED the agent — otherwise the watch would
   // not refresh and the headline act of the loop would be cosmetic.
@@ -507,7 +555,7 @@ async function testTendWholeCourt() {
   assert(okf.tended === ids.length,
     'a court-wide tend reports every agent tended',
     'tended=' + okf.tended + ' court=' + ids.length);
-  assertLivingShape(okf.living, 'court-tend');
+  assertLivingShape(okf.living, 'court-tend', true);
 
   const rows = await dbAll(
     `SELECT id, tended_at FROM user_agents WHERE owner_id=?`, [UID]);
@@ -696,6 +744,22 @@ async function main() {
   }
 
   console.log('\n' + '─'.repeat(70));
+
+  // THE COVERAGE FLOOR — a green run that asserted less than it used to is not
+  // a pass, it is a quieter failure. Checked before the pass banner so a shrunk
+  // suite can never report success.
+  if (!failures && checks < MIN_EXPECTED_CHECKS) {
+    console.log('\x1b[31m\x1b[1m  ✖ THE SUITE SHRANK — ' + checks +
+      ' checks ran, expected at least ' + MIN_EXPECTED_CHECKS + '.\x1b[0m');
+    console.log('\x1b[2m    Every check that ran passed, but ' +
+      (MIN_EXPECTED_CHECKS - checks) + ' stopped running altogether. That means a');
+    console.log('    conditional block went unentered — most likely a collection the');
+    console.log('    server should have populated came back empty, skipping its');
+    console.log('    assertions instead of failing them. Find what stopped being');
+    console.log('    emitted; do NOT lower MIN_EXPECTED_CHECKS to go green.\x1b[0m\n');
+    return 1;
+  }
+
   if (failures) {
     console.log('\x1b[31m\x1b[1m  ✖ THE VIGIL CONTRACT HAS DRIFTED — ' + failures +
       ' of ' + checks + ' checks failed.\x1b[0m');
