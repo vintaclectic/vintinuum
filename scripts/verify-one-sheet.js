@@ -105,6 +105,21 @@ const TOKEN_KEYS = ['vint_token', 'vintinuum_token', 'token', 'vint_jwt'];
 
 (async () => {
   const only = process.argv.slice(2);
+  // THE FALSE GREEN (2026-08-05). The positional args are WIDTHS to restrict the
+  // sweep to — but nothing said so, and this harness only ever loads world.html
+  // (hardcoded below), so the natural `verify-one-sheet.js world.html` invocation
+  // matched no width, skipped every iteration, and printed a green
+  // "0 interaction checks" PASS over a page it never opened. A verifier that
+  // reports success for work it did not do is worse than no verifier: it hides
+  // exactly the breakage it exists to catch. So an argument that is not a known
+  // width is now a loud non-zero failure, never a silent no-op.
+  const bad = only.filter(a => !WIDTHS.includes(Number(a)));
+  if (bad.length) {
+    console.error(`\n✗ not a width: ${bad.join(', ')}`);
+    console.error(`  usage: verify-one-sheet.js [width ...]   (this harness only tests world.html)`);
+    console.error(`  known widths: ${WIDTHS.join(', ')}\n`);
+    process.exit(2);
+  }
   const srv = await serve();
   const base = `http://127.0.0.1:${srv.address().port}`;
   // Chrome refuses to start on this box when several council seats sweep at once
@@ -320,11 +335,21 @@ const TOKEN_KEYS = ['vint_token', 'vintinuum_token', 'token', 'vint_jwt'];
   await browser.close();
   srv.close();
 
-  console.log(`\nONE-SHEET PROOF — ${checks} interaction checks across ${WIDTHS.join('/')}px\n`);
+  console.log(`\nONE-SHEET PROOF — ${checks} interaction checks across ${(only.length ? only : WIDTHS).join('/')}px\n`);
   if (failures.length) {
     console.log('✗ VIOLATIONS\n');
     failures.forEach(f => console.log('   ' + f));
     console.log(`\n${failures.length} violation(s).\n`);
+    process.exit(1);
+  }
+  // NO CHECKS IS NOT A PASS. Zero violations out of zero checks means the sweep
+  // never ran — a launcher renamed out from under SURFACES, a page that failed
+  // to mount, an interception that killed the load. Every one of those is real
+  // breakage that would otherwise print the same green tick as a clean run.
+  if (checks === 0) {
+    console.error('✗ 0 interaction checks ran — nothing was verified.\n');
+    console.error('  the sweep found no launchers to drive: the page did not mount,\n' +
+                  '  or SURFACES no longer matches the DOM. This is a failure, not a pass.\n');
     process.exit(1);
   }
   console.log('✓ exactly one surface open at a time, Escape closes it, scrim tracks it.\n');
