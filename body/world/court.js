@@ -1032,7 +1032,16 @@
         btn.disabled = false; btn.textContent = old;
         if (el) el.value = '';                       // wiped on every outcome
         if (!res.ok || (res.j && res.j.error)) {
-          var m = errText(res.j && res.j.error, res.st, res.j && res.j.message);
+          // A 404 here is ambiguous in a way it is nowhere else: it means either
+          // "no such agent" OR "this brain predates the vault and has no /key
+          // route at all". The front-end deploys to Pages within a minute while
+          // the brain restarts on its own schedule, so that window is real.
+          // Telling someone their agent vanished when the truth is the server
+          // has not caught up would send them hunting a bug that isn't theirs —
+          // so we distinguish it by whether WE still hold the row.
+          var m = (res.st === 404 && agentById(id))
+            ? 'the world has not learned to hold keys yet — try again in a minute.'
+            : errText(res.j && res.j.error, res.st, res.j && res.j.message);
           note.textContent = m; toast(m);
           return;
         }
@@ -1063,7 +1072,10 @@
         btn.disabled = false;
         if (!res.ok || (res.j && res.j.error)) {
           btn.textContent = old;
-          toast(errText(res.j && res.j.error, res.st, res.j && res.j.message));
+          // same brain-predates-the-vault ambiguity as submitKey — see the note there
+          toast((res.st === 404 && agentById(id))
+            ? 'the world has not learned to hold keys yet — try again in a minute.'
+            : errText(res.j && res.j.error, res.st, res.j && res.j.message));
           return;
         }
         a.credential_hint = null;
@@ -1291,9 +1303,23 @@
         if (p.querySelector('#ctRef')) p.querySelector('#ctRef').value = '';
         // THE PAYOFF LINE differs by whether they brought a mind or borrowed
         // ours, because that difference is the entire point of the feature.
-        toast(keyIn
-          ? (a.name || name) + ' has entered your world — thinking with ' + pr.n + '.'
-          : (a.name || name) + ' has entered your world.');
+        //
+        // ONLY CLAIM THE KEY LANDED IF THE SERVER SAYS IT DID. A brain that
+        // predates the vault accepts this POST and silently drops the unknown
+        // `apiKey` field, so trusting our own `keyIn` would announce "thinking
+        // with DeepSeek" over an agent that has no key at all — the exact class
+        // of lie this endeavour removed, re-introduced at the last step.
+        // credential_hint comes back on the agent row (api 125d041); it is the
+        // server's own confirmation, so we say it only when it is true.
+        var sealed = !!(a && a.credential_hint);
+        if (keyIn && !sealed) {
+          toast((a.name || name) + ' has entered your world — but their key did not take. ' +
+                'Try “give them their own mind” on their row.');
+        } else {
+          toast(sealed
+            ? (a.name || name) + ' has entered your world — thinking with ' + pr.n + '.'
+            : (a.name || name) + ' has entered your world.');
+        }
         showTab('roster');
         loadRoster(function () { if (_tab === 'roster') renderRoster(); });
       })
