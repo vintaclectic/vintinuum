@@ -136,6 +136,70 @@
       ' background:rgba(124,207,255,0.08);border:1px solid rgba(124,207,255,0.14);}',
       '#vintWorldHud .wh-chip b{color:#9fdcff;}',
 
+      // ══ THE ASCENT BLOCK ═════════════════════════════════════════════════════
+      // NO-COLLISION LAW: this adds ZERO new fixed elements. It renders INSIDE
+      // .wh-scroll, the panel's existing internal scroller, so the panel's own
+      // height budget absorbs it exactly the way it absorbs the vigil — the
+      // container yields and scrolls, it never grows onto #dvRail or #hint. Every
+      // row below is a flex row with min-width:0 on its flexible cell and its own
+      // clipping, so no string of any length can push a sibling out of its box.
+      '#vintWorldHud .wh-asc{padding:8px 12px 2px;}',
+      // the rung: the tier name, and where it sits on the whole ladder.
+      '#vintWorldHud .wh-rung{display:flex;align-items:baseline;justify-content:space-between;',
+      ' gap:8px;margin-bottom:5px;}',
+      '#vintWorldHud .wh-rungname{flex:1 1 auto;min-width:0;font-size:12px;letter-spacing:.09em;',
+      ' text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;',
+      ' color:#ffd479;text-shadow:0 0 12px rgba(255,212,121,0.35);}',
+      '#vintWorldHud .wh-rungn{flex:0 0 auto;font-size:10.5px;font-variant-numeric:tabular-nums;',
+      ' color:rgba(218,228,255,0.45);}',
+      // THE LADDER — six pips, one per rung. Reached rungs are lit, the one you
+      // stand on is ringed. Each pip is its own cell in a flex row with a gap, so
+      // they can never touch each other at any width.
+      '#vintWorldHud .wh-pips{display:flex;gap:4px;margin-bottom:6px;}',
+      '#vintWorldHud .wh-pip{flex:1 1 0;min-width:0;height:4px;border-radius:2px;',
+      ' background:rgba(255,255,255,0.09);transition:background .4s ease;}',
+      '#vintWorldHud .wh-pip.on{background:rgba(255,212,121,0.62);}',
+      '#vintWorldHud .wh-pip.at{background:#ffd479;box-shadow:0 0 8px rgba(255,212,121,0.55);}',
+      // THE OBJECTIVE — the named next thing. This is the acceptance criterion on
+      // screen, so it is the loudest thing in the block and it is NEVER absent.
+      '#vintWorldHud .wh-obj{border-radius:11px;padding:8px 10px;',
+      ' background:rgba(255,212,121,0.07);border:1px solid rgba(255,212,121,0.22);}',
+      '#vintWorldHud .wh-objlab{font-size:9.5px;letter-spacing:.11em;text-transform:uppercase;',
+      ' color:rgba(255,212,121,0.55);margin-bottom:3px;}',
+      '#vintWorldHud .wh-objname{font-size:13px;line-height:1.3;color:#fff3dd;margin-bottom:3px;',
+      ' overflow-wrap:anywhere;}',
+      '#vintWorldHud .wh-objsay{font-size:11px;line-height:1.4;color:rgba(245,235,220,0.72);',
+      ' overflow-wrap:anywhere;}',
+      // the distance bar + its number, each in its own row — never stacked on
+      // each other, never a number floating on a bar.
+      '#vintWorldHud .wh-objbar{position:relative;height:5px;border-radius:3px;margin-top:7px;',
+      ' background:rgba(255,255,255,0.08);overflow:hidden;}',
+      '#vintWorldHud .wh-objfill{position:absolute;left:0;top:0;bottom:0;border-radius:3px;',
+      ' background:linear-gradient(90deg,#ffd479,#ffb066);transition:width .5s ease;}',
+      '#vintWorldHud .wh-objfar{display:flex;align-items:baseline;justify-content:space-between;',
+      ' gap:8px;margin-top:4px;font-size:10px;color:rgba(245,235,220,0.5);}',
+      '#vintWorldHud .wh-objfar b{color:#ffd479;font-variant-numeric:tabular-nums;}',
+      '#vintWorldHud .wh-objfar .l{flex:1 1 auto;min-width:0;white-space:nowrap;overflow:hidden;',
+      ' text-overflow:ellipsis;}',
+      '#vintWorldHud .wh-objfar .r{flex:0 0 auto;}',
+      // what the next rung opens — the want, said plainly.
+      '#vintWorldHud .wh-opens{margin-top:6px;font-size:10.5px;line-height:1.4;',
+      ' color:rgba(159,220,255,0.62);overflow-wrap:anywhere;}',
+      '#vintWorldHud .wh-opens b{color:#9fdcff;}',
+
+      // ── THE LONG WORK — the open loop, given its own quiet box ───────────────
+      // Deliberately understated: it is not a quest tracker, it is a stone in the
+      // clearing that says a little more each time you climb. It is a BUTTON
+      // because it opens the full inscription, and it meets the 44px law.
+      '#vintWorldHud .wh-lw{display:block;width:100%;min-height:44px;margin-top:8px;',
+      ' text-align:left;font-family:inherit;cursor:pointer;border-radius:11px;padding:7px 10px;',
+      ' background:rgba(154,134,216,0.08);border:1px solid rgba(154,134,216,0.26);color:#cbbde8;}',
+      '#vintWorldHud .wh-lw:active{transform:scale(0.98);}',
+      '#vintWorldHud .wh-lwlab{font-size:9.5px;letter-spacing:.11em;text-transform:uppercase;',
+      ' color:rgba(190,170,235,0.6);margin-bottom:3px;}',
+      '#vintWorldHud .wh-lwask{font-size:11px;line-height:1.4;font-style:italic;',
+      ' color:rgba(203,189,232,0.86);overflow-wrap:anywhere;}',
+
       // ── THE VIGIL BLOCK ──────────────────────────────────────────────────────
       '#vintWorldHud .wh-vigil{padding:2px 12px 10px;}',
       // the header row: the state word, and the number, on ONE baseline. Both
@@ -299,12 +363,88 @@
       // and the body scrolls — it never grows past the screen or clips its button.
       '@media(max-height:520px){#whHomeCard .hm-body{padding:16px 18px 6px;}',
       ' #whHomeCard .hm-glyph{font-size:28px;}#whHomeCard .hm-h{font-size:20px;}',
-      ' #whHomeCard .hm-gift b{font-size:24px;}}'
+      ' #whHomeCard .hm-gift b{font-size:24px;}}',
+
+      // ══ THE LONG WORK — the stone, read in full ══════════════════════════════
+      // The SECOND deliberate overlay in this file, and the same sanctioned kind
+      // as the homecoming: a true modal over its OWN dedicated scrim, centred
+      // with flex (never transforms against hand-counted offsets), dismissible
+      // three ways. It reuses the homecoming's exact z-order neighbourhood —
+      // scrim 1610 / card 1620 — and only ONE of the two can ever be open,
+      // because openLongWork() closes the homecoming first and vice versa. Two
+      // modals sharing a z-index while both visible would be a collision; they
+      // are mutually exclusive by construction, which is why they may share it.
+      '#whLwWrap{position:fixed;inset:0;z-index:1610;display:none;',
+      ' align-items:center;justify-content:center;',
+      ' padding:max(16px,env(safe-area-inset-top,16px)) max(16px,env(safe-area-inset-right,16px))',
+      ' max(16px,env(safe-area-inset-bottom,16px)) max(16px,env(safe-area-inset-left,16px));',
+      ' background:rgba(3,4,9,0.78);backdrop-filter:blur(7px);-webkit-backdrop-filter:blur(7px);',
+      ' opacity:0;transition:opacity .5s ease;}',
+      '#whLwWrap.show{display:flex;opacity:1;}',
+      '#whLwCard{position:relative;z-index:1620;width:100%;max-width:min(380px,calc(100vw - 32px));',
+      ' max-height:calc(100dvh - 32px);max-height:calc(100vh - 32px);',
+      ' display:flex;flex-direction:column;overflow:hidden;',
+      ' background:rgba(10,9,18,0.97);border:1px solid rgba(154,134,216,0.34);border-radius:22px;',
+      ' box-shadow:0 24px 80px rgba(0,0,0,0.75),0 0 60px rgba(154,134,216,0.1);',
+      ' font-family:"Cormorant Garamond",Georgia,serif;color:#e9e3f6;',
+      ' transform:translateY(14px) scale(0.97);transition:transform .5s cubic-bezier(.22,1,.36,1);}',
+      '#whLwWrap.show #whLwCard{transform:translateY(0) scale(1);}',
+      '#whLwCard .lw-body{flex:1 1 auto;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;',
+      ' overscroll-behavior:contain;padding:24px 22px 8px;}',
+      '#whLwCard .lw-glyph{text-align:center;font-size:34px;line-height:1;color:#b9a6e8;',
+      ' text-shadow:0 0 30px rgba(154,134,216,0.55);}',
+      '#whLwCard .lw-kicker{margin-top:12px;text-align:center;font-size:11px;letter-spacing:.19em;',
+      ' text-transform:uppercase;color:rgba(190,170,235,0.6);}',
+      '#whLwCard .lw-h{margin-top:6px;text-align:center;font-size:24px;line-height:1.24;color:#f3eeff;}',
+      // each stanza is its own block with its own margin — they never touch.
+      '#whLwCard .lw-lines{margin-top:16px;display:flex;flex-direction:column;gap:12px;}',
+      '#whLwCard .lw-line{padding:11px 13px;border-radius:12px;font-size:15px;line-height:1.5;',
+      ' background:rgba(154,134,216,0.07);border-left:2px solid rgba(154,134,216,0.4);',
+      ' color:rgba(233,227,246,0.9);overflow-wrap:anywhere;}',
+      // the unreadable first stanza reads as unreadable, not as missing.
+      '#whLwCard .lw-line.unread{font-style:italic;color:rgba(233,227,246,0.5);',
+      ' border-left-color:rgba(154,134,216,0.18);background:rgba(255,255,255,0.03);}',
+      // the rungs still sealed — shown as sealed, never as empty space.
+      '#whLwCard .lw-sealed{margin-top:12px;padding:11px 13px;border-radius:12px;',
+      ' background:rgba(255,255,255,0.03);border:1px dashed rgba(154,134,216,0.24);',
+      ' font-size:13px;line-height:1.5;color:rgba(203,189,232,0.55);font-style:italic;}',
+      '#whLwCard .lw-ask{margin-top:16px;padding:12px 14px;border-radius:13px;',
+      ' background:rgba(154,134,216,0.1);border:1px solid rgba(154,134,216,0.3);',
+      ' font-size:14.5px;line-height:1.55;color:rgba(226,216,250,0.94);overflow-wrap:anywhere;}',
+      '#whLwCard .lw-foot{flex:0 0 auto;padding:12px 22px max(18px,env(safe-area-inset-bottom,18px));}',
+      '#whLwCard .lw-go{width:100%;min-height:48px;border-radius:14px;font-family:inherit;',
+      ' font-size:15px;letter-spacing:.04em;cursor:pointer;color:#efe9ff;font-weight:600;',
+      ' background:rgba(154,134,216,0.2);border:1px solid rgba(154,134,216,0.45);}',
+      '#whLwCard .lw-go:active{transform:scale(0.985);}',
+      '@media(max-height:520px){#whLwCard .lw-body{padding:16px 18px 6px;}',
+      ' #whLwCard .lw-glyph{font-size:24px;}#whLwCard .lw-h{font-size:19px;}',
+      ' #whLwCard .lw-line{font-size:13.5px;padding:9px 11px;}}',
+
+      // ── THE ASCENSION — a rung crossed, given exactly one quiet moment ───────
+      // NOT a modal: a rung is a warm confirmation, not an interruption, and a
+      // full-screen takeover for "you reached wallwright" would be the predatory
+      // kind of celebration. It renders INSIDE the panel's ascent block (so it
+      // owns no new fixed space at all) and fades on its own.
+      '#vintWorldHud .wh-rose{margin-top:8px;padding:9px 11px;border-radius:11px;',
+      ' background:linear-gradient(90deg,rgba(255,212,121,0.18),rgba(255,176,102,0.1));',
+      ' border:1px solid rgba(255,212,121,0.42);font-size:11.5px;line-height:1.45;',
+      ' color:#fff3dd;animation:whRose .7s cubic-bezier(.22,1,.36,1);overflow-wrap:anywhere;}',
+      '#vintWorldHud .wh-rose b{color:#ffd479;}',
+      '@keyframes whRose{from{opacity:0;transform:translateY(-6px);}to{opacity:1;transform:none;}}',
+      '@media (prefers-reduced-motion: reduce){#vintWorldHud .wh-rose{animation:none;}}'
     ].join('');
     document.head.appendChild(s);
   }
 
   var _el = null, _resident = null, _living = null, _tendBusy = false, _tendT = null;
+  // THE ASCENT — the server's ladder picture. Same three-valued discipline as
+  // `living`: undefined = not part of this update, object = replace, null = the
+  // server no longer speaks the ascent, so drop it rather than strand a stale
+  // rung on screen. The client computes NO progression, ever.
+  var _climb = null;
+  // the rung we last DREW, so a promotion is announced exactly once per crossing
+  // rather than on every state frame that happens to arrive at the new tier.
+  var _drawnTier = null, _roseT = null;
 
   function mount() {
     injectStyles();
@@ -318,6 +458,12 @@
           '<span class="wh-chip">✦ <b id="whEcho">0</b></span>' +
           '<span class="wh-chip">✶ <b id="whStanding">0</b></span>' +
         '</div>' +
+        // THE ASCENT — populated by _renderAscent(). Empty until the server sends
+        // a `climb` picture, so a legacy brain renders nothing here rather than a
+        // broken or fabricated ladder. Sits ABOVE the vigil deliberately: the
+        // first thing a player should see is what they are reaching FOR; the
+        // vigil below it is what they are holding.
+        '<div class="wh-asc" id="whAsc"></div>' +
         // THE VIGIL — populated by _renderVigil(). Until the server sends a
         // `living` picture this holds the legacy bare bar and nothing more, so a
         // legacy server never renders an empty or broken block.
@@ -348,7 +494,20 @@
       el.querySelector('#whBuildRow').classList.toggle('show'); publishBottom();
     };
     el.querySelectorAll('.wh-piece').forEach(function (b) {
-      b.onclick = function () { try { world().placeHere(b.getAttribute('data-kind')); } catch (_) {} };
+      b.onclick = function () {
+        var k = b.getAttribute('data-kind');
+        // mirror the ladder: a locked piece says so instead of firing into a
+        // refusal. The server still decides; this is only the instant echo.
+        var kinds = (_climb && _climb.tier && Array.isArray(_climb.tier.kinds))
+          ? _climb.tier.kinds : null;
+        if (kinds && kinds.indexOf(k) === -1) {
+          _toast('the ' + k + ' is not yours to place yet — keep building.');
+          return;
+        }
+        var sent = false;
+        try { sent = world().placeHere(k); } catch (_) { sent = false; }
+        if (sent === false) _toast('the clearing is out of reach — reload and try again.');
+      };
     });
     publishBottom();
   }
@@ -579,6 +738,198 @@
     publishBottom();
   }
 
+  // ═══════════════════════════════════════════════════════════════════════════
+  // THE ASCENT SURFACE — the ladder, the named objective, and the open loop
+  //
+  // Renders ONLY what the server sent. Every number below is read off `climb`;
+  // nothing here derives a tier, a threshold, an unlock or a distance. If the
+  // brain does not speak the ascent (or the flag is off) the block renders
+  // EMPTY — never a fabricated ladder, never a half-drawn one.
+  //
+  // NO-COLLISION: this writes into #whAsc, a flow child of the panel's existing
+  // internal scroller. It adds no fixed element and claims no new space; if the
+  // content grows, the panel's height budget makes it scroll rather than spill.
+  // ═══════════════════════════════════════════════════════════════════════════
+  function _renderAscent(C) {
+    var box = _el && _el.querySelector('#whAsc');
+    if (!box) return;
+
+    // DEGRADED PATH: no ladder picture, or the flag killed it server-side. Draw
+    // nothing at all — an empty box holds no pixels and collides with nothing.
+    if (!C || typeof C !== 'object' || C.on === false || !C.tier) {
+      if (box.innerHTML) { box.innerHTML = ''; publishBottom(); }
+      return;
+    }
+
+    var t = C.tier || {};
+    var o = C.objective || null;
+    var lw = C.longWork || null;
+    var ladder = Array.isArray(C.ladder) ? C.ladder : [];
+    var standing = num(C.standing, 0);
+
+    var html = '';
+
+    // ── the rung you stand on, and where that is on the whole ladder
+    html +=
+      '<div class="wh-rung">' +
+        '<span class="wh-rungname">' + esc(t.title || '—') + '</span>' +
+        '<span class="wh-rungn">✶ ' + Math.round(standing) + '</span>' +
+      '</div>';
+
+    // ── THE LADDER, as pips. Each pip is its own flex cell with a gap; they can
+    //    never touch, at any width, at any count.
+    if (ladder.length) {
+      html += '<div class="wh-pips">';
+      for (var i = 0; i < ladder.length; i++) {
+        var r = ladder[i] || {};
+        html += '<i class="wh-pip' + (r.reached ? ' on' : '') + (r.at ? ' at' : '') +
+                '" title="' + esc(r.title || '') + (r.need ? ' — ' + r.need + ' standing' : '') + '"></i>';
+      }
+      html += '</div>';
+    }
+
+    // ── THE OBJECTIVE. THE ACCEPTANCE CRITERION, ON SCREEN. The server
+    //    guarantees this is never null while the ladder is on, but the client
+    //    still guards: a missing objective renders the block WITHOUT it rather
+    //    than printing "undefined" at anybody.
+    if (o) {
+      var pct = Math.max(0, Math.min(1, num(o.pct, 0)));
+      html +=
+        '<div class="wh-obj">' +
+          '<div class="wh-objlab">' + (o.terminal ? 'the work that has no end' : 'next') + '</div>' +
+          '<div class="wh-objname">' + esc(o.name || '') + '</div>' +
+          '<div class="wh-objsay">' + esc(o.say || '') + '</div>' +
+          '<div class="wh-objbar"><div class="wh-objfill" style="width:' +
+            (pct * 100).toFixed(1) + '%"></div></div>' +
+          '<div class="wh-objfar">' +
+            '<span class="l">' + esc(o.far || '') + '</span>' +
+            '<span class="r"><b>' + Math.round(pct * 100) + '%</b></span>' +
+          '</div>' +
+          (o.opens ? '<div class="wh-opens">opens: ' + esc(o.opens) + '</div>' : '') +
+        '</div>';
+    }
+
+    // ── THE ASCENSION. A rung crossed gets exactly one quiet moment, inline,
+    //    and only when the tier actually CHANGED since the last draw. On the
+    //    very first draw of a session _drawnTier is null, so we record the rung
+    //    without announcing it — otherwise every reload would "promote" you.
+    var tierN = num(t.n, 0);
+    if (_drawnTier !== null && tierN > _drawnTier) {
+      html +=
+        '<div class="wh-rose">you are <b>' + esc(t.title || '') + '</b> now. ' +
+        esc(t.line || '') + '</div>';
+      clearTimeout(_roseT);
+      _roseT = setTimeout(function () {
+        try {
+          var n = _el && _el.querySelector('.wh-rose');
+          if (n && n.parentNode) { n.parentNode.removeChild(n); publishBottom(); }
+        } catch (_) {}
+      }, 12000);
+    }
+    _drawnTier = tierN;
+
+    // ── THE LONG WORK — the open loop. Always present (the stone stands in the
+    //    clearing from the first second), always asking something it does not
+    //    answer. This is the one thing on the panel that never resolves.
+    if (lw && lw.present) {
+      html +=
+        '<button class="wh-lw" id="whLwBtn">' +
+          '<div class="wh-lwlab">the long work · ' +
+            num(lw.revealed, 0) + ' of ' + num(lw.total, 0) + ' read</div>' +
+          '<div class="wh-lwask">' + esc(lw.ask || '') + '</div>' +
+        '</button>';
+    }
+
+    box.innerHTML = html;
+
+    var lwb = box.querySelector('#whLwBtn');
+    if (lwb) lwb.onclick = function () { showLongWork(_climb); };
+
+    publishBottom();
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // THE LONG WORK, READ IN FULL — the stone's inscription as far as it is yours
+  //
+  // The second sanctioned modal in this file. Mutually exclusive with the
+  // homecoming by construction (each closes the other before opening), which is
+  // why they may share a z-index band without ever sharing pixels.
+  // ═══════════════════════════════════════════════════════════════════════════
+  var _lwEl = null;
+
+  function showLongWork(C) {
+    if (!C || !C.longWork) return;
+    var lw = C.longWork;
+    // never let two modals occupy the screen at once
+    try { hideHomecoming(); } catch (_) {}
+
+    if (!_lwEl) {
+      _lwEl = document.createElement('div');
+      _lwEl.id = 'whLwWrap';
+      _lwEl.setAttribute('role', 'dialog');
+      _lwEl.setAttribute('aria-modal', 'true');
+      _lwEl.setAttribute('aria-label', 'the long work');
+      _lwEl.innerHTML =
+        '<div id="whLwCard">' +
+          '<div class="lw-body">' +
+            '<div class="lw-glyph">◈</div>' +
+            '<div class="lw-kicker" id="whLwKick">the long work</div>' +
+            '<div class="lw-h">the stone in the clearing</div>' +
+            '<div class="lw-lines" id="whLwLines"></div>' +
+            '<div class="lw-sealed" id="whLwSealed"></div>' +
+            '<div class="lw-ask" id="whLwAsk"></div>' +
+          '</div>' +
+          '<div class="lw-foot"><button class="lw-go" id="whLwGo">step back</button></div>' +
+        '</div>';
+      document.body.appendChild(_lwEl);
+      _lwEl.querySelector('#whLwGo').onclick = hideLongWork;
+      _lwEl.addEventListener('click', function (e) { if (e.target === _lwEl) hideLongWork(); });
+    }
+
+    var revealed = num(lw.revealed, 0), total = num(lw.total, 0);
+    _lwEl.querySelector('#whLwKick').textContent =
+      'the long work · ' + revealed + ' of ' + total + ' read';
+
+    // the stanzas earned, each in its own block. The server only ever sends the
+    // ones this player may read, so there is nothing here to leak.
+    var lines = Array.isArray(lw.lines) ? lw.lines : [];
+    var lhtml = '';
+    for (var i = 0; i < lines.length; i++) {
+      var L = lines[i] || {};
+      lhtml += '<div class="lw-line' + (L.read ? '' : ' unread') + '">' + esc(L.line || '') + '</div>';
+    }
+    _lwEl.querySelector('#whLwLines').innerHTML = lhtml;
+
+    // what is still sealed — shown as sealed, never as absence.
+    var sealed = Math.max(0, total - revealed);
+    var sn = _lwEl.querySelector('#whLwSealed');
+    if (sealed > 0) {
+      sn.style.display = '';
+      sn.textContent = sealed === 1
+        ? 'one more line is cut into the stone. you cannot read it yet.'
+        : sealed + ' more lines are cut into the stone. you cannot read them yet.';
+    } else {
+      // COMPLETE IS NOT ANSWERED. The payload says so and so does this surface.
+      sn.style.display = '';
+      sn.textContent = 'there is nothing left to uncover. there is still no answer.';
+    }
+
+    _lwEl.querySelector('#whLwAsk').textContent = lw.ask || '';
+
+    try { requestAnimationFrame(function () { _lwEl.classList.add('show'); }); }
+    catch (_) { _lwEl.classList.add('show'); }
+    document.addEventListener('keydown', _lwKey);
+  }
+
+  function _lwKey(e) { if (e.key === 'Escape') hideLongWork(); }
+
+  function hideLongWork() {
+    if (!_lwEl) return;
+    _lwEl.classList.remove('show');
+    document.removeEventListener('keydown', _lwKey);
+    setTimeout(function () { try { if (_lwEl) _lwEl.style.display = ''; } catch (_) {} }, 520);
+  }
+
   // route to the Court — the honest conversion path for the ask.
   function openCourt() {
     try { if (W.VintCourt && W.VintCourt.open) { W.VintCourt.open('add'); return; } } catch (_) {}
@@ -665,6 +1016,10 @@
     var gift = num(L.homecoming, 0);
     if (!(gift > 0)) return;
     _homeShown = true;
+    // NO-COLLISION: the homecoming and the Long Work share a z-index band, which
+    // is only safe because they are mutually exclusive. Each closes the other
+    // before it opens, so the two can never occupy the same pixels.
+    try { hideLongWork(); } catch (_) {}
 
     if (!_homeEl) {
       _homeEl = document.createElement('div');
@@ -747,23 +1102,54 @@
   //               nobody vouched for, which is exactly what "the client never
   //               computes survival" exists to prevent. So we drop it and fall
   //               back to the bare bar.
-  function _render(r, living) {
+  function _render(r, living, climb) {
     if (!_el) return;
     if (r) _resident = r;
     if (living !== undefined) _living = living || null;
+    // same three-valued contract as `living` — see the note above.
+    if (climb !== undefined) _climb = climb || null;
 
     if (_resident) {
       _el.querySelector('#whLumen').textContent = _resident.lumen != null ? _resident.lumen : 0;
       _el.querySelector('#whEcho').textContent = _resident.echo != null ? _resident.echo : 0;
-      _el.querySelector('#whStanding').textContent = _resident.standing != null ? _resident.standing : 0;
+      // the standing chip prefers the ASCENT's reading over the resident column
+      // (they agree by construction; the reading is the truth if they ever don't).
+      // num() guarantees a number even when standing is 0, null, or the column is
+      // missing entirely on a legacy row — the chip can never print undefined/NaN.
+      _el.querySelector('#whStanding').textContent = String(Math.round(
+        num(_climb && _climb.standing, num(_resident.standing, 0))));
       var claimBtn = _el.querySelector('#whClaim');
       if (_resident.claim && claimBtn) {
         claimBtn.disabled = true; claimBtn.style.opacity = '0.45';
         claimBtn.textContent = '⌂ hearth claimed';
       }
     }
+    // the ascent draws FIRST — it sits above the vigil in the panel, and drawing
+    // it first means one publishBottom() at the end measures a settled box.
+    _renderAscent(_climb);
+    _syncBuildRow();
     _renderVigil(_living);
     _syncTendBtn();
+  }
+
+  // ── THE BUILD ROW MIRRORS THE LADDER TOO ────────────────────────────────────
+  // This panel's own four buttons are all tier-0 kinds, so they are never locked
+  // in practice — but the mirror is wired anyway rather than assumed, because
+  // "these four happen to be free today" is exactly the assumption that leaves a
+  // dead control behind the next time the tier table moves. The server's
+  // `climb.tier.kinds` is the only authority; this reads it and nothing else.
+  function _syncBuildRow() {
+    if (!_el) return;
+    var kinds = (_climb && _climb.tier && Array.isArray(_climb.tier.kinds))
+      ? _climb.tier.kinds : null;
+    _el.querySelectorAll('.wh-piece').forEach(function (b) {
+      var k = b.getAttribute('data-kind');
+      // null = the brain has not spoken → never lock optimistically
+      var open = !kinds || kinds.indexOf(k) !== -1;
+      b.style.opacity = open ? '' : '0.4';
+      b.setAttribute('aria-disabled', open ? 'false' : 'true');
+      b.title = open ? k : (k + ' — opens further up the climb');
+    });
   }
 
   // ── wire to world events ─────────────────────────────────────────────────────
@@ -772,7 +1158,10 @@
     // a world:state ALWAYS carries the authoritative living picture, or the
     // absence of one — pass null (never undefined) so a server that stopped
     // speaking the vigil clears the last picture instead of stranding it.
-    _render(d.resident, d.living || null);
+    // a world:state ALWAYS carries the authoritative ladder picture too, or the
+    // absence of one — null (never undefined) so a brain that stopped speaking
+    // the ascent clears the last rung instead of stranding it on screen.
+    _render(d.resident, d.living || null, d.climb || null);
     // THE HOMECOMING lands on the arrival state frame (the server pays it once,
     // on world:hello). Give it a beat so it arrives into a painted world rather
     // than on top of the loader.
@@ -785,7 +1174,10 @@
     clearTimeout(_tendT); _tendBusy = false;
     // a tend reply without a picture means "currencies unchanged, keep what you
     // have" — NOT "the vigil is gone", so pass undefined rather than null here.
-    _render(null, d.living || undefined);
+    // a tend reply carries no ladder picture — pass undefined ("not part of this
+    // update") so the rung on screen is kept rather than cleared. The world:state
+    // frame that follows immediately after carries the freshly-reconciled climb.
+    _render(null, d.living || undefined, undefined);
     var n = num(d.tended, 0), g = num(d.gained, 0);
     if (!n) _toast('no one in your court to tend — bring an agent in.');
     else if (g > 0) {
@@ -803,7 +1195,8 @@
   W.addEventListener('vint:world-warmth', function (e) {
     var lv = e.detail && e.detail.living;
     if (!lv || lv === _living) return;   // already the picture we are showing
-    _render(null, lv);
+    // the warmth echo carries spark only, never the ladder — keep the rung.
+    _render(null, lv, undefined);
     // HOMECOMING — if the world paid a re-entry gift it gets its full moment.
     // showHomecoming self-guards to once per load, so the state frame and this
     // echo can never both open it.
@@ -811,7 +1204,21 @@
   });
   W.addEventListener('vint:world-harvest', function (e) {
     var d = e.detail || {};
-    _toast(d.artifact ? ('found: ' + d.artifact + '  (+' + d.echo + ' echo)') : ('+' + (d.echo || 0) + ' echo'));
+    if (!d.artifact) { _toast('+' + num(d.echo, 0) + ' echo'); return; }
+    var line = 'found: ' + d.artifact;
+    // THE WARDEN UNLOCK, made visible. `artifactDepth` is only present at warden
+    // and above — its very absence is the ungated state, so this surface never
+    // has to know what tier the player is on. Guarded field-by-field so a partial
+    // payload shortens the sentence rather than printing undefined.
+    if (d.artifactDepth && typeof d.artifactDepth === 'object') {
+      var kind = d.artifactDepth.kind ? String(d.artifactDepth.kind) : '';
+      var lv = num(d.artifactDepth.levels, -1);
+      var bits = [];
+      if (kind) bits.push(kind);
+      if (lv >= 0) bits.push(lv + (lv === 1 ? ' shelf deep' : ' shelves deep'));
+      if (bits.length) line += '  (' + bits.join(' · ') + ')';
+    }
+    _toast(line + '  +' + num(d.echo, 0) + ' echo');
   });
   W.addEventListener('vint:world-refine', function (e) {
     var d = e.detail || {}; _toast('refined ' + d.spent + ' echo → ' + d.gained + ' lumen');
@@ -833,6 +1240,20 @@
       msg = 'the clearing has drawn in close — you can build within ' + rad +
             ' of your hearth right now. tend your court to widen it.';
     }
+    // THE ASCENT REFUSAL — a signpost, never a wall. The server sends the tier
+    // that opens the piece and the exact gap to it, so the message can always
+    // say what to reach for rather than merely "no". Every field is guarded:
+    // a partial payload degrades to a shorter sentence, never to "undefined".
+    if (!msg && c === 'standing') {
+      var kd = det.kind ? esc(det.kind) : 'that piece';
+      msg = 'the ' + kd + ' is not yours to place yet';
+      if (det.tier) {
+        msg += ' — it opens at ' + esc(det.tier);
+        if (num(det.gap, 0) > 0) msg += ', ' + Math.round(num(det.gap, 0)) + ' standing away';
+      }
+      msg += '. keep building.';
+    }
+    if (!msg && c === 'bad_kind') msg = 'the clearing does not know that shape.';
     _toast(msg || ('— ' + c));
   });
 
@@ -850,8 +1271,18 @@
       _syncTendBtn();
     },
     living: function () { return _living; },
+    // THE ASCENT — the same contract the vigil has: another surface hands the
+    // server's freshly-computed `climb` straight in (the REST /api/world/ascent
+    // path does exactly this when there is no socket to carry a state frame).
+    renderAscent: function (C) {
+      if (C) _climb = C;
+      _renderAscent(_climb);
+    },
+    climb: function () { return _climb; },
     // exposed so another surface (or a test) can replay the moment deliberately
     showHomecoming: showHomecoming,
-    hideHomecoming: hideHomecoming
+    hideHomecoming: hideHomecoming,
+    showLongWork: function () { showLongWork(_climb); },
+    hideLongWork: hideLongWork
   };
 })();

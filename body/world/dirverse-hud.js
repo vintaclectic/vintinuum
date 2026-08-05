@@ -377,6 +377,15 @@
       ' color:#cfe0f5;background:rgba(255,255,255,0.045);border:1px solid rgba(255,255,255,0.1);font-family:inherit;}',
       '.dv-prop:active{transform:scale(0.94);}',
       '.dv-prop.on{background:rgba(124,207,255,0.16);border-color:rgba(124,207,255,0.5);color:#fff;}',
+      // LOCKED — visible, legible, and obviously not yet yours. NOT display:none:
+      // you should be able to see what you are climbing toward. Deliberately NOT
+      // `disabled` either — the tap must still land so it can say WHY, and a
+      // disabled button eats its own click. It keeps its full 60px box, so the
+      // strip's layout is identical locked or open and nothing shifts as tiers
+      // unlock (a palette that re-flows under your thumb is its own collision).
+      '.dv-prop.locked{opacity:0.34;border-style:dashed;',
+      ' border-color:rgba(255,255,255,0.16);color:rgba(207,232,255,0.6);}',
+      '.dv-prop.locked .pg{filter:grayscale(1);}',
       '.dv-prop .pg{font-size:20px;line-height:1;}',
       '.dv-prop .pn{font-size:10.5px;letter-spacing:.02em;}',
 
@@ -1434,6 +1443,28 @@
   // BUILD PALETTE — the thumb-scroll strip, visible only on your own world
   // ═══════════════════════════════════════════════════════════════════════════
   var _buildBar = null, _selProp = null;
+  // ── THE PALETTE MIRRORS THE LADDER (AETHERHOLD 2026-08-05) ──────────────────
+  // ELEVEN DEAD BUTTONS. This palette has always offered fifteen prop kinds
+  // while the server's PLACE_COST knew only four — so pillar through beacon were
+  // rendered, pressed, rejected with a bare `bad_kind`, and then TOASTED "placed
+  // a beacon where you stand" anyway. Eleven controls that did nothing and lied
+  // about it. THE ASCENT is what those kinds were always for: the server now
+  // costs all fifteen and decides which of them a player's standing has opened.
+  //
+  // This surface MIRRORS that verdict; it never rules on it. A locked prop is
+  // drawn locked (dimmed, with the tier that opens it in its tooltip) instead of
+  // being hidden — you should be able to SEE what you are climbing toward — and
+  // tapping it says what it costs instead of pretending it worked. The server is
+  // still the only authority: if this mirror is ever wrong, the placement is
+  // refused by the brain and the refusal names the tier.
+  var _openKinds = null;      // null = the brain has not spoken yet → allow all
+  var _tierTitle = '';
+
+  function _kindOpen(k) {
+    if (!_openKinds) return true;             // unknown → never block optimistically
+    return _openKinds.indexOf(k) !== -1;
+  }
+
   function buildPalette() {
     if (_buildBar) return _buildBar;
     var bar = document.createElement('div'); bar.id = 'dvBuild';
@@ -1442,18 +1473,58 @@
       var b = document.createElement('button'); b.className = 'dv-prop'; b.setAttribute('data-kind', p.k);
       b.innerHTML = '<span class="pg">' + esc(p.g) + '</span><span class="pn">' + esc(p.n) + '</span>';
       b.onclick = function () {
+        // A LOCKED PIECE SAYS SO, and does not pretend to place. The world:err
+        // handler carries the authoritative sentence when the server refuses;
+        // this is the instant local echo so the tap is never silent.
+        if (!_kindOpen(p.k)) {
+          toast('the ' + p.n + ' is not yours to place yet — keep building.');
+          return;
+        }
         strip.querySelectorAll('.dv-prop').forEach(function (x) { x.classList.remove('on'); });
         b.classList.add('on'); _selProp = p.k;
-        try { world().placeHere(p.k); } catch (_) {}
-        toast('placed a ' + p.n + ' where you stand');
+        var sent = false;
+        try { sent = world().placeHere(p.k); } catch (_) { sent = false; }
+        // NEVER TOAST A SUCCESS WE DID NOT SEE. placeHere returns false when the
+        // socket dropped the message; the old code claimed "placed a beacon"
+        // regardless, which is the same dead-control lie in a different coat.
+        // The authoritative confirmation arrives as a world:state / world:struct.
+        if (sent === false) toast('the clearing is out of reach — reload and try again.');
       };
       strip.appendChild(b);
     });
     bar.appendChild(strip);
     document.body.appendChild(bar);
     _buildBar = bar;
+    syncPalette();
     return bar;
   }
+
+  // Paint the palette from the server's ladder picture. Locked props stay VISIBLE
+  // (dimmed + labelled) so the climb has something to point at.
+  function syncPalette() {
+    if (!_buildBar) return;
+    _buildBar.querySelectorAll('.dv-prop').forEach(function (b) {
+      var k = b.getAttribute('data-kind');
+      var open = _kindOpen(k);
+      b.classList.toggle('locked', !open);
+      // aria + tooltip carry the reason, so the lock is never a mystery.
+      b.setAttribute('aria-disabled', open ? 'false' : 'true');
+      b.title = open
+        ? k
+        : (k + ' — opens further up the climb' + (_tierTitle ? ' (you are ' + _tierTitle + ')' : ''));
+    });
+  }
+
+  // The brain's ladder picture arrives on every world:state. The palette reads
+  // `climb.tier.kinds` — the single server-side truth about what is placeable —
+  // and never derives an unlock of its own.
+  W.addEventListener('vint:world-state', function (e) {
+    var c = e.detail && e.detail.climb;
+    if (!c || !c.tier || !Array.isArray(c.tier.kinds)) return;
+    _openKinds = c.tier.kinds.slice();
+    _tierTitle = String(c.tier.title || '');
+    syncPalette();
+  });
   var _buildOpen = false;
   function toggleBuild() {
     buildPalette();
@@ -1572,7 +1643,15 @@
     //     into a sheet swallows the launcher whole.
     var botFloor = 0;
     if (anyOpen()) {
-      var sel = document.querySelector('#dvWarpSheet.open, #dvAgentSheet.open, #ctSheet.open');
+      // EVERY registered full-width sheet must be listed here, or the rail
+      // measures its floor against a sheet that isn't there and leaves its
+      // bottom launchers inside the open one's pixels. #ascSheet (the ascent,
+      // 2026-08-05) is the fifth. A sheet that registers with the owner but is
+      // missing from this selector is invisible to the layout — that is the one
+      // seam in this design, so it is called out loudly rather than left to be
+      // rediscovered by the next surface.
+      var sel = document.querySelector(
+        '#dvWarpSheet.open, #dvAgentSheet.open, #ctSheet.open, #ascSheet.open');
       if (sel) {
         var shr = sel.getBoundingClientRect();
         if (shr.height > 0 && shr.top < vh) {
