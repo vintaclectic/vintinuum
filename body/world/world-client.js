@@ -593,6 +593,22 @@
         // re-apply saved council tints for the freshly-spawned live agents
         try { setTimeout(() => { try { _reapplySavedBeing(); } catch (_) {} }, 300); } catch (_) {}
       } else if (m.t === 'presence') {
+        // ── THE STANDING COURT, RECEIVED (AETHERHOLD 2026-08-05) ──────────────
+        // This loop used to be `get(a.id); if (A) …` — a pure position update
+        // that could only move beings hello had already spawned. That was the
+        // client half of "nobody else is there": the server can now name the
+        // agents standing in the world you walked into (its OWNER's court, not
+        // yours), and the client dropped every one of them on the floor because
+        // it had never been asked to spawn a presence it didn't already know.
+        //
+        // So an unknown COURT presence is now stood up on arrival. Two rules
+        // keep this from becoming a way for the wire to spawn anything it likes:
+        //   · only `court:true` frames may create — a council id the client
+        //     doesn't know is still ignored, exactly as before;
+        //   · the id is tracked in `visiting` (never in `court`, which means MY
+        //     court) so leaving the world tears down precisely what the room
+        //     gave us and never touches the player's own agents.
+        _syncVisitingCourt(m.agents || []);
         (m.agents || []).forEach(a => { const A = agents.get(a.id); if (A) A.target = { x: a.x, z: a.z, yaw: a.yaw || 0 }; });
         // selfPrefix kills stale-self bodies: if a prior WS connection of mine
         // (same userId, different counter) is still in the room broadcast, skip it.
@@ -641,7 +657,25 @@
       if (m.worldId != null) World._worldId = String(m.worldId);
       World._canBuild = (m.canBuild !== false); // default true if omitted (legacy hub)
       if (Array.isArray(m.structures)) { m.structures.forEach(_renderStruct); }
+      // THE LANTERNS — the marks visitors left standing here. Absent on a legacy
+      // server, so the loop is guarded rather than assumed.
+      World._canTrace = (m.canTrace === true);
+      if (Array.isArray(m.traces)) { m.traces.forEach(_renderTrace); }
       try { window.dispatchEvent(new CustomEvent('vint:world-state', { detail: m })); } catch (_) {}
+    } else if (m.t === 'world:traces') {
+      if (Array.isArray(m.traces)) m.traces.forEach(_renderTrace);
+      try { window.dispatchEvent(new CustomEvent('vint:world-traces', { detail: m })); } catch (_) {}
+    } else if (m.t === 'world:trace:new') {
+      // someone set a light down while we're standing here — watch it kindle
+      _renderTrace(m.trace);
+      try { window.dispatchEvent(new CustomEvent('vint:world-trace', { detail: m.trace })); } catch (_) {}
+    } else if (m.t === 'world:trace:ok') {
+      _renderTrace(m.trace);
+      try { window.dispatchEvent(new CustomEvent('vint:world-trace-ok', { detail: m.trace })); } catch (_) {}
+    } else if (m.t === 'world:trace:gone') {
+      const mesh = _traceMeshes.get(String(m.id));
+      if (mesh) { try { World._scene.remove(mesh); } catch (_) {} _traceMeshes.delete(String(m.id)); }
+      try { window.dispatchEvent(new CustomEvent('vint:world-trace-gone', { detail: { id: m.id } })); } catch (_) {}
     } else if (m.t === 'world:struct') {
       _renderStruct(m.struct);
       try { window.dispatchEvent(new CustomEvent('vint:world-struct', { detail: m.struct })); } catch (_) {}
@@ -701,6 +735,106 @@
     World._scene.add(mesh);
     _structMeshes.set(s.id, mesh);
   }
+
+  // ── THE LANTERNS ────────────────────────────────────────────────────────────
+  // A visitor's mark, standing where they stood. Small, warm, and unmistakably
+  // NOT a structure: a structure is something the owner built, a lantern is
+  // something someone else left. It floats and breathes slightly so a clearing
+  // with visitors reads as inhabited from across the world, which is the whole
+  // point — you should be able to SEE that people have been here before you walk
+  // to any one of them.
+  //
+  // NOTHING TOUCHES ANYTHING (no-collision, in three dimensions): lanterns are
+  // planted at the visitor's own standing position, which the server clamps to
+  // the same play area as movement, and they float at y=0.55 — above the floor
+  // plates and below every presence's head, so a light can never be inside a
+  // being or buried in a wall. Two visitors who stood in the same spot get one
+  // lantern each at the same place, which is the one honest reading of "we both
+  // stood here" and is also impossible to make worse (each is one per person).
+  const _traceMeshes = new Map(); // id → mesh
+  const _GLYPH_COLOR = {
+    lantern: 0xffd479, sigil: 0xa67cff, cairn: 0x9ad0c2,
+    bloom: 0xff8fb0, ember: 0xff8a3d, star: 0x9fdcff,
+  };
+  function _renderTrace(t) {
+    if (!t || t.id == null || !World._scene) return;
+    const id = String(t.id);
+    if (_traceMeshes.has(id)) return;
+    const THREE = World._THREE || (window.THREE);
+    if (!THREE) return;
+    const color = _GLYPH_COLOR[t.glyph] || _GLYPH_COLOR.lantern;
+    const g = new THREE.Group();
+    // the light itself — a small floating core
+    const core = new THREE.Mesh(
+      new THREE.OctahedronGeometry(0.16, 0),
+      new THREE.MeshStandardMaterial({ color: 0xfff4e0, emissive: color, emissiveIntensity: 1.6 })
+    );
+    core.position.y = 0.55;
+    // a soft ring on the ground marking WHERE they stood
+    const ring = new THREE.Mesh(
+      new THREE.RingGeometry(0.28, 0.42, 24),
+      new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.28, side: THREE.DoubleSide, depthWrite: false })
+    );
+    ring.rotation.x = -Math.PI / 2; ring.position.y = 0.02;
+    g.add(core, ring);
+    // a real (cheap, short-range) light so it actually warms the ground near it
+    try { const pl = new THREE.PointLight(color, 0.5, 2.6); pl.position.y = 0.55; g.add(pl); } catch (_) {}
+    g.position.set(t.x || 0, 0, t.z || 0);
+    // carried on the mesh so a click/proximity read can name who left it without
+    // a second lookup, and so the HUD can render the words as TEXT (never HTML).
+    g.userData.trace = { id: t.id, who: t.who, words: t.words, glyph: t.glyph, at: t.at };
+    g.userData.isTrace = true;
+    World._scene.add(g);
+    _traceMeshes.set(id, g);
+  }
+  // Lanterns breathe — a slow bob + turn, each on its own phase so a clearing of
+  // them never pulses in unison (which would read as a UI element, not a place).
+  // Costs one sin/cos per lantern per frame over a set capped at 60 server-side.
+  function _stepTraces(tnow) {
+    if (!_traceMeshes.size) return;
+    let i = 0;
+    for (const g of _traceMeshes.values()) {
+      const ph = (g.userData.tracePhase != null)
+        ? g.userData.tracePhase
+        : (g.userData.tracePhase = (i * 1.7) % 6.283);
+      const core = g.children[0];
+      if (core) { core.position.y = 0.55 + Math.sin(tnow * 0.0011 + ph) * 0.06; core.rotation.y += 0.004; }
+      i++;
+    }
+  }
+
+  // every lantern standing in this world, nearest first — the HUD walks this to
+  // render the "who came" list without keeping its own copy of the truth.
+  World.traces = function () {
+    const out = [];
+    for (const g of _traceMeshes.values()) {
+      const t = g.userData.trace; if (!t) continue;
+      out.push(Object.assign({}, t, { dist: Math.hypot(g.position.x - me.x, g.position.z - me.z) }));
+    }
+    out.sort((a, b) => a.dist - b.dist);
+    return out;
+  };
+  // may I leave one here? Server-authoritative (set from world:state.canTrace);
+  // false in my own world, false on a legacy server, false when signed out.
+  World.canTrace = function () { return World._canTrace === true && !World._guest; };
+  // Leave a lantern where I'm standing. Position is NOT sent — the server plants
+  // it at its own copy of where I am, so a client can never place one somewhere
+  // it never stood.
+  World.leaveTrace = function (words, glyph) {
+    World.send({ t: 'world:trace', words: String(words == null ? '' : words).slice(0, 140), glyph: glyph || 'lantern' });
+  };
+  // Put one out. Owner-only; the server re-checks, this just asks.
+  World.removeTrace = function (id) { World.send({ t: 'world:trace:remove', id: id }); };
+  // Turn the player to FACE a lantern (same discipline as courtFocus: we point
+  // them at it, we never seize the camera — the camera mode is the player's).
+  World.faceTrace = function (id) {
+    const g = _traceMeshes.get(String(id));
+    if (!g) return false;
+    const dx = g.position.x - me.x, dz = g.position.z - me.z;
+    if (Math.hypot(dx, dz) < 0.05) return true;
+    me.yaw = Math.atan2(dx, dz);
+    return true;
+  };
 
   // public: send any world message to the server (used by the HUD)
   World.send = function (m) { if (ws && ws.readyState === 1) ws.send(JSON.stringify(m)); };
@@ -795,8 +929,14 @@
     others.clear();
     for (const A of agents.values()) { try { scene.remove(A.group); } catch (_) {} }
     agents.clear();
+    // the room's own court went with `agents` — forget the ids too, or the next
+    // world's presence frame would think a stranger's agent is already standing.
+    visiting.clear();
     for (const mesh of _structMeshes.values()) { try { World._scene.remove(mesh); } catch (_) {} }
     _structMeshes.clear();
+    // the lanterns belong to the world we're leaving, not to the engine
+    for (const mesh of _traceMeshes.values()) { try { World._scene.remove(mesh); } catch (_) {} }
+    _traceMeshes.clear();
     if (World._selfBody) { try { scene.remove(World._selfBody); } catch (_) {} World._selfBody = null; }
     // reset self to the spawn ring so we don't arrive standing where we left the last world
     me.x = 0; me.z = 2.5; me.yaw = Math.PI; me.y = 0;
@@ -1012,6 +1152,7 @@
     World._frame = (World._frame || 0) + 1;
     if (World._motes) World._motes.rotation.y += dt * 0.02;
     _stepWarp(dt);
+    _stepTraces(tnow);
 
     // camera modes: 0=3rd-person (behind), 1=1st-person (eyes), 2=selfie (front)
     const mode = World._camMode || 0;
@@ -1257,6 +1398,68 @@
     }
     return { added, removed, total: court.size };
   };
+
+  // ── THE VISITED COURT ───────────────────────────────────────────────────────
+  // The agents the SERVER says are standing in the world we're currently in. In
+  // your own world that is your court (already placed by courtSync, so this is a
+  // no-op — `agents.has(id)` skips them). In someone else's, it is THEIRS, and
+  // this is the only path that can ever put them on screen: they are not in this
+  // browser's roster and never will be.
+  //
+  // Kept in its own set so the two populations can never be confused. `court` is
+  // MY court, placed from /api/agents/mine and owned by court.js; `visiting` is
+  // whatever room we're standing in, owned entirely by the wire. On travel,
+  // _teardownRoom clears `agents` wholesale and this set with it — you never
+  // carry a stranger's court home.
+  const visiting = new Set();
+  function _syncVisitingCourt(list) {
+    if (!scene || !THREE) return;
+    const seen = new Set();
+    for (const a of (Array.isArray(list) ? list : [])) {
+      // ONLY court frames may spawn. A council presence the client hasn't been
+      // introduced to by `hello` is still ignored — that stays a closed set.
+      if (!a || !a.id || !a.court) continue;
+      const id = String(a.id);
+      seen.add(id);
+      if (agents.has(id)) continue;            // already standing (mine, or spawned last tick)
+      let g;
+      try { g = _makeAgentPresence({ id, name: a.name || 'agent', form: a.form || 'presence-child-refractive' }); }
+      catch (e) { continue; }                   // a presence that won't build is simply absent, never a throw
+      g.position.set(a.x || 0, 0, a.z || 0);
+      g.rotation.y = a.yaw || 0;
+      // A RESTING WATCH stands dimmed, never missing. The consequence tier
+      // already made this promise on the owner's own HUD ("nothing is ever
+      // lost, a dim world just can't keep them all awake") and a visitor must
+      // see the same world the keeper does, or the tier is a lie told to one
+      // person. Opacity only — the being is fully there, just asleep.
+      if (a.resting) { try { _dimPresence(g, 0.3); } catch (_) {} }
+      scene.add(g);
+      agents.set(id, { group: g, target: { x: a.x || 0, z: a.z || 0, yaw: a.yaw || 0 }, name: a.name || 'agent' });
+      visiting.add(id);
+      if (a.color) { try { _forgeApplyTint(id, a.color); } catch (_) {} }
+    }
+    // Remove the departed — but ONLY ones this path spawned. An agent that left
+    // the owner's court (paused, archived) stops being broadcast and stops
+    // standing; my own court and the council are untouched by construction.
+    for (const id of [...visiting]) {
+      if (seen.has(id)) continue;
+      const A = agents.get(id);
+      if (A) { try { scene.remove(A.group); } catch (_) {} agents.delete(id); }
+      try { if (global.AgentLife && global.AgentLife.forget) global.AgentLife.forget(id); } catch (_) {}
+      visiting.delete(id);
+    }
+  }
+  // Dim a whole presence group in place (a resting watch). Materials are cloned
+  // by _makeAgentPresence per-instance, so this can never bleed onto another being.
+  function _dimPresence(group, opacity) {
+    group.traverse(o => {
+      if (!o.material) return;
+      const mats = Array.isArray(o.material) ? o.material : [o.material];
+      mats.forEach(mt => { if (!mt) return; mt.transparent = true; mt.opacity = Math.min(mt.opacity == null ? 1 : mt.opacity, opacity); });
+    });
+  }
+  // how many beings are standing in this world that aren't mine (HUD copy)
+  World.visitingCount = function () { return visiting.size; };
 
   // Where does this court member stand right now? (null if not placed.)
   World.courtPos = function (id) {

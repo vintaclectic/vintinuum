@@ -293,6 +293,11 @@
 <script src="body/world/dirverse-hud.js"></script>
 <script src="body/world/dirhaven-door.js"></script>
 <script src="body/world/court.js"></script>
+<!-- THE LANTERNS — visitors leave a mark, the owner finds it. Loads AFTER
+     dirverse-hud (it borrows that file's rail + sheet registry) and after
+     court.js so the rail order stays: star-map · agents · court · home ·
+     lanterns · build. Adds no fixed element of its own. -->
+<script src="body/world/traces-hud.js"></script>
 <script>
 (function () {
   const statusEl = document.getElementById('status');
