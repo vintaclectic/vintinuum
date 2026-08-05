@@ -156,6 +156,15 @@
       ' scrollbar-color:rgba(255,212,121,0.3) transparent;}',
       '.asc-body::-webkit-scrollbar{width:4px;}',
       '.asc-body::-webkit-scrollbar-thumb{background:rgba(255,212,121,0.3);border-radius:2px;}',
+      // ── THE BLANKET WRAP GUARD (no-collision law, horizontal axis) ──────────
+      // Every prose block inside this sheet and the ascension card wraps rather
+      // than widening its box. The single-line cells that must NOT wrap (the
+      // tier name, the rung titles, the pill, the head) each re-declare
+      // white-space:nowrap + ellipsis below and win on specificity, so this rule
+      // is a floor, never an override. Stated once here instead of seven times
+      // so a text block added later inherits containment by default — the next
+      // person to add a line cannot forget it.
+      '#ascSheet .asc-body *,#ascRoseCard *{overflow-wrap:anywhere;}',
 
       // ── WHERE YOU STAND ─────────────────────────────────────────────────────
       // The glyph and the name share one row; the name owns all remaining width
@@ -194,7 +203,11 @@
       '.asc-nkick{font-size:10px;letter-spacing:.16em;text-transform:uppercase;',
       ' color:rgba(255,212,121,0.7);}',
       // the ask itself — the named next thing, in the world's voice
-      '.asc-nsay{margin-top:6px;font-size:17px;line-height:1.4;color:#fff6e6;}',
+      // overflow-wrap:anywhere because this is the LONGEST server string on the
+      // surface and the only one with no fixed shape — a single unbroken token
+      // (a 40-char world name inside an ask) would otherwise widen its box.
+      '.asc-nsay{margin-top:6px;font-size:17px;line-height:1.4;color:#fff6e6;',
+      ' overflow-wrap:anywhere;}',
       // the distance. Its own row, tabular, never inside the sentence.
       '.asc-nfar{display:flex;align-items:baseline;justify-content:space-between;gap:10px;',
       ' margin-top:10px;font-size:12px;color:rgba(240,230,216,0.6);}',
