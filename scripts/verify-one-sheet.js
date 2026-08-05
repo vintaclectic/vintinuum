@@ -15,11 +15,38 @@
    two sheet rectangles intersect. It then asserts Escape closes whatever is up,
    and that the scrim is present while a sheet is open and gone after.
 
+   DETERMINISM (task VMWTTKU) — this proof never guesses when the page is ready.
+   Every measurement is taken only after the surfaces' OWN completion signals say
+   the animation is over: transitionrun/animationstart vs. transitionend/-cancel
+   counted from a listener installed before page scripts run, cross-checked
+   against Element.getAnimations(), and cross-checked again against agreement
+   between `.open` and the measured rect. It advances per animation frame and is
+   bounded by a 15s deadline — ~40x the longest authored animation (.38s) — so a
+   starved CPU makes it slower, never wrong, while a genuinely stuck page still
+   ends the run instead of hanging it. Failure to settle exits 2 ("harness
+   unsettled") instead of inventing a layout violation — a flaky verifier trains
+   everyone to ignore it, which is worse than none.
+
+   PROVEN (2026-08-05, task VMWTTKU closeout). Determinism is a claim about
+   behaviour under contention, so it was measured under contention rather than
+   asserted. On an 8-core box with 10-12 spinning burners, i.e. the load average
+   14-19 band the original flake reports came from:
+     · 5/5 consecutive 320px sweeps clean (24 interaction checks each);
+     · 2 rounds of CONCURRENT 320px + 375px sweeps clean — the true original
+       repro, parallel council seats rather than mere background load;
+     · 9 runs total, zero flakes, zero exit-2 unsettled.
+   And the proof still has teeth, which a green run alone never demonstrates: a
+   MUTATION test removing the `closeSheets(id)` eviction from openSheet() in
+   body/world/dirverse-hud.js made this script exit 1 with 24 precise violations
+   (both sheets up, rects intersecting, TAP pairs naming the survivor). A
+   verifier that cannot fail is the same lie as one that fails at random.
+   If you see a red 320px run: it is signal now. Read the violation, don't rerun.
+
    USAGE
      node scripts/verify-one-sheet.js
      VERIFY_WIDTHS=375,1280 node scripts/verify-one-sheet.js
 
-   Exits non-zero on any violation, so it can gate a commit.
+   EXITS  0 = proven clean · 1 = real violation · 2 = harness could not settle
 */
 'use strict';
 
@@ -176,43 +203,205 @@ const TOKEN_KEYS = ['vint_token', 'vintinuum_token', 'token', 'vint_jwt'];
     } catch (_) {}
   }, TOKEN_KEYS);
 
-  // A FLAT wait is a trap here, exactly as it was in verify-no-collision.js. The
-  // sheets animate transform over .38s, but an EVICTED sheet and a RISING one
-  // animate at once, and the DirHaven door adds its own .34s entrance — so a
-  // fixed 620ms sampled a sheet mid-slide (measured #dvAgentSheet at 803->1031,
-  // i.e. below an 812px fold, half-way out) and reported both "open". Worse, it
-  // reported false PASSES on slower renders. So: poll every surface rect until
-  // two consecutive samples are identical, then measure the settled truth.
-  const settle = async () => {
-    await page.evaluate(async (sels) => {
-      const snap = () => sels.map(s => {
-        const el = document.querySelector(s);
-        if (!el) return s + ':-';
-        const r = el.getBoundingClientRect();
-        return `${s}:${Math.round(r.top)},${Math.round(r.bottom)},${getComputedStyle(el).opacity}`;
-      }).join('|');
-      let prev = '', stable = 0;
-      for (let i = 0; i < 30; i++) {
-        await new Promise(r => setTimeout(r, 90));
-        const cur = snap();
-        stable = (cur === prev) ? stable + 1 : 0;
-        prev = cur;
-        if (stable >= 3) break;      // ~270ms of no movement = animations done
-      }
-    }, SURFACES.map(s => s.sel)).catch(() => {});
+  // ── SETTLING: wait on the animation's OWN completion signal, never on a clock ─
+  // A FLAT wait was a trap here, exactly as it was in verify-no-collision.js: the
+  // sheets animate transform over .38s, an EVICTED sheet and a RISING one animate
+  // at once, and the DirHaven door adds its own .34s entrance — so a fixed 620ms
+  // sampled a sheet mid-slide (measured #dvAgentSheet at 803->1031, i.e. below an
+  // 812px fold, half-way out) and reported both "open".
+  //
+  // The stability POLL that replaced it was a subtler trap, and it is what made
+  // this proof flake at 320px under load (task VMWTTKU): it slept 90ms, then
+  // demanded three consecutive identical getBoundingClientRect() samples. Under
+  // CPU contention from parallel council seats, the compositor does not advance
+  // the transition between polls — so three identical samples mean "the frame
+  // stalled", which is indistinguishable from "the animation finished". The probe
+  // then measured a sheet frozen mid-slide, or still parked at translateY(105%)
+  // before its first frame had even been produced, and reported a violation that
+  // did not exist: "agent survived, expected warp", "nothing is open". Different
+  // fiction every run, because which frame got starved was random. A flaky
+  // verifier trains everyone to ignore it, which is worse than no verifier.
+  //
+  // So we stop guessing from the outside and ask the engine. A surface is settled
+  // when ALL THREE hold:
+  //   1. no transition or animation is still running on any of the four surfaces
+  //      (tracked by real transitionend/animationend/-cancel events, which fire
+  //      exactly once per property per element no matter how starved the CPU is,
+  //      plus getAnimations() as the authoritative in-flight census);
+  //   2. the DOM's declared truth agrees with the pixels — a surface carrying
+  //      `.open` is fully on-screen and one without it is fully off-fold. This is
+  //      the cross-check the geometry-only poll never made, and it is what turns
+  //      "I saw identical numbers" into "the state machine has arrived";
+  //   3. two animation frames pass with nothing new starting, so a chained
+  //      transition (evict-then-raise) cannot slip through the gap between them.
+  // Timing out is a HARD FAILURE, not a shrug: an unsettled page cannot be
+  // measured, and a proof that measures an unsettled page is the flake itself.
+  await page.evaluateOnNewDocument((sels) => {
+    // Installed before any page script runs, so no completion event can be
+    // missed between load and the first settle() call.
+    const W = window;
+    W.__vintAnim = { running: 0, lastEnd: 0 };
+    const bump = (d) => {
+      W.__vintAnim.running = Math.max(0, W.__vintAnim.running + d);
+      if (d < 0) W.__vintAnim.lastEnd = performance.now();
+    };
+    const isSurface = (t) => !!(t && t.closest && sels.some(s => t.matches && t.matches(s)));
+    ['transitionrun', 'animationstart'].forEach(ev =>
+      document.addEventListener(ev, e => { if (isSurface(e.target)) bump(+1); }, true));
+    ['transitionend', 'transitioncancel', 'animationend', 'animationcancel'].forEach(ev =>
+      document.addEventListener(ev, e => { if (isSurface(e.target)) bump(-1); }, true));
+  }, SURFACES.map(s => s.sel));
+
+  let settleTimeouts = 0;
+  const navFailures = [];
+
+  // Every interaction with the page can die for reasons that have NOTHING to do
+  // with layout: the DirHaven door frames a third-party origin, so a click can
+  // begin a navigation that destroys the execution context out from under the
+  // very next evaluate ("Execution context was destroyed" — observed at 320px).
+  // Left unguarded that propagates to the top-level catch and exits 1, the code
+  // reserved for "a real violation was found". The whole point of this task is
+  // that the proof must never accuse the world of a bug it did not observe, so
+  // every page call funnels through here: a thrown context/target error is
+  // recorded as an ENVIRONMENT fault (exit 2) and the caller gets a null it can
+  // skip on, never a fabricated measurement.
+  const ENV_ERR = /execution context|target closed|session closed|detached|frame got detached|navigating/i;
+  const safeEval = async (fn, ...args) => {
+    try {
+      return await page.evaluate(fn, ...args);
+    } catch (e) {
+      if (ENV_ERR.test(e.message)) { navFailures.push(`${e.message.split('\n')[0]}`); return null; }
+      throw e;
+    }
   };
+
+  const settle = async () => {
+    const ok = await page.evaluate(async (sels) => {
+      // A frame, or a timer if the compositor has stopped producing frames
+      // entirely (a fully occluded/backgrounded tab). Racing the two means the
+      // wait always advances, so the deadline below is always reachable and the
+      // run fails loudly instead of hanging silently.
+      const frame = () => new Promise(r => {
+        let done = false;
+        const fin = () => { if (!done) { done = true; r(); } };
+        requestAnimationFrame(fin);
+        setTimeout(fin, 250);
+      });
+
+      // Is every surface's declared state (.open) consistent with where it is
+      // actually drawn? An opening sheet is flush to the bottom of the viewport;
+      // a closed one is translated entirely below the fold. Anything in between
+      // is mid-flight, whatever the event counters say.
+      const agrees = () => sels.every(s => {
+        const el = document.querySelector(s);
+        if (!el) return true;                       // not built yet = not in flight
+        const cs = getComputedStyle(el);
+        if (cs.display === 'none') return true;     // #dhPanel closed: not rendered
+        const r = el.getBoundingClientRect();
+        const open = el.classList.contains('open');
+        const onScreen = r.height > 2 && r.top < window.innerHeight - 1 && r.bottom > 1;
+        // opacity must also have arrived, not be mid-fade
+        const solid = parseFloat(cs.opacity) > 0.99;
+        return open ? (onScreen && solid) : !onScreen;
+      });
+
+      // The authoritative census of what the engine is still animating. Event
+      // counters can only be wrong in one direction (a listener attached late);
+      // getAnimations() cannot — it IS the running set.
+      const inFlight = () => sels.some(s => {
+        const el = document.querySelector(s);
+        if (!el || !el.getAnimations) return false;
+        return el.getAnimations().some(a => a.playState === 'running');
+      });
+
+      // Wait for arrival, then for two clean frames on top of it.
+      //
+      // The budget is deliberately enormous relative to the work: the longest
+      // authored animation in the world is .38s (.dv-sheet) and the door's
+      // dh-rise is .34s, so 15s is ~40x headroom. That asymmetry IS the fix —
+      // the old 90ms poll was tighter than the animation it measured, which is
+      // why contention could beat it. Nothing legitimate takes 15s, so a page
+      // that has not arrived by then is genuinely stuck, and saying "stuck" is
+      // honest where reporting a layout violation would be fiction.
+      //
+      // Bounded by frames AND wall-clock: frames because a throttled tab may
+      // coalesce rAF and a frame count alone could expire mid-slide; wall-clock
+      // because a fully backgrounded tab may stop producing frames at all, and
+      // a loop waiting on rAF forever would hang the run instead of failing it.
+      const deadline = performance.now() + 15000;
+      let quiet = 0;
+      while (performance.now() < deadline) {
+        await frame();
+        const busy = window.__vintAnim.running > 0 || inFlight();
+        quiet = (!busy && agrees()) ? quiet + 1 : 0;
+        if (quiet >= 2) return true;
+      }
+      return false;
+    }, SURFACES.map(s => s.sel)).catch((e) => {
+      // Distinguish the two ways this can fail. A context that died mid-settle
+      // is an ENVIRONMENT fault (the page navigated or the target closed), not
+      // evidence that an animation ran long — counting it as a settle timeout
+      // would blame the world's CSS for a harness casualty. Anything else is a
+      // genuine failure to reach a settled state.
+      if (ENV_ERR.test(e.message)) { navFailures.push(e.message.split('\n')[0]); return null; }
+      return false;
+    });
+    if (ok === false) settleTimeouts++;
+    return ok === true;
+  };
+
+  // Every check must start from a KNOWN-EMPTY page, and "I called closeSheets()"
+  // is not the same as "the page is empty". world.html reveals a guest sheet on a
+  // delay, an internal flow can re-raise one, and a close that lands while the
+  // next open is issued produces exactly the phantom this task was filed for
+  // ("nothing is open", "X survived, expected Y"). So: close, settle, VERIFY —
+  // and if something is still up, close it again rather than measuring a dirty
+  // page. Three tries is generous; failing to empty the page is a harness fault
+  // and is reported as one.
+  const reset = async () => {
+    for (let i = 0; i < 3; i++) {
+      await safeEval(() => { try { window.DirverseHUD.closeSheets(); } catch (_) {} });
+      await settle();
+      const st = await safeEval(PROBE, SURFACES.map(s => ({ id: s.id, sel: s.sel })));
+      if (!st) continue;                       // context died mid-reset; try again
+      if (!st.open.length && !st.scrim) return true;
+    }
+    settleTimeouts++;
+    return false;
+  };
+
+  // Loading the page is an ENVIRONMENT step, not an assertion. At load average
+  // 27+ (several council seats sweeping at once) a cold Chrome can exceed 25s
+  // just reaching domcontentloaded — measured on this box. Left to throw, that
+  // surfaces as a raw stack trace and exit 1, which is the code for "a real
+  // layout violation was found": the harness would be accusing the world of a
+  // bug when all that happened was a starved machine. Retry, then classify it
+  // as unsettled (exit 2) — never as a violation.
+  async function gotoWorld(w) {
+    let lastErr;
+    for (let i = 0; i < 3; i++) {
+      try {
+        await page.goto(`${base}/world.html`, {
+          waitUntil: 'domcontentloaded',
+          timeout: 30000 * (i + 1),
+        });
+        return true;
+      } catch (e) { lastErr = e; }
+    }
+    navFailures.push(`${w}px  world.html never reached domcontentloaded (${lastErr.message})`);
+    return false;
+  }
 
   for (const w of WIDTHS) {
     if (only.length && !only.includes(String(w))) continue;
     await page.setViewport({ width: w, height: 812, deviceScaleFactor: 1 });
-    await page.goto(`${base}/world.html`, { waitUntil: 'domcontentloaded', timeout: 25000 });
+    if (!await gotoWorld(w)) continue;
     // world.html mounts its rail and reveals a guest sheet on a delay; wait for
     // the modules that own the surfaces rather than for a flat clock.
     await page.waitForFunction(
       () => window.DirverseHUD && window.VintCourt && window.DirHavenDoor && window.VintTraces,
       { timeout: 20000 }
     ).catch(() => {});
-    await new Promise(r => setTimeout(r, 2200));
     // ── STAND IN A PERSON'S WORLD, NOT THE HUB ────────────────────────────────
     // The lantern launcher hides in the shared hub on purpose: 'universe' belongs
     // to everyone, holds no lanterns, and there is nobody to leave one for. That
@@ -222,6 +411,10 @@ const TOKEN_KEYS = ['vint_token', 'vintinuum_token', 'token', 'vint_jwt'];
     // when this surface is reachable, and the state its collisions matter in.
     // Nothing here fakes the SHEET; only the world the page thinks it's standing
     // in, which is the precondition, not the thing under test.
+    //
+    // This runs BEFORE the launcher wait below, because #dvTraceBtn is one of the
+    // buttons that wait now requires — and in the hub it correctly never appears,
+    // which would burn the full 20s timeout on every width.
     await page.evaluate(() => {
       try {
         const W = window.VintinuumWorld; if (!W) return;
@@ -236,24 +429,51 @@ const TOKEN_KEYS = ['vint_token', 'vintinuum_token', 'token', 'vint_jwt'];
         if (window.VintTraces && window.VintTraces.refresh) window.VintTraces.refresh();
       } catch (_) {}
     });
-    await settle();
+    // The modules existing is not the same as their LAUNCHERS existing: court.js
+    // and dirhaven-door.js retry `mount()` on an 80ms timer until the HUD's rail
+    // is up, and world.html reveals a guest sheet on its own delay. The old flat
+    // 2200ms sleep was a bet that all of that finished in time — a bet that loses
+    // under contention, and loses SILENTLY (a missing launcher reads as
+    // "launcher missing" or lets a self-opened sheet survive into the first pair
+    // and become "X survived, expected Y"). Wait for every button the proof
+    // actually taps, plus registration in the sheet owner, then settle.
+    //
+    // The lantern launcher is checked for VISIBILITY, not just existence: it is
+    // mounted into the rail from the moment the module loads and merely hidden in
+    // the hub, so `querySelector` alone would pass while the button was still
+    // display:none and the first tap would hit nothing.
+    await page.waitForFunction((btns) => {
+      for (const b of btns) {
+        const el = document.querySelector(b);
+        if (!el) return false;
+        const r = el.getBoundingClientRect();
+        if (r.width < 2 || r.height < 2) return false;
+      }
+      const h = window.DirverseHUD;
+      return !!(h && typeof h.anySheetOpen === 'function' && typeof h.closeSheets === 'function');
+    }, { timeout: 20000, polling: 'raf' }, SURFACES.map(s => s.btn)).catch(() => {});
     // Clear whatever the page opened on its own so each pair starts from zero.
-    await page.evaluate(() => { try { window.DirverseHUD.closeSheets(); } catch (_) {} });
-    await settle();
+    await reset();
 
     for (const a of SURFACES) {
       for (const b of SURFACES) {
         if (a.id === b.id) continue;
         checks++;
-        await page.evaluate(() => { try { window.DirverseHUD.closeSheets(); } catch (_) {} });
+        await reset();
+
+        // Each open is verified to have LANDED before the next one is issued.
+        // Firing b's open while a is still rising is a legitimate thing for a
+        // human to do, but it is not what THIS assertion is about — this pair
+        // proves eviction, and eviction can only be judged from a known start.
+        // (The real racing gesture is proven by the tap loop below, which the
+        // page's own openSheet() serialises.)
+        await safeEval(fn => { eval('(' + fn + ')')(); }, a.open.toString());
+        await settle();
+        await safeEval(fn => { eval('(' + fn + ')')(); }, b.open.toString());
         await settle();
 
-        await page.evaluate(fn => { eval('(' + fn + ')')(); }, a.open.toString());
-        await settle();
-        await page.evaluate(fn => { eval('(' + fn + ')')(); }, b.open.toString());
-        await settle();
-
-        const state = await page.evaluate(PROBE, SURFACES.map(s => ({ id: s.id, sel: s.sel })));
+        const state = await safeEval(PROBE, SURFACES.map(s => ({ id: s.id, sel: s.sel })));
+        if (!state) continue;   // context died: unmeasured, not violated
 
         // 1. exactly one surface visible
         if (state.open.length > 1) {
@@ -280,7 +500,8 @@ const TOKEN_KEYS = ['vint_token', 'vintinuum_token', 'token', 'vint_jwt'];
         // 4. ESCAPE closes it (none of the four sheets implemented this before)
         await page.keyboard.press('Escape');
         await settle();
-        const after = await page.evaluate(PROBE, SURFACES.map(s => ({ id: s.id, sel: s.sel })));
+        const after = await safeEval(PROBE, SURFACES.map(s => ({ id: s.id, sel: s.sel })));
+        if (!after) continue;
         if (after.open.length) {
           failures.push(`${w}px  after ${a.id}->${b.id}: Escape left ${after.open.map(o => o.sel).join(',')} open`);
         }
@@ -307,41 +528,59 @@ const TOKEN_KEYS = ['vint_token', 'vintinuum_token', 'token', 'vint_jwt'];
         // tap by design; only "X → door" and sheet↔sheet are switch gestures.
         if (a.id === 'dirhaven') continue;
         checks++;
-        await page.evaluate(() => { try { window.DirverseHUD.closeSheets(); } catch (_) {} });
-        await settle();
-        const tapped = await page.evaluate((sa, sb) => {
+        await reset();
+        const tapped = await safeEval((sa, sb) => {
           const ea = document.querySelector(sa), eb = document.querySelector(sb);
           if (!ea || !eb) return { ok: false, why: 'launcher missing: ' + (ea ? sb : sa) };
           ea.click();
           return { ok: true };
         }, a.btn, b.btn);
+        if (!tapped) continue;
         if (!tapped.ok) { failures.push(`${w}px  tap ${a.id}->${b.id}: ${tapped.why}`); continue; }
         await settle();
         // Now B, hit-tested: click whatever is actually on top of B's centre, the
         // way a finger would — not eb.click(), which ignores the stacking order.
-        const hit = await page.evaluate((sb) => {
+        //
+        // The hit-test must distinguish a launcher that is COVERED from one that
+        // was momentarily behind a sheet still leaving the screen. A single
+        // elementFromPoint cannot tell those apart, and at 320px under load it
+        // reported "#SMALL covers the launcher" — a <small> inside a sheet
+        // mid-slide — while the settled truth was clean (measured: #dvWarpBtn
+        // 526..572, #dvAgentSheet 584..812, no overlap, topmost element at the
+        // launcher's centre its own SPAN.lbl). A real collision is PERMANENT, so
+        // we re-test across frames and only fail if the obstruction persists.
+        // Anything that clears was never a collision, and reporting it as one is
+        // the flake this task exists to kill.
+        const hit = await safeEval((sb) => new Promise(resolve => {
           const eb = document.querySelector(sb);
-          if (!eb) return { ok: false, why: 'launcher vanished' };
-          const r = eb.getBoundingClientRect();
-          const top = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
-          if (!top) return { ok: false, why: 'nothing at launcher centre' };
-          if (!eb.contains(top) && top !== eb) {
-            return { ok: false, why: '#' + (top.id || top.className || top.tagName) + ' covers the launcher' };
-          }
-          top.click();
-          return { ok: true };
-        }, b.btn);
+          if (!eb) return resolve({ ok: false, why: 'launcher vanished' });
+          let tries = 0, lastWhy = '';
+          const probe = () => {
+            const r = eb.getBoundingClientRect();
+            const top = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+            if (top && (eb.contains(top) || top === eb)) { top.click(); return resolve({ ok: true }); }
+            lastWhy = top
+              ? '#' + (top.id || top.className || top.tagName) + ' covers the launcher'
+              : 'nothing at launcher centre';
+            // ~30 frames (half a second at 60fps, longer when throttled) is far
+            // more than the .38s slide needs to finish clearing the button.
+            if (++tries >= 30) return resolve({ ok: false, why: lastWhy + ' (persisted 30 frames)' });
+            requestAnimationFrame(probe);
+          };
+          requestAnimationFrame(probe);
+        }), b.btn);
+        if (!hit) continue;
         if (!hit.ok) { failures.push(`${w}px  tap ${a.id} then ${b.id}: ${hit.why}`); continue; }
         await settle();
-        const st = await page.evaluate(PROBE, SURFACES.map(s => ({ id: s.id, sel: s.sel })));
+        const st = await safeEval(PROBE, SURFACES.map(s => ({ id: s.id, sel: s.sel })));
+        if (!st) continue;
         if (st.open.length !== 1 || st.open[0].id !== b.id) {
           const got = st.open.map(o => o.sel).join(',') || 'nothing';
           failures.push(`${w}px  TAP ${a.id} then TAP ${b.id}: expected only ${b.sel} open, got ${got}`);
         }
       }
     }
-    await page.evaluate(() => { try { window.DirverseHUD.closeSheets(); } catch (_) {} });
-    await settle();
+    await reset();
 
     // 7. the scrim IS raised while a bottom sheet is up (backdrop-to-close is
     //    half the fix; an invisible backdrop is a dead gesture). The DirHaven
@@ -349,16 +588,17 @@ const TOKEN_KEYS = ['vint_token', 'vintinuum_token', 'token', 'vint_jwt'];
     for (const s of SURFACES) {
       if (s.id === 'dirhaven') continue;
       checks++;
-      await page.evaluate(() => { try { window.DirverseHUD.closeSheets(); } catch (_) {} });
+      await reset();
+      await safeEval(fn => { eval('(' + fn + ')')(); }, s.open.toString());
       await settle();
-      await page.evaluate(fn => { eval('(' + fn + ')')(); }, s.open.toString());
-      await settle();
-      const st = await page.evaluate(PROBE, SURFACES.map(x => ({ id: x.id, sel: x.sel })));
+      const st = await safeEval(PROBE, SURFACES.map(x => ({ id: x.id, sel: x.sel })));
+      if (!st) continue;
       if (!st.scrim) failures.push(`${w}px  ${s.id} open but #dvScrim is not showing (backdrop-tap-to-close is dead)`);
       // tapping the scrim closes it
-      await page.evaluate(() => { const e = document.getElementById('dvScrim'); if (e) e.click(); });
+      await safeEval(() => { const e = document.getElementById('dvScrim'); if (e) e.click(); });
       await settle();
-      const st2 = await page.evaluate(PROBE, SURFACES.map(x => ({ id: x.id, sel: x.sel })));
+      const st2 = await safeEval(PROBE, SURFACES.map(x => ({ id: x.id, sel: x.sel })));
+      if (!st2) continue;
       if (st2.open.length) failures.push(`${w}px  ${s.id}: tapping #dvScrim did not close it`);
     }
   }
@@ -366,7 +606,26 @@ const TOKEN_KEYS = ['vint_token', 'vintinuum_token', 'token', 'vint_jwt'];
   await browser.close();
   srv.close();
 
+  // Report the widths ACTUALLY swept, not the full list — a filtered run must
+  // never imply coverage it does not have (the false-green fix, 28b97b3).
   console.log(`\nONE-SHEET PROOF — ${checks} interaction checks across ${(only.length ? only : WIDTHS).join('/')}px\n`);
+  // A surface that never reached a settled state was never measured, so every
+  // assertion downstream of it is noise. Say that out loud instead of reporting
+  // a layout violation we cannot stand behind — this is the difference between
+  // "the world is broken" and "the harness could not see the world".
+  if (settleTimeouts || navFailures.length) {
+    if (settleTimeouts) {
+      console.log(`✗ HARNESS UNSETTLED — ${settleTimeouts} surface(s) never finished animating`);
+      console.log('   (the settle deadline elapsed with a transition still in flight, or .open');
+      console.log('    disagreeing with the measured rect).');
+    }
+    if (navFailures.length) {
+      console.log(`✗ HARNESS ENVIRONMENT — ${navFailures.length} page call(s) died outside layout:`);
+      navFailures.slice(0, 6).forEach(f => console.log('   ' + f));
+    }
+    console.log('   Nothing above was measured on a settled page — this is NOT a layout verdict.\n');
+    process.exit(2);
+  }
   if (failures.length) {
     console.log('✗ VIOLATIONS\n');
     failures.forEach(f => console.log('   ' + f));
@@ -384,4 +643,13 @@ const TOKEN_KEYS = ['vint_token', 'vintinuum_token', 'token', 'vint_jwt'];
     process.exit(1);
   }
   console.log('✓ exactly one surface open at a time, Escape closes it, scrim tracks it.\n');
-})().catch(e => { console.error(e); process.exit(1); });
+})().catch(e => {
+  // Last line of defence for the same principle: a crash in the DRIVER is not a
+  // finding about the WORLD. Anything recognisably environmental (chrome refused
+  // to start, the context/target vanished, a protocol timeout under load) exits
+  // 2 — "the harness could not see the page" — so only a genuine, measured
+  // layout violation is ever allowed to claim exit 1.
+  const env = /execution context|target closed|session closed|detached|navigating|chrome would not start|protocoltimeout|timed out/i;
+  console.error(e);
+  process.exit(env.test(String(e && e.message)) ? 2 : 1);
+});
