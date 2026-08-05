@@ -628,7 +628,22 @@
     html += '<div class="wh-watch">';
     if (watchers.length) {
       html += '<div class="wh-wlabel">' + standing + ' standing watch</div><div class="wh-worbs">';
-      var shown = watchers.slice(0, 8);
+      // ── THE ORB BUDGET, SPLIT SO THE CONSEQUENCE SURVIVES IT ────────────────
+      // The row holds 8 orbs. Giving the AWAKE watches all 8 first is what a
+      // naive slice does, and it silently deletes the entire point of the slot
+      // cap: a court of 12 with 3 awake and 9 resting rendered 8 bright orbs and
+      // ZERO dim ones, so the tier's loss — the thing the player is supposed to
+      // feel — became invisible exactly when it was largest.
+      //
+      // So the resting watches are RESERVED up to a third of the row (min 2 when
+      // any exist). The awake ones take the rest. Both truths always make it into
+      // the picture, and the overflow "+n" still accounts for everyone.
+      var restersAll = Array.isArray(v.resters) ? v.resters : [];
+      var ORB_MAX = 8;
+      var restBudget = restersAll.length
+        ? Math.min(restersAll.length, Math.max(2, Math.floor(ORB_MAX / 3)))
+        : 0;
+      var shown = watchers.slice(0, Math.max(1, ORB_MAX - restBudget));
       for (var i = 0; i < shown.length; i++) {
         var wch = shown[i] || {};
         var wt = Math.max(0, Math.min(1, num(wch.watch, 1)));
@@ -643,8 +658,8 @@
       //    the awake ones, never removed: an agent that vanished from this row
       //    would read as "I lost an agent", which is exactly the false alarm the
       //    "nothing is ever destroyed" invariant exists to prevent.
-      var resters = Array.isArray(v.resters) ? v.resters : [];
-      var restShown = resters.slice(0, Math.max(0, 8 - shown.length));
+      var resters = restersAll;
+      var restShown = resters.slice(0, Math.max(0, ORB_MAX - shown.length));
       for (var j = 0; j < restShown.length; j++) {
         var rc = restShown[j] || {};
         var rcol = /^#[0-9a-fA-F]{3,8}$/.test(String(rc.color || '')) ? rc.color : '#ffd479';
