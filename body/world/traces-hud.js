@@ -596,6 +596,10 @@
       : c === 'trace-rate'    ? 'you have left a lot of lights lately. rest a moment.'
       : c === 'trace-no-world'? 'the shared hub belongs to everyone — lights are left in a person\'s world.'
       : c === 'trace-no-visitor' ? 'sign in to leave a light in someone\'s world.'
+      // The kill switch is OFF, not BUSY. "try again in a moment" would be a lie
+      // that invites a retry which can only fail again — say it is stopped, and
+      // say it is temporary, because that is what a flag flip actually means.
+      : c === 'trace-off' ? 'lights are not being lit right now. this is temporary.'
       : 'the world could not hold that light. try again in a moment.'
     );
   });
