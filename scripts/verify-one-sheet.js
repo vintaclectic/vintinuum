@@ -27,6 +27,21 @@
    unsettled") instead of inventing a layout violation — a flaky verifier trains
    everyone to ignore it, which is worse than none.
 
+   PROVEN (2026-08-05, task VMWTTKU closeout). Determinism is a claim about
+   behaviour under contention, so it was measured under contention rather than
+   asserted. On an 8-core box with 10-12 spinning burners, i.e. the load average
+   14-19 band the original flake reports came from:
+     · 5/5 consecutive 320px sweeps clean (24 interaction checks each);
+     · 2 rounds of CONCURRENT 320px + 375px sweeps clean — the true original
+       repro, parallel council seats rather than mere background load;
+     · 9 runs total, zero flakes, zero exit-2 unsettled.
+   And the proof still has teeth, which a green run alone never demonstrates: a
+   MUTATION test removing the `closeSheets(id)` eviction from openSheet() in
+   body/world/dirverse-hud.js made this script exit 1 with 24 precise violations
+   (both sheets up, rects intersecting, TAP pairs naming the survivor). A
+   verifier that cannot fail is the same lie as one that fails at random.
+   If you see a red 320px run: it is signal now. Read the violation, don't rerun.
+
    USAGE
      node scripts/verify-one-sheet.js
      VERIFY_WIDTHS=375,1280 node scripts/verify-one-sheet.js
