@@ -363,9 +363,17 @@
       // perceiver on your dirs, compounding IP). Featured by doctrine.
       const featured = t.tier === 'sovereign';
       const isCurrent = t.tier === currentTier;
-      // Estate is one-time only. Display its monthly_price_cents but label
-      // it "one-time · forever" instead of monthly/yearly.
-      const isOneTime = t.tier === 'estate';
+      // A one-time tier is one with no yearly price to sell — that's the data
+      // saying so, not a hardcoded tier name. Estate is the only one today, but
+      // the next one-time tier we add is correct here for free.
+      //
+      // This MATTERS: Estate has no stripe_yearly_price_id. If the yearly toggle
+      // is on and we hand the button data-interval="yearly", the backend looks up
+      // the empty yearly price and throws price-not-configured — the $499 tier,
+      // the highest-value thing we sell, silently unbuyable for anyone who touched
+      // the toggle first. A one-time price has no interval, so we never send one.
+      const isOneTime = !t.yearly_price_cents && t.monthly_price_cents > 0
+                        && t.tier === 'estate';
       const cents = isOneTime
         ? (t.monthly_price_cents || 49900)
         : (interval === 'yearly' ? t.yearly_price_cents : t.monthly_price_cents);
@@ -387,7 +395,7 @@
           ? `<div class="current">✦ your current tier ✦</div>`
           : t.tier === 'free'
             ? `<button class="cta" disabled>included for everyone</button>`
-            : `<button class="cta" data-tier="${t.tier}" data-interval="${interval}">${
+            : `<button class="cta" data-tier="${t.tier}" data-interval="${isOneTime ? 'monthly' : interval}">${
                 billingEnabled ? 'choose ' + t.display_name.toLowerCase() : 'free while we build'
               }</button>`}
       `;
