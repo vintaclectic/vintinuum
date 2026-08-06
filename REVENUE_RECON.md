@@ -33,6 +33,13 @@ Three defects stood between a willing buyer and a payment, all now fixed:
 | 1 | `server.js` whitelisted `['premium','god','atelier']` (retired tier names) | **every** tier → `invalid-tier`; no checkout could ever start |
 | 2 | `billing.js` hardcoded `mode:'subscription'` | Estate ($499, a `one_time` price) → Stripe hard-rejects it. The highest-value tier was unbuyable |
 | 3 | `onCheckoutCompleted` only wrote an action_log, assuming "subscription event will follow" | a one-time buyer would be **charged $499 and granted nothing** — no subscription event ever arrives for a one-time payment |
+| 4 | the live Stripe webhook wasn't subscribed to `customer.subscription.created` | `billing.js` handles that event and its own header says tier promotion happens on it — but Stripe was never told to send it. A **first-time subscriber to any monthly tier would pay and never be upgraded.** (`invoice.payment_failed` was missing too, so dunning was silent.) Both now subscribed; verified every event the handler implements is enabled. |
+
+Defect 4 is worth dwelling on: defects 1–3 were in the repo, but 4 lived only in
+Stripe's dashboard config. The code was correct and the money would still have gone
+missing. Payment correctness isn't provable from source alone — it has to be checked
+against the live account, which is why every claim in this document is a probe result
+rather than a code reading.
 
 Verified after the fix, through the real HTTP endpoint with real auth: all five
 paid tiers return payable `cs_live_` URLs, Estate in `mode=payment` at
