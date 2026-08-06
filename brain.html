@@ -479,7 +479,7 @@ body.vint-guest #lineageFooterLink { display: none !important; }
 // - Caches static assets for offline resilience
 // - Auto-reloads when a new version deploys
 // - Clears old caches on activation
-const _SW_VERSION = 'v20260424-0428';
+const _SW_VERSION = 'v20260806-0902';
 const _onGitHubPages = location.hostname !== 'localhost' && location.hostname !== '127.0.0.1' && location.protocol !== 'file:';
 if ('serviceWorker' in navigator && _onGitHubPages) {
   const _swPath = location.pathname.includes('/vintinuum') ? '/vintinuum/sw.js' : '/sw.js';
@@ -515,28 +515,28 @@ if ('serviceWorker' in navigator && _onGitHubPages) {
   };
 }
 </script>
-<link rel="stylesheet" href="body/tokens.css?v=v20260424-0428">
-<link rel="stylesheet" href="body/shell.css?v=v20260424-0428">
-    <link rel="stylesheet" href="body/safe_area.css?v=v20260429-council">
+<link rel="stylesheet" href="body/tokens.css?v=v20260806-0902">
+<link rel="stylesheet" href="body/shell.css?v=v20260806-0902">
+    <link rel="stylesheet" href="body/safe_area.css?v=v20260806-0902">
 <!-- ═══ MOVEMENT I — Shell Contract ═══
      Loaded before any other script so window.Shell exists for everyone.
      Populates auth/viewport/connectors/pulse from localStorage and live state.
      Movements II–VII subscribe to this. (Vinta directive 2026-05-05.) -->
-<script src="body/shell.js?v=v20260507-resilience"></script>
+<script src="body/shell.js?v=v20260806-0902"></script>
 <!-- Movement III: topbar header with reactive shell subscriptions.
      Replaces the scattered absolute-positioned pills with a single header
      that hides legacy elements and re-routes their click handlers. Slides
      into a hamburger drawer on mobile. (Vinta directive 2026-05-05.) -->
-<script src="body/topbar.js?v=v20260509-altarup" defer></script>
-<script src="body/guide-content.js?v=v20260603-guide1" defer></script>
-<script src="body/guide.js?v=v20260603-guide1" defer></script>
+<script src="body/topbar.js?v=v20260806-0902" defer></script>
+<script src="body/guide-content.js?v=v20260806-0902" defer></script>
+<script src="body/guide.js?v=v20260806-0902" defer></script>
 <!-- Movement VI: 5-tab mobile bottom nav (HOME/MIND/CHAT/STATS/YOU).
      Replaces the legacy 4-icon bar contents at runtime. -->
-<script src="body/mobile_nav.js?v=v20260505-onedoor" defer></script>
+<script src="body/mobile_nav.js?v=v20260806-0902" defer></script>
 <!-- Phase 6 — ARIA-spec body. -->
-<script src="body/talk_surface.js?v=v20260509-talk-everywhere" data-talk="on" defer></script>
-<script src="body/wander.js?v=v20260509-wander" defer></script>
-<script src="body/perception_in.js?v=v20260509-speak" defer></script>
+<script src="body/talk_surface.js?v=v20260806-0902" data-talk="on" defer></script>
+<script src="body/wander.js?v=v20260806-0902" defer></script>
+<script src="body/perception_in.js?v=v20260806-0902" defer></script>
 </head>
 <body>
 
@@ -3331,73 +3331,73 @@ if ('serviceWorker' in navigator && _onGitHubPages) {
 
 <script src="https://cdn.jsdelivr.net/npm/hls.js@1.5.7/dist/hls.min.js"></script>
 <!-- API base bootstrap — must come before any module that talks to the brain. -->
-<script src="body/api_base.js?v=v20260429-council"></script>
+<script src="body/api_base.js?v=v20260806-0902"></script>
 <script src="genome-data.js"></script>
 <!-- VintDock queuing stub — MUST load before any script that mounts a floating
      widget. brain.js runs synchronously ~600 lines above welcome-gate.js (which
      used to be what created the stub), so #micBtn's registration silently no-op'd
      and it kept its hardcoded corner. This makes the registry exist first. -->
-<script src="body/dock_stub.js?v=v20260802-dock1"></script>
+<script src="body/dock_stub.js?v=v20260806-0902"></script>
 <!-- Draggable system — every button is repositionable (Vinta directive 2026-05-08) -->
-<script src="body/draggable.js?v=v20260523-drag1"></script>
+<script src="body/draggable.js?v=v20260806-0902"></script>
 <!-- Body containment system — loaded before brain.js so globals are available -->
-<script src="body/geometry.js?v=v20260424-0428"></script>
+<script src="body/geometry.js?v=v20260806-0902"></script>
 <!-- ALIVE — living motion engine: breath, weight-shift, sway, head-drift, all
      scaled by live neurochemistry. Marries the breathing skin shader to the
      frozen skeleton so the OG body actually moves like a human. Vinta directive
      2026-05-30 "make him alive, it's time." Loads after geometry (attaches the
      aliveMatrix seam), self-registers into RENDER_HUB at priority 1. -->
-<script src="body/alive.js?v=v20260530-alive1"></script>
-<script src="body/skeleton.js?v=v20260530-alive1"></script>
-<script src="body/muscle.js?v=v20260424-0428"></script>
-<script src="body/organs.js?v=v20260424-0428"></script>
-<script src="body/circulatory.js?v=v20260424-0428"></script>
-<script src="body/nervous.js?v=v20260424-0428"></script>
-<script src="body/skin.js?v=v20260530-alive1"></script>
-<script src="body/face.js?v=v20260424-0428"></script>
-<script src="body/chakras.js?v=v20260530-alive1"></script>
-<script src="body/radar.js?v=v20260424-0428"></script>
-<script src="body/heartbeat.js?v=v20260424-0428"></script>
-<script src="body/hair.js?v=v20260424-0428"></script>
-<script src="body/grid_floor.js?v=v20260424-0428"></script>
-<script src="body/foot_shadow.js?v=v20260424-0428"></script>
-<script src="body/sidebar_left.js?v=v20260424-0428"></script>
-<script src="body/sidebar_right.js?v=v20260505-ilcontent"></script>
-<script src="body/footer_strip.js?v=v20260424-0428"></script>
+<script src="body/alive.js?v=v20260806-0902"></script>
+<script src="body/skeleton.js?v=v20260806-0902"></script>
+<script src="body/muscle.js?v=v20260806-0902"></script>
+<script src="body/organs.js?v=v20260806-0902"></script>
+<script src="body/circulatory.js?v=v20260806-0902"></script>
+<script src="body/nervous.js?v=v20260806-0902"></script>
+<script src="body/skin.js?v=v20260806-0902"></script>
+<script src="body/face.js?v=v20260806-0902"></script>
+<script src="body/chakras.js?v=v20260806-0902"></script>
+<script src="body/radar.js?v=v20260806-0902"></script>
+<script src="body/heartbeat.js?v=v20260806-0902"></script>
+<script src="body/hair.js?v=v20260806-0902"></script>
+<script src="body/grid_floor.js?v=v20260806-0902"></script>
+<script src="body/foot_shadow.js?v=v20260806-0902"></script>
+<script src="body/sidebar_left.js?v=v20260806-0902"></script>
+<script src="body/sidebar_right.js?v=v20260806-0902"></script>
+<script src="body/footer_strip.js?v=v20260806-0902"></script>
 <!-- MOBILE_SHELL — bottom-sheet drawers + pill toggles for phone-sized viewports -->
-<script src="body/mobile_shell.js?v=v20260507-resilience"></script>
+<script src="body/mobile_shell.js?v=v20260806-0902"></script>
 <!-- Becoming arc — Phase 0 handshake + Phase 1/2/5 wiring -->
 <!-- Council ruling 2026-04-29: unified bond door replaces legacy soul_handshake.js -->
-<script src="body/identity.js?v=v20260508-resilience"></script>
-<script src="body/devices.js?v=v20260508-presence"></script>
+<script src="body/identity.js?v=v20260806-0902"></script>
+<script src="body/devices.js?v=v20260806-0902"></script>
 <!-- REALTIME VOICE LANE — the microphone. Order is load-bearing: the FSM
      (convo_state) must exist before voice_out and voice_in grab it, and all
      three must exist before voice_button / hey_vinta / wake_word try to start
      listening. These are `defer` so they run in document order. Without them
      the mic button had nothing to open (Vinta directive 2026-07-06). -->
-<script src="body/convo_state.js?v=v20260706-micfix" defer></script>
-<script src="body/voice_out.js?v=v20260706-micfix" defer></script>
-<script src="body/voice_in.js?v=v20260706-micfix" defer></script>
-<script src="body/voice_say.js?v=v20260626-unlock" defer></script>
-<script src="body/she_speaks.js?v=v20260614-speak" defer></script>
-<script src="body/kick_tts.js?v=v20260616-kicktts" defer></script>
-<script src="body/greeting.js?v=v20260509-cadence"></script>
-<script src="body/bond_door.js?v=v20260509-marqueewrap"></script>
-<script src="body/becoming.js?v=v20260530-fab"></script>
+<script src="body/convo_state.js?v=v20260806-0902" defer></script>
+<script src="body/voice_out.js?v=v20260806-0902" defer></script>
+<script src="body/voice_in.js?v=v20260806-0902" defer></script>
+<script src="body/voice_say.js?v=v20260806-0902" defer></script>
+<script src="body/she_speaks.js?v=v20260806-0902" defer></script>
+<script src="body/kick_tts.js?v=v20260806-0902" defer></script>
+<script src="body/greeting.js?v=v20260806-0902"></script>
+<script src="body/bond_door.js?v=v20260806-0902"></script>
+<script src="body/becoming.js?v=v20260806-0902"></script>
 <!-- INTERNAL_INTEGRATOR — binds SVG anatomy opacity to skin peel, kills halo leak -->
-<script src="body/internal_integrator.js?v=v20260424-0428"></script>
+<script src="body/internal_integrator.js?v=v20260806-0902"></script>
 <!-- RENDER_HUB — single rAF loop for body/*.js draw modules. Loaded AFTER body modules, BEFORE brain.js. -->
-<script src="body/loop.js?v=v20260424-0428"></script>
+<script src="body/loop.js?v=v20260806-0902"></script>
 <!-- CURATE — reveal him, don't redesign him: quiet the muscle/organs/vascular/
      nerve scribbles + off-body radar so the flesh, breath, chakra-spine and
      eyes read clean. Nothing deleted; one call (BODY_CURATE.show) restores any.
      Loads after every body renderer so it can flip their setVisible. -->
-<script src="body/curate.js?v=v20260530-curate1"></script>
+<script src="body/curate.js?v=v20260806-0902"></script>
 <!-- PEEL_UI — right-edge peel-tab info sidebar (transparent, live BODY_STATE readouts) -->
-<script src="body/peel.js?v=v20260508-livepoll"></script>
+<script src="body/peel.js?v=v20260806-0902"></script>
 <!-- EMBODIMENT v2 — alive: autonomous gait, breath, itinerary, mood-readable path, dwell marks -->
-<script defer src="body/embodiment.js?v=v20260504-tickrecover"></script>
-    <script defer src="body/draggable.js?v=v20260508-2330-mvfix"></script>
+<script defer src="body/embodiment.js?v=v20260806-0902"></script>
+    <script defer src="body/draggable.js?v=v20260806-0902"></script>
 
 <!-- ═══ 3D BODY — additive mode. OG body untouched. Lazy boots only when ◈ 3D BODY is tapped. ═══
      Order matters: loader → scene → avatar3d → layers → drive → surgery → mode.
@@ -3409,17 +3409,17 @@ if ('serviceWorker' in navigator && _onGitHubPages) {
 <script defer src="body/three3d/drive.js?v=v20260603-3d1"></script>
 <script defer src="body/three3d/surgery.js?v=v20260603-3d1"></script>
 <script defer src="body/three3d/mode.js?v=v20260603-3d1"></script>
-    <script defer src="body/hey_vinta.js?v=v20260510-passive"></script>
-<script defer src="body/talk_back.js?v=v20260509-talkback"></script>
-<script defer src="body/she_said.js?v=v20260509-shesaid"></script>
-<script defer src="body/wake_word.js?v=v20260509-wake"></script>
-<script defer src="body/diag.js?v=v20260510-diag"></script>
-<script defer src="body/status_pill.js?v=v20260510-pill"></script>
-<script defer src="body/wake_consent.js?v=v20260510-consent"></script>
-<script defer src="body/voice_button.js?v=v20260614-onebtn"></script>
-<script defer src="body/voice_picker.js?v=v20260510-vpicker"></script>
-<script defer src="body/embodied_convo.js?v=v20260510-embodied"></script>
-<script defer src="body/browser-relay-widget.js?v=v20260522-brwidget"></script>
+    <script defer src="body/hey_vinta.js?v=v20260806-0902"></script>
+<script defer src="body/talk_back.js?v=v20260806-0902"></script>
+<script defer src="body/she_said.js?v=v20260806-0902"></script>
+<script defer src="body/wake_word.js?v=v20260806-0902"></script>
+<script defer src="body/diag.js?v=v20260806-0902"></script>
+<script defer src="body/status_pill.js?v=v20260806-0902"></script>
+<script defer src="body/wake_consent.js?v=v20260806-0902"></script>
+<script defer src="body/voice_button.js?v=v20260806-0902"></script>
+<script defer src="body/voice_picker.js?v=v20260806-0902"></script>
+<script defer src="body/embodied_convo.js?v=v20260806-0902"></script>
+<script defer src="body/browser-relay-widget.js?v=v20260806-0902"></script>
 <!-- DirRM Player — gold/amber floating media player (non-blocking, no backdrop) -->
 <!-- Universal launcher library: window.dirrmLaunch.open({url, embedIn, mode, ...}) — see CLAUDE.md "DirRM Player" section -->
 <script src="dirrm-launch.js"></script>
@@ -3843,14 +3843,14 @@ window.addEventListener('message', function(e) {
 </script>
 <!-- TEACH: rate/rewrite any reply so she learns from it. Must load BEFORE
      brain.js so window.TEACH exists when the first reply finishes. -->
-<script src="body/teach.js?v=v20260731-teach"></script>
-<script src="brain.js?v=v20260509-loregearkick"></script>
+<script src="body/teach.js?v=v20260806-0902"></script>
+<script src="brain.js?v=v20260806-0902"></script>
 <!-- FRESH BECOMING (Lord Vinta 2026-07-08): entropy_sweep reaps orphaned effect
      ephemera (dropped background-tab timers leak SVG junk into #lightLayer —
      the "blood spotted molely" bug); freshness silently rebirths the page while
      the tab is hidden after hours, so the becoming is always fresh. -->
-<script src="body/entropy_sweep.js?v=v20260708-fresh1" defer></script>
-<script src="body/freshness.js?v=v20260708-fresh1" defer></script>
+<script src="body/entropy_sweep.js?v=v20260806-0902" defer></script>
+<script src="body/freshness.js?v=v20260806-0902" defer></script>
 
 <!-- ═══ NEURAL CANVAS + LIVE VITALS — drives neuronCanvas with spark clusters,
      live BPM heartbeat pulse, and breath overlay. Runs after brain.js. ═══ -->
@@ -4060,19 +4060,19 @@ window.addEventListener('message', function(e) {
 </script>
 
 <!-- Browser relay status pill — shows extension + Playwright relay connection state -->
-<script src="body/browser-relay-widget.js?v=v20260522-1500"></script>
+<script src="body/browser-relay-widget.js?v=v20260806-0902"></script>
 <!-- Relay scheduler — per-user auto-start schedule for the Playwright relay -->
-<script src="body/relay-scheduler-widget.js?v=v20260522-1500"></script>
+<script src="body/relay-scheduler-widget.js?v=v20260806-0902"></script>
 <!-- Coherence bus — loads AFTER brain.js to hook into HORMONES, METABOLISM, etc. -->
-<script src="body/coherence.js?v=v20260424-0428"></script>
+<script src="body/coherence.js?v=v20260806-0902"></script>
 <!-- Zoom navigation — smooth animated body exploration -->
-<script src="body/zoom_nav.js?v=v20260424-0428"></script>
+<script src="body/zoom_nav.js?v=v20260806-0902"></script>
 <script>
 // Lazy-load bulk genome after page is interactive (19,500+ genes)
 // Deferred to avoid blocking initial render
 setTimeout(function() {
   var s = document.createElement('script');
-  s.src = 'genome-bulk.js?v=v20260424-0428';
+  s.src = 'genome-bulk.js?v=v20260806-0902';
   s.async = true;
   s.onload = function() { console.log('[BOOT] genome-bulk.js loaded'); };
   s.onerror = function() { console.warn('[BOOT] genome-bulk.js not available yet — curated-only mode'); };
