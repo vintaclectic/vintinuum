@@ -771,10 +771,13 @@ a{color:inherit;text-decoration:none}
   });
   document.querySelectorAll('[data-subscribe]').forEach(function(a){
     a.addEventListener('click', function(e){
-      // href="#subscribe" placeholder until checkout lands; go to onboarding to begin
+      // LIVE CHECKOUT (Vinta 2026-08-06): the front door now routes straight to the
+      // working Stripe checkout, pushing the $7.77/mo Vintinuum entry tier hardest.
+      // upgrade.html?tier=vintinuum auto-starts Stripe Checkout for a signed-in user
+      // (and prompts sign-in first if needed). No more #subscribe dead-end.
       if(a.getAttribute('href')==='#subscribe'){
         e.preventDefault();
-        window.location.href='onboarding.html?intent=hosted';
+        window.location.href='upgrade.html?tier=vintinuum&interval=month';
       }
     });
   });

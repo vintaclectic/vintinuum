@@ -84,6 +84,14 @@
       border-color:rgba(180,140,255,0.45);
       background:linear-gradient(180deg, rgba(180,140,255,0.07), rgba(255,255,255,0.02));
     }
+    /* hero badge sits INSIDE the card body (its own row) — never overlaps the
+       ::before ribbon or the name. No-collision safe. */
+    .hero-badge{
+      display:inline-block; margin:0 auto 10px; padding:5px 12px; border-radius:999px;
+      background:linear-gradient(135deg,#F5A623,#FFD700); color:#0d0b08;
+      font-size:9.5px; font-weight:800; letter-spacing:0.12em; white-space:nowrap;
+      box-shadow:0 0 16px rgba(245,166,35,0.4);
+    }
     .tier.featured::before {
       content:'recommended';
       position:absolute; top:-10px; right:18px;
@@ -359,12 +367,18 @@
     const root = $('tiers');
     root.innerHTML = '';
     for (const t of tiers) {
-      // Sovereign is the featured tier — that's the moat (your own adapter,
-      // perceiver on your dirs, compounding IP). Featured by doctrine.
-      const featured = t.tier === 'sovereign';
+      // The $7.77/mo VINTINUUM tier is the hero — the easiest first-yes, pushed
+      // hardest (Vinta directive 2026-08-06). It gets the featured glow + a
+      // "START HERE" badge so it's the obvious entry into paying.
+      const featured = t.tier === 'vintinuum';
       const isCurrent = t.tier === currentTier;
       // Estate is one-time only. Display its monthly_price_cents but label
       // it "one-time · forever" instead of monthly/yearly.
+      // Its $499 price lives in the MONTHLY column and it has no yearly price id,
+      // so its button must always send interval=monthly. Passing the page's
+      // yearly toggle through would make the backend look up a null yearly price
+      // and throw `price-not-configured` — i.e. the yearly toggle would silently
+      // break the highest-value tier.
       const isOneTime = t.tier === 'estate';
       const cents = isOneTime
         ? (t.monthly_price_cents || 49900)
@@ -379,6 +393,7 @@
       const div = document.createElement('div');
       div.className = 'tier tier--' + t.tier + (featured ? ' featured' : '');
       div.innerHTML = `
+        ${featured ? '<div class="hero-badge">★ START HERE · BEST VALUE</div>' : ''}
         <div class="name">${(t.display_name || t.tier).toUpperCase()}</div>
         <div class="price">${price}<small>${sub}</small></div>
         <div class="desc">${tagline}</div>
@@ -387,7 +402,7 @@
           ? `<div class="current">✦ your current tier ✦</div>`
           : t.tier === 'free'
             ? `<button class="cta" disabled>included for everyone</button>`
-            : `<button class="cta" data-tier="${t.tier}" data-interval="${interval}">${
+            : `<button class="cta" data-tier="${t.tier}" data-interval="${isOneTime ? 'monthly' : interval}">${
                 billingEnabled ? 'choose ' + t.display_name.toLowerCase() : 'free while we build'
               }</button>`}
       `;
@@ -471,6 +486,22 @@
   (async () => {
     await Promise.all([loadStatus(), loadMyTier()]);
     await loadTiers();
+    // AUTO-CHECKOUT (Vinta 2026-08-06): a ?tier=X[&interval=month|year] param — used
+    // by the front-door "Start" CTA — jumps straight into Stripe Checkout for that
+    // tier, so a visitor goes from the landing page to paying in one click. Falls
+    // back to just highlighting the tier if billing is off or they aren't signed in.
+    try {
+      const q = new URLSearchParams(location.search);
+      const wantTier = (q.get('tier') || '').trim();
+      // Normalize to the two values the backend actually understands. It treats
+      // ONLY the exact string 'yearly' as yearly, so 'year'/'annual' from a hand-
+      // written or shared link would silently bill monthly. Estate is forced to
+      // monthly because that is the only interval it has a price id for.
+      const raw = (q.get('interval') || 'monthly').trim().toLowerCase();
+      const wantInterval = (wantTier === 'estate') ? 'monthly'
+        : (raw === 'yearly' || raw === 'year' || raw === 'annual') ? 'yearly' : 'monthly';
+      if (wantTier && billingEnabled) { onChoose(wantTier, wantInterval); }
+    } catch (_) {}
   })();
 })();
 </script>
