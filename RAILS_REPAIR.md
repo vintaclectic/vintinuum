@@ -13,6 +13,7 @@ audience was ≈ 0. Both are false, and the difference is the whole strategy.
 | X bearer is app-only, "not a functioning audience" | **OAuth 1.0a user context works.** Authenticated as `@Vintaclectic` (id `15806951`) | `GET /2/users/me` → HTTP 200 |
 | "Working assumption: audience ≈ 0" | **2,436 followers**, account created **2008-08-11**, 263 list memberships, 3,898 tweets | `user.fields=public_metrics` |
 | Reddit fails due to "2FA or wrong app type" | **The app credentials themselves are rejected** | `client_credentials` also 401s |
+| Reddit is fixable in ~3 min by making a new app | **False — self-serve API access ended Nov 2025.** New apps need manual Responsible-Builder approval (no SLA, small projects often rejected); revoked creds have no guaranteed replacement | Reddit API policy, 2026; see correction below |
 
 **There is a real, warm, 17-year-old distribution channel with 2,436 followers
 that works right now.** The funnel input was never zero. That was a credential
@@ -45,16 +46,37 @@ which requires no user, no password, and no 2FA.** That isolates the fault to
 the `REDDIT_CLIENT_ID`/`REDDIT_CLIENT_SECRET` pair itself: invalid, revoked, or
 belonging to a deleted app. Credential shape is fine (id 22 chars, secret 30).
 
-**No code change can fix this** — it needs Vinta, ~3 minutes:
+### CORRECTION (2026-08-06, second pass) — it is a POLICY wall, not a 3-minute fix
 
-1. Go to <https://www.reddit.com/prefs/apps>
-2. Create an app → type **web app** → redirect URI
-   `http://localhost:8000/oauth/reddit/callback`
-3. Put the new id/secret into `/home/vinta/dircomedia/backend/.env`
-4. Run `python backend/scripts/reddit_oauth.py` to mint `REDDIT_REFRESH_TOKEN`
+An earlier version of this doc said Vinta could fix Reddit in ~3 minutes by
+creating a new app. **That advice is obsolete and would have wasted his time.**
 
-The client now raises this exact instruction instead of a bare 401, so nobody
-loses another day hunting 2FA that was never the problem.
+Reddit ended self-service API access in **Nov 2025**. What is true now:
+
+- `prefs/apps` still issues a client id/secret in ~5 minutes, **but
+  registration is no longer access.** New credentials must clear a manual
+  **"Responsible Builder"** review that has **no SLA** and, by widespread
+  developer report, **routinely rejects small/personal projects**.
+- Reddit also killed unauthenticated `.json` access (May 2026) and now enforces
+  with TLS fingerprinting + datacenter-IP reputation filtering.
+- **Surviving pre-Nov-2025 credentials are effectively irreplaceable.** A
+  revoked app has no guaranteed path back. Ours is already revoked.
+
+**Consequence:** Reddit is **unavailable as a distribution rail** and is not
+schedulable work. Entering the approval queue is a judgment call only Vinta can
+make — it is not a task the council can complete. Verified live 2026-08-06:
+`client_credentials` returns `{"message": "Unauthorized", "error": 401}` with a
+valid User-Agent.
+
+(Also verified: an apparent `403 Blocked` seen mid-investigation was **our own
+shell sending an empty User-Agent**, not Reddit blocking us. With a correct UA
+it is a clean 401. Don't chase the 403 — it was self-inflicted.)
+
+The client now raises this full explanation instead of a bare 401 — naming the
+policy wall, ruling out 2FA/password, and pointing at the X rail — so nobody
+loses another day, and nobody retries a wall in a loop. Locked by
+`backend/tests/test_reddit_auth.py` (5 tests; the 3 policy assertions were
+mutation-verified to fail against the old message).
 
 ## Health surface now tells the truth
 
