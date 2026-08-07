@@ -42,8 +42,43 @@ Do NOT `cp -r` the folder — it will choke on `.git` object names under NTFS.
 - Brain:   https://api.vintaclectic.com  (port 8767 behind named tunnel)
 - Tunnel id: `<tunnel-id — see .env>`
 
+### Cloudflare tunnels — ONE TUNNEL PER ACCOUNT (the 1033 law)
+
+**A tunnel can only serve a zone that lives in the SAME Cloudflare account.**
+Cloudflare refuses a cross-account tunnel CNAME with **error 1033** (HTTP 530),
+and a cross-account proxied CNAME with **1014**. This bites twice now, and both
+times the DNS record and the ingress rule looked *perfectly correct* — the
+tunnel OWNER was the wrong thing. If you see 1033, do not debug DNS or ingress:
+compare the tunnel's `AccountTag` to the zone's account id.
+
+Three separate tunnels, three configs, three pm2 processes — a `cloudflared`
+process is bound to exactly one tunnel's credentials, so accounts cannot share
+a daemon:
+
+| Config | pm2 process | Account | Serves |
+|---|---|---|---|
+| `~/.cloudflared/config.yml` | `vintinuum-named-tunnel` | vintaclectic (`a500348d…`) | `api.` / `board.` / `dirmegle.vintaclectic.com` |
+| `~/.cloudflared/dirmegle.yml` | `dirmegle-tunnel` | DirMegle (`0cbb17c0…`) | `dirmegle.com`, `www.dirmegle.com` |
+| `~/.cloudflared/dirhaven.yml` | `dirhaven-tunnel` | DirHaven (`8faedb3a…`) | `app.dirhaven.com` → `localhost:5175` |
+
+All three force `protocol: http2` — cloudflared's QUIC path drops the WebSocket
+Upgrade header in transit, which breaks sockets while every health check stays
+green. Never add a hostname to a config whose account doesn't own that zone;
+that's dead config that quietly shadows the truth.
+
+**Verify a hostname the right way.** Vinta's Spectrum router runs a CUJO filter
+that SNI-hijacks some hostnames, producing a bogus "SSL wrong version number"
+that looks exactly like a cert fault. Always confirm against the edge IP
+directly, which bypasses it:
+`curl -sI --resolve app.dirhaven.com:443:104.21.1.142 https://app.dirhaven.com/`
+
+Note: the `dirhaven.com` **apex has no A/AAAA/CNAME record** — it does not
+resolve by design as of 2026-08-07 (`www` CNAMEs to the empty apex, so it is
+dead too). Only `app.dirhaven.com` is live. That is not a regression.
+
 ### Process management
-- PM2 process names: `vintinuum-api`, `vintinuum-named-tunnel`
+- PM2 process names: `vintinuum-api`, `vintinuum-named-tunnel`,
+  `dirmegle-tunnel`, `dirhaven-tunnel`
 - Boot resurrect: `~/vintinuum-api/boot-resurrect.sh`
 - Tail logs: `pm2 logs vintinuum-api --lines 80 --nostream`
 - Cold-restart brain: `pm2 restart vintinuum-api`
