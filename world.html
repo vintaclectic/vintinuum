@@ -342,6 +342,28 @@
      court.js so the rail order stays: star-map · agents · court · home ·
      lanterns · build. Adds no fixed element of its own. -->
 <script src="body/world/traces-hud.js"></script>
+<!-- THE CONCORD — the polity spine. Your agents hold seats, take positions from
+     their own disposition, vote, dissent and defect, and the session resolves on
+     the CLOCK whether you are here or not. Loads AFTER dirverse-hud (it borrows
+     that file's rail + one-sheet registry) and after court.js (it reads
+     VintCourt.roster() for the bench and wraps DirverseHUD.refreshAgents to hear
+     the roster move). Rail order becomes: star-map · agents · court · home ·
+     lanterns · build · concord. Adds no fixed element of its own; its sheet
+     carries .dv-sheet so layoutRail's yield clears it automatically. -->
+<script src="body/world/concord.js"></script>
+<!-- THE ADMIRALTY — the production + conflict organ that plugs into the polity
+     spine: warbuilding, shipbuilding (sea/land/air), and faction-vs-faction war.
+     A keel opens berths and your SEATED agents claim them on their own
+     recognizance, building from their own disposition — so the hull is the one
+     your court made, not the one you ordered, and a war reads backwards to the
+     agent whose weld failed. Loads AFTER concord.js because it is strictly
+     downstream of it: it spends the Concord's treasury, reads its charter,
+     seats, standing and disposition, and presses the same seven karma tags
+     through VintConcord's guarded verbs — one economy, one ladder, one karma
+     spine, never a second. Rail order becomes: star-map · agents · court ·
+     home · lanterns · build · concord · yard. Adds no fixed element of its own;
+     its sheet carries .dv-sheet so layoutRail's yield clears it automatically. -->
+<script src="body/world/admiralty.js"></script>
 <script>
 (function () {
   const statusEl = document.getElementById('status');

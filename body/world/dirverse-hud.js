@@ -137,12 +137,139 @@
       // so four launchers still fit the reserved band without ever scrolling.
       '@media(max-height:560px){#dvRail .dv-launch .lbl{display:none;}',
       ' #dvRail .dv-launch{padding:0 12px;gap:0;}}',
+      // ── THE COMPACT RAIL — capacity, measured, not guessed (2026-08-07) ──────
+      // The media query above compacts on VIEWPORT HEIGHT, which was a proxy for
+      // the real constraint and has now been outgrown by it. The true constraint
+      // is COUNT vs. BAND: at 320x568 with seven launchers the column needs 438px
+      // of a 268px band, and because the rail is column-reverse the surplus clips
+      // off the TOP — measured, the last launcher mounted rendered at top:-20 with
+      // NO sheet open at all, and with a sheet up four of them sat at negative
+      // coordinates. A launcher above the fold of its own scroll box is a dead
+      // control, which this file's own squeeze comment already names as being as
+      // bad as an overlapping one.
+      //
+      // So layoutRail measures whether the column fits and, when it does not,
+      // sets these classes in escalating order — labels first (the label is a
+      // convenience; the glyph is the identity), then the gap, then the padding.
+      // Each step is a CONTAINER yielding its own content, never a neighbour
+      // yielding its space, which is the only compaction the law permits.
+      'body.dv-rail-compact #dvRail .dv-launch .lbl{display:none;}',
+      'body.dv-rail-compact #dvRail .dv-launch{padding:0 12px;gap:0;}',
+      'body.dv-rail-tight #dvRail{gap:6px;}',
+      'body.dv-rail-tight #dvRail .dv-launch{padding:0 9px;min-height:42px;height:42px;}',
+      // ── THE SECOND COLUMN — when compaction is not enough, use the WIDTH ─────
+      // Compaction has a floor: eight glyph-only launchers at the 42px minimum
+      // touch target still need 378px, and a 320x568 phone's rail band is 268px.
+      // Measured, that is not a styling problem, it is a CAPACITY problem — the
+      // column is asking for more vertical room than the viewport has to give.
+      //
+      // But the rail is a 46px-wide strip against the left edge of a 320px
+      // screen. The space it needs is sitting unused directly beside it. So at
+      // the last step the rail wraps into a second column: still one measured
+      // container, still flow children, still bounded — it simply grows the way
+      // the viewport actually has room to grow. column-reverse + wrap-reverse
+      // keeps the newest launcher nearest the thumb and fills upward, which is
+      // the same reading order the single column already had.
+      //
+      // TWO THINGS MEASURED THE HARD WAY, both recorded so nobody re-derives them:
+      //
+      //  1. THE WRAP DIRECTION. `wrap-reverse` was the obvious pairing with
+      //     column-reverse (it keeps the newest launcher nearest the thumb) and
+      //     it is WRONG here: it grows the new column to the LEFT, and the rail
+      //     is already flush against the left edge, so the second column landed
+      //     at x=-70 — entirely off-screen, four launchers unhittable (measured:
+      //     `elementFromPoint` at their centres returned null). Plain `wrap`
+      //     grows RIGHT, into the empty middle of the screen, which is where the
+      //     room actually is. The reading order costs nothing next to a button
+      //     that exists.
+      //
+      //  2. THE CEILING. A wrapped rail is only half as tall, so `bottom`-
+      //     anchored it climbs no higher than before — but the SQUEEZE can drag
+      //     --dv-railtop up toward the viewport top when a sheet is open, and at
+      //     320x568 that put the wrapped column's top edge at y=23, straight
+      //     through #leave (the ↩ link, top 14..58, z1600). #leave is a primary
+      //     navigation control and does NOT yield. So the wrapped rail declares
+      //     its own hard ceiling below it: the link's band plus a gutter, via
+      //     max(), so it can only ever LOWER the rail's reach, never raise it
+      //     past what layoutRail already decided.
+      //
+      // The width is capped so the rail can never reach the screen's right half
+      // (where #topctl and the docked account stack live) — two columns of
+      // compact pills is ~108px of a 320px viewport, comfortably clear, and the
+      // cap is expressed against the viewport so it cannot drift on any device.
+      //  3. WIDTH, NOT MAX-WIDTH. `max-width` does NOT make a wrapping flex
+      //     container wrap: the rail is a fixed-position shrink-to-fit box, so
+      //     its used width came from its CONTENT and max-width never bound it —
+      //     measured, the launchers marched straight off the right edge to
+      //     x=376 on a 320px screen. An explicit `width` gives the flex
+      //     algorithm the line-length it needs to actually break. It is the
+      //     same min() so it still cannot reach the screen's right half.
+      //  4. THE CROSS-AXIS PACK. In a wrapping COLUMN flex container the
+      //     cross axis is horizontal, so `align-content` — not `align-items` —
+      //     decides where the generated columns sit. The rail's base rule sets
+      //     `align-items:flex-start` (correct: it keeps each pill shrink-to-fit
+      //     rather than stretched), but with wrapping on, the default
+      //     `align-content:normal` stretches the COLUMNS to fill the box and the
+      //     launchers marched past the container's own right edge. Packing the
+      //     columns to flex-start is what makes them respect the width above.
+      //  5. THE BAND MUST HOLD A ROW, OR WRAPPING IS A CATASTROPHE. Measured
+      //     with a sheet open at 320x568, the squeeze had already dragged
+      //     --dv-railtop up so far that this rule computed max-height:41px — one
+      //     pixel UNDER a compacted 42px launcher. In a wrapping column that is
+      //     not "slightly cramped", it is total: every single item overflows its
+      //     line and starts a new column, so eight launchers marched right off
+      //     the screen at x=376 in one 42px-tall row. A wrapping container whose
+      //     line is shorter than one item is strictly worse than no wrapping.
+      //     So the ceiling is floored at two rows' worth (90px): the wrap can
+      //     only ever be entered when it can actually hold a column, and the
+      //     JS step below verifies the result and removes the class if it did
+      //     not help — belt and braces, because this failure is silent.
+      // The band the wrapped rail may occupy is the SAME --dv-railtop /
+      // --dv-railbot the single column uses — those two vars are already the
+      // measured, neighbour-respecting answer (and --dv-railtop is now floored
+      // below #leave, see ceilFloor in layoutRail). Re-deriving a second ceiling
+      // here is what produced the 41px line: a rule that disagreed with the
+      // measurement. It agrees now, and it is floored at one compact row so the
+      // container can never be shorter than the item it must hold.
+      //
+      // THE WIDTH IS SET BY JS (--dv-railw), NOT GUESSED HERE. A fixed 110px was
+      // two columns, and with an open sheet squeezing the band to a single 46px
+      // row, two columns of eight launchers needs 410px of a 110px box — it
+      // spilled, the guard rejected the wrap, and the rail fell back to clipping.
+      // How wide the rail may be depends on how tall it was allowed to be, which
+      // only layoutRail knows, so layoutRail computes it and writes it here. The
+      // fallback keeps the rule sane if the var is ever missing.
+      'body.dv-rail-wrap #dvRail{flex-wrap:wrap;align-content:flex-start;',
+      ' width:var(--dv-railw,110px);column-gap:6px;',
+      ' max-height:max(46px,calc(100dvh - var(--dv-railtop,270px)',
+      ' - var(--dv-railbot,150px) - env(safe-area-inset-bottom,0px)));}',
 
       // shared bottom-sheet scaffold (WARP + AGENT both use it)
       '.dv-sheet{position:fixed;left:0;right:0;bottom:0;z-index:1600;',
       // dvh follows the on-screen keyboard on modern mobile, so the sheet shrinks
       // instead of being shoved off-screen; vh is the fallback for older engines.
-      ' max-height:min(78vh,560px);max-height:min(78dvh,560px);background:rgba(6,9,15,0.94);',
+      // THE SHEET RESERVES THE RAIL'S BAND (2026-08-07). 78dvh was chosen when
+      // the rail held four launchers and could always tuck into the 22% left
+      // over. It now holds eight, and at 320x568 that arithmetic broke: the
+      // sheet took 443px, #leave owns the top 58, and the 46px strip between
+      // them could not hold the column — six of eight launchers rendered at
+      // NEGATIVE y (down to -169) with elementFromPoint returning null at their
+      // centres. They were not cramped, they were gone, and a launcher you
+      // cannot hit is exactly the dead control this file's squeeze comment
+      // refuses to ship.
+      //
+      // Something has to yield, and it is the SHEET, for the same reason the
+      // panel yields to the rail in layoutRail's squeeze: the sheet is content
+      // with its own internal scroll (.dv-body is overflow-y:auto by design, so
+      // it loses nothing but a few visible pixels), while the rail is the only
+      // way BETWEEN surfaces and cannot scroll a user to a button they do not
+      // know is there. --dv-railneed is the compacted column's real measured
+      // height, published by layoutRail; the floor keeps the sheet usable at
+      // 42dvh no matter how many launchers ever exist, so a future tenth
+      // launcher can never squeeze the sheet into a sliver.
+      ' max-height:min(78vh,560px);',
+      ' max-height:max(42dvh,min(78dvh,560px,calc(100dvh - var(--dv-railneed,0px) - 76px)));',
+      ' background:rgba(6,9,15,0.94);',
       ' border-top:1px solid rgba(124,207,255,0.22);border-radius:20px 20px 0 0;',
       ' backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);color:#dce7ff;',
       ' font-family:"Cormorant Garamond",Georgia,serif;',
@@ -1624,12 +1751,32 @@
     //    and remembers its previous inline visibility, so writing the property
     //    from here would corrupt what the door saved. On tall viewports `want`
     //    is ≤ 0 and nothing moves at all.
+    // ── THE HARD CEILING: #leave DOES NOT YIELD ───────────────────────────────
+    // Both borrow branches below reclaim space by walking `top` upward, and both
+    // were bounded only by `top - 8` — i.e. by the top of the VIEWPORT. Above the
+    // rail sits #leave (the ↩ link, top 14..58 at z-index 1600), which is the
+    // only way out of the world and is therefore primary navigation, not passive
+    // readout. #vintWorldHud and #hint may yield (they are readouts, and the code
+    // below already makes them); #leave may not. Unbounded, the borrow put a
+    // launcher at top:23 straight through the link — measured, `elementFromPoint`
+    // at the launcher's own centre returned #leave, meaning the tap opened the
+    // wrong surface. This floor is computed ONCE here and both branches clamp to
+    // it, so neither can walk past the link no matter which one fires. It is a
+    // floor on the borrow, never a raise: on any viewport with room it is
+    // irrelevant, because `top` is already far below it.
+    var ceilFloor = 8;
+    var leaveEl = document.getElementById('leave');
+    if (leaveEl && getComputedStyle(leaveEl).display !== 'none') {
+      var lvr = leaveEl.getBoundingClientRect();
+      if (lvr.height > 0 && lvr.bottom > 0) ceilFloor = Math.max(ceilFloor, lvr.bottom + 10);
+    }
+
     var needH = _rail.scrollHeight || 0;
     var yieldPanel = false;
     if (botFloor && needH > 0 && panel) {
       var want = needH - (vh - top - bot);
       if (want > 0) {
-        var take = Math.min(want, Math.max(0, top - 8));
+        var take = Math.min(want, Math.max(0, top - ceilFloor));
         if (take > 0) {
           top -= take;
           var pr2 = panel.getBoundingClientRect();
@@ -1640,7 +1787,9 @@
     var avail = vh - top - bot;
     if (avail < 46) {
       var need = 46 - avail;
-      var giveTop = Math.min(need, Math.max(0, top - 8)); // never above the viewport
+      // never above #leave (see ceilFloor above) — it was `top - 8`, i.e. the
+      // top of the VIEWPORT, which is what walked launchers onto the ↩ link.
+      var giveTop = Math.min(need, Math.max(0, top - ceilFloor));
       top -= giveTop;
       avail = vh - top - bot;
       // THE VIGIL FIX (2026-08-04): borrowing from the ceiling walks the rail UP
@@ -1673,11 +1822,128 @@
       // than a short rail (the rail can scroll; a covered button cannot be hit).
       if (avail < 46) bot = Math.max(8, botFloor, bot - (46 - avail));
     }
+
+    // ── 3b) ENOUGH BAND FOR THE LAUNCHERS THAT EXIST ─────────────────────────
+    // The squeeze above guarantees exactly ONE launcher's worth of band, which
+    // was right when the rail held four and is not right now that it holds
+    // eight. `overflow-y:auto` was the intended relief, but the rail is
+    // column-reverse, so the surplus clips off the TOP: measured at 320x568 with
+    // a sheet open, six of eight launchers rendered at NEGATIVE y (down to
+    // -169) and `elementFromPoint` at their centres returned null. They were not
+    // cramped; they did not exist. And a scroll gesture inside a 46px strip is
+    // not a discoverable affordance — this file already says as much about the
+    // same failure arriving by another road.
+    //
+    // So: having taken the ceiling as far as #leave allows, take the rest from
+    // the FLOOR, still never past botFloor (a launcher under an open sheet is
+    // unhittable, which is strictly worse than a short rail). This asks for the
+    // room the launchers actually need instead of a fixed 46, and it can only
+    // ever give the rail MORE band, never less — so no neighbour loses space
+    // that the existing clauses had already granted it.
+    if (needH > 0 && (vh - top - bot) < needH) {
+      var deficit = needH - (vh - top - bot);
+      var fromFloor = Math.min(deficit, Math.max(0, bot - Math.max(8, botFloor)));
+      if (fromFloor > 0) bot -= fromFloor;
+    }
     // one authoritative write, AFTER every branch that can set it (the squeeze
     // above can raise it too, so toggling before that was a stale decision).
     try { document.body.classList.toggle('dv-panel-yield', yieldPanel); } catch (_) {}
     css.setProperty('--dv-railtop', Math.round(top) + 'px');
     css.setProperty('--dv-railbot', Math.round(bot) + 'px');
+
+    // ── 4) THE FIT — does the column actually fit the band it was just given? ──
+    // Everything above decides the rail's BOX. Nothing above ever asked whether
+    // the launchers fit inside it, because when this was written they always
+    // did. They no longer do: measured at 320x568 signed-in with seven
+    // launchers, the column needs 438px of a 268px band, and the rail is
+    // column-reverse — so the overflow clips off the TOP and the earliest-
+    // mounted launchers render at negative coordinates, unreachable, with no
+    // sheet open at all. `overflow-y:auto` was the intended relief valve, but a
+    // launcher you must first discover is scrollable is a launcher that is not
+    // there (this file's own squeeze comment says exactly that about the same
+    // failure arriving by a different road).
+    //
+    // So the rail compacts ITS OWN CONTENT to fit, in escalating steps, and
+    // re-measures after each one because every step changes the height it is
+    // testing. The container yields; no neighbour is ever asked for space, and
+    // nothing is allowed to spill. If even the tightest form does not fit (a
+    // genuinely tiny viewport with many launchers), scrolling remains as the
+    // last resort — bounded and honest — rather than silent clipping.
+    try {
+      var bandH = Math.max(46, vh - top - bot);
+      var cl = document.body.classList;
+      cl.remove('dv-rail-compact'); cl.remove('dv-rail-tight'); cl.remove('dv-rail-wrap');
+      // PUBLISH THE COLUMN'S REAL NEED, measured in its most compact form, so
+      // the sheet can reserve it (see .dv-sheet's max-height). It is measured
+      // WITH the compact classes on — that is the height the rail will actually
+      // occupy when a sheet is up — and then the classes are re-decided below
+      // against the band the sheet's yield produces. Published every layout, so
+      // adding or hiding a launcher updates the reservation with no extra wiring.
+      cl.add('dv-rail-compact'); cl.add('dv-rail-tight');
+      css.setProperty('--dv-railneed', Math.min(vh - 120, (_rail.scrollHeight || 0)) + 'px');
+      cl.remove('dv-rail-compact'); cl.remove('dv-rail-tight');
+      // scrollHeight is read AFTER each class change so each measurement is of
+      // the form actually being tested, never of the previous one.
+      if ((_rail.scrollHeight || 0) > bandH) {
+        cl.add('dv-rail-compact');
+        if ((_rail.scrollHeight || 0) > bandH) {
+          cl.add('dv-rail-tight');
+          // LAST STEP: compaction has a floor (42px is the minimum honest touch
+          // target and we will not go under it to win a measurement). If the
+          // column still does not fit, it wraps into a second column and uses
+          // the width the viewport actually has. Verified after the fact, not
+          // assumed — if even this does not fit, the class comes back off so
+          // the rail keeps its single-column scroll rather than being left in a
+          // wrapped state that solved nothing and changed the reading order.
+          // HOW WIDE THE WRAP NEEDS TO BE, DERIVED FROM HOW TALL IT IS ALLOWED
+          // TO BE. With a sheet open at 320x568 the band collapses to a single
+          // 46px row, so a fixed two-column width could never hold eight
+          // launchers (410px of content in a 110px box) — it spilled and the
+          // guard below correctly rejected it, leaving the clipping it was meant
+          // to cure. The columns needed are ceil(items / rows-that-fit), and the
+          // width is that many pill-widths — capped so the rail can still never
+          // reach the screen's right half, where #topctl and the docked account
+          // stack live. If the cap cannot hold the launchers, the guard rejects
+          // the wrap and the single-column scroll remains, as before.
+          var pill = 46, colGap = 6, rowGap = 6;
+          var firstL = _rail.querySelector('.dv-launch');
+          if (firstL) {
+            var fr = firstL.getBoundingClientRect();
+            if (fr.width > 2) pill = Math.ceil(fr.width);
+          }
+          var shown = 0, all = _rail.querySelectorAll('.dv-launch');
+          for (var ci = 0; ci < all.length; ci++) if (all[ci].offsetParent !== null) shown++;
+          var perCol = Math.max(1, Math.floor((bandH + rowGap) / (pill + rowGap)));
+          var cols = Math.max(1, Math.ceil(shown / perCol));
+          var wantW = cols * pill + (cols - 1) * colGap;
+          var vwNow = W.innerWidth || document.documentElement.clientWidth || 360;
+          var capW = Math.max(pill, Math.floor(vwNow / 2) - 24);
+          css.setProperty('--dv-railw', Math.min(wantW, capW) + 'px');
+
+          cl.add('dv-rail-wrap');
+          // VERIFY THE WRAP, ON THE AXIS IT CAN ACTUALLY FAIL ON. A wrapped
+          // rail overflows HORIZONTALLY, so re-testing scrollHeight would
+          // always pass and would have hidden the exact catastrophe measured
+          // above (a 41px line, eight launchers in one row running to x=376
+          // off a 320px screen). The honest test is whether every launcher is
+          // inside the rail's own box on BOTH axes; if any is not, the wrap did
+          // not help and comes straight back off, leaving the single-column
+          // scroll — bounded and reachable — as the fallback.
+          var rr = _rail.getBoundingClientRect();
+          var spill = _rail.scrollWidth > Math.ceil(rr.width) + 1;
+          if (!spill) {
+            var ls = _rail.querySelectorAll('.dv-launch');
+            for (var li = 0; li < ls.length; li++) {
+              if (ls[li].offsetParent === null) continue;      // hidden: not laid out
+              var lr = ls[li].getBoundingClientRect();
+              if (lr.width < 2) continue;
+              if (lr.right > rr.right + 1 || lr.left < rr.left - 1) { spill = true; break; }
+            }
+          }
+          if (spill) cl.remove('dv-rail-wrap');
+        }
+      }
+    } catch (_) {}
   }
   var _layoutT = null;
   function scheduleLayout() { clearTimeout(_layoutT); _layoutT = setTimeout(layoutRail, 60); }
