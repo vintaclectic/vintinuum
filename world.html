@@ -235,6 +235,22 @@
     border: 1px solid rgba(244,199,154,0.28); border-radius: 20px;
     padding: 18px 18px calc(16px + env(safe-area-inset-bottom,0px));
     box-shadow: 0 -8px 40px rgba(0,0,0,0.35), 0 0 0 1px rgba(255,255,255,0.02) inset;
+    /* THE DOORWAY MUST NOT EAT THE PHONE (aetherhold 2026-08-08).
+       Unbounded, this sheet is 288px tall — 51% of a 320x568 screen. #dvRail
+       treats it (correctly) as a floor it may not sit under, so on the smallest
+       phone the rail was left a 108px band for a column that needs 378px, and
+       three launchers rendered at NEGATIVE y: measured -30, -78 and -126, i.e.
+       outside their own scroll box, unhittable, with nothing on screen to say
+       they existed. Two surfaces both behaving correctly, and a dead control
+       between them — the capacity was simply not there.
+       The no-collision law names the remedy: when content does not fit, the
+       CONTAINER caps and the CONTENT scrolls; it never grows onto a neighbour.
+       So the doorway takes at most 46% of the viewport and scrolls inside
+       itself. It is refusable, secondary copy; the rail is the only way between
+       surfaces. On any viewport with room this clamp is inert (at 720px+ the
+       sheet's natural 288px is already under the cap and nothing changes). */
+    max-height: min(46dvh, 320px); overflow-y: auto; overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
     display: none; }
   #invite.show { display: block; animation: inviteRise .8s cubic-bezier(.2,.8,.2,1); }
   @keyframes inviteRise { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: none; } }
@@ -384,6 +400,33 @@
      home · lanterns · covenant · reckoning · concord · yard. Adds no fixed element of its own;
      its sheet carries .dv-sheet so layoutRail's yield clears it automatically. -->
 <script src="body/world/admiralty.js"></script>
+<!-- THE FACTIONS — allegiance as a RELATION, not a costume. One row per
+     unordered pair, so "allied and at war" has nowhere to be written. Named
+     ground with named owners; a war over it is resolved by handing the yard's
+     wageWar() the ground's element, so there is exactly one combat model in the
+     world and this file does not contain it. Loads AFTER admiralty.js because
+     it is strictly downstream: it borrows the war engine and spends the
+     Concord's ONE treasury through the guarded verbs. Rail order becomes:
+     star-map · agents · court · home · lanterns · covenant · reckoning ·
+     concord · yard · powers. Adds no fixed element of its own; its sheet
+     carries .dv-sheet so layoutRail's yield clears it automatically. -->
+<script src="body/world/factions.js"></script>
+<!-- RECOGNIZANCE — the organ where the world moves WITHOUT you. (organ 5)
+     agent-life.js gives every presence a body; this gives them agency. On a
+     90s beat, each of YOUR court's agents deliberates: a motive scored from its
+     own Concord disposition, its allegiance, and what the world actually lacks.
+     Above threshold it ACTS — tables a motion, lays a keel, pledges to a power,
+     carries lumen in, marches on contested ground — through the EXACT public
+     verbs your own taps reach. No private agent-only pathway exists.
+     Loads LAST of the organs because it is downstream of all three: it can only
+     act through Concord, Admiralty and Factions, and it is deliberately a no-op
+     when they are absent.
+     ── NO-COLLISION: this file creates ZERO DOM. No sheet, no launcher, no
+     fixed element, nothing added to the one-sheet exclusive set. Its only
+     surface is DirverseHUD.toast(), the HUD's own measured single channel.
+     ── KILL SWITCH: ?recog=0 (read live, never latched). Resentment signal:
+     VintRecognizance.hush(agentId), one call, always available, never punished. -->
+<script src="body/world/recognizance.js"></script>
 <script>
 (function () {
   const statusEl = document.getElementById('status');
