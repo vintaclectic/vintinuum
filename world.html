@@ -525,6 +525,43 @@
     setTimeout(() => { if (div.parentNode) div.parentNode.removeChild(div); }, 10500);
   }
 
+  // ── RECOGNIZANCE, SPOKEN (organ 5) ────────────────────────────────────────
+  // When one of your agents acts on its own — tables a motion, lays a keel,
+  // pledges to a power — it says so in the clearing's OWN voice, through the
+  // feed that already exists. Deliberately routed here and not into a surface
+  // of its own: `#feed` is measured, capped at five children, self-clearing and
+  // pointer-events:none, so an act can never collide with anything or outstay
+  // its welcome. recognizance.js creates no DOM; this is the whole of its
+  // visible life, and it is three lines of an existing channel.
+  //
+  // The `.muse` kind is the right register: an autonomous thought left in the
+  // clearing, italic and softer than speech, because the agent is not talking
+  // TO you — it went and did something, and you are hearing about it.
+  //
+  // OFFLINE is the moment that matters. A single act while you are watching is
+  // one line. A batch replayed on return is the "what happened while I was
+  // gone" beat, so it leads with the count and then speaks the acts themselves
+  // — capped at three lines so a long absence is a story, never a wall.
+  window.addEventListener('vint:recognizance-batch', (e) => {
+    const d = (e && e.detail) || {}; const acts = d.acts || [];
+    if (!acts.length) return;
+    if (d.offline && acts.length > 1) {
+      utter({ kind: 'ambient', name: 'the clearing',
+              text: acts.length + ' things happened while you were gone.' });
+    }
+    acts.slice(0, 3).forEach((a, i) => setTimeout(() => {
+      utter({ kind: 'muse', name: a.agent || 'an agent', text: sayOf(a) });
+    }, 700 * (i + 1)));
+  });
+  // The line is the agent's own, with its name lifted out so the feed's `who`
+  // cell carries it exactly as it does for speech — never the name printed
+  // twice, which is what happens if you hand `say` through whole.
+  function sayOf(a) {
+    const s = String(a.say || a.what || '');
+    const n = String(a.agent || '');
+    return (n && s.indexOf(n) === 0) ? s.slice(n.length).replace(/^\s+/, '') : s;
+  }
+
   // traces — what the clearing remembers. softly shown on arrival, fades when you move.
   async function showTraces() {
     const base = (window.__VINTINUUM_API_BASE || '').replace(/\/$/, '');

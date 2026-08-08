@@ -748,19 +748,20 @@
     return out;
   }
 
-  // ── the one HUD touch this file is allowed: the HUD's own measured toast ────
-  // Never a node of our own. Never more than one line. Silent on mobile-cold
-  // start so the first thing a new player meets is the world, not a report.
-  function announce(acts, offline) {
-    if (!HAS_DOM) return;
-    var h = hud();
-    if (!h || !h.toast) return;
-    if (!offline && acts.length === 1) { try { h.toast(acts[0].say); } catch (_) {} return; }
-    if (offline) {
-      try { h.toast(acts.length === 1 ? acts[0].say
-        : (acts.length + ' things happened while you were gone.')); } catch (_) {}
-    }
-  }
+  // ── THE VISIBLE LIFE OF THIS ORGAN — and why it is not here ────────────────
+  // There is exactly ONE channel: the `vint:recognizance-batch` event, which
+  // world.html routes into the clearing's existing speech feed (`#feed`, capped
+  // at five children, measured, pointer-events:none, self-clearing). This file
+  // deliberately does NOT also toast: two channels for one event is how a
+  // player ends up reading the same sentence twice, in two places, at two
+  // sizes — the No-Collision Law's cousin, and just as sloppy.
+  //
+  // Keeping the announcement OUT of this module is also what lets the organ
+  // stay zero-DOM: the page decides how an act is spoken, the organ only
+  // decides that one happened. A different surface (a phone HUD, a ledger
+  // sheet, nothing at all) can subscribe to the same event and this file does
+  // not change by one line.
+  function announce(/* acts, offline */) { /* the page speaks; see world.html */ }
 
   function emit(name, detail) {
     try {

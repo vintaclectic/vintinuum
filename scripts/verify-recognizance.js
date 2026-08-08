@@ -547,6 +547,31 @@ const MIME = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css
         out.durableMoved = (out.treasuryAfter !== t0) || !!out.motionAfter;
         out.launchersAfter = document.querySelectorAll('#dvRail button').length;
         out.stillNoSheet = !document.getElementById('rcSheet') && !document.getElementById('recogSheet');
+
+        // ── THE FEED LEG ─────────────────────────────────────────────────────
+        // The organ's whole visible life is world.html routing the batch event
+        // into the existing speech feed. Prove it lands, prove it NEVER
+        // overflows: a big offline replay must still leave `#feed` at its
+        // authored cap of 5 children, or the No-Collision Law is broken by an
+        // element the organ caused to exist.
+        const feed = document.getElementById('feed');
+        out.feedBefore = feed ? feed.children.length : -1;
+        const many = [];
+        for (let i = 0; i < 12; i++) {
+          many.push({ agent: 'Sable', say: 'Sable did thing ' + i + '.', what: 'thing ' + i });
+        }
+        window.dispatchEvent(new CustomEvent('vint:recognizance-batch',
+          { detail: { acts: many, offline: true } }));
+        await new Promise(r => setTimeout(r, 3200));   // the staggered lines land
+        out.feedAfter = feed ? feed.children.length : -1;
+        out.feedText = feed ? Array.from(feed.children).map(c => c.textContent) : [];
+        // the name must appear ONCE per line (the `who` cell), never twice
+        out.doubledName = out.feedText.some(t => (t.match(/Sable/g) || []).length > 1);
+        // and the feed must not have grown outside its own box
+        if (feed) {
+          const fr = feed.getBoundingClientRect();
+          out.feedInViewport = fr.left >= 0 && fr.right <= window.innerWidth + 1 && fr.top >= 0;
+        }
         // no fixed element of its own, anywhere
         out.ownFixed = 0;
         document.querySelectorAll('[id^="rc"],[id^="recog"]').forEach(el => {
@@ -572,6 +597,15 @@ const MIME = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css
         res.launchersBefore + ' → ' + res.launchersAfter);
       ok('the organ owns ZERO fixed elements (nothing to collide with)', res.ownFixed === 0,
         'fixed=' + res.ownFixed);
+      // the visible life, and its bound
+      ok('an act is SPOKEN into the clearing\'s existing feed', (res.feedAfter || 0) >= 1,
+        'feed ' + res.feedBefore + ' → ' + res.feedAfter);
+      ok('a 12-act offline replay still leaves the feed at its authored cap of 5',
+        res.feedAfter <= 5, 'children=' + res.feedAfter);
+      ok('the agent\'s name is printed ONCE per line, never doubled',
+        res.doubledName === false, JSON.stringify(res.feedText));
+      ok('the feed stayed inside the viewport (no overflow at 320px)',
+        res.feedInViewport === true);
     }
     await pg.close();
   } catch (e) {
