@@ -384,6 +384,25 @@
      home · lanterns · covenant · reckoning · concord · yard. Adds no fixed element of its own;
      its sheet carries .dv-sheet so layoutRail's yield clears it automatically. -->
 <script src="body/world/admiralty.js"></script>
+<!-- THE MARCHES — the FACTION organ, and the connective tissue between the two
+     above it. A government that rules nothing and a fleet that sails at nobody
+     are both theatre; territory is the stake that makes them cost something,
+     and allegiance is what decides who you pay it to. It does NOT fork a second
+     faction model: your polity IS a faction (synthesised live from the
+     Concord's own bench, charter and treasury — no duplicate membership store),
+     and the other powers are admiralty.js's own UNALIGNED (the Drift, the Sill,
+     the Span) PROMOTED from rival-hull seeds into standing powers that hold
+     ground. Allegiance is stored once on an unordered PAIR under a canonical
+     key, so relation(a,b) and relation(b,a) are the same read of the same byte
+     and one-way diplomacy is unrepresentable rather than merely forbidden. War
+     is resolved ONLY by the Admiralty's wake — there is no combat model in that
+     file, by design. Loads AFTER admiralty.js because it is strictly downstream
+     of both: it reads the Concord's bench/standing and credits its ONE
+     treasury, and it hands every fight to VintAdmiralty.sortie(). Rail order
+     becomes: star-map · agents · court · home · lanterns · covenant · reckoning
+     · concord · yard · marches. Adds no fixed element of its own; its sheet
+     carries .dv-sheet so layoutRail's yield clears it automatically. -->
+<script src="body/world/marches.js"></script>
 <script>
 (function () {
   const statusEl = document.getElementById('status');

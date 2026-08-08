@@ -2156,9 +2156,21 @@
     render: render, refresh: updateLauncher,
     // exported for the one-sheet proof and for whatever organ comes next
     state: function () { var s = load(); return JSON.parse(JSON.stringify(s)); },
+    // Drop the in-memory memo and read the yard back off localStorage, exactly
+    // as a fresh page load would. Added for the FACTIONS proof, which has to be
+    // able to prove that what a surface reports came from persisted bytes and
+    // not from a live object that merely happens to answer correctly.
+    reload: function () { _st = null; _stKey = null; return load(); },
     fleet: function () { return JSON.parse(JSON.stringify(load().fleet)); },
     resolve: resolve,
     lay: lay, sortie: sortie,
-    ELEMENTS: ELEMENTS, CLASSES: CLASSES, FRAMES: FRAMES
+    ELEMENTS: ELEMENTS, CLASSES: CLASSES, FRAMES: FRAMES,
+    // Exported for the MARCHES (body/world/marches.js), which promotes these
+    // three from "opponents for a synthesized rival hull" into standing powers
+    // that hold ground. It reads them from here rather than keeping its own
+    // copy so that the creed a wake names and the creed the map shows are one
+    // string — if they ever drifted, the world would be telling two stories
+    // about one enemy.
+    UNALIGNED: UNALIGNED
   };
 })();
