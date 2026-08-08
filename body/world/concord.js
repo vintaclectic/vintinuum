@@ -1274,11 +1274,22 @@
     body.appendChild(el('div', 'cn-sec', 'the table'));
     renderSeats(body, s, ch);
 
-    // 5) THE RECORD
+    // 5) ON THEIR OWN RECOGNIZANCE (organ 5)
+    // The ledger of what your agents did WITHOUT you, and the one control that
+    // stops any of them. It lives HERE, inside the sheet that already exists for
+    // "what your polity did", rather than in a surface of its own — the organ
+    // creates zero DOM by design, and adding an eighth full-width sheet to carry
+    // a list would put a new box into the one-open-at-a-time stack for no reason
+    // a player would thank us for.
+    // Rendered only when the organ has something to say, so a quiet world shows
+    // a quiet sheet instead of an empty heading.
+    renderRecognizance(body);
+
+    // 6) THE RECORD
     body.appendChild(el('div', 'cn-sec', 'the record'));
     renderRecord(body, s);
 
-    // 6) THE DISSOLVE — the resentment escape hatch, always one tap, no penalty
+    // 7) THE DISSOLVE — the resentment escape hatch, always one tap, no penalty
     var dis = el('button', 'cn-dissolve', 'dissolve the concord');
     dis.onclick = function () {
       if (dis.dataset.sure !== '1') {
@@ -1400,6 +1411,115 @@
     var n = el('div', 'cn-note');
     n.textContent = 'the session resolves on the clock, not when you return. close this and they will still decide.';
     body.appendChild(n);
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // ON THEIR OWN RECOGNIZANCE (organ 5) — the ledger, and the one control.
+  //
+  // recognizance.js owns the model and creates no DOM. This is the player's
+  // REACH into it: what was done in your name, by whom, and a single tap that
+  // stops any one of them from doing it again. It is rendered here, inside a
+  // sheet that already exists and is already measured, so the organ still adds
+  // no surface to the one-open-at-a-time stack.
+  //
+  // THE HUSH IS THE RESENTMENT SIGNAL, and it is deliberately per-AGENT rather
+  // than a global switch. A global "turn it off" teaches us nothing except that
+  // someone was annoyed; a per-agent hush tells us WHICH agent's behaviour was
+  // unwelcome, which is the measurement that can actually fix the design. It is
+  // always available, never costs anything, never scolds, and un-hushing is the
+  // same one tap — a control you are afraid to use is not a control.
+  //
+  // NO-COLLISION: every row reuses the seat row's existing grid (cn-seat /
+  // cn-sd / cn-st / cn-sn / cn-ss / cn-sa), so there is not one new box in this
+  // sheet and nothing here can be sized wrong at 320px that was not already
+  // proven right for the seats above it. Long agent names and long act lines
+  // both land in cells that already clip.
+  // ═══════════════════════════════════════════════════════════════════════════
+  function renderRecognizance(body) {
+    var R = W.VintRecognizance;
+    if (!R || !R.enabled || !R.enabled()) return;
+    var rows = [];
+    try { rows = R.ledger(6) || []; } catch (_) { return; }
+    var people = [];
+    try { people = R.deliberants() || []; } catch (_) {}
+    // A quiet world shows nothing rather than an empty heading — the world is
+    // allowed to have had a quiet day, and saying so in a blank panel is worse
+    // than saying nothing.
+    if (!rows.length && !people.some(function (p) { return R.hushed(p.id); })) return;
+
+    body.appendChild(el('div', 'cn-sec', 'on their own recognizance'));
+
+    if (rows.length) {
+      var wrap = el('div', 'cn-seats');
+      rows.forEach(function (r) {
+        var row = el('div', 'cn-seat');
+        row.style.setProperty('--ac', r.color || '#a67cff');
+        row.appendChild(el('div', 'cn-sd', '◈'));
+        var t = el('div', 'cn-st');
+        t.appendChild(el('div', 'cn-sn', r.agent || 'an agent'));       // ← as TEXT
+        // what they did, and how you take it back — the reversal is stated on
+        // the row itself, because an act you cannot see how to undo reads as a
+        // thing done TO you rather than a thing you can answer.
+        t.appendChild(el('div', 'cn-ss', String(r.what || '') + ' · ' + ago(r.t) +
+          ((r.undo && r.undo.how) ? ' · ' + r.undo.how : '')));
+        row.appendChild(t);
+        var isH = false; try { isH = !!R.hushed(r.agentId); } catch (_) {}
+        var b = el('button', 'cn-sa' + (isH ? '' : ' out'), isH ? 'let them act' : 'hush');
+        b.setAttribute('aria-label', (isH ? 'let ' : 'hush ') + (r.agent || 'this agent'));
+        b.onclick = function () {
+          try { R.hush(r.agentId, isH ? false : true); } catch (_) {}
+          toast(isH ? (r.agent || 'they') + ' may act again.'
+                    : (r.agent || 'they') + ' will not act on their own again until you say so.');
+          render();
+        };
+        row.appendChild(b);
+        wrap.appendChild(row);
+      });
+      body.appendChild(wrap);
+    }
+
+    // Anyone currently hushed who has no row in the visible window still needs a
+    // way back — otherwise hushing an agent and then scrolling past its last act
+    // would strand it silent with no control anywhere. A hush you cannot find is
+    // a hush you cannot undo.
+    var stranded = people.filter(function (p) {
+      if (!R.hushed(p.id)) return false;
+      return !rows.some(function (r) { return r.agentId === p.id; });
+    });
+    if (stranded.length) {
+      var w2 = el('div', 'cn-seats');
+      stranded.forEach(function (p) {
+        var row2 = el('div', 'cn-seat');
+        row2.style.setProperty('--ac', p.color || '#a67cff');
+        row2.appendChild(el('div', 'cn-sd', '◇'));
+        var t2 = el('div', 'cn-st');
+        t2.appendChild(el('div', 'cn-sn', p.name || 'an agent'));       // ← as TEXT
+        t2.appendChild(el('div', 'cn-ss', 'hushed — they will not act on their own'));
+        row2.appendChild(t2);
+        var b2 = el('button', 'cn-sa', 'let them act');
+        b2.setAttribute('aria-label', 'let ' + (p.name || 'this agent') + ' act');
+        b2.onclick = function () {
+          try { R.hush(p.id, false); } catch (_) {}
+          toast((p.name || 'they') + ' may act again.');
+          render();
+        };
+        row2.appendChild(b2);
+        w2.appendChild(row2);
+      });
+      body.appendChild(w2);
+    }
+    try { R.markSeen(); } catch (_) {}
+  }
+
+  // a plain, short elapsed-time phrase. No library, no ceremony.
+  function ago(t) {
+    var d = Math.max(0, Date.now() - (t || 0));
+    var m = Math.floor(d / 60000);
+    if (m < 1) return 'just now';
+    if (m < 60) return m + 'm ago';
+    var h = Math.floor(m / 60);
+    if (h < 24) return h + 'h ago';
+    return Math.floor(h / 24) + 'd ago';
   }
 
   function renderSeats(body, s, ch) {

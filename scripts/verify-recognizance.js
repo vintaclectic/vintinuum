@@ -572,6 +572,46 @@ const MIME = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css
           const fr = feed.getBoundingClientRect();
           out.feedInViewport = fr.left >= 0 && fr.right <= window.innerWidth + 1 && fr.top >= 0;
         }
+
+        // ── THE PLAYER'S REACH ───────────────────────────────────────────────
+        // The ledger + hush live inside the Concord's EXISTING sheet, so this
+        // leg opens that sheet and proves: the section renders, every row fits
+        // at 320px, and the hush control actually takes.
+        C.open();
+        await new Promise(r => setTimeout(r, 400));
+        const sheet = document.getElementById('cnSheet');
+        out.sheetOpen = !!(sheet && sheet.classList.contains('open'));
+        const secs = Array.from(sheet ? sheet.querySelectorAll('.cn-sec') : [])
+          .map(x => x.textContent);
+        out.hasRecogSection = secs.indexOf('on their own recognizance') >= 0;
+        out.sections = secs;
+        // NOTHING in the sheet may exceed the sheet's own width at 320
+        if (sheet) {
+          const sr = sheet.getBoundingClientRect();
+          out.sheetW = Math.round(sr.width);
+          let bleed = 0;
+          sheet.querySelectorAll('.cn-seat, .cn-sn, .cn-ss, .cn-sa').forEach(el2 => {
+            const r2 = el2.getBoundingClientRect();
+            if (r2.right > sr.right + 1 || r2.left < sr.left - 1) bleed++;
+          });
+          out.bleed = bleed;
+        }
+        // the hush control is reachable and it TAKES
+        const hushBtn = Array.from(sheet ? sheet.querySelectorAll('.cn-sa') : [])
+          .filter(x => x.textContent === 'hush')[0];
+        out.hushReachable = !!hushBtn;
+        if (hushBtn) {
+          const who = R.ledger(1)[0] && R.ledger(1)[0].agentId;
+          hushBtn.click();
+          await new Promise(r => setTimeout(r, 250));
+          out.hushTook = R.hushed(who) === true;
+          // and it is reversible in one tap, from the same place
+          const back = Array.from(sheet.querySelectorAll('.cn-sa'))
+            .filter(x => x.textContent === 'let them act')[0];
+          out.unhushReachable = !!back;
+          if (back) { back.click(); await new Promise(r => setTimeout(r, 250)); out.unhushTook = R.hushed(who) === false; }
+        }
+        C.close();
         // no fixed element of its own, anywhere
         out.ownFixed = 0;
         document.querySelectorAll('[id^="rc"],[id^="recog"]').forEach(el => {
@@ -606,6 +646,16 @@ const MIME = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css
         res.doubledName === false, JSON.stringify(res.feedText));
       ok('the feed stayed inside the viewport (no overflow at 320px)',
         res.feedInViewport === true);
+      // the player's reach, inside a sheet that already existed
+      ok('the Concord sheet opens', res.sheetOpen === true);
+      ok('"on their own recognizance" renders inside it (no NEW sheet was needed)',
+        res.hasRecogSection === true, JSON.stringify(res.sections));
+      ok('NOTHING in the section bleeds past the sheet at 320px',
+        res.bleed === 0, 'bleeding elements=' + res.bleed + ' sheetW=' + res.sheetW);
+      ok('the hush control is reachable from the ledger row', res.hushReachable === true);
+      ok('tapping hush TAKES (the agent will not act again)', res.hushTook === true);
+      ok('un-hushing is the same one tap, in the same place', res.unhushReachable === true);
+      ok('and un-hushing takes (never a trap)', res.unhushTook === true);
     }
     await pg.close();
   } catch (e) {
