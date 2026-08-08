@@ -93,6 +93,16 @@ const SURFACES = [
   // precondition below covers it, and the button is waited on for VISIBILITY
   // rather than mere existence.
   { id: 'admiralty', sel: '#adSheet',     btn: '#adBtn',      open: () => window.VintAdmiralty.open() },
+  // THE MARCHES. An eighth full-width sheet in the same z-band, through the same
+  // registry (registerSheet/openSheet), so it belongs here for exactly the reason
+  // the lanterns, the Concord and the yard did: the whole point of this script is
+  // that a NEW surface must never silently join a stack it was never measured
+  // against. Its launcher is conditionally hidden on the same rule the Concord's
+  // is (it appears only in a world you can build in), so the same precondition
+  // below covers it, and the button is waited on for VISIBILITY rather than mere
+  // existence. Its map is a 2-col grid that collapses to 1 col below 360px, which
+  // is precisely the kind of claim a 320px sweep exists to hold to.
+  { id: 'marches',  sel: '#mrSheet',      btn: '#mrBtn',      open: () => window.VintMarches.open() },
 ];
 
 const MIME = {
@@ -417,7 +427,7 @@ const TOKEN_KEYS = ['vint_token', 'vintinuum_token', 'token', 'vint_jwt'];
     // the modules that own the surfaces rather than for a flat clock.
     await page.waitForFunction(
       () => window.DirverseHUD && window.VintCourt && window.DirHavenDoor && window.VintTraces
-            && window.VintConcord && window.VintAdmiralty,
+            && window.VintConcord && window.VintAdmiralty && window.VintMarches,
       { timeout: 20000 }
     ).catch(() => {});
     // ── STAND IN A PERSON'S WORLD, NOT THE HUB ────────────────────────────────
@@ -467,6 +477,17 @@ const TOKEN_KEYS = ['vint_token', 'vintinuum_token', 'token', 'vint_jwt'];
         // which is a real render at full sheet height and exactly the layout
         // this proof is measuring.
         if (window.VintAdmiralty && window.VintAdmiralty.refresh) window.VintAdmiralty.refresh();
+        // ── THE MARCHES' precondition ────────────────────────────────────────
+        // Identical rule to the Concord's and the yard's, for the identical
+        // reason: your borders do not follow you into a stranger's clearing, so
+        // the launcher is correctly hidden in the hub and in a world you cannot
+        // build in. The named, buildable world set above IS the state in which
+        // this surface is reachable, which is the state its collisions matter
+        // in. Nothing here fakes the SHEET, a bond or a deed: with no Concord
+        // founded the sheet correctly renders its "ground answers to a polity"
+        // state, which is a real render at full sheet height and exactly the
+        // layout this proof measures.
+        if (window.VintMarches && window.VintMarches.refresh) window.VintMarches.refresh();
         // ask the module to re-decide, rather than setting display ourselves
         if (window.VintTraces && window.VintTraces.refresh) window.VintTraces.refresh();
       } catch (_) {}

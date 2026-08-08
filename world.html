@@ -384,6 +384,26 @@
      home · lanterns · covenant · reckoning · concord · yard. Adds no fixed element of its own;
      its sheet carries .dv-sheet so layoutRail's yield clears it automatically. -->
 <script src="body/world/admiralty.js"></script>
+<!-- THE MARCHES — allegiance and territory: the connective tissue BETWEEN the
+     polity and the war. It introduces no third kingdom — no combat model, no
+     second treasury, no second ladder, no second roster — and supplies the two
+     nouns neither organ below it could own alone: a RELATION, which belongs to
+     a PAIR (keyed by the sorted pair, so a one-way alliance is structurally
+     unrepresentable and "allied AND at war" has no moment in which it could
+     exist), and a TERRITORY, whose owner is ONE field with ONE writer, so two
+     factions can never both believe they hold the same ground. Its factions are
+     RECOGNISED, never invented: faction A is your Concord (members = its live
+     bench), and the rest are admiralty.js's own unaligned powers, crewed by the
+     agents who walked out of your table. A march changes hands ONLY through the
+     Admiralty's wake — this file listens for 'vint:admiralty-wake' and moves one
+     field; it never rolls its own war. Loads AFTER admiralty.js because it is
+     strictly downstream of both: it spends the Concord's treasury, reads its
+     bench/exiles/standing/tags, presses the same seven karma tags through
+     VintConcord's guarded verbs, and consumes VintAdmiralty.sortie() for every
+     war. Rail order becomes: star-map · agents · court · home · lanterns ·
+     covenant · reckoning · concord · yard · marches. Adds no fixed element of
+     its own; its sheet carries .dv-sheet so layoutRail's yield clears it. -->
+<script src="body/world/marches.js"></script>
 <!-- RECOGNIZANCE — the organ that turns ambient motion into AGENCY. agent-life
      already gave the clearing beautiful decoration (wander, muse, regard); this
      makes a seated agent CHANGE DURABLE WORLD STATE unprompted — table a motion,
