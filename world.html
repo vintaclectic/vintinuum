@@ -384,6 +384,21 @@
      home · lanterns · covenant · reckoning · concord · yard. Adds no fixed element of its own;
      its sheet carries .dv-sheet so layoutRail's yield clears it automatically. -->
 <script src="body/world/admiralty.js"></script>
+<!-- RECOGNIZANCE — the organ that turns ambient motion into AGENCY. agent-life
+     already gave the clearing beautiful decoration (wander, muse, regard); this
+     makes a seated agent CHANGE DURABLE WORLD STATE unprompted — table a motion,
+     lay a keel, send a line — through the SAME functions the player's own
+     buttons call, so there are no private rules for agents. Loads AFTER concord
+     and admiralty because it is strictly downstream of both (it tables through
+     VintConcord.table, builds through VintAdmiralty.lay, and reverses through
+     their two new verbs, strike/breakKeel/recallSortie). It owns no second loop:
+     agent-life.js's existing per-frame tick calls VintRecognizance.consider(),
+     and the only timer here is the same background beat the Concord and the
+     Admiralty already keep, so a world still moves in a backgrounded tab.
+     ADDS NOTHING TO THE DOM — no element, no style rule, no fixed position, no
+     sheet. Its only visible output is the ONE shared toast and an event any HUD
+     may listen to, so it cannot collide with anything by construction. -->
+<script src="body/world/recognizance.js"></script>
 <script>
 (function () {
   const statusEl = document.getElementById('status');

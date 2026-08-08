@@ -480,6 +480,14 @@
     try { if (c && c.spend) return c.spend(n, why); } catch (_) {}
     return false;
   }
+  // The other direction, through the same owner, for the same reason. Used only
+  // by the two reversal verbs below (breakKeel / recallSortie): a refund is a
+  // credit and it must go through the balance's one writer.
+  function credit(n, why) {
+    var c = concord();
+    try { if (c && c.credit) return c.credit(n, why); } catch (_) {}
+    return false;
+  }
   // Move the SAME seven karma tags the Concord keeps. A launch and a war are
   // political acts and the polity's own bars must show it.
   function impress(press, mult) {
@@ -1138,6 +1146,57 @@
     };
     save();
     return { ok: true };
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // THE TWO REVERSALS — added when RECOGNIZANCE landed.
+  //
+  // Once an agent can lay a keel or send a line ON ITS OWN, the player must be
+  // able to answer it through the same yard, immediately, for a full refund.
+  // That is the "reversible by play" law: everything a mind takes, a player can
+  // contest through the SAME systems — never by waiting out a clock and never
+  // by paying to fix it.
+  //
+  // Both live here rather than in recognizance.js because the yard is this
+  // file's to own, and both refund through the Concord's guarded verb rather
+  // than writing a lumen number, which is the same discipline `spend` follows.
+  // Both are unprivileged: they reverse a keel or a sortie whether the player
+  // ordered it or an agent did. There is no rule here that applies to agents
+  // and not to you.
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  // BREAK UP THE KEEL. The hull was never launched, so nothing the player made
+  // is destroyed — the stocks go empty and the lumen comes home. Work already
+  // done is lost, which is the honest cost of changing your mind, and it is the
+  // only cost.
+  function breakKeel() {
+    var s = load();
+    if (!s.keel) return false;
+    var refund = s.keel.cost || 0;
+    s.keel = null;
+    save();
+    if (refund) credit(refund, 'a keel broken up');
+    try {
+      W.dispatchEvent(new CustomEvent('vint:admiralty-keel-broken', { detail: { refund: refund } }));
+    } catch (_) {}
+    if (isOpen()) render();
+    updateLauncher();
+    return true;
+  }
+
+  // CALL THE LINE HOME. Only possible before the wake resolves — once the
+  // engagement has been fought, its result is history and history is not
+  // editable. Every hull returns unmarked: a recalled sortie never happened.
+  function recallSortie() {
+    var s = load();
+    if (!s.sortie) return false;
+    if (Date.now() >= s.sortie.closes) return false;   // already fought; history stands
+    s.sortie = null;
+    save();
+    try { W.dispatchEvent(new CustomEvent('vint:admiralty-sortie-recalled', { detail: {} })); } catch (_) {}
+    if (isOpen()) render();
+    updateLauncher();
+    return true;
   }
 
   // Resolve the sortie against wall-clock. An engagement fought while the tab
@@ -2159,6 +2218,9 @@
     fleet: function () { return JSON.parse(JSON.stringify(load().fleet)); },
     resolve: resolve,
     lay: lay, sortie: sortie,
+    // the two reversals, exported for recognizance.js's recall — and for any
+    // future surface that needs to let a player answer their own yard.
+    breakKeel: breakKeel, recallSortie: recallSortie,
     ELEMENTS: ELEMENTS, CLASSES: CLASSES, FRAMES: FRAMES
   };
 })();

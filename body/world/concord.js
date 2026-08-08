@@ -1540,6 +1540,44 @@
     }
   }
 
+  // ═══════════════════════════════════════════════════════════════════════════
+  // STRIKE — pull a motion back off the floor before it resolves.
+  //
+  // Added when RECOGNIZANCE landed (body/world/recognizance.js): once agents can
+  // TABLE motions on their own account, the player needs a way to say no that is
+  // not "dissolve my entire government". Without this, an agent tabling a levy
+  // you did not want would be a thing only time could fix, and "wait twenty
+  // minutes" is not a counter-play — it is a punishment.
+  //
+  // It lives HERE, not in recognizance.js, for the same reason the treasury's
+  // two writers do: the floor is the Concord's to own, and an organ that reached
+  // in and cleared `s.motion` itself would be a second writer of one state. The
+  // refund goes back through creditTreasury for the identical reason.
+  //
+  // Note it is symmetrical and unprivileged: it strikes ANY motion on the floor,
+  // whether the player tabled it or an agent did. There is no rule here that
+  // applies to agents and not to you.
+  // ═══════════════════════════════════════════════════════════════════════════
+  function strike(refund) {
+    var s = load();
+    if (!s.motion) return { ok: false, why: 'empty' };
+    var m = s.motion;
+    s.motion = null;
+    // the lumen it cost to put there comes home unless the caller says otherwise
+    if (refund !== false && m.cost) s.treasury += m.cost;
+    s.record.unshift({
+      k: m.k, at: Date.now(), passed: false, struck: true,
+      effect: 'the motion was struck from the floor before the table spoke.',
+      aye: 0, nay: 0, abstain: 0, votes: [],
+      target: m.target || null, cost: 0
+    });
+    while (s.record.length > recordCap()) s.record.pop();
+    save();
+    if (isOpen()) render();
+    updateLauncher();
+    return { ok: true, kind: m.k, refunded: (refund !== false ? (m.cost || 0) : 0) };
+  }
+
   function dissolve() {
     var s = load();
     // Nothing is destroyed. The seats empty, the exiles come home, the record
@@ -1753,6 +1791,12 @@
     disposition: dispositionOf,
     resolve: resolve,
     founded: founded,
+    // TABLE + STRIKE — the floor's two verbs, exported together on purpose.
+    // recognizance.js tables through the SAME function the player's own picker
+    // calls (there are no private rules for agents), and strike() is the
+    // counter-play that keeps that reversible by play rather than by waiting.
+    table: table,
+    strike: strike,
     // ── THE ORGAN SURFACE (added for admiralty.js) ──────────────────────────
     // Everything an organ built on this spine needs, so that NOTHING downstream
     // ever re-derives a disposition, re-walks the roster, re-reads the resident

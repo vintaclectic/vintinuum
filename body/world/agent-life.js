@@ -14,6 +14,12 @@
                                             you can actually be heard by them
      • a LISTENING/SPEAKING arc          — when you say something the nearest one
                                             turns, gathers a thinking-shimmer, then speaks
+     • RECOGNIZANCE                      — the one that is not decoration: an
+                                            agent breaks off what it is doing,
+                                            RESOLVES, and changes durable world
+                                            state (tables a motion, lays a keel,
+                                            sends a line) through the player's own
+                                            instruments. See the note at _resolveGate.
 
    Design law: all per-frame work is cheap (a handful of vec math per agent, one
    shared instanced wisp buffer, no allocations in the loop). 60fps target holds
@@ -116,7 +122,8 @@
     const home = { x: A.group.position.x, z: A.group.position.z };
     b = {
       p, home,
-      state: 'rest',           // 'rest' | 'travel' | 'listen' | 'speak'
+      state: 'rest',           // 'rest' | 'travel' | 'listen' | 'speak' | 'resolve'
+      resolveT: 0,             // the recognizance tell: a held beat of deliberation
       restT: p.restMin + Math.random() * (p.restMax - p.restMin),
       phase: Math.random() * Math.PI * 2,   // personal clock offset (no synced bobbing)
       lookYaw: A.group.rotation.y,
@@ -198,10 +205,66 @@
     b.state = 'travel';
   }
 
+  // ── RECOGNIZANCE — where ambient motion becomes AGENCY ───────────────────────
+  //
+  // THE DISTINCTION THIS BLOCK EXISTS TO DRAW. Everything above this line is
+  // beautiful decoration: a wander is a lerp, a muse-wisp is a particle, an idle
+  // ritual is a sine wave. Close the tab and none of it ever happened.
+  //
+  // Recognizance is the other thing: an agent, unprompted, CHANGES DURABLE WORLD
+  // STATE — it tables a motion in your Concord, lays a keel in your yard, sends
+  // your line to sea — through the SAME functions your own buttons call. The
+  // decision itself is NOT made here; it lives in body/world/recognizance.js as
+  // a pure, seed-deterministic, headless function, because a decision that only
+  // exists inside a render loop cannot be proven and cannot move a world whose
+  // tab is in the background.
+  //
+  // What lives HERE is the only part that belongs to the body: the loop hook
+  // (this file already ticks every frame — the brief was explicit that there
+  // must not be a second loop), and the VISIBLE TELL. When a mind is about to
+  // act, it stops, it holds, it thinks in front of you. An act you never saw
+  // anyone decide is indistinguishable from a scripted event; an act you watched
+  // someone stand still and reach for is a being with a will.
+  //
+  // Cost discipline: the gate below fires at most once every RESOLVE_EVERY
+  // seconds no matter the frame rate, and consider() itself short-circuits on a
+  // wall-clock cooldown before it builds a snapshot — so the per-frame cost of
+  // this entire feature, in the overwhelmingly common case, is one subtraction.
+  const RESOLVE_EVERY = 6.0;    // seconds between offers to the engine
+  let _resolveGate = RESOLVE_EVERY;
+
+  function _recognizance() { return global.VintRecognizance; }
+
+  // The tell: give the acting agent a beat of held, lit deliberation, so the
+  // player can SEE which mind moved. Uses the states and helpers this file
+  // already owns — no new visual system, no new element, nothing added to the
+  // DOM (the No-Collision Law holds by adding nothing at all).
+  function _markResolved(row) {
+    if (!row || !agents) return;
+    const A = agents.get(row.agentId) ||
+              (AL.idForName(row.agentName) ? agents.get(AL.idForName(row.agentName)) : null);
+    if (!A) return;
+    const b = _brainFor(row.agentId, A);
+    b.state = 'resolve';
+    b.resolveT = 2.6;
+    _emitWisp(A.group.position.x, 1.95, A.group.position.z, b.p.museHue, 3);
+  }
+
   // ── the per-frame drive ──────────────────────────────────────────────────────
   AL.tick = function (dt, tnow) {
     if (!_initialized || !agents) return;
     const P = getPlayer ? getPlayer() : { x: 0, z: 0 };
+
+    // THE HOOK. One counter, one call, on the loop that already runs. The engine
+    // decides everything; this file only asks, and only this often.
+    _resolveGate -= dt;
+    if (_resolveGate <= 0) {
+      _resolveGate = RESOLVE_EVERY;
+      const R = _recognizance();
+      if (R && R.enabled()) {
+        try { const row = R.consider(); if (row) _markResolved(row); } catch (_) {}
+      }
+    }
     for (const [id, A] of agents) {
       const b = _brainFor(id, A);
       b.breath += dt;
@@ -226,6 +289,19 @@
         _pulseGlow(A, b, 1.55 + 0.35 * Math.sin(tnow * 9), dt);
         _thinkWisp(id, g, b, dt, tnow);
         if (b.listenT <= 0) { b.state = 'rest'; b.restT = 1.2; }
+        continue;
+      }
+      if (b.state === 'resolve') {
+        // A MIND THAT JUST ACTED. It does not turn to you — that is the whole
+        // point of the tell. It squares to the centre of the clearing, where the
+        // table is, holds, and burns brighter than it does for you. The player
+        // reads "that one did something, and it did not do it for me," which is
+        // the exact feeling this organ exists to produce.
+        b.resolveT -= dt;
+        _faceToward(g, ANCHORS.center.x, ANCHORS.center.z, dt, 0.9);
+        _pulseGlow(A, b, 1.85 + 0.30 * Math.sin(tnow * 6.5), dt);
+        _thinkWisp(id, g, b, dt, tnow);
+        if (b.resolveT <= 0) { b.state = 'rest'; b.restT = 2.4; }
         continue;
       }
       if (b.state === 'speak') {
