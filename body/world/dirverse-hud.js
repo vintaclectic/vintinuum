@@ -1943,6 +1943,52 @@
           if (spill) cl.remove('dv-rail-wrap');
         }
       }
+
+      // ── THE LAST LAUNCHER MUST BE REACHABLE (2026-08-08, organ 6) ─────────
+      // The ladder above (compact → tight → wrap) has a real floor, and when
+      // every rung is exhausted the rail falls back to a single-column SCROLL.
+      // That fallback is bounded and honest — but a scroll container opens a gap
+      // between "rendered" and "reachable", and nothing was closing it.
+      //
+      // MEASURED at 320x568 with every conditional launcher visible (a named
+      // buildable world at standing 400, i.e. twelve launchers): the rail's box
+      // is top 335 -> bottom 560 (225px tall) with scrollHeight 522 and
+      // scrollTop 0, while the launchers painted from 518 all the way up to -10.
+      // The newest one sat 345px above the rail's own top edge, off the viewport
+      // entirely, with elementFromPoint returning #stage at its centre —
+      // rendered, reported visible by getComputedStyle, and completely
+      // unhittable. That is exactly the dead control the no-collision law
+      // forbids, and it is the failure mode that gets WORSE with every launcher
+      // anyone adds — which is precisely why it belongs in the rail that
+      // measures, not in each module hand-counting its neighbours.
+      //
+      // COLUMN-REVERSE INVERTS THE SCROLL ORIGIN, and that is the subtlety that
+      // makes the obvious fix a silent no-op. In a column-reverse flex container
+      // the scroll origin is the BOTTOM: the resting position is scrollTop 0
+      // showing the FIRST flow child at the bottom edge, and the overflow runs
+      // off the TOP. So `scrollTop -= delta` — the intuitive move, and the one a
+      // column-normal rail would need — walks the wrong way and clamps at 0.
+      //
+      // scrollIntoView() is used instead of hand-computed arithmetic because it
+      // is the one call that is correct in BOTH orientations: if this rail ever
+      // stops being column-reverse, or a browser normalises the origin, it keeps
+      // working rather than silently inverting again. `block:'nearest'`
+      // guarantees it does nothing when the element is already fully inside, so
+      // this is a true no-op at every viewport that already fits.
+      if (!cl.contains('dv-rail-wrap') && _rail.scrollHeight > _rail.clientHeight + 1) {
+        var lasts = _rail.querySelectorAll('.dv-launch');
+        var lastVis = null;
+        for (var qi = lasts.length - 1; qi >= 0; qi--) {
+          if (lasts[qi].offsetParent !== null) { lastVis = lasts[qi]; break; }
+        }
+        if (lastVis) {
+          var rb2 = _rail.getBoundingClientRect();
+          var lb2 = lastVis.getBoundingClientRect();
+          if (lb2.top < rb2.top - 1 || lb2.bottom > rb2.bottom + 1) {
+            try { lastVis.scrollIntoView({ block: 'nearest', inline: 'nearest' }); } catch (_) {}
+          }
+        }
+      }
     } catch (_) {}
   }
   var _layoutT = null;
