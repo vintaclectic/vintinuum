@@ -93,6 +93,16 @@ const SURFACES = [
   // precondition below covers it, and the button is waited on for VISIBILITY
   // rather than mere existence.
   { id: 'admiralty', sel: '#adSheet',     btn: '#adBtn',      open: () => window.VintAdmiralty.open() },
+  // THE ARCADE (organ 6). An eighth full-width sheet in the same z-band through
+  // the same registry, so it belongs here for exactly the reason the lanterns,
+  // the Concord and the Admiralty did: the whole point of this script is that a
+  // NEW surface must never silently join a stack it was never measured against.
+  // Unlike those three its launcher is NOT conditionally hidden — a hall is
+  // public by nature and is the one in-world route to the DirHaven engine and
+  // to DirRM, so it must be reachable from a cold load in the hub. That means
+  // it needs no precondition below; it is visible in every state this sweep
+  // runs in, which is strictly the harder case to keep clean.
+  { id: 'arcade',   sel: '#arSheet',      btn: '#arBtn',      open: () => window.VintArcade.open() },
 ];
 
 const MIME = {
@@ -417,7 +427,7 @@ const TOKEN_KEYS = ['vint_token', 'vintinuum_token', 'token', 'vint_jwt'];
     // the modules that own the surfaces rather than for a flat clock.
     await page.waitForFunction(
       () => window.DirverseHUD && window.VintCourt && window.DirHavenDoor && window.VintTraces
-            && window.VintConcord && window.VintAdmiralty,
+            && window.VintConcord && window.VintAdmiralty && window.VintArcade,
       { timeout: 20000 }
     ).catch(() => {});
     // ── STAND IN A PERSON'S WORLD, NOT THE HUB ────────────────────────────────
