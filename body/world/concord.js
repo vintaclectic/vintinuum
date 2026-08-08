@@ -136,11 +136,24 @@
 // This file NEVER concatenates one into innerHTML. Static markup only; every
 // name and every authored string enters through textContent, at the leaf.
 // ════════════════════════════════════════════════════════════════════════════
-(function () {
+//
+// ── HEADLESS (added for organ 5) ────────────────────────────────────────────
+// The MODEL half of this file — dispositionOf, voteOf, table, resolve, the
+// treasury's two writers — now runs with no DOM at all, so a proof script can
+// assert against THIS code rather than a re-implementation of it. Nothing about
+// the shipped browser path changed: with a DOM, `HAS_DOM` is true and every
+// line below runs exactly as it did. Without one, the surface half is skipped
+// and the model half is exported through `module.exports`. This is the same
+// shape factions.js uses, for the same reason.
+(function (root, factory) {
   'use strict';
-  if (window.VintConcord) return;
+  var api = factory(root);
+  if (typeof module === 'object' && module.exports) module.exports = api;
+})(typeof window !== 'undefined' ? window : globalThis, function (W) {
+  'use strict';
+  var HAS_DOM = typeof document !== 'undefined' && !!(document && document.createElement);
+  if (HAS_DOM && W.VintConcord) return W.VintConcord;
 
-  var W = window;
   function world() { return W.VintinuumWorld; }
   function hud() { return W.DirverseHUD; }
   function court() { return W.VintCourt; }
@@ -1638,6 +1651,30 @@
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
+  // THE HEADLESS BOUNDARY (added for organ 5)
+  //
+  // Everything ABOVE this line is the polity's MODEL: the charters, the seven
+  // tags, dispositionOf, voteOf, table(), resolve(), the treasury's two writers.
+  // Everything BELOW is SURFACE: the sheet, the styles, the rail launcher, and
+  // the wiring that keeps them fresh.
+  //
+  // With a DOM, nothing changes — we fall straight through and the browser gets
+  // the file it always got. Without one, we hand back the model and stop, so a
+  // proof script can drive the REAL vote arithmetic instead of a copy of it.
+  // The API object is assembled by buildAPI() (declared below and hoisted), so
+  // there is exactly ONE definition of the public surface, shared by both paths.
+  // ═══════════════════════════════════════════════════════════════════════════
+  if (!HAS_DOM) {
+    var headless = buildAPI();
+    // stubs for the surface half, so an organ may call them unguarded
+    headless.open = function () {}; headless.close = function () {};
+    headless.isOpen = function () { return false; };
+    headless.render = function () {}; headless.refresh = function () {};
+    W.VintConcord = headless;
+    return headless;
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
   // WIRING
   // ═══════════════════════════════════════════════════════════════════════════
   // A world:state can change standing, lumen and canBuild — all three gate this
@@ -1742,7 +1779,10 @@
     return true;
   }
 
-  W.VintConcord = {
+  // ONE definition of the public surface, used by BOTH the headless bail-out
+  // above and the browser path below. A function declaration so it hoists past
+  // the headless boundary — there is no second copy of this object anywhere.
+  function buildAPI() { return {
     open: open, close: close, isOpen: isOpen, enabled: enabled,
     render: render, refresh: updateLauncher,
     // exported for the one-sheet proof and for future organs (war, ships,
@@ -1753,6 +1793,27 @@
     disposition: dispositionOf,
     resolve: resolve,
     founded: founded,
+    // ── THE FLOOR, LENT (organ 5) ───────────────────────────────────────────
+    // `table()` is the EXACT verb the player's own "put it to the table" button
+    // reaches (see the sheet's handler ~line 1368). It is exported here — not
+    // duplicated — so that an agent acting on its own recognizance walks through
+    // the same door the player does: the same charter check, the same standing
+    // gate, the same treasury cost, the same one-motion-at-a-time floor. There
+    // is deliberately NO agent-only variant. If the charter forbids a motion,
+    // it forbids it for your treasurer exactly as it forbids it for you, and the
+    // refusal comes back as the same {ok:false, why} row.
+    // Also exported: `votes()`, so a surface can show who is going to say what
+    // BEFORE the floor closes — an open loop with a name on it.
+    table: table,
+    motion: function () { var m = load().motion; return m ? JSON.parse(JSON.stringify(m)) : null; },
+    // DROP THE MEMO. `load()` caches the polity per world key and only
+    // invalidates on world-travel, which is right for the render path and wrong
+    // for anyone who writes the store from outside (a proof harness, a restore,
+    // a second tab). Without this, a caller that writes `vint:concord:<world>`
+    // and then asks `founded()` gets the STALE blank the module read first —
+    // a silent, hard-to-see wrong answer rather than an error. One call, and
+    // the very next read comes off storage.
+    reload: function () { _st = null; _stKey = null; return load(); },
     // ── THE ORGAN SURFACE (added for admiralty.js) ──────────────────────────
     // Everything an organ built on this spine needs, so that NOTHING downstream
     // ever re-derives a disposition, re-walks the roster, re-reads the resident
@@ -1787,5 +1848,8 @@
     credit: creditTreasury,
     impress: impressTags,
     CHARTERS: CHARTERS, MOTIONS: MOTIONS, TAGS: TAGS
-  };
-})();
+  }; }
+
+  W.VintConcord = buildAPI();
+  return W.VintConcord;
+});

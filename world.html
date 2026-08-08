@@ -427,6 +427,40 @@
      ── KILL SWITCH: ?recog=0 (read live, never latched). Resentment signal:
      VintRecognizance.hush(agentId), one call, always available, never punished. -->
 <script src="body/world/recognizance.js"></script>
+<!-- THE DIRRM LAUNCHER — the ONE media surface. (organ 6)
+     Standing law (OPERATIONS.md § DirRM Player): anywhere in Vintinuum that
+     plays or could play media routes through the canonical player. world.html
+     had NO media path at all, which is why no raw <video>/<audio> ever crept
+     in — but "no path" is not the same as "the right path", and organ 6 opens
+     one (the arcade's marquee reel). So the launcher is loaded HERE, once, at
+     the world level, rather than each surface inventing its own.
+     `defer` is load-bearing: this is a UMD library with zero side effects
+     beyond defining window.dirrmLaunch, so it must never block the world's
+     first frame. Nothing WAITS on it either — arcade.js's ensureDirrm() finds
+     it if it is here and injects it if it is not, so either order works and
+     no cold-load cost is paid by a player who never asks for media. -->
+<script defer src="dirrm-launch.js"></script>
+<!-- THE ARCADE — the world becomes a PLACE THAT CONTAINS GAMES. (organ 6)
+     The one diegetic hall from which every side-engine is reachable, so that
+     "walk to it" is literal and there is exactly ONE such place instead of a
+     launcher per engine sprouting on the rail forever. It holds three doors:
+     AGENTIS GAMING (native cabinets your real court plays on the clock, scored
+     on the same seven-tag karma spine, wagering the Concord's ONE treasury
+     through its guarded verbs), THE DIRHAVEN APP (hands off to
+     dirhaven-door.js — a second ROUTE, never a second implementation), and THE
+     MARQUEE (attract reel, through DirRM and nothing else — this file contains
+     no <video> and no <audio>, by law and by grep).
+     Loads LAST because it is downstream of everything: Court for the roster,
+     Concord for dispositions/treasury/karma, DirHavenDoor for the app, and
+     dirrm-launch for media. It is deliberately a no-op when they are absent.
+     ── NO-COLLISION: adds ZERO fixed elements. Its launcher is a flow child of
+     #dvRail via addLauncher(); its sheet carries .dv-sheet and joins the
+     one-open-at-a-time registry via registerSheet('arcade'), so opening it
+     evicts whatever is up, Escape closes it, and the scrim tracks it. It
+     CLOSES itself before raising the DirRM player or the DirHaven door, so a
+     z9999 player iframe can never share pixels with a z1600 sheet.
+     ── KILL SWITCH: ?arcade=0 (read live, never latched). -->
+<script src="body/world/arcade.js"></script>
 <script>
 (function () {
   const statusEl = document.getElementById('status');
