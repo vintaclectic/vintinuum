@@ -683,6 +683,13 @@
           if (selfPrefix && u.id.startsWith(selfPrefix)) return; // stale ghost of me
           let O = others.get(u.id);
           if (!O) { const g = _makeUserPresence(u.name); g.position.set(u.x, 0, u.z); scene.add(g); O = { group: g, target: {} }; others.set(u.id, O); }
+          // THE NAME IS PART OF THE PRESENCE (2026-08-08). It used to be baked
+          // only into the sprite label, which meant the only way to know who a
+          // body was, was to read pixels. The Reckoning has to name a person
+          // before it will let you touch them ("you are about to kill <name>"),
+          // so the name lives on the record itself and is refreshed every tick
+          // in case a peer renames mid-session.
+          O.name = u.name || O.name || 'someone';
           O.target = { x: u.x, y: (u.y||0), z: u.z, yaw: u.yaw };
           O.voiceOn = !!u.voiceOn; O.voiceRange = u.voiceRange || 'normal';
           // connect voice if they (or we) are transmitting
@@ -752,6 +759,35 @@
     } else if (m.t === 'world:struct') {
       _renderStruct(m.struct);
       try { window.dispatchEvent(new CustomEvent('vint:world-struct', { detail: m.struct })); } catch (_) {}
+    } else if (m.t === 'world:soil:ok') {
+      // ── THE COVENANTS: what ground am I on, and what can it cost me ─────────
+      // Relayed verbatim. The client NEVER derives soil, violence or risk — the
+      // server is the only thing that knows, so the HUD can never tell a player
+      // they are safe when the server disagrees. (See body/world/covenants-hud.js)
+      World._soil = m;
+      try { window.dispatchEvent(new CustomEvent('vint:world-soil', { detail: m })); } catch (_) {}
+    } else if (m.t === 'world:died') {
+      // Being killed is a MOMENT and it gets words — who, what it cost, and the
+      // bounded promise that the world itself is untouched. Never a number that
+      // quietly changed.
+      try { window.dispatchEvent(new CustomEvent('vint:world-died', { detail: m })); } catch (_) {}
+    } else if (m.t === 'world:covenant:ok') {
+      try { window.dispatchEvent(new CustomEvent('vint:world-covenant', { detail: m })); } catch (_) {}
+    } else if (m.t === 'world:bank:ok') {
+      try { window.dispatchEvent(new CustomEvent('vint:world-bank', { detail: m })); } catch (_) {}
+    } else if (m.t === 'world:strike:ok') {
+      try { window.dispatchEvent(new CustomEvent('vint:world-strike', { detail: m })); } catch (_) {}
+    } else if (m.t === 'world:policy:list:ok') {
+      // THE ORDER PAPER — the open motions before your covenant. Held for
+      // synchronous readers (the Reckoning sheet paints from it on open) and
+      // announced, same as soil.
+      World._proposals = m;
+      try { window.dispatchEvent(new CustomEvent('vint:world-proposals', { detail: m })); } catch (_) {}
+    } else if (m.t === 'world:policy:ok' || m.t === 'world:vote:ok' || m.t === 'world:execute:ok') {
+      try { window.dispatchEvent(new CustomEvent('vint:world-law', { detail: m })); } catch (_) {}
+    } else if (m.t === 'world:deed') {
+      // the world's politics, happening near you — a public deed feed
+      try { window.dispatchEvent(new CustomEvent('vint:world-deed', { detail: m })); } catch (_) {}
     } else if (m.t === 'world:harvest:ok') {
       try { window.dispatchEvent(new CustomEvent('vint:world-harvest', { detail: m })); } catch (_) {}
     } else if (m.t === 'world:refine:ok') {
@@ -910,6 +946,63 @@
   World.isConnected = function () { return !!(ws && ws.readyState === 1); };
   World.currentWorldId = function () { return World._worldId; };
   World.canBuild = function () { return World._canBuild !== false; };
+
+  // ── THE RECKONING: who is standing near me ──────────────────────────────────
+  // Every OTHER PERSON in this room, nearest first. Same discipline as
+  // World.traces(): the HUD walks this instead of keeping its own copy of the
+  // truth, so there is exactly one registry of who is here.
+  //
+  // AGENTS ARE DELIBERATELY EXCLUDED. `others` holds human peers; `agents` holds
+  // the council's beings. The knife is only ever offered against a person who
+  // can consent to the ground they are standing on — an agent cannot walk into a
+  // march of its own will, so it can never be a target. That exclusion is the
+  // client half of "consent is geographic"; the server enforces the rest.
+  World.nearby = function () {
+    const out = [];
+    for (const [id, O] of others) {
+      if (!O || !O.group) continue;
+      out.push({
+        id: id,
+        name: O.name || 'someone',
+        dist: Math.hypot(O.group.position.x - me.x, O.group.position.z - me.z),
+      });
+    }
+    out.sort((a, b) => a.dist - b.dist);
+    return out;
+  };
+
+  // ── THE COVENANT VERBS ──────────────────────────────────────────────────────
+  // Thin, honest askers. NONE of these decides anything: each one states an
+  // intent and the server rules on it (factions.js). The client cannot know
+  // whether a strike is lawful — soil, grace windows, kill cooldowns, distance
+  // and blood all live server-side — so it never pretends to. It asks, and it
+  // renders the answer, including the refusal.
+  //
+  // The victim's POSITION is never sent. The server resolves the target from
+  // that peer's own live socket, so a client can't name someone who isn't
+  // actually standing beside it in contested ground.
+  World.strike = function (targetId) {
+    return World.send({ t: 'world:strike', target: String(targetId || '') });
+  };
+  World.bank = function () { return World.send({ t: 'world:bank' }); };
+  World.soil = function () { return World.send({ t: 'world:soil' }); };
+  World.joinCovenant = function (key) {
+    return World.send({ t: 'world:covenant:join', key: String(key || '') });
+  };
+  World.propose = function (policy) {
+    return World.send({ t: 'world:policy:propose', policy: String(policy || '') });
+  };
+  // Ask what is currently before the body. The answer arrives as
+  // vint:world-proposals (and is cached on World._proposals).
+  World.proposals = function () { return World.send({ t: 'world:policy:list' }); };
+  // A vote is a VOICE, and abstention is not a no — `inFavour` is explicit so a
+  // caller can never accidentally cast the opposite of what a player tapped.
+  World.vote = function (proposalId, inFavour) {
+    return World.send({ t: 'world:policy:vote', proposalId: proposalId, inFavour: inFavour !== false });
+  };
+  World.execute = function (targetId, warrantId) {
+    return World.send({ t: 'world:execute', target: String(targetId || ''), warrantId: warrantId });
+  };
 
   // ── THE WARP ────────────────────────────────────────────────────────────────
   // Travel to another world: tear down the live socket, wipe the old room's

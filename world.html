@@ -342,6 +342,26 @@
      court.js so the rail order stays: star-map · agents · court · home ·
      lanterns · build. Adds no fixed element of its own. -->
 <script src="body/world/traces-hud.js"></script>
+<!-- THE COVENANTS — factions, contested territory, policy, and the geography of
+     consent. Loads AFTER dirverse-hud for the same reason the lanterns do: it
+     takes its rail slot from `addLauncher` and registers with the shared sheet
+     owner, so it can never land on another surface. Its ONE fixed element is the
+     soil band, which lives in the top-CENTER strip nothing else claims (the
+     WorldHUD owns top-left, #topctl owns top-right) and is pointer-events:none,
+     so it is a readout that can never eat a tap. Rail order: star-map · agents ·
+     court · home · lanterns · covenant · build. -->
+<script src="body/world/covenants-hud.js"></script>
+<!-- THE RECKONING — the hands for the covenants. The backend shipped with
+     murder, voting and execution fully ruled and NOTHING in the client able to
+     send them; this is what puts the knife, the vote and the gallows in reach.
+     Loads AFTER covenants-hud so the rail order stays: star-map · agents ·
+     court · home · lanterns · covenant · reckoning · build, and so it registers
+     with the shared sheet owner (opening it EVICTS the covenant sheet — two
+     full-width surfaces can never be up at once). It pins no fixed geometry of
+     its own: the launcher is allocated by the rail, the confirm step renders
+     INSIDE the sheet's scroller rather than as an overlay, and every toast goes
+     through the one shared toast element. -->
+<script src="body/world/reckoning-hud.js"></script>
 <script>
 (function () {
   const statusEl = document.getElementById('status');

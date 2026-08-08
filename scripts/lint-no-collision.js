@@ -71,7 +71,25 @@ const SPAN_RE = /left\s*:\s*0\s*;\s*right\s*:\s*0|right\s*:\s*0\s*;\s*left\s*:\s
 // vars (--dv-railtop/--dv-railbot in dirverse-hud.js) rather than a baked-in
 // coordinate. That is the same discipline VintDock enforces, done locally, so
 // it is not the stale-arithmetic bug this lint hunts.
-const MEASURED_RE = /max-height\s*:\s*calc\([^)]*var\(|bottom\s*:\s*calc\(\s*var\(/;
+//
+// THE ARM WAS VERTICAL-ONLY, AND THAT WAS A GAP (widened 2026-08-08). The two
+// original patterns only recognise a measured `bottom`/`max-height` — i.e. a
+// widget clearing a stack ABOVE or BELOW it. An element that reserves the
+// HORIZONTAL reach of a corner stack was still reported as a hardcode even
+// though it is doing exactly the sanctioned thing. The proof it was a gap and
+// not a real finding: world.html's #status — the in-repo precedent this
+// discipline is named after — computes
+//     left: calc(var(--status-rail) + (100vw - ... - var(--vint-dock-reach-bottom)) / 2)
+// and would ALSO have failed this lint; it escapes today only because it lives
+// inline in an .html file rather than in a scanned .js one. So the third arm
+// accepts any inset (left/right/top/bottom) measured from a live dock/rail var,
+// which is the thing that actually makes a placement non-stale, while a literal
+// coordinate in any of those properties still fails exactly as before.
+const MEASURED_RE = new RegExp([
+  /max-height\s*:\s*calc\([^)]*var\(/.source,
+  /bottom\s*:\s*calc\(\s*var\(/.source,
+  /(?:left|right|top|bottom)\s*:\s*calc\([^;]*var\(\s*--(?:vint-dock-reach|vint-dock-height|dv-rail|status-rail)/.source,
+].join('|'));
 
 // Does this fixed-position block style an element that the file registers with
 // the dock somewhere else? Collect the CSS ids/classes named in the block and
