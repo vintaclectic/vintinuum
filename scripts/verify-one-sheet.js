@@ -76,6 +76,23 @@ const SURFACES = [
   // registerSheet), and this is what holds that claim to the same standard as
   // the four that came before it.
   { id: 'traces',   sel: '#dvTraceSheet', btn: '#dvTraceBtn', open: () => window.VintTraces.open() },
+  // THE CONCORD. A sixth full-width sheet at the same z-band, joining the same
+  // registry (registerSheet/openSheet) — so it belongs here for exactly the
+  // reason the lanterns did: the whole point of this script is that a NEW
+  // surface must never silently join a stack it was never measured against.
+  // Its launcher, like the lanterns', is conditionally hidden (it appears only
+  // in a world you can build in), so the precondition is arranged below with
+  // the others and the button is waited on for VISIBILITY, not mere existence.
+  { id: 'concord',  sel: '#cnSheet',      btn: '#cnBtn',      open: () => window.VintConcord.open() },
+  // THE ADMIRALTY. A seventh full-width sheet in the same z-band, through the
+  // same registry (registerSheet/openSheet), so it belongs here for exactly the
+  // reason the lanterns and the Concord did: the whole point of this script is
+  // that a NEW surface must never silently join a stack it was never measured
+  // against. Its launcher is conditionally hidden on the same rule the
+  // Concord's is (it appears only in a world you can build in), so the same
+  // precondition below covers it, and the button is waited on for VISIBILITY
+  // rather than mere existence.
+  { id: 'admiralty', sel: '#adSheet',     btn: '#adBtn',      open: () => window.VintAdmiralty.open() },
 ];
 
 const MIME = {
@@ -399,7 +416,8 @@ const TOKEN_KEYS = ['vint_token', 'vintinuum_token', 'token', 'vint_jwt'];
     // world.html mounts its rail and reveals a guest sheet on a delay; wait for
     // the modules that own the surfaces rather than for a flat clock.
     await page.waitForFunction(
-      () => window.DirverseHUD && window.VintCourt && window.DirHavenDoor && window.VintTraces,
+      () => window.DirverseHUD && window.VintCourt && window.DirHavenDoor && window.VintTraces
+            && window.VintConcord && window.VintAdmiralty,
       { timeout: 20000 }
     ).catch(() => {});
     // ── STAND IN A PERSON'S WORLD, NOT THE HUB ────────────────────────────────
@@ -425,6 +443,30 @@ const TOKEN_KEYS = ['vint_token', 'vintinuum_token', 'token', 'vint_jwt'];
           W.__verifyTraces = [{ id: 1, who: 'a traveler', words: 'i stood here', glyph: 'lantern', at: Math.floor(Date.now() / 1000), dist: 1 }];
           W.traces = function () { return W.__verifyTraces; };
         }
+        // ── THE CONCORD's precondition ────────────────────────────────────────
+        // Its launcher hides in the hub and in a world you cannot build in —
+        // your government does not follow you into a stranger's clearing, the
+        // same rule the Court holds to. That is correct product behaviour and
+        // is NOT relaxed to make a test pass, so the test stands where the
+        // button lives: a named world (set above) that we may build in, with a
+        // resident row carrying the standing/lumen the sheet reads. Nothing
+        // here fakes the SHEET or its layout — only the world the page thinks
+        // it is standing in, which is the precondition, not the thing under test.
+        W._canBuild = true;
+        W._resident = W._resident || { standing: 150, lumen: 200 };
+        if (window.VintConcord && window.VintConcord.refresh) window.VintConcord.refresh();
+        // ── THE ADMIRALTY's precondition ─────────────────────────────────────
+        // Identical rule to the Concord's, for the identical reason: your fleet
+        // does not follow you into a stranger's clearing, so the launcher is
+        // correctly hidden in the hub and in a world you cannot build in. That
+        // is product behaviour and is NOT relaxed to make a test pass — the
+        // named, buildable world set above IS the state in which this surface
+        // is reachable, which is the state its collisions matter in. Nothing
+        // here fakes the SHEET, the yard, or a polity: with no Concord founded
+        // the sheet correctly renders its "a yard answers to a polity" state,
+        // which is a real render at full sheet height and exactly the layout
+        // this proof is measuring.
+        if (window.VintAdmiralty && window.VintAdmiralty.refresh) window.VintAdmiralty.refresh();
         // ask the module to re-decide, rather than setting display ourselves
         if (window.VintTraces && window.VintTraces.refresh) window.VintTraces.refresh();
       } catch (_) {}
