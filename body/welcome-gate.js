@@ -129,9 +129,17 @@
     + 'font-size:12px;font-weight:700;letter-spacing:.1em;cursor:pointer;box-shadow:0 6px 24px rgba(0,0,0,.4);'
     + '-webkit-tap-highlight-color:transparent;transition:transform .15s,opacity .2s;}'
     + '#vwg-pill:active{transform:scale(.96);}'
-    + '#vwg-dot{position:fixed;z-index:2147483600;width:34px;height:34px;border-radius:50%;'
-    + 'display:flex;align-items:center;justify-content:center;border:1px solid rgba(255,213,79,.3);'
-    + 'background:rgba(8,12,20,.85);color:#ffd54f;font-family:"Space Mono",monospace;font-size:13px;'
+    // TAP FLOOR (council 2026-08-10): the dot rendered 34x34 — under the 44px
+    // minimum — on EVERY page, for every signed-in user (this is the account
+    // button, the most-tapped control we ship). The 34px disc is the *visual*;
+    // the element itself is now a 44px square so the touch target clears the
+    // floor without the glyph growing. background-clip keeps the fill on the
+    // inner disc via a border-box inset, so nothing about the look changes.
+    + '#vwg-dot{position:fixed;z-index:2147483600;width:44px;height:44px;border-radius:50%;'
+    + 'display:flex;align-items:center;justify-content:center;border:5px solid transparent;'
+    + 'background:rgba(8,12,20,.85);background-clip:padding-box;'
+    + 'box-shadow:inset 0 0 0 1px rgba(255,213,79,.3);'
+    + 'color:#ffd54f;font-family:"Space Mono",monospace;font-size:13px;'
     + 'cursor:pointer;-webkit-tap-highlight-color:transparent;}'
     + '#vwg-scrim{position:fixed;inset:0;z-index:2147483640;background:rgba(2,4,10,.72);backdrop-filter:blur(4px);'
     + 'display:none;align-items:flex-end;justify-content:center;}'

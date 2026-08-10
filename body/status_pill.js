@@ -47,7 +47,12 @@
       // drawer (200), modals (500), or the sidebar tabs again.
       '  position:fixed;left:var(--vint-fab-left,14px);bottom:calc(74px + env(safe-area-inset-bottom,0px));right:auto;top:auto;z-index:100;',
       '  display:flex;align-items:center;gap:8px;',
-      '  padding:6px 11px 6px 9px;border-radius:999px;',
+      // TAP FLOOR (council 2026-08-10): 6px padding on an 11.5px/1.2 line box
+      // rendered this pill 28px tall — it is a clickable control (it opens the
+      // status detail) and sat well under the 44px minimum at every breakpoint.
+      // min-height lifts it to the floor; the padding stays for horizontal feel.
+      '  min-height:44px;',
+      '  padding:6px 13px 6px 11px;border-radius:999px;',
       '  background:rgba(18,18,28,.78);',
       '  color:#f3eef9;',
       '  font:600 11.5px/1.2 ui-monospace,SFMono-Regular,Menlo,monospace;',
