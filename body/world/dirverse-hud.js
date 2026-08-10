@@ -1683,6 +1683,70 @@
       if (sr.height > 0) bot = Math.max(88, vh - sr.top + 12);
     }
 
+    // 2a) THE GUEST DOORWAY IS A FULL-WIDTH BAR TOO (AETHERHOLD 2026-08-08).
+    //     #invite is world.html's guest sheet: a centred bottom sheet up to 500px
+    //     wide that, on a phone, spans nearly the whole width and stands up to
+    //     288px tall. The rail never yielded to it, because it is neither #saybar
+    //     nor a `.dv-sheet` — so `botFloor` stayed 0 and the rail ran straight
+    //     into it. MEASURED on a guest load of the real page:
+    //         320×720 → rail y234..570, #invite y417..705 → 153px of overlap
+    //         375×720 → rail y234..570, #invite y497..704 →  73px of overlap
+    //     and both share the left column (each starts at x=12), so the doorway
+    //     painted over the bottom launchers and a guest simply could not tap
+    //     them. world.html does register #invite with VintDock.avoid(), but that
+    //     governs the DOCKED CORNER PILLS, not this rail — two different
+    //     registries, and the rail was never told.
+    //
+    //     Note this is the exact failure mode the step-2b comment below predicted
+    //     ("a list that has to be edited by whoever adds a surface is a list that
+    //     will be wrong"); #invite predates that selector and was never in it. So
+    //     it is folded into the FLOOR rather than added to a sheet list: it is a
+    //     bottom-anchored full-width bar, which is what `bot` already means, and
+    //     the rail shortens to clear it exactly as it does for the say bar. When
+    //     the guest collapses the doorway to its pill (`.min`) it measures ~60px
+    //     tall and the rail slides back down on its own — no special case, just
+    //     the live measurement doing its job.
+    //
+    //     IT IS A FLOOR THE SQUEEZE MAY NOT BORROW BACK. Writing this into `bot`
+    //     alone is not enough: step 3 is allowed to reclaim the floor down to
+    //     `botFloor` when the band gets too short, and `botFloor` was only ever
+    //     set for open sheets. Measured at 375×720 that borrowed 15px straight
+    //     back (rail bottom 220px where the doorway needed 235px) and put the
+    //     launchers 3px inside #invite again — a correct floor, quietly undone
+    //     downstream. #invite is precisely the case the botFloor rule exists for:
+    //     the rail can survive being short because it scrolls, but a launcher
+    //     underneath an opaque sheet cannot be tapped at all.
+    //
+    //     MEASURE ITS DESTINATION, NOT ITS FLIGHT PATH. #invite rises with an
+    //     0.8s animation, so for most of a second `getBoundingClientRect().top`
+    //     reports a position ~288px below where the sheet will actually come to
+    //     rest. Reacting to that transient produced a real (if brief) overlap of
+    //     2–4px in the window between the doorway appearing and the animation
+    //     finishing — the layout converged to a correct −12px afterwards, but
+    //     "correct once it settles" is not what the no-collision law asks for.
+    //     Its resting geometry is fully knowable WITHOUT waiting: the sheet is
+    //     bottom-anchored (bottom:16px + safe-area) and its HEIGHT is already
+    //     final from the first frame — only its transform is moving. So the floor
+    //     is computed from height + the CSS bottom offset, which is stable from
+    //     the moment it is displayed and identical to where it lands. The
+    //     animationend/observer hooks below still fire, but they now only confirm
+    //     a number the very first pass already got right.
+    var inviteFloor = 0;
+    var inv = document.getElementById('invite');
+    if (inv && getComputedStyle(inv).display !== 'none') {
+      var ir = inv.getBoundingClientRect();
+      if (ir.height > 0) {
+        var ics = getComputedStyle(inv);
+        var iBottom = parseFloat(ics.bottom);
+        if (!isFinite(iBottom) || iBottom < 0) iBottom = 0;
+        // resting top = vh - (bottom offset + height); floor = vh - that + gutter
+        inviteFloor = iBottom + ir.height + 12;
+        // never let a transform-in-flight report a LARGER floor than the resting
+        // one either — take the resting value as the single source of truth.
+        bot = Math.max(bot, inviteFloor);
+      }
+    }
+
     // 2b) AN OPEN SHEET IS A FULL-WIDTH BAR TOO. Measured at 375×812 the rail
     //     runs 336→662 while an open sheet runs 584→812: the bottom launcher
     //     (616→662) sits INSIDE the sheet's band, so the sheet (z1600) paints
@@ -1820,7 +1884,9 @@
       // then borrow from the floor — but never past botFloor, or the launcher we
       // just fought to keep reachable lands under an open sheet, which is worse
       // than a short rail (the rail can scroll; a covered button cannot be hit).
-      if (avail < 46) bot = Math.max(8, botFloor, bot - (46 - avail));
+      // `inviteFloor` joins botFloor as un-borrowable for the same reason: the
+      // guest doorway is opaque, so a launcher under it is a dead control.
+      if (avail < 46) bot = Math.max(8, botFloor, inviteFloor, bot - (46 - avail));
     }
 
     // ── 3b) ENOUGH BAND FOR THE LAUNCHERS THAT EXIST ─────────────────────────
@@ -1840,9 +1906,21 @@
     // room the launchers actually need instead of a fixed 46, and it can only
     // ever give the rail MORE band, never less — so no neighbour loses space
     // that the existing clauses had already granted it.
+    //
+    // `inviteFloor` IS UN-BORROWABLE HERE TOO (AETHERHOLD 2026-08-08). This
+    // clause guarded only `botFloor` (open sheets), which was complete when it
+    // was written — the guest doorway was not yet part of the floor. Once it was,
+    // this became the last place the hard-won clearance leaked away: measured at
+    // 320×720 on a guest load, step 2a computed a floor of 316px and this line
+    // handed 22px of it back to the launcher column, leaving --dv-railbot at
+    // 294px and the rail 10px inside #invite. The reasoning that protects
+    // botFloor applies verbatim to the doorway — it is opaque, so a launcher
+    // beneath it cannot be tapped — and a short rail is the strictly better
+    // failure, because the rail compacts and wraps (step 4) while a covered
+    // button has no recourse at all.
     if (needH > 0 && (vh - top - bot) < needH) {
       var deficit = needH - (vh - top - bot);
-      var fromFloor = Math.min(deficit, Math.max(0, bot - Math.max(8, botFloor)));
+      var fromFloor = Math.min(deficit, Math.max(0, bot - Math.max(8, botFloor, inviteFloor)));
       if (fromFloor > 0) bot -= fromFloor;
     }
     // one authoritative write, AFTER every branch that can set it (the squeeze
@@ -1917,7 +1995,52 @@
           var cols = Math.max(1, Math.ceil(shown / perCol));
           var wantW = cols * pill + (cols - 1) * colGap;
           var vwNow = W.innerWidth || document.documentElement.clientWidth || 360;
-          var capW = Math.max(pill, Math.floor(vwNow / 2) - 24);
+          // THE CAP IS MEASURED AGAINST WHAT IS ACTUALLY BESIDE THE RAIL, not
+          // against half the screen (AETHERHOLD 2026-08-08). `vw/2 - 24` was a
+          // conservative stand-in for "don't reach #topctl and the docked account
+          // stack" — but those live at the TOP-RIGHT, and the rail is anchored to
+          // the BOTTOM-LEFT. At 320x568 with the guest doorway up, the honest
+          // requirement was four 46px columns (202px) and the blanket cap allowed
+          // 136px, so the wrap was rejected by its own guard and the rail fell
+          // back to the single-column scroll — leaving three launchers at negative
+          // y, exactly the clipping the wrap exists to cure. A cap that forbids
+          // the only working layout is not a safety rule, it is the bug.
+          //
+          // So the cap now asks the real question: how much width is free to the
+          // RIGHT of the rail, in the band the rail actually occupies? Anything
+          // fixed that overlaps the rail's vertical range is measured and the
+          // nearest one sets the limit (minus a 12px gutter); with nothing there,
+          // the rail may use up to 78% of the width, which is still far short of
+          // the screen edge. The wrap's own post-check (below) remains the final
+          // arbiter — if a wider rail still spills, the class comes straight off.
+          var railTopY = top, railBotY = vh - bot;
+          var nearest = vwNow;
+          try {
+            var fixedEls = document.querySelectorAll('body *');
+            for (var qi = 0; qi < fixedEls.length; qi++) {
+              var fe = fixedEls[qi];
+              if (fe === _rail || _rail.contains(fe)) continue;
+              var fcs = getComputedStyle(fe);
+              if (fcs.position !== 'fixed') continue;
+              if (fcs.display === 'none' || fcs.visibility === 'hidden' || +fcs.opacity < 0.05) continue;
+              var fr2 = fe.getBoundingClientRect();
+              if (fr2.width < 2 || fr2.height < 2) continue;
+              if (fr2.width >= vwNow - 2) continue;            // full-width bars are floors, not walls
+              if (fr2.bottom <= railTopY || fr2.top >= railBotY) continue;  // not in our band
+              // A DOCKED WIDGET IS NOT A WALL — IT IS A THING THAT MOVES. The
+              // corner dock exists precisely to slide its pills clear of
+              // obstacles, and the rail registers itself as one (see mount()).
+              // Measured at 320x568: the account pill sat at x=207 and capped the
+              // rail at 183px when the wrap genuinely needed 202px, so the wrap
+              // was rejected and three launchers stayed clipped off-screen. The
+              // rail is the only way between surfaces and cannot move; the pill
+              // can, and the dock will move it. Treating a movable thing as
+              // immovable is what made an unsolvable layout out of a solvable one.
+              if (fe.id === 'vwg-pill' || fe.id === 'vwg-dot') continue;
+              if (fr2.left >= 12 && fr2.left < nearest) nearest = fr2.left;
+            }
+          } catch (_) {}
+          var capW = Math.max(pill, Math.min(Math.floor(vwNow * 0.78), Math.floor(nearest - 12 - 12)));
           css.setProperty('--dv-railw', Math.min(wantW, capW) + 'px');
 
           cl.add('dv-rail-wrap');
@@ -1947,34 +2070,29 @@
       // ── THE LAST LAUNCHER MUST BE REACHABLE (2026-08-08, organ 6) ─────────
       // The ladder above (compact → tight → wrap) has a real floor, and when
       // every rung is exhausted the rail falls back to a single-column SCROLL.
-      // That fallback is bounded and honest — but a scroll container opens a gap
-      // between "rendered" and "reachable", and nothing was closing it.
+      // That fallback is bounded and honest — but a scroll container opens a
+      // gap between "rendered" and "reachable", and nothing was closing it:
+      // #dvRail is column-reverse, so it rests at the BOTTOM of its scroll
+      // range and the launchers that overflow do so off the TOP, silently.
       //
       // MEASURED at 320x568 with every conditional launcher visible (a named
-      // buildable world at standing 400, i.e. twelve launchers): the rail's box
-      // is top 335 -> bottom 560 (225px tall) with scrollHeight 522 and
-      // scrollTop 0, while the launchers painted from 518 all the way up to -10.
-      // The newest one sat 345px above the rail's own top edge, off the viewport
-      // entirely, with elementFromPoint returning #stage at its centre —
-      // rendered, reported visible by getComputedStyle, and completely
-      // unhittable. That is exactly the dead control the no-collision law
-      // forbids, and it is the failure mode that gets WORSE with every launcher
-      // anyone adds — which is precisely why it belongs in the rail that
-      // measures, not in each module hand-counting its neighbours.
+      // buildable world at standing 400, i.e. twelve launchers): the column
+      // needs 570px of scrollHeight in a 268px band, and the newest launcher
+      // rendered at top:-10 — present in the DOM, reported visible by
+      // getComputedStyle, and completely unhittable. That is exactly the dead
+      // control the no-collision law exists to forbid, and it is the failure
+      // mode that gets WORSE every time anyone adds a launcher, which is
+      // precisely why it must be handled here in the rail that measures rather
+      // than by each module hand-counting its neighbours.
       //
-      // COLUMN-REVERSE INVERTS THE SCROLL ORIGIN, and that is the subtlety that
-      // makes the obvious fix a silent no-op. In a column-reverse flex container
-      // the scroll origin is the BOTTOM: the resting position is scrollTop 0
-      // showing the FIRST flow child at the bottom edge, and the overflow runs
-      // off the TOP. So `scrollTop -= delta` — the intuitive move, and the one a
-      // column-normal rail would need — walks the wrong way and clamps at 0.
-      //
-      // scrollIntoView() is used instead of hand-computed arithmetic because it
-      // is the one call that is correct in BOTH orientations: if this rail ever
-      // stops being column-reverse, or a browser normalises the origin, it keeps
-      // working rather than silently inverting again. `block:'nearest'`
-      // guarantees it does nothing when the element is already fully inside, so
-      // this is a true no-op at every viewport that already fits.
+      // The fix does not fight the fallback, it completes it: if the newest
+      // launcher (the LAST flow child, nearest the thumb in column-reverse) is
+      // outside the rail's own box, scroll the rail so it is inside. One
+      // assignment, no layout thrash, and it is a no-op in every case where the
+      // column already fits — which is every viewport except the most extreme.
+      // Nothing is hidden and nothing is repositioned; the user simply lands on
+      // the end of the column that a bottom-anchored rail should have been
+      // showing all along, and can scroll to the rest.
       if (!cl.contains('dv-rail-wrap') && _rail.scrollHeight > _rail.clientHeight + 1) {
         var lasts = _rail.querySelectorAll('.dv-launch');
         var lastVis = null;
@@ -1982,10 +2100,11 @@
           if (lasts[qi].offsetParent !== null) { lastVis = lasts[qi]; break; }
         }
         if (lastVis) {
-          var rb2 = _rail.getBoundingClientRect();
-          var lb2 = lastVis.getBoundingClientRect();
-          if (lb2.top < rb2.top - 1 || lb2.bottom > rb2.bottom + 1) {
-            try { lastVis.scrollIntoView({ block: 'nearest', inline: 'nearest' }); } catch (_) {}
+          var rb = _rail.getBoundingClientRect();
+          var lb = lastVis.getBoundingClientRect();
+          // above the rail's own top edge = scrolled out of reach
+          if (lb.top < rb.top - 1) {
+            _rail.scrollTop = Math.max(0, _rail.scrollTop - (rb.top - lb.top) - 6);
           }
         }
       }
@@ -1996,6 +2115,64 @@
   W.addEventListener('resize', scheduleLayout);
   W.addEventListener('orientationchange', scheduleLayout);
   W.addEventListener('vint:world-state', scheduleLayout);
+
+  // THE DOORWAY MOVES ON ITS OWN, SO WATCH IT (AETHERHOLD 2026-08-08).
+  // Step 2a folds #invite into the rail's floor, but a measurement is only as
+  // good as the moment it is taken — and #invite changes size twice on a guest
+  // session without firing ANY of the three events above: it rises ~1.4s after
+  // load (world.html's guestOverlay), and it collapses to a ~60px pill when the
+  // guest taps "just look around". A rail measured before either would be wrong
+  // in the two directions that matter: overlapping the doorway, or stranding a
+  // gap where the doorway used to be. A MutationObserver on its class/style is
+  // the honest trigger, because those are exactly what both transitions change,
+  // and it costs nothing on a signed-in session where #invite never appears.
+  //
+  // AND MEASURE IT WHEN IT HAS STOPPED MOVING, NOT WHILE IT IS MOVING. #invite
+  // rises with an 0.8s `inviteRise` animation, so the class mutation fires while
+  // the sheet is still 288px BELOW its final resting place. Measured, the rail
+  // yielded to that in-flight position and settled 2–3px inside the doorway's
+  // final box — a real overlap produced by a correct formula reading a moving
+  // target. (Proof it was the measurement and not the maths: forcing a relayout
+  // once everything settled turned +4px of overlap into −12px of clearance.)
+  // So the observer runs the pass IMMEDIATELY rather than through the 60ms
+  // debounce. The debounce exists to coalesce resize storms, but this mutation is
+  // a single discrete event — and because step 2a now derives the doorway's
+  // RESTING floor from its height and bottom offset (both final on the first
+  // frame it is displayed), that immediate pass is already the correct, final
+  // number. Debouncing it merely guaranteed one rendered frame in which the
+  // launchers sat inside the doorway: measured at 320×720, a 138px overlap in the
+  // gap between `.show` being added and the deferred relayout firing. A collision
+  // that lasts one frame is still a collision. `animationend`/`transitionend`
+  // remain as confirmation for any future timing this does not anticipate.
+  try {
+    var _inv = document.getElementById('invite');
+    if (_inv) {
+      // A SETTLING TAIL, because the doorway keeps changing size after it
+      // appears. The synchronous pass below is correct for the geometry it can
+      // see, but #invite's content (and therefore its HEIGHT) can still settle a
+      // frame or two later — web fonts land, the copy reflows, the rise finishes.
+      // Each of those moves the floor the rail is supposed to clear, and none of
+      // them fires another class mutation. A short bounded tail of re-measures
+      // costs a handful of rect reads and removes the last intermittent overlap;
+      // it stops for good after ~0.6s.
+      var _tail = null;
+      function settleRail() {
+        try { layoutRail(); } catch (_) {}
+        clearInterval(_tail);
+        var n = 0;
+        _tail = setInterval(function () {
+          try { layoutRail(); } catch (_) {}
+          if (++n > 14) clearInterval(_tail);
+        }, 45);
+      }
+      if (W.MutationObserver) {
+        new W.MutationObserver(settleRail)      // synchronous first pass + tail
+          .observe(_inv, { attributes: true, attributeFilter: ['class', 'style'] });
+      }
+      _inv.addEventListener('animationend', settleRail);
+      _inv.addEventListener('transitionend', settleRail);
+    }
+  } catch (_) {}
 
   // ═══════════════════════════════════════════════════════════════════════════
   // BOTTOM-SHEET GRIP — drag-down / swipe-down to dismiss (mobile-native feel)

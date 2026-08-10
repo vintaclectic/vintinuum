@@ -323,6 +323,123 @@
     pill.onclick = openSheet;
     document.body.appendChild(pill);
     dock(pill);
+    settleIn(pill);
+  }
+
+  // DON'T PAINT A POSITION YOU MIGHT HAVE TO TAKE BACK (AETHERHOLD 2026-08-08).
+  // corner_dock.js is injected ASYNCHRONOUSLY by this file, so for the first few
+  // hundred milliseconds `VintDock` is only the queuing stub: `register()` is
+  // recorded, but nothing is measured and nothing is placed. Until the real dock
+  // drains that queue, the pill renders wherever its CSS fallback puts it
+  // (bottom:88px) — a static guess that cannot know about an obstacle that was
+  // registered with `VintDock.avoid()`.
+  //
+  // On world.html that guess is wrong and visibly so: the guest doorway (#invite)
+  // is a bottom sheet up to 288px tall, so the pill painted 44px INSIDE it and sat
+  // there until the dock landed and lifted it clear. Measured on a guest load at
+  // both 320px and 375px: ~900ms of a button sitting on top of a sheet — the
+  // cardinal collision, merely brief. (It self-corrected, which is exactly why it
+  // survived this long unnoticed.)
+  //
+  // The fix is not a bigger guess — a fallback offset can never anticipate every
+  // page's obstacles. It is to not SHOW a placement that is currently wrong: the
+  // pill starts transparent and fades in the moment its own box is genuinely
+  // clear of every registered obstacle, with a hard deadline so it ALWAYS
+  // appears.
+  //
+  // WHY THE TEST IS "AM I CLEAR?" AND NOT "HAS THE DOCK PLACED ME?" — an earlier
+  // version waited for the dock's inline `bottom` as the "measured, not guessed"
+  // signal. That is wrong in the common case and dangerously so: the dock only
+  // writes an inline offset when a slot actually moves off its default, so on
+  // every page with no obstacle (which is most of them, and world.html at ≥375px
+  // once the rail fix landed) the signal never arrives and the way in stays
+  // invisible forever. Measured: opacity stuck at 0 at 375/768/1280 — a dead
+  // sign-in button, far worse than the brief overlap being fixed. Asking the
+  // geometry directly has no such failure mode: no obstacle → clear on the first
+  // check → instant reveal.
+  function settleIn(el) {
+    var done = false, t0 = Date.now();
+    var DEADLINE = 1600;   // ms; past this we show regardless. Never hide the way in.
+
+    // Is the pill's box intersecting a visible obstacle right now? Obstacles
+    // animate (world.html's doorway rises for 0.8s), and a button that appears on
+    // top of a sheet for even one frame is the collision we came to kill — so the
+    // last thing we do before showing is simply LOOK.
+    function blocked() {
+      try {
+        var r = el.getBoundingClientRect();
+        if (!r.width || !r.height) return false;
+        var obs = document.querySelectorAll('#invite');
+        for (var i = 0; i < obs.length; i++) {
+          var o = obs[i], ocs = getComputedStyle(o);
+          if (ocs.display === 'none' || ocs.visibility === 'hidden' || +ocs.opacity < 0.01) continue;
+          var b = o.getBoundingClientRect();
+          if (!b.width || !b.height) continue;
+          if (r.left < b.right && b.left < r.right && r.top < b.bottom && b.top < r.bottom) return true;
+        }
+      } catch (_) {}
+      return false;
+    }
+
+    // THE DEADLINE MUST NOT SHIP THE COLLISION IT WAS ADDED TO PREVENT. Revealing
+    // "anyway" after a timeout trades a dead button for an overlapping one, and
+    // the law does not accept either. So when the deadline expires while the pill
+    // is STILL blocked, we don't just show it — we lift it clear ourselves first,
+    // above the obstacle's top edge, and then show. That keeps both guarantees at
+    // once: the way in is always visible, and it is never sitting on a sheet. The
+    // dock remains the authority whenever it does its job; this only runs in the
+    // pathological case where nothing placed the pill in time.
+    function liftClear() {
+      try {
+        var r = el.getBoundingClientRect();
+        var obs = document.querySelectorAll('#invite');
+        var highestTop = null;
+        for (var i = 0; i < obs.length; i++) {
+          var o = obs[i], ocs = getComputedStyle(o);
+          if (ocs.display === 'none' || ocs.visibility === 'hidden' || +ocs.opacity < 0.01) continue;
+          var b = o.getBoundingClientRect();
+          if (!b.width || !b.height) continue;
+          if (r.left < b.right && b.left < r.right && r.top < b.bottom && b.top < r.bottom) {
+            if (highestTop == null || b.top < highestTop) highestTop = b.top;
+          }
+        }
+        if (highestTop != null) {
+          // 12px gutter — the same one the dock uses. Nothing ever touches.
+          el.style.bottom = Math.round((root.innerHeight - highestTop) + 12) + 'px';
+          el.style.top = 'auto';
+        }
+      } catch (_) {}
+    }
+
+    function reveal() {
+      if (done) return;
+      done = true;
+      el.style.opacity = '';
+      // KEEP WATCHING THROUGH THE FADE. #vwg-pill fades in over 0.2s, and an
+      // obstacle can still be growing during exactly that window (world.html's
+      // doorway finishes its 0.8s rise, getting TALLER as it goes). Clearing the
+      // check on the frame we start the fade is therefore not the same as being
+      // clear when the fade lands — measured, that left one frame of the pill
+      // visible on the sheet at 375px. So we re-check for a short tail and lift
+      // clear if the obstacle grew into us. Bounded: a handful of cheap rect
+      // reads, then it stops for good.
+      var tail = 0;
+      (function after() {
+        if (tail++ > 16) return;            // ~0.6s past the fade, then done
+        if (blocked()) liftClear();
+        setTimeout(after, 40);
+      })();
+    }
+
+    try {
+      el.style.opacity = '0';               // the transition on #vwg-pill fades it back
+      (function watch() {
+        if (done) return;
+        if (!blocked()) return reveal();
+        if ((Date.now() - t0) > DEADLINE) { liftClear(); return reveal(); }
+        setTimeout(watch, 40);
+      })();
+    } catch (_) { reveal(); }
   }
 
   // The account affordance sits FURTHEST from the corner (high priority number)

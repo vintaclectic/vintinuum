@@ -140,6 +140,32 @@
   // it's open. Rather than docking it into the button stack — wrong shape, and
   // it's draggable/full-width on mobile — we treat it as an obstacle: the
   // buttons start ABOVE it and slide back down the moment it closes.
+  // MEASURE AN OBSTACLE'S RESTING PLACE, NOT ITS FLIGHT PATH (AETHERHOLD
+  // 2026-08-08). An obstacle usually ANIMATES in — world.html's guest doorway
+  // (#invite) rises with an 0.8s `inviteRise` keyframe — and `reflow()` runs on
+  // the very next animation frame, so the rect read here is the sheet's position
+  // partway through that rise, up to its own height BELOW where it will settle.
+  // The dock then lifted the account pill clear of a doorway that was still
+  // moving, and the doorway finished its rise underneath it. Measured on a guest
+  // load of the real page: #vwg-pill sat fully INSIDE #invite (44px of overlap)
+  // for ~900ms at both 320px and 375px, before a later reflow corrected it. A
+  // collision that resolves itself in a second is still a collision a person saw.
+  //
+  // A transform cannot change layout, so the honest resting extent is readable
+  // immediately from the element's OWN edge offset plus its height — both final
+  // from the first frame it is displayed. We take the larger of that and the live
+  // rect, so an obstacle that is genuinely positioned mid-viewport (or one whose
+  // edge offset is 'auto') is never under-measured either.
+  function restingExtent(el, isBottom, r) {
+    try {
+      var cs = getComputedStyle(el);
+      var off = parseFloat(isBottom ? cs.bottom : cs.top);
+      if (!isFinite(off)) return 0;                 // 'auto' — nothing to derive
+      if (off < 0) off = 0;
+      return off + r.height;
+    } catch (_) { return 0; }
+  }
+
   function avoidExtent(corner) {
     var isBottom = corner[0] === 'b';
     var max = 0;
@@ -150,6 +176,9 @@
       try { r = a.el.getBoundingClientRect(); } catch (_) { return; }
       // Only obstruct if it actually sits in this corner's column.
       var ext = isBottom ? (root.innerHeight - r.top) : r.bottom;
+      // ...and never less than where it will come to rest (see above).
+      var rest = restingExtent(a.el, isBottom, r);
+      if (rest > ext) ext = rest;
       if (ext > max && ext < root.innerHeight) max = ext;
     });
     return max ? max + GUTTER : 0;

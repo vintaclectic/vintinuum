@@ -2151,6 +2151,142 @@
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', mountLauncher, { once: true });
   else mountLauncher();
 
+  // ═══════════════════════════════════════════════════════════════════════════
+  // wageWar(req) — THE WAR ENGINE, LENT OUT. (added for factions.js, organ 4)
+  //
+  // The allegiance organ needs to resolve a fight over named ground. The wrong
+  // way to give it one is to let it roll its own dice: two combat models is how
+  // you get two games that disagree about who won, and the moment the wake's
+  // gravity is retuned (it has been, twice, off measured sweeps) the second
+  // model silently becomes a lie.
+  //
+  // So the Admiralty keeps sole ownership of what a fight IS, and lends exactly
+  // one verb. The caller says WHERE (element), against WHOM (a named foe rather
+  // than a seeded stranger), with WHAT (hull ids, or the whole standing fleet),
+  // and how much they are HATED for it (grudge, computed by the pair ledger and
+  // stated openly in that sheet — never a hidden difficulty knob). What comes
+  // back is the wake's own line, unmodified: won, score, the frame-by-frame
+  // exchange, and the deciding frame with the name of the mind whose work
+  // decided it. The caller writes consequences; it never scores anything.
+  //
+  // It refuses rather than inventing a battle: no fleet, no fight, null. A
+  // caller that gets null must say so, not fake a result. (factions.js does.)
+  // ═══════════════════════════════════════════════════════════════════════════
+  function wageWar(req) {
+    var r = req || {};
+    var s = load();
+    // WHAT SAILS — the ids asked for, or every unstruck hull standing. A hull
+    // already out on a sortie is not available to a second fight; one hull,
+    // one line, always.
+    var ids = Array.isArray(r.hullIds) && r.hullIds.length ? r.hullIds : null;
+    var out = (s.sortie && s.sortie.hullIds) || [];
+    var mine = [];
+    for (var i = 0; i < s.fleet.length; i++) {
+      var hl = s.fleet[i];
+      if (hl.struck) continue;
+      if (out.indexOf(hl.id) >= 0) continue;
+      if (ids && ids.indexOf(hl.id) < 0) continue;
+      mine.push(hl);
+      if (mine.length >= 4) break;
+    }
+    if (!mine.length) return null;              // no fleet, no fight, no fiction
+
+    // WHO THEY ARE — a NAMED foe, built by the same rival mint the yard uses,
+    // so the power you hold ground against is made of the same stuff as the one
+    // you meet at sea. The element comes from the GROUND being fought over,
+    // which is why where you fight decides what kind of fleet wins, with no
+    // matchup table existing anywhere.
+    var seed = String(r.seed || Date.now().toString(36));
+    var elk = ELEMENTS[0].k;
+    for (var e = 0; e < ELEMENTS.length; e++) if (ELEMENTS[e].k === r.element) elk = ELEMENTS[e].k;
+    var clsk = CLASSES[hash32(seed + 'cls') % CLASSES.length].k;
+    var foe = r.foe || {};
+    var un = { k: String(foe.key || 'drift'), n: String(foe.name || 'an unnamed power'),
+               creed: String(foe.creed || ''), el: elk };
+    var rival = { name: un.n, creed: un.creed, fromExiles: false, hull: buildRivalHull(crewForRival(seed), elk, clsk, un, seed) };
+
+    // THE GRUDGE — priced once, on the rival's hull, exactly the way a defector's
+    // extra effort is priced in buildRivalHull. Legible, bounded, and applied to
+    // the frames rather than to the score, so it changes HOW they beat you and
+    // is readable in the line afterwards.
+    var g = Math.max(0, Math.min(0.4, Number(r.grudge) || 0));
+    if (g) {
+      for (var fk in rival.hull.stats) {
+        rival.hull.stats[fk] = Math.round(rival.hull.stats[fk] * (1 + g) * 100) / 100;
+      }
+    }
+
+    // THE FIGHT — the wake, unmodified. Each hull's line kept in full so the
+    // caller can read WHICH ship failed, same as resolveWake does.
+    var total = 0, lines = [], best = null, bv = -1;
+    for (var m = 0; m < mine.length; m++) {
+      var res = wake(mine[m], rival.hull);
+      total += res.score;
+      lines.push({ hull: mine[m].name, hullId: mine[m].id, won: res.won, score: res.score, line: res.line, decider: res.decider });
+      if (res.decider && Math.abs(res.decider.swing || 0) > bv) { bv = Math.abs(res.decider.swing || 0); best = res.decider; }
+    }
+    var won = total > 0;
+
+    // CONSEQUENCE INSIDE THE YARD — scars are the Admiralty's to keep, because
+    // hulls are the Admiralty's to own. The caller never touches a hull. And the
+    // absolute boundary holds unchanged: a lost war can strike a hull this file
+    // minted; it can NEVER touch an agent, and every hand walks home.
+    if (!won) {
+      var worst = null, wv = 1e9;
+      for (var q = 0; q < lines.length; q++) if (lines[q].score < wv) { wv = lines[q].score; worst = lines[q]; }
+      for (var f2 = 0; f2 < mine.length; f2++) {
+        if (worst && mine[f2].id === worst.hullId) {
+          mine[f2].scars.push({ at: Date.now(), where: (worst.decider && worst.decider.f) || 'skin',
+            why: (worst.decider && worst.decider.say) || 'it was opened.' });
+          if (mine[f2].scars.length >= 3) mine[f2].struck = true;
+        }
+      }
+    }
+    // The war is recorded in the yard's OWN record too, so a player reading the
+    // admiralty sees every line their fleet ever fought — not just the sorties.
+    s.wakes.unshift({
+      at: Date.now(), won: won, score: Math.round(total * 100) / 100,
+      rival: rival.name, rivalCreed: rival.creed, fromExiles: false, overGround: true,
+      hulls: mine.map(function (x) { return x.name; }), lines: lines,
+      effect: won ? 'the line held over ground.' : 'the line did not hold over ground.'
+    });
+    while (s.wakes.length > 20) s.wakes.pop();
+    save();
+    updateLauncher();
+    if (isOpen()) render();
+
+    return {
+      won: won, score: Math.round(total * 100) / 100,
+      line: lines.length === 1 ? lines[0].line : lines,
+      lines: lines, decider: best,
+      rival: { name: rival.name, creed: rival.creed, el: elk, cls: clsk },
+      hulls: mine.map(function (x) { return x.name; })
+    };
+  }
+  // The crew that lays a named power's hull. Reuses the exiles-then-unaligned
+  // pool rivalFor already builds, without its seeded NAME — the name comes from
+  // the caller here, because the faction is the one thing this file does not own.
+  function crewForRival(seed) {
+    var p = polity();
+    var exiles = (p && p.exiles) ? p.exiles : [];
+    var crew = [];
+    for (var i = 0; i < exiles.length && crew.length < 5; i++) {
+      var x = exiles[i], a = agentById(x.agentId);
+      crew.push({ id: x.agentId, name: (a && a.name) || x.name || 'one who walked out',
+        color: (a && a.color) || '#ff9a7a',
+        providerModel: (a && (a.providerModel || a.provider_model)) || '',
+        provider: (a && a.provider) || '', tended_at: null, __defector: true });
+    }
+    var want = Math.max(3, Math.min(5, bench().length || 3));
+    var n = 0;
+    while (crew.length < want) {
+      n++;
+      crew.push({ id: 'far:' + seed + ':' + n, name: 'a hand', color: '#ff9a7a',
+        providerModel: 'custom', provider: 'custom', tended_at: null });
+    }
+    return crew;
+  }
+
   W.VintAdmiralty = {
     open: open, close: close, isOpen: isOpen, enabled: enabled,
     render: render, refresh: updateLauncher,
@@ -2159,6 +2295,10 @@
     fleet: function () { return JSON.parse(JSON.stringify(load().fleet)); },
     resolve: resolve,
     lay: lay, sortie: sortie,
+    // ── THE WAR ENGINE, LENT (organ 4) ────────────────────────────────────────
+    // The ONLY sanctioned way another organ resolves a fight. Nothing downstream
+    // of this file keeps a second combat model; see the comment above wageWar.
+    wageWar: wageWar,
     ELEMENTS: ELEMENTS, CLASSES: CLASSES, FRAMES: FRAMES
   };
 })();
