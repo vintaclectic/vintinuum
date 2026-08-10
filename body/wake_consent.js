@@ -73,7 +73,28 @@
     s.id = 'vint-wake-consent-styles';
     s.textContent = [
       '.vint-wake-consent{',
-      '  position:fixed;left:50%;bottom:max(18px,env(safe-area-inset-bottom,0px));',
+      // NO-COLLISION (Vinta directive, enforced 2026-08-10). This card used to
+      // sit at bottom:max(18px,safe-area) — measured at 375x812 that put it in
+      // the band 18→78px, which lands ON TOP OF two things:
+      //   · the mobile nav      (fixed, bottom 0→56px, the primary navigation)
+      //   · the status pill     (fixed, bottom 74→102px)
+      // and because .show sets pointer-events:auto, it did not merely look
+      // wrong — it ATE TAPS on the nav underneath it.
+      //
+      // The card now stacks ABOVE the whole bottom furniture instead of over it.
+      //
+      // Crucially it must clear the RIGHT-HAND column too, not just the nav:
+      // this card is centred but up to 440px wide, so at 375px it spans the
+      // full viewport and shares rows with the voice-picker stack. The tallest
+      // thing in that column is the voice panel, which occupies 178→378px.
+      // Clearing 378px + a 12px gap puts the card at 390px — above every
+      // bottom-anchored element on either side, at every width.
+      //
+      // 390px is expressed as a var so one edit moves it if the stack grows.
+      // On surfaces with no mobile nav the furniture is shorter, never taller,
+      // so this offset stays collision-free there as well.
+      '  position:fixed;left:50%;',
+      '  bottom:calc(var(--vint-wake-consent-bottom, 390px) + env(safe-area-inset-bottom,0px));',
       '  transform:translate(-50%,12px);',
       '  z-index:99995;',
       '  max-width:min(440px,calc(100vw - 28px));',
