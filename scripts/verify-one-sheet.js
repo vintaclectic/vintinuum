@@ -46,7 +46,22 @@
      node scripts/verify-one-sheet.js
      VERIFY_WIDTHS=375,1280 node scripts/verify-one-sheet.js
 
+   RUNTIME — the full sweep is LONG, and that is not a hang (task SSKPNK6).
+   Eight surfaces make 56 ordered pairs, 49 tap gestures and 7 scrim checks =
+   112 checks per width, and every one of them resets the page and waits on the
+   surfaces' real completion signals rather than a clock. Measured on this box:
+   a single width is a few minutes; all five in one process exceeded a 10-minute
+   foreground budget and was killed at SIGTERM (143) with the sweep still healthy
+   and mid-flight. A killed run prints NOTHING, which reads exactly like a crash
+   and invites a rerun that will be killed the same way.
+   So: run the full sweep DETACHED (`nohup ... > log 2>&1 &`) and read the log,
+   or prove one width at a time with VERIFY_WIDTHS and commit between them. Per
+   width is also the better failure mode — a red run names the width immediately
+   instead of after the other four have finished.
+
    EXITS  0 = proven clean · 1 = real violation · 2 = harness could not settle
+          (143/SIGTERM is neither — it is a timeout that killed the sweep, and
+           it is a verdict about your patience, not about the world.)
 */
 'use strict';
 
