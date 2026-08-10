@@ -360,6 +360,47 @@
           refs.vitals.style.minWidth = '';
         }
       }
+
+      /* ── NO-COLLISION: the phone bar must FIT, not just look small ──────────
+         Vinta, on mobile: "buttons over everywhere shit sucks."
+
+         Measured at 375px the left cluster alone was 389px wide and ran to
+         x=397 — WIDER THAN THE SCREEN — so it drove straight through the centre
+         brand and the right-hand pills. Seven real overlaps in a 375px viewport:
+           topLeft><topBrand, topLeft><topLorePill, topLeft><topMenuPill,
+           topBrand><topBrainPill, topBrainPill><topLorePill,
+           topLivePill><topLorePill, topLivePill><topMenuPill
+
+         Root cause: a 3-column grid whose columns never shrink, holding five
+         full-width pills. Shrinking them all would just make five illegible,
+         sub-44px targets fighting for the same strip.
+
+         The honest fix is EDITORIAL, not cosmetic: on a phone the bar keeps only
+         what a thumb actually needs — identity (sign-in), home, and the menu.
+         BRAIN and LIVE are passive STATUS readouts, and every one of them is
+         still available (larger and legible) inside the drawer the ☰ opens, so
+         nothing is lost — it stops competing for 375px of width.
+         Restored verbatim at >=560px where the room genuinely exists. */
+      const phone = w < 560;
+      const setShown = (el, shown) => {
+        if (!el) return;
+        if (shown) { el.style.display = el.dataset.vtnDisp || 'flex'; el.removeAttribute('aria-hidden'); }
+        else {
+          if (!el.dataset.vtnDisp) el.dataset.vtnDisp = getComputedStyle(el).display;
+          el.style.display = 'none'; el.setAttribute('aria-hidden', 'true');
+        }
+      };
+      setShown(refs.brain || document.getElementById('topBrainPill'), !phone);
+      setShown(refs.live  || document.getElementById('topLivePill'),  !phone);
+      // LORE is a real action, not a readout — keep it, but icon-only on a phone
+      // so the right cluster cannot outgrow its column.
+      const loreLabel = document.getElementById('topLorePillLabel');
+      if (loreLabel) loreLabel.style.display = phone ? 'none' : '';
+      const lorePill = document.getElementById('topLorePill');
+      if (lorePill) lorePill.style.padding = phone ? '6px 10px' : '';
+      // the left cluster may never exceed its own grid column
+      const leftEl = document.getElementById('topLeft');
+      if (leftEl) { leftEl.style.minWidth = '0'; leftEl.style.overflow = 'hidden'; }
     };
     brandResponsive();
     window.addEventListener('resize', brandResponsive, { passive: true });
