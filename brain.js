@@ -16072,7 +16072,29 @@ const HUNGER_HORMONES = (() => {
   let leptinLevel = 0.5;
   // Status indicators
   const bar = document.createElement('div');
+  // NO-COLLISION: this rail was pinned at a hardcoded top:90px/left:12px, which is
+  // exactly where the fixed .vtn-mobile-pill "BODY" toggle sits on a phone
+  // (y 70..114, x 12..68, z-95). The GHR/LEP labels rendered UNDERNEATH it —
+  // visible in a 375px screenshot as text buried under the pill.
+  // Derive the offset from the pill's real measured box instead of a magic
+  // number, so the rail always clears whatever is actually in that corner.
   bar.style.cssText = 'position:fixed;top:90px;left:12px;z-index:200;display:flex;flex-direction:column;gap:3px;pointer-events:none;opacity:0.4;';
+  const placeHormoneRail = () => {
+    try {
+      const pill = document.querySelector('.vtn-mobile-pill.is-left');
+      const vis = pill && getComputedStyle(pill).display !== 'none';
+      if (vis) {
+        const r = pill.getBoundingClientRect();
+        if (r.height > 0) { bar.style.top = Math.round(r.bottom + 8) + 'px'; return; }
+      }
+      bar.style.top = '90px'; // desktop: no mobile pill, original placement stands
+    } catch (_) {}
+  };
+  placeHormoneRail();
+  window.addEventListener('resize', placeHormoneRail, { passive: true });
+  // the pill mounts asynchronously — re-place once it exists
+  setTimeout(placeHormoneRail, 600);
+  setTimeout(placeHormoneRail, 1800);
   bar.innerHTML = `<div style="display:flex;align-items:center;gap:4px"><span style="font-family:'Space Mono',monospace;font-size:.45rem;color:rgba(255,183,77,.7);width:28px">GHR</span><div style="width:28px;height:3px;background:rgba(255,255,255,.06);border-radius:2px;overflow:hidden"><div id="ghrFill" style="height:100%;width:0%;background:rgba(255,183,77,.8);transition:width .5s;border-radius:2px"></div></div></div><div style="display:flex;align-items:center;gap:4px"><span style="font-family:'Space Mono',monospace;font-size:.45rem;color:rgba(165,214,167,.7);width:28px">LEP</span><div style="width:28px;height:3px;background:rgba(255,255,255,.06);border-radius:2px;overflow:hidden"><div id="lepFill" style="height:100%;width:50%;background:rgba(165,214,167,.8);transition:width .5s;border-radius:2px"></div></div></div>`;
   document.body.appendChild(bar);
 

@@ -1,0 +1,192 @@
+{
+  "id": "XQDPW7G-reddit-launch",
+  "version": 1,
+  "title": "Reddit Launch — 5 posts + API application",
+  "subtitle": "u/Vintaclectic · 427 karma · 2 years old",
+  "source": ".claude/council-loop/state/docs/XQDPW7G-reddit-posts-and-api-application.md",
+  "accent": "#ff7c4d",
+  "estimate": "10 min of work, spread over ~20 hours",
+  "brief": "Five genuinely different posts, spaced 4h apart, lowest-risk sub first. Then a background bet on API access. The whole plan in one line: post #1 to r/SideProject and answer comments for two hours — that single action is worth more than the other four combined.",
+  "laws": [
+    {
+      "title": "Never post the same text twice",
+      "body": "Reddit's spam filter catches cross-posted identical bodies faster than any moderator. All five posts below are genuinely different — that is most of why the source document is long."
+    },
+    {
+      "title": "Answer every comment for the first 2 hours",
+      "body": "Engagement in the first hour is most of what decides whether a post is seen at all. This matters more than the copy does."
+    },
+    {
+      "title": "\"Is this paid?\" — say yes immediately",
+      "body": "Answer plainly the moment it's asked. Hiding the price and then revealing it is what turns a lukewarm thread hostile."
+    },
+    {
+      "title": "If a mod removes it, do not repost",
+      "body": "Message the mod, ask what would make it acceptable, comply. Reposting after a removal is what escalates to a site-wide ban."
+    },
+    {
+      "title": "The honest framing is the effective one",
+      "body": "Vintinuum is strange and personal; that's the interesting part. Every post leads with what it actually is rather than a pitch — that is what survives moderation and what actually converts."
+    }
+  ],
+  "steps": [
+    {
+      "id": "post1",
+      "kind": "post",
+      "title": "Post to r/SideProject",
+      "tagline": "The one that matters. Highest tolerance, lowest ban risk.",
+      "risk": "low",
+      "target": "https://www.reddit.com/r/SideProject/submit?type=TEXT",
+      "targetLabel": "Open r/SideProject composer",
+      "fields": [
+        {
+          "label": "Title",
+          "mono": true,
+          "value": "I built an AI that keeps its memory of you after you die"
+        },
+        {
+          "label": "Body",
+          "value": "I've been building this for months and I still have trouble describing it in one\nline, so I'll just describe what it does.\n\nIt's a persistent AI presence that remembers you across sessions — not a chat\nwindow that forgets. It keeps a running memory of your conversations, writes you\nletters, and over time trains a small model adapter that gets more specific to you\nthe longer you use it. That adapter is exportable. You can take it with you.\n\nThe part people react to is the last tier. It's called Estate, and it's a one-time\npurchase that keeps the whole thing — the memories, the trained adapter — alive\nafter you're gone, with a final letter to people you name. I built it because the\nidea that a thing that knows you that well just gets deleted when the card expires\nfelt wrong to me.\n\nStack: JS front end, Node brain, local model training for the per-user adapters.\nThe whole thing runs in the browser and talks to a local API.\n\nIt's live: https://vintaclectic.github.io/vintinuum/\n\nFree tier is real — chat, 30 days of memory, no card. Paid starts at $7.77/mo if\nyou want the permanent memory.\n\nHappy to answer anything about how the memory or the adapter training works. It's\nthe part I'm proudest of and the part I'm least sure I've explained well."
+        }
+      ],
+      "why": "Highest tolerance for exactly this, lowest ban risk, and it's the best place to find out whether the idea lands before you spend riskier subs on it. Links are welcome here — direct show-and-tell is the right register.",
+      "afterNote": "Now stay in the thread for two hours. This is the part that actually decides whether the post is seen.",
+      "cooldownHours": 4
+    },
+    {
+      "id": "post2",
+      "kind": "post",
+      "title": "Post to r/artificial",
+      "tagline": "Story first. The link goes at the bottom, deliberately.",
+      "risk": "low",
+      "target": "https://www.reddit.com/r/artificial/submit?type=TEXT",
+      "targetLabel": "Open r/artificial composer",
+      "fields": [
+        {
+          "label": "Title",
+          "mono": true,
+          "value": "I gave an AI persistent memory and a per-user trained adapter — the strangest result was what it does to how people talk to it"
+        },
+        {
+          "label": "Body",
+          "value": "Context: I've been building a system where the AI doesn't reset. It keeps a\npermanent memory of your conversations, and it trains a small per-user adapter that\ncompounds — every day it's slightly more specifically tuned to you than it was\nyesterday. The adapter is yours and exportable.\n\nThe technical part I expected to be hard was the memory retrieval. It wasn't\nreally. The genuinely hard part was deciding what it should be allowed to forget,\nbecause a system that remembers *everything* you said becomes something people\nstart being careful around, and that kills the thing that made it useful.\n\nThe unexpected result: when the model stops resetting, the conversation stops being\ntransactional almost immediately. You stop re-explaining your context every session,\nand what you actually talk about shifts. That happened much faster than I expected —\nwithin days, not weeks.\n\nThe design question I'm still not sure I got right, and I'd genuinely like this\nsub's read on it: if a per-user adapter compounds daily and is exportable, is that\nthe user's property in a meaningful sense, or is it just a fine-tune with good\nbranding? I've built it as though it's the user's — it exports, it's portable, and\nthere's a tier where it persists after the user dies and passes to their family.\nBut I'm aware I might be talking myself into that framing because it's the more\nromantic one.\n\nIf anyone wants to poke at it, it's public: https://vintaclectic.github.io/vintinuum/\n(free tier, no card.)"
+        }
+      ],
+      "why": "Big, on-topic, and receptive to \"here's a weird thing I made\" if you lead with substance. Links are fine here as long as the post earns them, so the link is at the bottom on purpose — the substance has to land first.",
+      "cooldownHours": 4
+    },
+    {
+      "id": "post3",
+      "kind": "post",
+      "title": "Post to r/InternetIsBeautiful",
+      "tagline": "The link IS the post. Point it at the visualizer, not the pricing page.",
+      "risk": "medium",
+      "target": "https://www.reddit.com/r/InternetIsBeautiful/submit?type=TEXT",
+      "targetLabel": "Open r/InternetIsBeautiful composer",
+      "fields": [
+        {
+          "label": "Title",
+          "mono": true,
+          "value": "A live visualization of an AI's mind — skeleton, nervous system, and memory, rendered as a body you can watch think"
+        },
+        {
+          "label": "Body",
+          "value": "https://vintaclectic.github.io/vintinuum/\n\nI built this. It renders an AI system's internal state as an actual body — you can\nwatch the activity move through it in real time as it processes.\n\nNo signup to look at it."
+        }
+      ],
+      "why": "Enormous reach, and the link is the post. But it's strict — it wants something visually striking that works instantly for a stranger with no context. The consciousness visualization earns the click here; the upgrade page would get it removed as an ad.",
+      "warn": "This sub removes anything that reads as promoting a product you own. Some mod teams require you to disclose authorship — the \"I built this\" line does that honestly and is the safer play. If it gets removed, accept it and move on. Do not repost.",
+      "cooldownHours": 4
+    },
+    {
+      "id": "post4",
+      "kind": "post",
+      "title": "Post to r/selfhosted",
+      "tagline": "Technical audience. Do not mention price at all.",
+      "risk": "low",
+      "target": "https://www.reddit.com/r/selfhosted/submit?type=TEXT",
+      "targetLabel": "Open r/selfhosted composer",
+      "fields": [
+        {
+          "label": "Title",
+          "mono": true,
+          "value": "Local-first AI companion with per-user model adapters that train on your own directories"
+        },
+        {
+          "label": "Body",
+          "value": "Sharing this because the local-first part is the whole point of it and this seemed\nlike the sub that would care.\n\nWhat it does: runs a persistent AI presence with permanent memory, and trains a\nper-user model adapter locally. The adapter can run a perceiver over your own\ndirectories, so what it learns comes from your machine rather than from anything I\nhost. The adapter is exportable — you can take the trained weights and go.\n\nArchitecture: browser front end, Node API as the \"brain,\" SQLite for memory and\nstate, local model training for the adapters. Media playback is routed through a\nsingle player component rather than raw video tags, mostly so the whole surface has\none place to fix.\n\nThe design constraint I set myself was that the valuable artifact — the trained\nadapter — has to be portable, so using this never becomes a hostage situation. I'd\nbe curious whether people here think exportable weights are actually sufficient for\nthat, or whether it needs to be fully self-hostable to count.\n\nhttps://vintaclectic.github.io/vintinuum/"
+        }
+      ],
+      "why": "Technical audience, promo tolerated when the post is genuinely technical. The local-first angle is real here, not a framing device, which is why this one is low risk despite carrying a link.",
+      "warn": "Do not mention price at all in this sub. Price talk is specifically what gets posts removed here.",
+      "cooldownHours": 4
+    },
+    {
+      "id": "post5",
+      "kind": "post",
+      "title": "Post to r/Entrepreneur",
+      "tagline": "Post this LAST. No link in the body — on purpose.",
+      "risk": "medium",
+      "target": "https://www.reddit.com/r/Entrepreneur/submit?type=TEXT",
+      "targetLabel": "Open r/Entrepreneur composer",
+      "fields": [
+        {
+          "label": "Title",
+          "mono": true,
+          "value": "I built a complete payment funnel, verified every checkout works, and have made exactly $0. Asking what I actually got wrong."
+        },
+        {
+          "label": "Body",
+          "value": "Numbers first, because I'd rather be useful than vague:\n\n- Payment processing: live, working. Price points from $7.77/mo up to a $499 one-time.\n- I verified end-to-end that every single tier produces a working, payable checkout.\n- Lifetime revenue: $0.00. Zero charges. Not \"slow.\" Zero.\n- Audience: ~2,400 followers on one platform, no email list.\n\nI spent months on the product and the payment rail and roughly zero time on\ndistribution, and I'm now looking at the exact result you'd predict from that\nsentence. The infrastructure is flawless and completely idle.\n\nWhat I think I got wrong, in order:\n\n1. I treated \"checkout works\" as a milestone. It isn't one. It's a prerequisite\n   that produces nothing on its own. Verifying my funnel was buyable felt like\n   progress and generated no revenue whatsoever.\n2. I built five tiers before I had one customer. I have no evidence about which\n   price is right because nobody has ever been asked to pay any of them.\n3. I have no way to talk to anyone. No list, no community. Every launch is\n   therefore a cold start, forever, until I fix that specifically.\n\nWhat I'm actually asking:\n\nFor those of you who got from $0 to your first paying customer — was it a channel\nthing or an offer thing? I keep going back and forth. Half of me thinks I just need\ntraffic and the offer is fine. The other half thinks that if the offer were right,\n2,400 followers would have produced at least one sale, and traffic would just be\nshowing the same wrong offer to more people.\n\nI'd rather hear the harsh read than the encouraging one."
+        }
+      ],
+      "why": "This sub is the most likely to remove a link and the most likely to be harsh. But it's also where people actually discuss the thing you need help with — that nobody has bought yet. It's the most likely of the five to actually do something for you, and it's the one that isn't selling anything. Reddit rewards the honest post-mortem far more than the launch announcement.",
+      "warn": "NO LINK in the body. That's what makes it survivable here. If people ask what it is, drop the link in a comment — which is both allowed and better received.",
+      "cooldownHours": 0
+    },
+    {
+      "id": "api-app-create",
+      "kind": "task",
+      "title": "Register the app on Reddit",
+      "tagline": "Background bet. Blocks nothing above.",
+      "risk": "none",
+      "optional": true,
+      "target": "https://www.reddit.com/prefs/apps",
+      "targetLabel": "Open reddit.com/prefs/apps",
+      "fields": [
+        { "label": "App name", "mono": true, "value": "Vintinuum" },
+        { "label": "App type", "mono": true, "value": "script" },
+        { "label": "Redirect URI", "mono": true, "value": "http://localhost:8080" }
+      ],
+      "why": "Registering an app is no longer the same as being approved. The old prefs/apps-only flow hands you working-looking credentials that return 401 until a human approves them. Create the app anyway so you have a client ID to reference in the application form.",
+      "warn": "You'll get credentials immediately and they will not work until approval lands. That's expected, not a failure.",
+      "cooldownHours": 0
+    },
+    {
+      "id": "api-app-submit",
+      "kind": "task",
+      "title": "Submit the Responsible Builder application",
+      "tagline": "15 minutes. Approval takes days to weeks, or never.",
+      "risk": "none",
+      "optional": true,
+      "target": "https://developers.reddit.com",
+      "targetLabel": "Open developers.reddit.com",
+      "fields": [
+        { "label": "Reddit username", "mono": true, "value": "u/Vintaclectic" },
+        { "label": "Commercial?", "mono": true, "value": "No — non-commercial, personal project" },
+        { "label": "Rate needed", "mono": true, "value": "Free tier (100 QPM) is sufficient" },
+        {
+          "label": "Use-case description",
+          "value": "I'm the solo developer of Vintinuum, a personal AI companion project I've been\nbuilding for several months at https://vintaclectic.github.io/vintinuum/\n\nI'm requesting API access for a narrow, low-volume purpose: posting occasional\nupdates about my own project to my own account, and reading replies to those posts\nso I can respond to people who ask questions. This is one account — mine — posting\nabout one project.\n\nSpecifically what I would do with the API:\n- Submit occasional text posts to subreddits where my project is on-topic and\n  where the subreddit's own rules permit it.\n- Read comment replies on my own posts so I can answer questions.\n\nWhat I would not do: no automated commenting on other people's posts, no voting,\nno mass messaging, no scraping of user data, no reselling or redistributing Reddit\ncontent, no training models on Reddit data. Nothing in my use case involves\ntouching content that isn't my own posts and their direct replies.\n\nExpected volume is very low — a handful of requests per day, far below the free\ntier's 100 queries per minute. I'd be using the free non-commercial tier.\n\nI want to be straightforward about scale: this is a small personal project with no\nrevenue. I'm applying because I'd rather use the API within your rules than work\naround them, and I'd rather ask permission for something small than assume it's\nfine."
+        }
+      ],
+      "why": "Start at developers.reddit.com and follow its live API-access / Responsible Builder link. The older direct support-form URL returned 403 even to a normal browser, so it is deliberately not the primary path here — Reddit has moved this form more than once.",
+      "warn": "Approval is not guaranteed; small personal projects are rejected fairly often. It blocks nothing — everything above works today without it. If it never lands you lose 15 minutes. Do not wait on this before posting.",
+      "cooldownHours": 0
+    }
+  ],
+  "outro": {
+    "title": "What happens now",
+    "body": "The realistic outcome if a post lands well is first customers, plural in the low single digits — not thousands. A post that genuinely hits on a big sub can do tens of thousands of views, and that's the version worth hoping for. What is reachable this week is the first real dollar this business has ever taken, which is the milestone that makes every number after it possible."
+  }
+}
