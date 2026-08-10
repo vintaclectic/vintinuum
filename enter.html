@@ -135,8 +135,9 @@ a{color:inherit;text-decoration:none}
   display:flex;align-items:center;justify-content:space-between;
   padding:max(16px,env(safe-area-inset-top,16px)) var(--gutter) 0;pointer-events:none}
 .hero__topbar > *{pointer-events:auto}
+/* the logo is a link home — 44px hit area while the glyph stays 26px */
 .brandmark{display:inline-flex;align-items:center;gap:10px;font-family:var(--serif);
-  font-size:1.15rem;letter-spacing:.02em;color:var(--bone)}
+  font-size:1.15rem;letter-spacing:.02em;color:var(--bone);min-height:44px}
 .brandmark img{width:26px;height:26px}
 .hero__sigil{position:relative;width:min(64vw,300px);aspect-ratio:1;margin:0 auto clamp(18px,4vw,30px)}
 .hero__sigil canvas{position:absolute;inset:0;width:100%;height:100%}
@@ -151,8 +152,11 @@ a{color:inherit;text-decoration:none}
   font-size:clamp(1.05rem,3.6vw,1.4rem);line-height:1.45}
 .hero__actions{margin-top:clamp(30px,5vw,44px);display:flex;flex-direction:column;
   align-items:center;gap:14px}
+/* "The ways in ↓" is a real CTA anchor, so it gets the 44px floor. It is a normal
+   flow element (see the scrollcue note below), so height growth just reserves space. */
 .hero__mini{font-family:var(--mono);font-size:.6rem;letter-spacing:.18em;
-  text-transform:uppercase;color:var(--faint);text-align:center}
+  text-transform:uppercase;color:var(--faint);text-align:center;
+  display:flex;align-items:center;justify-content:center;min-height:44px}
 .hero__mini b{color:var(--pulse);font-weight:700}
 /* NO-COLLISION: the scrollcue is now a NORMAL FLOW element at the end of the hero
    (NOT position:absolute). It reserves its own vertical space beneath the actions,
@@ -322,8 +326,12 @@ a{color:inherit;text-decoration:none}
   padding:34px var(--gutter) calc(env(safe-area-inset-bottom,0px) + 40px);
   display:flex;flex-wrap:wrap;gap:14px 26px;align-items:center;justify-content:center;
   text-align:center}
+/* 44px touch floor: these footer links were 16px tall. The row is flex-wrap with a
+   26px column gap, so growing the hit area vertically cannot collide with a
+   neighbour — inline-flex keeps the label optically centred. */
 .foot a{font-family:var(--mono);font-size:.62rem;letter-spacing:.14em;text-transform:uppercase;
-  color:var(--faint);transition:color .2s}
+  color:var(--faint);transition:color .2s;
+  display:inline-flex;align-items:center;justify-content:center;min-height:44px;min-width:44px}
 .foot a:hover{color:var(--pulse)}
 .foot .sep{color:rgba(150,175,215,.2)}
 .foot .mark{color:var(--dim);font-family:var(--serif);font-style:italic;font-size:.9rem}

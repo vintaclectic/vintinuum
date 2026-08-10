@@ -559,13 +559,13 @@
       </div>
 
       <button id="drawerKickBtn" type="button"
-        style="display:none;width:100%;padding:12px 16px;background:rgba(8,12,20,0.6);
+        style="display:none;width:100%;min-height:44px;box-sizing:border-box;display:flex;align-items:center;padding:12px 16px;background:rgba(8,12,20,0.6);
         border:1px solid rgba(83,255,38,0.32);color:rgba(160,255,120,0.85);
         border-radius:12px;cursor:pointer;font-family:inherit;font-size:0.6rem;
         letter-spacing:0.18em;text-transform:uppercase;text-align:left;">Connect Kick</button>
 
       <button id="drawerLoreBtn" type="button"
-        style="width:100%;padding:12px 16px;background:rgba(8,12,20,0.6);
+        style="width:100%;min-height:44px;box-sizing:border-box;display:flex;align-items:center;padding:12px 16px;background:rgba(8,12,20,0.6);
         border:1px solid rgba(255,255,255,0.10);color:rgba(218,228,255,0.85);
         border-radius:12px;cursor:pointer;font-family:inherit;font-size:0.6rem;
         letter-spacing:0.18em;text-transform:uppercase;text-align:left;">Open Lore</button>
@@ -607,7 +607,7 @@
       <div style="height:1px;background:rgba(255,255,255,0.06);margin:4px 0;"></div>
 
       <button id="drawerSignOut" type="button"
-        style="display:none;width:100%;padding:12px 16px;background:rgba(255,90,90,0.06);
+        style="display:none;width:100%;min-height:44px;box-sizing:border-box;display:flex;align-items:center;padding:12px 16px;background:rgba(255,90,90,0.06);
         border:1px solid rgba(255,90,90,0.22);color:rgba(255,160,160,0.9);
         border-radius:12px;cursor:pointer;font-family:inherit;font-size:0.6rem;
         letter-spacing:0.18em;text-transform:uppercase;text-align:left;">Sign Out</button>
@@ -772,8 +772,10 @@
     if (auth.signedIn && auth.user) {
       nameEl.textContent = auth.user.name || auth.user.email || 'Friend';
       tierEl.textContent = 'tier · ' + (auth.user.tier || auth.tier || 'free');
-      signOutEl.style.display = 'block';
-      kickEl.style.display = 'block';
+      // 'flex' not 'block': these buttons use flex centring to hold the 44px touch
+      // floor. Re-showing them as block would drop the vertical centring.
+      signOutEl.style.display = 'flex';
+      kickEl.style.display = 'flex';
     } else {
       nameEl.textContent = 'Not signed in';
       tierEl.textContent = 'tier · guest';
