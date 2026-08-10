@@ -6496,7 +6496,11 @@ window.MIC = (() => {
   const btn = document.createElement('button');
   btn.id = 'micBtn';
   btn.title = 'Voice — click to activate. Say anything to your agent.';
-  btn.style.cssText = 'position:fixed;bottom:24px;left:108px;z-index:1000;background:rgba(6,10,18,0.55);border:1px solid rgba(255,255,255,0.1);border-radius:50%;width:36px;height:36px;cursor:pointer;font-size:.9rem;display:flex;align-items:center;justify-content:center;color:rgba(218,228,255,0.7);transition:all .2s;padding:0;';
+  // 44px touch floor (mobile mandate): this is a primary voice control and was a
+  // 36px target on phones. VintDock derives the bottom-left stack from each
+  // element's real measured size, so growing it stays collision-managed — the
+  // neighbours re-flow around it rather than being overlapped.
+  btn.style.cssText = 'position:fixed;bottom:24px;left:108px;z-index:1000;background:rgba(6,10,18,0.55);border:1px solid rgba(255,255,255,0.1);border-radius:50%;width:44px;height:44px;min-width:44px;min-height:44px;cursor:pointer;font-size:1rem;display:flex;align-items:center;justify-content:center;color:rgba(218,228,255,0.7);transition:all .2s;padding:0;';
   btn.innerHTML = '🎤';
   document.body.appendChild(btn);
   // NO-COLLISION LAW (Vinta 2026-08-02): this sat at a hardcoded bottom:24/left:108.

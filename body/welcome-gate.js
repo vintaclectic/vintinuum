@@ -151,9 +151,13 @@
     + 'font-family:"Space Mono",monospace;animation:vwgrise .35s cubic-bezier(.2,.8,.2,1);}'
     + '@media(min-width:560px){.vwg-sheet{border-radius:22px;}}'
     + '@keyframes vwgrise{from{opacity:0;transform:translateY(20px);}to{opacity:1;transform:none;}}'
-    + '.vwg-eyebrow{font-size:10px;letter-spacing:.22em;text-transform:uppercase;color:#ffd54f;opacity:.7;margin-bottom:8px;}'
+    /* NO-COLLISION: the close button is a 44px absolute box pinned top-right. The
+       eyebrow and headline sit directly beneath it, so they reserve that corner
+       (padding-right) instead of flowing under it. Without this the title text runs
+       under the X at 320px. Verified at 320/375/768/1280. */
+    + '.vwg-eyebrow{font-size:10px;letter-spacing:.22em;text-transform:uppercase;color:#ffd54f;opacity:.7;margin-bottom:8px;padding-right:52px;}'
     + '.vwg-h{font-family:"Cormorant Garamond",Georgia,serif;font-style:italic;font-weight:300;'
-    + 'font-size:30px;line-height:1.08;margin-bottom:8px;color:#ffe9a8;}'
+    + 'font-size:30px;line-height:1.08;margin-bottom:8px;color:#ffe9a8;padding-right:52px;}'
     + '.vwg-sub{font-family:"Cormorant Garamond",Georgia,serif;font-size:17px;color:rgba(150,175,215,.7);'
     + 'line-height:1.5;margin-bottom:18px;}'
     + '.vwg-input{width:100%;background:rgba(0,0,0,.35);border:1px solid rgba(255,213,79,.14);border-radius:11px;'
@@ -166,7 +170,7 @@
     + '.vwg-btn.ghost{background:rgba(255,255,255,.05);border:1px solid rgba(255,213,79,.18);color:rgba(222,230,255,.85);}'
     + '.vwg-row{display:flex;gap:10px;margin-top:10px;}.vwg-row .vwg-btn{margin-top:0;}'
     + '.vwg-tabs{display:flex;gap:6px;margin-bottom:16px;}'
-    + '.vwg-tab{flex:1;min-height:38px;border-radius:9px;border:1px solid rgba(255,213,79,.14);background:transparent;'
+    + '.vwg-tab{flex:1;min-height:44px;border-radius:9px;border:1px solid rgba(255,213,79,.14);background:transparent;'
     + 'color:rgba(150,175,215,.6);font-family:"Space Mono",monospace;font-size:11px;letter-spacing:.08em;cursor:pointer;}'
     + '.vwg-tab.on{background:rgba(255,213,79,.12);color:#ffd54f;border-color:rgba(255,213,79,.3);}'
     + '.vwg-msg{font-size:12px;min-height:16px;margin-top:8px;color:rgba(150,175,215,.7);}'
@@ -178,8 +182,12 @@
     + '.vwg-install .nm{display:block;font-size:12px;color:rgba(222,230,255,.9);}'
     + '.vwg-install .ds{display:block;font-size:10px;color:rgba(150,175,215,.5);margin-top:2px;}'
     + '.vwg-install .ar{color:#ffd54f;font-size:13px;}'
-    + '.vwg-x{position:absolute;top:14px;right:16px;width:30px;height:30px;border:none;background:transparent;'
-    + 'color:rgba(150,175,215,.6);font-size:18px;cursor:pointer;}'
+    /* 44px finger target. This is position:absolute (No-Collision danger zone), so
+       it is nudged to the sheet corner and the header keeps right-padding to match —
+       a bigger box must not grow back over the title beneath it. */
+    + '.vwg-x{position:absolute;top:8px;right:10px;width:44px;height:44px;border:none;background:transparent;'
+    + 'display:flex;align-items:center;justify-content:center;'
+    + 'color:rgba(150,175,215,.6);font-size:18px;cursor:pointer;z-index:2;}'
     + '.vwg-dismiss{display:block;width:100%;text-align:center;background:none;border:none;color:rgba(150,175,215,.45);'
     + 'font-family:"Space Mono",monospace;font-size:11px;letter-spacing:.08em;margin-top:14px;cursor:pointer;padding:8px;}';
 

@@ -101,8 +101,12 @@
       @media(min-width:821px){
         #peelUI{display:none !important;}
       }
-      #peelUI .peel-tabs{width:32px;background:rgba(10,14,22,0.12);border-left:1px solid rgba(255,255,255,0.06);border-top-left-radius:14px;border-bottom-left-radius:14px;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;padding:14px 0;gap:10px;pointer-events:auto;}
-      #peelUI .peel-tab{width:26px;height:26px;display:flex;align-items:center;justify-content:center;border:0;background:transparent;color:rgba(218,228,255,0.45);font-size:13px;cursor:pointer;border-radius:8px;transition:color .2s ease,background .2s ease;padding:0;}
+      /* This rail is MOBILE-ONLY (hidden >=821px), so it is exactly where the 44px
+         touch floor matters most. Strip widened 32->44 and tabs 26->44 so each is a
+         real finger target. The rail is anchored right:0 with a fixed width, so
+         widening cannot cause horizontal overflow — verified at 320/375/768. */
+      #peelUI .peel-tabs{width:44px;background:rgba(10,14,22,0.12);border-left:1px solid rgba(255,255,255,0.06);border-top-left-radius:14px;border-bottom-left-radius:14px;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;padding:14px 0;gap:6px;pointer-events:auto;}
+      #peelUI .peel-tab{width:44px;height:44px;min-width:44px;min-height:44px;display:flex;align-items:center;justify-content:center;border:0;background:transparent;color:rgba(218,228,255,0.45);font-size:13px;cursor:pointer;border-radius:8px;transition:color .2s ease,background .2s ease;padding:0;}
       #peelUI .peel-tab:hover{color:rgba(218,228,255,0.85);background:rgba(255,255,255,0.04);}
       #peelUI .peel-tab.active{color:rgba(140,210,255,0.95);background:rgba(100,180,255,0.06);}
       #peelUI .peel-panel{width:0;overflow:hidden;background:rgba(10,14,22,0.18);border-left:1px solid rgba(255,255,255,0.08);transition:width .3s ease;pointer-events:auto;}

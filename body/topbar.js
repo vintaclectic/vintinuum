@@ -274,7 +274,10 @@
     brand.href = 'brain.html';
     brand.title = 'Vintinuum — return to brain';
     brand.setAttribute('aria-label', 'Vintinuum home');
-    brand.style.cssText = 'justify-self:center;display:flex;align-items:center;gap:10px;pointer-events:auto;flex-shrink:0;text-decoration:none;cursor:pointer;-webkit-tap-highlight-color:transparent;';
+    // 44px floor: on phones the wordmark hides and this collapses to a 24px icon,
+    // which is far too small to tap. min-w/h keeps the HIT AREA at 44 while the
+    // glyph stays 24 — the bar is 56px tall so it still cannot collide.
+    brand.style.cssText = 'justify-self:center;display:flex;align-items:center;justify-content:center;gap:10px;pointer-events:auto;flex-shrink:0;text-decoration:none;cursor:pointer;-webkit-tap-highlight-color:transparent;min-width:44px;min-height:44px;';
     // If we're already on brain.html, the link is a no-op anchor — but
     // we still allow click for the visual feedback. data-draggable=false
     // so the global draggable system doesn't hijack the click.
@@ -350,7 +353,8 @@
       if (refs.vitals) {
         if (w < 480) {
           refs.vitals.style.padding = '6px 10px';
-          refs.vitals.style.minWidth = '36px';
+          // never below the 44px touch floor, even in the compressed phone layout
+          refs.vitals.style.minWidth = '44px';
         } else {
           refs.vitals.style.padding = '';
           refs.vitals.style.minWidth = '';
@@ -457,7 +461,13 @@
       font-family: 'Space Mono', monospace;
       text-transform: uppercase;
       transition: all 180ms cubic-bezier(0.16,1,0.3,1);
-      min-height: 36px;
+      /* MOBILE MANDATE: every pill is a real finger target (>=44x44). The bar is
+         56px tall, so 44px sits inside it with 6px of breathing room top/bottom —
+         no reflow, no collision with the bar edge. Icon-only pills were 30-32px
+         wide, the worst offenders on a phone. */
+      min-height: 44px;
+      min-width: 44px;
+      justify-content: center;
       display: flex;
       align-items: center;
       gap: 8px;
@@ -532,8 +542,8 @@
         <div style="font-size:0.55rem;letter-spacing:0.3em;color:#7ccfff;font-weight:700;">VINTINUUM</div>
         <button id="topDrawerClose" type="button" aria-label="Close"
           style="background:none;border:1px solid rgba(255,255,255,0.10);color:rgba(255,255,255,0.55);
-          width:32px;height:32px;border-radius:50%;cursor:pointer;font-size:14px;
-          display:flex;align-items:center;justify-content:center;">×</button>
+          width:44px;height:44px;min-width:44px;min-height:44px;border-radius:50%;cursor:pointer;font-size:14px;
+          display:flex;align-items:center;justify-content:center;flex:0 0 auto;">×</button>
       </div>
 
       <div id="drawerIdentity" style="
@@ -615,7 +625,13 @@
       css.id = 'topDrawerLinkCSS';
       css.textContent = `
         .drawer-link {
-          display: block;
+          /* This drawer IS the mobile navigation — these links are the main way a
+             phone user moves through Vintinuum, so they get the full 44px target.
+             flex+align-items keeps the label optically centred as height grows. */
+          display: flex;
+          align-items: center;
+          min-height: 44px;
+          box-sizing: border-box;
           padding: 11px 14px;
           background: rgba(8,12,20,0.55);
           border: 1px solid rgba(255,255,255,0.08);
