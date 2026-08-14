@@ -66,8 +66,10 @@
 <script defer src="body/diag.js?v=v20260510-diag"></script>
 <script defer src="body/status_pill.js?v=v20260510-pill"></script>
 <script defer src="body/wake_consent.js?v=v20260510-consent"></script>
-<script defer src="body/voice_button.js?v=v20260614-onebtn"></script>
-<script defer src="body/voice_picker.js?v=v20260510-vpicker"></script>
+<!-- VOICE STACK (2026-08-14 universal voice fix) — voice_core loads the full stack -->
+<script src="body/voice_core.js?v=v20260814-universal" defer></script>
+<script defer src="body/voice_button.js?v=v20260814-universal"></script>
+<script defer src="body/voice_picker.js?v=v20260814-universal"></script>
 <script defer src="body/embodied_convo.js?v=v20260510-embodied"></script>
 <script src="body/bond_door.js?v=v20260509-marqueewrap"></script>
 <script src="body/topbar.js?v=v20260509-altarup" defer></script>

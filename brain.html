@@ -3370,15 +3370,10 @@ if ('serviceWorker' in navigator && _onGitHubPages) {
 <!-- Council ruling 2026-04-29: unified bond door replaces legacy soul_handshake.js -->
 <script src="body/identity.js?v=v20260806-0902"></script>
 <script src="body/devices.js?v=v20260806-0902"></script>
-<!-- REALTIME VOICE LANE — the microphone. Order is load-bearing: the FSM
-     (convo_state) must exist before voice_out and voice_in grab it, and all
-     three must exist before voice_button / hey_vinta / wake_word try to start
-     listening. These are `defer` so they run in document order. Without them
-     the mic button had nothing to open (Vinta directive 2026-07-06). -->
-<script src="body/convo_state.js?v=v20260806-0902" defer></script>
-<script src="body/voice_out.js?v=v20260806-0902" defer></script>
-<script src="body/voice_in.js?v=v20260806-0902" defer></script>
-<script src="body/voice_say.js?v=v20260806-0902" defer></script>
+<!-- REALTIME VOICE LANE — 2026-08-14: now uses voice_core for universal loading.
+     voice_core dynamically loads convo_state/voice_in/voice_out/voice_say in the
+     right order with capability detection. brain.html gets the full stack. -->
+<script src="body/voice_core.js?v=v20260814-universal" defer></script>
 <script src="body/she_speaks.js?v=v20260806-0902" defer></script>
 <script src="body/kick_tts.js?v=v20260806-0902" defer></script>
 <script src="body/greeting.js?v=v20260806-0902"></script>
@@ -3416,8 +3411,8 @@ if ('serviceWorker' in navigator && _onGitHubPages) {
 <script defer src="body/diag.js?v=v20260806-0902"></script>
 <script defer src="body/status_pill.js?v=v20260806-0902"></script>
 <script defer src="body/wake_consent.js?v=v20260806-0902"></script>
-<script defer src="body/voice_button.js?v=v20260806-0902"></script>
-<script defer src="body/voice_picker.js?v=v20260806-0902"></script>
+<script defer src="body/voice_button.js?v=v20260814-universal"></script>
+<script defer src="body/voice_picker.js?v=v20260814-universal"></script>
 <script defer src="body/embodied_convo.js?v=v20260806-0902"></script>
 <script defer src="body/browser-relay-widget.js?v=v20260806-0902"></script>
 <!-- DirRM Player — gold/amber floating media player (non-blocking, no backdrop) -->
