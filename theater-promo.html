@@ -591,9 +591,12 @@
   // Never hardcode a price on a public page. Stripe is the source of truth;
   // the brain reads tier_definitions. If the brain is unreachable we show
   // "see all tiers" rather than inventing a number the checkout won't honor.
-  function paintPrice(tier, cents) {
+  // /api/tier/plans returns { plans: [{ tier, price }] } with price in WHOLE
+  // DOLLARS (server.js ~3661). Do not read monthly_price_cents here — that's
+  // the DB column name, not the API's shape.
+  function paintPrice(tier, dollars) {
     var nodes = document.querySelectorAll('[data-price="' + tier + '"]');
-    var text = (cents === 0) ? '$0' : '$' + (cents / 100).toFixed(0) + '/mo';
+    var text = (!dollars) ? '$0' : '$' + dollars + '/mo';
     for (var i = 0; i < nodes.length; i++) {
       var n = nodes[i];
       n.textContent = (n.classList.contains('price-was'))
@@ -609,11 +612,11 @@
   fetch(API + '/api/tier/plans')
     .then(function (r) { return r.ok ? r.json() : Promise.reject(r.status); })
     .then(function (data) {
-      var tiers = (data && (data.tiers || data.plans)) || [];
+      var tiers = (data && (data.plans || data.tiers)) || [];
       var found = 0;
       tiers.forEach(function (t) {
         if (t.tier === 'theater' || t.tier === 'companion') {
-          paintPrice(t.tier, t.monthly_price_cents);
+          paintPrice(t.tier, t.price);
           found++;
         }
       });
@@ -637,6 +640,10 @@
       b.disabled = true;
     }
   }
+  // NOTE: /api/tier/founder-status is not yet implemented on the brain. Until
+  // it lands this resolves to the honest "open, not yet counting" state — we
+  // show NO number rather than a fabricated one. The moment the endpoint ships
+  // the real count paints itself with no change to this page.
   authedFetch(API + '/api/tier/founder-status?cohort=theater-100')
     .then(function (r) { return r.ok ? r.json() : Promise.reject(r.status); })
     .then(function (d) {
@@ -645,13 +652,14 @@
     })
     .catch(function () {
       // Honest degradation: no invented scarcity when we can't count.
-      $('meterLabel').textContent = 'founder seats open — count syncing';
+      $('meterFill').style.width = '0%';
+      $('meterLabel').textContent = 'founder seats are open — live count lands with the cohort';
     });
 
   // ── DirRM player, via the canonical launcher contract ───
   // Iframe + postMessage path documented in OPERATIONS.md. No raw <video>.
   var DEMO = {
-    url:   'media/theater-demo.mp4',
+    url:   'media/vintinuum_hermes_demo.mp4',
     title: 'DirRM — the universal media surface',
     type:  'video'
   };
@@ -714,8 +722,18 @@
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ cohort: 'theater-100', tier: 'theater' })
     })
-      .then(function (r) { return r.json().then(function (b) { return { ok: r.ok, body: b }; }); })
+      .then(function (r) {
+        // 404 = the founder cohort endpoint hasn't shipped yet. Say so plainly
+        // and hand them the real upgrade lane instead of a dead button.
+        if (r.status === 404) return { pending: true };
+        return r.json().then(function (b) { return { ok: r.ok, body: b }; });
+      })
       .then(function (res) {
+        if (res.pending) {
+          status.textContent = 'the founder list is opening shortly — nothing was charged. Taking you to the tiers page…';
+          setTimeout(function () { window.location.href = 'upgrade.html'; }, 1400);
+          return;
+        }
         if (res.ok && res.body && res.body.granted) {
           status.textContent = 'seat ' + (res.body.seat || '') + ' is yours. Theater is open — go play something.';
           if (typeof res.body.claimed === 'number') paintSeats(res.body.claimed);
