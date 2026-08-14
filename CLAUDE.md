@@ -25,6 +25,21 @@ Vinta has answered.
 Asking a question and then immediately running a tool in the same turn is the
 exact violation this rule exists to kill. Do not do it. Ever.
 
+**⚡ BUT ASK FAR LESS (Decision Doctrine, 2026-08-14, task FARQ9GP).** This rule
+governs *what happens after* you ask — it is NOT an invitation to ask. Vinta's
+directive: *"i want less needs-human intervention… the council of agents make
+decisions way more."* So: **decide by default, ask rarely.** If a wrong call is
+cheap to undo (anything in git — code, naming, layout, architecture, library,
+copy, defaults), you DECIDE it, ship it, and record
+`DECISION: <call> — REVERSIBLE VIA: <undo>` instead of asking. Reserve questions
+for the five irreversible cases in the machine-wide Decision Doctrine
+(`~/.claude/CLAUDE.md`): real money, irreversible public action as Vinta,
+destructive-without-backup, genuine strategic forks, and unresolvable
+contradictions in Vinta's own intent. Thin specs, missing files, stale acceptance
+criteria, and "which reasonable option?" are NOT grounds to ask — they're yours to
+settle. When you do genuinely ask, ask with a recommendation and a default you'll
+proceed with — then STOP COMPLETELY, exactly as above.
+
 ## Commit discipline (non-negotiable)
 
 After every logical unit of work, `git add` the touched files and create a
