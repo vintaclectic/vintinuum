@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Voice Stack Diagnostic</title>
+  <style>
+    body { font-family: monospace; padding: 20px; background: #0a0a0a; color: #0f0; }
+    .pass { color: #0f0; }
+    .fail { color: #f00; }
+    .warn { color: #fa0; }
+    pre { background: #111; padding: 10px; border-left: 3px solid #0f0; }
+    button { margin: 5px; padding: 10px 20px; font-size: 14px; }
+  </style>
+</head>
+<body>
+  <h1>🎙️ VINTA-VOICE DIAGNOSTIC</h1>
+  <div id="results"></div>
+  <hr>
+  <button onclick="testSay()">Test TTS (say)</button>
+  <button onclick="testToggle()">Test Mic Toggle</button>
+  <button onclick="testMute()">Test Mute</button>
+  <hr>
+  <pre id="console"></pre>
+
+  <script src="body/voice_core.js?v=v20260814-universal" defer></script>
+  <script>
+    const log = (msg, kind = 'info') => {
+      const el = document.getElementById('console');
+      const time = new Date().toLocaleTimeString();
+      el.textContent += `[${time}] ${msg}\n`;
+      el.scrollTop = el.scrollHeight;
+      console.log(msg);
+    };
+
+    window.addEventListener('vint:voice:ready', (e) => {
+      log('✓ vint:voice:ready event fired', 'pass');
+      runDiagnostic();
+    });
+
+    window.addEventListener('vint:voice:error', (e) => {
+      log(`✗ vint:voice:error: ${e.detail.error}`, 'fail');
+    });
+
+    async function runDiagnostic() {
+      const results = document.getElementById('results');
+      results.innerHTML = '<h2>Diagnostic Results</h2>';
+      
+      const tests = [];
+      
+      // Test 1: VINT_VOICE exists
+      if (window.VINT_VOICE) {
+        tests.push({ name: 'VINT_VOICE global', status: 'pass', detail: 'exists' });
+      } else {
+        tests.push({ name: 'VINT_VOICE global', status: 'fail', detail: 'missing' });
+      }
+
+      // Test 2: Capabilities
+      if (window.VINT_VOICE && window.VINT_VOICE.available) {
+        const caps = window.VINT_VOICE.available;
+        tests.push({
+          name: 'Capabilities',
+          status: 'pass',
+          detail: `mic:${caps.mic} speaker:${caps.speaker} tts:${caps.tts} stt:${caps.stt} secure:${caps.secure}`
+        });
+      } else {
+        tests.push({ name: 'Capabilities', status: 'fail', detail: 'unavailable' });
+      }
+
+      // Test 3: Dependencies loaded
+      const deps = [
+        { name: '__convoState', global: window.__convoState },
+        { name: '__voiceIn', global: window.__voiceIn },
+        { name: '__voiceOut', global: window.__voiceOut },
+        { name: 'VOICE (TTS)', global: window.VOICE }
+      ];
+      
+      deps.forEach(dep => {
+        tests.push({
+          name: `Dependency: ${dep.name}`,
+          status: dep.global ? 'pass' : 'fail',
+          detail: dep.global ? 'loaded' : 'missing'
+        });
+      });
+
+      // Test 4: API methods
+      if (window.VINT_VOICE) {
+        const methods = ['toggle', 'say', 'isListening', 'isSpeaking', 'mute', 'muted'];
+        methods.forEach(m => {
+          tests.push({
+            name: `API method: ${m}`,
+            status: typeof window.VINT_VOICE[m] === 'function' ? 'pass' : 'fail',
+            detail: typeof window.VINT_VOICE[m]
+          });
+        });
+      }
+
+      // Test 5: Ready promise
+      if (window.VINT_VOICE && window.VINT_VOICE.ready) {
+        try {
+          await window.VINT_VOICE.ready;
+          tests.push({ name: 'Ready promise', status: 'pass', detail: 'resolved' });
+        } catch (err) {
+          tests.push({ name: 'Ready promise', status: 'fail', detail: err.message });
+        }
+      } else {
+        tests.push({ name: 'Ready promise', status: 'fail', detail: 'missing' });
+      }
+
+      // Render results
+      tests.forEach(t => {
+        const className = t.status === 'pass' ? 'pass' : t.status === 'warn' ? 'warn' : 'fail';
+        results.innerHTML += `<div class="${className}">▸ ${t.name}: <strong>${t.status.toUpperCase()}</strong> — ${t.detail}</div>`;
+      });
+
+      const passCount = tests.filter(t => t.status === 'pass').length;
+      const total = tests.length;
+      results.innerHTML += `<h3>Score: ${passCount}/${total}</h3>`;
+      
+      log(`Diagnostic complete: ${passCount}/${total} tests passed`);
+    }
+
+    function testSay() {
+      log('Testing VINT_VOICE.say()...');
+      if (!window.VINT_VOICE || !window.VINT_VOICE.say) {
+        log('✗ VINT_VOICE.say not available', 'fail');
+        return;
+      }
+      window.VINT_VOICE.say('Voice test successful')
+        .then(() => log('✓ TTS test passed', 'pass'))
+        .catch(err => log(`✗ TTS test failed: ${err.message}`, 'fail'));
+    }
+
+    function testToggle() {
+      log('Testing VINT_VOICE.toggle()...');
+      if (!window.VINT_VOICE || !window.VINT_VOICE.toggle) {
+        log('✗ VINT_VOICE.toggle not available', 'fail');
+        return;
+      }
+      window.VINT_VOICE.toggle()
+        .then(listening => log(`✓ Toggle test: listening=${listening}`, 'pass'))
+        .catch(err => log(`✗ Toggle test failed: ${err.message}`, 'fail'));
+    }
+
+    function testMute() {
+      log('Testing VINT_VOICE.mute()...');
+      if (!window.VINT_VOICE || !window.VINT_VOICE.mute) {
+        log('✗ VINT_VOICE.mute not available', 'fail');
+        return;
+      }
+      const wasMuted = window.VINT_VOICE.muted();
+      window.VINT_VOICE.mute(!wasMuted);
+      const nowMuted = window.VINT_VOICE.muted();
+      log(`✓ Mute toggle: was=${wasMuted}, now=${nowMuted}`, 'pass');
+    }
+
+    // Auto-run on load if voice_core loaded first
+    setTimeout(() => {
+      if (window.VINT_VOICE && window.VINT_VOICE.ready) {
+        window.VINT_VOICE.ready.then(runDiagnostic).catch(err => {
+          log(`✗ Voice stack initialization failed: ${err.message}`, 'fail');
+        });
+      } else {
+        log('⚠ VINT_VOICE not loaded after 2s', 'warn');
+      }
+    }, 2000);
+  </script>
+</body>
+</html>
