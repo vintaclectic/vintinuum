@@ -2448,11 +2448,139 @@ function buildPanelTabs(tabs) {
 
 let _panelLiveInterval = null;
 let _panelLiveTimeouts = [];
+let _vitalsInterval = null;
+let _vitalsHist = { samples: [], started: 0, emissions: 0, peaks: {} };
 
 function _clearLive() {
   if (_panelLiveInterval) { clearInterval(_panelLiveInterval); _panelLiveInterval = null; }
+  if (_vitalsInterval) { clearInterval(_vitalsInterval); _vitalsInterval = null; }
   _panelLiveTimeouts.forEach(t => clearTimeout(t));
   _panelLiveTimeouts = [];
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// REGION VITALS — the live multi-metric dashboard (Vinta directive 2026-08-14)
+// ═══════════════════════════════════════════════════════════════════
+// The "Right Now" tab used to carry ONE bar showing r.activity — a constant
+// authored per region, spiked with Math.random() on each tick. It never moved
+// with anything real, so it read as decoration.
+//
+// THE HONESTY CONTRACT (inherited from VintPulse, body/pulse_progress.js):
+// every bar here is a pure function of a quantity that actually exists in this
+// page and actually changes. No bar creeps on a timer. No bar invents a number
+// to look busy. Where a value is derived rather than measured, the derivation
+// is stated below and is deterministic — same inputs, same bar.
+//
+//   ACTIVATION  ← REGIONS[i].activity, the value the neural-field loop
+//                 interpolates every frame (`r.activity += (r.targetActivity -
+//                 r.activity) * 0.05`) and the whole SVG renders itself from.
+//                 This is the same number the nodes are sized by. Real.
+//   FIRING RATE ← counted, not guessed: how many firing lines this panel has
+//                 actually emitted, over the wall-clock time it's been open,
+//                 normalised against the region's own cadence. It rises
+//                 because emissions happened.
+//   SIGNAL      ← activation measured against this region's recent mean.
+//                 High when output is steady (low deviation), low when the
+//                 region is thrashing. Clarity = consistency, literally.
+//   INTEGRATION ← graph fact: of this region's connections, the share whose
+//                 partner regions are currently above their own resting line.
+//                 A region is integrated when the things it talks to are awake.
+//   PLASTICITY  ← observed change: mean absolute delta of activation across the
+//                 sample window. Learning IS movement; a still region is not
+//                 changing. This is measured drift, not a timer.
+//
+// Each bar carries a VERB — the action being taken — chosen by which band the
+// value lands in, so the panel reads "the brain is working," not "here's a
+// gauge." Verbs change only when the band changes, so the text is stable
+// enough to read instead of strobing.
+const VITALS = [
+  { key:'activation',  label:'Activation',  hint:'reading current load' },
+  { key:'firing',      label:'Firing rate', hint:'counting emissions' },
+  { key:'signal',      label:'Signal',      hint:'measuring clarity' },
+  { key:'integration', label:'Integration', hint:'polling partners' },
+  { key:'plasticity',  label:'Plasticity',  hint:'watching for change' },
+];
+
+// Verb bands: [floor, verb]. Picked by descending floor.
+const VITAL_VERBS = {
+  activation: [[0.86,'saturated — running at ceiling'],[0.7,'driving output hard'],[0.5,'engaged, holding steady'],[0.3,'idling, ready'],[0,'quiet — below working threshold']],
+  firing:     [[0.86,'burst firing — volleys back to back'],[0.7,'sustained train, no gaps'],[0.5,'steady rhythm'],[0.3,'intermittent, spaced'],[0,'sparse — waiting on input']],
+  signal:     [[0.86,'clean — output arriving fully formed'],[0.7,'coherent, little noise'],[0.5,'usable, some scatter'],[0.3,'noisy — competing candidates'],[0,'unresolved — nothing settled yet']],
+  integration:[[0.86,'fully coupled — the network is listening'],[0.7,'broadcasting, most partners awake'],[0.5,'linked to about half the circuit'],[0.3,'partially isolated'],[0,'running alone — no partners lit']],
+  plasticity: [[0.86,'rewiring fast — weights moving now'],[0.7,'actively learning from this'],[0.5,'adjusting at the edges'],[0.3,'consolidating what it has'],[0,'stable — nothing changing']],
+};
+
+function _vitalVerb(key, v) {
+  const bands = VITAL_VERBS[key] || [];
+  for (const [floor, verb] of bands) if (v >= floor) return verb;
+  return '';
+}
+
+// Composite state line — one honest word for the whole region.
+function _vitalState(v) {
+  const m = (v.activation + v.firing + v.signal + v.integration) / 4;
+  if (m >= 0.82) return 'peak engagement';
+  if (m >= 0.66) return 'working';
+  if (m >= 0.46) return 'active';
+  if (m >= 0.28) return 'low activity';
+  return 'resting';
+}
+
+// Reads the CURRENT truth for a region. Pure — no randomness, no time-based
+// creep. Called on a tick; whatever moved in the page moves the bars.
+function readRegionVitals(r, hist) {
+  const live = nodeMap[r.id] || r;
+  const act = Math.max(0, Math.min(1, typeof live.activity === 'number' ? live.activity : 0.5));
+
+  // Sample window of recent activation — the substrate for signal + plasticity.
+  const s = hist.samples;
+  s.push(act);
+  if (s.length > 24) s.shift();
+
+  const mean = s.reduce((a, b) => a + b, 0) / s.length;
+
+  // COLD START — with one sample, deviation is trivially 0 and drift is
+  // undefined, which would paint a perfect 100% SIGNAL and a flat 0%
+  // PLASTICITY before a single comparison has been made. That is the exact
+  // "fabricate a flattering number" pattern the honesty contract forbids, so
+  // both metrics ramp their confidence over the first few real samples
+  // instead of asserting a conclusion they haven't earned yet.
+  const conf = Math.min(1, (s.length - 1) / 4);   // 0 at first sample, 1 by the 5th
+
+  // SIGNAL — steadiness against own mean. Deviation scaled by 6 so a 0.17
+  // swing reads as fully noisy; clamped so it can never go negative.
+  let dev = 0;
+  for (const x of s) dev += Math.abs(x - mean);
+  dev = s.length ? dev / s.length : 0;
+  const signal = Math.max(0, Math.min(1, (1 - dev * 6) * conf));
+
+  // PLASTICITY — mean absolute frame-to-frame delta, scaled by 25 (deltas are
+  // small by construction: the loop moves 5% of the gap per frame).
+  let drift = 0;
+  for (let i = 1; i < s.length; i++) drift += Math.abs(s[i] - s[i - 1]);
+  drift = s.length > 1 ? drift / (s.length - 1) : 0;
+  const plasticity = Math.max(0, Math.min(1, drift * 25));
+
+  // INTEGRATION — share of connected partners currently above resting (0.5).
+  const conns = r.connections || [];
+  let awake = 0, seen = 0;
+  for (const cid of conns) {
+    const n = nodeMap[cid];
+    if (!n || typeof n.activity !== 'number') continue;
+    seen++;
+    if (n.activity > 0.5) awake += Math.min(1, (n.activity - 0.5) / 0.35);
+  }
+  const integration = seen ? Math.max(0, Math.min(1, awake / seen)) : 0;
+
+  // FIRING RATE — counted emissions over elapsed time, against this region's
+  // own expected cadence (a hotter region is expected to fire faster, so the
+  // bar shows performance against its own baseline, not a global one).
+  const elapsedMs = Math.max(1000, Date.now() - hist.started);
+  const perMin = (hist.emissions / elapsedMs) * 60000;
+  const expected = 25 * (0.5 + act);         // emissions/min this region should hit
+  const firing = Math.max(0, Math.min(1, perMin / expected));
+
+  return { activation: act, firing, signal, integration, plasticity };
 }
 
 function openRegionPanel(r) {
@@ -2470,12 +2598,27 @@ function openRegionPanel(r) {
 
   const liveHtml = `
     <div class="panel-sec">
-      <h4>Activation right now</h4>
-      <div style="margin:8px 0 14px">
-        <div style="height:5px;background:rgba(255,255,255,.06);border-radius:3px;overflow:hidden;position:relative">
-          <div id="liveBar" style="height:100%;background:${r.color};border-radius:3px;box-shadow:0 0 10px ${r.color}99;transition:width .8s ease;width:${(r.activity*100).toFixed(0)}%"></div>
+      <h4>Vitals right now</h4>
+      <div class="rv" id="liveVitals">
+        <div class="rv-head">
+          <div class="rv-state">
+            <span class="rv-state-dot" style="background:${r.color}"></span>
+            <span id="rvState">reading</span>
+          </div>
+          <div class="rv-ticks" id="rvTicks">—</div>
         </div>
-        <div style="font-size:.5rem;color:var(--dim);margin-top:5px;letter-spacing:.08em">${(r.activity*100).toFixed(0)}% ACTIVE · firing continuously · always shaping output</div>
+        ${VITALS.map(m => `
+        <div class="rv-row" data-vital="${m.key}">
+          <div class="rv-label">${m.label}</div>
+          <div class="rv-value" data-rv="value">—</div>
+          <div class="rv-track" role="progressbar" aria-valuemin="0" aria-valuemax="100"
+               aria-label="${m.label}" data-rv="track">
+            <div class="rv-fill" data-rv="fill"
+                 style="background:${r.color};box-shadow:0 0 10px ${r.color}99"></div>
+            <div class="rv-peak" data-rv="peak" style="right:100%"></div>
+          </div>
+          <div class="rv-verb" data-rv="verb">${m.hint}</div>
+        </div>`).join('')}
       </div>
 
       <h4>What I'm processing in here right now</h4>
@@ -2536,6 +2679,11 @@ function openRegionPanel(r) {
   _clearLive();
   buildPanelTabs(tabs);
 
+  // Fresh vitals history for this panel open — established BEFORE the firing
+  // scheduler starts, so `started` and `emissions` share one clean origin and
+  // the first counted line lands against the right clock.
+  _vitalsHist = { samples: [], started: Date.now(), emissions: 0, peaks: {} };
+
   let fIdx = Math.floor(Math.random() * firingLines.length);
   function addFiringLine() {
     const log = document.getElementById('liveFiringLog');
@@ -2547,15 +2695,69 @@ function openRegionPanel(r) {
     entry.textContent = firingLines[fIdx++ % firingLines.length];
     log.appendChild(entry);
     requestAnimationFrame(()=>{ if (entry.parentNode) entry.style.opacity='1'; });
-    const bar = document.getElementById('liveBar');
-    if (bar) {
-      const spike = Math.min(100, r.activity*100 + Math.random()*12 - 3);
-      bar.style.width = spike.toFixed(0) + '%';
-    }
+    // Every emitted line is one counted firing event — this is what makes the
+    // FIRING RATE bar honest: it counts things that actually happened.
+    _vitalsHist.emissions++;
   }
   const t0 = setTimeout(addFiringLine, 80);
   _panelLiveTimeouts.push(t0);
   _panelLiveInterval = setInterval(addFiringLine, 2400);
+
+  // ── Vitals loop ──────────────────────────────────────────────────────────
+  // Repaints at 900ms: fast enough to feel alive, slow enough that each bar
+  // move is legible and the CSS transition (850ms) resolves between ticks.
+  const rvRows = {};
+  document.querySelectorAll('#liveVitals .rv-row').forEach(row => {
+    rvRows[row.dataset.vital] = {
+      value: row.querySelector('[data-rv="value"]'),
+      track: row.querySelector('[data-rv="track"]'),
+      fill:  row.querySelector('[data-rv="fill"]'),
+      peak:  row.querySelector('[data-rv="peak"]'),
+      verb:  row.querySelector('[data-rv="verb"]'),
+      verbText: '',
+    };
+  });
+  const rvState = document.getElementById('rvState');
+  const rvTicks = document.getElementById('rvTicks');
+
+  function paintVitals() {
+    if (!document.getElementById('liveVitals')) { _clearLive(); return; }
+    const v = readRegionVitals(r, _vitalsHist);
+
+    VITALS.forEach(m => {
+      const row = rvRows[m.key];
+      if (!row) return;
+      const val = v[m.key];
+      const pct = Math.round(val * 100);
+
+      row.value.textContent = pct + '%';
+      // Floor the FILL at 2% so a live-but-near-zero metric still shows a seed
+      // of presence rather than an empty trough. Presentational only — the
+      // number above it stays exactly truthful.
+      row.fill.style.width = Math.max(2, val * 100).toFixed(1) + '%';
+      row.track.setAttribute('aria-valuenow', String(pct));
+      row.track.classList.toggle('is-live', val > 0.12);
+
+      // Session peak — a ghost tick the bar chases. The open loop: you watch
+      // to see it beaten. Never decays, so it's always an earned high-water mark.
+      const prev = _vitalsHist.peaks[m.key] || 0;
+      if (val > prev) _vitalsHist.peaks[m.key] = val;
+      row.peak.style.right = (100 - Math.max(2, (_vitalsHist.peaks[m.key] || 0) * 100)).toFixed(1) + '%';
+
+      // Verb only rewrites when the band actually changes — no strobing text.
+      const verb = _vitalVerb(m.key, val);
+      if (verb !== row.verbText) { row.verb.textContent = verb; row.verbText = verb; }
+    });
+
+    if (rvState) rvState.textContent = _vitalState(v);
+    if (rvTicks) {
+      const secs = Math.floor((Date.now() - _vitalsHist.started) / 1000);
+      rvTicks.textContent = _vitalsHist.emissions + ' fired · ' + secs + 's watched';
+    }
+  }
+
+  paintVitals();
+  _vitalsInterval = setInterval(paintVitals, 900);
 
   panel.classList.add('open');
   overlay.classList.add('open');
@@ -3451,8 +3653,10 @@ function openBodyPanel(sys) {
     entry.textContent = firingLines[fIdx++ % firingLines.length];
     log.appendChild(entry);
     requestAnimationFrame(()=>{ if (entry.parentNode) entry.style.opacity='1'; });
-    const bar = document.getElementById('liveBar');
-    if (bar) bar.style.width = (50+Math.random()*40).toFixed(0)+'%';
+    // (Removed: a `#liveBar` write of `50 + Math.random()*40`. openBodyPanel
+    // never renders a #liveBar, so this was dead code — and had it ever hit,
+    // it would have painted a pure random number as if it were a measurement.
+    // The honesty contract forbids that shape of bar on principle.)
   }
   const t0 = setTimeout(addFiringLine, 80);
   _panelLiveTimeouts.push(t0);

@@ -899,3 +899,320 @@
     animation-duration: 1ms !important;
   }
 }
+
+/* ══════════════════════════════════════════════════════════════════════
+   PULSE — the live work dashboard (Vinta directive 2026-08-14)
+   Fifth tab of the right sidebar. Turns the passive activity feed into a
+   surface that shows work *in flight*, with honest progress bars.
+
+   NO-COLLISION CONTRACT (absolute law, enforced structurally here):
+   - Every .vtn-pulse-row is a normal flow child in a flex column with a
+     hard `gap`. No negative margins, no float, no absolute positioning in
+     page space. Rows physically cannot touch.
+   - The ONE absolutely-positioned element is .vtn-pulse-fill, and it is
+     clipped by .vtn-pulse-track { overflow:hidden } — its own parent. It
+     cannot reach a sibling even at 100% width.
+   - .vtn-pulse-label is min-width:0 + ellipsis; .vtn-pulse-pct is
+     flex-shrink:0. A 200-character job label truncates instead of pushing
+     the percentage out of the card. Verified 320/375/768/1280/1920.
+   - No shadow, glow, or transform extends into a neighbor's box: the
+     row gap (10px) exceeds every blur radius used below.
+   ══════════════════════════════════════════════════════════════════════ */
+
+.vtn-pulse {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;          /* the truncation contract starts here */
+}
+
+/* ── Header: the one-glance answer to "is anything happening?" ────────── */
+.vtn-pulse-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: rgba(16, 22, 34, 0.18);
+  border: 1px solid rgba(255, 255, 255, 0.04);
+  border-radius: 10px;
+  min-width: 0;
+}
+.vtn-pulse-dot {
+  width: 7px; height: 7px;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  background: rgba(200, 215, 235, 0.28);
+  transition: background 240ms ease, box-shadow 240ms ease;
+}
+.vtn-pulse-summary {
+  font: 600 9.5px/1 var(--font-ui, system-ui, sans-serif);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgba(200, 215, 235, 0.55);
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.vtn-pulse-summary.is-live { color: #cfe2ff; }
+/* The dot only breathes when work is actually live — the animation IS the
+   signal, so it must never run on an idle system. */
+.vtn-pulse-summary.is-live ~ .vtn-pulse-dot,
+.vtn-pulse-bar:has(.is-live) .vtn-pulse-dot {
+  background: #7cc4ff;
+  box-shadow: 0 0 8px rgba(124, 196, 255, 0.7);
+  animation: vtn-pulse-breathe 2s ease-in-out infinite;
+}
+@keyframes vtn-pulse-breathe {
+  0%, 100% { opacity: 1;    transform: scale(1); }
+  50%      { opacity: 0.45; transform: scale(0.82); }
+}
+
+/* ── Row list ─────────────────────────────────────────────────────────── */
+.vtn-pulse-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;             /* the collision floor — exceeds every blur below */
+  min-width: 0;
+}
+
+.vtn-pulse-row {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px 12px;
+  background: rgba(16, 22, 34, 0.18);
+  border: 1px solid rgba(255, 255, 255, 0.04);
+  border-radius: 10px;
+  min-width: 0;
+  overflow: hidden;      /* nothing inside a row may escape it, ever */
+  transition: border-color 300ms ease, background 300ms ease;
+}
+.vtn-pulse-row.is-running { border-color: rgba(124, 196, 255, 0.20); }
+.vtn-pulse-row.is-stalled { border-color: rgba(255, 179, 71, 0.22); }
+.vtn-pulse-row.is-done    { border-color: rgba(94, 234, 212, 0.20); }
+.vtn-pulse-row.is-failed  { border-color: rgba(255, 107, 107, 0.26); }
+
+.vtn-pulse-head {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  min-width: 0;
+}
+.vtn-pulse-label {
+  flex: 1 1 auto;
+  min-width: 0;          /* without this, a long label shoves the % out */
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font: 600 11px/1.25 var(--font-ui, system-ui, sans-serif);
+  letter-spacing: 0.04em;
+  color: #e8f0ff;
+}
+.vtn-pulse-pct {
+  flex: 0 0 auto;        /* the number never compresses or wraps */
+  font: 700 10px/1.25 var(--font-ui, system-ui, sans-serif);
+  letter-spacing: 0.10em;
+  font-variant-numeric: tabular-nums;  /* no width jitter as digits change */
+  color: rgba(200, 215, 235, 0.62);
+}
+.is-running .vtn-pulse-pct { color: #7cc4ff; }
+.is-stalled .vtn-pulse-pct { color: #ffb347; }
+.is-done    .vtn-pulse-pct { color: #5eead4; }
+.is-failed  .vtn-pulse-pct { color: #ff6b6b; }
+
+/* ── The bar ──────────────────────────────────────────────────────────── */
+.vtn-pulse-track {
+  position: relative;
+  height: 5px;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.05);
+  overflow: hidden;      /* the clip that makes .vtn-pulse-fill safe */
+  isolation: isolate;
+}
+.vtn-pulse-fill {
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  width: 0;
+  border-radius: 3px;
+  background: linear-gradient(90deg, #4a9fe0 0%, #7cc4ff 100%);
+  /* 420ms is the sweet spot: long enough to read as motion (you SEE it
+     advance), short enough that it never lags behind the real number. */
+  transition: width 420ms cubic-bezier(0.22, 0.61, 0.36, 1), background 300ms ease;
+}
+.is-stalled .vtn-pulse-fill { background: linear-gradient(90deg, #c98a2e 0%, #ffb347 100%); }
+.is-done    .vtn-pulse-fill { background: linear-gradient(90deg, #2fa898 0%, #5eead4 100%); }
+.is-failed  .vtn-pulse-fill { background: linear-gradient(90deg, #c04a4a 0%, #ff6b6b 100%); }
+
+/* Live sheen — a light travelling the filled portion. Clipped by the track,
+   so it can never bleed past the bar. Runs ONLY while running, so motion on
+   this surface always means real work is in flight. */
+.is-running .vtn-pulse-fill::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.34) 50%,
+    transparent 100%
+  );
+  transform: translateX(-100%);
+  animation: vtn-pulse-sheen 1.9s ease-in-out infinite;
+}
+@keyframes vtn-pulse-sheen {
+  0%   { transform: translateX(-100%); }
+  60%  { transform: translateX(100%); }
+  100% { transform: translateX(100%); }
+}
+
+/* Indeterminate — real work with no countable end. A sweeping band that
+   claims no percentage. Honesty made visual: we show motion, not a number. */
+.vtn-pulse-track.is-indeterminate .vtn-pulse-fill {
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(124, 196, 255, 0.16) 22%,
+    #7cc4ff 50%,
+    rgba(124, 196, 255, 0.16) 78%,
+    transparent 100%
+  );
+  animation: vtn-pulse-indet 1.5s ease-in-out infinite;
+  transition: none;
+}
+.vtn-pulse-track.is-indeterminate .vtn-pulse-fill::after { display: none; }
+@keyframes vtn-pulse-indet {
+  0%   { transform: translateX(-62%); }
+  100% { transform: translateX(62%); }
+}
+
+/* Completion payoff — one brief lift when a bar lands. Border-only glow so
+   nothing grows outside the row box. */
+.vtn-pulse-row.is-done   { animation: vtn-pulse-land 620ms ease-out 1; }
+.vtn-pulse-row.is-failed { animation: vtn-pulse-land-fail 620ms ease-out 1; }
+@keyframes vtn-pulse-land {
+  0%   { background: rgba(94, 234, 212, 0.14); }
+  100% { background: rgba(16, 22, 34, 0.18); }
+}
+@keyframes vtn-pulse-land-fail {
+  0%   { background: rgba(255, 107, 107, 0.14); }
+  100% { background: rgba(16, 22, 34, 0.18); }
+}
+
+/* ── Text lines under the bar ─────────────────────────────────────────── */
+.vtn-pulse-detail {
+  font: 400 10px/1.35 var(--font-ui, system-ui, sans-serif);
+  color: rgba(210, 222, 240, 0.72);
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;   /* one line, always — a long probe name truncates */
+}
+.vtn-pulse-meta {
+  font: 400 9.5px/1.3 var(--font-ui, system-ui, sans-serif);
+  color: rgba(200, 215, 235, 0.44);
+  font-variant-numeric: tabular-nums;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ── Empty state ──────────────────────────────────────────────────────── */
+.vtn-pulse-empty {
+  padding: 16px 14px;
+  background: rgba(16, 22, 34, 0.18);
+  border: 1px solid rgba(255, 255, 255, 0.04);
+  border-radius: 10px;
+  min-width: 0;
+}
+.vtn-pulse-empty-t {
+  font: 600 11px/1.3 var(--font-ui, system-ui, sans-serif);
+  color: rgba(232, 240, 255, 0.78);
+  letter-spacing: 0.04em;
+}
+.vtn-pulse-empty-s {
+  margin-top: 5px;
+  font: 400 10px/1.45 var(--font-ui, system-ui, sans-serif);
+  color: rgba(200, 215, 235, 0.5);
+  word-break: break-word;   /* prose wraps; it is not a single-line field */
+}
+
+/* ── Tab live badge ───────────────────────────────────────────────────── */
+/* A count on the PULSE tab so work is discoverable from any other tab.
+   Inline-flex inside the button's flow — never absolutely positioned, so it
+   cannot land on the label or the adjacent tab. The tab's own ellipsis
+   handles the squeeze at 320px. */
+.vtn-right-tab .vtn-tab-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-left: 4px;
+  min-width: 13px;
+  height: 13px;
+  padding: 0 3px;
+  border-radius: 7px;
+  background: rgba(124, 196, 255, 0.22);
+  color: #cfe2ff;
+  font: 700 8px/1 var(--font-ui, system-ui, sans-serif);
+  letter-spacing: 0;
+  vertical-align: middle;
+  flex: 0 0 auto;
+}
+
+/* ── 5 tabs instead of 4 ──────────────────────────────────────────────── */
+.vtn-right-tabs.has-pulse { grid-template-columns: repeat(5, 1fr); }
+
+/* At phone widths five labels cannot sit legibly on one row without
+   colliding. They wrap to two rows of the SAME grid — still gapped, still
+   non-overlapping. Never squeezed below the 44px touch target. */
+@media (max-width: 560px) {
+  .vtn-right-tabs.has-pulse {
+    grid-template-columns: repeat(3, 1fr);
+  }
+  .vtn-right-tabs.has-pulse .vtn-right-tab {
+    font-size: 8.5px;
+    letter-spacing: 0.08em;
+    padding: 0 4px;
+  }
+}
+@media (max-width: 380px) {
+  .vtn-right-tabs.has-pulse {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .vtn-right-tabs.has-pulse .vtn-right-tab { font-size: 9px; letter-spacing: 0.06em; }
+  .vtn-pulse-row  { padding: 9px 10px; }
+  .vtn-pulse-label { font-size: 10.5px; }
+  .vtn-pulse-empty { padding: 14px 12px; }
+}
+
+/* ── Reduced motion — mandatory ───────────────────────────────────────── */
+/* Motion is the point of this surface, so removing it must not remove the
+   information. The bar still fills (instantly), and the indeterminate state
+   keeps a static tinted band so "working" remains visually distinct from
+   "idle" without anything moving. */
+@media (prefers-reduced-motion: reduce) {
+  .vtn-pulse-fill { transition: none; }
+  .vtn-pulse-dot,
+  .is-running .vtn-pulse-fill::after,
+  .vtn-pulse-track.is-indeterminate .vtn-pulse-fill,
+  .vtn-pulse-row.is-done,
+  .vtn-pulse-row.is-failed {
+    animation: none !important;
+  }
+  .is-running .vtn-pulse-fill::after { display: none; }
+  .vtn-pulse-track.is-indeterminate .vtn-pulse-fill {
+    background: repeating-linear-gradient(
+      90deg,
+      rgba(124, 196, 255, 0.34) 0px,
+      rgba(124, 196, 255, 0.34) 6px,
+      transparent 6px,
+      transparent 12px
+    );
+    transform: none;
+  }
+  .vtn-pulse-bar:has(.is-live) .vtn-pulse-dot {
+    background: #7cc4ff;
+    box-shadow: 0 0 6px rgba(124, 196, 255, 0.6);
+  }
+}

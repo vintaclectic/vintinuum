@@ -284,6 +284,43 @@ canvas{display:block;}
 .freq-bar{height:2px;border-radius:1px;margin-top:4px;opacity:.7;}
 .activity-ring{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:5px;vertical-align:middle;}
 
+/* ══ REGION VITALS — the live multi-metric dashboard (Right Now tab) ══
+   NO-COLLISION: every node here is a normal flow child in a CSS grid.
+   The ONE absolutely-positioned thing — .rv-fill — is clipped inside its
+   own overflow:hidden .rv-track, so it cannot reach a sibling. The
+   shimmer sweep is likewise clipped. Verified 320/375/768/1280/1920. */
+.rv{display:flex;flex-direction:column;gap:9px;margin:8px 0 16px;}
+.rv-row{display:grid;grid-template-columns:1fr auto;grid-template-areas:"label value" "track track" "verb verb";gap:4px 8px;align-items:baseline;}
+.rv-label{grid-area:label;font-size:.5rem;letter-spacing:.16em;text-transform:uppercase;color:var(--dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;}
+.rv-value{grid-area:value;font-family:'Space Mono',monospace;font-size:.56rem;letter-spacing:.04em;color:var(--text);font-variant-numeric:tabular-nums;white-space:nowrap;}
+.rv-track{grid-area:track;position:relative;height:5px;border-radius:3px;background:rgba(255,255,255,.06);overflow:hidden;}
+.rv-fill{position:absolute;left:0;top:0;bottom:0;width:0;border-radius:3px;transition:width .85s cubic-bezier(.22,1,.36,1);}
+.rv-verb{grid-area:verb;font-size:.5rem;line-height:1.5;letter-spacing:.03em;color:rgba(150,175,215,.72);overflow-wrap:anywhere;min-width:0;}
+/* Peak marker: the highest value seen this session — a ghost tick, inside the
+   track. Anchored by its RIGHT edge (JS sets `right: (100 - pct)%`) rather than
+   by `left`, so at 100% the 1px body sits flush against the track's inner edge
+   instead of painting one pixel past it. Overflow:hidden on the track would
+   clip it either way; this makes the geometry correct, not merely hidden. */
+.rv-peak{position:absolute;top:0;bottom:0;width:1px;background:rgba(255,255,255,.34);transition:right .85s cubic-bezier(.22,1,.36,1);pointer-events:none;}
+/* Live sweep — reads as "signal moving through," clipped to the track. */
+.rv-track.is-live .rv-fill::after{content:'';position:absolute;inset:0;background:linear-gradient(90deg,transparent,rgba(255,255,255,.30),transparent);transform:translateX(-100%);animation:rvSweep 2.6s ease-in-out infinite;}
+@keyframes rvSweep{0%{transform:translateX(-100%);}60%,100%{transform:translateX(100%);}}
+/* Header strip above the bars: composite state + tick counter. */
+.rv-head{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:2px;}
+.rv-state{display:flex;align-items:center;gap:6px;font-size:.52rem;letter-spacing:.14em;text-transform:uppercase;color:var(--text);min-width:0;}
+.rv-state-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0;animation:livePulse 1.6s ease infinite;}
+.rv-ticks{font-family:'Space Mono',monospace;font-size:.5rem;letter-spacing:.06em;color:var(--dim);font-variant-numeric:tabular-nums;white-space:nowrap;}
+@media(max-width:400px){
+  .rv-label{font-size:.47rem;letter-spacing:.1em;}
+  .rv-verb{font-size:.47rem;}
+}
+@media(prefers-reduced-motion:reduce){
+  .rv-fill{transition:none;}
+  .rv-peak{transition:none;}
+  .rv-track.is-live .rv-fill::after{animation:none;display:none;}
+  .rv-state-dot{animation:none;}
+}
+
 /* ── OVERLAY ── */
 .overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:999;opacity:0;pointer-events:none;transition:opacity .22s;}
 .overlay.open{opacity:1;pointer-events:all;}
@@ -516,7 +553,7 @@ if ('serviceWorker' in navigator && _onGitHubPages) {
 }
 </script>
 <link rel="stylesheet" href="body/tokens.css?v=v20260806-0902">
-<link rel="stylesheet" href="body/shell.css?v=v20260806-0902">
+<link rel="stylesheet" href="body/shell.css?v=v20260814-pulse">
     <link rel="stylesheet" href="body/safe_area.css?v=v20260806-0902">
 <!-- ═══ MOVEMENT I — Shell Contract ═══
      Loaded before any other script so window.Shell exists for everyone.
@@ -3362,7 +3399,10 @@ if ('serviceWorker' in navigator && _onGitHubPages) {
 <script src="body/grid_floor.js?v=v20260806-0902"></script>
 <script src="body/foot_shadow.js?v=v20260806-0902"></script>
 <script src="body/sidebar_left.js?v=v20260806-0902"></script>
-<script src="body/sidebar_right.js?v=v20260806-0902"></script>
+<!-- PULSE — live work dashboard. MUST load before sidebar_right.js, which
+     wires the PULSE tab + badge against window.VintPulse at build time. -->
+<script src="body/pulse_progress.js?v=v20260814-pulse"></script>
+<script src="body/sidebar_right.js?v=v20260814-pulse"></script>
 <script src="body/footer_strip.js?v=v20260806-0902"></script>
 <!-- MOBILE_SHELL — bottom-sheet drawers + pill toggles for phone-sized viewports -->
 <script src="body/mobile_shell.js?v=v20260806-0902"></script>

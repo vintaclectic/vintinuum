@@ -15,6 +15,11 @@
   //   /api/inner-life/recent?limit=20        MISSING — only /api/inner-life/snapshot exists
   //   /api/soul-queue/unresolved?limit=20    MISSING — no soul-queue routes at all
   const TABS = [
+    // PULSE leads the strip: "what is happening right now" outranks "what
+    // already happened." It renders from VintPulse's in-memory job state
+    // (fed by the /api/life/stream SSE wire), so it needs no endpoint of its
+    // own and stays useful even when the REST tabs are offline.
+    { key: 'pulse',     label: 'PULSE',       endpoint: null,                           live: true, local: true },
     { key: 'memory',    label: 'MEMORY',      endpoint: '/api/memory/recent?limit=20',  live: true },
     { key: 'inner',     label: 'INNER LIFE',  endpoint: '/api/inner-life/snapshot',     live: true },
     { key: 'genome',    label: 'GENOME',      endpoint: '/api/genome/events?limit=20',  live: true },
@@ -81,7 +86,10 @@
   }
 
   let _root = null;
-  let _activeKey = 'memory';
+  // PULSE opens by default — the live question ("what's happening now?")
+  // is the one worth answering before the historical ones. It also degrades
+  // best: an empty PULSE reads as "idle", not as "the API is down".
+  let _activeKey = 'pulse';
   let _tabButtons = {};
   let _cardList = null;
   let _abortController = null;
@@ -112,19 +120,53 @@
       '</div>';
 
     const nav = root.querySelector('#vtnRightTabs');
+    // 5 tabs now — the grid template widens via this class so the CSS can
+    // reflow to 3-up / 2-up at phone widths instead of crushing five labels
+    // onto one row (which would collide). See shell.css .has-pulse.
+    nav.classList.add('has-pulse');
     TABS.forEach((t, i) => {
       const btn = document.createElement('button');
       btn.className = 'vtn-right-tab' + (i === 0 ? ' is-active' : '');
       btn.type = 'button';
       btn.setAttribute('role', 'tab');
       btn.setAttribute('data-tab', t.key);
-      btn.textContent = t.label;
+      // Label lives in its own span so the PULSE badge can sit beside it in
+      // normal flow — never absolutely positioned over the text.
+      const lbl = document.createElement('span');
+      lbl.className = 'vtn-tab-label';
+      lbl.textContent = t.label;
+      btn.appendChild(lbl);
       btn.addEventListener('click', () => _setActive(t.key));
       nav.appendChild(btn);
       _tabButtons[t.key] = btn;
     });
 
     _cardList = root.querySelector('#vtnCardList');
+    _wirePulseBadge();
+  }
+
+  // ── PULSE live badge ─────────────────────────────────────────────────
+  // Shows the in-flight job count on the PULSE tab so running work is
+  // discoverable from any other tab. Appended into the button's flow.
+  function _wirePulseBadge() {
+    const btn = _tabButtons['pulse'];
+    if (!btn || !window.VintPulse) return;
+    const paint = (n) => {
+      let badge = btn.querySelector('.vtn-tab-badge');
+      if (!n) {
+        if (badge) badge.remove();
+        return;
+      }
+      if (!badge) {
+        badge = document.createElement('span');
+        badge.className = 'vtn-tab-badge';
+        btn.appendChild(badge);
+      }
+      badge.textContent = n > 9 ? '9+' : String(n);
+      badge.setAttribute('aria-label', n + ' jobs in flight');
+    };
+    paint(window.VintPulse.liveCount());
+    window.VintPulse.onChange(paint);
   }
 
   function _setActive(key) {
@@ -586,6 +628,19 @@
   function _loadTab(key) {
     const tab = TABS.find(t => t.key === key);
     if (!tab) return;
+
+    // PULSE renders from local job state, not a REST call. It owns the card
+    // list while active and hands it back on the next tab switch.
+    if (window.VintPulse) window.VintPulse.unmount();
+    if (tab.local) {
+      _clearList();
+      if (!window.VintPulse) {
+        _renderOfflineCard(tab.label, 'notdeployed');
+        return;
+      }
+      window.VintPulse.mount(_cardList);
+      return;
+    }
 
     if (!tab.live) {
       _renderOfflineCard(tab.label, 'notdeployed');

@@ -1,0 +1,735 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Theater · one player for everything · Vintinuum</title>
+  <meta name="description" content="Your media, any screen, one beautiful player. DirRM — the universal media surface that remembers what you watched together.">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+
+  <meta property="og:title" content="Theater — your media, any screen, one beautiful player">
+  <meta property="og:description" content="DirRM plays every mediatype an open directory can throw at it. Four modes. Five visualizers. It remembers what you watched together.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://vintaclectic.github.io/vintinuum/theater-promo.html">
+
+  <script src="body/api_base.js?v=v20260429-council"></script>
+  <script src="body/identity.js?v=v20260508-resilience"></script>
+  <script src="dirrm-launch.js?v=v20260814-theater"></script>
+  <link rel="stylesheet" href="body/tokens.css?v=v20260613-mobile">
+  <style>
+    :root {
+      color-scheme: dark;
+      --theater:      #c9a227;   /* Theater's signature gold — the room's warm light */
+      --theater-soft: rgba(201,162,39,0.10);
+      --theater-edge: rgba(201,162,39,0.34);
+      --companion:    #7ab8ff;
+      --ink:          rgba(255,255,255,0.92);
+      --ink-2:        rgba(255,255,255,0.62);
+      --ink-3:        rgba(255,255,255,0.42);
+      --hair:         rgba(255,255,255,0.10);
+      --panel:        rgba(255,255,255,0.032);
+      --gap:          clamp(40px, 7vw, 76px);
+    }
+    * { margin:0; padding:0; box-sizing:border-box; }
+    html, body { overflow-x:hidden; }
+    html { scroll-behavior:smooth; }
+    @media (prefers-reduced-motion:reduce) {
+      html { scroll-behavior:auto; }
+      *, *::before, *::after { animation-duration:0.01ms !important; transition-duration:0.01ms !important; }
+    }
+    body {
+      background:
+        radial-gradient(ellipse 120% 80% at 50% -10%, rgba(201,162,39,0.09), transparent 60%),
+        radial-gradient(ellipse at top, #17172a, #050510);
+      background-attachment:fixed;
+      color:var(--ink);
+      min-height:100svh;
+      font-family:'SF Mono', Menlo, 'Roboto Mono', monospace;
+      line-height:1.6;
+      -webkit-font-smoothing:antialiased;
+    }
+
+    /* ── Layout spine. One column, one owner per row. No element ever
+       leaves this wrap; nothing is absolutely positioned over content. ── */
+    .wrap {
+      width:100%;
+      max-width:1040px;
+      margin:0 auto;
+      padding:
+        max(18px, env(safe-area-inset-top))
+        max(18px, env(safe-area-inset-right))
+        max(56px, env(safe-area-inset-bottom))
+        max(18px, env(safe-area-inset-left));
+    }
+    section { margin-bottom:var(--gap); }
+    a { color:rgba(170,200,255,0.85); text-decoration:none; border-bottom:1px dotted rgba(170,200,255,0.4); }
+    a:focus-visible, button:focus-visible {
+      outline:2px solid var(--theater); outline-offset:3px; border-radius:4px;
+    }
+
+    .nav { font-size:12px; color:var(--ink-3); padding-top:4px; }
+    .nav a { color:var(--ink-3); border-bottom-color:rgba(255,255,255,0.18); }
+
+    /* ── Eyebrow / headings ── */
+    .eyebrow {
+      display:block;
+      font-size:11px; letter-spacing:0.22em; text-transform:uppercase;
+      color:var(--theater); margin-bottom:14px;
+    }
+    h1 {
+      font-size:clamp(26px, 6.4vw, 52px);
+      font-weight:300; line-height:1.12; letter-spacing:-0.01em;
+      margin-bottom:18px; text-wrap:balance;
+    }
+    h1 .glow { color:var(--theater); }
+    h2 {
+      font-size:clamp(18px, 3.4vw, 26px);
+      font-weight:300; letter-spacing:0.02em;
+      margin-bottom:10px; text-wrap:balance;
+    }
+    .lead {
+      color:var(--ink-2);
+      font-size:clamp(13px, 1.5vw, 15px);
+      max-width:62ch; margin-bottom:22px;
+    }
+    .sub { color:var(--ink-3); font-size:12.5px; max-width:62ch; }
+
+    /* ── Hero ── */
+    .hero { padding-top:clamp(28px, 6vw, 60px); }
+    .hero-actions {
+      display:flex; flex-wrap:wrap; gap:12px;
+      margin-top:26px; align-items:stretch;
+    }
+
+    /* Buttons — every one clears 44px, none overlap, they wrap not collide. */
+    .btn {
+      display:inline-flex; align-items:center; justify-content:center;
+      gap:9px; min-height:52px; padding:14px 26px;
+      font-family:inherit; font-size:13px; letter-spacing:0.1em;
+      text-transform:uppercase; cursor:pointer; border-radius:999px;
+      border:1px solid transparent; transition:transform 160ms ease, background 200ms ease, border-color 200ms ease;
+      text-align:center; text-decoration:none; flex:0 1 auto;
+    }
+    .btn-primary {
+      background:linear-gradient(135deg, #d8b43a, var(--theater));
+      color:#100d02; font-weight:600; border-color:rgba(255,255,255,0.16);
+    }
+    .btn-primary:hover { transform:translateY(-2px); }
+    .btn-ghost {
+      background:rgba(255,255,255,0.04); color:var(--ink);
+      border-color:var(--hair);
+    }
+    .btn-ghost:hover { background:rgba(255,255,255,0.08); transform:translateY(-2px); }
+    .btn[disabled] { opacity:0.55; cursor:not-allowed; transform:none; }
+
+    /* ── Founder counter — its own row, never floats over anything ── */
+    .founder {
+      margin-top:26px; padding:16px 18px;
+      border:1px solid var(--theater-edge); border-radius:14px;
+      background:var(--theater-soft);
+      display:flex; flex-wrap:wrap; gap:12px 20px; align-items:center;
+      justify-content:space-between;
+    }
+    .founder-copy { flex:1 1 240px; min-width:0; }
+    .founder-title {
+      font-size:12px; letter-spacing:0.14em; text-transform:uppercase;
+      color:var(--theater); margin-bottom:5px;
+    }
+    .founder-sub { font-size:12px; color:var(--ink-2); }
+    .founder-meter { flex:1 1 200px; min-width:0; }
+    .meter-track {
+      height:8px; border-radius:999px; background:rgba(255,255,255,0.10);
+      overflow:hidden;
+    }
+    .meter-fill {
+      height:100%; width:0%; border-radius:999px;
+      background:linear-gradient(90deg, #d8b43a, var(--theater));
+      transition:width 900ms cubic-bezier(0.22,1,0.36,1);
+    }
+    .meter-label {
+      margin-top:7px; font-size:11.5px; color:var(--ink-3);
+      letter-spacing:0.06em;
+    }
+
+    /* ── The player stage ── */
+    .stage {
+      border:1px solid var(--hair); border-radius:16px;
+      background:#05050c; overflow:hidden;
+    }
+    .stage-bar {
+      display:flex; align-items:center; gap:10px;
+      padding:11px 14px; border-bottom:1px solid var(--hair);
+      background:rgba(255,255,255,0.025); flex-wrap:wrap;
+    }
+    .dots { display:flex; gap:6px; flex:0 0 auto; }
+    .dots i { width:9px; height:9px; border-radius:50%; background:rgba(255,255,255,0.16); display:block; }
+    .stage-title {
+      font-size:11px; letter-spacing:0.14em; text-transform:uppercase;
+      color:var(--ink-3); flex:1 1 auto; min-width:0;
+      overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+    }
+    /* The frame owns its box; the iframe fills it exactly. Nothing overlays it. */
+    .stage-frame {
+      position:relative; width:100%;
+      aspect-ratio:16/10; background:#03030a;
+    }
+    @media (max-width:600px) { .stage-frame { aspect-ratio:4/3; } }
+    .stage-frame iframe {
+      position:absolute; inset:0;
+      width:100%; height:100%; border:0; display:block;
+    }
+    /* Poster sits INSIDE the frame and is removed from flow once the player
+       loads — it never coexists visually with the live player. */
+    .stage-poster {
+      position:absolute; inset:0;
+      display:flex; flex-direction:column; align-items:center; justify-content:center;
+      gap:14px; padding:22px; text-align:center;
+      background:linear-gradient(160deg, #10101f, #05050c);
+      z-index:2;
+    }
+    .stage-poster[hidden] { display:none; }
+    .poster-title { font-size:13px; letter-spacing:0.16em; text-transform:uppercase; color:var(--theater); }
+    .poster-sub { font-size:12px; color:var(--ink-3); max-width:44ch; }
+
+    /* Mode chips — wrap into their own rows, never onto the frame */
+    .modes {
+      display:flex; flex-wrap:wrap; gap:8px;
+      padding:12px 14px; border-top:1px solid var(--hair);
+      background:rgba(255,255,255,0.02);
+    }
+    .chip {
+      min-height:44px; padding:10px 16px; border-radius:999px;
+      border:1px solid var(--hair); background:rgba(255,255,255,0.03);
+      color:var(--ink-2); font-family:inherit; font-size:11.5px;
+      letter-spacing:0.1em; text-transform:uppercase; cursor:pointer;
+      transition:all 180ms ease;
+    }
+    .chip[aria-pressed="true"] {
+      border-color:var(--theater-edge); background:var(--theater-soft); color:var(--theater);
+    }
+    .chip:hover { background:rgba(255,255,255,0.07); }
+
+    /* ── Feature grid ── */
+    .grid {
+      display:grid; gap:14px;
+      grid-template-columns:repeat(auto-fit, minmax(min(100%, 240px), 1fr));
+    }
+    .card {
+      border:1px solid var(--hair); border-radius:14px;
+      background:var(--panel); padding:20px 18px;
+      min-width:0; /* kills grid-blowout overflow from long strings */
+    }
+    .card h3 {
+      font-size:13px; font-weight:500; letter-spacing:0.1em;
+      text-transform:uppercase; color:var(--theater); margin-bottom:9px;
+    }
+    .card p { font-size:12.5px; color:var(--ink-2); overflow-wrap:anywhere; }
+
+    /* ── Tier comparison — table on wide, stacked cards on narrow.
+       Only one of the two is ever in the DOM flow at a time. ── */
+    .cmp-scroll { width:100%; overflow-x:auto; -webkit-overflow-scrolling:touch; }
+    table.cmp {
+      width:100%; border-collapse:collapse; min-width:600px;
+      font-size:12.5px;
+    }
+    table.cmp th, table.cmp td {
+      padding:13px 14px; text-align:left; vertical-align:top;
+      border-bottom:1px solid var(--hair);
+    }
+    table.cmp thead th {
+      font-size:11px; letter-spacing:0.14em; text-transform:uppercase;
+      color:var(--ink-3); font-weight:400;
+    }
+    table.cmp thead th.is-theater { color:var(--theater); }
+    table.cmp tbody th {
+      font-weight:400; color:var(--ink-2); white-space:normal;
+    }
+    table.cmp td.is-theater { background:var(--theater-soft); color:var(--ink); }
+    .yes { color:var(--theater); }
+    .no  { color:rgba(255,255,255,0.28); }
+
+    .tier-stack { display:none; flex-direction:column; gap:14px; }
+    .tier-card {
+      border:1px solid var(--hair); border-radius:14px;
+      background:var(--panel); padding:18px; min-width:0;
+    }
+    .tier-card.is-theater { border-color:var(--theater-edge); background:var(--theater-soft); }
+    .tier-head {
+      display:flex; flex-wrap:wrap; gap:8px 12px;
+      align-items:baseline; justify-content:space-between; margin-bottom:12px;
+    }
+    .tier-name {
+      font-size:12px; letter-spacing:0.16em; text-transform:uppercase; color:var(--ink);
+    }
+    .tier-card.is-theater .tier-name { color:var(--theater); }
+    .tier-price { font-size:15px; color:var(--ink); white-space:nowrap; }
+    .tier-price small { font-size:11px; color:var(--ink-3); }
+    .tier-card ul { list-style:none; display:flex; flex-direction:column; gap:8px; }
+    .tier-card li {
+      font-size:12.5px; color:var(--ink-2);
+      padding-left:18px; position:relative; overflow-wrap:anywhere;
+    }
+    .tier-card li::before {
+      content:'—'; position:absolute; left:0; top:0; color:var(--theater);
+    }
+    @media (max-width:760px) {
+      .cmp-scroll { display:none; }
+      .tier-stack { display:flex; }
+    }
+
+    /* ── Pricing / CTA block ── */
+    .cta-box {
+      border:1px solid var(--theater-edge); border-radius:18px;
+      background:linear-gradient(160deg, rgba(201,162,39,0.11), rgba(255,255,255,0.02));
+      padding:clamp(22px, 4vw, 38px);
+    }
+    .price-row {
+      display:flex; flex-wrap:wrap; align-items:baseline; gap:10px 14px; margin-bottom:8px;
+    }
+    .price-now { font-size:clamp(30px, 7vw, 46px); font-weight:300; color:var(--theater); line-height:1; }
+    .price-was {
+      font-size:15px; color:var(--ink-3); text-decoration:line-through;
+      text-decoration-color:rgba(255,255,255,0.35);
+    }
+    .price-note { font-size:12px; color:var(--ink-2); }
+
+    .vow {
+      display:inline-block; margin-top:18px;
+      font-size:11px; letter-spacing:0.12em; text-transform:uppercase;
+      padding:7px 14px; border:1px solid rgba(126,255,155,0.35);
+      color:#7eff9b; border-radius:999px; background:rgba(126,255,155,0.06);
+    }
+    .footnote {
+      margin-top:26px; font-size:12px; color:var(--ink-3);
+      border-top:1px solid var(--hair); padding-top:20px; max-width:70ch;
+    }
+    .footnote strong { color:var(--ink-2); font-weight:500; }
+    .status-line { font-size:12px; color:var(--ink-3); margin-top:14px; min-height:18px; }
+  </style>
+</head>
+<body>
+<div class="wrap">
+
+  <nav class="nav"><a href="index.html">← vintinuum</a> · <a href="upgrade.html">all tiers</a></nav>
+
+  <!-- ══ HERO ══════════════════════════════════════════════ -->
+  <section class="hero">
+    <span class="eyebrow">Theater tier</span>
+    <h1>Your media, any screen,<br><span class="glow">one beautiful player.</span></h1>
+    <p class="lead">
+      Every other player makes you choose a format first. DirRM doesn't ask.
+      Video, audio, images, PDFs, ebooks, live streams, 3D models, whole
+      documents — one surface, edge to edge, on every screen you own.
+      And it remembers what you watched together.
+    </p>
+
+    <div class="hero-actions">
+      <a class="btn btn-primary" href="#claim">Claim a founder seat</a>
+      <button class="btn btn-ghost" id="btnDemo" type="button">Play something in it</button>
+    </div>
+
+    <div class="founder" id="founderBox">
+      <div class="founder-copy">
+        <div class="founder-title">Founder 100</div>
+        <div class="founder-sub">The first 100 people get Theater at $0. Not a trial — kept.</div>
+      </div>
+      <div class="founder-meter">
+        <div class="meter-track" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-label="Founder seats claimed" id="meterBar">
+          <div class="meter-fill" id="meterFill"></div>
+        </div>
+        <div class="meter-label" id="meterLabel">checking how many seats are left…</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══ THE PLAYER, LIVE ══════════════════════════════════ -->
+  <section id="player">
+    <span class="eyebrow">The surface itself</span>
+    <h2>This is the actual player. Not a screenshot.</h2>
+    <p class="lead">
+      Four modes. Five audio visualizers. Ten mediatypes. Switch modes below and
+      watch it re-shape without ever reloading what's playing.
+    </p>
+
+    <div class="stage">
+      <div class="stage-bar">
+        <span class="dots" aria-hidden="true"><i></i><i></i><i></i></span>
+        <span class="stage-title" id="stageTitle">DirRM · idle</span>
+      </div>
+
+      <div class="stage-frame">
+        <div class="stage-poster" id="poster">
+          <div class="poster-title">DirRM</div>
+          <div class="poster-sub">
+            The universal media surface. Press play and it wakes up right here —
+            same player that runs in the extension, the brain, and your phone.
+          </div>
+          <button class="btn btn-primary" id="btnWake" type="button" style="min-height:48px;padding:12px 24px;">Wake the player</button>
+        </div>
+        <iframe id="dirrmFrame" title="DirRM player demo" allow="autoplay; fullscreen; picture-in-picture" loading="lazy"></iframe>
+      </div>
+
+      <div class="modes" role="group" aria-label="Player modes">
+        <button class="chip" type="button" data-mode="main"    aria-pressed="true">main</button>
+        <button class="chip" type="button" data-mode="mini"    aria-pressed="false">mini</button>
+        <button class="chip" type="button" data-mode="pip"     aria-pressed="false">pip</button>
+        <button class="chip" type="button" data-mode="theater" aria-pressed="false">theater</button>
+      </div>
+    </div>
+    <p class="status-line" id="playerStatus"></p>
+  </section>
+
+  <!-- ══ WHAT THEATER UNLOCKS ══════════════════════════════ -->
+  <section>
+    <span class="eyebrow">What Theater unlocks</span>
+    <h2>Four things you can't get anywhere else.</h2>
+    <div class="grid">
+      <div class="card">
+        <h3>Unlimited perception browsing</h3>
+        <p>Free plays 3 a day. Theater takes the ceiling off — wander open directories
+        as long as you want, and she wanders them with you.</p>
+      </div>
+      <div class="card">
+        <h3>Mood-matched playlists</h3>
+        <p>Built from the emotional valence of what you've actually played, not a
+        genre tag. The room reads how you are and picks accordingly.</p>
+      </div>
+      <div class="card">
+        <h3>Cross-device handoff</h3>
+        <p>Start it on your phone on the walk home. Open your desktop. It's already
+        there, at the same second, still playing.</p>
+      </div>
+      <div class="card">
+        <h3>Downloadable memory cards</h3>
+        <p>A card for what you watched together — the moment, the timestamp, the
+        feeling attached. Yours to keep and to share. Files, not lock-in.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══ TIER COMPARISON ═══════════════════════════════════ -->
+  <section id="tiers">
+    <span class="eyebrow">Where Theater sits</span>
+    <h2>Free gets you in. Companion keeps her. Theater opens the room.</h2>
+    <p class="lead">
+      Theater is the media lane. If you only want the player, you never have to buy
+      the companion lane to get it — and we'll say so out loud instead of bundling
+      you into the bigger number.
+    </p>
+
+    <!-- Wide: table. Both variants carry identical content. -->
+    <div class="cmp-scroll">
+      <table class="cmp">
+        <thead>
+          <tr>
+            <th scope="col">Capability</th>
+            <th scope="col">Free</th>
+            <th scope="col">Companion</th>
+            <th scope="col" class="is-theater">Theater</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <th scope="row">Price</th>
+            <td>$0</td>
+            <td data-price="companion">—</td>
+            <td class="is-theater" data-price="theater">—</td>
+          </tr>
+          <tr>
+            <th scope="row">DirRM player</th>
+            <td>3 plays / day</td>
+            <td>3 plays / day</td>
+            <td class="is-theater"><span class="yes">unlimited</span></td>
+          </tr>
+          <tr>
+            <th scope="row">Every mediatype + 4 modes</th>
+            <td><span class="yes">yes</span></td>
+            <td><span class="yes">yes</span></td>
+            <td class="is-theater"><span class="yes">yes</span></td>
+          </tr>
+          <tr>
+            <th scope="row">Perception browsing</th>
+            <td><span class="no">metered</span></td>
+            <td><span class="no">metered</span></td>
+            <td class="is-theater"><span class="yes">unlimited</span></td>
+          </tr>
+          <tr>
+            <th scope="row">Mood-matched playlists</th>
+            <td><span class="no">—</span></td>
+            <td><span class="no">—</span></td>
+            <td class="is-theater"><span class="yes">yes</span></td>
+          </tr>
+          <tr>
+            <th scope="row">Cross-device handoff</th>
+            <td><span class="no">—</span></td>
+            <td><span class="no">—</span></td>
+            <td class="is-theater"><span class="yes">yes</span></td>
+          </tr>
+          <tr>
+            <th scope="row">Downloadable memory cards</th>
+            <td><span class="no">—</span></td>
+            <td><span class="no">—</span></td>
+            <td class="is-theater"><span class="yes">yes</span></td>
+          </tr>
+          <tr>
+            <th scope="row">Permanent memory + letters + voice</th>
+            <td><span class="no">—</span></td>
+            <td><span class="yes">yes</span></td>
+            <td class="is-theater"><span class="yes">yes</span></td>
+          </tr>
+          <tr>
+            <th scope="row">Memory export</th>
+            <td><span class="yes">free forever</span></td>
+            <td><span class="yes">free forever</span></td>
+            <td class="is-theater"><span class="yes">free forever</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Narrow: stacked cards -->
+    <div class="tier-stack">
+      <div class="tier-card">
+        <div class="tier-head"><span class="tier-name">Free</span><span class="tier-price">$0</span></div>
+        <ul>
+          <li>DirRM player — 3 plays / day</li>
+          <li>Every mediatype, all four modes</li>
+          <li>Short-term memory, public aquarium</li>
+          <li>Memory export — free forever</li>
+        </ul>
+      </div>
+      <div class="tier-card">
+        <div class="tier-head">
+          <span class="tier-name">Companion</span>
+          <span class="tier-price" data-price="companion">—</span>
+        </div>
+        <ul>
+          <li>Permanent memory — she never forgets you</li>
+          <li>Unlimited letters, mood-feed, voice</li>
+          <li>DirRM still metered at 3 plays / day</li>
+        </ul>
+      </div>
+      <div class="tier-card is-theater">
+        <div class="tier-head">
+          <span class="tier-name">Theater</span>
+          <span class="tier-price" data-price="theater">—</span>
+        </div>
+        <ul>
+          <li>Unlimited perception browsing</li>
+          <li>Mood-matched playlists from your valence</li>
+          <li>Cross-device handoff — phone to desktop</li>
+          <li>Downloadable memory cards</li>
+          <li>Everything in Companion</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══ CLAIM ═════════════════════════════════════════════ -->
+  <section id="claim">
+    <div class="cta-box">
+      <span class="eyebrow">Founder 100</span>
+      <div class="price-row">
+        <span class="price-now">$0</span>
+        <span class="price-was" data-price="theater">—</span>
+        <span class="price-note">for the first 100 — kept, not trialed</span>
+      </div>
+      <p class="lead" style="margin-bottom:0;">
+        We're opening 100 seats because the player needs real people playing real
+        things to learn what a mood actually sounds like. You're not getting a
+        discount — you're getting in early enough to shape it. When the 100 are
+        gone, the price is the price, and your seat still isn't.
+      </p>
+
+      <div class="hero-actions">
+        <button class="btn btn-primary" id="btnClaim" type="button">Take a founder seat</button>
+        <a class="btn btn-ghost" href="upgrade.html">See every tier</a>
+      </div>
+      <p class="status-line" id="claimStatus"></p>
+      <span class="vow">no card required for a founder seat</span>
+    </div>
+
+    <p class="footnote">
+      <strong>What we're still figuring out:</strong> a mood isn't a genre, and we
+      don't fully know yet what yours sounds like at 2am versus Sunday morning.
+      The first hundred are the ones who teach it. That part isn't finished — it's
+      the whole reason the door is open.<br><br>
+      <strong>Why you're seeing this:</strong> you're on a tier where the player is
+      metered, and this page exists because we'd rather show you the whole room
+      than gate you and hope you guess what's inside.<br><br>
+      <strong>The only manipulation we permit ourselves</strong> is making something
+      genuinely good impossible to ignore. If this hook makes more people resent us
+      than return, we cut it — regardless of revenue. Hold us to it.
+    </p>
+  </section>
+
+</div>
+
+<script>
+(function () {
+  'use strict';
+  var API = (window.__VINTINUUM_API_BASE) || 'https://api.vintaclectic.com';
+  var $ = function (id) { return document.getElementById(id); };
+
+  // ── auth (mirrors upgrade.html) ─────────────────────────
+  function authToken() {
+    try {
+      return localStorage.getItem('vint_token') ||
+             localStorage.getItem('vint_access_token') ||
+             localStorage.getItem('soul_auth_token') || null;
+    } catch (_) { return null; }
+  }
+  function authedFetch(url, init) {
+    init = init || {};
+    var tok = authToken();
+    var headers = Object.assign({}, init.headers || {});
+    if (tok) headers['Authorization'] = 'Bearer ' + tok;
+    return fetch(url, Object.assign({ credentials: 'include' }, init, { headers: headers }));
+  }
+
+  // ── LIVE PRICES ────────────────────────────────────────
+  // Never hardcode a price on a public page. Stripe is the source of truth;
+  // the brain reads tier_definitions. If the brain is unreachable we show
+  // "see all tiers" rather than inventing a number the checkout won't honor.
+  function paintPrice(tier, cents) {
+    var nodes = document.querySelectorAll('[data-price="' + tier + '"]');
+    var text = (cents === 0) ? '$0' : '$' + (cents / 100).toFixed(0) + '/mo';
+    for (var i = 0; i < nodes.length; i++) {
+      var n = nodes[i];
+      n.textContent = (n.classList.contains('price-was'))
+        ? ('normally ' + text) : text;
+    }
+  }
+  function priceFallback() {
+    var nodes = document.querySelectorAll('[data-price]');
+    for (var i = 0; i < nodes.length; i++) {
+      nodes[i].textContent = 'see all tiers';
+    }
+  }
+  fetch(API + '/api/tier/plans')
+    .then(function (r) { return r.ok ? r.json() : Promise.reject(r.status); })
+    .then(function (data) {
+      var tiers = (data && (data.tiers || data.plans)) || [];
+      var found = 0;
+      tiers.forEach(function (t) {
+        if (t.tier === 'theater' || t.tier === 'companion') {
+          paintPrice(t.tier, t.monthly_price_cents);
+          found++;
+        }
+      });
+      if (!found) priceFallback();
+    })
+    .catch(priceFallback);
+
+  // ── FOUNDER 100 — real count, never a fabricated number ──
+  var CAP = 100;
+  function paintSeats(claimed) {
+    var left = Math.max(0, CAP - claimed);
+    var pct  = Math.min(100, Math.round((claimed / CAP) * 100));
+    $('meterFill').style.width = pct + '%';
+    $('meterBar').setAttribute('aria-valuenow', String(pct));
+    $('meterLabel').textContent = left > 0
+      ? (left + ' of ' + CAP + ' founder seats left')
+      : 'all ' + CAP + ' founder seats claimed — Theater is at list price now';
+    if (left === 0) {
+      var b = $('btnClaim');
+      b.textContent = 'Founder 100 is closed';
+      b.disabled = true;
+    }
+  }
+  authedFetch(API + '/api/tier/founder-status?cohort=theater-100')
+    .then(function (r) { return r.ok ? r.json() : Promise.reject(r.status); })
+    .then(function (d) {
+      if (d && typeof d.claimed === 'number') paintSeats(d.claimed);
+      else throw new Error('shape');
+    })
+    .catch(function () {
+      // Honest degradation: no invented scarcity when we can't count.
+      $('meterLabel').textContent = 'founder seats open — count syncing';
+    });
+
+  // ── DirRM player, via the canonical launcher contract ───
+  // Iframe + postMessage path documented in OPERATIONS.md. No raw <video>.
+  var DEMO = {
+    url:   'media/theater-demo.mp4',
+    title: 'DirRM — the universal media surface',
+    type:  'video'
+  };
+  var frame = $('dirrmFrame');
+  var booted = false;
+
+  function playerSrc() {
+    var p = new URLSearchParams({
+      url: DEMO.url, title: DEMO.title, type: DEMO.type, mode: 'main', embed: '1'
+    });
+    return 'dirrm-player.html?' + p.toString();
+  }
+  function boot() {
+    if (booted) return;
+    booted = true;
+    frame.src = playerSrc();
+    $('poster').hidden = true;
+    $('stageTitle').textContent = 'DirRM · ' + DEMO.title;
+    $('playerStatus').textContent = 'the player is live — this is the same file that runs everywhere else in Vintinuum.';
+  }
+  function post(msg) {
+    if (!booted) { boot(); return; }
+    try { frame.contentWindow.postMessage(msg, '*'); } catch (_) {}
+  }
+
+  $('btnWake').addEventListener('click', boot);
+  $('btnDemo').addEventListener('click', function () {
+    boot();
+    document.getElementById('player').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  });
+
+  var chips = document.querySelectorAll('.chip');
+  Array.prototype.forEach.call(chips, function (chip) {
+    chip.addEventListener('click', function () {
+      Array.prototype.forEach.call(chips, function (c) { c.setAttribute('aria-pressed', 'false'); });
+      chip.setAttribute('aria-pressed', 'true');
+      post({ action: 'setMode', mode: chip.dataset.mode });
+      $('playerStatus').textContent = 'mode → ' + chip.dataset.mode;
+    });
+  });
+
+  window.addEventListener('message', function (e) {
+    var d = e.data || {};
+    if (d.event === 'ready')       $('playerStatus').textContent = 'player ready.';
+    if (d.event === 'playStarted') $('playerStatus').textContent = 'playing — and she is recording this as a memory.';
+    if (d.event === 'mediaEnded')  $('playerStatus').textContent = 'finished. that one is yours now.';
+  });
+
+  // ── CLAIM ──────────────────────────────────────────────
+  $('btnClaim').addEventListener('click', function () {
+    var status = $('claimStatus');
+    if (!authToken()) {
+      status.textContent = 'sign in first so the seat attaches to you — sending you to the door…';
+      setTimeout(function () { window.location.href = 'enter.html?next=theater-promo.html'; }, 900);
+      return;
+    }
+    status.textContent = 'claiming your seat…';
+    authedFetch(API + '/api/tier/claim-founder', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ cohort: 'theater-100', tier: 'theater' })
+    })
+      .then(function (r) { return r.json().then(function (b) { return { ok: r.ok, body: b }; }); })
+      .then(function (res) {
+        if (res.ok && res.body && res.body.granted) {
+          status.textContent = 'seat ' + (res.body.seat || '') + ' is yours. Theater is open — go play something.';
+          if (typeof res.body.claimed === 'number') paintSeats(res.body.claimed);
+        } else if (res.body && res.body.error === 'cohort-full') {
+          status.textContent = 'the hundred filled while you were reading. Theater is on the tiers page at list price.';
+        } else {
+          status.textContent = 'could not reach the brain — nothing was charged. Try again, or use the tiers page.';
+        }
+      })
+      .catch(function () {
+        status.textContent = 'could not reach the brain — nothing was charged. Try again in a moment.';
+      });
+  });
+})();
+</script>
+</body>
+</html>
