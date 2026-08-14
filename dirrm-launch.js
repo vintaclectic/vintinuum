@@ -92,18 +92,77 @@
   function hasDOM() {
     return typeof document !== 'undefined' && document.body !== undefined;
   }
+  // Is the canonical player available at OUR OWN origin? If so we must use the
+  // relative path, because a cross-origin player cannot reach the media we are
+  // handing it, cannot be postMessaged without an origin pin, and — the failure
+  // that exposed this — is simply unreachable when the page is offline or
+  // self-hosted.
+  //
+  // THE BUG THIS FIXES (2026-08-08, organ 6). The test was a hostname substring
+  // allowlist: `vintaclectic` OR `localhost`. That is wrong in the one direction
+  // that fails silently. A world served from 127.0.0.1, a LAN address, a `.local`
+  // name, a Codespace, a preview deploy, or ANY federated self-hosted world node
+  // — every one of which ships dirrm-player.html right next to the page that is
+  // asking — fell through to the GitHub Pages CANONICAL_URL. Measured: the world
+  // at http://127.0.0.1:41529 opened
+  // `https://vintaclectic.github.io/.../dirrm-player.html?url=http://127.0.0.1:...`,
+  // which resolved to chrome-error://chromewebdata, played nothing, and reported
+  // nothing — an iframe cannot tell its parent it failed to load, so the player
+  // appeared to open and simply never made a sound. DIRVERSE's whole federation
+  // story is self-hosted world nodes, so this was going to be broken for every
+  // one of them.
+  //
+  // The honest test is not "what is this hostname called" but "IS THE PLAYER
+  // HERE?", and we can answer that exactly rather than guessing: this very
+  // library was loaded from somewhere, and dirrm-player.html is its sibling in
+  // every deployment. `document.currentScript` (captured at parse time, before
+  // any async work can null it) gives us that path directly.
+  //
+  // This also fixes the OTHER direction the substring test got wrong: an
+  // extension CONTENT SCRIPT injected into a third-party page has
+  // `location.host` of that page, so a naive "any http(s) page is ours" rule
+  // would emit a relative URL resolving against youtube.com. Deriving from the
+  // script's own URL cannot make that mistake — a content script's src is a
+  // chrome-extension:// URL, which is not same-origin with the page, so we
+  // correctly fall through to the canonical player.
+  //
+  // Falls back to the old allowlist only when currentScript is unavailable
+  // (an inline eval, a bundler that inlined us), so no existing caller regresses.
+  const _selfSrc = (function () {
+    try {
+      if (typeof document !== 'undefined' && document.currentScript && document.currentScript.src) {
+        return document.currentScript.src;
+      }
+    } catch (_) {}
+    return null;
+  })();
+
+  function siblingPlayerUrl() {
+    if (!hasDOM()) return null;
+    try {
+      if (!_selfSrc) return null;
+      const me = new URL(_selfSrc, location.href);
+      if (me.origin !== location.origin) return null;   // injected from elsewhere
+      return new URL(RELATIVE_URL, me).href;            // the sibling, absolute+exact
+    } catch (_) { return null; }
+  }
+
   function isSameOriginVintinuum() {
     if (!hasDOM()) return false;
+    if (siblingPlayerUrl()) return true;
     try {
+      // legacy fallback for callers where currentScript is not observable
       return location.host.includes('vintaclectic') || location.host.includes('localhost');
     } catch { return false; }
   }
 
   // ── URL BUILDER ───────────────────────────────────────────────────────────
   function buildPlayerUrl({ url, title, type, mode, autoplay } = {}) {
-    // Prefer same-origin (relative) when we're already on a vintinuum page,
-    // otherwise use the canonical GitHub Pages URL.
-    const base = isSameOriginVintinuum() ? RELATIVE_URL : CANONICAL_URL;
+    // Prefer the player that sits NEXT TO THIS LIBRARY (exact, origin-checked),
+    // then the relative path, and only then the canonical GitHub Pages URL. See
+    // isSameOriginVintinuum() above for why a hostname substring test was wrong.
+    const base = siblingPlayerUrl()
+      || (isSameOriginVintinuum() ? RELATIVE_URL : CANONICAL_URL);
     const qs = new URLSearchParams();
     if (url) qs.set('url', url);
     if (title) qs.set('title', title);
