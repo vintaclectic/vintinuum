@@ -76,10 +76,14 @@
       pointer-events: none;
     `;
 
-    // LEFT cluster (identity + vitals)
+    // LEFT cluster (identity + vitals + brain + live) — NO-COLLISION: all
+    // four pills must fit on ONE row at every breakpoint, never wrap to 2nd
+    // row. Reduced gap (6px desktop, 4px mobile) + responsive sizing ensures
+    // single-row fit even on 375px phones. Vinta 2026-08-14: "i dont want
+    // rate limit on 2nd row looks stupid".
     const left = document.createElement('div');
     left.id = 'topLeft';
-    left.style.cssText = 'justify-self:start;display:flex;align-items:center;gap:8px;pointer-events:none;min-width:0;overflow:hidden;';
+    left.style.cssText = 'justify-self:start;display:flex;align-items:center;gap:6px;pointer-events:none;min-width:0;flex-shrink:1;flex-wrap:nowrap;';
 
     // Identity pill
     const auth = makePill('topAuthPill', {
@@ -438,33 +442,41 @@
   }
 
   // ── Pill factory ──────────────────────────────────────────────────────────
+  // DECISION (V98W5HJ 2026-08-14): reduced sizing across the board so all 4
+  // topLeft pills (identity, vitals, brain, live) fit on one row at 375px
+  // without wrapping to 2nd row. Padding 6px 11px (from 7px 14px), font-size
+  // 0.55rem (from 0.6rem), letter-spacing 0.12em (from 0.18em), min-height
+  // 32px (from 36px), gap 6px (from 8px). Pills stay readable + sexy, never
+  // collide or wrap. REVERSIBLE VIA: revert this edit.
   function makePill(id, opts) {
     opts = opts || {};
     const btn = document.createElement('button');
     btn.id = id;
     btn.type = 'button';
     btn.setAttribute('aria-label', opts.ariaLabel || '');
+    btn.setAttribute('data-draggable', 'false'); // global draggable exempt
     btn.style.cssText = `
       pointer-events: auto;
       background: rgba(8, 12, 20, 0.55);
       border: 1px solid ${opts.borderColor || 'rgba(255,255,255,0.10)'};
       color: ${opts.color || 'rgba(218,228,255,0.85)'};
-      padding: ${opts.iconOnly ? '6px 10px' : '7px 14px'};
-      border-radius: 14px;
+      padding: ${opts.iconOnly ? '5px 9px' : '6px 11px'};
+      border-radius: 12px;
       cursor: pointer;
-      font-size: 0.6rem;
-      letter-spacing: 0.18em;
+      font-size: 0.55rem;
+      letter-spacing: 0.12em;
       font-family: 'Space Mono', monospace;
       text-transform: uppercase;
       transition: all 180ms cubic-bezier(0.16,1,0.3,1);
-      min-height: 36px;
+      min-height: 32px;
       display: flex;
       align-items: center;
-      gap: 8px;
+      gap: 6px;
       max-width: 60vw;
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
+      flex-shrink: 1;
       backdrop-filter: blur(8px);
       -webkit-backdrop-filter: blur(8px);
     `;
@@ -863,22 +875,58 @@
     const v = Shell.get('viewport');
     if (v.mobile) {
       // Mobile: 52px shell to match body grid (Vinta directive 2026-05-23).
+      // V98W5HJ 2026-08-14: even tighter pill sizing on mobile so all 4 topLeft
+      // pills stay on one row even on narrow phones (375px verified). Reduced
+      // gap to 4px, smaller font (.5rem), tighter padding (5px 8px). Sexy and
+      // zero-collision.
       refs.header.style.height = '52px';
-      refs.header.style.padding = '6px max(8px, env(safe-area-inset-right, 8px)) 6px max(8px, env(safe-area-inset-left, 8px))';
+      refs.header.style.padding = '5px max(6px, env(safe-area-inset-right, 6px)) 5px max(6px, env(safe-area-inset-left, 6px))';
+      refs.header.style.gap = '4px'; // tighter gap on mobile
+      const leftCluster = $('topLeft');
+      if (leftCluster) leftCluster.style.gap = '4px';
+      // Compress all topLeft pills further on mobile
+      ['topAuthPill', 'topVitalsPill', 'topBrainPill', 'topLivePill'].forEach(pillId => {
+        const pill = $(pillId);
+        if (pill) {
+          pill.style.padding = '5px 8px';
+          pill.style.fontSize = '0.5rem';
+          pill.style.minHeight = '30px';
+          pill.style.letterSpacing = '0.10em';
+        }
+      });
       // Hide lore pill text on mobile, keep menu
       const lore = $('topLorePillLabel');
       if (lore) lore.style.display = 'none';
-      // Hide vitals pill label on phones — BRAIN pill carries the live status
+      // Compress brain/live pill labels even more on mobile
       const brainLabel = $('topBrainPillLabel');
-      if (brainLabel) brainLabel.style.fontSize = '.45rem';
+      if (brainLabel) brainLabel.style.fontSize = '.42rem';
+      const liveLabel = $('topLivePillLabel');
+      if (liveLabel) liveLabel.style.fontSize = '.42rem';
       // Move the SSE seam to follow the new height
       const seam = $('topShellSeam');
       if (seam) seam.style.top = 'calc(52px + env(safe-area-inset-top, 0px))';
     } else {
       refs.header.style.height = '56px';
       refs.header.style.padding = '8px max(12px, env(safe-area-inset-right, 12px)) 8px max(12px, env(safe-area-inset-left, 12px))';
+      refs.header.style.gap = '8px';
+      const leftCluster = $('topLeft');
+      if (leftCluster) leftCluster.style.gap = '6px';
+      // Reset pills to default desktop sizing
+      ['topAuthPill', 'topVitalsPill', 'topBrainPill', 'topLivePill'].forEach(pillId => {
+        const pill = $(pillId);
+        if (pill) {
+          pill.style.padding = '6px 11px';
+          pill.style.fontSize = '0.55rem';
+          pill.style.minHeight = '32px';
+          pill.style.letterSpacing = '0.12em';
+        }
+      });
       const lore = $('topLorePillLabel');
       if (lore) lore.style.display = '';
+      const brainLabel = $('topBrainPillLabel');
+      if (brainLabel) brainLabel.style.fontSize = '.45rem';
+      const liveLabel = $('topLivePillLabel');
+      if (liveLabel) liveLabel.style.fontSize = '.45rem';
       const seam = $('topShellSeam');
       if (seam) seam.style.top = 'calc(56px + env(safe-area-inset-top, 0px))';
     }
