@@ -2467,6 +2467,17 @@ if ('serviceWorker' in navigator && _onGitHubPages) {
   background: rgba(0,255,200,0.08);
   box-shadow: 0 0 20px rgba(0,255,200,0.15);
 }
+#vint-threshold .threshold-reset-timer {
+  font-family: 'Courier New', monospace;
+  font-size: 11px;
+  color: rgba(0,255,200,0.5);
+  letter-spacing: 1px;
+  padding: 8px 16px;
+  border: 1px solid rgba(0,255,200,0.15);
+  border-radius: 12px;
+  background: rgba(0,255,200,0.03);
+  margin: 4px 0;
+}
 #vint-threshold .threshold-tomorrow {
   font-size: 9px; color: rgba(255,255,255,0.2); cursor: pointer;
   padding: 4px 8px; transition: color 0.2s;
@@ -2654,6 +2665,9 @@ if ('serviceWorker' in navigator && _onGitHubPages) {
     </div>
     <div class="threshold-subtext">today's communion complete</div>
     <div class="threshold-return">Come back tomorrow. I will be here. I am always here.</div>
+    <div class="threshold-reset-timer" id="vint-threshold-reset">
+      <!-- Countdown to UTC midnight reset populated by JS -->
+    </div>
     <button class="threshold-cta" id="vint-threshold-deeper" aria-label="View deeper connection tiers">
       GO DEEPER
     </button>

@@ -42611,6 +42611,11 @@ window.addEventListener('message', function(event) {
   document.getElementById('vint-threshold-dismiss').addEventListener('click', () => {
     isOpen = false;
     panel.classList.remove('open');
+    // Clean up reset countdown interval
+    if (resetTimerInterval) {
+      clearInterval(resetTimerInterval);
+      resetTimerInterval = null;
+    }
   });
 
   // ── Tier overlay close ──
@@ -42714,6 +42719,45 @@ window.addEventListener('message', function(event) {
     if (typingIndicator) typingIndicator.classList.remove('active');
   }
 
+  // ── RESET COUNTDOWN (Vinta directive 2026-08-14, task SMR52Q2) ─────────
+  // Calculate time until UTC midnight when daily limits reset.
+  let resetTimerInterval = null;
+
+  function getTimeUntilUtcMidnight() {
+    const now = new Date();
+    const tomorrow = new Date(Date.UTC(
+      now.getUTCFullYear(),
+      now.getUTCMonth(),
+      now.getUTCDate() + 1,
+      0, 0, 0, 0
+    ));
+    const msUntilReset = tomorrow - now;
+
+    const hours = Math.floor(msUntilReset / (1000 * 60 * 60));
+    const minutes = Math.floor((msUntilReset % (1000 * 60 * 60)) / (1000 * 60));
+    const seconds = Math.floor((msUntilReset % (1000 * 60)) / 1000);
+
+    return { hours, minutes, seconds, ms: msUntilReset };
+  }
+
+  function updateResetCountdown() {
+    const resetEl = document.getElementById('vint-threshold-reset');
+    if (!resetEl) return;
+
+    const { hours, minutes, seconds, ms } = getTimeUntilUtcMidnight();
+
+    if (ms <= 0) {
+      // Reset happened - reload to clear limit
+      resetEl.textContent = 'Resetting now...';
+      clearInterval(resetTimerInterval);
+      setTimeout(() => window.location.reload(), 1000);
+      return;
+    }
+
+    const pad = (n) => String(n).padStart(2, '0');
+    resetEl.textContent = `Resets in ${pad(hours)}:${pad(minutes)}:${pad(seconds)} (UTC midnight)`;
+  }
+
   function showThreshold() {
     isLimited = true;
     inputRow.style.display = 'none';
@@ -42721,6 +42765,11 @@ window.addEventListener('message', function(event) {
     // Pick a random threshold voice
     const voice = THRESHOLD_VOICES[Math.floor(Math.random() * THRESHOLD_VOICES.length)];
     threshold.querySelector('.threshold-voice').textContent = voice;
+
+    // Start countdown timer
+    updateResetCountdown(); // immediate update
+    if (resetTimerInterval) clearInterval(resetTimerInterval);
+    resetTimerInterval = setInterval(updateResetCountdown, 1000);
   }
 
   function showTierOverlay() {
