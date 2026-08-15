@@ -1,0 +1,946 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>DirRM · drop anything, it plays</title>
+<meta name="description" content="Drop any file — video, audio, image, PDF, ebook, 3D model, code — and it plays instantly. Nothing uploads. DirRM is the universal media surface.">
+
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<meta property="og:title" content="DirRM — drop anything, it plays">
+<meta property="og:description" content="Video, audio, images, PDFs, ebooks, 3D models, code. One player for every file you own. Nothing uploads — playback is local.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://dirrm.vintinuum.co/">
+
+<script src="body/api_base.js?v=v20260815-dirrm-landing"></script>
+<script src="dirrm-launch.js?v=v20260815-dirrm-landing"></script>
+<link rel="stylesheet" href="body/tokens.css?v=v20260613-mobile">
+<style>
+  /* ═══════════════════════════════════════════════════════════════════════
+     DIRRM LANDING — dirrm.vintinuum.co
+
+     LAYOUT LAW (No-Collision, absolute):
+     The page is ONE single-column flow spine. Every section is a normal
+     block in that flow and owns its full row — nothing is absolutely
+     positioned over content, anywhere, at any breakpoint.
+
+     There are exactly TWO fixed-position layers in this document, and they
+     are mutually exclusive by construction — never co-visible:
+       1. .stage   — the player overlay (z-index 200). While open, the page
+                     behind is inert and scroll-locked.
+       2. .toast   — a status line (z-index 300), which renders ONLY inside
+                     the stage's own footer row when the stage is open, and
+                     in its own reserved bottom band when it is not. It is
+                     centered in a flex row with its own padding, so it
+                     cannot land on the player chrome or on any button.
+     No other element in this file uses position:fixed or position:absolute
+     over another element's box.
+     ═══════════════════════════════════════════════════════════════════════ */
+  :root {
+    color-scheme: dark;
+    --theater:      #c9a227;          /* Theater's signature gold */
+    --theater-soft: rgba(201,162,39,0.10);
+    --theater-edge: rgba(201,162,39,0.34);
+    --live:         #7cffb4;
+    --ink:          rgba(255,255,255,0.93);
+    --ink-2:        rgba(255,255,255,0.63);
+    --ink-3:        rgba(255,255,255,0.42);
+    --hair:         rgba(255,255,255,0.10);
+    --panel:        rgba(255,255,255,0.034);
+    --radius:       14px;
+    --gap:          clamp(38px, 7vw, 74px);
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  html, body { overflow-x:hidden; max-width:100%; }
+  html { scroll-behavior:smooth; }
+  @media (prefers-reduced-motion:reduce) {
+    html { scroll-behavior:auto; }
+    *, *::before, *::after {
+      animation-duration:0.01ms !important;
+      transition-duration:0.01ms !important;
+      animation-iteration-count:1 !important;
+    }
+  }
+  body {
+    background:
+      radial-gradient(ellipse 120% 80% at 50% -10%, rgba(201,162,39,0.10), transparent 60%),
+      radial-gradient(ellipse at top, #17172a, #050510);
+    background-attachment:fixed;
+    color:var(--ink);
+    min-height:100svh;
+    font-family:'SF Mono', Menlo, 'Roboto Mono', ui-monospace, monospace;
+    line-height:1.6;
+    -webkit-font-smoothing:antialiased;
+    text-rendering:optimizeLegibility;
+  }
+  /* Body is locked (not hidden) while the stage is open, so the scroll
+     position is preserved and the background can never scroll under it. */
+  body.stage-open { overflow:hidden; }
+
+  /* ── THE SPINE — one column, one owner per row ─────────────────────── */
+  .wrap {
+    width:100%;
+    max-width:1060px;
+    margin:0 auto;
+    padding:
+      max(16px, env(safe-area-inset-top))
+      max(18px, env(safe-area-inset-right))
+      max(18px, env(safe-area-inset-bottom))
+      max(18px, env(safe-area-inset-left));
+  }
+  section { padding-block:var(--gap); }
+  section + section { border-top:1px solid var(--hair); }
+
+  a { color:inherit; }
+  .nav {
+    display:flex; flex-wrap:wrap; gap:6px 14px; align-items:center;
+    padding-block:14px; font-size:12px; color:var(--ink-3);
+  }
+  /* 44px minimum touch target — non-negotiable, so nav links are inline-flex
+     boxes with a real height rather than bare text with padding. */
+  .nav a {
+    color:var(--ink-3); text-decoration:none;
+    display:inline-flex; align-items:center; min-height:44px; padding:0 4px;
+  }
+  .nav a:hover, .nav a:focus-visible { color:var(--ink); }
+
+  .eyebrow {
+    display:inline-block; font-size:11px; letter-spacing:0.16em;
+    text-transform:uppercase; color:var(--theater);
+    border:1px solid var(--theater-edge); background:var(--theater-soft);
+    border-radius:999px; padding:6px 13px; margin-bottom:20px;
+  }
+  h1 {
+    font-size:clamp(30px, 7.2vw, 60px);
+    line-height:1.08; letter-spacing:-0.025em; font-weight:600;
+    margin-bottom:16px; text-wrap:balance;
+  }
+  h1 .glow { color:var(--theater); }
+  .sub {
+    font-size:clamp(14px, 2.6vw, 17px); color:var(--ink-2);
+    max-width:62ch; text-wrap:pretty;
+  }
+  h2 {
+    font-size:clamp(19px, 3.8vw, 26px); font-weight:600;
+    letter-spacing:-0.015em; margin-bottom:12px; text-wrap:balance;
+  }
+  .lede { color:var(--ink-2); font-size:14px; max-width:64ch; margin-bottom:26px; }
+
+  /* ── THE DROP ZONE — the whole point of the page ───────────────────── */
+  .drop {
+    position:relative;              /* contains ONLY its own ::after ring */
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    gap:16px; text-align:center;
+    width:100%;
+    min-height:clamp(260px, 42svh, 380px);
+    margin-top:30px;
+    padding:clamp(26px, 5vw, 44px);
+    border:1.5px dashed var(--theater-edge);
+    border-radius:calc(var(--radius) + 6px);
+    background:
+      radial-gradient(ellipse 90% 70% at 50% 0%, rgba(201,162,39,0.07), transparent 70%),
+      var(--panel);
+    cursor:pointer;
+    transition:border-color .18s ease, background .18s ease, transform .18s cubic-bezier(.2,.8,.2,1);
+    -webkit-tap-highlight-color:transparent;
+  }
+  .drop:hover, .drop:focus-visible {
+    border-color:var(--theater);
+    background:radial-gradient(ellipse 90% 70% at 50% 0%, rgba(201,162,39,0.12), transparent 70%), var(--panel);
+    outline:none;
+  }
+  .drop:focus-visible { box-shadow:0 0 0 3px rgba(201,162,39,0.34); }
+  .drop.is-hot {
+    border-color:var(--theater); border-style:solid;
+    background:radial-gradient(ellipse 90% 70% at 50% 0%, rgba(201,162,39,0.20), transparent 70%), var(--panel);
+    transform:scale(1.008);
+  }
+  /* The pulse ring is a pseudo-element pinned to the drop zone's OWN box and
+     is pointer-events:none — it cannot touch or intercept any sibling. */
+  .drop::after {
+    content:''; position:absolute; inset:-1.5px;
+    border-radius:inherit; pointer-events:none;
+    border:1.5px solid transparent; transition:border-color .18s ease;
+  }
+  .drop.is-hot::after { border-color:rgba(201,162,39,0.45); }
+
+  .drop-icon {
+    font-size:clamp(34px, 8vw, 46px); line-height:1;
+    filter:drop-shadow(0 0 18px rgba(201,162,39,0.35));
+  }
+  .drop-title { font-size:clamp(17px, 3.4vw, 22px); font-weight:600; letter-spacing:-0.01em; }
+  .drop-hint  { font-size:13px; color:var(--ink-2); max-width:44ch; }
+  .drop-meta  { font-size:11px; color:var(--ink-3); letter-spacing:0.04em; }
+  /* The file input is a SIBLING of .drop, not a child — a <button> may not
+     contain a form control, so it cannot be nested. The old selector
+     (`.drop input[type=file]`) therefore never matched and the raw input
+     rendered visibly under the drop zone. Hide it by its own id. */
+  #file { display:none; }
+
+  /* Buttons — 44px minimum touch target, everywhere, no exceptions. */
+  .btn {
+    display:inline-flex; align-items:center; justify-content:center; gap:8px;
+    min-height:46px; padding:12px 22px;
+    border-radius:999px; border:1px solid var(--theater-edge);
+    background:var(--theater); color:#12100a;
+    font:inherit; font-size:14px; font-weight:600; letter-spacing:-0.01em;
+    text-decoration:none; cursor:pointer;
+    transition:transform .14s cubic-bezier(.2,.8,.2,1), filter .14s ease;
+  }
+  .btn:hover, .btn:focus-visible { transform:translateY(-1px); filter:brightness(1.08); outline:none; }
+  .btn:focus-visible { box-shadow:0 0 0 3px rgba(201,162,39,0.4); }
+  .btn:active { transform:translateY(0); }
+  .btn-ghost { background:transparent; color:var(--ink); border-color:var(--hair); }
+  .btn-ghost:hover, .btn-ghost:focus-visible { border-color:var(--theater-edge); color:var(--theater); }
+
+  /* ── URL LANE — its own row, never overlapping the drop zone ───────── */
+  .or {
+    display:flex; align-items:center; gap:14px;
+    margin-top:26px; color:var(--ink-3); font-size:11px;
+    letter-spacing:0.14em; text-transform:uppercase;
+  }
+  .or::before, .or::after { content:''; flex:1; height:1px; background:var(--hair); }
+
+  .urlrow { display:flex; flex-wrap:wrap; gap:10px; margin-top:18px; }
+  .urlrow input {
+    flex:1 1 260px; min-width:0;      /* min-width:0 = the flex overflow guard */
+    min-height:46px; padding:12px 16px;
+    border-radius:999px; border:1px solid var(--hair);
+    background:rgba(0,0,0,0.28); color:var(--ink);
+    font:inherit; font-size:14px;
+  }
+  .urlrow input::placeholder { color:var(--ink-3); }
+  .urlrow input:focus-visible { outline:none; border-color:var(--theater-edge); box-shadow:0 0 0 3px rgba(201,162,39,0.2); }
+  .urlrow .btn { flex:0 0 auto; }
+
+  /* ── RECENTS — session memory, the investment loop ─────────────────── */
+  .recents { margin-top:30px; }
+  .recents-head {
+    display:flex; flex-wrap:wrap; gap:8px 14px;
+    align-items:baseline; justify-content:space-between; margin-bottom:12px;
+  }
+  .recents-head h3 { font-size:12px; font-weight:600; letter-spacing:0.14em; text-transform:uppercase; color:var(--ink-3); }
+  .linkbtn {
+    display:inline-flex; align-items:center;
+    background:none; border:none; color:var(--ink-3); font:inherit; font-size:11px;
+    cursor:pointer; padding:0 4px; min-height:44px; text-decoration:underline;
+    text-underline-offset:3px;
+  }
+  .linkbtn:hover, .linkbtn:focus-visible { color:var(--theater); outline:none; }
+  .chips { display:flex; flex-wrap:wrap; gap:8px; }
+  .chip {
+    display:inline-flex; align-items:center; gap:8px;
+    max-width:100%; min-height:44px; padding:9px 15px;
+    border-radius:999px; border:1px solid var(--hair);
+    background:var(--panel); color:var(--ink-2);
+    font:inherit; font-size:12px; cursor:pointer; text-align:left;
+    transition:border-color .14s ease, color .14s ease;
+  }
+  .chip:hover, .chip:focus-visible { border-color:var(--theater-edge); color:var(--ink); outline:none; }
+  .chip .chip-kind { color:var(--theater); flex:0 0 auto; }
+  .chip .chip-name {
+    overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+    max-width:min(46vw, 280px);      /* long filenames truncate, never overflow */
+  }
+
+  /* ── TYPE GRID ─────────────────────────────────────────────────────── */
+  .grid {
+    display:grid; gap:12px;
+    grid-template-columns:repeat(auto-fit, minmax(150px, 1fr));
+  }
+  .card {
+    border:1px solid var(--hair); border-radius:var(--radius);
+    background:var(--panel); padding:16px; min-width:0;
+  }
+  .card-k {
+    font-size:11px; letter-spacing:0.12em; text-transform:uppercase;
+    color:var(--theater); margin-bottom:7px;
+  }
+  .card-v { font-size:12.5px; color:var(--ink-2); overflow-wrap:anywhere; }
+
+  /* ── TIER ROW — honest, generous, no dark patterns ─────────────────── */
+  .tier {
+    border:1px solid var(--theater-edge); border-radius:var(--radius);
+    background:var(--theater-soft); padding:clamp(18px, 3.6vw, 28px);
+  }
+  .tier ul { list-style:none; display:flex; flex-direction:column; gap:9px; margin:16px 0 22px; }
+  .tier li { position:relative; padding-left:22px; font-size:13.5px; color:var(--ink-2); }
+  .tier li::before {
+    content:'▸'; position:absolute; left:0; top:0;
+    color:var(--theater); font-size:12px; line-height:1.6;
+  }
+  .tier-cta { display:flex; flex-wrap:wrap; gap:10px; }
+  .tier-note { margin-top:14px; font-size:11.5px; color:var(--ink-3); }
+
+  footer {
+    padding-block:34px 10px; border-top:1px solid var(--hair);
+    color:var(--ink-3); font-size:11.5px;
+    display:flex; flex-wrap:wrap; gap:8px 16px; align-items:center;
+  }
+  footer a {
+    color:var(--ink-3); text-decoration:none;
+    display:inline-flex; align-items:center; min-height:44px; padding:0 2px;
+  }
+  footer a:hover, footer a:focus-visible { color:var(--theater); }
+
+  /* ═══ THE STAGE — player overlay ══════════════════════════════════════
+     A column flex container: [ player iframe (flex:1) ][ footer row (auto) ].
+     The iframe and the footer are FLEX SIBLINGS, so the controls can never
+     overlap the player — the browser reserves the footer's height and the
+     iframe gets exactly the remaining space. No absolute positioning.
+
+     Per the standing DirRM rule ("the player IS the window, no box"), the
+     iframe is edge-to-edge with no border, no radius, no shadow — the stage
+     is pure black behind it and the player owns every pixel it is given.
+     ═══════════════════════════════════════════════════════════════════ */
+  .stage {
+    position:fixed; inset:0; z-index:200;
+    display:none; flex-direction:column;
+    background:#000;
+  }
+  .stage.is-open { display:flex; }
+  .stage-frame {
+    flex:1 1 auto; width:100%; min-height:0;   /* min-height:0 lets it shrink */
+    border:0; display:block; background:#000;
+  }
+  .stage-bar {
+    flex:0 0 auto;
+    display:flex; align-items:center; gap:10px;
+    padding:10px max(12px, env(safe-area-inset-right))
+            max(10px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left));
+    background:rgba(6,6,12,0.96);
+    border-top:1px solid var(--hair);
+  }
+  .stage-name {
+    flex:1 1 auto; min-width:0;
+    overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+    font-size:12px; color:var(--ink-2);
+  }
+  .stage-bar .btn { flex:0 0 auto; min-height:44px; padding:10px 18px; font-size:13px; }
+
+  /* ── TOAST — floats, therefore it gets a GUARANTEED EMPTY LANE ──────
+     THE COLLISION THIS FIXES (found by the automated audit, not by eye):
+     when the toast was pinned to the viewport bottom, at 320/375/768px it
+     landed directly on top of the URL input and the "or paste a link"
+     divider — 271×25px of shared pixels. A fixed element measured against
+     the VIEWPORT knows nothing about what content happens to be scrolled
+     under it, so it will always eventually collide with something.
+
+     The fix is structural, not a nudge: the toast is its own row in the
+     page flow, and it RESERVES ITS HEIGHT ALWAYS (visibility toggles, not
+     display), so the layout permanently owns that band and no other element
+     can ever be laid out into it. It is sticky within its own row, so it
+     stays visible while scrolling without ever leaving its lane.
+     ─────────────────────────────────────────────────────────────────── */
+  .toastrow {
+    /* In-flow row — occupies real layout space, collides with nothing. */
+    display:flex; justify-content:center;
+    position:sticky; bottom:max(10px, env(safe-area-inset-bottom));
+    z-index:300; padding-inline:12px; pointer-events:none;
+    min-height:46px;            /* the reserved lane — always held */
+  }
+  .toast {
+    max-width:min(92vw, 460px);
+    padding:11px 18px; border-radius:999px;
+    border:1px solid var(--theater-edge); background:rgba(10,10,16,0.96);
+    color:var(--ink); font-size:12.5px; text-align:center;
+    box-shadow:0 8px 30px rgba(0,0,0,0.5);
+    opacity:0; transform:translateY(8px);
+    transition:opacity .2s ease, transform .2s ease;
+    overflow-wrap:anywhere;
+    visibility:hidden;          /* hidden but its ROW still reserves space */
+  }
+  .toast.is-up { opacity:1; transform:translateY(0); visibility:visible; }
+  /* While the stage is open the toast becomes a fixed element again — but
+     now the only thing on screen is the stage, and it is pinned into the
+     empty band ABOVE the stage bar, whose height is fixed and known. */
+  body.stage-open .toastrow {
+    position:fixed; left:0; right:0;
+    bottom:calc(66px + max(10px, env(safe-area-inset-bottom)));
+    min-height:0;
+  }
+
+  .sr-only {
+    position:absolute; width:1px; height:1px; padding:0; margin:-1px;
+    overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; border:0;
+  }
+
+  /* ── MOBILE ────────────────────────────────────────────────────────── */
+  @media (max-width:560px) {
+    .urlrow .btn, .tier-cta .btn { width:100%; }   /* full-width thumb targets */
+    .drop { min-height:clamp(230px, 38svh, 300px); }
+    .chip .chip-name { max-width:56vw; }
+  }
+  /* Landscape phones: the stage must not lose the player to the bar. */
+  @media (max-height:430px) and (orientation:landscape) {
+    .stage-bar { padding-block:6px; }
+    .stage-bar .btn { min-height:38px; padding:8px 14px; }
+    body.stage-open .toastrow { bottom:calc(52px + max(6px, env(safe-area-inset-bottom))); }
+  }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+
+  <nav class="nav" aria-label="Site">
+    <a href="index.html">← vintinuum</a>
+    <span aria-hidden="true">·</span>
+    <a href="theater-promo.html">theater</a>
+    <span aria-hidden="true">·</span>
+    <a href="upgrade.html">tiers</a>
+  </nav>
+
+  <!-- ══ HERO + DROP ZONE ══════════════════════════════════════════════ -->
+  <section id="drop-section" style="border-top:none; padding-top:clamp(18px,4vw,32px);">
+    <span class="eyebrow">DirRM · universal media surface</span>
+    <h1>Drop anything.<br><span class="glow">It plays.</span></h1>
+    <p class="sub">
+      Video, audio, images, PDFs, ebooks, 3D models, subtitles, code. One player
+      for every file you own — and it never asks you to upload a thing.
+    </p>
+
+    <!-- The drop zone is a real <button> so keyboard and screen readers get
+         the same affordance the mouse does. -->
+    <button type="button" class="drop" id="drop"
+            aria-describedby="drop-hint">
+      <span class="drop-icon" aria-hidden="true">◎</span>
+      <span class="drop-title" id="drop-title">Drop a file here</span>
+      <span class="drop-hint" id="drop-hint">
+        or tap to browse — plays instantly, right on this device
+      </span>
+      <span class="drop-meta" id="drop-meta">nothing uploads · nothing leaves your machine</span>
+    </button>
+    <input type="file" id="file" accept="*/*" multiple>
+
+    <div class="or">or paste a link</div>
+    <form class="urlrow" id="urlform">
+      <label class="sr-only" for="url">Media URL</label>
+      <input type="url" id="url" inputmode="url" autocomplete="off"
+             placeholder="https://… mp4, mp3, m3u8, pdf, youtube…">
+      <button type="submit" class="btn">Play it</button>
+    </form>
+
+    <div class="recents" id="recents" hidden>
+      <div class="recents-head">
+        <h3>This session</h3>
+        <button type="button" class="linkbtn" id="clear-recents">clear</button>
+      </div>
+      <div class="chips" id="chips"></div>
+    </div>
+  </section>
+
+  <!-- ══ WHAT IT PLAYS ════════════════════════════════════════════════ -->
+  <section>
+    <h2>Every mediatype an open directory can throw at it</h2>
+    <p class="lede">
+      DirRM doesn't guess from a file extension alone — it reads the file itself.
+      Ten families, one surface, no plugins.
+    </p>
+    <div class="grid">
+      <div class="card"><div class="card-k">Video</div><div class="card-v">mp4 · mkv · webm · mov · avi · ts · m2ts</div></div>
+      <div class="card"><div class="card-k">Audio</div><div class="card-v">mp3 · flac · wav · opus · m4a · ogg · aiff</div></div>
+      <div class="card"><div class="card-k">Image</div><div class="card-v">jpg · png · gif · webp · avif · svg · heic</div></div>
+      <div class="card"><div class="card-k">Documents</div><div class="card-v">pdf · epub · mobi · cbz · djvu</div></div>
+      <div class="card"><div class="card-k">Streams</div><div class="card-v">m3u8 (HLS) · mpd (DASH) · ism</div></div>
+      <div class="card"><div class="card-k">3D</div><div class="card-v">glb · gltf · obj · stl · fbx</div></div>
+      <div class="card"><div class="card-k">Text &amp; code</div><div class="card-v">txt · md · json · any source file</div></div>
+      <div class="card"><div class="card-k">Embeds</div><div class="card-v">youtube · vimeo · soundcloud · twitch</div></div>
+    </div>
+  </section>
+
+  <!-- ══ MODES + VISUALIZERS ══════════════════════════════════════════ -->
+  <section>
+    <h2>Four modes. Five visualizers.</h2>
+    <p class="lede">
+      Every one of them is free, right here, on every file you drop. The player
+      is draggable and resizable — put it wherever you actually want it.
+    </p>
+    <div class="grid">
+      <div class="card"><div class="card-k">Main</div><div class="card-v">The room. Drag it, resize it, scale it.</div></div>
+      <div class="card"><div class="card-k">Mini</div><div class="card-v">Compact bar for audio while you work.</div></div>
+      <div class="card"><div class="card-k">PiP</div><div class="card-v">Corner overlay that stays out of the way.</div></div>
+      <div class="card"><div class="card-k">Theater</div><div class="card-v">Edge to edge. The player becomes the screen.</div></div>
+      <div class="card"><div class="card-k">Visualizers</div><div class="card-v">bars · wave · radial · mirror · particles</div></div>
+      <div class="card"><div class="card-k">Keyboard</div><div class="card-v">Space, arrows, F, M — all wired.</div></div>
+    </div>
+  </section>
+
+  <!-- ══ THEATER TIER — earned desire, shown after the value ══════════ -->
+  <section>
+    <h2>Where Theater picks it up</h2>
+    <p class="lede">
+      Everything above is yours for free, forever, on unlimited files. Theater is
+      for when you want the player to stop being a tool and start being a memory.
+    </p>
+    <div class="tier">
+      <div class="eyebrow" style="margin-bottom:14px;">Theater · <span data-price="theater">—</span></div>
+      <ul>
+        <li>Play history that remembers what you watched, and when, and how far you got</li>
+        <li>Mood-matched playlists built from what actually moved you</li>
+        <li>Cross-device handoff — start on the phone, finish on the desktop</li>
+        <li>Unlimited perception browsing across open directories</li>
+        <li>Downloadable memory cards of a night you want to keep</li>
+      </ul>
+      <div class="tier-cta">
+        <a class="btn" href="upgrade.html">See Theater</a>
+        <a class="btn btn-ghost" href="theater-promo.html">What it feels like</a>
+      </div>
+      <p class="tier-note">
+        The drop zone above is not a trial and never expires. If Theater isn't for
+        you, keep using DirRM exactly as it is.
+      </p>
+    </div>
+  </section>
+
+  <footer>
+    <span>DirRM · the universal media surface</span>
+    <a href="index.html">vintinuum</a>
+    <a href="privacy.html">privacy</a>
+    <span>playback is local — files never upload</span>
+  </footer>
+
+  <!-- The toast lives IN THE FLOW as the last row of the spine, so its lane
+       is reserved by the layout itself and can never be shared. -->
+  <div class="toastrow" aria-live="polite" aria-atomic="true">
+    <div class="toast" id="toast" role="status"></div>
+  </div>
+</div>
+
+<!-- ══ STAGE — player overlay (flex column: iframe + bar, never overlapping) ══ -->
+<div class="stage" id="stage" role="dialog" aria-modal="true" aria-label="DirRM player" hidden>
+  <iframe class="stage-frame" id="stage-frame" title="DirRM player"
+          allow="autoplay; fullscreen; picture-in-picture; encrypted-media"
+          allowfullscreen></iframe>
+  <div class="stage-bar">
+    <span class="stage-name" id="stage-name">—</span>
+    <button type="button" class="btn btn-ghost" id="stage-another">Play another</button>
+    <button type="button" class="btn" id="stage-close">Close</button>
+  </div>
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  // ═════════════════════════════════════════════════════════════════════
+  // DIRRM LANDING — drop → play, with zero uploads.
+  //
+  // THE CENTRAL PROBLEM THIS FILE SOLVES:
+  // A dropped File becomes a blob: URL. A blob: URL has NO file extension.
+  // The canonical player's detectMediaType() (dirrm-player.html ~1660)
+  // determines type by splitting the URL on '.', so for EVERY blob it would
+  // fall through to 'unknown' — a dropped .mp3 would render as a broken
+  // <video>, a .pdf would render as nothing.
+  //
+  // The fix, and the reason this page passes an explicit type: at line 1674
+  // of the player, `providedType` short-circuits detection entirely. So we
+  // classify from the real File object (MIME type first — it is the browser's
+  // own sniff — then the true filename extension as fallback) and hand the
+  // player an explicit, correct type. The player then honors it verbatim.
+  //
+  // WHY URL PARAMS AND NOT postMessage:
+  // The player emits no 'ready' event (verified: no such emit exists in
+  // dirrm-player.html). A postMessage fired on iframe.onload can therefore
+  // race the player's constructor and be dropped on the floor with no error
+  // and no retry — the exact silent-failure class that OPERATIONS.md records
+  // for the cross-origin launcher bug. loadFromUrl() reads the query string
+  // synchronously during init, so it cannot race. We set iframe.src.
+  // ═════════════════════════════════════════════════════════════════════
+
+  var PLAYER = 'dirrm-player.html';          // sibling on this origin, always
+  var MAX_RECENTS = 8;
+
+  var $ = function (id) { return document.getElementById(id); };
+  var dropEl    = $('drop'),      fileEl   = $('file');
+  var dropTitle = $('drop-title'),dropMeta = $('drop-meta');
+  var urlForm   = $('urlform'),   urlInput = $('url');
+  var stage     = $('stage'),     frame    = $('stage-frame');
+  var stageName = $('stage-name');
+  var toastEl   = $('toast');
+  var recentsEl = $('recents'),   chipsEl  = $('chips');
+
+  // Live blob URLs we own. Revoked on replace/close so a long session of
+  // dropping big files cannot leak memory.
+  var liveBlobs = [];
+  var recents = [];          // session-only; nothing persisted, nothing sent
+  var toastTimer = null;
+  var lastFocus = null;
+
+  // ── TOAST ──────────────────────────────────────────────────────────
+  function toast(msg, ms) {
+    toastEl.textContent = msg;
+    toastEl.classList.add('is-up');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () {
+      toastEl.classList.remove('is-up');
+    }, ms || 2600);
+  }
+
+  // ── TYPE CLASSIFICATION ────────────────────────────────────────────
+  // Returns a type string the canonical player accepts verbatim. These
+  // strings are exactly the ones detectMediaType() returns/aliases:
+  // video|audio|image|pdf|ebook|stream|model|text|archive|torrent|embed.
+  var EXT = {
+    // video
+    mp4:'video', m4v:'video', webm:'video', mkv:'video', mov:'video', avi:'video',
+    wmv:'video', flv:'video', ogv:'video', '3gp':'video', ts:'video', m2ts:'video',
+    mts:'video', divx:'video', xvid:'video', vob:'video', asf:'video', rm:'video', rmvb:'video',
+    // audio
+    mp3:'audio', wav:'audio', ogg:'audio', flac:'audio', aac:'audio', m4a:'audio',
+    opus:'audio', wma:'audio', aiff:'audio', aif:'audio', mid:'audio', midi:'audio',
+    ape:'audio', alac:'audio', amr:'audio', au:'audio', ra:'audio',
+    // image
+    jpg:'image', jpeg:'image', png:'image', gif:'image', webp:'image', svg:'image',
+    bmp:'image', ico:'image', tiff:'image', tif:'image', avif:'image', heic:'image',
+    heif:'image', jxl:'image', raw:'image', cr2:'image', nef:'image', arw:'image', dng:'image',
+    // documents
+    pdf:'pdf',
+    epub:'ebook', mobi:'ebook', azw:'ebook', azw3:'ebook', fb2:'ebook',
+    djvu:'ebook', lit:'ebook', pdb:'ebook', cbr:'ebook', cbz:'ebook',
+    // streams
+    m3u8:'stream', mpd:'stream', ism:'stream',
+    // 3d
+    glb:'model', gltf:'model', obj:'model', fbx:'model', stl:'model',
+    dae:'model', ply:'model', usdz:'model', '3ds':'model', blend:'model',
+    // archives
+    zip:'archive', rar:'archive', '7z':'archive', tar:'archive', gz:'archive',
+    bz2:'archive', xz:'archive', zst:'archive', tgz:'archive', iso:'archive',
+    dmg:'archive', pkg:'archive', deb:'archive', rpm:'archive', msi:'archive',
+    exe:'archive', apk:'archive',
+    torrent:'torrent'
+  };
+  // Text/code is a long tail — treat anything not matched above but textual
+  // as 'text'. The player renders it monospaced with syntax detection.
+  var TEXT_EXT = /^(txt|md|markdown|json|xml|csv|tsv|log|js|mjs|cjs|ts|tsx|jsx|py|rb|go|rs|java|c|cpp|h|hpp|cs|php|swift|kt|scala|lua|pl|sh|bash|zsh|fish|yaml|yml|toml|ini|cfg|conf|env|sql|dockerfile|makefile|html|htm|css|scss|sass|less|vue|svelte|srt|vtt|ass|nfo)$/i;
+
+  function extOf(name) {
+    var m = String(name || '').toLowerCase().match(/\.([a-z0-9]+)$/i);
+    return m ? m[1] : '';
+  }
+
+  // MIME first (the browser already sniffed the bytes), extension second.
+  // A file named "movie" with type "video/mp4" still plays; a file the OS
+  // typed as application/octet-stream still resolves by its extension.
+  function typeOfFile(file) {
+    var mime = (file.type || '').toLowerCase();
+    var ext  = extOf(file.name);
+
+    if (mime) {
+      if (mime.indexOf('video/') === 0) {
+        // HLS/DASH manifests are sometimes served as video/* — respect the ext.
+        return EXT[ext] === 'stream' ? 'stream' : 'video';
+      }
+      if (mime.indexOf('audio/') === 0) return 'audio';
+      if (mime.indexOf('image/') === 0) return 'image';
+      if (mime === 'application/pdf') return 'pdf';
+      if (mime === 'application/epub+zip') return 'ebook';
+      if (mime.indexOf('text/') === 0)  return EXT[ext] === 'stream' ? 'stream' : 'text';
+      if (mime.indexOf('model/') === 0) return 'model';
+      if (mime === 'application/json' || mime === 'application/xml') return 'text';
+    }
+    if (EXT[ext]) return EXT[ext];
+    if (TEXT_EXT.test(ext)) return 'text';
+    // Unknown: hand the player 'unknown' — it runs its own fallback chain
+    // rather than us lying about the type and guaranteeing a broken render.
+    return 'unknown';
+  }
+
+  function typeOfUrl(u) {
+    var s = String(u || '');
+    if (/youtube\.com|youtu\.be|vimeo\.com|soundcloud\.com|spotify\.com|twitch\.tv|kick\.com|tiktok\.com|bandcamp\.com|dailymotion\.com|rumble\.com/i.test(s)) {
+      return null;   // let the player's embed detection own these — it wins anyway
+    }
+    var path = s.split('?')[0].split('#')[0];
+    var ext = extOf(path);
+    if (EXT[ext]) return EXT[ext];
+    if (TEXT_EXT.test(ext)) return 'text';
+    return null;     // null = omit the param, let the player auto-detect
+  }
+
+  function prettyName(name) {
+    return String(name || '').replace(/\.[^.]+$/, '').replace(/[_-]+/g, ' ').trim() || 'Untitled';
+  }
+  function humanSize(bytes) {
+    if (!bytes && bytes !== 0) return '';
+    var u = ['B','KB','MB','GB','TB'], i = 0, n = bytes;
+    while (n >= 1024 && i < u.length - 1) { n /= 1024; i++; }
+    return (n >= 10 || i === 0 ? Math.round(n) : n.toFixed(1)) + ' ' + u[i];
+  }
+
+  // ── THE STAGE ──────────────────────────────────────────────────────
+  function buildPlayerUrl(mediaUrl, title, type) {
+    var qs = new URLSearchParams();
+    qs.set('url', mediaUrl);
+    if (title) qs.set('title', title);
+    if (type)  qs.set('type', type);
+    qs.set('mode', 'theater');     // the stage is full-viewport; theater matches it
+    qs.set('autoplay', '1');
+    return PLAYER + '?' + qs.toString();
+  }
+
+  // THE MODE GAP (verified in dirrm-player.html, do not "simplify" this away):
+  // OPERATIONS.md documents &mode= as a URL param, but the player's
+  // loadFromUrl() reads ONLY url/title/type — it never reads mode, and the
+  // constructor hardcodes this.mode='main'. So a player launched by URL always
+  // boots at 860×520 "main" and would sit as a small floating card inside our
+  // full-viewport stage — the exact "player in a box" the standing DirRM rule
+  // forbids ("the player IS the window, no box").
+  //
+  // We therefore drive mode over the documented setMode postMessage instead.
+  // Unlike a `load` message this cannot lose data by racing: setMode is
+  // idempotent, so we simply send it on iframe load and once more a beat
+  // later, and whichever arrives after the player's constructor wins.
+  function applyTheaterMode() {
+    try { frame.contentWindow.postMessage({ action: 'setMode', mode: 'theater' }, '*'); } catch (_) {}
+  }
+
+  function openStage(mediaUrl, title, type) {
+    stageName.textContent = title || 'Now playing';
+    // Setting src re-navigates the iframe, so the player boots fresh and reads
+    // our params synchronously in loadFromUrl(). No handshake, no race.
+    frame.src = buildPlayerUrl(mediaUrl, title, type);
+    frame.onload = function () { applyTheaterMode(); setTimeout(applyTheaterMode, 120); };
+
+    lastFocus = document.activeElement;
+    stage.hidden = false;
+    stage.classList.add('is-open');
+    document.body.classList.add('stage-open');
+    // Focus the close button so Esc/Tab have a sane starting point and the
+    // screen reader announces the dialog.
+    setTimeout(function () { try { $('stage-close').focus(); } catch (_) {} }, 40);
+  }
+
+  function closeStage() {
+    stage.classList.remove('is-open');
+    stage.hidden = true;
+    document.body.classList.remove('stage-open');
+    frame.src = 'about:blank';        // stops playback + releases decoders
+    try { if (lastFocus && lastFocus.focus) lastFocus.focus(); } catch (_) {}
+  }
+
+  // ── PLAY ENTRY POINTS ──────────────────────────────────────────────
+  function playFile(file) {
+    if (!file) return;
+    var type  = typeOfFile(file);
+    var title = prettyName(file.name);
+
+    // Revoke the previous blob before minting a new one — bounded memory
+    // no matter how many files get dropped in a session.
+    revokeBlobs();
+    var blobUrl = URL.createObjectURL(file);
+    liveBlobs.push(blobUrl);
+
+    addRecent({ kind: type, name: file.name, title: title, file: file });
+    openStage(blobUrl, title, type);
+    toast(labelFor(type) + ' · ' + humanSize(file.size) + ' · playing locally');
+  }
+
+  function playUrl(raw) {
+    var u = String(raw || '').trim();
+    if (!u) return;
+    // Bare domain or path with no scheme → assume https rather than failing.
+    if (!/^[a-z][a-z0-9+.-]*:/i.test(u)) u = 'https://' + u;
+    var type  = typeOfUrl(u);
+    var title = '';
+    try {
+      var p = new URL(u).pathname.split('/').pop();
+      title = prettyName(decodeURIComponent(p));
+    } catch (_) {}
+    addRecent({ kind: type || 'link', name: title || u, title: title, url: u });
+    openStage(u, title, type);
+    toast('Loading from link…');
+  }
+
+  function labelFor(t) {
+    var map = {
+      video:'Video', audio:'Audio', image:'Image', pdf:'PDF', ebook:'Ebook',
+      stream:'Stream', model:'3D model', text:'Text', archive:'Archive',
+      torrent:'Torrent', unknown:'File', link:'Link'
+    };
+    return map[t] || 'File';
+  }
+
+  function revokeBlobs() {
+    while (liveBlobs.length) {
+      try { URL.revokeObjectURL(liveBlobs.pop()); } catch (_) {}
+    }
+  }
+
+  // ── RECENTS (session only — never written to disk, never sent) ─────
+  function addRecent(entry) {
+    recents.unshift(entry);
+    if (recents.length > MAX_RECENTS) recents.length = MAX_RECENTS;
+    paintRecents();
+  }
+  function paintRecents() {
+    if (!recents.length) { recentsEl.hidden = true; chipsEl.textContent = ''; return; }
+    recentsEl.hidden = false;
+    chipsEl.textContent = '';
+    recents.forEach(function (r, i) {
+      var b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'chip';
+      var k = document.createElement('span');
+      k.className = 'chip-kind';
+      k.textContent = labelFor(r.kind);
+      var n = document.createElement('span');
+      n.className = 'chip-name';
+      n.textContent = r.name;                    // textContent — never innerHTML
+      b.appendChild(k); b.appendChild(n);
+      b.addEventListener('click', function () {
+        // Re-mint the blob: the previous object URL was revoked when the next
+        // file was dropped, so replaying from the retained File is the only
+        // correct path. Links just replay by URL.
+        if (r.file) playFile(r.file);
+        else if (r.url) playUrl(r.url);
+      });
+      chipsEl.appendChild(b);
+    });
+  }
+  $('clear-recents').addEventListener('click', function () {
+    recents = [];
+    paintRecents();
+    toast('Session list cleared');
+  });
+
+  // ── DROP ZONE WIRING ───────────────────────────────────────────────
+  dropEl.addEventListener('click', function () { fileEl.click(); });
+
+  fileEl.addEventListener('change', function () {
+    var files = Array.prototype.slice.call(fileEl.files || []);
+    if (!files.length) return;
+    // Queue extras into recents so a multi-select isn't silently discarded.
+    files.slice(1).reverse().forEach(function (f) {
+      addRecent({ kind: typeOfFile(f), name: f.name, title: prettyName(f.name), file: f });
+    });
+    playFile(files[0]);
+    if (files.length > 1) toast(files.length + ' files — playing the first, rest are below');
+    fileEl.value = '';                 // allow re-picking the same file
+  });
+
+  // dragenter/over must both preventDefault or the browser navigates away.
+  var hotDepth = 0;                    // depth counter: child elements fire too
+  ['dragenter', 'dragover'].forEach(function (ev) {
+    dropEl.addEventListener(ev, function (e) {
+      e.preventDefault(); e.stopPropagation();
+      if (e.dataTransfer) e.dataTransfer.dropEffect = 'copy';
+      dropEl.classList.add('is-hot');
+      dropTitle.textContent = 'Let go';
+      dropMeta.textContent  = 'it plays the moment you release';
+    });
+  });
+  dropEl.addEventListener('dragleave', function (e) {
+    e.preventDefault(); e.stopPropagation();
+    // Only cool down when the pointer truly left the zone, not a child.
+    if (!dropEl.contains(e.relatedTarget)) resetDropCopy();
+  });
+  dropEl.addEventListener('drop', function (e) {
+    e.preventDefault(); e.stopPropagation();
+    resetDropCopy();
+    var dt = e.dataTransfer; if (!dt) return;
+
+    var files = Array.prototype.slice.call(dt.files || []);
+    if (files.length) {
+      files.slice(1).reverse().forEach(function (f) {
+        addRecent({ kind: typeOfFile(f), name: f.name, title: prettyName(f.name), file: f });
+      });
+      playFile(files[0]);
+      if (files.length > 1) toast(files.length + ' files — playing the first, rest are below');
+      return;
+    }
+    // Dragging a link or an <img> from another tab yields text, not a file.
+    var text = dt.getData('text/uri-list') || dt.getData('text/plain');
+    if (text) { playUrl(text); return; }
+    toast('That drop had nothing playable in it');
+  });
+
+  function resetDropCopy() {
+    hotDepth = 0;
+    dropEl.classList.remove('is-hot');
+    dropTitle.textContent = 'Drop a file here';
+    dropMeta.textContent  = 'nothing uploads · nothing leaves your machine';
+  }
+
+  // Page-wide drop guard: dropping ANYWHERE outside the zone must not make
+  // the browser navigate to the file and blow away the session.
+  ['dragover', 'drop'].forEach(function (ev) {
+    window.addEventListener(ev, function (e) {
+      if (dropEl.contains(e.target)) return;
+      e.preventDefault();
+      if (ev === 'drop') {
+        var dt = e.dataTransfer;
+        var f = dt && dt.files && dt.files[0];
+        if (f) { playFile(f); toast('Caught it — playing now'); }
+      }
+    });
+  });
+
+  // Paste a URL or an image straight from the clipboard.
+  window.addEventListener('paste', function (e) {
+    if (stage.classList.contains('is-open')) return;
+    var t = e.target;
+    if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA')) return;
+    var cd = e.clipboardData; if (!cd) return;
+    if (cd.files && cd.files.length) { playFile(cd.files[0]); return; }
+    var text = (cd.getData('text') || '').trim();
+    if (/^(https?:|magnet:|blob:|data:)/i.test(text)) { playUrl(text); }
+  });
+
+  urlForm.addEventListener('submit', function (e) {
+    e.preventDefault();
+    if (!urlInput.value.trim()) { toast('Paste a link first'); return; }
+    playUrl(urlInput.value);
+  });
+
+  // ── STAGE CONTROLS ─────────────────────────────────────────────────
+  $('stage-close').addEventListener('click', closeStage);
+  $('stage-another').addEventListener('click', function () {
+    closeStage();
+    fileEl.click();
+  });
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape' && stage.classList.contains('is-open')) closeStage();
+  });
+  // The player posts 'playerClosed' when the user hits its own X.
+  window.addEventListener('message', function (e) {
+    var d = e.data || {};
+    if (!d || typeof d !== 'object') return;
+    if (d.action === 'playerClosed') closeStage();
+  });
+  window.addEventListener('pagehide', revokeBlobs);
+
+  // ── LIVE PRICE (never hardcode a price on a public page) ───────────
+  // /api/tier/plans returns { plans: [{ tier, price }] } with price in WHOLE
+  // DOLLARS. If the brain is unreachable we say "see all tiers" rather than
+  // inventing a number the checkout won't honor.
+  (function price() {
+    var API = (window.__VINTINUUM_API_BASE || '').replace(/\/$/, '');
+    var nodes = document.querySelectorAll('[data-price]');
+    if (!API || !nodes.length) return;
+    fetch(API + '/api/tier/plans')
+      .then(function (r) { return r.ok ? r.json() : Promise.reject(r.status); })
+      .then(function (data) {
+        var plans = (data && (data.plans || data.tiers)) || [];
+        var hit = null;
+        plans.forEach(function (p) { if (p.tier === 'theater') hit = p; });
+        if (!hit || !hit.price) throw new Error('no theater plan');
+        for (var i = 0; i < nodes.length; i++) nodes[i].textContent = '$' + hit.price + '/mo';
+      })
+      .catch(function () {
+        for (var i = 0; i < nodes.length; i++) nodes[i].textContent = 'see all tiers';
+      });
+  })();
+
+  // ── DEEP LINK: dirrm.vintinuum.co/?url=… plays immediately ─────────
+  (function deepLink() {
+    try {
+      var q = new URLSearchParams(location.search);
+      var u = q.get('url');
+      if (u) playUrl(u);
+    } catch (_) {}
+  })();
+})();
+</script>
+</body>
+</html>
