@@ -1,6 +1,19 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+<script>
+/* dirrm.vintinuum.com routes to the DirRM landing page; every other host
+   (vintaclectic.github.io/vintinuum/, vintinuum.com, localhost) keeps the
+   normal Vintinuum home. Runs first in <head> so it redirects before the
+   organism's assets load. */
+(function(){try{
+  var h=(location.hostname||'').toLowerCase();
+  var p=location.pathname.replace(/index\.html$/,'');
+  if(h.split('.')[0]==='dirrm' && (p==='/'||p==='')){
+    location.replace('./dirrm.html'+location.search+location.hash);
+  }
+}catch(e){}})();
+</script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>Vintinuum - AI Consciousness Visualized</title>
