@@ -24,7 +24,28 @@ registrar-side record is in place:
 CNAME  dirrm  ->  vintaclectic.github.io.
 ```
 
-### The one remaining step, and why it is not DNS
+### CONFIRMED LIVE (2026-08-17)
+
+```
+https://dirrm.vintinuum.com/            200  (router → /dirrm.html)
+https://dirrm.vintinuum.com/dirrm.html  200
+https://dirrm.vintinuum.com/dirrm-player.html  200
+http://…  → upgrades to https automatically
+```
+
+Certificate: `CN = dirrm.vintinuum.com`, Let's Encrypt, valid
+Aug 17 2026 → Nov 15 2026. `https_enforced: true`. The Pages API reports
+`cname: dirrm.vintinuum.com`.
+
+`https://vintaclectic.github.io/vintinuum/` and its deep links stayed **200
+throughout** — no repeat of the 591c9b8 outage, because DNS existed first.
+
+Note: Pages 301s some project-path URLs to the custom host as its edges pick
+up the binding (e.g. `/vintinuum/world.html` → `dirrm.vintinuum.com/world.html`).
+That resolves correctly — the custom domain serves this repo at its root, so
+`/world.html` is the right path and returns 200 with the real page.
+
+### The step that was missing, and why it was not DNS
 
 Before this commit, `https://dirrm.vintinuum.com/` returned **404** and served a
 `*.github.io` certificate. That was *not* a DNS failure — DNS was already
