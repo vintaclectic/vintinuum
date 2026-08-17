@@ -172,6 +172,83 @@
     return base + (qs.toString() ? '?' + qs.toString() : '');
   }
 
+  // ── EXTRACT A PLAYABLE URL OUT OF PASTED TEXT ────────────────────────────
+  // Open-directory URLs are the hostile case, and they are the whole point of
+  // DirRM. A real one looks like:
+  //   https://host/movies/Disclosure Day (2026) [1080p] [YTS.GG - YTS.BZ]/
+  //     Disclosure.Day.2026.1080p.WEBRip.x264.AAC5.1-[YTS.GG - YTS.BZ].mp4
+  // which carries SPACES, PARENTHESES and SQUARE BRACKETS in the path. Two
+  // traps we must not fall into:
+  //   1. Stopping the match at the first whitespace truncates the filename
+  //      mid-word (that is how ".../AAC5.1-[" happens — a dead link).
+  //   2. Blindly stripping trailing ),.;!? eats punctuation that is genuinely
+  //      part of the filename (".../Movie (2026).mp4").
+  // So: take everything from the scheme onward, then trim only trailing
+  // characters that cannot plausibly end a URL — and never trim when the
+  // string already ends in a file extension.
+  const TRAILING_NOISE = /[\s"'<>»”’]+$/;
+  function trimUrlNoise(u) {
+    let out = String(u).replace(TRAILING_NOISE, '');
+    // Sentence punctuation is only noise when it does NOT terminate a real
+    // filename. ".../Movie (2026).mp4" keeps its ')' and '.'; "see .../a.mp4."
+    // loses the stray period.
+    if (!/\.[A-Za-z0-9]{2,5}$/.test(out)) {
+      out = out.replace(/[),.;!?]+$/g, '');
+    }
+    // Balance brackets: a trailing '[' or unmatched '(' is never part of a
+    // usable URL, it is a paste that got cut short.
+    while (/[[(]$/.test(out)) out = out.slice(0, -1);
+    return out;
+  }
+  function extractPlayableUrl(raw) {
+    const s = String(raw || '').trim();
+    if (!s) return '';
+    // Scheme lane: keep spaces/brackets that belong to the path. We take the
+    // remainder of the line rather than \S+ so open-dir names survive intact.
+    const absolute = s.match(/https?:\/\/[^\n\r]+/i);
+    if (absolute) return trimUrlNoise(absolute[0]);
+    const host = s.match(/(?:^|\s)((?:[\w-]+\.)+[a-z]{2,}(?:[/:][^\n\r]*)?)/i);
+    if (host) return trimUrlNoise(host[1]);
+    return s;
+  }
+
+  // ── ENCODE THE PATH SO THE BROWSER KEEPS THE WHOLE FILENAME ──────────────
+  // Spaces and []{}^ etc. are not legal in a URL path. Left raw, they get
+  // mangled or truncated on the way to <video src>. We percent-encode ONLY
+  // the offenders, and only where they are not already encoded, so an
+  // already-correct %20/%5B URL passes through byte-identical.
+  function normalizePlayableUrl(u) {
+    const s = String(u || '');
+    if (!s || /^(data|blob):/i.test(s)) return s;
+    const m = s.match(/^([a-z][a-z0-9+.-]*:\/\/[^/?#]*)([^?#]*)(.*)$/i);
+    if (!m) return s;
+    const [, origin, path, tail] = m;
+    const encoded = path.replace(/%(?![0-9a-f]{2})|[^A-Za-z0-9%\-._~!$&'()*+,;=:@/]/gi, (ch) =>
+      Array.from(ch)
+        .map((c) => '%' + c.charCodeAt(0).toString(16).toUpperCase().padStart(2, '0'))
+        .join('')
+    );
+    return origin + encoded + tail;
+  }
+
+  // ── FILE EXTENSION FROM THE LAST PATH SEGMENT ONLY ───────────────────────
+  // Splitting the whole URL on '.' is the bug that made a scene-release name
+  // ("...x264.AAC5.1-[YTS.GG - YTS.BZ].mp4") report an extension of "1-[".
+  // The extension lives in the final segment, after its final dot, and nowhere
+  // else — the host's dots and the release tag's dots are not extensions.
+  function extFromUrl(url) {
+    let path = String(url || '');
+    try { path = new URL(url).pathname; }
+    catch { path = path.split('?')[0].split('#')[0]; }
+    let seg = path.split('/').filter(Boolean).pop() || '';
+    try { seg = decodeURIComponent(seg); } catch {}
+    const dot = seg.lastIndexOf('.');
+    if (dot < 0 || dot === seg.length - 1) return '';
+    const ext = seg.slice(dot + 1).toLowerCase();
+    // A real extension is short and alphanumeric. "1-[" and "GG%20-%20YTS" are not.
+    return /^[a-z0-9]{1,5}$/.test(ext) ? ext : '';
+  }
+
   // ── DETECT MEDIA TYPE FROM URL (mirrors player's own detection) ──────────
   // Used by callers that want to log the type, or pass it explicitly. The
   // player auto-detects too — this is just a hint.
@@ -192,6 +269,7 @@
     zip:'archive', rar:'archive', '7z':'archive', tar:'archive', gz:'archive', iso:'archive',
   };
   function detectType(url) {
+    url = extractPlayableUrl(url);
     if (!url) return 'video';
     if (url.startsWith('data:')) {
       const m = url.match(/^data:([a-z]+)\//i);
@@ -207,11 +285,8 @@
     if (/youtube\.com|youtu\.be|vimeo\.com|dailymotion\.com|soundcloud\.com|spotify\.com|bandcamp\.com|tiktok\.com|rumble\.com|kick\.com|twitch\.tv/i.test(url)) {
       return /soundcloud|spotify|bandcamp/i.test(url) ? 'audio' : /kick|twitch/i.test(url) ? 'stream' : 'video';
     }
-    try {
-      const path = new URL(url).pathname;
-      const ext = (path.split('.').pop() || '').toLowerCase().split('?')[0].split('#')[0];
-      if (EXT_TO_TYPE[ext]) return EXT_TO_TYPE[ext];
-    } catch {}
+    const ext = extFromUrl(url);
+    if (ext && EXT_TO_TYPE[ext]) return EXT_TO_TYPE[ext];
     return 'video';
   }
 
@@ -343,8 +418,9 @@
       localStream = null,    // local getUserMedia stream for self-view PIP (optional)
     } = opts;
 
-    const finalType = type || detectType(url);
-    const playerUrl = buildPlayerUrl({ url, title, type: finalType, mode, autoplay });
+    const playableUrl = normalizePlayableUrl(extractPlayableUrl(url));
+    const finalType = type || detectType(playableUrl);
+    const playerUrl = buildPlayerUrl({ url: playableUrl, title, type: finalType, mode, autoplay });
 
     // ── Decision tree for HOW to surface the player ────────────────────────
     // LIVE streams with a MediaStream object MUST use a same-page embed — postMessage
@@ -502,6 +578,9 @@
     open,
     play,
     detectType,
+    extractPlayableUrl,
+    normalizePlayableUrl,
+    extFromUrl,
     buildPlayerUrl,
     isExtensionContext,
     hasDOM,

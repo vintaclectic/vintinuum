@@ -11,14 +11,10 @@
 <meta property="og:title" content="DirRM — play anything">
 <meta property="og:description" content="Drop any file. It plays. Nothing uploads.">
 <meta property="og:type" content="website">
-<!-- og:url must be an address that RESOLVES TODAY, because crawlers do not run
-     JS and cannot follow a domain that does not exist yet. dirrm.vintinuum.co
-     is NXDOMAIN and vintinuum.com has no `dirrm` record as of 2026-08-14, so
-     pointing og:url at either would hand every scraper a dead link. This is the
-     live, verified URL; flip it (and the canonical below) the moment the custom
-     domain resolves — see docs/DIRRM-DOMAIN-SETUP.md for the exact DNS steps. -->
-<meta property="og:url" content="https://vintaclectic.github.io/vintinuum/dirrm.html">
-<link rel="canonical" href="https://vintaclectic.github.io/vintinuum/dirrm.html">
+<!-- The custom host is wired by CNAME; the repo root redirects only when served
+     from dirrm.vintinuum.com so the project-site URL keeps its existing entry. -->
+<meta property="og:url" content="https://dirrm.vintinuum.com/dirrm.html">
+<link rel="canonical" href="https://dirrm.vintinuum.com/dirrm.html">
 
 <style>
 /* ══════════════════════════════════════════════════════════════════════════
@@ -748,9 +744,29 @@ body[data-state="playing"] .toast[data-show="1"]{
   }
 
   // ── URL LANE ─────────────────────────────────────────────────────────────
+  // Open-directory URLs carry spaces and [brackets] in the path. Matching to
+  // the first whitespace truncates the filename (".../AAC5.1-[" — a dead
+  // link); stripping trailing punctuation blindly eats a real ")" or ".".
+  // dirrm-launch.js owns the canonical implementation; use it when present so
+  // the landing page and the launcher can never drift apart.
+  function extractPlayableUrl(raw){
+    if (window.dirrmLaunch && window.dirrmLaunch.extractPlayableUrl){
+      return window.dirrmLaunch.extractPlayableUrl(raw);
+    }
+    var s = String(raw || '').trim();
+    if (!s) return '';
+    var m = s.match(/https?:\/\/[^\n\r]+/i);
+    if (!m) m = s.match(/(?:^|\s)((?:[\w-]+\.)+[a-z]{2,}(?:[/:][^\n\r]*)?)/i);
+    if (!m) return s;
+    var out = (m[1] || m[0]).replace(/[\s"'<>]+$/, '');
+    if (!/\.[A-Za-z0-9]{2,5}$/.test(out)) out = out.replace(/[),.;!?]+$/g, '');
+    while (/[[(]$/.test(out)) out = out.slice(0, -1);
+    return out;
+  }
+
   function playUrl(raw){
     if (!raw) return;
-    var u = raw.trim();
+    var u = extractPlayableUrl(raw);
     if (!u) return;
     // Bare host → assume https. Also blocks javascript:/data: injection below.
     if (!/^[a-z][a-z0-9+.-]*:/i.test(u)) u = 'https://' + u;
@@ -783,7 +799,7 @@ body[data-state="playing"] .toast[data-show="1"]{
       return;
     }
     var txt = cd.getData('text');
-    if (txt && /^(https?:\/\/|[\w-]+\.[a-z]{2,})/i.test(txt.trim())){
+    if (txt && /(https?:\/\/|[\w-]+\.[a-z]{2,})/i.test(txt.trim())){
       e.preventDefault();
       playUrl(txt.trim());
     }
