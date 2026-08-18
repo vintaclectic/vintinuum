@@ -342,6 +342,11 @@
      court.js so the rail order stays: star-map · agents · court · home ·
      lanterns · build. Adds no fixed element of its own. -->
 <script src="body/world/traces-hud.js"></script>
+<!-- GALACTIC TIME — a pleasure clock for tasks, thoughts and connections.
+     Loads after dirverse-hud/traces so it can borrow the rail + one-sheet
+     registry, and before Concord/Yard so the rail order stays exploratory
+     before governance/production. -->
+<script src="body/world/galactic-time.js"></script>
 <!-- THE CONCORD — the polity spine. Your agents hold seats, take positions from
      their own disposition, vote, dissent and defect, and the session resolves on
      the CLOCK whether you are here or not. Loads AFTER dirverse-hud (it borrows
@@ -603,5 +608,7 @@
 })();
 </script>
   <script src="body/welcome-gate.js"></script>
+<!-- VOICE — the canonical spine, one tag (body/voice.js). tier=full -->
+<script defer src="body/voice.js?v=v20260818-onevoice" data-tier="full"></script>
 </body>
 </html>
