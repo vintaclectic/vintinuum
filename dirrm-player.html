@@ -1742,6 +1742,13 @@
         // TikTok Live — goes through yt-dlp extraction
         if (/tiktok\.com\/@[^/]+\/live/i.test(url) || /vm\.tiktok\.com/i.test(url)) return 'tiktok-live';
 
+        // Kick LIVE channel — must NOT go through the iframe embed (task BPYUATZ).
+        // player.kick.com refuses framing (X-Frame-Options: SAMEORIGIN) and the
+        // refusal is undetectable cross-origin, so an embed yields a silent black
+        // box. Resolve the real HLS URL through the brain instead. VODs and clips
+        // still take the embed path — only bare channel URLs are live.
+        if (this._kickLiveChannel(url)) return 'kick-live';
+
         // Generic yt-dlp extraction fallback for social/streaming URLs with no extension
         if (/tiktok\.com|instagram\.com\/reel|facebook\.com\/watch|rumble\.com\/v/i.test(url)) return 'ytdlp';
 
@@ -2057,6 +2064,9 @@
               break;
             case 'tiktok-live':
               await this.loadTikTokLive(url);
+              break;
+            case 'kick-live':
+              await this.loadKickLive(url);
               break;
             case 'ytdlp':
               await this.loadYtDlp(url);
@@ -3737,6 +3747,67 @@
        * TikTok Live — resolves the live stream URL via the brain's yt-dlp endpoint,
        * then plays it as an HLS stream. Shows a clear "not live" card if offline.
        */
+      /**
+       * Returns the Kick channel slug when `url` is a LIVE kick.com channel page
+       * (not a VOD, clip, or a browse/category page), else null.
+       * Mirrors the routing in detectEmbed() so the two never disagree.
+       */
+      _kickLiveChannel(url) {
+        try {
+          const u = new URL(url);
+          if (u.hostname.replace(/^www\./, '') !== 'kick.com') return null;
+          const parts = u.pathname.split('/').filter(Boolean);
+          if (!parts.length) return null;                       // homepage
+          if (/\/(?:video|videos)\/[a-z0-9-]+/i.test(u.pathname)) return null; // VOD → embed
+          if (/\/clips?\/[a-z0-9-]+/i.test(u.pathname)) return null;           // clip → embed
+          const slug = parts[0];
+          if (['categories', 'browse', 'search', 'following', 'about'].includes(slug)) return null;
+          if (!/^[a-zA-Z0-9_-]{1,64}$/.test(slug)) return null;
+          return slug;
+        } catch (_) { return null; }
+      }
+
+      /**
+       * Kick LIVE — plays the real stream instead of an iframe that can never work.
+       *
+       * Kick's player refuses to be framed (X-Frame-Options: SAMEORIGIN), and a
+       * cross-origin embedder physically cannot detect that refusal, so the old
+       * embed path produced a silent black rectangle with no error. The brain's
+       * /api/stream/kick-live resolves the channel's IVS playback URL (via the
+       * curl-cffi Cloudflare bypass), which serves `access-control-allow-origin: *`
+       * and therefore plays fine in hls.js from any origin.
+       */
+      async loadKickLive(url) {
+        const channel = this._kickLiveChannel(url) || '';
+        this.setBadge('Kick Live');
+        this._updateLoading(`Resolving ${channel || 'Kick'} live stream…`);
+
+        const apiBase = window.__VINTINUUM_API_BASE || window.VINTINUUM_API || window.__VINT_API || 'https://api.vintaclectic.com';
+        const endpoint = `${apiBase}/api/stream/kick-live?channel=${encodeURIComponent(channel || url)}`;
+
+        let data;
+        try {
+          const resp = await fetch(endpoint, { credentials: 'include' });
+          data = await resp.json();
+        } catch (e) {
+          return this._showLiveOfflineCard(url, channel, 'Could not reach the brain API to resolve this Kick stream. Is the brain running?');
+        }
+
+        if (!data || !data.ok || !data.streamUrl) {
+          const msg = (data && data.message)
+            || 'Could not resolve this Kick stream.';
+          return this._showLiveOfflineCard(url, channel, msg);
+        }
+
+        if (data.title) this.mediaTitle.textContent = data.title;
+        if (this.mediaSubtitle) {
+          this.mediaSubtitle.textContent = data.viewers != null
+            ? `${Number(data.viewers).toLocaleString()} watching on Kick`
+            : 'Live on Kick';
+        }
+        await this.loadStream(data.streamUrl);
+      }
+
       async loadTikTokLive(url) {
         this.setBadge('TikTok Live');
         this._updateLoading('Extracting TikTok Live stream via yt-dlp…');
@@ -3801,27 +3872,46 @@
         await this.loadStream(data.streamUrl);
       }
 
-      /** Shows a friendly "not live right now" card with a retry button */
-      _showLiveOfflineCard(url, username, reason) {
+      /**
+       * Shows a friendly "not live right now" card with a retry button.
+       * Platform-aware (task BPYUATZ): this card is shared by TikTok Live and
+       * Kick Live, so it must never tell a Kick user to "Open on TikTok".
+       * All interpolations are escaped and the retry is wired via a real
+       * listener rather than an inline onclick string.
+       */
+      _showLiveOfflineCard(url, handle, reason) {
         this.loading.style.display = 'none';
         this.controls.style.display = 'none';
-        this.setBadge('TikTok Live');
+
+        let platform = 'TikTok', display = handle ? '@' + handle : 'TikTok Live';
+        try {
+          const host = new URL(url).hostname.replace(/^www\./, '');
+          if (host === 'kick.com') {
+            platform = 'Kick';
+            display = handle || 'Kick Live';
+          }
+        } catch (_) {}
+        this.setBadge(`${platform} Live`);
 
         const card = document.createElement('div');
         card.className = 'dirrm-info-card';
         card.innerHTML = `
           <div class="dirrm-info-icon" style="font-size:2rem;margin-bottom:12px;">📵</div>
-          <div class="dirrm-info-title">${username ? '@' + username : 'TikTok Live'}</div>
-          <div class="dirrm-info-meta" style="margin-top:8px;color:rgba(240,230,211,0.6);">${reason}</div>
+          <div class="dirrm-info-title">${this.escapeHtml(display)}</div>
+          <div class="dirrm-info-meta" style="margin-top:8px;color:rgba(240,230,211,0.6);">${this.escapeHtml(reason)}</div>
           <div style="margin-top:18px;display:flex;gap:10px;flex-wrap:wrap;justify-content:center;">
-            <button class="dirrm-action-btn" onclick="window.__dirrm && window.__dirrm.load('${url.replace(/'/g,"\\'")}')">
-              Retry
-            </button>
-            <a class="dirrm-action-btn" href="${url}" target="_blank" rel="noopener">
-              Open on TikTok
+            <button class="dirrm-action-btn" data-dirrm-retry>Retry</button>
+            <a class="dirrm-action-btn" href="${this.escapeHtml(url)}" target="_blank" rel="noopener">
+              Open on ${this.escapeHtml(platform)}
             </a>
           </div>
         `;
+        // NB: there is no `load()` method on the player — the real entry point is
+        // loadMedia(url, title, type). The previous inline onclick called
+        // `window.__dirrm.load(...)`, which silently did nothing; the Retry button
+        // never worked. Wire it to the real method and keep the resolved title.
+        const retry = card.querySelector('[data-dirrm-retry]');
+        if (retry) retry.addEventListener('click', () => this.loadMedia(url, this._lastTitle || null, this.mediaType || null));
         this.mediaContainer.appendChild(card);
       }
 
