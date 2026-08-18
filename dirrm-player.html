@@ -1679,6 +1679,14 @@
           model3d: 'model', '3d': 'model'
         };
 
+        // Kick LIVE is the ONE exception to "embed always wins" (task BPYUATZ).
+        // player.kick.com sends X-Frame-Options: SAMEORIGIN so the iframe is
+        // refused, and a cross-origin embedder physically cannot detect that
+        // refusal — the result is a silent black rectangle. So a live Kick
+        // channel must be resolved to real HLS BEFORE the embed check claims it.
+        // VODs and clips are unaffected and still embed normally.
+        if (this._kickLiveChannel(url)) return 'kick-live';
+
         // Embed detection ALWAYS wins — YouTube/TikTok/etc must go through iframe,
         // not raw <video>. providedType is a hint, not an override for known platforms.
         const embedKind = this.detectEmbed(url);
@@ -1717,12 +1725,6 @@
         // TikTok Live — goes through yt-dlp extraction
         if (/tiktok\.com\/@[^/]+\/live/i.test(url) || /vm\.tiktok\.com/i.test(url)) return 'tiktok-live';
 
-        // Kick LIVE channel — must NOT go through the iframe embed (task BPYUATZ).
-        // player.kick.com refuses framing (X-Frame-Options: SAMEORIGIN) and the
-        // refusal is undetectable cross-origin, so an embed yields a silent black
-        // box. Resolve the real HLS URL through the brain instead. VODs and clips
-        // still take the embed path — only bare channel URLs are live.
-        if (this._kickLiveChannel(url)) return 'kick-live';
 
         // Generic yt-dlp extraction fallback for social/streaming URLs with no extension
         if (/tiktok\.com|instagram\.com\/reel|facebook\.com\/watch|rumble\.com\/v/i.test(url)) return 'ytdlp';
