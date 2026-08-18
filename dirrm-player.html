@@ -406,6 +406,10 @@
 
     .dirrm-info-card-inner {
       max-width: 420px;
+      /* Flex children default to min-width:auto and refuse to shrink below their
+         content — pin it so the card can never exceed the player box at 320px. */
+      min-width: 0;
+      width: 100%;
       text-align: center;
       background: rgba(245, 166, 35, 0.05);
       border: 1px solid var(--dirrm-border);
@@ -432,6 +436,10 @@
       color: var(--dirrm-text-muted);
       margin-bottom: 18px;
       letter-spacing: 0.05em;
+      /* The refusal card interpolates a live hostname here. A long unbroken host
+         would otherwise push this box past the card at 320px — No-Collision Law. */
+      overflow-wrap: anywhere;
+      word-break: break-word;
     }
 
     .dirrm-info-actions {
@@ -442,6 +450,11 @@
     }
 
     .dirrm-info-btn {
+      /* 44px minimum touch target — mobile-first mandate. */
+      min-height: 44px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
       padding: 9px 16px;
       border-radius: 8px;
       background: linear-gradient(135deg, rgba(245, 166, 35, 0.25), rgba(245, 166, 35, 0.1));
@@ -1715,6 +1728,23 @@
        * Detects if a URL is a known embeddable platform.
        * Returns { kind, embedUrl } or null.
        */
+      /**
+       * The `parent` param Twitch/Kick require must be the BARE HOSTNAME of the
+       * page doing the embedding — no port, no scheme. Getting it wrong makes the
+       * provider render its own "this embed seems misconfigured" error inside our
+       * iframe (that string is theirs, not ours).
+       *
+       * `location.hostname` already excludes the port, so we never reintroduce it.
+       * Bare IPs are rejected by most embed providers, so 127.0.0.1 (how the
+       * council task board GUI binds) is normalized to `localhost` — the standard
+       * workaround Twitch documents and Kick honors.
+       */
+      embedParent() {
+        let h = location.hostname || '';
+        if (h === '127.0.0.1' || h === '[::1]' || h === '::1' || h === '0.0.0.0') h = 'localhost';
+        return h || 'vintaclectic.github.io';
+      }
+
       detectEmbed(url) {
         if (!url) return null;
         try {
@@ -1749,7 +1779,7 @@
 
           // Twitch
           if (host === 'twitch.tv' || host.endsWith('.twitch.tv')) {
-            const parent = location.hostname || 'vintaclectic.github.io';
+            const parent = this.embedParent();
             const parts = u.pathname.split('/').filter(Boolean);
             if (parts[0] === 'videos' && parts[1]) {
               return { kind: 'Twitch', embedUrl: `https://player.twitch.tv/?video=${parts[1]}&parent=${parent}&autoplay=true` };
@@ -1819,7 +1849,7 @@
 
           // Kick.com — player.kick.com requires ?channel=name&parent=<host>
           if (host === 'kick.com') {
-            const parent = 'vintaclectic.github.io';
+            const parent = this.embedParent();
             const parts = u.pathname.split('/').filter(Boolean);
             if (!parts.length) return null; // homepage — not embeddable
             const channel = parts[0];
@@ -1956,6 +1986,9 @@
 
         // Stop any prior raf loop tied to the old audio
         if (this._vizRaf) { cancelAnimationFrame(this._vizRaf); this._vizRaf = null; }
+        // Disarm any pending embed framing-guard — otherwise a guard armed by the
+        // previous item fires late and drops its refusal card over THIS item.
+        if (this._embedGuard) { clearTimeout(this._embedGuard); this._embedGuard = null; }
         this.mediaElement = null;
 
         try {
@@ -2461,13 +2494,99 @@
         iframe.setAttribute('allow', 'autoplay; encrypted-media; picture-in-picture; fullscreen; clipboard-write; accelerometer; gyroscope');
         iframe.setAttribute('allowfullscreen', '');
         iframe.setAttribute('referrerpolicy', 'strict-origin-when-cross-origin');
-        iframe.addEventListener('load', () => { this.loading.style.display = 'none'; });
+
+        // Some providers (Kick's player.kick.com sends X-Frame-Options: SAMEORIGIN)
+        // refuse to be framed at all. A browser that blocks a frame this way STILL
+        // fires `load`, so a load event alone never proves the embed is alive —
+        // without this guard the spinner just hides and leaves a dead black
+        // rectangle with no explanation and no way forward.
+        let settled = false;
+        const clearGuard = () => {
+          if (this._embedGuard) { clearTimeout(this._embedGuard); this._embedGuard = null; }
+        };
+        const framingRefused = () => {
+          if (settled) return;
+          settled = true;
+          clearGuard();
+          wrap.remove();
+          this.loadEmbedRefused(url, embed.kind);
+        };
+
+        iframe.addEventListener('load', () => {
+          this.loading.style.display = 'none';
+          // A cross-origin frame that actually rendered exposes a live (opaque)
+          // window with a non-zero frame count container. A frame blocked by
+          // X-Frame-Options / CSP leaves contentWindow null or unreachable.
+          let usable = true;
+          try {
+            if (!iframe.contentWindow) usable = false;
+          } catch (_) {
+            usable = true; // cross-origin throw = a real document is there
+          }
+          if (!usable) return framingRefused();
+          settled = true;
+          clearGuard();
+        });
+        iframe.addEventListener('error', framingRefused);
+
+        // Bounded: if the frame never loads at all, stop waiting and be honest.
+        clearGuard();
+        this._embedGuard = setTimeout(() => {
+          if (!settled) framingRefused();
+        }, 4500);
+
         wrap.appendChild(iframe);
         this.mediaContainer.appendChild(wrap);
 
         // Embeds bring their own UI — hide our transport bar
         this.controls.style.display = 'none';
         this.mediaElement = null;
+      }
+
+      /**
+       * Shown when a platform refuses to be embedded from this origin.
+       * Reuses the existing .dirrm-info-card surface (absolute, inset:0,
+       * overflow:auto) so it fills the player box, scrolls internally when the
+       * viewport is short, and never bleeds onto the rail, transport bar or
+       * window chrome. The player window stays fully usable — the queue can
+       * still advance past this item.
+       */
+      loadEmbedRefused(url, kind) {
+        this.loading.style.display = 'none';
+        this.controls.style.display = 'none';
+        this.mediaElement = null;
+        this.setBadge(kind || 'Embed');
+
+        const host = location.hostname || 'this page';
+        const label = kind || 'This site';
+        let openUrl = url;
+        let openLabel = `Open on ${label}`;
+        try {
+          const u = new URL(url);
+          const channel = u.pathname.split('/').filter(Boolean)[0];
+          if (u.hostname.replace(/^www\./, '') === 'kick.com' && channel) {
+            openUrl = `https://kick.com/${channel}`;
+            openLabel = 'Open on Kick';
+          }
+        } catch (_) {}
+
+        const card = document.createElement('div');
+        card.className = 'dirrm-info-card';
+        card.innerHTML = `
+          <div class="dirrm-info-card-inner">
+            <div class="dirrm-info-icon">🚫</div>
+            <div class="dirrm-info-title">${this.escapeHtml(label)} refused to embed</div>
+            <div class="dirrm-info-meta">
+              ${this.escapeHtml(label)} will not allow its player to be framed from
+              <strong>${this.escapeHtml(host)}</strong>. Watch it on the source site instead —
+              the queue still works, so you can skip to the next item.
+            </div>
+            <div class="dirrm-info-actions">
+              <a class="dirrm-info-btn" href="${this.escapeHtml(openUrl)}" target="_blank" rel="noopener">${this.escapeHtml(openLabel)}</a>
+            </div>
+          </div>
+        `;
+        this.mediaContainer.appendChild(card);
       }
 
       async loadAudio(url) {
