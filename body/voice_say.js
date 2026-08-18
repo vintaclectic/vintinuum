@@ -31,7 +31,15 @@
   if (window.VOICE && window.VOICE.__realBody) return;
 
   function apiBase() {
-    if (window.VINT_API) return window.VINT_API;
+    // Canonical resolver (body/api_base.js) FIRST. It owns ?api= overrides and
+    // LAN-IP/local-network detection. The legacy `window.VINT_API` below is a
+    // name nothing in the repo ever set — reading it first meant this module
+    // silently ignored api_base.js and fell through to its own guesswork.
+    if (window.__VINTINUUM_API_BASE) return window.__VINTINUUM_API_BASE;
+    if (window.VINTINUUM_API) return window.VINTINUUM_API;
+    if (window.__VINT_API) return window.__VINT_API;
+    if (window.VINT_API) return window.VINT_API;            // legacy, never set
+    if (window.VINT_API_BASE) return window.VINT_API_BASE;  // legacy, never set
     if (document.documentElement.dataset.api) return document.documentElement.dataset.api;
     if (location.hostname === 'localhost' || location.hostname === '127.0.0.1') {
       return 'http://localhost:8767';
@@ -89,6 +97,48 @@
   });
   // Some pages ship with a "wake/talk" button that calls __markInteracted
   window.__markInteracted = markInteracted;
+
+  // ── IFRAME BLIND SPOT (Vinta 2026-08-18) ─────────────────────────────────
+  // The capture listeners above only see gestures in THIS document. On a
+  // surface whose main interactive area is a same-page <iframe> (dirrm.html
+  // mounts the DirRM player into one), the user can click for a full minute
+  // inside the frame and this document never hears a single event — so the
+  // gate never opened and every queued utterance sat there forever. Two
+  // no-new-UI recoveries (Vinta 2026-06-26 forbids an unlock button):
+  //
+  //  1. BLUR — when focus leaves this document for an iframe, the browser
+  //     fires window.blur with document.activeElement === that IFRAME. That
+  //     only happens because the user just interacted with it. It is a real
+  //     gesture, observed indirectly.
+  //  2. postMessage — a friendly frame can announce a gesture explicitly with
+  //     { type: 'vint:gesture' }. Same-origin only; a cross-origin frame can
+  //     post it too but it carries no privilege beyond "unmute a queue the
+  //     user already asked for", so there is nothing to abuse.
+  try {
+    window.addEventListener('blur', function () {
+      if (hasInteracted) return;
+      try {
+        var ae = document.activeElement;
+        if (ae && ae.tagName === 'IFRAME') markInteracted();
+      } catch (_) {}
+    }, { capture: true });
+  } catch (_) {}
+  try {
+    window.addEventListener('message', function (e) {
+      if (hasInteracted) return;
+      var d = e && e.data;
+      if (d && (d === 'vint:gesture' || d.type === 'vint:gesture')) markInteracted();
+    });
+  } catch (_) {}
+
+  // Visibility return is NOT a gesture (a tab switch does not satisfy autoplay
+  // policy), but it IS the right moment to retry a queue that failed while
+  // hidden — the browser may have unlocked us in the meantime.
+  try {
+    document.addEventListener('visibilitychange', function () {
+      if (!document.hidden && hasInteracted) drain();
+    });
+  } catch (_) {}
 
   // NO unlock button (Vinta 2026-06-26 — the page already has too many buttons).
   // Browser autoplay policy still requires one gesture before audio can play,
