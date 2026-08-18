@@ -54,6 +54,63 @@
     } catch (_) {}
   })();
 
+  // ── Carry the funnel tracker onto every page ─────────────────────────────
+  // Same carrier logic as VintDock: welcome-gate.js is the only script present
+  // on every surface, so instrumentation rides in with it rather than needing
+  // 50 separate <script> edits. Idempotent; failure here is silent by design.
+  (function ensureFunnel() {
+    try {
+      if (root.vintFunnel) return;
+      if (document.querySelector('script[data-vint-funnel]')) return;
+      var s = document.createElement('script');
+      s.src = (function () {
+        try {
+          var me = document.currentScript || (function () {
+            var all = document.getElementsByTagName('script');
+            for (var i = all.length - 1; i >= 0; i--) {
+              if ((all[i].src || '').indexOf('welcome-gate.js') !== -1) return all[i];
+            }
+            return null;
+          })();
+          if (me && me.src) return me.src.replace(/welcome-gate\.js.*$/, 'funnel.js');
+        } catch (_) {}
+        return 'body/funnel.js';
+      })();
+      s.setAttribute('data-vint-funnel', '1');
+      (document.head || document.documentElement).appendChild(s);
+    } catch (_) {}
+  })();
+
+  // ── Carry the return-loop card ───────────────────────────────────────────
+  // Only for a signed-in human: the card asks the server whether there is
+  // anything real to say, and the server answers show:false unless the flag is
+  // armed AND the person was genuinely away AND real material exists. Loading
+  // the script for a logged-out visitor would be pure waste, so we don't.
+  (function ensureReturnLoop() {
+    try {
+      var t = null;
+      try { t = localStorage.getItem('vint_access_token') || localStorage.getItem('vint_token') || localStorage.getItem('soul_auth_token'); } catch (_) {}
+      if (!t) return;
+      if (document.querySelector('script[data-vint-return]')) return;
+      var s = document.createElement('script');
+      s.src = (function () {
+        try {
+          var me = document.currentScript || (function () {
+            var all = document.getElementsByTagName('script');
+            for (var i = all.length - 1; i >= 0; i--) {
+              if ((all[i].src || '').indexOf('welcome-gate.js') !== -1) return all[i];
+            }
+            return null;
+          })();
+          if (me && me.src) return me.src.replace(/welcome-gate\.js.*$/, 'return-loop.js');
+        } catch (_) {}
+        return 'body/return-loop.js';
+      })();
+      s.setAttribute('data-vint-return', '1');
+      (document.head || document.documentElement).appendChild(s);
+    } catch (_) {}
+  })();
+
   // ── config ──────────────────────────────────────────────────────────────
   var API_BASE = (function () {
     try { if (window.VINT_API_BASE) return window.VINT_API_BASE; } catch (_) {}
@@ -64,6 +121,37 @@
   var EXTENSION_URL = window.VINT_EXTENSION_URL || null;   // Chrome Web Store
   var ANDROID_URL   = window.VINT_ANDROID_URL || null;     // Play Store
   var ONBOARD_URL   = 'welcome.html';
+
+  // Funnel + attribution helpers. Both are defensive: if funnel.js has not
+  // landed yet (async script), tracking is skipped rather than throwing, and
+  // the UTM read falls back to localStorage written by funnel.js on landing.
+  function fnl(step, meta) {
+    try { if (root.vintFunnel && root.vintFunnel.track) root.vintFunnel.track(step, meta); } catch (_) {}
+  }
+  /* THE ATTRIBUTION LEAK (fixed 2026-08-17, task XQDPW7G):
+     signup happens on a page reached AFTER the campaign link's ?utm_* is gone,
+     so the POST body carried no campaign and every campaign signup that arrived
+     without a surviving cookie was silently miscounted as organic. The server's
+     acqAttributeSignup() has always read b.utm_campaign/utm_source/utm_content —
+     this completes a contract that was only ever half-built. Cookie stays the
+     primary signal; these params are the belt to its braces. */
+  function utmParams() {
+    var out = {};
+    try {
+      // Prefer live URL params (a direct landing on this page), else the
+      // memory funnel.js persisted when the visitor first arrived.
+      var q = new URLSearchParams(location.search);
+      var mem = {};
+      try { mem = JSON.parse(localStorage.getItem('vint_utm') || '{}') || {}; } catch (_) {}
+      var c = q.get('utm_campaign') || mem.utm_campaign;
+      var sr = q.get('utm_source')  || mem.utm_source;
+      var ct = q.get('utm_content') || mem.utm_content;
+      if (c)  out.utm_campaign = String(c).slice(0, 64);
+      if (sr) out.utm_source   = String(sr).slice(0, 32);
+      if (ct) out.utm_content  = String(ct).slice(0, 64);
+    } catch (_) {}
+    return out;
+  }
 
   // Don't show the gate on the onboarding/auth pages themselves.
   var path = (location.pathname.split('/').pop() || '').toLowerCase();
@@ -273,6 +361,12 @@
     var go = sheet.querySelector('#vwg-go'); go.disabled = true; flash(mode === 'signup' ? 'Creating…' : 'Entering…');
     var p = (mode === 'signup') ? '/api/auth/signup' : '/api/auth/login';
     var body = (mode === 'signup') ? { email: email, password: pass, name: name, display_name: name } : { email: email, password: pass };
+    if (mode === 'signup') {
+      // Forward the campaign so a cookieless arrival is still attributable.
+      var u = utmParams();
+      for (var k in u) { if (Object.prototype.hasOwnProperty.call(u, k)) body[k] = u[k]; }
+    }
+    fnl('gate_submit', { mode: mode });
     fetch(API_BASE + p, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
       .then(function (r) { return r.json().then(function (d) { return { ok: r.ok, d: d }; }); })
       .then(function (res) {
@@ -284,6 +378,10 @@
         if (rt) { ls('vint_refresh_token', rt); ls('soul_auth_refresh', rt); }
         if (res.d.user) { try { localStorage.setItem('vint_user', JSON.stringify(res.d.user)); } catch (_) {} }
         flash('✓ Welcome.', true);
+        // Fires ONLY on a real token from a real signup — never on a login,
+        // never optimistically. A fake step here would corrupt the only
+        // conversion number we have.
+        if (mode === 'signup') fnl('signup_ok', {});
         var onboarded = ls('vint_onboarded') === '1';
         setTimeout(function () {
           if (mode === 'signup' && !onboarded) location.href = ONBOARD_URL;   // new → onboarding
@@ -293,7 +391,7 @@
       .catch(function () { go.disabled = false; flash('Network hiccup — try again in a moment.'); });
   }
 
-  function openSheet() { injectCss(); if (!scrim) buildSheet(); renderAuth(); scrim.classList.add('show'); }
+  function openSheet() { injectCss(); if (!scrim) buildSheet(); renderAuth(); scrim.classList.add('show'); fnl('gate_open', { mode: mode }); }
   function closeSheet() { if (scrim) scrim.classList.remove('show'); }
 
   // ── persistent affordance ─────────────────────────────────────────────────
