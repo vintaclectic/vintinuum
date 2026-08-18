@@ -271,6 +271,9 @@
     if (!email || !pass) { flash('Email and password, please.'); return; }
     if (mode === 'signup' && !name) { flash('Tell her what to call you.'); return; }
     var go = sheet.querySelector('#vwg-go'); go.disabled = true; flash(mode === 'signup' ? 'Creating…' : 'Entering…');
+    // FUNNEL: commitment — they filled it in and pressed the button. Fired only
+    // after validation passes, so an empty-field misfire is not a "submit".
+    try { window.vintFunnel && window.vintFunnel('gate_submit', { mode: mode }); } catch (_) {}
     var p = (mode === 'signup') ? '/api/auth/signup' : '/api/auth/login';
     var body = (mode === 'signup') ? { email: email, password: pass, name: name, display_name: name } : { email: email, password: pass };
     fetch(API_BASE + p, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
@@ -284,6 +287,11 @@
         if (rt) { ls('vint_refresh_token', rt); ls('soul_auth_refresh', rt); }
         if (res.d.user) { try { localStorage.setItem('vint_user', JSON.stringify(res.d.user)); } catch (_) {} }
         flash('✓ Welcome.', true);
+        // FUNNEL: an account now genuinely exists (token in hand). Only on the
+        // signup lane — a returning sign-in is not a new human.
+        try {
+          if (mode === 'signup' && window.vintFunnel) window.vintFunnel('signup_ok', {});
+        } catch (_) {}
         var onboarded = ls('vint_onboarded') === '1';
         setTimeout(function () {
           if (mode === 'signup' && !onboarded) location.href = ONBOARD_URL;   // new → onboarding
@@ -293,7 +301,12 @@
       .catch(function () { go.disabled = false; flash('Network hiccup — try again in a moment.'); });
   }
 
-  function openSheet() { injectCss(); if (!scrim) buildSheet(); renderAuth(); scrim.classList.add('show'); }
+  function openSheet() {
+    injectCss(); if (!scrim) buildSheet(); renderAuth(); scrim.classList.add('show');
+    // FUNNEL: intent — the way-in is actually on screen in front of a human.
+    // Once per session: reopening the same sheet is not a second human.
+    try { window.vintFunnel && window.vintFunnel.oncePerSession('gate_open', { page: path || 'index.html' }); } catch (_) {}
+  }
   function closeSheet() { if (scrim) scrim.classList.remove('show'); }
 
   // ── persistent affordance ─────────────────────────────────────────────────

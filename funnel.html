@@ -1,0 +1,557 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>The Funnel · Vintinuum</title>
+<meta name="robots" content="noindex, nofollow">
+<!--
+  funnel.html — the honest scoreboard (task TAS22T8, 2026-08-17).
+
+  THE ONE RULE OF THIS PAGE: it must be IMPOSSIBLE to read it and come away
+  believing Vintinuum has 203 users. The task that spawned this work was titled
+  "203 users"; the truth is 4 real non-owner humans, 1 engaged, 0 paying. The
+  rest of the `users` table is connector bots, system rows, locked placeholders
+  and @example.com smoke tests. So the population block leads, states the true
+  number in the largest type on the page, and renders the server's own caveat
+  verbatim. No estimates, no projections, no fabricated numbers — every figure
+  here is a COUNT of a row that actually exists.
+
+  Owner-only: GET /api/funnel/report is 403 for everyone else, and this page
+  renders that refusal plainly rather than pretending to have data.
+
+  NO-COLLISION LAW: single-column flow layout. There is exactly ONE fixed
+  element on the page (the topbar), and the body reserves its height with
+  padding-top so nothing can ever slide under it. Every card is a bounded box;
+  long numbers and null percentages are handled with overflow-wrap and explicit
+  em-dash fallbacks, never left to overflow or print NaN.
+-->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@300;400&display=swap" rel="stylesheet">
+<style>
+  /* Design tokens lifted verbatim from index.html so this surface is part of
+     Vintinuum rather than a bolted-on admin panel. */
+  :root {
+    --vint-black: #05050a;
+    --vint-deep: #0a0a18;
+    --vint-surface: #0e0e1c;
+    --vint-line: rgba(255,255,255,.06);
+    --vint-text: #e8e4f0;
+    --vint-text-dim: rgba(255,255,255,.45);
+    --vint-accent: #a67cff;
+    --vint-cyan: #38d9c4;
+    --vint-rose: #e05090;
+    --vint-gold: #d4a030;
+    --vint-green: #40c070;
+    --card-radius: 16px;
+    --topbar-h: 56px;
+  }
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0;
+    background: var(--vint-black);
+    color: var(--vint-text);
+    font-family: 'Space Grotesk','Segoe UI',sans-serif;
+    -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
+    /* Reserve the fixed topbar's height + the notch. Content can never slide
+       under the bar because the bar's space is subtracted from the flow. */
+    padding-top: calc(var(--topbar-h) + env(safe-area-inset-top));
+    min-height: 100svh;
+  }
+
+  /* ── topbar: the ONLY fixed element on this page ── */
+  .bar {
+    position: fixed; top: 0; left: 0; right: 0;
+    height: calc(var(--topbar-h) + env(safe-area-inset-top));
+    padding: env(safe-area-inset-top) max(14px, env(safe-area-inset-left)) 0 max(14px, env(safe-area-inset-right));
+    display: flex; align-items: center; gap: 12px;
+    background: rgba(5,5,10,.92);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--vint-line);
+    z-index: 100;
+  }
+  .bar a.home {
+    color: var(--vint-text-dim); text-decoration: none; font-size: 20px;
+    min-width: 44px; min-height: 44px; display: flex; align-items: center;
+    flex-shrink: 0;
+  }
+  .bar a.home:hover { color: var(--vint-text); }
+  .bar h1 {
+    font-family: 'Syne',sans-serif; font-size: 15px; font-weight: 700;
+    letter-spacing: .04em; margin: 0; flex: 1; min-width: 0;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+
+  .wrap { max-width: 860px; margin: 0 auto; padding: 20px max(14px, env(safe-area-inset-left)) 60px max(14px, env(safe-area-inset-right)); }
+
+  .card {
+    background: var(--vint-surface);
+    border: 1px solid var(--vint-line);
+    border-radius: var(--card-radius);
+    padding: 20px 18px;
+    margin-bottom: 16px;
+    overflow-wrap: anywhere;   /* a freak-long number wraps, never overflows */
+  }
+  .eyebrow {
+    font-family: 'JetBrains Mono',monospace; font-size: 10px;
+    letter-spacing: .2em; text-transform: uppercase;
+    color: var(--vint-text-dim); margin-bottom: 12px;
+  }
+
+  /* ── the truth banner — the loudest thing on the page ── */
+  .truth {
+    border: 1px solid rgba(224,80,144,.4);
+    background: linear-gradient(135deg, rgba(224,80,144,.10), rgba(166,124,255,.06));
+  }
+  .truth .n {
+    font-family: 'Syne',sans-serif; font-size: clamp(40px, 12vw, 68px);
+    font-weight: 800; line-height: 1; color: var(--vint-rose);
+    margin: 0 0 6px;
+  }
+  .truth .lead {
+    font-size: clamp(15px, 4vw, 18px); line-height: 1.45; margin: 0 0 14px;
+  }
+  .truth .note {
+    font-family: 'JetBrains Mono',monospace; font-size: 11px; line-height: 1.65;
+    color: var(--vint-text-dim);
+    border-top: 1px solid var(--vint-line); padding-top: 12px; margin-top: 4px;
+  }
+
+  /* ── population grid: each figure in its own bounded cell ── */
+  .pop {
+    display: grid; gap: 10px;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  }
+  .pop .cell {
+    background: rgba(255,255,255,.025);
+    border: 1px solid var(--vint-line);
+    border-radius: 12px; padding: 14px; min-width: 0;
+  }
+  .pop .cell .k {
+    font-family: 'JetBrains Mono',monospace; font-size: 10px;
+    letter-spacing: .12em; text-transform: uppercase;
+    color: var(--vint-text-dim); display: block; margin-bottom: 6px;
+  }
+  .pop .cell .v {
+    font-family: 'Syne',sans-serif; font-size: 26px; font-weight: 700;
+    line-height: 1.1; display: block;
+  }
+  .pop .cell .sub { font-size: 11px; color: var(--vint-text-dim); display: block; margin-top: 4px; line-height: 1.4; }
+  .v.good { color: var(--vint-green); }
+  .v.warn { color: var(--vint-gold); }
+  .v.bad  { color: var(--vint-rose); }
+  .v.dim  { color: var(--vint-text-dim); }
+
+  /* ── window selector ── */
+  .windows { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; }
+  .windows button {
+    flex: 1 1 auto; min-width: 84px; min-height: 44px;   /* 44px touch target */
+    background: rgba(255,255,255,.03);
+    border: 1px solid var(--vint-line);
+    border-radius: 10px; color: var(--vint-text-dim);
+    font-family: 'JetBrains Mono',monospace; font-size: 12px;
+    cursor: pointer; transition: all .18s;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .windows button:hover { color: var(--vint-text); border-color: rgba(166,124,255,.3); }
+  .windows button.on {
+    background: rgba(166,124,255,.14); color: var(--vint-accent);
+    border-color: rgba(166,124,255,.4);
+  }
+
+  /* ── the funnel steps ── */
+  .step { margin-bottom: 14px; }
+  .step:last-child { margin-bottom: 0; }
+  .step .head {
+    display: flex; align-items: baseline; gap: 10px;
+    margin-bottom: 7px; flex-wrap: wrap;
+  }
+  .step .name {
+    font-family: 'JetBrains Mono',monospace; font-size: 12px;
+    color: var(--vint-text); flex: 1 1 auto; min-width: 0;
+  }
+  .step .count {
+    font-family: 'Syne',sans-serif; font-size: 17px; font-weight: 700;
+    flex-shrink: 0;
+  }
+  .step .pct {
+    font-family: 'JetBrains Mono',monospace; font-size: 11px;
+    color: var(--vint-text-dim); flex-shrink: 0;
+  }
+  /* The bar track is a bounded box; the fill lives INSIDE it and is clamped in
+     JS to 0-100%, so a fill can never escape its track. */
+  .track {
+    height: 10px; border-radius: 6px;
+    background: rgba(255,255,255,.05);
+    overflow: hidden;
+  }
+  .fill {
+    height: 100%; border-radius: 6px;
+    background: linear-gradient(90deg, var(--vint-accent), var(--vint-cyan));
+    transition: width .5s cubic-bezier(.2,.8,.2,1);
+  }
+  .step.zero .fill { background: rgba(255,255,255,.12); }
+  .step .drop {
+    font-family: 'JetBrains Mono',monospace; font-size: 10px;
+    color: var(--vint-rose); margin-top: 5px; line-height: 1.4;
+  }
+
+  /* ── states ── */
+  .state { text-align: center; padding: 40px 18px; }
+  .state .icon { font-size: 34px; margin-bottom: 14px; opacity: .5; }
+  .state .msg { font-size: 15px; line-height: 1.6; color: var(--vint-text-dim); max-width: 460px; margin: 0 auto; }
+  .state .msg strong { color: var(--vint-text); font-weight: 600; }
+  .hidden { display: none !important; }
+
+  .kill {
+    font-family: 'JetBrains Mono',monospace; font-size: 11px;
+    padding: 10px 12px; border-radius: 10px; line-height: 1.55;
+    border: 1px solid var(--vint-line); background: rgba(255,255,255,.02);
+    margin-top: 12px;
+  }
+  .kill.on  { border-color: rgba(64,192,112,.35); color: var(--vint-green); }
+  .kill.off { border-color: rgba(255,255,255,.1); color: var(--vint-text-dim); }
+
+  .foot {
+    font-family: 'JetBrains Mono',monospace; font-size: 10px;
+    color: rgba(255,255,255,.28); line-height: 1.7; text-align: center;
+    padding: 8px 0 0;
+  }
+
+  @media (max-width: 380px) {
+    .card { padding: 16px 14px; }
+    .pop { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<div class="bar">
+  <a class="home" href="index.html" aria-label="Back to Vintinuum">←</a>
+  <h1>The Funnel</h1>
+</div>
+
+<div class="wrap">
+
+  <!-- LOADING -->
+  <div class="card" id="loading">
+    <div class="state">
+      <div class="icon">◍</div>
+      <div class="msg">Reading the record…</div>
+    </div>
+  </div>
+
+  <!-- NOT OWNER -->
+  <div class="card hidden" id="denied">
+    <div class="state">
+      <div class="icon">✦</div>
+      <div class="msg"><strong>Owner only.</strong><br>
+        This scoreboard exposes revenue and conversion internals, so it answers
+        to one account. Sign in as the owner to read it.</div>
+    </div>
+  </div>
+
+  <!-- ERROR -->
+  <div class="card hidden" id="failed">
+    <div class="state">
+      <div class="icon">⚠</div>
+      <div class="msg"><strong>Could not reach the brain.</strong><br>
+        <span id="failmsg"></span></div>
+    </div>
+  </div>
+
+  <!-- REPORT -->
+  <div id="report" class="hidden">
+
+    <!-- The truth banner leads. Nothing above it, nothing louder than it. -->
+    <div class="card truth">
+      <div class="eyebrow">The real population</div>
+      <p class="n" id="tHumans">—</p>
+      <p class="lead" id="tLead">—</p>
+      <div class="note" id="tNote"></div>
+    </div>
+
+    <div class="card">
+      <div class="eyebrow">Counted honestly</div>
+      <div class="pop">
+        <div class="cell">
+          <span class="k">Real humans</span>
+          <span class="v" id="pHumans">—</span>
+          <span class="sub">excludes bots, system rows &amp; the owner</span>
+        </div>
+        <div class="cell">
+          <span class="k">Paying</span>
+          <span class="v" id="pPaying">—</span>
+          <span class="sub">tier beyond free</span>
+        </div>
+        <div class="cell">
+          <span class="k">Raw table rows</span>
+          <span class="v dim" id="pRows">—</span>
+          <span class="sub">NOT a user count</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="windows" id="windows">
+      <button data-days="7">7 days</button>
+      <button data-days="30" class="on">30 days</button>
+      <button data-days="90">90 days</button>
+    </div>
+
+    <div class="card">
+      <div class="eyebrow">Funnel · distinct visitors <span id="winLabel"></span></div>
+      <div id="steps"></div>
+      <div class="hidden" id="noEvents">
+        <div class="state">
+          <div class="icon">○</div>
+          <div class="msg"><strong>No events recorded yet.</strong><br>
+            Instrumentation is live and waiting on real traffic. This space stays
+            empty until a human actually moves through the funnel — it will never
+            be filled with an estimate.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="eyebrow">Retention &amp; the resentment signal</div>
+      <div class="pop">
+        <div class="cell">
+          <span class="k">Multi-day humans</span>
+          <span class="v" id="rMulti">—</span>
+          <span class="sub">seen on more than one day</span>
+        </div>
+        <div class="cell">
+          <span class="k">Loop shown</span>
+          <span class="v" id="rShown">—</span>
+          <span class="sub">times she spoke first</span>
+        </div>
+        <div class="cell">
+          <span class="k">Opened</span>
+          <span class="v" id="rOpened">—</span>
+          <span class="sub">they went to her</span>
+        </div>
+        <div class="cell">
+          <span class="k">Resentment</span>
+          <span class="v" id="rResent">—</span>
+          <span class="sub">(dismissed + muted) ÷ shown</span>
+        </div>
+      </div>
+      <div class="kill off" id="rKill">—</div>
+    </div>
+
+    <div class="foot">
+      Every number on this page is a count of rows that exist.<br>
+      Nothing here is estimated, projected, or inferred.
+    </div>
+  </div>
+
+</div>
+
+<script src="body/api_base.js?v=v20260429-council"></script>
+<script>
+(function () {
+  'use strict';
+
+  function api(p) {
+    try {
+      if (window.VINTINUUM && typeof window.VINTINUUM.url === 'function') return window.VINTINUUM.url(p);
+      var b = window.__VINTINUUM_API_BASE || window.VINTINUUM_API || window.__VINT_API;
+      if (b) return b + p;
+    } catch (_) {}
+    var h = (location.hostname || '').toLowerCase();
+    var local = !h || h === 'localhost' || h === '127.0.0.1';
+    return (local ? 'http://localhost:8767' : 'https://api.vintaclectic.com') + p;
+  }
+
+  function token() {
+    try {
+      return localStorage.getItem('vint_token')
+        || localStorage.getItem('vint_access_token')
+        || localStorage.getItem('soul_auth_token') || '';
+    } catch (_) { return ''; }
+  }
+
+  var $ = function (id) { return document.getElementById(id); };
+  function show(id) { var e = $(id); if (e) e.classList.remove('hidden'); }
+  function hide(id) { var e = $(id); if (e) e.classList.add('hidden'); }
+
+  // Every number that reaches the DOM goes through here. A null/undefined/NaN
+  // becomes an em-dash, never the string "NaN" or "null" — a broken figure on
+  // this page would undermine the one thing it exists to do: be trusted.
+  function num(v) {
+    return (typeof v === 'number' && isFinite(v)) ? String(v) : '—';
+  }
+  function pct(v) {
+    return (typeof v === 'number' && isFinite(v)) ? (v + '%') : '—';
+  }
+
+  var LABEL = {
+    land: 'landed on a surface',
+    gate_open: 'opened the way in',
+    gate_submit: 'pressed the button',
+    signup_ok: 'account created',
+    onboard_start: 'began onboarding',
+    onboard_done: 'finished onboarding',
+    first_message: 'actually spoke to her',
+    return_visit: 'came back another day'
+  };
+
+  function renderSteps(funnel) {
+    var host = $('steps');
+    host.innerHTML = '';
+
+    var total = 0;
+    (funnel || []).forEach(function (s) { total += (s.visitors || 0); });
+    if (!total) { host.classList.add('hidden'); show('noEvents'); return; }
+    host.classList.remove('hidden'); hide('noEvents');
+
+    // Bars are scaled against the FIRST step with population, so the funnel
+    // reads as proportions of arrivals rather than of an arbitrary maximum.
+    var base = 0;
+    for (var i = 0; i < funnel.length; i++) {
+      if (funnel[i].visitors > 0) { base = funnel[i].visitors; break; }
+    }
+
+    funnel.forEach(function (s) {
+      var v = s.visitors || 0;
+      // Clamped 0-100 so a fill can never exceed its track.
+      var w = base > 0 ? Math.max(0, Math.min(100, (v / base) * 100)) : 0;
+
+      var row = document.createElement('div');
+      row.className = 'step' + (v === 0 ? ' zero' : '');
+
+      var head = document.createElement('div');
+      head.className = 'head';
+
+      var name = document.createElement('span');
+      name.className = 'name';
+      name.textContent = (LABEL[s.step] || s.step);
+      head.appendChild(name);
+
+      var count = document.createElement('span');
+      count.className = 'count';
+      count.textContent = num(v);
+      head.appendChild(count);
+
+      if (typeof s.from_prev_pct === 'number' && isFinite(s.from_prev_pct)) {
+        var p = document.createElement('span');
+        p.className = 'pct';
+        p.textContent = pct(s.from_prev_pct) + ' of prev';
+        head.appendChild(p);
+      }
+      row.appendChild(head);
+
+      var track = document.createElement('div');
+      track.className = 'track';
+      var fill = document.createElement('div');
+      fill.className = 'fill';
+      fill.style.width = w + '%';
+      track.appendChild(fill);
+      row.appendChild(track);
+
+      // Only render a dropoff line when the previous step had real population.
+      if (typeof s.dropoff_pct === 'number' && isFinite(s.dropoff_pct) && s.dropoff_pct > 0) {
+        var d = document.createElement('div');
+        d.className = 'drop';
+        d.textContent = '↓ lost ' + pct(s.dropoff_pct) + ' here';
+        row.appendChild(d);
+      }
+      host.appendChild(row);
+    });
+  }
+
+  function render(d) {
+    var pop = d.population || {};
+    var humans = pop.real_humans;
+
+    // ── the truth banner ──────────────────────────────────────────────────
+    $('tHumans').textContent = num(humans);
+    var lead;
+    if (typeof humans === 'number' && humans === 0) {
+      lead = 'real human signups. Not one, yet — and the raw table count below is bots and test rows, not people.';
+    } else if (typeof humans === 'number' && humans < 25) {
+      lead = 'real human signups. That is the entire population. Any larger number you have seen for Vintinuum — including "203" — counted connector bots, system rows and test accounts as people.';
+    } else {
+      lead = 'real human signups, excluding bots, system rows and the owner account.';
+    }
+    $('tLead').textContent = lead;
+    // The server's own caveat, rendered verbatim — never paraphrased.
+    $('tNote').textContent = pop.note || '';
+
+    $('pHumans').textContent = num(humans);
+    $('pHumans').className = 'v ' + (humans > 0 ? 'good' : 'bad');
+    $('pPaying').textContent = num(pop.paying);
+    $('pPaying').className = 'v ' + (pop.paying > 0 ? 'good' : 'bad');
+    $('pRows').textContent = num(pop.total_user_rows);
+
+    $('winLabel').textContent = '· last ' + num(d.window_days) + ' days';
+    renderSteps(d.funnel || []);
+
+    var r = d.retention || {};
+    $('rMulti').textContent = num(r.multi_day_users);
+    $('rShown').textContent = num(r.loop_shown);
+    $('rOpened').textContent = num(r.loop_opened);
+
+    // Retention Doctrine test 6 — surfaced, never buried.
+    var res = $('rResent');
+    res.textContent = pct(r.resentment_pct);
+    if (typeof r.resentment_pct !== 'number') {
+      res.className = 'v dim';
+    } else if (r.resentment_pct >= 40) {
+      res.className = 'v bad';
+    } else if (r.resentment_pct >= 15) {
+      res.className = 'v warn';
+    } else {
+      res.className = 'v good';
+    }
+
+    var kill = $('rKill');
+    var on = /^ON/.test(String(r.kill_switch || ''));
+    kill.className = 'kill ' + (on ? 'on' : 'off');
+    kill.textContent = 'Return loop: ' + (r.kill_switch || 'unknown')
+      + (on ? ' — unset VINT_RETENTION_LOOP to kill it in 30s, no deploy.'
+            : ' — nothing is being shown to anyone.');
+
+    hide('loading'); hide('denied'); hide('failed'); show('report');
+  }
+
+  function load(days) {
+    hide('report'); hide('denied'); hide('failed'); show('loading');
+    var t = token();
+    if (!t) { hide('loading'); show('denied'); return; }
+
+    fetch(api('/api/funnel/report?days=' + encodeURIComponent(days)), {
+      headers: { Authorization: 'Bearer ' + t },
+      credentials: 'include'
+    })
+      .then(function (r) {
+        if (r.status === 401 || r.status === 403) { hide('loading'); show('denied'); return null; }
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        return r.json();
+      })
+      .then(function (d) { if (d && d.ok) render(d); else if (d) throw new Error(d.error || 'Malformed report'); })
+      .catch(function (e) {
+        hide('loading');
+        $('failmsg').textContent = (e && e.message) ? e.message : 'Unknown error.';
+        show('failed');
+      });
+  }
+
+  var days = 30;
+  Array.prototype.forEach.call(document.querySelectorAll('#windows button'), function (b) {
+    b.addEventListener('click', function () {
+      Array.prototype.forEach.call(document.querySelectorAll('#windows button'), function (x) { x.classList.remove('on'); });
+      b.classList.add('on');
+      days = parseInt(b.getAttribute('data-days'), 10) || 30;
+      load(days);
+    });
+  });
+
+  load(days);
+})();
+</script>
+</body>
+</html>
