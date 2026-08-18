@@ -319,6 +319,13 @@
 
     if (empty) empty.style.display = list.length ? 'none' : '';
 
+    // ── SCROLL PRESERVATION (Vinta 2026-08-17, task 2UCABMK) ──
+    // Save scroll position before DOM manipulation so auto-updates don't
+    // bounce the user back to top while they're reading. The scroll container
+    // is #vtnCardList (mounted.parentNode), not the rows div itself.
+    var scrollContainer = mounted.parentNode;
+    var savedScroll = scrollContainer ? scrollContainer.scrollTop : 0;
+
     // Reconcile rows against the ordered list, reusing nodes.
     var seen = Object.create(null);
     list.forEach(function (j, i) {
@@ -336,6 +343,11 @@
         rows.delete(id);
       }
     });
+
+    // Restore scroll position after DOM changes.
+    if (scrollContainer && savedScroll > 0) {
+      scrollContainer.scrollTop = savedScroll;
+    }
   }
 
   function startTick() {
