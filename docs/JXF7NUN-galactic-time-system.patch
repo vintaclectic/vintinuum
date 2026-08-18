@@ -1,0 +1,203 @@
+*** Begin Patch
+*** Update File: /home/vinta/.claude/council-loop/bin/vintask-gui.html
+@@
+   .upd-empty b{color:var(--ink2)}
+   @media(max-width:560px){
+@@
+     .upd-csub{flex:1 1 100%}
+   }
++
++  /* GALACTIC TIME SYSTEM (task JXF7NUN): pleasure-only task observatory. */
++  .galaxy-panel{display:flex;flex-direction:column;gap:var(--sp3);min-width:0}
++  .galaxy-toolbar{display:flex;align-items:center;justify-content:space-between;gap:var(--sp3);
++    flex-wrap:wrap;background:linear-gradient(160deg,rgba(20,184,166,.08),rgba(139,92,246,.07));
++    border:1px solid var(--line);border-radius:var(--radius);padding:10px 12px}
++  .galaxy-title{display:flex;flex-direction:column;gap:2px;min-width:0}
++  .galaxy-title b{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--acc2)}
++  .galaxy-title span{font-size:11.5px;color:var(--dim);overflow-wrap:anywhere}
++  .galaxy-actions{display:flex;align-items:center;gap:7px;flex-wrap:wrap}
++  .galaxy-actions button{min-height:44px;min-width:44px;border-radius:10px;border:1px solid var(--line);
++    background:var(--inset);color:var(--ink2);font:inherit;font-size:12px;font-weight:800;cursor:pointer;
++    display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:0 12px}
++  .galaxy-actions button:hover{border-color:var(--line-strong);color:var(--acc2)}
++  .galaxy-stage{position:relative;height:clamp(420px,62vh,760px);min-height:420px;overflow:hidden;
++    border:1px solid var(--line);border-radius:var(--radius-lg);
++    background:radial-gradient(circle at 50% 50%,rgba(245,166,35,.09),transparent 20%),
++      radial-gradient(circle at 20% 15%,rgba(20,184,166,.10),transparent 24%),
++      radial-gradient(circle at 80% 20%,rgba(139,92,246,.12),transparent 26%),
++      linear-gradient(180deg,#05070c,#09080d 56%,#040306);
++    box-shadow:0 24px 60px -38px #000,0 0 0 1px rgba(255,255,255,.02) inset;touch-action:none}
++  #galaxyCanvas{position:absolute;inset:0;width:100%;height:100%;display:block}
++  .galaxy-nodes{position:absolute;inset:0;pointer-events:none}
++  .g-node{position:absolute;left:0;top:0;transform:translate(-50%,-50%);pointer-events:auto;
++    border:1px solid transparent;background:transparent;color:var(--ink);cursor:pointer;padding:0;
++    min-width:44px;min-height:44px;border-radius:999px;display:grid;place-items:center}
++  .g-node:focus-visible{outline:2px solid var(--acc2);outline-offset:4px}
++  .g-core{width:var(--sz);height:var(--sz);border-radius:50%;
++    background:radial-gradient(circle at 35% 28%,#fff8d4 0 10%,var(--g1) 18%,var(--g2) 68%,rgba(0,0,0,.55) 100%);
++    box-shadow:0 0 calc(var(--sz) * .9) color-mix(in srgb,var(--g1) 55%,transparent),
++      inset -8px -10px 18px rgba(0,0,0,.38), inset 5px 4px 12px rgba(255,255,255,.24);
++    animation:gBreathe 3.6s ease-in-out infinite}
++  .g-node.todo .g-core{--g1:#8B5CF6;--g2:#22134f}
++  .g-node.claimed .g-core,.g-node.doing .g-core{--g1:#F5A623;--g2:#5c3210}
++  .g-node.done .g-core{--g1:#14B8A6;--g2:#0c4a44}
++  .g-node.blocked .g-core,.g-node.needs-human .g-core{--g1:#DC2626;--g2:#5c1616}
++  .g-node.paused .g-core{--g1:#F59E0B;--g2:#5c4310}
++  .g-node.cancelled .g-core{--g1:#6b5c3f;--g2:#17120c}
++  @keyframes gBreathe{0%,100%{filter:saturate(.95) brightness(.95)}50%{filter:saturate(1.25) brightness(1.12)}}
++  @media(prefers-reduced-motion:reduce){.g-core{animation:none}}
++  .g-label{position:absolute;left:50%;top:calc(50% + var(--sz) / 2 + 7px);transform:translateX(-50%);
++    width:max-content;max-width:170px;background:rgba(8,8,12,.74);border:1px solid var(--hair);
++    border-radius:8px;padding:5px 7px;font-size:10.5px;line-height:1.25;color:var(--ink2);
++    text-align:center;overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;
++    -webkit-box-orient:vertical;backdrop-filter:blur(5px)}
++  .galaxy-empty{position:absolute;inset:0;display:grid;place-items:center;text-align:center;
++    color:var(--dim);font-size:13px;line-height:1.6;padding:24px}
++  .galaxy-readout{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
++  .g-stat{background:var(--inset);border:1px solid var(--hair);border-radius:var(--radius-sm);
++    padding:10px 12px;min-width:0}
++  .g-stat b{display:block;font-size:16px;color:var(--acc2);font-variant-numeric:tabular-nums}
++  .g-stat span{display:block;font-size:10px;letter-spacing:.07em;text-transform:uppercase;color:var(--dim)}
++  @media(max-width:700px){.galaxy-stage{height:560px}.galaxy-readout{grid-template-columns:repeat(2,minmax(0,1fr))}
++    .galaxy-toolbar{align-items:stretch}.galaxy-actions{width:100%}.galaxy-actions button{flex:1 1 auto}}
+ 
+   .view-tabs .vt .dot{margin:0}
+@@
+           <button type="button" class="vt" id="vtLibrary" data-view="library">📚 Library <span class="vt-badge" id="vtLibBadge" hidden></span></button>
++          <button type="button" class="vt" id="vtGalaxy" data-view="galaxy">✦ Galaxy</button>
+           <!-- LATEST UPDATES / THE SHIPS LOG (task 4Q6FFU7) — what actually
+@@
+       <div class="upd-panel" id="updPanel" hidden>
+@@
+         <div class="upd-projects" id="updProjects"></div>
+       </div>
++      <div class="galaxy-panel" id="galaxyPanel" hidden>
++        <div class="galaxy-toolbar">
++          <div class="galaxy-title">
++            <b>Orb Dwelling Galactic Time</b>
++            <span>Every task becomes a clickable body; projects and agents bend the orbit lines.</span>
++          </div>
++          <div class="galaxy-actions">
++            <button type="button" id="galZoomOut" title="Zoom out" aria-label="Zoom out">-</button>
++            <button type="button" id="galZoomIn" title="Zoom in" aria-label="Zoom in">+</button>
++            <button type="button" id="galReset" title="Reset view">Reset</button>
++          </div>
++        </div>
++        <div class="galaxy-stage" id="galaxyStage" aria-label="Clickable galactic task map">
++          <canvas id="galaxyCanvas"></canvas>
++          <div class="galaxy-nodes" id="galaxyNodes"></div>
++          <div class="galaxy-empty" id="galaxyEmpty" hidden>No task stars yet.</div>
++        </div>
++        <div class="galaxy-readout" id="galaxyReadout"></div>
++      </div>
+       <div class="tasklist" id="list" style="margin-top:var(--sp4)"><div class="empty"><div class="glyph">◌</div>Loading…</div></div>
+@@
+     const spendOn = VIEW==='spend';
+     const libOn   = VIEW==='library';
+     const updOn   = VIEW==='updates';
++    const galOn   = VIEW==='galaxy';
+@@
+     const up=document.getElementById('updPanel'); if(up) up.hidden = !updOn;
+-    const lst=document.getElementById('list'); if(lst) lst.hidden = spendOn;
+-    const cnt=document.getElementById('counts'); if(cnt) cnt.hidden = spendOn || libOn || updOn;
++    const gp=document.getElementById('galaxyPanel'); if(gp) gp.hidden = !galOn;
++    const lst=document.getElementById('list'); if(lst) lst.hidden = spendOn || galOn;
++    const cnt=document.getElementById('counts'); if(cnt) cnt.hidden = spendOn || libOn || updOn || galOn;
+     if(spendOn){ loadSpend(); }
+     else if(VIEW==='roster'){ loadRoster(); }
+     else if(libOn){ loadLibrary(); setTimeout(()=>{ const q=document.getElementById('libQ'); if(q) q.focus(); },60); }
+     else if(updOn){ loadUpdates(); setTimeout(()=>{ const q=document.getElementById('updQ'); if(q) q.focus(); },60); }
++    else if(galOn){ loadGalaxy(); }
+     else { loadTasks(); }
+   });
+ });
+@@
+ function renderCards(list, html, keys){
+@@
+ }
++
++const GALAXY = { tasks:[], nodes:[], scale:1, ox:0, oy:0, drag:null };
++function galaxyStatus(t){ return String(t.status||'todo').replace(/[^a-z-]/g,'') || 'todo'; }
++function galaxyBuild(tasks){
++  const live = (tasks||[]).filter(t=>!t.archived && t.status!=='cancelled');
++  const byProject = new Map();
++  live.forEach(t=>{ const k=t.project||'Council'; if(!byProject.has(k)) byProject.set(k,[]); byProject.get(k).push(t); });
++  const projects=[...byProject.entries()];
++  const nodes=[]; const radiusBase=185;
++  projects.forEach(([project,items],pi)=>{
++    const orbit = radiusBase + pi*82;
++    const phase = (pi/projects.length) * Math.PI * 2;
++    nodes.push({type:'project', id:'p-'+pi, label:project, x:Math.cos(phase)*orbit*.42, y:Math.sin(phase)*orbit*.28, size:34, project});
++    items.forEach((t,ti)=>{
++      const a = phase + (ti/items.length)*Math.PI*2 + .34;
++      const r = orbit + (ti%4)*22;
++      const pr = Math.max(1, Math.min(5, parseInt(t.priority,10)||3));
++      nodes.push({type:'task', id:t.id, task:t, label:t.title||t.id, status:galaxyStatus(t),
++        x:Math.cos(a)*r, y:Math.sin(a)*r*.72, size:Math.max(18, 34 - pr*2), project});
++    });
++  });
++  GALAXY.nodes = nodes;
++}
++function galaxyScreen(n, rect){
++  return { x:rect.width/2 + GALAXY.ox + n.x*GALAXY.scale, y:rect.height/2 + GALAXY.oy + n.y*GALAXY.scale };
++}
++function renderGalaxy(){
++  const stage=document.getElementById('galaxyStage'), canvas=document.getElementById('galaxyCanvas'), wrap=document.getElementById('galaxyNodes');
++  if(!stage || !canvas || !wrap) return;
++  const rect=stage.getBoundingClientRect(), dpr=window.devicePixelRatio||1;
++  canvas.width=Math.max(1,Math.floor(rect.width*dpr)); canvas.height=Math.max(1,Math.floor(rect.height*dpr));
++  const ctx=canvas.getContext('2d'); ctx.setTransform(dpr,0,0,dpr,0,0); ctx.clearRect(0,0,rect.width,rect.height);
++  const stars=90; ctx.fillStyle='rgba(255,236,196,.72)';
++  for(let i=0;i<stars;i++){ const x=(i*73%997)/997*rect.width, y=(i*131%719)/719*rect.height, a=.18+((i*17)%70)/100; ctx.globalAlpha=a; ctx.fillRect(x,y,1.2,1.2); }
++  ctx.globalAlpha=1;
++  const projectNodes=GALAXY.nodes.filter(n=>n.type==='project');
++  const taskNodes=GALAXY.nodes.filter(n=>n.type==='task');
++  projectNodes.forEach(p=>{
++    const ps=galaxyScreen(p,rect);
++    ctx.strokeStyle='rgba(245,166,35,.13)'; ctx.lineWidth=1;
++    ctx.beginPath(); ctx.ellipse(rect.width/2+GALAXY.ox,rect.height/2+GALAXY.oy,Math.abs(p.x)*2.2*GALAXY.scale+80,Math.abs(p.y)*2.2*GALAXY.scale+90,0,0,Math.PI*2); ctx.stroke();
++    taskNodes.filter(n=>n.project===p.project).forEach(t=>{
++      const ts=galaxyScreen(t,rect);
++      ctx.strokeStyle=t.status==='done'?'rgba(20,184,166,.32)':t.status==='doing'||t.status==='claimed'?'rgba(245,166,35,.34)':'rgba(139,92,246,.22)';
++      ctx.lineWidth=t.status==='done'?1.7:1;
++      ctx.beginPath(); ctx.moveTo(ps.x,ps.y); ctx.quadraticCurveTo((ps.x+ts.x)/2, (ps.y+ts.y)/2-28, ts.x,ts.y); ctx.stroke();
++    });
++  });
++  wrap.innerHTML = GALAXY.nodes.map(n=>{
++    const p=galaxyScreen(n,rect), sz=(n.type==='project'?n.size:n.size)*GALAXY.scale;
++    const cls=n.type==='project'?'done':n.status;
++    const title=n.type==='project' ? n.label : `${n.id} · ${n.status} · ${n.label}`;
++    return `<button type="button" class="g-node ${esc(cls)}" data-id="${esc(n.id)}" style="left:${p.x}px;top:${p.y}px;--sz:${Math.max(16,Math.min(54,sz))}px" title="${esc(title)}" aria-label="${esc(title)}"><span class="g-core"></span><span class="g-label">${esc(n.label)}</span></button>`;
++  }).join('');
++  const empty=document.getElementById('galaxyEmpty'); if(empty) empty.hidden=!!GALAXY.nodes.length;
++}
++async function loadGalaxy(){
++  const r=await (await fetch('/api/tasks')).json(); GALAXY.tasks=r.tasks||[];
++  galaxyBuild(GALAXY.tasks); renderGalaxy();
++  const live=GALAXY.tasks.filter(t=>!t.archived && t.status!=='cancelled');
++  const projects=new Set(live.map(t=>t.project||'Council'));
++  const agents=new Set(live.map(t=>t.chosen_agent||t.assignee||t.claimed_by).filter(Boolean));
++  const done=live.filter(t=>t.status==='done').length;
++  const read=document.getElementById('galaxyReadout');
++  if(read) read.innerHTML = [
++    ['Bodies', live.length], ['Constellations', projects.size], ['Council signals', agents.size], ['Finished stars', done]
++  ].map(x=>`<div class="g-stat"><b>${x[1]}</b><span>${x[0]}</span></div>`).join('');
++}
++document.getElementById('galaxyNodes')?.addEventListener('click', e=>{
++  const b=e.target.closest('.g-node'); if(!b) return;
++  const n=GALAXY.nodes.find(x=>x.id===b.dataset.id);
++  if(n && n.type==='task') openDrawer(n.id);
++});
++document.getElementById('galZoomIn')?.addEventListener('click',()=>{ GALAXY.scale=Math.min(2.4,GALAXY.scale+.18); renderGalaxy(); });
++document.getElementById('galZoomOut')?.addEventListener('click',()=>{ GALAXY.scale=Math.max(.55,GALAXY.scale-.18); renderGalaxy(); });
++document.getElementById('galReset')?.addEventListener('click',()=>{ GALAXY.scale=1; GALAXY.ox=0; GALAXY.oy=0; renderGalaxy(); });
++window.addEventListener('resize',()=>{ if(VIEW==='galaxy') renderGalaxy(); });
+@@
+   const up = document.getElementById('updPanel');
+   const sp = document.getElementById('spendPanel');
++  const gp = document.getElementById('galaxyPanel');
+@@
+   if(up) up.hidden = true;
+   if(sp) sp.hidden = true;
++  if(gp) gp.hidden = true;
+*** End Patch

@@ -1,0 +1,13 @@
+*** Begin Patch
+*** Update File: /home/vinta/.claude/council-loop/bin/council-driver.sh
+@@
+-  # if no seat-specific/unassigned task and this is a generic seat, try the shared pool as 'claude'
+-  if [ -z "$TASK_JSON" ] && [ "$AGENT_ID" != "claude" ]; then
+-    TASK_JSON="$($VINTASK next --agent claude 2>/dev/null)"
++  # If no seat-specific/unassigned task exists, let generic seats draw from the
++  # named generalist pool. `claude` was retired by SEHP2A4; `vessel` is the
++  # accountable successor, so the driver must not keep reintroducing the old owner.
++  if [ -z "$TASK_JSON" ] && [ "$AGENT_ID" != "vessel" ]; then
++    TASK_JSON="$($VINTASK next --agent vessel 2>/dev/null)"
+   fi
+*** End Patch

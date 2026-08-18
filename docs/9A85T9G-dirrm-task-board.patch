@@ -1,0 +1,230 @@
+*** Begin Patch
+*** Update File: /home/vinta/.claude/council-loop/bin/vintask-gui.js
+@@
+ const ASSET_ROUTES = {
+   '/favicon.ico':     { file: 'favicon.ico',    type: 'image/x-icon' },
+   '/favicon.svg':     { file: 'favicon.svg',    type: 'image/svg+xml' },
+   '/favicon-16.svg':  { file: 'favicon-16.svg', type: 'image/svg+xml' },
+   '/logo.svg':        { file: 'logo.svg',       type: 'image/svg+xml' },
+ };
++const DIRRM_ROUTES = {
++  '/dirrm-launch.js':   { file: '/home/vinta/vintinuum/dirrm-launch.js',   type: 'application/javascript; charset=utf-8' },
++  '/dirrm-player.html': { file: '/home/vinta/vintinuum/dirrm-player.html', type: 'text/html; charset=utf-8' },
++};
+@@
+     if (req.method === 'GET' && u.pathname === '/') {
+       // read fresh each load so HTML edits hot-serve (no restart needed)
+       let html; try { html = fs.readFileSync(HTML_PATH, 'utf8'); } catch { html = '<h1>board HTML missing</h1>'; }
+       res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' });
+       return res.end(html);
+     }
++    // DirRM player surface for the board. Whitelisted files only: the board needs
++    // the canonical launcher/player, but it must not become a generic static file server.
++    if (req.method === 'GET' && DIRRM_ROUTES[u.pathname]) {
++      const r = DIRRM_ROUTES[u.pathname];
++      try {
++        const buf = fs.readFileSync(r.file);
++        res.writeHead(200, { 'Content-Type': r.type, 'Cache-Control': 'no-store' });
++        return res.end(buf);
++      } catch {
++        res.writeHead(404); return res.end('');
++      }
++    }
+     // SSE endpoint for instant live updates (Vinta 2026-08-10)
+     if (req.method === 'GET' && u.pathname === '/api/events') return handleSSE(req, res);
+*** Update File: /home/vinta/.claude/council-loop/bin/vintask-gui.html
+@@
+   .card h2{margin:0 0 var(--sp4);font-size:12px;font-weight:800;letter-spacing:.08em;
+     text-transform:uppercase;color:var(--dim);display:flex;align-items:center;gap:8px}
+   .card h2 .dot{width:6px;height:6px;border-radius:50%;background:var(--acc2);box-shadow:0 0 8px var(--acc-glow)}
++
++  /* DirRM media desk — a board-native remote for the canonical player.
++     It lives in normal grid flow, never over the queue or drawer. */
++  .dirrm-desk{display:flex;flex-direction:column;gap:var(--sp4)}
++  .dirrm-desk h2{margin-bottom:0}
++  .dirrm-deck{display:grid;grid-template-columns:1fr;gap:var(--sp3)}
++  .dirrm-field{display:flex;flex-direction:column;gap:7px;min-width:0}
++  .dirrm-field span{font-size:10.5px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--dim2)}
++  .dirrm-field input,.dirrm-field select{
++    min-height:42px;width:100%;background:var(--inset);border:1px solid var(--line);
++    color:var(--ink);border-radius:var(--radius-sm);padding:10px 12px;font:inherit;outline:none;
++  }
++  .dirrm-field input:focus,.dirrm-field select:focus{border-color:var(--line-strong);box-shadow:0 0 0 3px var(--acc-glow)}
++  .dirrm-row{display:grid;grid-template-columns:minmax(0,1fr) 118px;gap:var(--sp3)}
++  .dirrm-modes{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
++  .dirrm-mode,.dirrm-act{
++    min-height:38px;border:1px solid var(--line);border-radius:9px;background:var(--inset);
++    color:var(--ink2);font:inherit;font-size:12px;font-weight:800;cursor:pointer;
++    transition:border-color .15s,background .15s,color .15s,transform .05s;
++  }
++  .dirrm-mode:hover,.dirrm-act:hover{border-color:var(--line-strong);color:var(--ink)}
++  .dirrm-mode.on{background:rgba(245,166,35,.14);border-color:var(--acc);color:var(--acc2)}
++  .dirrm-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px}
++  .dirrm-act.primary{background:var(--gradient-gold);border-color:var(--acc2);color:#0d0b08}
++  .dirrm-act.danger{color:var(--bad);border-color:rgba(220,38,38,.42)}
++  .dirrm-slot{
++    display:grid;place-items:center;min-height:220px;aspect-ratio:16/10;overflow:hidden;
++    background:#000;border:1px solid var(--line);border-radius:var(--radius);
++    box-shadow:0 1px 0 rgba(255,255,255,.02) inset;
++  }
++  .dirrm-slot iframe{display:block;width:100%;height:100%;border:0}
++  .dirrm-empty{padding:18px;text-align:center;color:var(--dim);font-size:12.5px;line-height:1.45}
++  .dirrm-status{min-height:18px;color:var(--dim);font-size:12px}
++  @media(max-width:520px){
++    .dirrm-row{grid-template-columns:1fr}
++    .dirrm-modes{grid-template-columns:repeat(2,1fr)}
++    .dirrm-actions{grid-template-columns:1fr}
++  }
+ 
+   label.f{display:block;margin:0 0 var(--sp4)}
+@@
+       <div class="tasklist" id="list" style="margin-top:var(--sp4)"><div class="empty"><div class="glyph">◌</div>Loading…</div></div>
+     </section>
++
++    <!-- DirRM PLAYER DESK — canonical player, all modes, manageable while working. -->
++    <section class="card dirrm-desk" aria-label="DirRM media desk">
++      <h2><span class="dot"></span>DirRM Player</h2>
++      <div class="dirrm-deck">
++        <label class="dirrm-field">
++          <span>Media URL</span>
++          <input type="url" id="dirrmUrl" placeholder="Paste video, audio, PDF, ebook, image, stream, model, or embed URL…" autocomplete="off" spellcheck="false">
++        </label>
++        <div class="dirrm-row">
++          <label class="dirrm-field">
++            <span>Title</span>
++            <input type="text" id="dirrmTitle" placeholder="Optional now-playing label" autocomplete="off">
++          </label>
++          <label class="dirrm-field">
++            <span>Type</span>
++            <select id="dirrmType">
++              <option value="">Auto</option>
++              <option value="video">Video</option>
++              <option value="audio">Audio</option>
++              <option value="image">Image</option>
++              <option value="pdf">PDF</option>
++              <option value="ebook">Ebook</option>
++              <option value="stream">Stream</option>
++              <option value="model">3D model</option>
++              <option value="docs">Document</option>
++              <option value="text">Text</option>
++            </select>
++          </label>
++        </div>
++        <div class="dirrm-modes" id="dirrmModes" role="group" aria-label="DirRM player mode">
++          <button type="button" class="dirrm-mode" data-mode="main">Main</button>
++          <button type="button" class="dirrm-mode" data-mode="mini">Mini</button>
++          <button type="button" class="dirrm-mode on" data-mode="pip">PIP</button>
++          <button type="button" class="dirrm-mode" data-mode="theater">Theater</button>
++        </div>
++        <div class="dirrm-actions">
++          <button type="button" class="dirrm-act primary" id="dirrmPlay">Play here</button>
++          <button type="button" class="dirrm-act" id="dirrmPop">Open window</button>
++          <button type="button" class="dirrm-act" id="dirrmReload">Reload</button>
++          <button type="button" class="dirrm-act danger" id="dirrmClose">Close</button>
++        </div>
++      </div>
++      <div class="dirrm-slot" id="dirrmSlot">
++        <div class="dirrm-empty">Paste anything playable. The board routes it through the canonical DirRM player, so PIP, mini, main, theater, visualizers, and media detection stay identical to DirHaven.</div>
++      </div>
++      <div class="dirrm-status" id="dirrmStatus" role="status" aria-live="polite">Ready.</div>
++    </section>
+   </div>
+ 
+   <!-- ── LIVE ACTIVITY STREAM (all actions/logs, all projects, in order) ── -->
+@@
+-<script>
++<script src="/dirrm-launch.js"></script>
++<script>
+ const $ = s => document.querySelector(s);
+ let PRIO = 3;
+ let VIEW = 'active'; // 'active' | 'archive'
++
++// DIRRM PLAYER DESK — canonical launcher, no duplicate media implementation.
++const DIRRM_DESK = { handle:null, mode:'pip' };
++function dirrmStatus(msg, ok=true){
++  const el = document.getElementById('dirrmStatus');
++  if(el){ el.textContent = msg; el.style.color = ok ? 'var(--dim)' : 'var(--bad)'; }
++}
++function dirrmSetMode(mode){
++  if(!['main','mini','pip','theater'].includes(mode)) return;
++  DIRRM_DESK.mode = mode;
++  document.querySelectorAll('#dirrmModes .dirrm-mode').forEach(b=>{
++    b.classList.toggle('on', b.dataset.mode === mode);
++  });
++  if(DIRRM_DESK.handle && !DIRRM_DESK.handle.isClosed()) {
++    DIRRM_DESK.handle.setMode(mode);
++    dirrmStatus(`Mode: ${mode}`);
++  }
++}
++function dirrmPayload(){
++  const url = (document.getElementById('dirrmUrl')?.value || '').trim();
++  if(!url) return null;
++  const title = (document.getElementById('dirrmTitle')?.value || '').trim();
++  const type = (document.getElementById('dirrmType')?.value || '').trim() || null;
++  return { url, title:title || url.split('/').pop() || 'Now playing', type, mode:DIRRM_DESK.mode, autoplay:true };
++}
++async function dirrmPlayHere(){
++  const opts = dirrmPayload();
++  if(!opts){ dirrmStatus('Paste a media URL first.', false); return; }
++  if(!window.dirrmLaunch || typeof window.dirrmLaunch.open !== 'function'){
++    dirrmStatus('DirRM launcher did not load.', false); return;
++  }
++  const slot = document.getElementById('dirrmSlot');
++  try{
++    if(DIRRM_DESK.handle && !DIRRM_DESK.handle.isClosed()){
++      DIRRM_DESK.handle.load(opts);
++      DIRRM_DESK.handle.setMode(opts.mode);
++    } else {
++      if(slot) slot.innerHTML = '';
++      DIRRM_DESK.handle = await window.dirrmLaunch.open({...opts, embedIn:slot});
++      DIRRM_DESK.handle.on('playerClosed', ()=>{
++        DIRRM_DESK.handle = null;
++        if(slot) slot.innerHTML = '<div class="dirrm-empty">Player closed. Paste another URL or reopen the last one.</div>';
++        dirrmStatus('Closed.');
++      });
++      DIRRM_DESK.handle.on('modeChanged', dirrmSetMode);
++      DIRRM_DESK.handle.on('mediaEnded', ()=>dirrmStatus('Ended.'));
++    }
++    dirrmStatus(`Playing in ${opts.mode}: ${opts.title}`);
++  }catch(err){
++    dirrmStatus('Could not open DirRM: ' + (err && err.message ? err.message : err), false);
++  }
++}
++async function dirrmOpenWindow(){
++  const opts = dirrmPayload();
++  if(!opts){ dirrmStatus('Paste a media URL first.', false); return; }
++  if(!window.dirrmLaunch || typeof window.dirrmLaunch.open !== 'function'){
++    dirrmStatus('DirRM launcher did not load.', false); return;
++  }
++  try{
++    await window.dirrmLaunch.open({...opts, embedIn:'popup'});
++    dirrmStatus(`Opened ${opts.mode} window: ${opts.title}`);
++  }catch(err){
++    dirrmStatus('Could not open window: ' + (err && err.message ? err.message : err), false);
++  }
++}
++function dirrmClose(){
++  if(DIRRM_DESK.handle && !DIRRM_DESK.handle.isClosed()) DIRRM_DESK.handle.close();
++  DIRRM_DESK.handle = null;
++  const slot = document.getElementById('dirrmSlot');
++  if(slot) slot.innerHTML = '<div class="dirrm-empty">Closed. The task board stays live while DirRM sleeps.</div>';
++  dirrmStatus('Closed.');
++}
++document.addEventListener('click', e=>{
++  const mode = e.target.closest('#dirrmModes .dirrm-mode');
++  if(mode){ dirrmSetMode(mode.dataset.mode); return; }
++  if(e.target.closest('#dirrmPlay')) return dirrmPlayHere();
++  if(e.target.closest('#dirrmPop')) return dirrmOpenWindow();
++  if(e.target.closest('#dirrmReload')) return dirrmPlayHere();
++  if(e.target.closest('#dirrmClose')) return dirrmClose();
++});
++document.addEventListener('keydown', e=>{
++  if((e.metaKey||e.ctrlKey) && e.key.toLowerCase()==='m'){
++    const url = document.getElementById('dirrmUrl');
++    if(url){ e.preventDefault(); url.focus(); }
++  }
++});
+ 
+ // view toggle (Active / Archive)
+ document.querySelectorAll('.view-tabs .vt').forEach(b=>{
+*** End Patch

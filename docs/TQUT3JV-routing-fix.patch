@@ -1,0 +1,51 @@
+--- home/vinta/.claude/council-loop/lib/llm-router.js
++++ home/vinta/.claude/council-loop/lib/llm-router.js
+@@ -331,10 +331,14 @@
+   writeJSONAtomic(HISTORY_PATH, h);
+ }
+ 
+-/** Laplace-smoothed success rate; unknown providers sit at a neutral 0.5. */
++/** Laplace-smoothed success rate; unknown/recovered providers sit at neutral 0.5. */
+ function successRate(kind, provider) {
+   const p = ((historyStats().kinds[kind] || {})[provider]) || null;
+   if (!p) return 0.5;
++  const hp = (health().providers || {})[provider] || null;
++  if (hp && hp.last_ok_at && p.last_at && hp.last_ok_at > p.last_at) {
++    return 0.5;
++  }
+   return (p.ok + 1) / (p.ok + p.fail + 2);
+ }
+ 
+--- home/vinta/.claude/council-loop/config/providers.json
++++ home/vinta/.claude/council-loop/config/providers.json
+@@ -372,6 +372,7 @@
+     "code": {
+       "signals": [
+         "\\bimplement\\b",
++        "\\badd\\b",
+         "\\bcode\\b",
+         "\\brefactor\\b",
+         "\\bfunction\\b",
+@@ -379,6 +380,10 @@
+         "\\bfix\\b",
+         "\\bapi\\b",
+         "\\bendpoint\\b",
++        "\\bextension\\b",
++        "\\bchrome\\b",
++        "\\bkickbot\\b",
++        "\\btts\\b",
+         "\\bcompile\\b",
+         "\\btypescript\\b",
+         "\\bjavascript\\b",
+--- home/vinta/.claude/council-loop/bin/council-driver.sh
++++ home/vinta/.claude/council-loop/bin/council-driver.sh
+@@ -560,6 +560,9 @@
+       # Provider-level failure? (either the CLI itself errored, or the text says outage)
+       PROVIDER_FAILED=""
+       if [ "$RC" -ne 0 ] && [ "$RC" -ne 124 ]; then PROVIDER_FAILED="rc=$RC"; fi
++      if [ "${FTOK:-0}" -le 0 ] 2>/dev/null && [ -z "$(printf '%s' "$OUT" | tr -d '[:space:]')" ]; then
++        PROVIDER_FAILED="empty-output"
++      fi
+       if echo "$OUT" | grep -qiE "out of usage credits|usage limit|session limit|credit balance is too low|rate.?limit.*reset|insufficient.?(quota|credit)|RESOURCE_EXHAUSTED|not logged in|invalid.?api.?key"; then
+         PROVIDER_FAILED="outage"
+       fi

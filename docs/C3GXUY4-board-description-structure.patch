@@ -1,0 +1,60 @@
+*** Begin Patch
+*** Update File: /home/vinta/.claude/council-loop/bin/vintask-gui.html
+@@
+-  .task .detail-line{margin-top:var(--sp2);font-size:12px;color:var(--dim);line-height:1.5;word-break:break-word}
++  .task .detail-line{margin-top:var(--sp2);font-size:12px;color:var(--dim);line-height:1.5;word-break:break-word}
++  .task .detail-line p{margin:0 0 4px}.task .detail-line p:last-child{margin-bottom:0}
++  .task .detail-line .md-ul,.task .detail-line .md-ol{margin:3px 0 0;padding-left:18px}
++  .task .detail-line li{margin:1px 0}
+@@
+-  .upd-detail{font-size:12px;line-height:1.55;color:var(--dim);overflow-wrap:anywhere}
++  .upd-detail{font-size:12px;line-height:1.55;color:var(--dim);overflow-wrap:anywhere}
++  .upd-detail p{margin:0 0 4px}.upd-detail p:last-child{margin-bottom:0}
++  .upd-detail .md-ul,.upd-detail .md-ol{margin:3px 0 0;padding-left:18px}
+@@
+ function prettyDesc(src){
+   let s = String(src||'');
+   s = s.replace(/—\s*added by Lord Vinta\s*([0-9T :\-]*)\s*—/gi,
+@@
+   return s.trim();
+ }
++function structurePlainText(src){
++  let s = String(src||'');
++  if(!s.trim()) return '';
++  s = s.replace(/\r\n?/g,'\n');
++  s = s.replace(/([^\n])\s+(✓\s*[A-Z][^?\n]{3,}\?)\s*/g,'$1\n\n## $2\n');
++  s = s.replace(/([^\n✓])\s+(WHAT DO I NEED TO DO\?)\s*/gi,'$1\n\n## $2\n');
++  s = s.replace(/\s+(DECISION|QUESTION|BLOCKER|BLOCKED|NOTE|WARNING|TODO|STATUS|ANSWER|BUILT|DEPLOYED|LIVE|FIXED|VERIFY|VERIFIED|ACCEPTANCE|RESULT):/gi,'\n\n$1:');
++  s = s.replace(/\s+(--progress|--percent|--chosen|--detail|--acceptance|--agent|--project|--priority)\b/g,'\n- `$1`');
++  s = s.replace(/\s+(\((?:a|b|c|d|e|[1-9])\))/gi,'\n- $1');
++  s = s.replace(/\s+((?:[1-9]|[a-eA-E])[\)\.])\s+(?=\S)/g,'\n$1 ');
++  s = s.replace(/([.!?])\s+(?=(?:[A-Z][a-z]|✓|DECISION|QUESTION|NOTE|WARNING|TODO|STATUS|ANSWER|VERIFY|VERIFIED)\b)/g,'$1\n');
++  return s.replace(/\n{3,}/g,'\n\n').trim();
++}
+ function md(src){
+   if(!src) return '';
+-  let s = esc(String(src));
+-  // PROSE STRUCTURING: if a seat wrote one giant unbroken wall (no newlines, no
+-  // markdown), break it into readable segments — at (a)/(b) options, QUESTION:,
+-  // and sentence boundaries — so ANY message reads cleanly, not just markdown.
+-  if(!/\n/.test(s) && s.length>240){
+-    s = s
+-      .replace(/\s(\((?:a|b|c|d|[1-9])\))/g,'\n- $1')           // options -> list items
+-      .replace(/\s(QUESTION|BLOCKER|NOTE|WARNING|TODO|STATUS|ANSWER):/gi,'\n\n$1:') // labels -> new block
+-      .replace(/([.:])\s+(?=[A-Z(])/g,'$1\n');                   // sentence boundaries -> line breaks
+-  }
++  let s = esc(structurePlainText(src));
+@@
+-      : t.status==='blocked' ? `<div class="why blocked">⛔ ${esc(t.blocked_reason||'blocked')}</div>`
+-      : t.needs ? `<div class="why">⚠ ${esc(t.needs)}</div>` : '';
++      : t.status==='blocked' ? `<div class="why blocked md">⛔ ${md(t.blocked_reason||'blocked')}</div>`
++      : t.needs ? `<div class="why md">⚠ ${md(t.needs)}</div>` : '';
+@@
+-      ${t.detail?`<div class="detail-line">${esc(t.detail).slice(0,160)}</div>`:''}
++      ${t.detail?`<div class="detail-line md">${md(String(t.detail).slice(0,260))}</div>`:''}
+@@
+-    const detail = (!isDirect && e.detail)
+-      ? `<div class="upd-detail">${updMark(esc(e.detail), UPD.q)}</div>` : '';
++    const detail = (!isDirect && e.detail)
++      ? `<div class="upd-detail md">${updMark(md(e.detail), UPD.q)}</div>` : '';
+*** End Patch

@@ -1,0 +1,73 @@
+*** Begin Patch
+*** Update File: /home/vinta/vintinuum-extension/background.js
+@@
+ let _wakeKickAttempts = 0;
+ let _wakeKickTimer = null;
++let _lastAmbientWakeAt = 0;
++
++async function _openVoicePanelForWake(text) {
++  const prompt = String(text || '').trim();
++  const payload = { text: prompt, ts: Date.now(), source: 'wake-word' };
++  try { await chrome.storage.local.set({ vint_pending_voice_prompt: payload }); } catch (_) {}
++  chrome.tabs.query({ active: true, currentWindow: true }, async (tabs) => {
++    const tab = tabs && tabs[0];
++    if (tab && tab.id && tab.url && !tab.url.startsWith('chrome://') && !tab.url.startsWith('chrome-extension://')) {
++      try { await chrome.sidePanel.open({ tabId: tab.id }); } catch (_) {}
++    }
++    chrome.runtime.sendMessage({ type: 'VINT_AMBIENT_PROMPT', text: prompt, ts: payload.ts }, () => { void chrome.runtime.lastError; });
++  });
++}
++
+ function kickWake() {
+@@
+     // From offscreen doc -> relay to tabs/popup
+     if (['VINT_WAKE_TRIGGERED','VINT_WAKE_RUNNING','VINT_WAKE_SR_UNAVAILABLE','VINT_MIC_STARTED','VINT_MIC_INTERIM','VINT_MIC_FINAL','VINT_MIC_ERROR','VINT_MIC_DENIED','VINT_MIC_GRANTED'].includes(msg.type)) {
++      if (msg.type === 'VINT_WAKE_TRIGGERED') {
++        _lastAmbientWakeAt = Date.now();
++        _openVoicePanelForWake(msg.afterWake || '');
++      } else if (msg.type === 'VINT_MIC_FINAL' && Date.now() - _lastAmbientWakeAt < 10000) {
++        _openVoicePanelForWake(msg.text || '');
++        _lastAmbientWakeAt = 0;
++      }
+       // WAKE_TRIGGERED and MIC_FINAL/MIC_INTERIM -> broadcast to ALL tabs so any open tab can respond
+*** Update File: /home/vinta/vintinuum-extension/sidepanel/panel.js
+@@
+   async function sendMessage() {
+@@
+   }
++
++  function submitAmbientVoicePrompt(text) {
++    const prompt = String(text || '').trim();
++    document.querySelector('[data-tab="chat"]')?.click();
++    if (!prompt) {
++      input.focus();
++      return;
++    }
++    input.value = prompt;
++    input.dispatchEvent(new Event('input'));
++    VOICE.setState('thinking');
++    VOICE.armSpeakReply();
++    sendMessage();
++  }
++
++  chrome.storage.local.get(['vint_pending_voice_prompt'], (r) => {
++    const pending = r && r.vint_pending_voice_prompt;
++    if (!pending || Date.now() - (pending.ts || 0) > 30000) return;
++    chrome.storage.local.remove(['vint_pending_voice_prompt']);
++    setTimeout(() => submitAmbientVoicePrompt(pending.text || ''), 120);
++  });
+@@
+   chrome.runtime.onMessage.addListener((msg, sender) => {
+@@
+     if (msg.type && (msg.type.startsWith('VINT_MIC_') || msg.type.startsWith('VINT_VOICE_'))) {
+       VOICE.handle(msg);
+     }
++    if (msg.type === 'VINT_AMBIENT_PROMPT') {
++      submitAmbientVoicePrompt(msg.text || '');
++    }
+   });
+@@
+-    return { setState, toIdle, speak, handle, shouldSpeakReply, consumeSpeakReply, rememberReply, isThinking: () => state === 'thinking' };
++    return { setState, toIdle, speak, handle, armSpeakReply, shouldSpeakReply, consumeSpeakReply, rememberReply, isThinking: () => state === 'thinking' };
+   })();
+*** End Patch
