@@ -550,7 +550,7 @@ body {
 
 <script src="body/api_base.js"></script>
 <script src="body/voice_say.js?v=v20260626-unlock"></script>
-<script src="body/kick_tts.js?v=v20260616-kicktts"></script>
+<script src="body/kick_tts.js?v=v20260817-repeat-hardstop-persist"></script>
 <script src="body/draggable.js"></script>
 <script src="body/mobile_nav.js?v=v20260505-onedoor" defer></script>
 <script>
@@ -1370,5 +1370,7 @@ initEnroll();
 setInterval(loadAll, 30000);
 </script>
   <script src="body/welcome-gate.js"></script>
+<!-- VOICE — the canonical spine, one tag (body/voice.js). tier=full -->
+<script defer src="body/voice.js?v=v20260818-onevoice" data-tier="full"></script>
 </body>
 </html>

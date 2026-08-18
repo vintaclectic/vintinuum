@@ -399,5 +399,13 @@
   })();
 </script>
   <script src="body/welcome-gate.js"></script>
+<!-- THE FUNNEL (task TAS22T8): emitter + the in-app return touch. -->
+<script src="body/funnel.js?v=v20260817-tas22t8"></script>
+<script defer src="body/return_loop.js?v=v20260817-tas22t8"></script>
+<!-- VOICE — the canonical spine (body/voice.js). This page already carries
+     hand-rolled voice tags above; the bundle SKIPS every filename already
+     present and only fills the gaps (convo_state / voice_out / voice_kill),
+     so nothing here double-mounts and nothing that worked regresses. -->
+<script defer src="body/voice.js?v=v20260818-onevoice" data-tier="full"></script>
 </body>
 </html>

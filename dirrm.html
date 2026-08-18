@@ -1267,5 +1267,10 @@
   updateNav();
 })();
 </script>
+<!-- api_base.js — canonical brain resolver. voice.js and every other
+     module resolves the API through window.__VINTINUUM_API_BASE. -->
+<script src="body/api_base.js?v=v20260818-onevoice"></script>
+<!-- VOICE — the canonical spine, one tag (body/voice.js). tier=mute -->
+<script defer src="body/voice.js?v=v20260818-onevoice" data-tier="mute"></script>
 </body>
 </html>
