@@ -26,7 +26,15 @@
   if (document.documentElement.dataset.perception === 'off') return;
 
   function apiBase() {
-    if (window.VINT_API) return window.VINT_API;
+    // Canonical resolver (body/api_base.js) FIRST. It owns ?api= overrides and
+    // LAN-IP/local-network detection. The legacy `window.VINT_API` below is a
+    // name nothing in the repo ever set — reading it first meant this module
+    // silently ignored api_base.js and fell through to its own guesswork.
+    if (window.__VINTINUUM_API_BASE) return window.__VINTINUUM_API_BASE;
+    if (window.VINTINUUM_API) return window.VINTINUUM_API;
+    if (window.__VINT_API) return window.__VINT_API;
+    if (window.VINT_API) return window.VINT_API;            // legacy, never set
+    if (window.VINT_API_BASE) return window.VINT_API_BASE;  // legacy, never set
     if (document.documentElement.dataset.api) return document.documentElement.dataset.api;
     if (location.hostname === 'localhost' || location.hostname === '127.0.0.1') {
       return 'http://localhost:8767';

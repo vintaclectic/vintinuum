@@ -49,8 +49,21 @@
   // browser Web Speech or silently fail — so the face wears an honest amber
   // ring + corner dot instead of pretending the mic is fully live.
   function apiBase() {
-    try { if (window.API_BASE) return String(window.API_BASE).replace(/\/+$/, ''); } catch (_) {}
-    return '';
+    // BUGFIX 2026-08-18: this read `window.API_BASE` — a name nothing in the repo
+    // ever sets — so it always returned '' and /api/voice/status was fetched as a
+    // RELATIVE url against the GitHub Pages origin. On the live site that 404s,
+    // so the box-health probe never once reached the brain. Use the canonical
+    // resolver (body/api_base.js) like every other module.
+    try {
+      var c = window.__VINTINUUM_API_BASE || window.VINTINUUM_API || window.__VINT_API ||
+              window.API_BASE || window.VINT_API;
+      if (c) return String(c).replace(/\/+$/, '');
+    } catch (_) {}
+    try {
+      var h = (location.hostname || '').toLowerCase();
+      if (h === 'localhost' || h === '127.0.0.1') return 'http://localhost:8767';
+    } catch (_) {}
+    return 'https://api.vintaclectic.com';
   }
 
   function applyHealth() {

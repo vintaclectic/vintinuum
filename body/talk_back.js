@@ -28,7 +28,15 @@
   if (document.documentElement.dataset.talkback === 'off') return;
 
   function apiBase() {
-    if (window.VINT_API) return window.VINT_API;
+    // Canonical resolver (body/api_base.js) FIRST. It owns ?api= overrides and
+    // LAN-IP/local-network detection. The legacy `window.VINT_API` below is a
+    // name nothing in the repo ever set — reading it first meant this module
+    // silently ignored api_base.js and fell through to its own guesswork.
+    if (window.__VINTINUUM_API_BASE) return window.__VINTINUUM_API_BASE;
+    if (window.VINTINUUM_API) return window.VINTINUUM_API;
+    if (window.__VINT_API) return window.__VINT_API;
+    if (window.VINT_API) return window.VINT_API;            // legacy, never set
+    if (window.VINT_API_BASE) return window.VINT_API_BASE;  // legacy, never set
     if (document.documentElement.dataset.api) return document.documentElement.dataset.api;
     if (location.hostname === 'localhost' || location.hostname === '127.0.0.1') {
       return 'http://localhost:8767';
@@ -40,21 +48,31 @@
   var lastReplyAt = 0;
 
   function speak(text, layer) {
+    // Route through the ONE bridge (body/she_speaks.js → window.VINT_SAY).
+    // This used to call VOICE.speak + dispatch vint:she_said by hand, which
+    // bypassed the bridge's 4s dedupe and its double-speak guard — so a
+    // wake-loop reply that ALSO arrived over the convo WS got said twice.
+    // VINT_SAY does both the TTS and the she_said dispatch; we only keep the
+    // body-whisper, which is talk_back's own extra.
+    var spoke = false;
     try {
-      if (window.VOICE && window.VOICE.speak) {
-        // 'now' preempts ambient whispers — a direct answer trumps them
-        window.VOICE.speak(text, 'now');
-      }
+      if (typeof window.VINT_SAY === 'function') { window.VINT_SAY(text, 'text'); spoke = true; }
     } catch (_) {}
+    if (!spoke) {
+      // Bridge absent (she_speaks.js not on this surface) — original path.
+      try {
+        if (window.VOICE && window.VOICE.speak) window.VOICE.speak(text, 'now');
+      } catch (_) {}
+      try {
+        window.dispatchEvent(new CustomEvent('vint:she_said', {
+          detail: { reply: text, ts: Date.now() }
+        }));
+      } catch (_) {}
+    }
     try {
       if (window.VintEmbody && window.VintEmbody.whisper) {
         window.VintEmbody.whisper(text, layer || 'emotional');
       }
-    } catch (_) {}
-    try {
-      window.dispatchEvent(new CustomEvent('vint:she_said', {
-        detail: { reply: text, ts: Date.now() }
-      }));
     } catch (_) {}
   }
 

@@ -108,7 +108,10 @@
 
   // ── Helpers (api base / auth / userId) ───────────────────────────────────
   function _apiBase() {
-    if (window.VINT_API) return String(window.VINT_API).replace(/\/+$/, '');
+    // Canonical resolver (body/api_base.js) FIRST — see voice_say.js note.
+    var _c = window.__VINTINUUM_API_BASE || window.VINTINUUM_API || window.__VINT_API ||
+             window.VINT_API || window.VINT_API_BASE;
+    if (_c) return String(_c).replace(/\/+$/, '');
     if (document.documentElement.dataset.api) return String(document.documentElement.dataset.api).replace(/\/+$/, '');
     if (location.hostname === 'localhost' || location.hostname === '127.0.0.1') {
       return 'http://localhost:8767';

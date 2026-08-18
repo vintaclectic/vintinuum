@@ -23,7 +23,9 @@
   function api() {
     if (window.SOUL_AUTH && window.SOUL_AUTH.api) return window.SOUL_AUTH.api();
     if (window.__VINTINUUM_API_BASE) return window.__VINTINUUM_API_BASE;
-    if (window.VINT_API_BASE) return window.VINT_API_BASE;
+    if (window.VINTINUUM_API) return window.VINTINUUM_API;
+    if (window.__VINT_API) return window.__VINT_API;
+    if (window.VINT_API_BASE) return window.VINT_API_BASE;  // legacy, never set
     var h = (location.hostname || '').toLowerCase();
     if (h === 'localhost' || h === '127.0.0.1' || h === '0.0.0.0') return 'http://localhost:8767';
     return 'https://api.vintaclectic.com';

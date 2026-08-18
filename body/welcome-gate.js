@@ -56,7 +56,11 @@
 
   // ── config ──────────────────────────────────────────────────────────────
   var API_BASE = (function () {
-    try { if (window.VINT_API_BASE) return window.VINT_API_BASE; } catch (_) {}
+    try {
+      var c = window.__VINTINUUM_API_BASE || window.VINTINUUM_API || window.__VINT_API ||
+              window.VINT_API_BASE;
+      if (c) return String(c).replace(/\/+$/, '');
+    } catch (_) {}
     return (location.hostname === 'localhost' || location.hostname === '127.0.0.1')
       ? 'http://localhost:8767' : 'https://api.vintaclectic.com';
   })();
