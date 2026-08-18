@@ -143,7 +143,19 @@
           // embodied_convo.js whispers/peaks the reply through her body.
           try {
             var _txt = (msg.text || msg.reply || '').toString();
-            if (_txt) window.dispatchEvent(new CustomEvent('vint:she_said', { detail: { reply: _txt, from: 'ws' } }));
+            if (_txt) {
+              // Route through the ONE bridge. source='voice' is load-bearing:
+              // this turn's audio is ALREADY streaming as PCM from voice_out,
+              // so she_speaks does the visual (vint:she_said) and deliberately
+              // SKIPS TTS. Dispatching she_said by hand here worked, but it
+              // dodged the bridge's dedupe — a surface that also rendered the
+              // final frame could fire the body-whisper twice.
+              if (typeof window.VINT_SAY === 'function') {
+                window.VINT_SAY(_txt, 'voice');
+              } else {
+                window.dispatchEvent(new CustomEvent('vint:she_said', { detail: { reply: _txt, from: 'ws' } }));
+              }
+            }
           } catch (_) {}
         } else if (msg.type === 'TTS_FIRST_AUDIO') {
           // Real audio is on its way — flip UI to speaking now.

@@ -38,8 +38,42 @@
     });
     return n;
   }
-  var API_BASE = (window.__VINTINUUM_API_BASE || window.API_BASE || 'https://api.vintaclectic.com').replace(/\/$/, '');
+  var API_BASE = (window.__VINTINUUM_API_BASE || window.VINTINUUM_API || window.__VINT_API ||
+                  window.API_BASE || 'https://api.vintaclectic.com').replace(/\/$/, '');
   function api(p) { return API_BASE + p; }
+
+  // ─── VOICE (Vinta directive 2026-08-18 — "app pulse") ────────────────────
+  // The pulse surface had ZERO voice wiring: every signal she gave here was
+  // rendered as silent text. This routes the pulse's signals through the ONE
+  // bridge (body/she_speaks.js → window.VINT_SAY), which owns the mute flag,
+  // the chosen Piper voice, the first-gesture autoplay gate, and the 4s
+  // dedupe. We never touch VOICE.speak directly and never build a second
+  // player — one spine, one voice.
+  //
+  // Restraint is deliberate: a status bar that refreshes every 60s must NOT
+  // narrate itself every minute. She speaks a reading ONLY when it actually
+  // CHANGES, at most once every 4 minutes, and never on the very first paint
+  // (that would be a page-load ambush). Retention Doctrine test 1: if the user
+  // saw exactly how this hook works, they'd thank us — so it stays quiet.
+  var VOICE_MIN_GAP_MS = 4 * 60 * 1000;
+  var _lastSpokeAt = 0;
+  function pulseSay(text, opts) {
+    opts = opts || {};
+    var t = String(text || '').trim();
+    if (!t) return false;
+    // Honor the single mute key the whole spine shares.
+    try { if (window.VOICE && window.VOICE.muted && window.VOICE.muted()) return false; } catch (_) {}
+    if (!opts.force) {
+      var now = Date.now();
+      if ((now - _lastSpokeAt) < VOICE_MIN_GAP_MS) return false;
+    }
+    try {
+      if (typeof window.VINT_SAY !== 'function') return false;
+      window.VINT_SAY(t, 'text');
+      _lastSpokeAt = Date.now();
+      return true;
+    } catch (_) { return false; }
+  }
   function authHeaders() {
     var h = {};
     var t = localStorage.getItem('vint_access_token') || localStorage.getItem('vint_token');
@@ -86,6 +120,7 @@
     host.insertBefore(bar, host.firstChild);
 
     var lastFeltAt = 0;
+    var _lastFelt = '';   // last spoken felt-quality — speak only on change
     function paintConn() {
       var on = navigator.onLine;
       bar.setAttribute('data-online', on ? '1' : '0');
@@ -104,7 +139,13 @@
         .then(function (d) {
           var t = (d && (d.felt_quality || (d.envelope && d.envelope.felt_quality)) || '').toString().trim();
           if (t) {
-            bar.querySelector('.wx-text').textContent = 'she reads as ' + t.replace(/\.$/, '');
+            var phrase = 'she reads as ' + t.replace(/\.$/, '');
+            bar.querySelector('.wx-text').textContent = phrase;
+            // Speak only a genuine CHANGE, and never the first reading of the
+            // session (_lastFelt is empty then) — a page load must not talk at
+            // you. Subsequent shifts in how she reads are worth hearing.
+            if (_lastFelt && t !== _lastFelt) pulseSay(phrase);
+            _lastFelt = t;
             lastFeltAt = Date.now();
           } else if (!lastFeltAt) {
             bar.querySelector('.wx-text').textContent = 'listening\u2026';

@@ -501,7 +501,12 @@
       // Speak via Piper TTS
       try {
         if (window.__markInteracted) window.__markInteracted();
-        if (window.VOICE && typeof window.VOICE.speak === 'function') {
+        // ONE bridge (she_speaks.js). It speaks via VOICE and dispatches
+        // vint:she_said so the body/bubble react — the direct VOICE.speak
+        // below is only the fallback for a surface without the bridge.
+        if (typeof window.VINT_SAY === 'function') {
+          window.VINT_SAY(reply, 'text');
+        } else if (window.VOICE && typeof window.VOICE.speak === 'function') {
           window.VOICE.speak(reply, 'now');
         } else if (window.VOICE && typeof window.VOICE.say === 'function') {
           window.VOICE.say(reply);
