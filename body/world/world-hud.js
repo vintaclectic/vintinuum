@@ -366,6 +366,7 @@
     document.head.appendChild(s);
   }
 
+  var _ro = null;
   var _el = null, _resident = null, _living = null, _tendBusy = false, _tendT = null;
 
   function mount() {
@@ -402,6 +403,15 @@
       '</div>';
     document.body.appendChild(el);
     _el = el;
+    // attach the self-healing height observer to the real panel (see the note
+    // beside the resize listeners). _el is null until this line, so observing
+    // it any earlier would silently watch nothing.
+    try {
+      if (W.ResizeObserver && !_ro) {
+        _ro = new W.ResizeObserver(function () { publishBottom(); });
+        _ro.observe(_el);
+      }
+    } catch (_) {}
 
     el.querySelector('#whClaim').onclick = function () { try { world().claimHere(); } catch (_) {} };
     el.querySelector('#whHarvest').onclick = function () { try { world().harvest(); } catch (_) {} };
@@ -475,6 +485,16 @@
             '--wh-hint-need', (hh > 0 ? Math.round(hh) + 12 : 0) + 'px');
         } catch (_) {}
       } catch (_) {}
+      // ORDER MATTERS HERE TOO. The two reservations written just above
+      // (--wh-rail-need, --wh-hint-need) both feed --wh-reserve, which IS this
+      // panel's own max-height (see the stylesheet). Measuring our bottom in the
+      // same task that wrote them returned the PRE-reservation box, so we
+      // published a bottom that was up to 21px short of the real one — and #hint,
+      // which derives its top from exactly this number, landed inside the panel
+      // (measured 224x21 at 1280, 224x9 at 768). Flush the style write before
+      // reading our own geometry, the same one-line discipline the hint flush
+      // below already uses. This is the panel obeying the rule it publishes.
+      try { if (_el) void _el.offsetHeight; } catch (_) {}
       try {
         var b = 274;
         if (_el) {
@@ -497,6 +517,23 @@
   }
   W.addEventListener('resize', publishBottom);
   W.addEventListener('orientationchange', publishBottom);
+
+  // ── OBSERVE THE PANEL, DON'T ONLY LISTEN FOR THE EVENTS WE REMEMBERED ──────
+  // Every publishBottom() above is a hand-placed call at a moment we PREDICTED
+  // the panel changes height. The vigil broke that prediction: it grows the
+  // panel from async state (watchers arriving, the homecoming's delayed reveal,
+  // web-font settle), so the panel's final growth landed AFTER the last call we
+  // wrote. The published bottom then stayed frozen at the pre-growth number
+  // (measured: published 314 while the panel really ended at 347 — a 33px lie),
+  // and #hint, which faithfully derives its top from it, was pulled 21px INSIDE
+  // the panel. The bug was never a bad measurement; it was a measurement that
+  // never got retaken.
+  //
+  // A ResizeObserver removes the guesswork permanently: the panel's own box
+  // tells us when it changed, so the contract self-heals for every future organ
+  // that grows this panel without knowing publishBottom exists. This is the
+  // No-Collision Law made structural rather than remembered.
+  // (the observer itself is attached at mount, where the panel exists — see _el)
 
   function _toast(t) { var n = _el && _el.querySelector('#whToast'); if (n) n.textContent = t; }
 
