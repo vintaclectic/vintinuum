@@ -1459,6 +1459,20 @@
           this._attachSelfView(ls || null);
         } else if (action === 'setMode') {
           this.setMode(mode);
+        } else if (action === 'queryState') {
+          // PLAYBACK GUARD contract (Vinta directive 2026-08-19, task P3HVHZJ):
+          // brain.js snapshots what is playing before engaging the mic so that
+          // opening the mic can never silently kill Vinta's song. The player is
+          // the only thing that knows its own transport state, so it answers.
+          try {
+            const el = this.mediaElement;
+            const live = el ? (!el.paused && !el.ended) : !!this.isPlaying;
+            (event.source || window.parent)?.postMessage({
+              action: 'playbackState',
+              isPlaying: live,
+              hasMedia: !!el,
+            }, '*');
+          } catch {}
         } else if (action === 'play') {
           this.play();
         } else if (action === 'pause') {
