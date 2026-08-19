@@ -122,6 +122,16 @@
       font-size: 11px;
       color: var(--dirrm-text-muted);
       letter-spacing: 0.04em;
+      /* Its sibling .dirrm-title has had nowrap+ellipsis since day one; this one
+         never did. At 320-375px "Offline on Kick" / "12,481 watching on Kick"
+         wrapped to three lines and shoved the window-control buttons out of the
+         titlebar — a real No-Collision violation, found while shipping K3NUPWK.
+         Flex children default to min-width:auto and refuse to shrink below their
+         content, so min-width:0 is the load-bearing half of this fix. */
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      min-width: 0;
     }
 
     .dirrm-titlebar-right {
@@ -471,6 +481,154 @@
     .dirrm-info-btn:hover {
       background: linear-gradient(135deg, rgba(245, 166, 35, 0.4), rgba(245, 166, 35, 0.2));
       transform: translateY(-1px);
+    }
+
+    /* ============================================
+       OFFLINE CARD (task K3NUPWK)
+       ============================================
+       An offline Kick channel must never read as a broken player. Everything
+       here is inside .dirrm-info-card-inner, which is already max-width:420px /
+       min-width:0 / text-align:center inside an absolute inset:0 overflow:auto
+       parent — so this content scrolls INTERNALLY and cannot touch the titlebar,
+       the transport bar or the host frame's chrome at any size. */
+
+    /* The icon is an inline SVG here rather than an emoji glyph, so it is sized
+       by the box, not by font-size. Centred on its own line — never beside text. */
+    .dirrm-offline-card .dirrm-info-icon {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      color: var(--dirrm-gold);
+      line-height: 0;
+    }
+    .dirrm-offline-card .dirrm-info-icon svg {
+      width: clamp(30px, 9vw, 46px);
+      height: clamp(30px, 9vw, 46px);
+      display: block;
+    }
+    @media (max-height: 320px) {
+      .dirrm-offline-card .dirrm-info-icon svg { width: 26px; height: 26px; }
+    }
+
+    /* The channel name is the loudest thing on the card — it answers "who?".
+       clamp() because this card renders in everything from a 320px phone to a
+       1920px theater window (mobile-first mandate: no fixed px type). */
+    .dirrm-offline-channel {
+      font-size: clamp(1.05rem, 4.2vw, 1.6rem);
+      line-height: 1.2;
+      font-weight: 700;
+      color: var(--dirrm-gold);
+      margin-bottom: 4px;
+      /* A 64-char channel slug is legal on Kick. Without this it would blow the
+         420px box apart — No-Collision Law, the unbroken-token case. */
+      overflow-wrap: anywhere;
+      word-break: break-word;
+    }
+
+    /* "Not live right now" — the sentence that does the actual job. */
+    .dirrm-offline-headline {
+      font-size: clamp(0.85rem, 2.8vw, 1rem);
+      font-weight: 600;
+      letter-spacing: 0.02em;
+      color: var(--dirrm-text, #f0e6d3);
+      margin-bottom: 10px;
+      overflow-wrap: anywhere;
+    }
+
+    .dirrm-offline-card .dirrm-info-meta {
+      /* Body copy reads as prose, not as an error string. */
+      letter-spacing: 0;
+      line-height: 1.5;
+      font-size: clamp(0.72rem, 2.4vw, 0.8rem);
+      margin-bottom: 14px;
+    }
+
+    /* The countdown is a promise being kept in public: it proves the player is
+       alive and working rather than hung. Tabular numerals so the text does not
+       reflow (and nudge the buttons) once per second. */
+    .dirrm-offline-countdown {
+      display: block;
+      margin: 0 auto 14px;
+      padding: 7px 12px;
+      border-radius: 999px;
+      background: rgba(245, 166, 35, 0.08);
+      border: 1px solid var(--dirrm-border);
+      color: var(--dirrm-gold);
+      font-size: clamp(0.68rem, 2.2vw, 0.76rem);
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      font-variant-numeric: tabular-nums;
+      /* Own line, own box — never shares pixels with the buttons below it. */
+      width: fit-content;
+      max-width: 100%;
+    }
+
+    /* SHORT-FRAME SURVIVAL. The council task board docks this player in frames
+       as short as ~98px. The card must degrade gracefully rather than clip: the
+       channel name and the "not live" line are the two things that must survive
+       to the very last pixel, so the prose and icon yield first. Same tier
+       thresholds as the chrome compression above — nothing overlaps, elements
+       are only removed from flow and the survivors re-stack normally. */
+    @media (max-height: 320px) {
+      .dirrm-offline-card .dirrm-info-card-inner { padding: 14px 16px; }
+      .dirrm-offline-card .dirrm-info-icon { font-size: 26px; margin-bottom: 6px; }
+      .dirrm-offline-card .dirrm-info-meta { margin-bottom: 10px; }
+    }
+    @media (max-height: 220px) {
+      .dirrm-offline-card .dirrm-info-icon { display: none; }
+      .dirrm-offline-card .dirrm-info-meta { display: none; }
+      .dirrm-offline-card .dirrm-info-card-inner { padding: 10px 12px; }
+      .dirrm-offline-countdown { margin-bottom: 8px; padding: 5px 10px; }
+    }
+    @media (max-height: 140px) {
+      /* Bare minimum truth: WHO, that they're offline, and the way out. */
+      .dirrm-offline-card { padding: 6px; align-items: center; }
+      .dirrm-offline-card .dirrm-info-card-inner { padding: 7px 10px; background: none; border: none; }
+      .dirrm-offline-card .dirrm-offline-channel { font-size: 0.9rem; margin-bottom: 2px; }
+      .dirrm-offline-card .dirrm-offline-headline { font-size: 0.72rem; margin-bottom: 6px; }
+      .dirrm-offline-countdown { display: none; }
+      .dirrm-offline-card .dirrm-info-btn { min-height: 32px; padding: 5px 12px; font-size: 11px; }
+    }
+
+    /* Tier 4 — the ~98px board dock, the shortest frame we actually ship into.
+       At this height even the tier-3 stack needs one more squeeze, so the card
+       goes to a single centred ROW: name + state on the left, the two actions on
+       the right. Still zero overlap — it's a flex row with a real gap, and the
+       text column gets min-width:0 so a long slug ellipsizes instead of shoving
+       the buttons out of the frame. */
+    @media (max-height: 108px) {
+      .dirrm-offline-card { padding: 4px 8px; }
+      .dirrm-offline-card .dirrm-info-card-inner {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 12px;
+        padding: 2px 4px;
+        text-align: left;
+        max-width: 100%;
+      }
+      /* Only two children may exist in the row: the text column and the actions.
+         The icon, prose and countdown are already gone by tier 2/3, but pin them
+         here too so this tier is correct on its own terms. */
+      .dirrm-offline-card .dirrm-info-icon,
+      .dirrm-offline-card .dirrm-info-meta,
+      .dirrm-offline-card .dirrm-offline-countdown { display: none !important; }
+      .dirrm-offline-card .dirrm-offline-text { min-width: 0; }
+      .dirrm-offline-card .dirrm-offline-channel {
+        font-size: 0.8rem; margin-bottom: 0;
+        white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+      }
+      .dirrm-offline-card .dirrm-offline-headline {
+        font-size: 0.66rem; margin-bottom: 0;
+        white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+      }
+      .dirrm-offline-card .dirrm-info-actions { flex-wrap: nowrap; flex-shrink: 0; }
+      .dirrm-offline-card .dirrm-info-btn { min-height: 28px; padding: 4px 10px; font-size: 10px; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .dirrm-info-btn { transition: none; }
+      .dirrm-info-btn:hover { transform: none; }
     }
 
     /* Type badge in title bar */
@@ -2133,6 +2291,12 @@
           this._histIndex = this._history.length - 1;
         }
         this._updateNavButtons && this._updateNavButtons();
+
+        // Kill any armed offline auto-retry. The card is removed just below, but
+        // the countdown/timer are owned by the player, so without this an offline
+        // channel the user has already navigated away from would fire a retry and
+        // yank the surface back (task K3NUPWK).
+        this._clearOfflineRetry();
 
         // Clear any prior media + injected containers (including error cards, live overlays)
         this.mediaContainer.querySelectorAll(
@@ -3936,14 +4100,27 @@
           const resp = await fetch(endpoint, { credentials: 'include' });
           data = await resp.json();
         } catch (e) {
-          return this._showLiveOfflineCard(url, channel, 'Could not reach the brain API to resolve this Kick stream. Is the brain running?');
+          // The brain is unreachable — that is OUR fault, not the streamer's.
+          // Passing `unreachable` keeps the card from claiming the channel is
+          // offline when we simply never got to ask (task K3NUPWK).
+          return this._showLiveOfflineCard(url, channel, 'Could not reach the brain API to resolve this Kick stream. Is the brain running?', 'unreachable');
         }
 
         if (!data || !data.ok || !data.streamUrl) {
           const msg = (data && data.message)
             || 'Could not resolve this Kick stream.';
-          return this._showLiveOfflineCard(url, channel, msg);
+          // /api/stream/kick-live answers with a precise error code:
+          //   not_live  → the channel exists and simply isn't streaming
+          //   no_channel→ no such channel on Kick (a typo, or renamed)
+          //   resolve_failed / bad_channel → our side failed to ask
+          // Collapsing all of these into one grey "something went wrong" card is
+          // exactly what made an offline channel read as a broken player.
+          return this._showLiveOfflineCard(url, channel, msg, (data && data.error) || null);
         }
+
+        // They're live — forget the offline backoff so the NEXT time this channel
+        // drops we start checking again at 30s, not at the 5-minute cap.
+        this._offlineUrl = null; this._offlineAttempt = 0;
 
         if (data.title) this.mediaTitle.textContent = data.title;
         if (this.mediaSubtitle) {
@@ -3972,17 +4149,17 @@
           const resp = await fetch(endpoint, { credentials: 'include' });
           data = await resp.json();
         } catch (e) {
-          return this._showLiveOfflineCard(url, username, 'Could not reach brain API. Is the brain running?');
+          return this._showLiveOfflineCard(url, username, 'Could not reach brain API. Is the brain running?', 'unreachable');
         }
 
         if (!data.ok) {
           if (data.error === 'not_live') {
-            return this._showLiveOfflineCard(url, username, data.message || 'Not currently live.');
+            return this._showLiveOfflineCard(url, username, data.message || 'Not currently live.', 'not_live');
           }
           if (data.error === 'private') {
-            return this._showLiveOfflineCard(url, username, 'This account is private or requires login.');
+            return this._showLiveOfflineCard(url, username, 'This account is private or requires login.', 'private');
           }
-          return this._showLiveOfflineCard(url, username, data.message || 'Extraction failed.');
+          return this._showLiveOfflineCard(url, username, data.message || 'Extraction failed.', data.error || null);
         }
 
         // Got a stream URL — update title and play as HLS/video
@@ -4019,46 +4196,177 @@
       }
 
       /**
-       * Shows a friendly "not live right now" card with a retry button.
-       * Platform-aware (task BPYUATZ): this card is shared by TikTok Live and
-       * Kick Live, so it must never tell a Kick user to "Open on TikTok".
-       * All interpolations are escaped and the retry is wired via a real
-       * listener rather than an inline onclick string.
+       * Cancels any armed auto-retry countdown. Called whenever the offline card
+       * is replaced (a new load, a manual retry, or the auto-retry firing).
+       *
+       * LOAD-BEARING: loadMedia() removes `.dirrm-info-card` nodes from the DOM,
+       * but a setInterval closed over that node keeps running against a detached
+       * element and would fire a retry for a channel the user already left. The
+       * timer must be owned by the player, not by the card.
        */
-      _showLiveOfflineCard(url, handle, reason) {
+      _clearOfflineRetry() {
+        if (this._offlineTick)  { clearInterval(this._offlineTick);  this._offlineTick = null; }
+        if (this._offlineTimer) { clearTimeout(this._offlineTimer);  this._offlineTimer = null; }
+      }
+
+      /**
+       * THE OFFLINE CARD (task K3NUPWK).
+       *
+       * WHY THIS WAS REWRITTEN: an offline Kick channel read as a broken player.
+       * The old card was a bare emoji, the API's raw message string, and two
+       * buttons in a class (`dirrm-action-btn`) that HAS NO CSS RULE ANYWHERE in
+       * this file — so they rendered as unstyled browser default buttons, well
+       * under the 44px touch minimum. It also never distinguished "this channel
+       * is simply not streaming" (normal, expected, nobody's fault) from "we
+       * failed to reach the brain" (our bug). Both looked identical and both
+       * looked broken.
+       *
+       * The card now answers the four questions a confused user actually has:
+       *   1. WHO?    — the channel name, large, unmistakable.
+       *   2. WHAT?   — "Not live right now", stated plainly, not an error string.
+       *   3. WHEN?   — a live countdown to the next automatic check.
+       *   4. NOW?    — "Open on Kick" to go watch/follow at the source.
+       *
+       * Platform-aware (task BPYUATZ): shared by TikTok Live and Kick Live, so it
+       * must never tell a Kick user to "Open on TikTok". Every interpolation is
+       * escaped and every handler is a real listener, never an inline onclick.
+       *
+       * NO-COLLISION: the card is `.dirrm-info-card` — absolute, inset:0,
+       * overflow:auto — so it fills the media box, scrolls INTERNALLY when the
+       * frame is short, and can never bleed onto the titlebar, transport bar or
+       * host chrome. Its inner box is min-width:0 / max-width:420px so a long
+       * channel slug cannot push it past the player at 320px.
+       */
+      _showLiveOfflineCard(url, handle, reason, code) {
+        this._clearOfflineRetry();
         this.loading.style.display = 'none';
         this.controls.style.display = 'none';
+        this.mediaElement = null;
 
         let platform = 'TikTok', display = handle ? '@' + handle : 'TikTok Live';
+        let openUrl = url;
         try {
-          const host = new URL(url).hostname.replace(/^www\./, '');
+          const u = new URL(url);
+          const host = u.hostname.replace(/^www\./, '');
           if (host === 'kick.com') {
             platform = 'Kick';
             display = handle || 'Kick Live';
+            // Always send them to the CHANNEL page, never a deep sub-path that
+            // may 404 — this button is the whole point of the card.
+            if (handle) openUrl = `https://kick.com/${encodeURIComponent(handle)}`;
           }
         } catch (_) {}
-        this.setBadge(`${platform} Live`);
+
+        // Three distinct truths, three distinct cards. Only the first is the
+        // ordinary "they're not streaming" case that must never read as an error.
+        const isOffline    = code === 'not_live' || (!code && /not (currently )?live/i.test(reason || ''));
+        const isNoChannel  = code === 'no_channel';
+        const isOurFault   = code === 'unreachable' || code === 'resolve_failed' || code === 'bad_channel';
+
+        // INLINE SVG, NOT EMOJI. Every other info card here uses an emoji glyph,
+        // and that is fine for decoration — but this icon carries the meaning of
+        // the whole card, and emoji are a font-availability gamble (they render
+        // as a tofu box on bare Linux and some older Android builds; confirmed
+        // tofu in headless Chrome while shipping this). A drawn SVG always
+        // renders, and `currentColor` keeps it on the gold ramp.
+        const svg = (paths) =>
+          `<svg viewBox="0 0 24 24" width="46" height="46" fill="none" stroke="currentColor"
+                stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"
+                role="img" aria-hidden="true" focusable="false">${paths}</svg>`;
+        // A dimmed screen with a "z" — asleep, not broken.
+        const ICON_SLEEP  = svg('<rect x="2.5" y="4.5" width="19" height="13" rx="2"/><path d="M8 20.5h8"/><path d="M9.5 9h5l-5 5h5"/>');
+        // Magnifier — we looked, there's nothing by that name.
+        const ICON_SEARCH = svg('<circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.5 15.5 21 21"/>');
+        // Broken signal — the failure is on our side of the wire.
+        const ICON_SIGNAL = svg('<path d="M12 20h.01"/><path d="M5 12.5a10 10 0 0 1 4-2.4"/><path d="M15 10.1a10 10 0 0 1 4 2.4"/><path d="M2 9a14 14 0 0 1 5-3.2"/><path d="M17 5.8A14 14 0 0 1 22 9"/><path d="M9.5 16a5 5 0 0 1 5 0"/><path d="M3 3l18 18"/>');
+
+        let icon, headline, detail, retryable = true;
+        if (isOffline) {
+          icon     = ICON_SLEEP;
+          headline = 'Not live right now';
+          detail   = `${display} isn’t streaming at the moment. The player is fine — there’s just nothing to play yet. We’ll keep checking.`;
+        } else if (isNoChannel) {
+          icon     = ICON_SEARCH;
+          headline = `No ${platform} channel by that name`;
+          detail   = `We couldn’t find “${display}” on ${platform}. Check the spelling, or open ${platform} to search for it.`;
+          retryable = false; // a name that doesn't exist won't start existing on a timer
+        } else if (isOurFault) {
+          icon     = ICON_SIGNAL;
+          headline = 'Couldn’t check if they’re live';
+          detail   = `${reason} This is on our side, not the channel’s — ${display} may well be streaming.`;
+        } else {
+          icon     = ICON_SLEEP;
+          headline = 'Not live right now';
+          detail   = reason || `${display} isn’t streaming at the moment.`;
+        }
+
+        this.setBadge(isOffline ? 'Offline' : `${platform} Live`);
+        this.mediaTitle.textContent = display;
+        if (this.mediaSubtitle) {
+          this.mediaSubtitle.textContent = isOffline ? `Offline on ${platform}` : '';
+        }
 
         const card = document.createElement('div');
-        card.className = 'dirrm-info-card';
+        card.className = 'dirrm-info-card dirrm-offline-card';
         card.innerHTML = `
-          <div class="dirrm-info-icon" style="font-size:2rem;margin-bottom:12px;">📵</div>
-          <div class="dirrm-info-title">${this.escapeHtml(display)}</div>
-          <div class="dirrm-info-meta" style="margin-top:8px;color:rgba(240,230,211,0.6);">${this.escapeHtml(reason)}</div>
-          <div style="margin-top:18px;display:flex;gap:10px;flex-wrap:wrap;justify-content:center;">
-            <button class="dirrm-action-btn" data-dirrm-retry>Retry</button>
-            <a class="dirrm-action-btn" href="${this.escapeHtml(url)}" target="_blank" rel="noopener">
-              Open on ${this.escapeHtml(platform)}
-            </a>
+          <div class="dirrm-info-card-inner">
+            <div class="dirrm-info-icon">${icon}</div>
+            <!-- Wrapped so the ~98px board dock can lay this out as a single row
+                 (text column | action column) without reparenting anything. -->
+            <div class="dirrm-offline-text">
+              <div class="dirrm-offline-channel">${this.escapeHtml(display)}</div>
+              <div class="dirrm-offline-headline">${this.escapeHtml(headline)}</div>
+            </div>
+            <div class="dirrm-info-meta">${this.escapeHtml(detail)}</div>
+            ${retryable ? `<div class="dirrm-offline-countdown" data-dirrm-countdown aria-live="polite"></div>` : ''}
+            <div class="dirrm-info-actions">
+              ${retryable ? `<button class="dirrm-info-btn" type="button" data-dirrm-retry>Check now</button>` : ''}
+              <a class="dirrm-info-btn" href="${this.escapeHtml(openUrl)}" target="_blank" rel="noopener">Open on ${this.escapeHtml(platform)}</a>
+            </div>
           </div>
         `;
-        // NB: there is no `load()` method on the player — the real entry point is
-        // loadMedia(url, title, type). The previous inline onclick called
-        // `window.__dirrm.load(...)`, which silently did nothing; the Retry button
-        // never worked. Wire it to the real method and keep the resolved title.
-        const retry = card.querySelector('[data-dirrm-retry]');
-        if (retry) retry.addEventListener('click', () => this.loadMedia(url, this._lastTitle || null, this.mediaType || null));
         this.mediaContainer.appendChild(card);
+
+        const again = () => {
+          this._clearOfflineRetry();
+          this.loadMedia(url, this._lastTitle || null, this.mediaType || null);
+        };
+        const retryBtn = card.querySelector('[data-dirrm-retry]');
+        if (retryBtn) retryBtn.addEventListener('click', again);
+
+        if (!retryable) return;
+
+        // AUTO-RETRY WITH A VISIBLE COUNTDOWN.
+        // Backs off 30s → 60s → 120s → 300s (capped) across consecutive offline
+        // results for the SAME url, so a channel that's offline all night doesn't
+        // hammer the brain, while a channel about to go live is caught fast.
+        if (this._offlineUrl !== url) { this._offlineUrl = url; this._offlineAttempt = 0; }
+        const ladder = [30, 60, 120, 300];
+        const wait   = ladder[Math.min(this._offlineAttempt, ladder.length - 1)];
+        this._offlineAttempt++;
+
+        const countdownEl = card.querySelector('[data-dirrm-countdown]');
+        let left = wait;
+        const render = () => {
+          if (!countdownEl || !countdownEl.isConnected) return;
+          const m = Math.floor(left / 60), s = left % 60;
+          const clock = m ? `${m}:${String(s).padStart(2, '0')}` : `${s}s`;
+          countdownEl.textContent = left > 0
+            ? `Checking again in ${clock}`
+            : 'Checking now…';
+        };
+        render();
+        this._offlineTick = setInterval(() => {
+          left--;
+          if (left < 0) left = 0;
+          render();
+          // The card was replaced or the player moved on — stop cleanly.
+          if (!countdownEl.isConnected) this._clearOfflineRetry();
+        }, 1000);
+        this._offlineTimer = setTimeout(() => {
+          if (!card.isConnected) return this._clearOfflineRetry();
+          again();
+        }, wait * 1000);
       }
 
       _updateLoading(text) {
