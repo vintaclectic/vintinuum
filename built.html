@@ -1,0 +1,702 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Built by Vinta — a plain list of what I've made</title>
+<meta name="description" content="A plain-English index of the software Vinta has built over the past year: what each thing is, whether you can try it right now, and the links that actually work.">
+<meta name="theme-color" content="#0a0d14">
+<link rel="icon" type="image/svg+xml" href="branding/vintinuum/favicon/favicon.svg">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon.png">
+
+<meta property="og:title" content="Built by Vinta">
+<meta property="og:description" content="A plain-English index of what I've built this year — and what you can try right now.">
+<meta property="og:type" content="website">
+
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap');
+
+:root{
+  --bg:#0a0d14;
+  --bg-2:#0e131c;
+  --card:#111823;
+  --line:rgba(255,255,255,.08);
+  --line-soft:rgba(255,255,255,.05);
+  --text:#dfe7f5;
+  --dim:#93a3bd;
+  --ghost:#6a7893;
+  --accent:#c8a84b;
+  --live:#4ec98a;
+  --local:#5aa9e6;
+  --paused:#c8934b;
+  --radius:14px;
+  --maxw:940px;
+}
+
+*{margin:0;padding:0;box-sizing:border-box;}
+html{scroll-behavior:smooth;-webkit-text-size-adjust:100%;}
+body{
+  background:var(--bg);
+  color:var(--text);
+  font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+  font-weight:300;
+  line-height:1.65;
+  min-height:100vh;
+  overflow-x:hidden;
+  -webkit-font-smoothing:antialiased;
+}
+a{color:inherit;}
+
+/* ── LAYOUT SPINE ──
+   One centred column. Everything is a block in normal document flow.
+   Nothing is absolutely positioned, nothing floats, nothing overlaps. */
+.wrap{
+  width:100%;
+  max-width:var(--maxw);
+  margin:0 auto;
+  padding:0 20px;
+}
+
+/* ── HEADER ── */
+header.top{
+  border-bottom:1px solid var(--line-soft);
+  background:linear-gradient(180deg,#0c1119 0%,var(--bg) 100%);
+  padding:56px 0 44px;
+}
+.eyebrow{
+  font-family:'JetBrains Mono',monospace;
+  font-size:11px;
+  letter-spacing:.18em;
+  text-transform:uppercase;
+  color:var(--ghost);
+  margin-bottom:18px;
+}
+h1{
+  font-size:clamp(30px,6vw,46px);
+  font-weight:600;
+  line-height:1.15;
+  letter-spacing:-.02em;
+  margin-bottom:18px;
+}
+.lede{
+  font-size:clamp(15px,2.6vw,18px);
+  color:var(--dim);
+  max-width:62ch;
+  margin-bottom:14px;
+}
+.lede strong{color:var(--text);font-weight:500;}
+
+/* ── KEY / LEGEND ── */
+.legend{
+  display:flex;
+  flex-wrap:wrap;
+  gap:10px;
+  margin-top:26px;
+}
+.legend .chip{cursor:default;}
+
+.chip{
+  display:inline-flex;
+  align-items:center;
+  gap:7px;
+  padding:5px 11px;
+  border:1px solid var(--line);
+  border-radius:999px;
+  background:rgba(255,255,255,.02);
+  font-family:'JetBrains Mono',monospace;
+  font-size:11px;
+  letter-spacing:.06em;
+  color:var(--dim);
+  white-space:nowrap;
+}
+.dot{width:7px;height:7px;border-radius:50%;flex:none;}
+.dot.live{background:var(--live);box-shadow:0 0 8px rgba(78,201,138,.5);}
+.dot.local{background:var(--local);}
+.dot.paused{background:var(--paused);}
+
+/* ── AT A GLANCE NUMBERS ── */
+.stats{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(140px,1fr));
+  gap:12px;
+  margin:32px 0 0;
+}
+.stat{
+  border:1px solid var(--line-soft);
+  border-radius:var(--radius);
+  background:var(--bg-2);
+  padding:16px 18px;
+  min-width:0;
+}
+.stat .n{
+  font-family:'JetBrains Mono',monospace;
+  font-size:24px;
+  font-weight:500;
+  color:var(--accent);
+  line-height:1.2;
+}
+.stat .l{
+  font-size:12px;
+  color:var(--ghost);
+  margin-top:4px;
+  line-height:1.4;
+}
+
+/* ── SECTIONS ── */
+section{padding:52px 0 8px;}
+.sec-head{margin-bottom:8px;}
+h2{
+  font-size:clamp(20px,4vw,26px);
+  font-weight:600;
+  letter-spacing:-.01em;
+}
+.sec-note{
+  color:var(--dim);
+  font-size:15px;
+  max-width:62ch;
+  margin-top:8px;
+}
+
+/* ── PROJECT CARDS ──
+   Grid cells. Each card owns its box; content wraps or the box grows.
+   Nothing ever spills into a neighbour. */
+.grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(280px,1fr));
+  gap:16px;
+  margin-top:24px;
+  align-items:stretch;
+}
+.card{
+  border:1px solid var(--line);
+  border-radius:var(--radius);
+  background:var(--card);
+  padding:22px 22px 20px;
+  display:flex;
+  flex-direction:column;
+  gap:12px;
+  min-width:0;               /* lets long words wrap instead of blowing the grid */
+  overflow-wrap:anywhere;
+  transition:border-color .18s ease, transform .18s ease;
+}
+.card:hover{border-color:rgba(200,168,75,.3);transform:translateY(-2px);}
+@media (prefers-reduced-motion:reduce){
+  .card,.card:hover{transition:none;transform:none;}
+}
+
+.card-top{
+  display:flex;
+  flex-wrap:wrap;
+  align-items:baseline;
+  justify-content:space-between;
+  gap:8px;
+}
+.card h3{
+  font-size:18px;
+  font-weight:600;
+  letter-spacing:-.01em;
+  min-width:0;
+}
+.oneline{
+  color:var(--accent);
+  font-size:13px;
+  font-weight:400;
+  letter-spacing:.01em;
+}
+.plain{
+  color:var(--dim);
+  font-size:14.5px;
+  line-height:1.62;
+}
+.plain b{color:var(--text);font-weight:500;}
+
+.meta{
+  display:flex;
+  flex-wrap:wrap;
+  gap:7px;
+  margin-top:auto;          /* pins the footer row to the bottom of every card */
+  padding-top:4px;
+}
+.tag{
+  font-family:'JetBrains Mono',monospace;
+  font-size:10.5px;
+  letter-spacing:.05em;
+  color:var(--ghost);
+  border:1px solid var(--line-soft);
+  border-radius:6px;
+  padding:3px 8px;
+  white-space:nowrap;
+}
+
+.actions{
+  display:flex;
+  flex-wrap:wrap;
+  gap:9px;
+}
+.btn{
+  display:inline-flex;
+  align-items:center;
+  gap:7px;
+  padding:8px 14px;
+  border-radius:9px;
+  border:1px solid var(--line);
+  background:rgba(255,255,255,.03);
+  color:var(--text);
+  text-decoration:none;
+  font-size:13px;
+  font-weight:400;
+  transition:background .16s ease,border-color .16s ease;
+  white-space:nowrap;
+}
+.btn:hover{background:rgba(255,255,255,.07);border-color:rgba(255,255,255,.16);}
+.btn.primary{
+  border-color:rgba(200,168,75,.42);
+  background:rgba(200,168,75,.1);
+  color:#f0e2b8;
+}
+.btn.primary:hover{background:rgba(200,168,75,.18);}
+
+/* ── HONEST NOTE ── */
+.note{
+  border-left:2px solid rgba(200,168,75,.35);
+  padding:2px 0 2px 16px;
+  color:var(--dim);
+  font-size:14px;
+  margin-top:22px;
+  max-width:64ch;
+}
+
+/* ── HOW IT'S BUILT (plain list) ── */
+.rows{
+  margin-top:22px;
+  border:1px solid var(--line-soft);
+  border-radius:var(--radius);
+  overflow:hidden;
+  background:var(--bg-2);
+}
+.row{
+  display:grid;
+  grid-template-columns:170px 1fr;
+  gap:16px;
+  padding:15px 20px;
+  border-bottom:1px solid var(--line-soft);
+  align-items:start;
+}
+.row:last-child{border-bottom:none;}
+.row .k{
+  font-family:'JetBrains Mono',monospace;
+  font-size:11.5px;
+  letter-spacing:.06em;
+  text-transform:uppercase;
+  color:var(--ghost);
+  padding-top:3px;
+  min-width:0;
+  overflow-wrap:anywhere;
+}
+.row .v{color:var(--dim);font-size:14.5px;min-width:0;overflow-wrap:anywhere;}
+
+/* ── CONTACT ── */
+.contact{
+  border:1px solid var(--line);
+  border-radius:var(--radius);
+  background:linear-gradient(160deg,#121924 0%,#0e131c 100%);
+  padding:30px 26px;
+  margin-top:26px;
+}
+.contact h2{margin-bottom:10px;}
+.contact p{color:var(--dim);font-size:15px;max-width:60ch;margin-bottom:18px;}
+
+footer.bot{
+  border-top:1px solid var(--line-soft);
+  margin-top:60px;
+  padding:26px 0 46px;
+  color:var(--ghost);
+  font-size:12.5px;
+}
+footer.bot p{max-width:70ch;}
+footer.bot a{color:var(--dim);}
+
+/* ── SMALL SCREENS ──
+   The two-column rows collapse to one so nothing is squeezed or clipped. */
+@media (max-width:640px){
+  header.top{padding:40px 0 34px;}
+  .wrap{padding:0 16px;}
+  .row{grid-template-columns:1fr;gap:5px;}
+  .row .k{padding-top:0;}
+  .card{padding:19px 18px 17px;}
+  section{padding:42px 0 6px;}
+  .btn{flex:1 1 auto;justify-content:center;}
+}
+@media (max-width:360px){
+  .stats{grid-template-columns:1fr 1fr;}
+}
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="wrap">
+    <div class="eyebrow">Built 2026 · Independent</div>
+    <h1>What I've built this year.</h1>
+    <p class="lede">
+      I'm <strong>Vinta</strong>. Over the past year I designed and shipped a stack of working
+      software — a living AI system, a media player, a search engine for open directories,
+      a video-chat platform, and a handful of smaller tools.
+    </p>
+    <p class="lede">
+      This page is the plain version. Every item says <strong>what it is in one line</strong>,
+      what it does in a short paragraph, and whether you can <strong>click it and try it right
+      now</strong>. No jargon, no pitch. If something isn't live, it says so.
+    </p>
+
+    <div class="legend" aria-label="Status key">
+      <span class="chip"><span class="dot live"></span> Live — click and use it</span>
+      <span class="chip"><span class="dot local"></span> Runs on my machine — demo on request</span>
+      <span class="chip"><span class="dot paused"></span> Built, currently offline</span>
+    </div>
+
+    <div class="stats">
+      <div class="stat"><div class="n">1,300+</div><div class="l">commits across the main two repos</div></div>
+      <div class="stat"><div class="n">10</div><div class="l">separate projects built</div></div>
+      <div class="stat"><div class="n">58</div><div class="l">web pages in the main app</div></div>
+      <div class="stat"><div class="n">16 mo</div><div class="l">Apr 2026 → today, still shipping</div></div>
+    </div>
+  </div>
+</header>
+
+<!-- ══ LIVE ══ -->
+<section id="live">
+  <div class="wrap">
+    <div class="sec-head">
+      <h2>Try these right now</h2>
+      <p class="sec-note">
+        These are up as you read this. I checked each link before publishing this page.
+        Nothing to install, no account needed to look around.
+      </p>
+    </div>
+
+    <div class="grid">
+
+      <article class="card">
+        <div class="card-top">
+          <h3>Vintinuum</h3>
+          <span class="chip"><span class="dot live"></span> Live</span>
+        </div>
+        <div class="oneline">An AI you can watch think.</div>
+        <p class="plain">
+          Most AI is a chat box — you type, it answers, it forgets. This one has a
+          <b>body, a memory, and a mood</b> that carry over between visits. You can open
+          the hood and watch what it's doing: what it remembers, what it's currently
+          "feeling", how it's changed since yesterday. It runs 24/7 on my own server,
+          not rented from anyone.
+        </p>
+        <div class="actions">
+          <a class="btn primary" href="index.html">Open it</a>
+          <a class="btn" href="chat.html">Talk to it</a>
+          <a class="btn" href="stats.html">See its vitals</a>
+        </div>
+        <div class="meta">
+          <span class="tag">JAVASCRIPT</span><span class="tag">NODE</span>
+          <span class="tag">SQLITE</span><span class="tag">SELF-HOSTED API</span>
+        </div>
+      </article>
+
+      <article class="card">
+        <div class="card-top">
+          <h3>DirRM Player</h3>
+          <span class="chip"><span class="dot live"></span> Live</span>
+        </div>
+        <div class="oneline">A media player that plays basically anything.</div>
+        <p class="plain">
+          Hand it a link — video, audio, a live stream — and it plays it, in one
+          consistent player instead of five different broken ones. It has
+          <b>its own window modes</b> (full, mini, picture-in-picture, theater), all
+          draggable and resizable. It's the single player used everywhere across my
+          projects, so nothing has to be rebuilt twice.
+        </p>
+        <div class="actions">
+          <a class="btn primary" href="https://dirrm.vintinuum.com" target="_blank" rel="noopener">Open the player</a>
+          <a class="btn" href="dirrm.html">In-app version</a>
+        </div>
+        <div class="meta">
+          <span class="tag">HLS</span><span class="tag">MEDIA</span>
+          <span class="tag">OWN DOMAIN</span><span class="tag">36 RELEASES</span>
+        </div>
+      </article>
+
+      <article class="card">
+        <div class="card-top">
+          <h3>The Brain (API)</h3>
+          <span class="chip"><span class="dot live"></span> Live</span>
+        </div>
+        <div class="oneline">The always-on server behind everything.</div>
+        <p class="plain">
+          The part nobody sees. It's a server I wrote and I host myself — it stores the
+          memory, runs the AI models, and answers every request the apps make. It's been
+          running continuously with its own monitoring and auto-restart. You can hit the
+          public health check below and get a real answer back, live.
+        </p>
+        <div class="actions">
+          <a class="btn primary" href="https://api.vintaclectic.com/api/health" target="_blank" rel="noopener">Check it's alive</a>
+        </div>
+        <div class="meta">
+          <span class="tag">NODE / EXPRESS</span><span class="tag">509 COMMITS</span>
+          <span class="tag">118 MODULES</span><span class="tag">24/7 UPTIME</span>
+        </div>
+      </article>
+
+      <article class="card">
+        <div class="card-top">
+          <h3>The World</h3>
+          <span class="chip"><span class="dot live"></span> Live</span>
+        </div>
+        <div class="oneline">A 3D world that runs in your browser.</div>
+        <p class="plain">
+          No download, no game engine, no plugin — it builds an explorable 3D space
+          straight in the browser tab. Written from scratch with web 3D. It's the piece
+          people tend to click first, because it's the one you can immediately
+          <b>see</b> rather than read about.
+        </p>
+        <div class="actions">
+          <a class="btn primary" href="world.html">Walk around</a>
+          <a class="btn" href="aquarium.html">Aquarium view</a>
+        </div>
+        <div class="meta">
+          <span class="tag">THREE.JS</span><span class="tag">WEBGL</span>
+          <span class="tag">NO INSTALL</span>
+        </div>
+      </article>
+
+    </div>
+
+    <p class="note">
+      Fair warning on the live links: this is a real system I run myself, not a polished
+      demo someone else hosts for me. If the server is mid-restart you might catch a
+      hiccup. That's the honest tradeoff of owning the whole stack.
+    </p>
+  </div>
+</section>
+
+<!-- ══ BUILT, NOT PUBLIC ══ -->
+<section id="built">
+  <div class="wrap">
+    <div class="sec-head">
+      <h2>Built and working — ask me for a demo</h2>
+      <p class="sec-note">
+        These are finished or near-finished and run properly, but they live on my machine
+        or behind a login rather than on a public URL. Happy to walk anyone through any of
+        them on a screen share.
+      </p>
+    </div>
+
+    <div class="grid">
+
+      <article class="card">
+        <div class="card-top">
+          <h3>DirHaven</h3>
+          <span class="chip"><span class="dot local"></span> Demo on request</span>
+        </div>
+        <div class="oneline">A search engine for files the web forgot.</div>
+        <p class="plain">
+          There are millions of wide-open folders sitting on the internet full of music,
+          films and books that no search engine indexes properly. This crawls them,
+          catalogues what's inside, and gives you a <b>clean searchable library</b> with a
+          player attached. It's the biggest thing here by code volume — the crawler,
+          the database, the health monitoring and the front end are all mine.
+        </p>
+        <div class="meta">
+          <span class="tag">546 COMMITS</span><span class="tag">CRAWLER</span>
+          <span class="tag">FULL-STACK</span><span class="tag">REACT</span>
+        </div>
+      </article>
+
+      <article class="card">
+        <div class="card-top">
+          <h3>DirMegle</h3>
+          <span class="chip"><span class="dot paused"></span> Offline right now</span>
+        </div>
+        <div class="oneline">Random video chat that's never empty.</div>
+        <p class="plain">
+          Video chat with strangers, one-to-one. The problem every site like this has is
+          the <b>empty room</b> — nobody's online, so nobody stays. I solved it by having
+          an AI host appear when the queue is empty, so you're never left staring at a
+          spinner. Built with real-time video, matchmaking and moderation.
+        </p>
+        <div class="meta">
+          <span class="tag">WEBRTC</span><span class="tag">REAL-TIME</span>
+          <span class="tag">DOCKER</span><span class="tag">MATCHMAKING</span>
+        </div>
+      </article>
+
+      <article class="card">
+        <div class="card-top">
+          <h3>Browser Extension</h3>
+          <span class="chip"><span class="dot local"></span> Demo on request</span>
+        </div>
+        <div class="oneline">A Chrome extension that links my AI to the browser.</div>
+        <p class="plain">
+          Installs into Chrome and gives the AI a window onto what's on screen, plus the
+          ability to act in the browser. Built on the current extension standard
+          (Manifest V3), which is the strict one — background workers, permissions,
+          the lot. <b>152 versions</b> in, and stable.
+        </p>
+        <div class="meta">
+          <span class="tag">CHROME MV3</span><span class="tag">152 COMMITS</span>
+          <span class="tag">SERVICE WORKER</span>
+        </div>
+      </article>
+
+      <article class="card">
+        <div class="card-top">
+          <h3>Agentis</h3>
+          <span class="chip"><span class="dot local"></span> Demo on request</span>
+        </div>
+        <div class="oneline">An arena where AI agents compete.</div>
+        <p class="plain">
+          You bring an AI agent, it enters contests against other agents, and results are
+          scored and ranked with a working <b>points-and-stakes economy</b> behind it —
+          wins, losses, totals earned, leaderboards. It's the closest thing here to a
+          game, and the scoring logic was the interesting part to build.
+        </p>
+        <div class="meta">
+          <span class="tag">NODE</span><span class="tag">SQLITE</span>
+          <span class="tag">ECONOMY DESIGN</span>
+        </div>
+      </article>
+
+      <article class="card">
+        <div class="card-top">
+          <h3>DirCoMedia</h3>
+          <span class="chip"><span class="dot local"></span> Demo on request</span>
+        </div>
+        <div class="oneline">One place to post to every social account.</div>
+        <p class="plain">
+          Write an update once, and it goes out to the right accounts in the right voice
+          for each project, on a schedule. Built properly with background job queues
+          rather than a script and hope — <b>nothing posts publicly without me approving
+          it first</b>, which was a deliberate design rule.
+        </p>
+        <div class="meta">
+          <span class="tag">PYTHON / FASTAPI</span><span class="tag">NEXT.JS</span>
+          <span class="tag">CELERY + REDIS</span><span class="tag">POSTGRES</span>
+        </div>
+      </article>
+
+      <article class="card">
+        <div class="card-top">
+          <h3>LIOS</h3>
+          <span class="chip"><span class="dot local"></span> Demo on request</span>
+        </div>
+        <div class="oneline">A private, encrypted case organiser.</div>
+        <p class="plain">
+          Desktop software for organising the paperwork of a legal case — every document,
+          every date, in order, searchable, on a timeline. It's <b>local-first and
+          encrypted</b>: nothing leaves the machine. It organises material; it does not
+          give legal advice, and it says so plainly in the app.
+        </p>
+        <div class="meta">
+          <span class="tag">RUST</span><span class="tag">TYPESCRIPT</span>
+          <span class="tag">TAURI</span><span class="tag">ENCRYPTED</span>
+        </div>
+      </article>
+
+    </div>
+  </div>
+</section>
+
+<!-- ══ HOW ══ -->
+<section id="how">
+  <div class="wrap">
+    <div class="sec-head">
+      <h2>How this actually got built</h2>
+      <p class="sec-note">
+        The short version, for anyone deciding whether to hand me work.
+      </p>
+    </div>
+
+    <div class="rows">
+      <div class="row">
+        <div class="k">The approach</div>
+        <div class="v">
+          I direct a team of specialised AI agents — each one tuned for a job (front end,
+          security, world-building, cost control) — and I review, correct and ship the
+          output. That's how one person produces this much working software without it
+          turning to mush.
+        </div>
+      </div>
+      <div class="row">
+        <div class="k">What I actually do</div>
+        <div class="v">
+          Decide what gets built and why, design how it should feel, set the rules the
+          code has to obey, and own whether it ships. The hard part isn't typing — it's
+          judgement about what's worth building and knowing when something is genuinely
+          done.
+        </div>
+      </div>
+      <div class="row">
+        <div class="k">I own the whole stack</div>
+        <div class="v">
+          Front end, back end, database, server, domains, deploys, monitoring. When
+          something breaks at 3am there's nobody else to call, so I built it to restart
+          itself and tell me what happened.
+        </div>
+      </div>
+      <div class="row">
+        <div class="k">Rules I don't break</div>
+        <div class="v">
+          Nothing ships with overlapping or broken layout. Everything works on a phone,
+          not just a laptop. Secrets never go into the code. Nothing gets posted publicly
+          without a human saying yes. Every piece of work gets logged so it can be found
+          again later.
+        </div>
+      </div>
+      <div class="row">
+        <div class="k">Languages &amp; tools</div>
+        <div class="v">
+          JavaScript / TypeScript, Node, Python, Rust, Lua · React, Next.js, Three.js ·
+          SQLite, PostgreSQL, Redis · Docker, Celery, Cloudflare, Tauri, Chrome
+          extensions, WebRTC, HLS streaming.
+        </div>
+      </div>
+      <div class="row">
+        <div class="k">Where the code lives</div>
+        <div class="v">
+          Ten separate repositories, all under version control, all with written
+          documentation. The main site's source is public on GitHub.
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══ CONTACT ══ -->
+<section id="contact">
+  <div class="wrap">
+    <div class="contact">
+      <h2>Work with me</h2>
+      <p>
+        I take on building — web apps, tools, AI systems, or fixing something that's
+        already half-built and stuck. If you know someone who needs this kind of work,
+        passing this page along is the most useful thing you can do.
+      </p>
+      <div class="actions">
+        <a class="btn primary" href="mailto:vintaclectic@gmail.com">Email me</a>
+        <a class="btn" href="https://github.com/vintaclectic/vintinuum" target="_blank" rel="noopener">See the code</a>
+        <a class="btn" href="index.html">Back to the app</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer class="bot">
+  <div class="wrap">
+    <p>
+      Built by Vinta, 2026. Every link on this page was checked before publishing —
+      the ones marked live were returning a real response. Status shown here is honest:
+      if a thing isn't running, it doesn't claim to be.
+    </p>
+  </div>
+</footer>
+
+</body>
+</html>
