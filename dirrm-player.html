@@ -757,6 +757,13 @@
       gap: 16px;
       background: rgba(13, 11, 8, 0.9);
       z-index: 5;
+      /* It is a SPINNER, not a shield. It carries no controls, so it has no
+         business eating clicks aimed at the media underneath it. If it ever
+         fails to dismiss (a stalled live stream, a source that never fires
+         loadedmetadata), the video stays fully interactive instead of the whole
+         surface going dead. Purely additive safety — nothing in here was ever
+         clickable. */
+      pointer-events: none;
     }
 
     .dirrm-spinner {
@@ -1123,6 +1130,137 @@
     }
 
     /* ============================================
+       EMBEDDED LAYOUT — THE PLAYER IS THE WINDOW
+       ============================================
+       ROOT CAUSE OF "all sound no video" (fixed here):
+       .dirrm-player is position:fixed with per-mode PIXEL geometry
+       (mini = 380x auto, main = 860x520, pip = 320x180). That is correct when
+       the player owns a real browser window. Inside a HOST IFRAME — the council
+       task board's #dirrmSurface, brain.html, jarvis, any embedIn: element —
+       position:fixed resolves against the IFRAME's viewport, so the player
+       declared a 380px-wide, content-height box inside a frame that was often
+       only ~98px tall. body{overflow:hidden} then CLIPPED it: the titlebar and
+       controls consumed the visible strip and the media container was pushed
+       entirely below the fold. The <video> was present, decoding and audible —
+       just scrolled out of view. Audio played. No video. Exactly the report.
+
+       THE CURE: when embedded, the HOST iframe owns the box, not the player.
+       The player becomes a flow-filling flex column at 100%/100% and every
+       per-mode pixel size is neutralised. Geometry has exactly ONE owner at a
+       time — the host when embedded, the player when standalone. That is the
+       box-model rule, applied.
+
+       This class is set by JS (_applyEmbedLayout) on <html>, so it is live
+       before first paint and cannot be beaten by the inline styles setMode()
+       writes — hence the !important on the geometry properties only. */
+    html.dirrm-embedded,
+    html.dirrm-embedded body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      overflow: hidden;
+    }
+
+    /* Geometry reset — beats setMode()'s inline width/height for EVERY mode.
+       Nothing else about the mode is touched: mini still hides what mini hides,
+       pip still overlays its chrome. Only the BOX is taken back. */
+    html.dirrm-embedded .dirrm-player,
+    html.dirrm-embedded .dirrm-player[data-mode="main"],
+    html.dirrm-embedded .dirrm-player[data-mode="mini"],
+    html.dirrm-embedded .dirrm-player[data-mode="pip"],
+    html.dirrm-embedded .dirrm-player[data-mode="theater"] {
+      position: absolute !important;
+      inset: 0 !important;
+      width: 100% !important;
+      height: 100% !important;
+      max-width: none !important;
+      max-height: none !important;
+      min-width: 0 !important;
+      min-height: 0 !important;
+      /* THE PLAYER IS THE WINDOW: no rounded black box around the media when
+         we are inside someone else's frame. The host draws the frame. */
+      border-radius: 0 !important;
+      border: 0 !important;
+      box-shadow: none !important;
+      /* A scale transform inside a host frame would letterbox the media inside
+         its own window — the exact bordered-box artefact the law forbids. */
+      transform: none !important;
+      animation: none;
+    }
+
+    /* The media container must be the ONLY element that flexes, and it must be
+       allowed to shrink. min-height:0 is load-bearing: without it a flex child
+       refuses to shrink below content height and blows the column out of the
+       frame — the second half of the original defect. */
+    html.dirrm-embedded .dirrm-media-container {
+      flex: 1 1 auto !important;
+      height: auto !important;
+      min-height: 0 !important;
+      min-width: 0 !important;
+    }
+
+    /* Chrome keeps its natural height and never grows; it can only ever take
+       what it needs, so the media always gets the remainder. */
+    html.dirrm-embedded .dirrm-titlebar,
+    html.dirrm-embedded .dirrm-controls {
+      flex: 0 0 auto !important;
+    }
+
+    /* RESIZE HANDLES BELONG TO WHOEVER OWNS THE BOX.
+       Embedded, the HOST owns resize (the board's own #dirrmRsz grip), so these
+       eight absolutely-positioned z-index:10 strips are not just redundant —
+       they line every edge of the media and SWALLOW pointer events over the
+       video (the "zero video interaction" half of the report), and the SE one
+       lands in the same pixels as the host's grip, which is a straight
+       No-Collision violation. Removed from the layer entirely when embedded. */
+    html.dirrm-embedded .dirrm-resize {
+      display: none !important;
+    }
+
+    /* SHORT-FRAME SURVIVAL — THE MEDIA ALWAYS WINS THE BOX.
+       Mini docks, pip corners, 98px board frames, phones in landscape. In a
+       short frame the fixed chrome (titlebar ~45px + controls ~95px = 140px)
+       eats the entire height and the video is left a sliver — a milder form of
+       the very bug this block exists to kill. So the chrome compresses in
+       tiers, and it compresses BEFORE the media gives up a single pixel.
+
+       Measured (headless, embedded): 360x210 pip gave the media only 26% of the
+       frame and 460x98 mini only 30% before these tiers were tuned. The
+       thresholds below are set from those real numbers, not guessed.
+
+       Nothing here overlaps anything: every tier only REMOVES chrome from the
+       flex column or shrinks its padding, so the remaining siblings still
+       stack in normal flow and the media simply receives the reclaimed space. */
+
+    /* Tier 1 — under 320px: the title has nowhere to go. The host frame already
+       shows the title on its own drag rail, so this is a duplicate, not a loss. */
+    @media (max-height: 320px) {
+      html.dirrm-embedded .dirrm-titlebar { display: none !important; }
+      html.dirrm-embedded .dirrm-kbd-legend { display: none !important; }
+      html.dirrm-embedded .dirrm-controls { padding: 6px 10px !important; gap: 6px !important; }
+    }
+
+    /* Tier 2 — under 220px: drop the secondary control row (skip/volume/extras)
+       and keep only the transport line. */
+    @media (max-height: 220px) {
+      html.dirrm-embedded .dirrm-controls { padding: 4px 8px !important; gap: 4px !important; }
+      html.dirrm-embedded .dirrm-skip { display: none !important; }
+      html.dirrm-embedded .dirrm-viz-label { display: none !important; }
+    }
+
+    /* Tier 3 — under 140px (the board's mini dock): transport only, minimum
+       padding, volume gone. Below this the frame is an audio dock by nature. */
+    @media (max-height: 140px) {
+      html.dirrm-embedded .dirrm-controls { padding: 2px 6px !important; gap: 2px !important; }
+      html.dirrm-embedded .dirrm-volume { display: none !important; }
+      html.dirrm-embedded .dirrm-time { display: none !important; }
+    }
+    @media (max-height: 130px) {
+      html.dirrm-embedded .dirrm-controls { padding: 2px 6px !important; }
+      html.dirrm-embedded .dirrm-volume { display: none !important; }
+    }
+
+    /* ============================================
        ICONS (inline SVG)
        ============================================ */
     .icon {
@@ -1320,6 +1458,24 @@
     /* ============================================
        DIRRM PLAYER - Clawdbot Media Player
        ============================================ */
+
+    /* ── EMBED DETECTION — runs BEFORE the player is constructed ─────────────
+       When this document is inside a host iframe, the HOST owns the box and we
+       must not fight it with position:fixed pixel geometry. Setting the class
+       on <html> synchronously here (the script is below the markup but before
+       any media loads) means the embedded layout is in force for the first
+       paint — no flash of a clipped player, and no race with setMode().
+
+       Why `window.top !== window.self` and not a URL param: it is the ONE
+       signal that is always true and needs no cooperation from the caller.
+       Every existing embedder (task board, brain.html, jarvis, the extension,
+       any future embedIn:) gets the fix for free with zero call-site changes.
+       Wrapped in try/catch because a cross-origin parent throws on access —
+       and a throw there ALSO means we are embedded, so we set the class. */
+    var DIRRM_EMBEDDED = false;
+    try { DIRRM_EMBEDDED = (window.top !== window.self); }
+    catch (_) { DIRRM_EMBEDDED = true; }
+    if (DIRRM_EMBEDDED) document.documentElement.classList.add('dirrm-embedded');
 
     class DirRMPlayer {
       constructor() {
@@ -2205,6 +2361,19 @@
           this.loading.style.display = 'none';
           this.timeDuration.textContent = this.formatTime(video.duration);
         });
+
+        /* THE OVERLAY MUST NEVER OUTLIVE THE FIRST FRAME.
+           .dirrm-loading is inset:0, z-index:5 and has NO pointer-events:none —
+           it is a full-bleed shield over the media. `loadedmetadata` alone was
+           the only thing dismissing it, and that is not guaranteed for a LIVE
+           HLS stream (Kick): hls.js can be pushing decoded frames and audio
+           while metadata never resolves the way a file does, leaving the shield
+           up over playing video. That reads as "audio plays, video dead, clicks
+           do nothing" — the exact report. Every one of these events proves a
+           frame exists, so any of them is sufficient to drop the shield. */
+        ['loadeddata', 'canplay', 'playing'].forEach(ev =>
+          video.addEventListener(ev, () => { this.loading.style.display = 'none'; }, { once: true })
+        );
 
         video.addEventListener('timeupdate', () => {
           if (this._scrubbing) return; // finger owns the bar while scrubbing
@@ -4190,6 +4359,16 @@
         this.mode = mode;
         this.player.dataset.mode = mode;
 
+        // GEOMETRY HAS EXACTLY ONE OWNER. Embedded, the HOST iframe owns the
+        // box — writing 380px/860px/auto here is what clipped the media
+        // container out of a short frame and produced "all sound, no video".
+        // We still set data-mode (so mini/pip chrome behaviour is unchanged)
+        // and still notify the parent, which is the side that legitimately
+        // resizes the frame. We just never contradict our container.
+        if (DIRRM_EMBEDDED) {
+          this.player.style.width = '';
+          this.player.style.height = '';
+        } else
         // Adjust size based on mode
         if (mode === 'main') {
           this.player.style.width = '860px';
