@@ -6677,10 +6677,30 @@ window.MIC = (() => {
 
   // Whisper endpoint: local when file/localhost, proxy through ngrok when on GitHub Pages
   // WHISPER_URL computed fresh each use so it picks up __VINTINUUM_API_BASE after it's set
-  function _getWhisperBase() {
+  // Which STT base to use. FIXED 2026-08-19 (task P3HVHZJ): this used to hard-
+  // prefer the :8768 whisper sidecar on localhost. That sidecar is NOT running
+  // (nothing listens on 8768) — while the brain on :8767 exposes POST /stt
+  // backed by VintaBox and answers fine. Because the probe therefore always
+  // failed on localhost, every local session was pushed onto Chrome Web Speech:
+  // the engine that seized the audio session and stopped Vinta's song.
+  // We now resolve to whichever base actually answered the last probe, and only
+  // treat :8768 as a preference to be CONFIRMED, never assumed.
+  let _sttBaseOverride = null;   // set by checkWhisper() once a base proves alive
+  function _brainBase() {
     return (location.protocol === 'file:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1')
-      ? 'http://localhost:8768'
+      ? 'http://localhost:8767'
       : (window.__VINTINUUM_API_BASE || 'http://localhost:8767');
+  }
+  function _sttCandidates() {
+    const brain = _brainBase();
+    // Sidecar first (lower latency when it exists), brain second — but BOTH are
+    // probed, so a dead sidecar can never strand us on Web Speech again.
+    return (location.protocol === 'file:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1')
+      ? ['http://localhost:8768', brain]
+      : [brain];
+  }
+  function _getWhisperBase() {
+    return _sttBaseOverride || _brainBase();
   }
   function _getWhisperUrl() {
     const base = _getWhisperBase();
@@ -6695,6 +6715,10 @@ window.MIC = (() => {
   let silenceTimer = null;
   let stream = null;
   let wsCheck = null;
+  // Hoisted 2026-08-19 (task P3HVHZJ): startWhisper() reuses this ONE stream, so
+  // the binding must be declared above its first use rather than 400 lines below
+  // it (that was a temporal-dead-zone footgun waiting to bite).
+  let _micPermStream = null;
 
   // ── Voice feedback panel ───────────────────────────────────────────────────
   const btn = document.createElement('button');
@@ -6715,12 +6739,18 @@ window.MIC = (() => {
 
   const panel = document.createElement('div');
   panel.id = 'voicePanel';
-  panel.style.cssText = 'position:fixed;bottom:68px;left:24px;z-index:1001;width:220px;background:rgba(4,8,16,0.88);border:1px solid rgba(255,255,255,0.07);border-radius:14px;overflow:hidden;opacity:0;transition:opacity .35s;pointer-events:none;font-family:Space Mono,monospace;';
+  // width:220 fixed -> clamped so it can never exceed the viewport on a 320px
+  // phone (left:24 + 220 = 244 fits, but the clamp makes it provably safe and
+  // lets the wrapped status text breathe on wider screens). Mobile-first mandate.
+  panel.style.cssText = 'position:fixed;bottom:68px;left:24px;z-index:1001;width:min(220px, calc(100vw - 48px));max-height:calc(100svh - 140px);background:rgba(4,8,16,0.88);border:1px solid rgba(255,255,255,0.07);border-radius:14px;overflow:hidden;opacity:0;transition:opacity .35s;pointer-events:none;font-family:Space Mono,monospace;';
   document.body.appendChild(panel);
 
   const wvCanvas = document.createElement('canvas');
   wvCanvas.width = 220; wvCanvas.height = 28;
-  wvCanvas.style.cssText = 'display:block;width:220px;height:28px;';
+  // Canvas backing store stays 220 (the draw code uses 220 as its coordinate
+  // space); the CSS box is fluid so it can never be wider than the panel that
+  // contains it at 320px. Nothing overflows its container. NO-COLLISION LAW.
+  wvCanvas.style.cssText = 'display:block;width:100%;max-width:220px;height:28px;';
   panel.appendChild(wvCanvas);
   const wvCtx = wvCanvas.getContext('2d');
 
@@ -6743,7 +6773,13 @@ window.MIC = (() => {
   panel.appendChild(heardEl);
 
   const responseEl = document.createElement('div');
-  responseEl.style.cssText = 'padding:2px 10px 7px;font-size:.55rem;color:rgba(79,195,247,.8);min-height:14px;line-height:1.4;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;';
+  // Status/diagnostic line. It WRAPS instead of truncating (task P3HVHZJ): the
+  // failure messages this row now carries ("STT timed out…", "mic permission
+  // denied…") are useless ellipsised at 220px, and a user who is told nothing
+  // useful is back to the original bug. It wraps INSIDE the panel and is capped
+  // at 3 lines with its own scroll, so it grows the panel's own box and can
+  // never bleed onto a neighbour — NO-COLLISION LAW holds.
+  responseEl.style.cssText = 'padding:2px 10px 7px;font-size:.55rem;color:rgba(79,195,247,.8);min-height:14px;line-height:1.4;white-space:normal;overflow-wrap:break-word;word-break:break-word;max-height:calc(1.4em * 3);overflow-y:auto;overscroll-behavior:contain;';
   panel.appendChild(responseEl);
 
   // Engine label — click to force-toggle engine
@@ -7092,33 +7128,317 @@ window.MIC = (() => {
     });
   }
 
+  // ── STT STATUS + WATCHDOG (Vinta directive 2026-08-19, task P3HVHZJ) ──────
+  // "you stopped my song waited to trasxnscribe and nothing hapopend"
+  // Every listening path must terminate in EITHER a transcript OR a specific,
+  // visible message. Perpetual "listening..." with no outcome is now impossible:
+  // a watchdog fires if nothing has been heard within a bounded window, and
+  // every error path routes through these helpers instead of being swallowed.
+  const STT_SILENT_MS = 15000;   // no transcript for this long → say something
+  let _sttFailStreak = 0;
+  let _sttLastResultAt = 0;
+  let _sttWatchdog = null;
+  let _sttFatalStop = false;     // hard-stopped; do not silently restart
+
+  function _sttAuthHeaders() {
+    // POST /stt is behind requireVoiceAuth: localhost passes, everyone else
+    // needs a voice token or a bearer JWT. Send whatever this browser holds so
+    // remote (GitHub Pages) users get a transcript instead of a silent 401.
+    const h = {};
+    try {
+      const vt = sessionStorage.getItem('vint_voice_token');
+      if (vt) h['x-voice-token'] = vt;
+      const jwt = localStorage.getItem('vint_soul_token') || localStorage.getItem('soul_auth_token');
+      if (jwt) h['Authorization'] = 'Bearer ' + jwt;
+    } catch (_) {}
+    return h;
+  }
+
+  function _sttNote(msg, color) {
+    // Status lives in the existing voicePanel rows — no new floating element,
+    // so there is nothing new that could collide with anything (NO-COLLISION LAW).
+    interimEl.textContent = '';
+    showResponse(msg, color || 'rgba(255,165,38,.85)');
+  }
+
+  function _sttSuccess() {
+    _sttFailStreak = 0;
+    _sttLastResultAt = Date.now();
+    _sttFatalStop = false;
+  }
+
+  // Server answered, but there were no words in the audio. That is an OUTCOME.
+  function _sttHeardNothing() {
+    _sttLastResultAt = Date.now();
+    interimEl.textContent = '';
+    showResponse('didn’t catch that — say it again', 'rgba(150,175,215,.75)');
+  }
+
+  // A recoverable failure. First one is quiet-ish; a streak gets the real reason.
+  function _sttFailure(reason) {
+    _sttFailStreak++;
+    if (_sttFailStreak >= 3) {
+      _sttNote(reason + ' (x' + _sttFailStreak + ')', 'rgba(239,83,80,.9)');
+      engineEl.textContent = 'ENGINE: WHISPER — struggling';
+      engineEl.style.color = 'rgba(239,83,80,.6)';
+      if (_sttFailStreak >= 6) _fallbackToWebSpeech(reason);
+    } else {
+      _sttNote(reason, 'rgba(255,165,38,.8)');
+    }
+  }
+
+  // Unrecoverable — stop cleanly and SAY WHY. Never leave "listening..." up.
+  function _sttFatal(reason) {
+    _sttFatalStop = true;
+    autoListen = false;
+    _sttStopWatchdog();
+    try { stop(); } catch (_) {}
+    showResponse(reason, 'rgba(239,83,80,.95)');
+    statusLabel.textContent = 'MIC STOPPED';
+    engineEl.textContent = 'ENGINE: STOPPED';
+    engineEl.style.color = 'rgba(239,83,80,.6)';
+    _setBtnIdle();
+  }
+
+  function _sttStartWatchdog() {
+    _sttStopWatchdog();
+    _sttLastResultAt = Date.now();
+    _sttWatchdog = setInterval(() => {
+      if (!autoListen) { _sttStopWatchdog(); return; }
+      const quiet = Date.now() - _sttLastResultAt;
+      if (quiet < STT_SILENT_MS) return;
+      // Bounded window elapsed with nothing to show. Tell the truth about why.
+      _sttLastResultAt = Date.now(); // re-arm so this repeats, not spams instantly
+      if (!_micHasSignal()) {
+        showResponse('hearing no input — check your mic device//mute', 'rgba(239,83,80,.9)');
+      } else if (whisperAvailable) {
+        showResponse('heard sound but no words yet — speak up or check STT', 'rgba(255,165,38,.85)');
+      } else {
+        showResponse('no transcript yet — browser voice may be blocked', 'rgba(255,165,38,.85)');
+      }
+    }, 2500);
+  }
+
+  function _sttStopWatchdog() {
+    if (_sttWatchdog) { clearInterval(_sttWatchdog); _sttWatchdog = null; }
+  }
+
+  // Is the mic actually receiving audio? Uses the analyser already driving the
+  // waveform, so it costs nothing extra and distinguishes "dead mic" from
+  // "mic fine, recognizer silent" — two very different messages for the user.
+  function _micHasSignal() {
+    try {
+      if (!analyser || !wvDataArr) return true; // unknown → don't accuse the mic
+      analyser.getByteFrequencyData(wvDataArr);
+      for (let i = 0; i < wvDataArr.length; i++) if (wvDataArr[i] > 4) return true;
+      return false;
+    } catch (_) { return true; }
+  }
+
+  function _setBtnIdle() {
+    btn.style.background = 'rgba(6,10,18,0.55)';
+    btn.style.borderColor = 'rgba(255,255,255,0.1)';
+    btn.style.color = 'rgba(218,228,255,0.7)';
+  }
+
+  // Controlled hand-off from Whisper to Web Speech. Always announced — the old
+  // code could switch engines with the user none the wiser.
+  function _fallbackToWebSpeech(reason) {
+    whisperAvailable = false;
+    _sttFailStreak = 0;
+    engineEl.textContent = 'ENGINE: WEB SPEECH (fallback)';
+    engineEl.style.color = 'rgba(255,165,38,.6)';
+    showResponse('Whisper unavailable (' + reason + ') — using browser voice', 'rgba(255,165,38,.9)');
+    _releaseMicStream();
+    mediaRecorder = null;
+    if (autoListen) setTimeout(() => { if (autoListen) startWebSpeech(); }, 300);
+  }
+
+  // Release EVERY capture track. Holding a stream open after the mic is off is
+  // what kept the audio session hostage while his music played.
+  function _releaseMicStream() {
+    try { if (stream) stream.getTracks().forEach(t => t.stop()); } catch (_) {}
+    try {
+      if (_micPermStream && _micPermStream !== stream) _micPermStream.getTracks().forEach(t => t.stop());
+    } catch (_) {}
+    stream = null;
+    _micPermStream = null;
+    analyser = null;
+    wvDataArr = null;
+  }
+
+  // ── PLAYBACK GUARD (Vinta directive 2026-08-19, task P3HVHZJ) ─────────────
+  // "im live trying to multpie and you stopped my song" — engaging the mic must
+  // NEVER kill audio that is already playing. Chrome's Web Speech API seizes the
+  // audio input session and, on shared-device setups (OBS / live stream), that
+  // grab ducks or hard-stops other playing media. Whisper/MediaRecorder is far
+  // politer, but a getUserMedia() call can still bump playback on some stacks.
+  //
+  // So: snapshot what was playing BEFORE we touch the mic, then re-assert it
+  // after. Two surfaces are covered:
+  //   1. The DirRM player (the canonical media surface — OPERATIONS.md). It
+  //      lives in an iframe, so we ask it for state over postMessage and tell
+  //      it to resume. We never build a second player and never touch its guts.
+  //   2. Any in-page <audio>/<video> element (e.g. #vex-audio-el). We do not
+  //      CREATE these — we only rescue ones the page already owns.
+  let _pbSnapshot = null;          // { dirrm: bool, els: HTMLMediaElement[] }
+  let _pbDirrmPlaying = false;     // last known DirRM play state
+  let _pbRestoreTimers = [];
+
+  // The DirRM player reports its state on request. brain.html hosts #dirrmFrame;
+  // dirrm-launch.js may also have injected a frame. Collect every candidate.
+  function _pbDirrmTargets() {
+    const out = [];
+    try {
+      const named = document.getElementById('dirrmFrame');
+      if (named && named.contentWindow) out.push(named.contentWindow);
+      document.querySelectorAll('iframe[id^="dirrm-launch-frame-"]').forEach(f => {
+        if (f.contentWindow && !out.includes(f.contentWindow)) out.push(f.contentWindow);
+      });
+    } catch (_) {}
+    return out;
+  }
+
+  // Listen for the player's state replies. Registered once, cheap, passive.
+  window.addEventListener('message', e => {
+    const d = e && e.data;
+    if (!d || d.action !== 'playbackState') return;
+    const wasPlaying = !!d.isPlaying;
+    // Back-fill: if a reply lands within the grace window right after we took a
+    // snapshot, and it says media WAS playing, correct the snapshot. Without
+    // this, a mic click racing the 1s poll loses the fact that his song was on
+    // — and _restorePlayback() would have nothing to restore.
+    if (_pbSnapshot && wasPlaying && !_pbSnapshot.dirrm && (Date.now() - _pbSnapshot.at) < 1500) {
+      _pbSnapshot.dirrm = true;
+    }
+    _pbDirrmPlaying = wasPlaying;
+  });
+
+  function _pbAskDirrm() {
+    _pbDirrmTargets().forEach(w => {
+      try { w.postMessage({ action: 'queryState' }, '*'); } catch (_) {}
+    });
+  }
+
+  // Poll DirRM state continuously-but-cheaply while the page is alive so the
+  // snapshot at mic-start is never stale. 1s cadence: invisible cost, and it
+  // means we always know whether his song was playing the instant he clicks.
+  setInterval(() => { if (!document.hidden) _pbAskDirrm(); }, 1000);
+
+  function _pbLiveEls() {
+    const els = [];
+    try {
+      document.querySelectorAll('audio,video').forEach(el => {
+        // "Playing" = has started, not ended, not already paused.
+        if (!el.paused && !el.ended && el.currentTime > 0) els.push(el);
+      });
+    } catch (_) {}
+    return els;
+  }
+
+  // Snapshot everything currently making sound. Call BEFORE any getUserMedia /
+  // SpeechRecognition call.
+  function _protectPlayback() {
+    // The DirRM reply is async, so the *poll-warmed* _pbDirrmPlaying is the
+    // value we trust here. But a snapshot taken microseconds after page load
+    // (before the first poll answers) would be a false "nothing was playing" —
+    // and we would then fail to restore his song. So we also treat a reply that
+    // arrives shortly AFTER the snapshot as belonging to it, via _pbSnapAt.
+    _pbAskDirrm();
+    _pbSnapshot = { dirrm: _pbDirrmPlaying, els: _pbLiveEls(), at: Date.now() };
+    return _pbSnapshot;
+  }
+
+  // Re-assert the snapshot. Called after the mic engages and again on stop.
+  // Staggered retries because the audio-session grab can pause media a few
+  // hundred ms AFTER the mic actually opens — a single immediate check misses it.
+  function _restorePlayback() {
+    const snap = _pbSnapshot;
+    if (!snap) return;
+    const attempt = () => {
+      // 1. In-page media that we saw playing and that is now paused → resume.
+      snap.els.forEach(el => {
+        try {
+          if (el.paused && !el.ended) el.play().catch(() => {});
+        } catch (_) {}
+      });
+      // 2. DirRM: if it was playing and has since stopped, tell it to play.
+      if (snap.dirrm && !_pbDirrmPlaying) {
+        _pbDirrmTargets().forEach(w => {
+          try { w.postMessage({ action: 'play' }, '*'); } catch (_) {}
+        });
+      }
+      _pbAskDirrm();
+    };
+    // Clear any prior schedule so repeated start/stop can't stack timers.
+    _pbRestoreTimers.forEach(t => clearTimeout(t));
+    _pbRestoreTimers = [120, 450, 1200, 2500].map(ms => setTimeout(attempt, ms));
+    attempt();
+  }
+
   // ── Whisper STT (primary) ─────────────────────────────────────────────────
   async function checkWhisper() {
-    try {
-      // Test the actual STT endpoint, not just /health — confirms full pipeline works
-      const _freshBase = _getWhisperBase();
-      const testUrl = _freshBase.includes(':8768') ? _freshBase + '/health' : _freshBase + '/stt';
-      // For /stt (proxy), do a HEAD or OPTIONS — a zero-body POST returns "No audio data" with 400, meaning it's alive
-      if (testUrl.endsWith('/stt')) {
-        // Use HEAD to avoid the 400 noise in console — just need to know the endpoint exists
-        const r = await fetch(testUrl, { method: 'HEAD', signal: AbortSignal.timeout(3000) }).catch(() => null);
-        // HEAD returns 200 or 405 (method not allowed) — both mean server is alive
-        whisperAvailable = r ? (r.ok || r.status === 405 || r.status === 400) : false;
-      } else {
-        const r = await fetch(testUrl, { signal: AbortSignal.timeout(2000) });
-        whisperAvailable = r.ok;
+    // Probe EVERY candidate base and pin the first that answers (task P3HVHZJ).
+    // The old version probed exactly one hardcoded base; when that base was the
+    // dead :8768 sidecar it reported "no whisper" even though the brain's /stt
+    // was alive two ports over — and the whole session fell to Web Speech.
+    _sttBaseOverride = null;
+    whisperAvailable = false;
+    let reason = 'no STT endpoint answered';
+
+    for (const base of _sttCandidates()) {
+      const isSidecar = base.includes(':8768');
+      const url = isSidecar ? base + '/health' : base + '/stt';
+      try {
+        const r = isSidecar
+          ? await fetch(url, { signal: AbortSignal.timeout(2000) }).catch(() => null)
+          // HEAD avoids the 400-on-empty-body noise; the brain answers HEAD /stt 200.
+          : await fetch(url, { method: 'HEAD', signal: AbortSignal.timeout(3000) }).catch(() => null);
+        // 200 = alive; 405/400 = alive but picky about the probe verb — also alive.
+        if (r && (r.ok || r.status === 405 || r.status === 400)) {
+          _sttBaseOverride = base;
+          whisperAvailable = true;
+          break;
+        }
+        if (r) reason = 'STT returned ' + r.status;
+      } catch (e) {
+        reason = (e && e.message) || 'probe failed';
       }
-    } catch { whisperAvailable = false; }
-    engineEl.textContent = whisperAvailable ? 'ENGINE: WHISPER (local AI)' : 'ENGINE: WEB SPEECH (browser)';
-    engineEl.style.color = whisperAvailable ? 'rgba(102,187,106,.5)' : 'rgba(255,165,38,.4)';
+    }
+
+    if (whisperAvailable) {
+      engineEl.textContent = 'ENGINE: WHISPER (local AI)';
+      engineEl.style.color = 'rgba(102,187,106,.5)';
+      engineEl.title = 'Local VintaBox whisper via ' + _getWhisperBase() + ' — audio never leaves this machine';
+    } else {
+      // Ground truth, always. Never claim an engine that is not answering.
+      engineEl.textContent = 'ENGINE: WEB SPEECH (browser)';
+      engineEl.style.color = 'rgba(255,165,38,.4)';
+      engineEl.title = 'Local Whisper unreachable (' + reason + ') — falling back to the browser recognizer';
+    }
     return whisperAvailable;
   }
 
   async function startWhisper() {
-    // Whisper disabled — no STT backend running. This path should never be reached.
-    return false;
+    // REVIVED 2026-08-19 (task P3HVHZJ). The old first line here was a hard
+    // `return false;` with the comment "no STT backend running". That comment
+    // was STALE: the brain exposes POST /stt (server.js), backed by the local
+    // VintaBox whisper sidecar, and it answers (HEAD /stt → 200, POST → a real
+    // {transcript,provider:"vintabox:whisper"} body). Dead-coding this path is
+    // what forced every session onto Chrome Web Speech — which seizes the audio
+    // session and stopped Vinta's song mid-stream. This is now the PRIMARY lane.
     try {
-      stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, sampleRate: 16000 } });
+      // ONE stream, reused. We deliberately do NOT open a second permanent
+      // _micPermStream alongside this recorder stream — two concurrent captures
+      // of the same device is exactly what makes the audio session thrash and
+      // duck other playback. autoGainControl added so the recorder does not
+      // fight the system mixer.
+      _protectPlayback();
+      stream = _micPermStream || await navigator.mediaDevices.getUserMedia({
+        audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true, sampleRate: 16000 }
+      });
+      _micPermStream = stream; // single shared handle; stop() releases it
+      _restorePlayback();
 
       // Connect to analyser for waveform
       const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -7142,49 +7462,59 @@ window.MIC = (() => {
           const blob = new Blob(audioChunks, { type: mimeType });
           if (blob.size < 1000) { startChunk(); return; } // too small = silence
 
-          showInterim('processing...');
+          showInterim('processing');
           try {
-            const formData = new FormData();
-            formData.append('audio', blob, 'audio' + (mimeType.includes('ogg') ? '.ogg' : '.webm'));
+            // NOTE: /stt reads the RAW request body (server.js pipes req straight
+            // into vintabox.listenFile with the Content-Type). It is NOT a
+            // multipart endpoint — the FormData that used to be built here was
+            // constructed and then thrown away. Send the blob, as the server expects.
             const r = await fetch(WHISPER_URL(), {
               method: 'POST',
-              headers: { 'Content-Type': mimeType, 'ngrok-skip-browser-warning': '1' },
+              headers: Object.assign(
+                { 'Content-Type': mimeType, 'ngrok-skip-browser-warning': '1' },
+                _sttAuthHeaders()
+              ),
               body: blob,
-              signal: AbortSignal.timeout(8000)
+              signal: AbortSignal.timeout(12000)
             });
             if (r.ok) {
-              const data = await r.json();
-              // Server says Whisper unavailable — switch to Web Speech permanently
+              const data = await r.json().catch(() => null);
+              if (!data) { _sttFailure('STT sent a reply I could not read'); if (autoListen) startChunk(); return; }
+              // Server says the local ear is down — fall back, loudly.
               if (data.fallback === 'webspeech' || data.error === 'no_stt_available') {
-                whisperAvailable = false;
-                engineEl.style.color = 'rgba(255,165,38,.4)';
-                showResponse('Whisper offline — switching to browser voice', 'rgba(255,165,38,.8)');
-                autoListen = true;
-                if (stream) { stream.getTracks().forEach(t => t.stop()); stream = null; }
-                mediaRecorder = null;
-                setTimeout(() => startWebSpeech(), 300);
+                _fallbackToWebSpeech('local Whisper ear is offline');
                 return;
               }
               const text = (data.transcript || '').trim();
               if (text && text.length > 1) {
+                _sttSuccess();
                 showHeard(text);
                 handleResult(text);
                 if (typeof COCHLEA !== 'undefined') COCHLEA.hear(0.8);
                 if (window.SKIN) SKIN.hear(0.8);
               } else {
-                interimEl.textContent = '';
+                // AN EMPTY TRANSCRIPT IS A RESULT, NOT SILENCE (task P3HVHZJ).
+                // This is the exact shape of "waited to transcribe and nothing
+                // happened": the server answered 200 with transcript:"". Say so.
+                _sttHeardNothing();
               }
             } else if (r.status === 503) {
-              // Hard 503 — Whisper dead, switch to Web Speech
-              whisperAvailable = false;
-              engineEl.style.color = 'rgba(255,165,38,.4)';
-              showResponse('Whisper offline — using browser voice', 'rgba(255,165,38,.7)');
-              if (autoListen) { if (stream) { stream.getTracks().forEach(t => t.stop()); stream = null; } mediaRecorder = null; setTimeout(() => startWebSpeech(), 300); }
+              _fallbackToWebSpeech('STT service unavailable (503)');
               return;
+            } else if (r.status === 401 || r.status === 403) {
+              // Voice auth gate (requireVoiceAuth) rejected us. Silently retrying
+              // forever would look exactly like the bug. Stop and tell him.
+              _sttFatal('voice auth rejected — sign in via the bond door, then retry');
+              return;
+            } else {
+              _sttFailure('STT error ' + r.status);
             }
           } catch (e) {
-            // Network error — stay quiet, retry on next chunk
-            interimEl.textContent = '';
+            // Timeout / network drop. NEVER swallow: count it, and once it is a
+            // pattern, surface the real reason instead of a forever "listening".
+            _sttFailure(e && e.name === 'TimeoutError'
+              ? 'STT timed out — the local ear is slow or stuck'
+              : 'STT unreachable — ' + ((e && e.message) || 'network error'));
           }
           if (autoListen) startChunk();
         };
@@ -7217,13 +7547,21 @@ window.MIC = (() => {
           } catch (_) {}
           document.getElementById('_micFixClose').addEventListener('click', function(e){ e.stopPropagation(); _fb.remove(); });
         }
-        // Fall through to Web Speech so voice still works
+        // A DENIED mic denies Web Speech too — falling through to it would just
+        // churn the audio session and still produce no transcript (the exact
+        // failure Vinta hit). Stop cleanly with a visible reason instead.
         whisperAvailable = false;
-        if (!autoListen) return false;
-        setTimeout(() => { startWebSpeech(); }, 500);
-      } else {
-        showResponse('mic error: ' + err.message, 'rgba(239,83,80,.7)');
+        _sttFatal('mic permission denied — allow the mic, then click 🎤 again');
+        return false;
       }
+      if (err.name === 'NotFoundError' || err.name === 'OverconstrainedError') {
+        _sttFatal('no microphone found on this device');
+        return false;
+      }
+      // Anything else: report it and let start() decide about the fallback.
+      // (We must NOT start Web Speech here as well — start() does that, and two
+      // starters racing is how duplicate recognizers fight over the mic.)
+      showResponse('mic error: ' + (err.message || err.name), 'rgba(239,83,80,.8)');
       return false;
     }
   }
@@ -7234,17 +7572,49 @@ window.MIC = (() => {
   let _wsRecognition = null;       // active SpeechRecognition (so stop() can abort it)
   let _wsSessionStarted = false;   // first-start visual flag (independent of watchdog)
   let _wsRestartTimer = null;      // pending restart timeout (so stop() can cancel it)
+  let _wsLastError = '';           // last recognition error (surfaced, never swallowed)
+  let _wsErrStreak = 0;            // consecutive errors with no successful result
+
+  // BOUNDED restart policy (task P3HVHZJ). This watchdog used to re-tick every
+  // 2000ms FOREVER, and onend restarted recognition every 150ms — so Web Speech
+  // grabbed and released the shared audio input session endlessly in the
+  // background, which is what ducked/stopped Vinta's song while he was live.
+  // Restarts are now capped and the loop stops cleanly instead of churning.
+  const WS_MAX_RESTARTS = 12;
+  let _wsRestartCount = 0;
+
+  function _wsBudgetLeft() { return _wsRestartCount < WS_MAX_RESTARTS; }
+
+  function _wsExhausted(why) {
+    // Out of budget: STOP churning and SAY SO. Never leave a dead "listening…".
+    _wsTeardown();
+    listening = false;
+    autoListen = false;
+    setListening(false);
+    _sttStopWatchdog();
+    _releaseMicStream();
+    statusLabel.textContent = 'MIC STOPPED';
+    showResponse('browser voice kept dropping (' + why + ') — mic off, click to retry', 'rgba(239,83,80,.95)');
+    engineEl.textContent = 'ENGINE: WEB SPEECH — gave up';
+    engineEl.style.color = 'rgba(239,83,80,.6)';
+    _setBtnIdle();
+    _restorePlayback();
+  }
 
   function _wsKeepalive() {
-    // Watchdog: if autoListen is on but not listening, kick it
+    // Watchdog: if autoListen is on but not listening, kick it — within budget.
     if (autoListen && !listening && !_wsRestarting) {
+      if (!_wsBudgetLeft()) { _wsExhausted(_wsLastError || 'repeated restarts'); return; }
       _wsRestarting = true;
+      _wsRestartCount++;
       _wsRestartTimer = setTimeout(() => {
         _wsRestarting = false; _wsRestartTimer = null;
         if (autoListen) startWebSpeech();
       }, 200);
     }
-    _wsWatchdog = setTimeout(_wsKeepalive, 2000);
+    // Only keep ticking while we are actually meant to be listening.
+    if (autoListen) _wsWatchdog = setTimeout(_wsKeepalive, 2000);
+    else _wsWatchdog = null;
   }
 
   // Tear down every piece of Web Speech state so the next start() is clean.
@@ -7254,6 +7624,7 @@ window.MIC = (() => {
     if (_wsRestartTimer) { clearTimeout(_wsRestartTimer); _wsRestartTimer = null; }
     _wsRestarting = false;
     _wsSessionStarted = false;
+    _wsRestartCount = 0;
     if (_wsRecognition) {
       // Detach handlers BEFORE abort so the dying recognition can't fire onend
       // and trigger a restart against the now-cleared autoListen flag.
@@ -7308,12 +7679,17 @@ window.MIC = (() => {
       // If this onend belongs to a recognition we already swapped out, ignore.
       if (recognition !== _wsRecognition) return;
       if (autoListen && !_wsRestarting) {
-        // Seamless restart — don't touch visuals, just silently reconnect
+        // Seamless restart — but BUDGETED. An unbounded 150ms restart loop is a
+        // permanent claim on the shared audio session (task P3HVHZJ).
+        if (!_wsBudgetLeft()) { _wsExhausted(_wsLastError || 'repeated restarts'); return; }
         _wsRestarting = true;
+        _wsRestartCount++;
+        // Back off as the streak grows instead of hammering every 150ms.
+        const delay = Math.min(150 + _wsErrStreak * 250, 2000);
         _wsRestartTimer = setTimeout(() => {
           _wsRestarting = false; _wsRestartTimer = null;
           if (autoListen) startWebSpeech();
-        }, 150);
+        }, delay);
       } else if (!autoListen) {
         // Intentional stop — update visuals
         setListening(false);
@@ -7321,15 +7697,35 @@ window.MIC = (() => {
     };
 
     recognition.onerror = e => {
-      if (e.error === 'not-allowed') {
+      _wsLastError = e.error || 'unknown';
+      if (e.error === 'not-allowed' || e.error === 'service-not-allowed') {
         showResponse('mic blocked — click 🔒 → Allow Microphone', 'rgba(239,83,80,.9)');
         autoListen = false; setListening(false);
         _wsTeardown();
+        _sttStopWatchdog();
+        _releaseMicStream();
+        statusLabel.textContent = 'MIC BLOCKED';
+        _setBtnIdle();
+        _restorePlayback();
       } else if (e.error === 'no-speech' || e.error === 'aborted' || e.error === 'network') {
-        // These are normal — Chrome stops after silence or network blip. Just restart.
-        // onend will fire after this and handle the restart
+        // NOT "normal" (task P3HVHZJ). These used to be swallowed entirely, so a
+        // recognizer that could never reach Google's servers looked exactly like
+        // patient listening — forever, with no transcript and no explanation.
+        // Count them, and once it is clearly a pattern, name the real reason.
+        _wsErrStreak++;
+        if (_wsErrStreak === 3 || _wsErrStreak === 6) {
+          const msg = e.error === 'network'
+            ? 'browser voice can’t reach its recognizer (network) — retrying'
+            : e.error === 'no-speech'
+              ? (_micHasSignal() ? 'no words detected yet — keep talking' : 'no mic input detected — check your device')
+              : 'voice session keeps aborting — retrying';
+          showResponse(msg, 'rgba(255,165,38,.9)');
+        }
+        if (_wsErrStreak >= 9) _wsExhausted(e.error);
       } else {
-        showResponse('mic: ' + e.error, 'rgba(239,83,80,.7)');
+        _wsErrStreak++;
+        showResponse('mic: ' + e.error, 'rgba(239,83,80,.8)');
+        if (_wsErrStreak >= 9) _wsExhausted(e.error);
       }
     };
 
@@ -7340,7 +7736,12 @@ window.MIC = (() => {
       }
       if (interim) showInterim(interim);
       const last = e.results[e.results.length - 1];
+      if (interim) { _sttLastResultAt = Date.now(); }
       if (last.isFinal) {
+        // A real transcript resets every failure counter and the silence clock.
+        _wsErrStreak = 0;
+        _wsRestartCount = 0;
+        _sttSuccess();
         showHeard(last[0].transcript);
         handleResult(last[0].transcript);
         if (typeof COCHLEA !== 'undefined') COCHLEA.hear(0.7 + last[0].confidence * 0.3);
@@ -7365,12 +7766,39 @@ window.MIC = (() => {
 
   async function start() {
     if (listening) return;
-    // Always use Web Speech API — no local Whisper service is running
-    // Whisper path is preserved for future use but disabled until a real STT backend exists
-    whisperAvailable = false;
-    engineEl.textContent = 'ENGINE: WEB SPEECH (browser)';
-    engineEl.style.color = 'rgba(255,165,38,.4)';
+    _sttFatalStop = false;
+    _sttFailStreak = 0;
+
+    // THE HEADLINE FIX (Vinta directive 2026-08-19, task P3HVHZJ).
+    // This function used to hardcode `whisperAvailable = false` and go straight
+    // to Chrome Web Speech, ignoring checkWhisper() entirely. Web Speech with
+    // continuous=true plus the keepalive watchdog grabs and releases the audio
+    // input session every couple of seconds forever — which is what stopped
+    // Vinta's song mid-stream. We now PROBE first and PREFER the MediaRecorder →
+    // /stt (local VintaBox whisper) lane, which records from one stable stream
+    // and never hands the audio session to a cloud recognizer.
+    _protectPlayback();               // snapshot his music BEFORE we touch the mic
+    engineEl.textContent = 'ENGINE: checking…';
+    engineEl.style.color = 'rgba(150,175,215,.4)';
+
+    let ok = false;
+    try { ok = await checkWhisper(); } catch (_) { ok = false; }
+
+    if (ok) {
+      const started = await startWhisper();
+      if (started) { _sttStartWatchdog(); _restorePlayback(); return; }
+      // startWhisper() already reported why it could not start.
+      if (_sttFatalStop || !autoListen) { _restorePlayback(); return; }
+    } else {
+      engineEl.textContent = 'ENGINE: WEB SPEECH (fallback)';
+      engineEl.style.color = 'rgba(255,165,38,.6)';
+      showResponse('local Whisper unreachable — using browser voice', 'rgba(255,165,38,.85)');
+    }
+
+    // LAST RESORT ONLY.
     startWebSpeech();
+    _sttStartWatchdog();
+    _restorePlayback();               // and put his music back if anything ducked it
   }
 
   function stop() {
@@ -7380,8 +7808,13 @@ window.MIC = (() => {
     const mr = mediaRecorder;
     mediaRecorder = null;
     if (mr && mr.state !== 'inactive') { try { mr.stop(); } catch(e) {} }
-    if (stream) { stream.getTracks().forEach(t => t.stop()); stream = null; }
-    analyser = null;
+    // Release EVERY track, including the permission stream. Previously
+    // _micPermStream was deliberately "held open so Chrome doesn't forget the
+    // grant" — which meant the mic never truly let go of the audio device even
+    // when it was switched OFF. That is a permanent claim on a shared input and
+    // is half of why other audio got ducked. Permission survives without it.
+    _releaseMicStream();
+    _sttStopWatchdog();
     // ── CRITICAL: tear down every Web Speech timer/recognition object ──
     // Without this, _wsWatchdog keeps ticking after stop, _wsSessionStarted
     // stays true, and the next reopen click silently no-ops (the watchdog's
@@ -7392,17 +7825,29 @@ window.MIC = (() => {
     statusDot.style.background = 'rgba(100,100,100,0.4)';
     interimEl.textContent = '';
     panel.style.opacity = '0';
+    // Whatever the mic touched, give his music back on the way out.
+    _restorePlayback();
   }
 
-  // Persistent mic permission stream — held open so Chrome doesn't forget the grant
-  let _micPermStream = null;
+  // Mic permission stream — declared at module top (see hoist note). This is the
+  // SINGLE capture handle: the Whisper recorder reuses it instead of opening a
+  // second concurrent getUserMedia, and stop() releases its tracks.
 
   function _requestMicThenStart() {
-    // If we already have permission, go straight to Web Speech
+    // If a live stream is already in hand, reuse it — never open a second one.
     if (_micPermStream) { start(); return; }
-    navigator.mediaDevices.getUserMedia({ audio: true })
+    // Snapshot playback BEFORE the permission prompt: on some stacks the very
+    // first getUserMedia is what ducks other audio (task P3HVHZJ).
+    _protectPlayback();
+    navigator.mediaDevices.getUserMedia({
+      // Polite constraints so we share the device instead of seizing it.
+      audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true }
+    })
       .then(s => {
-        _micPermStream = s; // keep it alive — proves permission to Chrome
+        // This ONE stream is what startWhisper() will record from. We do not
+        // hold a second permanent capture open beside it.
+        _micPermStream = s;
+        _restorePlayback();
         start();
       })
       .catch(err => {
