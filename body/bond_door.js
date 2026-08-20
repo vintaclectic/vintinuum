@@ -502,16 +502,26 @@
         ? 'Tell me the email you used. If there’s an account on it, a link comes to you — good for one hour.'
         : (emailSignupMode ? 'Pick a username — it’s how the world and the council will know you.' : 'Email + password — for souls who keep multiple homes.');
       if (on) {
+        // Reopening after a successful send must give a usable form again,
+        // not the leftover confirmation with its input still hidden.
+        forgotEmail.hidden = false;
+        forgotBtn.hidden = false;
+        forgotBtn.disabled = false;
+        forgotBtn.textContent = 'send the link';
+        forgotOk.hidden = true;
+        setErr('forgot', '');
         // Carry across whatever they already typed — one less thing to redo.
         var typed = (overlay.querySelector('[data-field="email"]').value || '').trim();
         if (typed && !forgotEmail.value) forgotEmail.value = typed;
-        setErr('forgot', '');
-        forgotOk.hidden = true;
         try { forgotEmail.focus(); } catch (_) {}
       } else {
         setErr('email', '');
       }
     }
+
+    // Let a top-level tab switch (name / owner key) leave the email pane in a
+    // clean sign-in state, so returning to it never lands mid-recovery.
+    resetEmailPane = function () { if (!forgotForm.hidden) showForgot(false); };
 
     overlay.querySelector('[data-action="forgot-open"]').addEventListener('click', function () { showForgot(true); });
     overlay.querySelector('[data-action="forgot-back"]').addEventListener('click', function () { showForgot(false); });

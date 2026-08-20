@@ -168,7 +168,11 @@ input::placeholder{color:rgba(150,175,215,.35);}
   align-items:stretch;
 }
 .peek{
-  width:auto;                       /* overrides the full-width button rule */
+  /* Class beats the bare `button` element selector on specificity, so these
+     hold regardless of source order. Stated explicitly rather than inherited
+     so the grid column cannot be widened to 100% and shove the input out. */
+  display:inline-flex;align-items:center;justify-content:center;
+  width:auto;
   min-height:48px;                  /* matches the input, > 44px touch target */
   padding:0 14px;
   border:1px solid rgba(255,213,79,.14);
