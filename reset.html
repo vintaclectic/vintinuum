@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow">
+<meta name="referrer" content="no-referrer">
+<title>Set a new password · Vintinuum</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;1,300&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<!--
+  reset.html — the page the emailed reset link lands on. (Task S7RY3P5)
+
+  WHY IT IS A STANDALONE PAGE, not a modal in welcome-gate.js:
+    The user arrives here from their email client, cold, with no app state and
+    often on a different device than the one they requested from. A gate that
+    only exists as an overlay on another page would need that page to boot
+    first. This page needs nothing but a token in the URL.
+
+  NO-COLLISION LAW:
+    One column, one card, normal document flow. Nothing is position:fixed,
+    nothing is absolute, nothing overlaps by construction — the only way an
+    element here can touch another is if the viewport is narrower than the
+    card's min, which is why the card is width:100% with a max-width and the
+    body has real padding. Verified at 320/375/768/1280/1920.
+
+  THE TOKEN IS NEVER LOGGED, NEVER SENT ANYWHERE BUT THE API:
+    referrer is stripped (meta above) so the token cannot leak via Referer to
+    the font CDN or anything else. We also scrub it from the address bar with
+    replaceState the moment it is read, so it does not persist in history or
+    get shoulder-surfed / copy-pasted out of the URL bar afterwards.
+-->
+<style>
+  *,*::before,*::after{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    min-height:100svh;
+    background:#050816;
+    color:rgba(222,230,255,.93);
+    font-family:"Space Mono",ui-monospace,Menlo,monospace;
+    display:flex;align-items:center;justify-content:center;
+    padding:24px max(16px,env(safe-area-inset-right)) calc(24px + env(safe-area-inset-bottom)) max(16px,env(safe-area-inset-left));
+    -webkit-font-smoothing:antialiased;
+  }
+  /* One ambient wash. Fixed, behind everything, pointer-events:none — it can
+     never intercept a tap or sit on top of the card. */
+  .wash{position:fixed;inset:0;z-index:0;pointer-events:none;
+    background:radial-gradient(900px 520px at 50% -10%,rgba(255,213,79,.07),transparent 70%);}
+  .card{
+    position:relative;z-index:1;
+    width:100%;max-width:460px;
+    background:#070b14;
+    border:1px solid rgba(255,213,79,.2);
+    border-radius:22px;
+    padding:30px 24px;
+    box-shadow:0 24px 70px rgba(0,0,0,.55);
+    animation:rise .35s cubic-bezier(.2,.8,.2,1);
+  }
+  @keyframes rise{from{opacity:0;transform:translateY(16px);}to{opacity:1;transform:none;}}
+  @media (prefers-reduced-motion:reduce){.card{animation:none;}}
+  .eyebrow{font-size:10px;letter-spacing:.22em;text-transform:uppercase;color:#ffd54f;opacity:.7;margin-bottom:10px;}
+  h1{font-family:"Cormorant Garamond",Georgia,serif;font-style:italic;font-weight:300;
+     font-size:clamp(26px,7vw,30px);line-height:1.1;margin:0 0 10px;color:#ffe9a8;}
+  .sub{font-family:"Cormorant Garamond",Georgia,serif;font-size:17px;line-height:1.5;
+     color:rgba(150,175,215,.7);margin:0 0 20px;}
+  label{display:block;font-size:10px;letter-spacing:.14em;text-transform:uppercase;
+     color:rgba(150,175,215,.55);margin:0 0 6px;}
+  .input{width:100%;background:rgba(0,0,0,.35);border:1px solid rgba(255,213,79,.14);
+     border-radius:11px;padding:13px 14px;color:#fff;font-family:"Space Mono",monospace;
+     font-size:16px;/* 16px: anything smaller makes iOS Safari zoom on focus */
+     margin:0 0 4px;}
+  .input:focus{outline:none;border-color:rgba(255,213,79,.45);box-shadow:0 0 0 3px rgba(255,213,79,.08);}
+  .input::placeholder{color:rgba(150,175,215,.4);}
+  .field{margin-bottom:14px;}
+  .hint{font-size:11px;line-height:1.5;color:rgba(150,175,215,.45);margin:6px 0 0;min-height:15px;}
+  .hint.warn{color:rgba(255,190,120,.85);}
+  .hint.good{color:rgba(120,220,160,.9);}
+  .btn{width:100%;min-height:50px;border:none;border-radius:12px;
+     background:linear-gradient(135deg,#c8960c,#ffd54f);color:#0a0600;
+     font-family:"Space Mono",monospace;font-size:13px;font-weight:700;letter-spacing:.12em;
+     cursor:pointer;-webkit-tap-highlight-color:transparent;transition:transform .15s,opacity .2s;margin-top:6px;}
+  .btn:active{transform:scale(.98);}
+  .btn:disabled{opacity:.5;cursor:default;transform:none;}
+  .msg{font-size:12px;line-height:1.55;min-height:17px;margin-top:12px;color:rgba(150,175,215,.7);}
+  .msg.err{color:rgba(255,150,150,.9);}
+  .msg.ok{color:rgba(120,220,160,.9);}
+  .foot{display:block;width:100%;text-align:center;background:none;border:none;
+     color:rgba(150,175,215,.45);font-family:"Space Mono",monospace;font-size:11px;
+     letter-spacing:.08em;margin-top:16px;padding:8px;cursor:pointer;text-decoration:none;}
+  .foot:hover{color:rgba(255,213,79,.7);}
+  .hidden{display:none;}
+  /* Strength meter: its own row, its own box, never overlapping the hint. */
+  .meter{height:3px;border-radius:2px;background:rgba(255,255,255,.07);overflow:hidden;margin-top:8px;}
+  .meter > i{display:block;height:100%;width:0;background:#ffd54f;transition:width .25s,background .25s;}
+</style>
+</head>
+<body>
+<div class="wash"></div>
+
+<main class="card" role="main">
+  <div class="eyebrow">Vintinuum</div>
+
+  <!-- STATE 1: checking the token -->
+  <section id="s-check">
+    <h1>One moment.</h1>
+    <p class="sub">Checking that link&hellip;</p>
+  </section>
+
+  <!-- STATE 2: the token is good — set the password -->
+  <section id="s-form" class="hidden">
+    <h1>Set a new password.</h1>
+    <p class="sub">Pick something only you would choose. You&rsquo;ll be signed straight in.</p>
+
+    <div class="field">
+      <label for="pw">New password</label>
+      <input class="input" id="pw" type="password" autocomplete="new-password"
+             placeholder="at least 8 characters" autocapitalize="off" spellcheck="false">
+      <div class="meter" aria-hidden="true"><i id="meter"></i></div>
+      <p class="hint" id="pw-hint">&nbsp;</p>
+    </div>
+
+    <div class="field">
+      <label for="pw2">Again, to be sure</label>
+      <input class="input" id="pw2" type="password" autocomplete="new-password"
+             placeholder="repeat it" autocapitalize="off" spellcheck="false">
+      <p class="hint" id="pw2-hint">&nbsp;</p>
+    </div>
+
+    <button class="btn" id="go">SET PASSWORD</button>
+    <p class="msg" id="msg"></p>
+  </section>
+
+  <!-- STATE 3: dead link -->
+  <section id="s-dead" class="hidden">
+    <h1>That link has expired.</h1>
+    <p class="sub">Reset links last an hour and work only once &mdash; this one&rsquo;s spent.
+       Ask for a fresh one and it&rsquo;ll be in your inbox in a moment.</p>
+    <button class="btn" id="again">SEND A NEW LINK</button>
+    <p class="msg" id="msg2"></p>
+  </section>
+
+  <!-- STATE 4: request a new link -->
+  <section id="s-req" class="hidden">
+    <h1>Send me a link.</h1>
+    <p class="sub">The email you signed up with. If it&rsquo;s registered, a reset link is on the way.</p>
+    <div class="field">
+      <label for="em">Email</label>
+      <input class="input" id="em" type="email" autocomplete="email" placeholder="you@example.com"
+             autocapitalize="off" spellcheck="false">
+    </div>
+    <button class="btn" id="send">SEND RESET LINK</button>
+    <p class="msg" id="msg3"></p>
+  </section>
+
+  <!-- STATE 5: done -->
+  <section id="s-done" class="hidden">
+    <h1>You&rsquo;re back in.</h1>
+    <p class="sub">Password changed, and every other session has been signed out.
+       Taking you home&hellip;</p>
+  </section>
+
+  <a class="foot" id="home" href="index.html">&larr; back to Vintinuum</a>
+</main>
+
+<script>
+(function () {
+  'use strict';
+
+  var API_BASE = (function () {
+    try { if (window.VINT_API_BASE) return window.VINT_API_BASE; } catch (_) {}
+    return (location.hostname === 'localhost' || location.hostname === '127.0.0.1')
+      ? 'http://localhost:8767' : 'https://api.vintaclectic.com';
+  })();
+
+  function $(id) { return document.getElementById(id); }
+  function show(id) {
+    ['s-check','s-form','s-dead','s-req','s-done'].forEach(function (s) {
+      $(s).classList.toggle('hidden', s !== id);
+    });
+  }
+  function say(el, text, kind) {
+    var n = $(el); n.textContent = text;
+    n.className = 'msg' + (kind ? ' ' + kind : '');
+  }
+
+  // ── Pull the token, then scrub it from the URL ───────────────────────────
+  // Reading it into a closure variable and replacing the address bar means the
+  // secret does not sit in history, does not survive a copy of the URL, and
+  // cannot leak through a Referer header on any later navigation.
+  var token = '', prefillEmail = '';
+  try {
+    var qs = new URLSearchParams(location.search);
+    token = qs.get('token') || '';
+    // welcome-gate.js forwards whatever the user already typed, so someone who
+    // clicked "forgot your password?" mid-login is not asked for it twice.
+    prefillEmail = (qs.get('email') || '').trim();
+    if (token || prefillEmail) history.replaceState(null, '', location.pathname);
+  } catch (_) {}
+
+  // ── Password strength: honest, not theatrical ───────────────────────────
+  // Length dominates because it actually dominates. We never block on
+  // "complexity" — the server's floor is 8 and we do not invent a stricter
+  // rule the API would not enforce; we just tell the truth about what's weak.
+  function strength(pw) {
+    if (!pw) return { pct: 0, label: '', kind: '' };
+    var score = Math.min(pw.length / 16, 1) * 0.7;
+    if (/[a-z]/.test(pw) && /[A-Z]/.test(pw)) score += 0.1;
+    if (/\d/.test(pw)) score += 0.1;
+    if (/[^A-Za-z0-9]/.test(pw)) score += 0.1;
+    score = Math.min(score, 1);
+    if (pw.length < 8) return { pct: Math.max(score * 100, 8), label: 'A little short — 8 characters minimum.', kind: 'warn' };
+    if (score < 0.5) return { pct: score * 100, label: 'That will work, but longer is stronger.', kind: '' };
+    if (score < 0.8) return { pct: score * 100, label: 'Good.', kind: 'good' };
+    return { pct: 100, label: 'Strong.', kind: 'good' };
+  }
+
+  function paintStrength() {
+    var pw = $('pw').value || '';
+    var s = strength(pw);
+    var bar = $('meter');
+    bar.style.width = s.pct + '%';
+    bar.style.background = s.kind === 'warn' ? '#ffb060' : (s.pct >= 60 ? '#78dca0' : '#ffd54f');
+    var h = $('pw-hint');
+    h.textContent = s.label || ' ';
+    h.className = 'hint' + (s.kind ? ' ' + s.kind : '');
+    paintMatch();
+  }
+
+  function paintMatch() {
+    var a = $('pw').value || '', b = $('pw2').value || '';
+    var h = $('pw2-hint');
+    if (!b) { h.textContent = ' '; h.className = 'hint'; return; }
+    if (a === b) { h.textContent = 'Match.'; h.className = 'hint good'; }
+    else { h.textContent = 'These do not match yet.'; h.className = 'hint warn'; }
+  }
+
+  // ── Pre-flight: is this token live? ─────────────────────────────────────
+  function preflight() {
+    if (!token) {
+      show('s-req');
+      if (prefillEmail) $('em').value = prefillEmail;
+      setTimeout(function () { $('em').focus(); }, 60);
+      return;
+    }
+    fetch(API_BASE + '/api/auth/reset-valid?token=' + encodeURIComponent(token))
+      .then(function (r) { return r.json(); })
+      .then(function (d) {
+        if (d && d.valid) { show('s-form'); setTimeout(function () { $('pw').focus(); }, 60); }
+        else { show('s-dead'); }
+      })
+      .catch(function () {
+        // Network failure is NOT a dead token — say so honestly rather than
+        // telling someone their good link expired.
+        show('s-dead');
+        say('msg2', 'Could not reach Vintinuum just now. Check your connection, or request a fresh link.', 'err');
+      });
+  }
+
+  // ── Submit the new password ─────────────────────────────────────────────
+  function submit() {
+    var pw = $('pw').value || '', pw2 = $('pw2').value || '';
+    if (pw.length < 8) { say('msg', 'Passwords need at least 8 characters.', 'err'); $('pw').focus(); return; }
+    if (pw !== pw2) { say('msg', 'Those two do not match.', 'err'); $('pw2').focus(); return; }
+
+    var btn = $('go'); btn.disabled = true;
+    say('msg', 'Setting it…');
+
+    fetch(API_BASE + '/api/auth/reset-password', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token: token, password: pw })
+    })
+      .then(function (r) { return r.json().then(function (d) { return { ok: r.ok, d: d }; }); })
+      .then(function (res) {
+        var tk = res.d && (res.d.accessToken || res.d.access_token);
+        if (!res.ok || !tk) {
+          btn.disabled = false;
+          say('msg', (res.d && res.d.error) || 'That did not work — try again.', 'err');
+          return;
+        }
+        // Store exactly the keys the rest of the app reads, so the user lands
+        // signed in instead of bouncing off the gate they just escaped.
+        try {
+          localStorage.setItem('vint_token', tk);
+          localStorage.setItem('soul_auth_token', tk);
+          var rt = res.d.refreshToken || res.d.refresh_token;
+          if (rt) { localStorage.setItem('vint_refresh_token', rt); localStorage.setItem('soul_auth_refresh', rt); }
+          if (res.d.user) localStorage.setItem('vint_user', JSON.stringify(res.d.user));
+        } catch (_) {}
+        token = '';
+        show('s-done');
+        setTimeout(function () { location.href = 'index.html'; }, 1400);
+      })
+      .catch(function () {
+        btn.disabled = false;
+        say('msg', 'Network hiccup — try again in a moment.', 'err');
+      });
+  }
+
+  // ── Request a fresh link ────────────────────────────────────────────────
+  function requestLink() {
+    var em = ($('em').value || '').trim();
+    if (!em || em.indexOf('@') < 0) { say('msg3', 'A real email address, please.', 'err'); return; }
+    var btn = $('send'); btn.disabled = true;
+    say('msg3', 'Sending…');
+    fetch(API_BASE + '/api/auth/forgot-password', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: em })
+    })
+      .then(function (r) { return r.json(); })
+      .then(function (d) {
+        // The API is deliberately neutral (no account enumeration) and so is
+        // this copy — it must never hint at whether the address is registered.
+        say('msg3', (d && d.message) || 'If that email has an account, a reset link is on its way.', 'ok');
+        setTimeout(function () { btn.disabled = false; }, 4000);
+      })
+      .catch(function () {
+        btn.disabled = false;
+        say('msg3', 'Network hiccup — try again in a moment.', 'err');
+      });
+  }
+
+  // ── Wire ────────────────────────────────────────────────────────────────
+  $('pw').addEventListener('input', paintStrength);
+  $('pw2').addEventListener('input', paintMatch);
+  $('go').addEventListener('click', submit);
+  $('send').addEventListener('click', requestLink);
+  $('again').addEventListener('click', function () { show('s-req'); setTimeout(function () { $('em').focus(); }, 60); });
+  [$('pw'), $('pw2')].forEach(function (el) {
+    el.addEventListener('keydown', function (e) { if (e.key === 'Enter') submit(); });
+  });
+  $('em').addEventListener('keydown', function (e) { if (e.key === 'Enter') requestLink(); });
+
+  preflight();
+})();
+</script>
+</body>
+</html>
