@@ -2471,6 +2471,84 @@
         this.mediaContainer.appendChild(card);
       }
 
+      /**
+       * HLS RECOVERY — keeps a live stream alive past its token expiry (task X3PS75Z).
+       * ---------------------------------------------------------------------------
+       * WHY THIS EXISTS. Kick live plays through an AWS IVS manifest whose URL
+       * carries a signed token that expires in ~10 MINUTES (measured: 9.6min).
+       * Once it lapses, IVS answers the manifest request with a 4xx that carries
+       * NO CORS headers — so the browser reports it as
+       *   "blocked by CORS policy: No 'Access-Control-Allow-Origin' header"
+       * which is a LIE about the cause. The manifest is not origin-locked at all
+       * (the token sets aws:strict-origin-enforcement:false and IVS returns
+       * `access-control-allow-origin: *` to every origin, verified). The stream
+       * died of OLD AGE, not of origin policy. That misleading message is why
+       * this looked like a CORS bug for so long.
+       *
+       * Before this, `new Hls()` had NO error listener whatsoever, so a fatal
+       * network error just stopped the video with no card, no retry, no log —
+       * a live stream silently froze after ~10 minutes, every time.
+       *
+       * WHAT IT DOES. On a FATAL error we re-resolve a FRESH manifest URL from
+       * the brain (a new token) and reload, rather than retrying the dead URL
+       * (which can never recover — the token is expired, not flaky). Non-fatal
+       * errors are left to hls.js, which self-heals them.
+       */
+      _attachHlsRecovery(hls, url, video) {
+        const Hls = window.Hls;
+        if (!Hls || !hls) return;
+
+        // Only Kick live URLs can be re-resolved; a plain .m3u8 has no issuer to
+        // ask for a new token, so for those we fall back to hls.js's own recovery.
+        const kickChannel = this._kickLiveChannel(this._lastUrl || '') || this._kickChannelForRefresh || null;
+        this._kickChannelForRefresh = kickChannel;
+        this._hlsReloads = 0;
+
+        hls.on(Hls.Events.ERROR, async (_evt, data) => {
+          if (!data || !data.fatal) return;            // hls.js handles non-fatal itself
+          if (this._hls !== hls) return;               // stale instance, we've moved on
+
+          if (data.type === Hls.ErrorTypes.MEDIA_ERROR) {
+            try { hls.recoverMediaError(); return; } catch (_) {}
+          }
+
+          // A fatal NETWORK error on a token-signed manifest = expired token.
+          // Retrying the same URL is futile; get a new one.
+          if (data.type === Hls.ErrorTypes.NETWORK_ERROR && kickChannel) {
+            if (this._hlsReloads >= 5) {
+              return this._showLiveOfflineCard(
+                this._lastUrl || url, kickChannel,
+                'The live stream kept dropping after several reconnects.', 'unreachable');
+            }
+            this._hlsReloads++;
+            try {
+              const apiBase = window.__VINTINUUM_API_BASE || window.VINTINUUM_API || window.__VINT_API || 'https://api.vintaclectic.com';
+              const resp = await fetch(
+                `${apiBase}/api/stream/kick-live?channel=${encodeURIComponent(kickChannel)}&fresh=1`,
+                { credentials: 'include' });
+              const fresh = await resp.json();
+              if (this._hls !== hls) return;           // superseded while awaiting
+              if (fresh && fresh.ok && fresh.streamUrl) {
+                hls.loadSource(fresh.streamUrl);       // new token, same instance
+                hls.startLoad();
+                return;
+              }
+              // The brain says they're no longer live — that's not an error, it's news.
+              return this._showLiveOfflineCard(
+                this._lastUrl || url, kickChannel,
+                (fresh && fresh.message) || 'The stream ended.',
+                (fresh && fresh.error) || 'not_live');
+            } catch (_) {
+              try { hls.startLoad(); } catch (__) {}   // brain unreachable — let hls retry
+              return;
+            }
+          }
+
+          // Anything else fatal and unrecoverable.
+          try { hls.startLoad(); } catch (_) {}
+        });
+      }
+
       async loadVideo(url) {
         this.setBadge('Video');
         const video = document.createElement('video');
@@ -2490,10 +2568,14 @@
             try {
               await this.loadScript('https://cdn.jsdelivr.net/npm/hls.js@latest/dist/hls.min.js');
               if (window.Hls && window.Hls.isSupported()) {
+                // Tear down any previous instance — a second loadVideo() would
+                // otherwise leave the old hls.js pulling segments forever.
+                if (this._hls) { try { this._hls.destroy(); } catch (_) {} this._hls = null; }
                 const hls = new window.Hls({ enableWorker: true, lowLatencyMode: true });
                 hls.loadSource(url);
                 hls.attachMedia(video);
                 this._hls = hls;
+                this._attachHlsRecovery(hls, url, video);
               } else {
                 video.src = url; // last-ditch
               }
