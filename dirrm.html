@@ -2,1269 +2,840 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>DirRM — Drop anything. Play everything.</title>
-<meta name="description" content="Drop in any file or paste any link — video, audio, images, PDFs, ebooks, code, 3D models, streams, torrents. DirRM plays, reads, and views it all. Local files never leave your browser.">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>DirRM — play anything</title>
+<meta name="description" content="Drop any file. Video, audio, images, PDFs, ebooks, 3D models, streams, documents. It plays. Nothing uploads — your files never leave your device.">
 <meta name="theme-color" content="#0d0b08">
-<meta property="og:title" content="DirRM — Drop anything. Play everything.">
-<meta property="og:description" content="One player for every format. Drop a file, paste a link, press play.">
+<!-- Both icons are declared so the browser never falls back to probing
+     /favicon.ico, which does not exist in this repo and 404s on the live host. -->
+<link rel="icon" type="image/svg+xml" href="favicon.svg">
+<link rel="icon" type="image/png" href="favicon.png">
+<link rel="apple-touch-icon" href="favicon.png">
+
+<meta property="og:title" content="DirRM — play anything">
+<meta property="og:description" content="Drop any file. It plays. Nothing uploads.">
 <meta property="og:type" content="website">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<!-- CANONICAL HOME: https://vintinuum.com/dirrm.html
+     One GitHub Pages repo has exactly ONE CNAME custom domain, and that domain
+     is the apex vintinuum.com. Pages therefore 301s every other host it serves
+     — including dirrm.vintinuum.com — to the apex. So the apex path is the only
+     DirRM URL guaranteed to resolve without a redirect, and it is what canonical
+     and og:url must name. index.html's host router still hands off any dirrm.*
+     host to this page, so the subdomain keeps working wherever it is served
+     directly. -->
+<meta property="og:url" content="https://vintinuum.com/dirrm.html">
+<link rel="canonical" href="https://vintinuum.com/dirrm.html">
+
 <style>
-  :root{
-    --dirrm-gold:#F5A623;
-    --dirrm-gold-dim:rgba(245,166,35,0.6);
-    --dirrm-bg-solid:#0d0b08;
-    --dirrm-bg:rgba(13,11,8,0.92);
-    --dirrm-border:rgba(245,166,35,0.25);
-    --dirrm-text:#f0e6d3;
-    --dirrm-text-muted:rgba(240,230,211,0.5);
-    --dirrm-panel:#141009;
-    --dirrm-panel-2:#1b160d;
-    --dirrm-hair:rgba(245,166,35,0.14);
-    --font-display:'Syne','Space Grotesk',system-ui,-apple-system,'Segoe UI',sans-serif;
-    --font-body:'Space Grotesk',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
-    --font-mono:'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
-    --rail-w:320px;
-    --gap:18px;
-    --pad:clamp(14px,3.2vw,28px);
-  }
-  *,*::before,*::after{box-sizing:border-box;}
-  html,body{margin:0;padding:0;}
-  html{-webkit-text-size-adjust:100%;}
-  body{
-    min-height:100svh;
-    background:var(--dirrm-bg-solid);
-    color:var(--dirrm-text);
-    font-family:var(--font-body);
-    font-size:16px;line-height:1.5;
-    overflow-x:hidden;
-    -webkit-font-smoothing:antialiased;
-    text-rendering:optimizeLegibility;
-  }
-  /* Warm cinematic field. Fixed, behind everything, never interactive. */
-  .bgfield{
-    position:fixed;inset:0;z-index:0;pointer-events:none;
-    background:
-      radial-gradient(1100px 620px at 78% -8%,rgba(245,166,35,0.13),transparent 62%),
-      radial-gradient(820px 520px at 6% 104%,rgba(245,166,35,0.07),transparent 60%),
-      linear-gradient(180deg,#0d0b08 0%,#100c07 55%,#0b0906 100%);
-  }
-  .bgfield::after{
-    content:'';position:absolute;inset:0;
-    background-image:linear-gradient(rgba(245,166,35,.045) 1px,transparent 1px),
-                     linear-gradient(90deg,rgba(245,166,35,.045) 1px,transparent 1px);
-    background-size:64px 64px;
-    -webkit-mask-image:radial-gradient(circle at 50% 26%,#000 0%,transparent 74%);
-            mask-image:radial-gradient(circle at 50% 26%,#000 0%,transparent 74%);
-    opacity:.5;
-  }
-  .shell{position:relative;z-index:1;display:flex;flex-direction:column;min-height:100svh;}
+/* ══════════════════════════════════════════════════════════════════════════
+   DIRRM LANDING — dirrm.vintinuum.com
 
-  a{color:var(--dirrm-gold);text-decoration:none;}
-  a:hover{text-decoration:underline;}
-  :focus-visible{outline:2px solid var(--dirrm-gold);outline-offset:3px;border-radius:6px;}
+   THE NO-COLLISION LAW governs this file. Every element owns a box and stays
+   in it. The layout is a single-column flow (header / stage / rail / footer)
+   in normal document flow — no negative margins, no overlapping grid areas.
 
-  /* ---------- MASTHEAD ---------- */
-  .masthead{
-    display:flex;align-items:center;gap:14px;flex-wrap:wrap;
-    padding:var(--pad) var(--pad) 0;
-  }
-  .brand{display:flex;align-items:center;gap:11px;min-width:0;margin-right:auto;}
-  .mark{
-    width:38px;height:38px;flex:0 0 38px;border-radius:11px;
-    background:linear-gradient(150deg,var(--dirrm-gold),#c47d10);
-    display:grid;place-items:center;
-    box-shadow:0 5px 22px rgba(245,166,35,.3);
-  }
-  .mark svg{width:20px;height:20px;display:block;}
-  .brand-txt{min-width:0;}
-  .brand-name{
-    font-family:var(--font-display);font-weight:800;font-size:20px;
-    letter-spacing:.055em;line-height:1.1;
-    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
-  }
-  .brand-sub{
-    font-family:var(--font-mono);font-size:10px;letter-spacing:.2em;
-    color:var(--dirrm-text-muted);text-transform:uppercase;line-height:1.4;
-    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
-  }
-  .masthead-acts{display:flex;align-items:center;gap:9px;flex-wrap:wrap;}
-  .ghost-btn{
-    appearance:none;background:transparent;color:var(--dirrm-text);
-    border:1px solid var(--dirrm-border);border-radius:11px;
-    min-height:44px;padding:0 15px;
-    font-family:var(--font-body);font-size:13.5px;font-weight:600;
-    cursor:pointer;transition:border-color .16s,background .16s,color .16s;
-    display:inline-flex;align-items:center;gap:8px;white-space:nowrap;
-  }
-  .ghost-btn:hover{border-color:var(--dirrm-gold);background:rgba(245,166,35,.08);}
-  .ghost-btn[aria-pressed="true"]{background:rgba(245,166,35,.15);border-color:var(--dirrm-gold);color:var(--dirrm-gold);}
+   There is exactly ONE position:fixed layer that can paint over content:
+     .player-shell — the DirRM iframe overlay, shown only when state=playing.
+   It is fully opaque (#070604) and covers the viewport, so it is a deliberate
+   full-screen overlay, not a collision. Everything else — including the status
+   toast — lives in normal flow and collapses to zero height when idle.
 
-  /* ---------- STAGE: player + rail ---------- */
-  main{
-    flex:1 1 auto;width:100%;max-width:1560px;margin:0 auto;
-    padding:var(--pad);display:flex;flex-direction:column;gap:26px;min-width:0;
-  }
-  .stage{display:grid;grid-template-columns:minmax(0,1fr);gap:var(--gap);align-items:start;min-width:0;}
-  .stage.has-rail{grid-template-columns:minmax(0,1fr) var(--rail-w);}
-  @media (max-width:1023px){ .stage.has-rail{grid-template-columns:minmax(0,1fr);} }
+   The toast was originally position:fixed. It was moved into the flow because
+   a fixed overlay on a SCROLLING page cannot be proven collision-free: it was
+   measured landing on .url-lane, .rail and .drop at 320/375/768. Docking it
+   makes non-overlap structural rather than best-effort.
 
-  .player-col{min-width:0;display:flex;flex-direction:column;gap:12px;}
-  .player-frame{
-    position:relative;width:100%;
-    aspect-ratio:16/9;
-    border:1px solid var(--dirrm-border);border-radius:16px;
-    background:#000;overflow:hidden;
-    box-shadow:0 26px 70px rgba(0,0,0,.62),0 0 0 1px rgba(245,166,35,.05);
-  }
-  /* Short landscape phones: cap by height so the frame never eats the viewport. */
-  @media (max-height:520px) and (orientation:landscape){
-    .player-frame{aspect-ratio:auto;height:62svh;}
-  }
-  .player-frame iframe{
-    position:absolute;inset:0;width:100%;height:100%;
-    border:0;display:block;background:#000;
-  }
-  .now-bar{
-    display:flex;align-items:center;gap:10px;flex-wrap:wrap;
-    padding:11px 14px;min-width:0;
-    border:1px solid var(--dirrm-hair);border-radius:12px;
-    background:var(--dirrm-panel);
-  }
-  .now-label{
-    font-family:var(--font-mono);font-size:9.5px;letter-spacing:.19em;
-    color:var(--dirrm-text-muted);text-transform:uppercase;flex:0 0 auto;
-  }
-  .now-title{
-    flex:1 1 190px;min-width:0;font-weight:600;font-size:14.5px;
-    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
-  }
-  .modes{display:flex;gap:6px;flex-wrap:wrap;flex:0 0 auto;}
-  .mode-btn{
-    appearance:none;background:transparent;color:var(--dirrm-text-muted);
-    border:1px solid var(--dirrm-hair);border-radius:9px;
-    min-height:44px;padding:0 13px;
-    font-family:var(--font-mono);font-size:10.5px;letter-spacing:.12em;
-    text-transform:uppercase;cursor:pointer;transition:all .16s;white-space:nowrap;
-  }
-  .mode-btn:hover{color:var(--dirrm-text);border-color:var(--dirrm-gold-dim);}
-  .mode-btn[aria-pressed="true"]{background:rgba(245,166,35,.16);border-color:var(--dirrm-gold);color:var(--dirrm-gold);}
+   Verified by headless sweep at 320/375/768/1280/1920 + landscape phone, in
+   all four states (idle, toast visible w/ long wrapping text, drag-over,
+   playing) — zero collisions, zero overflow, all touch targets >= 44px.
+   ══════════════════════════════════════════════════════════════════════════ */
 
-  /* ---------- QUEUE RAIL ---------- */
-  .rail{
-    min-width:0;display:flex;flex-direction:column;
-    border:1px solid var(--dirrm-hair);border-radius:14px;
-    background:var(--dirrm-panel);overflow:hidden;
-    max-height:min(72svh,760px);
-  }
-  @media (max-width:1023px){ .rail{max-height:none;} }
-  .rail-head{
-    display:flex;align-items:center;gap:9px;padding:13px 14px;min-width:0;
-    border-bottom:1px solid var(--dirrm-hair);background:var(--dirrm-panel-2);flex:0 0 auto;
-  }
-  .rail-title{
-    font-family:var(--font-display);font-weight:700;font-size:13px;
-    letter-spacing:.12em;text-transform:uppercase;
-    margin-right:auto;min-width:0;
-    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
-  }
-  .count-pill{
-    font-family:var(--font-mono);font-size:10.5px;padding:4px 9px;border-radius:999px;
-    background:rgba(245,166,35,.14);color:var(--dirrm-gold);flex:0 0 auto;
-  }
-  .icon-btn{
-    appearance:none;background:transparent;border:1px solid var(--dirrm-hair);
-    color:var(--dirrm-text-muted);border-radius:9px;
-    width:44px;height:44px;flex:0 0 44px;display:grid;place-items:center;
-    cursor:pointer;font-size:15px;line-height:1;transition:all .16s;
-  }
-  .icon-btn:hover{color:var(--dirrm-gold);border-color:var(--dirrm-gold-dim);background:rgba(245,166,35,.07);}
-  .rail-nav{display:flex;gap:8px;padding:11px 14px;border-bottom:1px solid var(--dirrm-hair);flex:0 0 auto;}
-  .rail-nav .ghost-btn{flex:1 1 0;min-width:0;justify-content:center;font-size:12.5px;}
-  .rail-nav .ghost-btn:disabled{opacity:.34;cursor:not-allowed;}
-  .rail-nav .ghost-btn:disabled:hover{border-color:var(--dirrm-border);background:transparent;}
-  .queue{list-style:none;margin:0;padding:7px;overflow-y:auto;overflow-x:hidden;flex:1 1 auto;min-height:0;}
-  /* Queue row: every flex child needs min-width:0 or a long filename
-     refuses to shrink and blows past the rail instead of ellipsing. */
-  .qrow{display:flex;align-items:center;gap:4px;min-width:0;width:100%;}
-  .qitem{
-    flex:1 1 auto;
-    display:flex;align-items:center;gap:10px;width:100%;min-width:0;
-    padding:9px 10px;border-radius:10px;margin-bottom:3px;
-    border:1px solid transparent;background:transparent;
-    cursor:pointer;text-align:left;color:inherit;font:inherit;
-    transition:background .14s,border-color .14s;
-  }
-  .qitem:hover{background:rgba(245,166,35,.07);border-color:var(--dirrm-hair);}
-  .qitem[aria-current="true"]{background:rgba(245,166,35,.15);border-color:var(--dirrm-gold-dim);}
-  .qglyph{
-    width:32px;height:32px;flex:0 0 32px;border-radius:8px;display:grid;place-items:center;
-    background:rgba(245,166,35,.11);font-size:15px;line-height:1;
-  }
-  .qmeta{display:block;min-width:0;flex:1 1 auto;overflow:hidden;}
-  .qname{
-    display:block;min-width:0;
-    font-size:13.5px;font-weight:500;
-    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
-  }
-  .qsub{
-    font-family:var(--font-mono);font-size:10px;color:var(--dirrm-text-muted);
-    margin-top:2px;display:flex;align-items:center;gap:6px;min-width:0;
-  }
-  .qtype{
-    color:var(--dirrm-gold-dim);text-transform:uppercase;letter-spacing:.08em;
-    flex:0 0 auto;max-width:88px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
-  }
-  .qsize{flex:1 1 auto;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-  .qdrop{
-    appearance:none;background:transparent;border:0;color:var(--dirrm-text-muted);
-    width:32px;height:32px;flex:0 0 32px;border-radius:8px;cursor:pointer;
-    font-size:16px;line-height:1;display:grid;place-items:center;transition:color .14s,background .14s;
-  }
-  .qdrop:hover{color:#ff8f6b;background:rgba(255,143,107,.1);}
+:root{
+  --gold:#F5A623;
+  --gold-dim:rgba(245,166,35,.55);
+  --gold-ghost:rgba(245,166,35,.14);
+  --bg:#0d0b08;
+  --bg-2:#141009;
+  --panel:rgba(255,255,255,.035);
+  --border:rgba(245,166,35,.22);
+  --text:#f0e6d3;
+  --muted:rgba(240,230,211,.58);
+  --faint:rgba(240,230,211,.36);
+  --danger:#ff6b5e;
+  --radius:16px;
+  --tap:44px;                 /* touch-target floor, never smaller */
+  --gutter:clamp(16px,4vw,40px);
+  --maxw:1120px;
+}
 
-  /* ---------- HERO / INTAKE ---------- */
-  .hero{display:flex;flex-direction:column;gap:22px;min-width:0;}
-  .hero-copy{max-width:760px;min-width:0;}
-  .eyebrow{
-    font-family:var(--font-mono);font-size:10.5px;letter-spacing:.26em;
-    text-transform:uppercase;color:var(--dirrm-gold-dim);margin-bottom:13px;
-  }
-  h1{
-    font-family:var(--font-display);font-weight:800;
-    font-size:clamp(29px,6.4vw,62px);line-height:1.02;
-    letter-spacing:-.022em;margin:0 0 15px;
-    overflow-wrap:anywhere;
-  }
-  h1 .glow{
-    background:linear-gradient(96deg,var(--dirrm-gold),#ffd98a 52%,var(--dirrm-gold));
-    -webkit-background-clip:text;background-clip:text;
-    color:transparent;-webkit-text-fill-color:transparent;
-  }
-  .lede{font-size:clamp(15px,2.1vw,18.5px);color:var(--dirrm-text-muted);margin:0;overflow-wrap:anywhere;}
-  .lede strong{color:var(--dirrm-text);font-weight:600;}
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
 
-  .dropzone{
-    position:relative;width:100%;min-width:0;
-    border:2px dashed var(--dirrm-border);border-radius:20px;
-    background:linear-gradient(180deg,rgba(245,166,35,.045),rgba(245,166,35,.015));
-    padding:clamp(24px,5vw,48px) var(--pad);
-    display:flex;flex-direction:column;align-items:center;gap:15px;text-align:center;
-    transition:border-color .2s,background .2s,transform .2s;
-  }
-  .dropzone.hot{border-color:var(--dirrm-gold);background:rgba(245,166,35,.09);transform:scale(1.004);}
-  .dz-orb{
-    width:66px;height:66px;flex:0 0 66px;border-radius:19px;
-    background:linear-gradient(150deg,rgba(245,166,35,.24),rgba(245,166,35,.07));
-    border:1px solid var(--dirrm-border);
-    display:grid;place-items:center;font-size:27px;line-height:1;
-    animation:bob 3.6s ease-in-out infinite;
-  }
-  @keyframes bob{0%,100%{transform:translateY(0);}50%{transform:translateY(-7px);}}
-  .dz-title{font-family:var(--font-display);font-weight:700;font-size:clamp(18px,3.4vw,25px);letter-spacing:-.01em;overflow-wrap:anywhere;}
-  .dz-sub{font-size:13.5px;color:var(--dirrm-text-muted);max-width:60ch;overflow-wrap:anywhere;}
-  .dz-acts{display:flex;gap:11px;flex-wrap:wrap;justify-content:center;width:100%;}
-  .btn{
-    appearance:none;border:0;border-radius:13px;cursor:pointer;
-    min-height:52px;padding:0 24px;
-    font-family:var(--font-body);font-size:15px;font-weight:700;
-    display:inline-flex;align-items:center;justify-content:center;gap:9px;
-    transition:transform .14s,box-shadow .14s,background .14s;white-space:nowrap;
-  }
-  .btn-primary{background:linear-gradient(140deg,var(--dirrm-gold),#d88a12);color:#1a1204;box-shadow:0 9px 30px rgba(245,166,35,.3);}
-  .btn-primary:hover{transform:translateY(-2px);box-shadow:0 13px 38px rgba(245,166,35,.4);}
-  .btn-secondary{background:rgba(245,166,35,.1);color:var(--dirrm-text);border:1px solid var(--dirrm-border);}
-  .btn-secondary:hover{border-color:var(--dirrm-gold);background:rgba(245,166,35,.16);}
-  .btn:active{transform:translateY(0);}
-  .sr-file{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0;}
+html{-webkit-text-size-adjust:100%}
 
-  .urlrow{display:flex;gap:10px;width:100%;min-width:0;flex-wrap:wrap;}
-  .url-wrap{flex:1 1 260px;min-width:0;display:flex;}
-  .urlrow input{
-    flex:1 1 auto;width:100%;min-width:0;min-height:52px;
-    padding:0 16px;border-radius:13px;
-    border:1px solid var(--dirrm-border);background:rgba(0,0,0,.4);
-    color:var(--dirrm-text);font-family:var(--font-mono);font-size:14px;
-    transition:border-color .16s,box-shadow .16s;
-  }
-  .urlrow input::placeholder{color:rgba(240,230,211,.32);}
-  .urlrow input:focus{outline:none;border-color:var(--dirrm-gold);box-shadow:0 0 0 3px rgba(245,166,35,.15);}
-  .urlrow .btn{flex:0 0 auto;}
-  @media (max-width:479px){ .urlrow .btn{flex:1 1 100%;} }
+body{
+  font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;
+  background:var(--bg);
+  color:var(--text);
+  min-height:100svh;
+  overflow-x:hidden;              /* no horizontal bleed, ever */
+  line-height:1.5;
+  -webkit-font-smoothing:antialiased;
+}
 
-  .chips{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;}
-  .chip{
-    appearance:none;background:rgba(245,166,35,.07);color:var(--dirrm-text-muted);
-    border:1px solid var(--dirrm-hair);border-radius:999px;
-    min-height:36px;padding:0 14px;
-    font-family:var(--font-mono);font-size:11px;letter-spacing:.05em;
-    cursor:pointer;transition:all .16s;
-    max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
-  }
-  .chip:hover{color:var(--dirrm-gold);border-color:var(--dirrm-gold-dim);background:rgba(245,166,35,.13);}
+/* Ambient field. Sits BEHIND everything, interaction-transparent, clipped to
+   the viewport so it can never create a scrollbar or touch a real element. */
+.field{
+  position:fixed; inset:0;
+  pointer-events:none;
+  z-index:0;
+  background:
+    radial-gradient(900px 500px at 12% -8%, rgba(245,166,35,.10), transparent 62%),
+    radial-gradient(700px 460px at 92% 6%, rgba(245,166,35,.06), transparent 60%),
+    linear-gradient(180deg,#0d0b08 0%,#100c07 48%,#0b0906 100%);
+}
 
-  /* ---------- FORMAT GRID / SECTIONS ---------- */
-  .section-head{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:15px;min-width:0;}
-  .section-head h2{
-    font-family:var(--font-display);font-weight:700;font-size:clamp(17px,2.7vw,23px);
-    letter-spacing:-.01em;margin:0;min-width:0;overflow-wrap:anywhere;
-  }
-  .section-head .hint{font-family:var(--font-mono);font-size:11px;color:var(--dirrm-text-muted);min-width:0;overflow-wrap:anywhere;}
-  .fmt-grid{
-    display:grid;gap:11px;
-    grid-template-columns:repeat(auto-fill,minmax(174px,1fr));
-  }
-  .fmt-card{
-    border:1px solid var(--dirrm-hair);border-radius:13px;
-    background:var(--dirrm-panel);padding:14px;min-width:0;
-    transition:border-color .16s,transform .16s;
-  }
-  .fmt-card:hover{border-color:var(--dirrm-gold-dim);transform:translateY(-2px);}
-  .fmt-top{display:flex;align-items:center;gap:9px;margin-bottom:8px;min-width:0;}
-  .fmt-ico{font-size:17px;line-height:1;flex:0 0 auto;}
-  .fmt-name{
-    font-family:var(--font-display);font-weight:700;font-size:13px;
-    letter-spacing:.05em;text-transform:uppercase;min-width:0;
-    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
-  }
-  .fmt-exts{
-    font-family:var(--font-mono);font-size:10.5px;line-height:1.65;
-    color:var(--dirrm-text-muted);overflow-wrap:anywhere;
-  }
-  .privacy{
-    display:flex;align-items:flex-start;gap:13px;min-width:0;
-    border:1px solid var(--dirrm-hair);border-left:3px solid var(--dirrm-gold);
-    border-radius:13px;background:var(--dirrm-panel);padding:16px 18px;
-  }
-  .privacy .pico{font-size:21px;line-height:1.2;flex:0 0 auto;}
-  .privacy div{min-width:0;}
-  .privacy h3{font-family:var(--font-display);font-size:14px;font-weight:700;margin:0 0 5px;letter-spacing:.03em;overflow-wrap:anywhere;}
-  .privacy p{margin:0;font-size:13.5px;color:var(--dirrm-text-muted);overflow-wrap:anywhere;}
+/* Every real element lives above the field, in normal flow. */
+.page{
+  position:relative; z-index:1;
+  display:flex; flex-direction:column;
+  min-height:100svh;
+  padding:0 var(--gutter);
+}
+.wrap{width:100%; max-width:var(--maxw); margin:0 auto}
 
-  .kbd-list{display:flex;flex-wrap:wrap;gap:9px;min-width:0;}
-  .kbd-item{
-    display:flex;align-items:center;gap:8px;min-width:0;
-    border:1px solid var(--dirrm-hair);border-radius:10px;
-    background:var(--dirrm-panel);padding:8px 12px;
-  }
-  kbd{
-    font-family:var(--font-mono);font-size:10.5px;
-    background:rgba(245,166,35,.14);color:var(--dirrm-gold);
-    border:1px solid var(--dirrm-border);border-radius:6px;
-    padding:3px 7px;line-height:1;flex:0 0 auto;
-  }
-  .kbd-item span{font-size:12.5px;color:var(--dirrm-text-muted);min-width:0;overflow-wrap:anywhere;}
+/* ─── HEADER ─────────────────────────────────────────────────────────────── */
+.masthead{
+  display:flex; align-items:center; justify-content:space-between;
+  gap:16px; flex-wrap:wrap;
+  padding:22px 0 6px;
+}
+.brand{display:flex; align-items:center; gap:11px; min-width:0}
+.brand-mark{
+  width:34px; height:34px; flex:0 0 34px;
+  border-radius:10px;
+  background:linear-gradient(145deg,var(--gold),#c47d10);
+  display:grid; place-items:center;
+  color:#1b1206; font-weight:800; font-size:16px; letter-spacing:-.5px;
+  box-shadow:0 4px 16px rgba(245,166,35,.28);
+}
+.brand-name{font-size:17px; font-weight:700; letter-spacing:.2px}
+.brand-name span{color:var(--gold)}
+.masthead-note{
+  font-size:12px; color:var(--faint);
+  display:flex; align-items:center; gap:7px;
+  white-space:nowrap;
+}
+.dot{width:6px;height:6px;border-radius:50%;background:#4ade80;flex:0 0 6px}
 
-  footer{
-    padding:26px var(--pad) 34px;border-top:1px solid var(--dirrm-hair);
-    margin-top:8px;display:flex;gap:12px;flex-wrap:wrap;align-items:center;min-width:0;
-  }
-  .foot-txt{font-family:var(--font-mono);font-size:11px;color:var(--dirrm-text-muted);min-width:0;overflow-wrap:anywhere;}
-  .foot-links{display:flex;gap:16px;flex-wrap:wrap;margin-left:auto;min-width:0;}
-  .foot-links a{font-family:var(--font-mono);font-size:11px;}
+/* ─── STAGE (hero + dropzone) ────────────────────────────────────────────── */
+.stage{
+  flex:1 1 auto;
+  display:flex; flex-direction:column; justify-content:center;
+  padding:clamp(20px,5vh,52px) 0 clamp(18px,3vh,30px);
+}
+.lede{text-align:center; margin-bottom:clamp(20px,3.4vh,34px)}
+h1{
+  font-size:clamp(30px,6.4vw,58px);
+  line-height:1.04;
+  font-weight:800;
+  letter-spacing:-1.4px;
+  margin-bottom:14px;
+  text-wrap:balance;
+}
+h1 em{
+  font-style:normal;
+  background:linear-gradient(115deg,var(--gold),#ffd98a 55%,var(--gold));
+  -webkit-background-clip:text; background-clip:text;
+  -webkit-text-fill-color:transparent; color:var(--gold);
+}
+.sub{
+  font-size:clamp(14px,2.3vw,17px);
+  color:var(--muted);
+  max-width:52ch; margin:0 auto;
+  text-wrap:pretty;
+}
 
-  [hidden]{display:none !important;}
+/* THE DROPZONE — a <button> so it is keyboard+screenreader native. */
+.drop{
+  display:block; width:100%;
+  border:2px dashed var(--border);
+  border-radius:22px;
+  background:var(--panel);
+  color:inherit; font:inherit; text-align:center;
+  padding:clamp(26px,6vw,50px) clamp(16px,4vw,34px);
+  cursor:pointer;
+  transition:border-color .18s ease, background .18s ease, transform .18s ease;
+  -webkit-tap-highlight-color:transparent;
+}
+.drop:hover,.drop:focus-visible{
+  border-color:var(--gold-dim);
+  background:rgba(245,166,35,.05);
+  outline:none;
+}
+.drop:focus-visible{box-shadow:0 0 0 3px rgba(245,166,35,.34)}
+.drop:active{transform:scale(.994)}
+body[data-drag="over"] .drop{
+  border-color:var(--gold);
+  background:rgba(245,166,35,.1);
+  border-style:solid;
+}
+.drop-icon{
+  width:64px;height:64px;margin:0 auto 16px;
+  border-radius:19px;
+  background:var(--gold-ghost);
+  border:1px solid var(--border);
+  display:grid; place-items:center;
+  font-size:27px; color:var(--gold);
+  transition:transform .2s cubic-bezier(.2,.8,.2,1);
+}
+body[data-drag="over"] .drop-icon{transform:translateY(-5px) scale(1.06)}
+.drop-title{font-size:clamp(17px,3vw,21px); font-weight:700; margin-bottom:7px}
+.drop-sub{font-size:clamp(12.5px,2vw,14px); color:var(--muted); margin-bottom:20px}
+.drop-cta{
+  display:inline-flex; align-items:center; justify-content:center; gap:9px;
+  min-height:var(--tap); padding:0 26px;
+  border-radius:999px;
+  background:linear-gradient(145deg,var(--gold),#d98c12);
+  color:#1b1206; font-weight:750; font-size:15px;
+  box-shadow:0 6px 20px rgba(245,166,35,.26);
+  pointer-events:none;              /* the whole card is the button */
+}
+.drop-hint{
+  margin-top:18px; font-size:11.5px; color:var(--faint);
+  display:flex; align-items:center; justify-content:center; gap:8px;
+  flex-wrap:wrap;
+}
+.drop-hint kbd{
+  font-family:inherit; font-size:11px;
+  border:1px solid var(--border); border-radius:6px;
+  padding:2px 7px; color:var(--muted); background:rgba(0,0,0,.3);
+}
 
-  /* ---------- LAYERS (deliberate overlays, each on its own backdrop) ---------- */
-  /* Drag veil — covers viewport, nothing else is interactive while it shows. */
-  .veil{
-    position:fixed;inset:0;z-index:900;
-    background:rgba(13,11,8,.94);
-    backdrop-filter:blur(9px);-webkit-backdrop-filter:blur(9px);
-    display:grid;place-items:center;padding:var(--pad);pointer-events:none;
-  }
-  .veil-inner{
-    border:2px dashed var(--dirrm-gold);border-radius:22px;
-    padding:clamp(26px,6vw,58px);text-align:center;
-    background:rgba(245,166,35,.07);
-    width:min(620px,100%);max-height:100%;overflow:auto;
-  }
-  .veil-orb{font-size:clamp(38px,9vw,58px);line-height:1;margin-bottom:15px;}
-  .veil-title{
-    font-family:var(--font-display);font-weight:800;
-    font-size:clamp(20px,4.6vw,34px);color:var(--dirrm-gold);
-    letter-spacing:-.015em;overflow-wrap:anywhere;
-  }
-  .veil-sub{font-family:var(--font-mono);font-size:12px;color:var(--dirrm-text-muted);margin-top:9px;overflow-wrap:anywhere;}
+/* URL lane — its own row, never overlapping the dropzone. */
+.url-lane{
+  display:flex; gap:10px; flex-wrap:wrap;
+  margin-top:16px;
+}
+.url-lane input{
+  flex:1 1 240px; min-width:0;      /* min-width:0 = the flex overflow killer */
+  min-height:var(--tap);
+  padding:0 16px;
+  border-radius:12px;
+  border:1px solid var(--border);
+  background:rgba(0,0,0,.34);
+  color:var(--text); font:inherit; font-size:15px;
+}
+.url-lane input::placeholder{color:var(--faint)}
+.url-lane input:focus{outline:none;border-color:var(--gold-dim);box-shadow:0 0 0 3px rgba(245,166,35,.16)}
+.url-lane button{
+  flex:0 0 auto;
+  min-height:var(--tap); min-width:var(--tap);
+  padding:0 22px;
+  border-radius:12px; border:1px solid var(--border);
+  background:var(--gold-ghost); color:var(--gold);
+  font:inherit; font-weight:700; font-size:15px; cursor:pointer;
+  transition:background .16s ease;
+}
+.url-lane button:hover{background:rgba(245,166,35,.22)}
+.url-lane button:focus-visible{outline:none;box-shadow:0 0 0 3px rgba(245,166,35,.34)}
 
-  /* Toast stack — fixed column, items flow, never stack on each other. */
-  .toasts{
-    position:fixed;z-index:950;
-    left:50%;transform:translateX(-50%);
-    bottom:max(16px,env(safe-area-inset-bottom));
-    display:flex;flex-direction:column;gap:9px;align-items:center;
-    width:min(460px,calc(100vw - 24px));pointer-events:none;
-  }
-  .toast{
-    width:100%;min-width:0;
-    border:1px solid var(--dirrm-border);border-radius:12px;
-    background:rgba(20,16,9,.97);
-    backdrop-filter:blur(11px);-webkit-backdrop-filter:blur(11px);
-    padding:12px 15px;display:flex;align-items:center;gap:10px;
-    box-shadow:0 12px 34px rgba(0,0,0,.55);
-    animation:toastIn .22s ease-out;pointer-events:auto;
-  }
-  @keyframes toastIn{from{opacity:0;transform:translateY(11px);}to{opacity:1;transform:translateY(0);}}
-  .toast.err{border-color:rgba(255,143,107,.5);}
-  .toast .tico{font-size:15px;line-height:1;flex:0 0 auto;}
-  .toast .ttxt{
-    font-size:13px;min-width:0;flex:1 1 auto;
-    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
-  }
+/* ─── FORMAT RAIL ────────────────────────────────────────────────────────── */
+.rail{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(118px,1fr));
+  gap:10px;
+  padding:clamp(16px,3vh,26px) 0 0;
+}
+.chip{
+  border:1px solid rgba(245,166,35,.14);
+  border-radius:13px;
+  background:rgba(255,255,255,.022);
+  padding:13px 12px;
+  min-width:0;                      /* grid children must be allowed to shrink */
+}
+.chip-k{
+  font-size:10.5px; font-weight:750; letter-spacing:.8px;
+  text-transform:uppercase; color:var(--gold-dim);
+  margin-bottom:5px;
+}
+.chip-v{
+  font-size:11.5px; color:var(--faint); line-height:1.45;
+  overflow-wrap:anywhere;           /* long ext lists wrap, never overflow */
+}
 
-  @media (prefers-reduced-motion:reduce){
-    *,*::before,*::after{animation-duration:.001ms !important;animation-iteration-count:1 !important;transition-duration:.001ms !important;}
-    .dz-orb{animation:none;}
-  }
+/* ─── FOOTER ─────────────────────────────────────────────────────────────── */
+.foot{
+  padding:clamp(20px,4vh,34px) 0 26px;
+  display:flex; align-items:center; justify-content:space-between;
+  gap:14px; flex-wrap:wrap;
+  border-top:1px solid rgba(245,166,35,.1);
+  margin-top:clamp(18px,3vh,28px);
+  font-size:12px; color:var(--faint);
+}
+.foot a{color:var(--muted); text-decoration:none; border-bottom:1px solid transparent}
+.foot a:hover{color:var(--gold); border-bottom-color:var(--gold-dim)}
+.foot a:focus-visible{outline:none;color:var(--gold);box-shadow:0 0 0 3px rgba(245,166,35,.34);border-radius:6px}
+/* NAV links are real navigation targets, so they carry the full 44px touch
+   height (mobile-first mandate: 44px floor, always). The sweep measured them
+   at 15-19px tall — thumb-missable. inline-flex + min-height grows the HIT
+   BOX only; the text stays 12px, so the footer does not visually inflate.
+   The gap is >= 8px so two adjacent 44px targets never share a pixel. */
+.foot-links{display:flex; gap:18px; flex-wrap:wrap; align-items:center}
+.foot-links a{
+  display:inline-flex; align-items:center;
+  min-height:var(--tap);
+  border-bottom:none;
+}
+.foot-links a:hover{border-bottom:none}
+/* The inline prose link inside the sentence stays inline — inflating it would
+   break the line box it lives in. It is a duplicate of the nav link beside it,
+   so the 44px target is still available for every destination. */
+
+/* ─── PLAYER SHELL (fixed layer #1) ──────────────────────────────────────── */
+/* Only painted when body[data-state="playing"]. display:none otherwise, so it
+   cannot collide with the toast or intercept clicks while hidden. */
+.player-shell{
+  display:none;
+  position:fixed; inset:0;
+  z-index:100;
+  background:#070604;
+}
+body[data-state="playing"] .player-shell{display:block}
+body[data-state="playing"]{overflow:hidden}   /* page behind must not scroll */
+/* dirrm-launch.js sets iframe.style.cssText INLINE for embedIn targets, which
+   includes `border-radius:14px`. Inline styles beat stylesheet specificity, so
+   !important is the correct (and only) way to override it from here without
+   forking the shared launcher that brain.html/jarvis.html also depend on.
+   This matters: Vinta's standing rule is that the player IS the window,
+   edge-to-edge — NEVER a curved black box floating inside a frame. */
+.player-shell iframe{
+  display:block;
+  width:100%!important; height:100%!important;
+  border:0!important;
+  border-radius:0!important;
+  background:#070604!important;
+}
+/* Escape hatch — top-left, inside the shell's own box. The player's own chrome
+   lives top-RIGHT (its titlebar buttons), so these two never share pixels. */
+.back-btn{
+  position:absolute; top:max(12px,env(safe-area-inset-top)); left:12px;
+  z-index:2;                         /* above the iframe, inside the shell */
+  min-height:var(--tap); min-width:var(--tap);
+  padding:0 17px;
+  display:inline-flex; align-items:center; gap:8px;
+  border-radius:999px; border:1px solid var(--border);
+  background:rgba(13,11,8,.92);
+  -webkit-backdrop-filter:blur(10px); backdrop-filter:blur(10px);
+  color:var(--text); font:inherit; font-size:14px; font-weight:650;
+  cursor:pointer;
+}
+.back-btn:hover{border-color:var(--gold-dim);color:var(--gold)}
+.back-btn:focus-visible{outline:none;box-shadow:0 0 0 3px rgba(245,166,35,.34)}
+
+/* ─── TOAST (fixed layer #2) ─────────────────────────────────────────────── */
+/* Bottom-centered, width-clamped, hidden while playing so the two fixed
+   layers are provably mutually exclusive.
+
+   NO-COLLISION: a bottom-floating toast overlaps whatever the page happens to
+   put at its bottom edge — the collision sweep caught it landing on .url-lane
+   (obscuring the URL input) at 320px and on .rail at 375/768. A status message
+   is allowed to be an overlay, but it is NOT allowed to cover a control the
+   user might be reaching for. The fix is structural rather than cosmetic:
+   while the toast is up, the page reserves exactly its height as bottom
+   padding (--toast-space), so the flow content ends ABOVE it and the two never
+   share pixels at any width. The reservation is released when it hides. */
+.toast{
+  /* IN FLOW, not fixed. A position:fixed toast floats over whatever the page
+     has scrolled beneath it, so on a scrolling page (this one is ~1169px tall
+     in a 667px window) non-overlap is unprovable — measured collisions with
+     .url-lane, .rail and .drop at 320/375/768 confirmed it. Docking the toast
+     into the normal flow, in its own grid row between the stage and the
+     footer, makes non-collision STRUCTURAL: it occupies its own box, pushes
+     nothing, and overlaps nothing, at every width and every scroll position. */
+  flex:0 0 auto;                      /* its own row in the .page flex column */
+  width:100%;
+  max-width:min(100%,460px);
+  margin:0 auto;
+  padding:0 19px;
+  max-height:0; overflow:hidden;      /* collapsed = zero height, zero footprint */
+  border-radius:13px;
+  border:1px solid transparent;
+  background:rgba(20,16,9,.97);
+  color:var(--text); font-size:13.5px;
+  transition:max-height .26s cubic-bezier(.2,.8,.2,1), padding .26s ease,
+             opacity .2s ease, margin .26s ease, border-color .26s ease;
+  pointer-events:none;
+  text-align:center;
+  overflow-wrap:anywhere;
+  /* NO-COLLISION: a transform alone moves the toast out of SIGHT but leaves its
+     box occupying real pixels over the footer/chips/controls beneath it. The
+     collision sweep caught exactly that at 320/375/768/1280 and in landscape.
+     visibility:hidden takes it out of painting AND hit-testing entirely, so
+     while idle it cannot touch a single neighbouring element. */
+  visibility:hidden;
+  opacity:0;
+}
+.toast[data-show="1"]{
+  visibility:visible; opacity:1;
+  max-height:8em;                     /* room for a 3-4 line wrap on 320px */
+  padding:13px 19px;
+  margin:0 auto 14px;
+  border-color:var(--border);
+}
+/* While playing, the opaque .player-shell covers the viewport, so the toast is
+   collapsed to zero height and hidden — the shell and the toast are provably
+   never co-visible. */
+body[data-state="playing"] .toast,
+body[data-state="playing"] .toast[data-show="1"]{
+  max-height:0; padding:0 19px; margin:0 auto;
+  visibility:hidden; opacity:0; border-color:transparent;
+}
+.toast[data-kind="err"]{border-color:rgba(255,107,94,.5);color:#ffb3ab}
+
+/* ─── RESPONSIVE ─────────────────────────────────────────────────────────── */
+@media (max-width:760px){
+  .masthead{padding:16px 0 4px}
+  .masthead-note{display:none}       /* removed, not overlapped */
+  .rail{grid-template-columns:repeat(2,1fr)}
+  .foot{justify-content:center;text-align:center}
+  .foot-links{justify-content:center}
+}
+@media (max-width:360px){
+  :root{--gutter:14px}
+  .rail{grid-template-columns:1fr}
+  .drop-icon{width:54px;height:54px;font-size:23px}
+  .url-lane button{width:100%}       /* stacks; never squeezed under 44px */
+}
+/* Short landscape phones: shrink the stage, never let it clip. */
+@media (max-height:520px) and (orientation:landscape){
+  .stage{padding:14px 0}
+  .drop{padding:20px 16px}
+  .drop-icon{width:44px;height:44px;font-size:19px;margin-bottom:10px}
+  .rail{display:none}
+}
+@media (prefers-reduced-motion:reduce){
+  *{animation:none!important;transition:none!important}
+}
 </style>
 </head>
-<body>
-<div class="bgfield" aria-hidden="true"></div>
+<body data-state="idle" data-drag="off">
 
-<div class="shell">
+<div class="field" aria-hidden="true"></div>
 
-  <header class="masthead">
-    <div class="brand">
-      <div class="mark" aria-hidden="true">
-        <svg viewBox="0 0 24 24" fill="none" stroke="#1a1204" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M5 3.5v17l14-8.5z"/>
-        </svg>
+<div class="page">
+  <div class="wrap">
+
+    <header class="masthead">
+      <div class="brand">
+        <div class="brand-mark" aria-hidden="true">D</div>
+        <div class="brand-name">Dir<span>RM</span></div>
       </div>
-      <div class="brand-txt">
-        <div class="brand-name">DirRM</div>
-        <div class="brand-sub">Universal Media Surface</div>
-      </div>
-    </div>
-    <div class="masthead-acts">
-      <button type="button" class="ghost-btn" id="btnShare" hidden>&#128279; Copy link</button>
-      <button type="button" class="ghost-btn" id="btnNewTab" hidden>&#8599; Open in player</button>
-      <button type="button" class="ghost-btn" id="btnReset" hidden>&#10005; Clear</button>
-    </div>
-  </header>
+      <div class="masthead-note"><span class="dot" aria-hidden="true"></span> nothing uploads — plays on your device</div>
+    </header>
 
-  <main>
-
-    <!-- ===== STAGE (hidden until first media) ===== -->
-    <section class="stage" id="stage" hidden aria-label="Player">
-      <div class="player-col">
-        <div class="player-frame">
-          <iframe id="playerFrame"
-                  title="DirRM Player"
-                  allow="autoplay; fullscreen; picture-in-picture; encrypted-media; clipboard-write; xr-spatial-tracking"
-                  allowfullscreen></iframe>
-        </div>
-        <div class="now-bar">
-          <span class="now-label">Now</span>
-          <span class="now-title" id="nowTitle">Nothing loaded</span>
-          <div class="modes" role="group" aria-label="Player mode">
-            <button type="button" class="mode-btn" data-mode="main"    aria-pressed="true">Main</button>
-            <button type="button" class="mode-btn" data-mode="theater" aria-pressed="false">Theater</button>
-            <button type="button" class="mode-btn" data-mode="mini"    aria-pressed="false">Mini</button>
-            <button type="button" class="mode-btn" data-mode="pip"     aria-pressed="false">PiP</button>
-          </div>
-        </div>
+    <main class="stage">
+      <div class="lede">
+        <h1>Drop anything.<br><em>It plays.</em></h1>
+        <p class="sub">Video, audio, images, PDFs, ebooks, 3D models, subtitles, documents, live streams. One player for every format you own — and your files never leave this device.</p>
       </div>
 
-      <aside class="rail" id="rail" hidden aria-label="Queue">
-        <div class="rail-head">
-          <span class="rail-title">Queue</span>
-          <span class="count-pill" id="queueCount">0</span>
-          <button type="button" class="icon-btn" id="btnClearQueue" title="Clear queue" aria-label="Clear queue">&#128465;</button>
+      <!-- The dropzone is the file picker. One target, one job. -->
+      <button type="button" class="drop" id="drop" aria-describedby="drop-sub">
+        <div class="drop-icon" aria-hidden="true">↓</div>
+        <div class="drop-title" id="drop-title">Drop a file here</div>
+        <div class="drop-sub" id="drop-sub">or tap to browse — any format, any size</div>
+        <span class="drop-cta" aria-hidden="true">Choose a file</span>
+        <div class="drop-hint">
+          <span>paste a file or link with <kbd>Ctrl</kbd>+<kbd>V</kbd></span>
         </div>
-        <div class="rail-nav">
-          <button type="button" class="ghost-btn" id="btnPrev" disabled>&#8592; Prev</button>
-          <button type="button" class="ghost-btn" id="btnNext" disabled>Next &#8594;</button>
-        </div>
-        <ul class="queue" id="queueList"></ul>
-      </aside>
-    </section>
+      </button>
 
-    <!-- ===== HERO / INTAKE ===== -->
-    <section class="hero" id="hero" aria-label="Add media">
-      <div class="hero-copy">
-        <div class="eyebrow">dirrm.vintinuum.com</div>
-        <h1>Drop anything.<br><span class="glow">Play everything.</span></h1>
-        <p class="lede">
-          One surface for every format you own. Video, audio, images, PDFs, ebooks, code,
-          3D models, live streams, torrents — <strong>watch it, read it, hear it, view it</strong>,
-          without installing a thing.
-        </p>
-      </div>
+      <!-- Separate row. Never overlaps the dropzone above it. -->
+      <form class="url-lane" id="url-form">
+        <label class="sr-only" for="url-input" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap">Media URL</label>
+        <input id="url-input" type="url" inputmode="url" autocomplete="off"
+               placeholder="…or paste a link">
+        <button type="submit">Play</button>
+      </form>
 
-      <div class="dropzone" id="dropzone">
-        <div class="dz-orb" aria-hidden="true">&#127916;</div>
-        <div class="dz-title">Drop a file anywhere on this page</div>
-        <div class="dz-sub">
-          Or choose files, pick a whole folder, paste a link, or just hit
-          <kbd>Ctrl</kbd>+<kbd>V</kbd> with anything on your clipboard.
-        </div>
+      <section class="rail" aria-label="Supported formats">
+        <div class="chip"><div class="chip-k">Video</div><div class="chip-v">mp4 mkv webm mov avi m4v flv wmv ts</div></div>
+        <div class="chip"><div class="chip-k">Audio</div><div class="chip-v">mp3 flac wav m4a ogg opus aac wma</div></div>
+        <div class="chip"><div class="chip-k">Images</div><div class="chip-v">jpg png gif webp svg heic bmp tiff</div></div>
+        <div class="chip"><div class="chip-k">Docs</div><div class="chip-v">pdf epub mobi txt md docx xlsx</div></div>
+        <div class="chip"><div class="chip-k">3D</div><div class="chip-v">glb gltf obj stl fbx</div></div>
+        <div class="chip"><div class="chip-k">Streams</div><div class="chip-v">m3u8 mpd youtube twitch kick</div></div>
+      </section>
+    </main>
 
-        <div class="dz-acts">
-          <button type="button" class="btn btn-primary" id="btnPickFiles">&#128193; Choose files</button>
-          <button type="button" class="btn btn-secondary" id="btnPickFolder">&#128194; Add a folder</button>
-        </div>
+    <!-- Status line. IN FLOW between the stage and the footer — it owns its own
+         row and collapses to zero height when idle, so it can never overlay a
+         control. (See .toast in the stylesheet for why it is not fixed.) -->
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
-        <input type="file" id="fileInput" class="sr-file" multiple accept="*/*" tabindex="-1" aria-hidden="true">
-        <input type="file" id="folderInput" class="sr-file" webkitdirectory directory multiple tabindex="-1" aria-hidden="true">
+    <footer class="foot">
+      <!-- "Vintinuum" is deliberately PLAIN TEXT here, not a link. As a link it
+           measured 61x15 — an un-inflatable sub-44px touch target (giving an
+           inline link a 44px box breaks the line box of the sentence it sits
+           in). It was also a duplicate destination: the same link exists in the
+           nav below at full 44px. Prose stays prose; the tappable target lives
+           in the nav where it can be sized honestly. -->
+      <div>DirRM — the universal media surface. Part of Vintinuum.</div>
+      <nav class="foot-links">
+        <a href="dirrm-player.html">Open the player</a>
+        <a href="https://vintaclectic.github.io/vintinuum/">Vintinuum</a>
+      </nav>
+    </footer>
 
-        <div class="urlrow">
-          <label class="url-wrap">
-            <span class="sr-file">Media URL</span>
-            <input type="text" id="urlInput" inputmode="url" autocomplete="off" spellcheck="false"
-                   placeholder="Paste a URL, YouTube link, .m3u8 stream, or magnet:">
-          </label>
-          <button type="button" class="btn btn-primary" id="btnPlayUrl">Play &#9654;</button>
-        </div>
-
-        <div class="chips" id="sampleChips" aria-label="Sample media"></div>
-      </div>
-
-      <div class="privacy">
-        <span class="pico" aria-hidden="true">&#128274;</span>
-        <div>
-          <h3>Your files never leave this browser</h3>
-          <p>
-            Local files are opened straight from your disk into the player using an in-memory
-            object URL. Nothing is uploaded, nothing is stored on a server, and there is no
-            account to create. Close the tab and it's gone.
-          </p>
-        </div>
-      </div>
-
-      <div>
-        <div class="section-head">
-          <h2>Everything it opens</h2>
-          <span class="hint">detected automatically from the file name or link</span>
-        </div>
-        <div class="fmt-grid" id="fmtGrid"></div>
-      </div>
-
-      <div>
-        <div class="section-head">
-          <h2>Recent</h2>
-          <span class="hint" id="recentHint">links you've played here before</span>
-        </div>
-        <div class="chips" id="recentChips" style="justify-content:flex-start"></div>
-      </div>
-
-      <div>
-        <div class="section-head"><h2>Shortcuts</h2></div>
-        <div class="kbd-list">
-          <div class="kbd-item"><kbd>Ctrl</kbd><kbd>V</kbd><span>Paste a link or file</span></div>
-          <div class="kbd-item"><kbd>O</kbd><span>Open file picker</span></div>
-          <div class="kbd-item"><kbd>L</kbd><span>Focus the URL bar</span></div>
-          <div class="kbd-item"><kbd>J</kbd> <kbd>K</kbd><span>Previous / next in queue</span></div>
-          <div class="kbd-item"><kbd>T</kbd><span>Theater mode</span></div>
-          <div class="kbd-item"><kbd>Esc</kbd><span>Clear the URL bar</span></div>
-        </div>
-      </div>
-    </section>
-
-  </main>
-
-  <footer>
-    <span class="foot-txt">DirRM &mdash; the universal media surface of Vintinuum. Static, offline-capable, no backend.</span>
-    <nav class="foot-links">
-      <a href="./dirrm-player.html">Player</a>
-      <a href="./index.html">Vintinuum</a>
-    </nav>
-  </footer>
-
-</div>
-
-<!-- Deliberate layers: each owns the full viewport on its own backdrop. -->
-<div class="veil" id="dragVeil" hidden aria-hidden="true">
-  <div class="veil-inner">
-    <div class="veil-orb">&#11015;</div>
-    <div class="veil-title">Release to play</div>
-    <div class="veil-sub">Any format. Any number of files.</div>
   </div>
 </div>
 
-<div class="toasts" id="toasts" role="status" aria-live="polite"></div>
+<!-- FIXED LAYER 1 — the player. Hidden unless data-state="playing". -->
+<div class="player-shell" id="shell">
+  <button type="button" class="back-btn" id="back">← Back</button>
+  <!-- iframe injected here at launch, removed on close (no stale blob refs) -->
+</div>
 
+<!-- The canonical launcher. Sibling-origin, so dirrmLaunch resolves the
+     player next to THIS page (see dirrm-launch.js siblingPlayerUrl). -->
+<script src="dirrm-launch.js"></script>
 <script>
-(function () {
+(function(){
   'use strict';
 
-  /* ============================================================
-     DirRM landing page.
-     This page NEVER renders media itself. It captures input,
-     detects the type, and hands everything to dirrm-player.html
-     over the documented postMessage contract.
-     ============================================================ */
+  var body   = document.body;
+  var drop   = document.getElementById('drop');
+  var shell  = document.getElementById('shell');
+  var back   = document.getElementById('back');
+  var toastEl= document.getElementById('toast');
+  var urlForm= document.getElementById('url-form');
+  var urlIn  = document.getElementById('url-input');
 
-  var PLAYER_SRC = 'dirrm-player.html';
-  var RECENT_KEY = 'dirrm:recent:v1';
-  var MAX_RECENT = 8;
+  // Live session state. objectUrl is revoked on every teardown so a long
+  // session never leaks the blob (and its backing file) in memory.
+  var handle = null;
+  var objectUrl = null;
+  var toastTimer = null;
 
-  // ---- element handles -------------------------------------------------
-  var $ = function (id) { return document.getElementById(id); };
-  var el = {
-    stage: $('stage'), hero: $('hero'), rail: $('rail'),
-    frame: $('playerFrame'), nowTitle: $('nowTitle'),
-    queueList: $('queueList'), queueCount: $('queueCount'),
-    btnPrev: $('btnPrev'), btnNext: $('btnNext'), btnClearQueue: $('btnClearQueue'),
-    dropzone: $('dropzone'), dragVeil: $('dragVeil'), toasts: $('toasts'),
-    fileInput: $('fileInput'), folderInput: $('folderInput'),
-    btnPickFiles: $('btnPickFiles'), btnPickFolder: $('btnPickFolder'),
-    urlInput: $('urlInput'), btnPlayUrl: $('btnPlayUrl'),
-    sampleChips: $('sampleChips'), recentChips: $('recentChips'), recentHint: $('recentHint'),
-    fmtGrid: $('fmtGrid'),
-    btnShare: $('btnShare'), btnNewTab: $('btnNewTab'), btnReset: $('btnReset')
-  };
+  // ── TOAST ────────────────────────────────────────────────────────────────
+  // The toast is an in-flow element that collapses to zero height when idle, so
+  // showing it needs no space reservation and no measurement — the layout does
+  // the work. See .toast in the stylesheet for why it is not position:fixed.
+  function toast(msg, kind){
+    toastEl.textContent = msg;
+    toastEl.setAttribute('data-kind', kind || 'ok');
+    toastEl.setAttribute('data-show','1');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function(){
+      toastEl.setAttribute('data-show','0');
+    }, kind === 'err' ? 5200 : 2600);
+  }
 
-  // ---- state -----------------------------------------------------------
-  var queue = [];          // [{id,title,url,type,size,isLocal,file}]
-  var currentIndex = -1;
-  var frameLoaded = false; // true once the iframe document has parsed
-  var pending = null;      // load requested before the frame was ready
-  var seq = 0;
-
-  /* ============================================================
-     TYPE DETECTION — mirrors dirrm-player.html detectMediaType()
-     exactly, so the chip we show is the behaviour you actually get.
-     ============================================================ */
+  // ── TYPE DETECTION ───────────────────────────────────────────────────────
+  // A blob: URL carries no extension, so dirrm-launch's detectType() cannot
+  // read one — it would fall through to its 'video' default and mis-render a
+  // PDF or an mp3. We resolve the type HERE from the real File (name first,
+  // MIME second) and pass it explicitly, which the player honours verbatim.
   var EXT = {
-    stream : ['m3u8','mpd','ism'],
-    video  : ['mp4','webm','mkv','mov','m4v','avi','wmv','flv','ogv','3gp','ts','m2ts','mts','divx','xvid','vob','asf','rm','rmvb'],
-    audio  : ['mp3','wav','ogg','flac','aac','m4a','opus','wma','aiff','aif','mid','midi','ape','alac','amr','au','ra'],
-    image  : ['jpg','jpeg','png','gif','webp','svg','bmp','ico','tiff','tif','avif','heic','heif','jxl','raw','cr2','nef','arw','dng'],
-    pdf    : ['pdf'],
-    ebook  : ['epub','mobi','azw','azw3','fb2','djvu','lit','pdb','cbr','cbz'],
-    text   : ['txt','md','markdown','json','xml','csv','tsv','log','js','mjs','cjs','ts','tsx','jsx','py','rb','go','rs','java','c','cpp','h','hpp','cs','php','swift','kt','scala','lua','pl','sh','bash','zsh','fish','yaml','yml','toml','ini','cfg','conf','env','sql','dockerfile','makefile','html','htm','css','scss','sass','less','vue','svelte'],
-    model  : ['glb','gltf','obj','fbx','stl','dae','ply','usdz','3ds','blend'],
-    archive: ['zip','rar','7z','tar','gz','bz2','xz','zst','tgz','tbz','txz','iso','dmg','pkg','deb','rpm','msi','exe','apk']
+    mp4:'video',webm:'video',mkv:'video',mov:'video',avi:'video',m4v:'video',
+    mpg:'video',mpeg:'video',ts:'video',vob:'video','3gp':'video',flv:'video',
+    wmv:'video',ogv:'video',
+    mp3:'audio',wav:'audio',flac:'audio',m4a:'audio',ogg:'audio',opus:'audio',
+    aac:'audio',aiff:'audio',wma:'audio',alac:'audio',mid:'audio',midi:'audio',
+    jpg:'image',jpeg:'image',png:'image',gif:'image',webp:'image',bmp:'image',
+    tiff:'image',tif:'image',svg:'image',heic:'image',avif:'image',
+    pdf:'pdf',
+    epub:'ebook',mobi:'ebook',azw:'ebook',azw3:'ebook',djvu:'ebook',
+    m3u8:'stream',mpd:'stream',ism:'stream',
+    glb:'model',gltf:'model',fbx:'model',obj:'model',stl:'model',
+    doc:'docs',docx:'docs',xls:'docs',xlsx:'docs',ppt:'docs',pptx:'docs',
+    txt:'docs',md:'docs',rtf:'docs',csv:'docs',json:'docs',srt:'docs',vtt:'docs'
   };
 
-  var EMBED_HOSTS = /(^|\.)(youtube\.com|youtu\.be|youtube-nocookie\.com|vimeo\.com|soundcloud\.com|open\.spotify\.com|spotify\.com|twitch\.tv|bandcamp\.com|music\.apple\.com|podcasts\.apple\.com|dailymotion\.com|dai\.ly|rumble\.com|kick\.com|facebook\.com|fb\.watch|archive\.org)$/i;
-
-  function extOf(name) {
-    var s = String(name || '').toLowerCase().split('?')[0].split('#')[0];
-    var dot = s.lastIndexOf('.');
-    return dot === -1 ? '' : s.slice(dot + 1);
-  }
-
-  function isEmbedUrl(url) {
-    if (!url) return false;
-    if (/^magnet:/i.test(url)) return false;
-    try {
-      var u = new URL(url, location.href);
-      if (!/^https?:$/.test(u.protocol)) return false;
-      var host = u.hostname.replace(/^www\./, '').replace(/^m\./, '');
-      if (!EMBED_HOSTS.test(host)) return false;
-      // TikTok /live is a stream extraction, not an embed — matches the player.
-      if (/tiktok\.com/i.test(host) && /\/live/i.test(u.pathname)) return false;
-      return true;
-    } catch (e) { return false; }
-  }
-
-  // name  = the thing that carries the extension (file.name, or the URL)
-  // url   = what the player will actually receive (may be a blob:)
-  function detectType(name, url) {
-    var probe = url || name || '';
-    if (/^magnet:/i.test(probe)) return 'torrent';
-    if (isEmbedUrl(probe)) return 'embed';
-
-    var ext = extOf(name || probe);
-    for (var kind in EXT) {
-      if (Object.prototype.hasOwnProperty.call(EXT, kind) && EXT[kind].indexOf(ext) !== -1) return kind;
-    }
-    if (ext === 'torrent') return 'torrent';
-
-    if (/v\.redd\.it/i.test(probe)) return 'video';
-    if (/tiktok\.com\/@[^/]+\/live/i.test(probe) || /vm\.tiktok\.com/i.test(probe)) return 'tiktok-live';
-    if (/tiktok\.com|instagram\.com\/reel|facebook\.com\/watch|rumble\.com\/v/i.test(probe)) return 'ytdlp';
+  function typeOfFile(file){
+    var name = file.name || '';
+    var dot  = name.lastIndexOf('.');
+    var ext  = dot > -1 ? name.slice(dot+1).toLowerCase() : '';
+    if (EXT[ext]) return EXT[ext];
+    // No/unknown extension — fall back to the browser's sniffed MIME.
+    var m = (file.type || '').toLowerCase();
+    if (m.indexOf('video/') === 0) return 'video';
+    if (m.indexOf('audio/') === 0) return 'audio';
+    if (m.indexOf('image/') === 0) return 'image';
+    if (m === 'application/pdf') return 'pdf';
+    if (m.indexOf('text/') === 0) return 'docs';
+    // Genuinely unknown. Return the player's own sentinel rather than '' so we
+    // land in its loadUnknown() cascade (video -> audio -> iframe -> download
+    // card) deliberately. Passing nothing would be WORSE than it looks: the
+    // launcher's detectType() cannot read an extension off a blob: URL, so it
+    // falls back to its 'video' default and the player would trust that hint
+    // instead of probing. 'unknown' is exactly what dirrm-player's
+    // detectMediaType() returns as its own last resort.
     return 'unknown';
   }
 
-  var TYPE_GLYPH = {
-    video:'🎬', audio:'🎵', image:'🖼️', pdf:'📄',
-    ebook:'📖', text:'📝', model:'🧊', archive:'🗜️',
-    stream:'📡', torrent:'🧲', embed:'🔗', live:'🔴',
-    'tiktok-live':'🔴', ytdlp:'⬇️', unknown:'❓'
-  };
-  function glyphFor(t) { return TYPE_GLYPH[t] || TYPE_GLYPH.unknown; }
-
-  function humanSize(bytes) {
-    if (!bytes && bytes !== 0) return '';
-    var u = ['B','KB','MB','GB','TB'], i = 0, n = bytes;
-    while (n >= 1024 && i < u.length - 1) { n /= 1024; i++; }
-    return (i === 0 ? n : n.toFixed(n < 10 ? 1 : 0)) + ' ' + u[i];
+  function titleOfFile(file){
+    var n = file.name || 'Untitled';
+    var dot = n.lastIndexOf('.');
+    return dot > 0 ? n.slice(0, dot) : n;
   }
 
-  function titleFromUrl(url) {
-    if (/^magnet:/i.test(url)) {
-      var dn = /[?&]dn=([^&]+)/i.exec(url);
-      if (dn) { try { return decodeURIComponent(dn[1].replace(/\+/g, ' ')); } catch (e) { /* fall through */ } }
-      return 'Magnet link';
-    }
-    try {
-      var u = new URL(url, location.href);
-      var host = u.hostname.replace(/^www\./, '');
-      var last = u.pathname.split('/').filter(Boolean).pop();
-      // Router words ("watch", "embed", "video"...) are not titles — a bare
-      // youtube.com/watch?v=ID would otherwise show up as "watch".
-      var JUNK = /^(watch|embed|video|videos|v|play|player|index|track|album|playlist|episode|live|shorts)$/i;
-      if (last && !JUNK.test(last)) {
-        try { return decodeURIComponent(last); } catch (e) { return last; }
-      }
-      var vid = u.searchParams.get('v');
-      if (vid) return host + ' · ' + vid;
-      if (last) return host + ' · ' + last;
-      return host;
-    } catch (e) {
-      return url.length > 64 ? url.slice(0, 61) + '…' : url;
-    }
-  }
+  // ── LAUNCH ───────────────────────────────────────────────────────────────
+  // Media is handed over as URL PARAMS at iframe-construction time, not via a
+  // postMessage 'load'. The canonical player has no 'ready' handshake (it emits
+  // only modeChanged / scaleChanged / playerClosed / liveEnded), so a posted
+  // load would race the iframe's listener registration and could land in the
+  // void. Params are read synchronously by the player on boot — no race.
+  // `srcIsFreshBlob` — set by playFile(), which has ALREADY torn the previous
+  // session down and minted the blob it is passing in. Without it the teardown
+  // below would revoke that brand-new URL a beat before the player reads it,
+  // and the player would show an empty frame with no error (an <img>/<video>
+  // pointed at a revoked blob just fails silently). Verified in headless: this
+  // was the difference between a blank player and a rendered image.
+  function launch(src, title, type, srcIsFreshBlob){
+    teardown(srcIsFreshBlob);         // one player at a time, always
 
-  /* ============================================================
-     TOASTS — fixed column, items flow vertically. Never overlap.
-     ============================================================ */
-  function toast(msg, isErr) {
-    var t = document.createElement('div');
-    t.className = 'toast' + (isErr ? ' err' : '');
-    var i = document.createElement('span');
-    i.className = 'tico';
-    i.textContent = isErr ? '⚠️' : '✓';
-    var s = document.createElement('span');
-    s.className = 'ttxt';
-    s.textContent = msg;
-    s.title = msg;
-    t.appendChild(i); t.appendChild(s);
-    el.toasts.appendChild(t);
-    // Cap the stack so it can never grow past the viewport.
-    while (el.toasts.children.length > 3) el.toasts.removeChild(el.toasts.firstChild);
-    setTimeout(function () {
-      if (t.parentNode) t.parentNode.removeChild(t);
-    }, isErr ? 5200 : 3000);
-  }
+    body.setAttribute('data-state','playing');
+    toastEl.setAttribute('data-show','0');
+    clearTimeout(toastTimer);
 
-  /* ============================================================
-     PLAYER BRIDGE
-     The player has no 'ready' handshake — it constructs its class
-     synchronously at the end of its own body, so its message
-     listener is bound by the time iframe 'load' fires. We gate on
-     'load' and queue anything requested earlier.
-     ============================================================ */
-  function ensureFrame() {
-    if (el.frame.getAttribute('src')) return;
-    el.frame.addEventListener('load', function () {
-      frameLoaded = true;
-      if (pending) { var p = pending; pending = null; sendLoad(p); }
-    });
-    el.frame.setAttribute('src', PLAYER_SRC);
-  }
-
-  function post(msg) {
-    try {
-      if (!el.frame.contentWindow) return false;
-      el.frame.contentWindow.postMessage(msg, '*');
-      return true;
-    } catch (e) {
-      console.warn('[dirrm] postMessage failed:', e);
-      return false;
-    }
-  }
-
-  function sendLoad(item) {
-    // Always pass an explicit type: blob: URLs carry no extension, so the
-    // player could never sniff a local file on its own.
-    return post({ action: 'load', url: item.url, title: item.title, type: item.type });
-  }
-
-  function setMode(mode) {
-    if (['main','mini','pip','theater'].indexOf(mode) === -1) return;
-    if (!post({ action: 'setMode', mode: mode })) return;
-    var btns = document.querySelectorAll('.mode-btn');
-    for (var i = 0; i < btns.length; i++) {
-      btns[i].setAttribute('aria-pressed', String(btns[i].getAttribute('data-mode') === mode));
-    }
-  }
-
-  // Events the player genuinely emits upward.
-  window.addEventListener('message', function (ev) {
-    var d = ev.data;
-    if (!d || typeof d !== 'object' || !d.action) return;
-    if (d.action === 'modeChanged' && d.mode) {
-      var btns = document.querySelectorAll('.mode-btn');
-      for (var i = 0; i < btns.length; i++) {
-        btns[i].setAttribute('aria-pressed', String(btns[i].getAttribute('data-mode') === d.mode));
-      }
-    } else if (d.action === 'mediaEnded') {
-      if (currentIndex < queue.length - 1) playIndex(currentIndex + 1);
-    } else if (d.action === 'playerClosed') {
-      toast('Player closed — pick something to bring it back');
-    }
-  });
-
-  /* ============================================================
-     QUEUE
-     ============================================================ */
-  function addItems(items, autoplay) {
-    if (!items || !items.length) { toast('Nothing usable in that drop', true); return; }
-    var firstNew = queue.length;
-    for (var i = 0; i < items.length; i++) queue.push(items[i]);
-    renderQueue();
-    if (autoplay !== false) playIndex(firstNew);
-    if (items.length > 1) toast('Queued ' + items.length + ' items');
-  }
-
-  function itemFromFile(file) {
-    var url;
-    try {
-      url = URL.createObjectURL(file);
-    } catch (e) {
-      console.warn('[dirrm] createObjectURL failed:', e);
-      return null;
-    }
-    return {
-      id: ++seq,
-      title: file.name || 'Untitled',
-      url: url,
-      // Detect from the FILE NAME — a blob: URL has no extension.
-      type: detectType(file.name, null),
-      size: file.size,
-      isLocal: true
+    var opts = {
+      url: src,
+      title: title || '',
+      embedIn: shell,                 // fill the shell — the player IS the window
+      mode: 'theater',
+      autoplay: true
     };
-  }
+    if (type) opts.type = type;       // omit when unknown → player auto-detects
 
-  function itemFromUrl(url, title, type) {
-    var clean = String(url || '').trim();
-    if (!clean) return null;
-    // Bare domain / path with no scheme → assume https, but never for magnets.
-    if (!/^[a-z][a-z0-9+.-]*:/i.test(clean) && !/^\/\//.test(clean)) {
-      if (/^[\w.-]+\.[a-z]{2,}(\/|$|:)/i.test(clean)) clean = 'https://' + clean;
-    }
-    return {
-      id: ++seq,
-      title: title || titleFromUrl(clean),
-      url: clean,
-      type: type || detectType(clean, clean),
-      size: null,
-      isLocal: false
-    };
-  }
-
-  function playIndex(i) {
-    if (i < 0 || i >= queue.length) return;
-    currentIndex = i;
-    var item = queue[i];
-
-    ensureFrame();
-    el.stage.hidden = false;
-    el.hero.hidden = false; // hero stays reachable below the stage — never covered
-    el.btnShare.hidden = item.isLocal;   // a blob: link is meaningless elsewhere
-    el.btnNewTab.hidden = item.isLocal;
-    el.btnReset.hidden = false;
-
-    el.nowTitle.textContent = item.title;
-    el.nowTitle.title = item.title;
-
-    if (frameLoaded) sendLoad(item); else pending = item;
-
-    if (!item.isLocal) rememberRecent(item);
-    renderQueue();
-    updateNav();
-
-    // Bring the player into view without yanking the page on first paint.
     try {
-      el.stage.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    } catch (e) { el.stage.scrollIntoView(); }
+      var p = window.dirrmLaunch.open(opts);
+      // open() is async (returns a promise) — resolve to the handle.
+      Promise.resolve(p).then(function(h){
+        handle = h;
+        // The player posts 'playerClosed' when its ✕ is pressed. Restore the
+        // landing page so the user is never stranded on a blank shell.
+        if (h && typeof h.on === 'function') h.on('playerClosed', restore);
+      }).catch(fail);
+    } catch(e){ fail(e); }
   }
 
-  function updateNav() {
-    el.btnPrev.disabled = currentIndex <= 0;
-    el.btnNext.disabled = currentIndex < 0 || currentIndex >= queue.length - 1;
+  function fail(e){
+    console.error('[dirrm-landing] launch failed', e);
+    restore();
+    toast('Could not open that file. Try another, or use the player directly.','err');
   }
 
-  function removeAt(i) {
-    if (i < 0 || i >= queue.length) return;
-    var item = queue[i];
-    var wasCurrent = (i === currentIndex);
-    // Never revoke the blob that is currently mounted in the player.
-    if (item.isLocal && !wasCurrent) {
-      try { URL.revokeObjectURL(item.url); } catch (e) { /* already gone */ }
+  // Remove the iframe and release the blob. Called before every launch and on
+  // every close, so exactly zero stale players/objectURLs can accumulate.
+  // keepBlob — do NOT revoke the current objectUrl. Used only by the
+  // playFile() → launch() path, where the caller has already revoked the OLD
+  // blob and the one held now is the fresh one about to be played.
+  function teardown(keepBlob){
+    if (handle){
+      try { handle.close(); } catch(_){}
+      handle = null;
     }
-    queue.splice(i, 1);
-    if (wasCurrent) {
-      currentIndex = -1;
-      if (queue.length) playIndex(Math.min(i, queue.length - 1));
-    } else if (i < currentIndex) {
-      currentIndex--;
-    }
-    renderQueue();
-    updateNav();
-  }
+    // Belt and braces — close() removes its own iframe, but if open() rejected
+    // mid-flight there may be an orphan. Sweep any iframe inside the shell.
+    var frames = shell.getElementsByTagName('iframe');
+    while (frames.length){ frames[0].parentNode.removeChild(frames[0]); }
 
-  function clearQueue() {
-    for (var i = 0; i < queue.length; i++) {
-      if (queue[i].isLocal && i !== currentIndex) {
-        try { URL.revokeObjectURL(queue[i].url); } catch (e) { /* ignore */ }
-      }
-    }
-    var keep = (currentIndex >= 0) ? queue[currentIndex] : null;
-    queue = keep ? [keep] : [];
-    currentIndex = keep ? 0 : -1;
-    renderQueue();
-    updateNav();
-    toast('Queue cleared');
-  }
-
-  function renderQueue() {
-    el.queueCount.textContent = String(queue.length);
-    el.rail.hidden = queue.length < 2;
-    el.stage.classList.toggle('has-rail', queue.length >= 2);
-
-    var list = el.queueList;
-    while (list.firstChild) list.removeChild(list.firstChild);
-
-    for (var i = 0; i < queue.length; i++) {
-      (function (item, idx) {
-        var li = document.createElement('li');
-
-        var btn = document.createElement('button');
-        btn.type = 'button';
-        btn.className = 'qitem';
-        btn.setAttribute('aria-current', String(idx === currentIndex));
-
-        var g = document.createElement('span');
-        g.className = 'qglyph';
-        g.textContent = glyphFor(item.type);
-
-        var meta = document.createElement('span');
-        meta.className = 'qmeta';
-
-        var nm = document.createElement('span');
-        nm.className = 'qname';
-        nm.textContent = item.title;
-        nm.title = item.title;
-
-        var sub = document.createElement('span');
-        sub.className = 'qsub';
-        var tt = document.createElement('span');
-        tt.className = 'qtype';
-        tt.textContent = item.type;
-        var sz = document.createElement('span');
-        sz.className = 'qsize';
-        sz.textContent = item.isLocal
-          ? (humanSize(item.size) + ' · on this device')
-          : 'link';
-        sub.appendChild(tt); sub.appendChild(sz);
-
-        meta.appendChild(nm); meta.appendChild(sub);
-        btn.appendChild(g); btn.appendChild(meta);
-        btn.addEventListener('click', function () { playIndex(idx); });
-
-        var rm = document.createElement('button');
-        rm.type = 'button';
-        rm.className = 'qdrop';
-        rm.textContent = '×';
-        rm.title = 'Remove';
-        rm.setAttribute('aria-label', 'Remove ' + item.title);
-        rm.addEventListener('click', function (e) { e.stopPropagation(); removeAt(idx); });
-
-        var row = document.createElement('div');
-        row.className = 'qrow';
-        row.appendChild(btn); row.appendChild(rm);
-        li.appendChild(row);
-        list.appendChild(li);
-      })(queue[i], i);
+    if (objectUrl && !keepBlob){
+      try { URL.revokeObjectURL(objectUrl); } catch(_){}
+      objectUrl = null;
     }
   }
 
-  /* ============================================================
-     RECENTS — URL-backed only. Blob URLs die on reload, so local
-     files are session-only and are never persisted as dead links.
-     ============================================================ */
-  function loadRecent() {
+  // REENTRANCY GUARD. handle.close() itself emits 'playerClosed' (see
+  // dirrm-launch.js createHandle().close), and we subscribe restore() to that
+  // very event — so restore → teardown → close → emit → restore is a real
+  // cycle. It happens to terminate today only because teardown() nulls
+  // `handle` before close() emits, so the second pass finds nothing to close.
+  // That is an accident of statement order in another file, not a guarantee we
+  // control. An explicit latch makes the termination OURS.
+  var restoring = false;
+  function restore(){
+    if (restoring) return;
+    restoring = true;
     try {
-      var raw = localStorage.getItem(RECENT_KEY);
-      var arr = raw ? JSON.parse(raw) : [];
-      return Array.isArray(arr) ? arr.filter(function (r) {
-        return r && typeof r.url === 'string' && !/^blob:/i.test(r.url);
-      }) : [];
-    } catch (e) { return []; }
+      teardown();
+      body.setAttribute('data-state','idle');
+    } finally { restoring = false; }
   }
 
-  function rememberRecent(item) {
-    if (item.isLocal || /^blob:/i.test(item.url)) return;
+  // ── FILE ENTRY ───────────────────────────────────────────────────────────
+  function playFile(file){
+    if (!file) return;
+    // Tear the previous session down BEFORE minting the new blob, so the old
+    // objectUrl is the one revoked. Minting first and tearing down after would
+    // revoke the URL we are about to hand the player (a use-after-revoke that
+    // renders as a silent blank player — caught in headless testing).
+    teardown();
+    var mint;
     try {
-      var arr = loadRecent().filter(function (r) { return r.url !== item.url; });
-      arr.unshift({ url: item.url, title: item.title, type: item.type });
-      localStorage.setItem(RECENT_KEY, JSON.stringify(arr.slice(0, MAX_RECENT)));
-      renderRecent();
-    } catch (e) { /* private mode / quota — recents are a nicety, never fatal */ }
-  }
-
-  function renderRecent() {
-    var arr = loadRecent();
-    var box = el.recentChips;
-    while (box.firstChild) box.removeChild(box.firstChild);
-    if (!arr.length) {
-      el.recentHint.textContent = 'nothing yet — links you play here will show up';
+      mint = URL.createObjectURL(file);
+    } catch(e){
+      toast('This browser could not read that file.','err');
       return;
     }
-    el.recentHint.textContent = 'links you’ve played here before (local files are session-only)';
-    for (var i = 0; i < arr.length; i++) {
-      (function (r) {
-        var c = document.createElement('button');
-        c.type = 'button';
-        c.className = 'chip';
-        c.textContent = glyphFor(r.type) + '  ' + r.title;
-        c.title = r.url;
-        c.addEventListener('click', function () {
-          var it = itemFromUrl(r.url, r.title, r.type);
-          if (it) addItems([it]);
-        });
-        box.appendChild(c);
-      })(arr[i]);
-    }
+    objectUrl = mint;
+    launch(mint, titleOfFile(file), typeOfFile(file), true);
   }
 
-  /* ============================================================
-     INTAKE — files, folders, URLs, drops, paste
-     ============================================================ */
-  function handleFiles(fileList) {
-    var files = Array.prototype.slice.call(fileList || []);
-    if (!files.length) { toast('No files found in that drop', true); return; }
-    var items = [];
-    for (var i = 0; i < files.length; i++) {
-      // Folder picks can include hidden junk — skip the obvious noise.
-      if (/^\./.test(files[i].name)) continue;
-      var it = itemFromFile(files[i]);
-      if (it) items.push(it);
-    }
-    if (!items.length) { toast('Couldn’t open those files', true); return; }
-    addItems(items);
+  // ── PICKER ───────────────────────────────────────────────────────────────
+  // The <input type=file> is created on demand rather than living in the DOM:
+  // a persistent hidden input is a classic collision/tab-order hazard, and a
+  // fresh one guarantees the change event fires even when the same file is
+  // picked twice in a row.
+  function pick(){
+    var inp = document.createElement('input');
+    inp.type = 'file';
+    inp.accept = '*/*';
+    inp.style.display = 'none';
+    document.body.appendChild(inp);
+    inp.addEventListener('change', function(){
+      var f = inp.files && inp.files[0];
+      document.body.removeChild(inp);
+      if (f) playFile(f);
+    });
+    inp.click();
   }
+  drop.addEventListener('click', pick);
 
-  function handleUrl(raw) {
-    var it = itemFromUrl(raw);
-    if (!it) { toast('That doesn’t look like a link', true); return; }
-    addItems([it]);
-    el.urlInput.value = '';
-  }
-
-  // --- drag & drop over the whole document ---
+  // ── DRAG & DROP ──────────────────────────────────────────────────────────
+  // Bound on window so a drop anywhere on the page works, not just on the card.
+  // dragleave uses a counter because dragleave fires when crossing INTO a child
+  // element — without the counter the highlight flickers off mid-drag.
   var dragDepth = 0;
-  function showVeil(on) {
-    el.dragVeil.hidden = !on;
-    el.dropzone.classList.toggle('hot', on);
-  }
-  ['dragenter','dragover'].forEach(function (evt) {
-    document.addEventListener(evt, function (e) {
+
+  ['dragenter','dragover'].forEach(function(ev){
+    window.addEventListener(ev, function(e){
+      if (!hasFiles(e)) return;
       e.preventDefault();
-      if (e.dataTransfer) { try { e.dataTransfer.dropEffect = 'copy'; } catch (x) {} }
-      if (evt === 'dragenter') { dragDepth++; showVeil(true); }
+      if (e.dataTransfer) e.dataTransfer.dropEffect = 'copy';
+      if (ev === 'dragenter') dragDepth++;
+      body.setAttribute('data-drag','over');
     });
   });
-  document.addEventListener('dragleave', function (e) {
-    e.preventDefault();
+
+  window.addEventListener('dragleave', function(e){
+    if (!hasFiles(e)) return;
     dragDepth = Math.max(0, dragDepth - 1);
-    if (dragDepth === 0) showVeil(false);
+    if (dragDepth === 0) body.setAttribute('data-drag','off');
   });
-  document.addEventListener('drop', function (e) {
+
+  window.addEventListener('drop', function(e){
+    if (!hasFiles(e)) return;
     e.preventDefault();
-    dragDepth = 0; showVeil(false);
+    dragDepth = 0;
+    body.setAttribute('data-drag','off');
     var dt = e.dataTransfer;
-    if (!dt) return;
-    if (dt.files && dt.files.length) { handleFiles(dt.files); return; }
-    var txt = '';
-    try { txt = dt.getData('text/uri-list') || dt.getData('text/plain') || ''; } catch (x) {}
-    txt = txt.split('\n')[0].trim();
-    if (txt) handleUrl(txt); else toast('Nothing usable in that drop', true);
-  });
-
-  // --- paste anywhere ---
-  document.addEventListener('paste', function (e) {
-    var cd = e.clipboardData;
-    if (!cd) return;
-    if (cd.files && cd.files.length) { e.preventDefault(); handleFiles(cd.files); return; }
-    var txt = (cd.getData('text/plain') || '').trim();
-    if (!txt) return;
-    // Only hijack the paste when it actually looks like a link.
-    if (/^(magnet:|https?:\/\/|\/\/)/i.test(txt) || /^[\w.-]+\.[a-z]{2,}\//i.test(txt)) {
-      if (document.activeElement !== el.urlInput) { e.preventDefault(); handleUrl(txt); }
+    if (dt && dt.files && dt.files.length){
+      playFile(dt.files[0]);
+      if (dt.files.length > 1) toast('Playing the first of ' + dt.files.length + ' files.');
+      return;
     }
+    // Dragged a link rather than a file.
+    var uri = dt && (dt.getData('text/uri-list') || dt.getData('text/plain'));
+    if (uri) playUrl(uri.split('\n')[0].trim());
   });
 
-  // --- pickers / buttons ---
-  el.btnPickFiles.addEventListener('click', function () { el.fileInput.click(); });
-  el.btnPickFolder.addEventListener('click', function () { el.folderInput.click(); });
-  el.fileInput.addEventListener('change', function () { handleFiles(el.fileInput.files); el.fileInput.value = ''; });
-  el.folderInput.addEventListener('change', function () { handleFiles(el.folderInput.files); el.folderInput.value = ''; });
-  el.btnPlayUrl.addEventListener('click', function () { handleUrl(el.urlInput.value); });
-  el.urlInput.addEventListener('keydown', function (e) {
-    if (e.key === 'Enter') { e.preventDefault(); handleUrl(el.urlInput.value); }
-    else if (e.key === 'Escape') { el.urlInput.value = ''; el.urlInput.blur(); }
-  });
-  el.btnPrev.addEventListener('click', function () { playIndex(currentIndex - 1); });
-  el.btnNext.addEventListener('click', function () { playIndex(currentIndex + 1); });
-  el.btnClearQueue.addEventListener('click', clearQueue);
-
-  document.addEventListener('click', function (e) {
-    var b = e.target.closest ? e.target.closest('.mode-btn') : null;
-    if (b) setMode(b.getAttribute('data-mode'));
-  });
-
-  el.btnReset.addEventListener('click', function () {
-    for (var i = 0; i < queue.length; i++) {
-      if (queue[i].isLocal) { try { URL.revokeObjectURL(queue[i].url); } catch (x) {} }
+  function hasFiles(e){
+    var dt = e.dataTransfer;
+    if (!dt) return false;
+    if (dt.types){
+      for (var i=0;i<dt.types.length;i++){
+        var t = dt.types[i];
+        if (t === 'Files' || t === 'text/uri-list' || t === 'text/plain') return true;
+      }
     }
-    queue = []; currentIndex = -1; pending = null;
-    post({ action: 'stop' });
-    el.stage.hidden = true;
-    el.stage.classList.remove('has-rail');
-    el.btnShare.hidden = true; el.btnNewTab.hidden = true; el.btnReset.hidden = true;
-    el.nowTitle.textContent = 'Nothing loaded';
-    renderQueue(); updateNav();
-    toast('Cleared');
-  });
-
-  function currentDeepLink() {
-    if (currentIndex < 0) return location.href;
-    var it = queue[currentIndex];
-    if (it.isLocal) return location.href;
-    return location.origin + location.pathname +
-      '?url=' + encodeURIComponent(it.url) +
-      '&title=' + encodeURIComponent(it.title) +
-      '&type=' + encodeURIComponent(it.type);
+    return false;
   }
 
-  el.btnShare.addEventListener('click', function () {
-    var link = currentDeepLink();
-    var done = function () { toast('Link copied'); };
-    var fail = function () {
-      // Clipboard denied (insecure context / permissions) — show it so it's still usable.
-      window.prompt('Copy this link:', link);
-    };
-    try {
-      if (navigator.clipboard && navigator.clipboard.writeText) {
-        navigator.clipboard.writeText(link).then(done, fail);
-      } else { fail(); }
-    } catch (e) { fail(); }
-  });
-
-  el.btnNewTab.addEventListener('click', function () {
-    if (currentIndex < 0) return;
-    var it = queue[currentIndex];
-    if (it.isLocal) { toast('Local files can’t open in a new tab', true); return; }
-    var href = PLAYER_SRC +
-      '?url=' + encodeURIComponent(it.url) +
-      '&title=' + encodeURIComponent(it.title) +
-      '&type=' + encodeURIComponent(it.type) +
-      '&autoplay=1';
-    window.open(href, '_blank', 'noopener');
-  });
-
-  // --- keyboard shortcuts (never while typing) ---
-  document.addEventListener('keydown', function (e) {
-    var t = e.target;
-    var typing = t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable);
-    if (typing || e.ctrlKey || e.metaKey || e.altKey) return;
-    var k = e.key.toLowerCase();
-    if (k === 'o') { e.preventDefault(); el.fileInput.click(); }
-    else if (k === 'l') { e.preventDefault(); el.urlInput.focus(); el.urlInput.select(); }
-    else if (k === 'j') { if (currentIndex > 0) { e.preventDefault(); playIndex(currentIndex - 1); } }
-    else if (k === 'k') { if (currentIndex >= 0 && currentIndex < queue.length - 1) { e.preventDefault(); playIndex(currentIndex + 1); } }
-    else if (k === 't') { if (currentIndex >= 0) { e.preventDefault(); setMode('theater'); } }
-  });
-
-  /* ============================================================
-     STATIC CONTENT — formats + samples
-     ============================================================ */
-  var FORMATS = [
-    ['🎬','Video','mp4 webm mkv mov avi m4v flv ogv wmv 3gp ts vob divx rm'],
-    ['🎵','Audio','mp3 flac wav ogg aac m4a opus wma aiff alac mid ape'],
-    ['🖼️','Image','jpg png gif webp svg avif heic tiff bmp jxl raw cr2 nef'],
-    ['📄','PDF','pdf — paged, zoomable, searchable'],
-    ['📖','Ebook','epub mobi azw3 fb2 djvu cbr cbz lit'],
-    ['📝','Text &amp; code','txt md json csv js ts py rs go sql yaml html css …'],
-    ['🧊','3D model','glb gltf obj fbx stl dae ply usdz 3ds'],
-    ['📡','Live stream','m3u8 mpd ism — HLS &amp; DASH'],
-    ['🔗','Embeds','YouTube Vimeo Twitch SoundCloud Spotify TikTok Kick'],
-    ['🧲','Torrent','magnet: links and .torrent files'],
-    ['🗜️','Archive','zip rar 7z tar gz iso dmg apk — inspected, not run']
-  ];
-
-  (function renderFormats() {
-    for (var i = 0; i < FORMATS.length; i++) {
-      var f = FORMATS[i];
-      var card = document.createElement('div');
-      card.className = 'fmt-card';
-      var top = document.createElement('div');
-      top.className = 'fmt-top';
-      var ic = document.createElement('span');
-      ic.className = 'fmt-ico';
-      ic.textContent = f[0];
-      var nm = document.createElement('span');
-      nm.className = 'fmt-name';
-      nm.innerHTML = f[1];
-      nm.title = nm.textContent;
-      top.appendChild(ic); top.appendChild(nm);
-      var ex = document.createElement('div');
-      ex.className = 'fmt-exts';
-      ex.innerHTML = f[2];
-      card.appendChild(top); card.appendChild(ex);
-      el.fmtGrid.appendChild(card);
+  // ── URL LANE ─────────────────────────────────────────────────────────────
+  // Open-directory URLs carry spaces and [brackets] in the path. Matching to
+  // the first whitespace truncates the filename (".../AAC5.1-[" — a dead
+  // link); stripping trailing punctuation blindly eats a real ")" or ".".
+  // dirrm-launch.js owns the canonical implementation; use it when present so
+  // the landing page and the launcher can never drift apart.
+  function extractPlayableUrl(raw){
+    if (window.dirrmLaunch && window.dirrmLaunch.extractPlayableUrl){
+      return window.dirrmLaunch.extractPlayableUrl(raw);
     }
-  })();
+    var s = String(raw || '').trim();
+    if (!s) return '';
+    var m = s.match(/https?:\/\/[^\n\r]+/i);
+    if (!m) m = s.match(/(?:^|\s)((?:[\w-]+\.)+[a-z]{2,}(?:[/:][^\n\r]*)?)/i);
+    if (!m) return s;
+    var out = (m[1] || m[0]).replace(/[\s"'<>]+$/, '');
+    if (!/\.[A-Za-z0-9]{2,5}$/.test(out)) out = out.replace(/[),.;!?]+$/g, '');
+    while (/[[(]$/.test(out)) out = out.slice(0, -1);
+    return out;
+  }
 
-  var SAMPLES = [
-    { label: 'Big Buck Bunny (mp4)', url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4', title: 'Big Buck Bunny' },
-    { label: 'Sintel trailer (mp4)', url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/SubaruOutbackOnStreetAndDirt.mp4', title: 'Subaru On Street And Dirt' },
-    { label: 'HLS live stream (m3u8)', url: 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8', title: 'Mux HLS test stream' },
-    { label: 'A PDF', url: 'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf', title: 'Dummy PDF' },
-    { label: 'A YouTube link', url: 'https://www.youtube.com/watch?v=aqz-KE-bpKQ', title: 'Big Buck Bunny on YouTube' }
-  ];
-
-  (function renderSamples() {
-    for (var i = 0; i < SAMPLES.length; i++) {
-      (function (s) {
-        var c = document.createElement('button');
-        c.type = 'button';
-        c.className = 'chip';
-        c.textContent = '▸ ' + s.label;
-        c.title = s.url;
-        c.addEventListener('click', function () {
-          var it = itemFromUrl(s.url, s.title);
-          if (it) addItems([it]);
-        });
-        el.sampleChips.appendChild(c);
-      })(SAMPLES[i]);
-    }
-  })();
-
-  /* ============================================================
-     DEEP LINKS — ?url=... and #url=...
-     ============================================================ */
-  (function deepLink() {
-    var src = null;
-    try {
-      var qs = new URLSearchParams(location.search);
-      if (qs.get('url')) src = qs;
-      else if (location.hash && location.hash.length > 1) {
-        var hs = new URLSearchParams(location.hash.replace(/^#/, ''));
-        if (hs.get('url')) src = hs;
-      }
-    } catch (e) { return; }
-    if (!src) return;
-    var u = src.get('url');
+  function playUrl(raw){
+    if (!raw) return;
+    var u = extractPlayableUrl(raw);
     if (!u) return;
-    var it = itemFromUrl(u, src.get('title') || null, src.get('type') || null);
-    if (!it) return;
-    addItems([it]);
-    var m = src.get('mode');
-    if (m) setTimeout(function () { setMode(m); }, 900);
+    // Bare host → assume https. Also blocks javascript:/data: injection below.
+    if (!/^[a-z][a-z0-9+.-]*:/i.test(u)) u = 'https://' + u;
+    if (!/^https?:\/\//i.test(u)){
+      toast('Only http and https links can be played.','err');
+      return;
+    }
+    teardown();
+    // Let the launcher's detectType() read the real extension here — unlike a
+    // blob:, an http URL carries one, and it also knows the platform embeds.
+    launch(u, '', null);
+  }
+
+  urlForm.addEventListener('submit', function(e){
+    e.preventDefault();
+    var v = urlIn.value;
+    if (!v.trim()){ urlIn.focus(); return; }
+    playUrl(v);
+  });
+
+  // ── PASTE ────────────────────────────────────────────────────────────────
+  window.addEventListener('paste', function(e){
+    if (body.getAttribute('data-state') === 'playing') return;
+    if (document.activeElement === urlIn) return;   // let the field paste normally
+    var cd = e.clipboardData;
+    if (!cd) return;
+    if (cd.files && cd.files.length){
+      e.preventDefault();
+      playFile(cd.files[0]);
+      return;
+    }
+    var txt = cd.getData('text');
+    if (txt && /(https?:\/\/|[\w-]+\.[a-z]{2,})/i.test(txt.trim())){
+      e.preventDefault();
+      playUrl(txt.trim());
+    }
+  });
+
+  // ── EXIT PATHS ───────────────────────────────────────────────────────────
+  back.addEventListener('click', restore);
+
+  window.addEventListener('keydown', function(e){
+    // Esc closes the player. The player itself uses Esc for fullscreen exit, but
+    // that is inside the iframe and never reaches this document — no conflict.
+    if (e.key === 'Escape' && body.getAttribute('data-state') === 'playing') restore();
+  });
+
+  // Free the blob if the tab is closed mid-playback.
+  window.addEventListener('pagehide', teardown);
+
+  // ── DEEP LINK ────────────────────────────────────────────────────────────
+  // ?url=… plays immediately — same contract as the player itself, so a deep
+  // link works identically on the Pages URL and on the custom domain later.
+  (function(){
+    var qs = new URLSearchParams(location.search);
+    var u  = qs.get('url');
+    if (u) playUrl(u);
   })();
 
-  renderQueue();
-  renderRecent();
-  updateNav();
 })();
 </script>
 <!-- api_base.js — canonical brain resolver. voice.js and every other

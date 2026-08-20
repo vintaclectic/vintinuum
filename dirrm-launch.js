@@ -13,7 +13,7 @@
 
    Canonical player:
        /home/vinta/vintinuum/dirrm-player.html        (source of truth)
-       https://vintaclectic.github.io/vintinuum/dirrm-player.html  (live)
+       https://vintinuum.com/dirrm-player.html  (live)
 
    This library is the SINGLE FUNCTION every surface in Vintinuum should
    call to play any media. It abstracts:
@@ -77,7 +77,11 @@
   'use strict';
 
   // ── CONFIG ────────────────────────────────────────────────────────────────
-  const CANONICAL_URL = 'https://vintaclectic.github.io/vintinuum/dirrm-player.html';
+  // The apex, NOT the github.io project path. The repo's Pages CNAME is
+  // vintinuum.com, so Pages 301s vintaclectic.github.io/vintinuum/* to the apex.
+  // Naming the apex directly avoids a redirect hop on every cross-origin launch —
+  // hops are where a long ?url= payload is most likely to be mangled or dropped.
+  const CANONICAL_URL = 'https://vintinuum.com/dirrm-player.html';
   const RELATIVE_URL  = 'dirrm-player.html';   // when invoked from a vintinuum page
   const VALID_MODES   = ['main', 'mini', 'pip', 'theater'];
 
