@@ -167,6 +167,42 @@
 (function () {
   'use strict';
 
+  // ── TLS GUARD — a reset token may never sit on a plaintext page ─────────
+  // As of 2026-08-20 GitHub Pages has not provisioned the certificate for the
+  // custom apex, and it 301s https://vintaclectic.github.io/... DOWN to
+  // http://vintinuum.com/... — so a token emailed over https can still land
+  // here on an unencrypted hop. If that happens, upgrade the scheme before
+  // touching the token: we re-enter over TLS carrying the same query, and the
+  // token is never read, never rendered and never POSTed in the clear.
+  //
+  // Retried once via sessionStorage so a domain that genuinely cannot serve
+  // https degrades to a clear message instead of an infinite redirect loop.
+  try {
+    var insecure = location.protocol === 'http:'
+      && location.hostname !== 'localhost' && location.hostname !== '127.0.0.1';
+    if (insecure) {
+      if (!sessionStorage.getItem('vint_tls_retry')) {
+        sessionStorage.setItem('vint_tls_retry', '1');
+        location.replace('https://' + location.host + location.pathname + location.search);
+        return;
+      }
+      // Second time here means https is genuinely unavailable. Refuse to use
+      // the token rather than transmit a credential in cleartext.
+      document.addEventListener('DOMContentLoaded', function () {
+        var c = document.querySelector('.card');
+        if (c) c.innerHTML = '<div class="eyebrow">Vintinuum</div>'
+          + '<h1>This page isn\u2019t secure yet.</h1>'
+          + '<p class="sub">Your reset link can\u2019t be used over an unencrypted '
+          + 'connection \u2014 that would expose it. The secure address is still '
+          + 'being set up. Try again shortly, or open this link from '
+          + '<a href="https://vintaclectic.github.io/vintinuum/reset.html" '
+          + 'style="color:#ffd54f;">the secure address</a>.</p>';
+      });
+      return;
+    }
+    sessionStorage.removeItem('vint_tls_retry');
+  } catch (_) { /* storage blocked — fall through rather than strand the user */ }
+
   var API_BASE = (function () {
     try { if (window.VINT_API_BASE) return window.VINT_API_BASE; } catch (_) {}
     return (location.hostname === 'localhost' || location.hostname === '127.0.0.1')
