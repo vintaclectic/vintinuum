@@ -166,6 +166,16 @@
     + 'color:rgba(150,175,215,.6);font-family:"Space Mono",monospace;font-size:11px;letter-spacing:.08em;cursor:pointer;}'
     + '.vwg-tab.on{background:rgba(255,213,79,.12);color:#ffd54f;border-color:rgba(255,213,79,.3);}'
     + '.vwg-msg{font-size:12px;min-height:16px;margin-top:8px;color:rgba(150,175,215,.7);}'
+    // "Forgot?" — its own block-level row in normal flow beneath the button.
+    // NO-COLLISION: block + width:100% means it can never sit beside or on top
+    // of a sibling; it reserves its own line at every width. Hidden entirely in
+    // signup mode (a brand-new account has no password to forget).
+    + '.vwg-forgot{display:block;width:100%;text-align:center;background:none;border:none;'
+    + 'color:rgba(150,175,215,.55);font-family:"Space Mono",monospace;font-size:11px;'
+    + 'letter-spacing:.06em;margin-top:10px;padding:9px 4px;cursor:pointer;'
+    + '-webkit-tap-highlight-color:transparent;text-decoration:underline;'
+    + 'text-underline-offset:3px;text-decoration-color:rgba(150,175,215,.28);}'
+    + '.vwg-forgot:hover{color:rgba(255,213,79,.8);}'
     + '.vwg-installs{margin-top:18px;padding-top:16px;border-top:1px solid rgba(255,255,255,.06);display:flex;flex-direction:column;gap:9px;}'
     + '.vwg-install{display:flex;align-items:center;gap:11px;padding:11px 13px;border-radius:11px;'
     + 'border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.025);text-decoration:none;color:inherit;-webkit-tap-highlight-color:transparent;}'
@@ -232,11 +242,20 @@
       + '<input class="vwg-input" id="vwg-email" type="email" placeholder="email" autocomplete="email">'
       + '<input class="vwg-input" id="vwg-pass" type="password" placeholder="password" autocomplete="current-password">'
       + '<button class="vwg-btn" id="vwg-go">Enter</button>'
+      + '<button class="vwg-forgot" id="vwg-forgot" type="button">Forgot your password?</button>'
       + '<div class="vwg-msg" id="vwg-msg"></div>'
       + '<div class="vwg-installs">' + installRows() + '</div>'
       + '<button class="vwg-dismiss" id="vwg-later">not now</button>';
     msgEl = sheet.querySelector('#vwg-msg');
     wireAuth();
+    // The markup above is always authored in the SIGNIN shape, but `mode` is
+    // module-scoped and survives a close. Reopening after switching to "New
+    // here" therefore left mode='signup' against signin markup — the name
+    // field stayed hidden while doAuth() posted to /signup and demanded a
+    // name the user could not see a field for. Re-asserting the mode on every
+    // render keeps the variable and the DOM in lockstep (and correctly sets
+    // the Forgot link's visibility, which reads from the same call).
+    setMode('signin');
   }
 
   function setMode(m) {
@@ -245,6 +264,11 @@
     sheet.querySelector('#vwg-nameWrap').style.display = (m === 'signup') ? '' : 'none';
     sheet.querySelector('#vwg-go').textContent = (m === 'signup') ? 'Begin' : 'Enter';
     sheet.querySelector('#vwg-pass').setAttribute('autocomplete', m === 'signup' ? 'new-password' : 'current-password');
+    // Recovery only belongs on the sign-in lane. display:none (not opacity)
+    // so it surrenders its line entirely in signup mode and cannot collide
+    // with the install rows that follow it.
+    var fg = sheet.querySelector('#vwg-forgot');
+    if (fg) fg.style.display = (m === 'signup') ? 'none' : '';
   }
 
   function wireAuth() {
@@ -261,12 +285,47 @@
     sheet.querySelectorAll('[data-soon]').forEach(function (a) { a.onclick = function (e) { e.preventDefault(); flash('Coming soon — we will light this up the moment it is live.'); }; });
 
     sheet.querySelector('#vwg-go').onclick = doAuth;
+    var forgot = sheet.querySelector('#vwg-forgot');
+    if (forgot) forgot.onclick = doForgot;
     [sheet.querySelector('#vwg-email'), sheet.querySelector('#vwg-pass'), sheet.querySelector('#vwg-name')].forEach(function (el) {
       if (el) el.addEventListener('keydown', function (e) { if (e.key === 'Enter') doAuth(); });
     });
   }
 
   function flash(t, ok) { if (msgEl) { msgEl.textContent = t; msgEl.style.color = ok ? 'rgba(120,220,160,.9)' : 'rgba(150,175,215,.7)'; } }
+
+  // ── Forgot password ───────────────────────────────────────────────────────
+  // The front half of the self-serve recovery lane (Vinta directive
+  // 2026-08-20, task S7RY3P5). Deliberately does NOT navigate anywhere: the
+  // person is already looking at the email field, so we post what they typed
+  // and keep them in place. reset.html is where they land from the email.
+  //
+  // The confirmation is intentionally NEUTRAL and never varies — the backend
+  // refuses to reveal whether an address is registered, and this copy must not
+  // undo that by saying "sent!" only for real accounts.
+  function doForgot() {
+    var email = (sheet.querySelector('#vwg-email').value || '').trim();
+    if (!email) { flash('Type your email above first, then tap this.'); return; }
+    var btn = sheet.querySelector('#vwg-forgot');
+    if (btn) btn.disabled = true;
+    flash('Sending…');
+    fetch(API_BASE + '/api/auth/forgot-password', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: email })
+    })
+      .then(function (r) { return r.json().then(function (d) { return { ok: r.ok, d: d }; }); })
+      .then(function (res) {
+        if (btn) btn.disabled = false;
+        var m = (res.d && res.d.message)
+          || 'If that email has an account, a reset link is on its way.';
+        flash(m, true);
+      })
+      .catch(function () {
+        if (btn) btn.disabled = false;
+        flash('Network hiccup — try again in a moment.');
+      });
+  }
 
   function doAuth() {
     var email = (sheet.querySelector('#vwg-email').value || '').trim();

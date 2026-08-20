@@ -156,6 +156,17 @@
       + '}'
       + '#bond-door-overlay .bd-skip:hover { color:rgba(255,255,255,0.7); }'
       + '#bond-door-overlay .bd-err-msg { font-size:12px; text-align:center; margin-top:12px; color:#ff9494; min-height:16px; letter-spacing:0.02em; }'
+      // Forgot-password sub-lane (task S7RY3P5). The forgot form REPLACES the
+      // sign-in form inside the email pane — the two are never in flow at the
+      // same time, so no-collision holds by construction, exactly like the
+      // three top-level panes do.
+      + '#bond-door-overlay .bd-forgot {'
+      + '  display:block; width:100%; margin-top:10px; padding:8px;'
+      + '  background:none; border:none; color:rgba(255,255,255,0.42);'
+      + '  font-size:11px; letter-spacing:0.06em; cursor:pointer; text-align:center;'
+      + '}'
+      + '#bond-door-overlay .bd-forgot:hover { color:rgba(255,255,255,0.78); }'
+      + '#bond-door-overlay .bd-ok-msg { font-size:12px; text-align:center; margin-top:12px; color:#78dca0; letter-spacing:0.02em; line-height:1.5; }'
       + '#bond-door-overlay .bd-greeting { text-align:center; margin:-8px 0 22px; }'
       + '#bond-door-overlay .bd-eyebrow { font-size:10px; letter-spacing:0.34em; text-transform:uppercase; color:rgba(206,147,216,0.7); margin-bottom:6px; }'
       + '#bond-door-overlay .bd-tagline { font-family:\'Cormorant Garamond\',serif; font-style:italic; font-size:18px; color:rgba(255,255,255,0.78); letter-spacing:0.02em; }'
@@ -255,7 +266,17 @@
       + '      <input type="password" data-field="password" maxlength="128" spellcheck="false" autocomplete="current-password" placeholder="password" />'
       + '      <button type="submit" class="bd-primary" data-action="bond-email">sign in</button>'
       + '      <button type="button" class="bd-toggle-signup" data-action="toggle-signup">new here? create an account →</button>'
+      + '      <button type="button" class="bd-forgot" data-action="forgot-open">forgot your password?</button>'
       + '      <div class="bd-err-msg" data-err="email" role="alert"></div>'
+      + '    </form>'
+      // Forgot sub-state — hidden sibling of the sign-in form. Exactly one of
+      // the two is ever unhidden, so they can never stack.
+      + '    <form autocomplete="off" onsubmit="return false;" data-form="forgot" hidden>'
+      + '      <input type="email" data-field="forgot-email" maxlength="128" spellcheck="false" autocomplete="username" placeholder="the email you signed up with" inputmode="email" />'
+      + '      <button type="submit" class="bd-primary" data-action="bond-forgot">send the link</button>'
+      + '      <button type="button" class="bd-forgot" data-action="forgot-back">← back to sign in</button>'
+      + '      <div class="bd-err-msg" data-err="forgot" role="alert"></div>'
+      + '      <div class="bd-ok-msg" data-ok="forgot" role="status" hidden></div>'
       + '    </form>'
       + '  </div>'
 
@@ -329,13 +350,28 @@
     };
     var nameInput = overlay.querySelector('[data-field="name"]');
 
+    // Set by the forgot-password wiring below; lets a top-level tab switch
+    // reset the email pane back to sign-in rather than stranding it in the
+    // forgot sub-state. Declared here so activateLane can call it safely
+    // before the wiring runs (no-op until then).
+    var resetEmailPane = function () {};
+
     function activateLane(lane) {
       toggleBtns.forEach(function (b) {
         b.classList.toggle('active', b.getAttribute('data-lane') === lane);
       });
       Object.keys(panes).forEach(function (k) { panes[k].hidden = (k !== lane); });
-      var focusEl = panes[lane].querySelector('input');
-      if (focusEl) { try { focusEl.focus(); } catch (_) {} }
+      if (lane !== 'email') resetEmailPane();
+      // Focus the first VISIBLE input. The email pane holds a hidden username
+      // field and a hidden forgot form, so a blind querySelector('input')
+      // would focus something the user cannot see.
+      var candidates = panes[lane].querySelectorAll('input');
+      for (var i = 0; i < candidates.length; i++) {
+        if (candidates[i].offsetParent !== null) {
+          try { candidates[i].focus(); } catch (_) {}
+          break;
+        }
+      }
     }
 
     toggleBtns.forEach(function (btn) {
@@ -445,6 +481,83 @@
       }
     });
     overlay.querySelector('[data-field="password"]').addEventListener('keydown', function (e) { if (e.key === 'Enter') emailBtn.click(); });
+
+    // ── forgot-password sub-lane (task S7RY3P5) ───────────────────────────
+    // Swaps the email pane between sign-in and "send me a link". The two
+    // forms are siblings and exactly one is unhidden at a time — no overlap
+    // is possible, and the card simply reflows to the shorter form.
+    var signinForm = overlay.querySelector('[data-form="email"]');
+    var forgotForm = overlay.querySelector('[data-form="forgot"]');
+    var forgotEmail = overlay.querySelector('[data-field="forgot-email"]');
+    var forgotBtn = overlay.querySelector('[data-action="bond-forgot"]');
+    var forgotOk = overlay.querySelector('[data-ok="forgot"]');
+    var emailTitle = overlay.querySelector('[data-email-title]');
+    var emailSub = overlay.querySelector('[data-email-sub]');
+
+    function showForgot(on) {
+      signinForm.hidden = on;
+      forgotForm.hidden = !on;
+      if (emailTitle) emailTitle.textContent = on ? 'Let’s get you back in.' : (emailSignupMode ? 'Make your name here.' : 'The lane you set up.');
+      if (emailSub) emailSub.textContent = on
+        ? 'Tell me the email you used. If there’s an account on it, a link comes to you — good for one hour.'
+        : (emailSignupMode ? 'Pick a username — it’s how the world and the council will know you.' : 'Email + password — for souls who keep multiple homes.');
+      if (on) {
+        // Carry across whatever they already typed — one less thing to redo.
+        var typed = (overlay.querySelector('[data-field="email"]').value || '').trim();
+        if (typed && !forgotEmail.value) forgotEmail.value = typed;
+        setErr('forgot', '');
+        forgotOk.hidden = true;
+        try { forgotEmail.focus(); } catch (_) {}
+      } else {
+        setErr('email', '');
+      }
+    }
+
+    overlay.querySelector('[data-action="forgot-open"]').addEventListener('click', function () { showForgot(true); });
+    overlay.querySelector('[data-action="forgot-back"]').addEventListener('click', function () { showForgot(false); });
+
+    // Anti-enumeration is absolute here: the server always answers 200 with
+    // the same neutral sentence, and this UI never branches on whether the
+    // account exists. Only a 429 or a network failure says anything else.
+    async function sendResetLink() {
+      var em = (forgotEmail.value || '').trim();
+      if (!em || em.indexOf('@') < 1) { setErr('forgot', 'The email you signed up with.'); return; }
+      forgotBtn.disabled = true;
+      forgotBtn.textContent = 'sending…';
+      setErr('forgot', '');
+      try {
+        var r = await fetch(api() + '/api/auth/forgot-password', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json', 'accept': 'application/json' },
+          body: JSON.stringify({ email: em }),
+        });
+        var j = {};
+        try { j = await r.json(); } catch (_) {}
+        if (r.status === 429) {
+          var s = Number(j && j.retryAfterSec);
+          var wait = (s && isFinite(s) && s > 0)
+            ? (s < 60 ? 'Try again in ' + Math.ceil(s) + ' seconds.' : 'Try again in ' + Math.ceil(s / 60) + ' minute' + (Math.ceil(s / 60) === 1 ? '.' : 's.'))
+            : 'Give it a minute.';
+          setErr('forgot', 'Too many tries. ' + wait);
+          forgotBtn.disabled = false;
+          forgotBtn.textContent = 'send the link';
+          return;
+        }
+        // 200 (and anything else non-429) → the one neutral message.
+        forgotEmail.hidden = true;
+        forgotBtn.hidden = true;
+        forgotOk.hidden = false;
+        forgotOk.textContent = (j && j.message) || 'If that email has an account, a reset link is on its way.';
+      } catch (err) {
+        console.error('[bond_door] forgot-password failed', err && err.message);
+        setErr('forgot', 'Network blocked — check your connection and try again.');
+        forgotBtn.disabled = false;
+        forgotBtn.textContent = 'send the link';
+      }
+    }
+
+    forgotBtn.addEventListener('click', sendResetLink);
+    forgotEmail.addEventListener('keydown', function (e) { if (e.key === 'Enter') sendResetLink(); });
   }
 
   // Welcome-back nudge for returning souls who already have a token —

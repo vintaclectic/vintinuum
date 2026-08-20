@@ -1,0 +1,620 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Vintinuum — Set a new password</title>
+<meta name="robots" content="noindex,nofollow">
+<meta name="theme-color" content="#050816">
+<link rel="icon" type="image/svg+xml" href="branding/vintinuum/favicon/favicon.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+
+<!--
+  ════════════════════════════════════════════════════════════════════════════
+  reset.html  ·  the way back in
+  ════════════════════════════════════════════════════════════════════════════
+
+  WHAT THIS IS
+    The landing surface for the link in a password-reset email. It is the
+    second half of the self-serve recovery lane (Vinta directive 2026-08-20,
+    task S7RY3P5); the backend half lives in vintinuum-api/server.js at
+    /api/auth/forgot-password · /reset-valid · /reset-password.
+
+  WHY IT'S A STANDALONE PAGE
+    A person arriving here is locked out, mildly stressed, and probably on a
+    phone. They get ONE column, ONE job, and no navigation to get lost in.
+    welcome-gate.js is deliberately NOT loaded: its first-visit modal would
+    throw a sign-in sheet over the very form this page exists to show.
+
+  NO-COLLISION LAW (absolute — the cardinal rule of this codebase)
+    Every element on this page lives in normal document flow inside a single
+    centred column. There is not one position:absolute / fixed / negative
+    margin / transform-offset element on this surface, which makes overlap
+    STRUCTURALLY impossible rather than merely untested. The three states
+    (loading · form · expired) are mutually exclusive — exactly one is in the
+    DOM flow at a time via hidden, so they can never stack on each other.
+    Long error strings wrap (overflow-wrap:anywhere); the card scrolls the
+    page, never bleeds past its own edge. Verified 320 / 375 / 768 / 1280 /
+    1920 and with the on-screen keyboard up.
+
+  MOBILE-FIRST (standing mandate — everyone uses mobile)
+    100svh so the on-screen keyboard cannot crop the submit button, 16px
+    inputs so iOS never zoom-jumps on focus, 44px+ touch targets throughout,
+    safe-area insets honoured on notched devices.
+
+  TOKEN HANDLING
+    The raw token lives only in the URL and in the POST body. It is never
+    written to localStorage, never logged, and it is scrubbed from the address
+    bar via replaceState the moment it has been read — so a reset link does
+    not linger in browser history or get shoulder-surfed off the URL bar.
+  ════════════════════════════════════════════════════════════════════════════
+-->
+
+<style>
+:root{
+  --void:#050816; --void-2:#070b18; --bone:#E8F1FF;
+  --pulse:#4FC3F7; --gold:#FFD54F; --coral:#FF7A6E; --mint:#78DCA0;
+  --text:rgba(232,241,255,0.92); --dim:rgba(168,190,225,0.62); --faint:rgba(150,175,215,0.38);
+  --line:rgba(79,195,247,0.16); --line-soft:rgba(232,241,255,0.10);
+  --serif:'Cormorant Garamond',Georgia,'Times New Roman',serif;
+  --mono:'Space Mono',ui-monospace,Menlo,monospace;
+  --ease:cubic-bezier(.22,.68,.28,1);
+  color-scheme:dark;
+}
+*,*::before,*::after{box-sizing:border-box;}
+html,body{margin:0;padding:0;}
+body{
+  min-height:100svh;
+  background:
+    radial-gradient(circle at 50% 0%,rgba(79,195,247,.08),transparent 60%),
+    radial-gradient(circle at 50% 100%,rgba(206,147,216,.05),transparent 55%),
+    var(--void);
+  color:var(--text);
+  font-family:var(--mono);
+  line-height:1.6;
+  /* The page is one centred column. Padding (not positioning) does the
+     centring, so nothing can ever escape the flow. */
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:
+    calc(28px + env(safe-area-inset-top))
+    max(18px,env(safe-area-inset-right))
+    calc(28px + env(safe-area-inset-bottom))
+    max(18px,env(safe-area-inset-left));
+}
+
+/* ── the single card — the only box on the page ─────────────────────────── */
+.card{
+  width:100%;
+  max-width:440px;
+  background:var(--void-2);
+  border:1px solid var(--line);
+  border-radius:20px;
+  padding:clamp(22px,5vw,32px);
+  box-shadow:0 24px 70px rgba(0,0,0,.55);
+  /* Anything unexpectedly wide (a long token echo, a long error) wraps
+     rather than widening the card past the viewport. */
+  overflow-wrap:anywhere;
+  word-break:break-word;
+}
+
+.eyebrow{
+  font-size:10px;letter-spacing:.22em;text-transform:uppercase;
+  color:var(--gold);opacity:.72;margin:0 0 10px;
+}
+h1{
+  font-family:var(--serif);font-style:italic;font-weight:300;
+  font-size:clamp(26px,7vw,32px);line-height:1.12;
+  margin:0 0 10px;color:#ffe9a8;
+}
+.sub{
+  font-family:var(--serif);font-size:clamp(15px,4vw,17px);
+  color:var(--dim);line-height:1.5;margin:0 0 22px;
+}
+
+/* ── state blocks: exactly one is ever in flow ──────────────────────────── */
+[hidden]{display:none !important;}
+
+/* ── loading ───────────────────────────────────────────────────────────── */
+.loading{display:flex;align-items:center;gap:11px;color:var(--dim);font-size:13px;padding:6px 0 2px;}
+.spinner{
+  width:15px;height:15px;flex:0 0 15px;border-radius:50%;
+  border:2px solid rgba(79,195,247,.22);border-top-color:var(--pulse);
+  animation:spin .8s linear infinite;
+}
+@keyframes spin{to{transform:rotate(360deg);}}
+@media (prefers-reduced-motion:reduce){
+  .spinner{animation:none;border-top-color:rgba(79,195,247,.5);}
+}
+
+/* ── form ──────────────────────────────────────────────────────────────── */
+.field{margin:0 0 14px;}
+label{
+  display:block;font-size:11px;letter-spacing:.1em;text-transform:uppercase;
+  color:var(--faint);margin:0 0 7px;
+}
+/* Styled by EXCLUSION, not by enumerating types. The original rule listed
+   [type=password],[type=text] and a later type=email field silently fell
+   through it — rendering at 21px, half the 44px touch minimum. Matching every
+   text-like input instead means any field added here inherits the correct
+   height by default rather than failing the mandate on a forgotten selector. */
+input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=file]):not([type=submit]):not([type=button]){
+  display:block;width:100%;
+  min-height:48px;                      /* > 44px touch target */
+  background:rgba(0,0,0,.35);
+  border:1px solid rgba(255,213,79,.14);
+  border-radius:11px;
+  padding:13px 14px;
+  color:#fff;
+  font-family:var(--mono);
+  font-size:16px;                       /* 16px: stops iOS zoom-on-focus */
+  transition:border-color .18s var(--ease);
+}
+input:focus{outline:none;border-color:rgba(255,213,79,.42);}
+input::placeholder{color:rgba(150,175,215,.35);}
+
+/* Reveal row — two grid columns, no overlay.
+   The button is a sibling of the input, not a layer over it, so the "SHOW"
+   label can never sit on top of the typed characters. The 1fr/auto grid
+   guarantees the input yields width to the button rather than the button
+   riding over the input. Gap keeps them from touching at any viewport. */
+.pw-row{
+  display:grid;
+  grid-template-columns:1fr auto;
+  gap:8px;
+  align-items:stretch;
+}
+.peek{
+  width:auto;                       /* overrides the full-width button rule */
+  min-height:48px;                  /* matches the input, > 44px touch target */
+  padding:0 14px;
+  border:1px solid rgba(255,213,79,.14);
+  border-radius:11px;
+  background:rgba(0,0,0,.35);
+  color:var(--dim);
+  font-family:var(--mono);font-size:10px;font-weight:400;letter-spacing:.1em;
+  white-space:nowrap;
+}
+.peek[aria-pressed="true"]{color:var(--gold);border-color:rgba(255,213,79,.4);}
+.peek:active{transform:scale(.97);}
+@media (max-width:360px){
+  .peek{padding:0 10px;font-size:9px;letter-spacing:.06em;}
+}
+
+/* Strength meter — its own row, its own height. Reserves space even when
+   empty so revealing it never shifts the button under the user's thumb. */
+.meter{margin:0 0 14px;}
+.meter-track{
+  height:4px;border-radius:99px;background:rgba(255,255,255,.07);overflow:hidden;
+}
+.meter-fill{
+  height:100%;width:0;border-radius:99px;background:var(--coral);
+  transition:width .25s var(--ease),background-color .25s var(--ease);
+}
+.meter-label{
+  display:block;min-height:15px;                 /* reserved: no reflow jump */
+  font-size:11px;color:var(--faint);margin-top:6px;
+}
+
+button{
+  display:block;width:100%;
+  min-height:52px;
+  border:none;border-radius:12px;
+  background:linear-gradient(135deg,#c8960c,#ffd54f);
+  color:#0a0600;
+  font-family:var(--mono);font-size:13px;font-weight:700;letter-spacing:.12em;
+  cursor:pointer;-webkit-tap-highlight-color:transparent;
+  transition:transform .15s var(--ease),opacity .2s;
+}
+button:active{transform:scale(.985);}
+button:disabled{opacity:.5;cursor:default;transform:none;}
+
+/* Message row — reserves its line height so appearing text never nudges
+   anything below it. */
+.msg{
+  min-height:18px;margin:12px 0 0;
+  font-size:12px;line-height:1.5;color:var(--dim);
+}
+.msg.bad{color:var(--coral);}
+.msg.good{color:var(--mint);}
+
+/* ── expired state ─────────────────────────────────────────────────────── */
+.note{
+  font-size:13px;line-height:1.6;color:var(--dim);
+  margin:0 0 18px;padding:14px;
+  border:1px solid var(--line-soft);border-radius:12px;
+  background:rgba(255,255,255,.025);
+}
+.link-row{margin:16px 0 0;}
+a.ghost{
+  display:block;width:100%;
+  min-height:48px;line-height:46px;                /* vertical centring w/o flex */
+  text-align:center;text-decoration:none;
+  border:1px solid rgba(255,213,79,.2);border-radius:12px;
+  background:rgba(255,255,255,.04);
+  color:rgba(222,230,255,.85);
+  font-size:12px;letter-spacing:.1em;
+  -webkit-tap-highlight-color:transparent;
+}
+a.ghost:hover{border-color:rgba(255,213,79,.4);}
+
+.footnote{
+  margin:20px 0 0;padding-top:16px;
+  border-top:1px solid var(--line-soft);
+  font-size:11px;line-height:1.6;color:var(--faint);
+}
+
+/* Tiny phones (320px): trim padding only. Nothing repositions, so nothing
+   can collide — the column just gets narrower. */
+@media (max-width:360px){
+  .card{padding:20px 16px;border-radius:16px;}
+}
+</style>
+</head>
+<body>
+
+<main class="card" role="main">
+  <p class="eyebrow">Vintinuum</p>
+  <h1 id="head">The way back in.</h1>
+  <p class="sub" id="sub">Checking your link&hellip;</p>
+
+  <!-- STATE 1 — checking the token -->
+  <div class="loading" id="stateLoading">
+    <span class="spinner" aria-hidden="true"></span>
+    <span>One moment.</span>
+  </div>
+
+  <!-- STATE 2 — the link is good: set a new password -->
+  <form id="stateForm" hidden autocomplete="on" novalidate>
+    <div class="field">
+      <label for="pw1">New password</label>
+      <!-- NO-COLLISION: the reveal button is a real grid COLUMN beside the
+           input, never an absolutely-positioned overlay sitting on top of the
+           text. The input simply gets narrower; the two can never share a
+           pixel at any width. -->
+      <div class="pw-row">
+        <input id="pw1" type="password" autocomplete="new-password"
+               placeholder="at least 8 characters" required minlength="8">
+        <button type="button" id="peek" class="peek"
+                aria-label="Show password" aria-pressed="false">SHOW</button>
+      </div>
+    </div>
+
+    <div class="meter" aria-hidden="true">
+      <div class="meter-track"><div class="meter-fill" id="meterFill"></div></div>
+      <span class="meter-label" id="meterLabel"></span>
+    </div>
+
+    <div class="field">
+      <label for="pw2">Confirm it</label>
+      <input id="pw2" type="password" autocomplete="new-password"
+             placeholder="type it once more" required minlength="8">
+    </div>
+
+    <button type="submit" id="go">SET PASSWORD</button>
+    <p class="msg" id="msg" role="status" aria-live="polite"></p>
+  </form>
+
+  <!-- STATE 3 — expired / already used / never valid.
+       Not a dead end: the same form that sent the first link lives right here,
+       so nobody has to go hunting for the front page. -->
+  <div id="stateDead" hidden>
+    <p class="note" id="deadNote">
+      This link has expired or has already been used. Reset links last one hour
+      and work once &mdash; that&rsquo;s what keeps them safe.
+    </p>
+
+    <form id="againForm" novalidate>
+      <div class="field">
+        <label for="again">Send me another</label>
+        <input id="again" type="email" autocomplete="email" inputmode="email"
+               placeholder="your email" required>
+      </div>
+      <button type="submit" id="againGo">SEND A NEW LINK</button>
+      <p class="msg" id="againMsg" role="status" aria-live="polite"></p>
+    </form>
+  </div>
+
+  <p class="footnote" id="foot">
+    Didn&rsquo;t ask for this? Nothing has changed. You can close this page and
+    your account stays exactly as it was.
+  </p>
+</main>
+
+<script>
+(function () {
+  'use strict';
+
+  // ── config ──────────────────────────────────────────────────────────────
+  // Mirrors welcome-gate.js's resolver so local dev and prod both work with
+  // no edit. Kept literal rather than imported: this page must stand alone.
+  var API_BASE = (function () {
+    try {
+      var c = window.__VINTINUUM_API_BASE || window.VINTINUUM_API || window.__VINT_API || window.VINT_API_BASE;
+      if (c) return String(c).replace(/\/+$/, '');
+    } catch (_) {}
+    return (location.hostname === 'localhost' || location.hostname === '127.0.0.1')
+      ? 'http://localhost:8767' : 'https://api.vintaclectic.com';
+  })();
+
+  var $ = function (id) { return document.getElementById(id); };
+  var head = $('head'), sub = $('sub'), foot = $('foot');
+  var elLoading = $('stateLoading'), elForm = $('stateForm'), elDead = $('stateDead');
+  var pw1 = $('pw1'), pw2 = $('pw2'), go = $('go'), msg = $('msg');
+  var meterFill = $('meterFill'), meterLabel = $('meterLabel');
+  var peek = $('peek');
+  var againForm = $('againForm'), again = $('again'),
+      againGo = $('againGo'), againMsg = $('againMsg');
+
+  // The one neutral sentence. Identical whether or not the address has an
+  // account — the UI must never become an account-existence oracle.
+  var NEUTRAL = 'If that email has an account, a reset link is on its way.';
+
+  // Exactly one state is ever in flow. Overlap is impossible by construction.
+  function show(which) {
+    elLoading.hidden = (which !== 'loading');
+    elForm.hidden    = (which !== 'form');
+    elDead.hidden    = (which !== 'dead');
+  }
+
+  function flash(text, kind) {
+    msg.textContent = text || '';
+    msg.className = 'msg' + (kind ? ' ' + kind : '');
+  }
+
+  // ── the token ───────────────────────────────────────────────────────────
+  // Read once, held in a closure, then scrubbed from the address bar so it
+  // does not sit in history or on screen. Never stored, never logged.
+  var token = (function () {
+    try {
+      var t = new URLSearchParams(location.search).get('token') || '';
+      return t.trim();
+    } catch (_) { return ''; }
+  })();
+
+  (function scrubUrl() {
+    if (!token) return;
+    try { history.replaceState(null, '', location.pathname); } catch (_) {}
+  })();
+
+  // ── password strength ───────────────────────────────────────────────────
+  // Honest feedback, not security theatre: length dominates because it
+  // genuinely does. The backend floor is 8; this only guides past it.
+  function strength(p) {
+    if (!p) return { pct: 0, label: '', color: 'var(--coral)' };
+    var score = 0;
+    if (p.length >= 8) score += 1;
+    if (p.length >= 12) score += 1;
+    if (p.length >= 16) score += 1;
+    if (/[^A-Za-z0-9]/.test(p) || (/[A-Za-z]/.test(p) && /[0-9]/.test(p))) score += 1;
+
+    if (p.length < 8) return { pct: 18, label: 'Too short — 8 characters minimum.', color: 'var(--coral)' };
+    if (score <= 2)   return { pct: 45, label: 'Workable. Longer would be stronger.', color: 'var(--gold)' };
+    if (score === 3)  return { pct: 72, label: 'Good.', color: 'var(--gold)' };
+    return { pct: 100, label: 'Strong.', color: 'var(--mint)' };
+  }
+
+  function paintMeter() {
+    var s = strength(pw1.value);
+    meterFill.style.width = s.pct + '%';
+    meterFill.style.backgroundColor = s.color;
+    meterLabel.textContent = s.label;
+  }
+  pw1.addEventListener('input', function () { paintMeter(); flash(''); });
+  pw2.addEventListener('input', function () { flash(''); });
+
+  // ── show / hide ─────────────────────────────────────────────────────────
+  // Only the first field reveals. The confirm field stays masked on purpose:
+  // its whole job is to catch a typo you cannot see.
+  peek.addEventListener('click', function () {
+    var shown = pw1.getAttribute('type') === 'text';
+    pw1.setAttribute('type', shown ? 'password' : 'text');
+    peek.setAttribute('aria-pressed', shown ? 'false' : 'true');
+    peek.setAttribute('aria-label', shown ? 'Show password' : 'Hide password');
+    peek.textContent = shown ? 'SHOW' : 'HIDE';
+    try { pw1.focus({ preventScroll: true }); } catch (_) {}
+  });
+
+  // ── ask for a new link (from the dead state) ────────────────────────────
+  // Anti-enumeration is absolute: every outcome that isn't a rate-limit or a
+  // network failure prints the exact same neutral sentence. We do not branch
+  // on whether the account exists, because we are never told, and we would
+  // not show it if we were.
+  againForm.addEventListener('submit', function (e) {
+    e.preventDefault();
+    var addr = (again.value || '').trim();
+    if (!addr || addr.indexOf('@') < 1) {
+      againMsg.textContent = 'That does not look like an email address.';
+      againMsg.className = 'msg bad';
+      again.focus();
+      return;
+    }
+    againGo.disabled = true;
+    againMsg.textContent = 'Sending…';
+    againMsg.className = 'msg';
+
+    fetch(API_BASE + '/api/auth/forgot-password', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: addr })
+    })
+      .then(function (r) { return r.json().then(function (d) { return { s: r.status, d: d }; }); })
+      .then(function (res) {
+        if (res.s === 429) {
+          againGo.disabled = false;
+          againMsg.textContent = waitLine(res.d);
+          againMsg.className = 'msg bad';
+          return;
+        }
+        // 200 and any other non-429 outcome collapse to the same words.
+        againMsg.textContent = NEUTRAL;
+        againMsg.className = 'msg good';
+        againForm.querySelector('.field').hidden = true;
+        againGo.hidden = true;
+        $('deadNote').textContent =
+          'Check your inbox — and your spam folder, which is where these '
+          + 'sometimes land. The new link works for one hour.';
+      })
+      .catch(function () {
+        againGo.disabled = false;
+        againMsg.textContent = 'Could not reach Vintinuum just now. Try again in a moment.';
+        againMsg.className = 'msg bad';
+      });
+  });
+  again.addEventListener('input', function () {
+    againMsg.textContent = ''; againMsg.className = 'msg';
+  });
+
+  // Turn a 429 body into a human wait. The server sends retryAfterSec.
+  function waitLine(d) {
+    var s = d && Number(d.retryAfterSec);
+    if (!s || !isFinite(s) || s < 1) return 'Too many tries. Give it a minute.';
+    if (s < 60) return 'Too many tries. Try again in ' + Math.ceil(s) + ' seconds.';
+    var m = Math.ceil(s / 60);
+    return 'Too many tries. Try again in ' + m + (m === 1 ? ' minute.' : ' minutes.');
+  }
+
+  // ── pre-flight ──────────────────────────────────────────────────────────
+  function dead(noteText) {
+    head.textContent = 'This link has run out.';
+    sub.textContent  = 'Links expire so a stale email can never open your account.';
+    if (noteText) $('deadNote').textContent = noteText;
+    show('dead');
+  }
+
+  function ready() {
+    head.textContent = 'Set a new password.';
+    sub.textContent  = 'Pick something you will remember. Signing you in as soon as it is saved.';
+    show('form');
+    try { pw1.focus({ preventScroll: true }); } catch (_) { }
+  }
+
+  if (!token) {
+    dead('This page needs the link from your reset email. Open that link directly, '
+       + 'or ask for a new one.');
+  } else {
+    fetch(API_BASE + '/api/auth/reset-valid?token=' + encodeURIComponent(token), {
+      method: 'GET', headers: { 'Accept': 'application/json' }
+    })
+      .then(function (r) { return r.json(); })
+      .then(function (d) { if (d && d.valid) ready(); else dead(); })
+      .catch(function () {
+        // Network failure is NOT an expired link — say the true thing.
+        head.textContent = 'Could not reach Vintinuum.';
+        sub.textContent  = 'Your link may still be fine.';
+        dead('We could not check this link just now — the connection did not go '
+           + 'through. Check your network and reload this page.');
+      });
+  }
+
+  // ── submit ──────────────────────────────────────────────────────────────
+  // SESSION KEYS — these are copied from body/shell.js, which is the canonical
+  // writer for auth state (writeToken / writeRefresh / setUser). This page is
+  // standalone and cannot import Shell, so it reproduces Shell's three-way
+  // mirror EXACTLY. Getting this wrong is the classic reset-lane bug: the
+  // password changes, the user is bounced back to a sign-in screen anyway.
+  //
+  //   access  → vint_token · vint_access_token · soul_auth_token
+  //   refresh → vint_refresh · vint_refresh_token · soul_auth_refresh
+  //   user    → vint_user  (JSON)
+  //
+  // Shell.readToken() reads vint_token FIRST, then vint_access_token, then
+  // soul_auth_token; readRefresh() reads vint_refresh FIRST. An earlier pass
+  // of this file omitted `vint_refresh` — the primary refresh key — which
+  // would have left the session unable to renew once the access token aged
+  // out. All six are written now.
+  //
+  // The soul_* companion keys (display name, bonded-at, lane) are what
+  // bond_door.js reads for its welcome-back nudge, and Shell.signOut() clears
+  // them as a unit with the token. We write them too, so a reset leaves the
+  // exact same localStorage shape a normal email sign-in leaves.
+  function persistSession(d) {
+    var tk = d && (d.accessToken || d.access_token);
+    if (!tk) return false;
+    try {
+      localStorage.setItem('vint_token', tk);
+      localStorage.setItem('vint_access_token', tk);
+      localStorage.setItem('soul_auth_token', tk);
+
+      var rt = d.refreshToken || d.refresh_token;
+      if (rt) {
+        localStorage.setItem('vint_refresh', rt);
+        localStorage.setItem('vint_refresh_token', rt);
+        localStorage.setItem('soul_auth_refresh', rt);
+      }
+
+      if (d.user) {
+        localStorage.setItem('vint_user', JSON.stringify(d.user));
+        // bond_door.js reads soul_display_name for the welcome-back line.
+        var dn = d.user.display_name || d.user.email;
+        if (dn) localStorage.setItem('soul_display_name', dn);
+      }
+      localStorage.setItem('soul_bonded_at', String(Date.now()));
+      localStorage.setItem('soul_lane', 'email');
+
+      // Shell binds tokens to a per-browser device id (X-Device-Id). The
+      // server just told us which device this session belongs to; adopt it
+      // so the next Shell boot doesn't mint a competing one.
+      if (d.deviceId && /^[a-zA-Z0-9_\-]{8,128}$/.test(d.deviceId)) {
+        localStorage.setItem('vint_device_id', d.deviceId);
+      }
+    } catch (_) { /* private mode — the redirect below still lands them home */ }
+    try { window.dispatchEvent(new CustomEvent('vint:auth', { detail: d })); } catch (_) {}
+    return true;
+  }
+
+  elForm.addEventListener('submit', function (e) {
+    e.preventDefault();
+
+    var a = pw1.value || '', b = pw2.value || '';
+    if (a.length < 8) { flash('At least 8 characters, please.', 'bad'); pw1.focus(); return; }
+    if (a !== b)      { flash('Those two do not match.', 'bad'); pw2.focus(); return; }
+
+    go.disabled = true;
+    flash('Saving…');
+
+    fetch(API_BASE + '/api/auth/reset-password', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token: token, password: a })
+    })
+      .then(function (r) { return r.json().then(function (d) { return { ok: r.ok, s: r.status, d: d }; }); })
+      .then(function (res) {
+        if (res.s === 429) {
+          go.disabled = false;
+          flash(waitLine(res.d), 'bad');
+          return;
+        }
+        if (!res.ok) {
+          go.disabled = false;
+          var err = (res.d && res.d.error) || 'That did not work. Try again.';
+          flash(err, 'bad');
+          // An invalid/expired token cannot be retried — swap to the dead
+          // state rather than letting them type into a form that can't work.
+          if (/expired|invalid/i.test(err)) setTimeout(function () { dead(); }, 1600);
+          return;
+        }
+        if (!persistSession(res.d)) {
+          // Password DID change; only the auto-sign-in failed. Say so
+          // precisely — telling them to "try again" would be a lie.
+          go.disabled = false;
+          flash('Password saved. Sign in with it from the front page.', 'good');
+          foot.textContent = 'Your new password is active. Head to the front page and sign in.';
+          return;
+        }
+        flash('✓ Saved. Signing you in…', 'good');
+        foot.textContent = 'Every other device was signed out — that is what a reset is for.';
+        setTimeout(function () { location.href = 'index.html'; }, 900);
+      })
+      .catch(function () {
+        go.disabled = false;
+        flash('Network hiccup — try again in a moment.', 'bad');
+      });
+  });
+})();
+</script>
+</body>
+</html>
