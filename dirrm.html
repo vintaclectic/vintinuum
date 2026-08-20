@@ -15,10 +15,16 @@
 <meta property="og:title" content="DirRM — play anything">
 <meta property="og:description" content="Drop any file. It plays. Nothing uploads.">
 <meta property="og:type" content="website">
-<!-- The custom host is wired by CNAME; the repo root redirects only when served
-     from dirrm.vintinuum.com so the project-site URL keeps its existing entry. -->
-<meta property="og:url" content="https://dirrm.vintinuum.com/dirrm.html">
-<link rel="canonical" href="https://dirrm.vintinuum.com/dirrm.html">
+<!-- CANONICAL HOME: https://vintinuum.com/dirrm.html
+     One GitHub Pages repo has exactly ONE CNAME custom domain, and that domain
+     is the apex vintinuum.com. Pages therefore 301s every other host it serves
+     — including dirrm.vintinuum.com — to the apex. So the apex path is the only
+     DirRM URL guaranteed to resolve without a redirect, and it is what canonical
+     and og:url must name. index.html's host router still hands off any dirrm.*
+     host to this page, so the subdomain keeps working wherever it is served
+     directly. -->
+<meta property="og:url" content="https://vintinuum.com/dirrm.html">
+<link rel="canonical" href="https://vintinuum.com/dirrm.html">
 
 <style>
 /* ══════════════════════════════════════════════════════════════════════════

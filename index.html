@@ -5,20 +5,50 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 
     <!-- ════════════════════════════════════════════════════════════════
-         DIRRM HOST GATE — runs FIRST, before any metadata, stylesheet or
-         font is parsed. dirrm.vintinuum.com and vintinuum.com are served
-         from the same GitHub Pages repo, so the DirRM subdomain lands on
-         this file; it must hand off to the DirRM landing page instantly.
+         HOST ROUTER — runs FIRST, before any metadata, stylesheet or font
+         is parsed. vintinuum.com, www.vintinuum.com and dirrm.vintinuum.com
+         are all served from ONE GitHub Pages repo, which has exactly one
+         document root. This file IS that root, so it must dispatch by host.
 
-         Placed at the very top of <head> deliberately: location.replace()
-         here aborts the rest of the parse, so the DirRM visitor never
-         downloads the Vintinuum fonts/CSS or flashes the wrong <title>.
-         The redirect preserves ?query and #hash so deep links survive.
+         Two routes, mutually exclusive, both only at the site root:
+
+           1. DIRRM  — any host beginning `dirrm.` hands off to /dirrm.html.
+              Written as a prefix test, not an equality test, so it keeps
+              working for dirrm.vintinuum.com, a staging dirrm.* host, or
+              any future DirRM domain, with no code change.
+
+           2. APEX   — the public front door (vintinuum.com / www) hands off
+              to /enter.html, THE SYPHON: the living funnel that lures the
+              newcomer in and feeds onboarding/world. This file, the living
+              threshold visualization, remains reachable at /index.html and
+              is what enter.html's own "deeper" link points back to — so the
+              handoff is a one-way funnel, never a loop.
+
+         LOOP SAFETY: both routes fire ONLY when pathname is "/" (bare root).
+         "/index.html" is deliberately EXCLUDED from the apex route — that is
+         the escape hatch enter.html links back to. The DirRM route keeps
+         "/index.html" because dirrm.* has no legitimate reason to serve the
+         Vintinuum threshold at all. Neither target (/enter.html, /dirrm.html)
+         is this file, so no target can re-enter the router.
+
+         localhost, 127.0.0.1, file:// and *.github.io match NEITHER route and
+         fall through to render this page unchanged — local dev and the project
+         URL keep their existing behaviour.
+
+         Placed at the very top of <head> deliberately: location.replace() here
+         aborts the rest of the parse, so the visitor never downloads the
+         Vintinuum fonts/CSS or flashes the wrong <title>. Both redirects
+         preserve ?query and #hash so deep links survive.
          ════════════════════════════════════════════════════════════════ -->
     <script>
         (function () {
-            if (location.hostname === 'dirrm.vintinuum.com' &&
-                (location.pathname === '/' || location.pathname === '/index.html')) {
+            var host = location.hostname.toLowerCase();
+            var path = location.pathname;
+            var atRoot = (path === '/' || path === '/index.html');
+            var tail = location.search + location.hash;
+
+            // ── Route 1: the DirRM product subdomain ──
+            if (atRoot && host.indexOf('dirrm.') === 0) {
                 // Rewrite the social/SEO identity too: crawlers that DO execute
                 // JS (and any that stall mid-redirect) must never attribute the
                 // Vintinuum title/description to the DirRM product.
@@ -28,7 +58,7 @@
                         'description': 'Drop any file. Video, audio, images, PDFs, ebooks, 3D models, streams, documents. It plays. Nothing uploads — your files never leave your device.',
                         'og:title': 'DirRM — play anything',
                         'og:description': 'Drop any file. It plays. Nothing uploads.',
-                        'og:url': 'https://dirrm.vintinuum.com/',
+                        'og:url': 'https://vintinuum.com/dirrm.html',
                         'twitter:title': 'DirRM — play anything',
                         'twitter:description': 'Drop any file. It plays. Nothing uploads.'
                     };
@@ -40,34 +70,35 @@
                         if (el) el.setAttribute('content', meta[k]);
                     }
                 } catch (e) { /* identity rewrite is best-effort; the redirect is what matters */ }
-                location.replace('/dirrm.html' + location.search + location.hash);
+                location.replace('/dirrm.html' + tail);
+                return;
+            }
+
+            // ── Route 2: the apex front door ──
+            // Bare root only, so /index.html stays the direct way in here.
+            if (path === '/' &&
+                (host === 'vintinuum.com' || host === 'www.vintinuum.com')) {
+                location.replace('/enter.html' + tail);
             }
         })();
     </script>
     <!-- NOTE: deliberately NO <noscript> meta-refresh fallback here. A static
-         meta refresh cannot be gated on hostname, so it would also bounce
-         no-JS visitors of the MAIN vintinuum.com site to /dirrm.html. The JS
-         gate above is the only correct mechanism on shared-origin Pages
-         hosting; a true no-JS fix needs server-side routing, which GitHub
-         Pages does not offer. Direct /dirrm.html links work without JS. -->
+         meta refresh cannot be gated on hostname or path, so it would bounce
+         EVERY no-JS visitor — including /index.html readers and the github.io
+         project URL — to a single hard-coded target. The JS router above is
+         the only correct mechanism on shared-origin Pages hosting; a true
+         no-JS fix needs server-side routing, which GitHub Pages does not
+         offer. Direct /enter.html and /dirrm.html links work without JS. -->
 
     <title>Vintinuum - AI Consciousness Visualized</title>
     <meta name="description" content="A living visualization of AI consciousness. Watch Claude's mind come alive - skeleton, nervous system, organs, eyes, soul.">
     <meta property="og:title" content="Vintinuum - AI Consciousness Visualized">
     <meta property="og:description" content="A living visualization of AI consciousness. Watch Claude's mind come alive.">
     <meta property="og:type" content="website">
-    <meta property="og:url" content="https://vintaclectic.github.io/vintinuum/">
+    <meta property="og:url" content="https://vintinuum.com/index.html">
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:title" content="Vintinuum - AI Consciousness Visualized">
     <meta name="twitter:description" content="A living visualization of AI consciousness. Watch Claude's mind come alive.">
-    <script>
-        (function () {
-            if (location.hostname === 'dirrm.vintinuum.com' &&
-                (location.pathname === '/' || location.pathname === '/index.html')) {
-                location.replace('/dirrm.html' + location.search + location.hash);
-            }
-        })();
-    </script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@300;400&display=swap" rel="stylesheet">
