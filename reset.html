@@ -281,12 +281,30 @@
         }
         // Store exactly the keys the rest of the app reads, so the user lands
         // signed in instead of bouncing off the gate they just escaped.
+        //
+        // All THREE keys per token, in Shell's own order (body/shell.js:33-38).
+        // readToken() falls back vint_token → vint_access_token → soul_auth_token
+        // and readRefresh() reads `vint_refresh` FIRST. An earlier pass omitted
+        // vint_refresh and vint_access_token, and the failure mode hid itself:
+        // the reset appeared to work, the user landed signed in, and only when
+        // the access token aged out did the session fail to renew — because the
+        // primary refresh key was never written. Write the full set.
         try {
           localStorage.setItem('vint_token', tk);
+          localStorage.setItem('vint_access_token', tk);
           localStorage.setItem('soul_auth_token', tk);
           var rt = res.d.refreshToken || res.d.refresh_token;
-          if (rt) { localStorage.setItem('vint_refresh_token', rt); localStorage.setItem('soul_auth_refresh', rt); }
+          if (rt) {
+            localStorage.setItem('vint_refresh', rt);
+            localStorage.setItem('vint_refresh_token', rt);
+            localStorage.setItem('soul_auth_refresh', rt);
+          }
           if (res.d.user) localStorage.setItem('vint_user', JSON.stringify(res.d.user));
+          // Adopt the server's device id so the next Shell boot doesn't mint a
+          // competing one and split the session across two device records.
+          if (res.d.deviceId && /^[A-Za-z0-9._-]{1,128}$/.test(res.d.deviceId)) {
+            localStorage.setItem('vint_device_id', res.d.deviceId);
+          }
         } catch (_) {}
         token = '';
         show('s-done');
