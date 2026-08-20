@@ -1,5 +1,21 @@
 # DirRM landing — custom domain setup
 
+> ## ⚠️ SUPERSEDED 2026-08-20 — task GWJF3R6
+>
+> The arrangement described below (`CNAME` = `dirrm.vintinuum.com`) **caused a live
+> regression**: because GitHub Pages force-301s the `*.github.io` project URL to the
+> single CNAME domain, `vintinuum.com` → `github.io/vintinuum` → `dirrm.vintinuum.com`,
+> so the apex landed visitors on the DirRM landing page instead of the Vintinuum
+> front door.
+>
+> **`CNAME` is now `vintinuum.com`.** DirRM's stable, redirect-free home is
+> **`https://vintinuum.com/dirrm.html`**. `dirrm.vintinuum.com` still resolves to
+> Pages and now 301s to the apex, which is the intended graceful-legacy behaviour.
+>
+> Current runbook: **`/home/vinta/.claude/council-loop/state/docs/GWJF3R6-apex-dns.md`**
+>
+> This file is kept for its historical measurements. Do not follow its instructions.
+
 Status as of **2026-08-17**: **DNS is LIVE.** `dirrm.vintinuum.com` resolves to
 the four GitHub Pages IPs, and this repo now ships the `CNAME` that binds the
 custom domain to the Pages site.
@@ -111,18 +127,25 @@ should print `dirrm.vintinuum.com`. If it prints `null`, the domain resolves but
 no repository has claimed it, which is the 404-plus-wrong-certificate state
 described at the top.
 
-## Do not use the apex here
+## ~~Do not use the apex here~~ — REVERSED 2026-08-20
 
-The `CNAME` should stay `dirrm.vintinuum.com`, not `vintinuum.com`. Moving this
-Pages project to the apex would be a site-wide migration and would require
-coordinating the hardcoded project-site URLs, extension fallback URL, and PWA.
+*Historical position (kept for the record):* "The `CNAME` should stay
+`dirrm.vintinuum.com`, not `vintinuum.com`. Moving this Pages project to the apex
+would be a site-wide migration and would require coordinating the hardcoded
+project-site URLs, extension fallback URL, and PWA."
+
+**This was wrong, and it broke the apex.** A single Pages repo has exactly one
+canonical CNAME domain, and Pages redirects every other host it serves to it —
+so putting the product subdomain in `CNAME` hijacked the main site. The apex is
+the brand root and must hold the CNAME. The "site-wide migration" it feared was
+in practice four URL constants, all now updated.
 
 ## What works regardless of DNS
 
 - **Live page:** `https://vintaclectic.github.io/vintinuum/dirrm.html`
-- **Custom host path:** `https://dirrm.vintinuum.com/dirrm.html` — DNS live;
-  serves as soon as Pages finishes binding the domain and issuing the cert
-- **Custom host root:** `https://dirrm.vintinuum.com/` redirects to `/dirrm.html`
+- **Canonical DirRM home (use this):** `https://vintinuum.com/dirrm.html`
+- **Legacy custom host:** `https://dirrm.vintinuum.com/` — still resolves to Pages,
+  now 301s to `https://vintinuum.com/` since the apex holds the CNAME
 - **Deep link:** `…/dirrm.html?url=<MEDIA_URL>` plays immediately — the same
   contract as the player, so it keeps working verbatim after the domain moves.
 - **Offline / self-hosted / LAN:** the launcher resolves the player next to
