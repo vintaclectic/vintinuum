@@ -1,0 +1,264 @@
+--- a/bin/vintask-gui.html
++++ b/bin/vintask-gui.html
+@@ -259,6 +259,57 @@
+   .skip-toggle input{width:16px;height:16px;accent-color:var(--acc);cursor:pointer;flex:none}
+   .skip-toggle.on{color:var(--ink2)}
+ 
++  /* ── DIRRM BOARD PLAYER (task 9A85T9G) ─────────────────────────────────────
++     The board is only the launcher/shell. Actual playback is ALWAYS the
++     canonical DirRM player loaded in an iframe, so this does not create a second
++     media engine and never introduces raw video/audio tags. The launcher panel is
++     normal-flow under the board toolbar; the player itself is a fixed PiP surface
++     with explicit viewport clamps so it cannot collide with task cards, drawers,
++     or mobile safe areas. */
++  .dirrm-toggle{border-color:rgba(20,184,166,.38)!important;color:#5eead4!important}
++  .dirrm-toggle.on{background:rgba(20,184,166,.12);border-color:#14B8A6!important;color:#99f6e4!important}
++  .dirrm-panel[hidden],.dirrm-pip[hidden]{display:none!important}
++  .dirrm-panel{
++    margin-top:var(--sp4);padding:var(--sp4);border:1px solid rgba(20,184,166,.24);
++    background:linear-gradient(180deg,rgba(20,184,166,.06),rgba(26,20,8,.82));
++    border-radius:var(--radius-sm);box-shadow:0 1px 0 rgba(255,255,255,.025) inset}
++  .dirrm-panel-head{display:flex;align-items:center;justify-content:space-between;gap:var(--sp3);margin-bottom:var(--sp3);flex-wrap:wrap}
++  .dirrm-panel-title{display:flex;align-items:center;gap:8px;font-size:11px;font-weight:900;letter-spacing:.08em;text-transform:uppercase;color:#99f6e4}
++  .dirrm-live-state{font-size:11px;color:var(--dim);overflow-wrap:anywhere}
++  .dirrm-form{display:grid;grid-template-columns:minmax(180px,1fr) minmax(120px,.5fr) minmax(118px,.34fr) auto;gap:8px;align-items:end}
++  .dirrm-field{display:flex;flex-direction:column;gap:5px;min-width:0}
++  .dirrm-field span{font-size:10px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--dim2)}
++  .dirrm-field input,.dirrm-field select{
++    width:100%;min-height:38px;border:1px solid var(--hair);border-radius:8px;background:var(--inset);
++    color:var(--ink);font:inherit;font-size:13px;padding:8px 10px;outline:none}
++  .dirrm-field input:focus,.dirrm-field select:focus{border-color:#14B8A6;box-shadow:0 0 0 2px rgba(20,184,166,.14)}
++  .dirrm-launch-btn{
++    min-height:38px;border:1px solid rgba(20,184,166,.44);border-radius:8px;background:rgba(20,184,166,.14);
++    color:#ccfbf1;font:inherit;font-size:12px;font-weight:900;cursor:pointer;padding:0 14px;white-space:nowrap}
++  .dirrm-launch-btn:hover{background:rgba(20,184,166,.22);border-color:#14B8A6}
++  .dirrm-mode-row{display:flex;align-items:center;gap:7px;flex-wrap:wrap;margin-top:var(--sp3)}
++  .dirrm-mode-row span{font-size:10px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--dim2)}
++  .dirrm-chip{min-height:32px;border:1px solid var(--hair);border-radius:999px;background:var(--inset);color:var(--ink2);
++    font:inherit;font-size:11px;font-weight:800;padding:0 10px;cursor:pointer}
++  .dirrm-chip.on,.dirrm-chip:hover{border-color:#14B8A6;color:#99f6e4;background:rgba(20,184,166,.1)}
++  .dirrm-pip{
++    position:fixed;right:18px;bottom:18px;width:min(520px,calc(100vw - 36px));height:min(340px,calc(100svh - 36px));
++    min-width:280px;min-height:190px;z-index:55;border:1px solid rgba(20,184,166,.42);border-radius:16px;
++    background:#060606;box-shadow:0 20px 70px rgba(0,0,0,.58),0 0 0 1px rgba(245,166,35,.14) inset;
++    overflow:hidden;resize:both}
++  .dirrm-pip-head{height:34px;display:flex;align-items:center;justify-content:space-between;gap:8px;padding:0 8px 0 12px;
++    background:linear-gradient(180deg,rgba(13,11,8,.96),rgba(13,11,8,.74));border-bottom:1px solid rgba(245,166,35,.16);cursor:move;user-select:none}
++  .dirrm-pip-title{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:11px;font-weight:900;letter-spacing:.06em;text-transform:uppercase;color:#99f6e4}
++  .dirrm-pip-acts{display:flex;align-items:center;gap:5px;flex:none}
++  .dirrm-pip-acts button{width:28px;height:26px;border:1px solid var(--hair);border-radius:7px;background:rgba(255,255,255,.03);color:var(--ink2);cursor:pointer;font:inherit;font-size:12px;font-weight:900}
++  .dirrm-pip-acts button:hover{border-color:#14B8A6;color:#99f6e4}
++  .dirrm-frame{width:100%;height:calc(100% - 34px);border:0;display:block;background:#000}
++  @media(max-width:760px){
++    .dirrm-form{grid-template-columns:1fr}
++    .dirrm-launch-btn{width:100%}
++    .dirrm-pip{left:10px;right:10px;bottom:10px;width:auto;height:min(64svh,420px);min-width:0}
++  }
++
+   /* Timeout-history drawer. A modal over a dimmed backdrop is the ONE overlay
+      Vinta explicitly sanctions, and it is exclusive: nothing else is open when
+      it is, so it collides with nothing. */
+@@ -3286,6 +3337,8 @@
+           <button type="button" class="vt" id="vtUpdates" data-view="updates">🚢 Latest Updates <span class="vt-badge" id="vtUpdBadge" hidden></span></button>
+         </div>
+         <div class="board-ctrls">
++          <button class="refresh dirrm-toggle" id="btnDirrmToggle" type="button"
++                  title="Open the DirRM player dock — listen, watch, read, or play while working">▣ DirRM</button>
+           <!-- CRASH RECOVERY (task JHMJ89D) — one click brings back work stranded
+                by a power loss. Lives beside the section tabs, in normal flow, so
+                it can never overlap them at any width. -->
+@@ -3315,6 +3368,47 @@
+         <input type="text" id="findQ" placeholder="Find a task — paste a ref code (e.g. K7QMX3P) or type any word…" autocomplete="off">
+         <span class="arch-count" id="findCount"></span>
+       </div>
++
++      <section class="dirrm-panel" id="dirrmPanel" hidden aria-label="DirRM player launcher">
++        <div class="dirrm-panel-head">
++          <div class="dirrm-panel-title"><span aria-hidden="true">▣</span><span>DirRM Player</span></div>
++          <div class="dirrm-live-state" id="dirrmLiveState">Paste any media, document, stream, model, or playable embed URL.</div>
++        </div>
++        <div class="dirrm-form">
++          <label class="dirrm-field">
++            <span>URL</span>
++            <input type="url" id="dirrmUrl" placeholder="https://… video, audio, PDF, ebook, stream, game/embed" autocomplete="url" spellcheck="false">
++          </label>
++          <label class="dirrm-field">
++            <span>Title</span>
++            <input type="text" id="dirrmTitle" placeholder="Optional label" autocomplete="off">
++          </label>
++          <label class="dirrm-field">
++            <span>Kind</span>
++            <select id="dirrmType">
++              <option value="">Auto</option>
++              <option value="video">Watch</option>
++              <option value="audio">Listen</option>
++              <option value="pdf">Read PDF</option>
++              <option value="ebook">Read ebook</option>
++              <option value="docs">Read document</option>
++              <option value="image">View image</option>
++              <option value="stream">Stream</option>
++              <option value="model">3D model</option>
++              <option value="iframe">Play/embed</option>
++            </select>
++          </label>
++          <button type="button" class="dirrm-launch-btn" id="dirrmLaunch">▶ Play in PiP</button>
++        </div>
++        <div class="dirrm-mode-row" id="dirrmModes" role="group" aria-label="DirRM mode">
++          <span>Mode</span>
++          <button type="button" class="dirrm-chip" data-mode="pip">PiP</button>
++          <button type="button" class="dirrm-chip" data-mode="mini">Mini</button>
++          <button type="button" class="dirrm-chip" data-mode="main">Main</button>
++          <button type="button" class="dirrm-chip" data-mode="theater">Theater</button>
++          <button type="button" class="dirrm-chip" id="dirrmOpenTab" title="Open the same media in a full browser tab">New tab</button>
++        </div>
++      </section>
+       <div class="counts" id="counts"></div>
+       <!-- AUTO-SKIP TOGGLE (task 4QBY759) — its own block row beneath the counts,
+            so it can never overlap the status pills above or the list below. It
+@@ -3439,6 +3533,21 @@
+   <div class="drawer-acts" id="dActs"></div>
+ </aside>
+ 
++<!-- DirRM PiP shell. Playback is the canonical DirRM iframe; this wrapper only
++     gives the task board a manageable work-safe surface around it. -->
++<section class="dirrm-pip" id="dirrmPip" hidden aria-label="DirRM player" role="region">
++  <div class="dirrm-pip-head" id="dirrmPipHead">
++    <div class="dirrm-pip-title" id="dirrmPipTitle">DirRM Player</div>
++    <div class="dirrm-pip-acts">
++      <button type="button" id="dirrmToMini" title="Mini mode">−</button>
++      <button type="button" id="dirrmToMain" title="Main mode">□</button>
++      <button type="button" id="dirrmClose" title="Close player">✕</button>
++    </div>
++  </div>
++  <iframe class="dirrm-frame" id="dirrmFrame" title="DirRM Player"
++          allow="autoplay; fullscreen; encrypted-media; picture-in-picture"></iframe>
++</section>
++
+ <!-- ── DOC OVERLAY CARD (U35MT22) — opens ON TOP of the drawer when Vinta clicks a
+      file chip. Explicitly-authorized overlay: its own layer (z 70/71), dimmed
+      backdrop, internal scroll, never touches the drawer's content. ── -->
+@@ -3536,6 +3645,116 @@
+ let PRIO = 3;
+ let VIEW = 'active'; // 'active' | 'archive'
+ 
++const DIRRM_PLAYER_URL = 'https://vintaclectic.github.io/vintinuum/dirrm-player.html';
++const DIRRM_MODES = ['pip','mini','main','theater'];
++let DIRRM = { mode: localStorage.getItem('dirrmBoard:mode') || 'pip', url: '', title: '', type: '', drag: null };
++
++function dirrmSrc({ url = '', title = '', type = '', mode = DIRRM.mode } = {}) {
++  const qs = new URLSearchParams();
++  if (url) qs.set('url', url);
++  if (title) qs.set('title', title);
++  if (type) qs.set('type', type);
++  if (DIRRM_MODES.includes(mode)) qs.set('mode', mode);
++  qs.set('autoplay', '1');
++  return DIRRM_PLAYER_URL + '?' + qs.toString();
++}
++function dirrmSetStatus(text) {
++  const el = document.getElementById('dirrmLiveState');
++  if (el) el.textContent = text;
++}
++function dirrmSetMode(mode, send = true) {
++  if (!DIRRM_MODES.includes(mode)) mode = 'pip';
++  DIRRM.mode = mode;
++  localStorage.setItem('dirrmBoard:mode', mode);
++  document.querySelectorAll('#dirrmModes .dirrm-chip[data-mode]').forEach(b => b.classList.toggle('on', b.dataset.mode === mode));
++  if (send) {
++    const frame = document.getElementById('dirrmFrame');
++    try { frame?.contentWindow?.postMessage({ action: 'setMode', mode }, '*'); } catch {}
++  }
++}
++function dirrmCurrentPayload() {
++  const raw = (document.getElementById('dirrmUrl')?.value || '').trim();
++  let url = raw;
++  if (url && !/^[a-z][a-z0-9+.-]*:/i.test(url)) url = 'https://' + url;
++  const title = (document.getElementById('dirrmTitle')?.value || '').trim() || url;
++  const type = (document.getElementById('dirrmType')?.value || '').trim();
++  return { url, title, type, mode: DIRRM.mode };
++}
++function dirrmLaunchBoard() {
++  const payload = dirrmCurrentPayload();
++  if (!payload.url) {
++    dirrmSetStatus('Paste a URL first.');
++    document.getElementById('dirrmUrl')?.focus();
++    return;
++  }
++  DIRRM = { ...DIRRM, ...payload };
++  localStorage.setItem('dirrmBoard:lastUrl', payload.url);
++  localStorage.setItem('dirrmBoard:lastTitle', payload.title || '');
++  localStorage.setItem('dirrmBoard:lastType', payload.type || '');
++  const frame = document.getElementById('dirrmFrame');
++  const pip = document.getElementById('dirrmPip');
++  const title = document.getElementById('dirrmPipTitle');
++  if (title) title.textContent = payload.title || 'DirRM Player';
++  if (frame) frame.src = dirrmSrc(payload);
++  if (pip) pip.hidden = false;
++  dirrmSetStatus('Playing in board PiP. Drag the title bar or resize the corner.');
++}
++function dirrmOpenTab() {
++  const payload = dirrmCurrentPayload();
++  if (!payload.url) { dirrmSetStatus('Paste a URL first.'); return; }
++  window.open(dirrmSrc(payload), '_blank', 'noopener');
++}
++function initDirrmBoardPlayer() {
++  const toggle = document.getElementById('btnDirrmToggle');
++  const panel = document.getElementById('dirrmPanel');
++  const url = document.getElementById('dirrmUrl');
++  const title = document.getElementById('dirrmTitle');
++  const type = document.getElementById('dirrmType');
++  if (url) url.value = localStorage.getItem('dirrmBoard:lastUrl') || '';
++  if (title) title.value = localStorage.getItem('dirrmBoard:lastTitle') || '';
++  if (type) type.value = localStorage.getItem('dirrmBoard:lastType') || '';
++  dirrmSetMode(DIRRM.mode, false);
++  toggle?.addEventListener('click', () => {
++    const open = panel?.hidden;
++    if (panel) panel.hidden = !open;
++    toggle.classList.toggle('on', !!open);
++    if (open) setTimeout(() => url?.focus(), 50);
++  });
++  document.getElementById('dirrmLaunch')?.addEventListener('click', dirrmLaunchBoard);
++  document.getElementById('dirrmOpenTab')?.addEventListener('click', dirrmOpenTab);
++  document.querySelectorAll('#dirrmModes .dirrm-chip[data-mode]').forEach(b => b.addEventListener('click', () => dirrmSetMode(b.dataset.mode)));
++  document.getElementById('dirrmToMini')?.addEventListener('click', () => dirrmSetMode('mini'));
++  document.getElementById('dirrmToMain')?.addEventListener('click', () => dirrmSetMode('main'));
++  document.getElementById('dirrmClose')?.addEventListener('click', () => {
++    const pip = document.getElementById('dirrmPip');
++    const frame = document.getElementById('dirrmFrame');
++    try { frame?.contentWindow?.postMessage({ action: 'close' }, '*'); } catch {}
++    if (frame) frame.removeAttribute('src');
++    if (pip) pip.hidden = true;
++    dirrmSetStatus('Player closed.');
++  });
++  [url, title].forEach(el => el?.addEventListener('keydown', e => {
++    if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') dirrmLaunchBoard();
++  }));
++  const head = document.getElementById('dirrmPipHead');
++  head?.addEventListener('pointerdown', e => {
++    if (e.target.closest('button')) return;
++    const pip = document.getElementById('dirrmPip'); if (!pip) return;
++    const r = pip.getBoundingClientRect();
++    DIRRM.drag = { dx: e.clientX - r.left, dy: e.clientY - r.top };
++    head.setPointerCapture?.(e.pointerId);
++  });
++  head?.addEventListener('pointermove', e => {
++    if (!DIRRM.drag) return;
++    const pip = document.getElementById('dirrmPip'); if (!pip) return;
++    const w = pip.offsetWidth, h = pip.offsetHeight;
++    const x = Math.max(0, Math.min(window.innerWidth - w, e.clientX - DIRRM.drag.dx));
++    const y = Math.max(0, Math.min(window.innerHeight - h, e.clientY - DIRRM.drag.dy));
++    pip.style.left = x + 'px'; pip.style.top = y + 'px'; pip.style.right = 'auto'; pip.style.bottom = 'auto';
++  });
++  head?.addEventListener('pointerup', e => { DIRRM.drag = null; try { head.releasePointerCapture?.(e.pointerId); } catch {} });
++}
++
+ // view toggle (Active / Archive)
+ document.querySelectorAll('.view-tabs .vt').forEach(b=>{
+   b.addEventListener('click', ()=>{
+@@ -8587,6 +8806,7 @@
+   if(as) as.hidden = true;   // archSearch is only for archive view — hide it
+ })();
+ 
++initDirrmBoardPlayer();
+ loadMeta().then(loadTasks);
+ loadSpend(); setInterval(loadSpend, 30000);   // spend analytics (refreshes every 30s)
+ loadActivity();

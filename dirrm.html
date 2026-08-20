@@ -485,7 +485,7 @@
     <!-- ===== HERO / INTAKE ===== -->
     <section class="hero" id="hero" aria-label="Add media">
       <div class="hero-copy">
-        <div class="eyebrow">dirrm.vintinuum.co</div>
+        <div class="eyebrow">dirrm.vintinuum.com</div>
         <h1>Drop anything.<br><span class="glow">Play everything.</span></h1>
         <p class="lede">
           One surface for every format you own. Video, audio, images, PDFs, ebooks, code,
@@ -660,6 +660,35 @@
       if (/tiktok\.com/i.test(host) && /\/live/i.test(u.pathname)) return false;
       return true;
     } catch (e) { return false; }
+  }
+
+  function suspiciousPublicMediaReason(url, title) {
+    if (!url || /^blob:|^data:|^magnet:/i.test(url)) return '';
+    try {
+      var u = new URL(url, location.href);
+      if (!/^https?:$/i.test(u.protocol)) return '';
+      var decoded = '';
+      try {
+        decoded = decodeURIComponent(
+          [u.hostname, u.pathname, u.search, title || ''].join(' ')
+        );
+      } catch (e) {
+        decoded = [u.hostname, u.pathname, u.search, title || ''].join(' ');
+      }
+      var hay = decoded.toLowerCase();
+      var directVideo = /\.(mp4|mkv|avi|mov|m4v|webm|wmv|flv)(\?|#|$)/i.test(u.pathname);
+      var moviePath = /(^|[\/\s._-])(movies?|films?)([\/\s._-]|$)/i.test(decoded);
+      var releaseMarker =
+        /\b(yts|rarbg|eztv|ettv|1337x|thepiratebay|torrentgalaxy|tgx|yify)\b/i.test(decoded) ||
+        /\b(webrip|web[-.\s]?dl|brrip|bluray|dvdrip|hdrip|camrip|hdtc|telesync|xvid|x264|x265|hevc)\b/i.test(decoded) ||
+        /\[(1080p|720p|2160p|4k|webrip|web[-.\s]?dl|brrip|bluray|yts|yify)[^\]]*\]/i.test(decoded);
+      var openDirHost = /\b(files?|cdn|media|dl|downloads?|public)\b/i.test(u.hostname);
+      var publicOpenDir = moviePath && (openDirHost || hay.indexOf('/public/') !== -1);
+      if (releaseMarker && (directVideo || publicOpenDir) && (moviePath || openDirHost || hay.indexOf('/public/') !== -1)) {
+        return 'This looks like a public movie-release URL, so DirRM will not open it.';
+      }
+    } catch (e) { /* invalid URLs fail normal intake */ }
+    return '';
   }
 
   // name  = the thing that carries the extension (file.name, or the URL)
@@ -838,6 +867,11 @@
     // Bare domain / path with no scheme → assume https, but never for magnets.
     if (!/^[a-z][a-z0-9+.-]*:/i.test(clean) && !/^\/\//.test(clean)) {
       if (/^[\w.-]+\.[a-z]{2,}(\/|$|:)/i.test(clean)) clean = 'https://' + clean;
+    }
+    var blocked = suspiciousPublicMediaReason(clean, title);
+    if (blocked) {
+      toast(blocked, true);
+      return null;
     }
     return {
       id: ++seq,

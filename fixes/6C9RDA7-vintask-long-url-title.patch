@@ -1,0 +1,24 @@
+*** Begin Patch
+*** Update File: /home/vinta/.claude/council-loop/bin/vintask-gui.html
+@@
+-  .task .ttl{font-weight:700;color:var(--ink);word-break:break-word;min-width:0;line-height:1.4}
++  .task .ttl{font-weight:700;color:var(--ink);min-width:0;max-width:100%;line-height:1.4;
++    overflow-wrap:anywhere;word-break:break-word}
+@@
+-  .task .meta span{background:var(--inset);border:1px solid var(--hair);border-radius:6px;padding:3px 8px;
+-    word-break:break-word;max-width:100%}
++  .task .meta span{background:var(--inset);border:1px solid var(--hair);border-radius:6px;padding:3px 8px;
++    min-width:0;max-width:100%;overflow-wrap:anywhere;word-break:break-word}
+@@
+-  .task .detail-line{margin-top:var(--sp2);font-size:12px;color:var(--dim);line-height:1.5;word-break:break-word}
++  .task .detail-line{margin-top:var(--sp2);font-size:12px;color:var(--dim);line-height:1.5;
++    min-width:0;max-width:100%;overflow-wrap:anywhere;word-break:break-word}
+   .task .why{margin-top:var(--sp3);font-size:12px;color:var(--warn);background:rgba(242,184,75,.07);
+-    border:1px solid rgba(242,184,75,.18);border-radius:var(--radius-sm);padding:8px 10px;word-break:break-word;line-height:1.45}
++    border:1px solid rgba(242,184,75,.18);border-radius:var(--radius-sm);padding:8px 10px;
++    min-width:0;max-width:100%;overflow-wrap:anywhere;word-break:break-word;line-height:1.45}
+@@
+-  .drawer-head .dh-ttl{font-weight:800;font-size:16px;color:var(--ink);line-height:1.4;word-break:break-word;min-width:0}
++  .drawer-head .dh-ttl{font-weight:800;font-size:16px;color:var(--ink);line-height:1.4;
++    min-width:0;max-width:100%;overflow-wrap:anywhere;word-break:break-word}
+*** End Patch

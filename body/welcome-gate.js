@@ -250,6 +250,12 @@
     + 'color:rgba(150,175,215,.6);font-family:"Space Mono",monospace;font-size:11px;letter-spacing:.08em;cursor:pointer;}'
     + '.vwg-tab.on{background:rgba(255,213,79,.12);color:#ffd54f;border-color:rgba(255,213,79,.3);}'
     + '.vwg-msg{font-size:12px;min-height:16px;margin-top:8px;color:rgba(150,175,215,.7);}'
+    // Forgot link: its own full-width row in normal flow, right-aligned.
+    // NOT absolute/floated — it can never land on the Enter button.
+    + '.vwg-forgot{display:block;width:100%;text-align:right;background:none;border:none;'
+    + 'color:rgba(150,175,215,.5);font-family:"Space Mono",monospace;font-size:11px;'
+    + 'letter-spacing:.06em;padding:6px 2px 0;margin:0;cursor:pointer;text-decoration:none;}'
+    + '.vwg-forgot:hover{color:rgba(255,213,79,.75);}'
     + '.vwg-installs{margin-top:18px;padding-top:16px;border-top:1px solid rgba(255,255,255,.06);display:flex;flex-direction:column;gap:9px;}'
     + '.vwg-install{display:flex;align-items:center;gap:11px;padding:11px 13px;border-radius:11px;'
     + 'border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.025);text-decoration:none;color:inherit;-webkit-tap-highlight-color:transparent;}'
@@ -315,6 +321,7 @@
       + '<div id="vwg-nameWrap" style="display:none;"><input class="vwg-input" id="vwg-name" type="text" placeholder="what should she call you?" autocomplete="name"></div>'
       + '<input class="vwg-input" id="vwg-email" type="email" placeholder="email" autocomplete="email">'
       + '<input class="vwg-input" id="vwg-pass" type="password" placeholder="password" autocomplete="current-password">'
+      + '<a class="vwg-forgot" id="vwg-forgot" href="reset.html">forgot your password?</a>'
       + '<button class="vwg-btn" id="vwg-go">Enter</button>'
       + '<div class="vwg-msg" id="vwg-msg"></div>'
       + '<div class="vwg-installs">' + installRows() + '</div>'
@@ -329,6 +336,9 @@
     sheet.querySelector('#vwg-nameWrap').style.display = (m === 'signup') ? '' : 'none';
     sheet.querySelector('#vwg-go').textContent = (m === 'signup') ? 'Begin' : 'Enter';
     sheet.querySelector('#vwg-pass').setAttribute('autocomplete', m === 'signup' ? 'new-password' : 'current-password');
+    // Only meaningful when signing IN — a brand-new account has nothing to recover.
+    var fg = sheet.querySelector('#vwg-forgot');
+    if (fg) fg.style.display = (m === 'signup') ? 'none' : '';
   }
 
   function wireAuth() {
@@ -344,6 +354,14 @@
     };
     sheet.querySelectorAll('[data-soon]').forEach(function (a) { a.onclick = function (e) { e.preventDefault(); flash('Coming soon — we will light this up the moment it is live.'); }; });
 
+    var fgl = sheet.querySelector('#vwg-forgot');
+    if (fgl) fgl.onclick = function (e) {
+      // Carry whatever they already typed, so the reset page does not ask
+      // for the email a second time.
+      var em = (sheet.querySelector('#vwg-email').value || '').trim();
+      if (em) { e.preventDefault(); location.href = 'reset.html?email=' + encodeURIComponent(em); }
+      // else: let the plain href through.
+    };
     sheet.querySelector('#vwg-go').onclick = doAuth;
     [sheet.querySelector('#vwg-email'), sheet.querySelector('#vwg-pass'), sheet.querySelector('#vwg-name')].forEach(function (el) {
       if (el) el.addEventListener('keydown', function (e) { if (e.key === 'Enter') doAuth(); });

@@ -25,6 +25,39 @@ Vinta has answered.
 Asking a question and then immediately running a tool in the same turn is the
 exact violation this rule exists to kill. Do not do it. Ever.
 
+## SEALED-QUESTION LAW (Vinta directive 2026-08-14, task SEHP2A4)
+
+*"both."*
+
+Vinta ruled that the rail stays and the unaccountable default agent is
+sacrificed. A task that carries a `needs-human` question is **sealed** until
+Vinta answers it. No agent may close it as `done`, and no agent may update its
+status to `done`, just because the agent believes the question is now moot. The
+only valid exits are:
+
+- Vinta answers the question with `vintask answer <id> "<decision>"`, which
+  returns the card to the queue.
+- Vinta force-closes it himself with `vintask done <id> --force`.
+- The agent leaves it `needs-human`, updates the question with any new context,
+  and exits.
+
+If a card is sealed, build every reversible part around the decision first, then
+leave the narrow reserved decision for Vinta. Never bury an unanswered question
+under a green card.
+
+## RETIRED DEFAULT AGENT: `claude` → `vessel` (task SEHP2A4)
+
+`claude` is retired as a council owner name. It was the anonymous default, not a
+specialist with a real agent file, and anonymous ownership made it too easy to
+close decision-bearing tasks without accountability. The replacement is
+`vessel`, the named general foreman. When recording task ownership:
+
+- Use the fittest named specialist whenever one fits.
+- Use `vessel` for genuinely generic glue work.
+- Never record a seat name (`seat-1`, `seat-2`, etc.) as the chosen agent.
+- Never record `claude`; if old tooling rewrites it to `vessel`, name `vessel`
+  directly anyway.
+
 ## Commit discipline (non-negotiable)
 
 After every logical unit of work, `git add` the touched files and create a
