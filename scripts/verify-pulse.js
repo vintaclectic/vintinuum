@@ -185,7 +185,22 @@ function measure() {
     const fill = row.querySelector('.vtn-pulse-fill');
     if (track && fill && vis(track)) {
       const tr = rect(track), fr = rect(fill);
-      if (fr.r > tr.r + EPS || fr.x < tr.x - EPS || fr.b > tr.b + EPS || fr.y < tr.y - EPS) {
+      // The INDETERMINATE bar is a full-width band deliberately swept past
+      // both track edges by `transform: translateX(±62%)`. Its untransformed
+      // border-box legitimately reports outside the track, so raw geometry
+      // is the wrong assertion — what actually keeps it safe is the track's
+      // own `overflow:hidden`. Assert THAT (the real containment contract),
+      // and keep the strict geometry rule for determinate bars, which have
+      // no transform and must never escape.
+      const indeterminate = track.classList.contains('is-indeterminate');
+      if (indeterminate) {
+        const clip = getComputedStyle(track).overflow;
+        if (clip !== 'hidden' && clip !== 'clip') {
+          out.violations.push({ kind: 'unclipped-bar', what: 'row#' + i +
+            ' indeterminate track does not clip (overflow:' + clip + ')',
+            child: fr, parent: tr });
+        }
+      } else if (fr.r > tr.r + EPS || fr.x < tr.x - EPS || fr.b > tr.b + EPS || fr.y < tr.y - EPS) {
         out.violations.push({ kind: 'unclipped-bar', what: 'row#' + i, child: fr, parent: tr });
       }
     }

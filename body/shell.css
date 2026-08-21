@@ -245,6 +245,14 @@
   border-radius: 12px;
 }
 .vtn-right-tab {
+  /* Flex row, not a block: the label is the ONLY shrinkable child, so the
+     badge always keeps its own reserved box instead of being pushed past
+     the button's right edge and clipped by overflow:hidden. Fixes the
+     PULSE-proof [overflow] tab#N badge violation at 1280/1920. */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
   min-height: 44px;
   padding: 0 6px;
   background: transparent;
@@ -260,6 +268,13 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+/* The label carries the truncation so the badge never has to. */
+.vtn-right-tab > .vtn-tab-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .vtn-right-tab:hover { color: #fff; background: rgba(255, 255, 255, 0.04); }
 .vtn-right-tab.is-active {
