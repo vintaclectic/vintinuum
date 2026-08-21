@@ -461,6 +461,12 @@
      z9999 player iframe can never share pixels with a z1600 sheet.
      ── KILL SWITCH: ?arcade=0 (read live, never latched). -->
 <script src="body/world/arcade.js"></script>
+<!-- OWNER ADMIN — hidden oversight panel. It loads after DirverseHUD so it can
+     join the measured one-sheet registry and never pin its own fixed geometry.
+     Open with ?owner=1 or Ctrl+Shift+O; after owner-key unlock it adds a rail
+     launcher. Credentials are session-only and sent as owner headers to the
+     brain; no owner secret is committed into this static page. -->
+<script src="body/world/owner-admin.js"></script>
 <script>
 (function () {
   const statusEl = document.getElementById('status');
