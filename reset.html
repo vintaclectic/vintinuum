@@ -181,6 +181,11 @@
     var insecure = location.protocol === 'http:'
       && location.hostname !== 'localhost' && location.hostname !== '127.0.0.1';
     if (insecure) {
+      // MEASURED 2026-08-21: the apex https listener answers with a
+      // *.github.io certificate (hostname mismatch), so this hop lands on a
+      // browser TLS interstitial rather than the page. Attempt it once
+      // anyway — the moment GitHub issues the apex cert this silently starts
+      // working and the whole block becomes a no-op — but never twice.
       if (!sessionStorage.getItem('vint_tls_retry')) {
         sessionStorage.setItem('vint_tls_retry', '1');
         location.replace('https://' + location.host + location.pathname + location.search);
@@ -194,9 +199,14 @@
           + '<h1>This page isn\u2019t secure yet.</h1>'
           + '<p class="sub">Your reset link can\u2019t be used over an unencrypted '
           + 'connection \u2014 that would expose it. The secure address is still '
-          + 'being set up. Try again shortly, or open this link from '
-          + '<a href="https://vintaclectic.github.io/vintinuum/reset.html" '
-          + 'style="color:#ffd54f;">the secure address</a>.</p>';
+          + 'being set up \u2014 please try again shortly.</p>'
+          // MEASURED 2026-08-21: the CNAME file 301s
+          // https://vintaclectic.github.io/vintinuum/* back DOWN to
+          // http://vintinuum.com, so offering it as "the secure address"
+          // sends the user in a circle. There is no working https origin to
+          // link to today, so we promise nothing we cannot deliver.
+          + '<p class="sub" style="opacity:.72;">If you need in right now, ask '
+          + 'Vinta to send you a link directly.</p>';
       });
       return;
     }
