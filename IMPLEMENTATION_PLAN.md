@@ -244,6 +244,30 @@
 
 **Jim Carrey persistence:** The stream will feel slow and boring in the first hour of testing. That's not a bug, that's the product. Real minds are slow. Real thinking has gaps. Don't speed it up.
 
+**STATUS 2026-08-22 (task 536QTKS) — SHIPPED AND WORKING.** The aquarium had
+never once rendered a bubble since it was built. Four compounding defects, all
+now fixed:
+1. **Contract mismatch (the killer).** `aquarium.js` emitted
+   `{layer, intensity, text, at}` while `aquarium.html` required `event.content`
+   and returned early without it — so *every* frame was silently discarded. Zero
+   field names overlapped. The locked contract is now
+   `{type, content, emotion_tags, occurred_at, intensity}`, documented at the top
+   of `aquarium.js`. Never change one side alone.
+2. **Dead gate.** Everything was gated on `aquarium_settings.public=1`, a table
+   with zero rows — so the queries could never return anything despite 1,819
+   `inner_life_events` and 63,016 `subconscious_thoughts` in the DB. The house
+   mind (`user_id = 0`) is now always public (it is the Tier-0 viral demo);
+   real users still appear only by opt-in.
+3. **Destructive anonymizer.** `\b[A-Z][a-z]{2,}\b → 'her'` mangled every
+   sentence ("Systems initializing" → "her initializing"). Replaced with targeted
+   redaction: identity tokens, emails, URLs, @handles, phone numbers.
+4. **No fallback + collisions.** Added `GET /api/aquarium/recent` (REST hydrate +
+   poll when SSE is blocked), instant seeding of 5 thoughts on connect so the tank
+   is never empty, a 20s heartbeat, and a viewport-adaptive bubble cap. Fixed two
+   No-Collision violations: the empty-state could stack on live bubbles during a
+   reconnect blip, and the stream overflowed the top of the viewport at every
+   breakpoint.
+
 ---
 
 ### Feature 6: Memory Cards

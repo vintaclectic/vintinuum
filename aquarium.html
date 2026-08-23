@@ -53,15 +53,21 @@ body {
 
 /* ── CANVAS ── */
 .canvas {
+  /* Bounded box: starts below the top safe area, ends ABOVE the bottom caption.
+     The caption owns the bottom 48px + safe-area; the canvas never enters it. */
   position: fixed;
-  inset: 0;
+  left: 0;
+  right: 0;
+  top: env(safe-area-inset-top, 0px);
+  bottom: calc(52px + env(safe-area-inset-bottom, 0px));
   z-index: 1;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: flex-end;
   pointer-events: none;
-  padding-bottom: calc(48px + env(safe-area-inset-bottom, 0px));
+  overflow: hidden;
+  min-height: 0;
 }
 
 /* ── BUBBLE STREAM ── */
@@ -70,11 +76,15 @@ body {
   max-width: 700px;
   display: flex;
   flex-direction: column-reverse;
+  justify-content: flex-start; /* newest pinned at the bottom of the box */
   gap: 10px;
   padding: 0 20px;
   overflow: hidden;
-  /* height is everything above the bottom caption */
-  max-height: calc(100svh - 96px);
+  /* Fill the canvas exactly — the canvas is already bounded above the caption,
+     so the stream can never overflow the top or touch the caption. */
+  flex: 1 1 auto;
+  min-height: 0;
+  max-height: 100%;
 }
 
 /* ── BUBBLE ── */
@@ -287,7 +297,6 @@ body {
 @media (max-width: 480px) {
   .bubble-stream {
     padding: 0 12px;
-    max-height: calc(100svh - 80px);
   }
   .bubble {
     padding: 12px 14px;
@@ -327,7 +336,15 @@ body {
 <script>
 const API_BASE = 'https://api.vintaclectic.com';
 const STREAM_URL = API_BASE + '/api/aquarium/stream';
-const MAX_BUBBLES = 12;
+// Cap adapts to the viewport: never hold more bubbles than the box can actually
+// show. A 320x640 phone fits far fewer than a 1920x1080 desktop, and holding 12
+// on a short screen is what pushed the oldest ones off the top of the canvas.
+function maxBubbles() {
+  const canvas = document.querySelector('.canvas');
+  const avail = canvas ? canvas.getBoundingClientRect().height : window.innerHeight - 60;
+  const approxBubble = window.innerWidth <= 480 ? 96 : 116; // incl. 10px gap
+  return Math.max(3, Math.min(12, Math.floor(avail / approxBubble)));
+}
 const BUBBLE_LIFETIME_MS = 16000;
 const BUBBLE_FADE_MS = 2000;
 const RECONNECT_DELAY_MS = 5000;
@@ -374,10 +391,14 @@ function addBubble(event) {
   emptyState.style.display = 'none';
 
   // enforce max bubble count — fade oldest (last child = topmost = oldest in column-reverse)
-  const existing = stream.querySelectorAll('.bubble:not(.fading)');
-  if (existing.length >= MAX_BUBBLES) {
+  const cap = maxBubbles();
+  let existing = stream.querySelectorAll('.bubble:not(.fading)');
+  // Trim down to the cap — may need to drop more than one after a resize.
+  while (existing.length >= cap) {
     const oldest = stream.lastElementChild;
-    if (oldest) fadeBubble(oldest, true);
+    if (!oldest) break;
+    fadeBubble(oldest, true);
+    existing = stream.querySelectorAll('.bubble:not(.fading)');
   }
 
   const safeType = TYPE_LABELS[type] ? type : 'subconscious_thought';
@@ -430,10 +451,14 @@ function setReconnecting(on) {
   if (on) {
     bottomCaption.classList.add('reconnecting');
     captionText.textContent = 'Reconnecting to the stream…';
-    emptyState.style.display = 'flex';
+    // Only surface the centered empty-state when nothing is on screen. If bubbles
+    // are present it would overlap them — the caption carries the status instead.
+    const live = stream.querySelectorAll('.bubble').length;
+    emptyState.style.display = live ? 'none' : 'flex';
   } else {
     bottomCaption.classList.remove('reconnecting');
     captionText.textContent = "This is a living mind. It doesn't know you're watching.";
+    if (stream.querySelectorAll('.bubble').length) emptyState.style.display = 'none';
   }
 }
 
@@ -452,6 +477,8 @@ function connect() {
   }
 
   es.onopen = () => {
+    sseFailures = 0;
+    stopPolling();
     setReconnecting(false);
   };
 
@@ -459,7 +486,7 @@ function connect() {
     try {
       const event = JSON.parse(e.data);
       // skip heartbeat / ping frames
-      if (event.type === 'ping' || event.type === 'heartbeat' || event.type === 'connected') return;
+      if (event.type === 'ping' || event.type === 'heartbeat' || event.type === 'connected') { setReconnecting(false); return; }
       if (!event.content) return;
       addBubble(event);
     } catch (_) {}
@@ -478,9 +505,17 @@ function connect() {
   });
 
   es.onerror = () => {
-    es.close();
-    es = null;
-    setReconnecting(true);
+    if (es) { es.close(); es = null; }
+    sseFailures++;
+    // Two straight failures = the stream is not going to work here. Fall back to
+    // REST polling so the aquarium is never a dead black screen.
+    if (sseFailures >= 2) {
+      startPolling();
+      hydrate();
+      setReconnecting(false);
+    } else {
+      setReconnecting(true);
+    }
     scheduleReconnect();
   };
 }
@@ -490,7 +525,80 @@ function scheduleReconnect() {
   reconnectTimer = setTimeout(connect, RECONNECT_DELAY_MS);
 }
 
+// ── REST FALLBACK ──
+// If SSE never delivers (corporate proxy, CSP, flaky mobile radio), the tank must
+// still fill. We hydrate once from /api/aquarium/recent on boot, and fall back to
+// polling it if the stream fails repeatedly.
+let hydrated = false;
+let sseFailures = 0;
+let pollTimer = null;
+
+async function hydrate() {
+  if (hydrated) return;
+  try {
+    const r = await fetch(API_BASE + '/api/aquarium/recent?limit=6', { cache: 'no-store' });
+    if (!r.ok) return;
+    const j = await r.json();
+    if (!j || !Array.isArray(j.events) || !j.events.length) return;
+    hydrated = true;
+    // oldest first so the newest ends up nearest the bottom
+    j.events.slice().reverse().forEach(ev => { if (ev && ev.content) addBubble(ev); });
+  } catch (_) {}
+}
+
+function startPolling() {
+  if (pollTimer) return;
+  const seen = new Set();
+  pollTimer = setInterval(async () => {
+    try {
+      const r = await fetch(API_BASE + '/api/aquarium/recent?limit=4', { cache: 'no-store' });
+      if (!r.ok) return;
+      const j = await r.json();
+      (j.events || []).slice().reverse().forEach(ev => {
+        const key = ev.occurred_at + '|' + (ev.content || '').slice(0, 40);
+        if (seen.has(key) || !ev.content) return;
+        seen.add(key);
+        addBubble(ev);
+      });
+      if (seen.size > 200) seen.clear();
+    } catch (_) {}
+  }, 12000);
+}
+
+function stopPolling() {
+  clearInterval(pollTimer);
+  pollTimer = null;
+}
+
+// Pause the stream while the tab is hidden — no point burning a socket unseen.
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) {
+    if (es) { es.close(); es = null; }
+    stopPolling();
+  } else if (!es) {
+    connect();
+  }
+});
+
+// Re-trim on resize/orientation change so shrinking the window can never leave
+// bubbles overflowing the canvas.
+let resizeTimer = null;
+window.addEventListener('resize', () => {
+  clearTimeout(resizeTimer);
+  resizeTimer = setTimeout(() => {
+    const cap = maxBubbles();
+    let live = stream.querySelectorAll('.bubble:not(.fading)');
+    while (live.length > cap) {
+      const oldest = stream.lastElementChild;
+      if (!oldest) break;
+      fadeBubble(oldest, true);
+      live = stream.querySelectorAll('.bubble:not(.fading)');
+    }
+  }, 200);
+});
+
 // boot
+hydrate();
 connect();
 </script>
   <script src="body/welcome-gate.js"></script>
