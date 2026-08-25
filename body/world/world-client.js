@@ -830,7 +830,173 @@
       mesh = new THREE.Mesh(new THREE.BoxGeometry(1, 0.6, 0.25),
         new THREE.MeshStandardMaterial({ color: 0x8a7a5a, emissive: 0x2a1a0a, emissiveIntensity: 0.3 }));
       mesh.position.y = 0.6;
-    } else { return; }
+    // ── THE TEN THAT WERE PAID FOR AND NEVER APPEARED (AETHERHOLD 2026-08-25) ──
+    // PLACE_COST carries fifteen kinds. This function drew five and `else
+    // return`-ed the rest, so ten of them took the player's strand, entered the
+    // server's structure table, survived reload, counted toward standing — and
+    // rendered NOTHING. The player paid, the world said yes, and the ground
+    // stayed empty. That is worse than a refusal: a refusal is honest.
+    //
+    // Every piece below obeys the same three contracts the original five did,
+    // because they are what keep the no-collision law true in 3D:
+    //   · FOOTPRINT ≤ 1 unit — the grid cell is the box, so no piece can ever
+    //     intrude on its neighbour's cell no matter how they are arranged.
+    //   · GROUNDED — local y is set so the piece SITS on y=0 (never sunk under
+    //     the floor plate, never floating above it), then `s.y` offsets it.
+    //   · EMISSIVE — the world is lit by spark and is often dim; an unlit piece
+    //     is invisible in a dim clearing, which is the bug all over again.
+    } else if (s.kind === 'pillar') {
+      // vertical punctuation — tallest of the tier-1 pieces, reads from range
+      const g = new THREE.Group();
+      const shaft = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.2, 1.6, 12),
+        new THREE.MeshStandardMaterial({ color: 0x7c8fa6, emissive: 0x15304a, emissiveIntensity: 0.35 }));
+      shaft.position.y = 0.8;
+      const cap = new THREE.Mesh(new THREE.CylinderGeometry(0.26, 0.26, 0.12, 12),
+        new THREE.MeshStandardMaterial({ color: 0x9fb4cc, emissive: 0x1d3f5e, emissiveIntensity: 0.5 }));
+      cap.position.y = 1.66; g.add(shaft, cap); mesh = g;
+    } else if (s.kind === 'fence') {
+      // low boundary — deliberately half the wall's height so a fenced edge and
+      // a walled edge are never confused at a glance
+      const g = new THREE.Group();
+      const rail = new THREE.Mesh(new THREE.BoxGeometry(1, 0.07, 0.07),
+        new THREE.MeshStandardMaterial({ color: 0x8a9aab, emissive: 0x16303f, emissiveIntensity: 0.3 }));
+      rail.position.y = 0.52;
+      const rail2 = rail.clone(); rail2.position.y = 0.3;
+      g.add(rail, rail2);
+      [-0.42, 0.42].forEach((x) => {
+        const p = new THREE.Mesh(new THREE.BoxGeometry(0.09, 0.62, 0.09),
+          new THREE.MeshStandardMaterial({ color: 0x6f7f90, emissive: 0x12283a, emissiveIntensity: 0.3 }));
+        p.position.set(x, 0.31, 0); g.add(p);
+      });
+      mesh = g;
+    } else if (s.kind === 'arch') {
+      // a doorway you pass THROUGH — the opening is real negative space, built
+      // from two legs and a lintel rather than a solid block with a texture
+      const g = new THREE.Group();
+      const mat = new THREE.MeshStandardMaterial({ color: 0x8fa8c4, emissive: 0x1b3d5e, emissiveIntensity: 0.45 });
+      [-0.4, 0.4].forEach((x) => {
+        const leg = new THREE.Mesh(new THREE.BoxGeometry(0.16, 1.5, 0.18), mat);
+        leg.position.set(x, 0.75, 0); g.add(leg);
+      });
+      const lintel = new THREE.Mesh(new THREE.BoxGeometry(0.96, 0.18, 0.18), mat);
+      lintel.position.y = 1.59; g.add(lintel); mesh = g;
+    } else if (s.kind === 'door') {
+      // a slab in a frame, canted slightly ajar so it reads as a door and not a
+      // wall — the tilt is the whole tell at distance
+      const g = new THREE.Group();
+      const frame = new THREE.Mesh(new THREE.BoxGeometry(0.92, 1.35, 0.1),
+        new THREE.MeshStandardMaterial({ color: 0x5a6b7c, emissive: 0x12283a, emissiveIntensity: 0.3 }));
+      frame.position.y = 0.675;
+      const slab = new THREE.Mesh(new THREE.BoxGeometry(0.66, 1.15, 0.09),
+        new THREE.MeshStandardMaterial({ color: 0xb08d5a, emissive: 0x3a2410, emissiveIntensity: 0.45 }));
+      slab.position.set(0.1, 0.6, 0.07); slab.rotation.y = -0.35;
+      g.add(frame, slab); mesh = g;
+    } else if (s.kind === 'window') {
+      // wall-height so it lines up with walls, but glazed and lit from within —
+      // a lit window is the strongest "someone lives here" signal in the world
+      const g = new THREE.Group();
+      const frame = new THREE.Mesh(new THREE.BoxGeometry(1, 1.2, 0.12),
+        new THREE.MeshStandardMaterial({ color: 0x5f7185, emissive: 0x14304a, emissiveIntensity: 0.3 }));
+      frame.position.y = 0.6;
+      const glass = new THREE.Mesh(new THREE.BoxGeometry(0.68, 0.72, 0.14),
+        new THREE.MeshStandardMaterial({ color: 0xbfe6ff, emissive: 0x7fc8ff, emissiveIntensity: 1.1, transparent: true, opacity: 0.65 }));
+      glass.position.y = 0.72; g.add(frame, glass); mesh = g;
+    } else if (s.kind === 'lantern') {
+      // hangs from a hook — reads as suspended where `light` reads as planted,
+      // which is why both exist
+      const g = new THREE.Group();
+      const hook = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.035, 1.25, 6),
+        new THREE.MeshStandardMaterial({ color: 0x4a5665 }));
+      hook.position.y = 0.625;
+      const arm = new THREE.Mesh(new THREE.BoxGeometry(0.34, 0.05, 0.05),
+        new THREE.MeshStandardMaterial({ color: 0x4a5665 }));
+      arm.position.set(0.15, 1.24, 0);
+      const cage = new THREE.Mesh(new THREE.OctahedronGeometry(0.17, 0),
+        new THREE.MeshStandardMaterial({ color: 0xffe6a8, emissive: 0xffb347, emissiveIntensity: 1.8 }));
+      cage.position.set(0.29, 1.05, 0);
+      g.add(hook, arm, cage);
+      const pl = new THREE.PointLight(0xffb347, 0.7, 3.5); pl.position.set(0.29, 1.05, 0); g.add(pl);
+      mesh = g;
+    } else if (s.kind === 'planter') {
+      // the only living thing a player can place — deliberately organic among
+      // all this geometry, so a garden reads instantly as tended
+      const g = new THREE.Group();
+      const box = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.34, 0.8),
+        new THREE.MeshStandardMaterial({ color: 0x6b5442, emissive: 0x241a10, emissiveIntensity: 0.25 }));
+      box.position.y = 0.17;
+      const soil = new THREE.Mesh(new THREE.BoxGeometry(0.68, 0.06, 0.68),
+        new THREE.MeshStandardMaterial({ color: 0x2e2419 }));
+      soil.position.y = 0.35; g.add(box, soil);
+      // three fronds, fixed offsets — never random, so a planter looks the same
+      // on every client and after every reload
+      [[-0.16, 0.1, 0.3], [0.05, -0.14, 0.42], [0.18, 0.16, 0.34]].forEach(([fx, fz, h]) => {
+        const frond = new THREE.Mesh(new THREE.ConeGeometry(0.1, h, 6),
+          new THREE.MeshStandardMaterial({ color: 0x6fcf97, emissive: 0x1c4a33, emissiveIntensity: 0.55 }));
+        frond.position.set(fx, 0.38 + h / 2, fz); g.add(frond);
+      });
+      mesh = g;
+    } else if (s.kind === 'stair') {
+      // four risers climbing exactly one wall-height across one cell, so a stair
+      // actually reads as reaching the top of the thing beside it
+      const g = new THREE.Group();
+      const mat = new THREE.MeshStandardMaterial({ color: 0x74879b, emissive: 0x15304a, emissiveIntensity: 0.35 });
+      for (let i = 0; i < 4; i++) {
+        const step = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.3, 0.25), mat);
+        step.position.set(0, 0.15 + i * 0.3, 0.375 - i * 0.25);
+        g.add(step);
+      }
+      mesh = g;
+    } else if (s.kind === 'roof') {
+      // sits at wall-height (1.2) so a roof laid on a walled room caps it
+      // exactly, instead of hovering or sinking into the wall tops
+      const g = new THREE.Group();
+      const prism = new THREE.Mesh(new THREE.ConeGeometry(0.78, 0.5, 4),
+        new THREE.MeshStandardMaterial({ color: 0x9a5f4a, emissive: 0x33150c, emissiveIntensity: 0.4 }));
+      prism.position.y = 1.45; prism.rotation.y = Math.PI / 4;
+      const eave = new THREE.Mesh(new THREE.BoxGeometry(1, 0.09, 1),
+        new THREE.MeshStandardMaterial({ color: 0x7a4a38, emissive: 0x2a1108, emissiveIntensity: 0.35 }));
+      eave.position.y = 1.2; g.add(eave, prism); mesh = g;
+    } else if (s.kind === 'banner') {
+      // cloth on a pole, tinted by the owner's covenant when the server sends
+      // one — the cheapest way to see whose ground you are standing on
+      const g = new THREE.Group();
+      const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 1.8, 8),
+        new THREE.MeshStandardMaterial({ color: 0x51606f }));
+      pole.position.y = 0.9;
+      const tint = (typeof s.color === 'number') ? s.color : 0xc44b6a;
+      // cloth half-width 0.23 at centre-offset 0.25 reaches exactly 0.48 — inside
+      // the 0.5 cell half-width. It was 0.52 and overhung its neighbour's cell by
+      // 2cm, which is the no-collision law losing by a rounding error.
+      const cloth = new THREE.Mesh(new THREE.PlaneGeometry(0.46, 0.72),
+        new THREE.MeshStandardMaterial({ color: tint, emissive: tint, emissiveIntensity: 0.4, side: THREE.DoubleSide, transparent: true, opacity: 0.92 }));
+      cloth.position.set(0.25, 1.3, 0); g.add(pole, cloth); mesh = g;
+    } else if (s.kind === 'beacon') {
+      // the lightwarden's piece, and the only one that costs an ember. It is
+      // seen from the STAR MAP, so it is the tallest thing a player can place
+      // and it carries a real light — this is what makes a world visible from
+      // outside itself.
+      const g = new THREE.Group();
+      const base = new THREE.Mesh(new THREE.CylinderGeometry(0.34, 0.44, 0.36, 10),
+        new THREE.MeshStandardMaterial({ color: 0x3f4c5c, emissive: 0x122236, emissiveIntensity: 0.4 }));
+      base.position.y = 0.18;
+      const column = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.16, 1.9, 10),
+        new THREE.MeshStandardMaterial({ color: 0x8fa8c4, emissive: 0x244a6e, emissiveIntensity: 0.6 }));
+      column.position.y = 1.25;
+      const crown = new THREE.Mesh(new THREE.IcosahedronGeometry(0.3, 1),
+        new THREE.MeshStandardMaterial({ color: 0xfff2c4, emissive: 0xffc14d, emissiveIntensity: 2.4 }));
+      crown.position.y = 2.35;
+      g.add(base, column, crown);
+      const pl = new THREE.PointLight(0xffc14d, 1.4, 9); pl.position.y = 2.35; g.add(pl);
+      mesh = g;
+    } else {
+      // An unknown kind still gets a BODY. A future server that ships a
+      // sixteenth piece to an older client must never reproduce this bug —
+      // the player paid for something, so something stands there, and it is
+      // legible as "this client is out of date" rather than silently absent.
+      mesh = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.5, 0.5),
+        new THREE.MeshStandardMaterial({ color: 0x7e8a99, emissive: 0x1a2a3a, emissiveIntensity: 0.4, transparent: true, opacity: 0.7 }));
+      mesh.position.y = 0.25;
+    }
     mesh.position.x = s.x; mesh.position.z = s.z; if (s.y) mesh.position.y += s.y;
     mesh.rotation.y = s.rot || 0;
     World._scene.add(mesh);
