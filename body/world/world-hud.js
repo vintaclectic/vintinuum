@@ -970,14 +970,87 @@
   W.addEventListener('vint:world-refine', function (e) {
     var d = e.detail || {}; _toast('refined ' + d.spent + ' echo → ' + d.gained + ' lumen' + _cut(d));
   });
+  /* ══ EVERY REFUSAL IS A SIGNPOST ══════════════════════════════════════════
+     (AETHERHOLD 2026-08-25, task BUTHM4K.)
+
+     THE BUG THIS REPLACES. This map held six codes. The server sends far more
+     than six — and the three most common failures in the entire build loop
+     (`need_strand`, `need_ember`, `bad_kind`) and the ascent's whole `standing`
+     verdict were NOT among them. So the single most frequent moment in DIRVERSE
+     — a player pressing a build button and being refused — rendered as the bare
+     string "— need_strand". That is not a message; it is a variable name
+     escaping into a player's face, and it is the reason a genuinely broken
+     economy went undiagnosed as long as it did. If the world had said "you need
+     1 strand and you have 0 — weave some at your hearth", the famine would have
+     been reported as a famine on day one instead of as "building doesn't work."
+
+     THE RULE, which the world's own code comments already stated and this
+     function did not honour: A REFUSAL IS A SIGNPOST, NOT A WALL. Every "no"
+     names (1) exactly what is missing, and (2) the exact next action that fixes
+     it. Never a code, never a bare noun, never a dead end. The server already
+     ships everything needed for that — need/have/gap/tier/radius are all in the
+     payload — and it was simply being thrown away. */
+
+  // what each material IS, and how you get more — the second half of every
+  // signpost. Named here once so the loom's economy is explained identically
+  // wherever a shortfall is reported.
+  var _SOURCE = {
+    strand: 'weave echo into strand at your hearth (4 echo each), or keep harvesting — nodes drop filaments.',
+    ember: 'embers come rarely from harvesting, or kindle one from 8 strand + 40 echo.',
+    echo: 'strike a knowledge node to gather echo.',
+    lumen: 'refine echo into lumen at the hearth.',
+    seed_stone: 'your seed stone is spent — you have already planted a hearth.'
+  };
+  function _need(det, item) {
+    var need = num(det.need, 1), have = num(det.have, 0);
+    var head = 'you need ' + need + ' ' + item + (need === 1 ? '' : 's') + ' and you have ' + have + '.';
+    return head + ' ' + (_SOURCE[item] || '');
+  }
+
   W.addEventListener('vint:world-err', function (e) {
     var det = e.detail || {};
     var c = det.code || 'error';
     var msg = {
       no_seed_stone: 'you need a seed stone to claim.', already_claimed: 'you already have a hearth.',
-      too_close: 'too close to another hearth — move further out.', not_your_plot: 'build inside your own hearth plot.',
+      too_close: 'too close to another hearth — move further out.',
+      not_your_plot: 'that is outside your hearth plot — walk back inside the ring and place it there.',
       cooldown: 'the node is still recharging…', no_echo: 'no echo to refine yet — harvest first.',
+      // ── THE BUILD-AUTHZ REFUSAL — a visitor, not a failure ────────────────
+      'place-denied': 'this clearing belongs to someone else — you can walk it and leave a light, but building happens in your own world. tap ⌂ home to build.',
+      bad_kind: 'this world does not know that piece yet — reload to get the newest palette.',
+      // ── THE LOOM ─────────────────────────────────────────────────────────
+      not_enough_echo: null,   // handled below (it carries the exact distance)
+      // ── THE LEDGER ───────────────────────────────────────────────────────
+      trade_no_partner: 'they are not standing here any more — trade happens face to face.',
+      trade_far: 'they are in another world right now. warp to them and try again.',
+      trade_self: 'you cannot trade with yourself.',
+      trade_busy_self: 'you already have a trade open — settle or close it first.',
+      trade_busy_other: 'they are already trading with someone else. try again in a moment.',
+      trade_gone: 'that trade has closed.',
+      trade_not_yours: 'that is not your trade.',
+      trade_empty: 'put something on the table first — an empty trade is not a trade.',
+      trade_stale: 'the table changed under you — check it and try again.',
+      trade_full: 'that is as many different things as one side can offer at once.',
+      trade_untradeable: 'that cannot cross the table.',
+      server: 'the world stumbled on that one — try again.'
     }[c];
+
+    // ── THE MATERIAL SHORTFALL — the single most common refusal in the world.
+    // `need_<item>` arrives from the placement cost check, the shipyard purse,
+    // and the trade escrow alike, so ONE branch answers all three, and it always
+    // says both numbers plus where more comes from.
+    if (!msg && c.indexOf('need_') === 0) {
+      msg = _need(det, c.slice(5));
+    }
+
+    // ── THE LOOM'S OWN SHORTFALL — it knows the exact distance, so say it.
+    if (!msg && c === 'not_enough_echo') {
+      var per = num(det.per, 4), haveE = num(det.have, 0), short = num(det.short, per);
+      msg = haveE > 0
+        ? ('not quite — a strand takes ' + per + ' echo and you have ' + haveE + '. ' + short + ' more and the loom turns.')
+        : ('the loom needs echo to weave — strike a node ' + Math.ceil(per / 3) + ' or so times, then weave.');
+    }
+
     // THE REACH ERROR — dimming, never denial. The server rejects a placement
     // beyond the current radius and sends the radius + spark with it, so the
     // message can say exactly why and exactly how to widen it again. This is
@@ -987,7 +1060,24 @@
       msg = 'the clearing has drawn in close — you can build within ' + rad +
             ' of your hearth right now. tend your court to widen it.';
     }
-    _toast(msg || ('— ' + c));
+
+    // ── THE ASCENT VERDICT — the ladder's refusal, which is really an INVITE.
+    // The server already ships kind/need/tier/have/gap and the HUD was dropping
+    // every one of them on the floor. This is the most motivating "no" in the
+    // whole world — it names the piece, the rung that opens it, and the exact
+    // distance — so it is the one that most deserved to be rendered.
+    if (!msg && (c === 'standing' || det.tier || det.gap != null)) {
+      var kind = det.kind ? String(det.kind) : 'that piece';
+      var tier = det.tier ? String(det.tier) : 'a higher standing';
+      var gap = num(det.gap, 0);
+      msg = 'the ' + kind + ' opens at ' + tier +
+            (gap > 0 ? (' — ' + gap + ' more standing to go.') : '.') +
+            ' build, tend and visit to climb.';
+    }
+
+    // LAST RESORT — still never a bare code. If the world refuses for a reason
+    // this client has not learned yet, say so in words a person can act on.
+    _toast(msg || 'the world said no to that one (' + c + ') — try again, or reload for the newest rules.');
   });
 
   // THE VISITOR GATE — the world you asked for is resting, so you were brought
