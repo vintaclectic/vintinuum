@@ -306,7 +306,16 @@
       '@keyframes whTendPulse{0%,100%{box-shadow:0 0 0 0 rgba(255,212,121,0);}',
       ' 50%{box-shadow:0 0 16px 0 rgba(255,212,121,0.28);}}',
       '#vintWorldHud .wh-btn:disabled{opacity:0.45;pointer-events:none;}',
-      '#vintWorldHud .wh-build{display:none;flex-wrap:wrap;gap:5px;padding:0 12px 10px;}',
+      // FIFTEEN PIECES, BOUNDED. Four buttons fit anywhere; fifteen is five rows
+      // (~220px) and on a short viewport that is enough to shove the panel's
+      // bottom edge past the fold and over the dock. So the row is CAPPED and
+      // scrolls INSIDE its own box — the no-overflow rule's prescribed remedy
+      // (resize the container, scroll inside it), never letting content spill
+      // onto a neighbour. overscroll-behavior:contain stops the scroll chaining
+      // out to the page when it bottoms out.
+      '#vintWorldHud .wh-build{display:none;flex-wrap:wrap;gap:5px;padding:0 12px 10px;',
+      ' max-height:min(212px,32vh);overflow-y:auto;-webkit-overflow-scrolling:touch;',
+      ' overscroll-behavior:contain;}',
       '#vintWorldHud .wh-build.show{display:flex;}',
       '#vintWorldHud .wh-piece{flex:1 1 30%;min-height:40px;border-radius:9px;font-size:11px;cursor:pointer;',
       ' border:1px solid rgba(255,255,255,0.12);background:rgba(255,255,255,0.04);color:#cfe0f5;font-family:inherit;}',
@@ -392,12 +401,23 @@
           '<button class="wh-btn" id="whHarvest">⛏ harvest</button>' +
           '<button class="wh-btn" id="whBuild">▥ build</button>' +
           '<button class="wh-btn" id="whRefine">✦→◇ refine</button>' +
+          // THE LOOM — the only faucet for the material every one of the fifteen
+          // pieces costs. It sat unreachable behind a missing button while
+          // players hit a hard wall after three placements. It lives in the SAME
+          // row as harvest and refine because it is the same kind of act: the
+          // three exits echo can take, side by side, so the choice is visible.
+          '<button class="wh-btn" id="whWeave">✦→║ weave</button>' +
         '</div>' +
         '<div class="wh-build" id="whBuildRow">' +
-          '<button class="wh-piece" data-kind="wall">wall</button>' +
-          '<button class="wh-piece" data-kind="floor">floor</button>' +
-          '<button class="wh-piece" data-kind="light">light</button>' +
-          '<button class="wh-piece" data-kind="shelf">shelf</button>' +
+          // ALL FIFTEEN. This row offered four, so eleven kinds the player had
+          // earned the standing to place were unreachable from the HUD — the
+          // build menu was as closed as the economy was. The row wraps and
+          // scrolls inside its own box (see .wh-build), so more pieces can never
+          // push the panel over anything.
+          ['wall','floor','light','shelf','pillar','fence','arch','door','window',
+           'lantern','planter','stair','roof','banner','beacon'].map(function (k) {
+            return '<button class="wh-piece" data-kind="' + k + '">' + k + '</button>';
+          }).join('') +
         '</div>' +
         '<div class="wh-toast" id="whToast">welcome — claim a hearth to begin.</div>' +
       '</div>';
@@ -416,6 +436,9 @@
     el.querySelector('#whClaim').onclick = function () { try { world().claimHere(); } catch (_) {} };
     el.querySelector('#whHarvest').onclick = function () { try { world().harvest(); } catch (_) {} };
     el.querySelector('#whRefine').onclick = function () { try { world().refine(); } catch (_) {} };
+    // No count = "weave everything I can" — the gesture players actually make.
+    // The server clamps to what they hold before a single item moves.
+    el.querySelector('#whWeave').onclick = function () { try { world().weave(); } catch (_) {} };
     el.querySelector('#whBuild').onclick = function () {
       el.querySelector('#whBuildRow').classList.toggle('show'); publishBottom();
     };
@@ -1006,6 +1029,22 @@
   });
   W.addEventListener('vint:world-refine', function (e) {
     var d = e.detail || {}; _toast('refined ' + d.spent + ' echo → ' + d.gained + ' lumen' + _cut(d));
+  });
+  // ── THE LOOM SPEAKS ─────────────────────────────────────────────────────────
+  // When a dim clearing takes a cut, the server sends BOTH numbers so this can
+  // say "2 (of 3) — the clearing is dim" rather than silently under-delivering.
+  // An unexplained smaller number is indistinguishable from a bug; a named one
+  // reads as stakes.
+  W.addEventListener('vint:world-weave', function (e) {
+    var d = e.detail || {};
+    var made = num(d.made, 0);
+    var line = 'wove ' + num(d.spent, 0) + ' echo → ' + made + ' strand';
+    if (d.full && num(d.full, 0) > made) line += ' (of ' + num(d.full, 0) + ' — the clearing is dim)';
+    _toast(line);
+  });
+  W.addEventListener('vint:world-kindle', function (e) {
+    var d = e.detail || {}, c = d.cost || {};
+    _toast('kindled an ember — ' + num(c.strand, 0) + ' strand and ' + num(c.echo, 0) + ' echo went into it.');
   });
   W.addEventListener('vint:world-err', function (e) {
     var det = e.detail || {};

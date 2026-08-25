@@ -799,6 +799,14 @@
       try { window.dispatchEvent(new CustomEvent('vint:world-harvest', { detail: m })); } catch (_) {}
     } else if (m.t === 'world:refine:ok') {
       try { window.dispatchEvent(new CustomEvent('vint:world-refine', { detail: m })); } catch (_) {}
+    } else if (m.t === 'world:weave:ok' || m.t === 'world:kindle:ok') {
+      // ── THE LOOM, REACHED (AETHERHOLD 2026-08-25) ──────────────────────────
+      // world-mvp answers world:weave and world:kindle — the ONLY faucet for
+      // strand and ember, and therefore the only cure for the famine that made
+      // building impossible after three pieces. No client had ever sent either
+      // verb or listened for either answer, so the cure existed and no player
+      // could reach it. A faucet nobody can turn is not a faucet.
+      try { window.dispatchEvent(new CustomEvent('vint:world-' + (m.t === 'world:weave:ok' ? 'weave' : 'kindle'), { detail: m })); } catch (_) {}
     } else if (m.t === 'world:trade' || m.t === 'world:trade:settled' || m.t === 'world:trade:closed') {
       // ── THE TABLE, RELAYED (AETHERHOLD 2026-08-25) ──────────────────────────
       // world-mvp has carried a full escrowed two-party trade protocol —
@@ -1150,6 +1158,16 @@
     return out.sort((a, b) => a.dist - b.dist);
   };
   World.nearestPeer = function () { return World.peers()[0] || null; };
+
+  // ── THE LOOM VERBS ──────────────────────────────────────────────────────────
+  // weave(): no count means "weave everything I can", which is the gesture
+  // players actually make; the server clamps to what they hold before a single
+  // item moves, so an over-ask is never an error. kindle(): the deterministic
+  // ember, expensive in both ledgers — a project, never a purchase.
+  World.weave = function (count) {
+    return World.send(count != null ? { t: 'world:weave', count: Math.max(1, count | 0) } : { t: 'world:weave' });
+  };
+  World.kindle = function () { return World.send({ t: 'world:kindle' }); };
 
   // THE TRADE VERBS. Thin by design — every rule (same room, escrow, one open
   // table per player, who may ready) is enforced server-side in ledger.js, and
