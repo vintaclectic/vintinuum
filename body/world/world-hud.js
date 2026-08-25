@@ -1021,9 +1021,23 @@
       // thing that stopped them AND the verb that clears it. Never a dead end.
       no_such_target: 'nothing there to reach — stand closer to what you meant.',
       not_your_vessel: 'that vessel answers to someone else.',
+      not_enough_echo: 'not enough echo — harvest a node first.',
+      server: 'the world stumbled on that one. try it again.',
+      // ── THE TABLE'S REFUSALS ──────────────────────────────────────────────
+      // Every one of these became reachable the moment the trade surface
+      // shipped. A trade error is the most alarming kind — real goods are in
+      // escrow — so each says plainly what happened to them.
       trade_far: 'too far apart to trade — walk to them first.',
       trade_no_partner: 'they stepped away before the trade could settle.',
-      server: 'the world stumbled on that one. try it again.',
+      trade_self: 'you cannot trade with yourself.',
+      trade_busy_self: 'you already have a table open — finish or walk away from it first.',
+      trade_busy_other: 'they are already trading with someone else.',
+      trade_gone: 'that table is gone — nothing was taken from you.',
+      trade_stale: 'the table moved while you were deciding — check it and ready again.',
+      trade_not_yours: 'that is not your table.',
+      trade_empty: 'nobody has offered anything yet.',
+      trade_full: 'that table will not hold any more.',
+      trade_untradeable: 'that one cannot change hands.',
       // A visitor in someone else's clearing. Not a fault — a boundary, and
       // it points at the world where the player CAN build.
       'place-denied': 'this is not your clearing — you can look and harvest, but you build at home.',
@@ -1101,4 +1115,351 @@
     showHomecoming: showHomecoming,
     hideHomecoming: hideHomecoming
   };
+})();
+
+/* ════════════════════════════════════════════════════════════════════════════
+   THE TABLE — two people, one exchange, nobody's word required.
+   (AETHERHOLD, world-forger, 2026-08-25.)
+
+   ── WHAT WAS WRONG ──────────────────────────────────────────────────────────
+   The world had multiplayer and no MULTIPLAY. Other players rendered — named,
+   rigged, moving at 5Hz — and there was nothing on earth you could DO to one.
+   Presence you can see but not address is scenery, and scenery is why a player
+   walks past another human being in an online world and feels nothing.
+
+   Meanwhile world-mvp.js has carried a complete escrowed trade protocol the
+   entire time — open/offer/ready/cancel, escrow on offer, both-sides-confirm,
+   server-rendered tables, TTL, one-open-table-per-player — and NOT ONE FRAME
+   OF IT EVER REACHED A HUMAN BEING. The hardest half was already built and
+   sealed behind a missing button. This is the button.
+
+   ── WHY TRADE IS THE FIRST INTERACTION AND NOT WAR ──────────────────────────
+   Trade is the only interaction that makes BOTH parties want the other player
+   to exist. The loom made strand scarce and contested (one echo income, three
+   exits), so two players genuinely hold different surpluses — that asymmetry is
+   what makes a table worth opening. War, gangs and the courts all get more
+   interesting AFTER people have something to lose with each other; a stranger
+   you have traded with three times is a different person than a stranger.
+   Retention Doctrine: this is the investment loop with another human as the
+   variable, which is the strongest one there is, and it is generous by
+   construction — nobody can be robbed at this table.
+
+   ── THE SAFETY IS THE SERVER'S, NEVER THIS FILE'S ───────────────────────────
+   This surface holds NO opinion about who may trade, what may be offered, or
+   whether an exchange is fair. It paints the server's table verbatim and sends
+   verbs back. Escrow means an offered item has already left your hands, so a
+   cancel or a disconnect returns it — there is no path where one player walks
+   away holding both halves. `readyReset` below is the one rule the UI must
+   respect visually: any change to the table clears both ready flags server-side,
+   so nobody can swap the goods after you agreed.
+
+   ── NO-COLLISION ────────────────────────────────────────────────────────────
+   z-index 1630 wrap / 1640 card: above the homecoming card (1610/1620) because
+   a live trade is more urgent than an arrival, and below #dvToast (1700) so a
+   refusal is never swallowed by the sheet that caused it. Fixed inset:0 with
+   flex centring (never hand-counted transforms), both columns in a real grid,
+   the manifest scrolls INSIDE its own box, and the whole card is capped at
+   100dvh minus safe-area so it cannot bleed at any viewport. Verified at
+   320/375/768/1280/1920.
+   ══════════════════════════════════════════════════════════════════════════ */
+(function () {
+  'use strict';
+  var W = window;
+  if (W.__vintWorldTrade) return; W.__vintWorldTrade = true;
+
+  var _trade = null;      // the server's last table, verbatim
+  var _names = {};        // userId → display name, as the server named them
+  var _wrap = null, _me = null;
+
+  function _n(v, d) { return (typeof v === 'number' && isFinite(v)) ? v : d; }
+  // THE ONE TOAST. dirverse-hud owns #dvToast (z-index 1700) and every surface
+  // speaks through it — a second toast implementation would be a second thing
+  // that can land in the same pixels, which is the collision law's whole point.
+  // Falls back to console rather than inventing a competing element.
+  function _say(t) {
+    try {
+      if (W.DirverseHUD && W.DirverseHUD.toast) { W.DirverseHUD.toast(t); return; }
+    } catch (_) {}
+    try { console.log('[trade]', t); } catch (_) {}
+  }
+  function _esc(s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  }
+  // WHO AM I AT THIS TABLE. The server names both sides by user id; the client
+  // must never guess which column is its own, or it will show a player their
+  // partner's goods as their own — the worst possible bug on this surface.
+  function _mine() { return _trade && String(_trade.aUser) === String(_me) ? 'a' : 'b'; }
+  function _side(k) { return k === 'a' ? { off: 'aOffer', rdy: 'aReady', u: 'aUser' } : { off: 'bOffer', rdy: 'bReady', u: 'bUser' }; }
+
+  function _style() {
+    if (document.getElementById('wtStyle')) return;
+    var s = document.createElement('style'); s.id = 'wtStyle';
+    s.textContent = [
+      '#wtWrap{position:fixed;inset:0;z-index:1630;display:none;',
+      ' align-items:center;justify-content:center;',
+      ' padding:max(14px,env(safe-area-inset-top,14px)) max(14px,env(safe-area-inset-right,14px))',
+      ' max(14px,env(safe-area-inset-bottom,14px)) max(14px,env(safe-area-inset-left,14px));',
+      ' background:rgba(3,5,10,0.74);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);',
+      ' opacity:0;transition:opacity .32s ease;}',
+      '#wtWrap.show{display:flex;opacity:1;}',
+      '#wtCard{position:relative;z-index:1640;width:100%;max-width:min(560px,calc(100vw - 28px));',
+      ' max-height:calc(100dvh - 28px);max-height:calc(100vh - 28px);',
+      ' display:flex;flex-direction:column;overflow:hidden;',
+      ' background:rgba(10,14,22,0.97);border:1px solid rgba(159,220,255,0.28);border-radius:20px;',
+      ' box-shadow:0 24px 80px rgba(0,0,0,0.72),0 0 60px rgba(110,180,240,0.08);',
+      ' font-family:"Cormorant Garamond",Georgia,serif;color:#f3ead9;}',
+      // header — its own row, never overlapped by the body that scrolls under it
+      '#wtCard .wt-head{flex:0 0 auto;padding:16px 18px 12px;border-bottom:1px solid rgba(159,220,255,0.16);}',
+      '#wtCard .wt-k{font-size:10.5px;letter-spacing:.2em;text-transform:uppercase;color:rgba(159,220,255,0.72);}',
+      '#wtCard .wt-h{margin-top:5px;font-size:21px;line-height:1.25;color:#fff6e6;',
+      // long names must WRAP, never widen the card and never spill the row
+      ' overflow-wrap:anywhere;word-break:break-word;}',
+      '#wtCard .wt-ttl{margin-top:4px;font-size:12px;color:rgba(240,232,218,0.6);font-variant-numeric:tabular-nums;}',
+      // the two columns: a real grid, so neither can ever intrude on the other
+      '#wtCard .wt-body{flex:1 1 auto;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;',
+      ' overscroll-behavior:contain;padding:14px 18px;',
+      ' display:grid;grid-template-columns:1fr 1fr;gap:12px;align-items:start;}',
+      // 380px and under, the columns stack — two 1fr columns at 320px would
+      // crush the item rows into unreadable slivers
+      '@media (max-width:380px){#wtCard .wt-body{grid-template-columns:1fr;}}',
+      '#wtCard .wt-col{min-width:0;border:1px solid rgba(255,255,255,0.09);border-radius:14px;',
+      ' background:rgba(255,255,255,0.03);padding:11px 12px;}',
+      '#wtCard .wt-col.mine{border-color:rgba(255,212,121,0.3);background:rgba(255,212,121,0.05);}',
+      '#wtCard .wt-who{font-size:12.5px;letter-spacing:.04em;color:rgba(240,232,218,0.82);',
+      ' overflow-wrap:anywhere;word-break:break-word;}',
+      '#wtCard .wt-rdy{margin-top:3px;font-size:11px;letter-spacing:.14em;text-transform:uppercase;}',
+      '#wtCard .wt-rdy.on{color:#7fe0a8;} #wtCard .wt-rdy.off{color:rgba(240,232,218,0.42);}',
+      '#wtCard .wt-items{margin-top:9px;display:flex;flex-direction:column;gap:6px;}',
+      '#wtCard .wt-row{display:flex;align-items:center;justify-content:space-between;gap:8px;',
+      ' font-size:13.5px;min-height:26px;}',
+      '#wtCard .wt-row .nm{min-width:0;overflow-wrap:anywhere;color:rgba(240,232,218,0.9);}',
+      '#wtCard .wt-row .ct{flex:0 0 auto;font-variant-numeric:tabular-nums;color:#ffd479;}',
+      '#wtCard .wt-empty{font-size:12.5px;color:rgba(240,232,218,0.42);font-style:italic;}',
+      // controls: own row, 44px min touch target, wraps rather than overflowing
+      '#wtCard .wt-add{margin-top:10px;display:flex;flex-wrap:wrap;gap:6px;}',
+      '#wtCard .wt-add button{flex:1 1 auto;min-width:64px;min-height:38px;border-radius:10px;',
+      ' font-family:inherit;font-size:12.5px;cursor:pointer;color:#dce8f4;',
+      ' background:rgba(159,220,255,0.1);border:1px solid rgba(159,220,255,0.28);}',
+      '#wtCard .wt-add button:active{transform:scale(0.97);}',
+      '#wtCard .wt-foot{flex:0 0 auto;display:flex;gap:9px;padding:12px 18px',
+      ' max(16px,env(safe-area-inset-bottom,16px));border-top:1px solid rgba(159,220,255,0.16);}',
+      '#wtCard .wt-foot button{flex:1 1 0;min-height:46px;border-radius:13px;font-family:inherit;',
+      ' font-size:14.5px;letter-spacing:.04em;cursor:pointer;border:none;}',
+      '#wtBtnReady{color:#0e1a12;background:linear-gradient(90deg,#7fe0a8,#4fc98a);font-weight:600;}',
+      '#wtBtnReady.armed{background:linear-gradient(90deg,#ffd479,#ffb066);color:#1a1006;}',
+      '#wtBtnCancel{color:rgba(240,232,218,0.82);background:rgba(255,255,255,0.06);',
+      ' border:1px solid rgba(255,255,255,0.14);}',
+      '@media (prefers-reduced-motion:reduce){#wtWrap{transition:none;}}'
+    ].join('');
+    document.head.appendChild(s);
+  }
+
+  function _build() {
+    if (_wrap) return;
+    _style();
+    _wrap = document.createElement('div');
+    _wrap.id = 'wtWrap';
+    _wrap.setAttribute('role', 'dialog');
+    _wrap.setAttribute('aria-modal', 'true');
+    _wrap.setAttribute('aria-label', 'trade');
+    _wrap.innerHTML =
+      '<div id="wtCard">' +
+        '<div class="wt-head"><div class="wt-k">the table</div>' +
+          '<div class="wt-h" id="wtTitle">an exchange</div>' +
+          '<div class="wt-ttl" id="wtTtl"></div></div>' +
+        '<div class="wt-body">' +
+          '<div class="wt-col mine" id="wtMine"></div>' +
+          '<div class="wt-col" id="wtTheirs"></div>' +
+        '</div>' +
+        '<div class="wt-foot">' +
+          '<button id="wtBtnCancel" type="button">walk away</button>' +
+          '<button id="wtBtnReady" type="button">ready</button>' +
+        '</div>' +
+      '</div>';
+    document.body.appendChild(_wrap);
+
+    _wrap.querySelector('#wtBtnCancel').addEventListener('click', function () {
+      if (_trade && W.World && W.World.trade) W.World.trade.cancel(_trade.id);
+      _hide();
+    });
+    _wrap.querySelector('#wtBtnReady').addEventListener('click', function () {
+      if (!_trade || !W.World || !W.World.trade) return;
+      var k = _side(_mine());
+      W.World.trade.ready(_trade.id, !_trade[k.rdy]);
+    });
+    // Backdrop click does NOT cancel. A trade holds escrowed goods, and a
+    // mis-tap outside a sheet must never be the thing that ends it — walking
+    // away is a deliberate button, always.
+  }
+
+  function _rowsFor(offer) {
+    var keys = Object.keys(offer || {}).filter(function (k) { return _n(offer[k], 0) > 0; }).sort();
+    if (!keys.length) return '<div class="wt-empty">nothing offered yet</div>';
+    return keys.map(function (k) {
+      return '<div class="wt-row"><span class="nm">' + _esc(k) + '</span>' +
+             '<span class="ct">' + _n(offer[k], 0) + '</span></div>';
+    }).join('');
+  }
+
+  // What can I put on the table? Driven by the purse the server last sent, so
+  // the buttons can only ever offer things the player actually holds — the
+  // server would refuse anything else anyway, and a button that always fails
+  // is a lie.
+  function _purse() {
+    try {
+      var st = (W.World && W.World._lastState) || null;
+      // world:state puts the purse at resident.inventory (see _fullState in
+      // world-mvp.js). Read it from where it actually lives, with a top-level
+      // fallback only so a future flatter frame cannot silently empty the
+      // offer buttons.
+      return (st && ((st.resident && st.resident.inventory) || st.inventory)) || {};
+    } catch (_) { return {}; }
+  }
+
+  function _paint() {
+    if (!_trade) return;
+    _build();
+    var mk = _mine(), tk = mk === 'a' ? 'b' : 'a';
+    var mine = _side(mk), theirs = _side(tk);
+    var theirName = _names[_trade[theirs.u]] || 'someone';
+
+    _wrap.querySelector('#wtTitle').textContent = 'trading with ' + theirName;
+    var secs = Math.max(0, Math.round(_n(_trade.expiresInMs, 0) / 1000));
+    _wrap.querySelector('#wtTtl').textContent = secs
+      ? ('the table stands for ' + secs + 's — any change clears both readies')
+      : 'any change clears both readies';
+
+    var purse = _purse();
+    var offerable = Object.keys(purse).filter(function (k) { return _n(purse[k], 0) > 0; }).sort().slice(0, 6);
+    var onTable = _trade[mine.off] || {};
+
+    _wrap.querySelector('#wtMine').innerHTML =
+      '<div class="wt-who">you</div>' +
+      '<div class="wt-rdy ' + (_trade[mine.rdy] ? 'on' : 'off') + '">' +
+        (_trade[mine.rdy] ? 'ready' : 'not ready') + '</div>' +
+      '<div class="wt-items">' + _rowsFor(onTable) + '</div>' +
+      '<div class="wt-add">' + offerable.map(function (k) {
+        return '<button type="button" data-item="' + _esc(k) + '">+1 ' + _esc(k) + '</button>';
+      }).join('') + '</div>';
+
+    _wrap.querySelector('#wtTheirs').innerHTML =
+      '<div class="wt-who">' + _esc(theirName) + '</div>' +
+      '<div class="wt-rdy ' + (_trade[theirs.rdy] ? 'on' : 'off') + '">' +
+        (_trade[theirs.rdy] ? 'ready' : 'not ready') + '</div>' +
+      '<div class="wt-items">' + _rowsFor(_trade[theirs.off]) + '</div>';
+
+    // offer is ABSOLUTE, so +1 sends current+1 — matches ledger.offer's contract
+    Array.prototype.forEach.call(_wrap.querySelectorAll('.wt-add button'), function (b) {
+      b.addEventListener('click', function () {
+        var it = b.getAttribute('data-item');
+        if (W.World && W.World.trade) W.World.trade.offer(_trade.id, it, _n(onTable[it], 0) + 1);
+      });
+    });
+
+    var rb = _wrap.querySelector('#wtBtnReady');
+    rb.textContent = _trade[mine.rdy] ? 'unready' : 'ready';
+    rb.classList.toggle('armed', !!_trade[mine.rdy]);
+  }
+
+  // ── THE SHARED SHEET OWNER (no-collision, enforced not assumed) ─────────────
+  // dirverse-hud requires that ANY module with a full-width surface register
+  // and open through it, or it will land on top of a sheet that is already up.
+  // The table obeys: opening it closes the warp/agent sheets first, so a trade
+  // and a star-map can never occupy the same pixels. Registration is attempted
+  // once, lazily, because dirverse-hud may mount after this file.
+  var _registered = false;
+  function _register() {
+    if (_registered) return;
+    try {
+      if (W.DirverseHUD && W.DirverseHUD.registerSheet) {
+        W.DirverseHUD.registerSheet('trade', function () { return !!(_wrap && _wrap.classList.contains('show')); }, _hide);
+        _registered = true;
+      }
+    } catch (_) {}
+  }
+  function _show() {
+    _build(); _register();
+    try {
+      if (W.DirverseHUD && W.DirverseHUD.openSheet) {
+        W.DirverseHUD.openSheet('trade', function () { _wrap.classList.add('show'); });
+        return;
+      }
+    } catch (_) {}
+    _wrap.classList.add('show');   // standalone (no dirverse-hud on this page)
+  }
+  function _hide() { if (_wrap) _wrap.classList.remove('show'); _trade = null; }
+
+  W.addEventListener('vint:world-trade', function (e) {
+    var m = e.detail || {};
+    if (m.names) { for (var k in m.names) _names[k] = m.names[k]; }
+    if (m.t === 'world:trade' && m.trade) {
+      _trade = m.trade; _paint(); _show();
+    } else if (m.t === 'world:trade:settled') {
+      // THE MOMENT IT LANDS gets words, from the server, both directions —
+      // never two numbers quietly changing.
+      var gave = Object.keys(m.gave || {}).map(function (i) { return m.gave[i] + ' ' + i; }).join(', ') || 'nothing';
+      var got = Object.keys(m.got || {}).map(function (i) { return m.got[i] + ' ' + i; }).join(', ') || 'nothing';
+      _hide();
+      _say('traded away ' + gave + ' — received ' + got);
+    } else if (m.t === 'world:trade:closed') {
+      _hide();
+      _say('the table closed — everything offered came back to you');
+    }
+  });
+
+  // WHO AM I, ESTABLISHED FROM THE WIRE — never guessed.
+  // A trade is keyed by numeric USER id, but the only identity the client is
+  // ever handed is the presence id from `hello`, formatted `user:<userId>:<n>`
+  // (world-server.js:111). The middle segment IS the user id, so it is parsed
+  // rather than assumed. If this were ever wrong the UI would show a player
+  // their partner's goods labelled "you", which is the worst bug this surface
+  // could have — so it is derived from the one authoritative source and from
+  // nothing else.
+  function _adoptSelf(sid) {
+    var parts = String(sid || '').split(':');
+    if (parts.length >= 2 && parts[0] === 'user' && parts[1]) _me = parts[1];
+  }
+  W.addEventListener('vint:world-hello', function (e) {
+    try { _adoptSelf((e.detail || {}).selfId); } catch (_) {}
+  });
+  W.addEventListener('vint:world-state', function (e) {
+    var d = e.detail || {};
+    try {
+      W.World._lastState = d;
+      // late-mount safety net: if the hello event fired before this module was
+      // listening, World still holds the id it was given.
+      if (_me == null && W.World && W.World._selfId) _adoptSelf(W.World._selfId);
+      if (_trade) _paint();   // the purse changed, so the offer buttons must
+    } catch (_) {}
+  });
+
+  W.WorldTrade = {
+    // Open a table with the nearest co-present player. This is the whole verb —
+    // a HUD button, a keybind or an agent can call it.
+    withNearest: function () {
+      if (!W.World || !W.World.nearestPeer) return false;
+      var p = W.World.nearestPeer();
+      if (!p) {
+        _say('nobody else is standing here right now.');
+        return false;
+      }
+      return W.World.trade.open(p.id);
+    },
+    with: function (peerId) { return W.World && W.World.trade ? W.World.trade.open(peerId) : false; },
+    close: _hide,
+    current: function () { return _trade; }
+  };
+
+  // THE KEYBIND — 't' opens a table with whoever is nearest. Ignored while the
+  // player is typing, so it can never eat a character in a chat box.
+  W.addEventListener('keydown', function (e) {
+    if (e.key !== 't' && e.key !== 'T') return;
+    var a = document.activeElement;
+    if (a && (a.tagName === 'INPUT' || a.tagName === 'TEXTAREA' || a.isContentEditable)) return;
+    if (e.ctrlKey || e.metaKey || e.altKey) return;
+    if (_trade) return;                       // a table is already open
+    W.WorldTrade.withNearest();
+  });
 })();

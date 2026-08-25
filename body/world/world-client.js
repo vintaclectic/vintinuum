@@ -626,7 +626,14 @@
       if (m.seq != null) World._lastSeq = m.seq;
       if (m.t === 'hello') {
         selfId = m.selfId;
+        // PUBLISHED, because identity is not private state. The presence id is
+        // `user:<userId>:<n>`, and it is the ONLY place the client is ever told
+        // which numeric user it is — the trade table needs that to know which
+        // column of an exchange is its own. Kept on World (not just in the
+        // closure) so a surface that mounts after `hello` can still ask.
+        World._selfId = m.selfId;
         World._selfName = m.selfName || 'you';
+        try { window.dispatchEvent(new CustomEvent('vint:world-hello', { detail: m })); } catch (_) {}
         // ── THE VISITOR GATE — you asked for a resting clearing and landed here.
         // The server redirected rather than dropping the socket, so the ONE thing
         // this must never do is leave the player silently somewhere they didn't
@@ -792,6 +799,19 @@
       try { window.dispatchEvent(new CustomEvent('vint:world-harvest', { detail: m })); } catch (_) {}
     } else if (m.t === 'world:refine:ok') {
       try { window.dispatchEvent(new CustomEvent('vint:world-refine', { detail: m })); } catch (_) {}
+    } else if (m.t === 'world:trade' || m.t === 'world:trade:settled' || m.t === 'world:trade:closed') {
+      // ── THE TABLE, RELAYED (AETHERHOLD 2026-08-25) ──────────────────────────
+      // world-mvp has carried a full escrowed two-party trade protocol —
+      // open/offer/ready/cancel, both-sides-confirmed, server-rendered — and
+      // NOT ONE CLIENT FRAME EVER REACHED A HUMAN. The server did the work and
+      // nobody could tell, which is the invisible-structure bug wearing a
+      // different coat. These three frames are the wire; world-hud paints them.
+      //
+      // Relayed VERBATIM and never re-derived: both parties must read the
+      // identical server-rendered table, because a trade UI where one side's
+      // client computes what the other side offered is how people get cheated
+      // by their own screen.
+      try { window.dispatchEvent(new CustomEvent('vint:world-trade', { detail: m })); } catch (_) {}
     } else if (m.t === 'world:err') {
       try { window.dispatchEvent(new CustomEvent('vint:world-err', { detail: m })); } catch (_) {}
     }
@@ -1113,6 +1133,37 @@
   World.currentWorldId = function () { return World._worldId; };
   World.canBuild = function () { return World._canBuild !== false; };
 
+  // ── WHO ELSE IS STANDING HERE ───────────────────────────────────────────────
+  // The `others` map has always held every co-present player, and nothing has
+  // ever been able to ASK it. Presence you can see but not address is scenery;
+  // this is what turns a body across the clearing into a person you can deal
+  // with. Sorted by distance because the person you mean is nearly always the
+  // nearest one, and distance is what the server checks for trade range anyway.
+  World.peers = function () {
+    const me = World._selfBody && World._selfBody.position;
+    const out = [];
+    for (const [id, O] of others) {
+      const p = O.group && O.group.position;
+      const dist = (me && p) ? Math.hypot(p.x - me.x, p.z - me.z) : Infinity;
+      out.push({ id, name: O.name || 'someone', x: p ? p.x : 0, z: p ? p.z : 0, dist });
+    }
+    return out.sort((a, b) => a.dist - b.dist);
+  };
+  World.nearestPeer = function () { return World.peers()[0] || null; };
+
+  // THE TRADE VERBS. Thin by design — every rule (same room, escrow, one open
+  // table per player, who may ready) is enforced server-side in ledger.js, and
+  // the client is not permitted a second opinion about any of it. It asks; the
+  // server rules; the table comes back as `vint:world-trade`.
+  World.trade = {
+    open:   function (targetId) { return World.send({ t: 'world:trade:open', target: String(targetId) }); },
+    // `count` is ABSOLUTE ("put 3 strand on the table"), never a delta — matches
+    // ledger.offer, and is the only reading that survives a double-tap.
+    offer:  function (tradeId, item, count) { return World.send({ t: 'world:trade:offer', tradeId: tradeId, item: String(item), count: Math.max(0, count | 0) }); },
+    ready:  function (tradeId, on) { return World.send({ t: 'world:trade:ready', tradeId: tradeId, ready: on !== false }); },
+    cancel: function (tradeId) { return World.send({ t: 'world:trade:cancel', tradeId: tradeId }); },
+  };
+
   // ── THE RECKONING: who is standing near me ──────────────────────────────────
   // Every OTHER PERSON in this room, nearest first. Same discipline as
   // World.traces(): the HUD walks this instead of keeping its own copy of the
@@ -1187,7 +1238,12 @@
     _teardownRoom();                            // remove other users, agents, structures of the old world
     World._worldId = worldId;
     World._canBuild = true;                     // optimistic; world:state will correct for visitors
+    // The presence id is per-SOCKET (the counter increments on every connect),
+    // so it is dropped here and the new `hello` republishes both it and
+    // World._selfId. The numeric user inside it does not change on a room hop —
+    // only the socket does.
     selfId = null;
+    World._selfId = null;
     // re-plumb voice to the *new* socket once it exists (getPos closures already reference live `me`).
     // A guest holds no ticket — never reach for the WS (it would 401-loop); re-arm the
     // ambient-demo for the new room instead so travel still lands them in a living clearing.
