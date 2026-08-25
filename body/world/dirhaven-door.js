@@ -35,24 +35,35 @@
   var W = window;
 
   // ── the DirHaven origin ────────────────────────────────────────────────────
-  // AS OF 2026-07-31 DIRHAVEN HAS NO PUBLIC ORIGIN. It is served by Vite on
-  // localhost:5175 (pm2 `dirhaven-frontend`), the cloudflared tunnel routes ONLY
-  // api.vintaclectic.com, and dirhaven.com is still commented out in
-  // dirhaven/server/config/cors.config.js. So we deliberately do NOT hardcode a
-  // production guess — inventing a domain would ship a door onto a dead street
-  // and fail silently in the one way the iframe cannot report.
+  // AS OF 2026-08-25 DIRHAVEN IS PUBLIC AT https://app.dirhaven.com. The old
+  // "no public origin" note above this line was written 2026-07-31 and is now
+  // STALE — the street it said was dead has been paved. Verified live before
+  // this edit, not assumed:
+  //   · GET https://app.dirhaven.com → HTTP/2 200
+  //   · served by pm2 `dirhaven-tunnel`, ingress `app.dirhaven.com →
+  //     http://localhost:5175` in ~/.cloudflared/dirhaven.yml
+  //   · its response carries
+  //       content-security-policy: frame-ancestors 'self' https://vintaclectic.github.io
+  //     i.e. DirHaven has ALREADY allowlisted this world's GitHub Pages origin
+  //     (server/config/express.config.js → WORLD_FRAME_ANCESTORS), and
+  //     'https://app.dirhaven.com' + 'https://vintaclectic.github.io' are both
+  //     already in server/config/cors.config.js ALLOWED_ORIGINS.
+  // Both halves of the handshake are therefore live; the only thing that was
+  // missing was this side knowing the address.
   //
   // Resolution order (all explicit, never guessed):
-  //   1. window.__DIRHAVEN_ORIGIN  — set by the host page when a public origin exists
+  //   1. window.__DIRHAVEN_ORIGIN  — host-page override, wins over everything
   //   2. localStorage['vint:dirhaven-origin'] — owner/dev override, local hosts only
   //      (mirrors the allowlist rule in dirhaven/client/src/vintDoor.js)
-  //   3. localhost:5175 when the world itself is running locally
-  //   4. null → the door tells the truth instead of framing nothing
-  //
-  // When DirHaven does get a public hostname: set __DIRHAVEN_ORIGIN (or add the
-  // constant here), add it to DirHaven's CORS allowlist, and add THIS world's
-  // origin to WORLD_FRAME_ANCESTORS. Nothing else in this file changes.
-  var LOCAL_DIRHAVEN = 'http://localhost:5175';
+  //   3. localhost:5175 when the world itself is running locally (dev keeps
+  //      talking to the dev shell, never to production)
+  //   4. PUBLIC_DIRHAVEN — the real, verified public origin
+  // The function can still return null in principle and EVERY caller still
+  // handles that; the null-safe paths below are deliberately kept rather than
+  // deleted, because an origin can be un-set again (flag, outage, rollback) and
+  // a door that assumes an address is a door that hangs on a spinner.
+  var LOCAL_DIRHAVEN  = 'http://localhost:5175';
+  var PUBLIC_DIRHAVEN = 'https://app.dirhaven.com';
 
   function devOrigin() {
     try {
@@ -78,7 +89,7 @@
     var dev = devOrigin();
     if (dev) return dev;
     if (worldIsLocal()) return LOCAL_DIRHAVEN;
-    return null;
+    return PUBLIC_DIRHAVEN;
   }
 
   function token() {
@@ -255,10 +266,14 @@
         };
       }
     } else if (kind === 'nowhere') {
-      // No origin to frame. Say exactly that rather than spinning on nothing.
+      // No origin to frame. Reachable again only if an override deliberately
+      // blanks the address (or a future rollback removes the public one) — the
+      // resolver's default is now the live https://app.dirhaven.com. Kept, and
+      // kept honest, rather than deleted: a door that cannot say "nowhere" is a
+      // door that spins forever the day the address goes away.
       if (orb) orb.style.display = 'none';
-      say.textContent = 'DirHaven is not reachable from here yet';
-      sub.textContent = 'it currently runs only on this machine (localhost:5175) and has no public address for the world to open. Once it has one, this door opens straight into it.';
+      say.textContent = 'DirHaven has no address for the world right now';
+      sub.textContent = 'no DirHaven origin resolved on this device, so there is nothing to open into. Clear the vint:dirhaven-origin override and reload, and the door goes back to app.dirhaven.com.';
       if (act) act.style.display = 'none';
     }
   }
