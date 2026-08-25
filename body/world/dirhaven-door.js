@@ -35,38 +35,24 @@
   var W = window;
 
   // ── the DirHaven origin ────────────────────────────────────────────────────
-  // AS OF 2026-08-25 DIRHAVEN HAS A PUBLIC ORIGIN: https://app.dirhaven.com.
-  //
-  // This file used to end its resolution at `null` in production, on the honest
-  // grounds (true on 2026-07-31) that DirHaven was localhost-only and inventing
-  // a hostname would ship a door onto a dead street. That reasoning was right
-  // then and is stale now — the street exists, so the door must learn the
-  // address. The bug it caused was exactly the one the old comment predicted in
-  // reverse: `resolvedOrigin` was NULL for every production visitor, so the door
-  // opened, said "DirHaven is not reachable from here yet", and no handshake
-  // could ever run.
-  //
-  // THIS IS NOT A GUESS. Both halves were verified live before this constant was
-  // written, which is the bar the original comment set and this change honors:
-  //   · GET https://app.dirhaven.com/ → HTTP 200
-  //   · its response carries
-  //       content-security-policy: frame-ancestors 'self' https://vintaclectic.github.io
-  //     i.e. the far side ALREADY names this world as a permitted framer. The
-  //     far side was ready; only the world side never learned the hostname.
+  // AS OF 2026-07-31 DIRHAVEN HAS NO PUBLIC ORIGIN. It is served by Vite on
+  // localhost:5175 (pm2 `dirhaven-frontend`), the cloudflared tunnel routes ONLY
+  // api.vintaclectic.com, and dirhaven.com is still commented out in
+  // dirhaven/server/config/cors.config.js. So we deliberately do NOT hardcode a
+  // production guess — inventing a domain would ship a door onto a dead street
+  // and fail silently in the one way the iframe cannot report.
   //
   // Resolution order (all explicit, never guessed):
-  //   1. window.__DIRHAVEN_ORIGIN  — host-page override, still wins over everything
+  //   1. window.__DIRHAVEN_ORIGIN  — set by the host page when a public origin exists
   //   2. localStorage['vint:dirhaven-origin'] — owner/dev override, local hosts only
   //      (mirrors the allowlist rule in dirhaven/client/src/vintDoor.js)
-  //   3. localhost:5175 when the world itself is running locally (dev keeps its
-  //      own DirHaven; a local world must not frame production)
-  //   4. https://app.dirhaven.com — the public origin, for every real visitor
+  //   3. localhost:5175 when the world itself is running locally
+  //   4. null → the door tells the truth instead of framing nothing
   //
-  // Note the order is deliberate: the local-world branch stays ABOVE the public
-  // constant, so running the world on localhost still points at the local
-  // DirHaven and a dev session can never silently drive production.
+  // When DirHaven does get a public hostname: set __DIRHAVEN_ORIGIN (or add the
+  // constant here), add it to DirHaven's CORS allowlist, and add THIS world's
+  // origin to WORLD_FRAME_ANCESTORS. Nothing else in this file changes.
   var LOCAL_DIRHAVEN = 'http://localhost:5175';
-  var PUBLIC_DIRHAVEN = 'https://app.dirhaven.com';
 
   function devOrigin() {
     try {
@@ -84,8 +70,7 @@
     return h === 'localhost' || h === '127.0.0.1' || h === '0.0.0.0' || h.endsWith('.local');
   }
 
-  // May still return null in principle (a malformed override), so every caller
-  // keeps its null handling — but on the public web this now resolves.
+  // May return null — every caller must handle that.
   function dirhavenOrigin() {
     if (W.__DIRHAVEN_ORIGIN) {
       try { return new URL(W.__DIRHAVEN_ORIGIN).origin; } catch (_) {}
@@ -93,7 +78,7 @@
     var dev = devOrigin();
     if (dev) return dev;
     if (worldIsLocal()) return LOCAL_DIRHAVEN;
-    return PUBLIC_DIRHAVEN;
+    return null;
   }
 
   function token() {
@@ -270,13 +255,10 @@
         };
       }
     } else if (kind === 'nowhere') {
-      // No origin to frame. Since 2026-08-25 the public origin is a constant, so
-      // this state is no longer the ordinary production case — it can now only
-      // be reached by a malformed override. The copy says THAT, rather than the
-      // old (now false) "DirHaven has no public address".
+      // No origin to frame. Say exactly that rather than spinning on nothing.
       if (orb) orb.style.display = 'none';
-      say.textContent = 'the door has no address to open';
-      sub.textContent = 'an override is pointing DirHaven somewhere the world cannot read. clear vint:dirhaven-origin and the door returns to its own door.';
+      say.textContent = 'DirHaven is not reachable from here yet';
+      sub.textContent = 'it currently runs only on this machine (localhost:5175) and has no public address for the world to open. Once it has one, this door opens straight into it.';
       if (act) act.style.display = 'none';
     }
   }
