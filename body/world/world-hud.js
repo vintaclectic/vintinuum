@@ -1014,7 +1014,54 @@
       no_seed_stone: 'you need a seed stone to claim.', already_claimed: 'you already have a hearth.',
       too_close: 'too close to another hearth — move further out.', not_your_plot: 'build inside your own hearth plot.',
       cooldown: 'the node is still recharging…', no_echo: 'no echo to refine yet — harvest first.',
+      // ── THE REFUSALS, IN WORDS (AETHERHOLD 2026-08-25) ────────────────────
+      // Every one of these used to fall through to a bare `— need_strand`,
+      // which is a database column shown to a human being. A refusal is the
+      // moment a player is most likely to quit, so each one now names the
+      // thing that stopped them AND the verb that clears it. Never a dead end.
+      no_such_target: 'nothing there to reach — stand closer to what you meant.',
+      not_your_vessel: 'that vessel answers to someone else.',
+      trade_far: 'too far apart to trade — walk to them first.',
+      trade_no_partner: 'they stepped away before the trade could settle.',
+      server: 'the world stumbled on that one. try it again.',
+      // A visitor in someone else's clearing. Not a fault — a boundary, and
+      // it points at the world where the player CAN build.
+      'place-denied': 'this is not your clearing — you can look and harvest, but you build at home.',
     }[c];
+    // THE MATERIAL ERRORS — `need_<item>`. The server sends the item name in
+    // the code itself (need_strand, need_ember), so the copy is generated
+    // rather than enumerated and no new material can ever go unworded again.
+    if (!msg && c.indexOf('need_') === 0) {
+      var item = c.slice(5);
+      var fix = {
+        // The loom is the answer to the famine, so the famine's error message
+        // is where the loom gets taught. This line IS the onboarding.
+        strand: 'weave echo into strand at the loom (press the weave key).',
+        ember:  'kindle an ember from lumen — it takes the refinery first.',
+        echo:   'harvest a node to gather echo.',
+        lumen:  'refine echo into lumen at the refinery.',
+      }[item] || 'gather more first.';
+      msg = 'not enough ' + item + ' — ' + fix;
+    }
+    // THE STANDING WALL — the ascent gate. The server sends the tier the piece
+    // needs and how far the player is from it, so this never says a flat "no";
+    // it says how much further, which is the difference between a locked door
+    // and a visible ladder.
+    if (!msg && (c === 'standing' || c === 'need_standing')) {
+      var gap = num(det.gap, 0);
+      msg = (det.kind ? ('a ' + det.kind + ' asks for ') : 'that asks for ') +
+            (det.need != null ? (det.need + ' standing') : 'more standing') +
+            (det.tier ? ' (' + det.tier + ')' : '') +
+            (gap > 0 ? ' — ' + gap + ' to go. tend your court and keep building.'
+                     : ' — keep building to earn it.');
+    }
+    // An unknown piece kind. Almost always a stale client asking for something
+    // this server does not carry, so it points at the reload rather than
+    // blaming the player for a build they never made up.
+    if (!msg && c === 'bad_kind') {
+      msg = 'the world does not know that piece' +
+            (det.kind ? ' (' + det.kind + ')' : '') + ' — reload to refresh your kit.';
+    }
     // THE REACH ERROR — dimming, never denial. The server rejects a placement
     // beyond the current radius and sends the radius + spark with it, so the
     // message can say exactly why and exactly how to widen it again. This is
