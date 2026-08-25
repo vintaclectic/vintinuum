@@ -1209,6 +1209,7 @@
   var _trade = null;      // the server's last table, verbatim
   var _names = {};        // userId → display name, as the server named them
   var _wrap = null, _me = null;
+  var _state = null;      // last world:state, cached locally (see the listener)
 
   function _n(v, d) { return (typeof v === 'number' && isFinite(v)) ? v : d; }
   // THE ONE TOAST. dirverse-hud owns #dvToast (z-index 1700) and every surface
@@ -1348,7 +1349,7 @@
   // is a lie.
   function _purse() {
     try {
-      var st = (W.World && W.World._lastState) || null;
+      var st = _state || (W.World && W.World._lastState) || null;
       // world:state puts the purse at resident.inventory (see _fullState in
       // world-mvp.js). Read it from where it actually lives, with a top-level
       // fallback only so a future flatter frame cannot silently empty the
@@ -1465,13 +1466,16 @@
   });
   W.addEventListener('vint:world-state', function (e) {
     var d = e.detail || {};
-    try {
-      W.World._lastState = d;
-      // late-mount safety net: if the hello event fired before this module was
-      // listening, World still holds the id it was given.
-      if (_me == null && W.World && W.World._selfId) _adoptSelf(W.World._selfId);
-      if (_trade) _paint();   // the purse changed, so the offer buttons must
-    } catch (_) {}
+    // The purse is cached HERE, not on World, so a state frame arriving before
+    // world-client has defined World cannot throw and take the repaint down
+    // with it. (It used to assign W.World._lastState first, inside the same
+    // try — one missing global and the table silently stopped refreshing.)
+    _state = d;
+    try { if (W.World) W.World._lastState = d; } catch (_) {}
+    // late-mount safety net: if the hello event fired before this module was
+    // listening, World still holds the id it was given.
+    try { if (_me == null && W.World && W.World._selfId) _adoptSelf(W.World._selfId); } catch (_) {}
+    if (_trade) { try { _paint(); } catch (_) {} }   // the purse changed, so the offer buttons must
   });
 
   W.WorldTrade = {
