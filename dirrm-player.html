@@ -2529,7 +2529,7 @@
               const fresh = await resp.json();
               if (this._hls !== hls) return;           // superseded while awaiting
               if (fresh && fresh.ok && fresh.streamUrl) {
-                hls.loadSource(fresh.streamUrl);       // new token, same instance
+                hls.loadSource(this._corsSafeStreamUrl(fresh.streamUrl)); // new token, same instance
                 hls.startLoad();
                 return;
               }
@@ -4164,6 +4164,34 @@
        * (not a VOD, clip, or a browse/category page), else null.
        * Mirrors the routing in detectEmbed() so the two never disagree.
        */
+      /**
+       * Routes an IVS/Kick playback URL through the brain's CORS proxy when the
+       * page's own origin is not one Kick's playback token permits.
+       *
+       * WHY (task DNE8UHK, 2026-08-25): the IVS playback token pins
+       * `access-control-allow-origin` to an allowlist of Kick's own domains
+       * (kick.com, player.kick.com, *.kick.live, ...). It is NOT `*`, despite
+       * what the older comment here claimed. So hls.js fetching the manifest
+       * from https://board.vintaclectic.com is blocked by the browser before a
+       * single byte arrives. That header comes from AWS and cannot be changed
+       * from the client, so the manifest has to be fetched server-side instead.
+       *
+       * Only proxied when needed: on an allowed origin we keep the DIRECT URL so
+       * playback stays peer-to-edge with no extra hop and no brain dependency.
+       */
+      _corsSafeStreamUrl(streamUrl) {
+        try {
+          const u = new URL(streamUrl, location.href);
+          // Non-IVS/Kick hosts (yt-dlp results etc.) are left completely alone.
+          if (!/(^|\.)live-video\.net$|(^|\.)amazonaws\.com$/i.test(u.hostname)) return streamUrl;
+          const origin = location.origin;
+          const ALLOWED = /^https:\/\/(kick\.com|player\.kick\.com|admin\.kick\.com|beta\.kick\.com|next\.kick\.com|dashboard\.kick\.com|xbox\.kick\.com|playstation\.kick\.com|tizen\.kick\.com|webos\.kick\.com|[^.]+\.kick\.live)$/i;
+          if (ALLOWED.test(origin)) return streamUrl;   // token already permits us
+          const apiBase = window.__VINTINUUM_API_BASE || window.VINTINUUM_API || window.__VINT_API || 'https://api.vintaclectic.com';
+          return `${apiBase}/api/stream/hls?src=${encodeURIComponent(u.href)}`;
+        } catch (_) { return streamUrl; }
+      }
+
       _kickLiveChannel(url) {
         try {
           const u = new URL(url);
@@ -4186,8 +4214,14 @@
        * cross-origin embedder physically cannot detect that refusal, so the old
        * embed path produced a silent black rectangle with no error. The brain's
        * /api/stream/kick-live resolves the channel's IVS playback URL (via the
-       * curl-cffi Cloudflare bypass), which serves `access-control-allow-origin: *`
-       * and therefore plays fine in hls.js from any origin.
+       * curl-cffi Cloudflare bypass).
+       *
+       * CORRECTED 2026-08-25 (task DNE8UHK): this used to claim the IVS manifest
+       * serves `access-control-allow-origin: *` and "plays fine from any origin".
+       * It does not. The playback token pins ACAO to an allowlist of Kick's own
+       * domains, so any other origin (e.g. board.vintaclectic.com) is blocked by
+       * CORS before hls.js reads a byte. _corsSafeStreamUrl() routes the manifest
+       * through the brain's /api/stream/hls proxy on those origins.
        */
       async loadKickLive(url) {
         const channel = this._kickLiveChannel(url) || '';
@@ -4230,7 +4264,7 @@
             ? `${Number(data.viewers).toLocaleString()} watching on Kick`
             : 'Live on Kick';
         }
-        await this.loadStream(data.streamUrl);
+        await this.loadStream(this._corsSafeStreamUrl(data.streamUrl));
       }
 
       async loadTikTokLive(url) {
