@@ -35,24 +35,39 @@
   var W = window;
 
   // ── the DirHaven origin ────────────────────────────────────────────────────
-  // AS OF 2026-07-31 DIRHAVEN HAS NO PUBLIC ORIGIN. It is served by Vite on
-  // localhost:5175 (pm2 `dirhaven-frontend`), the cloudflared tunnel routes ONLY
-  // api.vintaclectic.com, and dirhaven.com is still commented out in
-  // dirhaven/server/config/cors.config.js. So we deliberately do NOT hardcode a
-  // production guess — inventing a domain would ship a door onto a dead street
-  // and fail silently in the one way the iframe cannot report.
+  // THE STREET IS NOW REAL (verified live 2026-08-26). The 2026-07-31 comment
+  // that used to live here said "DIRHAVEN HAS NO PUBLIC ORIGIN" and returned
+  // null in production — which is why this door opened onto the honest-but-dead
+  // 'nowhere' veil for every visitor who wasn't running Vite on their own
+  // laptop. The premise expired; the code never learned.
   //
-  // Resolution order (all explicit, never guessed):
-  //   1. window.__DIRHAVEN_ORIGIN  — set by the host page when a public origin exists
+  // What is true now, each half checked rather than assumed:
+  //   · https://app.dirhaven.com/ → HTTP 200 (its own cloudflared tunnel →
+  //     localhost:5175; see DOMAINS.md § app.dirhaven.com and OPERATIONS.md).
+  //   · Its response carries, verbatim:
+  //       content-security-policy: frame-ancestors 'self' https://vintaclectic.github.io
+  //     i.e. DirHaven has ALREADY named this exact world as a permitted framer.
+  //     The far side of the handshake was hung and waiting; only our side was
+  //     still reading from a stale note.
+  //   · The apex `dirhaven.com` and `www.` both 301 → app.dirhaven.com, so the
+  //     app subdomain is the canonical origin, not a guess between three.
+  //
+  // We hardcode app.dirhaven.com as PROD, not as a hopeful default: a hardcoded
+  // origin that a live CSP explicitly allows is a verified fact, and the thing
+  // the old comment rightly refused to do (invent a domain) is not what this is.
+  //
+  // Resolution order (all explicit, still never guessed):
+  //   1. window.__DIRHAVEN_ORIGIN  — host-page override, wins over everything
   //   2. localStorage['vint:dirhaven-origin'] — owner/dev override, local hosts only
   //      (mirrors the allowlist rule in dirhaven/client/src/vintDoor.js)
-  //   3. localhost:5175 when the world itself is running locally
-  //   4. null → the door tells the truth instead of framing nothing
+  //   3. localhost:5175 when the world itself is running locally (dev keeps dev)
+  //   4. https://app.dirhaven.com — production, CSP-verified above
   //
-  // When DirHaven does get a public hostname: set __DIRHAVEN_ORIGIN (or add the
-  // constant here), add it to DirHaven's CORS allowlist, and add THIS world's
-  // origin to WORLD_FRAME_ANCESTORS. Nothing else in this file changes.
+  // dirhavenOrigin() can therefore no longer return null in prod, but EVERY
+  // caller still handles null, because override #2 is user-settable and #3/#4
+  // are environment-dependent. The 'nowhere' veil stays as the honest floor.
   var LOCAL_DIRHAVEN = 'http://localhost:5175';
+  var PROD_DIRHAVEN  = 'https://app.dirhaven.com';
 
   function devOrigin() {
     try {
@@ -70,15 +85,19 @@
     return h === 'localhost' || h === '127.0.0.1' || h === '0.0.0.0' || h.endsWith('.local');
   }
 
-  // May return null — every caller must handle that.
+  // May still return null (a malformed override with no fallback left), so every
+  // caller must keep handling that — but in a normal production load it now
+  // resolves to PROD_DIRHAVEN instead of stranding the door.
   function dirhavenOrigin() {
     if (W.__DIRHAVEN_ORIGIN) {
       try { return new URL(W.__DIRHAVEN_ORIGIN).origin; } catch (_) {}
     }
     var dev = devOrigin();
     if (dev) return dev;
+    // Local world → local DirHaven, so a dev editing DirHaven sees their own
+    // build, never production leaking into a local session.
     if (worldIsLocal()) return LOCAL_DIRHAVEN;
-    return null;
+    return PROD_DIRHAVEN;
   }
 
   function token() {
@@ -255,10 +274,13 @@
         };
       }
     } else if (kind === 'nowhere') {
-      // No origin to frame. Say exactly that rather than spinning on nothing.
+      // No origin to frame at all. Since app.dirhaven.com became the verified
+      // production fallback this can only happen when an override resolved to
+      // nothing — so the old "it only runs on this machine" copy would now be a
+      // lie. Say the true, narrower thing instead.
       if (orb) orb.style.display = 'none';
-      say.textContent = 'DirHaven is not reachable from here yet';
-      sub.textContent = 'it currently runs only on this machine (localhost:5175) and has no public address for the world to open. Once it has one, this door opens straight into it.';
+      say.textContent = 'the door has no address to open onto';
+      sub.textContent = 'a DirHaven origin override is set but did not resolve. Clear vint:dirhaven-origin to fall back to the public app.';
       if (act) act.style.display = 'none';
     }
   }
