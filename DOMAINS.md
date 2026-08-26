@@ -18,14 +18,23 @@ repo's own config. Nothing here is remembered — it was all verified on the mac
 | `api.vintaclectic.com` | **The Brain** — Vintinuum's API/consciousness server | ✅ 200 |
 | `board.vintaclectic.com` | **Council Task Board** — the queue Vinta runs the council from | ✅ 200 (owner-only) |
 | `dircomedia.com` | **DirCoMedia** — the marketing OS (parked page for now) | ✅ 200 |
+| `app.dirhaven.com` | **DirHaven APP** — open-directory discovery + streaming. Frames inside world.html via the DirHaven door. | ✅ 200 |
+| `dirhaven.com` + `www` | Redirect → `app.dirhaven.com` | ✅ 301 |
 
 **Public (registered but DOWN right now — origin not running):**
 
 | Domain | What it is | Status |
 |---|---|---|
 | `dirmegle.com` + `www` | **DirMegle** — random-match video social discovery | ❌ 530 |
-| `app.dirhaven.com` | **DirHaven APP** — open-directory discovery + streaming | ❌ 530 |
 | `api.dircomedia.com` | DirCoMedia's API | ❌ 530 |
+
+> **`app.dirhaven.com` moved OUT of this table on 2026-08-26 — it is LIVE.**
+> Re-verified by response, not by memory: `HTTP/2 200`, and it serves
+> `content-security-policy: frame-ancestors 'self' https://vintaclectic.github.io`,
+> i.e. it already permits the world to embed it. `dirhaven.com` and `www.` both
+> `301 →` it, so the app subdomain is the canonical origin. See the live row above.
+> This stale ❌ row is what kept the world's DirHaven door resolving to NULL in
+> production for weeks: the door read the doc's premise, not the wire.
 
 **Localhost (the private map):**
 
@@ -274,8 +283,9 @@ done
 
 ## 5. THE DOMAINS YOU OWN BUT AREN'T USING YET
 
-- **`dirhaven.com` apex** — doesn't resolve. Only `app.dirhaven.com` is wired.
-  A marketing/landing page at the apex is free upside.
+- **`dirhaven.com` apex** — resolves and `301`s to `app.dirhaven.com` (re-checked
+  2026-08-26; the earlier "doesn't resolve" note was stale). A marketing/landing
+  page at the apex instead of a bare redirect is still free upside.
 - **`dircomedia.com`** — currently a placeholder 200. The real app is intentionally
   local-only.
 - **`vintaclectic.com`** — 301s to `www.vintaclectic.com`. The zone is the hub for
