@@ -475,6 +475,35 @@
      z9999 player iframe can never share pixels with a z1600 sheet.
      ── KILL SWITCH: ?arcade=0 (read live, never latched). -->
 <script src="body/world/arcade.js"></script>
+<!-- THE SECRETS — the far side of a world that otherwise signposts everything.
+     (organ 7) Every other organ announces itself on the rail: tap the star-map,
+     tap the court, tap the arcade, and the surface explains itself. That is
+     right for a feature and fatal for a WORLD, because a place where everything
+     is labelled has no far side — nothing in it was ever FOUND, only navigated
+     to. This organ is the far side: conditions over the `vint:world-*` events
+     the world ALREADY broadcasts, which keep when you meet them and are never
+     announced before. No hint system, no "3 of 7" taunt, no checklist.
+     It is a PURE LISTENER and that is the load-bearing decision: it instruments
+     nothing, patches nothing, and is subscribed only to the window event bus.
+     Delete this file and every other organ behaves byte-identically — a secret
+     is never load-bearing for the thing it watches. Adding a secret is adding a
+     row to its KEEPERS table and editing NO other file, which is the whole
+     reason that table is data instead of code.
+     Loads LAST, after the arcade, because it observes every organ above it and
+     must claim its rail slot after they have claimed theirs. Deliberately a
+     no-op when they are absent.
+     ── TIER: none, permanently. Free players find every secret; nothing here is
+     ever gated or purchasable. A secret you can buy is an advertisement.
+     ── NO-COLLISION: adds ZERO fixed elements. Its launcher is a flow child of
+     #dvRail via addLauncher() (the rail measures and allocates the slot — no
+     hand-counted offset exists in the file), and its sheet carries .dv-sheet and
+     joins the one-open-at-a-time registry via registerSheet('secrets'), so
+     raising it evicts whatever is up. Reveals speak through DirverseHUD.toast(),
+     the world's ONE measured toast node, so two reveals in the same second queue
+     through a single element instead of stacking.
+     ── KILL SWITCH: ?secrets=0 (read live, never latched). Resentment signal:
+     VintSecrets.hush(), one call, silences every future reveal, keeps history. -->
+<script src="body/world/secrets.js"></script>
 <script>
 (function () {
   const statusEl = document.getElementById('status');
