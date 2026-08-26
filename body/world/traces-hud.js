@@ -645,6 +645,12 @@
     // has to put the page in a world where this button legitimately appears
     // before it can tap it, and asking the module to re-check is honest where
     // reaching in to set display would be faking the thing under test.
-    refresh: updateLauncher
+    refresh: updateLauncher,
+    // Is one of OUR removals in flight right now? world-hud.js asks before it
+    // speaks the three BARE codes this surface also claims ('not-yours',
+    // 'bad-id', 'unavailable'). Those codes are only provably about a lantern
+    // during this window; outside it they can come from anywhere, so the world
+    // HUD covers them. Exactly one voice per refusal — never two, never zero.
+    isRemoving: function () { return _pendingOut != null; }
   };
 })();
