@@ -792,6 +792,29 @@
       try { window.dispatchEvent(new CustomEvent('vint:world-harvest', { detail: m })); } catch (_) {}
     } else if (m.t === 'world:refine:ok') {
       try { window.dispatchEvent(new CustomEvent('vint:world-refine', { detail: m })); } catch (_) {}
+    } else if (m.t === 'world:weave:ok') {
+      // THE LOOM — echo became strand. This is the reply that makes building
+      // possible at all; without it the faucet the server grew had no client
+      // and the whole build economy stayed a closed circuit.
+      try { window.dispatchEvent(new CustomEvent('vint:world-weave', { detail: m })); } catch (_) {}
+    } else if (m.t === 'world:kindle:ok') {
+      try { window.dispatchEvent(new CustomEvent('vint:world-kindle', { detail: m })); } catch (_) {}
+    } else if (m.t === 'world:who:ok') {
+      // WHO ELSE IS STANDING HERE — the co-presence read (see world-mvp's
+      // `world:who`). Relayed verbatim; the client never decides who is here.
+      World._here = m;
+      try { window.dispatchEvent(new CustomEvent('vint:world-who', { detail: m })); } catch (_) {}
+    } else if (m.t === 'world:trade') {
+      // THE LEDGER — the one object two people own at once. Always the server's
+      // rendering of the table; neither side ever re-derives the other's offer.
+      World._trade = m.trade || null;
+      try { window.dispatchEvent(new CustomEvent('vint:world-trade', { detail: m })); } catch (_) {}
+    } else if (m.t === 'world:trade:settled') {
+      World._trade = null;
+      try { window.dispatchEvent(new CustomEvent('vint:world-trade-settled', { detail: m })); } catch (_) {}
+    } else if (m.t === 'world:trade:closed') {
+      World._trade = null;
+      try { window.dispatchEvent(new CustomEvent('vint:world-trade-closed', { detail: m })); } catch (_) {}
     } else if (m.t === 'world:err') {
       try { window.dispatchEvent(new CustomEvent('vint:world-err', { detail: m })); } catch (_) {}
     }
@@ -1072,15 +1095,25 @@
       const g = new THREE.Group();
       const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.045, 2.1, 8), M.frame);
       pole.position.y = 1.05; g.add(pole);
-      // a segmented cloth so the ripple is a real wave, not a rotating plank
+      // A segmented cloth so the ripple is a real travelling wave, not a
+      // rotating plank. FIVE segments of 0.11 hung from x=0.03 reach 0.575 —
+      // inside the 0.60 cell with the ripple's own ±0.05 sway accounted for, so
+      // a banner can never brush the piece on the next tile. (The forge test
+      // caught the earlier 0.13-wide version at 0.63: it spilled.)
       const cloth = new THREE.Group();
-      const SEG = 5;
+      const SEG = 5, QW = 0.11;
       for (let i = 0; i < SEG; i++) {
-        const q = new THREE.Mesh(new THREE.PlaneGeometry(0.13, 0.75), M.cloth);
-        q.position.set(0.04 + i * 0.13, 1.55, 0);
+        const q = new THREE.Mesh(new THREE.PlaneGeometry(QW, 0.75), M.cloth);
+        q.position.set(0.03 + i * QW, 1.55, 0);
         cloth.add(q);
       }
       g.add(cloth);
+      // A banner is a SIGN — it has to be readable at dusk, when the vigil has
+      // drained the clearing's light, or the one piece whose whole job is to be
+      // seen becomes the first thing to disappear. A small warm wash on the
+      // cloth, short-range so a field of banners cannot wash out the world.
+      const bl = new THREE.PointLight(0xffc79a, 0.5, 3.2);
+      bl.position.set(0.3, 1.55, 0); g.add(bl);
       g.userData.ripple = cloth;
       return g;
     },
@@ -1481,6 +1514,28 @@
   World.placeHere = function (kind) { const me = World._me || {}; World.send({ t: 'world:place', kind, x: me.x || 0, z: me.z || 0, rot: me.yaw || 0 }); };
   World.harvest = function () { World.send({ t: 'world:harvest' }); };
   World.refine = function (amount) { World.send({ t: 'world:refine', amount: amount || null }); };
+  // ── THE LOOM — the verb that makes building possible at all ────────────────
+  // `count` null/omitted means "weave everything I can afford", which is the
+  // gesture players actually make. The server clamps to what they hold before a
+  // single item moves; nothing here computes a rate or an outcome.
+  World.weave = function (count) {
+    return World.send({ t: 'world:weave', count: (count == null ? null : Math.floor(count)) });
+  };
+  World.kindle = function () { return World.send({ t: 'world:kindle' }); };
+  // ── CO-PRESENCE + THE LEDGER ───────────────────────────────────────────────
+  // `who` asks the server which HUMANS are standing in this room, with the
+  // relationship history attached. The answer arrives as vint:world-who and is
+  // cached on World._here. Positions and identities are resolved from the other
+  // sockets' own truth, so a client can never claim to be beside someone.
+  World.who = function () { return World.send({ t: 'world:who' }); };
+  World.tradeOpen = function (presenceId) { return World.send({ t: 'world:trade:open', target: String(presenceId || '') }); };
+  World.tradeOffer = function (tradeId, item, count) {
+    return World.send({ t: 'world:trade:offer', tradeId: tradeId, item: String(item || ''), count: Math.max(0, Math.floor(Number(count) || 0)) });
+  };
+  World.tradeReady = function (tradeId, ready) { return World.send({ t: 'world:trade:ready', tradeId: tradeId, ready: ready !== false }); };
+  World.tradeCancel = function (tradeId) { return World.send({ t: 'world:trade:cancel', tradeId: tradeId }); };
+  World.trade = function () { return World._trade || null; };
+  World.here = function () { return World._here || null; };
   // THE VIGIL — tend your court. Pass an agentId to set one watch, or nothing to
   // set them all. The server refreshes every watch and kindles the clearing; the
   // reply drives the light. This is the survival loop's headline verb.

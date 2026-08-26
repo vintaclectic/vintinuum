@@ -358,6 +358,13 @@
      court.js so the rail order stays: star-map · agents · court · home ·
      lanterns · build. Adds no fixed element of its own. -->
 <script src="body/world/traces-hud.js"></script>
+<!-- THE LOOM — echo becomes strand, and building becomes possible at all.
+     world/loom.js grew the faucet server-side; NOTHING in the client ever sent
+     world:weave, so the entire build economy stayed a closed circuit (three
+     starter strand, fifteen sinks, no reachable source). This is the tap.
+     Loads AFTER dirverse-hud because it borrows that file's rail + one-sheet
+     registry, and adds no fixed element of its own. -->
+<script src="body/world/loom-hud.js"></script>
 <!-- THE COVENANTS — factions, contested territory, policy, and the geography of
      consent. Loads AFTER dirverse-hud for the same reason the lanterns do: it
      takes its rail slot from `addLauncher` and registers with the shared sheet
