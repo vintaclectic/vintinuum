@@ -2559,11 +2559,17 @@
         const isM3U8 = /\.m3u8(\?|#|$)/i.test(url);
         const isMPD  = /\.mpd(\?|#|$)/i.test(url);
 
+        // HLS/DASH streams can have CORS restrictions (AWS IVS, CDNs with origin locks).
+        // Proxy cross-origin streams upfront so hls.js/dash.js get CORS-clean manifests.
+        // Task JZJ5768: direct IVS URLs (kick.com's actual stream backend) were failing
+        // because the token restricts playback to kick.com domains only.
+        const streamUrl = (isM3U8 || isMPD) && this._shouldProxyUpfront(url) ? this._proxify(url) : url;
+
         if (isM3U8) {
           this.setBadge('HLS Stream');
           // Native HLS (Safari, iOS) — just set src
           if (video.canPlayType('application/vnd.apple.mpegurl')) {
-            video.src = url;
+            video.src = streamUrl;
           } else {
             try {
               await this.loadScript('https://cdn.jsdelivr.net/npm/hls.js@latest/dist/hls.min.js');
@@ -2572,16 +2578,16 @@
                 // otherwise leave the old hls.js pulling segments forever.
                 if (this._hls) { try { this._hls.destroy(); } catch (_) {} this._hls = null; }
                 const hls = new window.Hls({ enableWorker: true, lowLatencyMode: true });
-                hls.loadSource(url);
+                hls.loadSource(streamUrl);
                 hls.attachMedia(video);
                 this._hls = hls;
-                this._attachHlsRecovery(hls, url, video);
+                this._attachHlsRecovery(hls, streamUrl, video);
               } else {
-                video.src = url; // last-ditch
+                video.src = streamUrl; // last-ditch
               }
             } catch (e) {
               console.warn('hls.js load failed, native attempt', e);
-              video.src = url;
+              video.src = streamUrl;
             }
           }
         } else if (isMPD) {
@@ -2590,14 +2596,14 @@
             await this.loadScript('https://cdn.dashjs.org/latest/dash.all.min.js');
             if (window.dashjs) {
               const dash = window.dashjs.MediaPlayer().create();
-              dash.initialize(video, url, true);
+              dash.initialize(video, streamUrl, true);
               this._dash = dash;
             } else {
-              video.src = url;
+              video.src = streamUrl;
             }
           } catch (e) {
             console.warn('dash.js load failed', e);
-            video.src = url;
+            video.src = streamUrl;
           }
         } else {
           // Direct video file. Cross-origin (open-dir / junk cert) → proxy
