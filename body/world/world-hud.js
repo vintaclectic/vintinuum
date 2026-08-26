@@ -1033,6 +1033,12 @@
   // future code added server-side lands next to its family rather than at the
   // bottom of an alphabetical pile nobody can audit.
   // ══════════════════════════════════════════════════════════════════════════
+  // codes we have already shouted about, so an unmapped one warns exactly once
+  // rather than once per occurrence. Declared BEFORE the handler that reads it —
+  // a `var` after the listener is hoisted but the initialiser is not, and the
+  // test caught exactly that as a live ReferenceError.
+  var _unmapped = {};
+
   var ERRORS = {
     // ── the hearth: claiming your ground ──────────────────────────────────
     no_seed_stone:   'you need a seed stone to claim — you start with one.',
@@ -1105,7 +1111,17 @@
     // ── THE LANTERNS (traces) ─────────────────────────────────────────────
     'not-yours':         'that lantern is not yours to move.',
     'bad-id':            'that lantern is no longer there.',
+    // The `trace-*` family. traces-hud speaks these in its own sheet when it is
+    // loaded; these are the backstop for a page that does not carry it, so a
+    // refusal is never spoken by nobody.
     'trace-unavailable': 'lanterns are not available in this world right now.',
+    'trace-off':         'lanterns are switched off in this world.',
+    'trace-own-world':   'this is your own clearing — your light is already here.',
+    'trace-rate':        'you have left a lot of lights lately — rest a moment.',
+    'trace-no-world':    'the shared hub belongs to everyone — leave lights in a person\'s world.',
+    'trace-no-visitor':  'sign in to leave a light in someone\'s world.',
+    'trace-not-yours':   'only that world\'s keeper can put this light out.',
+    'trace-bad-id':      'that light is already gone.',
 
     // ── generic ───────────────────────────────────────────────────────────
     rate:        'easy — that was too fast. try again in a moment.',
@@ -1157,9 +1173,13 @@
   // from anywhere, so this panel speaks them. Same invariant as the Reckoning:
   // exactly one voice, never two, never zero.
   function _tracesIsSpeaking(c) {
-    if (String(c).indexOf('trace-') === 0) return true;   // always theirs
+    // ...but only if that surface is actually LOADED. Yielding unconditionally
+    // meant a page without traces-hud left every trace-* refusal spoken by
+    // nobody at all — zero voices, which is the same failure as two.
+    if (!W.VintTraces) return false;
+    if (String(c).indexOf('trace-') === 0) return true;   // theirs outright
     if (!{ 'not-yours': 1, 'bad-id': 1, unavailable: 1 }[c]) return false;
-    try { return !!(W.VintTraces && W.VintTraces.isRemoving && W.VintTraces.isRemoving()); }
+    try { return !!(W.VintTraces.isRemoving && W.VintTraces.isRemoving()); }
     catch (_) { return false; }
   }
 
@@ -1174,14 +1194,35 @@
     // When the server said how much was needed and how much is held, say the
     // exact shortfall. "3 more strand" sends a player to the loom; "not enough
     // strand" sends them to wonder whether the game is broken.
+    // THE WAY THROUGH for each material, kept beside the arithmetic so a
+    // numeric refusal can never lose the remedy the plain one carried. This was
+    // a real regression the refusals test caught: with numbers attached,
+    // need_ember became "you need 1 more ember (0 of 1)." — correct, and a dead
+    // end. Every material now names its own faucet in both branches.
+    var WAY_THROUGH = {
+      strand: ' — weave echo into strand at the loom.',
+      ember:  ' — kindle one at the loom, or keep striking nodes.',
+      echo:   ' — go strike a node to harvest more.',
+      lumen:  ' — refine echo into lumen.',
+      seed_stone: '.'
+    };
     if (c.indexOf('need_') === 0 && det.need != null && det.have != null) {
+      var item = c.slice(5);
       var short = Math.max(0, num(det.need, 0) - num(det.have, 0));
-      var what = c.slice(5).replace(/_/g, ' ');
+      var what = item.replace(/_/g, ' ');
       if (short > 0) {
         msg = 'you need ' + short + ' more ' + what +
               ' (' + det.have + ' of ' + det.need + ')' +
-              (c === 'need_strand' ? ' — weave echo into strand at the loom.' : '.');
+              (WAY_THROUGH[item] || '.');
       }
+    }
+    // THE LOOM'S OWN SHORTFALL. loom.weave sends per/have/short when it refuses,
+    // and a message that discards them is strictly worse than one that spends
+    // them: "3 more echo" is a number of swings, "not enough echo" is a mood.
+    if (c === 'not_enough_echo' && det.per != null) {
+      var needMore = num(det.short, Math.max(0, num(det.per, 4) - num(det.have, 0)));
+      msg = 'not enough echo to weave — a strand costs ' + num(det.per, 4) + ' echo and you hold ' +
+            num(det.have, 0) + '. strike a node for ' + Math.max(1, needMore) + ' more.';
     }
     // an unmapped need_<item> still reads as English rather than an identifier
     if (!msg && c.indexOf('need_') === 0) {
@@ -1224,7 +1265,6 @@
     }
     _toast(msg);
   });
-  var _unmapped = {};
 
   // THE VISITOR GATE — the world you asked for is resting, so you were brought
   // to the hub instead. The server's own sentence is used verbatim (it is the
