@@ -365,6 +365,13 @@
      Loads AFTER dirverse-hud because it borrows that file's rail + one-sheet
      registry, and adds no fixed element of its own. -->
 <script src="body/world/loom-hud.js"></script>
+<!-- THE COMMONS — the other people are real. Room-scoped presence has shipped
+     at 5Hz since day one and NOTHING ever told the player a person had arrived,
+     so co-presence existed and was invisible. This is the roster (who is here,
+     how far, and your trade history with them), the arrival announcement, and
+     the real escrow trade table from world/ledger.js. Loads AFTER dirverse-hud
+     for the rail + one-sheet registry; adds no fixed element of its own. -->
+<script src="body/world/commons.js"></script>
 <!-- THE COVENANTS — factions, contested territory, policy, and the geography of
      consent. Loads AFTER dirverse-hud for the same reason the lanterns do: it
      takes its rail slot from `addLauncher` and registers with the shared sheet

@@ -627,6 +627,17 @@
       if (m.t === 'hello') {
         selfId = m.selfId;
         World._selfName = m.selfName || 'you';
+        // MY ACCOUNT ID, from the server's own presence id. The socket id is
+        // minted server-side as `user:<userId>:<counter>` (world-server.js), so
+        // the middle field is the account — the only thing that identifies the
+        // PERSON across reconnects, and what a two-owner object like a trade
+        // table is keyed on. Parsed defensively: an id in any other shape
+        // simply leaves this null and the trade table falls back rather than
+        // guessing a side.
+        try {
+          const parts = String(m.selfId || '').split(':');
+          World._myUserId = (parts.length >= 3 && parts[0] === 'user' && parts[1]) ? parts[1] : null;
+        } catch (_) { World._myUserId = null; }
         // ── THE VISITOR GATE — you asked for a resting clearing and landed here.
         // The server redirected rather than dropping the socket, so the ONE thing
         // this must never do is leave the player silently somewhere they didn't
@@ -699,6 +710,25 @@
         });
         // remove the gone
         for (const [id, O] of others) { if (!(m.users || []).find(u => u.id === id)) { scene.remove(O.group); others.delete(id); } }
+        // ── CO-PRESENCE, ANNOUNCED (AETHERHOLD 2026-08-25) ─────────────────
+        // The presence frame has carried every human in the room at 5Hz since
+        // the day this shipped, and NOTHING above this line ever told a surface
+        // that a person had arrived. So a player could stand behind you in fog
+        // for ten minutes and the honest report was "multiplayer isn't even
+        // implemented". Re-announcing the frame costs nothing on the wire (it
+        // already arrived) and is what lets the commons name who is here.
+        //
+        // `self` is stamped HERE rather than left to each listener, because the
+        // stale-ghost rule (a prior socket of mine, same userId, different
+        // counter) is knowledge this scope has and a HUD does not.
+        try {
+          const roster = (m.users || []).map(u => Object.assign({}, u, {
+            self: (u.id === selfId) || !!(selfPrefix && u.id.startsWith(selfPrefix)),
+          }));
+          window.dispatchEvent(new CustomEvent('vint:world-presence', {
+            detail: { users: roster, worldId: World._worldId },
+          }));
+        } catch (_) {}
       } else if (m.t === 'speech') {
         _onAgentSpeech(m);          // light the speaking being (if it's an agent) + show the bubble
       } else if (m.t === 'offer') {
@@ -1336,6 +1366,23 @@
     me.yaw = Math.atan2(dx, dz);
     return true;
   };
+
+  // Turn the player to FACE another person. Same discipline as faceTrace: we
+  // point them at the body, we never seize the camera — the camera mode is the
+  // player's. Returns false if that presence is no longer standing here, so a
+  // caller never reports a turn that did not happen.
+  World.facePresence = function (id) {
+    const O = others.get(String(id));
+    if (!O || !O.group) return false;
+    const dx = O.group.position.x - me.x, dz = O.group.position.z - me.z;
+    if (Math.hypot(dx, dz) < 0.05) return true;
+    me.yaw = Math.atan2(dx, dz);
+    return true;
+  };
+  // My own account id, when the server has told us. Used by the trade table to
+  // know which SIDE of a two-owner object is mine — never inferred from
+  // ordering, which would silently swap the manifests.
+  World.myUserId = function () { return World._myUserId != null ? World._myUserId : null; };
 
   // public: send any world message to the server (used by the HUD)
   World.send = function (m) { if (ws && ws.readyState === 1) { ws.send(JSON.stringify(m)); return true; } return false; };
