@@ -840,19 +840,36 @@ const PHASES = [
 // ─── LADDER ───────────────────────────────────────────────────────────────────
 function paintLadder(currentPhase) {
   const el = document.getElementById('ladder');
-  el.innerHTML = '';
   document.getElementById('phase-pill').textContent = 'phase ' + currentPhase;
-  for (const p of PHASES) {
-    const div = document.createElement('div');
+
+  // Get existing rungs or create them
+  let rungs = el.querySelectorAll('.rung');
+
+  // If we don't have the right number of rungs, rebuild from scratch
+  if (rungs.length !== PHASES.length) {
+    el.innerHTML = '';
+    rungs = [];
+  }
+
+  for (let i = 0; i < PHASES.length; i++) {
+    const p = PHASES[i];
+    let div = rungs[i];
+
+    // Create new rung if needed
+    if (!div) {
+      div = document.createElement('div');
+      div.innerHTML = `
+        <div class="rung-num">${p.n}</div>
+        <div class="rung-name">${p.short}</div>
+      `;
+      el.appendChild(div);
+    }
+
+    // Update classes to trigger CSS transitions
     let cls = 'rung';
     if (p.n < currentPhase) cls += ' passed';
     else if (p.n === currentPhase) cls += ' current';
     div.className = cls;
-    div.innerHTML = `
-      <div class="rung-num">${p.n}</div>
-      <div class="rung-name">${p.short}</div>
-    `;
-    el.appendChild(div);
   }
 }
 
