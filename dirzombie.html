@@ -1,0 +1,847 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Where Is My Dad? - DirZombie</title>
+<meta name="description" content="A playable DirZombie mini game: cross the infected city, read the clues, and find Dad before the horde finds you.">
+<meta name="theme-color" content="#08120b">
+<style>
+:root {
+  --void: #050807;
+  --street: #0b1410;
+  --asphalt: #121915;
+  --panel: rgba(9, 18, 13, 0.92);
+  --panel-2: rgba(18, 26, 20, 0.86);
+  --line: rgba(214, 255, 216, 0.14);
+  --text: #edf8e9;
+  --muted: rgba(237, 248, 233, 0.64);
+  --acid: #95ff38;
+  --blood: #ff3d43;
+  --amber: #ffbe4d;
+  --cyan: #55d7ff;
+  --tile: min(9.2vw, 58px);
+}
+
+* { box-sizing: border-box; }
+html { min-height: 100%; background: var(--void); }
+body {
+  min-height: 100vh;
+  margin: 0;
+  overflow-x: hidden;
+  color: var(--text);
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  background:
+    linear-gradient(90deg, rgba(149, 255, 56, 0.035) 1px, transparent 1px),
+    linear-gradient(rgba(149, 255, 56, 0.035) 1px, transparent 1px),
+    radial-gradient(circle at 18% 10%, rgba(255, 61, 67, 0.18), transparent 34rem),
+    radial-gradient(circle at 85% 20%, rgba(149, 255, 56, 0.14), transparent 28rem),
+    linear-gradient(155deg, #050807 0%, #0e1711 48%, #17090b 100%);
+  background-size: 42px 42px, 42px 42px, auto, auto, auto;
+}
+
+button {
+  font: inherit;
+  color: inherit;
+}
+
+.shell {
+  width: min(1180px, 100%);
+  margin: 0 auto;
+  padding: max(14px, env(safe-area-inset-top)) max(14px, env(safe-area-inset-right)) max(18px, env(safe-area-inset-bottom)) max(14px, env(safe-area-inset-left));
+}
+
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  min-height: 46px;
+  margin-bottom: 12px;
+}
+
+.back {
+  color: var(--muted);
+  text-decoration: none;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 10px 12px;
+  min-height: 42px;
+  background: rgba(0, 0, 0, 0.2);
+}
+
+.back:hover,
+.back:focus-visible {
+  color: var(--text);
+  border-color: rgba(149, 255, 56, 0.45);
+  outline: none;
+}
+
+.signal {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--muted);
+  font-size: 0.78rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.signal::before {
+  content: "";
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--acid);
+  box-shadow: 0 0 16px rgba(149, 255, 56, 0.9);
+  animation: blink 1.4s ease-in-out infinite;
+}
+
+@keyframes blink {
+  50% { opacity: 0.28; }
+}
+
+.game {
+  display: grid;
+  grid-template-columns: minmax(280px, 360px) minmax(0, 1fr);
+  gap: 18px;
+  align-items: start;
+}
+
+.brief,
+.stage,
+.log {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel);
+  box-shadow: 0 18px 70px rgba(0, 0, 0, 0.32);
+}
+
+.brief {
+  padding: 18px;
+  position: sticky;
+  top: 14px;
+}
+
+.brand {
+  display: grid;
+  grid-template-columns: 74px 1fr;
+  gap: 14px;
+  align-items: center;
+  margin-bottom: 18px;
+}
+
+.brand img {
+  width: 74px;
+  height: 74px;
+  object-fit: contain;
+  filter: drop-shadow(0 0 18px rgba(149, 255, 56, 0.25));
+}
+
+.eyebrow {
+  color: var(--acid);
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+h1 {
+  margin: 4px 0 0;
+  font-size: clamp(2.2rem, 7vw, 4.7rem);
+  line-height: 0.9;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+.copy {
+  margin: 0 0 18px;
+  color: var(--muted);
+  line-height: 1.55;
+}
+
+.stats {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin: 16px 0;
+}
+
+.stat {
+  min-height: 72px;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.035);
+}
+
+.stat span {
+  display: block;
+  color: var(--muted);
+  font-size: 0.68rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.stat strong {
+  display: block;
+  margin-top: 6px;
+  font-size: 1.35rem;
+}
+
+.primary,
+.secondary,
+.pad button {
+  min-height: 46px;
+  border: 1px solid rgba(149, 255, 56, 0.36);
+  border-radius: 8px;
+  background: linear-gradient(180deg, rgba(149, 255, 56, 0.18), rgba(149, 255, 56, 0.07));
+  color: var(--text);
+  cursor: pointer;
+}
+
+.primary,
+.secondary {
+  width: 100%;
+  margin-top: 8px;
+  padding: 12px 14px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.secondary {
+  border-color: rgba(237, 248, 233, 0.2);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--muted);
+}
+
+.primary:hover,
+.secondary:hover,
+.pad button:hover,
+.primary:focus-visible,
+.secondary:focus-visible,
+.pad button:focus-visible {
+  transform: translateY(-1px);
+  border-color: rgba(149, 255, 56, 0.7);
+  outline: none;
+}
+
+.stage {
+  padding: 14px;
+  overflow: hidden;
+}
+
+.hud {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 12px;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.objective {
+  color: var(--muted);
+  line-height: 1.35;
+}
+
+.status {
+  color: var(--amber);
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  text-align: right;
+}
+
+.city-wrap {
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(149, 255, 56, 0.13);
+  border-radius: 8px;
+  padding: 10px;
+  background:
+    radial-gradient(circle at 50% 45%, rgba(149, 255, 56, 0.07), transparent 34rem),
+    rgba(0, 0, 0, 0.34);
+}
+
+.city {
+  display: grid;
+  grid-template-columns: repeat(9, var(--tile));
+  grid-template-rows: repeat(9, var(--tile));
+  gap: 4px;
+  max-width: 100%;
+}
+
+.cell {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: var(--tile);
+  height: var(--tile);
+  min-width: 30px;
+  min-height: 30px;
+  border: 1px solid rgba(237, 248, 233, 0.09);
+  border-radius: 6px;
+  background: var(--asphalt);
+  color: rgba(237, 248, 233, 0.42);
+  font-weight: 900;
+  cursor: pointer;
+  isolation: isolate;
+}
+
+.cell::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(135deg, rgba(255,255,255,0.05), transparent 55%);
+  z-index: -1;
+}
+
+.cell.blocked {
+  background: #1f1614;
+  color: rgba(255, 61, 67, 0.55);
+}
+
+.cell.clue {
+  background: #192415;
+  color: var(--acid);
+}
+
+.cell.supply {
+  background: #1a211f;
+  color: var(--cyan);
+}
+
+.cell.horde {
+  background: #261015;
+  color: var(--blood);
+  box-shadow: inset 0 0 20px rgba(255, 61, 67, 0.18);
+}
+
+.cell.dad {
+  background: #2a2012;
+  color: var(--amber);
+}
+
+.cell.player {
+  border-color: rgba(149, 255, 56, 0.94);
+  color: #061007;
+  background: var(--acid);
+  box-shadow: 0 0 20px rgba(149, 255, 56, 0.42);
+}
+
+.cell.visited:not(.player) {
+  outline: 1px solid rgba(149, 255, 56, 0.18);
+}
+
+.below {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 158px;
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.log {
+  min-height: 158px;
+  max-height: 178px;
+  overflow: auto;
+  padding: 12px;
+  color: var(--muted);
+  line-height: 1.45;
+}
+
+.log p {
+  margin: 0 0 8px;
+}
+
+.log p:first-child {
+  color: var(--text);
+}
+
+.pad {
+  display: grid;
+  grid-template-columns: repeat(3, 46px);
+  grid-template-rows: repeat(3, 46px);
+  gap: 5px;
+  justify-content: end;
+}
+
+.pad button {
+  padding: 0;
+  font-size: 1.2rem;
+  font-weight: 900;
+}
+
+.pad .empty {
+  visibility: hidden;
+}
+
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  margin-top: 12px;
+  color: var(--muted);
+  font-size: 0.84rem;
+}
+
+.legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.key {
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+  display: inline-block;
+}
+
+.key.acid { background: var(--acid); }
+.key.red { background: var(--blood); }
+.key.blue { background: var(--cyan); }
+.key.gold { background: var(--amber); }
+
+@media (max-width: 880px) {
+  .game {
+    grid-template-columns: 1fr;
+  }
+
+  .brief {
+    position: static;
+  }
+}
+
+@media (max-width: 560px) {
+  :root { --tile: calc((100vw - 64px) / 9); }
+
+  .topbar {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .signal {
+    justify-content: space-between;
+    width: 100%;
+    font-size: 0.68rem;
+  }
+
+  .brand {
+    grid-template-columns: 58px 1fr;
+  }
+
+  .brand img {
+    width: 58px;
+    height: 58px;
+  }
+
+  .stage {
+    padding: 10px;
+  }
+
+  .hud,
+  .below {
+    grid-template-columns: 1fr;
+  }
+
+  .status {
+    text-align: left;
+  }
+
+  .pad {
+    justify-content: center;
+    grid-template-columns: repeat(3, 54px);
+    grid-template-rows: repeat(3, 54px);
+  }
+}
+</style>
+</head>
+<body>
+<main class="shell">
+  <nav class="topbar" aria-label="Page">
+    <a class="back" href="projects.html">Back to projects</a>
+    <div class="signal" id="signal">Emergency broadcast active</div>
+  </nav>
+
+  <section class="game" aria-label="Where Is My Dad game">
+    <aside class="brief">
+      <div class="brand">
+        <img src="branding/dirzombie/logo/dirzombie-logo.png" alt="DirZombie logo">
+        <div>
+          <div class="eyebrow">DirZombie rescue run</div>
+          <h1>Where Is My Dad?</h1>
+        </div>
+      </div>
+      <p class="copy">Dad's last radio ping came from inside the quarantine grid. Move block by block, collect supplies, read the clues, and reach him before panic or the horde drains you.</p>
+      <div class="stats" aria-live="polite">
+        <div class="stat"><span>Panic</span><strong id="panic">0%</strong></div>
+        <div class="stat"><span>Supplies</span><strong id="supplies">2</strong></div>
+        <div class="stat"><span>Clues</span><strong id="clues">0/4</strong></div>
+        <div class="stat"><span>Nightfall</span><strong id="nightfall">28</strong></div>
+      </div>
+      <button class="primary" id="start">Start new run</button>
+      <button class="secondary" id="scan">Use supply to scan</button>
+    </aside>
+
+    <section class="stage">
+      <div class="hud">
+        <div class="objective" id="objective">Find clues. Dad's shelter is hidden until you are close enough or brave enough to search.</div>
+        <div class="status" id="status">Awaiting run</div>
+      </div>
+      <div class="city-wrap">
+        <div class="city" id="city" role="grid" aria-label="Infected city map"></div>
+      </div>
+      <div class="below">
+        <div class="log" id="log" aria-live="polite"></div>
+        <div class="pad" aria-label="Move controls">
+          <span class="empty"></span><button data-move="0,-1" aria-label="Move north">N</button><span class="empty"></span>
+          <button data-move="-1,0" aria-label="Move west">W</button><button data-search="1" aria-label="Search current block">?</button><button data-move="1,0" aria-label="Move east">E</button>
+          <span class="empty"></span><button data-move="0,1" aria-label="Move south">S</button><span class="empty"></span>
+        </div>
+      </div>
+      <div class="legend" aria-label="Map legend">
+        <span><i class="key acid"></i>You</span>
+        <span><i class="key red"></i>Horde</span>
+        <span><i class="key blue"></i>Supply</span>
+        <span><i class="key gold"></i>Dad</span>
+      </div>
+    </section>
+  </section>
+</main>
+
+<script>
+(() => {
+  const size = 9;
+  const city = document.getElementById('city');
+  const log = document.getElementById('log');
+  const statusEl = document.getElementById('status');
+  const objective = document.getElementById('objective');
+  const signal = document.getElementById('signal');
+  const els = {
+    panic: document.getElementById('panic'),
+    supplies: document.getElementById('supplies'),
+    clues: document.getElementById('clues'),
+    nightfall: document.getElementById('nightfall')
+  };
+
+  const names = [
+    'gas mart', 'burnt overpass', 'clinic', 'pawn shop', 'motel', 'church',
+    'rail yard', 'school', 'substation', 'car wash', 'rooftop', 'market'
+  ];
+
+  let state;
+
+  function key(x, y) {
+    return `${x},${y}`;
+  }
+
+  function pick(open) {
+    return open.splice(Math.floor(Math.random() * open.length), 1)[0];
+  }
+
+  function makeRun() {
+    const open = [];
+    for (let y = 0; y < size; y += 1) {
+      for (let x = 0; x < size; x += 1) {
+        if (x !== 0 || y !== 8) open.push({ x, y });
+      }
+    }
+
+    const dad = pick(open);
+    const clues = new Set();
+    const supplies = new Set();
+    const hordes = new Set();
+    const blocked = new Set();
+
+    while (clues.size < 4) {
+      const p = pick(open);
+      clues.add(key(p.x, p.y));
+    }
+    while (supplies.size < 8) {
+      const p = pick(open);
+      supplies.add(key(p.x, p.y));
+    }
+    while (hordes.size < 11) {
+      const p = pick(open);
+      hordes.add(key(p.x, p.y));
+    }
+    while (blocked.size < 8) {
+      const p = pick(open);
+      blocked.add(key(p.x, p.y));
+    }
+
+    state = {
+      player: { x: 0, y: 8 },
+      dad,
+      clues,
+      supplies,
+      hordes,
+      blocked,
+      visited: new Set([key(0, 8)]),
+      foundClues: 0,
+      panic: 0,
+      supplyCount: 2,
+      steps: 0,
+      nightfall: 28,
+      over: false,
+      dadRevealed: false
+    };
+
+    log.innerHTML = '';
+    say('The radio coughs once: "Kiddo, if you hear this, follow the green marks."');
+    render();
+  }
+
+  function say(text) {
+    const p = document.createElement('p');
+    p.textContent = text;
+    log.prepend(p);
+  }
+
+  function distanceToDad() {
+    return Math.abs(state.player.x - state.dad.x) + Math.abs(state.player.y - state.dad.y);
+  }
+
+  function tileName() {
+    return names[(state.player.x * 7 + state.player.y * 3) % names.length];
+  }
+
+  function revealDadIfReady() {
+    if (state.foundClues >= 4 || distanceToDad() <= 1) {
+      state.dadRevealed = true;
+    }
+  }
+
+  function render() {
+    city.innerHTML = '';
+    revealDadIfReady();
+
+    for (let y = 0; y < size; y += 1) {
+      for (let x = 0; x < size; x += 1) {
+        const button = document.createElement('button');
+        const id = key(x, y);
+        button.className = 'cell';
+        button.type = 'button';
+        button.setAttribute('role', 'gridcell');
+        button.dataset.x = x;
+        button.dataset.y = y;
+
+        if (state.visited.has(id)) button.classList.add('visited');
+        if (state.blocked.has(id)) {
+          button.classList.add('blocked');
+          button.textContent = 'X';
+          button.setAttribute('aria-label', `Barricade at ${x}, ${y}`);
+        } else if (state.player.x === x && state.player.y === y) {
+          button.classList.add('player');
+          button.textContent = 'YOU';
+          button.setAttribute('aria-label', `You are at ${x}, ${y}`);
+        } else if (state.dadRevealed && state.dad.x === x && state.dad.y === y) {
+          button.classList.add('dad');
+          button.textContent = 'DAD';
+          button.setAttribute('aria-label', `Dad sighted at ${x}, ${y}`);
+        } else if (state.hordes.has(id) && state.visited.has(id)) {
+          button.classList.add('horde');
+          button.textContent = '!!!';
+          button.setAttribute('aria-label', `Known horde at ${x}, ${y}`);
+        } else if (state.supplies.has(id) && state.visited.has(id)) {
+          button.classList.add('supply');
+          button.textContent = '+';
+          button.setAttribute('aria-label', `Known supply at ${x}, ${y}`);
+        } else if (state.clues.has(id) && state.visited.has(id)) {
+          button.classList.add('clue');
+          button.textContent = '?';
+          button.setAttribute('aria-label', `Known clue at ${x}, ${y}`);
+        } else {
+          button.textContent = state.visited.has(id) ? '.' : '';
+          button.setAttribute('aria-label', `Unknown block ${x}, ${y}`);
+        }
+        city.appendChild(button);
+      }
+    }
+
+    els.panic.textContent = `${state.panic}%`;
+    els.supplies.textContent = state.supplyCount;
+    els.clues.textContent = `${state.foundClues}/4`;
+    els.nightfall.textContent = Math.max(0, state.nightfall);
+    statusEl.textContent = state.over ? 'Run ended' : 'Signal unstable';
+    signal.textContent = state.dadRevealed ? 'Dad signal acquired' : 'Emergency broadcast active';
+    objective.textContent = state.dadRevealed
+      ? 'Dad is on the board. Reach him before panic hits 100%.'
+      : `Current block: ${tileName()}. Search, scan, or move.`;
+  }
+
+  function checkTile() {
+    const id = key(state.player.x, state.player.y);
+    state.visited.add(id);
+
+    if (state.dad.x === state.player.x && state.dad.y === state.player.y) {
+      state.over = true;
+      statusEl.textContent = 'Dad found';
+      if (state.nightfall <= 0) {
+        say(`You found Dad in the ${tileName()}, but nightfall already changed him. Ending: Zombie Dad.`);
+      } else if (state.panic >= 80) {
+        say(`Dad is alive in the ${tileName()}, and you both limp out shaking. Ending: Blood Siren Rescue.`);
+      } else {
+        say(`Dad is alive in the ${tileName()}. Score: ${Math.max(1, 140 - state.steps - state.panic + state.nightfall)}. Ending: Clean Rescue.`);
+      }
+      render();
+      return;
+    }
+
+    if (state.hordes.has(id)) {
+      if (state.supplyCount > 0) {
+        state.supplyCount -= 1;
+        state.panic += 8;
+        say(`The horde hits the ${tileName()}. You burn one supply and slip out.`);
+      } else {
+        state.panic += 24;
+        say(`No supplies. You sprint through teeth and sirens. Panic spikes.`);
+      }
+      state.hordes.delete(id);
+    } else if (state.supplies.has(id)) {
+      state.supplyCount += 2;
+      state.supplies.delete(id);
+      say(`Found a med pouch and flares at the ${tileName()}. Supplies +2.`);
+    } else if (state.clues.has(id)) {
+      state.foundClues += 1;
+      state.clues.delete(id);
+      state.panic = Math.max(0, state.panic - 6);
+      say(`Clue ${state.foundClues}/4: Dad marked a route from the ${tileName()}.`);
+    } else {
+      state.panic += 3;
+      say(`Nothing but footprints at the ${tileName()}.`);
+    }
+
+    if (state.nightfall <= 0 && !state.dadRevealed) {
+      state.dadRevealed = true;
+      state.panic += 15;
+      say('Nightfall drops. Dad starts moving, and the whole grid hears him.');
+    }
+
+    if (state.panic >= 100) {
+      state.over = true;
+      state.panic = 100;
+      say(state.nightfall <= 0 ? 'The radio dissolves into static. Ending: Joined the Horde.' : 'The radio dissolves into static. Ending: Escaped Alone.');
+    }
+    render();
+  }
+
+  function move(dx, dy) {
+    if (state.over) return;
+    const x = state.player.x + dx;
+    const y = state.player.y + dy;
+    if (x < 0 || y < 0 || x >= size || y >= size) {
+      say('Fence line. No way through.');
+      return;
+    }
+    if (state.blocked.has(key(x, y))) {
+      say('A barricade blocks that street.');
+      return;
+    }
+    state.player = { x, y };
+    state.steps += 1;
+    state.nightfall -= 1;
+    checkTile();
+  }
+
+  function searchHere() {
+    if (state.over) return;
+    state.panic += 5;
+    state.nightfall -= 1;
+    if (distanceToDad() <= 2) {
+      state.dadRevealed = true;
+      say('The radio answers. Dad is close enough to triangulate.');
+    } else if (state.supplyCount > 0 && Math.random() > 0.52) {
+      state.supplyCount -= 1;
+      state.panic = Math.max(0, state.panic - 10);
+      say('You spend a flare and calm down long enough to hear the next street.');
+    } else {
+      say('You search too loudly. The city hears you back.');
+    }
+    if (state.panic >= 100) {
+      state.over = true;
+      state.panic = 100;
+      say('Panic floods the channel. Run failed.');
+    }
+    render();
+  }
+
+  function scan() {
+    if (state.over || state.supplyCount <= 0) {
+      say(state.over ? 'Start a new run first.' : 'No supplies left to scan with.');
+      return;
+    }
+    state.supplyCount -= 1;
+    state.panic += 2;
+    state.nightfall -= 1;
+    const hints = [];
+    const dirs = [
+      { dx: 0, dy: -1, name: 'north' },
+      { dx: 1, dy: 0, name: 'east' },
+      { dx: 0, dy: 1, name: 'south' },
+      { dx: -1, dy: 0, name: 'west' }
+    ];
+    dirs.forEach((d) => {
+      const x = state.player.x + d.dx;
+      const y = state.player.y + d.dy;
+      const id = key(x, y);
+      if (x < 0 || y < 0 || x >= size || y >= size) return;
+      if (state.hordes.has(id)) hints.push(`${d.name}: horde`);
+      if (state.clues.has(id)) hints.push(`${d.name}: clue`);
+      if (state.supplies.has(id)) hints.push(`${d.name}: supply`);
+      if (state.dad.x === x && state.dad.y === y) hints.push(`${d.name}: Dad`);
+    });
+    say(hints.length ? `Scanner pings ${hints.join(', ')}.` : 'Scanner pings empty streets.');
+    render();
+  }
+
+  document.getElementById('start').addEventListener('click', makeRun);
+  document.getElementById('scan').addEventListener('click', scan);
+  document.querySelector('.pad').addEventListener('click', (event) => {
+    const moveValue = event.target.dataset.move;
+    if (moveValue) {
+      const [dx, dy] = moveValue.split(',').map(Number);
+      move(dx, dy);
+    } else if (event.target.dataset.search) {
+      searchHere();
+    }
+  });
+  city.addEventListener('click', (event) => {
+    const cell = event.target.closest('.cell');
+    if (!cell || state.over) return;
+    const dx = Number(cell.dataset.x) - state.player.x;
+    const dy = Number(cell.dataset.y) - state.player.y;
+    if (Math.abs(dx) + Math.abs(dy) === 1) {
+      move(dx, dy);
+    } else {
+      searchHere();
+    }
+  });
+  window.addEventListener('keydown', (event) => {
+    const keys = {
+      ArrowUp: [0, -1],
+      ArrowRight: [1, 0],
+      ArrowDown: [0, 1],
+      ArrowLeft: [-1, 0],
+      w: [0, -1],
+      d: [1, 0],
+      s: [0, 1],
+      a: [-1, 0]
+    };
+    if (keys[event.key]) {
+      event.preventDefault();
+      move(keys[event.key][0], keys[event.key][1]);
+    } else if (event.key === ' ' || event.key === 'Enter') {
+      event.preventDefault();
+      searchHere();
+    }
+  });
+
+  makeRun();
+})();
+</script>
+</body>
+</html>
