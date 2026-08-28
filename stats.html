@@ -1882,7 +1882,8 @@ body {
   const API_HEADERS = { 'ngrok-skip-browser-warning': '1' };
   console.log('[Stats] API base = ' + API_BASE);
 
-  let currentRange = 'all';
+  // Restore persisted range, or default to 'all'
+  let currentRange = localStorage.getItem('vint:stats:range') || 'all';
   let cosmicBirth = null;
   let cosmicInterval = null;
 
@@ -2333,10 +2334,16 @@ body {
       document.querySelectorAll('.filter-pill').forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
       currentRange = btn.dataset.range;
+      localStorage.setItem('vint:stats:range', currentRange);
       fetchDashboard();
       fetchDeep();
     });
   });
+
+  // Restore active pill to match persisted range
+  document.querySelectorAll('.filter-pill').forEach(b => b.classList.remove('active'));
+  const activeBtn = document.querySelector(`.filter-pill[data-range="${currentRange}"]`);
+  if (activeBtn) activeBtn.classList.add('active');
 
   // ─── INIT ────────────────────────────────────────────────────────────────────
   fetchDashboard();
