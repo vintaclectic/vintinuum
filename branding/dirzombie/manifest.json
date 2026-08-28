@@ -1,0 +1,22 @@
+{
+  "name": "DirZombie Brand Pack",
+  "version": "1.0.0",
+  "root": "branding/dirzombie",
+  "logo": {
+    "mark": "logo/dirzombie-mark.svg",
+    "markPng": "logo/dirzombie-mark.png",
+    "wordmark": "logo/dirzombie-wordmark.svg",
+    "wordmarkPng": "logo/dirzombie-wordmark.png",
+    "lockup": "logo/dirzombie-lockup-horizontal.svg",
+    "lockupPng": "logo/dirzombie-lockup-horizontal.png",
+    "favicon": "favicon/favicon.svg",
+    "favicon32": "favicon/favicon-32.png",
+    "favicon192": "favicon/favicon-192.png",
+    "favicon512": "favicon/favicon-512.png"
+  },
+  "social": {
+    "profileSquare": "social/profile-square-1080.svg",
+    "profileSquarePng": "social/profile-square-1080.png"
+  },
+  "claim": "The directory that refuses to die."
+}
