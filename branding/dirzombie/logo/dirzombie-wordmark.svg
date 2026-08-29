@@ -1,0 +1,19 @@
+<svg width="1500" height="360" viewBox="0 0 1500 360" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="DirZombie wordmark">
+  <defs>
+    <linearGradient id="dz-word" x1="73" y1="72" x2="1422" y2="306" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#F4F0E3"/>
+      <stop offset="0.36" stop-color="#A7F05C"/>
+      <stop offset="0.68" stop-color="#8C57FF"/>
+      <stop offset="1" stop-color="#FF3B52"/>
+    </linearGradient>
+    <filter id="dz-shadow" x="-10%" y="-40%" width="120%" height="180%">
+      <feDropShadow dx="0" dy="18" stdDeviation="20" flood-color="#000000" flood-opacity="0.65"/>
+    </filter>
+  </defs>
+  <rect width="1500" height="360" rx="42" fill="#050607"/>
+  <path d="M63 283C180 250 285 240 378 252C518 270 596 321 744 315C870 310 1000 261 1438 211" stroke="#8C57FF" stroke-width="10" stroke-linecap="round" opacity="0.35"/>
+  <text x="76" y="230" fill="url(#dz-word)" filter="url(#dz-shadow)" font-family="Impact, Haettenschweiler, 'Arial Black', sans-serif" font-size="172" letter-spacing="7">DIRZOMBIE</text>
+  <path d="M403 87H618L443 235H631" stroke="#050607" stroke-width="22" stroke-linecap="square" opacity="0.92"/>
+  <path d="M76 268H1432" stroke="#A7F05C" stroke-width="8" stroke-linecap="round"/>
+  <path d="M1000 268H1432" stroke="#FF3B52" stroke-width="8" stroke-linecap="round"/>
+</svg>
