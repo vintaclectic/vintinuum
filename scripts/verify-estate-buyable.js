@@ -133,6 +133,23 @@ const TIERS = [
     await page.goto(`${base}/upgrade.html`, { waitUntil: 'networkidle0', timeout: 30000 });
     await page.waitForSelector('.tier--estate', { timeout: 10000 });
 
+    const closeLane = await page.evaluate(() => {
+      const lane = document.getElementById('estateCloseLane');
+      const cta = document.querySelector('[data-estate-now]');
+      return {
+        laneText: lane ? lane.textContent : '',
+        ctaText: cta ? cta.textContent : '',
+      };
+    });
+    checks++;
+    if (!/\$499/.test(closeLane.laneText) || !/Estate/i.test(closeLane.laneText)) {
+      fail('CLOSE-LANE', 'the revenue close lane must lead with the $499 Estate offer');
+    }
+    checks++;
+    if (!/Estate Checkout/i.test(closeLane.ctaText)) {
+      fail('CLOSE-CTA', 'the close-lane CTA must send visitors straight to Estate checkout');
+    }
+
     // Guard the guard: if the gate ever stops honoring vwg_dismissed, fail loudly
     // here rather than silently reporting green on an unclicked toggle.
     const blocked = await page.evaluate(() => {
@@ -244,6 +261,49 @@ const TIERS = [
         }
       }
     }
+
+    let estateCheckoutBody = null;
+    const auto = await browser.newPage();
+    await auto.setViewport({ width: 1280, height: 900 });
+    await auto.setRequestInterception(true);
+    auto.on('request', req => {
+      const url = req.url();
+      const json = body => req.respond({
+        status: 200,
+        contentType: 'application/json',
+        headers: { 'Access-Control-Allow-Origin': '*' },
+        body: JSON.stringify(body),
+      });
+      if (url.includes('/api/tiers'))          return json({ ok: true, tiers: TIERS, gates_live: true });
+      if (url.includes('/api/billing/status')) return json({ ok: true, enabled: true, mode: 'live', gates_live: true });
+      if (url.includes('/api/me') || url.includes('/api/tier')) return json({ ok: true, tier: 'free' });
+      if (url.includes('/api/billing/checkout')) {
+        estateCheckoutBody = req.postData();
+        return json({ ok: true, url: `${base}/paid.html` });
+      }
+      if (url.includes('/api/')) return json({ ok: true });
+      return req.continue();
+    });
+    await auto.evaluateOnNewDocument(() => {
+      try { localStorage.setItem('vwg_dismissed', String(Date.now())); } catch (_) {}
+      try { localStorage.setItem('vwg_seen', '1'); } catch (_) {}
+    });
+    await auto.goto(`${base}/upgrade.html?tier=estate&interval=yearly`, { waitUntil: 'networkidle0', timeout: 30000 });
+    await auto.waitForFunction(() => location.href.includes('/paid.html'), { timeout: 10000 });
+    checks++;
+    if (!estateCheckoutBody) {
+      fail('ESTATE-AUTO-CHECKOUT', 'the Estate direct-link route did not open checkout');
+    } else {
+      const parsed = JSON.parse(estateCheckoutBody);
+      checks++;
+      if (parsed.tier !== 'estate') fail('ESTATE-AUTO-TIER', `Estate direct-link checkout sent tier="${parsed.tier}"`);
+      checks++;
+      if (parsed.interval !== 'monthly') {
+        fail('ESTATE-AUTO-INTERVAL',
+          `Estate direct-link checkout sent interval="${parsed.interval}" from a yearly URL; one-time Estate must stay monthly`);
+      }
+    }
+    await auto.close();
   } finally {
     await browser.close();
     srv.close();

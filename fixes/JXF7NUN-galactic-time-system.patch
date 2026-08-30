@@ -1,0 +1,243 @@
+*** Begin Patch
+*** Update File: /home/vinta/.claude/council-loop/bin/vintask-gui.html
+@@
+   .upd-empty{padding:44px 20px;text-align:center;color:var(--dim);font-size:13px;line-height:1.7}
+   .upd-empty .ue-glyph{font-size:30px;display:block;margin-bottom:10px;opacity:.5}
+   .upd-empty b{color:var(--ink2)}
+   @media(max-width:560px){
+@@
+     .upd-csub{flex:1 1 100%}
+   }
++
++  /* ══ GALACTIC TIME — pleasure view for task/thought connections ═════════
++     A peer tab, not an overlay: the operational board stays untouched while
++     Vinta gets a playful star map of the same task data. The SVG line layer
++     owns its box beneath the control bands, and every planet is a normal grid
++     cell, so labels and controls cannot collide at mobile widths. */
++  .galaxy-panel[hidden]{display:none!important}
++  .galaxy-panel{margin-top:var(--sp4);display:flex;flex-direction:column;gap:12px}
++  .galaxy-head{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;flex-wrap:wrap}
++  .galaxy-title{margin:0;font-size:16px;font-weight:900;color:var(--ink);line-height:1.25}
++  .galaxy-title span{color:#b6fff2;text-shadow:0 0 16px rgba(20,184,166,.36)}
++  .galaxy-sub{margin:4px 0 0;font-size:11.5px;color:var(--dim);line-height:1.45;max-width:62ch}
++  .galaxy-stats{display:flex;gap:7px;flex-wrap:wrap;justify-content:flex-end}
++  .galaxy-stat{border:1px solid rgba(20,184,166,.25);background:rgba(20,184,166,.07);
++    border-radius:7px;padding:6px 9px;min-height:34px;display:flex;align-items:baseline;gap:6px}
++  .galaxy-stat b{color:#b6fff2;font-variant-numeric:tabular-nums}
++  .galaxy-stat span{font-size:10.5px;color:var(--dim);text-transform:uppercase;letter-spacing:.05em}
++  .galaxy-controls{display:flex;gap:7px;flex-wrap:wrap;align-items:center}
++  .galaxy-chip{background:var(--inset);border:1px solid var(--line);color:var(--dim);
++    border-radius:999px;padding:7px 12px;font:inherit;font-size:11.5px;font-weight:800;
++    min-height:34px;cursor:pointer;transition:.15s;display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
++  .galaxy-chip:hover{border-color:rgba(20,184,166,.48);color:var(--ink2)}
++  .galaxy-chip.on{background:linear-gradient(160deg,rgba(20,184,166,.28),rgba(139,92,246,.20));
++    border-color:rgba(182,255,242,.48);color:#dffdf8}
++  .galaxy-stage{position:relative;min-height:560px;border:1px solid rgba(182,255,242,.16);
++    border-radius:var(--radius-sm);overflow:hidden;background:
++      radial-gradient(circle at 18% 22%,rgba(139,92,246,.18),transparent 28%),
++      radial-gradient(circle at 78% 30%,rgba(20,184,166,.13),transparent 25%),
++      radial-gradient(circle at 52% 78%,rgba(245,166,35,.10),transparent 24%),
++      linear-gradient(180deg,#070814,#0b080f 62%,#07060a)}
++  .galaxy-stage::before{content:'';position:absolute;inset:0;pointer-events:none;opacity:.55;
++    background-image:
++      radial-gradient(circle,#fff 0 1px,transparent 1.6px),
++      radial-gradient(circle,#b6fff2 0 1px,transparent 1.5px),
++      radial-gradient(circle,#ffd36a 0 1px,transparent 1.4px);
++    background-size:67px 67px,113px 113px,157px 157px;background-position:6px 9px,22px 31px,44px 13px}
++  .galaxy-core{position:absolute;left:50%;top:50%;width:118px;height:118px;transform:translate(-50%,-50%);
++    border-radius:50%;display:grid;place-items:center;text-align:center;z-index:2;color:#fff7cc;font-size:10px;
++    letter-spacing:.08em;text-transform:uppercase;font-weight:900;background:
++      radial-gradient(circle at 35% 32%,#fffbe7 0 8%,#ffd700 18%,#f5a623 34%,rgba(245,166,35,.18) 58%,transparent 70%);
++    box-shadow:0 0 42px rgba(245,166,35,.36),0 0 88px rgba(20,184,166,.18)}
++  .galaxy-core b{display:block;font-size:24px;letter-spacing:0;color:#0d0b08;font-variant-numeric:tabular-nums}
++  .galaxy-lines{position:absolute;inset:0;width:100%;height:100%;z-index:1;pointer-events:none}
++  .galaxy-lines line{stroke:rgba(182,255,242,.28);stroke-width:1.2;vector-effect:non-scaling-stroke}
++  .galaxy-orbit{position:absolute;left:50%;top:50%;border:1px solid rgba(182,255,242,.12);
++    border-radius:50%;transform:translate(-50%,-50%);pointer-events:none}
++  .galaxy-system{position:absolute;inset:18px;z-index:3}
++  .planet{position:absolute;width:120px;min-height:86px;transform:translate(-50%,-50%);
++    border:1px solid rgba(255,255,255,.12);border-radius:9px;background:rgba(10,12,24,.76);
++    backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);padding:10px;color:var(--ink);
++    display:flex;flex-direction:column;gap:6px;cursor:pointer;text-align:left;font:inherit;
++    box-shadow:0 10px 32px -24px #000;transition:border-color .16s,transform .16s,box-shadow .16s}
++  .planet:hover{border-color:rgba(182,255,242,.52);transform:translate(-50%,-50%) translateY(-2px);
++    box-shadow:0 14px 38px -24px rgba(182,255,242,.55)}
++  .planet:focus-visible{outline:2px solid #b6fff2;outline-offset:3px}
++  .planet::before{content:'';width:22px;height:22px;border-radius:50%;box-shadow:0 0 18px currentColor;background:currentColor}
++  .planet.s-todo{color:#b6fff2}.planet.s-claimed,.planet.s-doing{color:#ffd700}
++  .planet.s-needs-human,.planet.s-blocked{color:#f97373}.planet.s-paused{color:#c4b5fd}
++  .planet.s-done{color:#34d399}.planet.s-cancelled{color:#64748b}
++  .planet-name{font-size:11.5px;font-weight:850;line-height:1.25;color:var(--ink);
++    display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
++  .planet-meta{display:flex;gap:5px;flex-wrap:wrap;font-size:9.5px;color:var(--dim);font-variant-numeric:tabular-nums}
++  .planet-meta span{background:rgba(255,255,255,.06);border-radius:4px;padding:2px 5px;max-width:100%;overflow-wrap:anywhere}
++  .galaxy-empty{position:absolute;inset:0;display:grid;place-items:center;text-align:center;color:var(--dim);
++    padding:28px;font-size:13px;line-height:1.6}
++  @media(max-width:700px){
++    .galaxy-stage{min-height:660px}
++    .galaxy-system{position:relative;inset:auto;display:grid;grid-template-columns:1fr;gap:10px;padding:14px}
++    .galaxy-core,.galaxy-orbit,.galaxy-lines{display:none}
++    .planet{position:static;width:100%;min-height:0;transform:none}
++    .planet:hover{transform:none}
++  }
+ 
+   .view-tabs .vt .dot{margin:0}
+   .board-ctrls{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+@@
+           <!-- LATEST UPDATES / THE SHIPS LOG (task 4Q6FFU7) — what actually
+                shipped, across every project, without opening a single card. -->
+           <button type="button" class="vt" id="vtUpdates" data-view="updates">🚢 Latest Updates <span class="vt-badge" id="vtUpdBadge" hidden></span></button>
++          <button type="button" class="vt" id="vtGalaxy" data-view="galaxy">✦ Galactic Time</button>
+         </div>
+@@
+       <div class="upd-panel" id="updPanel" hidden>
+@@
+         <div class="upd-projects" id="updProjects"></div>
+       </div>
++      <div class="galaxy-panel" id="galaxyPanel" hidden>
++        <div class="galaxy-head">
++          <div>
++            <h2 class="galaxy-title">Orb Dwelling <span>Galactic Time</span></h2>
++            <p class="galaxy-sub">Tasks become planetary dwellings; shared project, agent, and status threads become visible constellations.</p>
++          </div>
++          <div class="galaxy-stats" id="galaxyStats"></div>
++        </div>
++        <div class="galaxy-controls" id="galaxyControls">
++          <button type="button" class="galaxy-chip on" data-galaxy="active">Active constellation</button>
++          <button type="button" class="galaxy-chip" data-galaxy="all">All bodies</button>
++          <button type="button" class="galaxy-chip" data-galaxy="review">Decision stars</button>
++          <button type="button" class="galaxy-chip" data-galaxy="done">Completed planets</button>
++        </div>
++        <div class="galaxy-stage" id="galaxyStage" aria-label="Galactic task time map">
++          <svg class="galaxy-lines" id="galaxyLines" viewBox="0 0 1000 560" preserveAspectRatio="none" aria-hidden="true"></svg>
++          <div class="galaxy-orbit" style="width:28%;height:50%"></div>
++          <div class="galaxy-orbit" style="width:52%;height:76%"></div>
++          <div class="galaxy-orbit" style="width:78%;height:96%"></div>
++          <div class="galaxy-core" id="galaxyCore"><span><b>0</b>tasks</span></div>
++          <div class="galaxy-system" id="galaxySystem"></div>
++        </div>
++      </div>
+       <div class="tasklist" id="list" style="margin-top:var(--sp4)"><div class="empty"><div class="glyph">◌</div>Loading…</div></div>
+@@
+-let VIEW = 'active'; // 'active' | 'archive'
++let VIEW = 'active'; // 'active' | 'archive' | 'spend' | 'roster' | 'library' | 'updates' | 'galaxy'
++let TASK_CACHE = [];
++let GALAXY_MODE = 'active';
+ 
+ // view toggle (Active / Archive)
+ document.querySelectorAll('.view-tabs .vt').forEach(b=>{
+@@
+     const libOn   = VIEW==='library';
+     const updOn   = VIEW==='updates';
++    const galOn   = VIEW==='galaxy';
+     const s=document.getElementById('archSearch'); if(s) s.hidden = VIEW!=='archive';
+     const f=document.getElementById('findBar'); if(f) f.hidden = VIEW!=='active'; // active-board find only
+@@
+     const lp=document.getElementById('libPanel'); if(lp) lp.hidden = !libOn;
+@@
+     const up=document.getElementById('updPanel'); if(up) up.hidden = !updOn;
+-    const lst=document.getElementById('list'); if(lst) lst.hidden = spendOn;
+-    const cnt=document.getElementById('counts'); if(cnt) cnt.hidden = spendOn || libOn || updOn;
++    const gp=document.getElementById('galaxyPanel'); if(gp) gp.hidden = !galOn;
++    const lst=document.getElementById('list'); if(lst) lst.hidden = spendOn || galOn;
++    const cnt=document.getElementById('counts'); if(cnt) cnt.hidden = spendOn || libOn || updOn || galOn;
+     if(spendOn){ loadSpend(); }
+     else if(VIEW==='roster'){ loadRoster(); }
+     else if(libOn){ loadLibrary(); setTimeout(()=>{ const q=document.getElementById('libQ'); if(q) q.focus(); },60); }
+     else if(updOn){ loadUpdates(); setTimeout(()=>{ const q=document.getElementById('updQ'); if(q) q.focus(); },60); }
++    else if(galOn){ renderGalaxy(TASK_CACHE); }
+     else { loadTasks(); }
+   });
+ });
+@@
+ async function loadTasks(){
+@@
+   const {tasks} = await (await fetch('/api/tasks')).json();
++  TASK_CACHE = Array.isArray(tasks) ? tasks : [];
+@@
+   renderActLive(tasks);
++  if(VIEW==='galaxy'){ renderGalaxy(tasks); return; }
+@@
+ }
++
++function galaxyPool(tasks){
++  const list = Array.isArray(tasks) ? tasks.slice() : [];
++  if(GALAXY_MODE==='all') return list.filter(t=>t.status!=='cancelled').slice(0,42);
++  if(GALAXY_MODE==='review') return list.filter(t=>['needs-human','blocked'].includes(t.status) && !t.archived).slice(0,42);
++  if(GALAXY_MODE==='done') return list.filter(t=>t.status==='done').sort((a,b)=>(b.updated_at||0)-(a.updated_at||0)).slice(0,42);
++  return list.filter(t=>!t.archived && !['cancelled','done'].includes(t.status)).slice(0,42);
++}
++function galaxyLinkReason(a,b){
++  if(a.project && b.project && a.project===b.project) return 'project';
++  const aa=a.chosen_agent||a.assignee, bb=b.chosen_agent||b.assignee;
++  if(aa && bb && aa===bb) return 'agent';
++  if(a.status && a.status===b.status) return 'status';
++  return '';
++}
++function renderGalaxy(tasks){
++  const sys=document.getElementById('galaxySystem'), lines=document.getElementById('galaxyLines');
++  if(!sys || !lines) return;
++  const pool=galaxyPool(tasks);
++  const open=(tasks||[]).filter(t=>!t.archived && !['done','cancelled'].includes(t.status)).length;
++  const done=(tasks||[]).filter(t=>t.status==='done').length;
++  const review=(tasks||[]).filter(t=>['needs-human','blocked'].includes(t.status) && !t.archived).length;
++  const stats=document.getElementById('galaxyStats');
++  if(stats) stats.innerHTML=[
++    `<div class="galaxy-stat"><b>${open}</b><span>open</span></div>`,
++    `<div class="galaxy-stat"><b>${review}</b><span>decision stars</span></div>`,
++    `<div class="galaxy-stat"><b>${done}</b><span>completed</span></div>`
++  ].join('');
++  const core=document.getElementById('galaxyCore');
++  if(core) core.innerHTML=`<span><b>${pool.length}</b>bodies</span>`;
++  if(!pool.length){
++    lines.innerHTML='';
++    sys.innerHTML='<div class="galaxy-empty"><div><b>No bodies in this constellation.</b><br>Switch modes or queue work to seed the star field.</div></div>';
++    return;
++  }
++  const w=1000,h=560,cx=500,cy=280;
++  const placed=pool.map((t,i)=>{
++    const orbit = 120 + (i%3)*92;
++    const theta = (i*137.508 + ((t.priority||3)*19)) * Math.PI/180;
++    const x = cx + Math.cos(theta)*orbit*(1 + ((i%5)-2)*.025);
++    const y = cy + Math.sin(theta)*orbit*.78;
++    return {t,x:Math.max(80,Math.min(w-80,x)),y:Math.max(70,Math.min(h-70,y))};
++  });
++  const edge=[];
++  for(let i=0;i<placed.length;i++){
++    for(let j=i+1;j<placed.length && edge.length<70;j++){
++      const why=galaxyLinkReason(placed[i].t, placed[j].t);
++      if(why) edge.push(`<line x1="${placed[i].x.toFixed(1)}" y1="${placed[i].y.toFixed(1)}" x2="${placed[j].x.toFixed(1)}" y2="${placed[j].y.toFixed(1)}" data-kind="${why}"></line>`);
++    }
++  }
++  lines.innerHTML=edge.join('');
++  sys.innerHTML=placed.map(p=>{
++    const t=p.t, age=ago(t.updated_at||t.created_at||Date.now());
++    const agent=t.chosen_agent||t.assignee||'council';
++    return `<button type="button" class="planet s-${esc(t.status||'todo')}" data-open="${esc(t.id)}"
++        style="left:${(p.x/w*100).toFixed(2)}%;top:${(p.y/h*100).toFixed(2)}%"
++        title="${esc(t.title||t.id)} — open task">
++      <span class="planet-name">${esc(t.title||t.id)}</span>
++      <span class="planet-meta"><span>${esc(t.id)}</span><span>${esc(t.status||'todo')}</span><span>${esc(agent)}</span><span>${esc(age)}</span></span>
++    </button>`;
++  }).join('');
++}
++
++const galaxyControls = document.getElementById('galaxyControls');
++if(galaxyControls) galaxyControls.addEventListener('click', e=>{
++  const b=e.target.closest('.galaxy-chip[data-galaxy]');
++  if(!b) return;
++  GALAXY_MODE=b.dataset.galaxy||'active';
++  galaxyControls.querySelectorAll('.galaxy-chip').forEach(x=>x.classList.toggle('on', x===b));
++  renderGalaxy(TASK_CACHE);
++});
++const galaxyStage = document.getElementById('galaxyStage');
++if(galaxyStage) galaxyStage.addEventListener('click', e=>{
++  const b=e.target.closest('.planet[data-open]');
++  if(b) openDrawer(b.dataset.open);
++});
++if(galaxyStage) galaxyStage.addEventListener('keydown', e=>{
++  if((e.key==='Enter'||e.key===' ') && e.target.closest('.planet[data-open]')){
++    e.preventDefault(); openDrawer(e.target.closest('.planet[data-open]').dataset.open);
++  }
++});
+*** End Patch

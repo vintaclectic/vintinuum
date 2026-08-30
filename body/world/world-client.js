@@ -797,44 +797,386 @@
     }
   }
 
+  /* ══ THE FORGE — every one of the fifteen kinds, made visible ══════════════
+     (AETHERHOLD 2026-08-25, task BUTHM4K.)
+
+     THE BUG THIS REPLACES. This function handled five kinds — hearth, wall,
+     floor, light, shelf — and ended `else { return; }`. The build palette
+     offers FIFTEEN. So pillar, fence, arch, door, window, lantern, planter,
+     stair, roof, banner and beacon were accepted by the server, written to the
+     database, charged to the player's strand, counted toward their standing —
+     and then rendered as NOTHING. Eleven of fifteen pieces cost real material
+     and produced empty air. A player who paid four strand for a roof and saw
+     their clearing not change has no way to read that as anything but broken,
+     and they are right.
+
+     WHY A TABLE AND NOT A LONGER IF-CHAIN. Fifteen branches of `else if` is how
+     the first five got written and how the other ten got forgotten — there was
+     no place a missing kind could announce itself. Keyed builders make the gap
+     structural: FORGE's keys ARE the palette, so a kind that exists server-side
+     with no builder is a visible hole in one object rather than a silent
+     fall-through at the bottom of a chain. And the fallback below is no longer
+     `return` — an unknown kind now renders a plain marker cube, because a piece
+     the player paid for must ALWAYS produce something they can see. Silence is
+     the one response this function is never again allowed to give.
+
+     ── THE ART DIRECTION (held from the existing five) ────────────────────────
+     Everything is MeshStandardMaterial with a warm emissive core against the
+     cool structural blues already in the world: structure reads slate-blue
+     (0x6fb8e0 / 0x3a4a5a) with a dim cold emissive, and anything that gives
+     LIGHT reads amber (0xffd479 / 0xff9a3d) with a real PointLight so it
+     genuinely warms the ground near it. That contrast is the whole readable
+     language of a clearing at night: blue is what holds a shape, amber is what
+     makes it a home.
+
+     ── NO-COLLISION, IN THREE DIMENSIONS ─────────────────────────────────────
+     The no-collision law is a 2D UI law, but the same discipline is what keeps
+     a built clearing legible instead of a pile. Every piece is authored inside a
+     ONE-UNIT FOOTPRINT (the placement grid) and every piece declares its own
+     vertical band, so two pieces at the same spot stack rather than intersect:
+        floor/planter  y 0.00–0.30   (ground plane)
+        fence/shelf    y 0.00–0.90   (waist)
+        wall/door/
+        window/pillar  y 0.00–1.30   (standing)
+        stair          y 0.00–0.90   (a climb, not a wall)
+        arch           y 0.00–1.90   (you walk under it)
+        roof           y 1.30–1.90   (sits exactly on top of a wall)
+        banner         y 0.60–1.90   (hangs above the waist)
+        lantern/light  y 0.00–1.20   (post-height)
+        beacon         y 0.00–3.20   (the one piece that reaches)
+     Roof begins at 1.3 — precisely where wall ends — so a roof placed over a
+     wall meets it rather than clipping through it. Nothing here is authored
+     wider than 1.0 on x/z except the hearth disc (which is the plot marker and
+     is deliberately underneath everything) and the beacon's ground ring, which
+     is flat and drawn at y 0.02 with depthWrite off so it can never z-fight a
+     floor plate placed on the same square.
+
+     ── PERFORMANCE ───────────────────────────────────────────────────────────
+     Only the four light-bearing kinds carry a real PointLight (light, lantern,
+     beacon, hearth-core), and each is short-range. A clearing is capped at 2000
+     structures server-side; a plot full of walls therefore costs zero extra
+     lights. Geometry is low-poly on purpose (8–16 radial segments) because this
+     has to hold 60fps on a phone. */
   const _structMeshes = new Map(); // id → mesh
+
+  // the palette's two families, named once so every builder reads the same
+  const _MAT = {
+    // structure — cool, solid, holds a shape
+    stone:  { color: 0x6fb8e0, emissive: 0x1a3a5a, emissiveIntensity: 0.4 },
+    deck:   { color: 0x3a4a5a, emissive: 0x0a2a4a, emissiveIntensity: 0.3 },
+    timber: { color: 0x8a7a5a, emissive: 0x2a1a0a, emissiveIntensity: 0.3 },
+    iron:   { color: 0x445566, emissive: 0x0a1520, emissiveIntensity: 0.2 },
+    // light — warm, alive, gives back
+    glow:   { color: 0xfff0c0, emissive: 0xffd479, emissiveIntensity: 2.0 },
+    core:   { color: 0xffd479, emissive: 0xff9a3d, emissiveIntensity: 1.2 },
+    leaf:   { color: 0x9ad0c2, emissive: 0x1a4a3a, emissiveIntensity: 0.5 },
+    cloth:  { color: 0xff8fb0, emissive: 0x5a1a2a, emissiveIntensity: 0.6 },
+  };
+
+  function _m(THREE, key, extra) {
+    return new THREE.MeshStandardMaterial(Object.assign({}, _MAT[key] || _MAT.stone, extra || {}));
+  }
+  function _box(THREE, w, h, d, key, extra) {
+    return new THREE.Mesh(new THREE.BoxGeometry(w, h, d), _m(THREE, key, extra));
+  }
+  function _cyl(THREE, rt, rb, h, seg, key, extra) {
+    return new THREE.Mesh(new THREE.CylinderGeometry(rt, rb, h, seg || 10), _m(THREE, key, extra));
+  }
+  // a real, cheap, short-range light — the ONLY thing that makes an amber piece
+  // read as a light source rather than a yellow shape.
+  function _lamp(THREE, y, intensity, dist, color) {
+    const pl = new THREE.PointLight(color || 0xffd479, intensity, dist);
+    pl.position.y = y;
+    return pl;
+  }
+
+  const FORGE = {
+    /* the claimed plot itself — a soft disc and a warm core. Deliberately the
+       flattest thing in the world (0.05 tall) so every piece placed on the plot
+       sits ON it rather than fighting it for the same pixels. */
+    hearth(THREE) {
+      const g = new THREE.Group();
+      const disc = _cyl(THREE, 2, 2, 0.05, 28, 'deck', { emissive: 0x1a4a6a, emissiveIntensity: 0.5, transparent: true, opacity: 0.5 });
+      const core = new THREE.Mesh(new THREE.IcosahedronGeometry(0.28, 1), _m(THREE, 'core'));
+      core.position.y = 0.4;
+      g.add(disc, core, _lamp(THREE, 0.4, 0.7, 5));
+      return g;
+    },
+
+    /* ── STRUCTURE (the pieces that hold a shape) ─────────────────────────── */
+    wall(THREE) {
+      const m = _box(THREE, 1, 1.2, 0.12, 'stone', { transparent: true, opacity: 0.85 });
+      m.position.y = 0.6; return m;
+    },
+    floor(THREE) {
+      const m = _box(THREE, 1, 0.08, 1, 'deck');
+      m.position.y = 0.04; return m;
+    },
+    shelf(THREE) {
+      // a plank pair on two brackets, rather than one slab — reads as a shelf
+      // from across the clearing, which a featureless box never did.
+      const g = new THREE.Group();
+      const top = _box(THREE, 1, 0.07, 0.26, 'timber'); top.position.y = 0.86;
+      const mid = _box(THREE, 1, 0.07, 0.26, 'timber'); mid.position.y = 0.52;
+      const l = _box(THREE, 0.06, 0.9, 0.24, 'iron'); l.position.set(-0.46, 0.45, 0);
+      const r = _box(THREE, 0.06, 0.9, 0.24, 'iron'); r.position.set(0.46, 0.45, 0);
+      g.add(top, mid, l, r); return g;
+    },
+    pillar(THREE) {
+      // a tapered column with a cap and a base — the silhouette that says
+      // "this is load-bearing" at a glance.
+      const g = new THREE.Group();
+      const base = _cyl(THREE, 0.20, 0.24, 0.12, 12, 'deck'); base.position.y = 0.06;
+      const shaft = _cyl(THREE, 0.13, 0.17, 1.05, 12, 'stone'); shaft.position.y = 0.64;
+      const cap = _cyl(THREE, 0.22, 0.18, 0.13, 12, 'deck'); cap.position.y = 1.23;
+      g.add(base, shaft, cap); return g;
+    },
+    fence(THREE) {
+      // two rails on three posts. Waist height, so it divides ground without
+      // ever blocking sight — which is what makes a fence read as a boundary
+      // rather than a short wall.
+      const g = new THREE.Group();
+      for (const x of [-0.46, 0, 0.46]) {
+        const post = _box(THREE, 0.08, 0.82, 0.08, 'timber');
+        post.position.set(x, 0.41, 0); g.add(post);
+      }
+      for (const y of [0.36, 0.68]) {
+        const rail = _box(THREE, 1, 0.06, 0.05, 'timber');
+        rail.position.y = y; g.add(rail);
+      }
+      return g;
+    },
+    door(THREE) {
+      // a frame with a leaf swung slightly ajar, plus a warm handle. The ajar
+      // angle is the whole read: a closed rectangle is a wall, a door is a
+      // threshold, and 14 degrees is enough to say so from any angle.
+      const g = new THREE.Group();
+      const jl = _box(THREE, 0.09, 1.3, 0.16, 'timber'); jl.position.set(-0.455, 0.65, 0);
+      const jr = _box(THREE, 0.09, 1.3, 0.16, 'timber'); jr.position.set(0.455, 0.65, 0);
+      const head = _box(THREE, 1, 0.1, 0.16, 'timber'); head.position.y = 1.25;
+      const leaf = _box(THREE, 0.8, 1.14, 0.07, 'stone', { transparent: true, opacity: 0.9 });
+      // hinge at the left jamb: pivot the group, not the mesh, so the leaf
+      // swings from its edge like a real door instead of spinning on its middle
+      const hinge = new THREE.Group();
+      hinge.position.set(-0.41, 0.62, 0);
+      leaf.position.x = 0.4;
+      hinge.add(leaf); hinge.rotation.y = -0.25;
+      const knob = new THREE.Mesh(new THREE.SphereGeometry(0.05, 8, 8), _m(THREE, 'core'));
+      knob.position.set(0.72, 0, 0.07); hinge.add(knob);
+      g.add(jl, jr, head, hinge); return g;
+    },
+    window(THREE) {
+      // a wall with a hole in it, built as four solid segments around a glazed
+      // pane. Building it as a frame (rather than a transparent box) is what
+      // lets you actually SEE through it, which is the entire point of a window.
+      const g = new THREE.Group();
+      const sill = _box(THREE, 1, 0.42, 0.12, 'stone'); sill.position.y = 0.21;
+      const head = _box(THREE, 1, 0.30, 0.12, 'stone'); head.position.y = 1.15;
+      const lp = _box(THREE, 0.20, 0.58, 0.12, 'stone'); lp.position.set(-0.40, 0.71, 0);
+      const rp = _box(THREE, 0.20, 0.58, 0.12, 'stone'); rp.position.set(0.40, 0.71, 0);
+      const pane = _box(THREE, 0.60, 0.58, 0.03, 'glow', {
+        transparent: true, opacity: 0.22, emissiveIntensity: 0.55,
+      });
+      pane.position.y = 0.71;
+      const mullion = _box(THREE, 0.04, 0.58, 0.05, 'iron'); mullion.position.y = 0.71;
+      g.add(sill, head, lp, rp, pane, mullion); return g;
+    },
+    arch(THREE) {
+      // two legs and a real curved span (a torus half), tall enough to walk
+      // under. This is the piece that turns a row of walls into a doorway in a
+      // building, so its clearance is the load-bearing detail: 1.9 at the crown.
+      const g = new THREE.Group();
+      const l = _box(THREE, 0.16, 1.28, 0.18, 'stone'); l.position.set(-0.42, 0.64, 0);
+      const r = _box(THREE, 0.16, 1.28, 0.18, 'stone'); r.position.set(0.42, 0.64, 0);
+      const span = new THREE.Mesh(
+        new THREE.TorusGeometry(0.42, 0.085, 8, 20, Math.PI), _m(THREE, 'stone'));
+      span.position.y = 1.28;
+      const key = new THREE.Mesh(new THREE.OctahedronGeometry(0.10, 0), _m(THREE, 'core'));
+      key.position.y = 1.76;
+      g.add(l, r, span, key, _lamp(THREE, 1.76, 0.35, 2.4));
+      return g;
+    },
+    stair(THREE) {
+      // four real treads climbing one unit. Waist-high at the top so it reads as
+      // a way UP rather than a wall — and each tread is inset from the last so
+      // the silhouette is unmistakably a stair from any viewing angle.
+      const g = new THREE.Group();
+      for (let i = 0; i < 4; i++) {
+        const h = 0.2 * (i + 1);
+        const t = _box(THREE, 1, h, 0.25, 'deck');
+        t.position.set(0, h / 2, 0.375 - i * 0.25);
+        g.add(t);
+      }
+      return g;
+    },
+    roof(THREE) {
+      // a pitched roof whose EAVES START AT 1.3 — exactly where `wall` ends —
+      // so a roof placed above a wall meets it instead of clipping through it.
+      // That single number is what makes a built room look built.
+      const g = new THREE.Group();
+      const pitch = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.02, 0.74, 0.62, 4, 1), _m(THREE, 'timber'));
+      pitch.position.y = 1.61;
+      pitch.rotation.y = Math.PI / 4;   // square the 4-sided cone to the grid
+      const eave = _box(THREE, 1.1, 0.08, 1.1, 'deck'); eave.position.y = 1.32;
+      g.add(eave, pitch); return g;
+    },
+
+    /* ── LIGHT (the pieces that give back) ────────────────────────────────── */
+    light(THREE) {
+      const g = new THREE.Group();
+      const post = _cyl(THREE, 0.05, 0.05, 1.0, 8, 'iron'); post.position.y = 0.5;
+      const bulb = new THREE.Mesh(new THREE.SphereGeometry(0.12, 12, 12), _m(THREE, 'glow'));
+      bulb.position.y = 1.05;
+      g.add(post, bulb, _lamp(THREE, 1.05, 0.8, 4));
+      return g;
+    },
+    lantern(THREE) {
+      // a hanging cage on a crook — the same job as `light` but read as CRAFTED
+      // rather than installed, because at lampwright the player has earned a
+      // piece that looks like it took a hand to make.
+      const g = new THREE.Group();
+      const post = _cyl(THREE, 0.04, 0.05, 1.05, 8, 'iron'); post.position.y = 0.525;
+      const crook = _box(THREE, 0.30, 0.05, 0.05, 'iron'); crook.position.set(0.15, 1.05, 0);
+      const chain = _cyl(THREE, 0.012, 0.012, 0.16, 6, 'iron'); chain.position.set(0.29, 0.96, 0);
+      const cage = new THREE.Mesh(new THREE.OctahedronGeometry(0.17, 0), _m(THREE, 'glow', { transparent: true, opacity: 0.55 }));
+      cage.position.set(0.29, 0.79, 0);
+      const flame = new THREE.Mesh(new THREE.SphereGeometry(0.075, 10, 10), _m(THREE, 'core', { emissiveIntensity: 2.2 }));
+      flame.position.set(0.29, 0.79, 0);
+      const pl = _lamp(THREE, 0.79, 1.0, 4.5); pl.position.x = 0.29;
+      g.add(post, crook, chain, cage, flame, pl);
+      return g;
+    },
+    planter(THREE) {
+      // a box of soil with growth in it. The one piece that is ALIVE rather
+      // than built, so it gets the world's only green and a slow sway (below).
+      const g = new THREE.Group();
+      const box = _box(THREE, 0.7, 0.3, 0.7, 'timber'); box.position.y = 0.15;
+      const soil = _box(THREE, 0.6, 0.06, 0.6, 'deck', { color: 0x2a2018, emissiveIntensity: 0.05 });
+      soil.position.y = 0.3;
+      g.add(box, soil);
+      const fronds = new THREE.Group(); fronds.position.y = 0.3;
+      for (let i = 0; i < 5; i++) {
+        const a = (i / 5) * Math.PI * 2;
+        const blade = _cyl(THREE, 0.008, 0.03, 0.34, 6, 'leaf');
+        blade.position.set(Math.cos(a) * 0.17, 0.17, Math.sin(a) * 0.17);
+        blade.rotation.z = Math.cos(a) * 0.34;
+        blade.rotation.x = -Math.sin(a) * 0.34;
+        fronds.add(blade);
+      }
+      g.add(fronds);
+      g.userData.sway = fronds;   // stepped in _stepStructs
+      return g;
+    },
+    banner(THREE) {
+      // cloth on a crossbar, hanging clear of the waist. The player's colour in
+      // the clearing — the cheapest way to say "a person chose this".
+      const g = new THREE.Group();
+      const pole = _cyl(THREE, 0.035, 0.045, 1.9, 8, 'iron'); pole.position.y = 0.95;
+      const arm = _box(THREE, 0.5, 0.05, 0.05, 'iron'); arm.position.set(0.22, 1.86, 0);
+      const cloth = _box(THREE, 0.44, 0.72, 0.02, 'cloth', { transparent: true, opacity: 0.92 });
+      cloth.position.set(0.24, 1.46, 0);
+      const fringe = _box(THREE, 0.44, 0.05, 0.03, 'core'); fringe.position.set(0.24, 1.08, 0);
+      g.add(pole, arm, cloth, fringe);
+      g.userData.sway = cloth;
+      return g;
+    },
+    beacon(THREE) {
+      // THE ONE PIECE A STRANGER CAN SEE FROM THE STAR MAP. It costs the rarest
+      // thing in the hand and sits at the top of a weeks-long ladder, so it is
+      // the tallest, brightest, most animated object a clearing can hold — and
+      // it must read as an ACHIEVEMENT from across the world, not as a taller
+      // lamp. Ground ring, tapered plinth, caged flame, and a rising column of
+      // light with three orbiting motes.
+      const g = new THREE.Group();
+      const ring = new THREE.Mesh(
+        new THREE.RingGeometry(0.42, 0.6, 28),
+        new THREE.MeshBasicMaterial({ color: 0xffd479, transparent: true, opacity: 0.26, side: THREE.DoubleSide, depthWrite: false }));
+      ring.rotation.x = -Math.PI / 2; ring.position.y = 0.02;
+      const plinth = _cyl(THREE, 0.18, 0.34, 0.9, 12, 'deck'); plinth.position.y = 0.45;
+      const cage = _cyl(THREE, 0.2, 0.2, 0.44, 10, 'iron', { transparent: true, opacity: 0.4 });
+      cage.position.y = 1.14;
+      const flame = new THREE.Mesh(new THREE.IcosahedronGeometry(0.19, 1), _m(THREE, 'core', { emissiveIntensity: 2.6 }));
+      flame.position.y = 1.14;
+      // the column — additive-ish soft cone reaching up; depthWrite off so it
+      // never occludes anything standing behind it.
+      const column = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.05, 0.24, 2.0, 12, 1, true),
+        new THREE.MeshBasicMaterial({ color: 0xffd479, transparent: true, opacity: 0.16, side: THREE.DoubleSide, depthWrite: false }));
+      column.position.y = 2.2;
+      const motes = new THREE.Group(); motes.position.y = 1.14;
+      for (let i = 0; i < 3; i++) {
+        const mote = new THREE.Mesh(new THREE.OctahedronGeometry(0.06, 0), _m(THREE, 'glow', { emissiveIntensity: 2.4 }));
+        const a = (i / 3) * Math.PI * 2;
+        mote.position.set(Math.cos(a) * 0.42, 0, Math.sin(a) * 0.42);
+        motes.add(mote);
+      }
+      g.add(ring, plinth, cage, flame, column, motes, _lamp(THREE, 1.4, 1.8, 9));
+      g.userData.spin = motes;
+      g.userData.pulse = flame;
+      return g;
+    },
+  };
+
   function _renderStruct(s) {
     if (!s || _structMeshes.has(s.id) || !World._scene) return;
     const THREE = World._THREE || (window.THREE);
     if (!THREE) return;
-    let mesh;
-    if (s.kind === 'hearth') {
-      // a glowing claimed plot: a soft disc + warm core
-      const g = new THREE.Group();
-      const disc = new THREE.Mesh(new THREE.CylinderGeometry(2, 2, 0.05, 28),
-        new THREE.MeshStandardMaterial({ color: 0x2a3a4a, emissive: 0x1a4a6a, emissiveIntensity: 0.5, transparent: true, opacity: 0.5 }));
-      const core = new THREE.Mesh(new THREE.IcosahedronGeometry(0.28, 1),
-        new THREE.MeshStandardMaterial({ color: 0xffd479, emissive: 0xff9a3d, emissiveIntensity: 1.2 }));
-      core.position.y = 0.4; g.add(disc, core); mesh = g;
-    } else if (s.kind === 'wall') {
-      mesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1.2, 0.12),
-        new THREE.MeshStandardMaterial({ color: 0x6fb8e0, emissive: 0x1a3a5a, emissiveIntensity: 0.4, transparent: true, opacity: 0.85 }));
-      mesh.position.y = 0.6;
-    } else if (s.kind === 'floor') {
-      mesh = new THREE.Mesh(new THREE.BoxGeometry(1, 0.08, 1),
-        new THREE.MeshStandardMaterial({ color: 0x3a4a5a, emissive: 0x0a2a4a, emissiveIntensity: 0.3 }));
-      mesh.position.y = 0.04;
-    } else if (s.kind === 'light') {
-      const g = new THREE.Group();
-      const post = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 1.0, 8), new THREE.MeshStandardMaterial({ color: 0x445566 }));
-      post.position.y = 0.5;
-      const bulb = new THREE.Mesh(new THREE.SphereGeometry(0.12, 12, 12), new THREE.MeshStandardMaterial({ color: 0xfff0c0, emissive: 0xffd479, emissiveIntensity: 2 }));
-      bulb.position.y = 1.05; g.add(post, bulb);
-      const pl = new THREE.PointLight(0xffd479, 0.8, 4); pl.position.y = 1.05; g.add(pl); mesh = g;
-    } else if (s.kind === 'shelf') {
-      mesh = new THREE.Mesh(new THREE.BoxGeometry(1, 0.6, 0.25),
-        new THREE.MeshStandardMaterial({ color: 0x8a7a5a, emissive: 0x2a1a0a, emissiveIntensity: 0.3 }));
-      mesh.position.y = 0.6;
-    } else { return; }
+    let mesh = null;
+    const build = FORGE[s.kind];
+    try { if (build) mesh = build(THREE); } catch (e) {
+      // A builder that throws must not take the whole clearing down with it —
+      // the marker below still stands the piece up so the player sees what they
+      // paid for, and the console names the kind so the gap is findable.
+      console.warn('[world] forge failed for kind:', s.kind, e && e.message);
+      mesh = null;
+    }
+    if (!mesh) {
+      // THE MARKER — the fallback that is never `return`. A kind this client
+      // does not know is a client that is older than the server, which will
+      // happen on every deploy for the minute a page stays open. The honest
+      // response is a plain placeholder, NOT invisibility: the player paid for
+      // this piece and must always be able to see that something is there.
+      mesh = _box(THREE, 0.5, 0.5, 0.5, 'iron', { transparent: true, opacity: 0.6 });
+      mesh.position.y = 0.25;
+      mesh.userData.unknownKind = s.kind;
+    }
     mesh.position.x = s.x; mesh.position.z = s.z; if (s.y) mesh.position.y += s.y;
     mesh.rotation.y = s.rot || 0;
+    // carried so a click/proximity read can name the piece and its owner without
+    // a second lookup — same discipline the lanterns already keep.
+    mesh.userData.struct = { id: s.id, kind: s.kind, owner: s.owner_id };
     World._scene.add(mesh);
     _structMeshes.set(s.id, mesh);
+  }
+
+  /* ── THE CLEARING BREATHES ─────────────────────────────────────────────────
+     Only the pieces that declared a moving part are stepped, and the loop exits
+     immediately when none exist — so a clearing of a hundred walls costs this
+     function one Map size check per frame. A planter sways, a banner stirs, a
+     beacon turns and pulses. Each on its own phase so a row of them never moves
+     in unison, which would read as a UI animation rather than as a place. */
+  function _stepStructs(tnow) {
+    if (!_structMeshes.size) return;
+    let i = 0;
+    for (const g of _structMeshes.values()) {
+      i++;
+      if (!g || !g.userData) continue;
+      const ph = (g.userData.structPhase != null)
+        ? g.userData.structPhase
+        : (g.userData.structPhase = (i * 2.3) % 6.283);
+      if (g.userData.sway) {
+        g.userData.sway.rotation.z = Math.sin(tnow * 0.0011 + ph) * 0.07;
+      }
+      if (g.userData.spin) {
+        g.userData.spin.rotation.y = tnow * 0.0009 + ph;
+        g.userData.spin.position.y = 1.14 + Math.sin(tnow * 0.0016 + ph) * 0.12;
+      }
+      if (g.userData.pulse) {
+        const k = 1 + Math.sin(tnow * 0.0026 + ph) * 0.09;
+        g.userData.pulse.scale.set(k, k, k);
+      }
+    }
   }
 
   // ── THE LANTERNS ────────────────────────────────────────────────────────────
@@ -1309,6 +1651,7 @@
     _stepWarmth(dt);   // THE VIGIL: spark → light, eased every frame
     _stepWarp(dt);
     _stepTraces(tnow);
+    _stepStructs(tnow);  // THE FORGE: planters sway, banners stir, beacons turn
 
     // camera modes: 0=3rd-person (behind), 1=1st-person (eyes), 2=selfie (front)
     const mode = World._camMode || 0;

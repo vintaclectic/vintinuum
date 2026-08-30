@@ -40,6 +40,49 @@
       padding:6px 12px; border:1px solid rgba(126,255,155,0.35);
       color:#7eff9b; border-radius:999px; background:rgba(126,255,155,0.06);
     }
+    .close-lane {
+      margin:24px 0 8px;
+      border:1px solid rgba(255,200,110,0.34);
+      background:linear-gradient(135deg, rgba(255,200,110,0.11), rgba(255,255,255,0.035));
+      border-radius:12px;
+      padding:16px;
+      display:grid;
+      grid-template-columns:minmax(0, 1fr) auto;
+      gap:14px;
+      align-items:center;
+      box-shadow:0 14px 36px rgba(0,0,0,0.24);
+    }
+    .close-lane__eyebrow {
+      font-size:10px;
+      letter-spacing:0.16em;
+      text-transform:uppercase;
+      color:rgba(255,217,143,0.74);
+      margin-bottom:5px;
+    }
+    .close-lane__text {
+      color:rgba(255,255,255,0.82);
+      font-size:13px;
+      max-width:760px;
+    }
+    .close-lane__text strong { color:#ffd98f; font-weight:500; }
+    .close-lane__cta {
+      appearance:none;
+      border:1px solid rgba(255,217,143,0.62);
+      background:rgba(255,217,143,0.16);
+      color:#fff4cf;
+      border-radius:10px;
+      min-height:48px;
+      padding:0 18px;
+      font:inherit;
+      font-size:11px;
+      letter-spacing:0.14em;
+      text-transform:uppercase;
+      cursor:pointer;
+      white-space:nowrap;
+      transition:background 180ms ease, transform 160ms var(--ease-spring, ease);
+    }
+    .close-lane__cta:hover { background:rgba(255,217,143,0.25); }
+    .close-lane__cta:active { transform:scale(0.98); }
 
     /* Tier toggle */
     .interval-toggle {
@@ -177,6 +220,12 @@
       background:rgba(255,200,110,0.14); border-color:rgba(255,200,110,0.5);
     }
     .tier--estate button.cta:hover { background:rgba(255,200,110,0.26); }
+    .tier--estate .name::after {
+      content:'  CLOSE FIRST';
+      color:rgba(255,217,143,0.86);
+      font-size:9px;
+      letter-spacing:0.12em;
+    }
     .tier--estate::after {
       content:'the part of you that doesn\'t end';
       display:block; margin-top:2px;
@@ -205,6 +254,8 @@
     .footnote strong { color:rgba(255,255,255,0.7); font-weight:500; }
 
     @media (max-width: 720px) {
+      .close-lane { grid-template-columns:1fr; }
+      .close-lane__cta { width:100%; }
       .tiers { grid-template-columns:1fr; gap:14px; }
       .tier { min-height:auto; padding:20px 18px; }
       .tier .price { font-size:28px; }
@@ -237,6 +288,16 @@
       gates close, this is what you'll be choosing between.
     </p>
     <div class="vow">grateful dead vow · memory export always free · the soul is never gated</div>
+
+    <div class="close-lane" id="estateCloseLane">
+      <div>
+        <div class="close-lane__eyebrow">48-hour revenue lane</div>
+        <div class="close-lane__text">
+          The fastest honest close is <strong>Estate at $499 one-time</strong>: continuity, preserved memory, and family handoff in one purchase.
+        </div>
+      </div>
+      <button class="close-lane__cta" type="button" data-estate-now>Open Estate Checkout</button>
+    </div>
 
     <div class="status" id="status"><span class="dot"></span><span id="statusText">checking billing…</span></div>
 
@@ -482,6 +543,15 @@
     $('btnYearly').classList.add('active');
     $('btnMonthly').classList.remove('active');
     loadTiers();
+  });
+  document.querySelectorAll('[data-estate-now]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      if (billingEnabled) {
+        onChoose('estate', 'monthly');
+      } else {
+        location.href = 'upgrade.html?tier=estate&interval=monthly';
+      }
+    });
   });
 
   (async () => {

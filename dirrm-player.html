@@ -1878,6 +1878,34 @@
         if (el.tagName === 'IMG') el.onerror = onErr; // img uses onerror too
         el.src = url;
       }
+      _suspiciousPublicMediaReason(url, title) {
+        if (!url || /^blob:|^data:|^magnet:/i.test(url)) return '';
+        try {
+          const u = new URL(url, location.href);
+          if (!/^https?:$/i.test(u.protocol)) return '';
+          let decoded;
+          try {
+            decoded = decodeURIComponent(
+              [u.hostname, u.pathname, u.search, title || ''].join(' ')
+            );
+          } catch (_) {
+            decoded = [u.hostname, u.pathname, u.search, title || ''].join(' ');
+          }
+          const hay = decoded.toLowerCase();
+          const directVideo = /\.(mp4|mkv|avi|mov|m4v|webm|wmv|flv)(\?|#|$)/i.test(u.pathname);
+          const moviePath = /(^|[\/\s._-])(movies?|films?)([\/\s._-]|$)/i.test(decoded);
+          const releaseMarker =
+            /\b(yts|rarbg|eztv|ettv|1337x|thepiratebay|torrentgalaxy|tgx|yify)\b/i.test(decoded) ||
+            /\b(webrip|web[-.\s]?dl|brrip|bluray|dvdrip|hdrip|camrip|hdtc|telesync|xvid|x264|x265|hevc)\b/i.test(decoded) ||
+            /\[(1080p|720p|2160p|4k|webrip|web[-.\s]?dl|brrip|bluray|yts|yify)[^\]]*\]/i.test(decoded);
+          const openDirHost = /\b(files?|cdn|media|dl|downloads?|public)\b/i.test(u.hostname);
+          const publicOpenDir = moviePath && (openDirHost || hay.includes('/public/'));
+          if (releaseMarker && (directVideo || publicOpenDir) && (moviePath || openDirHost || hay.includes('/public/'))) {
+            return 'This looks like a public movie-release URL, so DirRM will not open it.';
+          }
+        } catch (_) {}
+        return '';
+      }
       _detectSurface() {
         // Best-effort: how is this player being shown?
         try {
@@ -2209,7 +2237,20 @@
             }
 
             // Live channel: kick.com/channelname (or kick.com/channelname/anything)
-            return { kind: 'Kick', embedUrl: `https://player.kick.com/?channel=${channel}&parent=${parent}&autoplay=true&muted=false` };
+            //
+            // NOT an iframe embed (task BTGZBTY). player.kick.com sends
+            // X-Frame-Options: SAMEORIGIN, so the frame is refused from every
+            // origin but Kick's own — and per the notes on /api/stream/kick-live,
+            // a blocked frame is indistinguishable from a rendered one to the
+            // embedder, so we can never detect the failure and the viewer just
+            // gets a silent black rectangle. The `parent=` param is a Twitch
+            // convention Kick does not honour, which is why hardcoding
+            // vintaclectic.github.io never helped on board.vintaclectic.com.
+            //
+            // The brain resolves the channel's IVS playback URL instead, whose
+            // manifest serves access-control-allow-origin:* — so hls.js can play
+            // it from ANY origin. `liveChannel` routes to loadKickLive().
+            return { kind: 'Kick', liveChannel: channel };
           }
 
           // X (Twitter) — videos and spaces (best-effort; may need login)
@@ -2272,6 +2313,20 @@
 
       async loadMedia(url, title, type) {
         const resolvedTitle = title || this.extractTitle(url);
+        const blocked = this._suspiciousPublicMediaReason(url, resolvedTitle);
+        if (blocked) {
+          this.mediaTitle.textContent = resolvedTitle;
+          this.mediaSubtitle.textContent = '';
+          this.setBadge(null);
+          this.mediaElement = null;
+          this.mediaContainer.querySelectorAll(
+            'video, audio, img, iframe, .dirrm-audio-visualizer, .dirrm-document-viewer, ' +
+            '.dirrm-embed, .dirrm-model-wrap, .dirrm-text-viewer, .dirrm-info-card, ' +
+            '.dirrm-error-card, .dirrm-live-badge, .dirrm-selfview, .dirrm-call-ended'
+          ).forEach(n => n.remove());
+          this.showErrorCard(url, blocked);
+          return;
+        }
         this.loading.style.display = 'flex';
         this.loading.innerHTML = `
           <div class="dirrm-loading-orb"></div>
@@ -2930,6 +2985,13 @@
           // Defensive — should not reach here unless type was forced
           return this.loadUnknown(url, 'Unknown embed source');
         }
+        // Kick live channels are NOT iframe-embeddable (X-Frame-Options:
+        // SAMEORIGIN). detectEmbed hands us a liveChannel instead of an
+        // embedUrl; resolve it to a CORS-open HLS manifest via the brain.
+        if (embed.liveChannel) {
+          return this.loadKickLive(embed.liveChannel, url);
+        }
+
         this.setBadge(embed.kind);
         this.mediaSubtitle.textContent = '';
 
@@ -4153,6 +4215,76 @@
         `;
         this.mediaContainer.appendChild(card);
         this.controls.style.display = 'none';
+      }
+
+      /**
+       * Kick Live (task BTGZBTY) — the ONLY way a Kick channel actually plays.
+       *
+       * player.kick.com refuses to be framed (X-Frame-Options: SAMEORIGIN) and
+       * that refusal is undetectable from the parent, so the old iframe path
+       * produced a silent black rectangle on every origin. Instead we ask the
+       * brain for the channel's IVS playback URL, whose manifest sends
+       * access-control-allow-origin:* — hls.js can then play it from any origin
+       * (board.vintaclectic.com included).
+       *
+       * The playback token lives ~10 minutes, so the URL is resolved at play
+       * time and never cached client-side.
+       */
+      async loadKickLive(channel, originalUrl) {
+        this.setBadge('Kick Live');
+        this._updateLoading(`Resolving ${channel}'s Kick stream…`);
+
+        const apiBase = window.__VINTINUUM_API_BASE || window.VINTINUUM_API || window.__VINT_API || 'https://api.vintaclectic.com';
+        const endpoint = `${apiBase}/api/stream/kick-live?channel=${encodeURIComponent(channel)}`;
+
+        let data;
+        try {
+          const resp = await fetch(endpoint);
+          data = await resp.json();
+        } catch (e) {
+          return this._showKickOfflineCard(originalUrl, channel,
+            'Could not reach the brain to resolve this stream.');
+        }
+
+        if (!data || !data.ok || !data.streamUrl) {
+          // no_channel is the typo case — say so plainly instead of "offline",
+          // because "vintacletic is offline" sends you hunting a dead stream.
+          const reason = data && data.error === 'no_channel'
+            ? `Kick has no channel named "${channel}". Check the spelling.`
+            : (data && data.message) || 'Could not resolve this Kick stream.';
+          return this._showKickOfflineCard(originalUrl, channel, reason);
+        }
+
+        if (data.title) this.mediaTitle.textContent = data.title;
+        this.setBadge('Kick LIVE');
+        await this.loadStream(data.streamUrl);
+      }
+
+      /** "Not live / no such channel" card for Kick, with retry + open-on-Kick. */
+      _showKickOfflineCard(url, channel, reason) {
+        this.loading.style.display = 'none';
+        this.controls.style.display = 'none';
+        this.setBadge('Kick');
+
+        const card = document.createElement('div');
+        card.className = 'dirrm-info-card';
+        const safeUrl = String(url || `https://kick.com/${channel}`);
+        card.innerHTML = `
+          <div class="dirrm-info-icon" style="font-size:2rem;margin-bottom:12px;">📡</div>
+          <div class="dirrm-info-title"></div>
+          <div class="dirrm-info-meta" style="margin-top:8px;color:rgba(240,230,211,0.6);"></div>
+          <div style="margin-top:18px;display:flex;gap:10px;flex-wrap:wrap;justify-content:center;">
+            <button class="dirrm-action-btn" data-kick-retry>Retry</button>
+            <a class="dirrm-action-btn" target="_blank" rel="noopener">Open on Kick</a>
+          </div>`;
+        // textContent, not innerHTML — a channel slug is user input.
+        card.querySelector('.dirrm-info-title').textContent = channel || 'Kick';
+        card.querySelector('.dirrm-info-meta').textContent = reason;
+        const link = card.querySelector('a');
+        link.href = safeUrl;
+        card.querySelector('[data-kick-retry]')
+            .addEventListener('click', () => this.load(safeUrl));
+        this.mediaContainer.appendChild(card);
       }
 
       /**
