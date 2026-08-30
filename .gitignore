@@ -18,3 +18,13 @@ android-twa/*.apk
 android-twa/app/
 android-twa/build/
 android-twa/.gradle/
+
+# ── COUNCIL RUNTIME JUNK (2026-08-30) ────────────────────────────────────────
+# Every seat runs in its own git worktree, and the council writes these INTO the
+# worktree at runtime. They were never ignored, so all 12 seat worktrees showed
+# as dirty permanently — which made the new merge-back guard SKIP every one of
+# them (it refuses to merge a dirty tree, correctly, since merging would silently
+# drop uncommitted work). Net effect: finished work could never ship. These are
+# machine state, not source; ignoring them is what lets real work through.
+.claude/
+.council-born-agents/
