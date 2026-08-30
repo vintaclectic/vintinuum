@@ -164,6 +164,9 @@ textarea::placeholder, input::placeholder { color: rgba(150,175,215,0.4); font-s
   </div>
 </div>
 
+<!-- THE FUNNEL (task TAS22T8): onboarding is a funnel step. -->
+<script src="body/api_base.js?v=v20260817-tas22t8"></script>
+<script src="body/funnel.js?v=v20260817-tas22t8"></script>
 <script>
 (function () {
   var API_BASE = (location.hostname === 'localhost' || location.hostname === '127.0.0.1')
@@ -337,8 +340,13 @@ textarea::placeholder, input::placeholder { color: rgba(150,175,215,0.4); font-s
   // STEP 5 — enter
   document.getElementById('enterBtn').addEventListener('click', function () {
     try { localStorage.setItem('vint_onboarded', '1'); } catch (_) {}
+    // FUNNEL: they finished onboarding and are walking into the real app.
+    try { window.vintFunnel && window.vintFunnel('onboard_done', {}); } catch (_) {}
     location.href = 'brain.html?welcome=1';
   });
+
+  // FUNNEL: they are actually here, looking at onboarding.
+  try { window.vintFunnel && window.vintFunnel.oncePerSession('onboard_start', {}); } catch (_) {}
 
   paint();
 })();

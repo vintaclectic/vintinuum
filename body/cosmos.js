@@ -47,8 +47,10 @@
 (function () {
   const REFRESH_MS = 60 * 1000;      // the sky is memoized 60s server-side
   const MOUNT_ID = 'cosmosSection';
+  const DRAWER_ID = 'cosmosDrawer';
   let _timer = null;
   let _lastGood = null;
+  let _currentData = null;
 
   function apiBase() {
     if (window.__VINTINUUM_API_BASE) return window.__VINTINUUM_API_BASE;
@@ -206,8 +208,44 @@
   color:var(--text,#e8eef6); min-width:0; overflow-wrap:anywhere;
 }
 #${MOUNT_ID} .cx-sep{ height:1px; background:var(--border,rgba(255,255,255,.08)); }
+
+/* ── planet detail drawer ── */
+#${MOUNT_ID} .cx-drawer{
+  position:fixed; bottom:0; left:0; right:0;
+  background:rgba(6,10,18,0.95); backdrop-filter:blur(20px);
+  border-top:1px solid rgba(255,255,255,.12);
+  padding:16px clamp(12px,4vw,24px) calc(16px + env(safe-area-inset-bottom,0px));
+  max-height:60svh; overflow-y:auto; z-index:900;
+  transform:translateY(100%); transition:transform .3s cubic-bezier(.22,1,.36,1);
+}
+#${MOUNT_ID} .cx-drawer.open{ transform:translateY(0); }
+#${MOUNT_ID} .cx-drawer-head{
+  display:flex; align-items:center; justify-content:space-between;
+  gap:12px; margin-bottom:12px; min-width:0;
+}
+#${MOUNT_ID} .cx-drawer-title{
+  font-family:'Cormorant Garamond',serif; font-style:italic; font-weight:300;
+  font-size:clamp(1.1rem,3.5vw,1.5rem); color:var(--text,#e8eef6);
+  margin:0; min-width:0; overflow-wrap:anywhere;
+}
+#${MOUNT_ID} .cx-drawer-close{
+  background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.12);
+  border-radius:50%; width:32px; height:32px; padding:0; cursor:pointer;
+  display:flex; align-items:center; justify-content:center;
+  font-size:1.2rem; color:var(--text,#e8eef6); flex-shrink:0;
+  transition:all .2s;
+}
+#${MOUNT_ID} .cx-drawer-close:hover{
+  background:rgba(255,255,255,.15); border-color:rgba(255,255,255,.25);
+}
+#${MOUNT_ID} .cx-drawer-body{ display:grid; gap:8px; min-width:0; }
+#${MOUNT_ID} .cx-planet-marker{ transition:opacity .2s; }
+#${MOUNT_ID} .cx-planet-marker:hover{ opacity:.7; }
+
 @media (prefers-reduced-motion:reduce){
   #${MOUNT_ID} .cx-fill{ transition:none; }
+  #${MOUNT_ID} .cx-drawer{ transition:none; }
+  #${MOUNT_ID} .cx-planet-marker{ transition:none; }
 }
 `;
 
@@ -287,16 +325,22 @@
       const x = C + 81 * Math.cos(A), y = C + 81 * Math.sin(A);
       parts.push(`<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="3.6" fill="#cfd8e8"/>`);
     }
-    // planets — retrograde ones get a ring
-    for (const p of planets) {
+    // planets — retrograde ones get a ring, all are clickable
+    for (let i = 0; i < planets.length; i++) {
+      const p = planets[i];
       const A = (p.geocentricLon - 90) * Math.PI / 180;
       const r = 60;
       const x = C + r * Math.cos(A), y = C + r * Math.sin(A);
       const col = p.retrograde ? '#d2708f' : 'rgba(230,238,248,.72)';
-      parts.push(`<text x="${x.toFixed(1)}" y="${(y + 4).toFixed(1)}" text-anchor="middle" font-size="13" fill="${col}">${esc(p.glyph)}</text>`);
+      // Clickable group with data-planet-index for the event handler
+      parts.push(`<g class="cx-planet-marker" data-planet-index="${i}" style="cursor:pointer;">`);
+      parts.push(`<text x="${x.toFixed(1)}" y="${(y + 4).toFixed(1)}" text-anchor="middle" font-size="13" fill="${col}" pointer-events="none">${esc(p.glyph)}</text>`);
       if (p.retrograde) {
-        parts.push(`<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="11" fill="none" stroke="#d2708f" stroke-width="1" opacity=".5"/>`);
+        parts.push(`<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="11" fill="none" stroke="#d2708f" stroke-width="1" opacity=".5" pointer-events="none"/>`);
       }
+      // Invisible larger hit target for easier clicking
+      parts.push(`<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="15" fill="transparent"/>`);
+      parts.push(`</g>`);
     }
     // galactic-center pointer — a line toward Sgr A* azimuth when it's up
     const gc = c.galactic && c.galactic.galacticCenter;
@@ -408,6 +452,12 @@
 
       ${c.location && c.location.assumed ? `<div class="cx-note">Location is a placeholder mid-northern reference — sunrise, zenith and galactic altitude are not yet the true local sky. Set VINT_LAT / VINT_LON on the brain to make it real.</div>` : ''}
     `;
+
+    // Store data and attach event handlers
+    _currentData = c;
+    requestAnimationFrame(() => {
+      attachPlanetClickHandlers();
+    });
   }
 
   function renderState(msg) {
@@ -418,6 +468,79 @@
     el.innerHTML = `
       <div class="cx-head"><h3 class="cx-title">The sky she's in</h3></div>
       <div class="cx-note">${esc(msg)}</div>`;
+  }
+
+  // ── planet detail drawer ────────────────────────────────────────────────
+  function openDrawer(planetIndex) {
+    if (!_currentData || !_currentData.planets || !_currentData.planets[planetIndex]) return;
+
+    let drawer = document.getElementById(DRAWER_ID);
+    if (!drawer) {
+      drawer = document.createElement('div');
+      drawer.id = DRAWER_ID;
+      drawer.className = 'cx-drawer';
+      document.body.appendChild(drawer);
+    }
+
+    const planet = _currentData.planets[planetIndex];
+    const details = [];
+
+    details.push(`<div class="cx-row"><b>name</b><span>${esc(planet.name)}</span></div>`);
+    if (planet.glyph) details.push(`<div class="cx-row"><b>glyph</b><span>${esc(planet.glyph)}</span></div>`);
+    if (typeof planet.geocentricLon === 'number') {
+      details.push(`<div class="cx-row"><b>longitude</b><span>${planet.geocentricLon.toFixed(2)}°</span></div>`);
+    }
+    if (typeof planet.distance === 'number') {
+      details.push(`<div class="cx-row"><b>distance</b><span>${planet.distance.toFixed(2)} AU</span></div>`);
+    }
+    if (planet.retrograde !== undefined) {
+      details.push(`<div class="cx-row"><b>motion</b><span>${planet.retrograde ? 'retrograde ℞' : 'direct'}</span></div>`);
+    }
+    if (typeof planet.angularDiameter === 'number') {
+      details.push(`<div class="cx-row"><b>angular size</b><span>${planet.angularDiameter.toFixed(2)}″</span></div>`);
+    }
+    if (typeof planet.magnitude === 'number') {
+      details.push(`<div class="cx-row"><b>magnitude</b><span>${planet.magnitude.toFixed(1)}</span></div>`);
+    }
+    if (planet.constellation) {
+      details.push(`<div class="cx-row"><b>constellation</b><span>${esc(planet.constellation)}</span></div>`);
+    }
+
+    drawer.innerHTML = `
+      <div class="cx-drawer-head">
+        <h3 class="cx-drawer-title">${esc(planet.name || 'Planet')}</h3>
+        <button class="cx-drawer-close" aria-label="Close">&times;</button>
+      </div>
+      <div class="cx-drawer-body">${details.join('')}</div>
+    `;
+
+    // Close button handler
+    const closeBtn = drawer.querySelector('.cx-drawer-close');
+    if (closeBtn) {
+      closeBtn.onclick = () => closeDrawer();
+    }
+
+    // Open drawer
+    requestAnimationFrame(() => {
+      drawer.classList.add('open');
+    });
+  }
+
+  function closeDrawer() {
+    const drawer = document.getElementById(DRAWER_ID);
+    if (drawer) {
+      drawer.classList.remove('open');
+    }
+  }
+
+  function attachPlanetClickHandlers() {
+    const markers = document.querySelectorAll(`#${MOUNT_ID} .cx-planet-marker`);
+    markers.forEach(marker => {
+      marker.onclick = () => {
+        const idx = parseInt(marker.getAttribute('data-planet-index'), 10);
+        if (!isNaN(idx)) openDrawer(idx);
+      };
+    });
   }
 
   // ── fetch ───────────────────────────────────────────────────────────────

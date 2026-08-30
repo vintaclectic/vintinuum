@@ -378,6 +378,11 @@
      INSIDE the sheet's scroller rather than as an overlay, and every toast goes
      through the one shared toast element. -->
 <script src="body/world/reckoning-hud.js"></script>
+<!-- GALACTIC TIME — a pleasure clock for tasks, thoughts and connections.
+     Loads after dirverse-hud/traces so it can borrow the rail + one-sheet
+     registry, and before Concord/Yard so the rail order stays exploratory
+     before governance/production. -->
+<script src="body/world/galactic-time.js"></script>
 <!-- THE CONCORD — the polity spine. Your agents hold seats, take positions from
      their own disposition, vote, dissent and defect, and the session resolves on
      the CLOCK whether you are here or not. Loads AFTER dirverse-hud (it borrows

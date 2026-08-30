@@ -1,0 +1,40 @@
+<svg width="1800" height="720" viewBox="0 0 1800 720" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="DirZombie logo lockup">
+  <defs>
+    <radialGradient id="dz-bg" cx="50%" cy="42%" r="68%">
+      <stop offset="0" stop-color="#1E2A26"/>
+      <stop offset="0.48" stop-color="#111418"/>
+      <stop offset="1" stop-color="#050607"/>
+    </radialGradient>
+    <linearGradient id="dz-gate" x1="137" y1="97" x2="463" y2="567" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#F4F0E3"/>
+      <stop offset="0.38" stop-color="#A7F05C"/>
+      <stop offset="0.68" stop-color="#8C57FF"/>
+      <stop offset="1" stop-color="#FF3B52"/>
+    </linearGradient>
+    <linearGradient id="dz-z" x1="178" y1="209" x2="449" y2="461" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#F4F0E3"/>
+      <stop offset="0.46" stop-color="#D8FF6A"/>
+      <stop offset="1" stop-color="#FF3B52"/>
+    </linearGradient>
+    <linearGradient id="dz-word" x1="566" y1="184" x2="1711" y2="389" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#F4F0E3"/>
+      <stop offset="0.4" stop-color="#A7F05C"/>
+      <stop offset="0.72" stop-color="#8C57FF"/>
+      <stop offset="1" stop-color="#FF3B52"/>
+    </linearGradient>
+  </defs>
+  <rect width="1800" height="720" rx="70" fill="#050607"/>
+  <path d="M94 575C220 510 334 493 438 526C572 569 628 651 779 642C910 634 1045 548 1730 456" stroke="#8C57FF" stroke-width="16" stroke-linecap="round" opacity="0.32"/>
+  <path d="M300 86C207 86 132 161 132 254C132 374 300 634 300 634C300 634 468 374 468 254C468 161 393 86 300 86Z" fill="#090B0D" stroke="url(#dz-gate)" stroke-width="28"/>
+  <path d="M211 266C211 211 251 170 300 170C349 170 389 211 389 266V480H211V266Z" fill="#050607" stroke="#A7F05C" stroke-width="18"/>
+  <path d="M224 241H385L251 424H392" stroke="url(#dz-z)" stroke-width="55" stroke-linecap="square" stroke-linejoin="miter"/>
+  <path d="M247 241H369L236 424H356" stroke="#050607" stroke-width="21" stroke-linecap="square" stroke-linejoin="miter" opacity="0.82"/>
+  <circle cx="300" cy="268" r="31" fill="#A7F05C"/>
+  <circle cx="300" cy="268" r="13" fill="#050607"/>
+  <path d="M142 494H458" stroke="#F4F0E3" stroke-width="18" stroke-linecap="round"/>
+  <path d="M180 535H420" stroke="#FF3B52" stroke-width="12" stroke-linecap="round" opacity="0.9"/>
+  <text x="560" y="374" fill="url(#dz-word)" font-family="Impact, Haettenschweiler, 'Arial Black', sans-serif" font-size="190" letter-spacing="8">DIRZOMBIE</text>
+  <text x="571" y="458" fill="#F4F0E3" font-family="'Space Mono', 'IBM Plex Mono', Menlo, monospace" font-size="34" letter-spacing="9">THE DIRECTORY THAT REFUSES TO DIE</text>
+  <path d="M571 492H1680" stroke="#A7F05C" stroke-width="8" stroke-linecap="round"/>
+  <path d="M1215 492H1680" stroke="#FF3B52" stroke-width="8" stroke-linecap="round"/>
+</svg>

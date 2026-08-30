@@ -1,131 +1,127 @@
-/* funnel.js — the smallest honest measurement layer in Vintinuum.
-   (task XQDPW7G, 2026-08-17)
+/* funnel.js — the frontend half of THE FUNNEL (task TAS22T8, 2026-08-17).
 
-   WHY THIS EXISTS: acq_clicks can only see people who clicked a campaign link.
-   It cannot see the visitor who landed, read the page, felt nothing, and left —
-   and with 4 real signups, that invisible population is the only one that
-   explains anything. This file makes them countable.
+   Backend (task XQDPW7G) built the whole spine: FUNNEL_STEPS, the vint_vid
+   visitor cookie, POST /api/funnel/event, GET /api/funnel/report. It recorded
+   ZERO rows, because nothing on the frontend ever emitted. This is the emitter.
 
-   CONTRACT (three hard promises, because telemetry must never cost us a user):
-     1. It NEVER blocks the UI      — sendBeacon, or a keepalive fetch.
-     2. It NEVER throws             — every path is wrapped; failure is silent.
-     3. It NEVER fabricates         — no step fires unless the human did the thing.
+   Design constraints, all non-negotiable:
+   - NEVER throws. A telemetry bug must never break a page or block a signup.
+   - NEVER blocks render. Fire-and-forget, keepalive, errors swallowed.
+   - NEVER inflates counts. Every step is deduped so a reload storm or a chatty
+     user cannot manufacture a funnel that looks better than reality. The whole
+     point of this instrument is to tell Vinta the truth about ~4 real humans.
 
-   Usage:  window.vintFunnel.track('gate_open', { surface: 'index' });
-   Steps are validated server-side against a hard allowlist; unknown steps 400. */
+   Exposes: window.vintFunnel(step, meta)  →  Promise-free, always safe. */
 (function () {
   'use strict';
-  if (window.vintFunnel) return;                       // singleton
+  if (typeof window === 'undefined') return;
+  if (window.vintFunnel) return;                    // singleton
 
-  var API_BASE = (function () {
-    try { if (window.VINT_API_BASE) return window.VINT_API_BASE; } catch (_) {}
-    return (location.hostname === 'localhost' || location.hostname === '127.0.0.1')
-      ? 'http://localhost:8767' : 'https://api.vintaclectic.com';
-  })();
-
-  // Mirrors the server allowlist. Client-side check is a courtesy (saves a
-  // pointless request); the SERVER is the authority that protects the table.
-  var STEPS = ['land','gate_open','gate_submit','signup_ok','onboard_start',
-               'onboard_done','first_message','return_visit'];
-
-  var LS_UTM = 'vint_utm';        // campaign memory, survives the nav to onboarding
-  var LS_SEEN = 'vint_seen_at';   // last-visit stamp, powers return_visit
-
-  function ls(k, v) {
+  // ── where is the brain? ──────────────────────────────────────────────────
+  // api_base.js is loaded before everything and is the single source of truth.
+  // We follow it exactly rather than re-deriving a URL (re-deriving is what
+  // caused the stale-quick-tunnel contagion api_base.js exists to kill).
+  function apiUrl(path) {
     try {
-      if (v === undefined) return localStorage.getItem(k);
-      localStorage.setItem(k, v); return v;
-    } catch (_) { return null; }
-  }
-
-  /* Capture utm_* on FIRST landing and remember it. The signup POST happens on
-     a different page (welcome.html), by which time location.search is long
-     gone — so without this persistence, every campaign signup would look
-     organic. Written once per campaign arrival; never overwritten by a blank. */
-  function captureUtm() {
-    try {
-      var q = new URLSearchParams(location.search);
-      var c = q.get('utm_campaign'), s = q.get('utm_source'), v = q.get('utm_content');
-      if (c || s || v) {
-        var cur = {};
-        try { cur = JSON.parse(ls(LS_UTM) || '{}') || {}; } catch (_) {}
-        var next = {
-          utm_campaign: c || cur.utm_campaign || null,
-          utm_source:   s || cur.utm_source   || null,
-          utm_content:  v || cur.utm_content  || null,
-          at: Date.now()
-        };
-        ls(LS_UTM, JSON.stringify(next));
+      if (window.VINTINUUM && typeof window.VINTINUUM.url === 'function') {
+        return window.VINTINUUM.url(path);
       }
+      var base = window.__VINTINUUM_API_BASE || window.VINTINUUM_API || window.__VINT_API;
+      if (base) return base + path;
     } catch (_) {}
+    // Last-resort mirror of api_base.js's own rule. Only reached if api_base.js
+    // failed to load at all, in which case the page has bigger problems.
+    var h = (location.hostname || '').toLowerCase();
+    var local = !h || h === 'localhost' || h === '127.0.0.1' || h === '0.0.0.0' || h === '::1';
+    return (local ? 'http://localhost:8767' : 'https://api.vintaclectic.com') + path;
   }
 
-  /** The remembered campaign, for anyone who needs to forward it (welcome-gate). */
-  function utm() {
-    try { return JSON.parse(ls(LS_UTM) || '{}') || {}; } catch (_) { return {}; }
+  // ── dedupe ───────────────────────────────────────────────────────────────
+  // sessionStorage for per-visit steps (land), localStorage+date for per-day
+  // steps (first_message). Both fail soft: if storage is unavailable (private
+  // mode, cookies off) we simply do not dedupe rather than dropping the event.
+  function stamp() {
+    var d = new Date();
+    return d.getFullYear() + '-' + (d.getMonth() + 1) + '-' + d.getDate();
   }
-
-  /** Fire-and-forget. Returns nothing, awaits nothing, breaks nothing. */
-  function track(step, meta) {
+  function once(store, key) {
     try {
-      if (STEPS.indexOf(step) === -1) return;          // never send junk
-      var u = utm();
-      var payload = {
-        step: step,
-        campaign: u.utm_campaign || null,
-        source: u.utm_source || null,
-        variant: u.utm_content || null,
-        meta: meta && typeof meta === 'object' ? meta : undefined
-      };
-      var url = API_BASE + '/api/funnel/event';
-      var body = JSON.stringify(payload);
-
-      // sendBeacon survives page unload — the only way to reliably catch a
-      // visitor who bounces. It cannot send cookies cross-origin without
-      // credentials, so fetch(keepalive) is preferred when available for the
-      // cookie (visitor stitching); beacon is the unload-safe fallback.
-      if (window.fetch) {
-        fetch(url, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: body,
-          credentials: 'include',                       // carries vint_vid
-          keepalive: true,                              // survives navigation
-          mode: 'cors'
-        }).catch(function () { /* telemetry is never an error the user sees */ });
-        return;
-      }
-      if (navigator.sendBeacon) {
-        navigator.sendBeacon(url, new Blob([body], { type: 'application/json' }));
-      }
-    } catch (_) { /* silence is the contract */ }
+      if (store.getItem(key)) return false;
+      store.setItem(key, '1');
+      return true;
+    } catch (_) { return true; }
   }
 
-  /* return_visit: fired when a known visitor comes back on a LATER day. Day
-     granularity (not ">24h") because "did they come back another day" is the
-     honest retention question; two sessions inside one evening is one visit. */
-  function markVisit() {
+  // ── the emitter ──────────────────────────────────────────────────────────
+  // Only these eight steps exist server-side; anything else is rejected 400.
+  // We mirror the allowlist here purely to avoid pointless network calls.
+  var STEPS = {
+    land: 1, gate_open: 1, gate_submit: 1, signup_ok: 1,
+    onboard_start: 1, onboard_done: 1, first_message: 1, return_visit: 1
+  };
+
+  function emit(step, meta) {
     try {
-      var today = new Date().toISOString().slice(0, 10);
-      var prev = ls(LS_SEEN);
-      if (prev && prev !== today) track('return_visit', { last_seen: prev });
-      ls(LS_SEEN, today);
-    } catch (_) {}
+      if (!STEPS[step]) return;
+      var body = { step: step };
+      if (meta && typeof meta === 'object') body.meta = meta;
+
+      // Carry campaign attribution when the visitor arrived on a tagged link,
+      // so a funnel row can be traced back to what brought them.
+      try {
+        var q = new URLSearchParams(location.search);
+        var c = q.get('c') || q.get('campaign');
+        var s = q.get('src') || q.get('source') || q.get('utm_source');
+        var v = q.get('v') || q.get('variant');
+        if (c) body.campaign = c;
+        if (s) body.source = s;
+        if (v) body.variant = v;
+      } catch (_) {}
+
+      fetch(apiUrl('/api/funnel/event'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        // credentials:'include' is load-bearing — it carries the vint_vid
+        // cookie so a land, a later gate_open, and an eventual signup all
+        // stitch to ONE visitor instead of looking like three strangers.
+        credentials: 'include',
+        keepalive: true,
+        body: JSON.stringify(body)
+      }).catch(function () { /* telemetry is never a visible failure */ });
+    } catch (_) { /* never throw into a caller */ }
   }
 
-  captureUtm();
+  // Public API. Deliberately tolerant: bad input is ignored, never thrown.
+  window.vintFunnel = function (step, meta) {
+    try { emit(String(step || ''), meta); } catch (_) {}
+  };
 
-  window.vintFunnel = { track: track, utm: utm, steps: STEPS.slice(), markVisit: markVisit };
+  // Deduped helpers used by the hooks below (and safe for any other module).
+  window.vintFunnel.oncePerSession = function (step, meta) {
+    try { if (once(sessionStorage, 'vf:' + step)) emit(step, meta); } catch (_) {}
+  };
+  window.vintFunnel.oncePerDay = function (step, meta) {
+    try { if (once(localStorage, 'vf:' + step + ':' + stamp())) emit(step, meta); } catch (_) {}
+  };
 
-  // Auto-fire `land` once per page load, after paint so it never competes with
-  // rendering. markVisit runs alongside so returning humans are counted.
-  function boot() {
-    track('land', { surface: (location.pathname.split('/').pop() || 'index').toLowerCase() });
-    markVisit();
-  }
-  if (document.readyState === 'complete' || document.readyState === 'interactive') {
-    setTimeout(boot, 0);
-  } else {
-    window.addEventListener('DOMContentLoaded', function () { setTimeout(boot, 0); });
-  }
+  // ── land ─────────────────────────────────────────────────────────────────
+  // Once per browser session, not once per page load: clicking through five
+  // surfaces is one arrival by one human, and counting it as five would be the
+  // same class of lie as the "203 users" number this whole task exists to fix.
+  try {
+    window.vintFunnel.oncePerSession('land', {
+      page: (location.pathname.split('/').pop() || 'index.html').slice(0, 40),
+      ref: (document.referrer || '').slice(0, 120)
+    });
+  } catch (_) {}
+
+  // ── first_message ────────────────────────────────────────────────────────
+  // The REAL activation moment. Emitted server-side from POST /chat as well
+  // (that is the authoritative lane — it covers extension/phone/telegram too
+  // and cannot be spoofed). This client hook exists only so the browser lane
+  // is stitched to the visitor cookie. Deduped per day; the server dedupes to
+  // genuinely-first separately.
+  window.vintFunnel.firstMessage = function (meta) {
+    window.vintFunnel.oncePerDay('first_message', meta);
+  };
 })();

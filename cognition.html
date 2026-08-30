@@ -154,6 +154,12 @@ body {
   text-align: center;
   transition: all 0.3s ease;
   position: relative;
+  cursor: pointer;
+}
+.rung:hover {
+  transform: translateY(-4px);
+  border-color: var(--border-glow);
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.3);
 }
 .rung::after {
   content: '';
@@ -179,17 +185,45 @@ body {
 .rung.passed {
   border-color: rgba(102,187,106,0.4);
   background: rgba(102,187,106,0.04);
+  animation: passedPulse 3s ease-in-out infinite;
 }
 .rung.passed .rung-num { color: var(--green); }
 .rung.passed .rung-name { color: rgba(150,235,165,0.8); }
+.rung.passed:hover {
+  transform: translateY(-6px);
+  border-color: rgba(102,187,106,0.6);
+}
 .rung.current {
   border-color: var(--gold);
   background: rgba(255,213,79,0.05);
   box-shadow: 0 0 28px rgba(255,213,79,0.15), inset 0 1px 0 rgba(255,213,79,0.12);
+  animation: currentPulse 2s ease-in-out infinite;
 }
 .rung.current .rung-num { color: var(--gold); }
 .rung.current .rung-name { color: var(--gold); }
 .rung.current .rung-exit { color: rgba(255,213,79,0.7); }
+.rung.current:hover {
+  transform: translateY(-6px) scale(1.02);
+  box-shadow: 0 0 35px rgba(255,213,79,0.25), inset 0 1px 0 rgba(255,213,79,0.18);
+}
+
+@keyframes passedPulse {
+  0%, 100% {
+    box-shadow: 0 0 8px rgba(102,187,106,0.1);
+  }
+  50% {
+    box-shadow: 0 0 16px rgba(102,187,106,0.2);
+  }
+}
+
+@keyframes currentPulse {
+  0%, 100% {
+    box-shadow: 0 0 28px rgba(255,213,79,0.15), inset 0 1px 0 rgba(255,213,79,0.12);
+  }
+  50% {
+    box-shadow: 0 0 40px rgba(255,213,79,0.3), inset 0 1px 0 rgba(255,213,79,0.18);
+  }
+}
 
 /* ─── ENGINE CARDS ─── */
 .engines-grid {

@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>DirZombie Brand Preview</title>
+  <link rel="icon" type="image/svg+xml" href="./favicon/favicon.svg">
+  <style>
+    :root {
+      --bg: #050607;
+      --panel: rgba(17, 20, 24, 0.9);
+      --text: #f4f0e3;
+      --muted: rgba(244, 240, 227, 0.68);
+      --line: rgba(244, 240, 227, 0.14);
+      --green: #a7f05c;
+      --violet: #8c57ff;
+      --red: #ff3b52;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background:
+        linear-gradient(180deg, rgba(167, 240, 92, 0.1), transparent 28%),
+        linear-gradient(135deg, rgba(140, 87, 255, 0.14), transparent 42%),
+        var(--bg);
+      color: var(--text);
+      font-family: Inter, "Segoe UI", sans-serif;
+      padding: clamp(18px, 4vw, 40px);
+    }
+    header {
+      max-width: 1180px;
+      margin: 0 auto 28px;
+      display: grid;
+      grid-template-columns: minmax(160px, 240px) minmax(0, 1fr);
+      gap: clamp(18px, 4vw, 36px);
+      align-items: center;
+    }
+    header img { width: 100%; display: block; }
+    h1 {
+      margin: 0;
+      color: var(--text);
+      font-family: Impact, Haettenschweiler, "Arial Black", sans-serif;
+      font-size: clamp(3rem, 10vw, 9rem);
+      font-weight: 900;
+      letter-spacing: 0;
+      line-height: 0.88;
+      text-transform: uppercase;
+    }
+    .claim {
+      margin: 14px 0 0;
+      color: var(--green);
+      font: 700 clamp(0.92rem, 1.8vw, 1.35rem) "Space Mono", "IBM Plex Mono", Menlo, monospace;
+      letter-spacing: 0;
+      text-transform: uppercase;
+    }
+    .grid {
+      max-width: 1180px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 18px;
+    }
+    .asset {
+      border: 1px solid var(--line);
+      background: var(--panel);
+      border-radius: 8px;
+      padding: 16px;
+      min-width: 0;
+    }
+    .asset h2 {
+      margin: 0 0 12px;
+      color: var(--muted);
+      font: 700 0.78rem "Space Mono", "IBM Plex Mono", Menlo, monospace;
+      letter-spacing: 0;
+      text-transform: uppercase;
+    }
+    .frame {
+      border: 1px solid rgba(167, 240, 92, 0.18);
+      background: #050607;
+      border-radius: 6px;
+      overflow: hidden;
+      display: grid;
+      place-items: center;
+      min-height: 220px;
+    }
+    .frame img { width: 100%; display: block; }
+    .frame.mark img { max-width: 360px; }
+    .swatches {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 8px;
+    }
+    .swatch {
+      min-height: 90px;
+      border-radius: 6px;
+      border: 1px solid var(--line);
+    }
+    @media (max-width: 640px) {
+      header { grid-template-columns: 1fr; }
+      header img { max-width: 180px; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <img src="./logo/dirzombie-mark.svg" alt="DirZombie mark">
+    <div>
+      <h1>DirZombie</h1>
+      <p class="claim">The directory that refuses to die.</p>
+    </div>
+  </header>
+  <main class="grid">
+    <section class="asset">
+      <h2>Primary Lockup</h2>
+      <div class="frame"><img src="./logo/dirzombie-lockup-horizontal.svg" alt="DirZombie lockup"></div>
+    </section>
+    <section class="asset">
+      <h2>Mark / Favicon</h2>
+      <div class="frame mark"><img src="./favicon/favicon.svg" alt="DirZombie favicon"></div>
+    </section>
+    <section class="asset">
+      <h2>Wordmark</h2>
+      <div class="frame"><img src="./logo/dirzombie-wordmark.svg" alt="DirZombie wordmark"></div>
+    </section>
+    <section class="asset">
+      <h2>Profile Image</h2>
+      <div class="frame mark"><img src="./social/profile-square-1080.svg" alt="DirZombie profile image"></div>
+    </section>
+    <section class="asset">
+      <h2>Palette</h2>
+      <div class="swatches" aria-label="DirZombie palette">
+        <div class="swatch" style="background:#050607"></div>
+        <div class="swatch" style="background:#f4f0e3"></div>
+        <div class="swatch" style="background:#a7f05c"></div>
+        <div class="swatch" style="background:#8c57ff"></div>
+        <div class="swatch" style="background:#ff3b52"></div>
+      </div>
+    </section>
+  </main>
+</body>
+</html>
