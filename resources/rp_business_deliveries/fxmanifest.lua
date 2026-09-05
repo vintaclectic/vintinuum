@@ -2,8 +2,8 @@ fx_version 'cerulean'
 game 'gta5'
 
 author 'Vintinuum Council'
-description 'Standalone configurable RP business money-delivery, reputation, loyalty, and protection resource.'
-version '1.0.0'
+description 'Standalone configurable RP business money-delivery, reputation, loyalty, protection, and crew takeover resource.'
+version '1.1.0'
 
 lua54 'yes'
 
@@ -18,4 +18,9 @@ client_scripts {
 
 server_scripts {
   'server/main.lua'
+}
+
+files {
+  'data/businesses.json',
+  'data/control.json'
 }
