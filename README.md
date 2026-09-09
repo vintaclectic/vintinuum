@@ -201,6 +201,7 @@ Pages live at the repo root and are served from GitHub Pages. Every page named b
 | Page | What it is |
 |------|-----------|
 | `altar.html` | Connectors hub — Telegram, Discord, Kick, Twitch, Google Drive |
+| `mcps.html` | MCP Forge — add external MCP servers or draft council-invented tool contracts |
 | `upgrade.html` | Tier upgrade — free → pro → god, Stripe checkout |
 | `phone.html` | Phone PWA shell — install on mobile, body sensors, notifications |
 | `sensor.html` | Phone-side body sensor input (accel, gyro, light) |
