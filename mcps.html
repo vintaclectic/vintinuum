@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>MCP Forge · Vintinuum</title>
+<style>
+  :root{
+    --bg:#060810; --panel:#101522; --edge:#263043; --ink:#eaf0ff;
+    --muted:#9facbf; --accent:#56c7a8; --accent2:#8ca7ff; --warn:#ffd070;
+    --ok:#58d68d; --err:#ff7a90; --radius:14px;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0;background:var(--bg);color:var(--ink);
+    font:16px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+    -webkit-text-size-adjust:100%}
+  .wrap{max-width:880px;margin:0 auto;padding:24px 18px 44px;min-height:100svh}
+  header{display:flex;flex-direction:column;gap:8px;margin-bottom:18px}
+  h1{margin:0;font-size:clamp(24px,5vw,34px);font-weight:760}
+  .sub{margin:0;color:var(--muted);font-size:15px;max-width:680px}
+  .top{display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap;margin-bottom:18px}
+  .link{color:var(--accent2);text-decoration:none}
+  .grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:14px}
+  .panel,.mcp{background:var(--panel);border:1px solid var(--edge);border-radius:var(--radius);padding:16px}
+  .panel{display:flex;flex-direction:column;gap:12px;min-width:0}
+  .panel h2,.mcp h2{margin:0;font-size:16px;overflow-wrap:anywhere;min-width:0}
+  label{display:flex;flex-direction:column;gap:6px;color:var(--muted);font-size:13px}
+  input,textarea,select{width:100%;background:#090d16;border:1px solid var(--edge);border-radius:10px;
+    color:var(--ink);font:inherit;padding:11px;min-width:0}
+  textarea{resize:vertical;min-height:86px}
+  .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+  .row > *{flex:1 1 180px}
+  .btn{appearance:none;border:0;border-radius:10px;background:var(--accent);color:#03110d;
+    font:inherit;font-weight:720;padding:11px 14px;cursor:pointer;min-height:44px}
+  .btn.ghost{background:transparent;color:var(--ink);border:1px solid var(--edge)}
+  .btn[disabled]{opacity:.55;cursor:not-allowed}
+  .status{min-height:20px;font-size:13px;color:var(--muted)}
+  .status.ok{color:var(--ok)} .status.err{color:var(--err)} .status.warn{color:var(--warn)}
+  .list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-top:14px}
+  .mcp{border-left:3px solid var(--accent);display:flex;flex-direction:column;gap:8px;min-width:0}
+  .mcp .meta{display:flex;gap:8px;flex-wrap:wrap;color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:.05em}
+  .mcp p{margin:0;color:var(--muted);font-size:14px;overflow-wrap:anywhere}
+  .pill{border:1px solid var(--edge);border-radius:999px;padding:2px 8px;overflow-wrap:anywhere;min-width:0}
+  .empty{padding:28px;text-align:center;color:var(--muted)}
+  @media (max-width:720px){.grid,.list{grid-template-columns:1fr}.wrap{padding:18px 14px 34px}}
+</style>
+</head>
+<body>
+<main class="wrap">
+  <div class="top">
+    <a class="link" href="index.html">Back to Vintinuum</a>
+    <a class="link" href="agents.html">Your agents</a>
+  </div>
+  <header>
+    <h1>MCP Forge</h1>
+    <p class="sub">Add external MCP servers or let the council draft new tool contracts for the organism. Drafts are reviewable before anything runs.</p>
+  </header>
+
+  <section class="grid">
+    <form class="panel" id="forgeForm">
+      <h2>Forge one from an idea</h2>
+      <label>Name <input id="forgeName" autocomplete="off" placeholder="browser-scribe" required></label>
+      <label>Purpose <textarea id="forgePurpose" placeholder="Read pages, extract structured notes, and save them as memory candidates." required></textarea></label>
+      <div class="row">
+        <label>Transport
+          <select id="forgeTransport">
+            <option value="stdio">stdio</option>
+            <option value="http">http</option>
+            <option value="sse">sse</option>
+          </select>
+        </label>
+        <label>Invented by <input id="forgeInventedBy" value="council" autocomplete="off"></label>
+      </div>
+      <button class="btn" type="submit">Forge Draft</button>
+      <div class="status" id="forgeStatus"></div>
+    </form>
+
+    <form class="panel" id="addForm">
+      <h2>Add an existing MCP</h2>
+      <label>Name <input id="addName" autocomplete="off" placeholder="local-files" required></label>
+      <label>Purpose <textarea id="addPurpose" placeholder="Expose approved local files as resources." required></textarea></label>
+      <div class="row">
+        <label>Transport
+          <select id="addTransport">
+            <option value="stdio">stdio</option>
+            <option value="http">http</option>
+            <option value="sse">sse</option>
+          </select>
+        </label>
+        <label>Command or URL <input id="addTarget" autocomplete="off" placeholder="node server.js"></label>
+      </div>
+      <button class="btn ghost" type="submit">Register MCP</button>
+      <div class="status" id="addStatus"></div>
+    </form>
+  </section>
+
+  <div class="status" id="pageStatus" style="margin-top:16px"></div>
+  <section class="list" id="mcpList"></section>
+</main>
+
+<script>
+const API = (location.hostname === 'localhost' || location.hostname === '127.0.0.1')
+  ? 'http://localhost:8767' : 'https://api.vintaclectic.com';
+const $ = id => document.getElementById(id);
+
+function token(){ return localStorage.getItem('vintinuum_session') || localStorage.getItem('vint_token') || ''; }
+function headers(){ return { 'Content-Type':'application/json', 'Authorization':'Bearer ' + token() }; }
+function setStatus(id, msg, kind){ const el = $(id); el.textContent = msg || ''; el.className = 'status' + (kind ? ' ' + kind : ''); }
+function esc(s){ return String(s || '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+function render(mcps){
+  const root = $('mcpList');
+  if (!mcps.length) {
+    root.innerHTML = '<div class="panel empty">No MCPs yet.</div>';
+    return;
+  }
+  root.innerHTML = mcps.map(m => `
+    <article class="mcp">
+      <div class="meta">
+        <span class="pill">${esc(m.status)}</span>
+        <span class="pill">${esc(m.source)}</span>
+        <span class="pill">${esc(m.transport)}</span>
+      </div>
+      <h2>${esc(m.name)}</h2>
+      <p>${esc(m.purpose)}</p>
+      <p>${esc((m.manifest && (m.manifest.command || m.manifest.endpoint_url)) || 'draft manifest')}</p>
+    </article>
+  `).join('');
+}
+
+async function load(){
+  if (!token()) {
+    setStatus('pageStatus', 'Sign in through the altar to manage MCPs.', 'warn');
+    render([]);
+    return;
+  }
+  setStatus('pageStatus', 'Loading MCPs...');
+  try {
+    const res = await fetch(`${API}/api/mcps`, { headers: headers() });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
+    setStatus('pageStatus', '');
+    render(data.mcps || []);
+  } catch(e) {
+    setStatus('pageStatus', 'Could not load MCPs: ' + e.message, 'err');
+  }
+}
+
+async function submit(url, payload, statusId){
+  if (!token()) { setStatus(statusId, 'Sign in first.', 'warn'); return; }
+  setStatus(statusId, 'Saving...');
+  try {
+    const res = await fetch(`${API}${url}`, { method:'POST', headers:headers(), body:JSON.stringify(payload) });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
+    setStatus(statusId, 'Saved as draft.', 'ok');
+    await load();
+  } catch(e) {
+    setStatus(statusId, e.message, 'err');
+  }
+}
+
+$('forgeForm').addEventListener('submit', e => {
+  e.preventDefault();
+  submit('/api/mcps/forge', {
+    name: $('forgeName').value,
+    purpose: $('forgePurpose').value,
+    transport: $('forgeTransport').value,
+    invented_by: $('forgeInventedBy').value || 'council'
+  }, 'forgeStatus');
+});
+
+$('addForm').addEventListener('submit', e => {
+  e.preventDefault();
+  const transport = $('addTransport').value;
+  const target = $('addTarget').value.trim();
+  submit('/api/mcps', {
+    name: $('addName').value,
+    purpose: $('addPurpose').value,
+    transport,
+    command: transport === 'stdio' ? target : '',
+    endpoint_url: transport !== 'stdio' ? target : ''
+  }, 'addStatus');
+});
+
+load();
+</script>
+<script src="body/welcome-gate.js"></script>
+</body>
+</html>
