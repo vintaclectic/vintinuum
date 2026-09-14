@@ -279,7 +279,7 @@
     font-size: 14px; color: #f4c79a; text-decoration: none; padding: 0 6px; }
 </style>
 </head>
-<body>
+<body data-atlas-pin="false">
 <div id="stage"></div>
 <div id="status" class="show">finding the clearing…</div>
 
@@ -316,7 +316,14 @@
   </div>
 </div>
 <div id="hint">W/A/S/D move · Q/E or drag turn · Shift run · Space jump · V view · 🎤 talk</div>
-<a id="leave" href="brain.html">↩ leave</a>
+<!-- ABWNYHB 2026-09-13: leave now returns to the ATLAS (index.html), not
+     brain.html. Vinta: the card page must be reachable from every surface.
+     world.html's top band is fully spoken for (#leave owns 14..58,
+     #vintWorldHud owns 64.. and grows with content), so it declines the
+     floating Atlas pin via data-atlas-pin="false" on <body> and routes its
+     EXISTING exit to the map instead — a way home with no new chrome and no
+     new collision surface. -->
+<a id="leave" href="index.html?home">↩ leave</a>
 <div id="topctl">
   <button id="btnView" aria-label="change view" title="change camera (V)">👁 view</button>
   <button id="btnMic" aria-label="push to talk" title="hold to talk (proximity)">🎤 talk</button>
@@ -347,6 +354,7 @@
 <script src="body/world/voice.js"></script>
 <script src="body/head_editor.js"></script>
 <script src="body/draggable.js"></script>
+<script defer src="body/atlas_pin.js?v=v20260913-abwnyhb"></script>
 <script src="body/world/agent-life.js"></script>
 <script src="body/world/world-client.js"></script>
 <script src="body/world/world-hud.js"></script>
