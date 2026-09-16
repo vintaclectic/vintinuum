@@ -209,7 +209,7 @@
     }
     if (url.startsWith('blob:')) return 'video';
     if (/youtube\.com|youtu\.be|vimeo\.com|dailymotion\.com|soundcloud\.com|spotify\.com|bandcamp\.com|tiktok\.com|rumble\.com|kick\.com|twitch\.tv/i.test(url)) {
-      return /soundcloud|spotify|bandcamp/i.test(url) ? 'audio' : /kick|twitch/i.test(url) ? 'stream' : 'video';
+      return /soundcloud|spotify|bandcamp/i.test(url) ? 'audio' : 'video';
     }
     try {
       const path = new URL(url).pathname;
