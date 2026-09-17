@@ -1,0 +1,79 @@
+{
+  "task_id": "MWNMNT9",
+  "checked_at": "2026-09-17T23:16:27.022488+00:00",
+  "specialist": "helios-fusion",
+  "publications_submitted": 0,
+  "publication_receipts": [],
+  "authorization": "User explicitly requested X/Reddit/available-platform sharing and reiterated on 2026-09-17 that posting must not be blocked. No further approval request needed for this task.",
+  "health_probe": {
+    "method": "GET",
+    "url": "http://localhost:8000/health",
+    "connect_timeout_seconds": 3,
+    "max_time_seconds": 8,
+    "attempts": 1,
+    "curl_exit": 7,
+    "http_status": 0,
+    "error": "Failed to connect to localhost port 8000 after 0 ms: Couldn't connect to server",
+    "cause": "unverified; this result does not distinguish unavailable service from session network restriction"
+  },
+  "static_file_checks": {
+    "owner_token_present": true,
+    "kill_switch_enabled_in_file": false,
+    "twitter_oauth1_required_fields_present": true,
+    "reddit_app_fields_present": true,
+    "reddit_auth_grant_fields_present": true,
+    "reddit_auto_subreddits_nonempty_in_file": false
+  },
+  "runtime_config_and_credential_validity": "unverified",
+  "contract": {
+    "submit": {
+      "method": "POST",
+      "path": "/api/v1/broadcast/",
+      "auth": "owner Bearer token",
+      "mode": "auto",
+      "fields": [
+        "project",
+        "kind",
+        "title",
+        "body",
+        "media_url",
+        "content_type",
+        "platforms",
+        "mode",
+        "idempotency_key",
+        "source"
+      ]
+    },
+    "approve_existing": {
+      "method": "POST",
+      "path": "/api/v1/broadcast/{broadcast_id}/approve",
+      "auth": "owner Bearer token",
+      "precondition": "row.status == pending_approval"
+    },
+    "idempotency_note": "Existing idempotency_key returns unchanged row; submitting mode auto again does not approve a preexisting pending row.",
+    "observe_results": "GET /api/v1/broadcast/{broadcast_id}; require per-platform post IDs/URLs, not just dispatch acknowledgement."
+  },
+  "verified_code_gates": [
+    {
+      "file": "/home/vinta/dircomedia/backend/app/api/v1/broadcast.py",
+      "detail": "Kill switch rejects fan-out with423; daily cap rejects with429; duplicate content rejects with409; owner auth required via app/main.py."
+    },
+    {
+      "file": "/home/vinta/dircomedia/backend/app/workers/broadcast_tasks.py",
+      "detail": "Reddit removed from platforms when REDDIT_AUTO_SUBREDDITS empty, for both auto and explicit owner approval. No mode exemption."
+    },
+    {
+      "file": "/home/vinta/dircomedia/backend/app/services/distribution/scheduler.py",
+      "detail": "Reddit defaults vintinuum to artificial and singularity; fanout worker does not forward a chosen allowlisted subreddit. Setting an allowlist alone does not bind the actual posting destination."
+    }
+  ],
+  "remaining_dependencies": [
+    "Reachable authenticated DirCoMedia API",
+    "Check existing broadcast rows before submission to prevent duplicates",
+    "Verify connected accounts live",
+    "Provide platform-fetchable media URL or verified upload path",
+    "Reconcile Reddit explicit-owner approval and actual subreddit binding before broadcast",
+    "Require terminal per-platform receipts"
+  ],
+  "modifications": "This evidence JSON only. No app configuration changed; no job queued; no credential output; no alternate transport attempted."
+}

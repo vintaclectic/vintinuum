@@ -1,0 +1,14 @@
+{
+  "project": "vintinuum",
+  "kind": "content",
+  "title": null,
+  "body": "AI work needs a clear finish line. Here’s how I organize tasks with a council board: define the outcome, assign the work, track progress, and review the result. What would you put on your board first?",
+  "media_url": "/home/vinta/.claude/council-loop/state/docs/MWNMNT9-media/short-square.mp4",
+  "content_type": "video",
+  "platforms": [
+    "twitter"
+  ],
+  "mode": "auto",
+  "idempotency_key": "MWNMNT9-council-explainer-x-v1",
+  "source": "council-MWNMNT9"
+}
