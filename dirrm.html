@@ -294,13 +294,28 @@ body[data-drag="over"] .drop-icon{transform:translateY(-5px) scale(1.06)}
 /* ─── PLAYER SHELL (fixed layer #1) ──────────────────────────────────────── */
 /* Only painted when body[data-state="playing"]. display:none otherwise, so it
    cannot collide with the toast or intercept clicks while hidden. */
+/* BOX MODEL (task XMB7CTP) — the shell is a two-row grid, not a stacking
+   context with a floating button on top:
+
+     row 1  .shell-bar   height --backbar-h, owns the back button. ALWAYS.
+     row 2  iframe       1fr, owns every remaining pixel. ALWAYS.
+
+   Every pixel of the shell belongs to exactly one owner, so there is no
+   unowned region where a collision can be born. */
 .player-shell{
   display:none;
   position:fixed; inset:0;
   z-index:100;
   background:#070604;
+  /* Bar height INCLUDES the notch inset, so the grid row already accounts for
+     it and the button never has to be pushed out of its own row. */
+  --backbar-h:calc(var(--tap) + 12px + env(safe-area-inset-top,0px));
+  grid-template-rows:var(--backbar-h) 1fr;
+  grid-template-columns:100%;
+  /* min-height:0 on the media row is the load-bearing half of "the iframe
+     scrolls/shrinks inside its row instead of blowing the grid out". */
 }
-body[data-state="playing"] .player-shell{display:block}
+body[data-state="playing"] .player-shell{display:grid}
 body[data-state="playing"]{overflow:hidden}   /* page behind must not scroll */
 /* dirrm-launch.js sets iframe.style.cssText INLINE for embedIn targets, which
    includes `border-radius:14px`. Inline styles beat stylesheet specificity, so
@@ -315,13 +330,35 @@ body[data-state="playing"]{overflow:hidden}   /* page behind must not scroll */
   border-radius:0!important;
   background:#070604!important;
 }
-/* Escape hatch — top-left, inside the shell's own box. The player's own chrome
-   lives top-RIGHT (its titlebar buttons), so these two never share pixels. */
+/* ─── BACK BAR (shell grid row 1) ────────────────────────────────────────── */
+/* NO-COLLISION FIX (task XMB7CTP). This button used to be
+   `position:absolute; top:12px; left:12px` floating OVER the player iframe.
+   The comment that justified it claimed "the player's own chrome lives
+   top-RIGHT", which is only half true: the player's titlebar BUTTONS are
+   right-aligned, but `.dirrm-title` — the media title — is the FIRST child of
+   `.dirrm-titlebar-left`, i.e. top-LEFT, at exactly the coordinates this
+   button occupied. So with media open, "← Back" sat on top of the title. That
+   is the cardinal sin, and it was structural: an overlay cannot be made safe
+   by nudging it, because the title's length and the viewport width both vary.
+
+   The fix is to stop overlaying at all. The bar is its own grid row; the
+   iframe gets the rest. They cannot touch, at any width, with any title. */
+.shell-bar{
+  grid-row:1;
+  display:flex; align-items:center;
+  padding:6px 12px calc(6px) 12px;
+  padding-top:calc(6px + env(safe-area-inset-top,0px));
+  padding-left:max(12px,env(safe-area-inset-left,0px));
+  padding-right:max(12px,env(safe-area-inset-right,0px));
+  background:#070604;
+  border-bottom:1px solid var(--border);
+  min-width:0;                      /* let the row shrink, never push */
+}
+.player-shell iframe{ grid-row:2; min-height:0; }
 .back-btn{
-  position:absolute; top:max(12px,env(safe-area-inset-top)); left:12px;
-  z-index:2;                         /* above the iframe, inside the shell */
   min-height:var(--tap); min-width:var(--tap);
   padding:0 17px;
+  flex:0 0 auto;
   display:inline-flex; align-items:center; gap:8px;
   border-radius:999px; border:1px solid var(--border);
   background:rgba(13,11,8,.92);
@@ -492,8 +529,12 @@ body[data-state="playing"] .toast[data-show="1"]{
 
 <!-- FIXED LAYER 1 — the player. Hidden unless data-state="playing". -->
 <div class="player-shell" id="shell">
-  <button type="button" class="back-btn" id="back">← Back</button>
-  <!-- iframe injected here at launch, removed on close (no stale blob refs) -->
+  <!-- Row 1: the back bar. Owns its own band of pixels; never overlays the
+       player, so it can never land on the player's own media title. -->
+  <div class="shell-bar">
+    <button type="button" class="back-btn" id="back">← Back</button>
+  </div>
+  <!-- Row 2: iframe injected here at launch, removed on close (no stale blob refs) -->
 </div>
 
 <!-- The canonical launcher. Sibling-origin, so dirrmLaunch resolves the
