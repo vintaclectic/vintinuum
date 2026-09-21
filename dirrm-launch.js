@@ -13,7 +13,7 @@
 
    Canonical player:
        /home/vinta/vintinuum/dirrm-player.html        (source of truth)
-       https://vintaclectic.github.io/vintinuum/dirrm-player.html  (live)
+       https://vintinuum.com/dirrm-player.html  (live)
 
    This library is the SINGLE FUNCTION every surface in Vintinuum should
    call to play any media. It abstracts:
@@ -77,7 +77,7 @@
   'use strict';
 
   // ── CONFIG ────────────────────────────────────────────────────────────────
-  const CANONICAL_URL = 'https://vintaclectic.github.io/vintinuum/dirrm-player.html';
+  const CANONICAL_URL = 'https://vintinuum.com/dirrm-player.html';
   const RELATIVE_URL  = 'dirrm-player.html';   // when invoked from a vintinuum page
   const VALID_MODES   = ['main', 'mini', 'pip', 'theater'];
 
@@ -105,7 +105,7 @@
   // — every one of which ships dirrm-player.html right next to the page that is
   // asking — fell through to the GitHub Pages CANONICAL_URL. Measured: the world
   // at http://127.0.0.1:41529 opened
-  // `https://vintaclectic.github.io/.../dirrm-player.html?url=http://127.0.0.1:...`,
+  // `https://vintinuum.com/.../dirrm-player.html?url=http://127.0.0.1:...`,
   // which resolved to chrome-error://chromewebdata, played nothing, and reported
   // nothing — an iframe cannot tell its parent it failed to load, so the player
   // appeared to open and simply never made a sound. DIRVERSE's whole federation

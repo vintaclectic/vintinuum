@@ -106,7 +106,7 @@ the same commit.
 
 ## Hosting truth
 
-- **Front-end:** `https://vintaclectic.github.io/vintinuum/` (GitHub Pages,
+- **Front-end:** `https://vintinuum.com/` (GitHub Pages,
   served from `main` branch of this repo)
 - **Brain:** `https://api.vintaclectic.com` (Cloudflare named tunnel →
   localhost:8767 → `~/vintinuum-api/server.js`)

@@ -38,7 +38,7 @@ Do NOT `cp -r` the folder — it will choke on `.git` object names under NTFS.
 `rsync --exclude=".git"` is the only correct method.
 
 ### Live URLs
-- Site:    https://vintaclectic.github.io/vintinuum/
+- Site:    https://vintinuum.com/
 - Brain:   https://api.vintaclectic.com  (port 8767 behind named tunnel)
 - Tunnel id: `<tunnel-id — see .env>`
 
@@ -156,7 +156,7 @@ vintinuum across all its mediums extensions and all"**
 
 ### The canonical player
 - Source of truth: `~/vintinuum/dirrm-player.html` (105 KB, version with 5 visualizers + 4 modes + full mediatype coverage)
-- Live URL: `https://vintaclectic.github.io/vintinuum/dirrm-player.html`
+- Live URL: `https://vintinuum.com/dirrm-player.html`
 - Modes: `main` (860×520), `mini` (380px), `pip` (corner overlay), `theater` (fullscreen)
 - Visualizers (audio): `bars`, `wave`, `radial`, `mirror`, `particles`
 - Mediatypes: video, audio, image, pdf, ebook, stream (HLS/DASH), 3d-model, document, iframe-embed, text — every type DirHaven's open-directory crawler can encounter.
@@ -176,7 +176,7 @@ Returns a handle with `load()`, `setMode()`, `play()`, `pause()`, `stop()`, `clo
 
 **1. URL params** (extension popup, links, deep links):
 ```
-https://vintaclectic.github.io/vintinuum/dirrm-player.html?url=<URL>&title=<TITLE>&type=<TYPE>&mode=<MODE>&autoplay=1
+https://vintinuum.com/dirrm-player.html?url=<URL>&title=<TITLE>&type=<TYPE>&mode=<MODE>&autoplay=1
 ```
 
 **2. Iframe + postMessage** (in-page embed):

@@ -24,7 +24,7 @@ export JAVA_HOME="$JDK"
 export PATH="$JDK/bin:$PATH"
 echo "JAVA_HOME=$JAVA_HOME"
 
-MANIFEST_URL="https://vintaclectic.github.io/vintinuum/manifest.webmanifest"
+MANIFEST_URL="https://vintinuum.com/manifest.webmanifest"
 if ! curl -sf -o /dev/null "$MANIFEST_URL"; then
   echo "✗ manifest not live — push the frontend, wait ~1 min, retry."; exit 1
 fi

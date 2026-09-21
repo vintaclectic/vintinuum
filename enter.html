@@ -38,7 +38,7 @@
     Selector : div.world-preview[data-media-slot="world-hero"]
     To wire a CLIP  : drop a file at  branding/world/world-hero.webm  (+ .mp4
                       fallback branding/world/world-hero.mp4) and a poster at
-                      branding/world/world-hero-poster.jpg. Then flip the
+                      branding/world/world-01.jpg. Then flip the
                       data-media-state to "video" — or just set the <video>
                       element's src children below; the JS auto-detects a
                       populated <video> and reveals it, hiding the fallback.
@@ -441,7 +441,7 @@ a{color:inherit;text-decoration:none}
     <div class="world-preview reveal" data-media-slot="world-hero" data-media-state="images">
       <!-- CLIP: populate these <source> children + poster, then set data-media-state="video" -->
       <video class="world-preview__video" playsinline muted loop preload="none"
-             poster="branding/world/world-hero-poster.jpg"
+             poster="branding/world/world-01.jpg"
              aria-label="A short loop of Vintinuum's living world">
         <!-- <source src="branding/world/world-hero.webm" type="video/webm"> -->
         <!-- <source src="branding/world/world-hero.mp4" type="video/mp4"> -->

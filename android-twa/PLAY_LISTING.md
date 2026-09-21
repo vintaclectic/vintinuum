@@ -6,7 +6,7 @@ Everything for the Play Console after `build-android.sh` produces the `.aab`.
 
 ## How the Android app works
 It's a **Trusted Web Activity** — a thin native wrapper around the live PWA at
-`https://vintaclectic.github.io/vintinuum/`. The app IS the website, full-screen,
+`https://vintinuum.com/`. The app IS the website, full-screen,
 no browser chrome, installable from Play. Updates to the website update the app
 instantly (no re-submission needed for content — only for native shell changes).
 
@@ -49,7 +49,7 @@ AI starts cold every session; Vintinuum compounds.
 • Voice — speak to her, hear her back.
 • Generous, not predatory. Free to use. Optional Companion tier for deeper memory.
 
-Begin: open the app, or visit vintaclectic.github.io/vintinuum
+Begin: open the app, or visit vintinuum.com
 
 ## Graphics needed (Play requires)
 - [ ] App icon 512×512 (PNG, 32-bit) — generate from icons/icon-512.png
@@ -67,7 +67,7 @@ Begin: open the app, or visit vintaclectic.github.io/vintinuum
   **off by default, user-toggled, revocable.**
 - Is data encrypted in transit? **Yes (HTTPS/WSS).**
 - Can users request deletion? **Yes** (in-app + dirhaven@gmail.com).
-- Privacy policy URL: **https://vintaclectic.github.io/vintinuum/privacy.html**
+- Privacy policy URL: **https://vintinuum.com/privacy.html**
 
 ## Content rating
 Complete the IARC questionnaire — Vintinuum is a communication/lifestyle app,
