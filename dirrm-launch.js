@@ -477,7 +477,12 @@
       const iframe = document.createElement('iframe');
       iframe.id = 'dirrm-launch-live-' + Math.random().toString(36).slice(2, 8);
       iframe.src = livePlayerUrl;
-      iframe.allow = 'autoplay; fullscreen; camera; microphone; picture-in-picture';
+      // Same delegation rule as the 'iframe' surface below — see the long note
+      // there. The live surface keeps camera+microphone (it carries a
+      // MediaStream) and gains the provider feature set, because a live session
+      // can still be handed an embeddable provider URL mid-session.
+      iframe.allow = 'autoplay; fullscreen; camera; microphone; picture-in-picture; '
+                   + 'encrypted-media; clipboard-write; accelerometer; gyroscope; web-share';
       iframe.style.cssText = (embedIn && typeof embedIn === 'object' && embedIn.appendChild)
         ? 'width:100%;height:100%;border:none;background:#000;'
         : 'position:fixed;inset:0;width:100vw;height:100svh;border:none;z-index:9999;background:#000;';
@@ -562,7 +567,33 @@
     const iframe = document.createElement('iframe');
     iframe.id = 'dirrm-launch-frame-' + Math.random().toString(36).slice(2, 8);
     iframe.src = playerUrl;
-    iframe.allow = 'autoplay; fullscreen; encrypted-media; picture-in-picture';
+    // PERMISSIONS POLICY IS DELEGATED DOWN THE WHOLE FRAME CHAIN, NOT JUST ONE HOP.
+    //
+    // THE BUG THIS FIXES (task XMB7CTP): "YouTube refuses to embed in DirRM from
+    // vintinuum.com". The diagnosis everyone reaches for is X-Frame-Options, and
+    // it is WRONG — measured this session, https://www.youtube-nocookie.com/embed/
+    // returns NO X-Frame-Options and NO CSP frame-ancestors, so framing from any
+    // origin is permitted. The refusal is a PERMISSIONS problem, not a framing one.
+    //
+    // The real chain when DirRM is embedded (dirrm.html -> player -> provider) is
+    // THREE frames deep:
+    //   dirrm.html  --allow=...-->  dirrm-player.html  --allow=...-->  youtube
+    // A nested frame can only ever receive a feature its PARENT frame was itself
+    // granted. The player's own provider iframe (dirrm-player.html loadEmbed)
+    // correctly asks for `autoplay; encrypted-media; clipboard-write;
+    // accelerometer; gyroscope; picture-in-picture; fullscreen` — but this outer
+    // allow list only forwarded four of those, so `clipboard-write`,
+    // `accelerometer` and `gyroscope` were silently DENIED one hop further down.
+    // YouTube's player treats a denied feature set as a hostile/unsupported
+    // embedding context and degrades to its "Video unavailable / watch on
+    // YouTube" refusal screen rather than erroring — which is exactly why this
+    // read as a framing block and never produced a console error to chase.
+    //
+    // The list below is kept as a SUPERSET of every feature any provider iframe
+    // in loadEmbed() requests. If a provider is ever given a new feature there,
+    // it MUST be added here too or it dies silently one frame down.
+    iframe.allow = 'autoplay; fullscreen; encrypted-media; picture-in-picture; '
+                 + 'clipboard-write; accelerometer; gyroscope; web-share';
     iframe.style.cssText = embedIn && embedIn.appendChild
       ? 'width:100%;height:100%;border:none;border-radius:14px;background:transparent;'
       : 'position:fixed;bottom:20px;right:20px;width:520px;height:340px;border:none;z-index:9998;border-radius:16px;box-shadow:0 8px 32px rgba(0,0,0,0.5),0 0 1px rgba(245,166,35,0.3);pointer-events:auto;background:transparent;';

@@ -15,16 +15,11 @@ The directory that refuses to die.
 
 ## Logo System
 
-- [logo/dirzombie-mark.svg](/home/vinta/.council-worktrees/Vintinuum-seat-8/branding/dirzombie/logo/dirzombie-mark.svg): primary symbol
-- [logo/dirzombie-mark.png](/home/vinta/.council-worktrees/Vintinuum-seat-8/branding/dirzombie/logo/dirzombie-mark.png): transparent PNG mark
-- [logo/dirzombie-wordmark.svg](/home/vinta/.council-worktrees/Vintinuum-seat-8/branding/dirzombie/logo/dirzombie-wordmark.svg): pure wordmark
-- [logo/dirzombie-wordmark.png](/home/vinta/.council-worktrees/Vintinuum-seat-8/branding/dirzombie/logo/dirzombie-wordmark.png): PNG wordmark
-- [logo/dirzombie-lockup-horizontal.svg](/home/vinta/.council-worktrees/Vintinuum-seat-8/branding/dirzombie/logo/dirzombie-lockup-horizontal.svg): primary default lockup
-- [logo/dirzombie-lockup-horizontal.png](/home/vinta/.council-worktrees/Vintinuum-seat-8/branding/dirzombie/logo/dirzombie-lockup-horizontal.png): PNG horizontal lockup
-- [logo/dirzombie-logo.png](/home/vinta/.council-worktrees/Vintinuum-seat-8/branding/dirzombie/logo/dirzombie-logo.png): primary square server logo
-- [favicon/favicon.svg](/home/vinta/.council-worktrees/Vintinuum-seat-8/branding/dirzombie/favicon/favicon.svg): favicon and browser tab mark using the same sigil
-- [social/profile-square-1080.svg](/home/vinta/.council-worktrees/Vintinuum-seat-8/branding/dirzombie/social/profile-square-1080.svg): universal avatar master
-- [social/profile-square-1080.png](/home/vinta/.council-worktrees/Vintinuum-seat-8/branding/dirzombie/social/profile-square-1080.png): social/profile PNG
+- `logo/dirzombie-mark.svg`: primary symbol
+- `logo/dirzombie-wordmark.svg`: pure wordmark
+- `logo/dirzombie-lockup-horizontal.svg`: primary default lockup
+- `favicon/favicon.svg`: favicon and browser tab mark using the same sigil
+- `social/profile-square-1080.svg`: universal avatar master
 
 ## Palette
 

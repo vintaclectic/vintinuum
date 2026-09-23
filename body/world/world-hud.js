@@ -1007,87 +1007,241 @@
   W.addEventListener('vint:world-refine', function (e) {
     var d = e.detail || {}; _toast('refined ' + d.spent + ' echo → ' + d.gained + ' lumen' + _cut(d));
   });
-  /* ══ EVERY REFUSAL IS A SIGNPOST ══════════════════════════════════════════
-     (AETHERHOLD 2026-08-25, task BUTHM4K.)
+  // ══════════════════════════════════════════════════════════════════════════
+  // THE REFUSALS — every "no" arrives with the way through attached
+  // (AETHERHOLD 2026-08-25, task BUTHM4K — BUG3)
+  //
+  // ── THE BUG THIS EXISTS TO KILL ───────────────────────────────────────────
+  // This map held SIX codes. The server emits over seventy, and the ones a
+  // player hits FIRST — need_strand, need_ember, bad_kind, place-denied,
+  // standing — were all missing. So the most common moment in the whole game
+  // ("I pressed build and it didn't work") produced the toast `— need_strand`:
+  // a raw internal identifier, no explanation, no remedy. A player cannot tell
+  // that from a crash. Lord Vinta read exactly that and concluded building was
+  // broken, which was half right — the economy WAS dead-ended, and the errors
+  // were incapable of telling him so.
+  //
+  // ── THE RULE ──────────────────────────────────────────────────────────────
+  // A refusal is a SIGNPOST, never a wall. Every message here (1) says what
+  // happened in plain words, (2) names the WAY THROUGH, and (3) uses the
+  // server's own numbers when it sent them — never a number this file guessed.
+  // The server ships `need`/`have`/`gap`/`tier`/`radius` precisely so the
+  // remedy can be exact, and an exact remedy is the difference between a player
+  // who quits and a player who goes and does the thing.
+  //
+  // Codes are also deliberately GROUPED by the system that raises them, so a
+  // future code added server-side lands next to its family rather than at the
+  // bottom of an alphabetical pile nobody can audit.
+  // ══════════════════════════════════════════════════════════════════════════
+  // codes we have already shouted about, so an unmapped one warns exactly once
+  // rather than once per occurrence. Declared BEFORE the handler that reads it —
+  // a `var` after the listener is hoisted but the initialiser is not, and the
+  // test caught exactly that as a live ReferenceError.
+  var _unmapped = {};
 
-     THE BUG THIS REPLACES. This map held six codes. The server sends far more
-     than six — and the three most common failures in the entire build loop
-     (`need_strand`, `need_ember`, `bad_kind`) and the ascent's whole `standing`
-     verdict were NOT among them. So the single most frequent moment in DIRVERSE
-     — a player pressing a build button and being refused — rendered as the bare
-     string "— need_strand". That is not a message; it is a variable name
-     escaping into a player's face, and it is the reason a genuinely broken
-     economy went undiagnosed as long as it did. If the world had said "you need
-     1 strand and you have 0 — weave some at your hearth", the famine would have
-     been reported as a famine on day one instead of as "building doesn't work."
+  var ERRORS = {
+    // ── the hearth: claiming your ground ──────────────────────────────────
+    no_seed_stone:   'you need a seed stone to claim — you start with one.',
+    already_claimed: 'you already have a hearth. this is your ground.',
+    too_close:       'too close to another hearth — walk further out and claim there.',
+    not_your_plot:   'that is outside your hearth plot — stand closer to your hearth and place again.',
 
-     THE RULE, which the world's own code comments already stated and this
-     function did not honour: A REFUSAL IS A SIGNPOST, NOT A WALL. Every "no"
-     names (1) exactly what is missing, and (2) the exact next action that fixes
-     it. Never a code, never a bare noun, never a dead end. The server already
-     ships everything needed for that — need/have/gap/tier/radius are all in the
-     payload — and it was simply being thrown away. */
+    // ── the nodes + the refinery ──────────────────────────────────────────
+    cooldown:        'the node is still recharging…',
+    no_echo:         'no echo to refine yet — harvest a node first.',
 
-  // what each material IS, and how you get more — the second half of every
-  // signpost. Named here once so the loom's economy is explained identically
-  // wherever a shortfall is reported.
-  var _SOURCE = {
-    strand: 'weave echo into strand at your hearth (4 echo each), or keep harvesting — nodes drop filaments.',
-    ember: 'embers come rarely from harvesting, or kindle one from 8 strand + 40 echo.',
-    echo: 'strike a knowledge node to gather echo.',
-    lumen: 'refine echo into lumen at the hearth.',
-    seed_stone: 'your seed stone is spent — you have already planted a hearth.'
+    // ── THE LOOM: the reason building works at all ────────────────────────
+    // need_strand is THE most-hit error in the game and it used to say nothing.
+    // It now names the exact verb that fixes it, because the whole strand
+    // famine was invisible to players who had no idea weaving existed.
+    need_strand:     'not enough strand — weave some (✦→⧉ weave turns echo into strand).',
+    need_ember:      'not enough ember — embers drop rarely from nodes, or kindle one at the loom (8 strand + 40 echo).',
+    need_echo:       'not enough echo — go strike a node.',
+    not_enough_echo: 'not enough echo to weave yet — each strand costs echo, so harvest a few more.',
+    need_seed_stone: 'you need a seed stone for that.',
+
+    // ── the palette + the ladder ──────────────────────────────────────────
+    bad_kind:        'the world does not know that piece — pick another from the palette.',
+    // `standing` is handled below with the server's tier + gap numbers.
+
+    // ── whose world am I standing in ──────────────────────────────────────
+    'place-denied':  'this is not your world — you can look and leave a lantern, but only its keeper can build here.',
+    'own-world':     'you are already home.',
+    'no-world':      'that world could not be found.',
+    'no-visitor':    'nobody is visiting right now.',
+    unauthenticated: 'sign in to do that.',
+
+    // ── THE LEDGER: trade ─────────────────────────────────────────────────
+    trade_no_partner:  'they are not here anymore — trade needs both of you standing in the same world.',
+    trade_self:        'you cannot trade with yourself.',
+    trade_far:         'they are in another world — walk to the same clearing to trade.',
+    trade_busy_self:   'you already have a trade open — finish or cancel it first.',
+    trade_busy_other:  'they are already trading with someone else.',
+    trade_gone:        'that trade has closed.',
+    trade_stale:       'the table changed while you were deciding — check the offer again.',
+    trade_empty:       'put something on the table before you mark ready.',
+    trade_full:        'that is as much as one side can offer in a single trade.',
+    trade_not_yours:   'that is not your trade.',
+    trade_untradeable: 'that one cannot be traded.',
+
+    // ── shared/generic (the Reckoning claims these only while its sheet is
+    //    open — see _reckoningIsSpeaking — so this panel covers the rest) ──
+    too_far: 'too far away — get closer.',
+
+    // ── THE ADMIRALTY: vessels ────────────────────────────────────────────
+    // Nothing else in the client speaks these, so they live here rather than
+    // reaching a player as raw tokens.
+    vessels_off:     'vessels are off in this world.',
+    no_such_hull:    'no such hull at the shipyard.',
+    no_such_part:    'no such part.',
+    fleet_full:      'your fleet is full — you would have to break one up first.',
+    not_your_vessel: 'that is not your vessel.',
+    overweight:      'too heavy for that keel — take something off, or lay a bigger hull.',
+    no_slots:        'no room left on that vessel for another fitting.',
+    not_fitted:      'that is not fitted to this vessel.',
+    hold_full:       'the hold is full.',
+    at_sea:          'you cannot do that while she is at sea.',
+    already_sailing: 'she is already under way.',
+    not_sailing:     'she is not under way.',
+    beached:         'she is beached — get her to water first.',
+    cannot_abort:    'too late to turn her back now.',
+    unharmed:        'she is not damaged — nothing to repair.',
+    blind:           'that hull has no eyes — fit an Eye, or fly.',
+
+    // ── THE LANTERNS (traces) ─────────────────────────────────────────────
+    'not-yours':         'that lantern is not yours to move.',
+    'bad-id':            'that lantern is no longer there.',
+    // The `trace-*` family. traces-hud speaks these in its own sheet when it is
+    // loaded; these are the backstop for a page that does not carry it, so a
+    // refusal is never spoken by nobody.
+    'trace-unavailable': 'lanterns are not available in this world right now.',
+    'trace-off':         'lanterns are switched off in this world.',
+    'trace-own-world':   'this is your own clearing — your light is already here.',
+    'trace-rate':        'you have left a lot of lights lately — rest a moment.',
+    'trace-no-world':    'the shared hub belongs to everyone — leave lights in a person\'s world.',
+    'trace-no-visitor':  'sign in to leave a light in someone\'s world.',
+    'trace-not-yours':   'only that world\'s keeper can put this light out.',
+    'trace-bad-id':      'that light is already gone.',
+
+    // ── generic ───────────────────────────────────────────────────────────
+    rate:        'easy — that was too fast. try again in a moment.',
+    unavailable: 'that is not available in this world.',
+    off:         'that system is off in this world.',
+    server:      'the world could not do that just now — try again.'
   };
-  function _need(det, item) {
-    var need = num(det.need, 1), have = num(det.have, 0);
-    var head = 'you need ' + need + ' ' + item + (need === 1 ? '' : 's') + ' and you have ' + have + '.';
-    return head + ' ' + (_SOURCE[item] || '');
+
+  // ── WHOSE VOICE IS THIS? (no-collision, in the message layer) ─────────────
+  // `vint:world-err` is a BROADCAST — every listening surface sees every code.
+  // reckoning-hud.js owns the covenant/violence refusals and toasts them in its
+  // own sheet with its own words. If this panel ALSO mapped them, one refusal
+  // would raise two toasts on two surfaces at once, which is the same collision
+  // sin as two elements in one box — just in time rather than in space.
+  //
+  // So this panel is DELIBERATELY SILENT on the codes the Reckoning owns. The
+  // list is explicit rather than a regex, because a regex would silently start
+  // swallowing a future economy code that merely happened to contain the word
+  // "carry", and a refusal nobody prints is worse than one printed twice.
+  var RECKONING_OWNS = {
+    covenants_off: 1, violence_off: 1, not_in_covenant: 1, no_such_target: 1,
+    no_such_policy: 1, no_such_proposal: 1, not_your_covenant: 1, already_proposed: 1,
+    closed: 1, expired: 1, you_are_on_safe_ground: 1, they_are_on_safe_ground: 1,
+    not_together: 1, grace: 1, self: 1, not_outlawed: 1, amnesty: 1,
+    no_warrant: 1, no_quorum: 1, not_carrying: 1, no_such_covenant: 1,
+    covenant_unavailable: 1,
+    // NOT `unharmed` — that reads like a violence verdict but it is vessels.js
+    // refusing a repair on an undamaged hull. Yielding it to the Reckoning left
+    // it spoken by NOBODY (the Reckoning has no such entry and its regex misses
+    // it), so it lives in ERRORS with the rest of the Admiralty.
+  };
+  // The mirror of reckoning-hud's ONLY_WHEN_OPEN. Those codes are generic — the
+  // Reckoning claims them ONLY while its sheet is open, so this panel must speak
+  // them the rest of the time or a real refusal would go unsaid by BOTH surfaces.
+  // Exactly one voice, always: never two, never zero.
+  function _reckoningIsSpeaking(c) {
+    if (!W.ReckoningHUD) return false;
+    if (RECKONING_OWNS[c]) return true;
+    if ({ cooldown: 1, unauthenticated: 1, too_far: 1 }[c]) {
+      try { return !!(W.ReckoningHUD.isOpen && W.ReckoningHUD.isOpen()); } catch (_) { return false; }
+    }
+    return false;
+  }
+
+  // traces-hud.js owns every `trace-*` code outright, and additionally claims
+  // the three bare codes ('not-yours' / 'bad-id' / 'unavailable') but ONLY while
+  // one of its own removals is in flight — which is exactly when it can prove
+  // the error is about a lantern. Outside that window those same codes can come
+  // from anywhere, so this panel speaks them. Same invariant as the Reckoning:
+  // exactly one voice, never two, never zero.
+  function _tracesIsSpeaking(c) {
+    // ...but only if that surface is actually LOADED. Yielding unconditionally
+    // meant a page without traces-hud left every trace-* refusal spoken by
+    // nobody at all — zero voices, which is the same failure as two.
+    if (!W.VintTraces) return false;
+    if (String(c).indexOf('trace-') === 0) return true;   // theirs outright
+    if (!{ 'not-yours': 1, 'bad-id': 1, unavailable: 1 }[c]) return false;
+    try { return !!(W.VintTraces.isRemoving && W.VintTraces.isRemoving()); }
+    catch (_) { return false; }
   }
 
   W.addEventListener('vint:world-err', function (e) {
     var det = e.detail || {};
     var c = det.code || 'error';
-    var msg = {
-      no_seed_stone: 'you need a seed stone to claim.', already_claimed: 'you already have a hearth.',
-      too_close: 'too close to another hearth — move further out.',
-      not_your_plot: 'that is outside your hearth plot — walk back inside the ring and place it there.',
-      cooldown: 'the node is still recharging…', no_echo: 'no echo to refine yet — harvest first.',
-      // ── THE BUILD-AUTHZ REFUSAL — a visitor, not a failure ────────────────
-      'place-denied': 'this clearing belongs to someone else — you can walk it and leave a light, but building happens in your own world. tap ⌂ home to build.',
-      bad_kind: 'this world does not know that piece yet — reload to get the newest palette.',
-      // ── THE LOOM ─────────────────────────────────────────────────────────
-      not_enough_echo: null,   // handled below (it carries the exact distance)
-      // ── THE LEDGER ───────────────────────────────────────────────────────
-      trade_no_partner: 'they are not standing here any more — trade happens face to face.',
-      trade_far: 'they are in another world right now. warp to them and try again.',
-      trade_self: 'you cannot trade with yourself.',
-      trade_busy_self: 'you already have a trade open — settle or close it first.',
-      trade_busy_other: 'they are already trading with someone else. try again in a moment.',
-      trade_gone: 'that trade has closed.',
-      trade_not_yours: 'that is not your trade.',
-      trade_empty: 'put something on the table first — an empty trade is not a trade.',
-      trade_stale: 'the table changed under you — check it and try again.',
-      trade_full: 'that is as many different things as one side can offer at once.',
-      trade_untradeable: 'that cannot cross the table.',
-      server: 'the world stumbled on that one — try again.'
-    }[c];
+    // yield to the surface that owns this family of refusals (see RECKONING_OWNS)
+    if (_reckoningIsSpeaking(c) || _tracesIsSpeaking(c)) return;
+    var msg = ERRORS[c];
 
-    // ── THE MATERIAL SHORTFALL — the single most common refusal in the world.
-    // `need_<item>` arrives from the placement cost check, the shipyard purse,
-    // and the trade escrow alike, so ONE branch answers all three, and it always
-    // says both numbers plus where more comes from.
+    // ── THE COST ERRORS, WITH THE SERVER'S OWN ARITHMETIC ─────────────────
+    // When the server said how much was needed and how much is held, say the
+    // exact shortfall. "3 more strand" sends a player to the loom; "not enough
+    // strand" sends them to wonder whether the game is broken.
+    // THE WAY THROUGH for each material, kept beside the arithmetic so a
+    // numeric refusal can never lose the remedy the plain one carried. This was
+    // a real regression the refusals test caught: with numbers attached,
+    // need_ember became "you need 1 more ember (0 of 1)." — correct, and a dead
+    // end. Every material now names its own faucet in both branches.
+    var WAY_THROUGH = {
+      strand: ' — weave echo into strand at the loom.',
+      ember:  ' — kindle one at the loom, or keep striking nodes.',
+      echo:   ' — go strike a node to harvest more.',
+      lumen:  ' — refine echo into lumen.',
+      seed_stone: '.'
+    };
+    if (c.indexOf('need_') === 0 && det.need != null && det.have != null) {
+      var item = c.slice(5);
+      var short = Math.max(0, num(det.need, 0) - num(det.have, 0));
+      var what = item.replace(/_/g, ' ');
+      if (short > 0) {
+        msg = 'you need ' + short + ' more ' + what +
+              ' (' + det.have + ' of ' + det.need + ')' +
+              (WAY_THROUGH[item] || '.');
+      }
+    }
+    // THE LOOM'S OWN SHORTFALL. loom.weave sends per/have/short when it refuses,
+    // and a message that discards them is strictly worse than one that spends
+    // them: "3 more echo" is a number of swings, "not enough echo" is a mood.
+    if (c === 'not_enough_echo' && det.per != null) {
+      var needMore = num(det.short, Math.max(0, num(det.per, 4) - num(det.have, 0)));
+      msg = 'not enough echo to weave — a strand costs ' + num(det.per, 4) + ' echo and you hold ' +
+            num(det.have, 0) + '. strike a node for ' + Math.max(1, needMore) + ' more.';
+    }
+    // an unmapped need_<item> still reads as English rather than an identifier
     if (!msg && c.indexOf('need_') === 0) {
-      msg = _need(det, c.slice(5));
+      msg = 'not enough ' + c.slice(5).replace(/_/g, ' ') + '.';
     }
 
-    // ── THE LOOM'S OWN SHORTFALL — it knows the exact distance, so say it.
-    if (!msg && c === 'not_enough_echo') {
-      var per = num(det.per, 4), haveE = num(det.have, 0), short = num(det.short, per);
-      msg = haveE > 0
-        ? ('not quite — a strand takes ' + per + ' echo and you have ' + haveE + '. ' + short + ' more and the loom turns.')
-        : ('the loom needs echo to weave — strike a node ' + Math.ceil(per / 3) + ' or so times, then weave.');
+    // ── THE LADDER'S REFUSAL — a signpost, never a wall ───────────────────
+    // The server names the tier that opens the piece and the exact standing
+    // gap to it. That turns "you can't" into "here is precisely how far", which
+    // is the difference between a locked door and a goal.
+    if (!msg && c === 'standing') {
+      var piece = det.kind ? ('the ' + det.kind) : 'that piece';
+      msg = det.tier
+        ? (piece + ' opens at ' + det.tier +
+           (det.gap != null ? ' — ' + det.gap + ' more standing to go.' : '.') +
+           ' build, tend and trade to climb.')
+        : (piece + ' needs more standing — build, tend and trade to climb.');
     }
-
+    // THE REACH ERROR — dimming, never denial. The server rejects a placement
     // THE REACH ERROR — dimming, never denial. The server rejects a placement
     // beyond the current radius and sends the radius + spark with it, so the
     // message can say exactly why and exactly how to widen it again. This is
@@ -1097,24 +1251,19 @@
       msg = 'the clearing has drawn in close — you can build within ' + rad +
             ' of your hearth right now. tend your court to widen it.';
     }
-
-    // ── THE ASCENT VERDICT — the ladder's refusal, which is really an INVITE.
-    // The server already ships kind/need/tier/have/gap and the HUD was dropping
-    // every one of them on the floor. This is the most motivating "no" in the
-    // whole world — it names the piece, the rung that opens it, and the exact
-    // distance — so it is the one that most deserved to be rendered.
-    if (!msg && (c === 'standing' || det.tier || det.gap != null)) {
-      var kind = det.kind ? String(det.kind) : 'that piece';
-      var tier = det.tier ? String(det.tier) : 'a higher standing';
-      var gap = num(det.gap, 0);
-      msg = 'the ' + kind + ' opens at ' + tier +
-            (gap > 0 ? (' — ' + gap + ' more standing to go.') : '.') +
-            ' build, tend and visit to climb.';
+    // LAST RESORT — a code this build has never seen. It still must not reach a
+    // player as a raw identifier: `— trade_stale` is indistinguishable from a
+    // crash. We humanise the token (underscores → spaces) so it at least reads
+    // as a sentence about the world, and log the real code once for whoever has
+    // to add it here. The player never sees our internal vocabulary.
+    if (!msg) {
+      if (!_unmapped[c]) {
+        _unmapped[c] = 1;
+        console.warn('[world-hud] unmapped refusal code "' + c + '" — add it to ERRORS in world-hud.js.', det);
+      }
+      msg = 'the world said no: ' + String(c).replace(/[_-]/g, ' ') + '.';
     }
-
-    // LAST RESORT — still never a bare code. If the world refuses for a reason
-    // this client has not learned yet, say so in words a person can act on.
-    _toast(msg || 'the world said no to that one (' + c + ') — try again, or reload for the newest rules.');
+    _toast(msg);
   });
 
   // THE VISITOR GATE — the world you asked for is resting, so you were brought

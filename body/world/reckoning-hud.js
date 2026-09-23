@@ -469,11 +469,22 @@
     no_quorum: 'the warrant has not reached quorum.',
   };
 
+  // Codes that are NOT this surface's property — they mean something different
+  // depending on which verb raised them. `cooldown` is the harvest node
+  // recharging far more often than it is an unsteady hand; `unauthenticated`
+  // belongs to whatever the player just tried to do. world-hud.js speaks both
+  // generically, so if this sheet spoke them too, ONE refusal would raise TWO
+  // toasts on two surfaces at once — the no-collision sin, in time rather than
+  // space. We only claim them while this sheet is actually open, i.e. while the
+  // player is unambiguously in the Reckoning's context.
+  var ONLY_WHEN_OPEN = { cooldown: 1, unauthenticated: 1, too_far: 1 };
+
   function onErr(d) {
     var code = d && d.code;
     if (!code) return;
     // only speak to refusals that belong to THIS surface; the world emits many
     if (!(code in REFUSAL) && !/strike|covenant|policy|warrant|quorum|outlaw|carry|soil/.test(String(code))) return;
+    if (ONLY_WHEN_OPEN[code] && !isOpen()) return;   // let the world HUD speak it
     toast(REFUSAL[code] || String(code).replace(/_/g, ' '));
     if (isOpen()) build();
   }

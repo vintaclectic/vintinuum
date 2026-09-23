@@ -1430,20 +1430,96 @@
     /* ============================================
        MOBILE RESPONSIVE
        ============================================ */
+    /* ============================================
+       MOBILE RESPONSIVE — MODES STAY DISTINCT (task XMB7CTP)
+       ============================================
+       WHAT WAS WRONG: this block used to force main AND mini AND pip all to
+       100vw x 100svh below 900px. That is not "responsive", it is a mode
+       COLLAPSE — all three of the user's sizes became the same fullscreen box,
+       so on any phone or tablet the size buttons visibly did nothing. That is
+       the "doesn't resize properly across all 3 sizes" report.
+
+       It also used a WIDTH-only query, so a phone in landscape (e.g. 844x390)
+       is 844px wide and took the mobile branch — but 390px tall, where a
+       100svh fullscreen main is right while a 180px pip is still perfectly
+       usable and often what you want.
+
+       THE MODEL NOW:
+         main    — fills the screen on small viewports (it is the "watching" mode)
+         mini    — a real dock: full width, SHORT, pinned to the bottom, above
+                   the home indicator. Distinct from main at every size.
+         pip     — a real corner tile that scales with the viewport but never
+                   exceeds it. Distinct from both.
+         theater — already 100vw/100svh in its own rule; untouched.
+       Each mode keeps its own geometry, so all three sizes remain reachable
+       and visibly different on a phone. */
     @media (max-width: 900px) {
-      .dirrm-player[data-mode="main"],
-      .dirrm-player[data-mode="mini"],
-      .dirrm-player[data-mode="pip"] {
+      /* MAIN — the full-attention mode. Fills the viewport. */
+      .dirrm-player[data-mode="main"] {
         width: 100vw !important;
         height: 100svh !important;
-        min-width: unset;
-        min-height: unset;
+        min-width: 0;
+        min-height: 0;
         border-radius: 0;
         top: 0 !important;
         left: 0 !important;
+        /* A scale transform on a full-viewport box pushes its edges off-screen
+           (or inset them), which reads as broken sizing. Full-bleed means scale
+           is meaningless here — neutralise it rather than fight it. */
+        transform: none !important;
       }
+
+      /* MINI — a bottom dock strip, NOT a fullscreen box. */
+      .dirrm-player[data-mode="mini"] {
+        width: 100vw !important;
+        left: 0 !important;
+        right: 0 !important;
+        top: auto !important;
+        bottom: 0 !important;
+        height: auto !important;
+        max-height: 42svh;
+        min-width: 0;
+        min-height: 0;
+        border-radius: 14px 14px 0 0;
+        transform: none !important;
+        padding-bottom: env(safe-area-inset-bottom, 0px);
+      }
+
+      /* PIP — a corner tile that tracks viewport width but stays a tile.
+         Clamped so it is never larger than the screen and never below the
+         44px touch floor for its own controls. */
+      .dirrm-player[data-mode="pip"] {
+        width: clamp(180px, 46vw, 320px) !important;
+        height: auto !important;
+        aspect-ratio: 16 / 9;
+        min-width: 0;
+        min-height: 0;
+        top: auto !important;
+        bottom: calc(12px + env(safe-area-inset-bottom, 0px)) !important;
+        left: auto !important;
+        right: calc(12px + env(safe-area-inset-right, 0px)) !important;
+        border-radius: 12px;
+        transform: none !important;
+      }
+
       .dirrm-resize { display: none; }
       .dirrm-titlebar { cursor: default; }
+    }
+
+    /* SHORT LANDSCAPE — the case the width-only query got wrong. A phone on its
+       side has plenty of width and almost no height, so the chrome must yield
+       and main must claim the full short viewport. */
+    @media (max-height: 460px) and (orientation: landscape) {
+      .dirrm-player[data-mode="main"] {
+        width: 100vw !important;
+        height: 100svh !important;
+        top: 0 !important;
+        left: 0 !important;
+        border-radius: 0;
+        transform: none !important;
+      }
+      .dirrm-player[data-mode="mini"] { max-height: 60svh; }
+      .dirrm-kbd-legend { display: none !important; }
     }
 
     @media (max-width: 480px) {
@@ -2123,17 +2199,50 @@
             if (!id && u.pathname.startsWith('/embed/')) id = u.pathname.split('/')[2];
             if (!id && u.pathname.startsWith('/live/')) id = u.pathname.split('/')[2];
             if (!id && u.pathname.startsWith('/watch')) id = u.searchParams.get('v'); // belt+suspenders
+            // The embed origin MUST be told who is framing it. Without an
+            // explicit &origin=, YouTube's player cannot verify the embedder and
+            // (on some videos, and on every video once its "limit playback to
+            // approved sites" flag is set) falls back to its refusal screen.
+            // location.origin is exactly the value YouTube expects.
+            const yOrigin = `&origin=${encodeURIComponent(location.origin)}`;
             if (id) {
               const t = u.searchParams.get('t') || u.searchParams.get('start');
               const start = t ? `&start=${parseInt(t)}` : '';
-              return { kind: 'YouTube', embedUrl: `https://www.youtube-nocookie.com/embed/${id}?autoplay=1${start}` };
+              // A watch URL can ALSO carry a list= — honour it so "play this
+              // video, then the rest of the playlist" works the way the link did.
+              const wList = u.searchParams.get('list');
+              const inList = wList ? `&list=${encodeURIComponent(wList)}` : '';
+              return { kind: 'YouTube', embedUrl: `https://www.youtube-nocookie.com/embed/${id}?autoplay=1${start}${inList}${yOrigin}` };
             }
-            // Channel/playlist/homepage — not embeddable as a specific video
+            // PLAYLIST — embeddable via /embed/videoseries. Previously returned
+            // null, which dead-ended every playlist link into "unknown media".
+            const list = u.searchParams.get('list');
+            if (list) {
+              return { kind: 'YouTube', embedUrl: `https://www.youtube-nocookie.com/embed/videoseries?list=${encodeURIComponent(list)}&autoplay=1${yOrigin}` };
+            }
+            // CHANNEL / USER / @handle — YouTube has no channel-embed endpoint,
+            // but a channel's uploads ARE a playlist: channel id UC... maps to
+            // uploads playlist UU... (same suffix). That is a documented,
+            // stable YouTube identifier rule, not a guess.
+            const p = u.pathname.split('/').filter(Boolean);
+            const chanId = (p[0] === 'channel' && p[1]) ? p[1] : null;
+            if (chanId && /^UC[\w-]{20,}$/.test(chanId)) {
+              const uploads = 'UU' + chanId.slice(2);
+              return { kind: 'YouTube', embedUrl: `https://www.youtube-nocookie.com/embed/videoseries?list=${uploads}&autoplay=1${yOrigin}` };
+            }
+            // @handle and /user/ and /c/ cannot be resolved to a channel id
+            // without an API call, so they are honestly NOT embeddable here.
+            // Returning null routes them to the refusal card, which offers the
+            // open-on-the-platform escape hatch — the honest outcome.
             return null;
           }
           if (host === 'youtu.be') {
             const id = u.pathname.slice(1).split('?')[0].split('/')[0];
-            if (id) return { kind: 'YouTube', embedUrl: `https://www.youtube-nocookie.com/embed/${id}?autoplay=1` };
+            if (id) {
+              const t = u.searchParams.get('t') || u.searchParams.get('start');
+              const start = t ? `&start=${parseInt(t)}` : '';
+              return { kind: 'YouTube', embedUrl: `https://www.youtube-nocookie.com/embed/${id}?autoplay=1${start}&origin=${encodeURIComponent(location.origin)}` };
+            }
           }
 
           // Vimeo

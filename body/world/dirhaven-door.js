@@ -35,35 +35,39 @@
   var W = window;
 
   // ── the DirHaven origin ────────────────────────────────────────────────────
-  // AS OF 2026-08-25 DIRHAVEN IS PUBLIC AT https://app.dirhaven.com. The old
-  // "no public origin" note above this line was written 2026-07-31 and is now
-  // STALE — the street it said was dead has been paved. Verified live before
-  // this edit, not assumed:
-  //   · GET https://app.dirhaven.com → HTTP/2 200
-  //   · served by pm2 `dirhaven-tunnel`, ingress `app.dirhaven.com →
-  //     http://localhost:5175` in ~/.cloudflared/dirhaven.yml
-  //   · its response carries
-  //       content-security-policy: frame-ancestors 'self' https://vintaclectic.github.io
-  //     i.e. DirHaven has ALREADY allowlisted this world's GitHub Pages origin
-  //     (server/config/express.config.js → WORLD_FRAME_ANCESTORS), and
-  //     'https://app.dirhaven.com' + 'https://vintaclectic.github.io' are both
-  //     already in server/config/cors.config.js ALLOWED_ORIGINS.
-  // Both halves of the handshake are therefore live; the only thing that was
-  // missing was this side knowing the address.
+  // THE STREET IS NOW REAL (verified live 2026-08-26). The 2026-07-31 comment
+  // that used to live here said "DIRHAVEN HAS NO PUBLIC ORIGIN" and returned
+  // null in production — which is why this door opened onto the honest-but-dead
+  // 'nowhere' veil for every visitor who wasn't running Vite on their own
+  // laptop. The premise expired; the code never learned.
   //
-  // Resolution order (all explicit, never guessed):
+  // What is true now, each half checked rather than assumed:
+  //   · https://app.dirhaven.com/ → HTTP 200 (its own cloudflared tunnel →
+  //     localhost:5175; see DOMAINS.md § app.dirhaven.com and OPERATIONS.md).
+  //   · Its response carries, verbatim:
+  //       content-security-policy: frame-ancestors 'self' https://vintaclectic.github.io
+  //     i.e. DirHaven has ALREADY named this exact world as a permitted framer.
+  //     The far side of the handshake was hung and waiting; only our side was
+  //     still reading from a stale note.
+  //   · The apex `dirhaven.com` and `www.` both 301 → app.dirhaven.com, so the
+  //     app subdomain is the canonical origin, not a guess between three.
+  //
+  // We hardcode app.dirhaven.com as PROD, not as a hopeful default: a hardcoded
+  // origin that a live CSP explicitly allows is a verified fact, and the thing
+  // the old comment rightly refused to do (invent a domain) is not what this is.
+  //
+  // Resolution order (all explicit, still never guessed):
   //   1. window.__DIRHAVEN_ORIGIN  — host-page override, wins over everything
   //   2. localStorage['vint:dirhaven-origin'] — owner/dev override, local hosts only
   //      (mirrors the allowlist rule in dirhaven/client/src/vintDoor.js)
-  //   3. localhost:5175 when the world itself is running locally (dev keeps
-  //      talking to the dev shell, never to production)
-  //   4. PUBLIC_DIRHAVEN — the real, verified public origin
-  // The function can still return null in principle and EVERY caller still
-  // handles that; the null-safe paths below are deliberately kept rather than
-  // deleted, because an origin can be un-set again (flag, outage, rollback) and
-  // a door that assumes an address is a door that hangs on a spinner.
-  var LOCAL_DIRHAVEN  = 'http://localhost:5175';
-  var PUBLIC_DIRHAVEN = 'https://app.dirhaven.com';
+  //   3. localhost:5175 when the world itself is running locally (dev keeps dev)
+  //   4. https://app.dirhaven.com — production, CSP-verified above
+  //
+  // dirhavenOrigin() can therefore no longer return null in prod, but EVERY
+  // caller still handles null, because override #2 is user-settable and #3/#4
+  // are environment-dependent. The 'nowhere' veil stays as the honest floor.
+  var LOCAL_DIRHAVEN = 'http://localhost:5175';
+  var PROD_DIRHAVEN  = 'https://app.dirhaven.com';
 
   function devOrigin() {
     try {
@@ -81,15 +85,19 @@
     return h === 'localhost' || h === '127.0.0.1' || h === '0.0.0.0' || h.endsWith('.local');
   }
 
-  // May return null — every caller must handle that.
+  // May still return null (a malformed override with no fallback left), so every
+  // caller must keep handling that — but in a normal production load it now
+  // resolves to PROD_DIRHAVEN instead of stranding the door.
   function dirhavenOrigin() {
     if (W.__DIRHAVEN_ORIGIN) {
       try { return new URL(W.__DIRHAVEN_ORIGIN).origin; } catch (_) {}
     }
     var dev = devOrigin();
     if (dev) return dev;
+    // Local world → local DirHaven, so a dev editing DirHaven sees their own
+    // build, never production leaking into a local session.
     if (worldIsLocal()) return LOCAL_DIRHAVEN;
-    return PUBLIC_DIRHAVEN;
+    return PROD_DIRHAVEN;
   }
 
   function token() {
@@ -266,14 +274,13 @@
         };
       }
     } else if (kind === 'nowhere') {
-      // No origin to frame. Reachable again only if an override deliberately
-      // blanks the address (or a future rollback removes the public one) — the
-      // resolver's default is now the live https://app.dirhaven.com. Kept, and
-      // kept honest, rather than deleted: a door that cannot say "nowhere" is a
-      // door that spins forever the day the address goes away.
+      // No origin to frame at all. Since app.dirhaven.com became the verified
+      // production fallback this can only happen when an override resolved to
+      // nothing — so the old "it only runs on this machine" copy would now be a
+      // lie. Say the true, narrower thing instead.
       if (orb) orb.style.display = 'none';
-      say.textContent = 'DirHaven has no address for the world right now';
-      sub.textContent = 'no DirHaven origin resolved on this device, so there is nothing to open into. Clear the vint:dirhaven-origin override and reload, and the door goes back to app.dirhaven.com.';
+      say.textContent = 'the door has no address to open onto';
+      sub.textContent = 'a DirHaven origin override is set but did not resolve. Clear vint:dirhaven-origin to fall back to the public app.';
       if (act) act.style.display = 'none';
     }
   }
