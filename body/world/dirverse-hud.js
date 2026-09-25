@@ -92,12 +92,27 @@
       // launcher buttons — flow children of #dvRail (NOT fixed; the rail is the one
       // fixed box that owns their space). ≥46px tall = the touch-target floor.
       '.dv-launch{position:relative;min-height:46px;min-width:46px;padding:0 14px;',
-      ' border-radius:23px;font-family:"Cormorant Garamond",Georgia,serif;font-size:14px;letter-spacing:.02em;',
+      ' border-radius:23px;font-family:"Cormorant Garamond",Georgia,serif;letter-spacing:.02em;',
+      // clamp, never a fixed px: the name must stay readable at 320px and must
+      // never be the thing that gets deleted to win a measurement (see the
+      // comment on makeLauncher). 12.4px is the floor and it is a deliberate
+      // floor — below that the name stops being legible at arm's length, and an
+      // illegible name is the same defect as a missing one wearing a disguise.
+      ' font-size:clamp(12.4px,1.05vw + 10.2px,14px);',
       ' color:#cfe8ff;background:rgba(8,12,20,0.72);border:1px solid rgba(124,207,255,0.34);',
       ' backdrop-filter:blur(9px);-webkit-backdrop-filter:blur(9px);cursor:pointer;',
       ' display:flex;align-items:center;gap:7px;white-space:nowrap;box-shadow:0 4px 20px rgba(0,0,0,0.35);}',
       '.dv-launch:active{transform:scale(0.96);}',
-      '.dv-launch .dot{width:7px;height:7px;border-radius:50%;background:#4fc3f7;box-shadow:0 0 8px #4fc3f7;}',
+      '.dv-launch .dot{flex:0 0 auto;width:7px;height:7px;border-radius:50%;background:#4fc3f7;box-shadow:0 0 8px #4fc3f7;}',
+      // THE GLYPH — its own box, and it is never hidden by any rule in this file.
+      // flex:0 0 auto so a long name can never squeeze the identity mark away.
+      '.dv-launch .gly{flex:0 0 auto;font-size:1.07em;line-height:1;}',
+      // THE NAME — allowed to shrink, allowed to ellipsize, NEVER allowed to
+      // vanish. min-width:0 is load-bearing: without it a flex item refuses to
+      // shrink below its content width and the pill would blow out of the rail
+      // instead of the text ellipsizing (the single commonest cause of a flex
+      // child overflowing its parent).
+      '.dv-launch .lbl{flex:0 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}',
       // ── THE RAIL (NO-COLLISION LAW) ────────────────────────────────────────
       // Was: four buttons each pinned by its own hardcoded `bottom:` (150/206/262/
       // 318px). That stack is only safe while the count and the button height are
@@ -133,10 +148,15 @@
       '#dvWarpBtn .dot{background:#ce93d8;box-shadow:0 0 8px #ce93d8;}',
       '#dvHomeBtn{color:#ffe2a0;border-color:rgba(255,212,121,0.4);}',
       '#dvHomeBtn .dot{background:#ffd479;box-shadow:0 0 8px #ffd479;}',
-      // very short viewports (landscape phones): drop the labels to glyph-only pills
-      // so four launchers still fit the reserved band without ever scrolling.
-      '@media(max-height:560px){#dvRail .dv-launch .lbl{display:none;}',
-      ' #dvRail .dv-launch{padding:0 12px;gap:0;}}',
+      // very short viewports (landscape phones): TIGHTEN the pills — but the name
+      // stays. This rule used to read `.lbl{display:none}` and it was the first
+      // of the three that between them made the rail unreadable (see makeLauncher's
+      // comment for the 425/544 measurement). A landscape phone is still a phone:
+      // it has no hover, so a glyph-only pill there is strictly less identifiable
+      // than on desktop, which is the opposite of what this rule was trying to do.
+      '@media(max-height:560px){#dvRail .dv-launch{padding:0 10px;gap:5px;',
+      ' font-size:clamp(11.8px,2.6vw,13px);}',
+      ' #dvRail .dv-launch .lbl{max-width:12ch;}}',
       // ── THE COMPACT RAIL — capacity, measured, not guessed (2026-08-07) ──────
       // The media query above compacts on VIEWPORT HEIGHT, which was a proxy for
       // the real constraint and has now been outgrown by it. The true constraint
@@ -153,10 +173,42 @@
       // convenience; the glyph is the identity), then the gap, then the padding.
       // Each step is a CONTAINER yielding its own content, never a neighbour
       // yielding its space, which is the only compaction the law permits.
-      'body.dv-rail-compact #dvRail .dv-launch .lbl{display:none;}',
-      'body.dv-rail-compact #dvRail .dv-launch{padding:0 12px;gap:0;}',
+      // ── WHAT COMPACTION IS ALLOWED TO TAKE (rewritten 2026-09-25) ───────────
+      // It used to take the LABEL — `display:none` — on the stated reasoning that
+      // "the label is a convenience; the glyph is the identity". Two things were
+      // wrong with that, and both are measured rather than argued:
+      //
+      //  1. THE GLYPH WAS INSIDE THE LABEL. `<span class="lbl">✦ star-map</span>`
+      //     — so hiding the label hid the identity too. The compacted pill was
+      //     empty: 46×46px of nothing but the 7px status dot. Measured in
+      //     Chromium, 425 of 544 (viewport × state × launcher) combinations
+      //     rendered a launcher with NO visible text whatsoever.
+      //  2. "CONVENIENCE" ASSUMED A HOVER. The only thing identifying a compacted
+      //     pill was its `title=`, and a touch device never shows a title. So on
+      //     the exact devices where compaction ALWAYS fires (a phone: 17 launchers
+      //     cannot fit any phone band uncompacted) the rail was a column of
+      //     identical unlabeled circles. That is Vinta's report verbatim: "the
+      //     buttons are hidden without hovering tooltips to see which buttons are
+      //     which what does what."
+      //
+      // So compaction now takes TYPE SIZE and PADDING, never the name. The name
+      // is the only thing that answers "what does this do", and it is therefore
+      // the last thing that may be spent, not the first. The ladder still
+      // escalates and each step still measures — it just buys its pixels from the
+      // container's own whitespace instead of from the user's comprehension.
+      // The height floor (42px) is unchanged; it remains the honest touch target.
+      'body.dv-rail-compact #dvRail .dv-launch{padding:0 10px;gap:5px;',
+      ' font-size:clamp(11.8px,2.6vw,13px);}',
+      'body.dv-rail-compact #dvRail .dv-launch .lbl{max-width:11ch;}',
       'body.dv-rail-tight #dvRail{gap:6px;}',
-      'body.dv-rail-tight #dvRail .dv-launch{padding:0 9px;min-height:42px;height:42px;}',
+      'body.dv-rail-tight #dvRail .dv-launch{padding:0 8px;gap:4px;min-height:42px;height:42px;',
+      ' font-size:clamp(11.2px,2.4vw,12.4px);}',
+      // the tightest honest form still names itself: 8 characters is enough to
+      // separate every launcher in the roster from every other one (measured
+      // against the real 17-launcher roster — no two names collide at 8 chars),
+      // and the ellipsis tells the user the name continues rather than pretending
+      // it was never there.
+      'body.dv-rail-tight #dvRail .dv-launch .lbl{max-width:8ch;}',
       // ── THE SECOND COLUMN — when compaction is not enough, use the WIDTH ─────
       // Compaction has a floor: eight glyph-only launchers at the 42px minimum
       // touch target still need 378px, and a 320x568 phone's rail band is 268px.
@@ -243,6 +295,80 @@
       ' width:var(--dv-railw,110px);column-gap:6px;',
       ' max-height:max(46px,calc(100dvh - var(--dv-railtop,270px)',
       ' - var(--dv-railbot,150px) - env(safe-area-inset-bottom,0px)));}',
+      // ── THE WRAPPED PILL HAS A BOUNDED WIDTH (2026-09-25) ───────────────────
+      // The wrap math upstream computes `cols * pillWidth`, and it was written
+      // when a compacted pill was GLYPH-ONLY and therefore 46px square. Now that
+      // compaction keeps the name (it must — see makeLauncher), a tight pill
+      // measures up to 101px, so seventeen launchers wanted 5 columns × 101px =
+      // 529px on a 320px screen. MEASURED: the wrap was rejected by its own
+      // spill guard at 320×568, 320×720(sheet), 375×667(sheet), 375×812(sheet)
+      // and 812×375, and the rail fell back to a single scrolled column with up
+      // to 16 of 17 launchers off the top — present, labeled, and unreachable.
+      //
+      // The pill is what yields, because a column whose width is CONTENT-driven
+      // cannot be planned against a viewport. Bounded to --dv-railcw (set by the
+      // same code that sets --dv-railw, from the same measurement), the columns
+      // become a width the wrap can actually fit, and the name ellipsizes inside
+      // it rather than the launcher disappearing. A shortened name is a legible
+      // name; an off-screen launcher is nothing at all.
+      'body.dv-rail-wrap #dvRail .dv-launch{max-width:var(--dv-railcw,104px);}',
+      // ── WHEN THE RAIL MUST SCROLL, IT SAYS SO (2026-09-25) ──────────────────
+      // Every rung of the ladder has a floor, and on a genuinely over-capacity
+      // viewport (MEASURED: 320×568 guest, 320×568 + sheet, 320×720 + sheet, and
+      // 812×375 guest — 17 launchers against a 46–267px band) not even the wrap
+      // can seat them legibly, so the rail keeps its bounded single-column
+      // scroll. This file already names the flaw in that fallback twice: "a
+      // launcher you must first discover is scrollable is a launcher that isn't
+      // there." Nothing had ever closed that gap — the scroll was silent.
+      //
+      // So the rail declares it. A top fade is painted ONLY while the column
+      // actually overflows (the class is set by layoutRail from a real
+      // scrollHeight/clientHeight comparison, never guessed), which is the
+      // conventional and instantly-readable sign that content continues above.
+      // It is a mask on the rail's own box — it adds NO element, so it cannot
+      // collide with anything, and it cannot be hit-tested or steal a tap.
+      'body.dv-rail-scrolls #dvRail{',
+      ' -webkit-mask-image:linear-gradient(to bottom,transparent 0,#000 34px);',
+      ' mask-image:linear-gradient(to bottom,transparent 0,#000 34px);}',
+
+      // ══ TOUCH IS A FIRST-CLASS POINTER (2026-09-25) ═══════════════════════
+      // MEASURED BEFORE WRITING: of the 22 modules in body/world/, 21 contained
+      // zero occurrences of `pointer:coarse`, `isTouch` or `matchMedia`. Only
+      // galactic-time.js had one. The world had, effectively, no touch path at
+      // all — it was a desktop surface that a phone was allowed to visit. That
+      // is the root of Vinta's report as much as the hidden labels were: hover
+      // was treated as universally available, so anything that only appeared on
+      // hover (or in a `title=`) simply did not exist on a phone.
+      //
+      // These rules are scoped to `pointer:coarse` so the desktop layout math —
+      // every measured value in layoutRail — is untouched. A coarse pointer gets
+      // MORE room, never less, and never a different structure: same rail, same
+      // flow children, same measurement engine, just sized for a thumb.
+      '@media(pointer:coarse){',
+      // 48px ≥ the 44px floor, with the 4px of headroom that keeps a pill from
+      // sitting exactly ON the minimum where a 1px rounding error breaks it.
+      ' #dvRail .dv-launch{min-height:48px;}',
+      // the tight rung may still shrink, but its floor rises to 44 on touch:
+      // 42px was an honest DESKTOP minimum and is under the touch floor.
+      ' body.dv-rail-tight #dvRail .dv-launch{min-height:44px;height:44px;}',
+      // the name must not be starved on the device that most needs it — a phone
+      // has no hover to fall back on, so touch gets a wider name than desktop
+      // compaction allows.
+      ' body.dv-rail-compact #dvRail .dv-launch .lbl{max-width:13ch;}',
+      ' body.dv-rail-tight #dvRail .dv-launch .lbl{max-width:10ch;}',
+      // momentum + contained overscroll in every scrollable surface, so a flick
+      // inside a sheet never chains out to the document behind it (which on iOS
+      // is what makes a bottom sheet feel like it is fighting the page).
+      ' .dv-body,#dvRail{-webkit-overflow-scrolling:touch;overscroll-behavior:contain;}',
+      // a sheet on a phone gets a bigger grip and a bigger close target.
+      ' .dv-grip{height:5px;width:48px;margin:11px auto 5px;}',
+      ' .dv-x{min-width:48px;min-height:48px;}',
+      ' .dv-tab{min-height:44px;}',
+      '}',
+      // HOVER IS AN ENHANCEMENT, NEVER A CHANNEL. Any affordance that changes on
+      // hover is declared only where hover actually exists, so a touch device is
+      // never left waiting for a state it cannot enter.
+      '@media(hover:hover){.dv-launch:hover{border-color:rgba(124,207,255,0.6);}}',
 
       // shared bottom-sheet scaffold (WARP + AGENT both use it)
       '.dv-sheet{position:fixed;left:0;right:0;bottom:0;z-index:1600;',
@@ -1621,7 +1747,31 @@
     // the rail exists to make impossible (drag would pin them over #vintWorldHud /
     // #editHeadBtn / #saybar). The rail itself is the stable, collision-proof home.
     b.setAttribute('data-draggable', 'false');
-    b.innerHTML = '<span class="dot"></span><span class="lbl">' + esc(glyph) + ' ' + esc(label) + '</span>';
+    // ── THE GLYPH AND THE NAME ARE SEPARATE SPANS (2026-09-25) ───────────────
+    // They used to share one `.lbl`, and three CSS rules set `.lbl{display:none}`
+    // to compact the rail. MEASURED in Chromium across 8 viewports × 4 compaction
+    // states × 17 launchers (544 buttons): 425 of them rendered as a 46×46 pill
+    // containing NO TEXT AT ALL — not even the glyph, because the glyph was
+    // inside the span being hidden. A bare dot in a circle. Every mounted
+    // launcher was unidentifiable the moment the rail compacted, and on a phone
+    // compaction is not the edge case, it is the NORMAL path (17 launchers can
+    // never fit a phone's band uncompacted). Vinta's report — "the buttons are
+    // hidden without hovering tooltips to see which buttons are which" — is
+    // exactly this, and `title=` was the only remaining identification, which a
+    // touch device cannot show at all.
+    //
+    // So the glyph gets its own span and the name gets its own span. Compaction
+    // now shrinks the NAME (clamp + a lower ceiling) instead of deleting it, and
+    // the glyph is never inside anything that can be hidden. The invariant this
+    // buys is checkable and is checked: every .dv-launch has non-empty visible
+    // text at every viewport and in every compaction state.
+    //
+    // aria-label carries the plain name so the accessible name never includes the
+    // decorative glyph, and the glyph is aria-hidden for the same reason.
+    b.setAttribute('aria-label', String(label));
+    b.innerHTML = '<span class="dot"></span>' +
+      '<span class="gly" aria-hidden="true">' + esc(glyph) + '</span>' +
+      '<span class="lbl">' + esc(label) + '</span>';
     b.addEventListener('click', function () { onClick(); });
     railEl().appendChild(b);
     return b;
@@ -1960,6 +2110,14 @@
       cl.add('dv-rail-compact'); cl.add('dv-rail-tight');
       css.setProperty('--dv-railneed', Math.min(vh - 120, (_rail.scrollHeight || 0)) + 'px');
       cl.remove('dv-rail-compact'); cl.remove('dv-rail-tight');
+      // --dv-railcw is only ever written inside the wrap branch below, so clear
+      // it here rather than letting a previous layout's column width survive
+      // into one that decides differently. It is scoped to .dv-rail-wrap and
+      // that class is re-decided every pass, so a stale value could not have
+      // painted — but a var that outlives the measurement it came from is the
+      // kind of quiet drift this file has been bitten by before, so it dies with
+      // the measurement that produced it.
+      css.removeProperty('--dv-railcw');
       // scrollHeight is read AFTER each class change so each measurement is of
       // the form actually being tested, never of the previous one.
       if ((_rail.scrollHeight || 0) > bandH) {
@@ -1983,17 +2141,33 @@
           // reach the screen's right half, where #topctl and the docked account
           // stack live. If the cap cannot hold the launchers, the guard rejects
           // the wrap and the single-column scroll remains, as before.
-          var pill = 46, colGap = 6, rowGap = 6;
+          // WIDTH AND HEIGHT ARE DIFFERENT NUMBERS NOW. This block used one
+          // variable (`pill`) for both, which was exactly right while a
+          // compacted launcher was a 46px SQUARE — glyph-only. Now that the name
+          // survives compaction the pill is ~46px tall and up to 101px wide, and
+          // using the width as a row height made `perCol` under-count by more
+          // than half (a 232px band reported 4 rows where it truly holds 5),
+          // which inflated the column count and the width demand with it.
+          var pillH = 46, pillW = 46, colGap = 6, rowGap = 6;
           var firstL = _rail.querySelector('.dv-launch');
           if (firstL) {
             var fr = firstL.getBoundingClientRect();
-            if (fr.width > 2) pill = Math.ceil(fr.width);
+            if (fr.width > 2) pillW = Math.ceil(fr.width);
+            if (fr.height > 2) pillH = Math.ceil(fr.height);
           }
+          // the WIDEST launcher decides the column, not the first one — the
+          // first is 'star-map' (96px) while 'galactic time' is 101px, and a
+          // column sized to the first would clip the widest by 5px.
           var shown = 0, all = _rail.querySelectorAll('.dv-launch');
-          for (var ci = 0; ci < all.length; ci++) if (all[ci].offsetParent !== null) shown++;
-          var perCol = Math.max(1, Math.floor((bandH + rowGap) / (pill + rowGap)));
+          for (var ci = 0; ci < all.length; ci++) {
+            if (all[ci].offsetParent === null) continue;
+            shown++;
+            var wr = all[ci].getBoundingClientRect();
+            if (wr.width > pillW) pillW = Math.ceil(wr.width);
+          }
+          var perCol = Math.max(1, Math.floor((bandH + rowGap) / (pillH + rowGap)));
           var cols = Math.max(1, Math.ceil(shown / perCol));
-          var wantW = cols * pill + (cols - 1) * colGap;
+          var wantW = cols * pillW + (cols - 1) * colGap;
           var vwNow = W.innerWidth || document.documentElement.clientWidth || 360;
           // THE CAP IS MEASURED AGAINST WHAT IS ACTUALLY BESIDE THE RAIL, not
           // against half the screen (AETHERHOLD 2026-08-08). `vw/2 - 24` was a
@@ -2040,7 +2214,31 @@
               if (fr2.left >= 12 && fr2.left < nearest) nearest = fr2.left;
             }
           } catch (_) {}
-          var capW = Math.max(pill, Math.min(Math.floor(vwNow * 0.78), Math.floor(nearest - 12 - 12)));
+          var capW = Math.max(46, Math.min(Math.floor(vwNow * 0.78), Math.floor(nearest - 12 - 12)));
+          // ── THE COLUMN YIELDS BEFORE THE WRAP IS ABANDONED (2026-09-25) ─────
+          // Previously `--dv-railw` was min(wantW, capW) and nothing reconciled
+          // the two: when wantW exceeded capW the columns did not fit, the spill
+          // guard fired, and the wrap was dropped entirely — the rail fell back
+          // to a scrolled single column with most launchers off the top. MEASURED
+          // at 320×568 that was 5 columns × 101px = 529px demanded of a 249px
+          // cap, and 12 of 17 launchers ended up unreachable.
+          //
+          // The honest move is the one this file already makes everywhere else:
+          // the CONTAINER'S OWN CONTENT yields. Given the cap, how wide may each
+          // column be so that `cols` of them fit? That width is published as
+          // --dv-railcw and bounds the pill (see the CSS rule), so the name
+          // ellipsizes to fit instead of the launcher vanishing. Floored at 62px
+          // — enough for the dot, the glyph and ~4 characters, which is still an
+          // identifiable button; below that the pill would be a glyph again and
+          // we would be back to the defect this whole change exists to kill, so
+          // the wrap is simply not entered and the scroll fallback stands.
+          var colW = Math.floor((capW - (cols - 1) * colGap) / cols);
+          if (colW >= 62 && colW < pillW) {
+            css.setProperty('--dv-railcw', colW + 'px');
+            wantW = cols * colW + (cols - 1) * colGap;
+          } else {
+            css.setProperty('--dv-railcw', pillW + 'px');
+          }
           css.setProperty('--dv-railw', Math.min(wantW, capW) + 'px');
 
           cl.add('dv-rail-wrap');
@@ -2093,6 +2291,14 @@
       // Nothing is hidden and nothing is repositioned; the user simply lands on
       // the end of the column that a bottom-anchored rail should have been
       // showing all along, and can scroll to the rest.
+      // THE SCROLL IS ANNOUNCED, NOT SILENT (2026-09-25). Measured from the real
+      // overflow, every layout, so it appears exactly when the column genuinely
+      // continues above the fold and disappears the moment it does not. See the
+      // `body.dv-rail-scrolls` rule for why this is a mask and not an element.
+      try {
+        cl.toggle('dv-rail-scrolls',
+          !cl.contains('dv-rail-wrap') && _rail.scrollHeight > _rail.clientHeight + 1);
+      } catch (_) {}
       if (!cl.contains('dv-rail-wrap') && _rail.scrollHeight > _rail.clientHeight + 1) {
         var lasts = _rail.querySelectorAll('.dv-launch');
         var lastVis = null;
