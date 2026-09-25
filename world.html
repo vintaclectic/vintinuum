@@ -2,7 +2,21 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+<!-- PINCH-ZOOM RESTORED (aetherhold 2026-09-25). `maximum-scale=1` blocked pinch
+     on the one surface in the app that carried it: all 7 sibling surfaces
+     (index, brain, dirrm, stream, chat, you, enter — grepped, verified) ship
+     `width=device-width, initial-scale=1.0, viewport-fit=cover` with NO scale
+     lock. world.html was the outlier.
+
+     It was never load-bearing. VERIFIED in world-client.js: the steer handlers
+     are registered `{ passive: true }` and call preventDefault NOWHERE, so the
+     scale lock was not what kept a drag from scrolling the page — `overflow:
+     hidden` on html/body was. The correct, scoped instrument for "this canvas
+     owns its gestures" is `touch-action` on #stage (set below), which stops the
+     browser's own pan/zoom on the WORLD without taking zoom away from the HUD
+     text a low-vision player needs to enlarge. Locking the whole viewport to
+     protect one canvas is the accessibility smell; the canvas defends itself. -->
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Vintinuum — the clearing</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500&display=swap" rel="stylesheet">
