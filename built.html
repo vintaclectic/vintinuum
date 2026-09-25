@@ -254,11 +254,14 @@ section{padding:clamp(38px,6.5vw,64px) 0 0;}
 .card-top{
   display:flex;
   flex-wrap:wrap;
-  align-items:baseline;
+  align-items:center;
   justify-content:space-between;
   gap:8px;
   min-width:0;
 }
+/* The title must be free to shrink, or it pins its own width and forces the
+   status chip out of the row. min-width:0 is the whole fix. */
+.card-top h3{flex:1 1 auto;min-width:0;}
 .chip{
   display:inline-flex;
   align-items:center;
@@ -351,10 +354,11 @@ section{padding:clamp(38px,6.5vw,64px) 0 0;}
   border:1px solid var(--line-soft);
   border-radius:6px;
   padding:3px 8px;
-  white-space:nowrap;
+  /* Same reasoning as .chip — a long stack label wraps inside its own
+     pill instead of escaping the card. */
+  min-width:0;
   max-width:100%;
-  overflow:hidden;
-  text-overflow:ellipsis;
+  overflow-wrap:anywhere;
 }
 
 /* ── BUTTONS ──
