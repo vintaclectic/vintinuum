@@ -638,7 +638,7 @@ footer.bot a:focus-visible{outline:2px solid var(--accent);outline-offset:2px;}
         </div>
         <div class="actions">
           <a class="btn primary" href="/index.html">Open Vintinuum</a>
-          <a class="btn" href="/chat.html">Talk to it</a>
+          <a class="btn" href="/stats.html">Inspect its internals</a>
         </div>
         <div class="stack">
           <span class="tag">NODE</span><span class="tag">EXPRESS</span>
@@ -811,20 +811,21 @@ footer.bot a:focus-visible{outline:2px solid var(--accent);outline-offset:2px;}
 
       <article class="card">
         <div class="card-top">
-          <h3>The Gallery</h3>
+          <h3>Unified state view</h3>
           <span class="chip"><span class="dot"></span> Live</span>
         </div>
-        <div class="what">Generated and collected visual work, presented properly.</div>
+        <div class="what">Every subsystem's state composed into one screen.</div>
         <p class="body-txt">
-          A responsive gallery with real image loading discipline — <b>nothing shifts
-          layout as assets arrive</b>, which is the whole difficulty of an image grid
-          and the thing most of them get wrong.
+          A dozen asynchronous sources — memory, metrics, jobs, model routing — read and
+          reconciled into a single coherent view. <b>The difficulty is disagreement</b>:
+          sources update at different rates, so the page has to decide what's true now
+          rather than render whichever response landed last.
         </p>
         <div class="actions">
-          <a class="btn primary" href="/gallery.html">Open the gallery</a>
+          <a class="btn primary" href="/mind.html">Open the view</a>
         </div>
         <div class="stack">
-          <span class="tag">CSS GRID</span><span class="tag">LAZY LOAD</span>
+          <span class="tag">ASYNC COMPOSITION</span><span class="tag">REST API</span>
         </div>
       </article>
 
@@ -882,15 +883,6 @@ footer.bot a:focus-visible{outline:2px solid var(--accent);outline-offset:2px;}
           models call real functions against real systems.
         </div>
         <div class="go"><a class="btn" href="/mcps.html">Open</a></div>
-      </div>
-
-      <div class="row">
-        <div class="k">Unified mind</div>
-        <div class="v">
-          A single view that composes state from every subsystem at once — the hardest
-          part being coherence when a dozen asynchronous sources disagree.
-        </div>
-        <div class="go"><a class="btn" href="/mind.html">Open</a></div>
       </div>
 
     </div>
