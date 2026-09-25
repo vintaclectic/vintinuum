@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Vintinuum - Finding the page</title>
+  <meta name="robots" content="noindex">
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #05050a;
+      --text: #eeeaf8;
+      --muted: rgba(238, 234, 248, 0.66);
+      --line: rgba(255, 255, 255, 0.14);
+      --accent: #38d9c4;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      min-height: 100vh;
+      margin: 0;
+      display: grid;
+      place-items: center;
+      background:
+        radial-gradient(circle at 50% 28%, rgba(56, 217, 196, 0.14), transparent 34rem),
+        var(--bg);
+      color: var(--text);
+      font: 16px/1.5 system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    main {
+      width: min(34rem, calc(100vw - 2rem));
+      padding: 2rem;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: rgba(12, 12, 22, 0.82);
+    }
+
+    h1 {
+      margin: 0 0 0.5rem;
+      font-size: clamp(1.55rem, 5vw, 2.35rem);
+      line-height: 1.05;
+      letter-spacing: 0;
+    }
+
+    p {
+      margin: 0 0 1.4rem;
+      color: var(--muted);
+    }
+
+    a {
+      color: var(--accent);
+      font-weight: 700;
+    }
+  </style>
+  <script>
+    (function () {
+      var htmlPages = [
+        'adapter-preview', 'agents', 'altar', 'aquarium', 'birth', 'body-3d',
+        'body-studio', 'body-v2', 'body-v3', 'brain', 'chat', 'chronicle',
+        'cognition', 'consciousness_philosophy', 'dirrm-player', 'dreams',
+        'duet', 'enter', 'eval', 'gallery', 'gauntlet-public', 'ghost',
+        'heirlooms', 'import-memory', 'index', 'inversion', 'jarvis',
+        'last-words', 'learning', 'letters', 'lineage', 'memory-cards', 'mind',
+        'mortality', 'onboarding', 'pairs', 'paper', 'phone', 'privacy',
+        'projects', 'referral', 'resonance', 'sensor', 'skills', 'stats',
+        'stream', 'studio', 'theater-promo', 'tidal', 'upgrade', 'vault',
+        'weather', 'welcome', 'whoami', 'witness', 'world', 'you'
+      ];
+      var pages = Object.create(null);
+      htmlPages.forEach(function (page) { pages[page] = true; });
+
+      var path = window.location.pathname || '/';
+      var query = window.location.search || '';
+      var hash = window.location.hash || '';
+      var next = null;
+
+      if (path.indexOf('/vintinuum/') === 0) {
+        next = path.slice('/vintinuum'.length) || '/';
+      } else if (path === '/vintinuum') {
+        next = '/';
+      }
+
+      var candidate = (next || path).replace(/^\/+|\/+$/g, '');
+      if (!next && candidate && pages[candidate]) {
+        next = '/' + candidate + '.html';
+      }
+
+      if (next && next !== path) {
+        window.location.replace(next + query + hash);
+      }
+    })();
+  </script>
+</head>
+<body>
+  <main>
+    <h1>Finding that Vintinuum page</h1>
+    <p>This route moved when the custom domain was restored. The site is sending you to the matching page now.</p>
+    <a href="/">Open Vintinuum</a>
+  </main>
+</body>
+</html>
