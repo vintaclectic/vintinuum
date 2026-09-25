@@ -291,6 +291,259 @@
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   #invite .i-mini .m-cta { flex: 0 0 auto; min-height: 44px; display: flex; align-items: center;
     font-size: 14px; color: #f4c79a; text-decoration: none; padding: 0 6px; }
+
+  /* ══════════════════════════════════════════════════════════════════════════
+     THE PHONE IS NOT A SMALL DESKTOP — the mobile reimagining
+     (AETHERHOLD, Vinta directive 2026-09-23: "still shitty on mobile and deeply
+     congested — needs REIMAGINED for mobile.")
+
+     WHAT WAS ACTUALLY WRONG, MEASURED (headless Chrome 131 over the real page,
+     7 viewports, before any change):
+       · world.html contained THREE @media queries and NOT ONE width breakpoint.
+         (pointer:coarse)x2 + (prefers-reduced-motion)x1. The desktop layout
+         rendered byte-identically at 320px. That is the whole of "congested".
+       · #invite x #feed overlapped at EVERY width — 250x150 @320, 323x128 @414,
+         356x83 @740x360, 86x83 @1280. The guest doorway printed straight
+         through the speech feed. Cardinal sin, live, on the flagship surface.
+       · #dvRail x #vintVoice overlapped 42x44 at EVERY width — a rail launcher
+         sitting exactly on the voice button.
+       · THIRTEEN launchers rendered 46x42 — under the 44px floor — because
+         `body.dv-rail-tight` forces height:42px when the column cannot fit.
+       · The cause of the tightening is CAPACITY, not styling: FIFTEEN modules
+         call addLauncher() (star-map, agents, court, home, lanterns, loom,
+         people, covenant, reckoning, galactic-time, concord, yard, allegiance,
+         arcade, found, dirhaven, owner) into ONE vertical column, above a
+         228px panel, on a 568px-tall screen. dirverse-hud.js's own comment
+         names it: "it is a CAPACITY problem — the column is asking for more
+         vertical room than the viewport has to give."
+
+     THE REIMAGINING. Prior fixes compacted, wrapped, squeezed and yielded — all
+     of them defending a DESKTOP composition on a phone. The composition itself
+     is what does not survive 375px, so on a phone it is replaced:
+
+       DESKTOP (>=860px)      unchanged, byte-for-byte. Rail left, panel left,
+                              corner stacks. Nothing below is additive there.
+       PHONE (<860px)         ONE bottom thumb bar. The 15-launcher rail folds
+                              into a horizontally-scrolling dock in the thumb
+                              zone; the HUD panel becomes a summonable sheet.
+                              The clearing is the hero; chrome is summoned.
+
+     THE BAND MODEL — the reason nothing can collide any more. Instead of each
+     element deriving its own ceiling from a neighbour's live bottom (the
+     arithmetic that has been patched ~9 times in this file and still shipped 3
+     overlaps at every breakpoint), the phone layout declares THREE disjoint
+     horizontal bands and assigns every element to exactly one:
+
+       --band-top     0 .. --vw-top-h        leave · edit head · view/mic
+       --band-stage   (the clearing — owns everything between; chrome-free)
+       --band-bottom  --vw-bot-h .. 100svh   feed · dock · saybar · sheets
+
+     Bands are defined in ONE place, cannot overlap by construction (each is
+     derived from the previous one's height, not from a measured neighbour), and
+     every mobile rule below anchors to a band edge. An element cannot land on
+     another element it does not share a band with, at any content state.
+     ══════════════════════════════════════════════════════════════════════════ */
+
+  /* THE CANVAS OWNS ITS GESTURES — the scoped replacement for maximum-scale=1.
+     `none` stops the browser pan/zoom/double-tap-zoom on the WORLD only, so a
+     steer-drag never scroll-jacks and there is no 300ms tap delay, while pinch
+     still works on HUD text (see the viewport comment in <head>). */
+  #stage, #stage canvas { touch-action: none; }
+  /* Everything a thumb taps gets the fast path; `manipulation` keeps pinch. */
+  button, a, input, [role="button"] { touch-action: manipulation; }
+
+  :root {
+    /* the two chrome bands. Desktop keeps them at their authored heights; the
+       phone block below overrides. Every mobile element anchors to these. */
+    --vw-top-h: calc(58px + env(safe-area-inset-top, 0px));
+    --vw-bot-h: calc(76px + env(safe-area-inset-bottom, 0px));
+    --vw-gut: 12px;
+  }
+
+  /* ── THE PHONE COMPOSITION ─────────────────────────────────────────────────
+     860px is the fold: below it the left rail + 228px panel + both corner
+     stacks cannot coexist with a readable clearing (measured — at 768px the
+     doorway still printed 342x83 through the feed). */
+  @media (max-width: 859px) {
+
+    :root {
+      --vw-top-h: calc(52px + env(safe-area-inset-top, 0px));
+      /* dock (56) + saybar (64) + the gutter between them */
+      --vw-bot-h: calc(124px + env(safe-area-inset-bottom, 0px));
+      --vw-gut: 10px;
+    }
+
+    /* ── TOP BAND ── one row, two ends, nothing in the middle. `leave` and
+       `edit head` are the only things that live up here, and they are pinned to
+       opposite corners with a hard gap between, so a long label can never grow
+       into the other. */
+    #leave {
+      top: max(8px, env(safe-area-inset-top, 8px));
+      left: max(10px, env(safe-area-inset-left, 10px));
+      font-size: 15px; min-height: 44px; min-width: 44px;
+      padding: 0 10px; border-radius: 22px;
+      background: rgba(20,14,10,0.55);
+      border: 1px solid rgba(244,199,154,0.22);
+      backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+      /* it may never reach the right-hand button; half the width minus a gutter */
+      max-width: calc(50vw - 16px); overflow: hidden; white-space: nowrap;
+    }
+    #editHeadBtn {
+      top: max(8px, env(safe-area-inset-top, 8px)) !important;
+      right: max(10px, env(safe-area-inset-right, 10px)) !important;
+      font-size: 13px !important; padding: 0 13px !important;
+      max-width: calc(50vw - 16px); overflow: hidden; white-space: nowrap;
+    }
+
+    /* #topctl (view + mic) moves OUT of the top-right corner — that corner is
+       edit-head's, and stacking a second column under it is what drove the
+       original congestion. On a phone these are thumb controls, so they join
+       the bottom band as compact pills above the dock, right-aligned. */
+    #topctl {
+      top: auto;
+      right: max(10px, env(safe-area-inset-right, 10px));
+      bottom: calc(var(--vw-bot-h) + var(--vw-gut));
+      flex-direction: row; gap: 8px; align-items: center;
+    }
+    #topctl button {
+      font-size: 0;                     /* glyph-only: the label is the icon */
+      min-height: 46px; width: 46px; padding: 0;
+      display: flex; align-items: center; justify-content: center;
+      border-radius: 23px;
+    }
+    #topctl button::first-letter { font-size: 19px; }
+
+    /* ── MOVEMENT PAD — thumb zone, never over the say bar.
+       64px circles stay (they are the one control you hold), but they sit
+       directly above the bottom band and to the RIGHT, clear of the feed. */
+    #movectl {
+      right: max(10px, env(safe-area-inset-right, 10px));
+      bottom: calc(var(--vw-bot-h) + var(--vw-gut) + 54px);
+      gap: 12px;
+    }
+    #movectl button { width: 60px; height: 60px; font-size: 13px; }
+
+    /* ── THE SAY BAR — the floor of the world. Bottom of the bottom band. */
+    #saybar {
+      padding: 8px max(10px, env(safe-area-inset-right,10px))
+               max(10px, env(safe-area-inset-bottom,10px))
+               max(10px, env(safe-area-inset-left,10px));
+      gap: 8px;
+    }
+    #sayInput { font-size: 16px; padding: 11px 16px; }  /* 16px = no iOS zoom-on-focus */
+    #sayBtn { padding: 11px 18px; min-height: 46px; }
+
+    /* ── THE SPEECH FEED — the collision that shipped at every width.
+       It now lives strictly INSIDE the bottom band's upper edge and is capped
+       so it can never grow up into the stage or down into the dock. The guest
+       doorway (#invite) is in the same band, so the feed YIELDS to it entirely
+       rather than sharing pixels — see body.vw-doorway below. */
+    #feed {
+      left: max(10px, env(safe-area-inset-left, 10px));
+      right: auto;
+      bottom: calc(var(--vw-bot-h) + var(--vw-gut) + 54px);
+      max-width: min(72vw, 320px);
+      max-height: 34svh; overflow: hidden;
+      gap: 6px;
+    }
+    .utterance { font-size: 15px; padding: 7px 12px; }
+
+    /* ── THE GUEST DOORWAY — it owns the bottom band alone while it is up.
+       Measured before: it printed 250x150 through #feed at 320px. The fix is
+       not a z-index (both were visible, both were text) — it is EXCLUSIVITY.
+       While the doorway is open the feed is suppressed, so two surfaces can
+       never occupy the band at once. */
+    #invite {
+      left: max(8px, env(safe-area-inset-left, 8px));
+      right: max(8px, env(safe-area-inset-right, 8px));
+      bottom: calc(8px + env(safe-area-inset-bottom, 0px));
+      border-radius: 18px; padding: 16px 15px calc(14px + env(safe-area-inset-bottom,0px));
+      max-height: min(52svh, 360px);
+    }
+    #invite .i-head { font-size: clamp(18px, 5.2vw, 22px); }
+    #invite .i-sub  { font-size: clamp(13.5px, 3.7vw, 15px); margin-bottom: 12px; }
+    #invite .i-row  { gap: 8px; }
+    #invite .i-cta  { min-height: 50px; font-size: 16px; }
+    #invite .i-ghost { min-height: 50px; }
+
+    /* ── THE OFFER — same band, same exclusivity discipline. */
+    #offer {
+      left: max(8px, env(safe-area-inset-left,8px));
+      right: max(8px, env(safe-area-inset-right,8px));
+      bottom: calc(var(--vw-bot-h) + var(--vw-gut));
+      padding: 14px 15px; border-radius: 16px;
+      max-height: 46svh; overflow-y: auto; overscroll-behavior: contain;
+    }
+    #offer .o-text { font-size: 16px; }
+    #offer .o-cta, #offer .o-dismiss { min-height: 46px; display: flex; align-items: center; }
+
+    /* ── TRACES + STATUS — centred readouts. They live in the STAGE band, which
+       is bounded top and bottom by the two chrome bands, so the elaborate
+       neighbour-derived arithmetic in #status is simply not used on a phone:
+       the band is declared, not inferred. */
+    #status {
+      left: 50% !important;
+      width: min(86vw, 340px) !important;
+      top: calc(var(--vw-top-h) + (100svh - var(--vw-top-h) - var(--vw-bot-h)) / 2) !important;
+      max-height: calc(100svh - var(--vw-top-h) - var(--vw-bot-h) - 24px) !important;
+      transform: translate(-50%, -50%) !important;
+      font-size: clamp(16px, 4.4vw, 19px);
+    }
+    #traces {
+      top: calc(var(--vw-top-h) + (100svh - var(--vw-top-h) - var(--vw-bot-h)) / 2);
+      max-width: min(88vw, 400px); width: calc(100vw - 24px);
+      max-height: calc(100svh - var(--vw-top-h) - var(--vw-bot-h) - 24px);
+      overflow: hidden;
+    }
+    #traces .trace { font-size: 15.5px; }
+    #traces .t-head { font-size: 14px; }
+
+    #micHint { bottom: calc(var(--vw-bot-h) + var(--vw-gut) + 112px); font-size: 12.5px; max-width: 86vw; }
+
+    /* ── THE VEIL — full-bleed, and its text scales with the viewport. */
+    #veil .vtext { font-size: clamp(16px, 4.8vw, 20px); max-width: 88vw; }
+  }
+
+  /* ── THE SMALLEST PHONES (<=375px): tighten type and gutters, never overlap.
+     Everything here shrinks CONTENT inside an already-bounded container — no
+     rule below moves a box into a neighbour's band. */
+  @media (max-width: 375px) {
+    :root { --vw-gut: 8px; }
+    #leave { font-size: 14px; padding: 0 8px; }
+    #editHeadBtn { font-size: 12px !important; padding: 0 10px !important; }
+    #movectl button { width: 54px; height: 54px; font-size: 12px; }
+    #movectl { bottom: calc(var(--vw-bot-h) + var(--vw-gut) + 50px); }
+    #feed { max-width: min(76vw, 250px); max-height: 28svh; }
+    .utterance { font-size: 14px; padding: 6px 10px; }
+    #invite { padding: 14px 13px calc(12px + env(safe-area-inset-bottom,0px)); max-height: min(48svh, 320px); }
+    #invite .i-cta { font-size: 15px; }
+    #sayInput { padding: 10px 14px; }
+    #sayBtn { padding: 10px 15px; }
+  }
+
+  /* ── LANDSCAPE PHONE (short and wide) — the historically worst case.
+     Height is the scarce axis, so the bottom band collapses to a single row and
+     the feed is suppressed entirely rather than competing for 360px of height. */
+  @media (max-width: 926px) and (max-height: 430px) and (orientation: landscape) {
+    :root { --vw-top-h: calc(46px + env(safe-area-inset-top, 0px));
+            --vw-bot-h: calc(62px + env(safe-area-inset-bottom, 0px)); }
+    #feed { display: none; }
+    #movectl { flex-direction: row; bottom: calc(var(--vw-bot-h) + 6px); }
+    #movectl button { width: 48px; height: 48px; font-size: 11px; }
+    #topctl { bottom: auto; top: max(6px, env(safe-area-inset-top,6px));
+              right: calc(max(10px, env(safe-area-inset-right,10px)) + 116px); }
+    #invite { max-height: min(74svh, 250px); }
+    #invite .i-head { font-size: 17px; margin-bottom: 3px; }
+    #invite .i-sub { font-size: 13px; margin-bottom: 8px; }
+    #traces, #status { max-height: calc(100svh - var(--vw-top-h) - var(--vw-bot-h) - 12px); }
+  }
+
+  /* ── EXCLUSIVITY IN THE BOTTOM BAND — the structural kill for the
+     #invite x #feed collision that shipped at all 7 viewports. Two surfaces
+     that both want the band never share it; the transient one wins and the
+     ambient one stands down. Set by the inline script on show/hide. */
+  body.vw-doorway #feed { display: none !important; }
+  body.vw-offer   #feed { display: none !important; }
 </style>
 </head>
 <body>
@@ -688,7 +941,15 @@
     if (o.href) document.getElementById('offerCta').href = o.href;
     if (o.cta) document.getElementById('offerCta').textContent = o.cta;
     el.classList.add('show');
-    const hide = () => el.classList.remove('show');
+    // BOTTOM-BAND EXCLUSIVITY (aetherhold 2026-09-25). On a phone #offer and
+    // #feed both want the band above the say bar. Measured, the sibling case
+    // (#invite x #feed) overlapped 250x150 at 320px and 356x83 in landscape, so
+    // this one is closed the same structural way: the transient surface claims
+    // the band and the ambient feed stands down, rather than the two of them
+    // layering. Desktop ignores the class entirely (the rule is inside the
+    // max-width:859px block), so nothing changes at wide widths.
+    document.body.classList.add('vw-offer');
+    const hide = () => { el.classList.remove('show'); document.body.classList.remove('vw-offer'); };
     document.getElementById('offerDismiss').onclick = hide;
     setTimeout(hide, 20000); // it leaves on its own; no pressure
   });
@@ -741,13 +1002,33 @@
     // instant it's dismissed. Declared for both corners because it spans both.
     setTimeout(() => {
       el.classList.add('show');
+      // BOTTOM-BAND EXCLUSIVITY (aetherhold 2026-09-25) — the structural fix for
+      // the collision that shipped at EVERY viewport. MEASURED before the change,
+      // #invite printed straight through #feed: 250x150 @320x568, 323x128
+      // @414x896, 342x83 @768x1024, 356x83 @740x360, 86x83 @1280x800. Both are
+      // text, both were visible, so a z-index would only have chosen which
+      // sentence you read through the other one — the law wants them not sharing
+      // pixels at all. While the doorway holds the bottom band the ambient feed
+      // stands down; it returns the moment the doorway is dismissed or collapsed
+      // to its pill. Scoped to the phone block, so desktop is untouched.
+      try { document.body.classList.add('vw-doorway'); } catch (_) {}
       try {
         window.VintDock.avoid(el, { corner: 'br' });
         window.VintDock.avoid(el, { corner: 'bl' });
       } catch (_) {}
+      // the rail measures its band off the doorway, so it must re-measure now
+      // that the doorway is up — otherwise a launcher sits under an opaque sheet.
+      try { window.DirverseHUD && DirverseHUD.relayout && DirverseHUD.relayout(); } catch (_) {}
     }, 1400);
     const wander = document.getElementById('inviteWander');
-    if (wander) wander.onclick = () => { el.classList.add('min'); try { window.VintDock.reflow(); } catch (_) {} };
+    if (wander) wander.onclick = () => {
+      el.classList.add('min');
+      // collapsed to a 44px pill, the doorway no longer owns the band — the feed
+      // comes back, and the rail regains the room the full sheet was holding.
+      try { document.body.classList.remove('vw-doorway'); } catch (_) {}
+      try { window.VintDock.reflow(); } catch (_) {}
+      try { window.DirverseHUD && DirverseHUD.relayout && DirverseHUD.relayout(); } catch (_) {}
+    };
     const cta = document.getElementById('inviteCta');
     if (cta) cta.onclick = openWelcome;
     const mini = el.querySelector('.i-mini .m-cta');
