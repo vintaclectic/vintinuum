@@ -72,7 +72,11 @@ body {
   top: 0; left: 0; right: 0;
   height: calc(48px + env(safe-area-inset-top, 0px));
   z-index: 100;
-  background: rgba(4, 8, 16, 0.88);
+  /* NO-COLLISION: the topbar is fixed above scrolling content, so it must be
+     fully OPAQUE. At 0.88 alpha the content underneath bled through it while
+     scrolling — two things sharing the same pixels. The blur stays for depth
+     on the atmosphere layer behind, but nothing shows through the bar now. */
+  background: rgb(4, 8, 16);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   border-bottom: 1px solid var(--border);
@@ -169,6 +173,9 @@ body {
 
 /* ── ACTIVE PROJECT CARD ── */
 .active-project {
+  min-width: 0;
+  max-width: 100%;
+  overflow-wrap: anywhere;
   background: linear-gradient(160deg, rgba(20, 40, 90, 0.35) 0%, rgba(40, 28, 8, 0.2) 100%);
   border: 1px solid rgba(200, 168, 75, 0.18);
   border-radius: 24px;
@@ -227,6 +234,9 @@ body {
 }
 
 .active-title {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  min-width: 0;
   font-family: 'Cormorant Garamond', serif;
   font-weight: 400;
   font-size: clamp(1.6rem, 4vw, 2.4rem);
@@ -237,6 +247,9 @@ body {
 }
 
 .active-why {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  min-width: 0;
   font-family: 'Cormorant Garamond', serif;
   font-style: italic;
   font-size: clamp(0.95rem, 2vw, 1.1rem);
@@ -264,6 +277,9 @@ body {
 }
 
 .phase-badge {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  min-width: 0;
   padding: 5px 14px;
   background: rgba(200, 168, 75, 0.08);
   border: 1px solid rgba(200, 168, 75, 0.2);
@@ -275,6 +291,9 @@ body {
 }
 
 .start-date {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  min-width: 0;
   font-family: 'JetBrains Mono', monospace;
   font-size: 0.5rem;
   letter-spacing: 0.08em;
@@ -454,6 +473,9 @@ textarea.form-input::placeholder, input.form-input::placeholder {
 }
 
 .past-card {
+  min-width: 0;
+  max-width: 100%;
+  overflow-wrap: anywhere;
   background: var(--panel);
   border: 1px solid var(--border);
   border-radius: 16px;
@@ -482,6 +504,9 @@ textarea.form-input::placeholder, input.form-input::placeholder {
 }
 
 .past-title {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  min-width: 0;
   font-family: 'Cormorant Garamond', serif;
   font-weight: 400;
   font-size: clamp(1rem, 2.5vw, 1.15rem);
@@ -513,6 +538,9 @@ textarea.form-input::placeholder, input.form-input::placeholder {
 }
 
 .past-why {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  min-width: 0;
   font-family: 'Cormorant Garamond', serif;
   font-style: italic;
   font-size: 0.9rem;
@@ -522,6 +550,9 @@ textarea.form-input::placeholder, input.form-input::placeholder {
 }
 
 .past-meta {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  min-width: 0;
   font-family: 'JetBrains Mono', monospace;
   font-size: 0.48rem;
   letter-spacing: 0.08em;
@@ -534,6 +565,9 @@ textarea.form-input::placeholder, input.form-input::placeholder {
 
 /* ── NEW PROJECT FORM ── */
 .new-project-panel {
+  min-width: 0;
+  max-width: 100%;
+  overflow-wrap: anywhere;
   background: var(--panel);
   border: 1px solid var(--border);
   border-radius: 20px;
@@ -690,6 +724,127 @@ textarea.form-input::placeholder, input.form-input::placeholder {
   text-transform: uppercase;
 }
 
+/* ── LOAD ERROR PANEL ──
+   Flows in the normal document column (no fixed/absolute positioning), so it
+   cannot collide with the topbar, the dock, or anything else. It replaces
+   #mainContent's children entirely — it never sits on top of them. */
+.load-error {
+  text-align: center;
+  padding: 36px 20px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  margin-bottom: 32px;
+}
+.load-error-title {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.56rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  margin-bottom: 12px;
+}
+.load-error-body {
+  font-family: 'Cormorant Garamond', serif;
+  font-style: italic;
+  font-size: 1.05rem;
+  line-height: 1.5;
+  color: var(--text);
+  margin: 0 auto 20px;
+  max-width: 44ch;
+  /* Long unbroken strings wrap instead of widening the box. */
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+.load-error-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+.load-error-actions .btn { text-decoration: none; }
+
+/* ── TOAST ──
+   z-index 300 sits deliberately ABOVE the confirm overlay (200) because a
+   toast reports the failure of a confirm action and must remain readable.
+   That is the only intentional layering on this page. It is pinned to the
+   BOTTOM centre and clamped to the viewport, so it can never reach the
+   topbar (top, z100) and never overlaps page content, which scrolls beneath
+   its own padding. Bottom inset clears the mobile dock + safe area. */
+.toast-host {
+  position: fixed;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: calc(96px + env(safe-area-inset-bottom, 0px));
+  z-index: 300;
+  width: min(440px, calc(100vw - 32px));
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  pointer-events: none;
+  /* Never taller than the viewport; a burst of toasts scrolls inside its own
+     box rather than growing upward into the page content. */
+  max-height: calc(100svh - 160px);
+  overflow-y: auto;
+}
+/* NO-COLLISION: the toast is the page's only floating layer, so the document
+   RESERVES the strip it occupies. While a toast is on screen the page gains
+   bottom padding equal to the toast rail, so real content scrolls clear of it
+   instead of passing underneath. Nothing is ever covered. */
+body.has-toast .page {
+  padding-bottom: calc(100px + var(--toast-rail, 0px) + env(safe-area-inset-bottom, 0px));
+}
+.toast-host:empty { display: none; }
+.toast {
+  pointer-events: auto;
+  background: rgba(10, 16, 28, 0.97);
+  border: 1px solid var(--border);
+  border-left: 3px solid #e0604a;
+  border-radius: 14px;
+  padding: 13px 15px;
+  box-shadow: 0 10px 34px rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  display: flex;
+  align-items: flex-start;
+  gap: 11px;
+  animation: toastIn 0.22s ease;
+}
+.toast-text {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 0.98rem;
+  line-height: 1.45;
+  color: var(--text);
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+.toast-close {
+  flex: 0 0 auto;
+  width: 44px;
+  height: 44px;
+  margin: -11px -11px -11px 0;
+  background: none;
+  border: 0;
+  color: var(--text-ghost);
+  font-size: 1.05rem;
+  line-height: 1;
+  cursor: pointer;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.toast-close:hover { color: var(--text); }
+@keyframes toastIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .toast { animation: none; }
+}
+
 @media (max-width: 600px) {
   .page { padding: calc(60px + env(safe-area-inset-top,0px)) 14px calc(100px + env(safe-area-inset-bottom,0px)); }
   .active-project { padding: 22px 16px; }
@@ -701,6 +856,10 @@ textarea.form-input::placeholder, input.form-input::placeholder {
   .active-actions .btn { width: 100%; justify-content: center; padding: 12px 14px; font-size: 0.54rem; }
   .topbar { padding-left: 12px; padding-right: 12px; }
   .active-phase-row { flex-direction: column; align-items: flex-start; gap: 6px; }
+  .load-error { padding: 28px 16px; }
+  .load-error-body { font-size: 1rem; }
+  .load-error-actions .btn { width: 100%; justify-content: center; padding: 12px 14px; }
+  .toast-host { width: calc(100vw - 24px); bottom: calc(84px + env(safe-area-inset-bottom, 0px)); }
 }
 </style>
 </head>
@@ -756,6 +915,7 @@ textarea.form-input::placeholder, input.form-input::placeholder {
 </main>
 
 <!-- CONFIRM DIALOG -->
+<div class="toast-host" id="toastHost" aria-live="polite" aria-atomic="false"></div>
 <div class="confirm-overlay" id="confirmOverlay" style="display:none">
   <div class="confirm-box">
     <div class="confirm-title" id="confirmTitle">Confirm</div>
@@ -778,10 +938,83 @@ const headers = () => ({ 'Content-Type': 'application/json', 'Authorization': `B
 let allProjects = [];
 let confirmCallback = null;
 
+// ── API ERRORS THAT A HUMAN CAN READ ──
+// The old version threw `new Error(res.status)`, so the UI literally printed
+// "Navigation error — 500". A bare HTTP status is not a message: every failure
+// mode looked identical and told the reader nothing they could act on.
+// ApiError carries the status, the server's `code`, and a human sentence.
+class ApiError extends Error {
+  constructor(message, status, code, isAuth) {
+    super(message);
+    this.name = 'ApiError';
+    this.status = status;
+    this.code = code || null;
+    this.isAuth = !!isAuth;
+  }
+}
+
+// Map a failed response to a sentence worth reading. Prefers the server's own
+// human message when it sent one; otherwise falls back per status class.
+async function describeFailure(res, path) {
+  let body = null;
+  // A failing response is not guaranteed to be JSON — Express hands back an
+  // HTML error page for a malformed body, and a proxy/tunnel outage returns
+  // HTML or nothing at all. Parsing must never throw over the real error.
+  try {
+    const raw = await res.text();
+    if (raw) { try { body = JSON.parse(raw); } catch (_) { body = null; } }
+  } catch (_) { body = null; }
+
+  const serverMsg = body && typeof body.error === 'string' ? body.error.trim() : '';
+  const code = body && typeof body.code === 'string' ? body.code : null;
+  const s = res.status;
+
+  if (s === 401 || s === 403) {
+    return new ApiError(
+      s === 403
+        ? "This journey isn't yours to open."
+        : "Your session has expired — sign in to see your projects.",
+      s, code, true
+    );
+  }
+  if (s === 404) {
+    return new ApiError(serverMsg || 'That project no longer exists.', s, code, false);
+  }
+  if (s === 409) {
+    return new ApiError(serverMsg || 'A journey is already underway.', s, code, false);
+  }
+  if (s === 400 || s === 422) {
+    return new ApiError(serverMsg || "Something in that form wasn't quite right.", s, code, false);
+  }
+  if (s === 429) {
+    return new ApiError('Too many requests — give it a moment, then try again.', s, code, false);
+  }
+  if (s >= 500) {
+    // Never surface a server's internal text verbatim beyond its own safe
+    // message; the backend already sanitizes, but don't rely on that here.
+    return new ApiError(
+      serverMsg || "Vintinuum couldn't reach your projects just now. This has been logged — try again in a moment.",
+      s, code, false
+    );
+  }
+  return new ApiError(serverMsg || `Unexpected response while loading ${path}.`, s, code, false);
+}
+
 async function apiFetch(path, opts = {}) {
-  const res = await fetch(API + path, { ...opts, headers: headers() });
-  if (!res.ok) throw new Error(`${res.status}`);
-  return res.json();
+  let res;
+  try {
+    res = await fetch(API + path, { ...opts, headers: headers() });
+  } catch (netErr) {
+    // fetch() only rejects on a network/CORS failure — that is offline, not 500.
+    throw new ApiError("Can't reach Vintinuum — check your connection and try again.", 0, 'NETWORK', false);
+  }
+  if (!res.ok) throw await describeFailure(res, path);
+  if (res.status === 204) return null;
+  try {
+    return await res.json();
+  } catch (_) {
+    throw new ApiError('Vintinuum sent back something unreadable. Try again in a moment.', res.status, 'BAD_JSON', false);
+  }
 }
 
 function fmtDate(d) {
@@ -792,6 +1025,47 @@ function fmtDate(d) {
 function escHtml(s) {
   return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
+
+// ── TOAST ──
+// Replaces alert(): non-blocking, readable, and dismissible. Capped at 3 so a
+// burst of failures can never grow the stack into the page content above it.
+function notifyError(e) {
+  const host = document.getElementById('toastHost');
+  const msg = (e && e.message) ? e.message : 'Something went wrong.';
+  if (!host) { console.error('[projects]', msg); return; }
+
+  while (host.children.length >= 3) host.removeChild(host.firstElementChild);
+
+  const el = document.createElement('div');
+  el.className = 'toast';
+  el.setAttribute('role', 'alert');
+  el.innerHTML = `
+    <span class="toast-text">${escHtml(msg)}</span>
+    <button class="toast-close" aria-label="Dismiss">&times;</button>
+  `;
+  const dismiss = () => {
+    if (el.parentNode) el.parentNode.removeChild(el);
+    clearTimeout(timer);
+    syncToastRail();
+  };
+  el.querySelector('.toast-close').addEventListener('click', dismiss);
+  // An expired session message is worth a longer read than a transient failure.
+  const timer = setTimeout(dismiss, (e && e.isAuth) ? 9000 : 6000);
+  host.appendChild(el);
+  syncToastRail();
+}
+
+// Keep the reserved bottom strip exactly as tall as the live toast rail, so
+// page content always scrolls clear of it and is never covered (NO-COLLISION).
+function syncToastRail() {
+  const host = document.getElementById('toastHost');
+  if (!host) return;
+  const any = host.children.length > 0;
+  document.body.classList.toggle('has-toast', any);
+  const h = any ? Math.ceil(host.getBoundingClientRect().height) : 0;
+  document.documentElement.style.setProperty('--toast-rail', h + 'px');
+}
+window.addEventListener('resize', syncToastRail);
 
 // ── CONFIRM DIALOG ──
 let confirmExtra = null;
@@ -827,12 +1101,32 @@ function doConfirm() {
 }
 
 // ── RENDER ──
+// A project is finished when the backend says so (`status`), falling back to
+// the legacy completed_at/abandoned_at fields if an older payload arrives.
+function isEnded(p) {
+  if (p && typeof p.status === 'string') return p.status === 'complete' || p.status === 'abandoned';
+  return !!(p && (p.completed_at || p.abandoned_at));
+}
+
 function renderAll(projects) {
-  allProjects = projects || [];
-  const active = allProjects.find(p => !p.completed_at && !p.abandoned_at);
-  const past = allProjects.filter(p => p.completed_at || p.abandoned_at)
-    .sort((a, b) => new Date(b.completed_at || b.abandoned_at) - new Date(a.completed_at || a.abandoned_at));
+  allProjects = Array.isArray(projects) ? projects : [];
+  const active = allProjects.find(p => !isEnded(p));
+  const past = allProjects.filter(isEnded)
+    .sort((a, b) => (b.last_updated || 0) - (a.last_updated || 0));
   const hasActive = !!active;
+
+  // ── TRUE EMPTY STATE ──
+  // Zero projects is not an error and not a blank page: it is an invitation.
+  if (allProjects.length === 0) {
+    document.getElementById('mainContent').innerHTML = `
+      <div class="no-active">
+        <p>No long projects yet.</p>
+        <span class="sub">Every journey starts with one bearing</span>
+      </div>
+      ${newProjectPanelHtml(false)}
+    `;
+    return;
+  }
 
   let html = '';
 
@@ -886,9 +1180,10 @@ function renderAll(projects) {
     html += `<div class="section-label" style="margin-top:8px">Past Journeys</div>`;
     html += `<div class="past-list">`;
     past.forEach(p => {
-      const status = p.completed_at ? 'completed' : 'abandoned';
-      const statusLabel = p.completed_at ? 'Completed' : 'Abandoned';
-      const endDate = fmtDate(p.completed_at || p.abandoned_at);
+      const done = (p.status === 'complete') || (!p.status && p.completed_at);
+      const status = done ? 'completed' : 'abandoned';
+      const statusLabel = done ? 'Completed' : 'Abandoned';
+      const endDate = fmtDate(p.completed_at || p.abandoned_at || (p.last_updated ? p.last_updated * 1000 : null));
       html += `
         <div class="past-card ${status}">
           <div class="past-card-header">
@@ -908,31 +1203,37 @@ function renderAll(projects) {
   }
 
   // New project form
-  html += `
+  html += newProjectPanelHtml(hasActive);
+
+  document.getElementById('mainContent').innerHTML = html;
+}
+
+// The create affordance — shared by the populated view and the empty state, so
+// a user with zero projects always has a way to begin one.
+function newProjectPanelHtml(hasActive) {
+  return `
     <div class="section-label">Begin New Journey</div>
     <div class="new-project-panel ${hasActive ? 'locked' : ''}" id="newProjectPanel">
       <div class="np-glow"></div>
       <div class="panel-label">Chart a New Course</div>
       ${hasActive ? `<p class="locked-note">A journey is already underway. Complete or abandon it before beginning another.</p>` : ''}
       <div class="form-group">
-        <label class="form-label">Title</label>
-        <input class="form-input" id="npTitle" placeholder="The name of this undertaking">
+        <label class="form-label" for="npTitle">Title</label>
+        <input class="form-input" id="npTitle" maxlength="300" placeholder="The name of this undertaking">
       </div>
       <div class="form-group">
-        <label class="form-label">Why — the soul of it</label>
-        <textarea class="form-input" id="npWhy" placeholder="What is the deepest reason? Why does this matter enough to be a long journey?" rows="3"></textarea>
+        <label class="form-label" for="npWhy">Why — the soul of it</label>
+        <textarea class="form-input" id="npWhy" rows="3" placeholder="What is the deepest reason? Why does this matter enough to be a long journey?"></textarea>
       </div>
       <div class="form-group">
-        <label class="form-label">Initial Phase</label>
-        <input class="form-input" id="npPhase" placeholder="e.g. Orientation, Foundation, Inquiry…">
+        <label class="form-label" for="npPhase">Initial Phase</label>
+        <input class="form-input" id="npPhase" maxlength="120" placeholder="e.g. Orientation, Foundation, Inquiry…">
       </div>
       <div class="form-actions">
         <button class="btn" data-draggable="true" onclick="createProject()" ${hasActive ? 'disabled' : ''}>Begin the Journey</button>
       </div>
     </div>
   `;
-
-  document.getElementById('mainContent').innerHTML = html;
 }
 
 function toggleProgressForm() {
@@ -947,7 +1248,7 @@ function toggleProgressForm() {
 async function logProgress(id) {
   const note = document.getElementById('progressNote').value.trim();
   const phase = document.getElementById('progressPhase').value.trim();
-  if (!note) { alert('A note is required.'); return; }
+  if (!note) { notifyError(new ApiError('Write a note first — what moved?', 0, 'CLIENT_VALIDATION', false)); return; }
   try {
     await apiFetch(`/api/projects/${id}/progress`, {
       method: 'POST',
@@ -955,7 +1256,7 @@ async function logProgress(id) {
     });
     load();
   } catch (e) {
-    alert(`Failed: ${e.message}`);
+    notifyError(e);
   }
 }
 
@@ -970,7 +1271,7 @@ function confirmComplete(id) {
       try {
         await apiFetch(`/api/projects/${id}/complete`, { method: 'POST', body: JSON.stringify({ completion_note: note }) });
         load();
-      } catch (e) { alert(`Failed: ${e.message}`); }
+      } catch (e) { notifyError(e); }
     }
   );
 }
@@ -986,7 +1287,7 @@ function confirmAbandon(id) {
       try {
         await apiFetch(`/api/projects/${id}/abandon`, { method: 'POST', body: JSON.stringify({ reason }) });
         load();
-      } catch (e) { alert(`Failed: ${e.message}`); }
+      } catch (e) { notifyError(e); }
     }
   );
 }
@@ -995,21 +1296,43 @@ async function createProject() {
   const title = document.getElementById('npTitle').value.trim();
   const why = document.getElementById('npWhy').value.trim();
   const phase = document.getElementById('npPhase').value.trim();
-  if (!title || !why) { alert('Title and Why are both required.'); return; }
+  if (!title || !why) { notifyError(new ApiError('A title and a why are both required to begin.', 0, 'CLIENT_VALIDATION', false)); return; }
   try {
     await apiFetch('/api/projects', { method: 'POST', body: JSON.stringify({ title, why, phase: phase || 'Orientation' }) });
     load();
   } catch (e) {
-    alert(`Failed: ${e.message}`);
+    notifyError(e);
   }
 }
 
+// A failed load gets a readable sentence and a way forward — never a raw code.
+function renderLoadError(e) {
+  const msg = escHtml(e && e.message ? e.message : 'Something went wrong.');
+  const isAuth = !!(e && e.isAuth);
+  const actionBtn = isAuth
+    ? `<a class="btn" href="index.html">Sign in</a>`
+    : `<button class="btn" data-draggable="true" onclick="load()">Try again</button>`;
+  document.getElementById('mainContent').innerHTML = `
+    <div class="load-error" role="alert">
+      <div class="load-error-title">${isAuth ? 'Sign in to continue' : 'The compass lost its bearing'}</div>
+      <p class="load-error-body">${msg}</p>
+      <div class="load-error-actions">${actionBtn}</div>
+    </div>
+  `;
+}
+
+function renderLoading() {
+  document.getElementById('mainContent').innerHTML =
+    `<div class="state-msg" role="status">Charting your journeys…</div>`;
+}
+
 async function load() {
+  renderLoading();
   try {
     const data = await apiFetch('/api/projects');
-    renderAll(Array.isArray(data) ? data : (data.projects || []));
+    renderAll(Array.isArray(data) ? data : ((data && data.projects) || []));
   } catch (e) {
-    document.getElementById('mainContent').innerHTML = `<div class="state-msg">Navigation error — ${e.message}</div>`;
+    renderLoadError(e);
   }
 }
 
