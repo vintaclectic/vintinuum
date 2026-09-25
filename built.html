@@ -106,6 +106,10 @@ img,svg{max-width:100%;height:auto;display:block;}
 }
 
 /* ── TYPE SCALE (clamp throughout — no fixed px on anything structural) ── */
+/* Every heading wraps unbreakable tokens inside its own box. Without this a
+   single long URL in a headline pushes the whole document wider than the
+   viewport — measured, not theorised. */
+h1,h2,h3,h4{min-width:0;overflow-wrap:anywhere;}
 h1{
   font-size:clamp(28px,7vw,52px);
   line-height:1.08;
