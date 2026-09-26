@@ -1,0 +1,1724 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<title>DirCoMedia - Social Command Engine</title>
+<meta name="description" content="DirCoMedia is the Vintinuum social media command engine for approvals, content, video, schedules, analytics, archive, and autonomous project marketing.">
+<meta name="theme-color" content="#11120d">
+<link rel="icon" type="image/svg+xml" href="favicon.svg">
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
+:root {
+  --studio-floor: #11120d;
+  --ink: #f2efe3;
+  --ink-soft: rgba(242, 239, 227, 0.72);
+  --ink-faint: rgba(242, 239, 227, 0.48);
+  --signal-lime: #b9ff5a;
+  --signal-blue: #55d6ff;
+  --signal-red: #ff6a5e;
+  --signal-yellow: #ffd35c;
+  --signal-green: #7ef0a5;
+  --tape: #252519;
+  --desk: #181912;
+  --desk-2: #202217;
+  --desk-3: #282b1d;
+  --line: rgba(242, 239, 227, 0.1);
+  --line-hard: rgba(242, 239, 227, 0.2);
+  --shadow: 0 22px 70px rgba(0, 0, 0, 0.38);
+  --radius: 8px;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  margin: 0;
+  min-height: 100vh;
+  background:
+    linear-gradient(90deg, rgba(255,255,255,0.025) 1px, transparent 1px) 0 0 / 56px 56px,
+    linear-gradient(180deg, rgba(255,255,255,0.018) 1px, transparent 1px) 0 0 / 56px 56px,
+    radial-gradient(circle at 14% 8%, rgba(185,255,90,0.11), transparent 34%),
+    radial-gradient(circle at 92% 18%, rgba(85,214,255,0.10), transparent 32%),
+    var(--studio-floor);
+  color: var(--ink);
+  font-family: "Instrument Sans", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+button, input, textarea, select {
+  font: inherit;
+}
+
+button {
+  color: inherit;
+}
+
+.app-shell {
+  display: grid;
+  grid-template-columns: 260px minmax(0, 1fr);
+  min-height: 100vh;
+}
+
+.rail {
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  padding: 18px 14px;
+  border-right: 1px solid var(--line);
+  background: rgba(17, 18, 13, 0.88);
+  backdrop-filter: blur(16px);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.brand {
+  display: grid;
+  grid-template-columns: 42px 1fr;
+  gap: 10px;
+  align-items: center;
+  padding: 8px;
+}
+
+.brand-mark {
+  width: 42px;
+  height: 42px;
+  border-radius: var(--radius);
+  background: conic-gradient(from 180deg, var(--signal-lime), var(--signal-blue), var(--signal-yellow), var(--signal-lime));
+  display: grid;
+  place-items: center;
+  color: #11120d;
+  font-family: "JetBrains Mono", monospace;
+  font-weight: 800;
+}
+
+.brand h1 {
+  margin: 0;
+  font-size: 1.08rem;
+  letter-spacing: 0;
+}
+
+.brand p {
+  margin: 2px 0 0;
+  color: var(--ink-faint);
+  font-family: "JetBrains Mono", monospace;
+  font-size: 0.66rem;
+  text-transform: uppercase;
+}
+
+.nav {
+  display: grid;
+  gap: 4px;
+}
+
+.nav button {
+  width: 100%;
+  min-height: 40px;
+  border: 1px solid transparent;
+  background: transparent;
+  display: grid;
+  grid-template-columns: 26px 1fr auto;
+  align-items: center;
+  gap: 9px;
+  text-align: left;
+  padding: 8px 10px;
+  border-radius: var(--radius);
+  cursor: pointer;
+  color: var(--ink-soft);
+}
+
+.nav button:hover,
+.nav button.active {
+  background: rgba(242, 239, 227, 0.07);
+  border-color: var(--line);
+  color: var(--ink);
+}
+
+.nav svg {
+  width: 18px;
+  height: 18px;
+  stroke-width: 1.8;
+}
+
+.nav .count {
+  min-width: 22px;
+  padding: 2px 6px;
+  border-radius: 999px;
+  background: rgba(185, 255, 90, 0.14);
+  color: var(--signal-lime);
+  font-family: "JetBrains Mono", monospace;
+  font-size: 0.68rem;
+  text-align: center;
+}
+
+.operator-strip {
+  margin-top: auto;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--desk);
+}
+
+.operator-strip .label,
+.section-kicker,
+.field label,
+.mini-label {
+  color: var(--ink-faint);
+  font-family: "JetBrains Mono", monospace;
+  font-size: 0.68rem;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+.operator-strip strong {
+  display: block;
+  margin-top: 6px;
+  font-size: 1.05rem;
+}
+
+.operator-strip progress {
+  width: 100%;
+  margin-top: 10px;
+  accent-color: var(--signal-lime);
+}
+
+.main {
+  min-width: 0;
+  padding: 22px;
+}
+
+.topline {
+  display: flex;
+  gap: 14px;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 18px;
+}
+
+.topline h2 {
+  margin: 0;
+  font-size: clamp(1.55rem, 3vw, 3rem);
+  letter-spacing: 0;
+}
+
+.topline p {
+  margin: 6px 0 0;
+  max-width: 760px;
+  color: var(--ink-soft);
+  line-height: 1.45;
+}
+
+.live-cluster {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 30px;
+  padding: 5px 9px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: rgba(242, 239, 227, 0.055);
+  color: var(--ink-soft);
+  font-family: "JetBrains Mono", monospace;
+  font-size: 0.72rem;
+}
+
+.dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--signal-lime);
+  box-shadow: 0 0 16px rgba(185,255,90,0.75);
+}
+
+.command-deck {
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(320px, 0.65fr);
+  gap: 16px;
+  align-items: stretch;
+  margin-bottom: 16px;
+}
+
+.mission-control {
+  border: 1px solid rgba(185, 255, 90, 0.22);
+  border-radius: var(--radius);
+  background:
+    linear-gradient(135deg, rgba(185,255,90,0.12), rgba(85,214,255,0.06)),
+    var(--desk);
+  box-shadow: var(--shadow);
+  padding: 18px;
+  position: relative;
+  overflow: hidden;
+}
+
+.mission-control:before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(120deg, transparent, rgba(255,255,255,0.08), transparent);
+  transform: translateX(-80%);
+  animation: sweep 8s ease-in-out infinite;
+  pointer-events: none;
+}
+
+@keyframes sweep {
+  0%, 68% { transform: translateX(-90%); }
+  100% { transform: translateX(95%); }
+}
+
+.mission-inner {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 210px;
+  gap: 16px;
+  align-items: end;
+}
+
+.mission-control h3 {
+  margin: 6px 0 8px;
+  font-size: clamp(1.35rem, 2.4vw, 2.2rem);
+}
+
+.mission-control p {
+  margin: 0;
+  color: var(--ink-soft);
+  line-height: 1.5;
+}
+
+.radar {
+  aspect-ratio: 1;
+  border: 1px solid rgba(185,255,90,0.25);
+  border-radius: 50%;
+  background:
+    radial-gradient(circle, transparent 0 26%, rgba(185,255,90,0.08) 27% 28%, transparent 29% 52%, rgba(85,214,255,0.08) 53% 54%, transparent 55%),
+    conic-gradient(from 0deg, rgba(185,255,90,0.36), transparent 20%, transparent);
+  position: relative;
+  animation: radar 6s linear infinite;
+}
+
+@keyframes radar {
+  to { transform: rotate(360deg); }
+}
+
+.radar:after {
+  content: "";
+  position: absolute;
+  inset: 46%;
+  border-radius: 50%;
+  background: var(--signal-lime);
+  box-shadow: 0 0 20px rgba(185,255,90,0.85), 58px -28px 0 -2px var(--signal-blue), -46px 38px 0 -3px var(--signal-yellow);
+}
+
+.brief-stack {
+  display: grid;
+  gap: 10px;
+}
+
+.brief {
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--desk);
+  padding: 12px;
+}
+
+.brief strong {
+  display: block;
+  margin-top: 5px;
+}
+
+.layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 360px;
+  gap: 16px;
+  align-items: start;
+}
+
+.panel {
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: rgba(24, 25, 18, 0.88);
+  box-shadow: 0 12px 48px rgba(0,0,0,0.22);
+}
+
+.panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px;
+  border-bottom: 1px solid var(--line);
+}
+
+.panel-head h3 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.panel-body {
+  padding: 14px;
+}
+
+.grid-3 {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.metric {
+  min-height: 98px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--desk-2);
+}
+
+.metric b {
+  display: block;
+  margin-top: 10px;
+  font-size: 1.55rem;
+}
+
+.metric span {
+  color: var(--ink-faint);
+  font-size: 0.82rem;
+}
+
+.section {
+  display: none;
+}
+
+.section.active {
+  display: block;
+}
+
+.stack {
+  display: grid;
+  gap: 12px;
+}
+
+.item {
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--desk-2);
+  padding: 12px;
+}
+
+.item-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  align-items: flex-start;
+}
+
+.item h4 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.item p {
+  margin: 8px 0 0;
+  color: var(--ink-soft);
+  line-height: 1.45;
+}
+
+.meta-row,
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 7px;
+  margin-top: 10px;
+}
+
+.control-strip {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.control-chip {
+  min-height: 58px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: rgba(0,0,0,0.14);
+  padding: 9px;
+}
+
+.control-chip strong {
+  display: block;
+  margin-top: 4px;
+  font-size: 0.92rem;
+}
+
+.tag {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+  padding: 3px 7px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--ink-soft);
+  background: rgba(0,0,0,0.12);
+  font-family: "JetBrains Mono", monospace;
+  font-size: 0.68rem;
+}
+
+.tag.hot { color: var(--signal-red); border-color: rgba(255,106,94,0.26); }
+.tag.good { color: var(--signal-green); border-color: rgba(126,240,165,0.24); }
+.tag.blue { color: var(--signal-blue); border-color: rgba(85,214,255,0.24); }
+.tag.yellow { color: var(--signal-yellow); border-color: rgba(255,211,92,0.24); }
+
+.btn {
+  min-height: 34px;
+  border: 1px solid var(--line-hard);
+  border-radius: var(--radius);
+  padding: 7px 10px;
+  background: rgba(242,239,227,0.07);
+  cursor: pointer;
+}
+
+.btn:hover {
+  border-color: rgba(185,255,90,0.4);
+  background: rgba(185,255,90,0.12);
+}
+
+.btn.primary {
+  background: var(--signal-lime);
+  color: #11120d;
+  border-color: var(--signal-lime);
+  font-weight: 800;
+}
+
+.btn.danger:hover {
+  border-color: rgba(255,106,94,0.45);
+  background: rgba(255,106,94,0.12);
+}
+
+.btn.icon {
+  width: 34px;
+  padding: 0;
+  display: inline-grid;
+  place-items: center;
+}
+
+.btn svg,
+.tool-btn svg {
+  width: 17px;
+  height: 17px;
+}
+
+.tool-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.tool-btn {
+  min-height: 34px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--desk-2);
+  color: var(--ink-soft);
+  padding: 7px 9px;
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+  cursor: pointer;
+}
+
+.tool-btn.active,
+.tool-btn:hover {
+  color: var(--ink);
+  border-color: rgba(185,255,90,0.35);
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.field {
+  display: grid;
+  gap: 6px;
+}
+
+.field.full {
+  grid-column: 1 / -1;
+}
+
+.field input,
+.field textarea,
+.field select {
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: rgba(0,0,0,0.18);
+  color: var(--ink);
+  padding: 10px;
+  outline: none;
+}
+
+.field textarea {
+  min-height: 116px;
+  resize: vertical;
+}
+
+.field input:focus,
+.field textarea:focus,
+.field select:focus {
+  border-color: rgba(185,255,90,0.5);
+  box-shadow: 0 0 0 3px rgba(185,255,90,0.08);
+}
+
+.ideas {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.idea {
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--desk-2);
+  padding: 11px;
+  cursor: pointer;
+}
+
+.idea:hover {
+  border-color: rgba(85,214,255,0.32);
+}
+
+.calendar {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.day {
+  min-height: 112px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--desk-2);
+  padding: 8px;
+}
+
+.day b {
+  display: block;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 0.72rem;
+  color: var(--ink-faint);
+  margin-bottom: 8px;
+}
+
+.slot {
+  display: block;
+  margin-top: 5px;
+  padding: 6px;
+  border-radius: 6px;
+  background: rgba(85,214,255,0.1);
+  color: var(--ink-soft);
+  font-size: 0.72rem;
+}
+
+.chart {
+  display: grid;
+  gap: 10px;
+}
+
+.decision-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.bar-row {
+  display: grid;
+  grid-template-columns: 92px minmax(0, 1fr) 48px;
+  gap: 10px;
+  align-items: center;
+}
+
+.bar-track {
+  height: 12px;
+  border-radius: 999px;
+  background: rgba(0,0,0,0.25);
+  overflow: hidden;
+}
+
+.bar-fill {
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--signal-lime), var(--signal-blue));
+}
+
+.project-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.project-card {
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--desk-2);
+  padding: 11px;
+  color: inherit;
+  cursor: pointer;
+  text-align: left;
+  width: 100%;
+}
+
+.project-card:hover {
+  border-color: rgba(185,255,90,0.34);
+  background: var(--desk-3);
+}
+
+.project-card.active {
+  border-color: rgba(185,255,90,0.55);
+  box-shadow: inset 0 0 0 1px rgba(185,255,90,0.18);
+}
+
+.project-card img {
+  width: 100%;
+  aspect-ratio: 16 / 6;
+  object-fit: cover;
+  border-radius: 6px;
+  border: 1px solid var(--line);
+  margin-bottom: 10px;
+}
+
+.switch-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.switch-row:last-child { border-bottom: 0; }
+.switch-row p { margin: 3px 0 0; color: var(--ink-faint); font-size: 0.84rem; }
+
+.switch {
+  position: relative;
+  width: 48px;
+  height: 28px;
+  flex: 0 0 auto;
+}
+
+.switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.slider {
+  position: absolute;
+  cursor: pointer;
+  inset: 0;
+  background: rgba(242,239,227,0.1);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+}
+
+.slider:before {
+  content: "";
+  position: absolute;
+  width: 20px;
+  height: 20px;
+  left: 3px;
+  top: 3px;
+  border-radius: 50%;
+  background: var(--ink-faint);
+  transition: transform 0.18s ease, background 0.18s ease;
+}
+
+.switch input:checked + .slider {
+  background: rgba(185,255,90,0.18);
+  border-color: rgba(185,255,90,0.35);
+}
+
+.switch input:checked + .slider:before {
+  transform: translateX(20px);
+  background: var(--signal-lime);
+}
+
+.empty {
+  padding: 26px;
+  text-align: center;
+  color: var(--ink-faint);
+  border: 1px dashed var(--line-hard);
+  border-radius: var(--radius);
+}
+
+.toast {
+  position: fixed;
+  right: 18px;
+  bottom: 18px;
+  max-width: min(420px, calc(100vw - 36px));
+  padding: 12px 14px;
+  border: 1px solid rgba(185,255,90,0.26);
+  border-radius: var(--radius);
+  background: rgba(24,25,18,0.96);
+  box-shadow: var(--shadow);
+  transform: translateY(18px);
+  opacity: 0;
+  pointer-events: none;
+  transition: 0.18s ease;
+  z-index: 20;
+}
+
+.toast.show {
+  transform: translateY(0);
+  opacity: 1;
+}
+
+.mobile-tabs {
+  display: none;
+}
+
+@media (max-width: 1120px) {
+  .command-deck,
+  .layout,
+  .mission-inner {
+    grid-template-columns: 1fr;
+  }
+
+  .radar {
+    max-width: 260px;
+  }
+}
+
+@media (max-width: 820px) {
+  .app-shell {
+    display: block;
+    padding-bottom: 68px;
+  }
+
+  .rail {
+    position: static;
+    height: auto;
+    border-right: 0;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .rail .nav {
+    display: none;
+  }
+
+  .operator-strip {
+    display: none;
+  }
+
+  .main {
+    padding: 16px;
+  }
+
+  .topline {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .live-cluster {
+    justify-content: flex-start;
+  }
+
+  .grid-3,
+  .form-grid,
+  .ideas,
+  .control-strip,
+  .decision-grid,
+  .project-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .calendar {
+    grid-template-columns: 1fr;
+  }
+
+  .mobile-tabs {
+    position: fixed;
+    left: 10px;
+    right: 10px;
+    bottom: 10px;
+    z-index: 12;
+    display: grid;
+    grid-template-columns: repeat(8, minmax(0, 1fr));
+    gap: 4px;
+    padding: 6px;
+    border: 1px solid var(--line-hard);
+    border-radius: var(--radius);
+    background: rgba(17,18,13,0.94);
+    backdrop-filter: blur(14px);
+  }
+
+  .mobile-tabs button {
+    min-height: 42px;
+    border: 0;
+    border-radius: 6px;
+    background: transparent;
+    color: var(--ink-faint);
+    display: grid;
+    place-items: center;
+  }
+
+  .mobile-tabs button.active {
+    color: #11120d;
+    background: var(--signal-lime);
+  }
+
+  .mobile-tabs svg {
+    width: 18px;
+    height: 18px;
+  }
+}
+</style>
+</head>
+<body>
+<div class="app-shell">
+  <aside class="rail">
+    <div class="brand">
+      <div class="brand-mark">DC</div>
+      <div>
+        <h1>DirCoMedia</h1>
+        <p>social command engine</p>
+      </div>
+    </div>
+    <nav class="nav" id="nav"></nav>
+    <div class="operator-strip">
+      <div class="label">autopilot confidence</div>
+      <strong id="confidenceLabel">87%</strong>
+      <progress id="confidenceBar" max="100" value="87"></progress>
+    </div>
+  </aside>
+
+  <main class="main">
+    <header class="topline">
+      <div>
+        <h2 id="viewTitle">Dashboard</h2>
+        <p id="viewSub">A one-stop social marketing shop for every Vintinuum project: approve, schedule, invent, measure, archive, and steer the agents from one console.</p>
+      </div>
+      <div class="live-cluster">
+        <span class="pill"><span class="dot"></span><span id="clock">live</span></span>
+        <span class="pill" id="selectedProjectPill">all projects</span>
+        <span class="pill" id="statsPill">0 pending</span>
+      </div>
+    </header>
+
+    <div class="command-deck">
+      <section class="mission-control">
+        <div class="mission-inner">
+          <div>
+            <div class="section-kicker">machine brief</div>
+            <h3 id="machineBriefTitle">Turn project activity into social momentum.</h3>
+            <p id="machineBrief">DirCoMedia watches the project constellation, drafts posts from active work, holds risky posts for approval, schedules safe campaigns, and learns from the numbers Vinta chooses to trust.</p>
+            <div class="actions">
+              <button class="btn primary" id="autoDraftBtn" type="button">Generate campaign</button>
+              <button class="btn" id="cronBtn" type="button">Run agent cron</button>
+              <button class="btn" id="panicBtn" type="button">Hold all approvals</button>
+            </div>
+            <div class="control-strip" id="autonomyStrip"></div>
+          </div>
+          <div class="radar" aria-label="Project marketing radar"></div>
+        </div>
+      </section>
+      <aside class="brief-stack">
+        <div class="brief">
+          <div class="mini-label">next best move</div>
+          <strong id="nextMove">Approve the Vintinuum launch thread, then schedule the DirHaven RP clip.</strong>
+        </div>
+        <div class="brief">
+          <div class="mini-label">Vinta input lane</div>
+          <strong id="inputLane">Opinion required only for public claims, money, or brand direction. Everything else queues for review.</strong>
+        </div>
+      </aside>
+    </div>
+
+    <section class="section active" data-section="dashboard">
+      <div class="layout">
+        <div class="stack">
+          <div class="panel">
+            <div class="panel-head">
+              <h3>Network Pulse</h3>
+              <button class="btn" data-jump="analytics" type="button">Open analytics</button>
+            </div>
+            <div class="panel-body grid-3" id="metricGrid"></div>
+          </div>
+          <div class="panel">
+            <div class="panel-head">
+              <h3>Priority Approvals</h3>
+              <button class="btn" data-jump="approvals" type="button">Review queue</button>
+            </div>
+            <div class="panel-body stack" id="dashboardApprovals"></div>
+          </div>
+        </div>
+        <aside class="stack">
+          <div class="panel">
+            <div class="panel-head"><h3>Project Aggregator</h3></div>
+            <div class="panel-body project-grid" id="projectGrid"></div>
+          </div>
+        </aside>
+      </div>
+    </section>
+
+    <section class="section" data-section="approvals">
+      <div class="panel">
+        <div class="panel-head">
+          <h3>Approval Queue</h3>
+          <div class="actions" style="margin-top:0">
+            <button class="btn" id="approveSafeBtn" type="button">Approve safe</button>
+            <button class="btn danger" id="holdPublicBtn" type="button">Hold public claims</button>
+          </div>
+        </div>
+        <div class="panel-body stack" id="approvalList"></div>
+      </div>
+    </section>
+
+    <section class="section" data-section="archive">
+      <div class="panel">
+        <div class="panel-head">
+          <h3>Archive</h3>
+          <button class="btn" id="restoreLastBtn" type="button">Restore latest</button>
+        </div>
+        <div class="panel-body stack" id="archiveList"></div>
+      </div>
+    </section>
+
+    <section class="section" data-section="content">
+      <div class="layout">
+        <div class="panel">
+          <div class="panel-head">
+            <h3>Content Foundry</h3>
+            <button class="btn primary" id="saveContentBtn" type="button">Queue draft</button>
+          </div>
+            <div class="panel-body">
+              <div class="form-grid">
+                <div class="field">
+                  <label for="contentProject">Project</label>
+                  <select id="contentProject"></select>
+              </div>
+              <div class="field">
+                <label for="contentChannel">Channel</label>
+                <select id="contentChannel"></select>
+              </div>
+              <div class="field full">
+                <label for="contentAngle">Angle</label>
+                <input id="contentAngle" value="The council turns scattered project progress into compounding public proof.">
+              </div>
+              <div class="field full">
+                <label for="contentBody">Draft</label>
+                <textarea id="contentBody"></textarea>
+              </div>
+            </div>
+            <div class="stack" id="draftList" style="margin-top:12px"></div>
+          </div>
+        </div>
+        <aside class="panel">
+          <div class="panel-head"><h3>Not-before-thought Angles</h3></div>
+          <div class="panel-body ideas" id="ideaGrid"></div>
+        </aside>
+      </div>
+    </section>
+
+    <section class="section" data-section="video">
+      <div class="layout">
+        <div class="panel">
+          <div class="panel-head">
+            <h3>Video Machine</h3>
+            <button class="btn primary" id="addVideoBtn" type="button">Create video brief</button>
+          </div>
+          <div class="panel-body">
+            <div class="form-grid">
+              <div class="field">
+                <label for="videoProject">Project</label>
+                <select id="videoProject"></select>
+              </div>
+              <div class="field">
+                <label for="videoFormat">Format</label>
+                <select id="videoFormat">
+                  <option>vertical short</option>
+                  <option>founder narration</option>
+                  <option>screen-record proof</option>
+                  <option>agent debate clip</option>
+                </select>
+              </div>
+              <div class="field full">
+                <label for="videoHook">Hook</label>
+                <input id="videoHook" value="What if your software team never slept, never forgot, and asked you fewer questions every day?">
+              </div>
+            </div>
+          </div>
+        </div>
+        <aside class="panel">
+          <div class="panel-head"><h3>Briefs</h3></div>
+          <div class="panel-body stack" id="videoList"></div>
+        </aside>
+      </div>
+    </section>
+
+    <section class="section" data-section="schedule">
+      <div class="panel">
+        <div class="panel-head">
+          <h3>Schedule</h3>
+          <button class="btn primary" id="scheduleNextBtn" type="button">Fill next empty slot</button>
+        </div>
+        <div class="panel-body calendar" id="calendarGrid"></div>
+      </div>
+    </section>
+
+    <section class="section" data-section="analytics">
+      <div class="layout">
+        <div class="panel">
+          <div class="panel-head"><h3>Channel Statistics</h3></div>
+          <div class="panel-body chart" id="channelChart"></div>
+        </div>
+        <aside class="panel">
+          <div class="panel-head"><h3>Signal Reading</h3></div>
+          <div class="panel-body stack">
+            <div class="decision-grid" id="statsWorkbench"></div>
+            <div id="signalReading" class="stack"></div>
+          </div>
+        </aside>
+      </div>
+    </section>
+
+    <section class="section" data-section="settings">
+      <div class="layout">
+        <div class="panel">
+          <div class="panel-head"><h3>Agentic Approval Rules</h3></div>
+          <div class="panel-body" id="settingsList"></div>
+        </div>
+        <aside class="panel">
+          <div class="panel-head"><h3>Input Preferences</h3></div>
+          <div class="panel-body stack">
+            <div class="field">
+              <label for="voiceInput">Vinta opinion bank</label>
+              <textarea id="voiceInput">Be bold, show receipts, never sound like generic SaaS, and keep public claims reviewable before they leave the building.</textarea>
+            </div>
+            <button class="btn primary" id="savePrefsBtn" type="button">Save preferences</button>
+          </div>
+        </aside>
+      </div>
+    </section>
+  </main>
+</div>
+
+<nav class="mobile-tabs" id="mobileTabs" aria-label="DirCoMedia mobile sections"></nav>
+<div class="toast" id="toast"></div>
+
+<script>
+const icons = {
+  dashboard: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M4 13h6V4H4v9Z"/><path d="M14 20h6V4h-6v16Z"/><path d="M4 20h6v-3H4v3Z"/></svg>',
+  approvals: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="m9 12 2 2 4-5"/><path d="M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/></svg>',
+  archive: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M3 7h18"/><path d="M5 7l1 13h12l1-13"/><path d="M9 11h6"/><path d="M8 3h8l1 4H7l1-4Z"/></svg>',
+  content: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M4 5h16"/><path d="M4 12h10"/><path d="M4 19h16"/><path d="m17 9 3 3-3 3"/></svg>',
+  video: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M4 7h11v10H4z"/><path d="m15 11 5-3v8l-5-3z"/></svg>',
+  schedule: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M7 3v4"/><path d="M17 3v4"/><path d="M4 8h16"/><path d="M5 5h14v15H5z"/></svg>',
+  analytics: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M4 19V5"/><path d="M4 19h16"/><path d="m8 15 3-4 3 2 4-7"/></svg>',
+  settings: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z"/><path d="M19.4 15a1.8 1.8 0 0 0 .36 1.98l.04.04a2 2 0 1 1-2.83 2.83l-.04-.04A1.8 1.8 0 0 0 15 19.4a1.8 1.8 0 0 0-1 .6 1.8 1.8 0 0 0-.5 1.25V21a2 2 0 1 1-4 0v-.06A1.8 1.8 0 0 0 8 19.4a1.8 1.8 0 0 0-1.98.36l-.04.04a2 2 0 1 1-2.83-2.83l.04-.04A1.8 1.8 0 0 0 4.6 15a1.8 1.8 0 0 0-.6-1 1.8 1.8 0 0 0-1.25-.5H2.7a2 2 0 1 1 0-4h.06A1.8 1.8 0 0 0 4.6 8a1.8 1.8 0 0 0-.36-1.98l-.04-.04a2 2 0 1 1 2.83-2.83l.04.04A1.8 1.8 0 0 0 9 4.6a1.8 1.8 0 0 0 1-.6 1.8 1.8 0 0 0 .5-1.25V2.7a2 2 0 1 1 4 0v.06A1.8 1.8 0 0 0 16 4.6a1.8 1.8 0 0 0 1.98-.36l.04-.04a2 2 0 1 1 2.83 2.83l-.04.04A1.8 1.8 0 0 0 19.4 9c.24.34.6.58 1 .6h.9a2 2 0 1 1 0 4h-.06A1.8 1.8 0 0 0 19.4 15Z"/></svg>'
+};
+
+const sections = [
+  ["dashboard", "Dashboard"],
+  ["approvals", "Approvals"],
+  ["archive", "Archive"],
+  ["content", "Content"],
+  ["video", "Video"],
+  ["schedule", "Schedule"],
+  ["analytics", "Analytics"],
+  ["settings", "Settings"]
+];
+
+const projects = [
+  { id: "vintinuum", name: "Vintinuum", stage: "living organism", asset: "branding/vintinuum/social/x-header-1500x500.png", channels: ["X", "YouTube", "LinkedIn", "Discord"], heat: 94 },
+  { id: "dirhaven", name: "DirHaven", stage: "RP world", asset: "branding/world/world-01.jpg", channels: ["TikTok", "YouTube", "X"], heat: 82 },
+  { id: "council", name: "Council Board", stage: "agent factory", asset: "branding/vintinuum/social/linkedin-company-cover-1128x191.png", channels: ["LinkedIn", "X", "YouTube"], heat: 91 },
+  { id: "witchventure", name: "WitchVenture", stage: "game surface", asset: "branding/world/world-02.jpg", channels: ["TikTok", "Discord", "YouTube"], heat: 76 }
+];
+
+const seed = {
+  active: "dashboard",
+  selectedProject: "all",
+  approvals: [
+    { id: "ap-1", project: "Vintinuum", channel: "X", risk: "safe", status: "pending", score: 92, text: "The council no longer waits for perfect specs. Reversible work gets decided, shipped, and logged for review." },
+    { id: "ap-2", project: "DirHaven", channel: "TikTok", risk: "public claim", status: "pending", score: 81, text: "A roleplay world where agent memory becomes the terrain players can actually move through." },
+    { id: "ap-3", project: "Council Board", channel: "LinkedIn", risk: "safe", status: "pending", score: 88, text: "Every task now needs proof, not vibes: the board refuses green cards without observed evidence." }
+  ],
+  archive: [],
+  drafts: [],
+  videos: [
+    { id: "vd-1", project: "Council Board", format: "screen-record proof", hook: "The dashboard that made AI agents stop burying human decisions.", status: "briefed" }
+  ],
+  schedule: [
+    { day: 1, title: "Vintinuum proof thread", channel: "X", project: "Vintinuum" },
+    { day: 3, title: "DirHaven world clip", channel: "TikTok", project: "DirHaven" },
+    { day: 5, title: "Council proof demo", channel: "LinkedIn", project: "Council Board" }
+  ],
+  stats: {
+    X: { reach: 86, conversions: 14, trust: 91 },
+    TikTok: { reach: 72, conversions: 9, trust: 68 },
+    YouTube: { reach: 64, conversions: 11, trust: 77 },
+    LinkedIn: { reach: 91, conversions: 21, trust: 94 },
+    Discord: { reach: 58, conversions: 17, trust: 83 },
+    Instagram: { reach: 61, conversions: 8, trust: 66 }
+  },
+  settings: {
+    autoApproveSafe: true,
+    holdPublicClaims: true,
+    dailyDigest: true,
+    cronDrafts: true,
+    learnFromStats: true,
+    requireVintaTaste: true
+  },
+  prefs: "Be bold, show receipts, never sound like generic SaaS, and keep public claims reviewable before they leave the building."
+};
+
+const channels = ["X", "TikTok", "YouTube", "LinkedIn", "Discord", "Instagram"];
+const state = loadState();
+
+function loadState() {
+  try {
+    const saved = JSON.parse(localStorage.getItem("dircomedia-state") || "{}");
+    return normalizeState(Object.assign({}, seed, saved));
+  } catch (_) {
+    return normalizeState(JSON.parse(JSON.stringify(seed)));
+  }
+}
+
+function normalizeState(next) {
+  next.active = sections.some(s => s[0] === next.active) ? next.active : "dashboard";
+  next.selectedProject = next.selectedProject || "all";
+  next.approvals = Array.isArray(next.approvals) ? next.approvals : [];
+  next.archive = Array.isArray(next.archive) ? next.archive : [];
+  next.drafts = Array.isArray(next.drafts) ? next.drafts : [];
+  next.videos = Array.isArray(next.videos) ? next.videos : [];
+  next.schedule = Array.isArray(next.schedule) ? next.schedule : [];
+  next.settings = Object.assign({}, seed.settings, next.settings || {});
+  next.stats = Object.assign({}, seed.stats, next.stats || {});
+  next.prefs = next.prefs || seed.prefs;
+  return next;
+}
+
+function saveState() {
+  localStorage.setItem("dircomedia-state", JSON.stringify(state));
+}
+
+function qs(sel, root = document) { return root.querySelector(sel); }
+function qsa(sel, root = document) { return Array.from(root.querySelectorAll(sel)); }
+
+function toast(message) {
+  const el = qs("#toast");
+  el.textContent = message;
+  el.classList.add("show");
+  clearTimeout(toast.timer);
+  toast.timer = setTimeout(() => el.classList.remove("show"), 2200);
+}
+
+function renderNav() {
+  const nav = qs("#nav");
+  const mobile = qs("#mobileTabs");
+  nav.innerHTML = "";
+  mobile.innerHTML = "";
+  sections.forEach(([id, label]) => {
+    const count = countFor(id);
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = id === state.active ? "active" : "";
+    btn.dataset.section = id;
+    btn.innerHTML = `${icons[id]}<span>${label}</span>${count ? `<span class="count">${count}</span>` : "<span></span>"}`;
+    btn.addEventListener("click", () => setSection(id));
+    nav.appendChild(btn);
+
+    const m = document.createElement("button");
+    m.type = "button";
+    m.className = id === state.active ? "active" : "";
+    m.title = label;
+    m.dataset.section = id;
+    m.innerHTML = icons[id];
+    m.addEventListener("click", () => setSection(id));
+    mobile.appendChild(m);
+  });
+}
+
+function countFor(section) {
+  if (section === "approvals") return state.approvals.filter(a => a.status === "pending").length;
+  if (section === "archive") return state.archive.length;
+  if (section === "content") return state.drafts.length;
+  if (section === "video") return state.videos.length;
+  if (section === "schedule") return state.schedule.length;
+  return 0;
+}
+
+function setSection(id) {
+  state.active = id;
+  saveState();
+  qsa(".section").forEach(el => el.classList.toggle("active", el.dataset.section === id));
+  qs("#viewTitle").textContent = sections.find(s => s[0] === id)[1];
+  qs("#viewSub").textContent = subtitles[id];
+  renderNav();
+}
+
+const subtitles = {
+  dashboard: "A one-stop social marketing shop for every Vintinuum project: approve, schedule, invent, measure, archive, and steer the agents from one console.",
+  approvals: "Risk-aware review queue: safe posts can autopass, public claims wait for explicit taste and truth.",
+  archive: "Everything rejected, shipped, restored, or retired remains searchable for reuse and learning.",
+  content: "Draft cross-channel campaigns from project context, Vinta's opinion bank, and reusable invention angles.",
+  video: "Turn work proof into short-form hooks, screen-record briefs, and founder narration packets.",
+  schedule: "A weekly campaign board that keeps every project visible without hand-building every slot.",
+  analytics: "Channel statistics translated into useful next moves instead of vanity-number fog.",
+  settings: "Agentic cron, approval, and taste rules that decide reversible work while holding reserved decisions."
+};
+
+function renderDashboard() {
+  const pending = filteredApprovals().filter(a => a.status === "pending");
+  const approved = filteredArchive().filter(a => a.status === "approved").length;
+  const totalScheduled = filteredSchedule().length;
+  const confidence = Math.min(98, 72 + pending.filter(a => a.risk === "safe").length * 4 + state.drafts.length * 2);
+  qs("#confidenceLabel").textContent = confidence + "%";
+  qs("#confidenceBar").value = confidence;
+  qs("#statsPill").textContent = pending.length + " pending";
+  qs("#selectedProjectPill").textContent = currentProjectName();
+  renderAutonomyStrip(confidence);
+
+  qs("#metricGrid").innerHTML = [
+    ["Pending approvals", pending.length, "items waiting for yes/no"],
+    ["Scheduled posts", totalScheduled, "weekly campaign slots"],
+    ["Proof reused", approved, "archive wins feeding new drafts"]
+  ].map(([label, value, text]) => `<div class="metric"><div class="mini-label">${label}</div><b>${value}</b><span>${text}</span></div>`).join("");
+
+  qs("#dashboardApprovals").innerHTML = pending.slice(0, 3).map(renderApproval).join("") || empty("No pending approvals. Generate a campaign or queue a draft.");
+  qs("#projectGrid").innerHTML = projects.map(p => `
+    <button class="project-card ${state.selectedProject === p.id ? "active" : ""}" type="button" data-project-filter="${p.id}">
+      <img src="${p.asset}" alt="${p.name} campaign asset">
+      <div class="item-head"><h4>${p.name}</h4><span class="tag good">${p.heat}% heat</span></div>
+      <p>${p.stage}</p>
+      <div class="meta-row">${p.channels.map(c => `<span class="tag blue">${c}</span>`).join("")}</div>
+    </button>`).join("");
+}
+
+function renderAutonomyStrip(confidence) {
+  const publicHeld = state.approvals.filter(a => a.risk !== "safe").length;
+  qs("#autonomyStrip").innerHTML = [
+    ["Scope", currentProjectName()],
+    ["Autopilot", state.settings.autoApproveSafe ? "safe posts" : "manual"],
+    ["Held risk", publicHeld + " claims"],
+    ["Confidence", confidence + "%"]
+  ].map(([label, value]) => `<div class="control-chip"><span class="mini-label">${label}</span><strong>${value}</strong></div>`).join("");
+}
+
+function renderApproval(a) {
+  const riskClass = a.risk === "safe" ? "good" : "hot";
+  return `
+    <article class="item" data-id="${a.id}">
+      <div class="item-head">
+        <h4>${a.project} -> ${a.channel}</h4>
+        <span class="tag ${riskClass}">${a.risk}</span>
+      </div>
+      <p>${a.text}</p>
+      <div class="meta-row">
+        <span class="tag yellow">score ${a.score}</span>
+        <span class="tag">${a.status}</span>
+      </div>
+      <div class="actions">
+        <button class="btn primary" data-action="approve" data-id="${a.id}" type="button">Approve</button>
+        <button class="btn" data-action="schedule" data-id="${a.id}" type="button">Schedule</button>
+        <button class="btn danger" data-action="reject" data-id="${a.id}" type="button">Archive</button>
+      </div>
+    </article>`;
+}
+
+function renderApprovals() {
+  const list = filteredApprovals().filter(a => a.status === "pending");
+  qs("#approvalList").innerHTML = list.map(renderApproval).join("") || empty("Approval queue is clear.");
+}
+
+function renderArchive() {
+  qs("#archiveList").innerHTML = filteredArchive().map(a => `
+    <article class="item" data-id="${a.id}">
+      <div class="item-head">
+        <h4>${a.project || "Campaign"} -> ${a.channel || a.format || "archive"}</h4>
+        <span class="tag ${a.status === "approved" ? "good" : "yellow"}">${a.status || "archived"}</span>
+      </div>
+      <p>${a.text || a.hook || a.title}</p>
+      <div class="meta-row"><span class="tag">${a.archivedAt || "saved"}</span></div>
+    </article>`).join("") || empty("Archive is empty. Approve or archive something to start the memory bank.");
+}
+
+function renderContent() {
+  fillSelect(qs("#contentProject"), projects.map(p => p.name));
+  fillSelect(qs("#contentChannel"), channels);
+  if (!qs("#contentBody").value) {
+    qs("#contentBody").value = buildDraft();
+  }
+  qs("#ideaGrid").innerHTML = [
+    ["Receipts-first launch", "Every claim has a proof clip, task id, or screenshot attached before it goes public."],
+    ["Agent council theater", "Turn internal agent debates into serialized content where the audience watches decisions get made."],
+    ["The anti-roadmap", "Post what shipped today, what got rejected, and what the system learned from both."],
+    ["Vinta taste bank", "Capture owner opinions once, then let every campaign inherit the taste constraints."]
+  ].map(([h, p]) => `<button class="idea" type="button" data-angle="${p}"><h4>${h}</h4><p>${p}</p></button>`).join("");
+  qs("#draftList").innerHTML = state.drafts.map(d => `
+    <article class="item">
+      <div class="item-head"><h4>${d.project} -> ${d.channel}</h4><span class="tag yellow">${d.status}</span></div>
+      <p>${d.text}</p>
+    </article>`).join("") || empty("Draft queue is empty. Queue a draft to feed approvals.");
+}
+
+function buildDraft() {
+  const project = qs("#contentProject") ? qs("#contentProject").value : "Vintinuum";
+  const channel = qs("#contentChannel") ? qs("#contentChannel").value : "X";
+  const angle = qs("#contentAngle") ? qs("#contentAngle").value : "The council turns scattered project progress into compounding public proof.";
+  return `${project} update for ${channel}: ${angle}\n\nProof packet:\n- what changed\n- why it matters\n- what Vinta would say in plain language\n- next action for the audience`;
+}
+
+function renderVideos() {
+  fillSelect(qs("#videoProject"), projects.map(p => p.name));
+  qs("#videoList").innerHTML = filteredVideos().map(v => `
+    <article class="item">
+      <div class="item-head"><h4>${v.project}</h4><span class="tag blue">${v.format}</span></div>
+      <p>${v.hook}</p>
+      <div class="actions">
+        <button class="btn" data-video-schedule="${v.id}" type="button">Schedule</button>
+        <button class="btn danger" data-video-archive="${v.id}" type="button">Archive</button>
+      </div>
+    </article>`).join("") || empty("No video briefs yet.");
+}
+
+function renderSchedule() {
+  const days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+  qs("#calendarGrid").innerHTML = days.map((d, i) => {
+    const slots = filteredSchedule().filter(s => s.day === i + 1);
+    return `<div class="day"><b>${d}</b>${slots.map(s => `<span class="slot">${s.project}: ${s.title}<br>${s.channel}</span>`).join("")}</div>`;
+  }).join("");
+}
+
+function renderAnalytics() {
+  const notes = {
+    X: "Fastest proof loop",
+    TikTok: "Needs more raw video",
+    YouTube: "Long proof underused",
+    LinkedIn: "Council posts strongest",
+    Discord: "Community asks needed",
+    Instagram: "Visual proof backlog"
+  };
+  const data = Object.entries(state.stats).map(([name, values]) => [name, scoreChannel(values), notes[name] || "Learning"]);
+  qs("#channelChart").innerHTML = data.map(([name, value, note]) => `
+    <div class="bar-row">
+      <span class="tag">${name}</span>
+      <div class="bar-track"><div class="bar-fill" style="width:${value}%"></div></div>
+      <span class="mini-label">${value}</span>
+      <div></div><p style="margin:0;color:var(--ink-faint)">${note}</p><div></div>
+    </div>`).join("");
+  qs("#statsWorkbench").innerHTML = Object.entries(state.stats).map(([name, values]) => `
+    <div class="item">
+      <div class="item-head"><h4>${name}</h4><span class="tag good">${scoreChannel(values)}</span></div>
+      <div class="field"><label>Reach</label><input type="number" min="0" max="100" data-stat="${name}" data-stat-key="reach" value="${values.reach}"></div>
+      <div class="field"><label>Conversions</label><input type="number" min="0" max="100" data-stat="${name}" data-stat-key="conversions" value="${values.conversions}"></div>
+      <div class="field"><label>Trust</label><input type="number" min="0" max="100" data-stat="${name}" data-stat-key="trust" value="${values.trust}"></div>
+    </div>`).join("");
+  qs("#signalReading").innerHTML = [
+    ["Inventive edge", "Posts that expose the council's decision record beat generic feature announcements."],
+    ["Stat to watch", bestChannel() + " has the best blended reach, conversion, and trust signal."],
+    ["Next experiment", "Pair a screen-record proof clip with Vinta's blunt opinion as the caption spine."]
+  ].map(([h, p]) => `<div class="item"><h4>${h}</h4><p>${p}</p></div>`).join("");
+}
+
+function scoreChannel(values) {
+  return Math.min(100, Math.round((Number(values.reach || 0) * 0.45) + (Number(values.conversions || 0) * 1.35) + (Number(values.trust || 0) * 0.32)));
+}
+
+function bestChannel() {
+  return Object.entries(state.stats).sort((a, b) => scoreChannel(b[1]) - scoreChannel(a[1]))[0][0];
+}
+
+function currentProjectName() {
+  if (state.selectedProject === "all") return "all projects";
+  return (projects.find(p => p.id === state.selectedProject) || {}).name || "all projects";
+}
+
+function projectMatches(item) {
+  return state.selectedProject === "all" || item.project === currentProjectName();
+}
+
+function filteredApprovals() { return state.approvals.filter(projectMatches); }
+function filteredArchive() { return state.archive.filter(projectMatches); }
+function filteredVideos() { return state.videos.filter(projectMatches); }
+function filteredSchedule() { return state.schedule.filter(projectMatches); }
+
+function renderSettings() {
+  const labels = {
+    autoApproveSafe: ["Auto-approve safe posts", "Posts with no public claim or money risk can move to schedule."],
+    holdPublicClaims: ["Hold public claims", "Claims about results, competitors, or promises stay in approvals."],
+    dailyDigest: ["Daily digest", "Summarize what shipped, what waited, and what learned."],
+    cronDrafts: ["Cron draft generation", "Create new campaign candidates from project activity."],
+    learnFromStats: ["Learn from statistics", "Use performance data to bias future angles and channels."],
+    requireVintaTaste: ["Require Vinta taste for brand posture", "Strategic voice changes remain in the input lane."]
+  };
+  qs("#settingsList").innerHTML = Object.entries(labels).map(([key, [title, copy]]) => `
+    <div class="switch-row">
+      <div><strong>${title}</strong><p>${copy}</p></div>
+      <label class="switch">
+        <input type="checkbox" data-setting="${key}" ${state.settings[key] ? "checked" : ""}>
+        <span class="slider"></span>
+      </label>
+    </div>`).join("");
+  qs("#voiceInput").value = state.prefs;
+}
+
+function fillSelect(select, values) {
+  if (!select || select.options.length) return;
+  values.forEach(v => {
+    const option = document.createElement("option");
+    option.textContent = v;
+    option.value = v;
+    select.appendChild(option);
+  });
+}
+
+function empty(text) {
+  return `<div class="empty">${text}</div>`;
+}
+
+function handleApproval(id, action) {
+  const idx = state.approvals.findIndex(a => a.id === id);
+  if (idx === -1) return;
+  const item = state.approvals[idx];
+  state.drafts = state.drafts.filter(d => d.id !== id);
+  if (action === "schedule") {
+    state.schedule.push({ day: nextOpenDay(), title: item.text.slice(0, 42), channel: item.channel, project: item.project });
+    item.status = "scheduled";
+    state.archive.unshift(Object.assign({}, item, { archivedAt: new Date().toLocaleString() }));
+    state.approvals.splice(idx, 1);
+    toast("Scheduled and archived the approval record.");
+  } else {
+    item.status = action === "approve" ? "approved" : "rejected";
+    state.archive.unshift(Object.assign({}, item, { archivedAt: new Date().toLocaleString() }));
+    state.approvals.splice(idx, 1);
+    toast(action === "approve" ? "Approved and stored as proof." : "Archived for learning.");
+  }
+  saveState();
+  renderAll();
+}
+
+function nextOpenDay() {
+  const counts = Array.from({ length: 7 }, (_, i) => state.schedule.filter(s => s.day === i + 1).length);
+  return counts.indexOf(Math.min(...counts)) + 1;
+}
+
+function generateCampaign() {
+  const scope = state.selectedProject === "all" ? projects : projects.filter(p => p.id === state.selectedProject);
+  const p = scope[Math.floor(Math.random() * scope.length)] || projects[0];
+  const c = bestChannelForProject(p);
+  const ideas = [
+    "Show the task id, the proof, and the human decision it replaced.",
+    "Turn the before/after of a broken surface into a public build receipt.",
+    "Ask the audience which reserved decision they would never delegate to an agent.",
+    "Show one dashboard number and the weird operational behavior it changed."
+  ];
+  state.approvals.unshift({
+    id: "ap-" + Date.now(),
+    project: p.name,
+    channel: c,
+    risk: state.settings.holdPublicClaims ? "safe" : "public claim",
+    status: "pending",
+    score: Math.min(99, scoreChannel(state.stats[c] || { reach: 60, conversions: 8, trust: 70 })),
+    text: ideas[Math.floor(Math.random() * ideas.length)]
+  });
+  saveState();
+  renderAll();
+  toast("Campaign candidate generated for approval.");
+}
+
+function bestChannelForProject(project) {
+  return project.channels.slice().sort((a, b) => scoreChannel(state.stats[b] || {}) - scoreChannel(state.stats[a] || {}))[0];
+}
+
+function runAgentCron() {
+  generateCampaign();
+  if (state.settings.autoApproveSafe) {
+    state.approvals.filter(a => a.risk === "safe").slice(0, 1).forEach(a => handleApproval(a.id, "schedule"));
+  }
+  if (state.settings.cronDrafts) {
+    const p = projects[(state.schedule.length + state.drafts.length) % projects.length];
+    state.drafts.unshift({
+      id: "dr-" + Date.now(),
+      project: p.name,
+      channel: bestChannelForProject(p),
+      risk: "safe",
+      status: "pending",
+      score: 86,
+      text: `${p.name} proof packet: ${state.prefs} Current move: turn ${p.stage} into a public receipt.`
+    });
+    state.approvals.unshift(state.drafts[0]);
+  }
+  saveState();
+  renderAll();
+  toast("Agent cron drafted, scheduled, and learned from stats.");
+}
+
+function renderAll() {
+  renderNav();
+  renderDashboard();
+  renderApprovals();
+  renderArchive();
+  renderContent();
+  renderVideos();
+  renderSchedule();
+  renderAnalytics();
+  renderSettings();
+  setSection(state.active);
+}
+
+document.addEventListener("click", e => {
+  const actionBtn = e.target.closest("[data-action]");
+  if (actionBtn) handleApproval(actionBtn.dataset.id, actionBtn.dataset.action);
+
+  const jump = e.target.closest("[data-jump]");
+  if (jump) setSection(jump.dataset.jump);
+
+  const projectFilter = e.target.closest("[data-project-filter]");
+  if (projectFilter) {
+    state.selectedProject = state.selectedProject === projectFilter.dataset.projectFilter ? "all" : projectFilter.dataset.projectFilter;
+    saveState();
+    renderAll();
+    toast("Project scope set to " + currentProjectName() + ".");
+  }
+
+  const idea = e.target.closest("[data-angle]");
+  if (idea) {
+    qs("#contentAngle").value = idea.dataset.angle;
+    qs("#contentBody").value = buildDraft();
+    toast("Angle loaded into the draft.");
+  }
+
+  const videoSchedule = e.target.closest("[data-video-schedule]");
+  if (videoSchedule) {
+    const v = state.videos.find(x => x.id === videoSchedule.dataset.videoSchedule);
+    if (v) {
+      state.schedule.push({ day: nextOpenDay(), title: v.hook.slice(0, 38), channel: "YouTube", project: v.project });
+      saveState();
+      renderAll();
+      toast("Video brief scheduled.");
+    }
+  }
+
+  const videoArchive = e.target.closest("[data-video-archive]");
+  if (videoArchive) {
+    const idx = state.videos.findIndex(x => x.id === videoArchive.dataset.videoArchive);
+    if (idx > -1) {
+      state.archive.unshift(Object.assign({}, state.videos[idx], { status: "video archived", archivedAt: new Date().toLocaleString() }));
+      state.videos.splice(idx, 1);
+      saveState();
+      renderAll();
+      toast("Video brief archived.");
+    }
+  }
+});
+
+qs("#autoDraftBtn").addEventListener("click", generateCampaign);
+qs("#cronBtn").addEventListener("click", runAgentCron);
+qs("#panicBtn").addEventListener("click", () => {
+  state.settings.autoApproveSafe = false;
+  state.settings.holdPublicClaims = true;
+  saveState();
+  renderAll();
+  toast("All approvals are held for manual review.");
+});
+qs("#approveSafeBtn").addEventListener("click", () => {
+  state.approvals.filter(a => a.risk === "safe").map(a => a.id).forEach(id => handleApproval(id, "approve"));
+});
+qs("#holdPublicBtn").addEventListener("click", () => {
+  state.settings.holdPublicClaims = true;
+  saveState();
+  renderAll();
+  toast("Public claims are locked to approval.");
+});
+qs("#restoreLastBtn").addEventListener("click", () => {
+  const item = state.archive.shift();
+  if (!item) return toast("Archive is empty.");
+  state.approvals.unshift(Object.assign({}, item, { id: "ap-" + Date.now(), status: "pending" }));
+  saveState();
+  renderAll();
+  toast("Latest archive item restored to approvals.");
+});
+qs("#saveContentBtn").addEventListener("click", () => {
+  const draft = {
+    id: "dr-" + Date.now(),
+    project: qs("#contentProject").value,
+    channel: qs("#contentChannel").value,
+    risk: "safe",
+    status: "pending",
+    score: 84,
+    text: qs("#contentBody").value.trim() || buildDraft()
+  };
+  state.drafts.unshift(draft);
+  state.approvals.unshift(draft);
+  saveState();
+  renderAll();
+  toast("Draft queued for approval.");
+});
+qs("#addVideoBtn").addEventListener("click", () => {
+  state.videos.unshift({
+    id: "vd-" + Date.now(),
+    project: qs("#videoProject").value,
+    format: qs("#videoFormat").value,
+    hook: qs("#videoHook").value,
+    status: "briefed"
+  });
+  saveState();
+  renderAll();
+  toast("Video brief created.");
+});
+qs("#scheduleNextBtn").addEventListener("click", () => {
+  const p = projects[state.schedule.length % projects.length];
+  state.schedule.push({ day: nextOpenDay(), title: "Proof drop: " + p.stage, channel: p.channels[0], project: p.name });
+  saveState();
+  renderAll();
+  toast("Next empty slot filled.");
+});
+qs("#savePrefsBtn").addEventListener("click", () => {
+  state.prefs = qs("#voiceInput").value;
+  saveState();
+  toast("Input preferences saved.");
+});
+document.addEventListener("change", e => {
+  const setting = e.target.dataset.setting;
+  if (setting) {
+    state.settings[setting] = e.target.checked;
+    saveState();
+    renderAll();
+    toast("Approval rule updated.");
+  }
+  const stat = e.target.dataset.stat;
+  const statKey = e.target.dataset.statKey;
+  if (stat && statKey) {
+    state.stats[stat][statKey] = Math.max(0, Math.min(100, Number(e.target.value || 0)));
+    saveState();
+    renderAll();
+    toast("Statistics updated for " + stat + ".");
+  }
+});
+["contentProject", "contentChannel", "contentAngle"].forEach(id => {
+  document.addEventListener("input", e => {
+    if (e.target.id === id) qs("#contentBody").value = buildDraft();
+  });
+});
+
+setInterval(() => {
+  qs("#clock").textContent = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+}, 1000);
+
+renderAll();
+</script>
+</body>
+</html>
