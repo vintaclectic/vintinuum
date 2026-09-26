@@ -157,6 +157,22 @@
       'body.dv-rail-compact #dvRail .dv-launch{padding:0 12px;gap:0;}',
       'body.dv-rail-tight #dvRail{gap:6px;}',
       'body.dv-rail-tight #dvRail .dv-launch{padding:0 9px;min-height:42px;height:42px;}',
+      // ── TOUCH LEGIBILITY — never hide what a control IS on a coarse pointer ───
+      // (Vinta directive 2026-09-26). A touch device has NO hover, so a glyph-only
+      // pill is an unidentifiable control — the exact "which button is which, what
+      // does what?" failure Vinta named on mobile. So on coarse pointers the LABEL
+      // ALWAYS shows, overriding every glyph-only compaction above (the short-
+      // viewport media query at max-height:560px AND the .dv-rail-compact /
+      // .dv-rail-tight classes). Identity is never hidden on a device that cannot
+      // reveal it on hover. The rail still cannot collide: it yields to overflow by
+      // SCROLLING inside its measured band (layoutRail skips glyph-only compaction
+      // on coarse — see the `!_coarse` guard there), never by hiding a control or
+      // spilling onto a neighbour. Desktop keeps hover + the title tooltip as
+      // extras, never the only path. The geometry is forced (!important) so a
+      // stray compact/tight class can never shrink a touch target below 46px.
+      'body.dv-coarse #dvRail .dv-launch .lbl{display:inline !important;}',
+      'body.dv-coarse #dvRail .dv-launch{min-height:46px !important;height:auto !important;',
+      ' padding:0 14px !important;gap:7px !important;}',
       // ── THE SECOND COLUMN — when compaction is not enough, use the WIDTH ─────
       // Compaction has a floor: eight glyph-only launchers at the 42px minimum
       // touch target still need 378px, and a 320x568 phone's rail band is 268px.
@@ -1605,6 +1621,9 @@
   // Nothing here is individually position:fixed, so no launcher can ever be
   // dragged or reflowed onto another fixed surface — the rail owns its space.
   var _rail = null;
+  // Coarse-pointer (touch) devices have no hover: labels must stay visible and the
+  // rail must never compact to glyph-only. Set live at mount + on pointer change.
+  var _coarse = false;
   function railEl() {
     if (_rail) return _rail;
     _rail = document.createElement('div');
@@ -1621,6 +1640,12 @@
     // the rail exists to make impossible (drag would pin them over #vintWorldHud /
     // #editHeadBtn / #saybar). The rail itself is the stable, collision-proof home.
     b.setAttribute('data-draggable', 'false');
+    // title = a desktop hover tooltip (an EXTRA, never the only path — touch keeps
+    // the visible label, see the dv-coarse rule); aria-label names the control for
+    // screen readers since the visible text is glyph+label and may compact on
+    // desktop short viewports. Neither is relied on for mobile discoverability.
+    b.title = label;
+    b.setAttribute('aria-label', label);
     b.innerHTML = '<span class="dot"></span><span class="lbl">' + esc(glyph) + ' ' + esc(label) + '</span>';
     b.addEventListener('click', function () { onClick(); });
     railEl().appendChild(b);
@@ -1962,7 +1987,15 @@
       cl.remove('dv-rail-compact'); cl.remove('dv-rail-tight');
       // scrollHeight is read AFTER each class change so each measurement is of
       // the form actually being tested, never of the previous one.
-      if ((_rail.scrollHeight || 0) > bandH) {
+      // ON TOUCH, NEVER COMPACT TO GLYPH-ONLY. The compact→tight→wrap ladder below
+      // buys vertical room by HIDING the label — acceptable on desktop (hover +
+      // title tooltip reveal identity) but a dead, unidentifiable control on a
+      // coarse pointer that has no hover (Vinta directive 2026-09-26). So on touch
+      // the ladder is skipped entirely: the rail keeps full labels and yields any
+      // overflow to the bounded internal scroll (overflow-y:auto on #dvRail) — the
+      // launchers stay legible and reachable, the rail still cannot spill past its
+      // measured band, and the last-launcher-reachable scroll fix below still runs.
+      if (!_coarse && (_rail.scrollHeight || 0) > bandH) {
         cl.add('dv-rail-compact');
         if ((_rail.scrollHeight || 0) > bandH) {
           cl.add('dv-rail-tight');
@@ -2204,6 +2237,21 @@
   function mount() {
     if (!enabled()) return;
     injectStyles();
+    // Detect a coarse (touch) primary pointer ONCE, tag <body>, and re-detect if it
+    // changes (a hybrid device docking/undocking). dv-coarse is what keeps labels
+    // visible and blocks glyph-only compaction — mobile legibility hinges on it.
+    try {
+      var _mq = W.matchMedia && W.matchMedia('(pointer: coarse)');
+      _coarse = !!(_mq && _mq.matches);
+      document.body.classList.toggle('dv-coarse', _coarse);
+      if (_mq && _mq.addEventListener) {
+        _mq.addEventListener('change', function (e) {
+          _coarse = !!e.matches;
+          document.body.classList.toggle('dv-coarse', _coarse);
+          try { layoutRail(); } catch (_) {}
+        });
+      }
+    } catch (_) {}
     // Our own two sheets join the one-open-at-a-time registry before any
     // launcher can raise them. `isOpen` reads the live class rather than a flag
     // so a grip-dismiss is seen correctly.
