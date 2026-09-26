@@ -1,0 +1,1000 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Vinta — Systems Engineer · Portfolio of Shipped Work</title>
+<meta name="description" content="Independent engineer. Five production systems: a self-hosted AI organism, a distributed media search engine, a universal media player, a WebRTC video platform, and a browser 3D world. All live, all clickable.">
+<meta name="theme-color" content="#08090d">
+<link rel="icon" type="image/svg+xml" href="branding/vintinuum/favicon/favicon.svg">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon.png">
+
+<meta property="og:title" content="Vinta — Systems Engineer">
+<meta property="og:description" content="Five production systems, all live and clickable. Real-time infrastructure, media pipelines, distributed search, AI orchestration.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://vintinuum.com/built.html">
+<meta name="twitter:card" content="summary_large_image">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+
+<style>
+/* ═══════════════════════════════════════════════════════════════════════
+   BUILT.HTML — PORTFOLIO
+   ── BOX MODEL (declared first, per the NO-COLLISION LAW) ──────────────
+   This document has EXACTLY ONE positioned element: .skip (the a11y skip
+   link), which is off-canvas until focused and then occupies the top-left
+   with nothing beneath it. Everything else — every header, section, card,
+   grid, row, footer — is a block in normal document flow inside a single
+   centred column (.wrap, max-width 1080px).
+
+   There is no position:absolute, no position:fixed, no float, no negative
+   margin, no transform that displaces layout, and no z-index contest
+   anywhere in this file. Collisions are therefore structurally impossible
+   rather than merely avoided: elements cannot overlap because none of them
+   are ever removed from flow.
+
+   Z-LADDER (only one rung is ever used):
+     --z-base  : 0    every element in this document
+     --z-skip  : 100  the skip link, on focus only, over an empty corner
+
+   OVERFLOW STRATEGY: every text container carries min-width:0 plus
+   overflow-wrap:anywhere so a long unbroken token (a URL, a hash) wraps
+   inside its box instead of blowing out the grid. Grids use auto-fit with
+   a minmax floor small enough that the narrowest supported viewport
+   (320px) still fits one full column inside the padding.
+   ═══════════════════════════════════════════════════════════════════════ */
+
+:root{
+  --bg:#08090d;
+  --bg-2:#0c0e14;
+  --card:#10131b;
+  --card-2:#131722;
+  --line:rgba(255,255,255,.09);
+  --line-soft:rgba(255,255,255,.055);
+  --text:#e4e9f3;
+  --dim:#98a4bb;
+  --ghost:#6c7890;
+  --accent:#d0a94e;
+  --accent-soft:rgba(208,169,78,.13);
+  --live:#4ecf8e;
+  --radius:14px;
+  --maxw:1080px;
+  --z-base:0;
+  --z-skip:100;
+  --pad:clamp(16px,4vw,28px);
+}
+
+*{margin:0;padding:0;box-sizing:border-box;}
+html{-webkit-text-size-adjust:100%;scroll-behavior:smooth;}
+@media (prefers-reduced-motion:reduce){
+  html{scroll-behavior:auto;}
+  *{animation:none!important;transition:none!important;}
+}
+body{
+  background:var(--bg);
+  color:var(--text);
+  font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+  font-weight:400;
+  line-height:1.6;
+  -webkit-font-smoothing:antialiased;
+  overflow-x:hidden;
+}
+a{color:inherit;}
+img,svg{max-width:100%;height:auto;display:block;}
+
+/* The single positioned element in the document. */
+.skip{
+  position:absolute;
+  left:-9999px;
+  top:0;
+  z-index:var(--z-skip);
+  background:var(--accent);
+  color:#000;
+  padding:12px 18px;
+  border-radius:0 0 10px 0;
+  font-size:14px;
+  font-weight:600;
+  text-decoration:none;
+}
+.skip:focus{left:0;}
+
+/* ── THE SINGLE COLUMN ── */
+.wrap{
+  width:100%;
+  max-width:var(--maxw);
+  margin:0 auto;
+  padding-left:max(var(--pad),env(safe-area-inset-left));
+  padding-right:max(var(--pad),env(safe-area-inset-right));
+}
+
+/* ── TYPE SCALE (clamp throughout — no fixed px on anything structural) ── */
+/* Every heading wraps unbreakable tokens inside its own box. Without this a
+   single long URL in a headline pushes the whole document wider than the
+   viewport — measured, not theorised. */
+h1,h2,h3,h4{min-width:0;overflow-wrap:anywhere;}
+h1{
+  font-size:clamp(28px,7vw,52px);
+  line-height:1.08;
+  letter-spacing:-.025em;
+  font-weight:700;
+}
+h2{
+  font-size:clamp(20px,4.2vw,30px);
+  line-height:1.2;
+  letter-spacing:-.018em;
+  font-weight:650;
+}
+h3{
+  font-size:clamp(17px,3.4vw,21px);
+  line-height:1.25;
+  letter-spacing:-.012em;
+  font-weight:600;
+  min-width:0;
+  overflow-wrap:anywhere;
+}
+.mono{font-family:'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,monospace;}
+
+/* ── HEADER ── */
+header.top{
+  border-bottom:1px solid var(--line-soft);
+  background:
+    radial-gradient(900px 420px at 18% -12%,rgba(208,169,78,.09),transparent 62%),
+    linear-gradient(180deg,#0b0d13 0%,var(--bg) 100%);
+  padding-top:max(clamp(34px,7vw,64px),env(safe-area-inset-top));
+  padding-bottom:clamp(30px,5vw,48px);
+}
+.eyebrow{
+  font-family:'JetBrains Mono',ui-monospace,monospace;
+  font-size:clamp(10px,2.2vw,11.5px);
+  letter-spacing:.2em;
+  text-transform:uppercase;
+  color:var(--accent);
+  margin-bottom:clamp(14px,2.6vw,20px);
+  min-width:0;
+  overflow-wrap:anywhere;
+}
+.lede{
+  color:var(--dim);
+  font-size:clamp(15px,3.3vw,18.5px);
+  line-height:1.62;
+  max-width:62ch;
+  margin-top:clamp(14px,2.6vw,20px);
+  min-width:0;
+  overflow-wrap:anywhere;
+}
+.lede strong{color:var(--text);font-weight:600;}
+
+/* ── HEADER ACTION ROW ── */
+.hero-actions{
+  display:flex;
+  flex-wrap:wrap;
+  gap:10px;
+  margin-top:clamp(20px,3.6vw,28px);
+}
+
+/* ── NUMBERS STRIP ──
+   auto-fit grid: 4-up on desktop, 2-up on phones, never squeezed. */
+.nums{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(122px,1fr));
+  gap:1px;
+  margin-top:clamp(24px,4.4vw,36px);
+  background:var(--line-soft);
+  border:1px solid var(--line-soft);
+  border-radius:var(--radius);
+  overflow:hidden;
+}
+.num{
+  background:var(--bg-2);
+  padding:clamp(13px,2.6vw,18px) clamp(11px,2.2vw,16px);
+  min-width:0;
+}
+.num .n{
+  font-family:'JetBrains Mono',ui-monospace,monospace;
+  font-size:clamp(19px,4.4vw,26px);
+  font-weight:500;
+  color:var(--accent);
+  line-height:1.1;
+  letter-spacing:-.02em;
+}
+.num .l{
+  font-size:clamp(11px,2.4vw,12.5px);
+  color:var(--ghost);
+  line-height:1.38;
+  margin-top:6px;
+  min-width:0;
+  overflow-wrap:anywhere;
+}
+
+/* ── SECTIONS ── */
+section{padding:clamp(38px,6.5vw,64px) 0 0;}
+.sec-head{margin-bottom:clamp(20px,3.6vw,30px);}
+.sec-kicker{
+  font-family:'JetBrains Mono',ui-monospace,monospace;
+  font-size:clamp(10px,2.1vw,11px);
+  letter-spacing:.18em;
+  text-transform:uppercase;
+  color:var(--ghost);
+  margin-bottom:10px;
+  min-width:0;
+  overflow-wrap:anywhere;
+}
+.sec-note{
+  color:var(--dim);
+  font-size:clamp(13.5px,2.9vw,15.5px);
+  max-width:64ch;
+  margin-top:10px;
+  min-width:0;
+  overflow-wrap:anywhere;
+}
+
+/* ── PROJECT GRID ──
+   minmax floor of 260px keeps one clean column at 320px viewport
+   (320 - 32px padding = 288px available). */
+.grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(260px,1fr));
+  gap:clamp(12px,2.4vw,18px);
+}
+.grid.solo{grid-template-columns:1fr;}
+
+.card{
+  background:linear-gradient(165deg,var(--card) 0%,var(--card-2) 100%);
+  border:1px solid var(--line);
+  border-radius:var(--radius);
+  padding:clamp(17px,3.4vw,24px);
+  display:flex;
+  flex-direction:column;
+  gap:clamp(10px,1.8vw,13px);
+  min-width:0;
+}
+.card.feature{
+  border-color:rgba(208,169,78,.3);
+  background:
+    radial-gradient(520px 260px at 92% -18%,rgba(208,169,78,.1),transparent 64%),
+    linear-gradient(165deg,var(--card) 0%,var(--card-2) 100%);
+}
+
+/* Card header: title + status chip. flex-wrap means a long title pushes
+   the chip to its own line rather than colliding with it. */
+.card-top{
+  display:flex;
+  flex-wrap:wrap;
+  align-items:center;
+  justify-content:space-between;
+  gap:8px;
+  min-width:0;
+}
+/* The title must be free to shrink, or it pins its own width and forces the
+   status chip out of the row. min-width:0 is the whole fix. */
+.card-top h3{flex:1 1 auto;min-width:0;}
+.chip{
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+  font-family:'JetBrains Mono',ui-monospace,monospace;
+  font-size:clamp(9.5px,2vw,10.5px);
+  letter-spacing:.1em;
+  text-transform:uppercase;
+  color:var(--live);
+  border:1px solid rgba(78,207,142,.28);
+  background:rgba(78,207,142,.07);
+  border-radius:999px;
+  padding:4px 10px;
+  /* Shrinkable + wrappable: an unexpectedly long status string must fold
+     inside the chip rather than push out of the card. nowrap here was a
+     real overflow at every breakpoint under a long-token test. */
+  flex:0 1 auto;
+  min-width:0;
+  max-width:100%;
+  overflow-wrap:anywhere;
+  text-align:center;
+}
+.chip.acct{
+  color:var(--ghost);
+  border-color:var(--line);
+  background:rgba(255,255,255,.03);
+}
+.dot{
+  width:6px;height:6px;border-radius:50%;
+  background:currentColor;
+  flex:0 0 auto;
+}
+
+.what{
+  color:var(--accent);
+  font-size:clamp(13.5px,2.9vw,15px);
+  font-weight:500;
+  line-height:1.45;
+  min-width:0;
+  overflow-wrap:anywhere;
+}
+.body-txt{
+  color:var(--dim);
+  font-size:clamp(13.5px,2.8vw,14.8px);
+  line-height:1.62;
+  min-width:0;
+  overflow-wrap:anywhere;
+}
+.body-txt b{color:var(--text);font-weight:600;}
+
+/* The "hard problem" callout — the thing an engineer actually reads. */
+.hard{
+  border-left:2px solid rgba(208,169,78,.4);
+  background:rgba(208,169,78,.035);
+  border-radius:0 8px 8px 0;
+  padding:11px 14px;
+  min-width:0;
+}
+.hard .lbl{
+  font-family:'JetBrains Mono',ui-monospace,monospace;
+  font-size:clamp(9.5px,2vw,10.5px);
+  letter-spacing:.14em;
+  text-transform:uppercase;
+  color:var(--accent);
+  display:block;
+  margin-bottom:5px;
+}
+.hard p{
+  color:var(--dim);
+  font-size:clamp(13px,2.7vw,14.2px);
+  line-height:1.58;
+  min-width:0;
+  overflow-wrap:anywhere;
+}
+
+/* Stack tags — wrap freely, never overflow the card. */
+.stack{
+  display:flex;
+  flex-wrap:wrap;
+  gap:6px;
+  margin-top:auto;
+  padding-top:4px;
+  min-width:0;
+}
+.tag{
+  font-family:'JetBrains Mono',ui-monospace,monospace;
+  font-size:clamp(9.5px,2vw,10.5px);
+  letter-spacing:.05em;
+  color:var(--ghost);
+  border:1px solid var(--line-soft);
+  border-radius:6px;
+  padding:3px 8px;
+  /* Same reasoning as .chip — a long stack label wraps inside its own
+     pill instead of escaping the card. */
+  min-width:0;
+  max-width:100%;
+  overflow-wrap:anywhere;
+}
+
+/* ── BUTTONS ──
+   44px min height everywhere: touch-target floor, enforced not hoped for. */
+.actions{
+  display:flex;
+  flex-wrap:wrap;
+  gap:9px;
+  min-width:0;
+}
+.btn{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  gap:7px;
+  min-height:44px;
+  padding:10px 16px;
+  border-radius:10px;
+  border:1px solid var(--line);
+  background:rgba(255,255,255,.035);
+  color:var(--text);
+  text-decoration:none;
+  font-size:clamp(13px,2.7vw,14px);
+  font-weight:500;
+  transition:background .16s ease,border-color .16s ease;
+  min-width:0;
+  overflow-wrap:anywhere;
+  text-align:center;
+}
+.btn:hover{background:rgba(255,255,255,.08);border-color:rgba(255,255,255,.18);}
+.btn:focus-visible{outline:2px solid var(--accent);outline-offset:2px;}
+.btn.primary{
+  border-color:rgba(208,169,78,.45);
+  background:var(--accent-soft);
+  color:#f3e5bd;
+}
+.btn.primary:hover{background:rgba(208,169,78,.2);}
+
+/* ── SECONDARY LIST (the "also built" rows) ── */
+.rows{
+  border:1px solid var(--line-soft);
+  border-radius:var(--radius);
+  overflow:hidden;
+  background:var(--bg-2);
+}
+.row{
+  display:grid;
+  grid-template-columns:minmax(0,190px) minmax(0,1fr) auto;
+  gap:clamp(10px,2vw,18px);
+  align-items:center;
+  padding:clamp(12px,2.4vw,15px) clamp(13px,2.6vw,20px);
+  border-bottom:1px solid var(--line-soft);
+  min-width:0;
+}
+.row:last-child{border-bottom:none;}
+.row .k{
+  font-weight:600;
+  font-size:clamp(13.5px,2.8vw,15px);
+  min-width:0;
+  overflow-wrap:anywhere;
+}
+.row .v{
+  color:var(--dim);
+  font-size:clamp(12.5px,2.6vw,14px);
+  line-height:1.5;
+  min-width:0;
+  overflow-wrap:anywhere;
+}
+.row .go{min-width:0;}
+.row .go .btn{padding:9px 15px;}
+
+/* ── HOW IT'S BUILT ── */
+.specs{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(248px,1fr));
+  gap:clamp(12px,2.4vw,18px);
+}
+.spec{
+  border:1px solid var(--line-soft);
+  border-radius:var(--radius);
+  background:var(--bg-2);
+  padding:clamp(16px,3vw,21px);
+  min-width:0;
+}
+.spec h4{
+  font-size:clamp(13px,2.7vw,14.5px);
+  font-weight:600;
+  margin-bottom:9px;
+  min-width:0;
+  overflow-wrap:anywhere;
+}
+.spec p{
+  color:var(--dim);
+  font-size:clamp(12.5px,2.6vw,13.8px);
+  line-height:1.6;
+  min-width:0;
+  overflow-wrap:anywhere;
+}
+
+/* ── CONTACT ── */
+.contact{
+  border:1px solid rgba(208,169,78,.26);
+  border-radius:var(--radius);
+  background:
+    radial-gradient(640px 300px at 12% -25%,rgba(208,169,78,.11),transparent 62%),
+    linear-gradient(160deg,#131824 0%,#0d1017 100%);
+  padding:clamp(22px,4.4vw,36px);
+}
+.contact p{
+  color:var(--dim);
+  font-size:clamp(14px,3vw,16px);
+  max-width:56ch;
+  margin-top:11px;
+  min-width:0;
+  overflow-wrap:anywhere;
+}
+
+/* ── FOOTER ── */
+footer.bot{
+  border-top:1px solid var(--line-soft);
+  margin-top:clamp(42px,7vw,72px);
+  padding-top:clamp(20px,3.6vw,28px);
+  padding-bottom:max(clamp(30px,5vw,52px),env(safe-area-inset-bottom));
+  color:var(--ghost);
+  font-size:clamp(11.5px,2.4vw,12.8px);
+}
+footer.bot p{max-width:70ch;line-height:1.6;min-width:0;overflow-wrap:anywhere;}
+/* Footer links are inline text, but still need a real tap target on touch:
+   inline-block + vertical padding lifts them to the 44px floor without
+   disturbing the surrounding text flow or colliding with adjacent lines. */
+footer.bot a{
+  color:var(--dim);
+  display:inline-block;
+  min-height:44px;
+  line-height:44px;
+  padding:0 2px;
+}
+footer.bot a:focus-visible{outline:2px solid var(--accent);outline-offset:2px;}
+
+/* ── NARROW VIEWPORTS ──
+   Collapse the 3-column row to a single stacked column so no cell is ever
+   compressed below its content. Buttons go full-width for thumb reach. */
+@media (max-width:720px){
+  .row{
+    grid-template-columns:minmax(0,1fr);
+    gap:6px;
+    align-items:start;
+  }
+  .row .go{width:100%;margin-top:6px;}
+  .row .go .btn{width:100%;}
+}
+@media (max-width:420px){
+  .actions .btn{flex:1 1 100%;}
+  .hero-actions .btn{flex:1 1 100%;}
+}
+</style>
+</head>
+<body>
+
+<a class="skip" href="#work">Skip to the work</a>
+
+<!-- ══════════════════ HEADER ══════════════════ -->
+<header class="top">
+  <div class="wrap">
+    <div class="eyebrow">Independent Systems Engineer · Available for hire</div>
+    <h1>I build production systems,<br>and you can click every one.</h1>
+
+    <p class="lede">
+      I'm <strong>Vinta</strong>. Over the last six months I designed, built and deployed
+      five real systems — a self-hosted AI organism, a distributed media search engine,
+      a universal media player, a WebRTC video platform, and a 3D world that runs in a
+      browser tab. Full stack: I wrote the frontend, the backend, the database schema,
+      the deploy pipeline and the infrastructure they run on.
+    </p>
+    <p class="lede">
+      <strong>Nothing on this page is a mockup, a screenshot or a plan.</strong>
+      Every link below is a live production URL I verified before publishing.
+      If a thing needs an account to be useful, it says so on the card.
+    </p>
+
+    <div class="hero-actions">
+      <a class="btn primary" href="#work">See the work</a>
+      <a class="btn" href="mailto:vintaclectic@gmail.com">Email me</a>
+      <a class="btn" href="https://github.com/vintaclectic/vintinuum" target="_blank" rel="noopener">GitHub</a>
+    </div>
+
+    <div class="nums" aria-label="Scale of the codebase">
+      <div class="num"><div class="n">897</div><div class="l">commits on the main repo</div></div>
+      <div class="num"><div class="n">197</div><div class="l">tables in the primary database</div></div>
+      <div class="num"><div class="n">85</div><div class="l">backend route modules across two APIs</div></div>
+      <div class="num"><div class="n">5</div><div class="l">systems live in production</div></div>
+    </div>
+  </div>
+</header>
+
+<!-- ══════════════════ FLAGSHIP WORK ══════════════════ -->
+<main id="work">
+
+<section>
+  <div class="wrap">
+    <div class="sec-head">
+      <div class="sec-kicker">01 — Distributed systems &amp; media infrastructure</div>
+      <h2>The two biggest builds</h2>
+      <p class="sec-note">
+        Both are separate products with their own domains, their own databases and their
+        own deploy pipelines. Both are open to anyone — no account required to look around.
+      </p>
+    </div>
+
+    <div class="grid">
+
+      <article class="card feature">
+        <div class="card-top">
+          <h3>DirHaven</h3>
+          <span class="chip"><span class="dot"></span> Live</span>
+        </div>
+        <div class="what">A search engine and streaming layer for the open web's media.</div>
+        <p class="body-txt">
+          The open internet is full of unindexed public file directories — terabytes of
+          video, audio, books and images that no search engine meaningfully reaches.
+          DirHaven <b>crawls them, classifies what it finds, and makes it searchable and
+          streamable</b> from one interface. It reads the formats in-browser too: video
+          and audio stream over HLS, PDFs and EPUBs render inline, images gallery.
+        </p>
+        <div class="hard">
+          <span class="lbl">The hard part</span>
+          <p>
+            Crawling hostile, inconsistent, frequently-dead sources at scale without the
+            index rotting. That meant a full-text search layer over a large corpus, a
+            content classification pipeline, health monitoring that detects when a source
+            goes stale, and streaming that tolerates origins which were never built to be
+            streamed from.
+          </p>
+        </div>
+        <div class="actions">
+          <a class="btn primary" href="https://app.dirhaven.com" target="_blank" rel="noopener">Open DirHaven</a>
+        </div>
+        <div class="stack">
+          <span class="tag">REACT 18</span><span class="tag">VITE</span>
+          <span class="tag">NODE</span><span class="tag">SOCKET.IO</span>
+          <span class="tag">HLS.JS</span><span class="tag">SQLITE FTS</span>
+          <span class="tag">PDF.JS</span><span class="tag">THREE.JS</span>
+          <span class="tag">PM2</span>
+        </div>
+      </article>
+
+      <article class="card feature">
+        <div class="card-top">
+          <h3>Vintinuum</h3>
+          <span class="chip"><span class="dot"></span> Live</span>
+        </div>
+        <div class="what">A self-hosted AI system with persistent state you can inspect.</div>
+        <p class="body-txt">
+          Most AI products are a stateless chat box in front of someone else's API.
+          This one runs on <b>my own hardware, with its own database</b>, and keeps
+          continuous state between sessions — memory, an internal model of the person
+          it's talking to, and metrics that change over time. The unusual part is that
+          it's <b>fully observable</b>: you can open its internals and watch what it
+          stored, what changed, and why.
+        </p>
+        <div class="hard">
+          <span class="lbl">The hard part</span>
+          <p>
+            Persistence and orchestration, not prompting. A 197-table schema, a routing
+            layer that sends work to local models or cloud models based on what the task
+            actually needs, background jobs that run continuously, and a public site on a
+            CDN talking to a private home server over an authenticated tunnel.
+          </p>
+        </div>
+        <div class="actions">
+          <a class="btn primary" href="/index.html">Open Vintinuum</a>
+          <a class="btn" href="/stats.html">Inspect its internals</a>
+        </div>
+        <div class="stack">
+          <span class="tag">NODE</span><span class="tag">EXPRESS</span>
+          <span class="tag">SQLITE</span><span class="tag">VANILLA JS</span>
+          <span class="tag">CLOUDFLARE TUNNEL</span><span class="tag">PM2</span>
+          <span class="tag">LOCAL LLM</span>
+        </div>
+      </article>
+
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════ REAL-TIME ══════════════════ -->
+<section>
+  <div class="wrap">
+    <div class="sec-head">
+      <div class="sec-kicker">02 — Real-time &amp; graphics</div>
+      <h2>Things that run at 60fps or not at all</h2>
+      <p class="sec-note">
+        Latency-sensitive work where "mostly correct" reads as broken to the user.
+      </p>
+    </div>
+
+    <div class="grid">
+
+      <article class="card">
+        <div class="card-top">
+          <h3>DirMegle</h3>
+          <span class="chip acct">Live · 18+ gate</span>
+        </div>
+        <div class="what">Random-pairing video chat between strangers.</div>
+        <p class="body-txt">
+          Two people who have never met are connected to each other's cameras in a
+          couple of seconds, with a <b>"next" button that has to re-pair instantly</b>.
+          Its own domain, its own signalling infrastructure. It opens on an age
+          confirmation — it's a stranger-video product, so that gate is deliberate.
+        </p>
+        <div class="hard">
+          <span class="lbl">The hard part</span>
+          <p>
+            WebRTC peer negotiation through NAT, a matchmaking queue that stays fast
+            while people join and abandon constantly, and teardown that never leaks a
+            session — a dropped peer must not strand the person still waiting.
+          </p>
+        </div>
+        <div class="actions">
+          <a class="btn primary" href="https://dirmegle.com" target="_blank" rel="noopener">Open DirMegle</a>
+        </div>
+        <div class="stack">
+          <span class="tag">WEBRTC</span><span class="tag">WEBSOCKETS</span>
+          <span class="tag">NODE</span><span class="tag">SIGNALLING SERVER</span>
+        </div>
+      </article>
+
+      <article class="card">
+        <div class="card-top">
+          <h3>DirRM Player</h3>
+          <span class="chip"><span class="dot"></span> Live</span>
+        </div>
+        <div class="what">One media player used by every surface in the stack.</div>
+        <p class="body-txt">
+          Give it a URL — a video file, an audio file, a stream, a YouTube link — and it
+          plays it. Four window modes (full, mini, picture-in-picture, theater), each
+          <b>draggable and resizable by the user</b>. It exists because the alternative
+          was five half-working players drifting apart across five products.
+        </p>
+        <div class="hard">
+          <span class="lbl">The hard part</span>
+          <p>
+            Building one embeddable component with a stable contract that every other
+            surface can call, so playback behaviour is fixed once and inherited
+            everywhere — and making it survive embedding policies that actively
+            refuse to cooperate.
+          </p>
+        </div>
+        <div class="actions">
+          <a class="btn primary" href="/dirrm.html">Open the player</a>
+        </div>
+        <div class="stack">
+          <span class="tag">JAVASCRIPT</span><span class="tag">MEDIA SOURCE API</span>
+          <span class="tag">POSTMESSAGE</span><span class="tag">WEB AUDIO</span>
+        </div>
+      </article>
+
+      <article class="card">
+        <div class="card-top">
+          <h3>The Clearing</h3>
+          <span class="chip"><span class="dot"></span> Live</span>
+        </div>
+        <div class="what">A 3D world that loads in a browser tab.</div>
+        <p class="body-txt">
+          A navigable real-time 3D environment — no install, no plugin, no app store.
+          It runs for logged-out visitors; signing in only adds persistence of the
+          things you build in it. <b>Works on a phone.</b>
+        </p>
+        <div class="hard">
+          <span class="lbl">The hard part</span>
+          <p>
+            Holding a real frame rate on hardware you don't control. Draw calls, geometry
+            budget and render resolution all scale down on touch devices, because a
+            gorgeous world that cooks a phone battery is a failed one.
+          </p>
+        </div>
+        <div class="actions">
+          <a class="btn primary" href="/world.html">Enter the world</a>
+        </div>
+        <div class="stack">
+          <span class="tag">THREE.JS</span><span class="tag">WEBGL</span>
+          <span class="tag">PROCEDURAL GEN</span>
+        </div>
+      </article>
+
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════ DATA VIZ ══════════════════ -->
+<section>
+  <div class="wrap">
+    <div class="sec-head">
+      <div class="sec-kicker">03 — Data visualisation &amp; interface</div>
+      <h2>Making a live system legible</h2>
+      <p class="sec-note">
+        These read live production data out of the running backend. Open them and you're
+        looking at the real database, not a fixture.
+      </p>
+    </div>
+
+    <div class="grid">
+
+      <article class="card">
+        <div class="card-top">
+          <h3>Observatory</h3>
+          <span class="chip"><span class="dot"></span> Live</span>
+        </div>
+        <div class="what">A telemetry dashboard for a system that never stops running.</div>
+        <p class="body-txt">
+          Dozens of live metrics rendered as charts over selectable time ranges, pulled
+          from the production API. The design problem was <b>density without noise</b> —
+          showing a lot at once while keeping any single number findable in a second.
+        </p>
+        <div class="actions">
+          <a class="btn primary" href="/stats.html">Open the dashboard</a>
+        </div>
+        <div class="stack">
+          <span class="tag">CANVAS</span><span class="tag">REST API</span>
+          <span class="tag">TIME-SERIES</span>
+        </div>
+      </article>
+
+      <article class="card">
+        <div class="card-top">
+          <h3>Aquarium</h3>
+          <span class="chip"><span class="dot"></span> Live</span>
+        </div>
+        <div class="what">Live system state as an animated ecosystem.</div>
+        <p class="body-txt">
+          The same backend telemetry as the dashboard, rendered as something you can
+          read at a glance instead of parse. <b>An honest visualisation</b> — when the
+          backend is quiet, it goes still, rather than faking motion.
+        </p>
+        <div class="actions">
+          <a class="btn primary" href="/aquarium.html">Open the aquarium</a>
+        </div>
+        <div class="stack">
+          <span class="tag">CANVAS</span><span class="tag">RAF LOOP</span>
+          <span class="tag">LIVE API</span>
+        </div>
+      </article>
+
+      <article class="card">
+        <div class="card-top">
+          <h3>Unified state view</h3>
+          <span class="chip"><span class="dot"></span> Live</span>
+        </div>
+        <div class="what">Every subsystem's state composed into one screen.</div>
+        <p class="body-txt">
+          A dozen asynchronous sources — memory, metrics, jobs, model routing — read and
+          reconciled into a single coherent view. <b>The difficulty is disagreement</b>:
+          sources update at different rates, so the page has to decide what's true now
+          rather than render whichever response landed last.
+        </p>
+        <div class="actions">
+          <a class="btn primary" href="/mind.html">Open the view</a>
+        </div>
+        <div class="stack">
+          <span class="tag">ASYNC COMPOSITION</span><span class="tag">REST API</span>
+        </div>
+      </article>
+
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════ AI ORCHESTRATION ══════════════════ -->
+<section>
+  <div class="wrap">
+    <div class="sec-head">
+      <div class="sec-kicker">04 — AI &amp; agent orchestration</div>
+      <h2>Multi-agent infrastructure</h2>
+      <p class="sec-note">
+        Systems where multiple AI workers run concurrently against one shared codebase
+        and have to not destroy each other's work. These are operational tools — they
+        show real internal state, and some ask for an account before they'll show it all.
+      </p>
+    </div>
+
+    <div class="rows">
+
+      <div class="row">
+        <div class="k">Agent roster</div>
+        <div class="v">
+          The specialist workers, what each one owns, and their current status.
+          Concurrent agents run in isolated git worktrees so parallel work merges
+          cleanly instead of colliding.
+        </div>
+        <div class="go"><a class="btn" href="/agents.html">Open</a></div>
+      </div>
+
+      <div class="row">
+        <div class="k">Lineage</div>
+        <div class="v">
+          Agents are generated from two parent configurations with inherited and
+          mutated traits. This renders the resulting family tree.
+        </div>
+        <div class="go"><a class="btn" href="/lineage.html">Open</a></div>
+      </div>
+
+      <div class="row">
+        <div class="k">Learning pipeline</div>
+        <div class="v">
+          The training loop: work products are captured as a corpus, exported, and fed
+          into local model fine-tuning. This is the monitoring surface for it.
+        </div>
+        <div class="go"><a class="btn" href="/learning.html">Open</a></div>
+      </div>
+
+      <div class="row">
+        <div class="k">MCP Forge</div>
+        <div class="v">
+          Tooling for Model Context Protocol servers — the interface layer that lets
+          models call real functions against real systems.
+        </div>
+        <div class="go"><a class="btn" href="/mcps.html">Open</a></div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════ HOW IT'S BUILT ══════════════════ -->
+<section>
+  <div class="wrap">
+    <div class="sec-head">
+      <div class="sec-kicker">05 — Engineering practice</div>
+      <h2>How it actually runs</h2>
+      <p class="sec-note">
+        The infrastructure underneath all of the above. I own every layer of it — there
+        is no platform team behind me.
+      </p>
+    </div>
+
+    <div class="specs">
+      <div class="spec">
+        <h4>Deployment</h4>
+        <p>
+          Push to main, live in about a minute. Static frontends on a CDN; backends on
+          a process manager with restart-on-failure and health checks. Main is treated
+          as production, because it is.
+        </p>
+      </div>
+      <div class="spec">
+        <h4>Public site, private server</h4>
+        <p>
+          The frontend is public and static. The API runs on hardware in my house and is
+          exposed through an authenticated tunnel — no inbound ports, no origin IP on
+          the internet, TLS terminated at the edge.
+        </p>
+      </div>
+      <div class="spec">
+        <h4>Data</h4>
+        <p>
+          A 197-table SQLite schema under the main system, with full-text search indexes,
+          migrations and scheduled backups. One authoritative path to the database — an
+          earlier two-copy setup drifted and cost me real hours, so I removed the choice.
+        </p>
+      </div>
+      <div class="spec">
+        <h4>Concurrency</h4>
+        <p>
+          Multiple agents work the same repository simultaneously in isolated git
+          worktrees, with a lock discipline and a merge gate. Parallel throughput without
+          stepping on each other was a design problem, not a default.
+        </p>
+      </div>
+      <div class="spec">
+        <h4>Cost control</h4>
+        <p>
+          Inference routes to local models where quality holds and to cloud models only
+          where it doesn't. The routing decision is per-task, measured, and the fallback
+          is a deliberate choice rather than a failure.
+        </p>
+      </div>
+      <div class="spec">
+        <h4>Interface discipline</h4>
+        <p>
+          One rule I do not break: nothing overlaps anything. Every surface is verified
+          at 320, 375, 768, 1280 and 1920 pixels, with long strings and empty states,
+          before it ships. This page included.
+        </p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════ CONTACT ══════════════════ -->
+<section>
+  <div class="wrap">
+    <div class="contact">
+      <h2>I'm looking for a job.</h2>
+      <p>
+        I taught myself all of this by building it and shipping it. If you need someone
+        who takes a system from empty repository to running in production — frontend,
+        backend, database, infrastructure, deploy — and who ships rather than plans,
+        I'd like to talk.
+      </p>
+      <p>
+        Everything on this page is live right now. Click anything. If something's broken
+        when you get there, tell me and I'll tell you exactly why.
+      </p>
+      <div class="hero-actions">
+        <a class="btn primary" href="mailto:vintaclectic@gmail.com">vintaclectic@gmail.com</a>
+        <a class="btn" href="https://github.com/vintaclectic/vintinuum" target="_blank" rel="noopener">github.com/vintaclectic</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<footer class="bot">
+  <div class="wrap">
+    <p>
+      Every link on this page was checked against its live URL before publishing.
+      The counts above are measured from the repositories and the production database,
+      not estimated. I've deliberately left off work that isn't finished, isn't running,
+      or wouldn't mean anything to you without me sitting next to you explaining it.
+    </p>
+    <p style="margin-top:12px;">
+      Built and operated by Vinta ·
+      <a href="mailto:vintaclectic@gmail.com">vintaclectic@gmail.com</a> ·
+      <a href="https://github.com/vintaclectic/vintinuum" target="_blank" rel="noopener">GitHub</a>
+    </p>
+  </div>
+</footer>
+
+</body>
+</html>
