@@ -84,7 +84,7 @@
     // mark
     ctx.fillStyle = 'rgba(244,199,154,0.8)';
     ctx.font = '500 30px Cormorant Garamond, Georgia, serif';
-    ctx.fillText('become  ·  vintaclectic.github.io/vintinuum', W/2, H*0.93);
+    ctx.fillText('become  ·  vintinuum.com', W/2, H*0.93);
 
     rrenderer.dispose();
     return await new Promise(res => c.toBlob(res, 'image/png', 0.92));
@@ -122,7 +122,7 @@
       const file = new File([blob], 'vintinuum-arrival.png', { type: 'image/png' });
       try {
         if (navigator.canShare && navigator.canShare({ files: [file] })) {
-          await navigator.share({ files: [file], title: 'I became real', text: 'become · vintaclectic.github.io/vintinuum' });
+          await navigator.share({ files: [file], title: 'I became real', text: 'become · vintinuum.com' });
         } else {
           const a = document.createElement('a'); a.href = url; a.download = 'vintinuum-arrival.png'; a.click();
         }

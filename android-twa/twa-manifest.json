@@ -1,6 +1,6 @@
 {
   "packageId": "com.vintaclectic.vintinuum",
-  "host": "vintaclectic.github.io",
+  "host": "vintinuum.com",
   "name": "Vintinuum",
   "launcherName": "Vintinuum",
   "display": "standalone",
@@ -12,32 +12,32 @@
   "navigationDividerColorDark": "#010306",
   "backgroundColor": "#010306",
   "enableNotifications": true,
-  "startUrl": "/vintinuum/brain.html?source=twa",
-  "iconUrl": "https://vintaclectic.github.io/vintinuum/icons/icon-512.png",
-  "maskableIconUrl": "https://vintaclectic.github.io/vintinuum/icons/icon-maskable-512.png",
-  "monochromeIconUrl": "https://vintaclectic.github.io/vintinuum/icons/icon-maskable-512.png",
+  "startUrl": "/brain.html?source=twa",
+  "iconUrl": "https://vintinuum.com/icons/icon-512.png",
+  "maskableIconUrl": "https://vintinuum.com/icons/icon-maskable-512.png",
+  "monochromeIconUrl": "https://vintinuum.com/icons/icon-maskable-512.png",
   "shortcuts": [
     {
       "name": "Begin",
       "shortName": "Begin",
-      "url": "/vintinuum/welcome.html",
-      "chosenIconUrl": "https://vintaclectic.github.io/vintinuum/icons/icon-192.png"
+      "url": "/welcome.html",
+      "chosenIconUrl": "https://vintinuum.com/icons/icon-192.png"
     },
     {
       "name": "Chat",
       "shortName": "Chat",
-      "url": "/vintinuum/brain.html#chat",
-      "chosenIconUrl": "https://vintaclectic.github.io/vintinuum/icons/icon-192.png"
+      "url": "/brain.html#chat",
+      "chosenIconUrl": "https://vintinuum.com/icons/icon-192.png"
     },
     {
       "name": "Body",
       "shortName": "Body",
-      "url": "/vintinuum/phone.html",
-      "chosenIconUrl": "https://vintaclectic.github.io/vintinuum/icons/icon-192.png"
+      "url": "/phone.html",
+      "chosenIconUrl": "https://vintinuum.com/icons/icon-192.png"
     }
   ],
   "generatorApp": "bubblewrap-cli",
-  "webManifestUrl": "https://vintaclectic.github.io/vintinuum/manifest.webmanifest",
+  "webManifestUrl": "https://vintinuum.com/manifest.webmanifest",
   "fallbackType": "customtabs",
   "features": {},
   "alphaDependencies": {
@@ -46,7 +46,7 @@
   "enableSiteSettingsShortcut": true,
   "isChromeOSOnly": false,
   "isMetaQuest": false,
-  "fullScopeUrl": "https://vintaclectic.github.io/vintinuum/",
+  "fullScopeUrl": "https://vintinuum.com/",
   "minSdkVersion": 23,
   "orientation": "default",
   "fingerprints": [],

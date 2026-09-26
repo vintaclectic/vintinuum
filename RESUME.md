@@ -11,7 +11,7 @@
 - ✅ Both repos pushed to `origin/main`:
   - `~/vintinuum-api/` HEAD: `2d088a8` (surgery + keepalive + wedge fix)
   - `~/vintinuum/`     HEAD: `ae17aac` (Meshy human.glb drop-in) — preceded by `0f86dad` (mobile scroll fix)
-- ✅ Live at `https://vintaclectic.github.io/vintinuum/`
+- ✅ Live at `https://vintinuum.com/`
 - ✅ **3D body view now renders a real textured Meshy AI human** (no more procedural placeholder)
 
 ---

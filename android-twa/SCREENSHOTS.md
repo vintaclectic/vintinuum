@@ -1,7 +1,7 @@
 # Screenshot Capture Guide — both stores
 
 Exact pages, states, and sizes. Capture once; reuse across Chrome + Play.
-Base URL: https://vintaclectic.github.io/vintinuum/
+Base URL: https://vintinuum.com/
 
 ---
 

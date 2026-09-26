@@ -464,7 +464,7 @@ body {
 
     // CTA href — signup with ref token pre-set
     const token = getToken();
-    const signupUrl = data.cta?.signup_url || ('https://vintaclectic.github.io/vintinuum/brain.html' + (token ? '?ref=' + encodeURIComponent(token) : ''));
+    const signupUrl = data.cta?.signup_url || ('https://vintinuum.com/brain.html' + (token ? '?ref=' + encodeURIComponent(token) : ''));
     ctaEl.href = signupUrl;
 
     // On click: attempt to redeem the trial after the user signs in

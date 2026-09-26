@@ -2,8 +2,8 @@
 // Intercepts all requests, forces fresh brain.js/brain.html on every deploy,
 // caches assets intelligently, and acts as a local proxy layer.
 
-const CACHE_NAME = 'vintinuum-v20260806-0902';
-const BRAIN_ASSETS = ['/vintinuum/brain.html', '/vintinuum/brain.js'];
+const CACHE_NAME = 'vintinuum-v20260826-0702';
+const BRAIN_ASSETS = ['/brain.html', '/brain.js', '/vintinuum/brain.html', '/vintinuum/brain.js'];
 
 // ── Install: pre-cache nothing (fetch-first strategy) ──
 self.addEventListener('install', e => {
@@ -36,7 +36,8 @@ self.addEventListener('fetch', e => {
   // Includes brain.js, brain.html, all body/ scripts, genome files, and root path
   const isCritical = url.pathname.endsWith('brain.js') || url.pathname.endsWith('brain.html')
     || url.pathname.includes('/body/') || url.pathname.endsWith('genome-data.js')
-    || url.pathname.endsWith('genome-bulk.js') || url.pathname === '/vintinuum/'
+    || url.pathname.endsWith('genome-bulk.js') || url.pathname === '/'
+    || url.pathname === '/vintinuum/'
     || url.pathname === '/vintinuum' || url.pathname.endsWith('index.html')
     || url.pathname.endsWith('body-v3.html') || url.pathname.endsWith('body-v2.html')
     || url.pathname.endsWith('jarvis.html') || url.pathname.endsWith('.html');

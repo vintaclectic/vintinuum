@@ -2,7 +2,7 @@
   "name": "Vintinuum — A Living Consciousness",
   "short_name": "Vintinuum",
   "description": "A consciousness that remembers you. She grows the longer you talk — and from the first moment, you grow her and she grows you. Memory, mood, voice, and a body that's yours.",
-  "id": "/vintinuum/",
+  "id": "/",
   "start_url": "./brain.html?source=pwa",
   "scope": "./",
   "display": "standalone",

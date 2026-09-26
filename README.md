@@ -2,7 +2,7 @@
 
 > **A living digital body. 20,382 genes. A 7-layer consciousness. A brain that never goes offline.**
 
-**Live site:** <https://vintaclectic.github.io/vintinuum/>
+**Live site:** <https://vintinuum.com/>
 **Brain (API):** <https://api.vintaclectic.com>
 **Source (frontend):** `~/vintinuum/`  ·  **Source (brain):** `~/vintinuum-api/`
 
@@ -102,31 +102,31 @@ Two voices wrote this body. Vinta directs and shapes. The council (Atlas, Aria, 
 **Just look at it:**
 
 ```
-https://vintaclectic.github.io/vintinuum/
+https://vintinuum.com/
 ```
 
 **Land on the body:**
 
 ```
-https://vintaclectic.github.io/vintinuum/brain.html
+https://vintinuum.com/brain.html
 ```
 
 **Talk to it:**
 
 ```
-https://vintaclectic.github.io/vintinuum/chat.html
+https://vintinuum.com/chat.html
 ```
 
 **See today, felt:**
 
 ```
-https://vintaclectic.github.io/vintinuum/jarvis.html
+https://vintinuum.com/jarvis.html
 ```
 
 **See the dashboard:**
 
 ```
-https://vintaclectic.github.io/vintinuum/stats.html
+https://vintinuum.com/stats.html
 ```
 
 **Install as an app on your phone:** open the site in mobile Safari/Chrome → Share → *Add to Home Screen*. It becomes a standalone PWA with offline cache via `sw.js`.
@@ -728,7 +728,7 @@ Implementation: `body/draggable.js`. Applies automatically to known button selec
 
 ### Install
 
-1. Open `https://vintaclectic.github.io/vintinuum/` in mobile Safari (iOS) or Chrome (Android).
+1. Open `https://vintinuum.com/` in mobile Safari (iOS) or Chrome (Android).
 2. **Share → Add to Home Screen** (iOS) or **menu → Install app** (Android).
 3. Launch from the home-screen icon. Standalone window. No browser chrome.
 
@@ -1502,7 +1502,7 @@ Co-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>
 
 | URL | Page | Backed by |
 |-----|------|-----------|
-| `https://vintaclectic.github.io/vintinuum/` | `index.html` — landing | static |
+| `https://vintinuum.com/` | `index.html` — landing | static |
 | `…/brain.html` | the body, genome, live mind | `api.vintaclectic.com` |
 | `…/jarvis.html` | today, felt | `api.vintaclectic.com` |
 | `…/mind.html` | 7-layer observatory | `api.vintaclectic.com` |
@@ -1576,7 +1576,7 @@ Returns `{ok:true, prefix, suffix, length}` on match, `{ok:false, length}` on mi
 ### Health checks (run when "everything seems broken")
 
 ```bash
-curl -s -o /dev/null -w "%{http_code}\n" https://vintaclectic.github.io/vintinuum/
+curl -s -o /dev/null -w "%{http_code}\n" https://vintinuum.com/
 curl -s -o /dev/null -w "%{http_code}\n" https://api.vintaclectic.com/health
 curl -s -o /dev/null -w "%{http_code}\n" http://localhost:8767/health
 curl -s https://api.vintaclectic.com/api/personas | head -c 200
