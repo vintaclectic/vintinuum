@@ -287,7 +287,11 @@
     }
     if (url.startsWith('blob:')) return 'video';
     if (/youtube\.com|youtu\.be|vimeo\.com|dailymotion\.com|soundcloud\.com|spotify\.com|bandcamp\.com|tiktok\.com|rumble\.com|kick\.com|twitch\.tv/i.test(url)) {
-      return /soundcloud|spotify|bandcamp/i.test(url) ? 'audio' : /kick|twitch/i.test(url) ? 'stream' : 'video';
+      // Kick/Twitch CHANNEL pages are not raw streams — the player resolves them
+      // itself (Twitch → provider embed, Kick live → real HLS via kick-live).
+      // Hinting 'stream' here would push a channel page at hls.js, which can only
+      // play a manifest. Only a genuine .m3u8/.mpd (below) is a 'stream'.
+      return /soundcloud|spotify|bandcamp/i.test(url) ? 'audio' : 'video';
     }
     const ext = extFromUrl(url);
     if (ext && EXT_TO_TYPE[ext]) return EXT_TO_TYPE[ext];
