@@ -2111,6 +2111,9 @@
           model3d: 'model', '3d': 'model'
         };
 
+        // Live platform resolvers must beat stale type hints from launchers.
+        if (/tiktok\.com\/@[^/]+\/live/i.test(url) || /vm\.tiktok\.com/i.test(url)) return 'tiktok-live';
+
         // Kick LIVE is the ONE exception to "embed always wins" (task BPYUATZ).
         // player.kick.com sends X-Frame-Options: SAMEORIGIN so the iframe is
         // refused, and a cross-origin embedder physically cannot detect that
@@ -2153,10 +2156,6 @@
 
         // Platform fallbacks for bare URLs without extension
         if (/v\.redd\.it/.test(url)) return 'video';
-
-        // TikTok Live — goes through yt-dlp extraction
-        if (/tiktok\.com\/@[^/]+\/live/i.test(url) || /vm\.tiktok\.com/i.test(url)) return 'tiktok-live';
-
 
         // Generic yt-dlp extraction fallback for social/streaming URLs with no extension
         if (/tiktok\.com|instagram\.com\/reel|facebook\.com\/watch|rumble\.com\/v/i.test(url)) return 'ytdlp';
