@@ -1146,7 +1146,10 @@
     if (!enabled()) return;
     var h = hud();
     if (!h || !h.addLauncher) { if (_waits++ < 25) setTimeout(mountLauncher, 90); return; }
-    _btn = h.addLauncher('fcBtn', 'allegiance', '◈', open);
+    // glyph ⚑ (banner/flag = faction) — distinct from agents' ◈. Allegiance is
+    // loyalty to a faction's colours, not your roster of agents; sharing ◈ made the
+    // two indistinguishable on a phone (Vinta directive 2026-09-26).
+    _btn = h.addLauncher('fcBtn', 'allegiance', '⚑', open);
     if (_btn) {
       _btn.setAttribute('aria-label', 'allegiance — who stands with you, and what ground it holds');
       _btn.setAttribute('title', 'allegiance — who stands with you, and what ground it holds');

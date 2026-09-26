@@ -1721,7 +1721,10 @@
     if (!enabled()) return;
     var h = hud();
     if (!h || !h.addLauncher) { if (_waits++ < 25) setTimeout(mountLauncher, 90); return; }
-    _btn = h.addLauncher('cnBtn', 'concord', '⚖', open);
+    // glyph ⚜ (fleur-de-lis / state emblem) — distinct from reckoning's ⚖ (scales
+    // of judgment). The Concord is the polity your agents govern, not a verdict;
+    // sharing ⚖ made the two indistinguishable on a phone (Vinta directive 2026-09-26).
+    _btn = h.addLauncher('cnBtn', 'concord', '⚜', open);
     if (_btn) {
       _btn.setAttribute('aria-label', 'the concord — the polity your agents run');
       _btn.setAttribute('title', 'the concord — the polity your agents run');

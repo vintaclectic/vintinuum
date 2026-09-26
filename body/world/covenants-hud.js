@@ -450,7 +450,10 @@
     if (h && h.registerSheet) { try { h.registerSheet('covenant', isOpen, close); } catch (_) {} }
     // the launcher slot is ALLOCATED BY THE RAIL, never positioned here.
     if (h && h.addLauncher) {
-      try { _launcher = h.addLauncher('cvBtn', 'covenant', '⚔', open); } catch (_) {}
+      // glyph ⚭ (union/pact) — distinct from arena's ⚔ (combat). A covenant is a
+      // binding oath over soil, not a fight; sharing ⚔ made the two indistinguishable
+      // on a phone (Vinta directive 2026-09-26 — no two controls may look alike).
+      try { _launcher = h.addLauncher('cvBtn', 'covenant', '⚭', open); } catch (_) {}
     }
 
     W.addEventListener('vint:world-soil', function (e) { onSoil(e.detail); });
