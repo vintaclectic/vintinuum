@@ -76,7 +76,27 @@
 
             // ── Route 2: the apex front door ──
             // Bare root only, so /index.html stays the direct way in here.
-            if (path === '/' &&
+            //
+            // THE STAY-HOME OVERRIDE (Vinta directive 2026-09-13, task ABWNYHB):
+            // this page — the 40-card atlas of every surface in the app — is what
+            // Vinta actually wants to land on, and what the github.io URL used to
+            // give him before the CNAME made github.io a 301 mirror of the apex.
+            // Once a visitor chooses the atlas as home (?home / the Atlas pin),
+            // that choice is remembered and the funnel stops firing for them.
+            // First-time visitors still get enter.html, so the syphon is intact.
+            try {
+                if (/(?:^|[?&])home(?:=|&|$)/.test(location.search)) {
+                    localStorage.setItem('vint:home', 'atlas');
+                } else if (/(?:^|[?&])funnel(?:=|&|$)/.test(location.search)) {
+                    localStorage.removeItem('vint:home');
+                }
+            } catch (e) { /* private mode: fall through to default funnel */ }
+
+            var staysHome = false;
+            try { staysHome = localStorage.getItem('vint:home') === 'atlas'; }
+            catch (e) { staysHome = false; }
+
+            if (!staysHome && path === '/' &&
                 (host === 'vintinuum.com' || host === 'www.vintinuum.com')) {
                 location.replace('/enter.html' + tail);
             }

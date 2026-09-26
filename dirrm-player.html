@@ -1840,25 +1840,28 @@
         } else if (action === 'loadLive') {
           // Same-page live stream handoff from dirrm-launch.js.
           // The MediaStream cannot cross postMessage JSON boundaries, so dirrm-launch
-          // stores it in window.__DIRRM_LIVE_STREAMS[streamKey] before sending this
-          // message. We pull it by key here, never via serialised JSON.
+          // stores it on the parent window before sending this message. An iframe
+          // has its own `window`, so reading only this window silently returned
+          // null and made embedded live streams look broken.
           const key = (event.data || {}).streamKey;
           const localKey = (event.data || {}).localStreamKey;
-          const stream = key && window.__DIRRM_LIVE_STREAMS && window.__DIRRM_LIVE_STREAMS[key];
-          const localStream = localKey && window.__DIRRM_LIVE_STREAMS && window.__DIRRM_LIVE_STREAMS[localKey];
+          const registry = this._liveStreamRegistry(event.source);
+          const stream = key && registry && registry[key];
+          const localStream = localKey && registry && registry[localKey];
           if (stream) {
             this._pendingLiveStream = stream;
             this._pendingLocalStream = localStream || null;
             // Clean up registry slot once consumed
-            delete window.__DIRRM_LIVE_STREAMS[key];
-            if (localKey) delete window.__DIRRM_LIVE_STREAMS[localKey];
+            delete registry[key];
+            if (localKey) delete registry[localKey];
           }
           this.loadMedia(url || '', title || 'Live', 'live');
         } else if (action === 'setLocalStream') {
           // Attach / replace the local self-view stream without reloading the whole player.
           const lkey = (event.data || {}).localStreamKey;
-          const ls = lkey && window.__DIRRM_LIVE_STREAMS && window.__DIRRM_LIVE_STREAMS[lkey];
-          if (lkey) delete window.__DIRRM_LIVE_STREAMS[lkey];
+          const registry = this._liveStreamRegistry(event.source);
+          const ls = lkey && registry && registry[lkey];
+          if (lkey && registry) delete registry[lkey];
           this._attachSelfView(ls || null);
         } else if (action === 'setMode') {
           this.setMode(mode);
@@ -2417,6 +2420,17 @@
         } else {
           this.typeBadge.style.display = 'none';
         }
+      }
+
+      _liveStreamRegistry(sourceWindow) {
+        const candidates = [sourceWindow, window.parent, window.opener, window];
+        for (const w of candidates) {
+          if (!w) continue;
+          try {
+            if (w.__DIRRM_LIVE_STREAMS) return w.__DIRRM_LIVE_STREAMS;
+          } catch (_) {}
+        }
+        return null;
       }
 
       async loadMedia(url, title, type) {
