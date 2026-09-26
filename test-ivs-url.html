@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>IVS URL Test</title>
+  <meta charset="utf-8">
+</head>
+<body style="margin: 2em; font-family: sans-serif;">
+  <h1>Testing Direct IVS Playback URL</h1>
+
+  <p>This tests whether Vintinuum can handle direct AWS IVS playback URLs (the m3u8 streams Kick uses).</p>
+
+  <div style="margin: 2em 0;">
+    <button onclick="testDirectIVS()" style="padding: 12px 24px; font-size: 16px; cursor: pointer;">
+      Load Direct IVS Stream in DirRM
+    </button>
+  </div>
+
+  <div id="output" style="margin-top: 2em; padding: 1em; background: #f5f5f5; border-radius: 4px;">
+    Click the button to test loading the IVS URL...
+  </div>
+
+  <script>
+    // The actual IVS URL from the task
+    const testURL = 'https://fa723fc1b171.us-west-2.playback.live-video.net/api/video/v1/us-west-2.196233775518.channel.8H0kKpQBLTDx.m3u8?token=eyJ0eXAiOiJKV1QiLCJhbGciOiJFUzM4NCJ9.eyJhd3M6Y2hhbm5lbC1hcm4iOiJhcm46YXdzOml2czp1cy13ZXN0LTI6MTk2MjMzNzc1NTE4OmNoYW5uZWwvOEgwa0twUUJMVER4IiwiYXdzOmFjY2Vzcy1jb250cm9sLWFsbG93LW9yaWdpbiI6Imh0dHBzOi8va2ljay5jb20saHR0cHM6Ly93d3cuZ3N0YXRpYy5jb20saHR0cHM6Ly8qLmtpY2subGl2ZSxodHRwczovL3BsYXllci5raWNrLmNvbSxodHRwczovL2FkbWluLmtpY2suY29tLGh0dHBzOi8vYmV0YS5raWNrLmNvbSxodHRwczovL25leHQua2ljay5jb20saHR0cHM6Ly9kYXNoYm9hcmQua2ljay5jb20saHR0cHM6Ly8qLnByZXZpZXcua2ljay5jb20saHR0cHM6Ly94Ym94LmtpY2suY29tLGh0dHBzOi8vcGxheXN0YXRpb24ua2ljay5jb20saHR0cHM6Ly90aXplbi5raWNrLmNvbSxodHRwczovL3dlYm9zLmtpY2suY29tLGh0dHBzOi8vKi5raWNrLXByZXByb2R1Y3Rpb24uY29tLGh0dHBzOi8vKi5raWNrLWRldmVsb3BtZW50LmNvbSIsImF3czpzdHJpY3Qtb3JpZ2luLWVuZm9yY2VtZW50IjpmYWxzZSwiYXdzOmFkcy1vcHQtb3V0Ijp0cnVlLCJleHAiOjE3ODc2NjY3MzN9.YCMuPmIOb_3dIkB25i3XHxquH9IperZAgbTJLy9GgYpaPKPLyuyNaD6pDGzUVSTn9PDGeSv3UPpoRrbbs75Gpg6upbO3iz9jf5mL37XJ8B9T_zskcnkwNKA8uQfn0wyQ';
+
+    function testDirectIVS() {
+      const out = document.getElementById('output');
+      out.innerHTML = `
+        <p><strong>Testing URL:</strong></p>
+        <pre style="white-space: pre-wrap; word-break: break-all; font-size: 11px;">${testURL}</pre>
+        <p><strong>URL Length:</strong> ${testURL.length} characters</p>
+        <p><strong>Action:</strong> Loading in DirRM player...</p>
+      `;
+
+      // Load via dirrm-launch.js (the standard way Vintinuum loads media)
+      if (window.dirrm && window.dirrm.launch) {
+        window.dirrm.launch(testURL, {
+          title: 'Direct IVS Stream Test',
+          mode: 'main'
+        });
+        out.innerHTML += '<p style="color: green;"><strong>✓ Launched via dirrm.launch()</strong></p>';
+      } else {
+        out.innerHTML += '<p style="color: red;"><strong>✗ dirrm-launch.js not loaded!</strong></p>';
+        out.innerHTML += '<p>Loading script and retrying...</p>';
+
+        const script = document.createElement('script');
+        script.src = './dirrm-launch.js';
+        script.onload = () => {
+          window.dirrm.launch(testURL, {
+            title: 'Direct IVS Stream Test',
+            mode: 'main'
+          });
+          out.innerHTML += '<p style="color: green;"><strong>✓ Launched after loading dirrm-launch.js</strong></p>';
+        };
+        script.onerror = () => {
+          out.innerHTML += '<p style="color: red;"><strong>✗ Failed to load dirrm-launch.js</strong></p>';
+        };
+        document.head.appendChild(script);
+      }
+    }
+  </script>
+
+  <script src="./dirrm-launch.js"></script>
+</body>
+</html>

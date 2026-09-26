@@ -2124,12 +2124,6 @@
         const embedKind = this.detectEmbed(url);
         if (embedKind) return 'embed';
 
-        // TikTok LIVE resolves through /api/stream/tiktok-live, never a raw <video>.
-        // It must sit ABOVE the type hint: dirrm-launch hints 'video' for every
-        // tiktok.com URL, so a guard below the hint is unreachable from any
-        // launcher-driven open — the live page would be handed to <video> and die.
-        if (/tiktok\.com\/@[^/]+\/live/i.test(url) || /vm\.tiktok\.com/i.test(url)) return 'tiktok-live';
-
         if (providedType && providedType !== 'auto') return aliases[providedType] ?? providedType;
 
         const u = (url || '').toLowerCase().split('?')[0].split('#')[0];
@@ -2159,6 +2153,9 @@
 
         // Platform fallbacks for bare URLs without extension
         if (/v\.redd\.it/.test(url)) return 'video';
+
+        // TikTok Live — goes through yt-dlp extraction
+        if (/tiktok\.com\/@[^/]+\/live/i.test(url) || /vm\.tiktok\.com/i.test(url)) return 'tiktok-live';
 
 
         // Generic yt-dlp extraction fallback for social/streaming URLs with no extension
