@@ -628,6 +628,17 @@
 <script src="body/world/dirverse-hud.js"></script>
 <script src="body/world/dirhaven-door.js"></script>
 <script src="body/world/court.js"></script>
+<!-- THE ASCENT (re-applied 2026-09-26). Recovered from council/seat-2, which was
+     174 commits behind main and whose merge would otherwise have discarded this
+     feature entirely: its world-hud.js carried 17 ASCENT references against ZERO
+     in main. ascent-hud.js is self-mounting (guards on window.VintAscent, injects
+     its own styles, binds its own events) and every DOM hook it reaches for —
+     ctBtn, dvBuildBtn, whBuild, asc-styles — is null-guarded inside try/catch, so
+     it degrades quietly on pages that lack them.
+     ORDER MATTERS and is load-bearing: it must come AFTER court.js so the rail's
+     DOM order stays star-map · agents · home · court · ascent and each launcher's
+     slot is allocated by the rail that measures it, never hand-counted here. -->
+<script src="body/world/ascent-hud.js"></script>
 <!-- THE LANTERNS — visitors leave a mark, the owner finds it. Loads AFTER
      dirverse-hud (it borrows that file's rail + sheet registry) and after
      court.js so the rail order stays: star-map · agents · court · home ·
@@ -660,6 +671,20 @@
      frame to know who is standing here to teach. Adds NO fixed element of its
      own. -->
 <script src="body/world/forge-hud.js"></script>
+<!-- THE GATHER — the NEAR half of making, the pair to the forge. The forge could
+     combine things you already held; NOTHING in the world could be pulled out of
+     the ground to hold in the first place (the old "harvest" was a coin-tap with
+     no object, no place, no depletion). This adds real resource NODES standing at
+     real positions in the clearing — walk up, tap the node itself to pull it, and
+     the raw matter lands in the SAME inventory the forge reads, so gather → forge
+     is one store, not a bridge. Beds run out and regrow; the council works them as
+     peers. Loads AFTER forge-hud.js so it sits beside it in the rail (the making
+     pair: forge · gather) and borrows dirverse-hud's rail slot + one-sheet
+     registry. Its ONLY in-world affordance is the 3D node (world-client's raycast
+     tap) — it adds NO fixed element to the page. Rail order stays: star-map ·
+     agents · court · home · lanterns · loom · commons · forge · gather ·
+     covenant · reckoning · … -->
+<script src="body/world/gather-hud.js"></script>
 <!-- THE COVENANTS — factions, contested territory, policy, and the geography of
      consent. Loads AFTER dirverse-hud for the same reason the lanterns do: it
      takes its rail slot from `addLauncher` and registers with the shared sheet
