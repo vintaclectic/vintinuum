@@ -847,34 +847,6 @@
       try { window.dispatchEvent(new CustomEvent('vint:world-trade-closed', { detail: m })); } catch (_) {}
     } else if (m.t === 'world:err') {
       try { window.dispatchEvent(new CustomEvent('vint:world-err', { detail: m })); } catch (_) {}
-
-    /* ── THE FORGE (AETHERHOLD 2026-09-25) ───────────────────────────────────
-       Fusion, teaching, and the great works. Dispatched as plain events the
-       same way every other world frame is; forge-hud.js is the only listener
-       and this file does not interpret a single one of these payloads — it
-       carries them. `world:forge:first` is the one GLOBAL frame in the whole
-       protocol (every soul online, once per recipe, ever), which is why it is
-       announced rather than merely rendered. */
-    } else if (m.t === 'world:forge:ok') {
-      try { window.dispatchEvent(new CustomEvent('vint:world-forge', { detail: m })); } catch (_) {}
-    } else if (m.t === 'world:forge:first') {
-      try { window.dispatchEvent(new CustomEvent('vint:world-forge-first', { detail: m })); } catch (_) {}
-    } else if (m.t === 'world:forge:taught') {
-      try { window.dispatchEvent(new CustomEvent('vint:world-forge-taught', { detail: m })); } catch (_) {}
-    } else if (m.t === 'world:forge:learned') {
-      try { window.dispatchEvent(new CustomEvent('vint:world-forge-learned', { detail: m })); } catch (_) {}
-    } else if (m.t === 'world:forge:world') {
-      try { window.dispatchEvent(new CustomEvent('vint:world-forge-world', { detail: m })); } catch (_) {}
-    } else if (m.t === 'world:forge:endeavours') {
-      try { window.dispatchEvent(new CustomEvent('vint:world-forge-endeavours', { detail: m })); } catch (_) {}
-    } else if (m.t === 'world:forge:raised') {
-      try { window.dispatchEvent(new CustomEvent('vint:world-forge-raised', { detail: m })); } catch (_) {}
-    } else if (m.t === 'world:forge:contributed') {
-      try { window.dispatchEvent(new CustomEvent('vint:world-forge-contributed', { detail: m })); } catch (_) {}
-    } else if (m.t === 'world:forge:withdrew') {
-      try { window.dispatchEvent(new CustomEvent('vint:world-forge-withdrew', { detail: m })); } catch (_) {}
-    } else if (m.t === 'world:forge:completed') {
-      try { window.dispatchEvent(new CustomEvent('vint:world-forge-completed', { detail: m })); } catch (_) {}
     }
   }
 
