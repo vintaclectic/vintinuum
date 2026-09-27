@@ -760,6 +760,15 @@
       // server, so the loop is guarded rather than assumed.
       World._canTrace = (m.canTrace === true);
       if (Array.isArray(m.traces)) { m.traces.forEach(_renderTrace); }
+      // THE GATHER — the resource nodes standing in this world. Rendered from the
+      // state frame the same way structures and lanterns are, so the ground you
+      // walk into already has things in it worth walking to. The HUD reads the
+      // same payload; the client never invents a node, a charge, or a position.
+      if (m.gather && Array.isArray(m.gather.nodes)) {
+        World._gatherResources = m.gather.resources || [];
+        m.gather.nodes.forEach(_renderGatherNode);
+        try { window.dispatchEvent(new CustomEvent('vint:world-gather-state', { detail: m.gather })); } catch (_) {}
+      }
       // THE VIGIL: the server's spark drives the world's actual light. `living`
       // carries the full picture (floor, drift, watchers, reach); spark alone is
       // the fallback for any older payload that predates the vigil.
@@ -875,6 +884,28 @@
       try { window.dispatchEvent(new CustomEvent('vint:world-forge-withdrew', { detail: m })); } catch (_) {}
     } else if (m.t === 'world:forge:completed') {
       try { window.dispatchEvent(new CustomEvent('vint:world-forge-completed', { detail: m })); } catch (_) {}
+
+    /* ── THE GATHER (AETHERHOLD 2026-09-26) ──────────────────────────────────
+       Pulling raw matter from the world's nodes. Dispatched as plain events the
+       same way every other world frame is; gather-hud.js renders them and this
+       file interprets none of the payloads — it carries them, and it renders the
+       nodes themselves in the scene. `world:gather:node` is the shared-world
+       depletion (everyone here watches a bed run down); `world:gather:agent` is a
+       council member working the clearing; `world:gather:first` is the one global
+       frame (first to a rare seam, ever), announced rather than merely rendered. */
+    } else if (m.t === 'world:gather:ok') {
+      try { window.dispatchEvent(new CustomEvent('vint:world-gather', { detail: m })); } catch (_) {}
+    } else if (m.t === 'world:gather:nodes') {
+      if (Array.isArray(m.nodes)) m.nodes.forEach(_renderGatherNode);
+      try { window.dispatchEvent(new CustomEvent('vint:world-gather-state', { detail: m })); } catch (_) {}
+    } else if (m.t === 'world:gather:node') {
+      if (m.node) _updateGatherNode(m.node);
+      try { window.dispatchEvent(new CustomEvent('vint:world-gather-node', { detail: m.node })); } catch (_) {}
+    } else if (m.t === 'world:gather:agent') {
+      _onAgentGather(m);
+      try { window.dispatchEvent(new CustomEvent('vint:world-gather-agent', { detail: m })); } catch (_) {}
+    } else if (m.t === 'world:gather:first') {
+      try { window.dispatchEvent(new CustomEvent('vint:world-gather-first', { detail: m })); } catch (_) {}
     }
   }
 
@@ -1412,6 +1443,232 @@
   // ordering, which would silently swap the manifests.
   World.myUserId = function () { return World._myUserId != null ? World._myUserId : null; };
 
+  // ══════════════════════════════════════════════════════════════════════════
+  // THE GATHER — resource nodes, standing in the world (AETHERHOLD 2026-09-26)
+  //
+  // A node is a PLACE, not a button. The server owns its position, its kind, its
+  // charge and its regrow clock; this file only draws what the server sent and
+  // lets you tap the thing itself. Every number here (charge, whether it is
+  // worked out, how close you must be) came off the wire — the client invents
+  // none of it, exactly like the structures and lanterns beside it.
+  //
+  // NO-COLLISION, in three dimensions: nodes sit on the ground (y=0) at authored
+  // positions the server chose to miss the bench, the spawn ring and every
+  // council anchor. Their name floats as a SPRITE above them (like a lantern's or
+  // a body's), which lives in world space and can never touch a DOM element. The
+  // tap target is the 3D mesh itself (raycast), so gathering adds NOT ONE fixed
+  // overlay to the page — the surface with the least chance of colliding with
+  // anything is the one that is not on the page at all.
+  // ══════════════════════════════════════════════════════════════════════════
+  const _gatherMeshes = new Map();   // node id → THREE.Group (userData.node = view)
+  const GATHER_REACH = 2.8;          // must AGREE with gather.GATHER_RADIUS server-side
+
+  function _gatherColor(res) {
+    return ({
+      fiber: 0x9cd06a, timber: 0xb08653, stone: 0x9aa3ad,
+      ore: 0xd7a44a, glimmer: 0xffd98a,
+    })[res] || 0x9ad0c2;
+  }
+
+  // Build the little standing thing for a node kind. Cheap geometry; distinct
+  // silhouette per resource so a clearing reads at a glance (reeds vs rocks vs a
+  // pool of light), and a soft ground-ring that lights when you are close enough
+  // to pull it — the whole "walk up to it" affordance, done in the scene.
+  function _buildGatherBody(THREE, view) {
+    const g = new THREE.Group();
+    const col = _gatherColor(view.resource);
+    const mat = new THREE.MeshStandardMaterial({ color: col, roughness: 0.85, metalness: 0.05, emissive: col, emissiveIntensity: 0.06 });
+    if (view.kind === 'reedbed') {
+      for (let i = 0; i < 7; i++) {
+        const blade = new THREE.Mesh(new THREE.ConeGeometry(0.05, 0.7 + Math.random() * 0.4, 5), mat);
+        blade.position.set((Math.random() - 0.5) * 0.7, 0.4, (Math.random() - 0.5) * 0.7);
+        blade.rotation.z = (Math.random() - 0.5) * 0.3; g.add(blade);
+      }
+    } else if (view.kind === 'boughfall') {
+      const log = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.19, 1.5, 8), mat);
+      log.rotation.z = Math.PI / 2; log.position.y = 0.18; g.add(log);
+    } else if (view.kind === 'outcrop') {
+      for (let i = 0; i < 4; i++) {
+        const rock = new THREE.Mesh(new THREE.DodecahedronGeometry(0.18 + Math.random() * 0.14, 0), mat);
+        rock.position.set((Math.random() - 0.5) * 0.7, 0.14 + Math.random() * 0.1, (Math.random() - 0.5) * 0.7);
+        rock.rotation.set(Math.random(), Math.random(), Math.random()); g.add(rock);
+      }
+    } else if (view.kind === 'oreseam') {
+      const rock = new THREE.Mesh(new THREE.DodecahedronGeometry(0.34, 0), new THREE.MeshStandardMaterial({ color: 0x5a5148, roughness: 0.9 }));
+      rock.position.y = 0.28; g.add(rock);
+      for (let i = 0; i < 5; i++) {
+        const vein = new THREE.Mesh(new THREE.OctahedronGeometry(0.06, 0), new THREE.MeshStandardMaterial({ color: col, emissive: col, emissiveIntensity: 0.5, metalness: 0.4, roughness: 0.4 }));
+        vein.position.set((Math.random() - 0.5) * 0.4, 0.2 + Math.random() * 0.28, (Math.random() - 0.5) * 0.4); g.add(vein);
+      }
+    } else if (view.kind === 'lightwell') {
+      // the rare one: a pool of caught light with a real (cheap) glow
+      const pool = new THREE.Mesh(new THREE.CircleGeometry(0.55, 24), new THREE.MeshBasicMaterial({ color: col, transparent: true, opacity: 0.5, side: THREE.DoubleSide, blending: THREE.AdditiveBlending, depthWrite: false }));
+      pool.rotation.x = -Math.PI / 2; pool.position.y = 0.03; g.add(pool);
+      const core = new THREE.Mesh(new THREE.IcosahedronGeometry(0.26, 0), new THREE.MeshStandardMaterial({ color: 0xfff4e0, emissive: col, emissiveIntensity: 1.5 }));
+      core.position.y = 0.7; g.add(core); g.userData.core = core;
+      try { const pl = new THREE.PointLight(col, 0.9, 4.5); pl.position.y = 0.7; g.add(pl); g.userData.glow = pl; } catch (_) {}
+    } else {
+      const m = new THREE.Mesh(new THREE.IcosahedronGeometry(0.3, 0), mat); m.position.y = 0.3; g.add(m);
+    }
+    // the ground-ring: the "you can pull this" affordance, lit by proximity + charge
+    const ring = new THREE.Mesh(new THREE.RingGeometry(0.62, 0.82, 28),
+      new THREE.MeshBasicMaterial({ color: col, transparent: true, opacity: 0.16, side: THREE.DoubleSide, depthWrite: false }));
+    ring.rotation.x = -Math.PI / 2; ring.position.y = 0.02; g.add(ring);
+    g.userData.ring = ring; g.userData.baseCol = col;
+    return g;
+  }
+
+  function _renderGatherNode(view) {
+    if (!view || view.id == null || !World._scene) return;
+    const THREE = World._THREE || window.THREE; if (!THREE) return;
+    const id = String(view.id);
+    if (_gatherMeshes.has(id)) { _updateGatherNode(view); return; }
+    let g; try { g = _buildGatherBody(THREE, view); } catch (_) { return; }
+    g.position.set(view.x || 0, 0, view.z || 0);
+    g.userData.node = view;
+    g.userData.isGatherNode = true;
+    // the name floats above it, as a world-space sprite — never a DOM overlay
+    try { const lbl = _makeLabel(view.label); lbl.position.y = 1.35; lbl.scale.set(1.1, 0.275, 1); g.add(lbl); g.userData.label = lbl; } catch (_) {}
+    World._scene.add(g);
+    _gatherMeshes.set(id, g);
+    _applyGatherLook(g);
+  }
+
+  function _updateGatherNode(view) {
+    if (!view || view.id == null) return;
+    const g = _gatherMeshes.get(String(view.id));
+    if (!g) { _renderGatherNode(view); return; }
+    g.userData.node = view;
+    _applyGatherLook(g);
+  }
+
+  // depleted → dim + drop the ring; alive → full colour. A worked-out node still
+  // stands where it was, so you learn WHERE the beds are even while they heal.
+  function _applyGatherLook(g) {
+    const v = g.userData.node; if (!v) return;
+    const worked = v.charges <= 0;
+    g.traverse(o => {
+      if (o.isMesh && o.material && o !== g.userData.ring) {
+        if (o.material.opacity != null && o.material.transparent) { /* keep pools */ }
+        o.material.needsUpdate = true;
+      }
+    });
+    g.userData._worked = worked;
+    if (g.userData.glow) g.userData.glow.intensity = worked ? 0.12 : 0.9;
+    if (g.userData.ring) g.userData.ring.material.opacity = worked ? 0.05 : 0.16;
+  }
+
+  // Every node standing here, nearest first, with distance + whether it is in
+  // reach — the gather HUD walks this to render its list without a second truth.
+  World.gatherNodes = function () {
+    const out = [];
+    for (const g of _gatherMeshes.values()) {
+      const v = g.userData.node; if (!v) continue;
+      const dist = Math.hypot(g.position.x - me.x, g.position.z - me.z);
+      out.push(Object.assign({}, v, { dist: Math.round(dist * 10) / 10, inReach: dist <= GATHER_REACH }));
+    }
+    out.sort((a, b) => a.dist - b.dist);
+    return out;
+  };
+  // the nearest node that is in reach AND has charge — what a single tap harvests
+  World.nearestGatherNode = function () {
+    let best = null, bd = Infinity;
+    for (const g of _gatherMeshes.values()) {
+      const v = g.userData.node; if (!v || v.charges <= 0) continue;
+      const d = Math.hypot(g.position.x - me.x, g.position.z - me.z);
+      if (d <= GATHER_REACH && d < bd) { bd = d; best = Object.assign({}, v, { dist: Math.round(d * 10) / 10 }); }
+    }
+    return best;
+  };
+  // Pull a node. The server re-checks proximity from our socket, so this only asks.
+  World.gather = function (nodeId) { return World.send({ t: 'world:gather:harvest', nodeId: nodeId }); };
+  World.gatherRead = function () { return World.send({ t: 'world:gather:read' }); };
+  // Turn to face a node (same discipline as faceTrace: point, never seize camera).
+  World.faceNode = function (nodeId) {
+    const g = _gatherMeshes.get(String(nodeId)); if (!g) return false;
+    const dx = g.position.x - me.x, dz = g.position.z - me.z;
+    if (Math.hypot(dx, dz) < 0.05) return true;
+    me.yaw = Math.atan2(dx, dz); return true;
+  };
+
+  // A council member is working a node: nudge that presence toward the node and
+  // let it linger — the VISIBLE half of "agents walk to nodes and gather". The
+  // economic act already happened server-side (the agent's inventory changed);
+  // this only makes it something you can watch. Guarded and gentle: it sets the
+  // agent-life target if that layer is present, else it just moves the presence.
+  function _onAgentGather(m) {
+    try {
+      if (!m || m.kind !== 'gather' || m.x == null) return;
+      const id = m.agentId;
+      const A = id && agents.get(id);
+      if (!A) return;
+      A.target = { x: m.x, z: m.z, yaw: A.target && A.target.yaw };
+      if (global.AgentLife && global.AgentLife.nudgeTo) {
+        try { global.AgentLife.nudgeTo(id, m.x, m.z, 4500); } catch (_) {}
+      }
+    } catch (_) {}
+  }
+
+  // nodes breathe (the rare one bobs + turns) and the ring pulses when you are in
+  // reach of a live node — cheap, capped at the nine authored nodes.
+  function _stepGather(tnow) {
+    if (!_gatherMeshes.size) return;
+    for (const g of _gatherMeshes.values()) {
+      const v = g.userData.node; if (!v) continue;
+      if (g.userData.core) { g.userData.core.position.y = 0.7 + Math.sin(tnow * 0.0016) * 0.06; g.userData.core.rotation.y += 0.006; }
+      if (g.userData.ring && v.charges > 0) {
+        const d = Math.hypot(g.position.x - me.x, g.position.z - me.z);
+        const near = d <= GATHER_REACH;
+        const target = near ? (0.30 + 0.16 * (0.5 + 0.5 * Math.sin(tnow * 0.004))) : 0.16;
+        g.userData.ring.material.opacity += (target - g.userData.ring.material.opacity) * 0.1;
+      }
+    }
+  }
+
+  // Raycast a screen point against the node meshes. Returns the nearest node in
+  // reach that has charge, or null. Used by the tap handler so you can pull a
+  // node by tapping the thing itself — no overlay, no button in the world.
+  function _pickGatherNode(clientX, clientY) {
+    const THREE = World._THREE || window.THREE;
+    if (!THREE || !_gatherMeshes.size || !renderer || !camera) return null;
+    const rect = renderer.domElement.getBoundingClientRect();
+    const ndc = new THREE.Vector2(
+      ((clientX - rect.left) / rect.width) * 2 - 1,
+      -((clientY - rect.top) / rect.height) * 2 + 1);
+    if (!World._ray) World._ray = new THREE.Raycaster();
+    World._ray.setFromCamera(ndc, camera);
+    const groups = [];
+    for (const g of _gatherMeshes.values()) groups.push(g);
+    const hits = World._ray.intersectObjects(groups, true);
+    if (!hits.length) return null;
+    // walk up from the hit object to the node group
+    let o = hits[0].object;
+    while (o && !o.userData.isGatherNode) o = o.parent;
+    if (!o || !o.userData.node) return null;
+    const v = o.userData.node;
+    const d = Math.hypot(o.position.x - me.x, o.position.z - me.z);
+    if (d > GATHER_REACH || v.charges <= 0) return { node: v, tooFar: d > GATHER_REACH, worked: v.charges <= 0 };
+    return { node: v, ok: true };
+  }
+  World._pickGatherNode = _pickGatherNode;
+
+  // A tap landed on the canvas — did it land on a node? If so, pull it (or say,
+  // gently, why not). Feedback goes through the HUD's ONE shared toast, never a
+  // second anchored element.
+  function _tryGatherTap(cx, cy) {
+    const hit = _pickGatherNode(cx, cy);
+    if (!hit) return false;
+    const say = (t) => { try { if (global.DirverseHUD && global.DirverseHUD.toast) global.DirverseHUD.toast(t); } catch (_) {} };
+    if (hit.ok) {
+      World.faceNode(hit.node.id);
+      World.gather(hit.node.id);
+      return true;
+    }
+    if (hit.tooFar) { World.faceNode(hit.node.id); say('walk closer to the ' + (hit.node.label || 'node') + ' to gather it.'); return true; }
+    if (hit.worked) { say('the ' + (hit.node.label || 'node') + ' is worked out — it will come back.'); return true; }
+    return false;
+  }
+
   // public: send any world message to the server (used by the HUD)
   World.send = function (m) { if (ws && ws.readyState === 1) { ws.send(JSON.stringify(m)); return true; } return false; };
   // Is the living socket actually up? Callers that need to know whether an
@@ -1579,6 +1836,10 @@
     // the lanterns belong to the world we're leaving, not to the engine
     for (const mesh of _traceMeshes.values()) { try { World._scene.remove(mesh); } catch (_) {} }
     _traceMeshes.clear();
+    // the gather nodes belong to the world we're leaving too — the next world
+    // ships its own on its state frame, so clear these or two worlds' beds stack.
+    for (const g of _gatherMeshes.values()) { try { World._scene.remove(g); } catch (_) {} }
+    _gatherMeshes.clear();
     if (World._selfBody) { try { scene.remove(World._selfBody); } catch (_) {} World._selfBody = null; }
     // reset self to the spawn ring so we don't arrive standing where we left the last world
     me.x = 0; me.z = 2.5; me.yaw = Math.PI; me.y = 0;
@@ -1652,9 +1913,22 @@
     addEventListener('keyup', e => { keys[e.key.toLowerCase()] = false; });
     let dragging = false, lx = 0;
     const dom = renderer.domElement;
-    dom.addEventListener('pointerdown', e => { dragging = true; lx = e.clientX; });
-    addEventListener('pointerup', () => { dragging = false; });
-    addEventListener('pointermove', e => { if (!dragging) return; me.yaw -= (e.clientX - lx) * 0.005; lx = e.clientX; });
+    // TAP-TO-GATHER lives on the SAME pointer stream as look-drag, told apart by
+    // movement + time: a short, still press is a tap (raycast a node and pull it);
+    // anything that moves or lingers is a look-drag and never harvests. Pointer
+    // events are unified, so this one path serves mouse and touch without a second
+    // handler that could double-fire. It adds no element to the page — the tap
+    // target is the 3D node itself.
+    let downX = 0, downY = 0, downT = 0, moved = 0;
+    dom.addEventListener('pointerdown', e => { dragging = true; lx = e.clientX; downX = e.clientX; downY = e.clientY; downT = Date.now(); moved = 0; });
+    addEventListener('pointerup', e => {
+      dragging = false;
+      // a genuine tap: < 350ms and < 8px of travel. Otherwise it was a look-drag.
+      const dt = Date.now() - downT;
+      const travel = Math.hypot((e.clientX || downX) - downX, (e.clientY || downY) - downY);
+      if (dt < 350 && travel < 8 && moved < 8) _tryGatherTap(e.clientX || downX, e.clientY || downY);
+    });
+    addEventListener('pointermove', e => { if (!dragging) return; const d = e.clientX - lx; moved += Math.abs(d); me.yaw -= d * 0.005; lx = e.clientX; });
 
     // mobile: drag the left half to steer+walk; on-screen run/jump buttons (wired in world.html)
     World._touchForward = false; World._touchRun = false; World._touchJump = false;
@@ -1810,6 +2084,7 @@
     _stepWarmth(dt);   // THE VIGIL: spark → light, eased every frame
     _stepWarp(dt);
     _stepTraces(tnow);
+    _stepGather(tnow);       // THE GATHER: nodes breathe, in-reach rings pulse
     _stepStructs(dt, tnow);  // THE FIFTEEN: the built world, breathing
 
     // camera modes: 0=3rd-person (behind), 1=1st-person (eyes), 2=selfie (front)

@@ -198,6 +198,30 @@
     b.state = 'travel';
   }
 
+  // ── THE GATHER'S VISIBLE HALF (AETHERHOLD 2026-09-26) ────────────────────────
+  // The server tells the client an agent WORKED a node (world:gather:agent). The
+  // economic act already happened under a reserved id; this makes it something you
+  // can watch. Walk the presence to the node, stop a stride short of it (never
+  // stand inside it — no-collision, in three dimensions), face it, and DWELL there
+  // for a beat so it reads as work, not a fly-by. It resumes its own soul (its
+  // POIs, its idle ritual) the moment the dwell ends. Guarded: an unknown id or an
+  // agent-life not yet ready is a quiet no-op, never a throw.
+  AL.nudgeTo = function (id, x, z, holdMs) {
+    if (!_initialized || !agents || !agents.has(id)) return false;
+    const A = agents.get(id);
+    const b = _brainFor(id, A);
+    const gx = A.group.position.x, gz = A.group.position.z;
+    const dx = x - gx, dz = z - gz, d = Math.hypot(dx, dz) || 1;
+    const reach = Math.max(0, d - 1.0);   // stop a stride short of the node
+    A.target = {
+      x: gx + (dx / d) * reach, z: gz + (dz / d) * reach,
+      yaw: Math.atan2(x - gx, z - gz),
+    };
+    b.state = 'travel';
+    b.gatherHold = Math.max(1.5, (holdMs || 3000) / 1000);   // dwell, in seconds
+    return true;
+  };
+
   // ── the per-frame drive ──────────────────────────────────────────────────────
   AL.tick = function (dt, tnow) {
     if (!_initialized || !agents) return;
@@ -243,7 +267,11 @@
         const tx = A.target ? A.target.x : gx, tz = A.target ? A.target.z : gz;
         if (Math.hypot(tx - gx, tz - gz) < 0.35) {
           b.state = 'rest';
-          b.restT = b.p.restMin + Math.random() * (b.p.restMax - b.p.restMin);
+          // if this trip was a gather-nudge, DWELL at the node for the requested
+          // beat (working it) before the soul chooses its next intent; otherwise
+          // the ordinary post-travel rest.
+          b.restT = b.gatherHold ? b.gatherHold : (b.p.restMin + Math.random() * (b.p.restMax - b.p.restMin));
+          b.gatherHold = 0;
         }
       } else { // 'rest'
         b.restT -= dt;

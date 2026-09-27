@@ -1,0 +1,549 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MERCATUS — Trading Control</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      background: #0a0a0a;
+      color: #e0e0e0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      padding: 20px;
+      line-height: 1.6;
+    }
+
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+
+    h1 {
+      font-size: 2.5rem;
+      font-weight: 700;
+      margin-bottom: 1rem;
+      background: linear-gradient(135deg, #00ff88, #0099ff);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .subtitle {
+      color: #888;
+      margin-bottom: 2rem;
+      font-size: 0.95rem;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 20px;
+      margin-bottom: 30px;
+    }
+
+    .card {
+      background: #1a1a1a;
+      border: 1px solid #333;
+      border-radius: 12px;
+      padding: 20px;
+    }
+
+    .card h2 {
+      font-size: 1.25rem;
+      margin-bottom: 1rem;
+      color: #fff;
+    }
+
+    .stat {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 12px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid #2a2a2a;
+    }
+
+    .stat:last-child {
+      border-bottom: none;
+      margin-bottom: 0;
+      padding-bottom: 0;
+    }
+
+    .stat-label {
+      color: #888;
+      font-size: 0.9rem;
+    }
+
+    .stat-value {
+      color: #fff;
+      font-weight: 600;
+    }
+
+    .mode-badge {
+      display: inline-block;
+      padding: 4px 12px;
+      border-radius: 6px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      text-transform: uppercase;
+    }
+
+    .mode-paper {
+      background: #1a4d2e;
+      color: #4ade80;
+    }
+
+    .mode-live {
+      background: #4d1a1a;
+      color: #ff6b6b;
+    }
+
+    .status-enabled {
+      color: #4ade80;
+    }
+
+    .status-disabled {
+      color: #ff6b6b;
+    }
+
+    .btn {
+      background: #2a2a2a;
+      border: 1px solid #444;
+      color: #fff;
+      padding: 12px 24px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 0.95rem;
+      font-weight: 600;
+      transition: all 0.2s;
+      margin-right: 10px;
+      margin-bottom: 10px;
+    }
+
+    .btn:hover {
+      background: #333;
+      border-color: #555;
+    }
+
+    .btn-danger {
+      background: #4d1a1a;
+      border-color: #661a1a;
+      color: #ff6b6b;
+    }
+
+    .btn-danger:hover {
+      background: #661a1a;
+    }
+
+    .btn-primary {
+      background: #1a4d4d;
+      border-color: #1a6666;
+      color: #4ade80;
+    }
+
+    .btn-primary:hover {
+      background: #1a6666;
+    }
+
+    .log {
+      background: #0d0d0d;
+      border: 1px solid #2a2a2a;
+      border-radius: 8px;
+      padding: 15px;
+      max-height: 400px;
+      overflow-y: auto;
+      font-family: 'Monaco', 'Courier New', monospace;
+      font-size: 0.85rem;
+    }
+
+    .log-entry {
+      margin-bottom: 8px;
+      padding: 8px;
+      border-left: 3px solid #333;
+      padding-left: 12px;
+    }
+
+    .log-decision {
+      border-left-color: #0099ff;
+    }
+
+    .log-order {
+      border-left-color: #00ff88;
+    }
+
+    .log-error {
+      border-left-color: #ff6b6b;
+    }
+
+    .log-time {
+      color: #666;
+      margin-right: 10px;
+    }
+
+    .input-group {
+      margin-bottom: 15px;
+    }
+
+    .input-group label {
+      display: block;
+      color: #888;
+      margin-bottom: 6px;
+      font-size: 0.9rem;
+    }
+
+    .input-group input,
+    .input-group select,
+    .input-group textarea {
+      width: 100%;
+      background: #0d0d0d;
+      border: 1px solid #333;
+      color: #fff;
+      padding: 10px;
+      border-radius: 6px;
+      font-size: 0.95rem;
+    }
+
+    .input-group textarea {
+      min-height: 80px;
+      resize: vertical;
+    }
+
+    .warning-box {
+      background: #4d3a1a;
+      border: 1px solid #665020;
+      border-radius: 8px;
+      padding: 15px;
+      margin-bottom: 20px;
+      color: #ffcc66;
+    }
+
+    .success-box {
+      background: #1a4d2e;
+      border: 1px solid #206640;
+      border-radius: 8px;
+      padding: 15px;
+      margin-bottom: 20px;
+      color: #4ade80;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>MERCATUS</h1>
+    <p class="subtitle">Robinhood Trading Control — Vintinuum Brain Integration</p>
+
+    <div class="warning-box" id="mode-warning" style="display: none;">
+      ⚠️ <strong>LIVE MODE ACTIVE</strong> — Real money, real orders. Every decision requires your approval.
+    </div>
+
+    <div class="success-box" id="mode-success" style="display: none;">
+      ✓ <strong>PAPER MODE</strong> — Analysis only, no real execution. Safe for testing.
+    </div>
+
+    <!-- State Grid -->
+    <div class="grid">
+      <!-- Current State -->
+      <div class="card">
+        <h2>Current State</h2>
+        <div class="stat">
+          <span class="stat-label">Mode</span>
+          <span class="stat-value" id="mode-badge">-</span>
+        </div>
+        <div class="stat">
+          <span class="stat-label">Status</span>
+          <span class="stat-value" id="enabled-status">-</span>
+        </div>
+        <div class="stat">
+          <span class="stat-label">Paused</span>
+          <span class="stat-value" id="paused-status">-</span>
+        </div>
+        <div class="stat">
+          <span class="stat-label">Requires Approval</span>
+          <span class="stat-value" id="approval-status">-</span>
+        </div>
+      </div>
+
+      <!-- Today's Stats -->
+      <div class="card">
+        <h2>Today</h2>
+        <div class="stat">
+          <span class="stat-label">P&L</span>
+          <span class="stat-value" id="today-pnl">$0.00</span>
+        </div>
+        <div class="stat">
+          <span class="stat-label">Open Positions</span>
+          <span class="stat-value" id="today-positions">0</span>
+        </div>
+        <div class="stat">
+          <span class="stat-label">Date</span>
+          <span class="stat-value" id="today-date">-</span>
+        </div>
+      </div>
+
+      <!-- Safety Limits -->
+      <div class="card">
+        <h2>Safety Limits</h2>
+        <div class="stat">
+          <span class="stat-label">Max Position Size</span>
+          <span class="stat-value" id="limit-position">$0</span>
+        </div>
+        <div class="stat">
+          <span class="stat-label">Max Daily Loss</span>
+          <span class="stat-value" id="limit-loss">$0</span>
+        </div>
+        <div class="stat">
+          <span class="stat-label">Max Open Positions</span>
+          <span class="stat-value" id="limit-positions">0</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Controls -->
+    <div class="card" style="margin-bottom: 30px;">
+      <h2>Controls</h2>
+      <button class="btn btn-primary" onclick="refreshState()">Refresh State</button>
+      <button class="btn" onclick="getPortfolio()">View Portfolio</button>
+      <button class="btn btn-danger" onclick="emergencyStop()">Emergency Stop</button>
+    </div>
+
+    <!-- Analyze Symbol -->
+    <div class="card" style="margin-bottom: 30px;">
+      <h2>Analyze Symbol</h2>
+      <div class="input-group">
+        <label>Symbol (e.g. AAPL, TSLA)</label>
+        <input type="text" id="analyze-symbol" placeholder="AAPL" />
+      </div>
+      <button class="btn btn-primary" onclick="analyzeSymbol()">Analyze</button>
+      <div id="analysis-result" style="margin-top: 15px;"></div>
+    </div>
+
+    <!-- Submit Decision (Paper Mode Test) -->
+    <div class="card" style="margin-bottom: 30px;">
+      <h2>Submit Decision</h2>
+      <div class="input-group">
+        <label>Action</label>
+        <select id="decision-action">
+          <option value="buy">Buy</option>
+          <option value="sell">Sell</option>
+        </select>
+      </div>
+      <div class="input-group">
+        <label>Symbol</label>
+        <input type="text" id="decision-symbol" placeholder="AAPL" />
+      </div>
+      <div class="input-group">
+        <label>Quantity</label>
+        <input type="number" id="decision-quantity" placeholder="10" />
+      </div>
+      <div class="input-group">
+        <label>Price (leave empty for market order)</label>
+        <input type="number" id="decision-price" placeholder="150.00" step="0.01" />
+      </div>
+      <div class="input-group">
+        <label>Reasoning</label>
+        <textarea id="decision-reasoning" placeholder="Why this trade makes sense..."></textarea>
+      </div>
+      <div class="input-group">
+        <label>Confidence (0-100)</label>
+        <input type="number" id="decision-confidence" placeholder="75" min="0" max="100" />
+      </div>
+      <button class="btn btn-primary" onclick="submitDecision()">Submit Decision</button>
+      <div id="decision-result" style="margin-top: 15px;"></div>
+    </div>
+
+    <!-- Recent History -->
+    <div class="card">
+      <h2>Recent History</h2>
+      <div class="log" id="history-log">
+        <div style="color: #666; text-align: center; padding: 20px;">
+          Loading history...
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const API = 'https://api.vintaclectic.com/api/trading';
+
+    // Load state on page load
+    async function refreshState() {
+      try {
+        const res = await fetch(`${API}/state`, {
+          credentials: 'include',
+        });
+        const state = await res.json();
+
+        // Mode
+        const modeBadge = document.getElementById('mode-badge');
+        modeBadge.textContent = state.mode.toUpperCase();
+        modeBadge.className = state.mode === 'live' ? 'mode-badge mode-live' : 'mode-badge mode-paper';
+
+        // Show warning/success box
+        if (state.mode === 'live') {
+          document.getElementById('mode-warning').style.display = 'block';
+          document.getElementById('mode-success').style.display = 'none';
+        } else {
+          document.getElementById('mode-warning').style.display = 'none';
+          document.getElementById('mode-success').style.display = 'block';
+        }
+
+        // Status
+        document.getElementById('enabled-status').textContent = state.enabled ? 'Enabled' : 'Disabled';
+        document.getElementById('enabled-status').className = state.enabled ? 'stat-value status-enabled' : 'stat-value status-disabled';
+
+        document.getElementById('paused-status').textContent = state.isPaused ? 'Yes' : 'No';
+        document.getElementById('paused-status').className = state.isPaused ? 'stat-value status-disabled' : 'stat-value status-enabled';
+
+        document.getElementById('approval-status').textContent = state.requiresApproval ? 'Yes' : 'No';
+
+        // Today
+        document.getElementById('today-pnl').textContent = `$${state.today.pnl.toFixed(2)}`;
+        document.getElementById('today-positions').textContent = state.today.openPositions;
+        document.getElementById('today-date').textContent = state.today.date;
+
+        // Limits
+        document.getElementById('limit-position').textContent = `$${state.limits.maxPositionSize}`;
+        document.getElementById('limit-loss').textContent = `$${state.limits.maxDailyLoss}`;
+        document.getElementById('limit-positions').textContent = state.limits.maxOpenPositions;
+
+      } catch (err) {
+        console.error('Failed to load state:', err);
+      }
+    }
+
+    async function getPortfolio() {
+      try {
+        const res = await fetch(`${API}/portfolio`, {
+          credentials: 'include',
+        });
+        const portfolio = await res.json();
+        alert(JSON.stringify(portfolio, null, 2));
+      } catch (err) {
+        alert('Failed to load portfolio: ' + err.message);
+      }
+    }
+
+    async function emergencyStop() {
+      if (!confirm('EMERGENCY STOP: This will immediately halt all trading. Continue?')) return;
+
+      try {
+        const res = await fetch(`${API}/emergency-stop`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({ reason: 'Manual emergency stop from UI' }),
+        });
+        const result = await res.json();
+        alert('Trading stopped: ' + result.reason);
+        refreshState();
+      } catch (err) {
+        alert('Failed to stop: ' + err.message);
+      }
+    }
+
+    async function analyzeSymbol() {
+      const symbol = document.getElementById('analyze-symbol').value.trim().toUpperCase();
+      if (!symbol) return alert('Enter a symbol');
+
+      const resultDiv = document.getElementById('analysis-result');
+      resultDiv.innerHTML = '<div style="color: #888;">Analyzing ' + symbol + '...</div>';
+
+      try {
+        const res = await fetch(`${API}/analyze`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({ symbol }),
+        });
+        const analysis = await res.json();
+        resultDiv.innerHTML = `<pre style="color: #4ade80; overflow-x: auto;">${JSON.stringify(analysis, null, 2)}</pre>`;
+      } catch (err) {
+        resultDiv.innerHTML = `<div style="color: #ff6b6b;">Error: ${err.message}</div>`;
+      }
+    }
+
+    async function submitDecision() {
+      const decision = {
+        action: document.getElementById('decision-action').value,
+        symbol: document.getElementById('decision-symbol').value.trim().toUpperCase(),
+        quantity: parseFloat(document.getElementById('decision-quantity').value),
+        price: parseFloat(document.getElementById('decision-price').value) || null,
+        reasoning: document.getElementById('decision-reasoning').value.trim(),
+        confidence: parseFloat(document.getElementById('decision-confidence').value) || 50,
+      };
+
+      if (!decision.symbol || !decision.quantity || !decision.reasoning) {
+        return alert('Fill in all required fields');
+      }
+
+      const resultDiv = document.getElementById('decision-result');
+      resultDiv.innerHTML = '<div style="color: #888;">Submitting...</div>';
+
+      try {
+        const res = await fetch(`${API}/decide`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify(decision),
+        });
+        const result = await res.json();
+
+        if (result.executed) {
+          resultDiv.innerHTML = `<div style="color: #4ade80;">✓ Executed (${result.mode}): Order ${result.orderId}</div>`;
+        } else {
+          resultDiv.innerHTML = `<div style="color: #ffcc66;">⚠ ${result.message || result.reason || 'Not executed'} (${result.mode})</div>`;
+        }
+
+        loadHistory();
+      } catch (err) {
+        resultDiv.innerHTML = `<div style="color: #ff6b6b;">Error: ${err.message}</div>`;
+      }
+    }
+
+    async function loadHistory() {
+      try {
+        const res = await fetch(`${API}/history?limit=20`, {
+          credentials: 'include',
+        });
+        const data = await res.json();
+        const log = document.getElementById('history-log');
+
+        if (!data.history || data.history.length === 0) {
+          log.innerHTML = '<div style="color: #666; text-align: center; padding: 20px;">No history yet</div>';
+          return;
+        }
+
+        log.innerHTML = data.history.reverse().map(entry => {
+          const time = new Date(entry.timestamp).toLocaleTimeString();
+          const type = entry.type.includes('decision') ? 'decision' : entry.type.includes('order') ? 'order' : 'error';
+          return `
+            <div class="log-entry log-${type}">
+              <span class="log-time">${time}</span>
+              <strong>${entry.type}</strong>
+              <div style="margin-top: 4px; color: #aaa; font-size: 0.85rem;">
+                ${JSON.stringify(entry).slice(0, 200)}
+              </div>
+            </div>
+          `;
+        }).join('');
+      } catch (err) {
+        console.error('Failed to load history:', err);
+      }
+    }
+
+    // Auto-refresh every 5 seconds
+    setInterval(() => {
+      refreshState();
+      loadHistory();
+    }, 5000);
+
+    // Initial load
+    refreshState();
+    loadHistory();
+  </script>
+</body>
+</html>
