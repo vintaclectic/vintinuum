@@ -1521,6 +1521,37 @@
           return true;
         } catch (_) { return false; }
       }
+      _urlTextForDetection(url) {
+        let text = String(url || '');
+        for (let i = 0; i < 2; i++) {
+          try {
+            const decoded = decodeURIComponent(text);
+            if (decoded === text) break;
+            text = decoded;
+          } catch (_) { break; }
+        }
+        return text.toLowerCase();
+      }
+      _isHlsUrl(url) {
+        const u = this._urlTextForDetection(url);
+        return /\.m3u8(?:[?#]|$)/i.test(u) ||
+          /\/(?:hls|live-hls|manifest)(?:[/?#]|$)/i.test(u) ||
+          /\/api\/(?:kick\/live|stream|media)\/[^?#]*(?:hls|manifest|m3u8)/i.test(u) ||
+          /[?&](?:format|type|kind)=hls(?:&|$)/i.test(u);
+      }
+      _isDashUrl(url) {
+        const u = this._urlTextForDetection(url);
+        return /\.mpd(?:[?#]|$)/i.test(u) ||
+          /\/(?:dash|mpd)(?:[/?#]|$)/i.test(u) ||
+          /[?&](?:format|type|kind)=dash(?:&|$)/i.test(u);
+      }
+      _isStreamUrl(url) {
+        const u = this._urlTextForDetection(url);
+        return this._isHlsUrl(url) || this._isDashUrl(url) ||
+          /\.ism(?:[?#]|$)/i.test(u) ||
+          /\/api\/stream\//i.test(u) ||
+          /\/api\/kick\/live\//i.test(u);
+      }
       // Set a media element's src with automatic one-time proxy fallback. When
       // the direct load errors (bad cert/CORS), swap to the proxied URL once.
       _setMediaSrc(el, url) {
@@ -1673,7 +1704,9 @@
 
         if (providedType && providedType !== 'auto') return aliases[providedType] ?? providedType;
 
-        const u = (url || '').toLowerCase().split('?')[0].split('#')[0];
+        if (this._isStreamUrl(url)) return 'stream';
+
+        const u = this._urlTextForDetection(url).split('?')[0].split('#')[0];
         const ext = u.split('.').pop();
 
         // Streams
@@ -2099,8 +2132,8 @@
         video.playsInline = true;
         video.volume = this.volume;
 
-        const isM3U8 = /\.m3u8(\?|#|$)/i.test(url);
-        const isMPD  = /\.mpd(\?|#|$)/i.test(url);
+        const isM3U8 = this._isHlsUrl(url);
+        const isMPD  = this._isDashUrl(url);
 
         if (isM3U8) {
           this.setBadge('HLS Stream');

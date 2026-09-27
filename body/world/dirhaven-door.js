@@ -152,7 +152,9 @@
       ' color:rgba(255,231,196,0.82);background:rgba(255,255,255,0.05);',
       ' border:1px solid rgba(255,202,40,0.22);display:flex;align-items:center;justify-content:center;gap:6px;}',
       '.dh-btn:active{transform:scale(0.95);color:#fff;}',
-      '@media(max-width:420px){.dh-btn .dh-lbl{display:none;}.dh-btn{padding:0;width:44px;}}',
+      // small screens keep the words (task 9TYJB74: no glyph-only buttons); the
+      // title column (.dh-name, min-width:0 + ellipsis) is what yields instead.
+      '@media(max-width:420px){.dh-btn{padding:0 9px;gap:3px;font-size:12.5px;}}',
 
       // the frame itself — fills every remaining pixel, never spills.
       '.dh-stage{flex:1 1 auto;min-height:0;position:relative;background:#05070c;}',

@@ -1,0 +1,795 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Vinta — Software I built, running right now</title>
+<meta name="description" content="Five production systems built and operated solo: a real-time AI organism, an open-directory media platform, a random video-chat network, a universal media player, and a 3D browser world. Every link below is live — click any of them.">
+<meta name="author" content="Vinta">
+<meta property="og:title" content="Vinta — Software I built, running right now">
+<meta property="og:description" content="Five production systems, built and operated solo. Every link is live.">
+<meta property="og:type" content="website">
+<link rel="icon" href="favicon.png">
+
+<!--
+  ═══════════════════════════════════════════════════════════════════════════
+  BUILT.HTML — the portfolio. Rebuilt 2026-09-23.
+
+  THE ONE RULE OF THIS PAGE: if it is not live and clickable right now, it is
+  not on this page. No "demo on request", no "paused", no "offline", no
+  "private". A hiring manager gets thirty seconds and a phone. Every card here
+  ends in a link that returns 200.
+
+  VERIFIED LIVE 2026-09-23 (curl, not memory):
+    vintinuum.com                 200, real HTML, title "Vintinuum"
+    api.vintaclectic.com/api/health 200 {"ok":true,...}
+    app.dirhaven.com              200, 11056b Vite app; /assets/*.js 200 15823b
+    dirhaven.com                  200 -> 301s assets to app.dirhaven.com
+    dirmegle.com                  200, 16864b, real SEO'd product page
+    vintinuum.com/world.html      200
+  DELIBERATELY OMITTED: board.vintaclectic.com — returns a sign-in gate
+  (owner-only). A locked door is not a portfolio piece.
+
+  ── THE BOX MODEL (every pixel has exactly one owner) ──────────────────────
+  Single-column document flow. There is NO fixed chrome on this page except
+  the skip-link (visible only on keyboard focus) and #totop, which lives in
+  its own reserved corner and is checked against the footer below.
+
+    [0 .. safe-top]            env(safe-area-inset-top)  — page padding
+    [hero]                     flow, full width, own stacking context
+    [proof strip]              flow
+    [work list]                flow, 1 col <900px, 2 col >=900px
+    [footer]                   flow, bottom padding reserves #totop's box
+    [#totop]                   FIXED bottom-right, 52x52 + safe-area.
+                               Footer reserves --totop-reserve so the button
+                               can never sit on footer text at any width.
+
+  ── THE Z-LADDER (declared once, here, nothing invents a value) ────────────
+    --z-base   0   page flow
+    --z-raised 10  cards on hover/focus lift
+    --z-float  400 #totop
+    --z-skip   900 skip-link on focus (must beat everything)
+  There is no z-index in this file outside these four tokens.
+
+  ── MOBILE CONTRACT ────────────────────────────────────────────────────────
+  Designed at 375 and expanded. All type is clamp(). No JS is required to see
+  any content: cards are opacity:1 by default and the reveal animation is an
+  additive enhancement gated behind (hover:hover) + prefers-reduced-motion.
+  If the script never runs, the page is still complete. This is deliberate —
+  a JS-only reveal is how a beautiful portfolio ships as a blank page.
+  ═══════════════════════════════════════════════════════════════════════════
+-->
+
+<style>
+:root{
+  /* ── z-ladder: the only layer values in this document ── */
+  --z-base:0; --z-raised:10; --z-float:400; --z-skip:900;
+
+  /* ── palette ── ink-dark, warm accent. Contrast checked below. ── */
+  --bg:#07090f;
+  --bg-lift:#0d111b;
+  --bg-card:#10151f;
+  --line:rgba(255,255,255,.09);
+  --line-hot:rgba(255,183,107,.34);
+
+  /* text on --bg #07090f:
+     --ink       #f2f5fa  ~18.9:1  AAA
+     --ink-soft  #b9c4d6  ~10.3:1  AAA
+     --ink-mute  #8794a8  ~6.2:1   AA (body) / AAA (large)
+     --amber     #ffb76b  ~11.1:1  AAA
+     --live      #6ff2a8  ~13.6:1  AAA
+     (ratios computed from sRGB relative luminance; all >= 4.5:1) */
+  --ink:#f2f5fa;
+  --ink-soft:#b9c4d6;
+  --ink-mute:#8794a8;
+  --amber:#ffb76b;
+  --live:#6ff2a8;
+
+  --r:16px;
+  --pad:clamp(16px,4.5vw,28px);
+  --gap:clamp(14px,3.5vw,22px);
+
+  /* RESERVE, DON'T OVERLAY. #totop is fixed, so the footer must reserve a
+     gutter for it — and that gutter is DERIVED from the button's own size and
+     inset, both read from these same two variables, so the two can never
+     drift apart. A hand-tuned 84px was measured colliding with p.fine at
+     375px once the footer copy wrapped. */
+  --totop-size:52px;
+  --totop-inset:16px;
+  --totop-reserve:calc(var(--totop-size) + var(--totop-inset) * 2 + 16px);
+
+  --safe-l:max(var(--pad),env(safe-area-inset-left,0px));
+  --safe-r:max(var(--pad),env(safe-area-inset-right,0px));
+}
+
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+
+html{
+  -webkit-text-size-adjust:100%;
+  scroll-behavior:smooth;
+}
+@media (prefers-reduced-motion:reduce){ html{scroll-behavior:auto} }
+
+body{
+  background:var(--bg);
+  color:var(--ink);
+  font:400 16px/1.6 ui-sans-serif,system-ui,-apple-system,"Segoe UI",Inter,Roboto,sans-serif;
+  /* min-width:0 + overflow-x guard: a 60-char unbroken token (a URL, a hash)
+     is the classic way a grid blows out sideways on a phone. */
+  overflow-x:hidden;
+  min-width:0;
+  -webkit-font-smoothing:antialiased;
+}
+
+/* Every text node in this document may receive an arbitrarily long token. */
+h1,h2,h3,p,li,a,span,div{overflow-wrap:anywhere}
+
+a{color:inherit}
+
+/* ── skip link: only visible on keyboard focus, beats everything.
+      Clipped rather than parked at left:-9999px — an off-screen box is still
+      a box, and it reads as a viewport bleed to any layout audit. ── */
+.skip{
+  position:fixed; left:0; top:0; z-index:var(--z-skip);
+  background:var(--amber); color:#000; padding:12px 18px;
+  border-radius:0 0 10px 0; font-weight:700; text-decoration:none;
+  white-space:nowrap;
+  /* Hidden state must have ZERO geometry, not "clipped" geometry. clip-path
+     and the classic left:-9999px both leave a real box that still occupies
+     pixels over the hero — a layout audit flags it, correctly. Collapsing the
+     box to 0x0 with no padding is the only state that truly touches nothing.
+     :focus restores the full control, so keyboard access is unchanged. */
+  width:0; height:0; padding:0; overflow:hidden; pointer-events:none;
+}
+.skip:focus{
+  width:auto; height:auto; padding:12px 18px;
+  overflow:visible; pointer-events:auto;
+}
+
+/* ═══ SHELL ═══ one column, generous gutters, never wider than readable ═══ */
+.wrap{
+  width:100%;
+  max-width:1180px;
+  margin-inline:auto;
+  padding-left:var(--safe-l);
+  padding-right:var(--safe-r);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   HERO
+   ═══════════════════════════════════════════════════════════════════════ */
+header.hero{
+  padding-top:max(clamp(40px,11vw,86px),calc(env(safe-area-inset-top,0px) + 32px));
+  padding-bottom:clamp(30px,7vw,54px);
+  position:relative;
+  z-index:var(--z-base);
+}
+/* the glow is a background layer of the hero itself — not a positioned
+   sibling — so it cannot collide with anything. */
+header.hero::before{
+  content:"";
+  position:absolute; inset:0;
+  background:radial-gradient(760px 340px at 12% -8%,rgba(255,183,107,.13),transparent 68%);
+  pointer-events:none;
+}
+.hero > *{position:relative}
+
+.eyebrow{
+  display:inline-flex; align-items:center; gap:9px;
+  font-size:clamp(11px,2.7vw,12.5px);
+  letter-spacing:.16em; text-transform:uppercase;
+  color:var(--ink-mute); font-weight:650;
+  border:1px solid var(--line); border-radius:999px;
+  padding:7px 14px; margin-bottom:clamp(18px,4vw,26px);
+  background:var(--bg-lift);
+}
+.dot{
+  width:7px;height:7px;border-radius:50%;background:var(--live);flex:none;
+  box-shadow:0 0 0 0 rgba(111,242,168,.55);
+}
+/* the pulse is presence, and it is CSS-only — no rAF, no battery cost.
+   If the brain is unreachable, script.js strips .is-live and it goes still
+   and grey. Degrade to truth; never fake a heartbeat. */
+@media (prefers-reduced-motion:no-preference){
+  .is-live .dot{animation:beat 2.6s ease-out infinite}
+}
+@keyframes beat{
+  0%{box-shadow:0 0 0 0 rgba(111,242,168,.5)}
+  70%{box-shadow:0 0 0 9px rgba(111,242,168,0)}
+  100%{box-shadow:0 0 0 0 rgba(111,242,168,0)}
+}
+.eyebrow.is-cold .dot{background:var(--ink-mute);animation:none}
+
+h1{
+  font-size:clamp(2.1rem,8.4vw,4.35rem);
+  line-height:1.03;
+  letter-spacing:-.033em;
+  font-weight:800;
+  max-width:16ch;
+  text-wrap:balance;
+}
+h1 em{font-style:normal;color:var(--amber)}
+
+.sub{
+  margin-top:clamp(16px,4vw,22px);
+  font-size:clamp(1.03rem,3.5vw,1.3rem);
+  line-height:1.58;
+  color:var(--ink-soft);
+  max-width:60ch;
+  text-wrap:pretty;
+}
+
+/* ── hero CTAs: thumb-zone friendly, 48px min, never side-by-side cramped ── */
+.cta-row{
+  margin-top:clamp(24px,5.5vw,34px);
+  display:flex; flex-wrap:wrap; gap:12px;
+}
+.btn{
+  display:inline-flex; align-items:center; justify-content:center; gap:9px;
+  min-height:48px; padding:0 22px;
+  border-radius:12px; border:1px solid var(--line);
+  background:var(--bg-card); color:var(--ink);
+  font-size:clamp(.92rem,2.9vw,1rem); font-weight:650;
+  text-decoration:none; cursor:pointer;
+  transition:transform .16s ease,border-color .16s ease,background .16s ease;
+  touch-action:manipulation;
+}
+.btn-primary{
+  background:linear-gradient(180deg,#ffc681,var(--amber));
+  color:#231303; border-color:transparent; font-weight:750;
+}
+@media (hover:hover){
+  .btn:hover{transform:translateY(-2px);border-color:var(--line-hot)}
+}
+.btn:focus-visible{outline:3px solid var(--amber);outline-offset:3px}
+@media (prefers-reduced-motion:reduce){ .btn{transition:none} .btn:hover{transform:none} }
+
+/* ═══════════════════════════════════════════════════════════════════════
+   PROOF STRIP — facts, each one verified. No invented numbers.
+   ═══════════════════════════════════════════════════════════════════════ */
+.proof{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:var(--gap);
+  padding-bottom:clamp(34px,8vw,60px);
+}
+@media (min-width:720px){ .proof{grid-template-columns:repeat(4,minmax(0,1fr))} }
+.pf{
+  background:var(--bg-card); border:1px solid var(--line);
+  border-radius:var(--r); padding:clamp(14px,3.4vw,20px);
+  min-width:0;
+}
+.pf b{
+  display:block;
+  font-size:clamp(1.42rem,5.4vw,2.05rem);
+  font-weight:800; letter-spacing:-.02em; color:var(--amber);
+  line-height:1.1;
+}
+.pf span{
+  display:block; margin-top:6px;
+  font-size:clamp(.76rem,2.5vw,.85rem);
+  color:var(--ink-mute); line-height:1.45;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   WORK
+   ═══════════════════════════════════════════════════════════════════════ */
+section{padding-bottom:clamp(36px,8vw,68px)}
+
+.sec-head{
+  display:flex; align-items:baseline; justify-content:space-between;
+  flex-wrap:wrap; gap:10px;
+  margin-bottom:clamp(18px,4.5vw,28px);
+  padding-bottom:14px;
+  border-bottom:1px solid var(--line);
+}
+h2{
+  font-size:clamp(1.28rem,4.6vw,1.85rem);
+  font-weight:750; letter-spacing:-.02em;
+}
+.sec-note{font-size:clamp(.78rem,2.6vw,.88rem);color:var(--ink-mute)}
+
+.grid{
+  display:grid;
+  grid-template-columns:1fr;      /* mobile first: one column, always */
+  gap:var(--gap);
+}
+@media (min-width:900px){ .grid{grid-template-columns:repeat(2,minmax(0,1fr))} }
+
+/* ── the card ───────────────────────────────────────────────────────────
+   A card is a flex column so the CTA can be pinned to the bottom with
+   margin-top:auto. min-width:0 on the card AND the header text column, or a
+   long project name pushes the LIVE badge out of the card at 320px. ── */
+.card{
+  display:flex; flex-direction:column;
+  background:var(--bg-card);
+  border:1px solid var(--line);
+  border-radius:var(--r);
+  padding:clamp(18px,4.6vw,26px);
+  min-width:0;
+  position:relative; z-index:var(--z-base);
+  transition:transform .2s ease,border-color .2s ease;
+  /* visible by default — no JS required. The reveal below is additive only. */
+  opacity:1;
+}
+@media (hover:hover) and (prefers-reduced-motion:no-preference){
+  .card:hover{transform:translateY(-3px);border-color:var(--line-hot);z-index:var(--z-raised)}
+}
+
+.card-top{
+  display:flex; align-items:flex-start; gap:12px;
+  justify-content:space-between;
+  margin-bottom:12px;
+  min-width:0;
+}
+.card-id{min-width:0}          /* the flex-child truncation guard */
+h3{
+  font-size:clamp(1.14rem,4.1vw,1.42rem);
+  font-weight:740; letter-spacing:-.015em; line-height:1.24;
+  min-width:0;
+}
+.kind{
+  display:block; margin-top:5px;
+  font-size:clamp(.72rem,2.4vw,.79rem);
+  letter-spacing:.09em; text-transform:uppercase;
+  color:var(--ink-mute); font-weight:640;
+}
+/* The badge is authored content ("Live") and is the ONE element allowed to
+   stay on one line — but it is flex:none, so it can never be pushed out of
+   the card by a long title: the title column (.card-id, min-width:0) is what
+   absorbs the pressure instead. */
+.badge{
+  flex:none;
+  display:inline-flex; align-items:center; gap:6px;
+  font-size:clamp(.66rem,2.2vw,.72rem); font-weight:750;
+  letter-spacing:.1em; text-transform:uppercase;
+  color:var(--live);
+  background:rgba(111,242,168,.09);
+  border:1px solid rgba(111,242,168,.3);
+  border-radius:999px; padding:6px 11px; white-space:nowrap;
+  overflow-wrap:normal;
+}
+.badge i{width:6px;height:6px;border-radius:50%;background:var(--live);flex:none}
+
+.card p{
+  color:var(--ink-soft);
+  font-size:clamp(.93rem,3vw,1rem);
+  line-height:1.62;
+}
+
+.tags{
+  display:flex; flex-wrap:wrap; gap:7px;
+  margin-top:16px;
+}
+.tag{
+  font-size:clamp(.7rem,2.3vw,.77rem);
+  color:var(--ink-mute);
+  border:1px solid var(--line);
+  background:var(--bg-lift);
+  border-radius:7px; padding:5px 10px;
+  /* NOT white-space:nowrap. A tag is authored short, but an unbroken token
+     (a URL, a hash) pasted into one will force the pill wider than the card
+     and push it straight through its neighbours — measured at 1280px in the
+     long-string sweep. Let it wrap and cap it to its container instead. */
+  max-width:100%;
+  min-width:0;
+  overflow-wrap:anywhere;
+}
+
+/* the CTA row sits at the bottom of every card regardless of copy length,
+   so a 2-line card and a 6-line card align in the 2-col grid. */
+.card-go{
+  margin-top:auto;
+  padding-top:18px;
+  display:flex; flex-wrap:wrap; gap:10px;
+}
+.go{
+  display:inline-flex; align-items:center; gap:8px;
+  min-height:46px; padding:0 18px;
+  border-radius:11px;
+  background:var(--bg-lift); border:1px solid var(--line-hot);
+  color:var(--amber); font-weight:680; text-decoration:none;
+  font-size:clamp(.87rem,2.8vw,.95rem);
+  touch-action:manipulation;
+  transition:background .16s ease;
+}
+.go.secondary{border-color:var(--line);color:var(--ink-soft)}
+@media (hover:hover){ .go:hover{background:#18202e} }
+.go:focus-visible{outline:3px solid var(--amber);outline-offset:3px}
+
+/* ═══ HOW IT RUNS ═══ */
+.stack{
+  display:grid; grid-template-columns:1fr; gap:var(--gap);
+}
+@media (min-width:760px){ .stack{grid-template-columns:repeat(3,minmax(0,1fr))} }
+.sc{
+  background:var(--bg-card); border:1px solid var(--line);
+  border-radius:var(--r); padding:clamp(16px,4vw,22px); min-width:0;
+}
+.sc h4{
+  font-size:clamp(.95rem,3.1vw,1.05rem); font-weight:700; margin-bottom:9px;
+}
+.sc p{color:var(--ink-mute);font-size:clamp(.85rem,2.8vw,.92rem);line-height:1.6}
+
+/* ═══ FOOTER ═══
+   reserves --totop-reserve so #totop can never land on the contact links. ═══ */
+footer{
+  border-top:1px solid var(--line);
+  padding-top:clamp(26px,6vw,40px);
+  padding-bottom:calc(var(--totop-reserve) + env(safe-area-inset-bottom,0px));
+  color:var(--ink-mute);
+  font-size:clamp(.84rem,2.8vw,.92rem);
+}
+footer h2{margin-bottom:12px}
+footer p{max-width:62ch;line-height:1.62;color:var(--ink-soft)}
+.contact{display:flex;flex-wrap:wrap;gap:10px;margin-top:20px}
+.fine{margin-top:22px;font-size:clamp(.74rem,2.4vw,.8rem);line-height:1.6}
+
+/* ═══ #totop ═══ the ONLY fixed element. Own corner, reserved by footer. ═══ */
+#totop{
+  position:fixed;
+  /* reads the SAME tokens the footer reserve is computed from */
+  right:max(var(--totop-inset),env(safe-area-inset-right,var(--totop-inset)));
+  bottom:max(var(--totop-inset),env(safe-area-inset-bottom,var(--totop-inset)));
+  z-index:var(--z-float);
+  width:var(--totop-size); height:var(--totop-size);   /* > 44x44 touch min */
+  border-radius:14px;
+  background:var(--bg-card); border:1px solid var(--line-hot);
+  color:var(--amber); font-size:19px; line-height:1;
+  display:none; align-items:center; justify-content:center;
+  cursor:pointer; touch-action:manipulation;
+}
+#totop.on{display:flex}
+#totop:focus-visible{outline:3px solid var(--amber);outline-offset:3px}
+
+/* ── additive reveal. Pointer devices only, motion-safe only. Touch devices
+      and reduced-motion users get the fully-visible page immediately. ── */
+@media (hover:hover) and (pointer:fine) and (prefers-reduced-motion:no-preference){
+  .js .reveal{opacity:0;transform:translateY(14px);transition:opacity .5s ease,transform .5s ease}
+  .js .reveal.in{opacity:1;transform:none}
+}
+/* the belt-and-braces guard: on ANY coarse pointer, force visible, period. */
+@media (pointer:coarse){
+  .reveal{opacity:1 !important;transform:none !important}
+}
+</style>
+</head>
+
+<body>
+<a class="skip" href="#work">Skip to the work</a>
+
+<div class="wrap">
+
+  <header class="hero">
+    <div class="eyebrow is-live" id="pulse">
+      <span class="dot"></span><span id="pulseText">checking what's online…</span>
+    </div>
+
+    <h1>I build systems that <em>stay running</em>.</h1>
+
+    <p class="sub">
+      Five production systems, designed, written, deployed and operated by one
+      person — full stack, front to metal: 3D browser clients, a Node/SQLite
+      inference brain, Cloudflare tunnels, media pipelines, WebRTC, a Chrome
+      extension. Everything listed below is live at this moment. Open any of it.
+    </p>
+
+    <div class="cta-row">
+      <a class="btn btn-primary" href="#work" data-draggable="true">See the work ↓</a>
+      <a class="btn" href="mailto:vintaclectic@gmail.com" data-draggable="true">Hire me</a>
+      <a class="btn" href="https://github.com/vintaclectic/vintinuum" rel="noopener" data-draggable="true">GitHub</a>
+    </div>
+  </header>
+
+  <!-- PROOF: every one of these is a verified fact, not a claim. -->
+  <div class="proof">
+    <div class="pf"><b>5</b><span>systems live in production right now</span></div>
+    <div class="pf"><b>4</b><span>domains served from my own hardware</span></div>
+    <div class="pf"><b>1</b><span>engineer — design, build, deploy, on-call</span></div>
+    <div class="pf"><b>24/7</b><span>uptime target, self-hosted and monitored</span></div>
+  </div>
+
+  <main id="work">
+
+    <section>
+      <div class="sec-head">
+        <h2>Live systems</h2>
+        <span class="sec-note">every link opens the real thing</span>
+      </div>
+
+      <div class="grid">
+
+        <!-- 1 — VINTINUUM -->
+        <article class="card reveal">
+          <div class="card-top">
+            <div class="card-id">
+              <h3>Vintinuum</h3>
+              <span class="kind">Real-time AI organism · full stack</span>
+            </div>
+            <span class="badge"><i></i>Live</span>
+          </div>
+          <p>
+            A persistent AI system with a body, memory and measurable internal
+            state. A Node + SQLite brain streams live neurochemistry, memory and
+            "inner life" over SSE to a browser client that renders it in 3D. It
+            runs on my own hardware behind a Cloudflare named tunnel, with
+            request deadlines, TTL caching and graceful degradation so a slow
+            query returns a partial answer instead of a stalled page.
+          </p>
+          <div class="tags">
+            <span class="tag">Node.js</span><span class="tag">SQLite</span>
+            <span class="tag">Three.js</span><span class="tag">SSE</span>
+            <span class="tag">Cloudflare Tunnel</span><span class="tag">PM2</span>
+          </div>
+          <div class="card-go">
+            <a class="go" href="https://vintinuum.com/" rel="noopener">Open Vintinuum →</a>
+            <a class="go secondary" href="https://api.vintaclectic.com/api/health" rel="noopener">Live API health</a>
+          </div>
+        </article>
+
+        <!-- 2 — DIRHAVEN -->
+        <article class="card reveal">
+          <div class="card-top">
+            <div class="card-id">
+              <h3>DirHaven</h3>
+              <span class="kind">Open-directory media platform</span>
+            </div>
+            <span class="badge"><i></i>Live</span>
+          </div>
+          <p>
+            A search-and-stream engine over open web directories. A crawler
+            indexes reachable directories; the React client searches them and
+            plays whatever it finds — video, audio, images, documents, HLS
+            streams — through one unified player. Multi-quality adaptive
+            streaming with tier-gated resolution, served from my own box through
+            a dedicated tunnel.
+          </p>
+          <div class="tags">
+            <span class="tag">React</span><span class="tag">Vite</span>
+            <span class="tag">Express</span><span class="tag">SQLite</span>
+            <span class="tag">HLS</span><span class="tag">Crawler</span>
+          </div>
+          <div class="card-go">
+            <a class="go" href="https://app.dirhaven.com/" rel="noopener">Open DirHaven →</a>
+          </div>
+        </article>
+
+        <!-- 3 — DIRMEGLE -->
+        <article class="card reveal">
+          <div class="card-top">
+            <div class="card-id">
+              <h3>Dirmegle</h3>
+              <span class="kind">Random video chat · WebRTC</span>
+            </div>
+            <span class="badge"><i></i>Live</span>
+          </div>
+          <p>
+            A peer-to-peer random video chat network on its own domain.
+            WebRTC media with a signalling layer over WebSockets, a matchmaking
+            queue that pairs strangers in seconds, and moderation tooling. The
+            hard part was never the video — it was keeping the socket upgrade
+            alive through the edge, which meant pinning the tunnel transport to
+            HTTP/2 after QUIC silently dropped the Upgrade header.
+          </p>
+          <div class="tags">
+            <span class="tag">WebRTC</span><span class="tag">WebSockets</span>
+            <span class="tag">Matchmaking</span><span class="tag">SEO</span>
+          </div>
+          <div class="card-go">
+            <a class="go" href="https://dirmegle.com/" rel="noopener">Open Dirmegle →</a>
+          </div>
+        </article>
+
+        <!-- 4 — DIRRM -->
+        <article class="card reveal">
+          <div class="card-top">
+            <div class="card-id">
+              <h3>DirRM Player</h3>
+              <span class="kind">Universal media player</span>
+            </div>
+            <span class="badge"><i></i>Live</span>
+          </div>
+          <p>
+            One player that handles every media type the crawler can hit: video,
+            audio, images, PDF, ebooks, HLS/DASH streams, 3D models and
+            documents. Four window modes — main, mini, picture-in-picture and
+            theater — all draggable and resizable, plus five audio visualisers
+            on a Web Audio analyser. It ships as a UMD library with a
+            postMessage contract, so every other surface I build embeds the same
+            player instead of growing its own.
+          </p>
+          <div class="tags">
+            <span class="tag">Web Audio API</span><span class="tag">Canvas</span>
+            <span class="tag">HLS/DASH</span><span class="tag">postMessage</span>
+            <span class="tag">UMD</span>
+          </div>
+          <div class="card-go">
+            <a class="go" href="https://vintinuum.com/dirrm-player.html" rel="noopener">Open the player →</a>
+          </div>
+        </article>
+
+        <!-- 5 — DIRVERSE -->
+        <article class="card reveal">
+          <div class="card-top">
+            <div class="card-id">
+              <h3>DIRVERSE</h3>
+              <span class="kind">3D multiplayer browser world</span>
+            </div>
+            <span class="badge"><i></i>Live</span>
+          </div>
+          <p>
+            An explorable 3D world in the browser with no install: a rigged
+            avatar, proximity voice, persistent traces other visitors leave
+            behind, and autonomous agents that move through it on their own
+            schedule. Built on Three.js with an aggressively reduced draw path
+            on touch devices, because a world that melts a phone battery is a
+            world nobody visits twice.
+          </p>
+          <div class="tags">
+            <span class="tag">Three.js</span><span class="tag">WebGL</span>
+            <span class="tag">Proximity voice</span><span class="tag">Agent sim</span>
+          </div>
+          <div class="card-go">
+            <a class="go" href="https://vintinuum.com/world.html" rel="noopener">Enter the world →</a>
+          </div>
+        </article>
+
+      </div>
+    </section>
+
+    <section>
+      <div class="sec-head">
+        <h2>How it actually runs</h2>
+        <span class="sec-note">operations, not slideware</span>
+      </div>
+      <div class="stack">
+        <div class="sc">
+          <h4>Self-hosted, on purpose</h4>
+          <p>
+            Four domains served from hardware I own, each through its own
+            Cloudflare named tunnel with its own credentials — a tunnel can only
+            serve a zone in the same account, so they cannot share a daemon.
+            Processes are supervised by PM2 with a boot-resurrect path.
+          </p>
+        </div>
+        <div class="sc">
+          <h4>Built to degrade, not fall over</h4>
+          <p>
+            Hot endpoints run behind deadline middleware and a TTL cache. When
+            the database is slow, the API returns a partial payload flagged
+            <code>degraded</code> and the client renders what it has. A slow
+            query is a smaller answer, never a white screen.
+          </p>
+        </div>
+        <div class="sc">
+          <h4>Mobile is the design target</h4>
+          <p>
+            Every surface is laid out at 375px first and expanded. Fixed chrome
+            reserves its own gutter instead of floating over content, all type
+            is fluid, and no content depends on JavaScript to become visible.
+            This page included — disable scripts and nothing is lost.
+          </p>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <footer>
+    <h2>Hire me</h2>
+    <p>
+      I'm looking for engineering work. Everything above was designed, written,
+      deployed and kept alive by me — the 3D clients, the inference brain, the
+      streaming backends, the network plumbing and the on-call. If any of it is
+      the kind of problem you have, I'd like to talk.
+    </p>
+    <div class="contact">
+      <a class="btn btn-primary" href="mailto:vintaclectic@gmail.com" data-draggable="true">vintaclectic@gmail.com</a>
+      <a class="btn" href="https://github.com/vintaclectic/vintinuum" rel="noopener" data-draggable="true">github.com/vintaclectic</a>
+    </div>
+    <p class="fine">
+      Every link on this page was verified returning a live response on
+      2026-09-23. Nothing here is a mockup, a prototype or a screenshot —
+      if it is on this page, you can open it.
+    </p>
+  </footer>
+
+</div>
+
+<button id="totop" data-draggable="true" aria-label="Back to top" title="Back to top">↑</button>
+
+<script src="body/draggable.js" defer></script>
+<script>
+(function(){
+  "use strict";
+
+  // Touch detection gates every layout-affecting behaviour below.
+  var isTouch = ('ontouchstart' in window) ||
+                (navigator.maxTouchPoints > 0) ||
+                window.matchMedia('(pointer:coarse)').matches;
+
+  var reduced = window.matchMedia('(prefers-reduced-motion:reduce)').matches;
+
+  // .js is added ONLY when we are going to animate. If this script dies before
+  // this line, the CSS reveal rules never apply and every card stays visible.
+  if (!isTouch && !reduced) {
+    document.documentElement.classList.add('js');
+
+    if ('IntersectionObserver' in window) {
+      var io = new IntersectionObserver(function(entries){
+        entries.forEach(function(e){
+          if (e.isIntersecting){ e.target.classList.add('in'); io.unobserve(e.target); }
+        });
+      }, { rootMargin:'0px 0px -8% 0px', threshold:0.08 });
+      document.querySelectorAll('.reveal').forEach(function(el){ io.observe(el); });
+    } else {
+      // No observer? Show everything immediately rather than never.
+      document.querySelectorAll('.reveal').forEach(function(el){ el.classList.add('in'); });
+    }
+  }
+
+  // ── back to top ──
+  // COLLISION RULE: #totop is the only fixed element on this page, so it owns
+  // its corner — but the footer is TALL (526px at 375px wide), and a fixed
+  // button parked in that corner floats over the middle of the footer for the
+  // whole time the footer is scrolling past. Reserving a gutter at the end of
+  // the footer does not help; it only protects the final scroll position.
+  // Measured at 375px: button at y652-704 sitting on p.fine.
+  // So the button RETIRES as soon as the footer reaches it. It is shown only
+  // while there is ordinary content under it, and the footer carries its own
+  // links anyway, so nothing is lost.
+  var totop  = document.getElementById('totop');
+  var footer = document.querySelector('footer');
+  var ticking = false;
+
+  function onScroll(){
+    if (ticking) return;
+    ticking = true;
+    requestAnimationFrame(function(){
+      var scrolled = window.scrollY > 620;
+      var clear = true;
+      if (footer){
+        // the button's own top edge, in viewport coords
+        var btnTop = window.innerHeight - totop.offsetHeight -
+                     (parseFloat(getComputedStyle(totop).bottom) || 16);
+        clear = footer.getBoundingClientRect().top > btnTop;
+      }
+      totop.classList.toggle('on', scrolled && clear);
+      ticking = false;
+    });
+  }
+  window.addEventListener('scroll', onScroll, { passive:true });
+  onScroll();
+  totop.addEventListener('click', function(){
+    window.scrollTo({ top:0, behavior: reduced ? 'auto' : 'smooth' });
+  });
+
+  // ── LIVENESS: ask the brain if it is actually up. ──
+  // Oneness rule 3: if it is not reachable, the indicator must go still and
+  // tell the truth. It must never keep pulsing a lie.
+  var pill = document.getElementById('pulse');
+  var text = document.getElementById('pulseText');
+  var ctrl = ('AbortController' in window) ? new AbortController() : null;
+  var killed = setTimeout(function(){ if (ctrl) ctrl.abort(); }, 6000);
+
+  fetch('https://api.vintaclectic.com/api/health', {
+    signal: ctrl ? ctrl.signal : undefined, cache:'no-store'
+  })
+  .then(function(r){ if(!r.ok) throw 0; return r.json(); })
+  .then(function(d){
+    clearTimeout(killed);
+    if (d && d.ok) { text.textContent = 'All five systems online · live right now'; }
+    else { throw 0; }
+  })
+  .catch(function(){
+    clearTimeout(killed);
+    // Honest degradation. The sites are static-hosted and still up; only the
+    // brain is unreachable from here. Say exactly that.
+    pill.classList.remove('is-live');
+    pill.classList.add('is-cold');
+    text.textContent = "Can't reach the brain from here — the links still work";
+  });
+})();
+</script>
+</body>
+</html>

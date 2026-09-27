@@ -23,119 +23,40 @@
      was 264px TALL, trading a horizontal collision for a vertical one. A centred
      message wants a readable measure, so it gets one, and the band it may occupy
      is bounded explicitly. */
-  #status { position: fixed; z-index: 5; font-size: 20px; color: rgba(245,235,220,0.7); opacity: 0; transition: opacity .6s; pointer-events: none;
+  /* ── THE MIDDLE BAND (task 9TYJB74, 2026-09-26) ──────────────────────────
+     The left launcher rail is gone (it is the bottom dock now, see
+     dirverse-hud.js), so the band between the HUD panel and the bottom stack is
+     shared by exactly three transient readouts, each given its own slice:
+       #status  — TOP of the band, one short message, max 56px tall
+       #traces  — the rest of the band below #status (never both: see :has rule)
+       #feed    — bottom of the band, grows upward, clipped to its own box
+     Horizontally every one of them reserves the RIGHT column (--wv-right-col:
+     the run/jump pad on touch, and the docked account stack via
+     --vint-dock-reach-bottom), whichever is wider. Vertically they read the
+     measured vars: --vint-hud-bottom (world-hud.js) and --wv-stack (the dock
+     plus the say bar, published by dirverse-hud.js layoutRail). Nothing here
+     counts a neighbour by hand. */
+  :root { --wv-right-col: 0px; --wv-hint-h: 44px;
+    /* the HUD panel (world-hud.js) reserves this much on the right: #topctl's
+       column, OR the docked corner stack's measured reach (the "Begin" pill /
+       account button), whichever is wider — so neither can clip the panel */
+    --vint-hud-right-reserve: max(112px, calc(var(--vint-dock-reach-bottom, 0px) + 16px)); }
+  @media (pointer: coarse) { :root { --wv-right-col: 92px; --wv-hint-h: 0px; } }
+  #status { position: fixed; z-index: 5; font-size: 18px; line-height: 1.3; color: rgba(245,235,220,0.75); opacity: 0; transition: opacity .6s; pointer-events: none;
     overflow: hidden; text-align: center; text-wrap: balance;
-    /* centre of the column that starts where the rail ends and STOPS where the
-       right-hand docked stack begins (--vint-dock-reach-bottom). Centring in the
-       full post-rail column while the box is narrower than that column would
-       push the box back to the right, re-creating the very overlap the narrowed
-       width was added to prevent — the anchor and the measure must agree. */
-    left: calc(var(--status-rail) + (100vw - var(--status-rail) - var(--vint-dock-reach-bottom, 60px)) / 2);
-    /* THE FREE BAND, measured on both axes.
-
-       VERTICAL — the ceiling is --dv-railtop, not a hardcoded 270. That literal
-       was the live bottom of #vintWorldHud on a TALL viewport, but the panel is
-       content-driven: at 320px signed-in it measures 64->270, so a message
-       centred in a band that starts at 270 put its own top edge at 266, 4px
-       inside the HUD. The panel's real bottom (+16px gutter) is already measured
-       and republished by dirverse-hud's layoutRail() on resize, orientation
-       change and every world:state -- exactly when the panel can grow. 270px
-       remains the pre-mount fallback so the message is never mispositioned
-       before the HUD exists. The floor is --vint-dock-height-bottom (NOT
-       --vint-dock-reach-bottom, which is horizontal intrusion and much larger:
-       a 97px pill reaches 113px inward while standing only 60px tall).
-
-       HORIZONTAL — the box is centred but must clear BOTH side stacks. The left
-       rail (#dvRail) is 133px wide at left:12 and shares this vertical band, so
-       a 320px-wide centred box at 320-375px viewports reached straight across
-       it. Deriving the width from the dock's reach was tried and is wrong -- it
-       squeezed the box to a 70px ribbon 264px tall, trading a horizontal
-       collision for a vertical one. Instead the box is bounded by the widest
-       centre column that leaves the rail (and its mirror on the right) alone,
-       with a readable floor: a centred message wants a real measure.
-
-       CENTRED, BUT CLAMPED. Centring is only safe while the band is taller than
-       the message; on a short window translateY(-50%) walks the box back UP
-       through the ceiling. The clamp must live in the ANCHOR, because
-       translateY(-50%) is the only way CSS centres a box of unknown height and
-       percentages in `top` resolve against the viewport, not the element. So:
-       anchor at the band's midpoint, never above ceiling + half the tallest the
-       box may be. max-height caps the box at the band, so half of it is the most
-       the transform can pull upward -- the anchor cannot land inside the HUD in
-       any content state. Roomy band -> dead centre, as authored; tight band ->
-       sits just under the ceiling and clips inside its own box. */
-    /* The reserved LEFT column: #dvRail is 133px at left:12, so 145 + a 12px
-       gutter. #hint is wider (max-width 228 at left:16 = 244) but is handled on
-       the VERTICAL axis instead — reserving 256px here would leave a 64px ribbon
-       at 320px, the same failure as the symmetric attempt. See --status-hint. */
-    --status-rail: 157px;
-    /* #hint (the W/A/S/D keys line) reaches x244, past the rail, and on a narrow
-       fine-pointer window it sits exactly where a centred message lands. It is
-       display:none on coarse pointers, so a real phone never pays this. Rather
-       than shrink the column to a ribbon, the message starts BELOW the hint on
-       the viewports where the two would otherwise share pixels: 100vw-244 is the
-       room left beside the hint, and below ~180px of it there is no honest way to
-       sit alongside, so the ceiling drops under the hint instead. */
-    --status-hint: clamp(0px, (180px - (100vw - 244px)) * 999, 335px);
-    /* THE CEILING IS THE PANEL'S TRUE BOTTOM, NOT THE RAIL'S (2026-08-04). This
-       used to read --dv-railtop, which is the RAIL's ceiling — and layoutRail's
-       SQUEEZE clause deliberately drags that value back UP into the panel on
-       short viewports so the rail keeps a usable height (a rail with no height is
-       a dead control; the rail is allowed to tuck beside the panel). #status is
-       not allowed to tuck: it is centred text with nothing to scroll. While the
-       panel was ~190px tall the squeeze rarely bit and this was invisible; the
-       moment THE VIGIL grew the panel to 341px at 320px wide, the squeezed
-       ceiling landed INSIDE the panel and the message rendered 55x33px on top of
-       it. --vint-hud-bottom is the panel's real, never-squeezed bottom edge
-       (published by world-hud's publishBottom on every world:state, resize and
-       orientationchange), which is the only honest ceiling for anything that must
-       sit strictly below the panel. */
-    --status-top: max(var(--vint-hud-bottom, 270px), var(--status-hint));
-    /* THE FLOOR must clear the DOCKED CORNER STACKS, not merely the bottom of
-       the viewport (2026-08-04). --vint-dock-height-bottom is the height of the
-       bottom-right column (34px for the bare account dot), which says where the
-       column STARTS relative to the bottom — but the dot is lifted off the bottom
-       edge by the say bar's own clearance, so subtracting only its height left
-       the band running straight down onto it (measured: #status × #vwg-dot,
-       34x26px at 320x568 once THE VIGIL pushed the ceiling down and the box had
-       to grow downward to keep its measure). --vint-dock-reach-bottom is
-       deliberately NOT used here: the file's own history records that it is a
-       HORIZONTAL intrusion and the wrong number for vertical math (a 97px pill
-       reaches 113px inward while standing 60px tall). The honest floor is the
-       taller of the dock column and the say bar's live clearance, which is what
-       actually sits along the bottom edge. */
-    --status-floor: max(var(--vint-dock-height-bottom, 90px), var(--dv-railbot, 150px));
-    --status-band: max(48px, calc(100dvh - var(--status-top) - var(--status-floor) - 24px));
-    /* The rail is on the LEFT ONLY, so the message moves over rather than
-       shrinking symmetrically. Reserving the rail's width on BOTH sides to keep a
-       viewport-centred box was tried and is the 70px-ribbon failure again: at
-       320px the centre column is ~6px wide. Instead the box takes the whole
-       column to the RIGHT of the rail and centres itself in THAT, which keeps a
-       readable measure at every width and still touches nothing. */
-    /* THE RIGHT COLUMN IS RESERVED TOO (2026-08-04). The width used to reserve
-       only --status-rail (the LEFT rail), on the reasoning that the rail is
-       left-only so the box should simply move over. That held while the box sat
-       high in the viewport, above the docked stacks. THE VIGIL pushed the ceiling
-       down (the panel grew), the band bottomed out at its 48px minimum, and the
-       box — still 147px wide and centred in the column right of the rail — ended
-       up reaching x312 at 320px, straight onto welcome-gate's account dot at x270
-       (measured 34x26px). Reserving the right stack too is the *horizontal*
-       answer to a horizontal collision, which this file's own history insists on.
-       The earlier "70px ribbon" failure came from reserving the RAIL's full 157px
-       on both sides; --vint-dock-reach-bottom is the real intrusion of the right
-       stack (~50px for the dot), so the centre column keeps a readable measure
-       instead of collapsing. */
-    width: min(320px, calc(100vw - var(--status-rail) - var(--vint-dock-reach-bottom, 60px) - 16px));
-    max-height: min(30vh, var(--status-band));
-    top: max(
-      calc(var(--status-top) + min(30vh, var(--status-band)) / 2),
-      calc(var(--status-top) + var(--status-band) / 2)
-    );
-    transform: translate(-50%, -50%); }
+    --wv-band-top: calc(var(--vint-hud-bottom, 270px) + var(--wv-hint-h) + 12px);
+    left: max(16px, env(safe-area-inset-left, 16px));
+    right: calc(16px + max(var(--wv-right-col), var(--vint-dock-reach-bottom, 0px)));
+    top: var(--wv-band-top);
+    max-height: min(56px, max(0px, calc(100dvh - var(--wv-band-top) - var(--wv-stack, 140px) - 12px))); }
   #status.show { opacity: 1; }
 
   /* speech feed — bottom-left, traces fade out (no scroll, no overflow) */
-  #feed { position: fixed; left: 16px; bottom: 92px; z-index: 4; max-width: min(78vw, 460px); display: flex; flex-direction: column; gap: 8px; pointer-events: none; }
+  #feed { position: fixed; left: max(16px, env(safe-area-inset-left, 16px)); bottom: calc(var(--wv-stack, 140px) + 10px); z-index: 4;
+    width: min(460px, calc(100vw - 32px - max(var(--wv-right-col), var(--vint-dock-reach-bottom, 0px))));
+    /* bounded below #status's slice (56px + gutters); clipped inside its own box, oldest line first */
+    max-height: max(0px, calc(100dvh - var(--wv-stack, 140px) - var(--vint-hud-bottom, 270px) - var(--wv-hint-h) - 96px));
+    overflow: hidden; display: flex; flex-direction: column; justify-content: flex-end; gap: 8px; pointer-events: none; }
   .utterance { font-size: 16px; line-height: 1.4; padding: 8px 14px; border-radius: 14px; background: rgba(13,17,23,0.55); backdrop-filter: blur(8px); opacity: 0; transform: translateY(6px); animation: rise .5s forwards, fade 1s 9s forwards; }
   .utterance .who { color: var(--c, #f4c79a); font-weight: 500; margin-right: 8px; }
   .utterance.agent { --c: #f4c79a; } .utterance.user { --c: #9fc0e0; } .utterance.ambient { --c: #cdbb9c; font-style: italic; }
@@ -144,8 +65,10 @@
   @keyframes fade { to { opacity: 0; } }
 
   /* say bar — bottom, mobile-safe, never overflows */
-  #saybar { position: fixed; left: 0; right: 0; bottom: 0; z-index: 6; display: flex; gap: 8px;
-    padding: 12px max(16px, env(safe-area-inset-right, 16px)) max(16px, env(safe-area-inset-bottom, 16px)) max(16px, env(safe-area-inset-left, 16px));
+  /* the say bar sits directly ON the bottom dock (--wv-dock-h, measured); the
+     dock owns the safe-area inset, so the bar only pads for it when no dock exists */
+  #saybar { position: fixed; left: 0; right: 0; bottom: var(--wv-dock-h, 0px); z-index: 6; display: flex; gap: 8px;
+    padding: 10px max(16px, env(safe-area-inset-right, 16px)) max(10px, calc(env(safe-area-inset-bottom, 0px) - var(--wv-dock-h, 0px))) max(16px, env(safe-area-inset-left, 16px));
     background: linear-gradient(transparent, rgba(13,17,23,0.7) 40%); }
   #sayInput { flex: 1; min-width: 0; font-family: inherit; font-size: 16px; color: rgba(245,235,220,0.95); background: rgba(255,255,255,0.06); border: 1px solid rgba(244,199,154,0.3); border-radius: 999px; padding: 12px 18px; outline: none; -webkit-appearance: none; }
   #sayInput:focus { border-color: rgba(244,199,154,0.6); }
@@ -175,8 +98,11 @@
   #leave { /* W4 2026-07-09: was top-RIGHT under #editHeadBtn (z1500) — 100% buried, a dead primary control. Opposite corners: leave=LEFT, edit-head=RIGHT. */ position: fixed; left: max(16px, env(safe-area-inset-left, 16px)); top: max(14px, env(safe-area-inset-top, 14px)); z-index: 1600; font-size: 14px; color: rgba(245,235,220,0.6); text-decoration: none; min-height: 44px; display: flex; align-items: center; padding: 0 4px; }
   @media (pointer: coarse) { #hint { display: none; } }
   /* run/jump controls — clear above the say bar, right side (mobile-first, no overflow) */
-  #movectl { position: fixed; right: max(16px, env(safe-area-inset-right, 16px)); bottom: calc(72px + max(16px, env(safe-area-inset-bottom, 16px))); z-index: 6; display: none; flex-direction: column; gap: 10px; }
-  #movectl button { width: 64px; height: 64px; border-radius: 50%; font-family: inherit; font-size: 14px; color: rgba(245,235,220,0.92); background: rgba(20,14,10,0.55); border: 1px solid rgba(244,199,154,0.35); backdrop-filter: blur(6px); cursor: pointer; user-select: none; -webkit-user-select: none; touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
+  /* run/jump own the right column (--wv-right-col) directly above the bottom stack.
+     Registered with VintDock.avoid() below, so the docked account button stacks
+     ABOVE it instead of landing on "jump" (measured before: 34x34 overlap at 320/375). */
+  #movectl { position: fixed; right: max(16px, env(safe-area-inset-right, 16px)); bottom: calc(var(--wv-stack, 140px) + 12px); z-index: 6; display: none; flex-direction: column; gap: 8px; }
+  #movectl button { width: 60px; height: 60px; border-radius: 50%; font-family: inherit; font-size: 14px; color: rgba(245,235,220,0.92); background: rgba(20,14,10,0.55); border: 1px solid rgba(244,199,154,0.35); backdrop-filter: blur(6px); cursor: pointer; user-select: none; -webkit-user-select: none; touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
   #movectl button:active { background: rgba(244,199,154,0.22); transform: scale(0.94); }
   @media (pointer: coarse) { #movectl { display: flex; } }
   /* view + mic controls — top-right under leave, always shown (desktop + mobile) */
@@ -185,11 +111,14 @@
   #topctl button:active { transform: scale(0.95); }
   #btnMic.live { background: rgba(255,90,110,0.30); border-color: rgba(255,120,140,0.7); color: #fff; }
   /* a voice ring that pulses over a speaking presence is drawn in 3D; this is the self mic hint */
-  #micHint { position: fixed; left: 50%; bottom: calc(80px + max(16px, env(safe-area-inset-bottom, 16px))); transform: translateX(-50%); z-index: 6; font-size: 13px; color: rgba(255,150,160,0.9); opacity: 0; transition: opacity .25s; pointer-events: none; white-space: nowrap; max-width: 90vw; overflow: hidden; text-overflow: ellipsis; }
-  #micHint.show { opacity: 1; }
+  /* the mic hint is a FLOW child of #topctl (below the talk button), so it only
+     ever occupies the top-right column's own box. display:none when idle, so the
+     column does not reserve empty space. */
+  #micHint { display: none; font-size: 13px; line-height: 1.25; color: rgba(255,170,178,0.95); text-align: right; max-width: 72px; pointer-events: none; }
+  #micHint.show { display: block; }
 
   /* offer — the conversion moment. soft pill, refusable, never blocks. */
-  #offer { position: fixed; left: max(16px,env(safe-area-inset-left,16px)); right: max(16px,env(safe-area-inset-right,16px)); bottom: calc(80px + max(16px, env(safe-area-inset-bottom, 16px))); z-index: 7; max-width: min(92vw, 520px); margin: 0 auto; background: rgba(20,14,10,0.82); backdrop-filter: blur(10px); border: 1px solid rgba(244,199,154,0.32); border-radius: 16px; padding: 16px 18px; display: none; }
+  #offer { position: fixed; left: max(16px,env(safe-area-inset-left,16px)); right: calc(16px + max(var(--wv-right-col), var(--vint-dock-reach-bottom, 0px))); bottom: calc(var(--wv-stack, 140px) + 12px); z-index: 7; max-width: 520px; max-height: calc(100dvh - var(--wv-stack, 140px) - var(--vint-hud-bottom, 270px) - 24px); overflow-y: auto; margin: 0 auto; background: rgba(20,14,10,0.82); backdrop-filter: blur(10px); border: 1px solid rgba(244,199,154,0.32); border-radius: 16px; padding: 16px 18px; display: none; }
   #offer.show { display: block; animation: offerIn .6s ease; }
   @keyframes offerIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
   #offer .o-who { color: #f4c79a; font-size: 14px; margin-bottom: 4px; }
@@ -199,7 +128,10 @@
   #offer .o-dismiss { font-family: inherit; font-size: 14px; color: rgba(245,235,220,0.45); background: none; border: none; cursor: pointer; }
 
   /* traces — what the clearing remembers. appears softly on arrival, fades. */
-  #traces { position: fixed; left: 50%; top: 50%; transform: translate(-50%,-50%); z-index: 4; max-width: min(86vw, 480px); width: calc(100vw - 32px); display: flex; flex-direction: column; gap: 12px; text-align: center; pointer-events: none; opacity: 0; transition: opacity 1.6s ease; }
+  #traces { position: fixed; z-index: 4; --wv-band-top: calc(var(--vint-hud-bottom, 270px) + var(--wv-hint-h) + 12px);
+    left: max(16px, env(safe-area-inset-left, 16px)); right: calc(16px + max(var(--wv-right-col), var(--vint-dock-reach-bottom, 0px)));
+    top: var(--wv-band-top); max-height: max(0px, calc(100dvh - var(--wv-band-top) - var(--wv-stack, 140px) - 24px)); overflow: hidden;
+    margin: 0 auto; max-width: 480px; display: flex; flex-direction: column; gap: 12px; text-align: center; pointer-events: none; opacity: 0; transition: opacity 1.6s ease; }
   #traces.show { opacity: 1; }
   #traces .t-head { font-size: 15px; color: rgba(245,235,220,0.5); font-style: italic; margin-bottom: 4px; }
   #traces .trace { font-size: 17px; line-height: 1.5; color: rgba(245,235,220,0.82); }
@@ -228,7 +160,7 @@
   /* ── guest invitation — a warm doorway, never a wall (helios) ──
      lower-anchored so the living world breathes above it; refusable; mobile-first. */
   #invite { position: fixed; left: max(12px, env(safe-area-inset-left,12px)); right: max(12px, env(safe-area-inset-right,12px));
-    bottom: calc(16px + env(safe-area-inset-bottom, 0px)); z-index: 7;
+    bottom: calc(var(--wv-dock-h, 0px) + 10px); z-index: 7;
     max-width: min(94vw, 500px); margin: 0 auto;
     background: linear-gradient(180deg, rgba(24,18,13,0.72), rgba(18,13,9,0.9));
     backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
@@ -249,7 +181,7 @@
        itself. It is refusable, secondary copy; the rail is the only way between
        surfaces. On any viewport with room this clamp is inert (at 720px+ the
        sheet's natural 288px is already under the cap and nothing changes). */
-    max-height: min(46dvh, 320px); overflow-y: auto; overscroll-behavior: contain;
+    max-height: min(46dvh, 320px, calc(100dvh - var(--wv-dock-h, 0px) - 84px)); overflow-y: auto; overscroll-behavior: contain;
     -webkit-overflow-scrolling: touch;
     display: none; }
   #invite.show { display: block; animation: inviteRise .8s cubic-bezier(.2,.8,.2,1); }
@@ -277,6 +209,26 @@
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   #invite .i-mini .m-cta { flex: 0 0 auto; min-height: 44px; display: flex; align-items: center;
     font-size: 14px; color: #f4c79a; text-decoration: none; padding: 0 6px; }
+
+  /* ── ONE THING AT A TIME, IN EACH SLICE ──────────────────────────────────── */
+  body:has(#status.show:not(:empty)) #traces { visibility: hidden; }
+  body:has(#offer.show) #feed { visibility: hidden; }
+  /* the build palette is full-width above the stack; on touch it stops short of
+     the run/jump column instead of running under it */
+  @media (pointer: coarse) { #dvBuild { right: calc(var(--wv-right-col) + 4px) !important; } }
+  /* While a panel is open, the panel sits on the dock (dirverse-hud.js). The
+     bottom floaters it would otherwise share pixels with step aside; they come
+     straight back when it closes. visibility, so no measured var shifts. The
+     account button is at a very high z-index, so it must yield explicitly. */
+  body.dv-sheeting #saybar, body.dv-sheeting #movectl, body.dv-sheeting #feed,
+  body.dv-sheeting #offer, body.dv-sheeting #invite, body.dv-sheeting #status,
+  body.dv-sheeting #traces, body.dv-sheeting #dvBuild,
+  body.dv-sheeting #vwg-dot, body.dv-sheeting #vwg-pill { visibility: hidden; }
+  /* EVERY BUTTON SAYS WHAT IT IS. welcome-gate's signed-in account button is a
+     bare ✦ dot everywhere else; in the world it carries its word. CSS only —
+     nothing depends on hover or on JS having run. */
+  html body #vwg-dot { width: auto; min-width: 34px; padding: 0 12px; border-radius: 17px; font-size: 13px; white-space: nowrap; }
+  html body #vwg-dot::after { content: " account"; font-family: 'Cormorant Garamond', Georgia, serif; }
 </style>
 </head>
 <body>
@@ -320,12 +272,12 @@
 <div id="topctl">
   <button id="btnView" aria-label="change view" title="change camera (V)">👁 view</button>
   <button id="btnMic" aria-label="push to talk" title="hold to talk (proximity)">🎤 talk</button>
+  <div id="micHint" aria-live="polite"></div>
 </div>
 <div id="movectl">
   <button id="btnRun" aria-label="run">run</button>
   <button id="btnJump" aria-label="jump">jump</button>
 </div>
-<div id="micHint"></div>
 <div id="feed"></div>
 <div id="saybar">
   <input id="sayInput" type="text" placeholder="say something into the clearing…" maxlength="400" autocomplete="off">
@@ -461,6 +413,10 @@
      z9999 player iframe can never share pixels with a z1600 sheet.
      ── KILL SWITCH: ?arcade=0 (read live, never latched). -->
 <script src="body/world/arcade.js"></script>
+<!-- THE GUIDE — "what is this?" (task 9TYJB74). Pinned first in the bottom
+     dock, never scrolls away. Lists every control actually on screen, with the
+     same words the buttons carry. No fixed geometry of its own. -->
+<script src="body/world/world-guide.js"></script>
 <script>
 (function () {
   const statusEl = document.getElementById('status');
@@ -646,6 +602,9 @@
     ['saybar','movectl','topctl','hint'].forEach(function (id) {
       const n = document.getElementById(id); if (n) n.style.display = 'none';
     });
+    // the say bar just left the bottom stack — re-publish --wv-stack so the
+    // doorway, toast and status re-anchor to the dock alone.
+    try { window.DirverseHUD && window.DirverseHUD.relayout(); } catch (_) {}
 
     // Rotate the opening line by which world you wandered into (hub vs. someone's world).
     if (_wid && _wid !== 'universe') {
@@ -704,6 +663,10 @@
     catch (e2) { console.error('[world] forge fallback failed:', e2); }
     status('the forge could not open — refresh and try again.');
   });
+
+  // run/jump is an obstacle for the docked account button (bottom-right column):
+  // registered, not hand-counted, so the dock stacks the button above the pad.
+  try { window.VintDock.avoid(document.getElementById('movectl'), { corner: 'br' }); } catch (_) {}
 
   // run (hold) + jump (tap) — mobile movement controls
   const runBtn = document.getElementById('btnRun'), jumpBtn = document.getElementById('btnJump');

@@ -121,7 +121,8 @@
       '#dvTraceSheet .tr-g{flex:1 1 auto;min-width:52px;min-height:44px;border-radius:12px;cursor:pointer;',
       ' font-family:inherit;font-size:18px;color:rgba(220,231,255,0.7);',
       ' background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.09);',
-      ' display:flex;align-items:center;justify-content:center;}',
+      ' display:flex;flex-direction:column;gap:2px;align-items:center;justify-content:center;}',
+      '#dvTraceSheet .tr-g .tr-gl{font-size:11px;line-height:1;letter-spacing:.03em;}',
       '#dvTraceSheet .tr-g.on{background:rgba(255,212,121,0.14);border-color:rgba(255,212,121,0.45);color:#ffe2a0;}',
       // The words. A textarea, not an input, because a sentence wraps — and it
       // is height-fixed with its own scroll so a long line can never push the
@@ -266,7 +267,8 @@
       b.setAttribute('data-g', g.k);
       b.setAttribute('aria-label', g.label);
       b.title = g.label;
-      b.textContent = g.s;
+      // glyph AND its name, always visible (no title-only labels — task 9TYJB74)
+      b.innerHTML = '<span aria-hidden="true">' + g.s + '</span><span class="tr-gl">' + g.label + '</span>';
       b.onclick = function () {
         _glyph = g.k;
         gr.querySelectorAll('.tr-g').forEach(function (x) { x.classList.remove('on'); });

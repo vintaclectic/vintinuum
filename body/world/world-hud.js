@@ -153,6 +153,8 @@
       '#vintWorldHud .wh-chip{display:flex;align-items:center;gap:4px;padding:3px 8px;border-radius:10px;',
       ' background:rgba(124,207,255,0.08);border:1px solid rgba(124,207,255,0.14);}',
       '#vintWorldHud .wh-chip b{color:#9fdcff;}',
+      // every currency says its name, always (no hover): ◇ lumen, ✦ echo, ✶ standing
+      '#vintWorldHud .wh-chip .wh-cw{font-style:normal;font-size:11px;color:rgba(206,224,255,0.62);margin-left:2px;}',
 
       // ── THE VIGIL BLOCK ──────────────────────────────────────────────────────
       '#vintWorldHud .wh-vigil{padding:2px 12px 10px;}',
@@ -376,9 +378,9 @@
     el.innerHTML =
       '<div class="wh-scroll">' +
         '<div class="wh-stats">' +
-          '<span class="wh-chip">◇ <b id="whLumen">0</b></span>' +
-          '<span class="wh-chip">✦ <b id="whEcho">0</b></span>' +
-          '<span class="wh-chip">✶ <b id="whStanding">0</b></span>' +
+          '<span class="wh-chip">◇ <b id="whLumen">0</b><i class="wh-cw">lumen</i></span>' +
+          '<span class="wh-chip">✦ <b id="whEcho">0</b><i class="wh-cw">echo</i></span>' +
+          '<span class="wh-chip">✶ <b id="whStanding">0</b><i class="wh-cw">standing</i></span>' +
         '</div>' +
         // THE VIGIL — populated by _renderVigil(). Until the server sends a
         // `living` picture this holds the legacy bare bar and nothing more, so a
@@ -435,7 +437,11 @@
         //    matters: we set the reservation BEFORE measuring our own bottom,
         //    so the bottom we publish is the post-budget one.
         var rail = document.getElementById('dvRail');
-        if (rail) {
+        // the launcher rail became the bottom dock (task 9TYJB74): it no longer
+        // shares this column, and its band is already inside --dv-railbot.
+        if (document.body.classList.contains('wv-docked')) {
+          document.documentElement.style.setProperty('--wh-rail-need', '0px');
+        } else if (rail) {
           // the rail's TRUE want: every launcher at full height, unclipped.
           var need = Math.max(rail.scrollHeight || 0, 46);
           // ...but never more than half the viewport, or a tall launcher stack

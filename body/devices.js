@@ -85,6 +85,22 @@
   var STORED_LABEL = null;
   try { STORED_LABEL = localStorage.getItem('vint_device_label'); } catch (_) {}
   var LABEL = STORED_LABEL || inferDefaultLabel();
+  var TRUST_KEY = 'vint_device_trusted_' + DEVICE_ID;
+
+  function isTrusted() {
+    try { return localStorage.getItem(TRUST_KEY) === '1'; } catch (_) { return false; }
+  }
+
+  function setTrusted(trusted) {
+    try {
+      if (trusted) localStorage.setItem(TRUST_KEY, '1');
+      else localStorage.removeItem(TRUST_KEY);
+    } catch (_) {}
+    document.dispatchEvent(new CustomEvent('vintinuum:device-trust-changed', {
+      detail: { deviceId: DEVICE_ID, trusted: !!trusted }
+    }));
+    return isTrusted();
+  }
 
   // ─── Heartbeat ────────────────────────────────────────────────────────────
   var hbTimer = null;
@@ -226,6 +242,8 @@
     list: list,
     heartbeat: heartbeat,
     setLabel: setLabel,
+    isTrusted: isTrusted,
+    setTrusted: setTrusted,
     lastHeartbeat: function () { return { at: lastHbAt, ok: lastHbOk }; },
   };
 })();

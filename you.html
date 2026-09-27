@@ -34,6 +34,7 @@
   .row .v { color: var(--text); font-size: 0.78rem; font-weight: 700; word-break: break-all; text-align: right; }
   .pill { display: inline-block; padding: 3px 10px; border-radius: 999px; font-size: 0.6rem; letter-spacing: 0.18em; text-transform: uppercase; border: 1px solid var(--border); color: var(--dim); }
   .pill.live { color: #7cffb4; border-color: rgba(124,255,180,0.35); }
+  .pill.trusted { color: #ffe08a; border-color: rgba(255,224,138,0.4); }
   .pill.dim  { color: rgba(180,180,200,0.5); }
   .empty { color: var(--dim); font-style: italic; font-family: 'Cormorant Garamond', serif; padding: 14px 4px; }
   .btn { display: inline-flex; align-items: center; gap: 8px; padding: 10px 16px; min-height: 44px; border-radius: 12px; border: 1px solid var(--border); background: rgba(124,207,255,0.06); color: var(--text); cursor: pointer; font-family: inherit; font-size: 0.65rem; letter-spacing: 0.18em; text-transform: uppercase; -webkit-tap-highlight-color: transparent; }
@@ -184,6 +185,7 @@
       const data = await res.json();
       const devices = data.devices || [];
       const current = data.currentDevice || '';
+      const trustedCurrent = !!(window.VINT_DEVICES && VINT_DEVICES.isTrusted && VINT_DEVICES.isTrusted());
       if (!devices.length) {
         body.innerHTML = '<div class="empty">No devices bonded yet. Pair your phone with the button below.</div>';
         return;
@@ -191,18 +193,26 @@
       body.innerHTML = devices.map(d => {
         const isThis = d.device_id === current;
         const platform = d.platform || (d.user_agent || '').includes('Mobile') ? 'mobile' : 'web';
+        const trustBadge = isThis && trustedCurrent ? ' <span class="pill trusted" style="margin-left:6px;">trusted</span>' : '';
         return `
           <div class="row">
             <span class="k">
-              ${platform.toUpperCase()}${isThis ? ' <span class="pill live" style="margin-left:6px;">this</span>' : ''}
+              ${platform.toUpperCase()}${isThis ? ' <span class="pill live" style="margin-left:6px;">this</span>' : ''}${trustBadge}
               <span style="display:block;color:var(--dim);font-size:0.65rem;margin-top:2px;">last seen ${fmtTime(d.last_seen)}</span>
             </span>
             <span class="v">
-              ${isThis ? '' : `<button class="btn" data-revoke="${d.id}" style="padding:5px 10px;font-size:0.55rem;">revoke</button>`}
+              ${isThis ? `<button class="btn" data-trust-current="1" style="padding:5px 10px;font-size:0.55rem;">${trustedCurrent ? 'untrust' : 'trust'}</button>` : `<button class="btn" data-revoke="${d.id}" style="padding:5px 10px;font-size:0.55rem;">revoke</button>`}
             </span>
           </div>
         `;
       }).join('');
+      body.querySelectorAll('button[data-trust-current]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          if (!window.VINT_DEVICES || !VINT_DEVICES.setTrusted) return;
+          VINT_DEVICES.setTrusted(!VINT_DEVICES.isTrusted());
+          refreshDevices();
+        });
+      });
       body.querySelectorAll('button[data-revoke]').forEach(btn => {
         btn.addEventListener('click', async () => {
           const id = btn.getAttribute('data-revoke');
@@ -247,6 +257,7 @@
     refreshDevices();
     Shell.subscribe('auth', () => { refreshIdentity(); refreshDevices(); });
     Shell.subscribe('connectors', refreshConnectors);
+    document.addEventListener('vintinuum:device-trust-changed', refreshDevices);
     document.getElementById('btnPair').addEventListener('click', openPair);
     document.getElementById('btnRefreshDevices').addEventListener('click', refreshDevices);
     document.getElementById('btnClosePair').addEventListener('click', () => {

@@ -89,160 +89,62 @@
     var s = document.createElement('style');
     s.id = 'dv-styles';
     s.textContent = [
-      // launcher buttons — flow children of #dvRail (NOT fixed; the rail is the one
-      // fixed box that owns their space). ≥46px tall = the touch-target floor.
-      '.dv-launch{position:relative;min-height:46px;min-width:46px;padding:0 14px;',
-      ' border-radius:23px;font-family:"Cormorant Garamond",Georgia,serif;font-size:14px;letter-spacing:.02em;',
-      ' color:#cfe8ff;background:rgba(8,12,20,0.72);border:1px solid rgba(124,207,255,0.34);',
-      ' backdrop-filter:blur(9px);-webkit-backdrop-filter:blur(9px);cursor:pointer;',
-      ' display:flex;align-items:center;gap:7px;white-space:nowrap;box-shadow:0 4px 20px rgba(0,0,0,0.35);}',
+      // ── THE DOCK (task 9TYJB74, 2026-09-26) ──────────────────────────────────
+      // The rail used to be a vertical column on the LEFT that, once it held more
+      // than four launchers, compacted itself to UNLABELED coloured dots (the glyph
+      // lived inside the hidden .lbl) and on a 320px guest load pushed six of them
+      // off-screen or under #leave (measured: elementFromPoint returned null /
+      // #leave at their centres). ~700 lines of measured squeeze logic existed only
+      // to keep a column from colliding with the HUD panel in the same corner.
+      //
+      // Now: ONE full-width bar pinned to the bottom edge, below the say bar. It
+      // owns the bottom band outright, so it has no vertical neighbour to fight.
+      // Every launcher shows glyph + text label at every width and every pointer
+      // type (no hover reveal, no compaction). Launchers that do not fit scroll
+      // sideways INSIDE #dvScroll, never onto anything. #dvPin holds guide +
+      // commons outside the scroller so the help is always one tap away.
+      '#dvRail{position:fixed;z-index:1450;left:0;right:0;bottom:0;',
+      ' display:flex;flex-direction:row;align-items:stretch;gap:6px;',
+      ' padding:6px max(8px,env(safe-area-inset-right,0px)) calc(6px + env(safe-area-inset-bottom,0px)) max(8px,env(safe-area-inset-left,0px));',
+      ' background:rgba(6,9,15,0.9);border-top:1px solid rgba(124,207,255,0.18);',
+      ' backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);}',
+      '#dvPin{flex:0 0 auto;display:flex;gap:6px;padding-right:6px;',
+      ' border-right:1px solid rgba(124,207,255,0.14);}',
+      '#dvScroll{flex:1 1 auto;min-width:0;display:flex;gap:6px;overflow-x:auto;overflow-y:hidden;',
+      ' scrollbar-width:none;overscroll-behavior-x:contain;-webkit-overflow-scrolling:touch;}',
+      '#dvScroll::-webkit-scrollbar{display:none;}',
+      // scroll affordance: the edge that hides more launchers fades, so a phone
+      // user can SEE there is more without any hover. Pure mask, no extra box.
+      '#dvScroll.more-r{-webkit-mask-image:linear-gradient(90deg,#000 82%,transparent);mask-image:linear-gradient(90deg,#000 82%,transparent);}',
+      '#dvScroll.more-l{-webkit-mask-image:linear-gradient(90deg,transparent,#000 18%);mask-image:linear-gradient(90deg,transparent,#000 18%);}',
+      '#dvScroll.more-l.more-r{-webkit-mask-image:linear-gradient(90deg,transparent,#000 14%,#000 86%,transparent);mask-image:linear-gradient(90deg,transparent,#000 14%,#000 86%,transparent);}',
+      '.dv-launch{position:relative;flex:0 0 auto;min-width:60px;min-height:50px;padding:4px 9px;',
+      ' display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;',
+      ' border-radius:13px;font-family:"Cormorant Garamond",Georgia,serif;color:#cfe8ff;',
+      ' background:rgba(255,255,255,0.04);border:1px solid rgba(124,207,255,0.22);',
+      ' cursor:pointer;white-space:nowrap;touch-action:manipulation;}',
+      '.dv-launch .gl{font-size:18px;line-height:1;}',
+      '.dv-launch .lbl{font-size:12.5px;line-height:1.1;letter-spacing:.03em;}',
       '.dv-launch:active{transform:scale(0.96);}',
-      '.dv-launch .dot{width:7px;height:7px;border-radius:50%;background:#4fc3f7;box-shadow:0 0 8px #4fc3f7;}',
-      // ── THE RAIL (NO-COLLISION LAW) ────────────────────────────────────────
-      // Was: four buttons each pinned by its own hardcoded `bottom:` (150/206/262/
-      // 318px). That stack is only safe while the count and the button height are
-      // both frozen — add a 4th and a short viewport (375x667, or ANY landscape
-      // phone) drives the top of the stack straight into #vintWorldHud, which is a
-      // 228px-wide panel pinned top-left at 64px. Two fixed elements, same pixels.
-      //
-      // Now: ONE fixed flex column anchored at the bottom, growing UPWARD, with a
-      // hard `max-height` that reserves the WorldHUD's band (64px top + its height)
-      // plus the saybar's band. The column can never reach the panel because it is
-      // not allowed to be tall enough to, at any viewport. If more launchers ever
-      // land than fit, the rail scrolls INSIDE itself (overflow-y:auto) rather than
-      // spilling upward onto the panel — the container yields, never the neighbour.
-      '#dvRail{position:fixed;z-index:1450;display:flex;flex-direction:column-reverse;',
-      ' align-items:flex-start;gap:10px;',
-      ' left:calc(12px + env(safe-area-inset-left,0px));',
-      // --dv-railbot is the clearance the saybar needs (measured live, 150px default).
-      ' bottom:calc(var(--dv-railbot,150px) + env(safe-area-inset-bottom,0px));',
-      // top of the rail can never cross the WorldHUD band. --dv-railtop is measured
-      // live from the real panel (see layoutRail); 270px is the safe static floor.
-      // min-height keeps ONE launcher always reachable even on a landscape phone —
-      // a rail squeezed to 0 height is a dead control, which is its own failure.
-      ' min-height:46px;',
-      ' max-height:calc(100dvh - var(--dv-railtop,270px) - var(--dv-railbot,150px) - env(safe-area-inset-bottom,0px));',
-      ' overflow-y:auto;overflow-x:hidden;scrollbar-width:none;overscroll-behavior:contain;',
-      ' pointer-events:none;}',
-      '#dvRail::-webkit-scrollbar{display:none;}',
-      // the buttons themselves are static-in-flow inside the rail (NOT fixed), so
-      // they can only ever occupy the rail's own box.
-      '#dvRail .dv-launch{position:relative;left:auto;right:auto;top:auto;bottom:auto;',
-      ' flex:0 0 auto;pointer-events:auto;}',
+      '.dv-launch:focus-visible{outline:2px solid #7ccfff;outline-offset:-2px;}',
+      // the one panel that is open is shown as the selected tab of the switcher
+      '.dv-launch.on{background:rgba(124,207,255,0.2);border-color:rgba(124,207,255,0.65);color:#fff;}',
       '#dvWarpBtn{color:#e6d4ff;border-color:rgba(206,147,216,0.4);}',
-      '#dvWarpBtn .dot{background:#ce93d8;box-shadow:0 0 8px #ce93d8;}',
       '#dvHomeBtn{color:#ffe2a0;border-color:rgba(255,212,121,0.4);}',
-      '#dvHomeBtn .dot{background:#ffd479;box-shadow:0 0 8px #ffd479;}',
-      // very short viewports (landscape phones): drop the labels to glyph-only pills
-      // so four launchers still fit the reserved band without ever scrolling.
-      '@media(max-height:560px){#dvRail .dv-launch .lbl{display:none;}',
-      ' #dvRail .dv-launch{padding:0 12px;gap:0;}}',
-      // ── THE COMPACT RAIL — capacity, measured, not guessed (2026-08-07) ──────
-      // The media query above compacts on VIEWPORT HEIGHT, which was a proxy for
-      // the real constraint and has now been outgrown by it. The true constraint
-      // is COUNT vs. BAND: at 320x568 with seven launchers the column needs 438px
-      // of a 268px band, and because the rail is column-reverse the surplus clips
-      // off the TOP — measured, the last launcher mounted rendered at top:-20 with
-      // NO sheet open at all, and with a sheet up four of them sat at negative
-      // coordinates. A launcher above the fold of its own scroll box is a dead
-      // control, which this file's own squeeze comment already names as being as
-      // bad as an overlapping one.
-      //
-      // So layoutRail measures whether the column fits and, when it does not,
-      // sets these classes in escalating order — labels first (the label is a
-      // convenience; the glyph is the identity), then the gap, then the padding.
-      // Each step is a CONTAINER yielding its own content, never a neighbour
-      // yielding its space, which is the only compaction the law permits.
-      'body.dv-rail-compact #dvRail .dv-launch .lbl{display:none;}',
-      'body.dv-rail-compact #dvRail .dv-launch{padding:0 12px;gap:0;}',
-      'body.dv-rail-tight #dvRail{gap:6px;}',
-      'body.dv-rail-tight #dvRail .dv-launch{padding:0 9px;min-height:42px;height:42px;}',
-      // ── THE SECOND COLUMN — when compaction is not enough, use the WIDTH ─────
-      // Compaction has a floor: eight glyph-only launchers at the 42px minimum
-      // touch target still need 378px, and a 320x568 phone's rail band is 268px.
-      // Measured, that is not a styling problem, it is a CAPACITY problem — the
-      // column is asking for more vertical room than the viewport has to give.
-      //
-      // But the rail is a 46px-wide strip against the left edge of a 320px
-      // screen. The space it needs is sitting unused directly beside it. So at
-      // the last step the rail wraps into a second column: still one measured
-      // container, still flow children, still bounded — it simply grows the way
-      // the viewport actually has room to grow. column-reverse + wrap-reverse
-      // keeps the newest launcher nearest the thumb and fills upward, which is
-      // the same reading order the single column already had.
-      //
-      // TWO THINGS MEASURED THE HARD WAY, both recorded so nobody re-derives them:
-      //
-      //  1. THE WRAP DIRECTION. `wrap-reverse` was the obvious pairing with
-      //     column-reverse (it keeps the newest launcher nearest the thumb) and
-      //     it is WRONG here: it grows the new column to the LEFT, and the rail
-      //     is already flush against the left edge, so the second column landed
-      //     at x=-70 — entirely off-screen, four launchers unhittable (measured:
-      //     `elementFromPoint` at their centres returned null). Plain `wrap`
-      //     grows RIGHT, into the empty middle of the screen, which is where the
-      //     room actually is. The reading order costs nothing next to a button
-      //     that exists.
-      //
-      //  2. THE CEILING. A wrapped rail is only half as tall, so `bottom`-
-      //     anchored it climbs no higher than before — but the SQUEEZE can drag
-      //     --dv-railtop up toward the viewport top when a sheet is open, and at
-      //     320x568 that put the wrapped column's top edge at y=23, straight
-      //     through #leave (the ↩ link, top 14..58, z1600). #leave is a primary
-      //     navigation control and does NOT yield. So the wrapped rail declares
-      //     its own hard ceiling below it: the link's band plus a gutter, via
-      //     max(), so it can only ever LOWER the rail's reach, never raise it
-      //     past what layoutRail already decided.
-      //
-      // The width is capped so the rail can never reach the screen's right half
-      // (where #topctl and the docked account stack live) — two columns of
-      // compact pills is ~108px of a 320px viewport, comfortably clear, and the
-      // cap is expressed against the viewport so it cannot drift on any device.
-      //  3. WIDTH, NOT MAX-WIDTH. `max-width` does NOT make a wrapping flex
-      //     container wrap: the rail is a fixed-position shrink-to-fit box, so
-      //     its used width came from its CONTENT and max-width never bound it —
-      //     measured, the launchers marched straight off the right edge to
-      //     x=376 on a 320px screen. An explicit `width` gives the flex
-      //     algorithm the line-length it needs to actually break. It is the
-      //     same min() so it still cannot reach the screen's right half.
-      //  4. THE CROSS-AXIS PACK. In a wrapping COLUMN flex container the
-      //     cross axis is horizontal, so `align-content` — not `align-items` —
-      //     decides where the generated columns sit. The rail's base rule sets
-      //     `align-items:flex-start` (correct: it keeps each pill shrink-to-fit
-      //     rather than stretched), but with wrapping on, the default
-      //     `align-content:normal` stretches the COLUMNS to fill the box and the
-      //     launchers marched past the container's own right edge. Packing the
-      //     columns to flex-start is what makes them respect the width above.
-      //  5. THE BAND MUST HOLD A ROW, OR WRAPPING IS A CATASTROPHE. Measured
-      //     with a sheet open at 320x568, the squeeze had already dragged
-      //     --dv-railtop up so far that this rule computed max-height:41px — one
-      //     pixel UNDER a compacted 42px launcher. In a wrapping column that is
-      //     not "slightly cramped", it is total: every single item overflows its
-      //     line and starts a new column, so eight launchers marched right off
-      //     the screen at x=376 in one 42px-tall row. A wrapping container whose
-      //     line is shorter than one item is strictly worse than no wrapping.
-      //     So the ceiling is floored at two rows' worth (90px): the wrap can
-      //     only ever be entered when it can actually hold a column, and the
-      //     JS step below verifies the result and removes the class if it did
-      //     not help — belt and braces, because this failure is silent.
-      // The band the wrapped rail may occupy is the SAME --dv-railtop /
-      // --dv-railbot the single column uses — those two vars are already the
-      // measured, neighbour-respecting answer (and --dv-railtop is now floored
-      // below #leave, see ceilFloor in layoutRail). Re-deriving a second ceiling
-      // here is what produced the 41px line: a rule that disagreed with the
-      // measurement. It agrees now, and it is floored at one compact row so the
-      // container can never be shorter than the item it must hold.
-      //
-      // THE WIDTH IS SET BY JS (--dv-railw), NOT GUESSED HERE. A fixed 110px was
-      // two columns, and with an open sheet squeezing the band to a single 46px
-      // row, two columns of eight launchers needs 410px of a 110px box — it
-      // spilled, the guard rejected the wrap, and the rail fell back to clipping.
-      // How wide the rail may be depends on how tall it was allowed to be, which
-      // only layoutRail knows, so layoutRail computes it and writes it here. The
-      // fallback keeps the rule sane if the var is ever missing.
-      'body.dv-rail-wrap #dvRail{flex-wrap:wrap;align-content:flex-start;',
-      ' width:var(--dv-railw,110px);column-gap:6px;',
-      ' max-height:max(46px,calc(100dvh - var(--dv-railtop,270px)',
-      ' - var(--dv-railbot,150px) - env(safe-area-inset-bottom,0px)));}',
+      '#wvGuideBtn{color:#fff3c4;border-color:rgba(255,212,121,0.5);}',
+      '#wvCommonsBtn{color:#c8f5d8;border-color:rgba(130,220,170,0.5);}',
+      // very narrow phones: slightly tighter pills, labels STAY (they are the point)
+      '@media(max-width:360px){.dv-launch{min-width:54px;padding:4px 7px;}.dv-launch .lbl{font-size:12px;}}',
+      // SHEETS SIT ON THE DOCK, never under it. An open sheet is lifted by the
+      // dock's measured height so the dock stays visible and tappable above the
+      // scrim as the ONE panel switcher (tap another launcher: this sheet closes,
+      // that one opens). Scoped to .open so a CLOSED sheet (translateY(105%))
+      // stays fully below the viewport instead of peeking up behind the dock.
+      // every sheet's ✕ says "close" in words, on every device (CSS, no hover)
+      '.dv-x::after,.ct-x::after{content:"close";font-size:13px;letter-spacing:.04em;margin-left:5px;vertical-align:middle;}',
+      '.dv-x,.ct-x{white-space:nowrap;}',
+      '.dv-sheet.open,#ctSheet.open,#cvSheet.open,#rkSheet.open{bottom:var(--wv-dock-h,64px) !important;',
+      ' max-height:min(78dvh,560px,calc(100dvh - var(--wv-dock-h,64px) - 64px - env(safe-area-inset-top,0px))) !important;}',
 
       // shared bottom-sheet scaffold (WARP + AGENT both use it)
       '.dv-sheet{position:fixed;left:0;right:0;bottom:0;z-index:1600;',
@@ -480,7 +382,9 @@
       '.dv-in:focus{border-color:rgba(124,207,255,0.5);}',
       '.dv-cnt{font-size:11px;color:rgba(206,224,255,0.45);text-align:right;margin-top:4px;}',
       '.dv-swatches{display:flex;gap:8px;flex-wrap:wrap;}',
-      '.dv-sw{width:38px;height:38px;min-height:38px;border-radius:50%;cursor:pointer;padding:0;',
+      // each swatch carries its NAME in the button (was colour-only + title)
+      '.dv-sw{min-width:38px;height:38px;min-height:38px;border-radius:19px;cursor:pointer;padding:0 12px;',
+      ' font-family:inherit;font-size:13px;font-weight:600;color:#0b0f18;white-space:nowrap;',
       ' border:2px solid transparent;box-shadow:0 0 0 1px rgba(255,255,255,0.12) inset;}',
       '.dv-sw.on{border-color:#fff;transform:scale(1.06);}',
       '.dv-vis{display:flex;gap:7px;}',
@@ -491,7 +395,7 @@
 
       // BUILD palette strip (thumb-scroll, own world only)
       '#dvBuild{position:fixed;left:0;right:0;z-index:1440;',
-      ' bottom:calc(74px + max(16px,env(safe-area-inset-bottom,16px)));',
+      ' bottom:calc(var(--wv-stack,138px) + 8px);',
       ' display:none;padding:8px max(12px,env(safe-area-inset-left,12px)) 8px max(12px,env(safe-area-inset-right,12px));}',
       '#dvBuild.show{display:block;}',
       '.dv-palette{display:flex;gap:8px;overflow-x:auto;-webkit-overflow-scrolling:touch;',
@@ -539,7 +443,7 @@
       'body.dv-panel-yield #vintWorldHud,body.dv-panel-yield #hint{visibility:hidden;}',
 
       // toast (shared, above sheets)
-      '#dvToast{position:fixed;left:50%;bottom:calc(88px + env(safe-area-inset-bottom,0px));',
+      '#dvToast{position:fixed;left:50%;bottom:calc(var(--wv-stack,138px) + 10px);',
       ' transform:translateX(-50%) translateY(10px);z-index:1700;max-width:88vw;',
       ' padding:10px 18px;border-radius:14px;background:rgba(8,12,20,0.9);',
       ' border:1px solid rgba(124,207,255,0.3);color:#dce7ff;font-family:"Cormorant Garamond",Georgia,serif;',
@@ -630,6 +534,8 @@
     // exactly like the saybar (see layoutRail step 2b). Without this the bottom
     // launchers stay under the sheet and are unclickable.
     try { layoutRail(); } catch (_) {}
+    // the dock is the panel switcher: the open sheet's launcher reads as selected
+    try { markActive(anyOpen()); } catch (_) {}
   }
   // A sheet can close without telling us: the grip swipe-down and a few internal
   // flows just drop the class. Those paths call syncScrim() directly, but a
@@ -991,7 +897,7 @@
       var b = document.createElement('button');
       b.className = 'dv-sw' + (t.v === _forgeTheme ? ' on' : '');
       b.style.background = t.v; b.type = 'button';
-      b.setAttribute('aria-label', t.n); b.title = t.n;
+      b.setAttribute('aria-label', t.n); b.textContent = t.n;
       b.onclick = function () {
         _forgeTheme = t.v;
         sw.querySelectorAll('.dv-sw').forEach(function (x) { x.classList.remove('on'); });
@@ -1604,576 +1510,157 @@
   // The rail is the ONE fixed box; every launcher lives inside it in normal flow.
   // Nothing here is individually position:fixed, so no launcher can ever be
   // dragged or reflowed onto another fixed surface — the rail owns its space.
-  var _rail = null;
+  var _rail = null, _pin = null, _scroll = null;
   function railEl() {
-    if (_rail) return _rail;
+    if (_rail) return _scroll;
     _rail = document.createElement('div');
     _rail.id = 'dvRail';
+    _rail.setAttribute('role', 'toolbar');
+    _rail.setAttribute('aria-label', 'world actions');
+    _pin = document.createElement('div'); _pin.id = 'dvPin';
+    _scroll = document.createElement('div'); _scroll.id = 'dvScroll';
+    _rail.appendChild(_pin); _rail.appendChild(_scroll);
     document.body.appendChild(_rail);
-    return _rail;
+    _scroll.addEventListener('scroll', updateMore, { passive: true });
+    return _scroll;
   }
 
+  // ── THE LABEL REGISTRY (task 9TYJB74) ───────────────────────────────────────
+  // One place that owns what every dock button is CALLED and what it DOES. The
+  // modules still choose their own id and click handler through addLauncher();
+  // this only fixes identity. Three glyphs were duplicated (⚖ reckoning/concord,
+  // ◈ agents/allegiance, ⌂ home/dirhaven), so a glyph alone could not tell a
+  // player which button was which. The guide sheet (commons.js) reads `d` from
+  // here, so the help text and the button can never drift apart.
+  var LAUNCH_META = {
+    wvGuideBtn:   { g: '?', l: 'guide',      d: 'What every button in the world does. You are reading it.' },
+    wvCommonsBtn: { g: '⌘', l: 'commons',    d: 'The shared square for people and agents: trade, craft, teach, build together, and read what happened.' },
+    dvWarpBtn:    { g: '✦', l: 'star-map',   d: 'Every world on the map. Visit someone else’s, or name and forge your own.' },
+    dvHomeBtn:    { g: '⌂', l: 'home',       d: 'Warp back to your own clearing (or forge one if you have none yet).' },
+    dvAgentBtn:   { g: '◈', l: 'agents',     d: 'Send an agent out to trade, work or explore, and see how its ventures went.' },
+    dvBuildBtn:   { g: '▥', l: 'build',      d: 'Place props in your own world. Only appears where you are allowed to build.' },
+    ctBtn:        { g: '♔', l: 'court',      d: 'Your agents from any provider, standing in the clearing. Add one, focus one, talk to one.' },
+    dvTraceBtn:   { g: '✧', l: 'lanterns',   d: 'Leave one lantern in a world you visit; see the lanterns visitors left in yours.' },
+    cvBtn:        { g: '⚔', l: 'covenant',   d: 'Factions, contested ground and policy. Tells you which ground is safe and what it could cost.' },
+    rkBtn:        { g: '⚖', l: 'reckoning',  d: 'The serious acts: strike on contested ground, vote on motions, and the gallows. Each asks you to confirm.' },
+    cnBtn:        { g: '⚑', l: 'concord',    d: 'The council your agents sit on: motions, votes, dissent and the shared treasury.' },
+    adBtn:        { g: '⚓', l: 'yard',       d: 'Shipbuilding and war: lay a keel and your seated agents build it.' },
+    fcBtn:        { g: '⚜', l: 'allegiance', d: 'Alliances, rivalries and named ground between powers.' },
+    dhDoorBtn:    { g: '▣', l: 'dirhaven',   d: 'Open the DirHaven app inside the world without leaving it.' },
+    arBtn:        { g: '⛁', l: 'arcade',     d: 'The hall of games your court plays, plus the marquee reel.' }
+  };
+  // pinned launchers live OUTSIDE the scroller, so they can never scroll away
+  var PINNED = { wvGuideBtn: 1, wvCommonsBtn: 1 };
+
   function makeLauncher(id, label, glyph, onClick) {
+    var meta = LAUNCH_META[id] || {};
+    var g = meta.g || glyph || '•', l = meta.l || label || id;
     var b = document.createElement('button');
-    b.id = id; b.className = 'dv-launch';
-    // NOT draggable: these are flow children of a bounded, scrollable rail. Letting
-    // them be dragged free would re-introduce exactly the fixed-element collisions
-    // the rail exists to make impossible (drag would pin them over #vintWorldHud /
-    // #editHeadBtn / #saybar). The rail itself is the stable, collision-proof home.
+    b.id = id; b.className = 'dv-launch'; b.type = 'button';
+    // NOT draggable (documented opt-out, per the draggable convention): these are
+    // flow children of the one bounded dock. A dragged-free launcher would be a
+    // loose fixed element that can land on the say bar, a sheet or the HUD — the
+    // exact collision the dock exists to make impossible.
     b.setAttribute('data-draggable', 'false');
-    b.innerHTML = '<span class="dot"></span><span class="lbl">' + esc(glyph) + ' ' + esc(label) + '</span>';
-    b.addEventListener('click', function () { onClick(); });
-    railEl().appendChild(b);
+    b.setAttribute('aria-label', l);
+    b.innerHTML = '<span class="gl" aria-hidden="true">' + esc(g) + '</span><span class="lbl">' + esc(l) + '</span>';
+    b.addEventListener('click', function () {
+      // the lit button is the open panel: tapping it again closes it. Every
+      // sheet gains the same way out, even the ones that ship no ✕ of their own.
+      if (b.classList.contains('on') && anyOpen()) { closeSheets(); return; }
+      onClick();
+    });
+    var host = railEl();
+    if (PINNED[id]) {
+      // keep pinned order stable: guide first, then commons
+      if (id === 'wvGuideBtn' && _pin.firstChild) _pin.insertBefore(b, _pin.firstChild);
+      else _pin.appendChild(b);
+    } else host.appendChild(b);
     return b;
   }
 
-  // ── THE COLLISION GUARD (measured, not assumed) ─────────────────────────────
-  // #vintWorldHud is a fixed left panel (top:64px, width 228px) whose height is
-  // content-driven — it grows with the resident's stats/actions. The rail grows
-  // upward from the bottom on the SAME left edge. So the only honest way to keep
-  // them apart is to measure the panel live and hand the rail a hard ceiling.
-  // Re-measured on resize, orientation change, and every world:state (the panel
-  // re-renders on state, which is exactly when its height can change).
+  // Which dock button owns which registered sheet — so the switcher can show
+  // the open panel as its selected tab. Unknown ids simply select nothing.
+  var SHEET_LAUNCHER = {
+    warp: 'dvWarpBtn', agent: 'dvAgentBtn', court: 'ctBtn', traces: 'dvTraceBtn',
+    covenant: 'cvBtn', reckoning: 'rkBtn', concord: 'cnBtn', admiralty: 'adBtn',
+    factions: 'fcBtn', arcade: 'arBtn', dirhaven: 'dhDoorBtn',
+    guide: 'wvGuideBtn', commons: 'wvCommonsBtn'
+  };
+  function markActive(entry) {
+    if (!_rail) return;
+    var want = entry ? SHEET_LAUNCHER[entry.id] : null;
+    var all = _rail.querySelectorAll('.dv-launch');
+    for (var i = 0; i < all.length; i++) {
+      var on = !!want && all[i].id === want;
+      all[i].classList.toggle('on', on);
+      if (on) all[i].setAttribute('aria-pressed', 'true'); else all[i].removeAttribute('aria-pressed');
+    }
+  }
+
+  function updateMore() {
+    if (!_scroll) return;
+    var max = _scroll.scrollWidth - _scroll.clientWidth;
+    _scroll.classList.toggle('more-r', max > 2 && _scroll.scrollLeft < max - 2);
+    _scroll.classList.toggle('more-l', max > 2 && _scroll.scrollLeft > 2);
+  }
+
+  // ── THE BOTTOM STACK, MEASURED ──────────────────────────────────────────────
+  // The dock owns the bottom edge; the say bar sits directly on it. Everything
+  // else that floats near the bottom (feed, offer, mic hint, run/jump, guest
+  // doorway, toast, build palette, #status) positions itself against the vars
+  // published here, so none of them hand-counts a neighbour:
+  //   --wv-dock-h  the dock's real height (safe-area included)
+  //   --wv-stack   dock + say bar (the say bar only when it is showing)
+  //   --dv-railbot legacy name, kept for #status and world-hud's height budget:
+  //                clearance above the whole bottom stack (+12px gutter)
+  //   --dv-railneed / --wh-rail-need: 0 — nothing lives in the left column now.
   function layoutRail() {
     if (!_rail) return;
-    var vh = W.innerHeight || document.documentElement.clientHeight || 800;
     var css = document.documentElement.style;
-
-    // 1) the ceiling: the live bottom edge of #vintWorldHud + a 16px gutter.
-    var top = 270; // safe static floor if the panel isn't mounted yet
-    var panel = document.getElementById('vintWorldHud');
-    if (panel) {
-      var pr = panel.getBoundingClientRect();
-      if (pr.height > 0 && pr.bottom > 0) top = pr.bottom + 16;
+    var vh = W.innerHeight || document.documentElement.clientHeight || 800;
+    var dockH = 0;
+    if (getComputedStyle(_rail).display !== 'none') {
+      var dr = _rail.getBoundingClientRect();
+      if (dr.height > 0) dockH = Math.max(0, Math.round(vh - dr.top));
     }
-    // #hint (the W/A/S/D keys line) also lives in this left column, below the
-    // panel — and as of THE VIGIL (2026-08-04) it is folded into this ceiling.
-    //
-    // It used to be excluded on the reasoning that the rail starts where the
-    // panel ends and pushing it below the hint would shorten the launcher band.
-    // That held only while #hint sat at a hardcoded top:274px — i.e. ABOVE where
-    // any rail could reach. The vigil made #vintWorldHud content-driven and the
-    // hint now derives its own top from --vint-hud-bottom, so on a tall desktop
-    // a panel with watchers puts the hint at ~600px, squarely inside the rail's
-    // band. Measured at 1280x800 that was a 108x28px overlap of the keys line by
-    // the launchers — two elements, same pixels, exactly the cardinal sin.
-    //
-    // So the ceiling is now the LOWER of the two neighbours in this column. The
-    // hint is desktop-only (hidden on coarse pointers), so this costs the short
-    // touch viewports — the ones that can least afford it — precisely nothing.
-    // NOTE ON THE VISIBILITY TEST: #hint is position:fixed, and a fixed element
-    // ALWAYS reports offsetParent === null — so the `offsetParent !== null` idiom
-    // used for #saybar (which is static) silently reports "hidden" here and the
-    // fold-in never happened. Measured, that left a 16px band of launchers on the
-    // keys line. Fixed elements must be tested by computed display instead.
-    var hint = document.getElementById('hint');
-    if (hint && getComputedStyle(hint).display !== 'none') {
-      var hr = hint.getBoundingClientRect();
-      if (hr.height > 0 && hr.bottom > 0) top = Math.max(top, hr.bottom + 16);
-    }
-    // #status keeps clear of the hint by bounding its own width instead — a
-    // horizontal solution to a horizontal problem (see world.html's #status).
-
-    // 2) the floor: the live top edge of #saybar + a 12px gutter (it's a
-    //    full-width bar, so the rail must clear it vertically, not dodge it).
-    var bot = 150;
+    css.setProperty('--wv-dock-h', dockH + 'px');
+    var stack = dockH;
     var say = document.getElementById('saybar');
-    if (say && say.offsetParent !== null) {
-      var sr = say.getBoundingClientRect();
-      if (sr.height > 0) bot = Math.max(88, vh - sr.top + 12);
+    if (say && getComputedStyle(say).display !== 'none') {
+      var sr = say.getBoundingClientRect();   // read AFTER the write above: forces a fresh layout
+      if (sr.height > 0) stack = Math.max(stack, Math.round(vh - sr.top));
     }
-
-    // 2a) THE GUEST DOORWAY IS A FULL-WIDTH BAR TOO (AETHERHOLD 2026-08-08).
-    //     #invite is world.html's guest sheet: a centred bottom sheet up to 500px
-    //     wide that, on a phone, spans nearly the whole width and stands up to
-    //     288px tall. The rail never yielded to it, because it is neither #saybar
-    //     nor a `.dv-sheet` — so `botFloor` stayed 0 and the rail ran straight
-    //     into it. MEASURED on a guest load of the real page:
-    //         320×720 → rail y234..570, #invite y417..705 → 153px of overlap
-    //         375×720 → rail y234..570, #invite y497..704 →  73px of overlap
-    //     and both share the left column (each starts at x=12), so the doorway
-    //     painted over the bottom launchers and a guest simply could not tap
-    //     them. world.html does register #invite with VintDock.avoid(), but that
-    //     governs the DOCKED CORNER PILLS, not this rail — two different
-    //     registries, and the rail was never told.
-    //
-    //     Note this is the exact failure mode the step-2b comment below predicted
-    //     ("a list that has to be edited by whoever adds a surface is a list that
-    //     will be wrong"); #invite predates that selector and was never in it. So
-    //     it is folded into the FLOOR rather than added to a sheet list: it is a
-    //     bottom-anchored full-width bar, which is what `bot` already means, and
-    //     the rail shortens to clear it exactly as it does for the say bar. When
-    //     the guest collapses the doorway to its pill (`.min`) it measures ~60px
-    //     tall and the rail slides back down on its own — no special case, just
-    //     the live measurement doing its job.
-    //
-    //     IT IS A FLOOR THE SQUEEZE MAY NOT BORROW BACK. Writing this into `bot`
-    //     alone is not enough: step 3 is allowed to reclaim the floor down to
-    //     `botFloor` when the band gets too short, and `botFloor` was only ever
-    //     set for open sheets. Measured at 375×720 that borrowed 15px straight
-    //     back (rail bottom 220px where the doorway needed 235px) and put the
-    //     launchers 3px inside #invite again — a correct floor, quietly undone
-    //     downstream. #invite is precisely the case the botFloor rule exists for:
-    //     the rail can survive being short because it scrolls, but a launcher
-    //     underneath an opaque sheet cannot be tapped at all.
-    //
-    //     MEASURE ITS DESTINATION, NOT ITS FLIGHT PATH. #invite rises with an
-    //     0.8s animation, so for most of a second `getBoundingClientRect().top`
-    //     reports a position ~288px below where the sheet will actually come to
-    //     rest. Reacting to that transient produced a real (if brief) overlap of
-    //     2–4px in the window between the doorway appearing and the animation
-    //     finishing — the layout converged to a correct −12px afterwards, but
-    //     "correct once it settles" is not what the no-collision law asks for.
-    //     Its resting geometry is fully knowable WITHOUT waiting: the sheet is
-    //     bottom-anchored (bottom:16px + safe-area) and its HEIGHT is already
-    //     final from the first frame — only its transform is moving. So the floor
-    //     is computed from height + the CSS bottom offset, which is stable from
-    //     the moment it is displayed and identical to where it lands. The
-    //     animationend/observer hooks below still fire, but they now only confirm
-    //     a number the very first pass already got right.
-    var inviteFloor = 0;
+    // THE GUEST DOORWAY stands on the dock too (world.html anchors #invite to
+    // --wv-dock-h, never to --wv-stack, so this cannot feed back into itself).
+    // Measured at its RESTING place (bottom offset + height), not mid-animation:
+    // the rise is a transform, so height and bottom are already final.
     var inv = document.getElementById('invite');
     if (inv && getComputedStyle(inv).display !== 'none') {
       var ir = inv.getBoundingClientRect();
-      if (ir.height > 0) {
-        var ics = getComputedStyle(inv);
-        var iBottom = parseFloat(ics.bottom);
-        if (!isFinite(iBottom) || iBottom < 0) iBottom = 0;
-        // resting top = vh - (bottom offset + height); floor = vh - that + gutter
-        inviteFloor = iBottom + ir.height + 12;
-        // never let a transform-in-flight report a LARGER floor than the resting
-        // one either — take the resting value as the single source of truth.
-        bot = Math.max(bot, inviteFloor);
-      }
+      var ib = parseFloat(getComputedStyle(inv).bottom);
+      if (ir.height > 0) stack = Math.max(stack, Math.round((isFinite(ib) ? ib : 0) + ir.height));
     }
-
-    // 2b) AN OPEN SHEET IS A FULL-WIDTH BAR TOO. Measured at 375×812 the rail
-    //     runs 336→662 while an open sheet runs 584→812: the bottom launcher
-    //     (616→662) sits INSIDE the sheet's band, so the sheet (z1600) paints
-    //     over it. Raising the rail above 1600 is not the fix — that would draw
-    //     a launcher ON TOP of a sheet, which is the same cardinal collision
-    //     wearing the other hat. The honest fix is the one the saybar already
-    //     gets: the rail YIELDS, shortening its band so it never enters the
-    //     sheet's pixels at all. Every launcher that remains is fully visible
-    //     and fully tappable, which is what makes "tap ◈ while ✦ is open"
-    //     actually work instead of merely appearing to.
-    //
-    //     `botFloor` is the part of the floor the squeeze (step 3) may NOT
-    //     borrow back: leaning on the saybar only looks crowded, but leaning
-    //     into a sheet swallows the launcher whole.
-    //     THE SELECTOR USED TO BE A HAND-WRITTEN LIST of the three sheets that
-    //     existed when this was written (#dvWarpSheet, #dvAgentSheet, #ctSheet).
-    //     That made the yield silently incomplete the moment a FOURTH sheet was
-    //     added: THE LANTERNS (#dvTraceSheet) opened, `anyOpen()` was true, the
-    //     querySelector matched nothing, botFloor stayed 0, and the rail sat
-    //     inside the sheet's band with its launchers painted over — measured as
-    //     "#dvScrim covers the launcher" on three ordered pairs. A list that has
-    //     to be edited by whoever adds a surface is a list that will be wrong.
-    //
-    //     So it asks the DOM the same question the law does: is any element with
-    //     the shared sheet class actually open right now? `.dv-sheet` is the one
-    //     scaffold most bottom sheets reuse (warp, agents, and now the lanterns),
-    //     so a new surface built on it is covered the day it ships, with nothing
-    //     to remember. #ctSheet is named explicitly on purpose: the Court keeps
-    //     its own class deliberately (see court.js — "own class so the Court can
-    //     be killed without touching the DIRVERSE stylesheet"), so it can't be
-    //     picked up by the shared selector and has to be listed. #dvTraceSheet is
-    //     belt-and-braces — it does carry .dv-sheet, and naming it costs nothing.
-    var botFloor = 0;
-    if (anyOpen()) {
-      // every open sheet, not just the first — the yield must clear the TALLEST
-      // of them, and taking only one would under-shorten the rail if a future
-      // flow ever has two up deliberately.
-      var open = document.querySelectorAll('.dv-sheet.open, #ctSheet.open, #dvTraceSheet.open');
-      for (var oi = 0; oi < open.length; oi++) {
-        var shr = open[oi].getBoundingClientRect();
-        if (shr.height > 0 && shr.top < vh) {
-          botFloor = Math.max(botFloor, vh - shr.top + 12);
-        }
-      }
-      if (botFloor > 0) bot = Math.max(bot, botFloor);
-    }
-
-    // 3) THE SQUEEZE (landscape phones: 375px tall with a ~190px panel leaves
-    //    negative room). A rail with no height is a dead control — as bad as an
-    //    overlapping one. So when the band can't hold even one launcher, we
-    //    RECLAIM space by collapsing the panel gutter, and if it's still short,
-    //    we let the rail scroll internally. It never spills onto a neighbour and
-    //    it is never unreachable: those are the only two outcomes allowed.
-    //
-    //    An open sheet makes this bite where it never did before: clearing the
-    //    sheet costs the rail ~90px, and at 375×812 that left 302px of band for
-    //    326px of launchers. The rail is column-reverse + overflow-y:auto, so the
-    //    surplus clips off the TOP — ♔ landed half outside its own scroll box and
-    //    a tap at its centre hit the scrim behind it. A launcher you must first
-    //    discover is scrollable is a launcher that isn't there.
-    //
-    //    So something yields, and it is not the rail (a clipped launcher) nor the
-    //    sheet (the collision we came to kill): it is #vintWorldHud, passive
-    //    readout, while the rail is the only way between surfaces. Via a body
-    //    class, never an inline style — the DirHaven door hides that same panel
-    //    and remembers its previous inline visibility, so writing the property
-    //    from here would corrupt what the door saved. On tall viewports `want`
-    //    is ≤ 0 and nothing moves at all.
-    // ── THE HARD CEILING: #leave DOES NOT YIELD ───────────────────────────────
-    // Both borrow branches below reclaim space by walking `top` upward, and both
-    // were bounded only by `top - 8` — i.e. by the top of the VIEWPORT. Above the
-    // rail sits #leave (the ↩ link, top 14..58 at z-index 1600), which is the
-    // only way out of the world and is therefore primary navigation, not passive
-    // readout. #vintWorldHud and #hint may yield (they are readouts, and the code
-    // below already makes them); #leave may not. Unbounded, the borrow put a
-    // launcher at top:23 straight through the link — measured, `elementFromPoint`
-    // at the launcher's own centre returned #leave, meaning the tap opened the
-    // wrong surface. This floor is computed ONCE here and both branches clamp to
-    // it, so neither can walk past the link no matter which one fires. It is a
-    // floor on the borrow, never a raise: on any viewport with room it is
-    // irrelevant, because `top` is already far below it.
-    var ceilFloor = 8;
-    var leaveEl = document.getElementById('leave');
-    if (leaveEl && getComputedStyle(leaveEl).display !== 'none') {
-      var lvr = leaveEl.getBoundingClientRect();
-      if (lvr.height > 0 && lvr.bottom > 0) ceilFloor = Math.max(ceilFloor, lvr.bottom + 10);
-    }
-
-    var needH = _rail.scrollHeight || 0;
-    var yieldPanel = false;
-    if (botFloor && needH > 0 && panel) {
-      var want = needH - (vh - top - bot);
-      if (want > 0) {
-        var take = Math.min(want, Math.max(0, top - ceilFloor));
-        if (take > 0) {
-          top -= take;
-          var pr2 = panel.getBoundingClientRect();
-          if (pr2.height > 0 && top < pr2.bottom) yieldPanel = true;
-        }
-      }
-    }
-    var avail = vh - top - bot;
-    if (avail < 46) {
-      var need = 46 - avail;
-      // never above #leave (see ceilFloor above) — it was `top - 8`, i.e. the
-      // top of the VIEWPORT, which is what walked launchers onto the ↩ link.
-      var giveTop = Math.min(need, Math.max(0, top - ceilFloor));
-      top -= giveTop;
-      avail = vh - top - bot;
-      // THE VIGIL FIX (2026-08-04): borrowing from the ceiling walks the rail UP
-      // into whatever is above it, and above it is #vintWorldHud. Before the
-      // vigil the panel was short enough that this branch almost never fired;
-      // the taller panel makes it fire on every 320x568 signed-in session, and
-      // measured, it put 112x34px of launchers straight on top of the panel (and
-      // the panel on top of #status, which derives its own ceiling from
-      // --dv-railtop). Borrowing without yielding is not a squeeze, it is a
-      // collision. So the SAME rule the open-sheet path already obeys applies
-      // here: if the borrow crosses the panel's live bottom, the panel — passive
-      // readout — yields, because the rail is the only way between surfaces.
-      if (giveTop > 0 && panel) {
-        var pr3 = panel.getBoundingClientRect();
-        if (pr3.height > 0 && top < pr3.bottom) yieldPanel = true;
-      }
-      // #hint sits between the panel and the rail on desktop, so a ceiling
-      // borrow walks through IT first. Measured at 812x375 (landscape phone)
-      // that was a 42x17px band of launchers on the keys line. The hint is a
-      // W/A/S/D legend — the least load-bearing thing in this column, and on a
-      // viewport this short it is pure decoration next to a reachable launcher —
-      // so it yields with the panel. Via the same body class, never an inline
-      // style, so nothing else that touches these elements gets corrupted.
-      if (giveTop > 0 && hint) {
-        var hr2 = hint.getBoundingClientRect();
-        if (hr2.height > 0 && top < hr2.bottom) yieldPanel = true;
-      }
-      // then borrow from the floor — but never past botFloor, or the launcher we
-      // just fought to keep reachable lands under an open sheet, which is worse
-      // than a short rail (the rail can scroll; a covered button cannot be hit).
-      // `inviteFloor` joins botFloor as un-borrowable for the same reason: the
-      // guest doorway is opaque, so a launcher under it is a dead control.
-      if (avail < 46) bot = Math.max(8, botFloor, inviteFloor, bot - (46 - avail));
-    }
-
-    // ── 3b) ENOUGH BAND FOR THE LAUNCHERS THAT EXIST ─────────────────────────
-    // The squeeze above guarantees exactly ONE launcher's worth of band, which
-    // was right when the rail held four and is not right now that it holds
-    // eight. `overflow-y:auto` was the intended relief, but the rail is
-    // column-reverse, so the surplus clips off the TOP: measured at 320x568 with
-    // a sheet open, six of eight launchers rendered at NEGATIVE y (down to
-    // -169) and `elementFromPoint` at their centres returned null. They were not
-    // cramped; they did not exist. And a scroll gesture inside a 46px strip is
-    // not a discoverable affordance — this file already says as much about the
-    // same failure arriving by another road.
-    //
-    // So: having taken the ceiling as far as #leave allows, take the rest from
-    // the FLOOR, still never past botFloor (a launcher under an open sheet is
-    // unhittable, which is strictly worse than a short rail). This asks for the
-    // room the launchers actually need instead of a fixed 46, and it can only
-    // ever give the rail MORE band, never less — so no neighbour loses space
-    // that the existing clauses had already granted it.
-    //
-    // `inviteFloor` IS UN-BORROWABLE HERE TOO (AETHERHOLD 2026-08-08). This
-    // clause guarded only `botFloor` (open sheets), which was complete when it
-    // was written — the guest doorway was not yet part of the floor. Once it was,
-    // this became the last place the hard-won clearance leaked away: measured at
-    // 320×720 on a guest load, step 2a computed a floor of 316px and this line
-    // handed 22px of it back to the launcher column, leaving --dv-railbot at
-    // 294px and the rail 10px inside #invite. The reasoning that protects
-    // botFloor applies verbatim to the doorway — it is opaque, so a launcher
-    // beneath it cannot be tapped — and a short rail is the strictly better
-    // failure, because the rail compacts and wraps (step 4) while a covered
-    // button has no recourse at all.
-    if (needH > 0 && (vh - top - bot) < needH) {
-      var deficit = needH - (vh - top - bot);
-      var fromFloor = Math.min(deficit, Math.max(0, bot - Math.max(8, botFloor, inviteFloor)));
-      if (fromFloor > 0) bot -= fromFloor;
-    }
-    // one authoritative write, AFTER every branch that can set it (the squeeze
-    // above can raise it too, so toggling before that was a stale decision).
-    try { document.body.classList.toggle('dv-panel-yield', yieldPanel); } catch (_) {}
-    css.setProperty('--dv-railtop', Math.round(top) + 'px');
-    css.setProperty('--dv-railbot', Math.round(bot) + 'px');
-
-    // ── 4) THE FIT — does the column actually fit the band it was just given? ──
-    // Everything above decides the rail's BOX. Nothing above ever asked whether
-    // the launchers fit inside it, because when this was written they always
-    // did. They no longer do: measured at 320x568 signed-in with seven
-    // launchers, the column needs 438px of a 268px band, and the rail is
-    // column-reverse — so the overflow clips off the TOP and the earliest-
-    // mounted launchers render at negative coordinates, unreachable, with no
-    // sheet open at all. `overflow-y:auto` was the intended relief valve, but a
-    // launcher you must first discover is scrollable is a launcher that is not
-    // there (this file's own squeeze comment says exactly that about the same
-    // failure arriving by a different road).
-    //
-    // So the rail compacts ITS OWN CONTENT to fit, in escalating steps, and
-    // re-measures after each one because every step changes the height it is
-    // testing. The container yields; no neighbour is ever asked for space, and
-    // nothing is allowed to spill. If even the tightest form does not fit (a
-    // genuinely tiny viewport with many launchers), scrolling remains as the
-    // last resort — bounded and honest — rather than silent clipping.
+    css.setProperty('--wv-stack', stack + 'px');
+    css.setProperty('--dv-railbot', (stack + 12) + 'px');
+    css.setProperty('--dv-railneed', '0px');
+    css.setProperty('--wh-rail-need', '0px');
+    var panel = document.getElementById('vintWorldHud');
+    var top = 270;
+    if (panel) { var pr = panel.getBoundingClientRect(); if (pr.height > 0 && pr.bottom > 0) top = Math.round(pr.bottom + 16); }
+    css.setProperty('--dv-railtop', top + 'px');
     try {
-      var bandH = Math.max(46, vh - top - bot);
       var cl = document.body.classList;
-      cl.remove('dv-rail-compact'); cl.remove('dv-rail-tight'); cl.remove('dv-rail-wrap');
-      // PUBLISH THE COLUMN'S REAL NEED, measured in its most compact form, so
-      // the sheet can reserve it (see .dv-sheet's max-height). It is measured
-      // WITH the compact classes on — that is the height the rail will actually
-      // occupy when a sheet is up — and then the classes are re-decided below
-      // against the band the sheet's yield produces. Published every layout, so
-      // adding or hiding a launcher updates the reservation with no extra wiring.
-      cl.add('dv-rail-compact'); cl.add('dv-rail-tight');
-      css.setProperty('--dv-railneed', Math.min(vh - 120, (_rail.scrollHeight || 0)) + 'px');
-      cl.remove('dv-rail-compact'); cl.remove('dv-rail-tight');
-      // scrollHeight is read AFTER each class change so each measurement is of
-      // the form actually being tested, never of the previous one.
-      if ((_rail.scrollHeight || 0) > bandH) {
-        cl.add('dv-rail-compact');
-        if ((_rail.scrollHeight || 0) > bandH) {
-          cl.add('dv-rail-tight');
-          // LAST STEP: compaction has a floor (42px is the minimum honest touch
-          // target and we will not go under it to win a measurement). If the
-          // column still does not fit, it wraps into a second column and uses
-          // the width the viewport actually has. Verified after the fact, not
-          // assumed — if even this does not fit, the class comes back off so
-          // the rail keeps its single-column scroll rather than being left in a
-          // wrapped state that solved nothing and changed the reading order.
-          // HOW WIDE THE WRAP NEEDS TO BE, DERIVED FROM HOW TALL IT IS ALLOWED
-          // TO BE. With a sheet open at 320x568 the band collapses to a single
-          // 46px row, so a fixed two-column width could never hold eight
-          // launchers (410px of content in a 110px box) — it spilled and the
-          // guard below correctly rejected it, leaving the clipping it was meant
-          // to cure. The columns needed are ceil(items / rows-that-fit), and the
-          // width is that many pill-widths — capped so the rail can still never
-          // reach the screen's right half, where #topctl and the docked account
-          // stack live. If the cap cannot hold the launchers, the guard rejects
-          // the wrap and the single-column scroll remains, as before.
-          var pill = 46, colGap = 6, rowGap = 6;
-          var firstL = _rail.querySelector('.dv-launch');
-          if (firstL) {
-            var fr = firstL.getBoundingClientRect();
-            if (fr.width > 2) pill = Math.ceil(fr.width);
-          }
-          var shown = 0, all = _rail.querySelectorAll('.dv-launch');
-          for (var ci = 0; ci < all.length; ci++) if (all[ci].offsetParent !== null) shown++;
-          var perCol = Math.max(1, Math.floor((bandH + rowGap) / (pill + rowGap)));
-          var cols = Math.max(1, Math.ceil(shown / perCol));
-          var wantW = cols * pill + (cols - 1) * colGap;
-          var vwNow = W.innerWidth || document.documentElement.clientWidth || 360;
-          // THE CAP IS MEASURED AGAINST WHAT IS ACTUALLY BESIDE THE RAIL, not
-          // against half the screen (AETHERHOLD 2026-08-08). `vw/2 - 24` was a
-          // conservative stand-in for "don't reach #topctl and the docked account
-          // stack" — but those live at the TOP-RIGHT, and the rail is anchored to
-          // the BOTTOM-LEFT. At 320x568 with the guest doorway up, the honest
-          // requirement was four 46px columns (202px) and the blanket cap allowed
-          // 136px, so the wrap was rejected by its own guard and the rail fell
-          // back to the single-column scroll — leaving three launchers at negative
-          // y, exactly the clipping the wrap exists to cure. A cap that forbids
-          // the only working layout is not a safety rule, it is the bug.
-          //
-          // So the cap now asks the real question: how much width is free to the
-          // RIGHT of the rail, in the band the rail actually occupies? Anything
-          // fixed that overlaps the rail's vertical range is measured and the
-          // nearest one sets the limit (minus a 12px gutter); with nothing there,
-          // the rail may use up to 78% of the width, which is still far short of
-          // the screen edge. The wrap's own post-check (below) remains the final
-          // arbiter — if a wider rail still spills, the class comes straight off.
-          var railTopY = top, railBotY = vh - bot;
-          var nearest = vwNow;
-          try {
-            var fixedEls = document.querySelectorAll('body *');
-            for (var qi = 0; qi < fixedEls.length; qi++) {
-              var fe = fixedEls[qi];
-              if (fe === _rail || _rail.contains(fe)) continue;
-              var fcs = getComputedStyle(fe);
-              if (fcs.position !== 'fixed') continue;
-              if (fcs.display === 'none' || fcs.visibility === 'hidden' || +fcs.opacity < 0.05) continue;
-              var fr2 = fe.getBoundingClientRect();
-              if (fr2.width < 2 || fr2.height < 2) continue;
-              if (fr2.width >= vwNow - 2) continue;            // full-width bars are floors, not walls
-              if (fr2.bottom <= railTopY || fr2.top >= railBotY) continue;  // not in our band
-              // A DOCKED WIDGET IS NOT A WALL — IT IS A THING THAT MOVES. The
-              // corner dock exists precisely to slide its pills clear of
-              // obstacles, and the rail registers itself as one (see mount()).
-              // Measured at 320x568: the account pill sat at x=207 and capped the
-              // rail at 183px when the wrap genuinely needed 202px, so the wrap
-              // was rejected and three launchers stayed clipped off-screen. The
-              // rail is the only way between surfaces and cannot move; the pill
-              // can, and the dock will move it. Treating a movable thing as
-              // immovable is what made an unsolvable layout out of a solvable one.
-              if (fe.id === 'vwg-pill' || fe.id === 'vwg-dot') continue;
-              if (fr2.left >= 12 && fr2.left < nearest) nearest = fr2.left;
-            }
-          } catch (_) {}
-          var capW = Math.max(pill, Math.min(Math.floor(vwNow * 0.78), Math.floor(nearest - 12 - 12)));
-          css.setProperty('--dv-railw', Math.min(wantW, capW) + 'px');
-
-          cl.add('dv-rail-wrap');
-          // VERIFY THE WRAP, ON THE AXIS IT CAN ACTUALLY FAIL ON. A wrapped
-          // rail overflows HORIZONTALLY, so re-testing scrollHeight would
-          // always pass and would have hidden the exact catastrophe measured
-          // above (a 41px line, eight launchers in one row running to x=376
-          // off a 320px screen). The honest test is whether every launcher is
-          // inside the rail's own box on BOTH axes; if any is not, the wrap did
-          // not help and comes straight back off, leaving the single-column
-          // scroll — bounded and reachable — as the fallback.
-          var rr = _rail.getBoundingClientRect();
-          var spill = _rail.scrollWidth > Math.ceil(rr.width) + 1;
-          if (!spill) {
-            var ls = _rail.querySelectorAll('.dv-launch');
-            for (var li = 0; li < ls.length; li++) {
-              if (ls[li].offsetParent === null) continue;      // hidden: not laid out
-              var lr = ls[li].getBoundingClientRect();
-              if (lr.width < 2) continue;
-              if (lr.right > rr.right + 1 || lr.left < rr.left - 1) { spill = true; break; }
-            }
-          }
-          if (spill) cl.remove('dv-rail-wrap');
-        }
-      }
-
-      // ── THE LAST LAUNCHER MUST BE REACHABLE (2026-08-08, organ 6) ─────────
-      // The ladder above (compact → tight → wrap) has a real floor, and when
-      // every rung is exhausted the rail falls back to a single-column SCROLL.
-      // That fallback is bounded and honest — but a scroll container opens a
-      // gap between "rendered" and "reachable", and nothing was closing it:
-      // #dvRail is column-reverse, so it rests at the BOTTOM of its scroll
-      // range and the launchers that overflow do so off the TOP, silently.
-      //
-      // MEASURED at 320x568 with every conditional launcher visible (a named
-      // buildable world at standing 400, i.e. twelve launchers): the column
-      // needs 570px of scrollHeight in a 268px band, and the newest launcher
-      // rendered at top:-10 — present in the DOM, reported visible by
-      // getComputedStyle, and completely unhittable. That is exactly the dead
-      // control the no-collision law exists to forbid, and it is the failure
-      // mode that gets WORSE every time anyone adds a launcher, which is
-      // precisely why it must be handled here in the rail that measures rather
-      // than by each module hand-counting its neighbours.
-      //
-      // The fix does not fight the fallback, it completes it: if the newest
-      // launcher (the LAST flow child, nearest the thumb in column-reverse) is
-      // outside the rail's own box, scroll the rail so it is inside. One
-      // assignment, no layout thrash, and it is a no-op in every case where the
-      // column already fits — which is every viewport except the most extreme.
-      // Nothing is hidden and nothing is repositioned; the user simply lands on
-      // the end of the column that a bottom-anchored rail should have been
-      // showing all along, and can scroll to the rest.
-      if (!cl.contains('dv-rail-wrap') && _rail.scrollHeight > _rail.clientHeight + 1) {
-        var lasts = _rail.querySelectorAll('.dv-launch');
-        var lastVis = null;
-        for (var qi = lasts.length - 1; qi >= 0; qi--) {
-          if (lasts[qi].offsetParent !== null) { lastVis = lasts[qi]; break; }
-        }
-        if (lastVis) {
-          var rb = _rail.getBoundingClientRect();
-          var lb = lastVis.getBoundingClientRect();
-          // above the rail's own top edge = scrolled out of reach
-          if (lb.top < rb.top - 1) {
-            _rail.scrollTop = Math.max(0, _rail.scrollTop - (rb.top - lb.top) - 6);
-          }
-        }
-      }
+      cl.remove('dv-rail-compact'); cl.remove('dv-rail-tight'); cl.remove('dv-rail-wrap'); cl.remove('dv-panel-yield');
+      cl.add('wv-docked');
     } catch (_) {}
+    updateMore();
   }
   var _layoutT = null;
   function scheduleLayout() { clearTimeout(_layoutT); _layoutT = setTimeout(layoutRail, 60); }
   W.addEventListener('resize', scheduleLayout);
   W.addEventListener('orientationchange', scheduleLayout);
   W.addEventListener('vint:world-state', scheduleLayout);
-
-  // THE DOORWAY MOVES ON ITS OWN, SO WATCH IT (AETHERHOLD 2026-08-08).
-  // Step 2a folds #invite into the rail's floor, but a measurement is only as
-  // good as the moment it is taken — and #invite changes size twice on a guest
-  // session without firing ANY of the three events above: it rises ~1.4s after
-  // load (world.html's guestOverlay), and it collapses to a ~60px pill when the
-  // guest taps "just look around". A rail measured before either would be wrong
-  // in the two directions that matter: overlapping the doorway, or stranding a
-  // gap where the doorway used to be. A MutationObserver on its class/style is
-  // the honest trigger, because those are exactly what both transitions change,
-  // and it costs nothing on a signed-in session where #invite never appears.
-  //
-  // AND MEASURE IT WHEN IT HAS STOPPED MOVING, NOT WHILE IT IS MOVING. #invite
-  // rises with an 0.8s `inviteRise` animation, so the class mutation fires while
-  // the sheet is still 288px BELOW its final resting place. Measured, the rail
-  // yielded to that in-flight position and settled 2–3px inside the doorway's
-  // final box — a real overlap produced by a correct formula reading a moving
-  // target. (Proof it was the measurement and not the maths: forcing a relayout
-  // once everything settled turned +4px of overlap into −12px of clearance.)
-  // So the observer runs the pass IMMEDIATELY rather than through the 60ms
-  // debounce. The debounce exists to coalesce resize storms, but this mutation is
-  // a single discrete event — and because step 2a now derives the doorway's
-  // RESTING floor from its height and bottom offset (both final on the first
-  // frame it is displayed), that immediate pass is already the correct, final
-  // number. Debouncing it merely guaranteed one rendered frame in which the
-  // launchers sat inside the doorway: measured at 320×720, a 138px overlap in the
-  // gap between `.show` being added and the deferred relayout firing. A collision
-  // that lasts one frame is still a collision. `animationend`/`transitionend`
-  // remain as confirmation for any future timing this does not anticipate.
-  try {
-    var _inv = document.getElementById('invite');
-    if (_inv) {
-      // A SETTLING TAIL, because the doorway keeps changing size after it
-      // appears. The synchronous pass below is correct for the geometry it can
-      // see, but #invite's content (and therefore its HEIGHT) can still settle a
-      // frame or two later — web fonts land, the copy reflows, the rise finishes.
-      // Each of those moves the floor the rail is supposed to clear, and none of
-      // them fires another class mutation. A short bounded tail of re-measures
-      // costs a handful of rect reads and removes the last intermittent overlap;
-      // it stops for good after ~0.6s.
-      var _tail = null;
-      function settleRail() {
-        try { layoutRail(); } catch (_) {}
-        clearInterval(_tail);
-        var n = 0;
-        _tail = setInterval(function () {
-          try { layoutRail(); } catch (_) {}
-          if (++n > 14) clearInterval(_tail);
-        }, 45);
-      }
-      if (W.MutationObserver) {
-        new W.MutationObserver(settleRail)      // synchronous first pass + tail
-          .observe(_inv, { attributes: true, attributeFilter: ['class', 'style'] });
-      }
-      _inv.addEventListener('animationend', settleRail);
-      _inv.addEventListener('transitionend', settleRail);
-    }
-  } catch (_) {}
-
   // ═══════════════════════════════════════════════════════════════════════════
   // BOTTOM-SHEET GRIP — drag-down / swipe-down to dismiss (mobile-native feel)
   // ═══════════════════════════════════════════════════════════════════════════
@@ -2221,6 +1708,19 @@
     buildPalette();
     updateBuildVisibility();
     layoutRail();
+    // the dock's height can change without a resize (web fonts landing, the
+    // safe-area settling, a launcher appearing) — re-publish the stack then too.
+    try { if (W.ResizeObserver) new W.ResizeObserver(scheduleLayout).observe(_rail); } catch (_) {}
+    try { if (W.ResizeObserver) new W.ResizeObserver(updateMore).observe(_scroll); } catch (_) {}
+    // the doorway rises, collapses to a pill, and settles its copy without any
+    // resize event — watch its box and its class so the stack follows it.
+    try {
+      var _inv = document.getElementById('invite');
+      if (_inv) {
+        if (W.ResizeObserver) new W.ResizeObserver(scheduleLayout).observe(_inv);
+        if (W.MutationObserver) new W.MutationObserver(scheduleLayout).observe(_inv, { attributes: true, attributeFilter: ['class', 'style'] });
+      }
+    } catch (_) {}
     whoAmI();
   }
 
@@ -2254,7 +1754,7 @@
     var existing = document.getElementById(id);
     if (existing) return existing;            // idempotent: re-mount never doubles
     var b = makeLauncher(id, label, glyph, onClick);
-    layoutRail();                             // re-measure: the rail just grew
+    layoutRail();                             // re-measure: the dock just grew
     return b;
   }
 
@@ -2268,6 +1768,9 @@
     },
     goHome: goHome,
     addLauncher: addLauncher,
+    // the label registry, read by the guide sheet (commons.js) so help text and
+    // buttons come from one source. Returns a copy — callers cannot mutate it.
+    launchMeta: function (id) { var m = LAUNCH_META[id]; return m ? { g: m.g, l: m.l, d: m.d } : null; },
     relayout: layoutRail,
     toast: toast,
     refreshAgents: refreshVentureAgents,

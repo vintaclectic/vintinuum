@@ -607,7 +607,7 @@
     let wsUrl = null, ticket = _token();
     try {
       const r = await fetch(_base() + '/api/world/hello', { headers: { Authorization: 'Bearer ' + _token() } });
-      if (r.ok) { const h = await r.json(); if (h.wsUrl) wsUrl = h.wsUrl; if (h.ticket) ticket = h.ticket; World._sessionEpoch = h.sessionEpoch; World._protoMax = h.protoMax; }
+      if (r.ok) { const h = await r.json(); if (h.wsUrl) wsUrl = h.wsUrl; if (h.ticket) ticket = h.ticket; if (h.userId != null) World._userId = String(h.userId); World._sessionEpoch = h.sessionEpoch; World._protoMax = h.protoMax; }
     } catch (_) {}
     if (gen !== _wsGen) return;         // a warp happened while hello was in flight — abandon this connect
     if (!wsUrl) wsUrl = _base().replace(/^http/, 'ws') + '/ws/world'; // legacy fallback
@@ -794,6 +794,13 @@
       try { window.dispatchEvent(new CustomEvent('vint:world-refine', { detail: m })); } catch (_) {}
     } else if (m.t === 'world:err') {
       try { window.dispatchEvent(new CustomEvent('vint:world-err', { detail: m })); } catch (_) {}
+    } else if (/^world:(forge|trade|who)(:|$)/.test(m.t)) {
+      // THE COMMONS (task 9TYJB74). The server has handled trade (ledger.js),
+      // the forge (combine / teach / raise / contribute / withdraw / read) and
+      // the who-is-here read since 2026-08-25 / 09-25, and every reply was
+      // dropped here because no branch listened. One relay, verbatim — the
+      // client never derives an outcome; body/world/commons.js renders it.
+      try { window.dispatchEvent(new CustomEvent('vint:world-commons', { detail: m })); } catch (_) {}
     }
   }
 
@@ -945,6 +952,9 @@
   // Court's "set the watch" uses it to choose the WS path vs. the REST fallback.
   World.isConnected = function () { return !!(ws && ws.readyState === 1); };
   World.currentWorldId = function () { return World._worldId; };
+  // the signed-in user's id as the brain's /api/world/hello reported it (null
+  // for guests / before hello). Used to tell which side of a trade table is yours.
+  World.userId = function () { return World._userId || null; };
   World.canBuild = function () { return World._canBuild !== false; };
 
   // ── THE RECKONING: who is standing near me ──────────────────────────────────
