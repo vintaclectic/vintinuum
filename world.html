@@ -493,6 +493,27 @@
      z9999 player iframe can never share pixels with a z1600 sheet.
      ── KILL SWITCH: ?arcade=0 (read live, never latched). -->
 <script src="body/world/arcade.js"></script>
+<!-- THE MARKET — the peer-to-peer BAZAAR. (Vinta's first-named world verb:
+     "trade, combine tools.") The commons (commons.js) owns the LIVE, co-present,
+     server-escrow SWAP through world/ledger.js; the forge owns the combine. This
+     is the third thing neither could be: an ASYNCHRONOUS listing market. You and
+     your court list tools, resources and creations; anyone makes offers/bids; a
+     lister ACCEPTS and the trade settles through the Concord's ONE treasury and
+     seven-tag karma spine — never a second economy, never a second escrow.
+     Loads AFTER concord.js (strictly downstream: it settles ONLY through
+     VintConcord.spend()/credit()/impress(), the guarded verbs, and reads
+     VintCourt.roster() for the counterparties) and after arcade.js so the rail
+     order stays: … concord · yard · powers · … · arcade · market. It is a no-op
+     when the Concord/Court are absent, exactly like the Admiralty and the Arcade.
+     ── NO-COLLISION: adds ZERO fixed elements. Its launcher is a flow child of
+     #dvRail via addLauncher() (the rail measures and allocates the slot — no
+     hand-counted offset exists in the file), and its sheet carries .dv-sheet and
+     joins the one-open-at-a-time registry via registerSheet('market'), so raising
+     it evicts whatever is up, Escape closes it, and the scrim tracks it. Every
+     toast goes through the one shared DirverseHUD.toast node.
+     ── KILL SWITCH: ?market=0 (read live, never latched). Resentment signal:
+     'close the market', one tap, wipes the bazaar's own state, keeps nothing. -->
+<script src="body/world/market.js"></script>
 <!-- OWNER ADMIN — hidden oversight panel. It loads after DirverseHUD so it can
      join the measured one-sheet registry and never pin its own fixed geometry.
      Open with ?owner=1 or Ctrl+Shift+O; after owner-key unlock it adds a rail

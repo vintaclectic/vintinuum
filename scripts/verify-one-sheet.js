@@ -118,6 +118,15 @@ const SURFACES = [
   // it needs no precondition below; it is visible in every state this sweep
   // runs in, which is strictly the harder case to keep clean.
   { id: 'arcade',   sel: '#arSheet',      btn: '#arBtn',      open: () => window.VintArcade.open() },
+  // THE MARKET (the bazaar). A ninth full-width sheet in the same z-band through
+  // the same registry, so it belongs here for exactly the reason the lanterns,
+  // the Concord, the Admiralty and the Arcade did: the whole point of this script
+  // is that a NEW surface must never silently join a stack it was never measured
+  // against. Like the Arcade its launcher is NOT conditionally hidden — a bazaar
+  // is public by nature and reachable from a cold load — so it needs no
+  // precondition below; it is visible in every state this sweep runs in, which is
+  // strictly the harder case to keep clean.
+  { id: 'market',   sel: '#mkSheet',      btn: '#mkBtn',      open: () => window.VintMarket.open() },
 ];
 
 const MIME = {
@@ -442,7 +451,7 @@ const TOKEN_KEYS = ['vint_token', 'vintinuum_token', 'token', 'vint_jwt'];
     // the modules that own the surfaces rather than for a flat clock.
     await page.waitForFunction(
       () => window.DirverseHUD && window.VintCourt && window.DirHavenDoor && window.VintTraces
-            && window.VintConcord && window.VintAdmiralty && window.VintArcade,
+            && window.VintConcord && window.VintAdmiralty && window.VintArcade && window.VintMarket,
       { timeout: 20000 }
     ).catch(() => {});
     // ── STAND IN A PERSON'S WORLD, NOT THE HUB ────────────────────────────────
