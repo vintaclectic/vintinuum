@@ -875,6 +875,14 @@
       try { window.dispatchEvent(new CustomEvent('vint:world-forge-withdrew', { detail: m })); } catch (_) {}
     } else if (m.t === 'world:forge:completed') {
       try { window.dispatchEvent(new CustomEvent('vint:world-forge-completed', { detail: m })); } catch (_) {}
+    } else if (m.t === 'world:gather:nodes') {
+      try { window.dispatchEvent(new CustomEvent('vint:world-gather-nodes', { detail: m })); } catch (_) {}
+    } else if (m.t === 'world:gather:ok') {
+      try { window.dispatchEvent(new CustomEvent('vint:world-gather-ok', { detail: m })); } catch (_) {}
+    } else if (m.t === 'world:gather:node') {
+      try { window.dispatchEvent(new CustomEvent('vint:world-gather-node', { detail: m })); } catch (_) {}
+    } else if (m.t === 'world:gather:first') {
+      try { window.dispatchEvent(new CustomEvent('vint:world-gather-first', { detail: m })); } catch (_) {}
     }
   }
 
