@@ -224,6 +224,10 @@
       // extras, never the only path. The geometry is forced (!important) so a
       // stray compact/tight class can never shrink a touch target below 46px.
       'body.dv-coarse #dvRail .dv-launch .lbl{display:inline !important;}',
+      // a WRAPPED rail on touch buys its columns from the pill's own padding,
+      // never from its height or its name: 10px sides instead of 14 keep ~8px
+      // more of every name visible inside the bounded column (GEJ8NYU).
+      'body.dv-coarse.dv-rail-wrap #dvRail .dv-launch{padding:0 10px !important;gap:5px !important;}',
       'body.dv-coarse #dvRail .dv-launch{min-height:46px !important;height:auto !important;',
       ' padding:0 14px !important;gap:7px !important;}',
       // ── THE SECOND COLUMN — when compaction is not enough, use the WIDTH ─────
@@ -329,6 +333,27 @@
       // it rather than the launcher disappearing. A shortened name is a legible
       // name; an off-screen launcher is nothing at all.
       'body.dv-rail-wrap #dvRail .dv-launch{max-width:var(--dv-railcw,104px);}',
+      // ── THE GLYPH TIER — the rung BELOW tight, FINE POINTER ONLY (GEJ8NYU) ──
+      // MEASURED 2026-09-27 with verify-rail-reach.js (every launcher, not just the
+      // eight that open sheets): at 375x812 with any sheet up the rail holds 18-19
+      // launchers in a ~400px band, the labeled wrap is refused (a labeled pill is
+      // 71..111px, and the floor-62px column still cannot seat them), and the rail
+      // falls back to its single scrolled column with 9-11 launchers ABOVE the
+      // viewport — present, labeled, and unhittable. A name nobody can reach
+      // identifies nothing.
+      //
+      // So there is one rung left to spend, and it is spent ONLY where hover
+      // exists. The glyph is its own span (see makeLauncher) and is never hidden;
+      // the name is folded away and moved to `title=` (set by layoutRail), which a
+      // fine pointer shows on hover. The pill collapses to its 46px floor, so five
+      // columns are 5*46+4*6 = 254px — inside the 0.78vw cap (292px at 375).
+      //
+      // THE 2026-09-26 TOUCH DIRECTIVE IS NOT RELAXED. On a coarse pointer the
+      // whole ladder is skipped (`!_coarse` in layoutRail) AND the body.dv-coarse
+      // rule above forces `.lbl{display:inline !important}`, which outranks this
+      // rule — so a phone can never land here even by a stray class.
+      'body.dv-rail-glyph #dvRail .dv-launch .lbl{display:none;}',
+      'body.dv-rail-glyph #dvRail .dv-launch{padding:0 8px;gap:4px;justify-content:center;min-width:46px;}',
       // ── WHEN THE RAIL MUST SCROLL, IT SAYS SO (2026-09-25) ──────────────────
       // Every rung of the ladder has a floor, and on a genuinely over-capacity
       // viewport (MEASURED: 320×568 guest, 320×568 + sheet, 320×720 + sheet, and
@@ -1969,6 +1994,38 @@
       }
     }
 
+    // 2a') THE BOTTOM-LEFT DOCK IS A FLOOR TOO (GEJ8NYU). #vintVoice (and any
+    //      sibling on the corner dock's 'bl' stack) sits at left:16 — inside the
+    //      rail's own column — and the rail never knew: world.html's own audit
+    //      records "#dvRail x #vintVoice overlapped 42x44 at EVERY width", and
+    //      verify-rail-reach.js MEASURED it again at 320x568/320x812/375x812/
+    //      768x1024/1920x1080. It only bit when step 3/3b borrowed the floor, so
+    //      whether a launcher landed on the mic depended on how much the squeeze
+    //      happened to take. The dock does not move for the rail (the rail is not
+    //      registered as a dock obstacle — it would shove the stack up into the
+    //      panel), so the rail yields instead: the bl stack's live top becomes an
+    //      un-borrowable floor, exactly like #invite. Read from the dock's own
+    //      registry so a new bl widget is covered the day it ships; only slots
+    //      that actually intrude on the rail's column count.
+    var dockFloor = 0;
+    try {
+      var D = W.VintDock;
+      var dslots = (D && typeof D._slots === 'function') ? D._slots() : [];
+      var railL = 12;
+      try { railL = _rail.getBoundingClientRect().left; } catch (_) {}
+      for (var di = 0; di < dslots.length; di++) {
+        var ds = dslots[di];
+        if (!ds || ds.corner !== 'bl' || !ds.el || !ds.el.isConnected) continue;
+        var dcs = getComputedStyle(ds.el);
+        if (dcs.display === 'none' || dcs.visibility === 'hidden' || +dcs.opacity < 0.05) continue;
+        var dr = ds.el.getBoundingClientRect();
+        if (dr.width < 2 || dr.height < 2 || dr.top >= vh) continue;
+        if (dr.left > railL + 46) continue;              // not in the rail's column
+        dockFloor = Math.max(dockFloor, vh - dr.top + 12);
+      }
+    } catch (_) {}
+    if (dockFloor > 0 && dockFloor < vh) bot = Math.max(bot, dockFloor); else dockFloor = 0;
+
     // 2b) AN OPEN SHEET IS A FULL-WIDTH BAR TOO. Measured at 375×812 the rail
     //     runs 336→662 while an open sheet runs 584→812: the bottom launcher
     //     (616→662) sits INSIDE the sheet's band, so the sheet (z1600) paints
@@ -2057,6 +2114,21 @@
       if (lvr.height > 0 && lvr.bottom > 0) ceilFloor = Math.max(ceilFloor, lvr.bottom + 10);
     }
 
+    // THE NEED IS MEASURED IN ONE FIXED FORM, NOT IN WHATEVER FORM THE LAST PASS
+    // LEFT (GEJ8NYU). This read `_rail.scrollHeight` as-found, which was stable
+    // only while the rail almost never wrapped: the steady state was the
+    // compact+tight single column, so the need was always that column's height.
+    // Once the wrap started succeeding, the as-found rail was often WRAPPED —
+    // a fraction of the height — so the next pass borrowed less band, the wrap
+    // then failed, the pass after that saw a tall scrolled column and borrowed
+    // again. MEASURED: the same 768x1024 coarse + court state came out wrapped
+    // (top 120) on one run and scrolled with launchers off-screen (top 173) on
+    // the next. So the need is taken from the compact+tight single column every
+    // time — the form the base behaviour always measured in its steady state —
+    // and step 4 re-decides the classes from scratch below, as it always has.
+    var cl0 = document.body.classList;
+    cl0.remove('dv-rail-wrap'); cl0.remove('dv-rail-glyph');
+    cl0.add('dv-rail-compact'); cl0.add('dv-rail-tight');
     var needH = _rail.scrollHeight || 0;
     var yieldPanel = false;
     if (botFloor && needH > 0 && panel) {
@@ -2067,6 +2139,16 @@
           top -= take;
           var pr2 = panel.getBoundingClientRect();
           if (pr2.height > 0 && top < pr2.bottom) yieldPanel = true;
+          // #hint sits BELOW the panel, so a borrow can stop between the two:
+          // past the hint's bottom but short of the panel's. This branch only
+          // ever tested the panel, so the rail walked onto the keys line without
+          // yielding it — MEASURED at 1280x800 with ◈ open: rail top 134, #hint
+          // 140..185, four launchers on the hint. Step 3 below already yields the
+          // hint for exactly this reason; the sheet-borrow now does the same.
+          if (hint && getComputedStyle(hint).display !== 'none') {
+            var hr3 = hint.getBoundingClientRect();
+            if (hr3.height > 0 && top < hr3.bottom) yieldPanel = true;
+          }
         }
       }
     }
@@ -2108,7 +2190,7 @@
       // than a short rail (the rail can scroll; a covered button cannot be hit).
       // `inviteFloor` joins botFloor as un-borrowable for the same reason: the
       // guest doorway is opaque, so a launcher under it is a dead control.
-      if (avail < 46) bot = Math.max(8, botFloor, inviteFloor, bot - (46 - avail));
+      if (avail < 46) bot = Math.max(8, botFloor, inviteFloor, dockFloor, bot - (46 - avail));
     }
 
     // ── 3b) ENOUGH BAND FOR THE LAUNCHERS THAT EXIST ─────────────────────────
@@ -2142,7 +2224,7 @@
     // button has no recourse at all.
     if (needH > 0 && (vh - top - bot) < needH) {
       var deficit = needH - (vh - top - bot);
-      var fromFloor = Math.min(deficit, Math.max(0, bot - Math.max(8, botFloor, inviteFloor)));
+      var fromFloor = Math.min(deficit, Math.max(0, bot - Math.max(8, botFloor, inviteFloor, dockFloor)));
       if (fromFloor > 0) bot -= fromFloor;
     }
     // one authoritative write, AFTER every branch that can set it (the squeeze
@@ -2173,6 +2255,7 @@
       var bandH = Math.max(46, vh - top - bot);
       var cl = document.body.classList;
       cl.remove('dv-rail-compact'); cl.remove('dv-rail-tight'); cl.remove('dv-rail-wrap');
+      cl.remove('dv-rail-glyph');
       // PUBLISH THE COLUMN'S REAL NEED, measured in its most compact form, so
       // the sheet can reserve it (see .dv-sheet's max-height). It is measured
       // WITH the compact classes on — that is the height the rail will actually
@@ -2192,15 +2275,21 @@
       css.removeProperty('--dv-railcw');
       // scrollHeight is read AFTER each class change so each measurement is of
       // the form actually being tested, never of the previous one.
-      // ON TOUCH, NEVER COMPACT TO GLYPH-ONLY. The compact→tight→wrap ladder below
-      // buys vertical room by HIDING the label — acceptable on desktop (hover +
-      // title tooltip reveal identity) but a dead, unidentifiable control on a
-      // coarse pointer that has no hover (Vinta directive 2026-09-26). So on touch
-      // the ladder is skipped entirely: the rail keeps full labels and yields any
-      // overflow to the bounded internal scroll (overflow-y:auto on #dvRail) — the
-      // launchers stay legible and reachable, the rail still cannot spill past its
-      // measured band, and the last-launcher-reachable scroll fix below still runs.
-      if (!_coarse && (_rail.scrollHeight || 0) > bandH) {
+      // ON TOUCH, NEVER COMPACT TO GLYPH-ONLY (Vinta directive 2026-09-26) — and
+      // that is now enforced at the ONE rung that hides a name, not by skipping
+      // the whole ladder (GEJ8NYU). This guard used to read `!_coarse && ...` on
+      // the reasoning that the ladder "buys vertical room by HIDING the label".
+      // That stopped being true on 2026-09-25: compact and tight shrink the NAME,
+      // and the labeled wrap bounds the pill so the name ellipsizes — none of
+      // them hide identity. Skipping them on touch meant a phone got the bounded
+      // scroll every time, and MEASURED (verify-rail-reach.js, COARSE=1) that was
+      // 400+ launchers above the fold across 32 phone states: legible names on
+      // buttons nobody could reach. So touch now climbs compact → tight → labeled
+      // wrap like desktop does (the body.dv-coarse rules still hold every pill at
+      // the 46px floor with its name showing), and ONLY the glyph tier below is
+      // fine-pointer-only. If even the labeled wrap cannot seat the launchers on
+      // touch, the bounded scroll + fade fallback stands exactly as before.
+      if ((_rail.scrollHeight || 0) > bandH) {
         cl.add('dv-rail-compact');
         if ((_rail.scrollHeight || 0) > bandH) {
           cl.add('dv-rail-tight');
@@ -2269,6 +2358,17 @@
           // arbiter — if a wider rail still spills, the class comes straight off.
           var railTopY = top, railBotY = vh - bot;
           var nearest = vwNow;
+          // A WALL IS SOMETHING BESIDE THE COLUMN, NOT INSIDE IT (GEJ8NYU). The
+          // scan below took the nearest fixed element's LEFT edge as the limit,
+          // and anything starting within the rail's own single-column footprint
+          // (MEASURED: #status at x=26 on a 375px screen, #vintVoice at x=16 on
+          // 1280x800) produced `nearest - 24` < 46, so capW collapsed to 46px and
+          // EVERY wrap — labeled or glyph — was refused by its own spill guard.
+          // Narrowing the rail cannot clear an element the single column already
+          // stands on, so such an element is not a wall for the wrap's width;
+          // only things starting at or right of the column's edge are.
+          var colRight = 12;
+          try { colRight = Math.ceil(_rail.getBoundingClientRect().right); } catch (_) {}
           try {
             var fixedEls = document.querySelectorAll('body *');
             for (var qi = 0; qi < fixedEls.length; qi++) {
@@ -2291,7 +2391,7 @@
               // can, and the dock will move it. Treating a movable thing as
               // immovable is what made an unsolvable layout out of a solvable one.
               if (fe.id === 'vwg-pill' || fe.id === 'vwg-dot') continue;
-              if (fr2.left >= 12 && fr2.left < nearest) nearest = fr2.left;
+              if (fr2.left >= colRight && fr2.left < nearest) nearest = fr2.left;
             }
           } catch (_) {}
           var capW = Math.max(46, Math.min(Math.floor(vwNow * 0.78), Math.floor(nearest - 12 - 12)));
@@ -2313,7 +2413,13 @@
           // we would be back to the defect this whole change exists to kill, so
           // the wrap is simply not entered and the scroll fallback stands.
           var colW = Math.floor((capW - (cols - 1) * colGap) / cols);
-          if (colW >= 62 && colW < pillW) {
+          // on touch the pill keeps 10px padding + dot + glyph (~51px of chrome,
+          // see the dv-coarse wrap rule), so the floor that still leaves ~6
+          // characters of name is higher than the fine-pointer 62px. MEASURED at
+          // 375x812 + sheet: an 84px floor leaves the narrowest name box >= 30px
+          // (4-5 glyphs + ellipsis); every name in the roster stays distinct.
+          var colMin = _coarse ? 84 : 62;
+          if (colW >= colMin && colW < pillW) {
             css.setProperty('--dv-railcw', colW + 'px');
             wantW = cols * colW + (cols - 1) * colGap;
           } else {
@@ -2330,18 +2436,60 @@
           // inside the rail's own box on BOTH axes; if any is not, the wrap did
           // not help and comes straight back off, leaving the single-column
           // scroll — bounded and reachable — as the fallback.
-          var rr = _rail.getBoundingClientRect();
-          var spill = _rail.scrollWidth > Math.ceil(rr.width) + 1;
-          if (!spill) {
+          // (GEJ8NYU) the per-launcher test now checks the VERTICAL axis too: a
+          // wrapped column whose band is shorter than its content clips off the
+          // top exactly like the single column does, and a launcher above the
+          // rail's own top edge is as dead as one off its right edge.
+          var wrapSpills = function () {
+            var rr = _rail.getBoundingClientRect();
+            if (_rail.scrollWidth > Math.ceil(rr.width) + 1) return true;
             var ls = _rail.querySelectorAll('.dv-launch');
             for (var li = 0; li < ls.length; li++) {
               if (ls[li].offsetParent === null) continue;      // hidden: not laid out
               var lr = ls[li].getBoundingClientRect();
               if (lr.width < 2) continue;
-              if (lr.right > rr.right + 1 || lr.left < rr.left - 1) { spill = true; break; }
+              if (lr.right > rr.right + 1 || lr.left < rr.left - 1) return true;
+              if (lr.top < rr.top - 1 || lr.bottom > rr.bottom + 1) return true;
+            }
+            return false;
+          };
+          var spill = wrapSpills();
+          if (spill) cl.remove('dv-rail-wrap');
+
+          // ── THE GLYPH TIER (GEJ8NYU) — the last rung before the scroll ───────
+          // The labeled wrap could not seat every launcher. Before conceding to a
+          // scrolled column (where most launchers sit above the fold), fold the
+          // names away and try the wrap again at the 46px glyph floor. Fine
+          // pointer only: this whole ladder is already behind `!_coarse`, and the
+          // CSS forces labels back on coarse regardless. Same measurement, same
+          // cap, same verification — if even this spills, it comes straight off
+          // and the scroll fallback below stands exactly as before.
+          if (spill && !_coarse) {
+            cl.add('dv-rail-glyph');
+            css.removeProperty('--dv-railcw');
+            var gW = 46, gH = pillH;
+            var gAll = _rail.querySelectorAll('.dv-launch');
+            for (var gi = 0; gi < gAll.length; gi++) {
+              if (gAll[gi].offsetParent === null) continue;
+              var gr = gAll[gi].getBoundingClientRect();
+              if (gr.width > gW) gW = Math.ceil(gr.width);
+              if (gr.height > 2) gH = Math.ceil(gr.height);
+              // the name moves to the tooltip a fine pointer can actually show;
+              // aria-label already carries it for assistive tech.
+              if (!gAll[gi].title) gAll[gi].title = gAll[gi].getAttribute('aria-label') || '';
+            }
+            var gPer = Math.max(1, Math.floor((bandH + rowGap) / (gH + rowGap)));
+            var gCols = Math.max(1, Math.ceil(shown / gPer));
+            var gWant = gCols * gW + (gCols - 1) * colGap;
+            if (gWant <= capW) {
+              css.setProperty('--dv-railcw', gW + 'px');
+              css.setProperty('--dv-railw', gWant + 'px');
+              cl.add('dv-rail-wrap');
+              if (wrapSpills()) { cl.remove('dv-rail-wrap'); cl.remove('dv-rail-glyph'); }
+            } else {
+              cl.remove('dv-rail-glyph');
             }
           }
-          if (spill) cl.remove('dv-rail-wrap');
         }
       }
 

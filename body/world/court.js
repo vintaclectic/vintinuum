@@ -206,6 +206,14 @@
       // This sheet carries a text input (add-an-agent, and the talk composer), so
       // without it the keyboard would push the field out of sight on a phone.
       ' max-height:min(80vh,600px);max-height:min(80dvh,600px);',
+      // THE RAIL RESERVATION, synced from .dv-sheet (GEJ8NYU). The comment above
+      // promises "same scaffold geometry as .dv-sheet", but .dv-sheet later learned
+      // to reserve the launcher rail's measured need (--dv-railneed, floored at
+      // 42dvh) and this copy never did. MEASURED at 375x667 and 320x568: every
+      // .dv-sheet left the rail a band it could wrap into; #ctSheet alone took
+      // 80dvh, left the rail a 101-185px strip, and 13-16 launchers ended up above
+      // the viewport. Same rule now, so the Court yields exactly as its siblings do.
+      ' max-height:max(42dvh,min(80dvh,600px,calc(100dvh - var(--dv-railneed,0px) - 76px)));',
       ' background:rgba(6,9,15,0.94);',
       ' border-top:1px solid rgba(255,212,121,0.24);border-radius:20px 20px 0 0;',
       ' backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);color:#f0e6d8;',
