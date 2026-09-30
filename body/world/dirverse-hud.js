@@ -244,6 +244,94 @@
       ' max-height:max(46px,calc(100dvh - var(--dv-railtop,270px)',
       ' - var(--dv-railbot,150px) - env(safe-area-inset-bottom,0px)));}',
 
+      // ══════════════════════════════════════════════════════════════════════
+      // THE PHONE DOCK — the rail stops being a column and becomes a thumb rail
+      // (AETHERHOLD 2026-09-25, Vinta: "reimagined for mobile")
+      //
+      // Everything above this comment is the VERTICAL rail and its four
+      // escalating compaction steps (labels off -> gap -> padding -> wrap into
+      // two columns). Each was correct and each was losing, because the problem
+      // they fight is not styling, it is CAPACITY — this file's own comment
+      // says so: "the column is asking for more vertical room than the viewport
+      // has to give." FIFTEEN modules call addLauncher(). A 320x568 phone has
+      // no vertical room to give and never will.
+      //
+      // MEASURED, before this block (headless Chrome 131, real page, guest):
+      //   · 13 launchers rendered 46x42 — under the 44px floor — because
+      //     body.dv-rail-tight forces height:42px trying to make them fit.
+      //   · #dvRail overlapped #vintVoice 42x44 at ALL SEVEN viewports.
+      //   · at 375x667 the column rendered clipped at the left edge, on top of
+      //     the 3D presences and their nameplates.
+      //
+      // So on a phone the column is rotated into the ONE axis a phone actually
+      // has spare: horizontal. The rail becomes a single-row, horizontally
+      // scrolling dock in the thumb zone, directly above the say bar.
+      //   · Vertical capacity problem -> gone. 15 launchers cost ONE row.
+      //   · Tap targets -> 48px, above the floor, because nothing is competing
+      //     for height any more (the tight/compact/wrap classes are all
+      //     neutralised below — they exist to solve a problem that no longer
+      //     applies in this axis).
+      //   · The clearing -> the hero. The left column is returned to the world;
+      //     nothing floats over the 3D presences.
+      //   · Discoverability -> a row you swipe is a known phone idiom, and the
+      //     edge fade below says "there is more" without a taunt or a counter.
+      //
+      // NO-COLLISION: the dock is a single bounded box in the bottom band. It
+      // scrolls INSIDE itself (overflow-x:auto), so a sixteenth launcher costs
+      // zero pixels of anyone else's space. Its band is declared in world.html
+      // (--vw-bot-h), not derived from a neighbour's live bottom, so it cannot
+      // drift onto #saybar the way the measured ceilings kept drifting.
+      '@media(max-width:859px){',
+      ' #dvRail{flex-direction:row;flex-wrap:nowrap;align-items:center;',
+      '  left:0;right:0;width:auto;',
+      // WHERE THE DOCK SITS — the measured floor, never a literal (2026-09-25).
+      // First cut hardcoded `64px` (the say bar) and MEASURED a 300x56 overlap
+      // with the guest doorway at 320px / 353x56 at 375px: #invite is also in
+      // the bottom band and stands up to 52svh tall, so a literal floor put the
+      // dock straight through it. layoutRail() already computes the honest floor
+      // every frame it matters (say bar, open sheets, AND the doorway — see
+      // `inviteFloor`) and publishes it as --dv-railbot. The dock rides that
+      // number, so the doorway pushes it up and releases it on dismiss with no
+      // second arithmetic to keep in sync. 64px is only the pre-measure default.
+      '  bottom:calc(max(64px, var(--dv-railbot,64px)) + env(safe-area-inset-bottom,0px));',
+      '  top:auto;max-height:56px;min-height:56px;',
+      '  gap:8px;padding:4px max(10px,env(safe-area-inset-right,10px)) 4px max(10px,env(safe-area-inset-left,10px));',
+      '  overflow-x:auto;overflow-y:hidden;',
+      '  scroll-snap-type:x proximity;-webkit-overflow-scrolling:touch;',
+      '  overscroll-behavior-x:contain;pointer-events:auto;',
+      // the row fades at both ends instead of hard-clipping, so "there is more
+      // to the right" is legible without a counter or an arrow eating a slot.
+      '  -webkit-mask-image:linear-gradient(90deg,transparent 0,#000 14px,#000 calc(100% - 14px),transparent 100%);',
+      '  mask-image:linear-gradient(90deg,transparent 0,#000 14px,#000 calc(100% - 14px),transparent 100%);}',
+      ' #dvRail .dv-launch{scroll-snap-align:center;min-height:48px;height:48px;',
+      '  min-width:48px;padding:0 14px;gap:7px;font-size:13.5px;}',
+      // THE COMPACTION CLASSES ARE RETIRED ON PHONES. They are the vertical
+      // axis's emergency measures; in a horizontal row they would shrink a
+      // target below 44px to solve a height problem that no longer exists.
+      // Explicitly neutralised rather than left to specificity luck.
+      ' body.dv-rail-compact #dvRail .dv-launch .lbl{display:inline;}',
+      ' body.dv-rail-compact #dvRail .dv-launch{padding:0 14px;gap:7px;}',
+      ' body.dv-rail-tight #dvRail{gap:8px;}',
+      ' body.dv-rail-tight #dvRail .dv-launch{padding:0 14px;min-height:48px;height:48px;}',
+      ' body.dv-rail-wrap #dvRail{flex-wrap:nowrap;width:auto;column-gap:8px;max-height:56px;}',
+      // an open sheet covers the dock, so the dock steps aside rather than
+      // fighting for z-order under an opaque surface.
+      ' body.dv-sheeting #dvRail{opacity:0;pointer-events:none;',
+      '  transform:translateY(12px);transition:opacity .2s,transform .2s;}',
+      '}',
+      // LANDSCAPE PHONE — the row keeps its height but tightens, because height
+      // is the scarce axis and 48px is the floor we refuse to go under.
+      '@media(max-width:926px) and (max-height:430px) and (orientation:landscape){',
+      // SAME MEASURED FLOOR AS THE PORTRAIT DOCK. A literal `52px` here was
+      // overriding the --dv-railbot rule above (same specificity, later in the
+      // sheet) and MEASURED a 500x52 overlap with the guest doorway at 740x360 —
+      // the exact collision the portrait rule had already been fixed for. The
+      // floor must be measured in BOTH orientations or the fix only half exists.
+      ' #dvRail{bottom:calc(max(52px, var(--dv-railbot,52px)) + env(safe-area-inset-bottom,0px));',
+      '  max-height:52px;min-height:52px;}',
+      ' #dvRail .dv-launch{min-height:46px;height:46px;font-size:13px;padding:0 12px;}',
+      '}',
+
       // shared bottom-sheet scaffold (WARP + AGENT both use it)
       '.dv-sheet{position:fixed;left:0;right:0;bottom:0;z-index:1600;',
       // dvh follows the on-screen keyboard on modern mobile, so the sheet shrinks
@@ -539,7 +627,18 @@
       'body.dv-panel-yield #vintWorldHud,body.dv-panel-yield #hint{visibility:hidden;}',
 
       // toast (shared, above sheets)
-      '#dvToast{position:fixed;left:50%;bottom:calc(88px + env(safe-area-inset-bottom,0px));',
+      // THE TOAST RIDES ABOVE THE DOCK, MEASURED (aetherhold 2026-09-25).
+      // `88px` was a literal chosen against the say bar alone. Once the rail
+      // became a 56px horizontal dock in the same bottom band, MEASURED at
+      // 740x360: #dvToast x #dvRail 370x16 and #dvToast x #invite 370x56 — the
+      // world's ONE announcement channel printing through two surfaces at once.
+      // --dv-railbot is the measured floor everything in this band already
+      // shares (say bar, open sheets, guest doorway); the toast clears that plus
+      // the dock's own height and a gutter, so it is the topmost thing in the
+      // band by construction instead of by a hoped-for number.
+      '#dvToast{position:fixed;left:50%;',
+      ' bottom:calc(max(88px, var(--dv-railbot,88px) + var(--dv-dockh,0px) + 10px)',
+      '   + env(safe-area-inset-bottom,0px));',
       ' transform:translateX(-50%) translateY(10px);z-index:1700;max-width:88vw;',
       ' padding:10px 18px;border-radius:14px;background:rgba(8,12,20,0.9);',
       ' border:1px solid rgba(124,207,255,0.3);color:#dce7ff;font-family:"Cormorant Garamond",Georgia,serif;',
@@ -1610,6 +1709,27 @@
     _rail = document.createElement('div');
     _rail.id = 'dvRail';
     document.body.appendChild(_rail);
+    // ── THE RAIL AND THE CORNER DOCK ARE TWO REGISTRIES, AND THEY NEVER TALKED
+    //    (AETHERHOLD 2026-09-25). #vintVoice and welcome-gate's account pill
+    //    both register at corner 'bl' — the SAME bottom-left column the vertical
+    //    rail grows out of — and nothing ever told the dock the rail was there.
+    //    MEASURED on the unmodified page, that shipped `#dvRail x #vintVoice`
+    //    42x44 at ALL SEVEN viewports, desktop included: a launcher sitting
+    //    exactly on the voice button. On a phone the dock is a full-width row,
+    //    so it crosses BOTH bottom corners and the same clash reappeared against
+    //    `vwg-pill` (97x44) until this registration existed.
+    //
+    //    #invite already solved this exact problem the right way (world.html:
+    //    "It's the wrong shape to dock ... so it registers as an OBSTACLE
+    //    instead"). The rail is the same shape of thing, so it takes the same
+    //    remedy: the docked pills stack ABOVE it and slide back down when it is
+    //    gone. Declared for both corners because the phone dock spans both.
+    try {
+      if (W.VintDock && W.VintDock.avoid) {
+        W.VintDock.avoid(_rail, { corner: 'bl' });
+        W.VintDock.avoid(_rail, { corner: 'br' });
+      }
+    } catch (_) {}
     return _rail;
   }
 

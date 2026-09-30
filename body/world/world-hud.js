@@ -142,6 +142,67 @@
       ' background:rgba(6,10,16,0.85);border:1px solid rgba(124,207,255,0.2);border-radius:16px;',
       ' backdrop-filter:blur(9px);-webkit-backdrop-filter:blur(9px);color:#dae4ff;',
       ' font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;overflow:hidden;}',
+      // ══════════════════════════════════════════════════════════════════════
+      // THE PHONE PANEL — progressive disclosure, not a permanent block
+      // (AETHERHOLD 2026-09-25, Vinta: "reimagined for mobile")
+      //
+      // On desktop this 228px panel sits in a left column that has room for it.
+      // On a 320x568 phone it is 40% of the screen height, permanently, before
+      // a single launcher or the guest doorway has asked for anything — and it
+      // is the reason every neighbour in this file has a hand-derived ceiling
+      // measured off its live bottom (--vint-hud-bottom), an arithmetic that
+      // has been patched repeatedly and still shipped overlaps at all seven
+      // viewports.
+      //
+      // So on a phone it COLLAPSES to its vitals — the three currency chips and
+      // the spark meter, the only things worth a permanent slot — and the rest
+      // (watchers, drift, the ask, the actions) is one tap away. The world is
+      // the hero; the dashboard is summoned.
+      //
+      // WHY THIS IS SAFE FOR EVERY NEIGHBOUR: collapsed, the panel is a FIXED
+      // 74px tall. --vint-hud-bottom (which #hint, #status and the rail all
+      // derive from) is still published by publishBottom() from the real
+      // measured box, so every existing consumer keeps working unchanged — they
+      // simply get a much smaller, and now CONSTANT, number. Expanded, it is
+      // capped at 62svh and scrolls inside itself, so it can never grow onto
+      // the dock or the say bar no matter how many watchers exist.
+      '@media(max-width:859px){',
+      ' #vintWorldHud{top:calc(58px + env(safe-area-inset-top,0px));',
+      '  left:max(10px,env(safe-area-inset-left,10px));',
+      // narrower than the desktop 228 and bounded away from the right corner
+      // (edit-head lives there), so the two can never meet at any width.
+      '  width:min(196px,calc(100vw - 20px - 52vw));min-width:150px;',
+      '  max-width:calc(100vw - 20px - 52vw);',
+      '  min-height:0;max-height:74px;',
+      '  border-radius:14px;transition:max-height .28s cubic-bezier(.22,1,.36,1);}',
+      // EXPANDED — summoned by tap. Capped and internally scrolled, never grows
+      // onto a neighbour; the container yields, which is the only compaction
+      // the no-collision law permits.
+      ' #vintWorldHud.wh-open{max-height:min(62svh,420px);',
+      '  width:min(280px,calc(100vw - 20px));max-width:calc(100vw - 20px);}',
+      // the collapsed state shows the vitals row only. Everything else is
+      // display:none rather than clipped, so nothing is half-visible behind a
+      // rounded edge and no hidden control can be tapped by accident.
+      ' #vintWorldHud:not(.wh-open) .wh-vigil > *:not(.wh-meter):not(.wh-vhead){display:none;}',
+      ' #vintWorldHud:not(.wh-open) .wh-acts,',
+      ' #vintWorldHud:not(.wh-open) .wh-inv{display:none;}',
+      ' #vintWorldHud .wh-stats{padding:8px 10px 4px;gap:5px;font-size:11.5px;}',
+      ' #vintWorldHud .wh-chip{padding:3px 7px;}',
+      // the summon affordance — a full-width 44px hit area along the bottom of
+      // the collapsed card. It is a real <button> (created in mount()), so it
+      // is keyboard reachable and announces its state.
+      ' #vintWorldHud .wh-more{display:flex;}',
+      '}',
+      // the toggle is desktop-irrelevant: the panel is always fully open there.
+      '#vintWorldHud .wh-more{display:none;align-items:center;justify-content:center;',
+      ' gap:6px;flex:0 0 auto;min-height:26px;width:100%;border:none;cursor:pointer;',
+      ' background:linear-gradient(transparent,rgba(124,207,255,0.10));',
+      ' color:rgba(159,220,255,0.78);font-family:inherit;font-size:11px;',
+      ' letter-spacing:.1em;text-transform:uppercase;padding:4px 0 6px;}',
+      '#vintWorldHud .wh-more:active{color:#fff;}',
+      '#vintWorldHud .wh-more .car{transition:transform .28s;font-size:9px;}',
+      '#vintWorldHud.wh-open .wh-more .car{transform:rotate(180deg);}',
+
       // the scroller: everything inside the panel lives here, so a tall vigil
       // scrolls within the rounded box rather than growing the box itself.
       '#vintWorldHud .wh-scroll{flex:1 1 auto;min-height:0;overflow-y:auto;overflow-x:hidden;',
@@ -400,7 +461,14 @@
           '<button class="wh-piece" data-kind="shelf">shelf</button>' +
         '</div>' +
         '<div class="wh-toast" id="whToast">welcome — claim a hearth to begin.</div>' +
-      '</div>';
+      '</div>' +
+      // THE SUMMON (phone only — CSS display:none at >=860px). A real <button>
+      // outside .wh-scroll so it stays pinned to the bottom of the card while
+      // the content scrolls behind it. aria-expanded carries the state for
+      // screen readers; the visible caret carries it for everyone else.
+      '<button class="wh-more" id="whMore" type="button" aria-expanded="false"' +
+        ' aria-controls="vintWorldHud" data-draggable="false">' +
+        '<span class="lbl">more</span><span class="car">▼</span></button>';
     document.body.appendChild(el);
     _el = el;
     // attach the self-healing height observer to the real panel (see the note
@@ -422,6 +490,24 @@
     el.querySelectorAll('.wh-piece').forEach(function (b) {
       b.onclick = function () { try { world().placeHere(b.getAttribute('data-kind')); } catch (_) {} };
     });
+
+    // ── THE SUMMON (phone progressive disclosure) ────────────────────────────
+    // Collapsed, the panel is the vitals only; expanded, it is the full vigil.
+    // publishBottom() runs on BOTH edges of the toggle because --vint-hud-bottom
+    // is what #hint, #status and the rail derive their own ceilings from — an
+    // expand that did not republish would leave three neighbours believing the
+    // panel is still 74px tall, which is precisely how an overlap gets shipped.
+    var more = el.querySelector('#whMore');
+    if (more) more.onclick = function () {
+      var open = el.classList.toggle('wh-open');
+      more.setAttribute('aria-expanded', open ? 'true' : 'false');
+      var lbl = more.querySelector('.lbl');
+      if (lbl) lbl.textContent = open ? 'less' : 'more';
+      publishBottom();
+      // the rail's band is measured off this panel; re-measure on both edges.
+      try { W.DirverseHUD && W.DirverseHUD.relayout && W.DirverseHUD.relayout(); } catch (_) {}
+    };
+
     publishBottom();
   }
 

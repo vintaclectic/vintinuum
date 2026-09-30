@@ -102,8 +102,23 @@
 
     camera = new THREE.PerspectiveCamera(55, 1, 0.1, 200);
     const isMobile = /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent) || (innerWidth < 720);
+    // ── THE PHONE BUDGET (AETHERHOLD 2026-09-25) ───────────────────────────
+    // "A beautiful world that stutters is a failed world." Three tiers, not
+    // two: a 320-414px phone is not merely "mobile", it is a device whose GPU
+    // is filling a 3x-density panel from a battery. `isSmall` is the tier that
+    // gets the real savings, and it is measured off the SHORT side so a phone
+    // in landscape is still treated as a phone (innerWidth alone calls a
+    // 740x360 handset "desktop" and hands it the full pixel budget).
+    const _short = Math.min(innerWidth, innerHeight);
+    const isSmall = isMobile && _short <= 430;
+    World._isSmall = isSmall;
     renderer = new THREE.WebGLRenderer({ antialias: !isMobile, alpha: false, powerPreference: 'high-performance' });
-    renderer.setPixelRatio(Math.min(devicePixelRatio, isMobile ? 1.5 : 2)); // helios: cap DPR on mobile
+    // DPR is the single biggest lever on a phone: it is QUADRATIC in pixels
+    // shaded. A 414x896 iPhone at its native dpr 3 is 3.34M pixels; capped at
+    // 1.25 it is 580K — an 83% cut in fragment work for a difference that is
+    // very hard to see on a 5-inch panel at arm's length, and the difference
+    // between a smooth world and a hot, stuttering one.
+    renderer.setPixelRatio(Math.min(devicePixelRatio, isSmall ? 1.25 : (isMobile ? 1.5 : 2)));
     renderer.outputColorSpace = THREE.SRGBColorSpace;
     World._isMobile = isMobile;
     mountEl.appendChild(renderer.domElement);
@@ -190,8 +205,23 @@
         });
       } catch (e) { console.warn('[world] voice init failed:', e && e.message); }
     }
+    // ARM THE FRAME GOVERNOR (see _loop). Small phones draw at a stable ~30fps;
+    // everything else keeps the full uncapped rate. Set here rather than at the
+    // declaration because `isSmall` is only known once the renderer is built.
+    // 32ms (not 33.3) so a display running a true 30Hz cadence is never missed
+    // by a fraction of a millisecond and forced down to 20fps.
+    _minFrameMs = World._isSmall ? 32 : 0;
+    // honour the player's own system-level motion preference over our default:
+    // reduced-motion asks for LESS animation, and a lower draw rate is exactly
+    // that, so a desktop user who asked for it gets the calmer cadence too.
+    try {
+      if (W_matchReduced()) _minFrameMs = Math.max(_minFrameMs, 32);
+    } catch (_) {}
     _loop();
   };
+  function W_matchReduced() {
+    return !!(global.matchMedia && global.matchMedia('(prefers-reduced-motion: reduce)').matches);
+  }
   // public voice controls for the UI
   World.micPush = function (on) { return global.VintinuumVoice ? global.VintinuumVoice.setMic(on) : false; };
   World.cycleVoiceRange = function () { return global.VintinuumVoice ? global.VintinuumVoice.cycleRange() : 'normal'; };
@@ -233,7 +263,10 @@
 
     // weather: slow drifting motes of warm light
     const moteGeo = new THREE.BufferGeometry();
-    const N = 120, pos = new Float32Array(N * 3);
+    // the drifting motes are pure atmosphere — the first thing that should give
+    // way on a small phone, and the last thing anyone notices going. Halved on
+    // the small tier (120 -> 60); untouched everywhere else.
+    const N = (World._isSmall ? 60 : 120), pos = new Float32Array(N * 3);
     for (let i = 0; i < N; i++) { pos[i*3] = (Math.random()-0.5)*30; pos[i*3+1] = Math.random()*6; pos[i*3+2] = (Math.random()-0.5)*30; }
     moteGeo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
     const moteMat = new THREE.PointsMaterial({ color: 0xffd9a0, size: 0.06, transparent: true, opacity: 0.5 });
@@ -1698,9 +1731,24 @@
     }
   }
 
-  function _loop() {
+  // ── THE FRAME GOVERNOR (phones only) ──────────────────────────────────────
+  // On a small phone the honest target is a STABLE 30fps, not a thermally
+  // throttled sawtooth between 60 and 22. Rendering every other frame halves
+  // GPU work and — critically — halves heat, which is what actually causes the
+  // stutter a player feels two minutes in. Movement is already dt-based
+  // (_stepMovement takes the real delta), so the world moves at exactly the
+  // same speed; only the number of times it is drawn changes.
+  // Desktop and tablets are untouched: _minFrameMs stays 0 and this is a
+  // single always-false comparison per frame.
+  var _minFrameMs = 0, _lastDraw = 0;
+  function _loop(ts) {
     requestAnimationFrame(_loop);
     if (World._hidden) return;                        // zero GPU when tab hidden
+    if (_minFrameMs) {
+      var _now = ts || (performance && performance.now ? performance.now() : Date.now());
+      if (_now - _lastDraw < _minFrameMs) return;
+      _lastDraw = _now;
+    }
     try { _frame(); } catch (e) {
       // one bad frame must NEVER stop the world. Log once, keep the RAF chain alive.
       if (!World._loopErrLogged) { console.error('[world] frame error (world keeps rendering):', e); World._loopErrLogged = true; }
