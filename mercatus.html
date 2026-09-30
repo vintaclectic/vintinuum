@@ -291,6 +291,29 @@ dialog.dlg p{margin:0 0 12px;color:var(--dim);font-size:14px;overflow-wrap:anywh
   <div class="banner err" id="staleBanner" role="status"></div>
 
   <section class="grid">
+    <!-- BROKER LINK (PV3NCGB): the brain signs itself in to Robinhood -->
+    <article class="panel span-all" id="linkPanel" hidden>
+      <div class="panel-head">
+        <h2>Broker Link<small>sign the brain in to Robinhood, once</small></h2>
+        <span class="chip" id="linkChip"><span>—</span></span>
+      </div>
+      <p class="note" id="linkNote">Mercurius can't read a single bar until the brain is signed in to Robinhood. One approval and it links itself — the credential stays encrypted on the brain, never in this page.</p>
+      <div class="btnrow" id="linkStartRow">
+        <button type="button" class="btn gold" id="linkStart" data-draggable="true">Link Robinhood</button>
+      </div>
+      <div id="linkWait" hidden>
+        <p class="note">A Robinhood approval tab just opened on the brain's PC. Not at that PC? Open the approval page here, approve, then paste the address your browser lands on (it starts with <span class="mono">http://127.0.0.1:</span> and may show "can't connect" — that's expected).</p>
+        <div style="height:8px"></div>
+        <div class="btnrow"><a class="btn" id="linkOpen" href="#" target="_blank" rel="noopener noreferrer" data-draggable="true">Open approval page</a></div>
+        <div style="height:8px"></div>
+        <div class="wl-add">
+          <input class="in mono" id="linkPaste" maxlength="4096" placeholder="http://127.0.0.1:…/callback?code=…" autocomplete="off" spellcheck="false" aria-label="Paste the callback address">
+          <button type="button" class="btn gold" id="linkFinish" data-draggable="true">Finish link</button>
+        </div>
+      </div>
+      <div class="result" id="linkResult" aria-live="polite"></div>
+    </article>
+
     <!-- HEARTBEAT -->
     <article class="panel span-all">
       <div class="panel-head">
@@ -602,6 +625,62 @@ async function loadSession() {
   try { session = await api('/session', { timeout: 60000 }); }
   catch (e) { if (e.kind === 'auth') return; session = { linked: false, error: e.message }; }
   renderMast();
+  renderLink(session && session.link);
+}
+
+// ── broker link ─────────────────────────────────────────────────────────────
+let linkPoll = null;
+function renderLink(L) {
+  const panel = $('linkPanel');
+  if (!panel) return;
+  const linked = session && session.linked;
+  panel.hidden = !!linked && !(L && L.status === 'awaiting_approval');
+  if (panel.hidden) { stopLinkPoll(); return; }
+  const st = L ? L.status : 'idle';
+  const chip = $('linkChip');
+  const waiting = st === 'awaiting_approval' || st === 'starting';
+  chip.className = 'chip ' + (st === 'linked' ? 'ok' : st === 'failed' ? 'err' : waiting ? 'warn' : '');
+  chip.innerHTML = '<span>' + esc(waiting ? 'waiting for your approval' : st === 'failed' ? 'link failed' : st === 'linked' ? 'linked' : 'not linked') + '</span>';
+  $('linkWait').hidden = st !== 'awaiting_approval';
+  $('linkStartRow').hidden = st === 'awaiting_approval';
+  if (st === 'awaiting_approval' && L.url) $('linkOpen').href = L.url;
+  if (st === 'failed' && L.error) $('linkResult').innerHTML = '<p class="note err">' + esc(L.error) + ' — press Link Robinhood to try again.</p>';
+  if (st === 'awaiting_approval') startLinkPoll();
+}
+function startLinkPoll() { if (!linkPoll) linkPoll = setInterval(pollLink, 3000); }
+function stopLinkPoll() { if (linkPoll) { clearInterval(linkPoll); linkPoll = null; } }
+async function pollLink() {
+  let L;
+  try { L = await api('/link/status'); } catch (e) { return; }
+  if (L.status === 'linked') { stopLinkPoll(); return linkDone(L); }
+  if (L.status !== 'awaiting_approval') stopLinkPoll();
+  renderLink(L);
+}
+async function linkDone(L) {
+  $('linkResult').innerHTML = '<p class="note ok">Linked' + (L.account ? ' — trading account ' + esc(L.account.masked) : '') + '. Mercurius can see the market now.</p>';
+  await loadSession();
+  loadStrategy();
+}
+async function linkStart() {
+  const btn = $('linkStart');
+  btn.disabled = true; btn.textContent = 'Asking Robinhood…';
+  $('linkResult').innerHTML = '';
+  try { renderLink(await api('/link/start', { method: 'POST', body: { openOnHost: true }, timeout: 40000 })); }
+  catch (e) { if (e.kind !== 'auth') $('linkResult').innerHTML = '<p class="note err">' + esc(e.message) + '</p>'; }
+  finally { btn.disabled = false; btn.textContent = 'Link Robinhood'; }
+}
+async function linkFinish() {
+  const url = $('linkPaste').value.trim();
+  if (!url) { $('linkResult').innerHTML = '<p class="note warn">Paste the address from your browser bar first.</p>'; return; }
+  const btn = $('linkFinish');
+  btn.disabled = true; btn.textContent = 'Linking…';
+  try {
+    const L = await api('/link/complete', { method: 'POST', body: { url }, timeout: 45000 });
+    if (L.status === 'linked') { stopLinkPoll(); return linkDone(L); }
+    renderLink(L);
+    if (L.error) $('linkResult').innerHTML = '<p class="note err">' + esc(L.error) + '</p>';
+  } catch (e) { if (e.kind !== 'auth') $('linkResult').innerHTML = '<p class="note err">' + esc(e.message) + '</p>'; }
+  finally { btn.disabled = false; btn.textContent = 'Finish link'; }
 }
 
 function renderState() {
@@ -1110,6 +1189,9 @@ async function doResume() {
 
 // ── wiring ──────────────────────────────────────────────────────────────────
 function wire() {
+  $('linkStart').addEventListener('click', linkStart);
+  $('linkFinish').addEventListener('click', linkFinish);
+  $('linkPaste').addEventListener('keydown', (e) => { if (e.key === 'Enter') linkFinish(); });
   $('sideBuy').addEventListener('click', () => setSide('buy'));
   $('sideSell').addEventListener('click', () => setSide('sell'));
   ['cSym', 'cQty', 'cPx', 'cWhy'].forEach((id) => $(id).addEventListener('input', updateComposer));
