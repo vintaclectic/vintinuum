@@ -412,6 +412,15 @@ dialog.dlg p{margin:0 0 12px;color:var(--dim);font-size:14px;overflow-wrap:anywh
       <div id="pfBody"><div class="empty">Not fetched yet.</div></div>
     </article>
 
+    <!-- ACCOUNTING (fill-derived, broker-verified real fills) -->
+    <article class="panel span-2" id="acctPanel">
+      <div class="panel-head">
+        <h2>Accounting<small>fill-derived — real broker fills, not a process counter</small></h2>
+        <button type="button" class="btn" id="acctRefresh" data-draggable="true">Refresh</button>
+      </div>
+      <div id="acctBody"><div class="empty">Not fetched yet.</div></div>
+    </article>
+
     <!-- ANALYZE -->
     <article class="panel">
       <div class="panel-head"><h2>Analyze<small>quote + fundamentals</small></h2></div>
@@ -524,6 +533,7 @@ let mounted = false;
 let timers = [];
 let side = 'buy';
 let armedDecision = null;
+let ACC = null; // last /accounting read: fill-derived P&L + broker-verified positions/fills
 let wlDraft = null;       // watchlist being edited
 let wlServer = [];
 
@@ -581,8 +591,10 @@ function mount() {
   loadHistory();
   loadStrategy();
   loadSession();
+  loadAccounting();
   timers.push(setInterval(pollState, 10000));
   timers.push(setInterval(loadHistory, 15000));
+  timers.push(setInterval(loadAccounting, 45000));
   timers.push(setInterval(loadStrategy, 20000));
   timers.push(setInterval(renderStale, 1000));
 }
@@ -726,16 +738,81 @@ function arc(frac, color, hatched) {
     '<path d="' + track + '" fill="none" stroke="' + (hatched ? 'url(#hatch)' : 'rgba(255,255,255,.08)') + '" stroke-width="9" stroke-linecap="round"/>' +
     (val ? '<path d="' + val + '" fill="none" stroke="' + color + '" stroke-width="9" stroke-linecap="round"/>' : '') + '</svg>';
 }
+// ── accounting: fill-derived P&L + broker-verified positions + REAL fills ────
+// Reads /api/trading/accounting. { tracked:false, reason } is an honest state we
+// render as NOT TRACKED — a fabricated number is never shown. These are the
+// ACTUAL broker fills behind every trade, the evidence layer of the journal.
+async function loadAccounting() {
+  if (!mounted) return;
+  try {
+    ACC = await api('/accounting', { timeout: 60000 });
+  } catch (e) {
+    if (e.kind === 'auth') return;
+    ACC = { tracked: false, reason: e.message };
+  }
+  renderAccounting();
+  if (mounted && S) renderGauges();
+}
+function renderAccounting() {
+  const body = $('acctBody'); if (!body) return;
+  if (!ACC) { body.innerHTML = '<div class="empty">Not fetched yet.</div>'; return; }
+  if (!ACC.tracked) {
+    body.innerHTML = '<div class="empty" style="border-color:rgba(255,208,112,.3);color:var(--warn)">' +
+      'NOT TRACKED — ' + esc(ACC.reason || 'broker accounting unavailable') +
+      '<br><span class="mono" style="color:var(--ghost)">No number is shown until the broker returns a shape we recognize.</span></div>';
+    return;
+  }
+  const pnl = ACC.realizedPnlToday || {};
+  const v = Number(pnl.value);
+  const pnlHtml = Number.isFinite(v)
+    ? '<span style="color:' + (v >= 0 ? 'var(--ok, #7fe0a0)' : 'var(--err)') + '">' +
+        esc((v >= 0 ? '+' : '-') + usd(Math.abs(v))) + (pnl.currency ? ' ' + esc(pnl.currency) : '') + '</span>'
+    : '—';
+  const items = (ACC.openPositions && ACC.openPositions.items) || [];
+  const fills = ACC.fillsToday || [];
+  let html = '<dl class="kv">' +
+    '<div><dt>realized P&amp;L today</dt><dd>' + pnlHtml + '</dd></div>' +
+    '<div><dt>open positions</dt><dd>' + esc(ACC.openPositions ? ACC.openPositions.count : 0) + '</dd></div>' +
+    '<div><dt>fills today</dt><dd>' + esc(fills.length) + '</dd></div>' +
+    '<div><dt>as of</dt><dd>' + esc(clock(ACC.asOf)) + '</dd></div>' +
+    '</dl>' +
+    '<p class="note" style="color:var(--text)">Fill-derived from the broker — real, not a process counter.</p>';
+  html += '<p class="note" style="margin-top:6px;color:var(--text)">Open positions</p>';
+  if (items.length) {
+    html += '<div class="tbl-wrap"><table class="tbl"><thead><tr><th>symbol</th><th>quantity</th><th>avg price</th></tr></thead><tbody>' +
+      items.map((p) => '<tr><td>' + esc(p.symbol || '—') + '</td><td>' + esc(p.quantity != null ? p.quantity : '—') + '</td><td>' +
+        (p.avgPrice != null ? esc(usd(p.avgPrice)) : '—') + '</td></tr>').join('') +
+      '</tbody></table></div>';
+  } else html += '<div class="empty">No open positions.</div>';
+  html += '<p class="note" style="margin-top:6px;color:var(--text)">Today’s actual fills</p>';
+  if (fills.length) {
+    html += '<div class="tbl-wrap"><table class="tbl"><thead><tr><th>time</th><th>symbol</th><th>side</th><th>qty</th><th>price</th><th>state</th></tr></thead><tbody>' +
+      fills.map((f) => '<tr><td>' + esc(f.filledAt ? clock(f.filledAt) : '—') + '</td><td>' + esc(f.symbol || '—') + '</td><td>' + esc(f.side || '—') + '</td><td>' +
+        esc(f.quantity != null ? f.quantity : '—') + '</td><td>' + (f.price != null ? esc(usd(f.price)) : '—') + '</td><td>' +
+        esc(f.state || '—') + '</td></tr>').join('') +
+      '</tbody></table></div>';
+  } else html += '<div class="empty">No fills yet today.</div>';
+  body.innerHTML = html;
+}
+
 function renderGauges() {
   const L = S.limits, T = S.today;
   const g = [];
-  // Daily loss: never show the placeholder 0 as if it were measured.
-  if (T.pnlTracked) {
+  // Daily loss: never show the placeholder 0 as if it were measured. Prefer the
+  // broker-verified fill-derived number (ACC) when the brain says it is tracked,
+  // else the process-tracked pnl, else honest NOT TRACKED.
+  const accV = ACC && ACC.tracked && ACC.realizedPnlToday && Number.isFinite(Number(ACC.realizedPnlToday.value))
+    ? Number(ACC.realizedPnlToday.value) : null;
+  if (accV !== null) {
+    const used = Math.max(0, -accV);
+    g.push(gauge(arc(used / L.maxDailyLoss, used >= L.maxDailyLoss ? 'var(--live)' : 'var(--mode)'),
+      usd(used) + ' / ' + usd(L.maxDailyLoss), 'daily loss', 'broker-verified fills'));
+  } else if (T.pnlTracked) {
     const used = Math.max(0, -T.pnl);
     g.push(gauge(arc(used / L.maxDailyLoss, used >= L.maxDailyLoss ? 'var(--live)' : 'var(--mode)'),
       usd(used) + ' / ' + usd(L.maxDailyLoss), 'daily loss', ''));
   } else {
-    g.push(gauge(arc(0, '', true), 'limit ' + usd(L.maxDailyLoss), 'daily loss', 'NOT TRACKED: no fill tracker yet'));
+    g.push(gauge(arc(0, '', true), 'limit ' + usd(L.maxDailyLoss), 'daily loss', 'NOT TRACKED: refresh Accounting for broker fills'));
   }
   const posFrac = L.maxOpenPositions ? T.openPositions / L.maxOpenPositions : 0;
   g.push(gauge(arc(posFrac, 'var(--mode)'), T.openPositions + ' / ' + L.maxOpenPositions, 'open positions',
@@ -977,6 +1054,27 @@ function tapeText(e) {
   if (d && d.reasoning) parts.push('“' + d.reasoning.slice(0, 220) + (d.reasoning.length > 220 ? '…' : '') + '”');
   return parts.join(' — ') || '';
 }
+// Full decision rationale for a single trade — the "why" behind every order,
+// expandable inline so the one-liner stays scannable but nothing is hidden.
+function tapeDetail(e) {
+  const d = e.decision;
+  if (!d) return '';
+  const rows = [];
+  if (d.reasoning) rows.push(['reasoning', d.reasoning]);
+  if (d.confidence != null && d.confidence !== '') rows.push(['confidence', String(d.confidence)]);
+  if (d.strategy) rows.push(['strategy', d.strategy]);
+  if (d.regime) rows.push(['regime', d.regime]);
+  if (d.stopLoss != null && d.stopLoss !== '') rows.push(['stop loss', usd(d.stopLoss)]);
+  if (d.takeProfit != null && d.takeProfit !== '') rows.push(['take profit', usd(d.takeProfit)]);
+  if (e.exposure != null) rows.push(['exposure', usd(e.exposure)]);
+  if (d.source) rows.push(['source', d.source]);
+  if (e.id) rows.push(['order id', e.id]);
+  if (!rows.length) return '';
+  return '<details class="tape-more" style="margin-top:6px"><summary style="cursor:pointer;color:var(--dim);font:11px/1.4 var(--mono);letter-spacing:.08em">why this trade</summary>' +
+    '<dl class="kv" style="margin-top:6px">' + rows.map((kv) =>
+      '<div><dt>' + esc(kv[0]) + '</dt><dd style="white-space:pre-wrap;overflow-wrap:anywhere">' + esc(kv[1]) + '</dd></div>').join('') +
+    '</dl></details>';
+}
 async function loadHistory() {
   if (!mounted) return;
   try {
@@ -988,7 +1086,7 @@ async function loadHistory() {
     } else {
       tape.innerHTML = hist.map((e) =>
         '<li><span class="t">' + esc(clock(e.timestamp)) + ' · ' + esc((e.mode || '').toUpperCase()) + '</span><span class="ty ' + tapeClass(e) + '">' +
-        esc(String(e.type || '').replace(/_/g, ' ')) + '</span>' + (tapeText(e) ? '<span class="d">' + esc(tapeText(e)) + '</span>' : '') + '</li>').join('');
+        esc(String(e.type || '').replace(/_/g, ' ')) + '</span>' + (tapeText(e) ? '<span class="d">' + esc(tapeText(e)) + '</span>' : '') + tapeDetail(e) + '</li>').join('');
     }
     renderHeartbeat(hist.slice(0, 60));
   } catch (e) {
@@ -1204,6 +1302,7 @@ function wire() {
   $('anGo').addEventListener('click', analyze);
   $('anIn').addEventListener('keydown', (e) => { if (e.key === 'Enter') analyze(); });
   $('tapeRefresh').addEventListener('click', loadHistory);
+  $('acctRefresh').addEventListener('click', loadAccounting);
   $('engStart').addEventListener('click', () => engine('start', 'Starting the loop'));
   $('engStop').addEventListener('click', () => engine('stop', 'Stopping the loop'));
   $('engScan').addEventListener('click', () => engine('scan', 'Scanning the watchlist'));
