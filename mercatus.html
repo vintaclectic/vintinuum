@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Mercatus — Manual Trade</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Cormorant+Garamond:ital,wght@0,300;1,300&display=swap" rel="stylesheet">
+<!--
+  MERCATUS — the manual trade surface. Phase 2 of the autonomous-trading feature.
+  Every BUY/SELL here is gated by body/trade-tooltip.js so no trade fires blind.
+  Palette + fonts lifted from brain.html for house continuity.
+
+  BOX MODEL (No-Collision Law):
+    [topbar  0..56px, fixed, z-topbar]     owns the top band
+    [content flow, padding-top reserves the topbar, z-base]  the cards
+    [tooltip/modal/confirm  z 500..710]    owned by trade-tooltip.js
+  Every pixel has one owner. Fixed topbar has a matching reserved gutter.
+-->
+<style>
+  :root{
+    color-scheme: dark;
+    --blue:#4fc3f7; --gold:#ffd54f; --red:#ef5350; --green:#66bb6a;
+    --purple:#ce93d8; --cyan:#80deea; --orange:#ffa726;
+    --bg:#010306; --panel:rgba(10,16,28,0.55); --border:rgba(255,255,255,0.08);
+    --text:rgba(218,228,255,0.93); --dim:rgba(150,175,215,0.58);
+    --topbar-h: calc(56px + env(safe-area-inset-top, 0px));
+    --z-base:0; --z-topbar:300;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  html{height:100%;}
+  body{
+    background:
+      radial-gradient(1200px 600px at 80% -10%, rgba(79,195,247,0.06), transparent 60%),
+      radial-gradient(900px 500px at 0% 110%, rgba(206,147,216,0.05), transparent 60%),
+      var(--bg);
+    color:var(--text); font-family:'Space Mono',ui-monospace,monospace;
+    min-height:100svh;
+    padding:
+      calc(var(--topbar-h) + 14px)
+      max(14px, env(safe-area-inset-right))
+      calc(28px + env(safe-area-inset-bottom))
+      max(14px, env(safe-area-inset-left));
+    -webkit-font-smoothing:antialiased;
+  }
+  button{font-family:'Space Mono',monospace;}
+
+  /* ── TOPBAR ── fixed, owns the top band, z above content ── */
+  .topbar{
+    position:fixed; top:0; left:0; right:0; z-index:var(--z-topbar);
+    height:var(--topbar-h);
+    display:flex; align-items:center; gap:12px;
+    padding:0 max(14px, env(safe-area-inset-right)) 0 max(14px, env(safe-area-inset-left));
+    padding-top:env(safe-area-inset-top, 0px);
+    background:rgba(4,7,14,0.82); backdrop-filter:blur(16px); -webkit-backdrop-filter:blur(16px);
+    border-bottom:1px solid var(--border);
+  }
+  .brand{
+    font-family:'Cormorant Garamond',serif; font-style:italic; font-weight:300;
+    font-size:clamp(1.1rem,4.5vw,1.5rem); letter-spacing:.1em;
+    background:linear-gradient(120deg,var(--cyan),var(--purple),var(--gold));
+    -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent;
+    white-space:nowrap;
+  }
+  .tb-spacer{flex:1 1 auto;}
+  .mode-chip{
+    font-size:clamp(0.58rem,2vw,0.7rem); font-weight:700; letter-spacing:.08em;
+    padding:6px 11px; border-radius:999px; white-space:nowrap;
+    border:1px solid var(--border); color:var(--dim); background:rgba(255,255,255,0.03);
+  }
+  .mode-chip.paper{color:var(--cyan); border-color:rgba(128,222,234,0.4); background:rgba(128,222,234,0.08);}
+  .mode-chip.live{color:var(--orange); border-color:rgba(255,167,38,0.45); background:rgba(255,167,38,0.10);}
+  .mode-chip.halt{color:var(--red); border-color:rgba(239,83,80,0.5); background:rgba(239,83,80,0.10);}
+  .refresh{
+    min-width:44px; min-height:44px; border-radius:11px; border:1px solid var(--border);
+    background:rgba(79,195,247,0.08); color:var(--cyan); font-size:1rem; cursor:pointer;
+    display:flex; align-items:center; justify-content:center;
+  }
+  .refresh:active{transform:scale(.94);}
+
+  /* ── INTRO ── */
+  .intro{max-width:720px; margin:0 auto 18px;}
+  .intro h1{
+    font-family:'Cormorant Garamond',serif; font-weight:300; font-style:italic;
+    font-size:clamp(1.5rem,6vw,2.4rem); line-height:1.15; letter-spacing:.02em; margin-bottom:8px;
+  }
+  .intro p{color:var(--dim); font-size:clamp(0.7rem,2.6vw,0.85rem); line-height:1.55;}
+  .intro .accent{color:var(--gold);}
+
+  /* ── CARD GRID ── each card owns its own box; no overlap ── */
+  .grid{
+    max-width:720px; margin:0 auto;
+    display:grid; gap:12px;
+    grid-template-columns:repeat(auto-fill, minmax(min(100%, 200px), 1fr));
+  }
+  .card{
+    background:var(--panel); border:1px solid var(--border); border-radius:15px;
+    padding:15px 15px 14px; display:flex; flex-direction:column; gap:11px;
+    min-width:0; backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px);
+    transition:border-color .2s ease, transform .2s ease;
+  }
+  .card:hover{border-color:rgba(128,222,234,0.28);}
+  .card-hd{display:flex; align-items:baseline; justify-content:space-between; gap:10px; min-width:0;}
+  .sym{font-size:clamp(1.05rem,4.5vw,1.28rem); font-weight:700; letter-spacing:.05em;}
+  .name{font-size:.6rem; color:var(--dim); letter-spacing:.04em; text-align:right; overflow-wrap:anywhere;}
+  .price-row{display:flex; align-items:baseline; gap:9px; min-width:0; flex-wrap:wrap;}
+  .price{font-size:clamp(1.15rem,5vw,1.5rem); font-weight:700; font-variant-numeric:tabular-nums;}
+  .price.loading{color:var(--dim); font-style:italic; font-size:.85rem; font-weight:400;}
+  .price.err{color:var(--red); font-size:.82rem; font-weight:400;}
+  .chg{font-size:.68rem; font-weight:700; font-variant-numeric:tabular-nums; white-space:nowrap;}
+  .chg.up{color:var(--green);} .chg.down{color:var(--red);}
+
+  .qty-row{display:flex; align-items:center; gap:8px;}
+  .qty-row label{font-size:.6rem; color:var(--dim); letter-spacing:.06em; text-transform:uppercase;}
+  .qty-step{display:flex; align-items:center; gap:0; margin-left:auto; border:1px solid var(--border); border-radius:10px; overflow:hidden;}
+  .qty-step button{
+    width:44px; height:44px; min-width:44px; background:rgba(255,255,255,0.03); color:var(--text);
+    border:0; font-size:1.15rem; cursor:pointer; line-height:1;
+  }
+  .qty-step button:active{background:rgba(255,255,255,0.09);}
+  .qty-step input{
+    width:54px; height:44px; text-align:center; background:transparent; color:var(--text);
+    border:0; border-left:1px solid var(--border); border-right:1px solid var(--border);
+    font-family:inherit; font-size:.85rem; font-weight:700; -moz-appearance:textfield;
+  }
+  .qty-step input::-webkit-outer-spin-button,.qty-step input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0;}
+  .exposure{font-size:.62rem; color:var(--dim); letter-spacing:.03em; min-height:1em; overflow-wrap:anywhere;}
+  .exposure b{color:var(--gold); font-weight:700;}
+
+  .actions{display:flex; gap:9px;}
+  .act{
+    flex:1 1 0; min-height:46px; border-radius:11px; font-weight:700; letter-spacing:.06em;
+    font-size:clamp(0.74rem,3vw,0.86rem); cursor:pointer; border:1px solid;
+    transition:transform .1s ease, filter .15s ease;
+  }
+  .act:active{transform:scale(.97);}
+  .act:disabled{opacity:.45; cursor:not-allowed;}
+  .act.buy{background:rgba(102,187,106,0.14); color:var(--green); border-color:rgba(102,187,106,0.45);}
+  .act.buy:hover:not(:disabled){background:rgba(102,187,106,0.24);}
+  .act.sell{background:rgba(239,83,80,0.14); color:var(--red); border-color:rgba(239,83,80,0.45);}
+  .act.sell:hover:not(:disabled){background:rgba(239,83,80,0.24);}
+
+  .foot{max-width:720px; margin:20px auto 0; color:var(--dim); font-size:.62rem; line-height:1.6; text-align:center;}
+  .foot code{color:var(--cyan); background:rgba(128,222,234,0.08); padding:1px 5px; border-radius:5px;}
+
+  @media (max-width:400px){
+    .grid{grid-template-columns:1fr;}
+  }
+  @media (prefers-reduced-motion: reduce){
+    *{transition:none !important;}
+  }
+</style>
+</head>
+<body>
+
+  <header class="topbar">
+    <span class="brand">Mercatus</span>
+    <span class="tb-spacer"></span>
+    <span class="mode-chip" id="modeChip" data-draggable="false">mode…</span>
+    <button class="refresh" id="refreshBtn" data-draggable="false" aria-label="Refresh prices" title="Refresh prices">↻</button>
+  </header>
+
+  <section class="intro">
+    <h1>Every manual trade, <span class="accent">eyes open.</span></h1>
+    <p>Hover or long-press a BUY / SELL button for the quick read. Tap it for the full
+       "if you go through with this trade" breakdown — exposure, max loss, max gain,
+       risk/reward, volatility, brain state. Nothing fires until you confirm. No number
+       here is invented; anything we can't see says so.</p>
+  </section>
+
+  <main class="grid" id="grid" aria-live="polite"></main>
+
+  <p class="foot">
+    Prices &amp; technicals stream live from the trading brain via
+    <code>/api/trading/analyze</code>. Server mode (PAPER / LIVE) is read from
+    <code>/api/trading/state</code> — the confirm dialog echoes it exactly so a
+    stale screen can never fire into a changed brain.
+  </p>
+
+  <!-- draggable first so it can wire the modal handles; then the tooltip engine -->
+  <script src="body/draggable.js"></script>
+  <script src="body/trade-tooltip.js"></script>
+  <script>
+  (function () {
+    'use strict';
+    var API = (location.origin.indexOf('localhost') >= 0 || location.origin.indexOf('127.0.0.1') >= 0)
+      ? 'http://localhost:8767' : '';
+
+    var WATCH = [
+      { sym: 'SPCE', name: 'Virgin Galactic' },
+      { sym: 'TSLA', name: 'Tesla' },
+      { sym: 'META', name: 'Meta Platforms' },
+      { sym: 'GOOG', name: 'Alphabet' },
+      { sym: 'AAPL', name: 'Apple' },
+      { sym: 'SPY',  name: 'S&P 500 ETF' },
+      { sym: 'QQQ',  name: 'Nasdaq 100 ETF' },
+    ];
+
+    function isNum(v){ return typeof v === 'number' && isFinite(v); }
+    function money(v){
+      if (!isNum(v)) return '—';
+      return (v < 0 ? '-' : '') + '$' + Math.abs(v).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2});
+    }
+    function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];}); }
+
+    async function getJSON(path, opts){
+      try{
+        var r = await fetch(API + path, Object.assign({headers:{'Accept':'application/json'},credentials:'same-origin'}, opts||{}));
+        var t = await r.text(); var d = null;
+        try{ d = t ? JSON.parse(t) : null; }catch(_){ d = null; }
+        return { ok:r.ok, status:r.status, data:d };
+      }catch(err){ return { ok:false, status:0, data:null, error: err && err.message }; }
+    }
+    function analyze(sym){ return getJSON('/api/trading/analyze',{method:'POST',headers:{'Accept':'application/json','Content-Type':'application/json'},body:JSON.stringify({symbol:sym})}); }
+
+    var grid = document.getElementById('grid');
+    var modeChip = document.getElementById('modeChip');
+    var cards = {};
+
+    function buildCard(item){
+      var card = document.createElement('div');
+      card.className = 'card';
+      card.id = 'card-' + item.sym;
+      card.innerHTML =
+        '<div class="card-hd"><span class="sym">' + esc(item.sym) + '</span>'
+        + '<span class="name">' + esc(item.name) + '</span></div>'
+        + '<div class="price-row"><span class="price loading" data-price>loading…</span>'
+        + '<span class="chg" data-chg></span></div>'
+        + '<div class="qty-row"><label>Qty</label>'
+        + '<div class="qty-step"><button type="button" data-dec aria-label="decrease">−</button>'
+        + '<input type="number" min="1" step="1" value="1" data-qty inputmode="numeric" aria-label="quantity">'
+        + '<button type="button" data-inc aria-label="increase">+</button></div></div>'
+        + '<div class="exposure" data-exp>Exposure: <b>—</b></div>'
+        + '<div class="actions">'
+        + '<button class="act buy" data-act="buy" data-draggable="false">BUY</button>'
+        + '<button class="act sell" data-act="sell" data-draggable="false">SELL</button>'
+        + '</div>';
+      grid.appendChild(card);
+
+      var state = { sym: item.sym, price: null, qty: 1 };
+      cards[item.sym] = { el: card, state: state };
+
+      var qtyInput = card.querySelector('[data-qty]');
+      var expEl = card.querySelector('[data-exp]');
+      function syncExposure(){
+        var q = Math.max(1, parseInt(qtyInput.value,10) || 1);
+        state.qty = q;
+        expEl.innerHTML = 'Exposure: <b>' + (isNum(state.price) ? money(state.price * q) : '—') + '</b>';
+      }
+      card.querySelector('[data-inc]').addEventListener('click', function(){ qtyInput.value = (Math.max(1,parseInt(qtyInput.value,10)||1) + 1); syncExposure(); });
+      card.querySelector('[data-dec]').addEventListener('click', function(){ qtyInput.value = Math.max(1,(parseInt(qtyInput.value,10)||1) - 1); syncExposure(); });
+      qtyInput.addEventListener('input', syncExposure);
+
+      // wire BUY / SELL: tooltip on hover/long-press, modal on click
+      card.querySelectorAll('.act').forEach(function(btn){
+        var action = btn.getAttribute('data-act');
+        if (window.TradeTooltip){
+          window.TradeTooltip.attach(btn, { symbol:item.sym, action:action, get qty(){ return state.qty; } });
+        }
+        btn.addEventListener('click', function(){
+          if (!window.TradeTooltip) return;
+          window.TradeTooltip.openModal(item.sym, { action:action, qty:state.qty });
+        });
+      });
+      syncExposure();
+      return cards[item.sym];
+    }
+
+    function renderPrice(sym){
+      var c = cards[sym]; if (!c) return;
+      var res = c._lastRes; var card = c.el; var st = c.state;
+      var priceEl = card.querySelector('[data-price]');
+      var chgEl = card.querySelector('[data-chg]');
+      chgEl.textContent = ''; chgEl.className = 'chg';
+      if (!res || !res.ok || !res.data){
+        priceEl.className = 'price err'; priceEl.textContent = 'price unavailable';
+        st.price = null;
+      } else {
+        var a = res.data;
+        var quote = a.quote || null;
+        var price = quote && isNum(Number(quote.price)) ? Number(quote.price) : null;
+        if (price == null){
+          priceEl.className = 'price err';
+          priceEl.textContent = (a.errors && a.errors.quote) ? esc(String(a.errors.quote)) : 'no price';
+          st.price = null;
+        } else {
+          st.price = price;
+          priceEl.className = 'price'; priceEl.textContent = money(price);
+          var prev = quote ? Number(quote.previous_close != null ? quote.previous_close : quote.adjusted_previous_close) : NaN;
+          if (isNum(price) && isNum(prev) && prev > 0){
+            var abs = price - prev; var pc = (price - prev) / prev * 100;
+            chgEl.textContent = (abs >= 0 ? '+' : '') + money(abs) + ' (' + (pc >= 0 ? '+' : '') + pc.toFixed(2) + '%)';
+            chgEl.className = 'chg ' + (abs >= 0 ? 'up' : 'down');
+          }
+        }
+      }
+      // refresh exposure display
+      var q = st.qty || 1;
+      var expEl = card.querySelector('[data-exp]');
+      expEl.innerHTML = 'Exposure: <b>' + (isNum(st.price) ? money(st.price * q) : '—') + '</b>';
+    }
+
+    async function loadPrices(){
+      await Promise.all(WATCH.map(async function(item){
+        var c = cards[item.sym];
+        var priceEl = c.el.querySelector('[data-price]');
+        priceEl.className = 'price loading'; priceEl.textContent = 'loading…';
+        c._lastRes = await analyze(item.sym);
+        renderPrice(item.sym);
+      }));
+    }
+
+    async function loadMode(){
+      var res = await getJSON('/api/trading/state');
+      if (!res.ok || !res.data){
+        modeChip.className = 'mode-chip'; modeChip.textContent = 'mode: unknown';
+        return;
+      }
+      var st = res.data;
+      var mode = String(st.mode || 'unknown');
+      if (st.halted){
+        modeChip.className = 'mode-chip halt';
+        modeChip.textContent = (mode.toUpperCase()) + ' · HALTED';
+      } else {
+        modeChip.className = 'mode-chip ' + (mode === 'live' ? 'live' : 'paper');
+        modeChip.textContent = mode.toUpperCase();
+      }
+    }
+
+    // build + load
+    WATCH.forEach(buildCard);
+    document.getElementById('refreshBtn').addEventListener('click', function(){ loadMode(); loadPrices(); });
+    loadMode();
+    loadPrices();
+  })();
+  </script>
+</body>
+</html>
