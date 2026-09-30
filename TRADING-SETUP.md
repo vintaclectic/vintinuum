@@ -1,13 +1,16 @@
-# MERCATUS — Robinhood Trading Integration Setup
+# MERCURIUS — Robinhood Trading Mastermind
 
 **Status:** ✅ READY (Paper mode by default — safe to test)
 
 ## What Was Built
 
-1. **mercatus** — Bred trading specialist agent (`~/.claude/agents/mercatus.md`)
-   - Quantitative analysis, risk management, market psychology
-   - Pattern recognition, options math, portfolio theory
-   - Profit optimization with capital protection FIRST
+1. **mercurius** — Supreme trading intelligence agent (`~/.claude/agents/mercurius.md`)
+   - Quantitative + technical analysis (RSI, MACD, Bollinger, multi-timeframe)
+   - Market psychology, sentiment, regime detection
+   - Risk management, position sizing, portfolio optimization
+   - Alpha generation: momentum, mean reversion, volatility arbitrage
+   - Pattern recognition, options pricing, order flow analysis
+   - Profit maximization with capital protection FIRST
 
 2. **Brain Integration** (`~/vintinuum-api/trading.js`)
    - Two modes: PAPER (default, analysis only) and LIVE (real execution)
@@ -15,18 +18,40 @@
    - All decisions logged (append-only JSONL for auditability)
    - Robinhood MCP integration via `robinhood-for-agents` package
 
-3. **API Endpoints** (`~/vintinuum-api/routes/trading.js`)
+3. **MASTERMIND STRATEGY ENGINE** (`~/vintinuum-api/trading-strategy.js`) 🧠
+   - **Autonomous market scanning** — monitors watchlist on configurable interval
+   - **Market regime detection** — trending_up, trending_down, ranging, volatile, quiet
+   - **Multi-strategy signal generation:**
+     - Momentum (trend following in trending markets)
+     - Mean reversion (oversold/overbought in ranging markets)
+     - MACD crossovers (all regimes)
+   - **Intelligent position sizing** — risk-adjusted based on volatility + confidence
+   - **Automatic stop-loss and take-profit** — 2:1 reward/risk ratio
+   - **mercurius consultation** — each signal enhanced with deep analysis
+   - **Profit-driven but surgical** — trade probabilities, not certainties
+
+4. **API Endpoints** (`~/vintinuum-api/routes/trading.js`)
    - `/api/trading/state` — current mode, limits, today's stats
    - `/api/trading/portfolio` — live Robinhood portfolio
    - `/api/trading/analyze` — symbol analysis (quotes, fundamentals, technicals)
    - `/api/trading/decide` — submit trading decision
    - `/api/trading/emergency-stop` — kill switch
-   - `/api/trading/mcp` — direct MCP tool access for mercatus
+   - `/api/trading/mcp` — direct MCP tool access
+   
+   **MASTERMIND CONTROLS:**
+   - `/api/trading/strategy/status` — engine status, config, watchlist
+   - `/api/trading/strategy/scan` — run one scan cycle NOW
+   - `/api/trading/strategy/start` — start autonomous loop
+   - `/api/trading/strategy/stop` — stop autonomous loop
+   - `/api/trading/strategy/watchlist` — update symbols to monitor
 
-4. **Control Panel UI** (`~/vintinuum/trading.html`)
+5. **Control Panel UI** (`~/vintinuum/trading.html`)
    - Live state dashboard
    - Symbol analysis
-   - Decision submission (test in paper mode)
+   - Manual decision submission
+   - **Mastermind engine controls** (start/stop autonomous loop)
+   - **Watchlist editor**
+   - **Live signal feed** (what mercurius is seeing)
    - History log
    - Emergency controls
 
