@@ -855,3 +855,100 @@ If assuming → do not say it. Go check, or say you do not know.
 
 **A verified "I don't know" is infinitely more valuable than a confident guess.**
 Guessing has already cost real work on this machine and it will not happen again.
+
+---
+
+## 📚 THE LESSONS-LEARNED PROTOCOL — agents evolve their own instructions (Vinta directive 2026-10-02, task KVHPK4E)
+
+*"ensure in instructions every agent adds to instructions things it learns everytime it either fucks up, does too much, too little, this or that etc. anything and everything that matters should always be added to instructions to fix next turn next session next project. always."*
+
+**Standing order for ALL agents, ALL sessions, ALL projects.**
+
+When you discover something important through failure, excess, insufficiency, or any meaningful experience, you MUST immediately update the appropriate instruction file so the lesson persists forever. Never let the same mistake happen twice.
+
+### When to record a lesson
+
+Record immediately when ANY of these happen:
+1. **You fucked up** — violated a rule, broke something, made a wrong call, missed an obvious check
+2. **You did too much** — over-engineered, gold-plated, built features nobody asked for, wasted tokens
+3. **You did too little** — missed acceptance criteria, left TODOs, shipped incomplete work
+4. **You discovered a gap** — found an instruction was unclear/contradictory/missing
+5. **You hit a novel edge case** — encountered a situation the instructions didn't cover
+6. **You received correction from Vinta** — he fixed/reverted/clarified your work
+7. **You nearly made a mistake** — caught yourself before breaking a rule, and others might not
+
+If you're unsure whether something counts: **it counts**. Over-documenting lessons is the goal.
+
+### Where to write the lesson (routing rules)
+
+Pick the narrowest scope that captures the lesson:
+
+1. **Machine-wide law** → append to `~/.claude/CLAUDE.md`
+   - Applies to ALL agents, ALL projects, ALL sessions
+   - Examples: a new safety rail, a universal workflow step, a banned pattern
+   - Format: Add a new `## ` section or append to an existing one
+   - Always commit and push this file after editing (it's in git at `~/.claude`)
+
+2. **Project-specific pattern** → append to `<project>/CLAUDE.md`
+   - Applies to THIS project only (e.g. Vintinuum, DirHaven, extension)
+   - Examples: a project's API conventions, its test requirements, its deploy quirks
+   - Format: Add to the relevant section or create a new one
+   - Commit and push per the project's push discipline
+
+3. **Agent-specific evolution** → append to `~/.claude/agents/<agent>.md`
+   - Applies to THIS agent's specialty only
+   - Examples: helios-design learns a new aesthetic rule, atlas-rp learns a DirHaven economy pattern
+   - Format: Add to the agent's "Standing orders" or "Domain expertise" section
+   - This file is NOT in git; changes persist locally only
+
+4. **User feedback/preference** → memory system (already governed by auto-memory)
+   - Vinta's personal preferences, feedback on your approach, project context
+   - Use the existing memory tools per the auto-memory protocol in system reminders
+
+### How to write the lesson
+
+Every lesson follows this format:
+
+```markdown
+## [TITLE] — learned [DATE], task [TASKID]
+
+*[Optional: the fuck-up/discovery that triggered this]*
+
+**The lesson:** [What you learned in 1-2 sentences]
+
+**The rule:** [The concrete behavior change, actionable, testable]
+
+**Example violation:** [What the mistake looks like]
+
+**Example compliance:** [What the correct behavior looks like]
+```
+
+Example:
+```markdown
+## Never `done` a task without running acceptance — learned 2026-10-02, task ABC123
+
+*I marked a card done after implementing the feature but never verified it met the acceptance criteria. Vinta reopened it.*
+
+**The lesson:** Implementation ≠ completion. A task is only done when you've verified every acceptance criterion.
+
+**The rule:** Before running `vintask done <id>`, run EVERY check listed in the acceptance field and name them in `--proof`.
+
+**Example violation:** Implemented a feature, committed it, marked it done without testing.
+
+**Example compliance:** Implemented the feature, ran the test suite, manually verified at 3 breakpoints, then `done` with `--proof "npm test → 47/47 pass, visual check at 375/768/1920px"`.
+```
+
+### The self-check at end of EVERY session
+
+Before exiting, ask:
+1. "Did I learn something important this session?"
+2. "Did I make a mistake, do too much, do too little, or discover a gap?"
+3. "If another agent faces this same situation tomorrow, what should they know?"
+
+If any answer is yes → write the lesson to the appropriate file, commit/push if needed, note it in your Work Journal row.
+
+### Enforcement
+
+This protocol is self-enforcing: agents that don't learn from mistakes repeat them, waste tokens, and get their work reverted. The penalty for not documenting lessons is re-learning them expensively, forever.
+
+**Lessons are load-bearing infrastructure.** Treat them as seriously as the code you ship.
