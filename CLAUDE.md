@@ -869,3 +869,34 @@ Guessing has already cost real work on this machine and it will not happen again
 **The lesson:** an extension inherits the deploy-state of its base. If the base feature lives only on the dev branch, your extension is born stranded — and a cherry-pick of just your diff onto `main` fails because the surrounding code (your anchors) isn't there.
 
 **The rule:** before building on top of an existing world feature on the rescue branch, verify the base is on `origin/main` (grep `git show origin/main:<file>` for the function/handler you depend on, and/or curl the live file). If the base is NOT on main, say so up front: your work will be deploy-gated on landing the base first (the rescue→main reconciliation), which is a separate unit with production blast radius — do not try to force a 13-commit divergent merge inside one feature card. Build + verify on the dev line, push to preserve it, and `block` on the reconciliation with the exact missing base named — never call it `done` (it is not live) and never ship a half-merged `world.html` to production.
+
+---
+
+## 📚 THE LESSONS-LEARNED PROTOCOL — Vintinuum agents evolve their own instructions (Vinta directive 2026-10-02, task KVHPK4E)
+
+Full law in the machine-wide `~/.claude/CLAUDE.md`. The short version for this
+repo: every time you fuck up, over-build, under-build, hit a gap in these
+instructions, get corrected by Vinta, or hit a novel edge case while working on
+Vintinuum, write the lesson down *immediately* so it isn't re-learned next
+session:
+
+- **Lesson is Vintinuum-specific** (an API quirk, a DB gotcha, a DirRM/body
+  pattern, something true only in this repo) → append it here, to this file,
+  under a new `## [TITLE] — learned [DATE], task [TASKID]` heading, with
+  **The lesson / The rule / Example violation / Example compliance**. Commit +
+  push per the push discipline above (this file is in git; it deploys).
+- **Lesson applies to every project, every agent, machine-wide** → append it to
+  `~/.claude/CLAUDE.md` instead (not here) — that file is now git-tracked at
+  `~/.claude` (commit KVHPK4E-fix, 2026-10-02; it was previously silently
+  excluded from the durable-config repo's gitignore and unbacked-up).
+- **Lesson is about Vinta's own feedback/preference** → the memory system
+  (auto-memory), not this file.
+
+Over-documenting is the goal. If unsure whether a lesson counts, it counts —
+write it down before you exit the turn.
+
+## A seat branch can be WEEKS behind main — build on `origin/main`'s file, not the worktree's — learned 2026-10-19, task P86KVXB
+
+*I designed and wired the Mercatus logo into `mercatus.html` in the seat-5 worktree, verified it 5/5, and only at push time found that main had REPLACED that page outright (the war room became the Mercatus Cosmos, 1f9bdde). The whole masthead integration had to be redone against main's file. Resetting the seat branch to main afterwards also briefly dropped the only remote copy of an unlanded seat commit (this protocol pointer, b2a3876).*
+
+**The rule:** at the start of any task that edits a page, run `git fetch origin main && git diff --stat HEAD origin/main -- <file>`. If the file differs, work from `git show origin/main:<file>` and build on main (detached `origin/main` → commit → `push HEAD:main`). Before force-resetting a seat branch, run `git log origin/main..HEAD` and land or preserve every commit it lists.
