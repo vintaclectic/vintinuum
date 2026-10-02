@@ -873,3 +873,28 @@ If assuming → do not say it. Go check, or say you do not know.
 
 **A verified "I don't know" is infinitely more valuable than a confident guess.**
 Guessing has already cost real work on this machine and it will not happen again.
+
+---
+
+## 📚 THE LESSONS-LEARNED PROTOCOL — Vintinuum agents evolve their own instructions (Vinta directive 2026-10-02, task KVHPK4E)
+
+Full law in the machine-wide `~/.claude/CLAUDE.md`. The short version for this
+repo: every time you fuck up, over-build, under-build, hit a gap in these
+instructions, get corrected by Vinta, or hit a novel edge case while working on
+Vintinuum, write the lesson down *immediately* so it isn't re-learned next
+session:
+
+- **Lesson is Vintinuum-specific** (an API quirk, a DB gotcha, a DirRM/body
+  pattern, something true only in this repo) → append it here, to this file,
+  under a new `## [TITLE] — learned [DATE], task [TASKID]` heading, with
+  **The lesson / The rule / Example violation / Example compliance**. Commit +
+  push per the push discipline above (this file is in git; it deploys).
+- **Lesson applies to every project, every agent, machine-wide** → append it to
+  `~/.claude/CLAUDE.md` instead (not here) — that file is now git-tracked at
+  `~/.claude` (commit KVHPK4E-fix, 2026-10-02; it was previously silently
+  excluded from the durable-config repo's gitignore and unbacked-up).
+- **Lesson is about Vinta's own feedback/preference** → the memory system
+  (auto-memory), not this file.
+
+Over-documenting is the goal. If unsure whether a lesson counts, it counts —
+write it down before you exit the turn.
