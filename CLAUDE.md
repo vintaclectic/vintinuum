@@ -45,6 +45,24 @@ If a card is sealed, build every reversible part around the decision first, then
 leave the narrow reserved decision for Vinta. Never bury an unanswered question
 under a green card.
 
+## THE LENIENCY DOCTRINE — empty the holding pen (Vinta directive 2026-10-02, task TFKCEMJ)
+
+`needs-human`/`blocked` is a holding pen to be EMPTIED, not a graveyard to fill.
+Full text in the machine-wide `~/.claude/CLAUDE.md` and
+`~/.claude/council-loop/AUTONOMOUS_PROTOCOL.md`. The short version for this repo:
+- **Reopen spurious blocks on sight** — provider-exhausted (stale lockout),
+  circular-failover (router bug), turn-schema-prose (work likely done),
+  agent-died-with-work (reporting failure). `vintask reopen <id>` is free +
+  reversible; the attempts cap protects the budget.
+- **Cap-hit on an over-broad card → `vintask sprout <id> "<narrow slice>"`**, not a
+  whole reopen.
+- **Genuine blocks stay blocked** (missing credential/host/money/human-test) with
+  the reason updated to what you verified.
+- **needs-human stays sealed for real Reserved-Decisions** — never reopen a
+  money/public/destructive one to "finish" it. NOISE/moot needs-human → update its
+  `needs` to `RECOMMEND CANCEL — noise, nothing to decide`; let Vinta clear it.
+- **Record every recovery** as a `DECISION:` line in the Work Journal + the card.
+
 ## RETIRED DEFAULT AGENT: `claude` → `vessel` (task SEHP2A4)
 
 `claude` is retired as a council owner name. It was the anonymous default, not a
