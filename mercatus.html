@@ -1,0 +1,1337 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="robots" content="noindex, nofollow" />
+<title>MERCATUS // the war room · Vintinuum</title>
+<!--
+  MERCATUS // the war room — Lord Vinta's owner-only trading control panel.
+  Task DGRRNBY. Talks ONLY to /api/trading/* on the brain, which enforces
+  requireAuth + owner-by-email on every route. This page never renders a
+  control until /api/trading/state has answered 200 for the current token:
+  the war room lives in <template id="tpl-warroom"> and is cloned only then.
+
+  Honesty rules baked in:
+    - no number is shown that the brain did not send
+    - daily P&L and open positions are marked NOT TRACKED / not broker-verified
+      when the brain says so (pnlTracked / openPositionsTracked = false)
+    - every failure is shown as a failure, with the brain's own sentence
+-->
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap');
+
+:root{
+  --void:#040810;
+  --panel:rgba(14,20,32,.72);
+  --panel-solid:#0b111c;
+  --edge:rgba(255,255,255,.08);
+  --edge-strong:rgba(255,255,255,.16);
+  --text:rgba(214,228,255,.92);
+  --dim:rgba(160,182,220,.62);
+  --ghost:rgba(140,162,198,.38);
+  --gold:#c8a84b;
+  --gold-dim:rgba(200,168,75,.45);
+  --paper:#56c7a8;
+  --live:#ff4d6a;
+  --buy:#56c7a8;
+  --sell:#ff7a90;
+  --warn:#ffd070;
+  --ok:#58d68d;
+  --err:#ff7a90;
+  --mode:var(--paper);
+  --radius:14px;
+  --rail-h:84px;
+  --serif:'Cormorant Garamond',Georgia,serif;
+  --sans:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+  --mono:'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,monospace;
+}
+body.is-live{ --mode:var(--live); }
+
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{margin:0;padding:0}
+body{
+  background:
+    radial-gradient(1200px 600px at 12% -10%, rgba(200,168,75,.07), transparent 60%),
+    radial-gradient(900px 500px at 100% 0%, rgba(86,199,168,.05), transparent 60%),
+    var(--void);
+  color:var(--text);font:15px/1.5 var(--sans);-webkit-text-size-adjust:100%;
+  /* The page is a column: a scrolling content region, then the kill rail as a
+     normal-flow flex item. Nothing ever scrolls UNDER the rail (no-collision),
+     and the rail is always on screen. dvh keeps it above a mobile keyboard. */
+  height:100vh;height:100svh;height:100dvh;overflow:hidden;display:flex;flex-direction:column;
+}
+.scroller{flex:1 1 auto;min-height:0;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
+a{color:var(--gold);text-decoration:none}
+a:hover{text-decoration:underline}
+button,input,textarea,select{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+
+.wrap{max-width:1480px;margin:0 auto;padding:18px 14px 24px}
+.topnav{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:14px;font-size:13px}
+.topnav .dimlink{color:var(--dim)}
+
+/* ── masthead ─────────────────────────────────────────────────────────── */
+.mast{display:grid;grid-template-columns:minmax(0,1fr);gap:12px;margin-bottom:14px}
+.mast-title{min-width:0}
+.mast h1{margin:0;font:500 clamp(34px,8vw,64px)/1 var(--serif);letter-spacing:.14em;color:var(--gold)}
+.mast h1 .slash{color:var(--ghost);letter-spacing:0;margin:0 .15em}
+.mast h1 .room{font-style:italic;letter-spacing:.02em;color:var(--text);font-size:.6em;white-space:nowrap}
+/* Narrow phones: the subtitle drops to its own line instead of spilling. */
+@media (max-width:520px){
+  .mast h1{font-size:clamp(30px,11vw,44px);letter-spacing:.1em}
+  .mast h1 .slash{display:none}
+  .mast h1 .room{display:block;margin-top:4px;font-size:.52em}
+}
+.mast .sub{margin:6px 0 0;color:var(--dim);font-size:13px;max-width:62ch}
+.mast-status{display:flex;flex-wrap:wrap;gap:8px;align-items:center;min-width:0}
+@media (min-width:900px){
+  .mast{grid-template-columns:minmax(0,1fr) auto;align-items:end}
+  .mast-status{justify-content:flex-end}
+}
+
+.mode-badge{
+  display:inline-flex;align-items:center;gap:10px;min-height:44px;padding:8px 16px;border-radius:12px;
+  border:2px solid var(--mode);color:var(--mode);font:600 18px/1 var(--mono);letter-spacing:.22em;
+  background:color-mix(in srgb, var(--mode) 10%, transparent);
+}
+.mode-badge .dot{width:10px;height:10px;border-radius:50%;background:var(--mode);flex:0 0 auto}
+body.is-live .mode-badge{
+  background:repeating-linear-gradient(135deg, rgba(255,77,106,.20) 0 10px, rgba(255,77,106,.06) 10px 20px);
+  animation:livepulse 1.6s ease-in-out infinite;
+}
+@keyframes livepulse{0%,100%{box-shadow:0 0 0 0 rgba(255,77,106,.0)}50%{box-shadow:0 0 22px 2px rgba(255,77,106,.45)}}
+.chip{display:inline-flex;align-items:center;gap:6px;min-height:32px;padding:4px 10px;border-radius:999px;
+  border:1px solid var(--edge-strong);font:500 12px/1.2 var(--mono);color:var(--dim);max-width:100%;min-width:0}
+.chip > span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+.chip.ok{color:var(--ok);border-color:rgba(88,214,141,.4)}
+.chip.err{color:var(--err);border-color:rgba(255,122,144,.4)}
+.chip.warn{color:var(--warn);border-color:rgba(255,208,112,.4)}
+
+.banner{display:none;margin:0 0 12px;padding:10px 14px;border-radius:12px;font-size:13px;overflow-wrap:anywhere}
+.banner.show{display:block}
+.banner.err{background:rgba(255,122,144,.08);border:1px solid rgba(255,122,144,.35);color:var(--err)}
+.banner.warn{background:rgba(255,208,112,.07);border:1px solid rgba(255,208,112,.3);color:var(--warn)}
+.banner.halt{background:rgba(255,77,106,.10);border:1px solid rgba(255,77,106,.5);color:#ffd0d8}
+.banner .row{margin-top:8px}
+
+/* ── grid + panels ────────────────────────────────────────────────────── */
+.grid{display:grid;grid-template-columns:minmax(0,1fr);gap:14px;align-items:start}
+@media (min-width:900px){
+  .grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .span-all{grid-column:1/-1}
+}
+@media (min-width:1360px){
+  .grid{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .span-2{grid-column:span 2}
+}
+.panel{background:var(--panel);border:1px solid var(--edge);border-radius:var(--radius);padding:16px;
+  min-width:0;display:flex;flex-direction:column;gap:12px;backdrop-filter:blur(6px)}
+.panel-head{display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap;min-width:0}
+.panel h2{margin:0;font:500 22px/1.1 var(--serif);letter-spacing:.06em;color:var(--text);min-width:0}
+.panel h2 small{display:block;font:500 11px/1.4 var(--mono);letter-spacing:.14em;color:var(--ghost);text-transform:uppercase;margin-top:3px}
+.note{margin:0;color:var(--dim);font-size:12.5px;overflow-wrap:anywhere}
+.note.warn{color:var(--warn)} .note.err{color:var(--err)} .note.ok{color:var(--ok)}
+.mono{font-family:var(--mono)}
+
+.btn{appearance:none;border:1px solid var(--edge-strong);background:rgba(255,255,255,.04);color:var(--text);
+  border-radius:10px;min-height:44px;padding:10px 14px;font-weight:600;font-size:14px;cursor:pointer;
+  display:inline-flex;align-items:center;justify-content:center;gap:8px;max-width:100%;text-align:center}
+.btn:hover{border-color:var(--gold-dim)}
+.btn.gold{background:var(--gold);color:#15110a;border-color:var(--gold)}
+.btn.mode{background:var(--mode);color:#07100d;border-color:var(--mode)}
+.btn.danger{background:rgba(255,77,106,.12);color:#ffd0d8;border-color:rgba(255,77,106,.55)}
+.btn[disabled]{opacity:.45;cursor:not-allowed}
+.btnrow{display:flex;flex-wrap:wrap;gap:8px}
+.btnrow > .btn{flex:1 1 120px}
+
+label.f{display:flex;flex-direction:column;gap:6px;color:var(--dim);font-size:12px;letter-spacing:.04em;min-width:0}
+input.in,textarea.in,select.in{width:100%;min-width:0;background:#070b13;border:1px solid var(--edge-strong);
+  border-radius:10px;padding:11px 12px;min-height:44px;color:var(--text);font-size:16px}
+textarea.in{resize:vertical;min-height:84px}
+input.in.mono{font-family:var(--mono)}
+.frow{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+@media (max-width:360px){.frow{grid-template-columns:minmax(0,1fr)}}
+
+/* ── heartbeat tape ───────────────────────────────────────────────────── */
+.ecg-box{position:relative;border:1px solid var(--edge);border-radius:12px;background:#03060c;overflow:hidden}
+.ecg-box svg{display:block;width:100%;height:96px}
+.ecg-legend{display:flex;flex-wrap:wrap;gap:6px 14px;font:11px/1.4 var(--mono);color:var(--ghost)}
+.ecg-legend i{display:inline-block;width:10px;height:3px;border-radius:2px;margin-right:6px;vertical-align:middle}
+.ecg-meta{display:flex;justify-content:space-between;gap:10px;font:11px/1.4 var(--mono);color:var(--ghost);flex-wrap:wrap}
+#ecgMsg{margin:0;font:12px/1.4 var(--mono);color:var(--ghost);overflow-wrap:anywhere}
+#ecgMsg.halt{color:var(--live);font-weight:600;letter-spacing:.08em}
+
+/* ── gauges ───────────────────────────────────────────────────────────── */
+.gauges{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+@media (max-width:420px){.gauges{grid-template-columns:minmax(0,1fr)}}
+.gauge{display:flex;flex-direction:column;align-items:center;gap:4px;min-width:0;text-align:center;
+  border:1px solid var(--edge);border-radius:12px;padding:10px 6px}
+.gauge svg{width:100%;max-width:120px;height:auto;display:block}
+.gauge .g-val{font:500 14px/1.2 var(--mono);color:var(--text);overflow-wrap:anywhere}
+.gauge .g-lbl{font:11px/1.3 var(--mono);color:var(--ghost);letter-spacing:.08em;text-transform:uppercase}
+.gauge .g-note{font-size:11px;color:var(--warn);overflow-wrap:anywhere}
+
+/* ── composer ─────────────────────────────────────────────────────────── */
+.seg{display:grid;grid-template-columns:1fr 1fr;gap:6px;background:#070b13;border:1px solid var(--edge-strong);border-radius:12px;padding:4px}
+.seg .btn{border:0;background:transparent;letter-spacing:.2em;font-family:var(--mono)}
+.seg .btn[aria-pressed="true"].buy{background:var(--buy);color:#04120d}
+.seg .btn[aria-pressed="true"].sell{background:var(--sell);color:#1a0509}
+.exposure{display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap}
+.exposure .amt{font:500 26px/1 var(--mono);color:var(--text);overflow-wrap:anywhere;min-width:0}
+.exposure .cap{font:12px/1.2 var(--mono);color:var(--ghost)}
+.capbar{height:8px;border-radius:99px;background:rgba(255,255,255,.06);overflow:hidden}
+.capbar > div{height:100%;width:0;background:var(--mode);transition:width .25s ease}
+.capbar.over > div{background:var(--live)}
+.conviction{border:1px solid var(--edge);border-radius:12px;overflow:hidden;background:#03060c}
+.conviction canvas{display:block;width:100%;height:84px}
+.conv-row{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+.conv-row .v{font:500 13px/1 var(--mono);color:var(--dim)}
+input[type=range].in{padding:0;min-height:44px;background:transparent;border:0;accent-color:var(--gold)}
+.confirm-card{border:2px solid var(--mode);border-radius:12px;padding:14px;display:flex;flex-direction:column;gap:10px;
+  background:color-mix(in srgb, var(--mode) 7%, transparent)}
+.confirm-card .restate{margin:0;font:500 16px/1.45 var(--mono);overflow-wrap:anywhere}
+.confirm-card .consequence{margin:0;font-size:13px;color:var(--text);overflow-wrap:anywhere}
+.result{font-size:13px;overflow-wrap:anywhere;min-height:0}
+.result:empty{display:none}
+
+/* ── data renderers ───────────────────────────────────────────────────── */
+.kv{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px}
+.kv > div{border:1px solid var(--edge);border-radius:10px;padding:8px 10px;min-width:0}
+.kv dt{font:10.5px/1.3 var(--mono);color:var(--ghost);text-transform:uppercase;letter-spacing:.08em;overflow-wrap:anywhere}
+.kv dd{margin:2px 0 0;font:500 14px/1.3 var(--mono);color:var(--text);overflow-wrap:anywhere}
+.tbl-wrap{overflow:auto;max-height:320px;border:1px solid var(--edge);border-radius:10px;-webkit-overflow-scrolling:touch}
+table.tbl{border-collapse:collapse;width:100%;font:12px/1.4 var(--mono)}
+table.tbl th,table.tbl td{padding:7px 9px;text-align:left;border-bottom:1px solid var(--edge);white-space:nowrap;max-width:260px;overflow:hidden;text-overflow:ellipsis}
+table.tbl th{position:sticky;top:0;background:var(--panel-solid);color:var(--ghost);font-weight:500;text-transform:uppercase;letter-spacing:.06em;font-size:10.5px}
+pre.raw{margin:0;max-height:240px;overflow:auto;background:#03060c;border:1px solid var(--edge);border-radius:10px;padding:10px;
+  font:11.5px/1.45 var(--mono);color:var(--dim);white-space:pre-wrap;overflow-wrap:anywhere}
+.empty{padding:18px 10px;text-align:center;color:var(--ghost);font-size:13px;border:1px dashed var(--edge);border-radius:10px;overflow-wrap:anywhere}
+.loading{color:var(--dim);font-size:13px}
+.loading::after{content:'';display:inline-block;width:1.2em;text-align:left;animation:dots 1.2s steps(4,end) infinite}
+@keyframes dots{0%{content:''}25%{content:'.'}50%{content:'..'}75%{content:'...'}}
+
+/* ── tape ─────────────────────────────────────────────────────────────── */
+.tape{list-style:none;margin:0;padding:0;max-height:420px;overflow-y:auto;border:1px solid var(--edge);border-radius:10px;-webkit-overflow-scrolling:touch}
+.tape li{display:grid;grid-template-columns:auto minmax(0,1fr);gap:4px 10px;padding:9px 12px;border-bottom:1px solid var(--edge);font-size:12.5px}
+.tape li:last-child{border-bottom:0}
+.tape .t{font:11px/1.6 var(--mono);color:var(--ghost);white-space:nowrap}
+.tape .ty{font:500 11px/1.6 var(--mono);letter-spacing:.06em;text-transform:uppercase;overflow-wrap:anywhere}
+.tape .d{grid-column:1/-1;color:var(--dim);overflow-wrap:anywhere}
+.ty.buy{color:var(--buy)} .ty.sell{color:var(--sell)} .ty.rej{color:var(--warn)} .ty.stop{color:var(--live)} .ty.info{color:var(--ghost)} .ty.exec{color:var(--gold)}
+
+/* ── watchlist ────────────────────────────────────────────────────────── */
+.wl{display:flex;flex-wrap:wrap;gap:6px}
+.wl .tag{display:inline-flex;align-items:center;gap:2px;border:1px solid var(--edge-strong);border-radius:999px;padding:0 0 0 12px;font:500 13px/1 var(--mono);min-height:44px}
+.wl .tag .btn{min-height:44px;min-width:44px;padding:0;border:0;background:transparent;color:var(--ghost);font-size:18px;border-radius:999px}
+.wl .tag .btn:hover{color:var(--err)}
+.wl-add{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px}
+
+/* ── locked / unreachable ─────────────────────────────────────────────── */
+.lock{max-width:560px;margin:8vh auto 0;text-align:center;padding:28px 20px;border:1px solid var(--edge);border-radius:18px;background:var(--panel)}
+.lock .sigil{font:400 64px/1 var(--serif);color:var(--gold);margin-bottom:10px}
+.lock h2{margin:0 0 8px;font:500 28px/1.15 var(--serif);letter-spacing:.08em}
+.lock p{margin:0 0 16px;color:var(--dim);overflow-wrap:anywhere}
+
+/* ── kill rail: a flex item BELOW the scroller, never overlaying content ─── */
+.rail{flex:0 0 auto;position:relative;height:calc(var(--rail-h) + env(safe-area-inset-bottom, 0px));
+  padding:12px max(14px, env(safe-area-inset-right, 0px)) calc(12px + env(safe-area-inset-bottom, 0px)) max(14px, env(safe-area-inset-left, 0px));
+  display:flex;align-items:center;gap:12px;background:rgba(4,8,16,.94);border-top:1px solid rgba(255,77,106,.35);backdrop-filter:blur(10px)}
+.rail-status{flex:1 1 auto;min-width:0;display:flex;flex-direction:column;gap:2px}
+.rail-status .l1{font:600 12px/1.25 var(--mono);letter-spacing:.14em;color:var(--mode);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rail-status .l2{font:11px/1.3 var(--mono);color:var(--dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.kill{flex:0 0 auto;position:relative;min-height:60px;min-width:156px;max-width:58vw;padding:0 18px;border-radius:14px;cursor:pointer;
+  border:2px solid #ff4d6a;background:linear-gradient(180deg,#ff4d6a,#c8203e);color:#fff;
+  font:700 15px/1.1 var(--mono);letter-spacing:.14em;overflow:hidden;box-shadow:0 0 0 0 rgba(255,77,106,.5)}
+.kill .fill{position:absolute;inset:0;background:rgba(0,0,0,.28);transform-origin:left;transform:scaleX(0)}
+.kill.armed{background:#1a0509;color:#ffd0d8;animation:armed .6s ease-in-out infinite alternate}
+.kill.armed .fill{animation:drain 5s linear forwards;background:rgba(255,77,106,.35)}
+.kill > span{position:relative}
+@keyframes armed{from{box-shadow:0 0 0 0 rgba(255,77,106,.6)}to{box-shadow:0 0 18px 4px rgba(255,77,106,.6)}}
+@keyframes drain{from{transform:scaleX(1)}to{transform:scaleX(0)}}
+@media (max-width:360px){.kill{min-width:128px;font-size:13px;padding:0 12px;letter-spacing:.08em}}
+
+dialog.dlg{border:1px solid var(--edge-strong);border-radius:16px;background:var(--panel-solid);color:var(--text);
+  padding:20px;width:min(440px, calc(100vw - 32px));max-height:calc(100svh - 32px);overflow:auto}
+dialog.dlg::backdrop{background:rgba(2,4,8,.72)}
+dialog.dlg h3{margin:0 0 8px;font:500 24px/1.2 var(--serif)}
+dialog.dlg p{margin:0 0 12px;color:var(--dim);font-size:14px;overflow-wrap:anywhere}
+
+@media (prefers-reduced-motion:reduce){
+  *{animation:none!important;transition:none!important}
+}
+</style>
+</head>
+<body>
+<div class="scroller" id="scroller">
+<div class="wrap">
+  <nav class="topnav">
+    <a href="index.html">&larr; Vintinuum</a>
+    <span class="dimlink mono" id="apiLabel"></span>
+  </nav>
+
+  <header class="mast">
+    <div class="mast-title">
+      <h1>MERCATUS<span class="slash">//</span><span class="room">the war room</span></h1>
+      <p class="sub">Owner-only. Every number here comes from the brain or it isn't shown. Paper until you say otherwise.</p>
+    </div>
+    <div class="mast-status" id="mastStatus" aria-live="polite"></div>
+  </header>
+
+  <main id="stage">
+    <p class="loading" id="boot">Opening the war room</p>
+  </main>
+</div>
+</div>
+
+<!-- ═══════════════ THE WAR ROOM (cloned only after /state answers 200) ═══════════════ -->
+<template id="tpl-warroom">
+  <div class="banner halt" id="haltBanner" role="alert"></div>
+  <div class="banner err" id="staleBanner" role="status"></div>
+
+  <section class="grid">
+    <!-- BROKER LINK (PV3NCGB): the brain signs itself in to Robinhood -->
+    <article class="panel span-all" id="linkPanel" hidden>
+      <div class="panel-head">
+        <h2>Broker Link<small>sign the brain in to Robinhood, once</small></h2>
+        <span class="chip" id="linkChip"><span>—</span></span>
+      </div>
+      <p class="note" id="linkNote">Mercurius can't read a single bar until the brain is signed in to Robinhood. One approval and it links itself — the credential stays encrypted on the brain, never in this page.</p>
+      <div class="btnrow" id="linkStartRow">
+        <button type="button" class="btn gold" id="linkStart" data-draggable="true">Link Robinhood</button>
+      </div>
+      <div id="linkWait" hidden>
+        <p class="note">A Robinhood approval tab just opened on the brain's PC. Not at that PC? Open the approval page here, approve, then paste the address your browser lands on (it starts with <span class="mono">http://127.0.0.1:</span> and may show "can't connect" — that's expected).</p>
+        <div style="height:8px"></div>
+        <div class="btnrow"><a class="btn" id="linkOpen" href="#" target="_blank" rel="noopener noreferrer" data-draggable="true">Open approval page</a></div>
+        <div style="height:8px"></div>
+        <div class="wl-add">
+          <input class="in mono" id="linkPaste" maxlength="4096" placeholder="http://127.0.0.1:…/callback?code=…" autocomplete="off" spellcheck="false" aria-label="Paste the callback address">
+          <button type="button" class="btn gold" id="linkFinish" data-draggable="true">Finish link</button>
+        </div>
+      </div>
+      <div class="result" id="linkResult" aria-live="polite"></div>
+    </article>
+
+    <!-- HEARTBEAT -->
+    <article class="panel span-all">
+      <div class="panel-head">
+        <h2>The Heartbeat<small>the journal, read as a pulse</small></h2>
+        <span class="note mono" id="ecgCount"></span>
+      </div>
+      <div class="ecg-box"><svg id="ecg" viewBox="0 0 1000 96" aria-label="Trading journal heartbeat" role="img"></svg></div>
+      <p id="ecgMsg" aria-live="polite"></p>
+      <div class="ecg-meta"><span id="ecgFrom"></span><span id="ecgTo"></span></div>
+      <div class="ecg-legend">
+        <span><i style="background:var(--buy)"></i>decision</span>
+        <span><i style="background:#f4f7ff"></i>order sent</span>
+        <span><i style="background:var(--warn)"></i>rejected (dip)</span>
+        <span><i style="background:var(--live)"></i>stop / failure</span>
+        <span><i style="background:var(--ghost)"></i>analysis / ops</span>
+      </div>
+    </article>
+
+    <!-- LIMITS -->
+    <article class="panel">
+      <div class="panel-head"><h2>Limits<small>the rails, as the brain reports them</small></h2></div>
+      <div class="gauges" id="gauges"></div>
+      <p class="note" id="limitsNote"></p>
+    </article>
+
+    <!-- COMPOSER -->
+    <article class="panel" id="composerPanel">
+      <div class="panel-head"><h2>Decision Composer<small>limit orders only</small></h2></div>
+      <div id="composeForm">
+        <div class="seg" role="group" aria-label="Side">
+          <button type="button" class="btn buy" id="sideBuy" aria-pressed="true" data-draggable="true">BUY</button>
+          <button type="button" class="btn sell" id="sideSell" aria-pressed="false" data-draggable="true">SELL</button>
+        </div>
+        <div style="height:10px"></div>
+        <div class="frow">
+          <label class="f">Symbol<input class="in mono" id="cSym" maxlength="10" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="AAPL"></label>
+          <label class="f">Quantity<input class="in mono" id="cQty" inputmode="decimal" placeholder="1"></label>
+        </div>
+        <div style="height:10px"></div>
+        <label class="f">Limit price (USD)<input class="in mono" id="cPx" inputmode="decimal" placeholder="0.00"></label>
+        <div style="height:10px"></div>
+        <label class="f">Reasoning<textarea class="in" id="cWhy" maxlength="4000" placeholder="Why this, why now. It goes in the journal verbatim."></textarea></label>
+        <div style="height:10px"></div>
+        <div class="conv-row"><span class="note">Conviction</span><span class="v" id="convVal">50</span></div>
+        <div class="conviction"><canvas id="convField" aria-hidden="true"></canvas></div>
+        <input type="range" class="in" id="cConf" min="0" max="100" value="50" aria-label="Confidence 0 to 100">
+        <div class="exposure"><span class="amt" id="expAmt">$0.00</span><span class="cap" id="expCap"></span></div>
+        <div class="capbar" id="capbar"><div></div></div>
+        <p class="note" id="composeHint"></p>
+        <div class="btnrow"><button type="button" class="btn mode" id="armBtn" data-draggable="true" disabled>Review decision</button></div>
+      </div>
+      <div class="confirm-card" id="confirmCard" hidden>
+        <p class="restate" id="restate"></p>
+        <p class="consequence" id="consequence"></p>
+        <div class="btnrow">
+          <button type="button" class="btn" id="backBtn" data-draggable="true">Back</button>
+          <button type="button" class="btn mode" id="commitBtn" data-draggable="true">Commit</button>
+        </div>
+      </div>
+      <div class="result" id="composeResult" aria-live="polite"></div>
+    </article>
+
+    <!-- STRATEGY -->
+    <article class="panel">
+      <div class="panel-head">
+        <h2>Mercurius<small>strategy engine</small></h2>
+        <span class="chip" id="engChip"><span>—</span></span>
+      </div>
+      <p class="note warn" id="engWarn" hidden></p>
+      <div class="kv" id="engKv"></div>
+      <div class="btnrow">
+        <button type="button" class="btn" id="engStart" data-draggable="true">Start loop</button>
+        <button type="button" class="btn" id="engStop" data-draggable="true">Stop loop</button>
+        <button type="button" class="btn" id="engScan" data-draggable="true">Scan now</button>
+      </div>
+      <div class="result" id="engResult" aria-live="polite"></div>
+      <div>
+        <p class="note" style="margin-bottom:6px">Watchlist <span class="mono" style="color:var(--ghost)">(in-memory on the brain; resets on restart)</span></p>
+        <div class="wl" id="wl"></div>
+        <div style="height:8px"></div>
+        <div class="wl-add">
+          <input class="in mono" id="wlIn" maxlength="10" placeholder="Add ticker" autocapitalize="characters" spellcheck="false" aria-label="Add ticker">
+          <button type="button" class="btn" id="wlAdd" data-draggable="true">Add</button>
+        </div>
+        <div style="height:8px"></div>
+        <div class="btnrow"><button type="button" class="btn gold" id="wlSave" data-draggable="true" disabled>Save watchlist</button></div>
+      </div>
+    </article>
+
+    <!-- PORTFOLIO -->
+    <article class="panel span-2">
+      <div class="panel-head">
+        <h2>Portfolio &amp; Positions<small>live from the broker, on demand</small></h2>
+        <button type="button" class="btn" id="pfRefresh" data-draggable="true">Refresh</button>
+      </div>
+      <div id="pfBody"><div class="empty">Not fetched yet.</div></div>
+    </article>
+
+    <!-- ACCOUNTING (fill-derived, broker-verified real fills) -->
+    <article class="panel span-2" id="acctPanel">
+      <div class="panel-head">
+        <h2>Accounting<small>fill-derived — real broker fills, not a process counter</small></h2>
+        <button type="button" class="btn" id="acctRefresh" data-draggable="true">Refresh</button>
+      </div>
+      <div id="acctBody"><div class="empty">Not fetched yet.</div></div>
+    </article>
+
+    <!-- ANALYZE -->
+    <article class="panel">
+      <div class="panel-head"><h2>Analyze<small>quote + fundamentals</small></h2></div>
+      <div class="wl-add">
+        <input class="in mono" id="anIn" maxlength="10" placeholder="Symbol" autocapitalize="characters" spellcheck="false" aria-label="Symbol to analyze">
+        <button type="button" class="btn gold" id="anGo" data-draggable="true">Analyze</button>
+      </div>
+      <div id="anBody"></div>
+    </article>
+
+    <!-- TAPE -->
+    <article class="panel span-2">
+      <div class="panel-head">
+        <h2>The Tape<small>decision + order journal, newest first</small></h2>
+        <button type="button" class="btn" id="tapeRefresh" data-draggable="true">Refresh</button>
+      </div>
+      <ul class="tape" id="tape"><li><span class="t"></span><span class="loading">Reading the journal</span></li></ul>
+    </article>
+  </section>
+
+  <!-- KILL RAIL — always on screen while the war room is open. -->
+  <div class="rail" id="rail">
+    <div class="rail-status"><span class="l1" id="railL1">—</span><span class="l2" id="railL2">—</span></div>
+    <!-- data-draggable="false" ON PURPOSE: the kill switch must never be draggable.
+         A drag could strand it somewhere unexpected, and a press-and-hold that
+         starts a drag instead of a stop is the exact failure you cannot afford
+         when you need to halt. It stays pinned to the rail, always reachable. -->
+    <button type="button" class="kill" id="killBtn" data-draggable="false" aria-describedby="railL2">
+      <span class="fill"></span><span id="killLbl">EMERGENCY STOP</span>
+    </button>
+  </div>
+
+  <dialog class="dlg" id="resumeDlg">
+    <h3>Lift the halt?</h3>
+    <p>Trading resumes in the brain's current mode. Type <span class="mono">RESUME</span> to confirm.</p>
+    <input class="in mono" id="resumeIn" autocomplete="off" spellcheck="false" aria-label="Type RESUME">
+    <p class="note err" id="resumeErr" style="margin-top:8px"></p>
+    <div class="btnrow">
+      <button type="button" class="btn" id="resumeCancel" data-draggable="true">Keep halted</button>
+      <button type="button" class="btn gold" id="resumeGo" data-draggable="true">Resume</button>
+    </div>
+  </dialog>
+</template>
+
+<script src="body/draggable.js"></script>
+<script>
+(function () {
+'use strict';
+
+const API = (location.hostname === 'localhost' || location.hostname === '127.0.0.1')
+  ? 'http://localhost:8767' : 'https://api.vintaclectic.com';
+const $ = (id) => document.getElementById(id);
+const token = () => { try { return localStorage.getItem('vint_token'); } catch (_) { return null; } };
+$('apiLabel').textContent = API.replace(/^https?:\/\//, '');
+
+// ── util ────────────────────────────────────────────────────────────────────
+function esc(s) {
+  return String(s == null ? '' : s).replace(/[&<>"']/g, (c) =>
+    ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+const usd = (n) => '$' + Number(n).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+function clock(ts) {
+  const d = new Date(ts);
+  return isNaN(d) ? '—' : d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+}
+function ago(ms) {
+  const s = Math.max(0, Math.round(ms / 1000));
+  return s < 60 ? s + 's' : s < 3600 ? Math.round(s / 60) + 'm' : Math.round(s / 3600) + 'h';
+}
+
+class ApiError extends Error {
+  constructor(msg, status, kind, data) { super(msg); this.status = status; this.kind = kind; this.data = data; }
+}
+
+async function api(path, opts) {
+  opts = opts || {};
+  const tok = token();
+  if (!tok) { lockOut('none'); throw new ApiError('No session', 0, 'auth'); }
+  const ctl = new AbortController();
+  const timer = setTimeout(() => ctl.abort(), opts.timeout || 20000);
+  let res;
+  try {
+    res = await fetch(API + '/api/trading' + path, {
+      method: opts.method || 'GET',
+      headers: Object.assign({ Authorization: 'Bearer ' + tok }, opts.body ? { 'Content-Type': 'application/json' } : {}),
+      body: opts.body ? JSON.stringify(opts.body) : undefined,
+      signal: ctl.signal,
+      cache: 'no-store',
+    });
+  } catch (e) {
+    throw new ApiError(e.name === 'AbortError' ? 'The brain did not answer in time.' : 'The brain is unreachable.', 0, 'net');
+  } finally {
+    clearTimeout(timer);
+  }
+  let data = null;
+  try { data = await res.json(); } catch (_) {}
+  if (res.status === 401) { lockOut('expired'); throw new ApiError('Session expired', 401, 'auth'); }
+  if (res.status === 403) { lockOut('denied'); throw new ApiError('Owner only', 403, 'auth'); }
+  if (!res.ok) {
+    const msg = (data && (data.reason || data.error || data.message)) || ('The brain answered ' + res.status + '.');
+    throw new ApiError(msg, res.status, 'http', data);
+  }
+  return data;
+}
+
+// ── state ───────────────────────────────────────────────────────────────────
+let S = null;             // last /state
+let lastOk = 0;           // last successful /state poll
+let mounted = false;
+let timers = [];
+let side = 'buy';
+let armedDecision = null;
+let ACC = null; // last /accounting read: fill-derived P&L + broker-verified positions/fills
+let wlDraft = null;       // watchlist being edited
+let wlServer = [];
+
+// ── lock screen: controls are never rendered here ───────────────────────────
+function lockOut(kind) {
+  timers.forEach(clearInterval); timers = [];
+  mounted = false;
+  document.body.classList.remove('is-live');
+  const oldRail = $('rail'); if (oldRail) oldRail.remove();
+  const oldDlg = $('resumeDlg'); if (oldDlg) oldDlg.remove();
+  const copy = {
+    none:    ['Sealed.', 'The war room opens only for the owner. Sign in on Vintinuum as the owner, then come back.'],
+    expired: ['Your session lapsed.', 'Sign in on Vintinuum again, then come back. Nothing was changed.'],
+    denied:  ['Not your war room.', 'This session is signed in, but it is not the owner. The brain refused it.'],
+  }[kind] || ['Sealed.', ''];
+  $('mastStatus').innerHTML = '<span class="chip err"><span>LOCKED</span></span>';
+  $('stage').innerHTML =
+    '<section class="lock" role="alert"><div class="sigil">&#9763;</div><h2>' + esc(copy[0]) + '</h2><p>' + esc(copy[1]) +
+    '</p><a class="btn gold" href="index.html" data-draggable="true">Open Vintinuum</a></section>';
+}
+
+function unreachable(msg) {
+  $('mastStatus').innerHTML = '<span class="chip err"><span>NO SIGNAL</span></span>';
+  $('stage').innerHTML =
+    '<section class="lock" role="alert"><div class="sigil">&#8709;</div><h2>No signal from the brain.</h2><p>' + esc(msg) +
+    ' No controls are shown until the brain answers.</p><button type="button" class="btn gold" id="retryBtn" data-draggable="true">Try again</button></section>';
+  $('retryBtn').addEventListener('click', boot);
+}
+
+// ── boot ────────────────────────────────────────────────────────────────────
+async function boot() {
+  if (!token()) return lockOut('none');
+  $('stage').innerHTML = '<p class="loading">Opening the war room</p>';
+  try {
+    S = await api('/state');
+  } catch (e) {
+    if (e.kind === 'auth') return;
+    return unreachable(e.message);
+  }
+  lastOk = Date.now();
+  mount();
+}
+
+function mount() {
+  ['rail', 'resumeDlg'].forEach((id) => { const el = $(id); if (el) el.remove(); });
+  const frag = $('tpl-warroom').content.cloneNode(true);
+  $('stage').innerHTML = '';
+  $('stage').appendChild(frag);
+  // The rail + dialog leave the scroller: the rail becomes the column's last row.
+  document.body.appendChild($('rail'));
+  document.body.appendChild($('resumeDlg'));
+  mounted = true;
+  wire();
+  renderState();
+  loadHistory();
+  loadStrategy();
+  loadSession();
+  loadAccounting();
+  timers.push(setInterval(pollState, 10000));
+  timers.push(setInterval(loadHistory, 15000));
+  timers.push(setInterval(loadAccounting, 45000));
+  timers.push(setInterval(loadStrategy, 20000));
+  timers.push(setInterval(renderStale, 1000));
+}
+
+async function pollState() {
+  try { S = await api('/state'); lastOk = Date.now(); renderState(); }
+  catch (e) { if (e.kind !== 'auth') renderStale(); }
+}
+
+function renderStale() {
+  if (!mounted) return;
+  const b = $('staleBanner');
+  const gap = Date.now() - lastOk;
+  if (gap > 25000) {
+    b.className = 'banner err show';
+    b.textContent = 'Signal lost ' + ago(gap) + ' ago. Everything below may be stale. The kill switch still tries the brain when pressed.';
+  } else {
+    b.className = 'banner err';
+  }
+}
+
+// ── mast + rail + halt ──────────────────────────────────────────────────────
+let session = null;
+function renderMast() {
+  if (!S) return;
+  const live = S.mode === 'live';
+  document.body.classList.toggle('is-live', live);
+  const chips = [];
+  chips.push('<span class="mode-badge" title="Trading mode reported by the brain"><span class="dot"></span>' + (live ? 'LIVE' : 'PAPER') + '</span>');
+  if (S.halted) chips.push('<span class="chip err"><span>HALTED</span></span>');
+  else chips.push('<span class="chip ok"><span>ARMED</span></span>');
+  if (session == null) chips.push('<span class="chip"><span>broker: checking…</span></span>');
+  else if (session.linked) chips.push('<span class="chip ok"><span>broker linked (' + esc(session.mode) + ')</span></span>');
+  else chips.push('<span class="chip warn" title="' + esc(session.error || '') + '"><span>broker not linked</span></span>');
+  chips.push('<span class="chip"><span>' + (S.requiresApproval ? 'approval gate ON' : 'approval gate OFF') + '</span></span>');
+  $('mastStatus').innerHTML = chips.join('');
+}
+
+async function loadSession() {
+  try { session = await api('/session', { timeout: 60000 }); }
+  catch (e) { if (e.kind === 'auth') return; session = { linked: false, error: e.message }; }
+  renderMast();
+  renderLink(session && session.link);
+}
+
+// ── broker link ─────────────────────────────────────────────────────────────
+let linkPoll = null;
+function renderLink(L) {
+  const panel = $('linkPanel');
+  if (!panel) return;
+  const linked = session && session.linked;
+  panel.hidden = !!linked && !(L && L.status === 'awaiting_approval');
+  if (panel.hidden) { stopLinkPoll(); return; }
+  const st = L ? L.status : 'idle';
+  const chip = $('linkChip');
+  const waiting = st === 'awaiting_approval' || st === 'starting';
+  chip.className = 'chip ' + (st === 'linked' ? 'ok' : st === 'failed' ? 'err' : waiting ? 'warn' : '');
+  chip.innerHTML = '<span>' + esc(waiting ? 'waiting for your approval' : st === 'failed' ? 'link failed' : st === 'linked' ? 'linked' : 'not linked') + '</span>';
+  $('linkWait').hidden = st !== 'awaiting_approval';
+  $('linkStartRow').hidden = st === 'awaiting_approval';
+  if (st === 'awaiting_approval' && L.url) $('linkOpen').href = L.url;
+  if (st === 'failed' && L.error) $('linkResult').innerHTML = '<p class="note err">' + esc(L.error) + ' — press Link Robinhood to try again.</p>';
+  if (st === 'awaiting_approval') startLinkPoll();
+}
+function startLinkPoll() { if (!linkPoll) linkPoll = setInterval(pollLink, 3000); }
+function stopLinkPoll() { if (linkPoll) { clearInterval(linkPoll); linkPoll = null; } }
+async function pollLink() {
+  let L;
+  try { L = await api('/link/status'); } catch (e) { return; }
+  if (L.status === 'linked') { stopLinkPoll(); return linkDone(L); }
+  if (L.status !== 'awaiting_approval') stopLinkPoll();
+  renderLink(L);
+}
+async function linkDone(L) {
+  $('linkResult').innerHTML = '<p class="note ok">Linked' + (L.account ? ' — trading account ' + esc(L.account.masked) : '') + '. Mercurius can see the market now.</p>';
+  await loadSession();
+  loadStrategy();
+}
+async function linkStart() {
+  const btn = $('linkStart');
+  btn.disabled = true; btn.textContent = 'Asking Robinhood…';
+  $('linkResult').innerHTML = '';
+  try { renderLink(await api('/link/start', { method: 'POST', body: { openOnHost: true }, timeout: 40000 })); }
+  catch (e) { if (e.kind !== 'auth') $('linkResult').innerHTML = '<p class="note err">' + esc(e.message) + '</p>'; }
+  finally { btn.disabled = false; btn.textContent = 'Link Robinhood'; }
+}
+async function linkFinish() {
+  const url = $('linkPaste').value.trim();
+  if (!url) { $('linkResult').innerHTML = '<p class="note warn">Paste the address from your browser bar first.</p>'; return; }
+  const btn = $('linkFinish');
+  btn.disabled = true; btn.textContent = 'Linking…';
+  try {
+    const L = await api('/link/complete', { method: 'POST', body: { url }, timeout: 45000 });
+    if (L.status === 'linked') { stopLinkPoll(); return linkDone(L); }
+    renderLink(L);
+    if (L.error) $('linkResult').innerHTML = '<p class="note err">' + esc(L.error) + '</p>';
+  } catch (e) { if (e.kind !== 'auth') $('linkResult').innerHTML = '<p class="note err">' + esc(e.message) + '</p>'; }
+  finally { btn.disabled = false; btn.textContent = 'Finish link'; }
+}
+
+function renderState() {
+  if (!mounted || !S) return;
+  renderMast();
+  // rail
+  const live = S.mode === 'live';
+  $('railL1').textContent = (live ? 'LIVE' : 'PAPER') + ' · ' + (S.halted ? 'HALTED' : 'ARMED');
+  $('railL2').textContent = S.halted
+    ? ('stopped: ' + ((S.halt && S.halt.reason) || (S.haltSource === 'env' ? 'TRADING_ENABLED=false' : 'kill switch')))
+    : ('cap ' + usd(S.limits.maxPositionSize) + ' per position · limit orders only');
+  // halt banner
+  const hb = $('haltBanner');
+  if (S.halted) {
+    const when = S.halt && S.halt.at ? ' at ' + new Date(S.halt.at).toLocaleString() : '';
+    const why = S.haltSource === 'env'
+      ? 'The environment kill switch (TRADING_ENABLED=false) is set. It can only be lifted on the brain host.'
+      : 'Emergency stop' + when + ': ' + ((S.halt && S.halt.reason) || 'no reason given') + '. The halt survives brain restarts.';
+    hb.innerHTML = '<strong>TRADING HALTED.</strong> ' + esc(why) +
+      (S.haltSource === 'env' ? '' : '<div class="row"><button type="button" class="btn" id="resumeOpen" data-draggable="true">Lift the halt…</button></div>');
+    hb.className = 'banner halt show';
+    const ro = $('resumeOpen'); if (ro) ro.addEventListener('click', openResume);
+  } else if (S.isPaused) {
+    hb.innerHTML = '<strong>PAUSED.</strong> The daily loss limit was breached. It resets at the next UTC day.';
+    hb.className = 'banner halt show';
+  } else {
+    hb.className = 'banner halt';
+  }
+  renderGauges();
+  updateComposer();
+  renderStale();
+}
+
+// ── gauges ──────────────────────────────────────────────────────────────────
+function arc(frac, color, hatched) {
+  const f = Math.max(0, Math.min(1, frac || 0));
+  const r = 42, cx = 50, cy = 52, a0 = Math.PI, a1 = Math.PI + Math.PI * f;
+  const p = (a) => (cx + r * Math.cos(a)).toFixed(2) + ' ' + (cy + r * Math.sin(a)).toFixed(2);
+  const track = 'M ' + p(Math.PI) + ' A ' + r + ' ' + r + ' 0 0 1 ' + p(2 * Math.PI);
+  const val = f > 0 ? 'M ' + p(a0) + ' A ' + r + ' ' + r + ' 0 0 1 ' + p(a1) : '';
+  return '<svg viewBox="0 0 100 60" aria-hidden="true">' +
+    '<defs><pattern id="hatch" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="3" height="6" fill="rgba(255,208,112,.35)"/></pattern></defs>' +
+    '<path d="' + track + '" fill="none" stroke="' + (hatched ? 'url(#hatch)' : 'rgba(255,255,255,.08)') + '" stroke-width="9" stroke-linecap="round"/>' +
+    (val ? '<path d="' + val + '" fill="none" stroke="' + color + '" stroke-width="9" stroke-linecap="round"/>' : '') + '</svg>';
+}
+// ── accounting: fill-derived P&L + broker-verified positions + REAL fills ────
+// Reads /api/trading/accounting. { tracked:false, reason } is an honest state we
+// render as NOT TRACKED — a fabricated number is never shown. These are the
+// ACTUAL broker fills behind every trade, the evidence layer of the journal.
+async function loadAccounting() {
+  if (!mounted) return;
+  try {
+    ACC = await api('/accounting', { timeout: 60000 });
+  } catch (e) {
+    if (e.kind === 'auth') return;
+    ACC = { tracked: false, reason: e.message };
+  }
+  renderAccounting();
+  if (mounted && S) renderGauges();
+}
+function renderAccounting() {
+  const body = $('acctBody'); if (!body) return;
+  if (!ACC) { body.innerHTML = '<div class="empty">Not fetched yet.</div>'; return; }
+  if (!ACC.tracked) {
+    body.innerHTML = '<div class="empty" style="border-color:rgba(255,208,112,.3);color:var(--warn)">' +
+      'NOT TRACKED — ' + esc(ACC.reason || 'broker accounting unavailable') +
+      '<br><span class="mono" style="color:var(--ghost)">No number is shown until the broker returns a shape we recognize.</span></div>';
+    return;
+  }
+  const pnl = ACC.realizedPnlToday || {};
+  const v = Number(pnl.value);
+  const pnlHtml = Number.isFinite(v)
+    ? '<span style="color:' + (v >= 0 ? 'var(--ok, #7fe0a0)' : 'var(--err)') + '">' +
+        esc((v >= 0 ? '+' : '-') + usd(Math.abs(v))) + (pnl.currency ? ' ' + esc(pnl.currency) : '') + '</span>'
+    : '—';
+  const items = (ACC.openPositions && ACC.openPositions.items) || [];
+  const fills = ACC.fillsToday || [];
+  let html = '<dl class="kv">' +
+    '<div><dt>realized P&amp;L today</dt><dd>' + pnlHtml + '</dd></div>' +
+    '<div><dt>open positions</dt><dd>' + esc(ACC.openPositions ? ACC.openPositions.count : 0) + '</dd></div>' +
+    '<div><dt>fills today</dt><dd>' + esc(fills.length) + '</dd></div>' +
+    '<div><dt>as of</dt><dd>' + esc(clock(ACC.asOf)) + '</dd></div>' +
+    '</dl>' +
+    '<p class="note" style="color:var(--text)">Fill-derived from the broker — real, not a process counter.</p>';
+  html += '<p class="note" style="margin-top:6px;color:var(--text)">Open positions</p>';
+  if (items.length) {
+    html += '<div class="tbl-wrap"><table class="tbl"><thead><tr><th>symbol</th><th>quantity</th><th>avg price</th></tr></thead><tbody>' +
+      items.map((p) => '<tr><td>' + esc(p.symbol || '—') + '</td><td>' + esc(p.quantity != null ? p.quantity : '—') + '</td><td>' +
+        (p.avgPrice != null ? esc(usd(p.avgPrice)) : '—') + '</td></tr>').join('') +
+      '</tbody></table></div>';
+  } else html += '<div class="empty">No open positions.</div>';
+  html += '<p class="note" style="margin-top:6px;color:var(--text)">Today’s actual fills</p>';
+  if (fills.length) {
+    html += '<div class="tbl-wrap"><table class="tbl"><thead><tr><th>time</th><th>symbol</th><th>side</th><th>qty</th><th>price</th><th>state</th></tr></thead><tbody>' +
+      fills.map((f) => '<tr><td>' + esc(f.filledAt ? clock(f.filledAt) : '—') + '</td><td>' + esc(f.symbol || '—') + '</td><td>' + esc(f.side || '—') + '</td><td>' +
+        esc(f.quantity != null ? f.quantity : '—') + '</td><td>' + (f.price != null ? esc(usd(f.price)) : '—') + '</td><td>' +
+        esc(f.state || '—') + '</td></tr>').join('') +
+      '</tbody></table></div>';
+  } else html += '<div class="empty">No fills yet today.</div>';
+  body.innerHTML = html;
+}
+
+function renderGauges() {
+  const L = S.limits, T = S.today;
+  const g = [];
+  // Daily loss: never show the placeholder 0 as if it were measured. Prefer the
+  // broker-verified fill-derived number (ACC) when the brain says it is tracked,
+  // else the process-tracked pnl, else honest NOT TRACKED.
+  const accV = ACC && ACC.tracked && ACC.realizedPnlToday && Number.isFinite(Number(ACC.realizedPnlToday.value))
+    ? Number(ACC.realizedPnlToday.value) : null;
+  if (accV !== null) {
+    const used = Math.max(0, -accV);
+    g.push(gauge(arc(used / L.maxDailyLoss, used >= L.maxDailyLoss ? 'var(--live)' : 'var(--mode)'),
+      usd(used) + ' / ' + usd(L.maxDailyLoss), 'daily loss', 'broker-verified fills'));
+  } else if (T.pnlTracked) {
+    const used = Math.max(0, -T.pnl);
+    g.push(gauge(arc(used / L.maxDailyLoss, used >= L.maxDailyLoss ? 'var(--live)' : 'var(--mode)'),
+      usd(used) + ' / ' + usd(L.maxDailyLoss), 'daily loss', ''));
+  } else {
+    g.push(gauge(arc(0, '', true), 'limit ' + usd(L.maxDailyLoss), 'daily loss', 'NOT TRACKED: refresh Accounting for broker fills'));
+  }
+  const posFrac = L.maxOpenPositions ? T.openPositions / L.maxOpenPositions : 0;
+  g.push(gauge(arc(posFrac, 'var(--mode)'), T.openPositions + ' / ' + L.maxOpenPositions, 'open positions',
+    T.openPositionsTracked ? '' : 'process count, not broker-verified'));
+  const exp = draftExposure();
+  g.push(gauge(arc(exp / L.maxPositionSize, exp > L.maxPositionSize ? 'var(--live)' : 'var(--gold)'),
+    usd(exp) + ' / ' + usd(L.maxPositionSize), 'draft vs cap', 'your composer draft'));
+  $('gauges').innerHTML = g.join('');
+  $('limitsNote').textContent = 'Limits are set by the brain environment. Market orders are disabled: their exposure cannot be capped.';
+}
+function gauge(svg, val, lbl, note) {
+  return '<div class="gauge">' + svg + '<div class="g-val">' + esc(val) + '</div><div class="g-lbl">' + esc(lbl) + '</div>' +
+    (note ? '<div class="g-note">' + esc(note) + '</div>' : '') + '</div>';
+}
+
+// ── composer ────────────────────────────────────────────────────────────────
+const SYM_RE = /^[A-Z][A-Z0-9.\-]{0,9}$/;
+function num(v) { const n = Number(String(v).trim()); return String(v).trim() === '' ? NaN : n; }
+function draftExposure() {
+  if (!mounted) return 0;
+  const q = num($('cQty').value), p = num($('cPx').value);
+  return Number.isFinite(q) && Number.isFinite(p) && q > 0 && p > 0 ? +(q * p).toFixed(2) : 0;
+}
+function draftProblem() {
+  const sym = $('cSym').value.trim().toUpperCase();
+  const q = num($('cQty').value), p = num($('cPx').value);
+  if (!SYM_RE.test(sym)) return 'Enter a ticker.';
+  if (!(Number.isFinite(q) && q > 0)) return 'Quantity must be a positive number.';
+  if (!(Number.isFinite(p) && p > 0)) return 'A limit price is required.';
+  if (!$('cWhy').value.trim()) return 'Reasoning is required. It goes in the journal.';
+  if (S && draftExposure() > S.limits.maxPositionSize) return 'Exposure is over the per-position cap. The brain will refuse it.';
+  if (S && S.halted) return 'Trading is halted. The brain will refuse any decision.';
+  return null;
+}
+function updateComposer() {
+  if (!mounted || !S) return;
+  const exp = draftExposure(), cap = S.limits.maxPositionSize;
+  $('expAmt').textContent = usd(exp);
+  $('expCap').textContent = 'cap ' + usd(cap);
+  const over = exp > cap;
+  $('capbar').classList.toggle('over', over);
+  $('capbar').firstElementChild.style.width = Math.min(100, cap ? (exp / cap) * 100 : 0) + '%';
+  const prob = draftProblem();
+  $('composeHint').textContent = prob || ('Ready. ' + side.toUpperCase() + ' in ' + S.mode.toUpperCase() + ' mode.');
+  $('composeHint').className = 'note' + (prob ? (over || S.halted ? ' err' : '') : ' ok');
+  $('armBtn').disabled = !!prob;
+  $('armBtn').textContent = 'Review ' + side.toUpperCase() + (S.mode === 'live' ? ' (LIVE)' : ' (paper)');
+  renderGauges();
+}
+function setSide(s) {
+  side = s;
+  $('sideBuy').setAttribute('aria-pressed', String(s === 'buy'));
+  $('sideSell').setAttribute('aria-pressed', String(s === 'sell'));
+  conv.hue = s === 'buy' ? 'buy' : 'sell';
+  updateComposer();
+}
+function consequenceText(mode) {
+  if (mode === 'paper') return 'PAPER: logged to the journal. No order leaves the brain. No money moves.';
+  if (S.requiresApproval) return 'LIVE with the approval gate ON: logged for approval. No approval queue is wired yet, so nothing is sent to Robinhood.';
+  return 'LIVE with the approval gate OFF: this sends a REAL limit order to Robinhood. Real money.';
+}
+function arm() {
+  if (draftProblem()) return;
+  const d = {
+    action: side,
+    symbol: $('cSym').value.trim().toUpperCase(),
+    quantity: num($('cQty').value),
+    price: num($('cPx').value),
+    reasoning: $('cWhy').value.trim(),
+    confidence: Number($('cConf').value),
+  };
+  d.exposure = +(d.quantity * d.price).toFixed(2);
+  d.mode = S.mode;
+  armedDecision = d;
+  $('restate').textContent = d.action.toUpperCase() + ' ' + d.quantity + ' ' + d.symbol + ' @ ' + usd(d.price) +
+    ' LIMIT = ' + usd(d.exposure) + ' exposure · ' + d.mode.toUpperCase() + ' mode · conviction ' + d.confidence;
+  $('consequence').textContent = consequenceText(d.mode);
+  $('commitBtn').textContent = d.mode === 'live' ? 'Commit LIVE ' + usd(d.exposure) : 'Commit to paper';
+  $('composeForm').hidden = true;
+  $('confirmCard').hidden = false;
+  $('composeResult').innerHTML = '';
+  $('commitBtn').focus();
+}
+function disarm() {
+  armedDecision = null;
+  $('confirmCard').hidden = true;
+  $('composeForm').hidden = false;
+}
+async function commit() {
+  const d = armedDecision;
+  if (!d) return;
+  $('commitBtn').disabled = true;
+  $('composeResult').innerHTML = '<span class="loading">Sending to the brain</span>';
+  try {
+    const r = await api('/decide', { method: 'POST', timeout: 60000, body: {
+      action: d.action, symbol: d.symbol, quantity: d.quantity, price: d.price,
+      reasoning: d.reasoning, confidence: d.confidence,
+      confirmMode: d.mode, confirmExposure: d.exposure,
+    } });
+    const label = { paper_logged: 'Logged to paper.', pending_approval: 'Logged for approval. Nothing was sent.',
+      submitted: 'Order submitted to Robinhood.', failed: 'Order failed.' }[r.status] || ('Status: ' + r.status);
+    $('composeResult').innerHTML = '<p class="note ' + (r.status === 'failed' ? 'err' : 'ok') + '">' + esc(label) +
+      (r.reason ? ' ' + esc(r.reason) : '') + (r.orderId ? ' Order id <span class="mono">' + esc(r.orderId) + '</span>.' : '') + '</p>';
+    disarm();
+    $('cWhy').value = '';
+    updateComposer();
+    loadHistory();
+    pollState();
+  } catch (e) {
+    if (e.kind === 'auth') return;
+    let extra = '';
+    if (e.status === 409 && e.data && e.data.mode) extra = ' The brain is in ' + String(e.data.mode).toUpperCase() + ' mode. Review again.';
+    $('composeResult').innerHTML = '<p class="note err">Not accepted: ' + esc(e.message) + esc(extra) + '</p>';
+    disarm();
+    pollState();
+    loadHistory();
+  } finally {
+    const cb = $('commitBtn'); if (cb) cb.disabled = false;
+  }
+}
+
+// ── conviction field: particle coherence == confidence ──────────────────────
+const conv = { value: 50, hue: 'buy', parts: [], raf: 0, visible: true, t: 0 };
+function convSetup() {
+  const c = $('convField');
+  const dpr = Math.min(2, window.devicePixelRatio || 1);
+  const w = c.clientWidth || 300, h = c.clientHeight || 84;
+  c.width = Math.round(w * dpr); c.height = Math.round(h * dpr);
+  const ctx = c.getContext('2d'); ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  conv.w = w; conv.h = h; conv.ctx = ctx;
+  if (!conv.parts.length) {
+    for (let i = 0; i < 90; i++) conv.parts.push({ x: Math.random() * w, y: Math.random() * h, a: Math.random() * Math.PI * 2, s: 0.4 + Math.random() * 0.9 });
+  }
+}
+function convFrame() {
+  const { ctx, w, h } = conv; if (!ctx) return;
+  const k = conv.value / 100;                        // 0 chaos → 1 aligned
+  const dir = conv.hue === 'buy' ? -0.35 : 0.35;     // buy leans up-right, sell down-right
+  const col = conv.hue === 'buy' ? '86,199,168' : '255,122,144';
+  ctx.fillStyle = 'rgba(3,6,12,0.28)'; ctx.fillRect(0, 0, w, h);
+  conv.t += 0.016;
+  for (const p of conv.parts) {
+    const wander = (Math.sin(p.x * 0.03 + conv.t * 2.1) + Math.cos(p.y * 0.05 - conv.t * 1.7)) * Math.PI;
+    const target = dir;
+    p.a = p.a + ((target * k + wander * (1 - k)) - p.a) * 0.08;
+    const sp = p.s * (0.6 + k * 1.6);
+    p.x += Math.cos(p.a) * sp; p.y += Math.sin(p.a) * sp;
+    if (p.x > w) p.x -= w; if (p.x < 0) p.x += w; if (p.y > h) p.y -= h; if (p.y < 0) p.y += h;
+    ctx.fillStyle = 'rgba(' + col + ',' + (0.25 + 0.6 * k).toFixed(2) + ')';
+    ctx.fillRect(p.x, p.y, 1.6 + k * 1.4, 1.6);
+  }
+}
+function convLoop() {
+  conv.raf = 0;
+  if (!mounted || !conv.visible || document.hidden) return;
+  convFrame();
+  conv.raf = requestAnimationFrame(convLoop);
+}
+function convKick() {
+  const reduce = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if (reduce) { for (let i = 0; i < 40; i++) convFrame(); return; }
+  if (!conv.raf) conv.raf = requestAnimationFrame(convLoop);
+}
+
+// ── heartbeat: each journal event is a beat ─────────────────────────────────
+function beatFor(ev) {
+  const t = ev.type || '';
+  const a = ev.decision && ev.decision.action;
+  if (t === 'decision_submitted') return { amp: 24 + Math.min(16, (ev.exposure || 0) / Math.max(1, (S && S.limits.maxPositionSize) || 500) * 30), col: a === 'sell' ? 'var(--sell)' : 'var(--buy)' };
+  if (t === 'decision_pending_approval') return { amp: 22, col: 'var(--gold)', dbl: true };
+  if (t === 'order_executed') return { amp: 40, col: '#f4f7ff' };
+  if (t === 'decision_rejected') return { amp: -22, col: 'var(--warn)' };
+  if (t === 'order_failed' || t === 'mcp_denied') return { amp: -30, col: 'var(--live)' };
+  if (t === 'emergency_stop') return { amp: -40, col: 'var(--live)', stop: true };
+  if (t === 'resume') return { amp: 16, col: 'var(--ok)' };
+  return { amp: 6, col: 'var(--ghost)' };
+}
+let lastHist = [];
+function renderHeartbeat(hist) {
+  const svg = $('ecg'); if (!svg) return;
+  lastHist = hist;
+  const ev = hist.slice().reverse(); // oldest → newest
+  const W = Math.max(200, Math.round(svg.clientWidth || svg.parentNode.clientWidth || 1000)), H = 96, mid = 50;
+  svg.setAttribute('viewBox', '0 0 ' + W + ' ' + H);
+  const msg = $('ecgMsg');
+  $('ecgCount').textContent = ev.length ? ev.length + ' beats' : '';
+  const flat = !!(S && S.halted);
+  msg.className = flat ? 'halt' : '';
+  if (!ev.length) {
+    svg.innerHTML = '<line x1="0" y1="' + mid + '" x2="' + W + '" y2="' + mid + '" stroke="' + (flat ? '#ff4d6a' : 'rgba(160,182,220,.25)') + '" stroke-width="1.5"/>';
+    msg.textContent = flat ? 'FLATLINE: trading is halted.' : 'No heartbeat yet: the journal is empty.';
+    $('ecgFrom').textContent = ''; $('ecgTo').textContent = '';
+    return;
+  }
+  // Beats need ~24px each; on narrow screens show only the newest that fit.
+  const fit = Math.max(4, Math.floor((W - 20) / 24));
+  const shown = ev.slice(-fit);
+  const step = (W - 20) / (shown.length + 1);
+  let d = 'M 0 ' + mid, marks = '';
+  shown.forEach((e, i) => {
+    const b = beatFor(e), x = step * (i + 1);
+    b.amp = Math.max(-40, Math.min(40, b.amp));
+    const hw = Math.min(10, step * 0.4);
+    d += ' L ' + (x - hw).toFixed(1) + ' ' + mid + ' L ' + (x - hw / 2).toFixed(1) + ' ' + (mid + b.amp * 0.18).toFixed(1) +
+      ' L ' + x.toFixed(1) + ' ' + (mid - b.amp).toFixed(1) + ' L ' + (x + hw / 2).toFixed(1) + ' ' + (mid + b.amp * 0.25).toFixed(1) +
+      ' L ' + (x + hw).toFixed(1) + ' ' + mid;
+    marks += '<circle cx="' + x.toFixed(1) + '" cy="' + (mid - b.amp).toFixed(1) + '" r="3" fill="' + b.col + '"><title>' +
+      esc((e.type || '') + ' · ' + clock(e.timestamp)) + '</title></circle>';
+  });
+  const lastX = step * shown.length + Math.min(10, step * 0.4);
+  svg.innerHTML =
+    '<path d="' + d + ' L ' + lastX.toFixed(1) + ' ' + mid + '" fill="none" stroke="rgba(200,168,75,.75)" stroke-width="1.6" stroke-linejoin="round"/>' +
+    '<line x1="' + lastX.toFixed(1) + '" y1="' + mid + '" x2="' + W + '" y2="' + mid + '" stroke="' + (flat ? '#ff4d6a' : 'rgba(200,168,75,.35)') + '" stroke-width="' + (flat ? 2.2 : 1.2) + '"' + (flat ? '' : ' stroke-dasharray="4 6"') + '/>' +
+    marks;
+  msg.textContent = flat ? 'FLATLINE: trading is halted.' : (shown.length < ev.length ? 'Showing the newest ' + shown.length + ' of ' + ev.length + ' beats.' : '');
+  $('ecgFrom').textContent = 'oldest ' + clock(shown[0].timestamp);
+  $('ecgTo').textContent = 'newest ' + clock(shown[shown.length - 1].timestamp);
+}
+
+// ── tape ────────────────────────────────────────────────────────────────────
+function tapeClass(e) {
+  const t = e.type || '';
+  if (t === 'emergency_stop' || t === 'order_failed' || t === 'mcp_denied') return 'stop';
+  if (t === 'decision_rejected') return 'rej';
+  if (t === 'order_executed') return 'exec';
+  if (t.startsWith('decision')) return (e.decision && e.decision.action === 'sell') ? 'sell' : 'buy';
+  return 'info';
+}
+function tapeText(e) {
+  const d = e.decision;
+  const parts = [];
+  if (d) parts.push((d.action || '').toUpperCase() + ' ' + (d.quantity != null ? d.quantity + ' ' : '') + (d.symbol || '') +
+    (d.price ? ' @ ' + usd(d.price) : '') + (e.exposure != null ? ' = ' + usd(e.exposure) : '') + (d.source ? ' · ' + d.source : ''));
+  if (e.reason) parts.push(e.reason);
+  if (e.error) parts.push(String(e.error));
+  if (e.symbol && !d) parts.push(e.symbol);
+  if (e.tool) parts.push(e.tool);
+  if (e.watchlist) parts.push(e.watchlist.join(' '));
+  if (d && d.reasoning) parts.push('“' + d.reasoning.slice(0, 220) + (d.reasoning.length > 220 ? '…' : '') + '”');
+  return parts.join(' — ') || '';
+}
+// Full decision rationale for a single trade — the "why" behind every order,
+// expandable inline so the one-liner stays scannable but nothing is hidden.
+function tapeDetail(e) {
+  const d = e.decision;
+  if (!d) return '';
+  const rows = [];
+  if (d.reasoning) rows.push(['reasoning', d.reasoning]);
+  if (d.confidence != null && d.confidence !== '') rows.push(['confidence', String(d.confidence)]);
+  if (d.strategy) rows.push(['strategy', d.strategy]);
+  if (d.regime) rows.push(['regime', d.regime]);
+  if (d.stopLoss != null && d.stopLoss !== '') rows.push(['stop loss', usd(d.stopLoss)]);
+  if (d.takeProfit != null && d.takeProfit !== '') rows.push(['take profit', usd(d.takeProfit)]);
+  if (e.exposure != null) rows.push(['exposure', usd(e.exposure)]);
+  if (d.source) rows.push(['source', d.source]);
+  if (e.id) rows.push(['order id', e.id]);
+  if (!rows.length) return '';
+  return '<details class="tape-more" style="margin-top:6px"><summary style="cursor:pointer;color:var(--dim);font:11px/1.4 var(--mono);letter-spacing:.08em">why this trade</summary>' +
+    '<dl class="kv" style="margin-top:6px">' + rows.map((kv) =>
+      '<div><dt>' + esc(kv[0]) + '</dt><dd style="white-space:pre-wrap;overflow-wrap:anywhere">' + esc(kv[1]) + '</dd></div>').join('') +
+    '</dl></details>';
+}
+async function loadHistory() {
+  if (!mounted) return;
+  try {
+    const r = await api('/history?limit=80');
+    const hist = Array.isArray(r.history) ? r.history : [];
+    const tape = $('tape');
+    if (!hist.length) {
+      tape.innerHTML = '<li><span class="d">The journal is empty. The first decision you commit starts the heartbeat.</span></li>';
+    } else {
+      tape.innerHTML = hist.map((e) =>
+        '<li><span class="t">' + esc(clock(e.timestamp)) + ' · ' + esc((e.mode || '').toUpperCase()) + '</span><span class="ty ' + tapeClass(e) + '">' +
+        esc(String(e.type || '').replace(/_/g, ' ')) + '</span>' + (tapeText(e) ? '<span class="d">' + esc(tapeText(e)) + '</span>' : '') + tapeDetail(e) + '</li>').join('');
+    }
+    renderHeartbeat(hist.slice(0, 60));
+  } catch (e) {
+    if (e.kind === 'auth') return;
+    $('tape').innerHTML = '<li><span class="d" style="color:var(--err)">Could not read the journal: ' + esc(e.message) + '</span></li>';
+  }
+}
+
+// ── generic renderer for broker payloads (shape owned by Robinhood) ─────────
+function isScalar(v) { return v == null || ['string', 'number', 'boolean'].includes(typeof v); }
+function fmtScalar(v) { return v == null ? '—' : typeof v === 'number' ? v.toLocaleString('en-US', { maximumFractionDigits: 6 }) : String(v); }
+function renderData(v, depth) {
+  depth = depth || 0;
+  if (isScalar(v)) return '<div class="kv"><div><dt>value</dt><dd>' + esc(fmtScalar(v)) + '</dd></div></div>';
+  if (Array.isArray(v)) {
+    if (!v.length) return '<div class="empty">None.</div>';
+    if (v.every((r) => r && typeof r === 'object' && !Array.isArray(r))) {
+      const cols = [];
+      v.slice(0, 20).forEach((r) => Object.keys(r).forEach((k) => { if (isScalar(r[k]) && !cols.includes(k) && cols.length < 9) cols.push(k); }));
+      return '<div class="tbl-wrap"><table class="tbl"><thead><tr>' + cols.map((c) => '<th>' + esc(c) + '</th>').join('') + '</tr></thead><tbody>' +
+        v.slice(0, 200).map((r) => '<tr>' + cols.map((c) => '<td title="' + esc(fmtScalar(r[c])) + '">' + esc(fmtScalar(r[c])) + '</td>').join('') + '</tr>').join('') +
+        '</tbody></table></div>';
+    }
+    return '<pre class="raw">' + esc(JSON.stringify(v, null, 2).slice(0, 6000)) + '</pre>';
+  }
+  const keys = Object.keys(v);
+  const scal = keys.filter((k) => isScalar(v[k]));
+  const nest = keys.filter((k) => !isScalar(v[k]));
+  let out = '';
+  if (scal.length) out += '<dl class="kv">' + scal.map((k) => '<div><dt>' + esc(k) + '</dt><dd>' + esc(fmtScalar(v[k])) + '</dd></div>').join('') + '</dl>';
+  nest.forEach((k) => {
+    out += '<p class="note" style="margin-top:10px">' + esc(k) + '</p>' +
+      (depth < 2 ? renderData(v[k], depth + 1) : '<pre class="raw">' + esc(JSON.stringify(v[k], null, 2).slice(0, 4000)) + '</pre>');
+  });
+  return out || '<div class="empty">Empty response.</div>';
+}
+
+async function loadPortfolio() {
+  const btn = $('pfRefresh'); btn.disabled = true;
+  $('pfBody').innerHTML = '<p class="loading">Asking the broker (this can take ~10s)</p>';
+  try {
+    const r = await api('/portfolio', { timeout: 60000 });
+    $('pfBody').innerHTML = renderData(r);
+  } catch (e) {
+    if (e.kind === 'auth') return;
+    $('pfBody').innerHTML = '<div class="empty" style="color:var(--err);border-color:rgba(255,122,144,.35)">Broker did not return a portfolio.<br>' + esc(e.message) + '</div>';
+  } finally { btn.disabled = false; }
+}
+
+async function analyze() {
+  const sym = $('anIn').value.trim().toUpperCase();
+  if (!SYM_RE.test(sym)) { $('anBody').innerHTML = '<p class="note err">Enter a valid ticker.</p>'; return; }
+  const btn = $('anGo'); btn.disabled = true;
+  $('anBody').innerHTML = '<p class="loading">Reading ' + esc(sym) + '</p>';
+  try {
+    const r = await api('/analyze', { method: 'POST', timeout: 60000, body: { symbol: sym } });
+    let html = '<p class="note mono">' + esc(r.symbol) + ' · ' + esc(clock(r.timestamp)) + '</p>';
+    [['quote', 'Quote'], ['fundamentals', 'Fundamentals'], ['technicals', 'Technicals']].forEach(([k, lbl]) => {
+      html += '<p class="note" style="margin-top:10px;color:var(--text)">' + lbl + '</p>';
+      if (r[k] != null) html += renderData(r[k]);
+      else html += '<p class="note err">' + esc((r.errors && r.errors[k]) || 'No data.') + '</p>';
+    });
+    $('anBody').innerHTML = html;
+    loadHistory();
+  } catch (e) {
+    if (e.kind === 'auth') return;
+    $('anBody').innerHTML = '<p class="note err">' + esc(e.message) + '</p>';
+  } finally { btn.disabled = false; }
+}
+
+// ── strategy ────────────────────────────────────────────────────────────────
+async function loadStrategy() {
+  if (!mounted) return;
+  try {
+    const r = await api('/strategy/status');
+    const chip = $('engChip');
+    chip.className = 'chip ' + (r.running ? 'ok' : '');
+    chip.innerHTML = '<span>' + (r.scanning ? 'scanning' : r.running ? 'loop running' : 'idle') + '</span>';
+    const w = $('engWarn');
+    if (r.technicalsWired === false) {
+      w.hidden = false;
+      w.textContent = 'Signals cannot fire yet: technical indicators are not wired on the brain, so every scan ends with no setups. Start/scan are safe to run; they will not trade.';
+    } else w.hidden = true;
+    const ls = r.lastScan;
+    const kv = [
+      ['scan every', r.config.scanInterval + ' min'],
+      ['min confidence', r.config.minConfidence],
+      ['max signals', r.config.maxConcurrentSignals],
+      ['risk / trade', (r.config.riskPerTrade * 100).toFixed(1) + '%'],
+      ['last scan', ls ? clock(ls.at) : 'never'],
+      ['last result', ls ? (ls.ok ? (ls.scanned + ' scanned · ' + ls.signals + ' signals' + (ls.reason ? ' · ' + ls.reason : '')) : ('error: ' + ls.error)) : '—'],
+    ];
+    $('engKv').innerHTML = kv.map(([k, v]) => '<div><dt>' + esc(k) + '</dt><dd>' + esc(v) + '</dd></div>').join('');
+    $('engStart').disabled = r.running || (S && S.halted);
+    $('engStop').disabled = !r.running;
+    $('engScan').disabled = r.scanning;
+    wlServer = r.config.watchlist.slice();
+    if (wlDraft === null) renderWatchlist();
+  } catch (e) {
+    if (e.kind === 'auth') return;
+    $('engChip').className = 'chip err'; $('engChip').innerHTML = '<span>unreachable</span>';
+  }
+}
+async function engine(path, busyText) {
+  $('engResult').innerHTML = '<span class="loading">' + esc(busyText) + '</span>';
+  try {
+    const r = await api('/strategy/' + path, { method: 'POST', timeout: 120000 });
+    const msg = r.message || (path === 'scan'
+      ? ('Scanned ' + (r.scanned || 0) + ' · ' + (r.signals || 0) + ' signals · ' + (r.decisions || 0) + ' decisions' + (r.reason ? ' (' + r.reason + ')' : ''))
+      : 'Done.');
+    $('engResult').innerHTML = '<p class="note ok">' + esc(msg) + '</p>';
+  } catch (e) {
+    if (e.kind === 'auth') return;
+    $('engResult').innerHTML = '<p class="note err">' + esc(e.message) + '</p>';
+  }
+  loadStrategy(); loadHistory();
+}
+function renderWatchlist() {
+  const list = wlDraft || wlServer;
+  $('wl').innerHTML = list.length
+    ? list.map((s, i) => '<span class="tag">' + esc(s) + '<button type="button" class="btn" data-i="' + i + '" data-draggable="true" aria-label="Remove ' + esc(s) + '">&times;</button></span>').join('')
+    : '<span class="note">Empty. Add at least one ticker to save.</span>';
+  $('wlSave').disabled = !wlDraft || !wlDraft.length || JSON.stringify(wlDraft) === JSON.stringify(wlServer);
+}
+function wlAdd() {
+  const s = $('wlIn').value.trim().toUpperCase();
+  if (!SYM_RE.test(s)) return;
+  wlDraft = (wlDraft || wlServer.slice());
+  if (!wlDraft.includes(s) && wlDraft.length < 25) wlDraft.push(s);
+  $('wlIn').value = '';
+  renderWatchlist();
+}
+async function wlSave() {
+  $('wlSave').disabled = true;
+  try {
+    const r = await api('/strategy/watchlist', { method: 'POST', body: { symbols: wlDraft } });
+    wlServer = r.watchlist; wlDraft = null;
+    $('engResult').innerHTML = '<p class="note ok">Watchlist saved: ' + esc(r.watchlist.join(' ')) + '</p>';
+  } catch (e) {
+    if (e.kind === 'auth') return;
+    $('engResult').innerHTML = '<p class="note err">' + esc(e.message) + '</p>';
+  }
+  renderWatchlist();
+}
+
+// ── kill switch: tap to arm, tap again within 5s to fire ────────────────────
+let killArmTimer = 0;
+function killDisarm() {
+  clearTimeout(killArmTimer); killArmTimer = 0;
+  const k = $('killBtn'); if (!k) return;
+  k.classList.remove('armed'); $('killLbl').textContent = 'EMERGENCY STOP';
+}
+async function killPress() {
+  const k = $('killBtn');
+  if (!k.classList.contains('armed')) {
+    k.classList.add('armed');
+    $('killLbl').textContent = 'TAP AGAIN: HALT';
+    killArmTimer = setTimeout(killDisarm, 5000);
+    return;
+  }
+  clearTimeout(killArmTimer);
+  k.classList.remove('armed');
+  $('killLbl').textContent = 'STOPPING…';
+  k.disabled = true;
+  try {
+    const r = await api('/emergency-stop', { method: 'POST', timeout: 15000, body: { reason: 'Kill switch pressed in the war room' } });
+    $('killLbl').textContent = r.persisted ? 'HALTED' : 'HALTED (not persisted)';
+    $('railL2').textContent = r.persisted ? 'stop confirmed by the brain and saved to disk' : 'stop confirmed, but the halt file was NOT written; a restart would resume';
+  } catch (e) {
+    $('killLbl').textContent = 'NOT CONFIRMED: RETRY';
+    $('railL2').textContent = 'The brain did not confirm the stop: ' + e.message;
+  } finally {
+    k.disabled = false;
+    setTimeout(() => { if ($('killLbl') && /HALTED/.test($('killLbl').textContent)) $('killLbl').textContent = 'EMERGENCY STOP'; }, 4000);
+    pollState(); loadStrategy(); loadHistory();
+  }
+}
+
+// ── resume ──────────────────────────────────────────────────────────────────
+function openResume() {
+  $('resumeIn').value = ''; $('resumeErr').textContent = '';
+  const d = $('resumeDlg');
+  if (typeof d.showModal === 'function') d.showModal(); else d.setAttribute('open', '');
+  $('resumeIn').focus();
+}
+async function doResume() {
+  if ($('resumeIn').value.trim() !== 'RESUME') { $('resumeErr').textContent = 'Type RESUME exactly.'; return; }
+  try {
+    const r = await api('/resume', { method: 'POST', body: { confirm: 'RESUME' } });
+    if (!r.resumed) { $('resumeErr').textContent = r.reason || 'The brain refused.'; return; }
+    $('resumeDlg').close();
+    pollState(); loadHistory(); loadStrategy();
+  } catch (e) {
+    if (e.kind === 'auth') return;
+    $('resumeErr').textContent = e.message;
+  }
+}
+
+// ── wiring ──────────────────────────────────────────────────────────────────
+function wire() {
+  $('linkStart').addEventListener('click', linkStart);
+  $('linkFinish').addEventListener('click', linkFinish);
+  $('linkPaste').addEventListener('keydown', (e) => { if (e.key === 'Enter') linkFinish(); });
+  $('sideBuy').addEventListener('click', () => setSide('buy'));
+  $('sideSell').addEventListener('click', () => setSide('sell'));
+  ['cSym', 'cQty', 'cPx', 'cWhy'].forEach((id) => $(id).addEventListener('input', updateComposer));
+  $('cSym').addEventListener('blur', () => { $('cSym').value = $('cSym').value.trim().toUpperCase(); });
+  $('cConf').addEventListener('input', () => { conv.value = Number($('cConf').value); $('convVal').textContent = conv.value; convKick(); });
+  $('armBtn').addEventListener('click', arm);
+  $('backBtn').addEventListener('click', disarm);
+  $('commitBtn').addEventListener('click', commit);
+  $('pfRefresh').addEventListener('click', loadPortfolio);
+  $('anGo').addEventListener('click', analyze);
+  $('anIn').addEventListener('keydown', (e) => { if (e.key === 'Enter') analyze(); });
+  $('tapeRefresh').addEventListener('click', loadHistory);
+  $('acctRefresh').addEventListener('click', loadAccounting);
+  $('engStart').addEventListener('click', () => engine('start', 'Starting the loop'));
+  $('engStop').addEventListener('click', () => engine('stop', 'Stopping the loop'));
+  $('engScan').addEventListener('click', () => engine('scan', 'Scanning the watchlist'));
+  $('wlAdd').addEventListener('click', wlAdd);
+  $('wlIn').addEventListener('keydown', (e) => { if (e.key === 'Enter') wlAdd(); });
+  $('wl').addEventListener('click', (e) => {
+    const b = e.target.closest('button[data-i]'); if (!b) return;
+    wlDraft = (wlDraft || wlServer.slice()); wlDraft.splice(Number(b.dataset.i), 1); renderWatchlist();
+  });
+  $('wlSave').addEventListener('click', wlSave);
+  $('killBtn').addEventListener('click', killPress);
+  $('resumeCancel').addEventListener('click', () => $('resumeDlg').close());
+  $('resumeGo').addEventListener('click', doResume);
+  $('resumeIn').addEventListener('keydown', (e) => { if (e.key === 'Enter') doResume(); });
+
+  convSetup();
+  if ('ResizeObserver' in window) {
+    new ResizeObserver(() => { convSetup(); convKick(); }).observe($('convField'));
+    new ResizeObserver(() => renderHeartbeat(lastHist)).observe($('ecg'));
+  }
+  if ('IntersectionObserver' in window) {
+    new IntersectionObserver((ents) => { conv.visible = ents[0].isIntersecting; if (conv.visible) convKick(); }).observe($('convField'));
+  }
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) { convKick(); pollState(); } });
+  convKick();
+}
+
+boot();
+})();
+</script>
+</body>
+</html>
