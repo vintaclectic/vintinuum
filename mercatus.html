@@ -1,0 +1,3114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="color-scheme" content="dark">
+<title>MERCATUS COSMOS — the market as a living system</title>
+<style>
+/* ══════════════════════════════════════════════════════════════════════════════
+   MERCATUS COSMOS (task 8589YGC)
+   ──────────────────────────────────────────────────────────────────────────────
+   Vinta 2026-10-02: "i want a complete cosmos similar to the council task boards
+   cosmos related merely to the mercatus environment that entails all things
+   trading in the most Ficated and remarkable way." + "Not only that, I want it to
+   be such that anything that happens happens for a profit."
+
+   Modelled on the Council Task Board's Cosmos (vintask-gui.html #cosmosPanel),
+   translated wholesale into the trading domain:
+      council sun      -> THE ACCOUNT STAR (equity + today's realised P&L)
+      task planet      -> a WATCHLIST WORLD (one per CONFIG.watchlist symbol)
+      task status hue  -> MARKET REGIME hue (detectRegime)
+      update heat      -> SIGNAL STRENGTH + scan recency
+      agent threads    -> FILL ARCS (today's executions, trailing the world)
+      sentinel craft   -> THE TICK COMET (the daemon's visible heartbeat)
+
+   ══ NO-COLLISION ARCHITECTURE — read this before touching a rule ══════════════
+   Everything is NORMAL FLOW. The page is a single column flex whose children are
+   siblings and therefore cannot touch:
+      [ masthead ] [ auth gate ] [ bridge ] [ legend ] [ STAGE ] [ deck ]
+      [ inspector ] [ collapsible sections ]
+   Exactly TWO elements are positioned, both INSIDE the stage, and they are
+   geometrically disjoint by construction + by measurement:
+      · #mcHud      — the cursor/selection readout. A cursor-following panel has
+                      no other physical home, so it is an authorised overlay. It
+                      is pointer-events:none while it chases the cursor (it can
+                      never eat a drag), becomes a real target only once PINNED,
+                      and its position is clamped in JS against the MEASURED
+                      control-cluster rect — never against an assumed one.
+      · .mc-zoom    — the control cluster. It owns the bottom-right corner and
+                      nothing else may enter it.
+   If the HUD cannot fit anywhere without touching the cluster or leaving the
+   stage, it is NOT SHOWN AT ALL (mcHudFits). Refusing to render beats overlapping.
+   The inspector is a FLOW BLOCK UNDER the stage, never an overlay, so tapping a
+   world on a 320px phone makes the page taller instead of burying the galaxy it
+   is describing.
+   CANVAS TEXT IS NOT EXEMPT. Every label is collected first and placed by
+   mcLabelPass(), which rejects any placement that touches another label, any
+   world's own disc, the HUD, the cluster, the veil, or the canvas edge. A label
+   that cannot be placed cleanly is DROPPED.
+   Proven at 320/375/768/1280/1920 by verify-mercatus-collision.js.
+
+   ══ HONESTY ══════════════════════════════════════════════════════════════════
+   Zero stubs. A datum we do not have renders as a LABELLED EMPTY STATE, never as
+   a plausible number. A symbol the broker could not price is a DARK WORLD that
+   carries its real error string. `tracked:false` from /accounting prints NOT
+   TRACKED. The heartbeat dot STOPS when the scan loop stops — a still dot is an
+   honest dot, and we never fake a pulse we are not feeling.
+   ════════════════════════════════════════════════════════════════════════════ */
+
+*,*::before,*::after{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0}
+
+:root{
+  --bg:#06060a; --void:#04040a; --panel:#0e0f15; --inset:#12131a;
+  --hair:rgba(255,255,255,.055); --line:rgba(255,255,255,.1);
+  --line2:rgba(255,255,255,.14); --line-strong:rgba(255,255,255,.2);
+  --ink:#f2f3f7; --ink2:#d6d9e3; --dim:#98a0b3; --dim2:#6a7183;
+  --acc:#F5A623; --acc2:#FFC75A;          /* the account star / RTH gold */
+  --good:#22C55E; --good2:#4ADE80;        /* profit */
+  --bad:#EF4444;  --bad2:#FCA5A5;         /* loss */
+  --claim:#8B5CF6;                        /* awaiting-you violet */
+  --warn:#FBBF24;
+  --radius:14px; --radius-sm:10px;
+  --mono:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Inter,sans-serif;
+  /* regime hues — one source of truth, read by CSS and by the canvas */
+  --h-up:142; --h-down:0; --h-range:38; --h-vol:280; --h-quiet:210; --h-unk:220;
+}
+
+body{
+  background:
+    radial-gradient(120% 80% at 50% -10%,rgba(245,166,35,.05),transparent 60%),
+    radial-gradient(90% 70% at 100% 100%,rgba(139,92,246,.04),transparent 60%),
+    var(--bg);
+  color:var(--ink); font-family:var(--sans); line-height:1.6;
+  /* BACKSTOP, not a crutch: no element is permitted to overflow horizontally in
+     the first place. This only guarantees a stray never produces a page-wide
+     scrollbar on a 320px phone. */
+  overflow-x:hidden;
+  padding-bottom:env(safe-area-inset-bottom);
+}
+
+/* ── the one column every block is a sibling in ── */
+.mc-wrap{max-width:1560px;margin:0 auto;min-width:0;
+  padding:clamp(10px,2vw,22px) clamp(10px,2.2vw,24px) clamp(28px,5vw,56px);
+  display:flex;flex-direction:column;gap:clamp(10px,1.4vw,15px)}
+
+/* ══ MASTHEAD ═══════════════════════════════════════════════════════════════ */
+.mc-mast{display:flex;flex-wrap:wrap;align-items:center;gap:10px;min-width:0;
+  border:1px solid var(--line2);border-radius:var(--radius);padding:12px 14px;
+  background:linear-gradient(180deg,rgba(24,19,8,.9),var(--panel))}
+.mc-title{flex:1 1 220px;min-width:0;display:flex;flex-direction:column;gap:2px}
+.mc-title h1{margin:0;font-size:clamp(19px,3.4vw,27px);font-weight:900;
+  letter-spacing:.14em;line-height:1.1;
+  background:linear-gradient(100deg,var(--acc2),var(--good2) 55%,var(--claim));
+  -webkit-background-clip:text;background-clip:text;color:transparent;
+  overflow-wrap:anywhere}
+.mc-title p{margin:0;font-size:11px;color:var(--dim2);letter-spacing:.05em;
+  line-height:1.5;overflow-wrap:anywhere}
+.mc-mbadges{display:flex;flex-wrap:wrap;gap:7px;min-width:0;align-items:center}
+
+/* a pill. Every status chip on this page is one of these: its own box, nowrap
+   text, never a positioned element, so a wrapping row can never stack. */
+.mc-pill{flex:0 0 auto;max-width:100%;display:inline-flex;align-items:center;gap:6px;
+  min-height:30px;padding:4px 11px;border-radius:999px;
+  border:1px solid var(--hair);background:var(--inset);
+  font:800 10.5px/1.25 var(--mono);letter-spacing:.07em;text-transform:uppercase;
+  color:var(--dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mc-pill i{flex:none;width:8px;height:8px;border-radius:50%;background:currentColor;
+  box-shadow:0 0 8px currentColor;font-style:normal}
+.mc-pill.is-live{color:var(--bad2);border-color:rgba(239,68,68,.5);background:rgba(239,68,68,.13)}
+.mc-pill.is-paper{color:var(--good2);border-color:rgba(34,197,94,.45);background:rgba(34,197,94,.1)}
+.mc-pill.is-good{color:var(--good2);border-color:rgba(34,197,94,.4)}
+.mc-pill.is-bad{color:var(--bad2);border-color:rgba(239,68,68,.45)}
+.mc-pill.is-warn{color:var(--warn);border-color:rgba(251,191,36,.45)}
+.mc-pill.is-accent{color:var(--acc2);border-color:rgba(245,166,35,.42)}
+.mc-pill.is-claim{color:#c4b5fd;border-color:rgba(139,92,246,.5);background:rgba(139,92,246,.13)}
+.mc-pill.is-off{color:var(--dim2)}
+
+/* ── the LIVE-MONEY banner. Its own flow block, full width, never an overlay ── */
+.mc-alert{display:flex;align-items:flex-start;gap:10px;min-width:0;
+  border-radius:var(--radius-sm);padding:11px 13px;font-size:12.5px;line-height:1.6;
+  overflow-wrap:anywhere}
+.mc-alert[hidden]{display:none!important}
+.mc-alert b{font-weight:800}
+.mc-alert .ai{flex:0 0 auto;font-size:15px;line-height:1.3}
+.mc-alert .at{flex:1 1 auto;min-width:0}
+.mc-alert.a-live{border:1px solid rgba(239,68,68,.45);background:rgba(239,68,68,.1);color:var(--bad2)}
+.mc-alert.a-halt{border:1px solid rgba(251,191,36,.45);background:rgba(251,191,36,.09);color:var(--warn)}
+.mc-alert.a-paper{border:1px solid rgba(34,197,94,.35);background:rgba(34,197,94,.07);color:var(--good2)}
+
+/* ══ AUTH GATE ══════════════════════════════════════════════════════════════
+   /api/trading/* is Bearer-only and owner-only (routes/trading.js: requireAuth
+   then a strict users.email === OWNER_EMAIL check, with NO localhost bypass).
+   Without a token the honest surface is this gate — not an empty cosmos that
+   looks broken. The old trading.html sent `credentials:'include'` and no Bearer
+   header at all, which can only ever 401; that is fixed here. */
+.mc-auth{display:flex;flex-direction:column;gap:11px;min-width:0;
+  border:1px solid rgba(139,92,246,.4);border-radius:var(--radius);padding:14px;
+  background:linear-gradient(180deg,rgba(26,20,44,.85),var(--panel))}
+.mc-auth[hidden]{display:none!important}
+.mc-auth h2{margin:0;font-size:13.5px;font-weight:800;letter-spacing:.04em;color:#c4b5fd}
+.mc-auth p{margin:0;font-size:12px;color:var(--dim);line-height:1.65;overflow-wrap:anywhere}
+.mc-auth code{font-family:var(--mono);font-size:11px;color:var(--acc2);
+  background:var(--inset);border:1px solid var(--hair);border-radius:5px;padding:1px 5px;
+  overflow-wrap:anywhere}
+.mc-authrow{display:flex;flex-wrap:wrap;gap:8px;min-width:0;align-items:stretch}
+.mc-authrow input{flex:1 1 240px;min-width:0}
+
+/* ══ THE BRIDGE — the command layer above the galaxy ════════════════════════
+   COLLISION ARCHITECTURE: stacked flow rows in one bordered box. Zero positioned
+   elements. The only thing that can grow is the approval rail, and it grows
+   INWARD (max-height + overflow-y + overscroll containment) so a hundred pending
+   orders can never shove the galaxy off the page. */
+.mc-bridge{display:flex;flex-direction:column;gap:11px;min-width:0;
+  border:1px solid var(--line2);border-radius:var(--radius);padding:12px 13px;
+  background:
+    radial-gradient(120% 140% at 0% 0%,rgba(245,166,35,.075),transparent 58%),
+    radial-gradient(100% 140% at 100% 0%,rgba(34,197,94,.055),transparent 58%),
+    linear-gradient(180deg,rgba(20,18,12,.92),var(--panel))}
+
+/* ── row 1: THE PROFIT SPINE. Vinta's "anything that happens happens for a
+      profit" is a UI requirement, not a mood: the first row of the console
+      always answers "what did this make me?" and says NOT TRACKED when it
+      genuinely cannot know. ── */
+.mc-vitals{display:flex;flex-wrap:wrap;align-items:stretch;gap:7px;min-width:0}
+.mc-v{flex:0 0 auto;min-width:0;max-width:100%;display:inline-flex;
+  flex-direction:column;gap:1px;justify-content:center;
+  background:var(--inset);border:1px solid var(--hair);border-radius:11px;
+  padding:6px 12px;min-height:44px}
+.mc-v i{font-style:normal;font-size:9.5px;font-weight:800;letter-spacing:.09em;
+  text-transform:uppercase;color:var(--dim2);white-space:nowrap}
+.mc-v b{font:800 15px/1.15 var(--mono);color:var(--ink);font-variant-numeric:tabular-nums;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+.mc-v.v-good b{color:var(--good2)} .mc-v.v-bad b{color:var(--bad2)}
+.mc-v.v-accent b{color:var(--acc2)} .mc-v.v-claim b{color:#c4b5fd}
+.mc-v.v-off b{color:var(--dim2);font-size:12px}
+.mc-v.v-hero{background:linear-gradient(170deg,rgba(245,166,35,.14),var(--inset));
+  border-color:rgba(245,166,35,.34)}
+.mc-v.v-hero b{font-size:19px}
+
+/* the liveness tell. CSS-only breathing, so it costs a phone nothing. When the
+   scan loop goes quiet JS adds .stale and the animation STOPS. */
+.mc-beat{flex:1 1 auto;min-width:max-content;margin-left:auto;
+  display:inline-flex;align-items:center;justify-content:flex-end;gap:7px;
+  padding:0 2px;font:800 10px/1.3 var(--mono);letter-spacing:.07em;
+  text-transform:uppercase;color:var(--good);white-space:nowrap}
+.mc-beat i{flex:none;width:9px;height:9px;border-radius:50%;background:currentColor;
+  box-shadow:0 0 9px currentColor;animation:mcBreathe 2.4s ease-in-out infinite}
+.mc-beat.stale{color:var(--dim2)}
+.mc-beat.stale i{animation:none;box-shadow:none}
+@keyframes mcBreathe{0%,100%{opacity:.33;transform:scale(.8)}50%{opacity:1;transform:scale(1)}}
+
+/* ── row 2: THE APPROVAL RAIL — the reason the Bridge exists. Every live order
+      waits here for Vinta's explicit yes. ── */
+.mc-rail,.mc-clear{min-width:0}
+.mc-rail[hidden],.mc-clear[hidden]{display:none!important}
+.mc-rail{display:flex;flex-direction:column;gap:8px;
+  border-top:1px solid var(--hair);padding-top:10px}
+.mc-rh{display:flex;align-items:center;flex-wrap:wrap;gap:8px;min-width:0}
+.mc-rbadge{flex:0 0 auto;min-width:23px;height:23px;padding:0 7px;border-radius:999px;
+  display:inline-flex;align-items:center;justify-content:center;
+  font:800 11px/1 var(--mono);color:#140d03;
+  background:linear-gradient(160deg,#FFC75A,#F5A623);
+  box-shadow:0 0 14px rgba(245,166,35,.45)}
+.mc-rt{flex:0 0 auto;font-size:12.5px;font-weight:800;color:var(--ink);letter-spacing:.03em}
+.mc-rhint{flex:1 1 180px;min-width:0;text-align:right;font-size:10.5px;
+  color:var(--dim2);line-height:1.5;overflow-wrap:anywhere}
+/* GROWTH GOES INWARD — the single rule that keeps the queue from ever pushing
+   the galaxy off the page, no matter how much is pending. */
+.mc-rlist{display:flex;flex-direction:column;gap:7px;min-width:0;
+  max-height:min(40vh,320px);overflow-y:auto;overscroll-behavior:contain;
+  padding-right:3px}
+/* THE COLLISION THAT ALMOST SHIPPED, inherited verbatim from the Council's
+   task VMNJ78A: a row is a flex ITEM in a column flex but also a flex CONTAINER,
+   and min-height sets a FLOOR not a ceiling — so its content was free to paint
+   OUTSIDE its own box onto the next row while every bounding-box assertion
+   passed. `flex:0 0 auto` (never shrink a row to fit the list; the list scrolls,
+   that is its whole job), `height:auto` (the row sizes to its content; the
+   min-height is only a touch-target floor) and `overflow:hidden` as the hard
+   backstop. Growth goes inward. Always. */
+.mc-r{flex:0 0 auto;height:auto;overflow:hidden;
+  display:flex;flex-wrap:wrap;align-items:center;gap:9px;min-width:0;width:100%;
+  background:rgba(22,18,10,.76);border:1px solid var(--line);
+  border-left:3px solid var(--acc);border-radius:var(--radius-sm);
+  padding:9px 11px;min-height:52px;
+  transition:border-color .14s,background .14s}
+.mc-r:hover{background:rgba(34,27,14,.88);border-color:var(--line-strong)}
+.mc-r.r-sell{border-left-color:var(--bad)}
+.mc-r-main{flex:1 1 170px;min-width:0;display:flex;flex-direction:column;gap:3px;
+  overflow:hidden}
+.mc-r-t{font:800 12.5px/1.35 var(--mono);color:var(--ink);overflow-wrap:anywhere;
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.mc-r-m{display:flex;flex-wrap:wrap;gap:5px;min-width:0;font-size:10px;
+  color:var(--dim);line-height:1.5}
+.mc-r-m span{flex:0 0 auto;max-width:100%;overflow:hidden;text-overflow:ellipsis;
+  white-space:nowrap}
+.mc-r-m .rx{font-family:var(--mono);color:var(--acc2);font-weight:700}
+/* the two decisions. Their own flex item, so they can never land on the text. */
+.mc-r-acts{flex:0 0 auto;display:flex;flex-wrap:wrap;gap:6px;min-width:0}
+
+/* ── row 3: the honest zero-state ── */
+.mc-clear{display:flex;align-items:center;gap:10px;border-top:1px solid var(--hair);
+  padding-top:10px;font-size:12px;color:var(--dim);line-height:1.6;overflow-wrap:anywhere}
+.mc-clear b{color:var(--good2)}
+.mc-clear .cg{flex:0 0 auto;font-size:17px;color:var(--good);opacity:.75}
+
+/* ══ BUTTONS ════════════════════════════════════════════════════════════════ */
+.mc-btn{flex:0 0 auto;max-width:100%;display:inline-flex;align-items:center;
+  justify-content:center;gap:6px;min-height:40px;padding:0 14px;
+  border-radius:9px;border:1px solid var(--line2);background:var(--inset);
+  color:var(--ink2);font:800 11.5px/1 var(--mono);letter-spacing:.05em;
+  text-transform:uppercase;cursor:pointer;white-space:nowrap;
+  overflow:hidden;text-overflow:ellipsis;
+  transition:border-color .15s,background .15s,color .15s}
+.mc-btn:hover:not(:disabled){border-color:var(--line-strong);color:var(--ink)}
+.mc-btn:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+.mc-btn:disabled{opacity:.42;cursor:not-allowed}
+.mc-btn.b-go{border-color:rgba(34,197,94,.5);background:rgba(34,197,94,.13);color:var(--good2)}
+.mc-btn.b-go:hover:not(:disabled){background:rgba(34,197,94,.22)}
+.mc-btn.b-no{border-color:rgba(239,68,68,.5);background:rgba(239,68,68,.12);color:var(--bad2)}
+.mc-btn.b-no:hover:not(:disabled){background:rgba(239,68,68,.2)}
+.mc-btn.b-acc{border-color:rgba(245,166,35,.5);background:rgba(245,166,35,.13);color:var(--acc2)}
+.mc-btn.b-acc:hover:not(:disabled){background:rgba(245,166,35,.22)}
+.mc-btn.b-sm{min-height:34px;padding:0 10px;font-size:10.5px}
+/* 44px touch floor on anything a thumb must hit on a phone */
+@media(hover:none){ .mc-btn{min-height:44px} .mc-btn.b-sm{min-height:40px} }
+
+/* ══ LEGEND — the colour language, stated up front ══════════════════════════ */
+.mc-legend{display:flex;align-items:center;flex-wrap:wrap;gap:7px;min-width:0;
+  background:var(--inset);border:1px solid var(--line);border-radius:var(--radius-sm);
+  padding:9px 11px}
+.mc-lk{flex:0 0 auto;max-width:100%;display:inline-flex;align-items:center;gap:6px;
+  min-height:27px;padding:4px 9px;border-radius:999px;
+  border:1px solid var(--hair);background:rgba(255,255,255,.028);
+  font:700 10.5px/1.2 var(--sans);letter-spacing:.03em;color:var(--dim);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mc-lk i{flex:none;width:9px;height:9px;border-radius:50%;font-style:normal;
+  background:currentColor;box-shadow:0 0 7px currentColor}
+.mc-lk.k-up{color:hsl(var(--h-up) 70% 58%)}
+.mc-lk.k-down{color:hsl(var(--h-down) 72% 62%)}
+.mc-lk.k-range{color:hsl(var(--h-range) 80% 58%)}
+.mc-lk.k-vol{color:hsl(var(--h-vol) 70% 68%)}
+.mc-lk.k-quiet{color:hsl(var(--h-quiet) 42% 60%)}
+.mc-lk.k-star{color:var(--acc)}
+.mc-lk.k-star i{border-radius:2px;transform:rotate(45deg)}
+/* a DARK world: hollow ring, matching what the canvas draws for an unpriced
+   symbol. An ordinary flex item, so it reflows and can never collide. */
+.mc-lk.k-dark{color:var(--dim2)}
+.mc-lk.k-dark i{background:none;box-shadow:none;border:2px solid currentColor;
+  width:10px;height:10px}
+.mc-lk.k-wait{color:#c4b5fd}
+.mc-lk.k-wait i{background:none;box-shadow:0 0 9px currentColor;
+  border:2px solid currentColor;width:10px;height:10px}
+.mc-lhint{flex:1 1 180px;min-width:0;margin-left:auto;text-align:right;
+  font-size:10.5px;color:var(--dim2);line-height:1.5;overflow-wrap:anywhere}
+
+/* ══ THE STAGE — the canvas's bounded box. Nothing escapes it. ══════════════ */
+.mc-stage{position:relative;width:100%;min-width:0;
+  height:clamp(330px,60vh,680px);
+  border:1px solid var(--line);border-radius:var(--radius);
+  background:
+    radial-gradient(120% 90% at 50% 0%,rgba(245,166,35,.05),transparent 62%),
+    radial-gradient(90% 120% at 10% 100%,rgba(34,197,94,.04),transparent 60%),
+    var(--void);
+  overflow:hidden;touch-action:none;isolation:isolate}
+.mc-stage:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+#mcCanvas{display:block;width:100%;height:100%;cursor:grab;touch-action:none}
+#mcCanvas.dragging{cursor:grabbing}
+
+/* MONITOR FULLSCREEN — the panel becomes the viewport. The stage takes every
+   pixel the other blocks do not need; no element leaves its box, so the
+   No-Collision Law holds identically here as it does inline. */
+.mc-cosmos:fullscreen,.mc-cosmos:-webkit-full-screen{
+  width:100vw;height:100vh;margin:0;padding:12px;box-sizing:border-box;
+  overflow:auto;background:var(--bg);display:flex;flex-direction:column;gap:10px}
+.mc-cosmos:fullscreen .mc-stage,.mc-cosmos:-webkit-full-screen .mc-stage{
+  flex:1 1 auto;height:auto;min-height:300px}
+.mc-cosmos:fullscreen .mc-bridge,.mc-cosmos:-webkit-full-screen .mc-bridge,
+.mc-cosmos:fullscreen .mc-legend,.mc-cosmos:-webkit-full-screen .mc-legend,
+.mc-cosmos:fullscreen .mc-deck,.mc-cosmos:-webkit-full-screen .mc-deck{flex:0 0 auto}
+
+/* ── THE HUD: the ONLY authorised overlay. Two honest states. ───────────────
+   GHOST  (hover) → pointer-events:none, aria-hidden. It cannot be clicked
+          because it cannot be reached: it is chasing the cursor, so "moving
+          onto it" is not a gesture that exists.
+   PINNED (a world is SELECTED by click/tap) → pointer-events:auto, real
+          buttons, stops following the cursor. It only exists AFTER the tap that
+          selected the world, so it can never be under the finger that started
+          a drag.
+   The pinned state is strictly taller (it carries an action row), so the clamp
+   RE-MEASURES after the buttons are in the DOM and refuses to pin at all when
+   the stage is too small to hold it without collision — see mcHudFits(). */
+/* THE HEIGHT CAP IS LOAD-BEARING, NOT COSMETIC.
+   mcHudFits() only permits the HUD when a box its size fits either ABOVE the
+   control cluster or to its LEFT. On a 320px phone the stage is ~300x420 and the
+   cluster is an 82x82 grid in the corner, so the left-hand column is only 208px
+   wide — too narrow for a readable panel. That leaves the band above the cluster,
+   which is `stageH - 92`. An uncapped pinned HUD (7 stat rows + a 4-line note + a
+   wrapped action row) measured ~340px and so fit NOWHERE, and the clamp correctly
+   refused to show it at all — the verifier caught exactly that as "the HUD refused
+   to pin". Capping the height makes the measured box fit, and `overflow-y:auto` on
+   the pinned state keeps every row REACHABLE rather than clipped away. Growth goes
+   inward: the panel scrolls, it never grows onto the cluster.
+   The two numbers are the cluster's real footprint plus the 12px safe margin on
+   both sides: 170+10 column -> 204, 82+10 grid -> 116. */
+.mc-hud{position:absolute;left:12px;top:12px;z-index:3;
+  max-width:min(288px,calc(100% - 24px));max-height:calc(100% - 204px);
+  overflow:hidden;pointer-events:none;
+  background:rgba(8,8,12,.94);border:1px solid var(--line-strong);
+  border-radius:var(--radius-sm);padding:9px 11px;
+  box-shadow:0 10px 30px rgba(0,0,0,.66);backdrop-filter:blur(3px)}
+.mc-hud[hidden]{display:none!important}
+.mc-hud.pinned{pointer-events:auto;max-width:min(312px,calc(100% - 24px));
+  /* reachable, not clipped — the only honest way to honour the height cap */
+  overflow-y:auto;overscroll-behavior:contain;
+  border-color:var(--acc);
+  box-shadow:0 12px 34px rgba(0,0,0,.7),0 0 0 1px rgba(245,166,35,.17)}
+.mc-hud.pinned:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+.mc-hhead{display:flex;align-items:flex-start;gap:8px;min-width:0}
+.mc-hhead .hh-t{flex:1 1 auto;min-width:0}
+.mc-hud .hh-t{font:800 13px/1.3 var(--mono);color:var(--ink);letter-spacing:.03em;
+  overflow-wrap:anywhere;
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.mc-hud .hh-s{display:block;margin-top:4px;font:800 9.5px/1.3 var(--mono);
+  letter-spacing:.09em;text-transform:uppercase}
+.mc-hrows{margin-top:6px;display:flex;flex-direction:column;gap:3px;min-width:0}
+.mc-hrow{display:flex;align-items:baseline;gap:8px;min-width:0;font-size:10.5px;
+  line-height:1.5}
+.mc-hrow span{flex:0 0 auto;color:var(--dim2);letter-spacing:.04em;
+  text-transform:uppercase;font-size:9.5px;font-weight:800}
+.mc-hrow b{flex:1 1 auto;min-width:0;text-align:right;font-family:var(--mono);
+  font-weight:700;color:var(--ink2);font-variant-numeric:tabular-nums;
+  overflow-wrap:anywhere}
+.mc-hrow b.g{color:var(--good2)} .mc-hrow b.r{color:var(--bad2)}
+.mc-hrow b.a{color:var(--acc2)} .mc-hrow b.o{color:var(--dim2)}
+.mc-hnote{margin-top:6px;font-size:10.5px;color:var(--dim);line-height:1.55;
+  overflow-wrap:anywhere;
+  display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden}
+/* the action row wraps freely; every button is a full flex item with its own
+   box, so nothing here is positioned and no button can land on another. */
+.mc-hacts{display:flex;flex-wrap:wrap;gap:5px;margin-top:8px;min-width:0;
+  padding-top:8px;border-top:1px solid var(--hair)}
+.mc-hx{flex:0 0 auto;width:26px;height:26px;display:inline-flex;align-items:center;
+  justify-content:center;background:none;border:1px solid var(--line);
+  color:var(--dim);border-radius:6px;font:inherit;font-size:12px;line-height:1;
+  cursor:pointer;padding:0}
+.mc-hx:hover{border-color:var(--line-strong);color:var(--ink2)}
+.mc-hx:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+
+/* ── the control cluster: its own reserved corner, entered by nothing else ── */
+.mc-zoom{position:absolute;right:10px;bottom:10px;z-index:4;
+  display:flex;flex-direction:column;gap:6px}
+.mc-zoom button{width:38px;height:38px;flex:none;padding:0;display:flex;
+  align-items:center;justify-content:center;
+  background:rgba(8,8,12,.93);border:1px solid var(--line);color:var(--ink2);
+  border-radius:9px;font:800 15px/1 var(--sans);cursor:pointer;
+  transition:border-color .15s,color .15s,background .15s}
+.mc-zoom button:hover{border-color:var(--acc);color:var(--acc2)}
+.mc-zoom button:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+.mc-zoom button.on{border-color:var(--acc);color:var(--acc);
+  box-shadow:0 0 0 1px rgba(245,166,35,.2),0 0 18px rgba(245,166,35,.18)}
+/* On a short stage a 4-high column would eat the whole right edge, so the
+   cluster becomes a 2x2 grid. It is still ONE reserved rect, and the HUD clamp
+   measures that rect rather than assuming either shape. */
+@media(max-width:520px){
+  .mc-zoom{display:grid;grid-template-columns:38px 38px;gap:6px}
+  /* the cluster is now 82px tall instead of 170, so the HUD's legal band grows */
+  .mc-hud{max-height:calc(100% - 116px)}
+}
+
+/* ── the stage's own empty / loading / error state, centred in its own box ── */
+.mc-veil{position:absolute;inset:0;z-index:2;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;gap:9px;text-align:center;
+  padding:clamp(16px,5vw,30px);color:var(--dim);font-size:12.5px;line-height:1.7}
+.mc-veil[hidden]{display:none!important}
+.mc-veil .vg{font-size:30px;opacity:.5}
+.mc-veil b{color:var(--ink2)}
+.mc-veil .vmsg{max-width:min(420px,100%);min-width:0;overflow-wrap:anywhere}
+
+/* ══ THE DECK — the ET session band. A flow block under the stage. ══════════ */
+.mc-deck{background:var(--inset);border:1px solid var(--line);
+  border-radius:var(--radius-sm);padding:11px 12px;
+  display:flex;flex-direction:column;gap:9px;min-width:0}
+.mc-dhead{display:flex;align-items:baseline;flex-wrap:wrap;gap:9px;min-width:0}
+.mc-dsession{flex:0 0 auto;max-width:100%;font:800 9.5px/1 var(--mono);
+  letter-spacing:.1em;text-transform:uppercase;color:#120d04;
+  background:linear-gradient(100deg,var(--acc2),var(--acc));
+  border-radius:999px;padding:5px 11px;min-height:23px;display:inline-flex;
+  align-items:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mc-dsession.s-pre{background:linear-gradient(100deg,#93c5fd,#3b82f6);color:#04080f}
+.mc-dsession.s-after{background:linear-gradient(100deg,#818cf8,#4338ca);color:#f2f3f7}
+.mc-dsession.s-closed{background:var(--panel);color:var(--dim);
+  box-shadow:inset 0 0 0 1px var(--line)}
+.mc-dstamp{flex:1 1 200px;min-width:0;font:12.5px/1.5 var(--mono);color:var(--ink2);
+  font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+.mc-dstamp em{font-style:normal;color:var(--dim2)}
+/* the band itself: a 24h bar with the five ET windows as nested blocks. Pure
+   flow + percentage widths inside one relative track, so the segments tile
+   exactly and the NOW marker is the single positioned child of its own box. */
+.mc-band{position:relative;height:30px;border-radius:7px;overflow:hidden;
+  background:#07070c;border:1px solid var(--hair);min-width:0}
+.mc-bseg{position:absolute;top:0;bottom:0;display:block}
+.mc-bseg.g-closed{background:rgba(255,255,255,.03)}
+.mc-bseg.g-pre{background:linear-gradient(180deg,rgba(59,130,246,.3),rgba(59,130,246,.14))}
+.mc-bseg.g-reg{background:linear-gradient(180deg,rgba(245,166,35,.42),rgba(245,166,35,.16))}
+.mc-bseg.g-flat{background:repeating-linear-gradient(45deg,rgba(251,191,36,.6) 0 5px,rgba(251,191,36,.26) 5px 10px)}
+.mc-bseg.g-after{background:linear-gradient(180deg,rgba(67,56,202,.42),rgba(67,56,202,.16))}
+.mc-bnow{position:absolute;top:-1px;bottom:-1px;width:2px;z-index:2;
+  background:var(--ink);box-shadow:0 0 9px rgba(255,255,255,.75)}
+/* Seven nowrap labels in a non-wrapping row measured 295px of content inside a
+   274px box at 320px wide, and that overflow propagated all the way up through
+   .mc-deck to #mcCosmos — a real horizontal overflow the verifier caught. So the
+   row WRAPS (its items are siblings, so wrapped lines can never overlap), and the
+   two interior labels that merely annotate what the band already draws are
+   dropped on narrow screens rather than squeezed. */
+.mc-bticks{display:flex;flex-wrap:wrap;justify-content:space-between;
+  gap:2px 8px;min-width:0;
+  font:700 9px/1.3 var(--mono);color:var(--dim2);letter-spacing:.04em}
+.mc-bticks span{flex:0 0 auto;min-width:0}
+@media(max-width:560px){ .mc-bticks span.tk-opt{display:none} }
+
+/* ══ INSPECTOR — a FLOW block UNDER the stage, never an overlay ═════════════
+   This is the deliberate inversion of the HUD: the HUD is small, transient and
+   floats; the inspector is the full dossier and takes real page height. On a
+   320px phone a tapped world pushes the page taller instead of burying the
+   galaxy it describes. */
+.mc-inspect{border:1px solid var(--line2);border-radius:var(--radius);
+  padding:12px 13px;background:linear-gradient(180deg,rgba(18,19,26,.95),var(--panel));
+  display:flex;flex-direction:column;gap:10px;min-width:0}
+.mc-inspect[hidden]{display:none!important}
+.mc-ihead{display:flex;align-items:center;flex-wrap:wrap;gap:9px;min-width:0}
+.mc-isym{flex:0 0 auto;font:900 17px/1.2 var(--mono);letter-spacing:.07em;color:var(--ink)}
+.mc-ispacer{flex:1 1 40px;min-width:0}
+.mc-igrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(132px,1fr));
+  gap:8px;min-width:0}
+.mc-ic{min-width:0;background:var(--inset);border:1px solid var(--hair);
+  border-radius:var(--radius-sm);padding:9px 11px;display:flex;flex-direction:column;gap:2px;
+  overflow:hidden}
+.mc-ic i{font-style:normal;font-size:9.5px;font-weight:800;letter-spacing:.08em;
+  text-transform:uppercase;color:var(--dim2)}
+.mc-ic b{font:800 14px/1.25 var(--mono);color:var(--ink);font-variant-numeric:tabular-nums;
+  overflow-wrap:anywhere}
+.mc-ic b.g{color:var(--good2)} .mc-ic b.r{color:var(--bad2)}
+.mc-ic b.a{color:var(--acc2)} .mc-ic b.o{color:var(--dim2);font-size:11.5px}
+.mc-iwhy{min-width:0;border-top:1px solid var(--hair);padding-top:9px;
+  font-size:12px;color:var(--dim);line-height:1.65;overflow-wrap:anywhere}
+.mc-iwhy b{color:var(--ink2);font-weight:700}
+.mc-iacts{display:flex;flex-wrap:wrap;gap:7px;min-width:0}
+
+/* ══ COLLAPSIBLE SECTIONS — everything the old panel did, kept, below the
+      cosmos, exactly as the Council Task Board keeps its task list below the
+      galaxy. <details> gives the semantics free; no JS can desync them. ═════ */
+.mc-sections{display:flex;flex-direction:column;gap:10px;min-width:0}
+.mc-sec{min-width:0;border:1px solid var(--line);border-radius:var(--radius);
+  background:var(--panel);overflow:hidden}
+.mc-sec>summary{display:flex;align-items:center;gap:9px;min-width:0;
+  padding:12px 13px;cursor:pointer;list-style:none;min-height:50px;
+  font:800 12px/1.35 var(--mono);letter-spacing:.07em;text-transform:uppercase;
+  color:var(--ink2);background:var(--inset)}
+.mc-sec>summary::-webkit-details-marker{display:none}
+.mc-sec>summary:hover{color:var(--ink)}
+.mc-sec>summary:focus-visible{outline:2px solid var(--acc);outline-offset:-2px}
+.mc-sec>summary .sx{flex:0 0 auto;width:15px;text-align:center;color:var(--acc);
+  font-size:11px;transition:transform .18s}
+.mc-sec[open]>summary .sx{transform:rotate(90deg)}
+.mc-sec>summary .st{flex:1 1 auto;min-width:0;overflow:hidden;
+  text-overflow:ellipsis;white-space:nowrap}
+.mc-sec>summary .sc{flex:0 0 auto;font-size:10px;color:var(--dim2);
+  font-weight:800;letter-spacing:.05em}
+.mc-sbody{padding:12px 13px;display:flex;flex-direction:column;gap:11px;min-width:0;
+  border-top:1px solid var(--hair)}
+
+/* a table that becomes cards on a phone, so a 7-column grid can never overflow
+   a 320px screen. Each row is its own box either way. */
+.mc-tbl{display:flex;flex-direction:column;gap:6px;min-width:0}
+.mc-tr{display:grid;gap:4px 10px;min-width:0;align-items:baseline;
+  background:rgba(255,255,255,.022);border:1px solid var(--hair);
+  border-radius:9px;padding:8px 10px;overflow:hidden;
+  grid-template-columns:1fr}
+.mc-tr>div{min-width:0;overflow:hidden;font-size:11.5px;line-height:1.5;
+  overflow-wrap:anywhere}
+.mc-tr>div>i{font-style:normal;display:inline-block;min-width:76px;
+  font-size:9.5px;font-weight:800;letter-spacing:.07em;text-transform:uppercase;
+  color:var(--dim2)}
+.mc-tr>div>b{font-family:var(--mono);font-weight:700;color:var(--ink2);
+  font-variant-numeric:tabular-nums}
+.mc-tr>div>b.g{color:var(--good2)} .mc-tr>div>b.r{color:var(--bad2)}
+.mc-tr>div>b.a{color:var(--acc2)} .mc-tr>div>b.o{color:var(--dim2)}
+@media(min-width:760px){
+  .mc-tr{grid-template-columns:repeat(var(--cols,4),minmax(0,1fr))}
+  .mc-tr>div>i{display:block;min-width:0;margin-bottom:1px}
+}
+
+/* the journal: a scrolling log whose growth goes INWARD */
+.mc-log{display:flex;flex-direction:column;gap:5px;min-width:0;
+  max-height:min(52vh,430px);overflow-y:auto;overscroll-behavior:contain;
+  padding-right:3px}
+.mc-le{flex:0 0 auto;height:auto;overflow:hidden;min-width:0;
+  border-left:3px solid var(--line2);border-radius:7px;
+  background:rgba(255,255,255,.022);padding:7px 10px;
+  font-size:11px;line-height:1.55}
+.mc-le.e-scan{border-left-color:var(--acc)}
+.mc-le.e-order{border-left-color:var(--good)}
+.mc-le.e-dec{border-left-color:#c4b5fd}
+.mc-le.e-bad{border-left-color:var(--bad)}
+.mc-le.e-tick{border-left-color:var(--dim2)}
+.mc-le-h{display:flex;flex-wrap:wrap;align-items:baseline;gap:8px;min-width:0}
+.mc-le-t{flex:0 0 auto;font:700 10px/1.4 var(--mono);color:var(--dim2);
+  font-variant-numeric:tabular-nums}
+.mc-le-k{flex:0 0 auto;font:800 10.5px/1.4 var(--mono);color:var(--ink2);
+  letter-spacing:.04em}
+.mc-le-b{margin-top:3px;min-width:0;font-family:var(--mono);font-size:10.5px;
+  color:var(--dim);line-height:1.55;overflow-wrap:anywhere;
+  display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+
+/* ── forms ── */
+.mc-form{display:grid;grid-template-columns:1fr;gap:9px;min-width:0}
+@media(min-width:640px){ .mc-form{grid-template-columns:1fr 1fr} .mc-form .wide{grid-column:1/-1} }
+.mc-fld{display:flex;flex-direction:column;gap:4px;min-width:0}
+.mc-fld label{font-size:9.5px;font-weight:800;letter-spacing:.08em;
+  text-transform:uppercase;color:var(--dim2)}
+.mc-fld input,.mc-fld select,.mc-fld textarea{
+  width:100%;min-width:0;background:var(--void);color:var(--ink);
+  border:1px solid var(--line);border-radius:8px;padding:10px 11px;
+  font:600 13px/1.4 var(--mono);min-height:44px}
+.mc-fld textarea{min-height:76px;resize:vertical;font-family:var(--sans);font-weight:400}
+.mc-fld input:focus,.mc-fld select:focus,.mc-fld textarea:focus{
+  outline:2px solid var(--acc);outline-offset:1px;border-color:var(--acc)}
+.mc-fhint{font-size:10.5px;color:var(--dim2);line-height:1.5;overflow-wrap:anywhere}
+.mc-out{min-width:0;font-family:var(--mono);font-size:11px;line-height:1.6;
+  color:var(--dim);overflow-wrap:anywhere;
+  background:var(--void);border:1px solid var(--hair);border-radius:8px;
+  padding:9px 11px;max-height:min(46vh,380px);overflow:auto;
+  overscroll-behavior:contain;white-space:pre-wrap}
+.mc-out[hidden]{display:none!important}
+.mc-out.ok{color:var(--good2);border-color:rgba(34,197,94,.3)}
+.mc-out.bad{color:var(--bad2);border-color:rgba(239,68,68,.32)}
+
+.mc-empty{min-width:0;padding:14px 12px;text-align:center;font-size:12px;
+  color:var(--dim2);line-height:1.65;background:rgba(255,255,255,.018);
+  border:1px dashed var(--line);border-radius:9px;overflow-wrap:anywhere}
+.mc-empty b{color:var(--dim);font-weight:700}
+
+.mc-foot{min-width:0;font-size:10.5px;color:var(--dim2);line-height:1.7;
+  text-align:center;overflow-wrap:anywhere;padding-top:4px}
+.mc-foot a{color:var(--acc2)}
+
+/* ── the toast rail. NOT a floating overlay.
+      A fixed bottom-centre toast is the conventional choice and it is exactly
+      what the No-Collision Law forbids: it would sit over whatever section
+      happened to be scrolled under it, and nobody authorised that layering. So
+      the rail is an ordinary FLOW BLOCK in the main column — a sibling of the
+      masthead. Toasts push the page down instead of covering it, stacked toasts
+      are siblings in a column flex and therefore cannot overlap each other, and
+      `:empty{display:none}` means the rail costs exactly zero pixels whenever
+      there is nothing to say. Layout shift is a cosmetic cost; overlap is a
+      law violation. We pay the cosmetic one. ── */
+.mc-toasts{display:flex;flex-direction:column;gap:7px;min-width:0}
+.mc-toasts:empty{display:none}
+.mc-toast{flex:0 0 auto;min-width:0;overflow:hidden;
+  border:1px solid var(--line-strong);border-radius:10px;padding:10px 12px;
+  background:rgba(10,10,15,.96);box-shadow:0 10px 32px rgba(0,0,0,.6);
+  font-size:12px;line-height:1.55;color:var(--ink2);overflow-wrap:anywhere;
+  animation:mcToast .2s ease-out}
+.mc-toast.t-ok{border-color:rgba(34,197,94,.5);color:var(--good2)}
+.mc-toast.t-bad{border-color:rgba(239,68,68,.5);color:var(--bad2)}
+.mc-toast.t-warn{border-color:rgba(251,191,36,.5);color:var(--warn)}
+@keyframes mcToast{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+
+@media(prefers-reduced-motion:reduce){
+  .mc-beat i{animation:none}
+  .mc-toast{animation:none}
+  .mc-sec>summary .sx{transition:none}
+}
+
+/* ── the 320px rescue: the narrowest mandated width gets a shorter stage and a
+      tighter HUD cap, because a tall overlay on a short stage is exactly how the
+      clamp runs out of legal room. ── */
+@media(max-width:400px){
+  .mc-stage{height:clamp(300px,54vh,420px)}
+  .mc-hud{max-width:calc(100% - 20px)}
+  .mc-v{padding:6px 10px}
+  .mc-v b{font-size:14px}
+  .mc-v.v-hero b{font-size:17px}
+}
+</style>
+</head>
+<body>
+<div class="mc-wrap">
+
+  <!-- ══ MASTHEAD ═════════════════════════════════════════════════════════ -->
+  <header class="mc-mast">
+    <div class="mc-title">
+      <h1>MERCATUS COSMOS</h1>
+      <p id="mcSub">the market as a living system — every world is a symbol, every arc a fill</p>
+    </div>
+    <div class="mc-mbadges" id="mcBadges">
+      <span class="mc-pill is-off"><i></i>connecting</span>
+    </div>
+  </header>
+
+  <div class="mc-alert a-live" id="mcAlertLive" hidden>
+    <span class="ai" aria-hidden="true">&#9888;</span>
+    <span class="at"><b>LIVE MODE — REAL MONEY.</b> Every order waits in the approval queue
+      below until you explicitly approve it. Nothing executes on its own.</span>
+  </div>
+  <div class="mc-alert a-paper" id="mcAlertPaper" hidden>
+    <span class="ai" aria-hidden="true">&#10003;</span>
+    <span class="at"><b>PAPER MODE.</b> The engine senses, decides and records — and places
+      zero real orders.</span>
+  </div>
+  <div class="mc-alert a-halt" id="mcAlertHalt" hidden>
+    <span class="ai" aria-hidden="true">&#9632;</span>
+    <span class="at" id="mcAlertHaltText"><b>TRADING HALTED.</b></span>
+  </div>
+
+  <!-- the toast rail: a FLOW sibling, never an overlay (see .mc-toasts) -->
+  <div class="mc-toasts" id="mcToasts" aria-live="polite"></div>
+
+  <!-- ══ AUTH GATE ════════════════════════════════════════════════════════ -->
+  <section class="mc-auth" id="mcAuth" hidden>
+    <h2>OWNER SIGN-IN REQUIRED</h2>
+    <p id="mcAuthWhy">The Mercatus API is owner-only and Bearer-only: every
+      <code>/api/trading/*</code> route demands a valid access token whose user row carries
+      the owner email. There is no localhost bypass.</p>
+    <p>Open <code>brain.html</code> on this origin and sign in — this page picks the token up
+      automatically. Or paste an access token here for this tab only (it is stored under
+      <code>vint_access_token</code>, the same key the rest of Vintinuum uses).</p>
+    <div class="mc-authrow">
+      <div class="mc-fld" style="flex:1 1 240px">
+        <label for="mcTokenIn">Access token</label>
+        <input id="mcTokenIn" type="password" autocomplete="off" spellcheck="false"
+               placeholder="eyJhbGciOi…">
+      </div>
+      <button type="button" class="mc-btn b-acc" id="mcTokenSave" style="align-self:flex-end">Use token</button>
+    </div>
+  </section>
+
+  <!-- ══ THE COSMOS — bridge + legend + stage + deck, the fullscreen unit ══ -->
+  <section class="mc-cosmos" id="mcCosmos"
+           style="display:flex;flex-direction:column;gap:inherit;min-width:0">
+
+    <!-- ── THE BRIDGE ─────────────────────────────────────────────────────── -->
+    <div class="mc-bridge">
+      <div class="mc-vitals" id="mcVitals">
+        <div class="mc-v v-off"><i>today</i><b>—</b></div>
+      </div>
+
+      <div class="mc-rail" id="mcRail" hidden>
+        <div class="mc-rh">
+          <span class="mc-rbadge" id="mcRailN">0</span>
+          <span class="mc-rt">AWAITING YOUR DECISION</span>
+          <span class="mc-rhint">Nothing reaches the broker until you approve it. The world
+            pulses in the cosmos until you do.</span>
+        </div>
+        <div class="mc-rlist" id="mcRailList"></div>
+      </div>
+
+      <div class="mc-clear" id="mcClear">
+        <span class="cg" aria-hidden="true">&#10003;</span>
+        <span id="mcClearText">Queue clear — <b>nothing is waiting on you.</b></span>
+      </div>
+    </div>
+
+    <!-- ── LEGEND ─────────────────────────────────────────────────────────── -->
+    <div class="mc-legend">
+      <span class="mc-lk k-star"><i></i>account star</span>
+      <span class="mc-lk k-up"><i></i>trending up</span>
+      <span class="mc-lk k-down"><i></i>trending down</span>
+      <span class="mc-lk k-range"><i></i>ranging</span>
+      <span class="mc-lk k-vol"><i></i>volatile</span>
+      <span class="mc-lk k-quiet"><i></i>quiet</span>
+      <span class="mc-lk k-wait"><i></i>awaiting you</span>
+      <span class="mc-lk k-dark"><i></i>no data</span>
+      <span class="mc-lhint">Orbit radius = volatility · sweep speed = ATR vs its own
+        average · ring = a position you hold · arcs = today's fills</span>
+    </div>
+
+    <!-- ── THE STAGE ──────────────────────────────────────────────────────── -->
+    <div class="mc-stage" id="mcStage" tabindex="0"
+         aria-label="Mercatus Cosmos — the watchlist as a star system">
+      <canvas id="mcCanvas"></canvas>
+
+      <div class="mc-hud" id="mcHud" hidden aria-hidden="true"></div>
+
+      <div class="mc-zoom">
+        <button type="button" id="mcZoomIn"  aria-label="Zoom in"  title="Zoom in">+</button>
+        <button type="button" id="mcZoomOut" aria-label="Zoom out" title="Zoom out">&minus;</button>
+        <button type="button" id="mcFit"     aria-label="Frame the whole system" title="Frame the whole system">&#9974;</button>
+        <button type="button" id="mcFull" aria-pressed="false"
+                aria-label="Fullscreen the cosmos on this monitor"
+                title="Fullscreen the cosmos on this monitor">&#8689;</button>
+      </div>
+
+      <div class="mc-veil" id="mcVeil">
+        <span class="vg" aria-hidden="true">&#10022;</span>
+        <span class="vmsg">Charting the market…</span>
+      </div>
+    </div>
+
+    <!-- ── THE DECK: the ET session band ──────────────────────────────────── -->
+    <div class="mc-deck">
+      <div class="mc-dhead">
+        <span class="mc-dsession s-closed" id="mcSession">—</span>
+        <span class="mc-dstamp" id="mcStamp">—</span>
+      </div>
+      <div class="mc-band" id="mcBand" aria-hidden="true">
+        <span class="mc-bseg g-pre"   id="mcSegPre"></span>
+        <span class="mc-bseg g-reg"   id="mcSegReg"></span>
+        <span class="mc-bseg g-flat"  id="mcSegFlat"></span>
+        <span class="mc-bseg g-after" id="mcSegAfter"></span>
+        <span class="mc-bnow" id="mcSegNow"></span>
+      </div>
+      <div class="mc-bticks">
+        <span>00:00</span><span class="tk-opt">04:00 sense</span><span>09:30 open</span>
+        <span class="tk-opt">15:50 flat</span><span>16:00</span><span class="tk-opt">20:00</span><span>24:00</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══ INSPECTOR — a flow block, never an overlay ═══════════════════════ -->
+  <section class="mc-inspect" id="mcInspect" hidden aria-live="polite"></section>
+
+  <!-- ══ COLLAPSIBLE SECTIONS ════════════════════════════════════════════ -->
+  <div class="mc-sections">
+
+    <details class="mc-sec" id="mcSecPos" open>
+      <summary><span class="sx">&#9656;</span><span class="st">Positions &amp; today's fills</span><span class="sc" id="mcPosCount">—</span></summary>
+      <div class="mc-sbody">
+        <div id="mcPosBody"><div class="mc-empty">Loading…</div></div>
+      </div>
+    </details>
+
+    <details class="mc-sec" id="mcSecQueue">
+      <summary><span class="sx">&#9656;</span><span class="st">Approval queue</span><span class="sc" id="mcQCount">—</span></summary>
+      <div class="mc-sbody"><div id="mcQBody"><div class="mc-empty">Loading…</div></div></div>
+    </details>
+
+    <details class="mc-sec" id="mcSecPerf">
+      <summary><span class="sx">&#9656;</span><span class="st">Profit &amp; performance</span><span class="sc" id="mcPerfCount">—</span></summary>
+      <div class="mc-sbody"><div id="mcPerfBody"><div class="mc-empty">Loading…</div></div></div>
+    </details>
+
+    <details class="mc-sec" id="mcSecEngine">
+      <summary><span class="sx">&#9656;</span><span class="st">Engine, watchlist &amp; safety rails</span><span class="sc" id="mcEngCount">—</span></summary>
+      <div class="mc-sbody"><div id="mcEngBody"><div class="mc-empty">Loading…</div></div></div>
+    </details>
+
+    <details class="mc-sec" id="mcSecJournal">
+      <summary><span class="sx">&#9656;</span><span class="st">Journal</span><span class="sc" id="mcJCount">—</span></summary>
+      <div class="mc-sbody">
+        <div class="mc-log" id="mcJBody"><div class="mc-empty">Loading…</div></div>
+      </div>
+    </details>
+
+    <details class="mc-sec" id="mcSecAnalyze">
+      <summary><span class="sx">&#9656;</span><span class="st">Analyze a symbol</span><span class="sc">on demand</span></summary>
+      <div class="mc-sbody">
+        <div class="mc-form">
+          <div class="mc-fld">
+            <label for="mcAnSym">Symbol</label>
+            <input id="mcAnSym" type="text" placeholder="AAPL" autocapitalize="characters"
+                   spellcheck="false" maxlength="10">
+          </div>
+          <div class="mc-fld" style="justify-content:flex-end">
+            <button type="button" class="mc-btn b-acc" id="mcAnGo">Analyze</button>
+          </div>
+        </div>
+        <pre class="mc-out" id="mcAnOut" hidden></pre>
+      </div>
+    </details>
+
+    <details class="mc-sec" id="mcSecDecide">
+      <summary><span class="sx">&#9656;</span><span class="st">Place a decision by hand</span><span class="sc">limit only</span></summary>
+      <div class="mc-sbody">
+        <p class="mc-fhint">A limit price is <b>required</b> — market orders are disabled
+          server-side because their exposure cannot be capped. The panel echoes the mode and
+          the exact exposure back to the brain, so a stale screen can never fire into a
+          changed one.</p>
+        <div class="mc-form">
+          <div class="mc-fld">
+            <label for="mcDcAct">Action</label>
+            <select id="mcDcAct"><option value="buy">Buy</option><option value="sell">Sell</option></select>
+          </div>
+          <div class="mc-fld">
+            <label for="mcDcSym">Symbol</label>
+            <input id="mcDcSym" type="text" placeholder="AAPL" autocapitalize="characters"
+                   spellcheck="false" maxlength="10">
+          </div>
+          <div class="mc-fld">
+            <label for="mcDcQty">Quantity</label>
+            <input id="mcDcQty" type="number" min="0" step="any" placeholder="10">
+          </div>
+          <div class="mc-fld">
+            <label for="mcDcPx">Limit price (required)</label>
+            <input id="mcDcPx" type="number" min="0" step="0.01" placeholder="150.00">
+          </div>
+          <div class="mc-fld wide">
+            <label for="mcDcWhy">Reasoning (required)</label>
+            <textarea id="mcDcWhy" placeholder="Why this trade makes sense…"></textarea>
+          </div>
+          <div class="mc-fld">
+            <label for="mcDcConf">Confidence 0–100</label>
+            <input id="mcDcConf" type="number" min="0" max="100" step="1" placeholder="75">
+          </div>
+          <div class="mc-fld" style="justify-content:flex-end">
+            <button type="button" class="mc-btn b-acc" id="mcDcGo">Submit decision</button>
+          </div>
+          <div class="mc-fhint wide" id="mcDcExp">Exposure: —</div>
+        </div>
+        <pre class="mc-out" id="mcDcOut" hidden></pre>
+      </div>
+    </details>
+
+    <details class="mc-sec" id="mcSecCtl">
+      <summary><span class="sx">&#9656;</span><span class="st">Controls &amp; broker link</span><span class="sc" id="mcCtlCount">—</span></summary>
+      <div class="mc-sbody">
+        <div class="mc-iacts">
+          <button type="button" class="mc-btn" id="mcCtlRefresh">Refresh now</button>
+          <button type="button" class="mc-btn b-acc" id="mcCtlScan">Scan now</button>
+          <button type="button" class="mc-btn" id="mcCtlStart">Start engine</button>
+          <button type="button" class="mc-btn" id="mcCtlStop">Stop engine</button>
+          <button type="button" class="mc-btn" id="mcCtlBreaker">Reset breaker</button>
+          <button type="button" class="mc-btn b-go" id="mcCtlResume">Resume trading</button>
+          <button type="button" class="mc-btn b-no" id="mcCtlHalt">Emergency stop</button>
+        </div>
+        <p class="mc-fhint">“Scan now” runs the real pipeline and <b>can place decisions</b>
+          inside the regular session. The approval queue is still the hard gate in live mode.</p>
+        <div id="mcCtlBody"><div class="mc-empty">Loading…</div></div>
+        <pre class="mc-out" id="mcCtlOut" hidden></pre>
+      </div>
+    </details>
+  </div>
+
+  <p class="mc-foot" id="mcFoot">MERCATUS COSMOS · task 8589YGC · reads only existing
+    <code>/api/trading/*</code> routes · nothing on this page is simulated</p>
+</div>
+
+<script>
+'use strict';
+/* ════════════════════════════════════════════════════════════════════════════
+   MERCATUS COSMOS — engine (task 8589YGC)
+   ────────────────────────────────────────────────────────────────────────────
+   DATA CONTRACT. Every field read below was verified against the real modules
+   on 2026-10-02; none of it is inferred from a name:
+     GET  /api/trading/state            trading.getState()
+       { mode:'paper'|'live', enabled, isPaused, halted, haltSource, halt,
+         limits:{maxPositionSize,maxDailyLoss,maxOpenPositions},
+         guardrails:{maxPositionPct,maxDailyLossPct,minBalance,cooldownMs,
+                     cooldown:{lastBuyAt,lastBuySymbol,active,secondsRemaining}},
+         today:{pnl,pnlTracked,openPositions,openPositionsTracked,date},
+         requiresApproval, circuit:{state,consecutiveFailures,openedAt,nextTryAt,
+         threshold,cooldownMs,canAttempt}, orderTypes, accountConfigured,
+         link, brokerMode }
+     GET  /api/trading/accounting       trading.getLiveAccounting()
+       { tracked:true, asOf, account, realizedPnlToday:{value,currency?},
+         openPositions:{count,items:[{symbol,quantity,avgPrice}]},
+         fillsToday:[{id,symbol,side,quantity,price,state,filledAt}] }
+       | { tracked:false, reason, asOf, account? }      <- an HONEST state
+     GET  /api/trading/strategy/status
+       { engine, running, scanning, lastScan, technicalsWired,
+         config:{watchlist,scanInterval,flatByClose,minConfidence,
+                 maxConcurrentSignals,riskPerTrade}, scheduler, circuit, trading }
+     GET  /api/trading/pending          { pending:[{id,decision,exposure,createdAt,status}] }
+     GET  /api/trading/history?limit=N  { history:[ journal rows, NEWEST FIRST ] }
+     GET  /api/trading/analytics        { performance:{...}, confidenceAnalysis,
+                                          moodCorrelation, recommendations, generatedAt }
+     GET  /api/trading/portfolio        RAW broker payload (shape varies)
+     GET  /api/trading/session          { linked, mode, accounts? } | { linked:false, error }
+     POST /api/trading/approve   { id, confirmMode, confirmExposure }   409 on mismatch
+     POST /api/trading/reject    { id, reason }
+     POST /api/trading/decide    { action,symbol,quantity,price,reasoning,confidence,
+                                   confirmMode, confirmExposure }       409 on mismatch
+     POST /api/trading/analyze   { symbol }
+     POST /api/trading/emergency-stop | /resume {confirm:'RESUME'}
+     POST /api/trading/strategy/{scan,start,stop,circuit/reset,watchlist}
+
+   WHERE THE PER-SYMBOL TRUTH COMES FROM. The live scan loop runs in
+   mercatus-daemon.js — a DIFFERENT OS PROCESS from the API server. So
+   /strategy/status's in-memory `lastScan` is only populated when the API process
+   itself did the scanning. The journal is the one channel both processes share,
+   so trading-strategy.js publishes a `scan_snapshot` row per scan and this panel
+   reads it from /history. mcPickSnapshot() takes whichever of the two is NEWER,
+   so the cosmos is correct no matter which process is driving.
+   ════════════════════════════════════════════════════════════════════════════ */
+
+var MC_API = 'https://api.vintaclectic.com/api/trading';
+try {
+  // Same-origin override when this page is served beside the brain (dev/self-host).
+  if (window.__VINTINUUM_API_BASE) MC_API = String(window.__VINTINUUM_API_BASE).replace(/\/+$/, '') + '/api/trading';
+} catch (_) {}
+
+/* ── ET session boundaries. These are PORTS of trading-scheduler.js constants
+      (SENSE_START 04:00, REG_OPEN 09:30, FLAT_BY 15:50, REG_CLOSE 16:00,
+      SENSE_END 20:00) and of isEasternDST's 2nd-Sunday-March / 1st-Sunday-
+      November rule. Kept in sync by name, not guessed. ── */
+var MC_SENSE_START = 4 * 60, MC_REG_OPEN = 9 * 60 + 30, MC_FLAT_BY = 15 * 60 + 50,
+    MC_REG_CLOSE = 16 * 60, MC_SENSE_END = 20 * 60;
+
+/* ── THE ONE GLOBAL. Everything the canvas and the DOM both need lives here, so
+      there is a single place to answer "what does the panel currently believe?" ── */
+var MC = {
+  // raw server payloads (null until a poll has genuinely succeeded — never {} ,
+  // because an empty object is indistinguishable from "the brain said nothing")
+  state: null, accounting: null, strat: null, pending: null, analytics: null,
+  portfolio: null, session: null, history: null,
+  snapshot: null,          // the chosen scan_snapshot (journal or in-memory)
+  snapshotAt: 0,           // ms epoch of that snapshot
+  snapshotFrom: '',        // 'journal' | 'memory' — surfaced, never hidden
+  lastTickAt: 0,           // newest scheduler_tick_done timestamp seen
+  lastTickRow: null,
+  errs: {},                // endpoint -> last error string
+  authed: false, token: '',
+
+  // scene
+  cv: null, ctx: null, W: 0, H: 0, dpr: 1,
+  view: { x: 0, y: 0, k: 1 }, target: { x: 0, y: 0, k: 1 },
+  star: null, worlds: [], stars: [], nebulae: [], comets: [],
+  tick: 0, running: false, raf: 0, lastFrame: 0, reduced: false,
+  hover: null, sel: null, hudPinned: false,
+  drag: null, built: false, firstFit: false,
+  seenPending: Object.create(null),   // id -> true, so a NEW pending can flash
+  pulses: [],                          // transient {x,y,t,hue} shockwaves
+  zoomRect: null                       // MEASURED control-cluster rect
+};
+
+/* ── tiny helpers ───────────────────────────────────────────────────────────── */
+function mcEl(id) { return document.getElementById(id); }
+function mcClamp(v, a, b) { return v < a ? a : (v > b ? b : v); }
+function mcLerp(a, b, t) { return a + (b - a) * t; }
+function mcNum(v) { var n = Number(v); return Number.isFinite(n) ? n : null; }
+function mcEsc(s) {
+  return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+    return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+  });
+}
+/* deterministic per-symbol noise (FNV-1a), so a world's orbit phase is STABLE
+   across reloads — the system looks like the same system every time you open it. */
+function mcHash(str) {
+  var h = 2166136261 >>> 0, s = String(str || '');
+  for (var i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619) >>> 0; }
+  return h >>> 0;
+}
+function mcRnd(id, salt) { return (mcHash(id + '|' + salt) % 100000) / 100000; }
+
+function mcMoney(v, opts) {
+  var n = mcNum(v); if (n === null) return null;
+  var o = opts || {};
+  var sign = (o.signed && n > 0) ? '+' : (n < 0 ? '-' : '');
+  var a = Math.abs(n);
+  var d = o.digits == null ? 2 : o.digits;
+  if (o.compact && a >= 1000) {
+    if (a >= 1e6) return sign + '$' + (a / 1e6).toFixed(2) + 'M';
+    if (a >= 1e4) return sign + '$' + (a / 1e3).toFixed(1) + 'k';
+  }
+  return sign + '$' + a.toFixed(d).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+}
+function mcPct(v, digits) {
+  var n = mcNum(v); if (n === null) return null;
+  return (n > 0 ? '+' : '') + n.toFixed(digits == null ? 2 : digits) + '%';
+}
+function mcAgo(ms) {
+  if (!ms) return null;
+  var s = Math.max(0, Math.round((Date.now() - ms) / 1000));
+  if (s < 60) return s + 's ago';
+  if (s < 3600) return Math.floor(s / 60) + 'm ago';
+  if (s < 86400) return Math.floor(s / 3600) + 'h ago';
+  return Math.floor(s / 86400) + 'd ago';
+}
+function mcClock(ms) {
+  try { return new Date(ms).toLocaleTimeString([], { hour12: false }); }
+  catch (_) { return '—'; }
+}
+
+/* ── toasts. The rail is a column flex of siblings, so stacked toasts can never
+      overlap; each removes itself. ── */
+function mcToast(msg, kind, ms) {
+  var rail = mcEl('mcToasts'); if (!rail) return;
+  var d = document.createElement('div');
+  d.className = 'mc-toast' + (kind ? ' t-' + kind : '');
+  d.textContent = String(msg);
+  rail.appendChild(d);
+  // Never let the rail grow without bound — the oldest goes first.
+  while (rail.children.length > 4) rail.removeChild(rail.firstChild);
+  setTimeout(function () { if (d.parentNode) d.parentNode.removeChild(d); }, ms || 5200);
+}
+
+/* ══ AUTH ════════════════════════════════════════════════════════════════════
+   The canonical Shell key is `vint_access_token` (index.html writes it alongside
+   the legacy `vint_access` mirror); other surfaces on this origin use `vint_token`
+   or `soul_auth_token`. We read the whole chain so signing in ANYWHERE in
+   Vintinuum lights this page up. */
+var MC_TOKEN_KEYS = ['vint_access_token', 'vint_access', 'vint_token', 'soul_auth_token'];
+function mcReadToken() {
+  for (var i = 0; i < MC_TOKEN_KEYS.length; i++) {
+    try { var t = localStorage.getItem(MC_TOKEN_KEYS[i]); if (t) return String(t); } catch (_) {}
+  }
+  return '';
+}
+function mcSetAuthGate(show, why) {
+  var g = mcEl('mcAuth'); if (g) g.hidden = !show;
+  var w = mcEl('mcAuthWhy');
+  if (w && why) w.innerHTML = mcEsc(why);
+}
+
+/* ══ FETCH ═══════════════════════════════════════════════════════════════════
+   One door. Every call carries the Bearer header (the old panel sent
+   credentials:'include' and NO Authorization header, which can only 401 against
+   requireAuth — that is the bug this replaces). Errors are recorded per endpoint
+   so each card can show its OWN honest failure instead of the page going blank. */
+function mcFetch(path, opts) {
+  var o = opts || {};
+  var headers = { 'Accept': 'application/json' };
+  if (MC.token) headers['Authorization'] = 'Bearer ' + MC.token;
+  if (o.body !== undefined) headers['Content-Type'] = 'application/json';
+  return fetch(MC_API + path, {
+    method: o.method || 'GET',
+    headers: headers,
+    body: o.body === undefined ? undefined : JSON.stringify(o.body),
+    cache: 'no-store'
+  }).then(function (res) {
+    return res.text().then(function (txt) {
+      var data = null;
+      if (txt) { try { data = JSON.parse(txt); } catch (_) { data = { error: txt.slice(0, 400) }; } }
+      if (res.status === 401) { MC.authed = false; mcSetAuthGate(true); }
+      if (res.status === 403) {
+        MC.authed = false;
+        mcSetAuthGate(true, 'That token authenticated, but its user is not the owner. ' +
+          '/api/trading/* is restricted to the owner email, with no exceptions.');
+      }
+      if (!res.ok) {
+        var msg = (data && (data.error || data.message || data.reason)) || ('HTTP ' + res.status);
+        var e = new Error(String(msg)); e.status = res.status; e.data = data; throw e;
+      }
+      if (res.status >= 200) { MC.authed = true; }
+      return data;
+    });
+  });
+}
+
+/* ══ ET SESSION — a port of classifyEtSession(), same constants, same DST rule ══ */
+function mcNthSundayOfMonth(year, monthIdx, n) {
+  var d = new Date(Date.UTC(year, monthIdx, 1));
+  var firstSunOffset = (7 - d.getUTCDay()) % 7;
+  return 1 + firstSunOffset + (n - 1) * 7;
+}
+function mcIsEasternDST(ms) {
+  var d = new Date(ms), y = d.getUTCFullYear();
+  // DST begins 2:00 local on the 2nd Sunday of March, ends on the 1st of November.
+  var startDay = mcNthSundayOfMonth(y, 2, 2), endDay = mcNthSundayOfMonth(y, 10, 1);
+  var start = Date.UTC(y, 2, startDay, 7);   // 02:00 EST = 07:00 UTC
+  var end   = Date.UTC(y, 10, endDay, 6);    // 02:00 EDT = 06:00 UTC
+  return ms >= start && ms < end;
+}
+function mcSession(ms) {
+  if (ms == null) ms = Date.now();
+  var offsetHours = mcIsEasternDST(ms) ? -4 : -5;
+  var et = new Date(ms + offsetHours * 3600000);
+  var hour = et.getUTCHours(), minute = et.getUTCMinutes(), weekday = et.getUTCDay();
+  var minuteOfDay = hour * 60 + minute;
+  var isWeekend = weekday === 0 || weekday === 6;
+  var regular = !isWeekend && minuteOfDay >= MC_REG_OPEN && minuteOfDay < MC_REG_CLOSE;
+  var sensing = !isWeekend && minuteOfDay >= MC_SENSE_START && minuteOfDay < MC_SENSE_END;
+  var pastFlat = minuteOfDay >= MC_FLAT_BY;
+  var session;
+  if (isWeekend) session = 'closed';
+  else if (regular) session = 'regular';
+  else if (minuteOfDay >= MC_SENSE_START && minuteOfDay < MC_REG_OPEN) session = 'premarket';
+  else if (minuteOfDay >= MC_REG_CLOSE && minuteOfDay < MC_SENSE_END) session = 'afterhours';
+  else session = 'closed';
+  return {
+    session: session, sensing: sensing, regular: regular, pastFlat: pastFlat,
+    isWeekend: isWeekend, minuteOfDay: minuteOfDay, dst: offsetHours === -4,
+    hour: hour, minute: minute, weekday: weekday,
+    label: hour + ':' + String(minute).padStart(2, '0') + ' ET'
+  };
+}
+
+/* ── the regime colour language. ONE source of truth, matching the CSS vars. ── */
+var MC_REGIME = {
+  trending_up:   { hue: 142, name: 'TRENDING UP',   sat: 70, lit: 56 },
+  trending_down: { hue: 0,   name: 'TRENDING DOWN', sat: 72, lit: 60 },
+  ranging:       { hue: 38,  name: 'RANGING',       sat: 80, lit: 56 },
+  volatile:      { hue: 280, name: 'VOLATILE',      sat: 70, lit: 66 },
+  quiet:         { hue: 210, name: 'QUIET',         sat: 42, lit: 58 },
+  unknown:       { hue: 220, name: 'NO DATA',       sat: 10, lit: 44 }
+};
+function mcRegime(r) { return MC_REGIME[r] || MC_REGIME.unknown; }
+function mcHsl(reg, a, litAdj) {
+  return 'hsla(' + reg.hue + ',' + reg.sat + '%,' + (reg.lit + (litAdj || 0)) + '%,' + a + ')';
+}
+
+/* ══ SNAPSHOT SELECTION ══════════════════════════════════════════════════════
+   Two possible sources, and we take the NEWER rather than trusting either:
+     · /history  — a `scan_snapshot` journal row. Written by whichever process
+                   scanned, so this is the one that works when mercatus-daemon is
+                   the driver (which it is, in production).
+     · /strategy/status .lastScan.snapshot — in-memory, only populated when the
+                   API process itself scanned.
+   MC.snapshotFrom records which won, and the UI prints it, because "where did
+   this number come from" must never be a mystery. */
+function mcPickSnapshot() {
+  var best = null, bestAt = 0, from = '';
+
+  var h = MC.history;
+  if (h && Array.isArray(h.history)) {
+    for (var i = 0; i < h.history.length; i++) {
+      var row = h.history[i];
+      if (row && row.type === 'scan_snapshot') {
+        var t = Date.parse(row.timestamp);
+        if (Number.isFinite(t) && t > bestAt) { best = row; bestAt = t; from = 'journal'; }
+        break; // history is newest-first, so the first match is the newest
+      }
+    }
+  }
+  var ls = MC.strat && MC.strat.lastScan;
+  if (ls && ls.snapshot && Array.isArray(ls.snapshot.symbols)) {
+    var t2 = Date.parse(ls.finishedAt || ls.at);
+    if (Number.isFinite(t2) && t2 > bestAt) { best = ls.snapshot; bestAt = t2; from = 'memory'; }
+  }
+  MC.snapshot = best; MC.snapshotAt = bestAt; MC.snapshotFrom = from;
+  return best;
+}
+
+/* The newest scheduler tick, which is the ONLY honest cross-process liveness
+   signal available: /strategy/status.running describes the API process's own
+   loop handle and is `false` even while the daemon is ticking happily. */
+function mcPickTick() {
+  var h = MC.history;
+  MC.lastTickAt = 0; MC.lastTickRow = null;
+  if (!h || !Array.isArray(h.history)) return;
+  for (var i = 0; i < h.history.length; i++) {
+    var r = h.history[i];
+    if (r && (r.type === 'scheduler_tick_done' || r.type === 'scheduler_tick_skipped')) {
+      var t = Date.parse(r.timestamp);
+      if (Number.isFinite(t)) { MC.lastTickAt = t; MC.lastTickRow = r; }
+      return;
+    }
+  }
+}
+
+/* ══ POLLING ═════════════════════════════════════════════════════════════════
+   Per-endpoint cadence, chosen against the server's real limiter (readLimit =
+   120 requests/min/owner in routes/trading.js). The sum below is ~26 req/min, so
+   we sit far under it even with a manual refresh storm. Broker-touching reads
+   (/accounting, /portfolio, /session) are the slow ones on purpose: each spawns
+   real MCP work and can trip the circuit breaker if hammered.
+   A failing endpoint backs off geometrically to 4x its base, so an outage costs
+   less, not more. Polling halts entirely while the tab is hidden. */
+var MC_POLLS = [
+  { key: 'state',     path: '/state',             every: 10000 },
+  { key: 'pending',   path: '/pending',           every: 8000  },
+  { key: 'strat',     path: '/strategy/status',   every: 15000 },
+  { key: 'history',   path: '/history?limit=250', every: 20000 },
+  { key: 'accounting',path: '/accounting',        every: 30000 },
+  { key: 'analytics', path: '/analytics',         every: 60000 },
+  { key: 'portfolio', path: '/portfolio',         every: 60000 },
+  { key: 'session',   path: '/session',           every: 90000 }
+];
+var MC_POLL_STATE = Object.create(null);
+MC_POLLS.forEach(function (p) { MC_POLL_STATE[p.key] = { at: 0, fails: 0, inflight: false }; });
+
+function mcPollOne(p, force) {
+  var st = MC_POLL_STATE[p.key];
+  if (st.inflight) return Promise.resolve();
+  var backoff = Math.min(4, 1 + st.fails) ;
+  if (!force && Date.now() - st.at < p.every * backoff) return Promise.resolve();
+  st.inflight = true;
+  return mcFetch(p.path).then(function (data) {
+    MC[p.key] = data; delete MC.errs[p.key]; st.fails = 0;
+  }).catch(function (e) {
+    MC.errs[p.key] = (e && e.message) || 'unreachable';
+    st.fails++;
+  }).then(function () {
+    st.inflight = false; st.at = Date.now();
+  });
+}
+
+function mcPollAll(force) {
+  if (!MC.token) { mcSetAuthGate(true); mcRenderAll(); return Promise.resolve(); }
+  return Promise.all(MC_POLLS.map(function (p) { return mcPollOne(p, force); }))
+    .then(function () {
+      mcPickSnapshot(); mcPickTick();
+      mcBuild();
+      mcRenderAll();
+    });
+}
+
+var MC_POLL_TIMER = 0;
+function mcStartPolling() {
+  if (MC_POLL_TIMER) return;
+  // One 2s heartbeat drives every cadence, so there is exactly ONE timer to stop
+  // and no chance of a leaked interval surviving a tab switch.
+  MC_POLL_TIMER = setInterval(function () {
+    if (document.hidden) return;
+    mcPollAll(false);
+  }, 2000);
+}
+function mcStopPolling() {
+  if (MC_POLL_TIMER) { clearInterval(MC_POLL_TIMER); MC_POLL_TIMER = 0; }
+}
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   BUILD — turn the live market into a star system
+   ──────────────────────────────────────────────────────────────────────────────
+   THE ACCOUNT STAR sits at the world origin. Every watchlist symbol becomes a
+   WORLD on a ring, and every visual property is a real measurement:
+
+     ring / orbit radius   volatility rank by atrPct (calmest inside, wildest out)
+     sweep speed           atrRatio = ATR vs its own recent average. This is
+                           literally the quantity detectRegime() thresholds at
+                           2x (volatile) and 0.5x (quiet), so the motion and the
+                           colour are telling you the same truth two ways.
+     disc radius           the position you HOLD if you hold one (market value),
+                           else the signal confidence, else a visible floor.
+     hue                   market regime (detectRegime, server-side)
+     glow                  signal strength (confidence), 0 when there is no signal
+     solid ring            a real broker-confirmed holding; thickness ~ size
+     double pulsing ring   sitting in the approval queue, waiting on Vinta
+     dashed hollow disc    the broker could not price it — a DARK WORLD that
+                           carries its real error string and NEVER a fake price
+     trailing arcs         today's fills, drawn back along the orbit
+   ══════════════════════════════════════════════════════════════════════════════ */
+
+var MC_RING0 = 200, MC_RINGGAP = 112;
+
+function mcBuild() {
+  var snap = MC.snapshot;
+  var cfg = (MC.strat && MC.strat.config) || {};
+  // The watchlist, in order of preference: the snapshot that actually ran, then
+  // the engine's live config. If neither exists we have NOTHING to draw, and we
+  // say so rather than inventing the documented default list.
+  var list = (snap && Array.isArray(snap.watchlist) && snap.watchlist.length) ? snap.watchlist
+           : (Array.isArray(cfg.watchlist) && cfg.watchlist.length) ? cfg.watchlist : [];
+
+  var bySym = Object.create(null);
+  if (snap && Array.isArray(snap.symbols)) {
+    snap.symbols.forEach(function (s) { if (s && s.symbol) bySym[s.symbol] = s; });
+  }
+  var sigBySym = Object.create(null);
+  if (snap && Array.isArray(snap.signals)) {
+    snap.signals.forEach(function (s) { if (s && s.symbol) sigBySym[s.symbol] = s; });
+  }
+
+  // Broker-confirmed holdings + today's fills (honest only when tracked).
+  var acc = MC.accounting;
+  var tracked = !!(acc && acc.tracked);
+  var posBySym = Object.create(null), fillsBySym = Object.create(null);
+  if (tracked && acc.openPositions && Array.isArray(acc.openPositions.items)) {
+    acc.openPositions.items.forEach(function (p) {
+      if (p && p.symbol) posBySym[p.symbol] = p;
+    });
+  }
+  if (tracked && Array.isArray(acc.fillsToday)) {
+    acc.fillsToday.forEach(function (f) {
+      if (!f || !f.symbol) return;
+      (fillsBySym[f.symbol] = fillsBySym[f.symbol] || []).push(f);
+    });
+  }
+
+  // Pending approvals, keyed by symbol so a world can pulse.
+  var pendBySym = Object.create(null);
+  var pend = (MC.pending && Array.isArray(MC.pending.pending)) ? MC.pending.pending : [];
+  pend.forEach(function (p) {
+    var d = p && p.decision; if (!d || !d.symbol) return;
+    if (p.status && p.status !== 'pending') return;
+    (pendBySym[d.symbol] = pendBySym[d.symbol] || []).push(p);
+  });
+
+  // Any symbol we hold or have a pending order on belongs in the sky even if it
+  // is not on the watchlist — you must never have money somewhere invisible.
+  var all = list.slice();
+  Object.keys(posBySym).concat(Object.keys(pendBySym)).forEach(function (s) {
+    if (all.indexOf(s) === -1) all.push(s);
+  });
+
+  // ── volatility ranking decides the rings. Symbols with no ATR go to the
+  //    OUTSIDE as unknowns rather than being silently treated as calm. ──
+  var ranked = all.slice().sort(function (a, b) {
+    var av = bySym[a] && mcNum(bySym[a].atrPct), bv = bySym[b] && mcNum(bySym[b].atrPct);
+    if (av === null || av === undefined) av = Infinity;
+    if (bv === null || bv === undefined) bv = Infinity;
+    if (av === bv) return a < b ? -1 : 1;
+    return av - bv;
+  });
+
+  var prevBySym = Object.create(null);
+  MC.worlds.forEach(function (w) { prevBySym[w.symbol] = w; });
+
+  var worlds = [];
+  var perRing = all.length <= 5 ? 1 : (all.length <= 10 ? 2 : 3);
+
+  ranked.forEach(function (sym, idx) {
+    var s = bySym[sym] || null;
+    var sig = sigBySym[sym] || null;
+    var pos = posBySym[sym] || null;
+    var fills = fillsBySym[sym] || [];
+    var pq = pendBySym[sym] || [];
+    var reg = mcRegime(s ? s.regime : 'unknown');
+    var dark = !(s && s.ok);
+
+    var ring = Math.floor(idx / perRing);
+    var r = MC_RING0 + ring * MC_RINGGAP;
+    // Deterministic phase + tilt, so the same market always draws the same system.
+    var phase = mcRnd(sym, 'phase') * Math.PI * 2;
+    var tilt = 0.52 + mcRnd(sym, 'tilt') * 0.3;
+
+    // sweep: calm worlds drift, violent worlds race. atrRatio 1 == normal.
+    var ratio = s ? mcNum(s.atrRatio) : null;
+    var speed = 0.10 + 0.22 * mcClamp(ratio === null ? 0.8 : ratio, 0, 4);
+    if (mcRnd(sym, 'dir') > 0.82) speed *= -1;   // a few retrograde worlds: depth
+
+    // disc radius from REAL size
+    var price = s ? mcNum(s.price) : null;
+    var mktVal = null, unreal = null;
+    if (pos) {
+      var q = mcNum(pos.quantity), ap = mcNum(pos.avgPrice);
+      var mark = price !== null ? price : ap;
+      if (q !== null && mark !== null) mktVal = q * mark;
+      if (q !== null && ap !== null && price !== null) unreal = (price - ap) * q;
+    }
+    var rad;
+    if (mktVal !== null) rad = mcClamp(11 + Math.sqrt(Math.max(0, mktVal)) * 0.62, 12, 44);
+    else if (sig) rad = mcClamp(9 + (mcNum(sig.confidence) || 0) / 7, 10, 26);
+    else rad = dark ? 8 : 10;
+
+    // realised contribution today, straight from the fills we can see
+    var realisedToday = null;
+    if (fills.length) {
+      var acc2 = 0, any = false;
+      fills.forEach(function (f) {
+        var q2 = mcNum(f.quantity), p2 = mcNum(f.price);
+        if (q2 === null || p2 === null) return;
+        any = true;
+        // sells bring cash in, buys send it out — this is CASH FLOW, which is
+        // honest and computable; it is NOT a realised-P&L claim, and the UI
+        // labels it exactly that way.
+        acc2 += (String(f.side) === 'sell' ? 1 : -1) * q2 * p2;
+      });
+      if (any) realisedToday = acc2;
+    }
+
+    var prev = prevBySym[sym];
+    worlds.push({
+      kind: 'world', symbol: sym, snap: s, signal: sig, pos: pos, fills: fills,
+      pending: pq, dark: dark, reg: reg, ring: ring, r: r, tilt: tilt,
+      phase: phase, speed: speed, rad: rad,
+      price: price, mktVal: mktVal, unreal: unreal, cashFlowToday: realisedToday,
+      // carry the live angle across a rebuild so a poll never teleports a world
+      ang: prev ? prev.ang : phase,
+      x: 0, y: 0, sx: null, sy: null,
+      glow: sig ? mcClamp((mcNum(sig.confidence) || 0) / 100, 0, 1) : 0
+    });
+  });
+
+  // ── THE ACCOUNT STAR ──
+  var st = MC.state || {};
+  var equity = mcEquity();
+  var pnl = mcRealisedToday();
+  var starR;
+  if (equity !== null) starR = mcClamp(30 + Math.sqrt(Math.max(0, equity)) * 0.55, 32, 104);
+  else starR = 44;                                  // a known size for "unknown equity"
+  MC.star = {
+    kind: 'star', symbol: 'ACCOUNT', x: 0, y: 0, rad: starR,
+    equity: equity, pnl: pnl,
+    halted: !!(st.halted || st.isPaused),
+    mode: st.mode || null,
+    sx: null, sy: null
+  };
+
+  MC.worlds = worlds;
+
+  // starfield + nebulae, deterministic and built once
+  if (!MC.stars.length) {
+    for (var i = 0; i < 420; i++) {
+      var a = mcRnd('star' + i, 'a') * Math.PI * 2;
+      var d = 120 + mcRnd('star' + i, 'd') * 1500;
+      MC.stars.push({
+        x: Math.cos(a) * d, y: Math.sin(a) * d * 0.8,
+        z: 0.35 + mcRnd('star' + i, 'z') * 0.6,
+        r: 0.5 + mcRnd('star' + i, 'r') * 1.2,
+        tw: mcRnd('star' + i, 't') * 6.283,
+        h: mcRnd('star' + i, 'h') > 0.86 ? 45 : 210
+      });
+    }
+    for (var j = 0; j < 7; j++) {
+      var aa = mcRnd('neb' + j, 'a') * Math.PI * 2;
+      var dd = 300 + mcRnd('neb' + j, 'd') * 900;
+      MC.nebulae.push({
+        x: Math.cos(aa) * dd, y: Math.sin(aa) * dd * 0.7,
+        r: 240 + mcRnd('neb' + j, 'r') * 420,
+        z: 0.5 + mcRnd('neb' + j, 'z') * 0.4,
+        a: 0.035 + mcRnd('neb' + j, 'al') * 0.05,
+        h: [142, 38, 280, 210, 0, 38, 142][j]
+      });
+    }
+  }
+
+  // A pending order that is NEW since the last build earns a shockwave: the
+  // moment a decision lands is the moment Vinta most needs to notice.
+  pend.forEach(function (p) {
+    if (!p || !p.id || MC.seenPending[p.id]) return;
+    MC.seenPending[p.id] = true;
+    if (!MC.built) return;                 // never flash the whole queue on first load
+    var sym = p.decision && p.decision.symbol;
+    var w = worlds.filter(function (x) { return x.symbol === sym; })[0];
+    if (w) MC.pulses.push({ w: w, t: 0, hue: 265 });
+  });
+
+  MC.built = true;
+  if (!MC.firstFit && (worlds.length || MC.star)) { mcFit(true); MC.firstFit = true; }
+}
+
+/* Equity, mirroring trading.js `_parseEquity` key-for-key (same preference order,
+   same container unwrapping) so the browser never invents its own opinion of
+   which broker field means equity. Returns null — never a guess — when the shape
+   is not one we recognise. */
+function mcEquity() {
+  var data = MC.portfolio;
+  if (!data) return null;
+  if (typeof data === 'string') { try { data = JSON.parse(data); } catch (_) { return null; } }
+  if (!data || typeof data !== 'object') return null;
+  var src = (data.portfolio && typeof data.portfolio === 'object') ? data.portfolio
+          : (data.data && typeof data.data === 'object') ? data.data : data;
+  var keys = ['equity', 'extended_hours_equity', 'market_value', 'total_equity',
+              'portfolio_value', 'extended_hours_portfolio_equity',
+              'total_market_value', 'last_core_equity'];
+  for (var i = 0; i < keys.length; i++) {
+    var n = mcNum(src[keys[i]]);
+    if (n !== null) return n;
+  }
+  return null;
+}
+/* Today's realised P&L. /accounting returns it as the money OBJECT
+   `{value, currency?}` (trading.js _coerceMoney), NOT a bare number — reading it
+   as a number is a silent NaN, so we unwrap `.value` explicitly. */
+function mcRealisedToday() {
+  var a = MC.accounting;
+  if (!a || !a.tracked) return null;
+  var r = a.realizedPnlToday;
+  if (r == null) return null;
+  if (typeof r === 'object') return mcNum(r.value);
+  return mcNum(r);
+}
+
+/* ══ GEOMETRY ════════════════════════════════════════════════════════════════ */
+function mcPositions(dt) {
+  var s = MC.star;
+  for (var i = 0; i < MC.worlds.length; i++) {
+    var w = MC.worlds[i];
+    if (!MC.reduced) w.ang += (w.speed * dt) / 1000 * 0.42;
+    w.x = s.x + Math.cos(w.ang) * w.r;
+    w.y = s.y + Math.sin(w.ang) * w.r * w.tilt;
+  }
+}
+function mcToScreen(x, y) {
+  return { x: (x - MC.view.x) * MC.view.k + MC.W / 2,
+           y: (y - MC.view.y) * MC.view.k + MC.H / 2 };
+}
+function mcToWorld(sx, sy) {
+  return { x: (sx - MC.W / 2) / MC.view.k + MC.view.x,
+           y: (sy - MC.H / 2) / MC.view.k + MC.view.y };
+}
+
+/* ── DPR-aware sizing, capped at 2 so a 3x phone does not render 9x the pixels ── */
+function mcResize() {
+  var cv = MC.cv, stage = mcEl('mcStage');
+  if (!cv || !stage) return;
+  var r = stage.getBoundingClientRect();
+  var w = Math.max(1, Math.round(r.width)), h = Math.max(1, Math.round(r.height));
+  var dpr = Math.min(2, window.devicePixelRatio || 1);
+  if (w === MC.W && h === MC.H && dpr === MC.dpr) return;
+  MC.W = w; MC.H = h; MC.dpr = dpr;
+  cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr);
+  MC.ctx = cv.getContext('2d');
+  MC.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  MC.zoomRect = null;              // the cluster moved; re-measure before clamping
+}
+
+function mcFit(instant) {
+  var maxR = MC_RING0;
+  MC.worlds.forEach(function (w) { maxR = Math.max(maxR, w.r + w.rad + 30); });
+  var span = maxR * 2 + 120;
+  var k = mcClamp(Math.min((MC.W || 700) / span, (MC.H || 450) / (span * 0.78)) * 0.94, 0.16, 3.2);
+  MC.target = { x: 0, y: 0, k: k };
+  if (instant) MC.view = { x: 0, y: 0, k: k };
+}
+
+/* ══ DRAW ════════════════════════════════════════════════════════════════════ */
+function mcDraw(dt) {
+  var ctx = MC.ctx; if (!ctx) return;
+  var W = MC.W, H = MC.H, k = MC.view.k;
+  // THE EMPTY-SKY GUARD. The render loop starts at boot, BEFORE the first poll
+  // has returned, so MC.star is legitimately null on the first frames (and again
+  // if every endpoint is down). Reading star.x there threw
+  // "Cannot read properties of null (reading 'x')" on every load — caught by
+  // verify-mercatus-collision.js, which fails on any page error. There is no star
+  // to draw and nothing to invent, so we paint the void, let the veil say why,
+  // and return.
+  if (!MC.star) {
+    ctx.globalCompositeOperation = 'source-over';
+    ctx.fillStyle = '#04040a'; ctx.fillRect(0, 0, W, H);
+    mcVeilState();
+    return;
+  }
+  MC.tick += MC.reduced ? 0 : dt;
+  var tk = MC.tick;
+
+  var sess = mcSession();
+  var st = MC.state || {};
+  var breaker = (st.circuit && st.circuit.state) || (MC.strat && MC.strat.circuit && MC.strat.circuit.state) || null;
+  var breakerOpen = breaker === 'OPEN';
+  var halted = !!(st.halted || st.isPaused);
+
+  // ── the session backdrop. Pre-market is cold, the regular session is warm,
+  //    the flat-by-close cutoff goes yellow, after-hours is deep blue, closed is
+  //    near-black. The sky tells you what time it is before you read anything. ──
+  var band = { premarket: [210, 42, 9], regular: [38, 48, 8], afterhours: [243, 46, 9],
+               closed: [230, 18, 4] }[sess.session] || [230, 14, 4];
+  if (sess.regular && sess.pastFlat) band = [48, 62, 10];
+  var g0 = ctx.createLinearGradient(0, 0, 0, H);
+  g0.addColorStop(0, 'hsl(' + band[0] + ',' + band[1] + '%,' + band[2] + '%)');
+  g0.addColorStop(1, '#04040a');
+  ctx.globalCompositeOperation = 'source-over';
+  ctx.fillStyle = g0; ctx.fillRect(0, 0, W, H);
+
+  // nebulae + parallax starfield
+  ctx.globalCompositeOperation = 'lighter';
+  MC.nebulae.forEach(function (n) {
+    var p = mcToScreen(MC.view.x + (n.x - MC.view.x) * n.z, MC.view.y + (n.y - MC.view.y) * n.z);
+    var rr = n.r * k * n.z;
+    if (p.x + rr < 0 || p.x - rr > W || p.y + rr < 0 || p.y - rr > H) return;
+    var g = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, rr);
+    g.addColorStop(0, 'hsla(' + n.h + ',70%,55%,' + n.a + ')');
+    g.addColorStop(1, 'hsla(' + n.h + ',70%,45%,0)');
+    ctx.fillStyle = g; ctx.beginPath(); ctx.arc(p.x, p.y, rr, 0, 6.2832); ctx.fill();
+  });
+  MC.stars.forEach(function (s) {
+    var p = mcToScreen(MC.view.x + (s.x - MC.view.x) * s.z, MC.view.y + (s.y - MC.view.y) * s.z);
+    if (p.x < -4 || p.x > W + 4 || p.y < -4 || p.y > H + 4) return;
+    var tw = MC.reduced ? 0.75 : (0.55 + 0.45 * Math.sin(tk * 0.0011 + s.tw));
+    ctx.fillStyle = 'hsla(' + s.h + ',80%,82%,' + (tw * 0.6 * s.z + 0.07) + ')';
+    ctx.beginPath(); ctx.arc(p.x, p.y, s.r * mcClamp(k, 0.6, 1.5), 0, 6.2832); ctx.fill();
+  });
+  ctx.globalCompositeOperation = 'source-over';
+
+  mcPositions(dt);
+
+  var LBL = [], NODES = [];
+  var focus = MC.sel || MC.hover;
+  var dimmed = !!focus;
+  var star = MC.star;
+  var sp = mcToScreen(star.x, star.y);
+  star.sx = sp.x; star.sy = sp.y;
+
+  // ── orbit rings ──
+  ctx.globalCompositeOperation = 'lighter';
+  var seen = {};
+  MC.worlds.forEach(function (w) {
+    if (seen[w.r]) return; seen[w.r] = 1;
+    var rr = w.r * k;
+    if (sp.x + rr < -40 || sp.x - rr > W + 40) return;
+    ctx.strokeStyle = 'rgba(245,166,35,' + (dimmed ? 0.03 : 0.058) + ')';
+    ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.ellipse(sp.x, sp.y, rr, rr * w.tilt, 0, 0, 6.2832); ctx.stroke();
+  });
+  ctx.globalCompositeOperation = 'source-over';
+
+  // ── FILL ARCS: today's executions, trailing back along each orbit ──
+  MC.worlds.forEach(function (w) {
+    if (!w.fills.length) return;
+    var onWeb = !focus || focus === w;
+    w.fills.slice(0, 12).forEach(function (f, i) {
+      var buy = String(f.side) !== 'sell';
+      var span = 0.11 + 0.05 * i;
+      var a0 = w.ang - span - i * 0.045, a1 = w.ang - i * 0.045;
+      ctx.strokeStyle = buy ? 'rgba(34,197,94,' + (onWeb ? 0.6 : 0.12) + ')'
+                            : 'rgba(239,68,68,' + (onWeb ? 0.6 : 0.12) + ')';
+      ctx.lineWidth = mcClamp(2.4 * k, 1, 4);
+      ctx.beginPath();
+      ctx.ellipse(sp.x, sp.y, w.r * k, w.r * k * w.tilt, 0, a0, a1);
+      ctx.stroke();
+    });
+  });
+
+  // ── THE ACCOUNT STAR ──
+  var pnl = star.pnl;
+  var starHue = pnl === null ? 42 : (pnl > 0 ? 142 : (pnl < 0 ? 0 : 42));
+  var sr = star.rad * k;
+  var breath = MC.reduced ? 1 : (1 + 0.035 * Math.sin(tk * 0.0016));
+  var gs = ctx.createRadialGradient(sp.x, sp.y, 0, sp.x, sp.y, Math.max(2, sr * 3.4 * breath));
+  gs.addColorStop(0, 'hsla(' + starHue + ',90%,72%,' + (halted ? 0.4 : 0.9) + ')');
+  gs.addColorStop(0.28, 'hsla(' + starHue + ',85%,56%,' + (halted ? 0.14 : 0.32) + ')');
+  gs.addColorStop(1, 'hsla(' + starHue + ',85%,50%,0)');
+  ctx.globalCompositeOperation = 'lighter';
+  ctx.fillStyle = gs;
+  ctx.beginPath(); ctx.arc(sp.x, sp.y, Math.max(2, sr * 3.4 * breath), 0, 6.2832); ctx.fill();
+  ctx.globalCompositeOperation = 'source-over';
+  ctx.fillStyle = 'hsla(' + starHue + ',95%,' + (halted ? 48 : 78) + '%,1)';
+  ctx.beginPath(); ctx.arc(sp.x, sp.y, Math.max(2.5, sr * breath), 0, 6.2832); ctx.fill();
+  // a star whose equity we cannot read gets a dashed rim: the size is a PLACEHOLDER
+  // and the rim is how it admits that, instead of implying a measured equity.
+  if (star.equity === null) {
+    ctx.setLineDash([5, 5]); ctx.strokeStyle = 'rgba(255,255,255,.45)';
+    ctx.lineWidth = 1.4;
+    ctx.beginPath(); ctx.arc(sp.x, sp.y, Math.max(3, sr * breath + 5), 0, 6.2832); ctx.stroke();
+    ctx.setLineDash([]);
+  }
+  NODES.push({ x: sp.x - sr, y: sp.y - sr, w: sr * 2, h: sr * 2 });
+  LBL.push({
+    node: star, prio: 100, text: 'ACCOUNT',
+    sub: star.equity !== null ? mcMoney(star.equity, { compact: true })
+       : (pnl !== null ? mcMoney(pnl, { signed: true }) : 'EQUITY UNKNOWN'),
+    col: 'hsl(' + starHue + ',85%,72%)', ax: sp.x, ay: sp.y, ar: sr
+  });
+
+  // ── THE WORLDS ──
+  MC.worlds.forEach(function (w) {
+    var p = mcToScreen(w.x, w.y);
+    w.sx = p.x; w.sy = p.y;
+    var rr = Math.max(2.5, w.rad * k);
+    if (p.x + rr < -60 || p.x - rr > W + 60 || p.y + rr < -60 || p.y - rr > H + 60) return;
+    var isFocus = focus === w;
+    var fade = dimmed && !isFocus ? 0.34 : 1;
+
+    // glow from signal strength — no signal, no glow. We never light a world up
+    // for being pretty.
+    if (w.glow > 0.01) {
+      var pulse = MC.reduced ? 1 : (0.75 + 0.25 * Math.sin(tk * 0.004 + w.phase));
+      var gr = rr + 10 + w.glow * 26 * pulse;
+      var gg = ctx.createRadialGradient(p.x, p.y, rr * 0.5, p.x, p.y, gr);
+      gg.addColorStop(0, mcHsl(w.reg, 0.5 * w.glow * fade, 12));
+      gg.addColorStop(1, mcHsl(w.reg, 0, 12));
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.fillStyle = gg;
+      ctx.beginPath(); ctx.arc(p.x, p.y, gr, 0, 6.2832); ctx.fill();
+      ctx.globalCompositeOperation = 'source-over';
+    }
+
+    if (w.dark) {
+      // A DARK WORLD. Hollow + dashed, because there is no price behind it and a
+      // filled disc would read as real data.
+      ctx.setLineDash([3, 4]);
+      ctx.strokeStyle = 'rgba(150,160,180,' + (0.55 * fade) + ')';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.arc(p.x, p.y, rr, 0, 6.2832); ctx.stroke();
+      ctx.setLineDash([]);
+    } else {
+      ctx.fillStyle = mcHsl(w.reg, 0.95 * fade, 4);
+      ctx.beginPath(); ctx.arc(p.x, p.y, rr, 0, 6.2832); ctx.fill();
+      // a terminator: the lit limb faces the star, so the system reads 3-D
+      ctx.globalCompositeOperation = 'lighter';
+      var lg = ctx.createLinearGradient(p.x - rr, p.y - rr, p.x + rr, p.y + rr);
+      lg.addColorStop(0, mcHsl(w.reg, 0.4 * fade, 22));
+      lg.addColorStop(1, mcHsl(w.reg, 0, 0));
+      ctx.fillStyle = lg;
+      ctx.beginPath(); ctx.arc(p.x, p.y, rr, 0, 6.2832); ctx.fill();
+      ctx.globalCompositeOperation = 'source-over';
+    }
+
+    // HELD: a solid ring, thickness with size, plus a profit/loss tint
+    if (w.pos) {
+      var up = w.unreal;
+      ctx.strokeStyle = up === null ? 'rgba(245,166,35,' + (0.8 * fade) + ')'
+        : (up >= 0 ? 'rgba(74,222,128,' + (0.88 * fade) + ')' : 'rgba(252,165,165,' + (0.88 * fade) + ')');
+      ctx.lineWidth = mcClamp(2 + (w.mktVal ? Math.sqrt(w.mktVal) * 0.1 : 0), 2, 6);
+      ctx.beginPath(); ctx.arc(p.x, p.y, rr + 5, 0, 6.2832); ctx.stroke();
+    }
+
+    // AWAITING YOU: a double ring that expands and resets — it cannot be ignored
+    // and it stops the instant the queue item is resolved.
+    if (w.pending.length) {
+      var t = MC.reduced ? 0.5 : ((tk % 1500) / 1500);
+      [0, 0.5].forEach(function (off) {
+        var tt = (t + off) % 1;
+        ctx.strokeStyle = 'rgba(167,139,250,' + ((1 - tt) * 0.8 * fade) + ')';
+        ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.arc(p.x, p.y, rr + 6 + tt * 24, 0, 6.2832); ctx.stroke();
+      });
+    }
+
+    NODES.push({ x: p.x - rr, y: p.y - rr, w: rr * 2, h: rr * 2 });
+
+    // ── label candidacy. Priority decides who survives the collision pass. ──
+    var sub = null, col = mcHsl(w.reg, 1, 14);
+    if (w.pending.length) { sub = 'AWAITING YOU'; col = '#c4b5fd'; }
+    else if (w.dark) { sub = 'NO DATA'; col = '#8b93a6'; }
+    else if (w.unreal !== null) { sub = mcMoney(w.unreal, { signed: true }); col = w.unreal >= 0 ? '#4ADE80' : '#FCA5A5'; }
+    else if (w.signal) { sub = String(w.signal.action).toUpperCase() + ' ' + (mcNum(w.signal.confidence) || 0) + '%'; col = '#FFC75A'; }
+    else if (w.price !== null) sub = mcMoney(w.price);
+    LBL.push({
+      node: w, prio: w.pending.length ? 90 : (w.pos ? 80 : (w.signal ? 70 : (w.dark ? 30 : 50))),
+      text: w.symbol, sub: sub, col: col, ax: p.x, ay: p.y, ar: rr
+    });
+  });
+
+  // ── transient shockwaves for a decision that JUST landed ──
+  MC.pulses = MC.pulses.filter(function (pu) {
+    pu.t += dt;
+    if (pu.t > 1400) return false;
+    var w = pu.w, tt = pu.t / 1400;
+    var pp = mcToScreen(w.x, w.y);
+    ctx.strokeStyle = 'hsla(' + pu.hue + ',85%,75%,' + ((1 - tt) * 0.85) + ')';
+    ctx.lineWidth = 3 * (1 - tt) + 0.6;
+    ctx.beginPath(); ctx.arc(pp.x, pp.y, 10 + tt * 120, 0, 6.2832); ctx.stroke();
+    return true;
+  });
+
+  // ── THE TICK COMET: the daemon's heartbeat made visible. One comet per
+  //    observed scheduler tick. If the loop dies, no comet ever flies again —
+  //    the absence IS the signal, which is why we never spawn one on a timer. ──
+  MC.comets = MC.comets.filter(function (c) {
+    c.t += dt;
+    if (c.t > c.life) return false;
+    var pr = c.t / c.life;
+    var ang = c.a0 + pr * 2.1;
+    var dist = mcLerp(c.d0, 90, pr);
+    var cp = mcToScreen(Math.cos(ang) * dist, Math.sin(ang) * dist * 0.72);
+    for (var i = 0; i < 9; i++) {
+      var ta = ang - i * 0.035, td = dist + i * 11;
+      var tp = mcToScreen(Math.cos(ta) * td, Math.sin(ta) * td * 0.72);
+      ctx.fillStyle = 'rgba(255,236,190,' + ((1 - i / 9) * 0.5 * (1 - pr)) + ')';
+      ctx.beginPath(); ctx.arc(tp.x, tp.y, mcClamp((2.4 - i * 0.2) * k, 0.4, 3), 0, 6.2832); ctx.fill();
+    }
+    ctx.fillStyle = 'rgba(255,248,225,' + (0.95 * (1 - pr)) + ')';
+    ctx.beginPath(); ctx.arc(cp.x, cp.y, mcClamp(3 * k, 1, 4.5), 0, 6.2832); ctx.fill();
+    return true;
+  });
+
+  // ── CIRCUIT-BREAKER HALO: a red ring around the whole scene while the broker
+  //    is cut off, with the live cooldown countdown. Canvas-drawn, so it cannot
+  //    collide with any DOM element by construction. ──
+  if (breakerOpen) {
+    var cs = st.circuit || (MC.strat && MC.strat.circuit) || {};
+    var pulse2 = MC.reduced ? 0.6 : (0.45 + 0.3 * Math.sin(tk * 0.0035));
+    ctx.strokeStyle = 'rgba(239,68,68,' + pulse2 + ')';
+    ctx.lineWidth = 3;
+    ctx.strokeRect(5.5, 5.5, W - 11, H - 11);
+    var left = cs.nextTryAt ? Math.max(0, Math.ceil((cs.nextTryAt - Date.now()) / 1000)) : null;
+    var msg = 'BROKER CIRCUIT OPEN' + (left !== null ? '  ·  retry in ' + left + 's' : '');
+    ctx.font = '800 11px ui-monospace,Menlo,monospace';
+    var tw2 = ctx.measureText(msg).width;
+    var bx = Math.max(8, (W - tw2 - 20) / 2);
+    ctx.fillStyle = 'rgba(40,8,8,.94)';
+    ctx.fillRect(bx, 10, tw2 + 20, 24);
+    ctx.strokeStyle = 'rgba(239,68,68,.75)'; ctx.lineWidth = 1;
+    ctx.strokeRect(bx + 0.5, 10.5, tw2 + 19, 23);
+    ctx.fillStyle = '#FCA5A5'; ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+    ctx.fillText(msg, bx + 10, 22.5);
+    // The banner owns that strip, so no canvas label may enter it.
+    LBL.forEach(function () {});
+    NODES.push({ x: bx, y: 10, w: tw2 + 20, h: 24 });
+  }
+
+  // ── HALTED: desaturate the whole scene and say so. A halted system that still
+  //    looks lively is a lie. ──
+  if (halted) {
+    ctx.fillStyle = 'rgba(6,6,10,.5)';
+    ctx.fillRect(0, 0, W, H);
+    var hm = (st.haltSource === 'env' ? 'HALTED BY ENV KILL SWITCH' : (st.isPaused && !st.halted ? 'PAUSED' : 'TRADING HALTED'));
+    ctx.font = '900 13px ui-monospace,Menlo,monospace';
+    var hw = ctx.measureText(hm).width;
+    var hx = Math.max(8, (W - hw - 24) / 2), hy = breakerOpen ? 42 : 10;
+    ctx.fillStyle = 'rgba(44,32,4,.95)'; ctx.fillRect(hx, hy, hw + 24, 26);
+    ctx.strokeStyle = 'rgba(251,191,36,.8)'; ctx.lineWidth = 1;
+    ctx.strokeRect(hx + 0.5, hy + 0.5, hw + 23, 25);
+    ctx.fillStyle = '#FBBF24'; ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+    ctx.fillText(hm, hx + 12, hy + 13.5);
+    NODES.push({ x: hx, y: hy, w: hw + 24, h: 26 });
+  }
+
+  // ── the empty sky. Nothing to draw is a STATE, not a blank. ──
+  mcVeilState();
+
+  // ── and finally the labels, placed so that none of them touch anything ──
+  mcLabelPass(ctx, LBL, NODES, W, H);
+}
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   LABEL PASS — canvas text is NOT exempt from the No-Collision Law
+   ──────────────────────────────────────────────────────────────────────────────
+   Canvas text escapes CSS layout, which is exactly why it is the easiest place
+   on the whole surface to break the law: paint a label per world unconditionally
+   and a dense ring will happily stack "NVDA $500" straight through "AMD $94" and
+   through the discs themselves.
+
+   So nothing is painted until every candidate has been PLACED. For each label, in
+   priority order (awaiting-you > held > signal > priced > dark), we try eight
+   anchor positions around its world and accept the first that touches NOTHING:
+     · no already-placed label box
+     · no world's or star's own disc box (a label clear of its neighbours but
+       lying across a planet is still text on top of a thing)
+     · not the HUD, which is a real DOM element floating over this canvas — text
+       UNDER an overlay is "underneath", and the law names that too
+     · not the control cluster, not the veil
+     · not outside the canvas
+   A label with no legal placement is DROPPED. Dropping a label is correct;
+   overlapping one never is.
+   ══════════════════════════════════════════════════════════════════════════════ */
+function mcRectsHit(a, b, pad) {
+  var p = pad || 0;
+  return !(a.x + a.w + p <= b.x || b.x + b.w + p <= a.x ||
+           a.y + a.h + p <= b.y || b.y + b.h + p <= a.y);
+}
+/* The live, MEASURED rect of a DOM child of the stage, in canvas coordinates.
+   Measured — never assumed — because the control cluster is a column at wide
+   widths and a 2x2 grid under 520px, and an assumed shape is how a clamp ends up
+   wrong at exactly one breakpoint. */
+function mcDomRect(el) {
+  var stage = mcEl('mcStage');
+  if (!el || !stage || el.hidden) return null;
+  var s = stage.getBoundingClientRect(), r = el.getBoundingClientRect();
+  if (!r.width || !r.height) return null;
+  return { x: r.x - s.x, y: r.y - s.y, w: r.width, h: r.height };
+}
+function mcZoomRect() { return mcDomRect(document.querySelector('.mc-zoom')); }
+
+function mcLabelPass(ctx, list, nodes, W, H) {
+  var SAFE = 6;
+  var blockers = nodes.slice();
+  var hudR = mcDomRect(mcEl('mcHud'));   if (hudR) blockers.push(hudR);
+  var zR = mcZoomRect();                 if (zR) blockers.push(zR);
+  var veil = mcEl('mcVeil');
+  if (veil && !veil.hidden) { var vR = mcDomRect(veil); if (vR) blockers.push(vR); }
+
+  list.sort(function (a, b) { return b.prio - a.prio; });
+  var placed = [];
+
+  for (var i = 0; i < list.length; i++) {
+    var L = list[i];
+    // At a far-out zoom a world is a couple of pixels; labelling every one of
+    // them would be noise AND a collision storm. Only the ones that matter
+    // (awaiting-you, held) insist on a label when the scene is tiny.
+    if (L.ar < 4 && L.prio < 80) continue;
+
+    ctx.font = '800 11.5px ui-monospace,Menlo,Consolas,monospace';
+    var tw = ctx.measureText(L.text).width;
+    var sw = 0;
+    if (L.sub) { ctx.font = '700 10px ui-monospace,Menlo,Consolas,monospace'; sw = ctx.measureText(L.sub).width; }
+    var bw = Math.max(tw, sw) + 10;
+    var bh = L.sub ? 27 : 16;
+
+    var off = L.ar + 7;
+    var cands = [
+      { x: L.ax + off,            y: L.ay - bh / 2 },        // right
+      { x: L.ax - off - bw,       y: L.ay - bh / 2 },        // left
+      { x: L.ax - bw / 2,         y: L.ay - off - bh },      // above
+      { x: L.ax - bw / 2,         y: L.ay + off },           // below
+      { x: L.ax + off * 0.7,      y: L.ay - off - bh },      // up-right
+      { x: L.ax - off * 0.7 - bw, y: L.ay - off - bh },      // up-left
+      { x: L.ax + off * 0.7,      y: L.ay + off * 0.7 },     // down-right
+      { x: L.ax - off * 0.7 - bw, y: L.ay + off * 0.7 }      // down-left
+    ];
+
+    var chosen = null;
+    for (var c = 0; c < cands.length; c++) {
+      var r = { x: cands[c].x, y: cands[c].y, w: bw, h: bh };
+      if (r.x < SAFE || r.y < SAFE || r.x + r.w > W - SAFE || r.y + r.h > H - SAFE) continue;
+      var hit = false, j;
+      for (j = 0; j < placed.length; j++) if (mcRectsHit(r, placed[j], 3)) { hit = true; break; }
+      if (hit) continue;
+      for (j = 0; j < blockers.length; j++) if (mcRectsHit(r, blockers[j], 2)) { hit = true; break; }
+      if (hit) continue;
+      chosen = r; break;
+    }
+    if (!chosen) continue;                 // DROPPED, and that is the right answer
+    placed.push(chosen);
+
+    // a hairline leader so a displaced label still clearly belongs to its world
+    ctx.strokeStyle = 'rgba(255,255,255,.17)'; ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(L.ax, L.ay);
+    ctx.lineTo(chosen.x + (chosen.x > L.ax ? 0 : chosen.w), chosen.y + chosen.h / 2);
+    ctx.stroke();
+
+    ctx.textAlign = 'left'; ctx.textBaseline = 'top';
+    ctx.font = '800 11.5px ui-monospace,Menlo,Consolas,monospace';
+    ctx.fillStyle = 'rgba(4,4,8,.8)';
+    ctx.fillRect(chosen.x, chosen.y, chosen.w, chosen.h);
+    ctx.fillStyle = L.col;
+    ctx.fillText(L.text, chosen.x + 5, chosen.y + 2);
+    if (L.sub) {
+      ctx.font = '700 10px ui-monospace,Menlo,Consolas,monospace';
+      ctx.fillStyle = 'rgba(214,217,227,.86)';
+      ctx.fillText(L.sub, chosen.x + 5, chosen.y + 15);
+    }
+  }
+}
+
+/* ══ THE VEIL — loading / empty / dark-sky, each a labelled honest state ═════ */
+function mcVeilState() {
+  var veil = mcEl('mcVeil'); if (!veil) return;
+  var msg = null, glyph = '✦';
+  // Order matters: a sky that HAS worlds is never covered by a sign-in notice. The
+  // signed-out message is about an empty sky, so it is gated on the sky being
+  // empty — otherwise the veil would sit over a perfectly good system and, being
+  // inset:0, would collide with the HUD (caught by the verifier at 768/1280/1920).
+  if (!MC.token && !MC.worlds.length) {
+    msg = '<b>Sign in to chart the market.</b><br>The cosmos reads owner-only data.'; glyph = '✧';
+  } else if (MC.errs.strat && MC.errs.history && !MC.snapshot) {
+    msg = '<b>The sky is dark.</b><br>' + mcEsc(MC.errs.strat) + ' — the brain is not answering.';
+    glyph = '✧';
+  } else if (!MC.snapshot && !MC.worlds.length) {
+    msg = '<b>No scan has been charted yet.</b><br>The engine publishes a snapshot on every tick' +
+          ' — hit <em>Scan now</em> in Controls, or wait for the next one.';
+  } else if (!MC.worlds.length) {
+    msg = '<b>An empty watchlist.</b><br>Nothing to orbit. Set one in the Engine section.';
+  }
+  if (msg) {
+    veil.hidden = false;
+    veil.innerHTML = '<span class="vg" aria-hidden="true">' + glyph + '</span>' +
+                     '<span class="vmsg">' + msg + '</span>';
+  } else {
+    veil.hidden = true;
+  }
+}
+
+/* ══ FRAME LOOP ══════════════════════════════════════════════════════════════
+   A background tab must never burn a frame, so the loop is guarded on BOTH page
+   visibility and an explicit stop. */
+function mcFrame(ts) {
+  if (!MC.running) { MC.raf = 0; return; }
+  var dt = Math.min(64, MC.lastFrame ? ts - MC.lastFrame : 16);
+  MC.lastFrame = ts;
+  MC.view.x = mcLerp(MC.view.x, MC.target.x, MC.reduced ? 1 : 0.16);
+  MC.view.y = mcLerp(MC.view.y, MC.target.y, MC.reduced ? 1 : 0.16);
+  MC.view.k = mcLerp(MC.view.k, MC.target.k, MC.reduced ? 1 : 0.16);
+  mcDraw(dt);
+  // A pinned HUD is anchored to its WORLD, and the world just moved, so the
+  // launcher must ride along or it drifts off the thing it describes. This
+  // re-runs the CLAMP ONLY — never innerHTML, because repainting 60x/sec would
+  // destroy focus mid-Tab and make the buttons unclickable.
+  if (MC.hudPinned && MC.sel) mcReclampHud();
+  MC.raf = requestAnimationFrame(mcFrame);
+}
+function mcStartLoop() {
+  if (MC.running) return;
+  MC.running = true; MC.lastFrame = 0;
+  MC.raf = requestAnimationFrame(mcFrame);
+}
+function mcStopLoop() {
+  MC.running = false;
+  if (MC.raf) { cancelAnimationFrame(MC.raf); MC.raf = 0; }
+}
+
+/* ══ THE HUD ═════════════════════════════════════════════════════════════════ */
+/* The dismiss control belongs in the HEADER, beside the title — not in the action
+   row, where it wrapped onto a line of its own and read as a stray button. */
+function mcHudHead(title, pinned) {
+  return '<div class="mc-hhead"><span class="hh-t">' + mcEsc(title) + '</span>' +
+    (pinned ? '<button type="button" class="mc-hx" data-mcact="unpin" aria-label="Close">&times;</button>' : '') +
+    '</div>';
+}
+function mcHudBody(n, pinned) {
+  if (!n) return '';
+  if (n.kind === 'star') {
+    var rows = '';
+    rows += mcHudRow('Equity', n.equity === null ? 'not exposed' : mcMoney(n.equity),
+                     n.equity === null ? 'o' : 'a');
+    rows += mcHudRow('Realised today', n.pnl === null ? 'NOT TRACKED' : mcMoney(n.pnl, { signed: true }),
+                     n.pnl === null ? 'o' : (n.pnl >= 0 ? 'g' : 'r'));
+    var a = MC.accounting;
+    rows += mcHudRow('Open positions', (a && a.tracked && a.openPositions) ? String(a.openPositions.count) : 'NOT TRACKED',
+                     (a && a.tracked) ? '' : 'o');
+    rows += mcHudRow('Mode', n.mode ? n.mode.toUpperCase() : '—', n.mode === 'live' ? 'r' : 'g');
+    return mcHudHead('THE ACCOUNT STAR', pinned) +
+           '<span class="hh-s" style="color:var(--acc2)">' +
+           (n.equity === null ? 'SIZE IS A PLACEHOLDER' : 'SIZED BY EQUITY') + '</span>' +
+           '<div class="mc-hrows">' + rows + '</div>';
+  }
+  var s = n.snap, out = '';
+  out += mcHudHead(n.symbol, pinned);
+  out += '<span class="hh-s" style="color:' + mcHsl(n.reg, 1, 14) + '">' + n.reg.name + '</span>';
+  var r = '';
+  r += mcHudRow('Price', n.price === null ? 'no price' : mcMoney(n.price), n.price === null ? 'o' : 'a');
+  if (s && mcNum(s.rsi) !== null) r += mcHudRow('RSI', mcNum(s.rsi).toFixed(1));
+  if (s && mcNum(s.atrPct) !== null) r += mcHudRow('ATR % of px', mcNum(s.atrPct).toFixed(2) + '%');
+  if (s && mcNum(s.atrRatio) !== null) r += mcHudRow('ATR vs avg', mcNum(s.atrRatio).toFixed(2) + 'x');
+  if (n.pos) {
+    r += mcHudRow('Held', mcNum(n.pos.quantity) + ' @ ' + (mcMoney(n.pos.avgPrice) || '—'));
+    r += mcHudRow('Unrealised', n.unreal === null ? '—' : mcMoney(n.unreal, { signed: true }),
+                  n.unreal === null ? 'o' : (n.unreal >= 0 ? 'g' : 'r'));
+  }
+  if (n.fills.length) r += mcHudRow("Fills today", String(n.fills.length));
+  if (n.pending.length) r += mcHudRow('Awaiting you', n.pending.length + ' order' + (n.pending.length > 1 ? 's' : ''), 'a');
+  out += '<div class="mc-hrows">' + r + '</div>';
+  if (n.dark && s && s.err) out += '<div class="mc-hnote">' + mcEsc(s.err) + '</div>';
+  else if (n.signal) out += '<div class="mc-hnote">' + mcEsc(n.signal.reasoning || '') + '</div>';
+  return out;
+}
+function mcHudRow(label, val, cls) {
+  return '<div class="mc-hrow"><span>' + mcEsc(label) + '</span><b class="' + (cls || '') + '">' +
+         mcEsc(val == null ? '—' : val) + '</b></div>';
+}
+
+/* Does a box of this size fit ANYWHERE inside the stage without touching the
+   control cluster? If not, we refuse to show the HUD at all. */
+function mcHudFits(w, h) {
+  var SAFE = 12;
+  if (w + SAFE * 2 > MC.W || h + SAFE * 2 > MC.H) return false;
+  var z = MC.zoomRect || (MC.zoomRect = mcZoomRect());
+  if (!z) return true;
+  // There is room if the HUD can live in the band ABOVE the cluster, or in the
+  // column to its LEFT. Either is enough.
+  if (h + SAFE * 2 <= z.y) return true;
+  if (w + SAFE * 2 <= z.x) return true;
+  return false;
+}
+function mcClampHud(ax, ay, w, h) {
+  var SAFE = 12;
+  var z = MC.zoomRect || (MC.zoomRect = mcZoomRect());
+  var maxX = MC.W - w - SAFE, maxY = MC.H - h - SAFE;
+  var cands = [
+    { x: ax + 16,     y: ay + 14 },
+    { x: ax - w - 16, y: ay + 14 },
+    { x: ax + 16,     y: ay - h - 14 },
+    { x: ax - w - 16, y: ay - h - 14 },
+    { x: SAFE,        y: SAFE },
+    { x: maxX,        y: SAFE }
+  ];
+  for (var i = 0; i < cands.length; i++) {
+    var x = mcClamp(cands[i].x, SAFE, Math.max(SAFE, maxX));
+    var y = mcClamp(cands[i].y, SAFE, Math.max(SAFE, maxY));
+    var r = { x: x, y: y, w: w, h: h };
+    if (z && mcRectsHit(r, z, SAFE)) continue;
+    return { left: x, top: y };
+  }
+  // Nothing clean near the anchor — take the top-left corner, which the fits()
+  // gate has already proven is clear of the cluster.
+  return { left: SAFE, top: SAFE };
+}
+/* ON A NARROW STAGE THE PINNED HUD IS THE WRONG SURFACE.
+   At 375px the stage is ~340x420 and a full dossier panel covers essentially all
+   of it — you would be reading about a world while that world is hidden behind
+   the thing describing it. The inspector exists precisely for this: it is a FLOW
+   block under the stage, so on a phone the dossier pushes the page taller and the
+   galaxy stays visible above it. So below this width a tap selects + opens the
+   inspector and the HUD is never pinned at all. No collision either way; this is
+   the better of two legal choices. */
+function mcWantsPinnedHud() { return MC.W >= 460; }
+
+function mcShowHud(node, pinned) {
+  var hud = mcEl('mcHud'); if (!hud || !node) return;
+  if (pinned && !mcWantsPinnedHud()) { hud.hidden = true; MC.hudPinned = false; return; }
+  hud.className = 'mc-hud' + (pinned ? ' pinned' : '');
+  hud.innerHTML = mcHudBody(node, pinned) + (pinned ? mcHudActions(node) : '');
+  hud.hidden = false;
+  hud.setAttribute('aria-hidden', pinned ? 'false' : 'true');
+  if (pinned) hud.setAttribute('tabindex', '-1'); else hud.removeAttribute('tabindex');
+  // MEASURE AFTER the buttons are in the DOM — the pinned state is strictly
+  // taller, so measuring the ghost's size would under-estimate and let the
+  // pinned panel land on the cluster.
+  var w = hud.offsetWidth || 220, h = hud.offsetHeight || 70;
+  if (!mcHudFits(w, h)) { hud.hidden = true; MC.hudPinned = false; return; }
+  var ax = node.sx == null ? MC.W / 2 : node.sx, ay = node.sy == null ? MC.H / 2 : node.sy;
+  var p = mcClampHud(ax, ay, w, h);
+  hud.style.left = p.left + 'px'; hud.style.top = p.top + 'px';
+  MC.hudPinned = !!pinned;
+}
+function mcReclampHud() {
+  var hud = mcEl('mcHud'), n = MC.sel;
+  if (!hud || !n || hud.hidden) return;
+  var w = hud.offsetWidth || 220, h = hud.offsetHeight || 70;
+  if (!mcHudFits(w, h)) { hud.hidden = true; MC.hudPinned = false; return; }
+  var p = mcClampHud(n.sx == null ? MC.W / 2 : n.sx, n.sy == null ? MC.H / 2 : n.sy, w, h);
+  hud.style.left = p.left + 'px'; hud.style.top = p.top + 'px';
+}
+function mcHudActions(n) {
+  var b = '<div class="mc-hacts">';
+  if (n.kind === 'world') {
+    b += '<button type="button" class="mc-btn b-sm b-acc" data-mcact="analyze" data-sym="' + mcEsc(n.symbol) + '">Analyze</button>';
+    b += '<button type="button" class="mc-btn b-sm" data-mcact="inspect" data-sym="' + mcEsc(n.symbol) + '">Dossier</button>';
+    if (n.pending.length) {
+      b += '<button type="button" class="mc-btn b-sm b-go" data-mcact="approve" data-id="' + mcEsc(n.pending[0].id) + '">Approve</button>';
+      b += '<button type="button" class="mc-btn b-sm b-no" data-mcact="reject" data-id="' + mcEsc(n.pending[0].id) + '">Reject</button>';
+    }
+  } else {
+    b += '<button type="button" class="mc-btn b-sm" data-mcact="scrollQueue">Queue</button>';
+    b += '<button type="button" class="mc-btn b-sm" data-mcact="scrollPerf">Profit</button>';
+  }
+  return b + '</div>';
+}
+function mcUnpin() {
+  MC.hudPinned = false; MC.sel = null;
+  var hud = mcEl('mcHud'); if (hud) { hud.hidden = true; hud.className = 'mc-hud'; }
+}
+
+/* ══ PICKING + INPUT ═════════════════════════════════════════════════════════ */
+function mcPick(sx, sy) {
+  var best = null, bestD = Infinity;
+  var cand = MC.worlds.concat(MC.star ? [MC.star] : []);
+  for (var i = 0; i < cand.length; i++) {
+    var n = cand[i];
+    if (n.sx == null) continue;
+    var rr = Math.max(10, (n.rad || 10) * MC.view.k + 6);   // a finger-sized target
+    var d = Math.hypot(sx - n.sx, sy - n.sy);
+    if (d <= rr && d < bestD) { best = n; bestD = d; }
+  }
+  return best;
+}
+function mcStageXY(ev) {
+  var r = MC.cv.getBoundingClientRect();
+  return { x: ev.clientX - r.x, y: ev.clientY - r.y };
+}
+function mcWireInput() {
+  var cv = MC.cv, stage = mcEl('mcStage');
+  if (!cv) return;
+
+  cv.addEventListener('pointerdown', function (ev) {
+    cv.setPointerCapture && cv.setPointerCapture(ev.pointerId);
+    var p = mcStageXY(ev);
+    MC.drag = { x0: p.x, y0: p.y, vx: MC.target.x, vy: MC.target.y, moved: false };
+    cv.classList.add('dragging');
+  });
+  cv.addEventListener('pointermove', function (ev) {
+    var p = mcStageXY(ev);
+    if (MC.drag) {
+      var dx = p.x - MC.drag.x0, dy = p.y - MC.drag.y0;
+      if (Math.abs(dx) > 3 || Math.abs(dy) > 3) MC.drag.moved = true;
+      MC.target.x = MC.drag.vx - dx / MC.view.k;
+      MC.target.y = MC.drag.vy - dy / MC.view.k;
+      return;
+    }
+    // hover → GHOST hud. Never while a world is pinned: the pinned panel is the
+    // stationary target the user is travelling to, and swapping it under the
+    // cursor would snatch it away mid-reach.
+    var n = mcPick(p.x, p.y);
+    MC.hover = n;
+    cv.style.cursor = n ? 'pointer' : 'grab';
+    if (!MC.hudPinned) {
+      if (n) mcShowHud(n, false);
+      else { var h = mcEl('mcHud'); if (h) h.hidden = true; }
+    }
+  });
+  function endDrag(ev) {
+    cv.classList.remove('dragging');
+    if (!MC.drag) return;
+    var moved = MC.drag.moved; MC.drag = null;
+    if (moved) return;                       // a pan is not a tap
+    var p = mcStageXY(ev);
+    var n = mcPick(p.x, p.y);
+    if (n) {
+      MC.sel = n;
+      mcShowHud(n, true);          // a no-op below 460px by design
+      mcRenderInspect(n);
+      // On the narrow path the inspector IS the dossier, so bring it into view —
+      // otherwise a tap would look like it did nothing at all.
+      if (!mcWantsPinnedHud()) {
+        var ins = mcEl('mcInspect');
+        if (ins) ins.scrollIntoView({ block: 'nearest' });
+      }
+    } else { mcUnpin(); mcRenderInspect(null); }
+  }
+  cv.addEventListener('pointerup', endDrag);
+  cv.addEventListener('pointercancel', function () { MC.drag = null; cv.classList.remove('dragging'); });
+  cv.addEventListener('pointerleave', function () {
+    MC.hover = null;
+    if (!MC.hudPinned) { var h = mcEl('mcHud'); if (h) h.hidden = true; }
+  });
+  cv.addEventListener('wheel', function (ev) {
+    ev.preventDefault();
+    mcZoomAt(ev.deltaY < 0 ? 1.14 : 1 / 1.14);
+  }, { passive: false });
+
+  // the pinned HUD's own buttons
+  var hud = mcEl('mcHud');
+  if (hud) hud.addEventListener('click', function (ev) {
+    var b = ev.target.closest && ev.target.closest('[data-mcact]');
+    if (b) { ev.stopPropagation(); mcAction(b.getAttribute('data-mcact'), b); }
+  });
+
+  if (stage) stage.addEventListener('keydown', function (ev) {
+    if (ev.key === 'Escape') { mcUnpin(); mcRenderInspect(null); }
+    else if (ev.key === '+' || ev.key === '=') mcZoomAt(1.18);
+    else if (ev.key === '-' || ev.key === '_') mcZoomAt(1 / 1.18);
+    else if (ev.key === '0') mcFit(false);
+    else return;
+    ev.preventDefault();
+  });
+
+  if (typeof ResizeObserver !== 'undefined' && stage) {
+    new ResizeObserver(function () {
+      mcResize();
+      MC.zoomRect = null;
+      if (MC.hudPinned && MC.sel) mcReclampHud();
+    }).observe(stage);
+  }
+}
+function mcZoomAt(f) { MC.target.k = mcClamp(MC.target.k * f, 0.12, 4); }
+
+/* ── monitor fullscreen. The cosmos block becomes the viewport; the stage takes
+      whatever the bridge/legend/deck do not need. Re-measure AFTER the transition
+      or every clamp is working from the old geometry. ── */
+function mcIsFull() {
+  return !!(document.fullscreenElement || document.webkitFullscreenElement);
+}
+function mcSyncFullBtn() {
+  var b = mcEl('mcFull'); if (!b) return;
+  var on = mcIsFull();
+  b.classList.toggle('on', on);
+  b.setAttribute('aria-pressed', on ? 'true' : 'false');
+  b.setAttribute('aria-label', on ? 'Exit fullscreen' : 'Fullscreen the cosmos on this monitor');
+}
+function mcToggleFull() {
+  var el = mcEl('mcCosmos'); if (!el) return;
+  try {
+    if (mcIsFull()) {
+      (document.exitFullscreen || document.webkitExitFullscreen).call(document);
+    } else {
+      (el.requestFullscreen || el.webkitRequestFullscreen).call(el);
+    }
+  } catch (e) { mcToast('Fullscreen refused: ' + e.message, 'warn'); }
+}
+['fullscreenchange', 'webkitfullscreenchange'].forEach(function (ev) {
+  document.addEventListener(ev, function () {
+    mcSyncFullBtn();
+    // Two frames: one for the browser to finish resizing, one for our measure.
+    requestAnimationFrame(function () {
+      requestAnimationFrame(function () {
+        mcResize(); MC.zoomRect = null; mcFit(false);
+        if (MC.hudPinned && MC.sel) mcReclampHud();
+      });
+    });
+  });
+});
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   DOM RENDER — the bridge, the deck, the inspector, the sections
+   Every renderer here obeys one rule: a datum we do not have prints a LABELLED
+   UNKNOWN. There is no branch anywhere below that substitutes a plausible number.
+   ══════════════════════════════════════════════════════════════════════════════ */
+function mcRenderAll() {
+  mcRenderBadges();
+  mcRenderVitals();
+  mcRenderRail();
+  mcRenderDeck();
+  mcRenderPositions();
+  mcRenderQueueSection();
+  mcRenderPerf();
+  mcRenderEngine();
+  mcRenderJournal();
+  mcRenderCtl();
+  if (MC.sel) mcRenderInspect(MC.sel);
+}
+
+function mcPill(text, cls, dot) {
+  return '<span class="mc-pill ' + (cls || '') + '">' + (dot ? '<i></i>' : '') + mcEsc(text) + '</span>';
+}
+
+function mcRenderBadges() {
+  var el = mcEl('mcBadges'); if (!el) return;
+  var st = MC.state, out = '';
+  if (!MC.token) { el.innerHTML = mcPill('signed out', 'is-off', true); return; }
+  if (!st) {
+    el.innerHTML = mcPill(MC.errs.state ? 'brain unreachable' : 'connecting', MC.errs.state ? 'is-bad' : 'is-off', true);
+  } else {
+    out += mcPill(st.mode === 'live' ? 'LIVE MONEY' : 'PAPER', st.mode === 'live' ? 'is-live' : 'is-paper', true);
+    if (st.halted) out += mcPill('HALTED' + (st.haltSource === 'env' ? ' (env)' : ''), 'is-warn', true);
+    else if (st.isPaused) out += mcPill('PAUSED', 'is-warn', true);
+    else out += mcPill('ARMED', 'is-good', true);
+    if (st.requiresApproval) out += mcPill('approval required', 'is-claim');
+    var c = st.circuit;
+    if (c && c.state && c.state !== 'CLOSED') out += mcPill('breaker ' + c.state, 'is-bad', true);
+    var lk = st.link;
+    if (lk && lk.linked === false) out += mcPill('broker not linked', 'is-warn');
+    el.innerHTML = out;
+  }
+
+  // the three flow banners — mutually exclusive, each its own block
+  var st2 = MC.state || {};
+  var aL = mcEl('mcAlertLive'), aP = mcEl('mcAlertPaper'), aH = mcEl('mcAlertHalt');
+  if (aL) aL.hidden = !(st2.mode === 'live' && !st2.halted);
+  if (aP) aP.hidden = !(st2.mode === 'paper' && !st2.halted);
+  if (aH) {
+    aH.hidden = !(st2.halted || st2.isPaused);
+    var t = mcEl('mcAlertHaltText');
+    if (t && !aH.hidden) {
+      var why = (st2.halt && (st2.halt.reason || st2.halt.message)) ||
+                (st2.haltSource === 'env' ? 'the TRADING_ENABLED kill switch is off' : 'paused');
+      t.innerHTML = '<b>TRADING HALTED.</b> ' + mcEsc(why) +
+        ' — no tick will place an order until you resume.';
+    }
+  }
+}
+
+/* ── THE PROFIT SPINE. Vinta: "anything that happens happens for a profit", so
+      this row exists to answer that, including when the answer is "I cannot
+      know yet" — which it says in words. ── */
+function mcV(label, val, cls) {
+  return '<div class="mc-v ' + (cls || '') + '"><i>' + mcEsc(label) + '</i><b>' +
+         mcEsc(val == null ? '—' : val) + '</b></div>';
+}
+function mcRenderVitals() {
+  var el = mcEl('mcVitals'); if (!el) return;
+  var out = '';
+  var realised = mcRealisedToday();
+  var acc = MC.accounting, perf = MC.analytics && MC.analytics.performance;
+  var eq = mcEquity();
+
+  if (realised === null) {
+    out += mcV('realised today', (acc && acc.reason) ? 'NOT TRACKED' : '—', 'v-hero v-off');
+  } else {
+    out += mcV('realised today', mcMoney(realised, { signed: true }),
+               'v-hero ' + (realised > 0 ? 'v-good' : realised < 0 ? 'v-bad' : ''));
+  }
+  out += mcV('equity', eq === null ? 'not exposed' : mcMoney(eq, { compact: true }),
+             eq === null ? 'v-off' : 'v-accent');
+  out += mcV('open', (acc && acc.tracked && acc.openPositions) ? String(acc.openPositions.count) : 'NOT TRACKED',
+             (acc && acc.tracked) ? '' : 'v-off');
+  out += mcV('fills today', (acc && acc.tracked && Array.isArray(acc.fillsToday)) ? String(acc.fillsToday.length) : 'NOT TRACKED',
+             (acc && acc.tracked) ? '' : 'v-off');
+  if (perf) {
+    out += mcV('all-time p&l', mcMoney(perf.totalPnL, { signed: true, compact: true }),
+               perf.totalPnL > 0 ? 'v-good' : perf.totalPnL < 0 ? 'v-bad' : '');
+    out += mcV('win rate', perf.totalTrades ? (mcNum(perf.winRate) + '%') : 'no trades yet',
+               perf.totalTrades ? '' : 'v-off');
+    out += mcV('profit factor', perf.totalTrades ? String(perf.profitFactor) : '—',
+               perf.totalTrades ? '' : 'v-off');
+  }
+  var nP = (MC.pending && MC.pending.pending) ? MC.pending.pending.length : 0;
+  out += mcV('awaiting you', String(nP), nP ? 'v-claim' : 'v-off');
+
+  // ── the heartbeat. Honest by construction: the dot breathes only while the
+  //    newest journal tick is younger than 2.5 tick intervals. /strategy/status
+  //    .running cannot be used for this — it reports the API process's OWN loop
+  //    handle and reads false while mercatus-daemon ticks away in another
+  //    process. The journal is the only cross-process truth. ──
+  var tickMin = (MC.strat && MC.strat.config && mcNum(MC.strat.config.scanInterval)) || 5;
+  var age = MC.lastTickAt ? (Date.now() - MC.lastTickAt) : null;
+  var fresh = age !== null && age < tickMin * 60000 * 2.5;
+  var beatTxt = MC.lastTickAt ? ('tick ' + mcAgo(MC.lastTickAt)) : 'no tick seen';
+  out += '<span class="mc-beat' + (fresh ? '' : ' stale') + '"><i></i>' + mcEsc(beatTxt) + '</span>';
+  el.innerHTML = out;
+
+  // one comet per NEW observed tick
+  if (MC.lastTickAt && MC.lastTickAt !== MC._cometAt) {
+    MC._cometAt = MC.lastTickAt;
+    if (MC.built && fresh) {
+      MC.comets.push({ t: 0, life: 2600, a0: Math.random() * 6.283, d0: 900 });
+    }
+  }
+}
+
+function mcRenderRail() {
+  var rail = mcEl('mcRail'), list = mcEl('mcRailList'), clear = mcEl('mcClear');
+  if (!rail || !list) return;
+  var pend = (MC.pending && Array.isArray(MC.pending.pending))
+    ? MC.pending.pending.filter(function (p) { return !p.status || p.status === 'pending'; }) : [];
+  var n = pend.length;
+  mcEl('mcRailN').textContent = String(n);
+  rail.hidden = n === 0;
+  if (clear) {
+    clear.hidden = n !== 0;
+    var ct = mcEl('mcClearText');
+    if (ct) {
+      ct.innerHTML = MC.errs.pending
+        ? 'Queue unknown — <b>' + mcEsc(MC.errs.pending) + '</b>'
+        : 'Queue clear — <b>nothing is waiting on you.</b>';
+    }
+  }
+  if (!n) { list.innerHTML = ''; return; }
+  list.innerHTML = pend.map(function (p) {
+    var d = p.decision || {};
+    var sell = String(d.action) === 'sell';
+    return '<div class="mc-r' + (sell ? ' r-sell' : '') + '">' +
+      '<div class="mc-r-main">' +
+        '<div class="mc-r-t">' + mcEsc(String(d.action || '?').toUpperCase()) + ' ' +
+          mcEsc(d.symbol || '?') + ' &times;' + mcEsc(d.quantity) +
+          ' @ ' + mcEsc(mcMoney(d.price) || '—') + '</div>' +
+        '<div class="mc-r-m">' +
+          '<span class="rx">' + mcEsc(mcMoney(p.exposure) || '—') + ' exposure</span>' +
+          (d.confidence != null ? '<span>' + mcEsc(d.confidence) + '% conf</span>' : '') +
+          (d.strategy ? '<span>' + mcEsc(d.strategy) + '</span>' : '') +
+          '<span>' + mcEsc(mcAgo(Date.parse(p.createdAt)) || '—') + '</span>' +
+        '</div>' +
+      '</div>' +
+      '<div class="mc-r-acts">' +
+        '<button type="button" class="mc-btn b-sm b-go" data-mcact="approve" data-id="' + mcEsc(p.id) + '">Approve</button>' +
+        '<button type="button" class="mc-btn b-sm b-no" data-mcact="reject" data-id="' + mcEsc(p.id) + '">Reject</button>' +
+      '</div>' +
+    '</div>';
+  }).join('');
+}
+
+function mcRenderDeck() {
+  var s = mcSession();
+  var badge = mcEl('mcSession'), stamp = mcEl('mcStamp');
+  if (badge) {
+    var cls = { premarket: 's-pre', afterhours: 's-after', closed: 's-closed', regular: '' }[s.session] || '';
+    badge.className = 'mc-dsession ' + cls;
+    badge.textContent = (s.session === 'regular' && s.pastFlat) ? 'FLAT-BY-CLOSE' : s.session.toUpperCase();
+  }
+  if (stamp) {
+    var bits = [s.label + (s.dst ? ' (EDT)' : ' (EST)')];
+    bits.push(s.regular ? 'regular session' : (s.sensing ? 'sensing window' : 'market closed'));
+    if (s.regular && s.pastFlat) bits.push('no NEW autonomous trades');
+    var tickMin = (MC.strat && MC.strat.config && mcNum(MC.strat.config.scanInterval)) || null;
+    if (tickMin) bits.push('tick every ' + tickMin + 'm');
+    if (MC.snapshotAt) bits.push('scan ' + mcAgo(MC.snapshotAt) + ' (' + MC.snapshotFrom + ')');
+    stamp.innerHTML = bits.map(function (b, i) {
+      return i ? '<em> · </em>' + mcEsc(b) : mcEsc(b);
+    }).join('');
+  }
+  // the 24h band — percentage widths that tile exactly, so segments never overlap
+  var pc = function (m) { return (m / 1440 * 100) + '%'; };
+  var seg = function (id, a, b) {
+    var e = mcEl(id); if (!e) return;
+    e.style.left = pc(a); e.style.width = pc(b - a);
+  };
+  seg('mcSegPre', MC_SENSE_START, MC_REG_OPEN);
+  seg('mcSegReg', MC_REG_OPEN, MC_FLAT_BY);
+  seg('mcSegFlat', MC_FLAT_BY, MC_REG_CLOSE);
+  seg('mcSegAfter', MC_REG_CLOSE, MC_SENSE_END);
+  var now = mcEl('mcSegNow');
+  if (now) now.style.left = 'calc(' + pc(s.minuteOfDay) + ' - 1px)';
+}
+
+/* ── a responsive row: labelled cells that stack on a phone and become columns
+      at >=760px. Either way each cell is its own box. ── */
+function mcRow(cells, cols) {
+  return '<div class="mc-tr" style="--cols:' + (cols || cells.length) + '">' +
+    cells.map(function (c) {
+      return '<div><i>' + mcEsc(c[0]) + '</i><b class="' + (c[2] || '') + '">' +
+             mcEsc(c[1] == null ? '—' : c[1]) + '</b></div>';
+    }).join('') + '</div>';
+}
+function mcEmpty(msg) { return '<div class="mc-empty">' + msg + '</div>'; }
+
+function mcRenderPositions() {
+  var body = mcEl('mcPosBody'), cnt = mcEl('mcPosCount'); if (!body) return;
+  var a = MC.accounting;
+  if (!a) {
+    body.innerHTML = mcEmpty(MC.errs.accounting
+      ? 'Accounting unreachable — <b>' + mcEsc(MC.errs.accounting) + '</b>'
+      : 'Loading…');
+    if (cnt) cnt.textContent = '—'; return;
+  }
+  if (!a.tracked) {
+    // THE honest state the API is explicitly designed to return. Never dressed up.
+    body.innerHTML = mcEmpty('<b>NOT TRACKED.</b><br>' + mcEsc(a.reason || 'the broker did not answer') +
+      '<br><br>Positions and fills come from the broker, so there is nothing to show until it answers. ' +
+      'No number here is ever estimated.');
+    if (cnt) cnt.textContent = 'not tracked'; return;
+  }
+  var items = (a.openPositions && a.openPositions.items) || [];
+  var fills = a.fillsToday || [];
+  if (cnt) cnt.textContent = items.length + ' held · ' + fills.length + ' fills';
+  var out = '';
+  out += '<div class="mc-tbl">';
+  if (!items.length) out += mcEmpty('<b>No open positions.</b> The broker confirms you are flat.');
+  else items.forEach(function (p) {
+    var w = MC.worlds.filter(function (x) { return x.symbol === p.symbol; })[0];
+    var px = w && w.price !== null ? w.price : null;
+    var q = mcNum(p.quantity), ap = mcNum(p.avgPrice);
+    var unreal = (px !== null && q !== null && ap !== null) ? (px - ap) * q : null;
+    out += mcRow([
+      ['symbol', p.symbol],
+      ['qty', q],
+      ['avg cost', mcMoney(ap)],
+      ['mark', px === null ? 'no price' : mcMoney(px), px === null ? 'o' : 'a'],
+      ['unrealised', unreal === null ? 'needs a price' : mcMoney(unreal, { signed: true }),
+        unreal === null ? 'o' : (unreal >= 0 ? 'g' : 'r')]
+    ], 5);
+  });
+  out += '</div>';
+
+  out += '<div style="font:800 9.5px/1 var(--mono);letter-spacing:.09em;text-transform:uppercase;color:var(--dim2);padding-top:4px">Today\'s fills</div>';
+  out += '<div class="mc-tbl">';
+  if (!fills.length) out += mcEmpty('<b>No fills yet today.</b>');
+  else fills.slice(0, 40).forEach(function (f) {
+    var q = mcNum(f.quantity), p2 = mcNum(f.price);
+    out += mcRow([
+      ['symbol', f.symbol],
+      ['side', f.side ? f.side.toUpperCase() : null, String(f.side) === 'sell' ? 'r' : 'g'],
+      ['qty', q],
+      ['price', mcMoney(p2)],
+      ['value', (q !== null && p2 !== null) ? mcMoney(q * p2) : null],
+      ['at', f.filledAt ? mcClock(Date.parse(f.filledAt)) : null]
+    ], 6);
+  });
+  out += '</div>';
+  out += '<p class="mc-fhint">Fills are the EVIDENCE behind today\'s realised number, not the ' +
+    'number itself — the brain parses realised P&amp;L from the broker separately, and says ' +
+    'NOT TRACKED rather than summing these.</p>';
+  body.innerHTML = out;
+}
+
+function mcRenderQueueSection() {
+  var body = mcEl('mcQBody'), cnt = mcEl('mcQCount'); if (!body) return;
+  var pend = (MC.pending && Array.isArray(MC.pending.pending)) ? MC.pending.pending : null;
+  if (!pend) {
+    body.innerHTML = mcEmpty(MC.errs.pending ? 'Queue unreachable — <b>' + mcEsc(MC.errs.pending) + '</b>' : 'Loading…');
+    if (cnt) cnt.textContent = '—'; return;
+  }
+  if (cnt) cnt.textContent = pend.length ? (pend.length + ' pending') : 'clear';
+  if (!pend.length) {
+    body.innerHTML = mcEmpty('<b>Nothing pending.</b> Every decision the engine makes lands ' +
+      'here first — in live mode nothing reaches the broker until you approve it.');
+    return;
+  }
+  body.innerHTML = '<div class="mc-tbl">' + pend.map(function (p) {
+    var d = p.decision || {};
+    return mcRow([
+      ['order', String(d.action || '?').toUpperCase() + ' ' + (d.symbol || '?')],
+      ['qty @ limit', mcNum(d.quantity) + ' @ ' + (mcMoney(d.price) || '—')],
+      ['exposure', mcMoney(p.exposure), 'a'],
+      ['confidence', d.confidence != null ? d.confidence + '%' : null],
+      ['status', p.status],
+      ['queued', p.createdAt ? mcAgo(Date.parse(p.createdAt)) : null]
+    ], 6) + (d.reasoning ? '<div class="mc-iwhy" style="border:0;padding:4px 10px 10px">' +
+      mcEsc(d.reasoning) + '</div>' : '');
+  }).join('') + '</div>';
+}
+
+function mcRenderPerf() {
+  var body = mcEl('mcPerfBody'), cnt = mcEl('mcPerfCount'); if (!body) return;
+  var an = MC.analytics;
+  if (!an) {
+    body.innerHTML = mcEmpty(MC.errs.analytics ? 'Analytics unreachable — <b>' + mcEsc(MC.errs.analytics) + '</b>' : 'Loading…');
+    if (cnt) cnt.textContent = '—'; return;
+  }
+  var p = an.performance || {};
+  if (cnt) cnt.textContent = p.totalTrades ? (p.totalTrades + ' closed trades') : 'no closed trades';
+  var out = '<div class="mc-tbl">';
+  if (!p.totalTrades) {
+    out += mcEmpty('<b>No closed trades yet.</b><br>Win rate, drawdown and profit factor are ' +
+      'computed from completed round-trips in the journal. They stay blank until there is one — ' +
+      'they are never seeded.');
+  } else {
+    out += mcRow([['closed trades', p.totalTrades], ['wins', p.wins, 'g'], ['losses', p.losses, 'r'],
+                  ['win rate', mcNum(p.winRate) + '%']], 4);
+    out += mcRow([['total p&l', mcMoney(p.totalPnL, { signed: true }), p.totalPnL >= 0 ? 'g' : 'r'],
+                  ['avg win', mcMoney(p.avgWin), 'g'], ['avg loss', mcMoney(p.avgLoss), 'r'],
+                  ['profit factor', p.profitFactor]], 4);
+    out += mcRow([['max drawdown', mcMoney(p.maxDrawdown), 'r'],
+                  ['avg hold', p.avgHoldTimeHours != null ? p.avgHoldTimeHours + 'h' : null],
+                  ['generated', an.generatedAt ? mcClock(Date.parse(an.generatedAt)) : null],
+                  ['open (journal)', (p.openPositions || []).length]], 4);
+  }
+  out += '</div>';
+  var recs = an.recommendations || [];
+  if (recs.length) {
+    out += '<div style="font:800 9.5px/1 var(--mono);letter-spacing:.09em;text-transform:uppercase;color:var(--dim2);padding-top:6px">Engine recommendations</div>';
+    out += '<div class="mc-tbl">' + recs.map(function (r) {
+      return mcRow([['category', r.category], ['severity', r.severity,
+        r.severity === 'high' ? 'r' : (r.severity === 'medium' ? 'a' : '')],
+        ['note', r.message || r.recommendation || r.suggestion]], 3);
+    }).join('') + '</div>';
+  }
+  body.innerHTML = out;
+}
+
+function mcRenderEngine() {
+  var body = mcEl('mcEngBody'), cnt = mcEl('mcEngCount'); if (!body) return;
+  var s = MC.strat, st = MC.state;
+  if (!s && !st) {
+    body.innerHTML = mcEmpty(MC.errs.strat ? 'Engine unreachable — <b>' + mcEsc(MC.errs.strat) + '</b>' : 'Loading…');
+    if (cnt) cnt.textContent = '—'; return;
+  }
+  var cfg = (s && s.config) || {};
+  var tickMin = mcNum(cfg.scanInterval);
+  var age = MC.lastTickAt ? Date.now() - MC.lastTickAt : null;
+  var fresh = age !== null && tickMin && age < tickMin * 60000 * 2.5;
+  if (cnt) cnt.textContent = fresh ? 'ticking' : (MC.lastTickAt ? 'stalled' : 'no tick seen');
+
+  var out = '<div class="mc-tbl">';
+  out += mcRow([
+    ['loop liveness', MC.lastTickAt ? (fresh ? 'TICKING · ' + mcAgo(MC.lastTickAt) : 'STALLED · last ' + mcAgo(MC.lastTickAt)) : 'NO TICK IN JOURNAL',
+      fresh ? 'g' : 'r'],
+    ['tick cadence', tickMin ? tickMin + ' min' : null],
+    ['last tick reason', MC.lastTickRow ? (MC.lastTickRow.reason || MC.lastTickRow.type) : null],
+    ['scanning now', s ? String(!!s.scanning) : null]
+  ], 4);
+  out += '<p class="mc-fhint">Liveness is measured from the <b>journal</b>, not from ' +
+    '<code>/strategy/status.running</code>: the autonomous loop lives in the ' +
+    '<code>mercatus</code> daemon process, so the API server\'s own loop handle is ' +
+    '<code>false</code> even while ticks are landing. The journal is the only truth both ' +
+    'processes share.</p>';
+
+  var snap = MC.snapshot;
+  out += mcRow([
+    ['last scan', MC.snapshotAt ? mcAgo(MC.snapshotAt) : 'none charted'],
+    ['source', MC.snapshotFrom || null],
+    ['symbols scanned', snap ? (snap.scanned != null ? snap.scanned : (snap.symbols || []).length) : null],
+    ['usable', snap ? snap.usable : null],
+    ['outcome', snap ? snap.reason : null],
+    ['signals', snap ? (snap.signals || []).length : null]
+  ], 6);
+  if (snap && snap.error) {
+    out += mcRow([['scan error', snap.error, 'r']], 1);
+  }
+
+  var wl = (snap && snap.watchlist) || cfg.watchlist || [];
+  out += mcRow([
+    ['watchlist', wl.length ? wl.join(' · ') : 'none set'],
+    ['min confidence', cfg.minConfidence != null ? cfg.minConfidence + '%' : null],
+    ['max signals', cfg.maxConcurrentSignals],
+    ['risk / trade', cfg.riskPerTrade != null ? (cfg.riskPerTrade * 100).toFixed(1) + '%' : null],
+    ['flat by close', cfg.flatByClose == null ? null : String(cfg.flatByClose)]
+  ], 5);
+
+  if (st) {
+    var g = st.guardrails || {}, c = st.circuit || {};
+    out += mcRow([
+      ['max position', mcMoney(st.limits && st.limits.maxPositionSize)],
+      ['max daily loss', mcMoney(st.limits && st.limits.maxDailyLoss)],
+      ['max open', st.limits && st.limits.maxOpenPositions],
+      ['order types', (st.orderTypes || []).join(', ')]
+    ], 4);
+    out += mcRow([
+      ['position cap %', g.maxPositionPct != null ? (g.maxPositionPct * 100).toFixed(0) + '%' : null],
+      ['daily loss cap %', g.maxDailyLossPct != null ? (g.maxDailyLossPct * 100).toFixed(0) + '%' : null],
+      ['min balance', mcMoney(g.minBalance)],
+      ['buy cooldown', g.cooldown ? (g.cooldown.active
+        ? g.cooldown.secondsRemaining + 's left (' + (g.cooldown.lastBuySymbol || '?') + ')' : 'clear') : null,
+        (g.cooldown && g.cooldown.active) ? 'a' : 'g']
+    ], 4);
+    out += mcRow([
+      ['breaker', c.state, c.state === 'CLOSED' ? 'g' : 'r'],
+      ['consecutive fails', c.consecutiveFailures],
+      ['threshold', c.threshold],
+      ['retry at', c.nextTryAt ? mcClock(c.nextTryAt) : 'n/a']
+    ], 4);
+    out += mcRow([
+      ['broker linked', st.link ? String(st.link.linked) : null, (st.link && st.link.linked) ? 'g' : 'r'],
+      ['account configured', String(!!st.accountConfigured), st.accountConfigured ? 'g' : 'r'],
+      ['broker mode', st.brokerMode],
+      ['today (process)', st.today ? (st.today.pnlTracked ? mcMoney(st.today.pnl) : 'untracked by design') : null, 'o']
+    ], 4);
+  }
+  out += '</div>';
+
+  if (snap && Array.isArray(snap.symbols) && snap.symbols.length) {
+    out += '<div style="font:800 9.5px/1 var(--mono);letter-spacing:.09em;text-transform:uppercase;color:var(--dim2);padding-top:6px">Per-symbol telemetry from the last scan</div>';
+    out += '<div class="mc-tbl">' + snap.symbols.map(function (x) {
+      if (!x.ok) {
+        return mcRow([['symbol', x.symbol], ['state', 'NO DATA', 'r'],
+                      ['reason', x.err || 'unknown']], 3);
+      }
+      return mcRow([
+        ['symbol', x.symbol],
+        ['price', mcMoney(x.price), 'a'],
+        ['regime', mcRegime(x.regime).name],
+        ['rsi', x.rsi],
+        ['atr %', x.atrPct != null ? x.atrPct + '%' : null],
+        ['atr vs avg', x.atrRatio != null ? x.atrRatio + 'x' : null],
+        ['vs bar close', mcPct(x.vsBarClosePct), x.vsBarClosePct > 0 ? 'g' : (x.vsBarClosePct < 0 ? 'r' : '')],
+        ['bars', x.bars]
+      ], 8);
+    }).join('') + '</div>';
+  }
+  body.innerHTML = out;
+}
+
+function mcRenderJournal() {
+  var body = mcEl('mcJBody'), cnt = mcEl('mcJCount'); if (!body) return;
+  var h = MC.history && MC.history.history;
+  if (!Array.isArray(h)) {
+    body.innerHTML = mcEmpty(MC.errs.history ? 'Journal unreachable — <b>' + mcEsc(MC.errs.history) + '</b>' : 'Loading…');
+    if (cnt) cnt.textContent = '—'; return;
+  }
+  if (cnt) cnt.textContent = h.length + ' rows';
+  if (!h.length) { body.innerHTML = mcEmpty('<b>The journal is empty.</b>'); return; }
+  body.innerHTML = h.slice(0, 160).map(function (r) {
+    var t = String(r.type || '');
+    var cls = t === 'scan_snapshot' ? 'e-scan'
+      : /order|fill/.test(t) ? 'e-order'
+      : /decision/.test(t) ? 'e-dec'
+      : /fail|error|denied|exception|rejected/.test(t) ? 'e-bad'
+      : /scheduler|tick|analysis|portfolio_check/.test(t) ? 'e-tick' : '';
+    // A compact, readable gist per row instead of a raw JSON dump.
+    var gist;
+    if (t === 'scan_snapshot') {
+      gist = (r.reason || '?') + ' · ' + ((r.symbols || []).length) + ' symbols · ' +
+             ((r.signals || []).length) + ' signals' +
+             (r.error ? ' · ' + r.error : '');
+    } else if (t === 'analysis') {
+      gist = r.symbol + ' · ' + (r.ok ? 'ok' : 'no data');
+    } else {
+      var copy = {};
+      Object.keys(r).forEach(function (k) {
+        if (k !== 'timestamp' && k !== 'type' && k !== 'mode') copy[k] = r[k];
+      });
+      gist = JSON.stringify(copy);
+      if (gist === '{}') gist = '';
+      if (gist.length > 320) gist = gist.slice(0, 320) + '…';
+    }
+    return '<div class="mc-le ' + cls + '">' +
+      '<div class="mc-le-h"><span class="mc-le-t">' + mcEsc(mcClock(Date.parse(r.timestamp))) + '</span>' +
+      '<span class="mc-le-k">' + mcEsc(t) + '</span>' +
+      (r.mode ? '<span class="mc-le-t">' + mcEsc(r.mode) + '</span>' : '') + '</div>' +
+      (gist ? '<div class="mc-le-b">' + mcEsc(gist) + '</div>' : '') + '</div>';
+  }).join('');
+}
+
+function mcRenderCtl() {
+  var body = mcEl('mcCtlBody'), cnt = mcEl('mcCtlCount'); if (!body) return;
+  var st = MC.state, se = MC.session;
+  if (cnt) cnt.textContent = st ? (st.halted ? 'halted' : 'armed') : '—';
+  var out = '<div class="mc-tbl">';
+  out += mcRow([
+    ['broker session', se ? (se.linked ? 'LINKED' : 'NOT LINKED') : (MC.errs.session || '—'),
+      (se && se.linked) ? 'g' : 'r'],
+    ['accounts', (se && Array.isArray(se.accounts)) ? se.accounts.length : null],
+    ['link error', (se && se.error) ? se.error : null],
+    ['api', MC.errs.state ? 'ERROR' : 'OK', MC.errs.state ? 'r' : 'g']
+  ], 4);
+  var errKeys = Object.keys(MC.errs);
+  if (errKeys.length) {
+    out += errKeys.map(function (k) { return mcRow([['/' + k + ' error', MC.errs[k], 'r']], 1); }).join('');
+  }
+  out += '</div>';
+  body.innerHTML = out;
+  // resume only makes sense when something is actually stopped
+  var r = mcEl('mcCtlResume'); if (r) r.disabled = !(st && (st.halted || st.isPaused));
+  var b = mcEl('mcCtlBreaker');
+  if (b) b.disabled = !(st && st.circuit && st.circuit.state !== 'CLOSED');
+}
+
+/* ══ INSPECTOR — the full dossier, a FLOW block under the stage ═════════════ */
+function mcRenderInspect(node) {
+  var el = mcEl('mcInspect'); if (!el) return;
+  if (!node) { el.hidden = true; el.innerHTML = ''; return; }
+  var out = '';
+  if (node.kind === 'star') {
+    var eq = node.equity, pnl = node.pnl;
+    out += '<div class="mc-ihead"><span class="mc-isym">THE ACCOUNT STAR</span>' +
+      mcPill(node.mode === 'live' ? 'LIVE' : 'PAPER', node.mode === 'live' ? 'is-live' : 'is-paper', true) +
+      '<span class="mc-ispacer"></span>' +
+      '<button type="button" class="mc-btn b-sm" data-mcact="closeInspect">Close</button></div>';
+    out += '<div class="mc-igrid">' +
+      mcIC('equity', eq === null ? 'NOT EXPOSED' : mcMoney(eq), eq === null ? 'o' : 'a') +
+      mcIC('realised today', pnl === null ? 'NOT TRACKED' : mcMoney(pnl, { signed: true }),
+           pnl === null ? 'o' : (pnl >= 0 ? 'g' : 'r')) +
+      mcIC('worlds charted', String(MC.worlds.length)) +
+      mcIC('awaiting you', String((MC.pending && MC.pending.pending || []).length)) +
+      '</div>';
+    out += '<div class="mc-iwhy">' + (eq === null
+      ? 'No <code>/api/trading</code> route exposes account equity — <code>getAccountValue()</code> ' +
+        'exists in the module but is not mounted — so the star\'s size here is a <b>fixed ' +
+        'placeholder</b> and it wears a dashed rim to admit it. Equity is read best-effort ' +
+        'from the raw <code>/portfolio</code> payload using the same key preference as the ' +
+        'server\'s own parser; when that shape is unrecognised we print NOT EXPOSED rather ' +
+        'than a number.'
+      : 'Star radius scales with equity. The core colour is today\'s realised P&amp;L: green ' +
+        'above zero, red below.') + '</div>';
+  } else {
+    var s = node.snap || {};
+    out += '<div class="mc-ihead"><span class="mc-isym">' + mcEsc(node.symbol) + '</span>' +
+      mcPill(node.reg.name, node.dark ? 'is-off' : 'is-accent', true) +
+      (node.pending.length ? mcPill(node.pending.length + ' awaiting you', 'is-claim', true) : '') +
+      (node.pos ? mcPill('held', 'is-good') : '') +
+      '<span class="mc-ispacer"></span>' +
+      '<button type="button" class="mc-btn b-sm" data-mcact="closeInspect">Close</button></div>';
+    out += '<div class="mc-igrid">';
+    out += mcIC('price', node.price === null ? 'NO PRICE' : mcMoney(node.price), node.price === null ? 'o' : 'a');
+    out += mcIC('vs bar close', mcPct(s.vsBarClosePct) || '—',
+      s.vsBarClosePct > 0 ? 'g' : (s.vsBarClosePct < 0 ? 'r' : 'o'));
+    out += mcIC('rsi', s.rsi == null ? '—' : String(s.rsi));
+    out += mcIC('atr % of price', s.atrPct == null ? '—' : s.atrPct + '%');
+    out += mcIC('atr vs its avg', s.atrRatio == null ? '—' : s.atrRatio + 'x');
+    out += mcIC('macd histogram', (s.macd && s.macd.histogram != null) ? String(s.macd.histogram) : '—',
+      (s.macd && s.macd.histogram > 0) ? 'g' : ((s.macd && s.macd.histogram < 0) ? 'r' : 'o'));
+    out += mcIC('sma 50 / 200', (s.sma50 != null && s.sma200 != null)
+      ? (mcMoney(s.sma50) + ' / ' + mcMoney(s.sma200)) : '—');
+    if (s.bollinger) out += mcIC('bollinger l/m/u', mcMoney(s.bollinger.lower) + ' / ' +
+      mcMoney(s.bollinger.middle) + ' / ' + mcMoney(s.bollinger.upper));
+    if (node.pos) {
+      out += mcIC('held', mcNum(node.pos.quantity) + ' @ ' + (mcMoney(node.pos.avgPrice) || '—'));
+      out += mcIC('unrealised', node.unreal === null ? 'needs a price' : mcMoney(node.unreal, { signed: true }),
+        node.unreal === null ? 'o' : (node.unreal >= 0 ? 'g' : 'r'));
+    }
+    out += mcIC('fills today', String(node.fills.length));
+    if (node.cashFlowToday !== null) {
+      out += mcIC('net cash flow today', mcMoney(node.cashFlowToday, { signed: true }),
+        node.cashFlowToday >= 0 ? 'g' : 'r');
+    }
+    out += mcIC('bars analysed', s.bars == null ? '—' : String(s.bars));
+    out += '</div>';
+
+    // WHY the world looks the way it looks — the regime rule, stated.
+    var why = '';
+    if (node.dark) {
+      why = '<b>This world is dark.</b> The broker returned no usable data, so it has no ' +
+        'price, no regime and no size — it is drawn hollow and dashed rather than guessed at. ' +
+        'Reason given: <b>' + mcEsc(s.err || 'unknown') + '</b>';
+    } else {
+      var rr = mcNum(s.atrRatio);
+      if (node.reg.name === 'VOLATILE') why = 'ATR is <b>' + rr + 'x</b> its own recent average, above the 2x volatile threshold.';
+      else if (node.reg.name === 'QUIET') why = 'ATR is <b>' + rr + 'x</b> its own recent average, below the 0.5x quiet threshold.';
+      else if (node.reg.name === 'TRENDING UP') why = 'Price above SMA50 above SMA200 with a positive MACD histogram.';
+      else if (node.reg.name === 'TRENDING DOWN') why = 'Price below SMA50 below SMA200 with a negative MACD histogram.';
+      else why = 'No trend and no volatility extreme — the default <b>ranging</b> read.';
+      why += ' Orbit radius ranks it by ATR % of price; sweep speed tracks that same ' +
+        'ATR-vs-average ratio, so the motion and the colour agree.';
+    }
+    if (node.signal) {
+      why += '<br><br><b>SIGNAL: ' + mcEsc(String(node.signal.action).toUpperCase()) + '</b> at ' +
+        mcEsc(node.signal.confidence) + '% via <b>' + mcEsc(node.signal.strategy) + '</b>.<br>' +
+        mcEsc(node.signal.reasoning || '');
+    }
+    out += '<div class="mc-iwhy">' + why + '</div>';
+
+    if (node.pending.length) {
+      out += '<div class="mc-iwhy"><b>Waiting on you:</b> ' + node.pending.map(function (p) {
+        var d = p.decision || {};
+        return mcEsc(String(d.action).toUpperCase() + ' ' + d.quantity + ' @ ' + (mcMoney(d.price) || '?') +
+          ' (' + (mcMoney(p.exposure) || '?') + ' exposure)');
+      }).join(' · ') + '</div>';
+    }
+    out += '<div class="mc-iacts">' +
+      '<button type="button" class="mc-btn b-sm b-acc" data-mcact="analyze" data-sym="' + mcEsc(node.symbol) + '">Analyze now</button>' +
+      '<button type="button" class="mc-btn b-sm" data-mcact="prefill" data-sym="' + mcEsc(node.symbol) + '">Draft a decision</button>' +
+      (node.pending.length
+        ? '<button type="button" class="mc-btn b-sm b-go" data-mcact="approve" data-id="' + mcEsc(node.pending[0].id) + '">Approve</button>' +
+          '<button type="button" class="mc-btn b-sm b-no" data-mcact="reject" data-id="' + mcEsc(node.pending[0].id) + '">Reject</button>'
+        : '') +
+      '</div>';
+  }
+  el.innerHTML = out;
+  el.hidden = false;
+}
+function mcIC(label, val, cls) {
+  return '<div class="mc-ic"><i>' + mcEsc(label) + '</i><b class="' + (cls || '') + '">' +
+         mcEsc(val == null ? '—' : val) + '</b></div>';
+}
+
+/* ══ ACTIONS ═════════════════════════════════════════════════════════════════
+   APPROVE/DECIDE carry the server's CONFIRMATION CONTRACT: the panel must echo
+   back the mode it displayed and the exact exposure it displayed, or the brain
+   answers 409. That is what makes a stale screen physically unable to fire into a
+   changed brain, so we always read the exposure from the SAME pending object the
+   row was rendered from. */
+function mcAction(act, btn) {
+  var id = btn && btn.getAttribute('data-id');
+  var sym = btn && btn.getAttribute('data-sym');
+  if (act === 'unpin') { mcUnpin(); return; }
+  if (act === 'closeInspect') { mcRenderInspect(null); mcUnpin(); return; }
+  if (act === 'inspect') {
+    var w = MC.worlds.filter(function (x) { return x.symbol === sym; })[0];
+    if (w) { MC.sel = w; mcRenderInspect(w); mcEl('mcInspect').scrollIntoView({ block: 'nearest' }); }
+    return;
+  }
+  if (act === 'scrollQueue') { var q = mcEl('mcSecQueue'); if (q) { q.open = true; q.scrollIntoView({ block: 'start' }); } return; }
+  if (act === 'scrollPerf') { var pf = mcEl('mcSecPerf'); if (pf) { pf.open = true; pf.scrollIntoView({ block: 'start' }); } return; }
+  if (act === 'prefill') {
+    var sec = mcEl('mcSecDecide'); if (sec) sec.open = true;
+    var w2 = MC.worlds.filter(function (x) { return x.symbol === sym; })[0];
+    mcEl('mcDcSym').value = sym || '';
+    if (w2 && w2.price !== null) mcEl('mcDcPx').value = w2.price.toFixed(2);
+    mcDcExposure();
+    if (sec) sec.scrollIntoView({ block: 'start' });
+    return;
+  }
+  if (act === 'analyze') {
+    var sec2 = mcEl('mcSecAnalyze'); if (sec2) sec2.open = true;
+    mcEl('mcAnSym').value = sym || '';
+    mcAnalyze();
+    if (sec2) sec2.scrollIntoView({ block: 'start' });
+    return;
+  }
+  if (act === 'approve' || act === 'reject') {
+    var item = ((MC.pending && MC.pending.pending) || []).filter(function (p) { return p.id === id; })[0];
+    if (!item) { mcToast('That order is no longer in the queue.', 'warn'); mcPollAll(true); return; }
+    var d = item.decision || {};
+    var label = String(d.action || '?').toUpperCase() + ' ' + (d.symbol || '?') + ' x' + d.quantity +
+                ' @ ' + (mcMoney(d.price) || '?') + '  (' + (mcMoney(item.exposure) || '?') + ' exposure)';
+    if (act === 'reject') {
+      if (!confirm('REJECT this order?\n\n' + label)) return;
+      mcBusy(btn, true);
+      mcFetch('/reject', { method: 'POST', body: { id: id, reason: 'rejected by owner from the cosmos' } })
+        .then(function () { mcToast('Rejected: ' + label, 'ok'); })
+        .catch(function (e) { mcToast('Reject failed: ' + e.message, 'bad', 9000); })
+        .then(function () { mcBusy(btn, false); mcPollAll(true); });
+      return;
+    }
+    var mode = (MC.state && MC.state.mode) || 'paper';
+    var warn = mode === 'live'
+      ? 'APPROVE — THIS SENDS A REAL ORDER WITH REAL MONEY.\n\n'
+      : 'APPROVE (paper mode — no real order).\n\n';
+    if (!confirm(warn + label)) return;
+    mcBusy(btn, true);
+    mcFetch('/approve', { method: 'POST', body: { id: id, confirmMode: mode, confirmExposure: item.exposure } })
+      .then(function (r) { mcToast('Approved (' + (r && r.status || 'ok') + '): ' + label, 'ok', 8000); })
+      .catch(function (e) {
+        mcToast(e.status === 409
+          ? 'Refused — the brain changed under you: ' + e.message + '. Refreshing.'
+          : 'Approve failed: ' + e.message, 'bad', 10000);
+      })
+      .then(function () { mcBusy(btn, false); mcPollAll(true); });
+    return;
+  }
+}
+function mcBusy(btn, on) {
+  if (!btn) return;
+  btn.disabled = !!on;
+  if (on) { btn.dataset.mcLabel = btn.textContent; btn.textContent = '…'; }
+  else if (btn.dataset.mcLabel) { btn.textContent = btn.dataset.mcLabel; delete btn.dataset.mcLabel; }
+}
+function mcOut(id, text, cls) {
+  var e = mcEl(id); if (!e) return;
+  e.hidden = false; e.className = 'mc-out' + (cls ? ' ' + cls : '');
+  e.textContent = text;
+}
+
+function mcAnalyze() {
+  var sym = String(mcEl('mcAnSym').value || '').trim().toUpperCase();
+  if (!/^[A-Z][A-Z0-9.\-]{0,9}$/.test(sym)) { mcOut('mcAnOut', 'Enter a valid ticker.', 'bad'); return; }
+  mcOut('mcAnOut', 'Analyzing ' + sym + '…');
+  mcFetch('/analyze', { method: 'POST', body: { symbol: sym } })
+    .then(function (r) { mcOut('mcAnOut', JSON.stringify(r, null, 2), 'ok'); })
+    .catch(function (e) { mcOut('mcAnOut', 'Failed: ' + e.message, 'bad'); });
+}
+
+function mcDcExposure() {
+  var q = mcNum(mcEl('mcDcQty').value), p = mcNum(mcEl('mcDcPx').value);
+  var e = mcEl('mcDcExp'); if (!e) return null;
+  if (q === null || p === null || q <= 0 || p <= 0) { e.textContent = 'Exposure: — (quantity and limit price required)'; return null; }
+  var exp = +(q * p).toFixed(2);
+  var mode = (MC.state && MC.state.mode) || '?';
+  e.innerHTML = 'Exposure: <b>' + mcEsc(mcMoney(exp)) + '</b> — this exact figure and the mode (<b>' +
+    mcEsc(mode.toUpperCase()) + '</b>) are echoed to the brain; a mismatch is refused with a 409.';
+  return exp;
+}
+function mcSubmitDecision() {
+  var exp = mcDcExposure();
+  var body = {
+    action: mcEl('mcDcAct').value,
+    symbol: String(mcEl('mcDcSym').value || '').trim().toUpperCase(),
+    quantity: mcNum(mcEl('mcDcQty').value),
+    price: mcNum(mcEl('mcDcPx').value),
+    reasoning: String(mcEl('mcDcWhy').value || '').trim(),
+    confidence: mcNum(mcEl('mcDcConf').value)
+  };
+  if (!/^[A-Z][A-Z0-9.\-]{0,9}$/.test(body.symbol)) { mcOut('mcDcOut', 'Invalid symbol.', 'bad'); return; }
+  if (body.quantity === null || body.quantity <= 0) { mcOut('mcDcOut', 'Quantity must be positive.', 'bad'); return; }
+  if (body.price === null || body.price <= 0) {
+    mcOut('mcDcOut', 'A limit price is required — the brain disables market orders because their exposure cannot be capped.', 'bad');
+    return;
+  }
+  if (!body.reasoning) { mcOut('mcDcOut', 'Reasoning is required.', 'bad'); return; }
+  var mode = (MC.state && MC.state.mode) || 'paper';
+  if (!confirm((mode === 'live' ? 'LIVE — REAL MONEY.\n\n' : 'PAPER.\n\n') +
+      body.action.toUpperCase() + ' ' + body.symbol + ' x' + body.quantity + ' @ ' +
+      mcMoney(body.price) + '  (' + mcMoney(exp) + ' exposure)')) return;
+  body.confirmMode = mode; body.confirmExposure = exp;
+  mcOut('mcDcOut', 'Submitting…');
+  mcFetch('/decide', { method: 'POST', body: body })
+    .then(function (r) { mcOut('mcDcOut', JSON.stringify(r, null, 2), 'ok'); mcPollAll(true); })
+    .catch(function (e) { mcOut('mcDcOut', 'Failed (' + (e.status || '?') + '): ' + e.message, 'bad'); mcPollAll(true); });
+}
+
+function mcCtl(path, body, confirmMsg, outId) {
+  if (confirmMsg && !confirm(confirmMsg)) return;
+  mcOut(outId || 'mcCtlOut', 'Working…');
+  mcFetch(path, { method: 'POST', body: body || {} })
+    .then(function (r) {
+      mcOut(outId || 'mcCtlOut', JSON.stringify(r, null, 2), 'ok');
+      mcToast((r && (r.message || r.reason)) || 'Done', 'ok');
+    })
+    .catch(function (e) {
+      mcOut(outId || 'mcCtlOut', 'Failed (' + (e.status || '?') + '): ' + e.message, 'bad');
+      mcToast('Failed: ' + e.message, 'bad', 9000);
+    })
+    .then(function () { mcPollAll(true); });
+}
+
+/* ══ BOOT ════════════════════════════════════════════════════════════════════ */
+function mcWireControls() {
+  mcEl('mcZoomIn').addEventListener('click', function () { mcZoomAt(1.22); });
+  mcEl('mcZoomOut').addEventListener('click', function () { mcZoomAt(1 / 1.22); });
+  mcEl('mcFit').addEventListener('click', function () { mcFit(false); });
+  mcEl('mcFull').addEventListener('click', mcToggleFull);
+
+  mcEl('mcTokenSave').addEventListener('click', function () {
+    var t = String(mcEl('mcTokenIn').value || '').trim();
+    if (!t) { mcToast('Paste a token first.', 'warn'); return; }
+    try { localStorage.setItem('vint_access_token', t); } catch (_) {}
+    MC.token = t; mcEl('mcTokenIn').value = '';
+    mcSetAuthGate(false);
+    mcToast('Token stored — reconnecting.', 'ok');
+    mcPollAll(true);
+  });
+
+  mcEl('mcAnGo').addEventListener('click', mcAnalyze);
+  mcEl('mcDcGo').addEventListener('click', mcSubmitDecision);
+  ['mcDcQty', 'mcDcPx'].forEach(function (id) {
+    mcEl(id).addEventListener('input', mcDcExposure);
+  });
+
+  mcEl('mcCtlRefresh').addEventListener('click', function () { mcPollAll(true); mcToast('Refreshing…'); });
+  mcEl('mcCtlScan').addEventListener('click', function () {
+    mcCtl('/strategy/scan', {}, 'Run a REAL scan now?\n\nInside the regular session this can ' +
+      'place decisions. In live mode they still queue for your approval.');
+  });
+  mcEl('mcCtlStart').addEventListener('click', function () { mcCtl('/strategy/start', {}); });
+  mcEl('mcCtlStop').addEventListener('click', function () { mcCtl('/strategy/stop', {}); });
+  mcEl('mcCtlBreaker').addEventListener('click', function () { mcCtl('/strategy/circuit/reset', {}); });
+  mcEl('mcCtlResume').addEventListener('click', function () {
+    mcCtl('/resume', { confirm: 'RESUME' }, 'Resume trading?');
+  });
+  mcEl('mcCtlHalt').addEventListener('click', function () {
+    mcCtl('/emergency-stop', { reason: 'Manual stop from the Mercatus Cosmos' },
+      'EMERGENCY STOP — halt every tick immediately?');
+  });
+
+  // one delegated listener for every data-mcact button in the bridge + inspector
+  document.addEventListener('click', function (ev) {
+    var b = ev.target.closest && ev.target.closest('[data-mcact]');
+    if (!b) return;
+    if (b.closest('#mcHud')) return;        // the HUD has its own handler
+    mcAction(b.getAttribute('data-mcact'), b);
+  });
+}
+
+function mcBoot() {
+  MC.reduced = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+  MC.cv = mcEl('mcCanvas');
+  MC.token = mcReadToken();
+  mcResize();
+  mcWireInput();
+  mcWireControls();
+  mcSyncFullBtn();
+  mcRenderDeck();
+  mcVeilState();
+  mcSetAuthGate(!MC.token);
+  mcStartLoop();
+  mcStartPolling();
+  mcPollAll(true);
+  // the deck clock is seconds-resolution, so once a second is exactly enough
+  setInterval(function () { if (!document.hidden) { mcRenderDeck(); mcRenderVitals(); } }, 1000);
+}
+
+/* A background tab must never burn a frame OR a request. Guarded on both sides. */
+document.addEventListener('visibilitychange', function () {
+  if (document.hidden) { mcStopLoop(); }
+  else { mcResize(); mcStartLoop(); mcPollAll(false); }
+});
+window.addEventListener('resize', function () { mcResize(); MC.zoomRect = null; });
+
+if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', mcBoot);
+else mcBoot();
+
+/* ── TEST SEAM (verify-mercatus-collision.js only) ──────────────────────────
+   The collision verifier must measure the surface in its WORST CASE: a full sky,
+   a long error string, a pinned HUD, a loaded queue. It cannot get there against
+   a live broker that is currently refusing data, and waiting for a real market
+   event is not a test. So it pushes known-shaped payloads through the SAME
+   renderers the pollers use. This fabricates nothing at runtime — it is only ever
+   called by the verifier, and it writes into MC exactly as a successful poll
+   would. */
+window.__mcTestInject = function (payloads) {
+  Object.keys(payloads || {}).forEach(function (k) { MC[k] = payloads[k]; });
+  MC.errs = {};
+  mcPickSnapshot(); mcPickTick(); mcBuild(); mcFit(true); mcRenderAll();
+  return { worlds: MC.worlds.length, snapshotFrom: MC.snapshotFrom };
+};
+window.MC = MC;
+
+</script>
+</body>
+</html>
