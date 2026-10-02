@@ -461,8 +461,21 @@
     updateLauncher();
 
     try {
+      // THE COUNTERPARTY, NAMED (AETHERHOLD 2026-10-02, task 9TYJB74) ──────────
+      // The Pulse renders agents and humans as co-equal actors, and this is the
+      // one bazaar event where an AGENT is the actor. The counterparty name and
+      // kind are already computed in this scope (buyer/seller + their ids); the
+      // market's counterparties are always this user's own court (see the file
+      // header: "THE COUNTERPARTIES HERE ARE YOUR OWN COURT"), so an id that is
+      // not SELF is, verifiably, an agent. Surfacing fields that already exist —
+      // not fabricating one. Additive: the sole prior shape is preserved.
+      var cpId   = playerIsSeller ? buyerId : String(lst.sellerId);
+      var cpName = playerIsSeller ? buyer : String(lst.seller);
       W.dispatchEvent(new (W.CustomEvent || CustomEvent)('vint:market-settled', {
-        detail: { title: lst.title, lumen: amt, soldByYou: playerIsSeller, kind: kind.k }
+        detail: {
+          title: lst.title, lumen: amt, soldByYou: playerIsSeller, kind: kind.k,
+          counterparty: cpName, counterpartyIsAgent: (cpId !== SELF)
+        }
       }));
     } catch (_) {}
     return { ok: true, sold: playerIsSeller, lumen: amt, buyer: buyer, seller: String(lst.seller) };
