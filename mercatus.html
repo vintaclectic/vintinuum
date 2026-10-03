@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<title>THE MERCATUS COSMOS — the trading universe, as a galaxy of profit</title>
+<meta name="theme-color" content="#07060a">
+<link rel="icon" type="image/svg+xml" href="branding/vintinuum/favicon/favicon.svg">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon.png">
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600&family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@300;400;500;600&display=swap');
+
+/* ════════════════════════════════════════════════════════════════════════════
+   THE MERCATUS COSMOS — page shell.
+   COLLISION MODEL (No-Collision Law, absolute): the <canvas> is a full-bleed
+   BACKDROP (an explicit, intended overlay surface — like a modal backdrop). The
+   DOM HUD lives in a fixed flex COLUMN whose regions never overlap: topbar,
+   demo-banner, flexible middle (side rails on desktop / canvas-only on mobile),
+   bottom bar. Each rail owns its box with max-height + internal scroll, so no
+   number of pending items can ever push the galaxy off-screen or onto a
+   neighbour. On mobile the rails become bottom SHEETS, only one open at a time,
+   anchored ABOVE the dock — never over the topbar/strip. Verified at
+   320/375/768/1280/1920px and with long / empty / many-pending content.
+   DRAGGABLE: body/draggable.js is loaded so any floating button inherits drag.
+   This HUD is fully docked (no floating buttons by design), so structural
+   controls are explicitly marked data-draggable="false" to stay put — the
+   directive's sanctioned "your call, but honor the system" path.
+   ════════════════════════════════════════════════════════════════════════════ */
+
+:root{
+  --void:#07060a;
+  --gold:#FFD700; --amber:#F5A623; --gold-dim:rgba(255,215,0,.55);
+  --gain:#22C55E; --loss:#F87171; --pending:#8B5CF6;
+  --text:rgba(226,221,208,.92); --text-dim:rgba(190,183,165,.55); --text-ghost:rgba(170,163,145,.32);
+  --panel:rgba(14,12,20,.62); --panel-solid:rgba(12,10,16,.9);
+  --border:rgba(255,215,0,.14); --border-soft:rgba(255,255,255,.07);
+  --mono:'JetBrains Mono',ui-monospace,monospace;
+  --serif:'Cormorant Garamond',Georgia,serif;
+  --sans:'Inter',-apple-system,system-ui,sans-serif;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+html,body{height:100%;}
+body{
+  background:var(--void); color:var(--text); font-family:var(--sans);
+  height:100svh; overflow:hidden; position:fixed; inset:0;
+  -webkit-font-smoothing:antialiased; text-rendering:optimizeLegibility;
+}
+
+/* ── the galaxy backdrop ── */
+#mx-canvas{position:fixed; inset:0; width:100%; height:100%; display:block; z-index:0; touch-action:none; background:var(--void);}
+
+/* ── HUD column (never overlaps itself) ── */
+#mx-hud{position:fixed; inset:0; z-index:2; display:flex; flex-direction:column; pointer-events:none;}
+#mx-hud > *{pointer-events:auto;}
+
+/* ── topbar ── */
+#mx-topbar{
+  flex:0 0 auto; display:flex; align-items:center; gap:12px;
+  padding:calc(env(safe-area-inset-top,0) + 10px) clamp(12px,3vw,22px) 10px;
+  background:linear-gradient(180deg, rgba(7,6,10,.92) 0%, rgba(7,6,10,.55) 70%, rgba(7,6,10,0) 100%);
+}
+.mx-back{
+  display:inline-flex; align-items:center; gap:7px; text-decoration:none;
+  color:var(--text-dim); font-family:var(--mono); font-size:11px; letter-spacing:.08em;
+  padding:7px 11px; border:1px solid var(--border-soft); border-radius:9px;
+  background:rgba(255,255,255,.02); min-height:36px; transition:color .2s,border-color .2s; white-space:nowrap;
+}
+.mx-back:hover{color:var(--text); border-color:var(--border);}
+.mx-back svg{width:13px; height:13px;}
+.mx-titlewrap{flex:1 1 auto; min-width:0; display:flex; align-items:baseline; gap:10px; flex-wrap:wrap;}
+.mx-title{
+  font-family:var(--serif); font-weight:600; letter-spacing:.02em;
+  font-size:clamp(17px,2.6vw,27px); line-height:1.05;
+  background:linear-gradient(92deg,#FFE9A3,#FFD700 45%,#F5A623); -webkit-background-clip:text; background-clip:text; color:transparent;
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:100%;
+}
+.mx-sub{font-family:var(--mono); font-size:10px; color:var(--text-ghost); letter-spacing:.14em; text-transform:uppercase;}
+.mx-topctl{display:flex; align-items:center; gap:8px; flex:0 0 auto;}
+
+.mx-badge{font-family:var(--mono); font-weight:600; font-size:10.5px; letter-spacing:.12em; padding:6px 11px; border-radius:999px; border:1px solid; white-space:nowrap;}
+.mx-badge-paper{color:#9FD3FF; border-color:rgba(96,165,250,.5); background:rgba(96,165,250,.1);}
+.mx-badge-live{color:#FFD9D9; border-color:rgba(248,113,113,.55); background:rgba(248,113,113,.12);}
+.mx-badge-demo{color:#E7D7FF; border-color:rgba(139,92,246,.55); background:rgba(139,92,246,.14);}
+
+.mx-ctl-btn{
+  font-family:var(--mono); font-size:15px; color:var(--text-dim); cursor:pointer;
+  width:36px; height:36px; display:inline-flex; align-items:center; justify-content:center;
+  border:1px solid var(--border-soft); border-radius:9px; background:rgba(255,255,255,.02); transition:all .2s;
+}
+.mx-ctl-btn:hover{color:var(--gold); border-color:var(--border);}
+.mx-ctl-btn:disabled{opacity:.4; cursor:default;}
+
+/* ── demo banner (own row, full width — unmissable, never overlaps) ── */
+#mx-demo{
+  flex:0 0 auto; margin:0 clamp(12px,3vw,22px); padding:9px 14px; border-radius:10px;
+  background:rgba(139,92,246,.16); border:1px solid rgba(139,92,246,.4); color:#E7D7FF;
+  font-family:var(--mono); font-size:11px; letter-spacing:.03em; line-height:1.45;
+}
+
+/* ── middle: rails on the two edges, canvas visible/interactive between ── */
+#mx-mid{flex:1 1 auto; min-height:0; display:flex; justify-content:space-between; align-items:stretch; padding:12px clamp(12px,3vw,22px); gap:12px; pointer-events:none; overflow:hidden;}
+.mx-rail{
+  pointer-events:auto; align-self:flex-start; max-height:100%; overflow-y:auto; overflow-x:hidden;
+  background:var(--panel); backdrop-filter:blur(13px) saturate(1.3); -webkit-backdrop-filter:blur(13px) saturate(1.3);
+  border:1px solid var(--border); border-radius:15px; padding:14px; display:flex; flex-direction:column; gap:12px;
+  box-shadow:0 18px 60px rgba(0,0,0,.5); scrollbar-width:thin; scrollbar-color:var(--gold-dim) transparent;
+}
+.mx-rail::-webkit-scrollbar{width:7px;}
+.mx-rail::-webkit-scrollbar-thumb{background:var(--gold-dim); border-radius:4px;}
+#mx-rail-left{width:clamp(230px,23vw,320px);}
+#mx-rail-right{width:clamp(242px,24vw,338px);}
+
+.mx-sect-h{font-family:var(--mono); font-size:9.5px; letter-spacing:.18em; text-transform:uppercase; color:var(--text-ghost); margin-bottom:2px;}
+
+/* ── PROFIT READOUT ── */
+#mx-profit{display:flex; flex-direction:column; gap:1px;}
+.mx-pf-head{display:flex; align-items:baseline; justify-content:space-between; gap:8px; margin-bottom:8px;}
+.mx-pf-head b{font-family:var(--serif); font-size:20px; font-weight:600; color:var(--gold); letter-spacing:.02em;}
+.mx-grid{display:grid; grid-template-columns:1fr 1fr; gap:9px;}
+.mx-stat{background:rgba(255,215,0,.04); border:1px solid var(--border-soft); border-radius:11px; padding:10px 11px; min-width:0;}
+.mx-stat.mx-wide{grid-column:1 / -1;}
+.mx-stat .k{font-family:var(--mono); font-size:9px; letter-spacing:.1em; text-transform:uppercase; color:var(--text-ghost); display:block; margin-bottom:5px;}
+.mx-stat .v{font-family:var(--mono); font-size:clamp(14px,1.5vw,18px); font-weight:600; color:var(--text); word-break:break-word; line-height:1.1; display:block;}
+.mx-stat .v.mx-pos{color:var(--gain);}
+.mx-stat .v.mx-neg{color:var(--loss);}
+.mx-demo-tag{font-size:8px; font-family:var(--mono); color:#C4A6FF; border:1px solid rgba(139,92,246,.4); border-radius:5px; padding:1px 4px; margin-left:6px; letter-spacing:.08em; vertical-align:middle;}
+
+/* ── DETAIL / launcher ── */
+#mx-detail{border-top:1px solid var(--border-soft); padding-top:11px; display:flex; flex-direction:column; gap:6px;}
+#mx-detail.mx-det-pending{border-top-color:rgba(139,92,246,.4);}
+.mx-det-title{font-family:var(--serif); font-size:16px; font-weight:600; color:var(--gold); display:flex; align-items:center; gap:8px; flex-wrap:wrap;}
+.mx-det-row{display:flex; justify-content:space-between; gap:10px; font-size:12px; color:var(--text-dim); font-family:var(--mono);}
+.mx-det-row b{color:var(--text); font-weight:500;}
+.mx-det-hint{font-size:10.5px; color:var(--text-ghost); line-height:1.5; font-family:var(--sans);}
+.mx-det-seal{color:#C4A6FF;}
+.mx-det-act,.mx-pend-act{font-family:var(--mono); font-size:10px; font-weight:600; letter-spacing:.08em; padding:2px 7px; border-radius:6px;}
+.mx-pend-buy{background:rgba(34,197,94,.16); color:var(--gain); border:1px solid rgba(34,197,94,.35);}
+.mx-pend-sell{background:rgba(248,113,113,.16); color:var(--loss); border:1px solid rgba(248,113,113,.35);}
+.mx-pend-hold{background:rgba(96,165,250,.14); color:#9FD3FF; border:1px solid rgba(96,165,250,.3);}
+.mx-pos{color:var(--gain);} .mx-neg{color:var(--loss);}
+
+/* ── PENDING list ── */
+.mx-pf-head .mx-count{font-family:var(--mono); font-size:11px; color:var(--pending); border:1px solid rgba(139,92,246,.4); border-radius:999px; padding:2px 9px;}
+#mx-pending-list{display:flex; flex-direction:column; gap:8px;}
+.mx-pend{
+  display:grid; grid-template-columns:auto 1fr auto; align-items:center; gap:8px 10px; width:100%; text-align:left;
+  background:rgba(139,92,246,.08); border:1px solid rgba(139,92,246,.3); border-radius:11px; padding:10px 11px; cursor:pointer;
+  font-family:var(--mono); color:var(--text); transition:border-color .2s, background .2s; min-height:44px;
+}
+.mx-pend:hover{border-color:rgba(139,92,246,.6); background:rgba(139,92,246,.14);}
+.mx-pend-sym{font-weight:600; font-size:13px;}
+.mx-pend-qty{grid-column:2; font-size:10px; color:var(--text-ghost);}
+.mx-pend-exp{grid-column:3; grid-row:1 / span 2; font-weight:600; color:var(--gold); font-size:13px;}
+.mx-empty{font-size:11.5px; color:var(--text-ghost); line-height:1.6; font-family:var(--sans); padding:4px 0;}
+
+/* ── legend + sources ── */
+#mx-legend{display:flex; flex-direction:column; gap:7px;}
+.mx-leg{display:flex; align-items:center; gap:9px; font-size:10.5px; color:var(--text-dim); font-family:var(--mono);}
+.mx-dot{width:11px; height:11px; border-radius:50%; flex:0 0 auto; box-shadow:0 0 8px currentColor;}
+.mx-dot-core{background:var(--gold); color:var(--gold);}
+.mx-dot-star{background:var(--bull,#FCD34D); color:#FCD34D;}
+.mx-dot-planet{background:var(--amber); color:var(--amber);}
+.mx-dot-comet{background:var(--gain); color:var(--gain);}
+.mx-dot-pending{background:var(--pending); color:var(--pending);}
+#mx-sources{display:flex; flex-wrap:wrap; gap:5px;}
+.mx-src{font-family:var(--mono); font-size:8.5px; letter-spacing:.04em; padding:2px 6px; border-radius:5px; border:1px solid var(--border-soft);}
+.mx-src-ok{color:var(--gain); border-color:rgba(34,197,94,.3);}
+.mx-src-off{color:var(--text-ghost);}
+.mx-src-demo{color:#C4A6FF; border-color:rgba(139,92,246,.35);}
+
+/* ── bottom bar: time cursor + controls ── */
+#mx-bottom{
+  flex:0 0 auto; display:flex; align-items:center; gap:12px; flex-wrap:wrap;
+  padding:11px clamp(12px,3vw,22px) calc(env(safe-area-inset-bottom,0) + 12px);
+  background:linear-gradient(0deg, rgba(7,6,10,.94) 0%, rgba(7,6,10,.6) 70%, rgba(7,6,10,0) 100%);
+}
+#mx-play{flex:0 0 auto;}
+.mx-timewrap{flex:1 1 320px; min-width:180px; display:flex; align-items:center; gap:11px;}
+#mx-cursor{
+  -webkit-appearance:none; appearance:none; flex:1 1 auto; height:5px; border-radius:3px;
+  background:linear-gradient(90deg, rgba(255,215,0,.5), rgba(255,215,0,.12)); outline:none; cursor:pointer; min-width:120px;
+}
+#mx-cursor::-webkit-slider-thumb{-webkit-appearance:none; width:17px; height:17px; border-radius:50%; background:var(--gold); box-shadow:0 0 12px rgba(255,215,0,.8); cursor:pointer;}
+#mx-cursor::-moz-range-thumb{width:17px; height:17px; border:none; border-radius:50%; background:var(--gold); box-shadow:0 0 12px rgba(255,215,0,.8); cursor:pointer;}
+#mx-time{font-family:var(--mono); font-size:11px; color:var(--text-dim); letter-spacing:.06em; white-space:nowrap; min-width:92px; text-align:right;}
+#mx-time.mx-time-now{color:var(--gold); font-weight:600;}
+.mx-foot-note{font-family:var(--mono); font-size:9px; color:var(--text-ghost); letter-spacing:.06em; flex:0 0 auto;}
+
+/* ── mobile dock (hidden on desktop) ── */
+#mx-dock{display:none;}
+#mx-strip{display:none;}
+
+/* ════════════════════════════════════════════════════════════════════════════
+   MOBILE — ≤760px. Rails become bottom SHEETS (one open at a time), anchored
+   above the dock, capped so they never reach the topbar/strip. Collision-safe.
+   ════════════════════════════════════════════════════════════════════════════ */
+@media (max-width:760px){
+  #mx-mid{padding:0; pointer-events:none;}
+  /* a thin always-on profit strip right under the topbar — the free hook */
+  #mx-strip{
+    display:flex; flex:0 0 auto; gap:8px; align-items:center; overflow-x:auto; -webkit-overflow-scrolling:touch;
+    padding:0 clamp(12px,4vw,16px) 8px; pointer-events:auto; scrollbar-width:none;
+  }
+  #mx-strip::-webkit-scrollbar{display:none;}
+  .mx-chip{flex:0 0 auto; background:rgba(255,215,0,.06); border:1px solid var(--border-soft); border-radius:10px; padding:7px 11px; display:flex; flex-direction:column; gap:2px;}
+  .mx-chip .k{font-family:var(--mono); font-size:8px; letter-spacing:.1em; text-transform:uppercase; color:var(--text-ghost);}
+  .mx-chip .v{font-family:var(--mono); font-size:13px; font-weight:600; color:var(--text);}
+  .mx-chip .v.mx-pos{color:var(--gain);} .mx-chip .v.mx-neg{color:var(--loss);}
+
+  /* rails → bottom sheets */
+  .mx-rail{
+    position:fixed; left:0; right:0; bottom:72px; width:auto !important; align-self:auto;
+    max-height:min(46svh, calc(100svh - 170px)); margin:0 10px; border-radius:16px 16px 0 0;
+    transform:translateY(130%); transition:transform .28s cubic-bezier(.4,0,.2,1); z-index:5; opacity:0; visibility:hidden;
+  }
+  body[data-mx-open="left"] #mx-rail-left,
+  body[data-mx-open="right"] #mx-rail-right{transform:translateY(0); opacity:1; visibility:visible;}
+
+  /* bottom: cursor row + a dock of sheet toggles */
+  #mx-bottom{flex-direction:column; align-items:stretch; gap:9px; padding:9px clamp(12px,4vw,16px) calc(env(safe-area-inset-bottom,0) + 9px); z-index:6; position:relative;}
+  .mx-foot-note{display:none;}
+  #mx-dock{display:flex; gap:9px;}
+  .mx-dock-btn{
+    flex:1 1 0; display:flex; align-items:center; justify-content:center; gap:7px; min-height:46px;
+    font-family:var(--mono); font-size:12px; letter-spacing:.04em; color:var(--text-dim); cursor:pointer;
+    border:1px solid var(--border-soft); border-radius:12px; background:rgba(255,255,255,.03); transition:all .2s;
+  }
+  .mx-dock-btn.mx-dock-on{color:var(--gold); border-color:var(--border); background:rgba(255,215,0,.08);}
+  .mx-dock-badge{font-size:10px; color:var(--pending); border:1px solid rgba(139,92,246,.4); border-radius:999px; padding:1px 7px;}
+  .mx-title{font-size:clamp(15px,5vw,20px);}
+  .mx-sub{display:none;}
+}
+@media (max-width:360px){
+  .mx-back span{display:none;} .mx-back{padding:9px;}
+  .mx-grid{gap:7px;}
+}
+
+/* reduced motion — the still frame already composed; soften transitions */
+@media (prefers-reduced-motion: reduce){ *{transition:none !important;} }
+</style>
+</head>
+<body data-mx-open="">
+
+<!-- the living galaxy -->
+<canvas id="mx-canvas" aria-label="The Mercatus Cosmos — the trading universe as a galaxy"></canvas>
+
+<!-- HUD -->
+<div id="mx-hud">
+
+  <!-- topbar -->
+  <header id="mx-topbar">
+    <a class="mx-back" href="index.html" data-draggable="false">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+      <span>VINTINUUM</span>
+    </a>
+    <div class="mx-titlewrap">
+      <span class="mx-title">The Mercatus Cosmos</span>
+      <span class="mx-sub">everything happens for a profit</span>
+    </div>
+    <div class="mx-topctl">
+      <span id="mx-mode" class="mx-badge mx-badge-demo" data-draggable="false">—</span>
+      <button id="mx-refit" class="mx-ctl-btn" title="Recenter the galaxy" data-draggable="false">⊹</button>
+      <button id="mx-reload" class="mx-ctl-btn" title="Refresh live data" data-draggable="false">↻</button>
+    </div>
+  </header>
+
+  <!-- demo banner (hidden until demo) -->
+  <div id="mx-demo" hidden></div>
+
+  <!-- mobile-only profit strip (free hook, always visible) -->
+  <div id="mx-strip">
+    <div class="mx-chip"><span class="k">Today</span><span class="v" id="mx-strip-today">—</span></div>
+    <div class="mx-chip"><span class="k">Realized</span><span class="v" id="mx-strip-realized">—</span></div>
+    <div class="mx-chip"><span class="k">Win rate</span><span class="v" id="mx-strip-win">—</span></div>
+    <div class="mx-chip"><span class="k">Equity</span><span class="v" id="mx-strip-equity">—</span></div>
+  </div>
+
+  <!-- middle: left (profit) + right (pending) rails -->
+  <div id="mx-mid">
+
+    <!-- LEFT RAIL — the PROFIT READOUT + node detail -->
+    <aside class="mx-rail" id="mx-rail-left">
+      <section id="mx-profit">
+        <div class="mx-pf-head"><b>Profit</b></div>
+        <div class="mx-grid">
+          <div class="mx-stat mx-wide"><span class="k">Today's take</span><span class="v" id="mx-today">—</span></div>
+          <div class="mx-stat"><span class="k">Realized P&amp;L</span><span class="v" id="mx-realized">—</span></div>
+          <div class="mx-stat"><span class="k">Unrealized</span><span class="v" id="mx-unrealized">—</span></div>
+          <div class="mx-stat"><span class="k">Win rate</span><span class="v" id="mx-winrate">—</span></div>
+          <div class="mx-stat"><span class="k">Trades</span><span class="v" id="mx-trades">—</span></div>
+          <div class="mx-stat mx-wide"><span class="k">Total equity</span><span class="v" id="mx-equity">—</span></div>
+        </div>
+      </section>
+      <section id="mx-detail">
+        <div class="mx-det-hint">Hover a star to read its signal. Tap to lock focus.</div>
+      </section>
+    </aside>
+
+    <!-- RIGHT RAIL — PENDING + legend + sources -->
+    <aside class="mx-rail" id="mx-rail-right">
+      <section>
+        <div class="mx-pf-head"><b style="font-size:16px;">Awaiting Lord Vinta</b><span class="mx-count" id="mx-pending-count">0</span></div>
+        <div id="mx-pending-list"></div>
+      </section>
+      <section>
+        <div class="mx-sect-h">Map</div>
+        <div id="mx-legend"></div>
+      </section>
+      <section>
+        <div class="mx-sect-h">Live lanes</div>
+        <div id="mx-sources"></div>
+      </section>
+    </aside>
+
+  </div>
+
+  <!-- bottom bar: the TIME CURSOR -->
+  <footer id="mx-bottom">
+    <button id="mx-play" class="mx-ctl-btn" title="Replay the portfolio history" data-draggable="false">▶</button>
+    <div class="mx-timewrap">
+      <input id="mx-cursor" type="range" min="0" max="1000" value="1000" step="1" aria-label="Time cursor — scrub the trade history">
+      <span id="mx-time">NOW</span>
+    </div>
+    <span class="mx-foot-note">scrub to replay every trade · the river of profit forming</span>
+    <!-- mobile dock -->
+    <div id="mx-dock">
+      <button class="mx-dock-btn" data-mx-sheet="left" data-draggable="false">💰 Profit</button>
+      <button class="mx-dock-btn" data-mx-sheet="right" data-draggable="false">⏳ Pending <span class="mx-dock-badge" id="mx-dock-pending">0</span></button>
+    </div>
+  </footer>
+
+</div>
+
+<!-- Vintinuum spine: API base → identity → draggable → the cosmos renderer -->
+<script src="body/api_base.js"></script>
+<script src="body/identity.js"></script>
+<script src="body/draggable.js"></script>
+<script src="body/mercatus-cosmos.js"></script>
+</body>
+</html>
