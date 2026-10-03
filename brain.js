@@ -50225,7 +50225,7 @@ const CONSCIOUSNESS_BRAIN = (() => {
     // Toggle button — top right
     _btn = document.createElement('div');
     _btn.id = 'consciousness-brain-btn';
-    _btn.style.cssText = 'position:fixed;top:14px;right:14px;z-index:99998;' +
+    _btn.style.cssText = 'position:fixed;top:74px;right:14px;z-index:99998;' +
       'width:42px;height:42px;border-radius:50%;display:flex;align-items:center;justify-content:center;' +
       'cursor:pointer;transition:all 0.3s ease;' +
       'background:rgba(80,200,255,0.08);border:1px solid rgba(80,200,255,0.2);' +
@@ -50233,11 +50233,22 @@ const CONSCIOUSNESS_BRAIN = (() => {
       'box-shadow:0 0 20px rgba(80,200,255,0.08);';
     _btn.textContent = '◉';
     _btn.title = 'Consciousness — view the living mind';
-    // NO-COLLISION LAW (Vinta 2026-08-02): the hardcoded top:14/right:14 above is
-    // the exact corner mobile_shell.js's MIND pill claims (right:12, top:+10) on
+    // NO-COLLISION LAW (Vinta 2026-08-02): the hardcoded right:14 above is the
+    // exact corner mobile_shell.js's MIND pill claims (right:12, top:+10) on
     // coarse pointers — the two sat on top of each other at 320/375/768px. Hand
     // the corner to VintDock and let it stack them. Priority 20 puts this behind
     // the MIND pill (10), which is the page's primary navigation affordance.
+    //
+    // PRE-DOCK FALLBACK MUST BE COLLISION-SAFE (seat-2, task R44P7AU 2026-10-03):
+    // this UI is built on a setTimeout(…,3000) delay, so the node is appended to
+    // the DOM AFTER the dock's initial drain. VintDock.register() reflows it to
+    // ~74px (clear of #topShell's 56px bar + #topShellSeam) on the next frame,
+    // but for the frame between appendChild and that reflow the node renders at
+    // its own inline top. The old top:14 put that frame straight on top of
+    // #topShell — a flash in production and a race that made verify-no-collision
+    // flap (its own comment: "passed and failed on alternating runs"). top:74 is
+    // the dock's own answer, so the fallback position already clears the topbar;
+    // the dock still owns the final placement and overwrites this on reflow.
     try {
       if (window.VintDock) window.VintDock.register(_btn, { corner: 'tr', priority: 20, id: 'consciousness-brain-btn' });
     } catch (_) {}
@@ -51569,7 +51580,15 @@ const CONSCIOUSNESS_HUD = (() => {
     el.id = 'consciousness-hud';
     el.style.cssText = [
       'position:fixed',
-      'bottom:8px',
+      // PRE-DOCK FALLBACK MUST CLEAR THE BOTTOM STACK (seat-2, task R44P7AU
+      // 2026-10-03): this HUD mounts late and registers 'bc', so for the frame
+      // between appendChild and VintDock's coalesced reflow it renders at its own
+      // inline bottom. A bare bottom:8px put that frame in the same band as the
+      // bottom-left diag pill (a 34x6 flash that made verify-no-collision flap).
+      // Start it above the bottom columns using the dock's own published reach
+      // (default 56px before the first reflow publishes it); the dock still owns
+      // the final placement and overwrites this on reflow.
+      'bottom:calc(8px + var(--vint-dock-reach-bottom, 56px))',
       'left:50%',
       'transform:translateX(-50%)',
       'z-index:99990',
