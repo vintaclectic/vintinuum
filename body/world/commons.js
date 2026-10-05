@@ -293,6 +293,13 @@
       ? (others.length === 1 ? 'one other person is here' : others.length + ' other people are here')
       : 'who is standing here';
 
+    // THE CONFLUENCE ENTRY — a single flow row at the top of the roster that
+    // opens the record of who you are becoming one with (people AND agents,
+    // co-equal). Additive, guarded, flow content only; confluence.js owns its
+    // markup and collision profile. If the organ is absent or flagged off, this
+    // is a no-op and the commons is unchanged.
+    try { if (W.VintConfluence && W.VintConfluence.entryInto) W.VintConfluence.entryInto(pane); } catch (_) {}
+
     if (!others.length) {
       var a = el('div', 'cm-alone');
       a.appendChild(el('b', null, 'You have this clearing to yourself.'));
