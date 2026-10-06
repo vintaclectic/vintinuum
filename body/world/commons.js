@@ -307,6 +307,14 @@
     // collision profile. Absent or flagged off → a no-op, commons unchanged.
     try { if (W.VintConvergence && W.VintConvergence.entryInto) W.VintConvergence.entryInto(pane); } catch (_) {}
 
+    // THE WEAVE ENTRY — the collective-present sibling, directly beneath the
+    // convergence row. Opens the living constellation of the whole fabric of
+    // becoming one: every peer you are woven with (people AND agents, co-equal)
+    // drawn as a co-equal star, every witnessed thread as an edge. Additive,
+    // guarded, flow content only; weave.js owns its markup and collision profile.
+    // Absent or flagged off → a no-op, commons unchanged.
+    try { if (W.VintWeave && W.VintWeave.entryInto) W.VintWeave.entryInto(pane); } catch (_) {}
+
     if (!others.length) {
       var a = el('div', 'cm-alone');
       a.appendChild(el('b', null, 'You have this clearing to yourself.'));
