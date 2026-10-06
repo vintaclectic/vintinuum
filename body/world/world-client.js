@@ -755,6 +755,7 @@
       // DIRVERSE: server tells us which world we landed in + whether we may build here
       if (m.worldId != null) World._worldId = String(m.worldId);
       World._canBuild = (m.canBuild !== false); // default true if omitted (legacy hub)
+      if (m.build !== undefined) World._buildZone = m.build || null;   // THE FABRICATOR's mirror of the gate
       if (Array.isArray(m.structures)) { m.structures.forEach(_renderStruct); }
       // THE LANTERNS — the marks visitors left standing here. Absent on a legacy
       // server, so the loop is guarded rather than assumed.
@@ -797,6 +798,12 @@
       try { window.dispatchEvent(new CustomEvent('vint:world-trace-gone', { detail: { id: m.id } })); } catch (_) {}
     } else if (m.t === 'world:struct') {
       _renderStruct(m.struct);
+      // the piece I just asked for has come back from the server: say so, once
+      const pp = World._pendingPlace, st = m.struct || {};
+      if (pp && st.kind === pp.kind && Date.now() - pp.at < 8000 && Math.hypot((st.x || 0) - pp.x, (st.z || 0) - pp.z) < 0.01) {
+        World._pendingPlace = null;
+        try { window.dispatchEvent(new CustomEvent('vint:world-placed', { detail: st })); } catch (_) {}
+      }
       try { window.dispatchEvent(new CustomEvent('vint:world-struct', { detail: m.struct })); } catch (_) {}
     } else if (m.t === 'world:soil:ok') {
       // ── THE COVENANTS: what ground am I on, and what can it cost me ─────────
@@ -1843,11 +1850,144 @@
     if (World._selfBody) { try { scene.remove(World._selfBody); } catch (_) {} World._selfBody = null; }
     // reset self to the spawn ring so we don't arrive standing where we left the last world
     me.x = 0; me.z = 2.5; me.yaw = Math.PI; me.y = 0;
+    _fabClear(); _fab.kind = null; World._buildZone = null;
     if (global.VintinuumVoice && global.VintinuumVoice.clearPeers) { try { global.VintinuumVoice.clearPeers(); } catch (_) {} }
   }
 
   World.claimHere = function () { World.send({ t: 'world:claim', x: World._me ? World._me.x : 0, z: World._me ? World._me.z : 0 }); };
-  World.placeHere = function (kind) { const me = World._me || {}; World.send({ t: 'world:place', kind, x: me.x || 0, z: me.z || 0, rot: me.yaw || 0 }); };
+  // ── THE FABRICATOR — build mode, a ghost you can see before you pay ─────────
+  // (GPYSY83, 2026-10-06 — "nothing shows up when I lay down a wall")
+  //
+  // The old placeHere dropped the piece at the player's OWN feet: inside the
+  // body in third person, under the lens in first person, and — in the hub —
+  // straight into a `no_claim` refusal. It also returned nothing, so the
+  // palette's "did it send?" check could never fire. Building felt dead.
+  //
+  // Now: choosing a piece raises a HOLOGRAM of it one stride ahead, snapped to
+  // the half-unit grid and squared to the nearest quarter turn, with the build
+  // reach drawn on the ground as a ring. The ghost is cyan where the server
+  // will accept it and red where it will not — mirrored from the `build` block
+  // the server ships on every world:state (anchor, radius, kinds, costs), so the
+  // preview never invents a rule of its own. The server stays the authority.
+  const AHEAD = 1.6, SNAP = 0.5, QUARTER = Math.PI / 2;
+  const _fab = { kind: null, turn: 0, ghost: null, ring: null, grid: null, verdict: null, last: null };
+  World._buildZone = null;
+
+  function _fabSpot() {
+    const sx = Math.sin(me.yaw || 0), cz = Math.cos(me.yaw || 0);
+    const x = Math.round(((me.x || 0) + sx * AHEAD) / SNAP) * SNAP;
+    const z = Math.round(((me.z || 0) + cz * AHEAD) / SNAP) * SNAP;
+    const rot = Math.round((me.yaw || 0) / QUARTER) * QUARTER + _fab.turn * QUARTER;
+    return { x, z, rot };
+  }
+
+  // The server's verdict, read ahead of time from its own numbers.
+  function _fabJudge(kind, spot) {
+    const b = World._buildZone, inv = (World._resident && World._resident.inventory) || {};
+    if (!World.isConnected()) return { ok: false, why: 'the world is not connected — reload to reach it.' };
+    if (World._canBuild === false) return { ok: false, why: 'only this world\'s keeper can build here.' };
+    if (!b) return { ok: true, why: 'ready' };
+    if (Array.isArray(b.kinds) && b.kinds.indexOf(kind) === -1) return { ok: false, why: 'the ' + kind + ' opens further up the climb.' };
+    let anchor = b.anchor, firstHearth = false;
+    if (!anchor) {
+      if (!inv.seed_stone) return { ok: false, why: 'you need a hearth here first, and your seed stone is spent.' };
+      anchor = { x: me.x || 0, z: me.z || 0 }; firstHearth = true;   // the server plants it where you stand
+    }
+    const d = Math.hypot(spot.x - anchor.x, spot.z - anchor.z);
+    if (d > b.radius + 1e-6) return { ok: false, why: 'beyond your reach (' + b.radius + ') — walk toward your ' + (b.own ? 'world\'s heart' : 'hearth') + '.' };
+    const cost = (b.costs && b.costs[kind]) || {};
+    for (const it in cost) {
+      if ((inv[it] || 0) < cost[it]) return { ok: false, why: 'needs ' + cost[it] + ' ' + it + ' — you hold ' + (inv[it] || 0) + '.' };
+    }
+    return { ok: true, why: firstHearth ? 'ready — your hearth will be planted where you stand.' : 'ready', firstHearth, cost };
+  }
+
+  function _ghostMats(THREE) {
+    return {
+      ok:  new THREE.MeshBasicMaterial({ color: 0x7ccfff, transparent: true, opacity: 0.38, depthWrite: false }),
+      bad: new THREE.MeshBasicMaterial({ color: 0xff6a7a, transparent: true, opacity: 0.34, depthWrite: false }),
+      edgeOk:  new THREE.LineBasicMaterial({ color: 0xbfe9ff, transparent: true, opacity: 0.9 }),
+      edgeBad: new THREE.LineBasicMaterial({ color: 0xffb0b8, transparent: true, opacity: 0.9 }),
+    };
+  }
+  let _GM = null;
+
+  function _fabClear() {
+    const sc = World._scene;
+    for (const k of ['ghost', 'ring', 'grid']) { if (_fab[k] && sc) { try { sc.remove(_fab[k]); } catch (_) {} } _fab[k] = null; }
+  }
+
+  function _fabBuildGhost(kind) {
+    const THREE = World._THREE || global.THREE; if (!THREE || !World._scene) return;
+    _GM = _GM || _ghostMats(THREE);
+    let src;
+    try { src = _PIECE[kind] ? _PIECE[kind](THREE, _mats(THREE)) : _unknownPiece(THREE, _mats(THREE), kind); } catch (_) { return; }
+    const g = new THREE.Group();
+    src.updateMatrixWorld(true);
+    src.traverse(o => {
+      if (!o.isMesh || !o.geometry) return;
+      const m = new THREE.Mesh(o.geometry, _GM.ok); m.applyMatrix4(o.matrixWorld); g.add(m);
+      try { const e = new THREE.LineSegments(new THREE.EdgesGeometry(o.geometry), _GM.edgeOk); e.applyMatrix4(o.matrixWorld); g.add(e); } catch (_) {}
+    });
+    g.renderOrder = 10;
+    _fab.ghost = g; World._scene.add(g);
+  }
+
+  function _fabBuildRing() {
+    const THREE = World._THREE || global.THREE, b = World._buildZone; if (!THREE || !World._scene) return;
+    const r = (b && b.radius) || 2;
+    const ring = new THREE.Mesh(new THREE.RingGeometry(r - 0.05, r + 0.05, 72),
+      new THREE.MeshBasicMaterial({ color: 0x7ccfff, transparent: true, opacity: 0.55, side: THREE.DoubleSide, depthWrite: false }));
+    ring.rotation.x = -Math.PI / 2; ring.position.y = 0.03;
+    _fab.ring = ring; World._scene.add(ring);
+    if (THREE.GridHelper) {
+      const grid = new THREE.GridHelper(r * 2, Math.max(2, Math.round(r * 2 / SNAP)), 0x3f7fa8, 0x23465e);
+      grid.material.transparent = true; grid.material.opacity = 0.32; grid.material.depthWrite = false;
+      grid.position.y = 0.02; _fab.grid = grid; World._scene.add(grid);
+    }
+    _fab.ringR = r;
+  }
+
+  // per-frame: follow the player, recolour by verdict, announce changes
+  function _stepFab(tnow) {
+    if (!_fab.kind) return;
+    if (!_fab.ghost) _fabBuildGhost(_fab.kind);
+    const b = World._buildZone;
+    if (!_fab.ring || (b && b.radius !== _fab.ringR)) { if (_fab.ring) { World._scene.remove(_fab.ring); _fab.ring = null; } if (_fab.grid) { World._scene.remove(_fab.grid); _fab.grid = null; } _fabBuildRing(); }
+    const a = (b && b.anchor) || { x: me.x || 0, z: me.z || 0 };
+    if (_fab.ring) _fab.ring.position.set(a.x, 0.03, a.z);
+    if (_fab.grid) _fab.grid.position.set(a.x, 0.02, a.z);
+    const spot = _fabSpot(), v = _fabJudge(_fab.kind, spot);
+    if (_fab.ghost) {
+      _fab.ghost.position.set(spot.x, 0.01 + Math.sin(tnow * 3) * 0.02, spot.z);
+      _fab.ghost.rotation.y = spot.rot;
+      const fill = v.ok ? _GM.ok : _GM.bad, edge = v.ok ? _GM.edgeOk : _GM.edgeBad;
+      fill.opacity = (v.ok ? 0.30 : 0.26) + Math.sin(tnow * 4) * 0.08;
+      _fab.ghost.children.forEach(c => { c.material = c.isLineSegments ? edge : fill; });
+    }
+    const key = (v.ok ? '1' : '0') + v.why + spot.x + ',' + spot.z;
+    if (key !== _fab.last) {
+      _fab.last = key; _fab.verdict = v;
+      try { window.dispatchEvent(new CustomEvent('vint:world-fab', { detail: { kind: _fab.kind, spot, ok: v.ok, why: v.why, cost: v.cost || null, firstHearth: !!v.firstHearth } })); } catch (_) {}
+    }
+  }
+
+  World.buildSelect = function (kind) {
+    if (_fab.kind === kind) return;
+    _fabClear(); _fab.kind = kind || null; _fab.last = null; _fab.turn = 0;
+  };
+  World.buildExit = function () { _fabClear(); _fab.kind = null; _fab.last = null; try { window.dispatchEvent(new CustomEvent('vint:world-fab', { detail: null })); } catch (_) {} };
+  World.buildTurn = function () { _fab.turn = (_fab.turn + 1) % 4; _fab.last = null; };
+  World.buildKind = function () { return _fab.kind; };
+
+  // Place `kind` (or the selected piece) at the ghost. Returns true only if the
+  // message actually left on a live socket — never a success we did not send.
+  World.placeHere = function (kind) {
+    kind = kind || _fab.kind; if (!kind) return false;
+    const spot = _fabSpot();
+    World._pendingPlace = { kind, x: spot.x, z: spot.z, at: Date.now() };
+    return World.send({ t: 'world:place', kind, x: spot.x, z: spot.z, rot: spot.rot });
+  };
   World.harvest = function () { World.send({ t: 'world:harvest' }); };
   World.refine = function (amount) { World.send({ t: 'world:refine', amount: amount || null }); };
   // ── THE LOOM — the verb that makes building possible at all ────────────────
@@ -1907,6 +2047,13 @@
       // don't hijack typing in the say box
       if (document.activeElement && /input|textarea/i.test(document.activeElement.tagName)) return;
       if (k === 'v') { World.cycleCamera(); return; }       // V = cycle camera view
+      // THE FABRICATOR's keys, live only while a piece is chosen: R turns it a
+      // quarter, Enter lays it, Esc puts the blueprint away.
+      if (_fab.kind) {
+        if (k === 'r') { World.buildTurn(); e.preventDefault(); return; }
+        if (k === 'enter') { try { window.dispatchEvent(new CustomEvent('vint:world-fab-place')); } catch (_) {} e.preventDefault(); return; }
+        if (k === 'escape') { try { window.dispatchEvent(new CustomEvent('vint:world-fab-exit')); } catch (_) {} return; }
+      }
       keys[k] = true;
       if (MOVE_KEYS[k]) e.preventDefault(); // stop Space scrolling, arrows panning
     }, { passive: false });
@@ -2086,6 +2233,7 @@
     _stepTraces(tnow);
     _stepGather(tnow);       // THE GATHER: nodes breathe, in-reach rings pulse
     _stepStructs(dt, tnow);  // THE FIFTEEN: the built world, breathing
+    _stepFab(tnow);          // THE FABRICATOR: the ghost of the next piece
 
     // camera modes: 0=3rd-person (behind), 1=1st-person (eyes), 2=selfie (front)
     const mode = World._camMode || 0;
