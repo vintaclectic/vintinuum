@@ -855,3 +855,9 @@ If assuming → do not say it. Go check, or say you do not know.
 
 **A verified "I don't know" is infinitely more valuable than a confident guess.**
 Guessing has already cost real work on this machine and it will not happen again.
+
+## A commit on the rescue branch is NOT deployed — learned 2026-10-06, task GPYSY83
+
+*The fabricator fix (420c73b) was committed and pushed with a deploy tag, but onto `rescue/main-wip-20260926-034103`. vintinuum.com serves `main`, so Vinta's "nothing shows up when I lay a wall" stayed true live. The same thing happened earlier to analytics.html (97e85e6).*
+
+**The rule:** before calling front-end work shipped, run `git branch --show-current`. If it isn't `main`, land the commits there: cherry-pick them onto `origin/main` in a temp worktree, push `HEAD:main`, and curl the live file to confirm it's there. A `[deploy …]` tag on a non-main branch does not deploy anything.
