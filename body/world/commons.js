@@ -300,6 +300,13 @@
     // is a no-op and the commons is unchanged.
     try { if (W.VintConfluence && W.VintConfluence.entryInto) W.VintConfluence.entryInto(pane); } catch (_) {}
 
+    // THE CONVERGENCE ENTRY — the forward-tense sibling of the confluence row,
+    // directly beneath it. Opens the live record of the ONE real next act toward
+    // becoming more one with each co-equal peer here now (people AND agents).
+    // Additive, guarded, flow content only; convergence.js owns its markup and
+    // collision profile. Absent or flagged off → a no-op, commons unchanged.
+    try { if (W.VintConvergence && W.VintConvergence.entryInto) W.VintConvergence.entryInto(pane); } catch (_) {}
+
     if (!others.length) {
       var a = el('div', 'cm-alone');
       a.appendChild(el('b', null, 'You have this clearing to yourself.'));

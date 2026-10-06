@@ -656,6 +656,22 @@
   W.VintConfluence = {
     open: open, close: close, isOpen: isOpen, enabled: enabled,
     render: render, entryInto: entryInto, refresh: syncVentures,
+    // a READ-ONLY snapshot of the witnessed record, ranked by thread-count.
+    // THE CONVERGENCE (convergence.js) composes its live invitations from this —
+    // it never re-derives the record, so there is one source of witnessed truth.
+    // Each entry: { name, kind:'human'|'agent', count, traded, ventured,
+    // ventureNet, taught:[], learned:[], raised:[], first, last }. A shallow copy
+    // so a reader can never mutate a bond.
+    bonds: function () {
+      return sortedBonds().map(function (b) {
+        return {
+          name: b.name, kind: b.kind, count: recount(b),
+          traded: num(b.traded, 0), ventured: num(b.ventured, 0), ventureNet: num(b.ventureNet, 0),
+          taught: (b.taught || []).slice(), learned: (b.learned || []).slice(), raised: (b.raised || []).slice(),
+          first: b.first, last: b.last
+        };
+      });
+    },
     // exposed for the verify harness only — never used by the UI
     _bondCount: function () { return sortedBonds().length; },
     _reset: function () { _state = fresh(); save(); if (isOpen()) render(); updateEntry(); }
