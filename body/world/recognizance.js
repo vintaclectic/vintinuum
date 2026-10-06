@@ -632,6 +632,36 @@
     }
   ];
 
+  // ═══════════════════════════════════════════════════════════════════════════
+  // WHY THERE IS NO forge/gather/teach/contribute MOTIVE HERE (task B8CJNB9).
+  //
+  // Every motive above mutates a CLIENT-AUTHORITATIVE organ — the Concord, the
+  // yard, the factions — whose model lives in this browser, so when a motive
+  // fires, the agent GENUINELY is the actor: the act is written against the
+  // agent's id, in the one place that act's truth lives. No lie is possible.
+  //
+  // The forge organs (gather, craft, teach, join a great work) are different in
+  // kind: they are SERVER-authoritative. The only way this client can trigger
+  // one is world.send({t:'world:forge:…'}), and the server performs that as the
+  // AUTHENTICATED USER. Firing it here and captioning it "your agent did this"
+  // would attribute a human's act to an agent — a fabrication, and exactly the
+  // lie the no-fabrication law forbids (the same reason the Confluence honestly
+  // omits a pairing verb it cannot truthfully attribute).
+  //
+  // So the forge-organ autonomy is NOT faked here. It lives where it can be
+  // honest: the server performs it under a reserved agent id and broadcasts it,
+  // the shipped `world:gather:agent` pattern — see vintinuum-api/world/gather.js,
+  // whose council tick now chooses WHICH agent acts in WHICH forge organ by the
+  // SAME Concord disposition this organ reads (disposition.js mirrors concord's
+  // dispositionOf bit-for-bit). A builder gathers and makes, a mentor teaches, a
+  // civic/social/trusting agent joins the great work — and the act surfaces in
+  // the clearing co-equally with a human's, because it goes out through the very
+  // same broadcast a human's act does. The kill switch (?recog=0's server twin,
+  // DIRVERSE_RECOG=0 / pauseAgents) and the per-agent hush live there too, on the
+  // authoritative side, because a client flag cannot honestly govern a shared-
+  // world tick that is acting for everyone at once.
+  // ═══════════════════════════════════════════════════════════════════════════
+
   function elementOf(k) {
     var F = factions();
     if (!F || !F.HOLDS) return null;

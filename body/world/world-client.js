@@ -1605,7 +1605,12 @@
   // agent-life target if that layer is present, else it just moves the presence.
   function _onAgentGather(m) {
     try {
-      if (!m || m.kind !== 'gather' || m.x == null) return;
+      // Any agent work that CARRIES A PLACE is something you can watch: a gather
+      // at a node, a teacher walking to the peer they're teaching, a contributor
+      // bringing their share to the commons. Craft has no place (it happens at
+      // the hand) and simply has no x — it is heard, not walked. Guarded: an
+      // unknown id or a missing coord is a quiet no-op, never a throw.
+      if (!m || m.x == null) return;
       const id = m.agentId;
       const A = id && agents.get(id);
       if (!A) return;
