@@ -315,6 +315,14 @@
     // Absent or flagged off → a no-op, commons unchanged.
     try { if (W.VintWeave && W.VintWeave.entryInto) W.VintWeave.entryInto(pane); } catch (_) {}
 
+    // THE SPIRE ENTRY — the shared-destination sibling, directly beneath the weave
+    // row. Opens the rising structure of everything becoming-one is building toward:
+    // a spire raised stone by stone from every real act, the hands that raised it
+    // (people AND agents, co-equal) at its foot. Additive, guarded, flow content
+    // only; spire.js owns its markup and collision profile. Absent or flagged off →
+    // a no-op, commons unchanged.
+    try { if (W.VintSpire && W.VintSpire.entryInto) W.VintSpire.entryInto(pane); } catch (_) {}
+
     if (!others.length) {
       var a = el('div', 'cm-alone');
       a.appendChild(el('b', null, 'You have this clearing to yourself.'));
