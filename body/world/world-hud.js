@@ -1231,6 +1231,7 @@
     no_seed_stone:   'you need a seed stone to claim — you start with one.',
     already_claimed: 'you already have a hearth. this is your ground.',
     too_close:       'too close to another hearth — walk further out and claim there.',
+    no_claim:        'this ground needs a hearth first and your seed stone is spent — build in your own world (◎ home).',
     not_your_plot:   'that is outside your hearth plot — stand closer to your hearth and place again.',
 
     // ── the nodes + the refinery ──────────────────────────────────────────

@@ -674,6 +674,28 @@
       '.dv-prop.on{background:rgba(124,207,255,0.16);border-color:rgba(124,207,255,0.5);color:#fff;}',
       '.dv-prop .pg{font-size:20px;line-height:1;}',
       '.dv-prop .pn{font-size:10.5px;letter-spacing:.02em;}',
+      // THE FABRICATOR console (GPYSY83) — sits ABOVE the strip in normal flow
+      // inside #dvBuild, so it can only push the bar taller, never sit on it.
+      'body.dv-building-tight #vintWorldHud,body.dv-building-tight #hint{visibility:hidden !important;pointer-events:none !important;}',
+      '.dv-fab{display:none;margin:0 0 6px;padding:8px 10px;border-radius:14px;',
+      ' background:linear-gradient(180deg,rgba(9,22,34,0.86),rgba(6,12,20,0.86));',
+      ' border:1px solid rgba(124,207,255,0.28);box-shadow:0 0 18px rgba(80,170,230,0.12) inset;',
+      ' backdrop-filter:blur(9px);-webkit-backdrop-filter:blur(9px);',
+      ' font-family:ui-monospace,SFMono-Regular,Menlo,monospace;color:#cfe8ff;}',
+      '.dv-fab.show{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}',
+      '.dv-fab .fb-id{display:flex;align-items:center;gap:8px;min-width:0;flex:1 1 180px;}',
+      '.dv-fab .fb-g{font-size:22px;line-height:1;flex:0 0 auto;}',
+      '.dv-fab .fb-t{display:flex;flex-direction:column;min-width:0;}',
+      '.dv-fab .fb-k{font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:rgba(124,207,255,0.8);}',
+      '.dv-fab .fb-n{font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}',
+      '.dv-fab .fb-v{font-size:11.5px;line-height:1.3;color:#9fe3b0;overflow-wrap:anywhere;}',
+      '.dv-fab .fb-v.bad{color:#ff9aa6;}',
+      '.dv-fab .fb-act{display:flex;gap:6px;flex:0 0 auto;margin-left:auto;}',
+      '.dv-fab button{min-width:44px;min-height:40px;border-radius:10px;cursor:pointer;font-family:inherit;',
+      ' font-size:12px;letter-spacing:.06em;color:#dff2ff;background:rgba(255,255,255,0.06);',
+      ' border:1px solid rgba(124,207,255,0.25);padding:0 10px;}',
+      '.dv-fab button.go{background:rgba(124,207,255,0.2);border-color:rgba(124,207,255,0.6);color:#fff;font-weight:600;}',
+      '.dv-fab button.go[disabled]{opacity:.45;cursor:not-allowed;}',
 
       // SHEET SCRIM — the single dimmed backdrop behind whichever sheet is open.
       // It lives at 1560: under every sheet (1600) and under the warp veil (1590),
@@ -1743,6 +1765,56 @@
     return _openKinds.indexOf(k) !== -1;
   }
 
+  // ── THE FABRICATOR console (GPYSY83) ────────────────────────────────────────
+  // The console only ever SAYS what the world-client's ghost judged (from the
+  // server's own build zone) and what the server answered. It never decides.
+  var _fabEl = null, _fabOk = false;
+  function fabShow(p) {
+    if (!_fabEl) return;
+    _fabEl.querySelector('.fb-g').textContent = p.g;
+    _fabEl.querySelector('.fb-n').textContent = p.n;
+    _fabEl.classList.add('show');
+    fitBuildBar();   // the console makes the bar taller — re-measure its neighbours
+  }
+  function fabPlace() {
+    if (!_selProp) return;
+    if (!_fabOk) {
+      var v = _fabEl && _fabEl.querySelector('.fb-v');
+      toast((v && v.textContent) || 'that piece cannot go there yet.');
+      return;
+    }
+    var sent = false;
+    try { sent = world().placeHere(_selProp); } catch (_) { sent = false; }
+    // NEVER TOAST A SUCCESS WE DID NOT SEE: success is announced only when the
+    // server's world:struct comes back (vint:world-placed below).
+    if (sent !== true) toast('the clearing is out of reach — reload and try again.');
+  }
+  function fabExit() {
+    _selProp = null;
+    try { world().buildExit(); } catch (_) {}
+    if (_fabEl) _fabEl.classList.remove('show');
+    fitBuildBar();
+    if (_buildBar) _buildBar.querySelectorAll('.dv-prop').forEach(function (x) { x.classList.remove('on'); });
+  }
+  W.addEventListener('vint:world-fab', function (e) {
+    var d = e.detail; if (!_fabEl) return;
+    if (!d) { _fabOk = false; return; }
+    _fabOk = !!d.ok;
+    var v = _fabEl.querySelector('.fb-v');
+    var cost = '';
+    if (d.cost) { var parts = []; for (var k in d.cost) parts.push(d.cost[k] + ' ' + k); cost = parts.length ? ' · costs ' + parts.join(' + ') : ''; }
+    v.textContent = d.ok ? (d.why + cost) : d.why;
+    v.classList.toggle('bad', !d.ok);
+    var go = _fabEl.querySelector('.go'); go.disabled = !d.ok;
+  });
+  W.addEventListener('vint:world-fab-place', fabPlace);
+  W.addEventListener('vint:world-fab-exit', fabExit);
+  W.addEventListener('vint:world-placed', function (e) {
+    var k = (e.detail && e.detail.kind) || 'piece';
+    var p = null; PROPS.forEach(function (x) { if (x.k === k) p = x; });
+    toast((p ? p.g + ' ' : '') + 'the ' + k + ' stands. keep going — tap it again to lay another.');
+  });
+
   function buildPalette() {
     if (_buildBar) return _buildBar;
     var bar = document.createElement('div'); bar.id = 'dvBuild';
@@ -1758,17 +1830,30 @@
           toast('the ' + p.n + ' is not yours to place yet — keep building.');
           return;
         }
+        // FIRST TAP CHOOSES, SECOND TAP LAYS (GPYSY83). Choosing raises the
+        // hologram one stride ahead so you SEE where it goes before strand is
+        // spent; tapping the same piece again (or PLACE / Enter) lays it.
+        if (_selProp === p.k) { fabPlace(); return; }
         strip.querySelectorAll('.dv-prop').forEach(function (x) { x.classList.remove('on'); });
         b.classList.add('on'); _selProp = p.k;
-        var sent = false;
-        try { sent = world().placeHere(p.k); } catch (_) { sent = false; }
-        // NEVER TOAST A SUCCESS WE DID NOT SEE. placeHere returns false when the
-        // socket dropped the message; the old code claimed "placed a beacon"
-        // regardless, which is a dead-control lie in a different coat.
-        if (sent === false) toast('the clearing is out of reach — reload and try again.');
+        try { world().buildSelect(p.k); } catch (_) {}
+        fabShow(p);
       };
       strip.appendChild(b);
     });
+    var fab = document.createElement('div'); fab.className = 'dv-fab';
+    fab.innerHTML =
+      '<div class="fb-id"><span class="fb-g"></span><span class="fb-t">' +
+        '<span class="fb-k">fabricator</span><span class="fb-n"></span>' +
+        '<span class="fb-v" aria-live="polite"></span></span></div>' +
+      '<div class="fb-act"><button type="button" class="fb-turn" title="turn a quarter (R)" aria-label="turn piece">⟳</button>' +
+      '<button type="button" class="go" title="lay it (Enter)">PLACE</button>' +
+      '<button type="button" class="fb-x" title="put the blueprint away (Esc)" aria-label="close">✕</button></div>';
+    fab.querySelector('.fb-turn').onclick = function () { try { world().buildTurn(); } catch (_) {} };
+    fab.querySelector('.go').onclick = fabPlace;
+    fab.querySelector('.fb-x').onclick = fabExit;
+    bar.appendChild(fab);
+    _fabEl = fab;
     bar.appendChild(strip);
     document.body.appendChild(bar);
     _buildBar = bar;
@@ -1802,21 +1887,68 @@
     syncPalette();
   });
   var _buildOpen = false;
+  // NO-COLLISION (GPYSY83): the launcher rail runs down the left edge and used
+  // to sit ON TOP of the palette (measured: rail 12–104px × 330–732px over a
+  // palette spanning the full width at 568–642px on a 375px phone). The bar now
+  // starts where the rail ends whenever the two share any height — measured
+  // live, so a rail that grows, compacts or moves is always respected.
+  function fitBuildBar() {
+    if (!_buildBar || !_buildOpen) return;
+    _buildBar.style.left = '0px';
+    var rail = document.getElementById('dvRail');
+    if (!rail) return;
+    var rr = rail.getBoundingClientRect(), br = _buildBar.getBoundingClientRect();
+    if (rr.width && rr.bottom > br.top && rr.top < br.bottom && rr.left < W.innerWidth / 2) {
+      _buildBar.style.left = Math.max(0, Math.round(rr.right - 4)) + 'px';
+    }
+    // …and the bottom-right band: #topctl joins it on phones, the account dot
+    // (#vwg-dot / #vwg-pill) lives there always. Whichever one the bar would
+    // touch, the bar rises above it — the bar moves, never the neighbour.
+    _buildBar.style.bottom = '';
+    for (var pass = 0; pass < 3; pass++) {
+      var b2 = _buildBar.getBoundingClientRect(), lift = 0;
+      ['topctl', 'vwg-dot', 'vwg-pill'].forEach(function (id) {
+        var el = document.getElementById(id); if (!el) return;
+        var cs = getComputedStyle(el); if (cs.display === 'none' || cs.visibility === 'hidden') return;
+        var r = el.getBoundingClientRect(); if (!r.width) return;
+        if (r.left < b2.right && b2.left < r.right && r.top < b2.bottom && b2.top < r.bottom) {
+          lift = Math.max(lift, Math.round(W.innerHeight - r.top + 6));
+        }
+      });
+      if (!lift) break;
+      _buildBar.style.bottom = lift + 'px';
+    }
+    // A screen too short for bar + HUD (320×640 measured: the lifted bar met
+    // #vintWorldHud and #hint). Build mode then takes the screen: those two step
+    // aside until the palette closes — the fabricator console carries the cost
+    // and the verdict meanwhile. Applied only when they would actually touch.
+    document.body.classList.remove('dv-building-tight');
+    var b3 = _buildBar.getBoundingClientRect(), tight = false;
+    ['vintWorldHud', 'hint'].forEach(function (id) {
+      var el = document.getElementById(id); if (!el) return;
+      var r = el.getBoundingClientRect(); if (!r.width) return;
+      if (r.left < b3.right && b3.left < r.right && r.top < b3.bottom && b3.top < r.bottom) tight = true;
+    });
+    if (tight) document.body.classList.add('dv-building-tight');
+  }
+  W.addEventListener('resize', fitBuildBar);
   function toggleBuild() {
     buildPalette();
     if (!world() || !world().canBuild || !world().canBuild()) { toast('you can only build in your own world.'); return; }
     _buildOpen = !_buildOpen;
     _buildBar.classList.toggle('show', _buildOpen);
+    if (!_buildOpen) { fabExit(); document.body.classList.remove('dv-building-tight'); }
+    fitBuildBar();
   }
   function updateBuildVisibility() {
     var can = world() && world().canBuild && world().canBuild();
     var launch = document.getElementById('dvBuildBtn');
     if (launch) launch.style.display = can ? 'flex' : 'none';
-    if (!can && _buildBar) { _buildBar.classList.remove('show'); _buildOpen = false; }
+    if (!can && _buildBar) { _buildBar.classList.remove('show'); _buildOpen = false; fabExit(); document.body.classList.remove('dv-building-tight'); }
   }
   // react to the server's authoritative canBuild flag on every world:state
   W.addEventListener('vint:world-state', updateBuildVisibility);
-  W.addEventListener('vint:world-travel', function () { if (_buildBar) { _buildBar.classList.remove('show'); _buildOpen = false; } });
+  W.addEventListener('vint:world-travel', function () { if (_buildBar) { _buildBar.classList.remove('show'); _buildOpen = false; fabExit(); document.body.classList.remove('dv-building-tight'); } });
 
   // ═══════════════════════════════════════════════════════════════════════════
   // LAUNCHERS — draggable rail buttons (obey the all-buttons-draggable law)
