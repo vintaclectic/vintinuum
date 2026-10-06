@@ -1,0 +1,620 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MERCATUS Analytics — Trading Performance</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      background: #0a0a0a;
+      color: #e0e0e0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      padding: 20px;
+      line-height: 1.6;
+    }
+
+    .container {
+      max-width: 1600px;
+      margin: 0 auto;
+    }
+
+    h1 {
+      font-size: 2.5rem;
+      font-weight: 700;
+      margin-bottom: 0.5rem;
+      background: linear-gradient(135deg, #00ff88, #0099ff);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .subtitle {
+      color: #888;
+      margin-bottom: 2rem;
+      font-size: 0.95rem;
+    }
+
+    .header-controls {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 2rem;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .btn {
+      background: #2a2a2a;
+      border: 1px solid #444;
+      color: #fff;
+      padding: 10px 20px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 0.9rem;
+      font-weight: 600;
+      transition: all 0.2s;
+    }
+
+    .btn:hover {
+      background: #333;
+      border-color: #555;
+    }
+
+    .btn-primary {
+      background: #1a4d4d;
+      border-color: #1a6666;
+      color: #4ade80;
+    }
+
+    .btn-primary:hover {
+      background: #1a6666;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 20px;
+      margin-bottom: 30px;
+    }
+
+    .card {
+      background: #1a1a1a;
+      border: 1px solid #333;
+      border-radius: 12px;
+      padding: 20px;
+    }
+
+    .card h2 {
+      font-size: 1.25rem;
+      margin-bottom: 1rem;
+      color: #fff;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .card h3 {
+      font-size: 1.1rem;
+      margin: 1rem 0 0.5rem 0;
+      color: #aaa;
+    }
+
+    .metric {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 12px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid #2a2a2a;
+    }
+
+    .metric:last-child {
+      border-bottom: none;
+      margin-bottom: 0;
+      padding-bottom: 0;
+    }
+
+    .metric-label {
+      color: #888;
+      font-size: 0.9rem;
+    }
+
+    .metric-value {
+      color: #fff;
+      font-weight: 600;
+      font-size: 1.1rem;
+    }
+
+    .metric-value.positive {
+      color: #4ade80;
+    }
+
+    .metric-value.negative {
+      color: #ff6b6b;
+    }
+
+    .big-number {
+      font-size: 3rem;
+      font-weight: 700;
+      text-align: center;
+      margin: 20px 0;
+    }
+
+    .big-number.positive {
+      color: #4ade80;
+    }
+
+    .big-number.negative {
+      color: #ff6b6b;
+    }
+
+    .big-number.neutral {
+      color: #ffcc66;
+    }
+
+    .recommendation {
+      background: #2a2a1a;
+      border-left: 4px solid #ffcc66;
+      padding: 15px;
+      margin-bottom: 15px;
+      border-radius: 6px;
+    }
+
+    .recommendation.critical {
+      background: #2a1a1a;
+      border-left-color: #ff6b6b;
+    }
+
+    .recommendation.high {
+      background: #2a1a1a;
+      border-left-color: #ff9966;
+    }
+
+    .recommendation.medium {
+      background: #2a2a1a;
+      border-left-color: #ffcc66;
+    }
+
+    .recommendation.low {
+      background: #1a2a1a;
+      border-left-color: #4ade80;
+    }
+
+    .recommendation-header {
+      font-weight: 600;
+      margin-bottom: 8px;
+      color: #fff;
+    }
+
+    .recommendation-message {
+      color: #ccc;
+      margin-bottom: 8px;
+      font-size: 0.95rem;
+    }
+
+    .recommendation-action {
+      color: #4ade80;
+      font-size: 0.9rem;
+      font-style: italic;
+    }
+
+    .trade-list {
+      max-height: 400px;
+      overflow-y: auto;
+    }
+
+    .trade-item {
+      background: #0d0d0d;
+      border: 1px solid #2a2a2a;
+      border-radius: 6px;
+      padding: 12px;
+      margin-bottom: 10px;
+    }
+
+    .trade-header {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 8px;
+    }
+
+    .trade-symbol {
+      font-weight: 700;
+      font-size: 1.1rem;
+    }
+
+    .trade-pnl {
+      font-weight: 700;
+      font-size: 1.1rem;
+    }
+
+    .trade-pnl.positive {
+      color: #4ade80;
+    }
+
+    .trade-pnl.negative {
+      color: #ff6b6b;
+    }
+
+    .trade-details {
+      font-size: 0.85rem;
+      color: #888;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 8px;
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+    }
+
+    .badge-success {
+      background: #1a4d2e;
+      color: #4ade80;
+    }
+
+    .badge-danger {
+      background: #4d1a1a;
+      color: #ff6b6b;
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 40px;
+      color: #666;
+    }
+
+    .empty-state-icon {
+      font-size: 3rem;
+      margin-bottom: 15px;
+    }
+
+    .loading {
+      text-align: center;
+      padding: 40px;
+      color: #888;
+    }
+
+    @media (max-width: 768px) {
+      .grid {
+        grid-template-columns: 1fr;
+      }
+
+      h1 {
+        font-size: 2rem;
+      }
+
+      .big-number {
+        font-size: 2rem;
+      }
+
+      .header-controls {
+        flex-direction: column;
+        align-items: stretch;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header-controls">
+      <div>
+        <h1>MERCATUS Analytics</h1>
+        <p class="subtitle">Trading Performance Dashboard</p>
+      </div>
+      <div>
+        <button class="btn btn-primary" onclick="refreshAnalytics()">Refresh Data</button>
+        <button class="btn" onclick="window.location.href='trading.html'">Control Panel</button>
+      </div>
+    </div>
+
+    <div id="loading" class="loading">
+      <div>Loading analytics...</div>
+    </div>
+
+    <div id="content" style="display: none;">
+      <!-- Key Metrics Grid -->
+      <div class="grid">
+        <!-- Win Rate -->
+        <div class="card">
+          <h2>Win Rate</h2>
+          <div class="big-number" id="win-rate">-</div>
+          <div class="metric">
+            <span class="metric-label">Total Trades</span>
+            <span class="metric-value" id="total-trades">0</span>
+          </div>
+          <div class="metric">
+            <span class="metric-label">Wins</span>
+            <span class="metric-value positive" id="wins">0</span>
+          </div>
+          <div class="metric">
+            <span class="metric-label">Losses</span>
+            <span class="metric-value negative" id="losses">0</span>
+          </div>
+        </div>
+
+        <!-- P&L Summary -->
+        <div class="card">
+          <h2>Profit & Loss</h2>
+          <div class="big-number" id="total-pnl">-</div>
+          <div class="metric">
+            <span class="metric-label">Avg Win</span>
+            <span class="metric-value positive" id="avg-win">$0.00</span>
+          </div>
+          <div class="metric">
+            <span class="metric-label">Avg Loss</span>
+            <span class="metric-value negative" id="avg-loss">$0.00</span>
+          </div>
+          <div class="metric">
+            <span class="metric-label">Profit Factor</span>
+            <span class="metric-value" id="profit-factor">0.00</span>
+          </div>
+        </div>
+
+        <!-- Risk Metrics -->
+        <div class="card">
+          <h2>Risk Metrics</h2>
+          <div class="metric">
+            <span class="metric-label">Max Drawdown</span>
+            <span class="metric-value negative" id="max-drawdown">$0.00</span>
+          </div>
+          <div class="metric">
+            <span class="metric-label">Avg Hold Time</span>
+            <span class="metric-value" id="avg-hold">0h</span>
+          </div>
+          <div class="metric">
+            <span class="metric-label">Open Positions</span>
+            <span class="metric-value" id="open-positions">0</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Recommendations -->
+      <div class="card" style="margin-bottom: 30px;">
+        <h2>Parameter Tuning Recommendations</h2>
+        <div id="recommendations"></div>
+      </div>
+
+      <!-- Recent Trades & Brain Correlation -->
+      <div class="grid">
+        <!-- Recent Trades -->
+        <div class="card" style="grid-column: 1 / -1;">
+          <h2>Recent Trades</h2>
+          <div class="trade-list" id="recent-trades"></div>
+        </div>
+
+        <!-- Brain Mood Correlation (placeholder) -->
+        <div class="card">
+          <h2>Brain-Mood Correlation</h2>
+          <div id="mood-correlation">
+            <div style="color: #888; text-align: center; padding: 20px;">
+              <div style="font-size: 2rem; margin-bottom: 10px;">🧠</div>
+              <div>Brain mood correlation analysis</div>
+              <div style="font-size: 0.85rem; margin-top: 10px;">
+                Coming soon: correlate emotional state with trade outcomes
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Confidence Analysis -->
+        <div class="card">
+          <h2>Confidence Score Analysis</h2>
+          <div id="confidence-analysis">
+            <div class="metric">
+              <span class="metric-label">High Confidence (80+)</span>
+              <span class="metric-value" id="conf-high">0</span>
+            </div>
+            <div class="metric">
+              <span class="metric-label">Medium Confidence (60-79)</span>
+              <span class="metric-value" id="conf-medium">0</span>
+            </div>
+            <div class="metric">
+              <span class="metric-label">Low Confidence (&lt;60)</span>
+              <span class="metric-value" id="conf-low">0</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="empty-state" class="empty-state" style="display: none;">
+      <div class="empty-state-icon">📊</div>
+      <h2>No Closed Trades Yet</h2>
+      <p style="margin-top: 10px;">Win rate and P&amp;L appear once a position is closed. Until then, here is what is open.</p>
+      <div id="open-positions" style="margin-top: 16px; max-width: 100%; overflow-x: auto;"></div>
+      <button class="btn btn-primary" onclick="window.location.href='mercatus.html'" style="margin-top: 20px;">
+        Open Mercatus
+      </button>
+    </div>
+  </div>
+
+  <script>
+    const API = 'https://api.vintaclectic.com/api/trading';
+    // /api/trading/* is Bearer-only and owner-only, so cookies alone always 401.
+    // Read the same token chain mercatus.html reads.
+    const TOKEN_KEYS = ['vint_access_token', 'vint_access', 'vint_token', 'soul_auth_token'];
+    function readToken() {
+      for (const k of TOKEN_KEYS) {
+        try { const t = localStorage.getItem(k); if (t) return t; } catch (_) {}
+      }
+      return '';
+    }
+    function esc(v) {
+      return String(v).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    }
+    function renderOpenPositions(list) {
+      const el = document.getElementById('open-positions');
+      if (!list || !list.length) { el.innerHTML = '<p style="opacity:.7">No open positions.</p>'; return; }
+      el.innerHTML = '<table style="margin:0 auto;border-collapse:collapse;font-size:14px">' +
+        '<tr><th style="padding:6px 12px;text-align:left">Symbol</th><th style="padding:6px 12px;text-align:right">Qty</th>' +
+        '<th style="padding:6px 12px;text-align:right">Entry</th><th style="padding:6px 12px;text-align:left">Opened</th></tr>' +
+        list.map(p => '<tr><td style="padding:6px 12px">' + esc(p.symbol) + '</td>' +
+          '<td style="padding:6px 12px;text-align:right">' + esc(Number(p.quantity).toFixed(4)) + '</td>' +
+          '<td style="padding:6px 12px;text-align:right">$' + esc(Number(p.buyPrice).toFixed(2)) + '</td>' +
+          '<td style="padding:6px 12px">' + esc(new Date(p.entryTime).toLocaleString()) + '</td></tr>').join('') +
+        '</table>';
+    }
+
+    async function refreshAnalytics() {
+      document.getElementById('loading').style.display = 'block';
+      document.getElementById('content').style.display = 'none';
+      document.getElementById('empty-state').style.display = 'none';
+
+      try {
+        const token = readToken();
+        if (!token) throw new Error('not signed in. Sign in as the owner on vintinuum.com, then reload');
+        const res = await fetch(`${API}/analytics`, {
+          headers: { Authorization: 'Bearer ' + token },
+        });
+
+        if (res.status === 401 || res.status === 403) {
+          throw new Error(`HTTP ${res.status}: trading analytics are owner-only. Sign in with the owner account`);
+        }
+        if (!res.ok) {
+          throw new Error(`HTTP ${res.status}`);
+        }
+
+        const data = await res.json();
+
+        if (data.performance.totalTrades === 0) {
+          document.getElementById('loading').style.display = 'none';
+          document.getElementById('empty-state').style.display = 'block';
+          renderOpenPositions(data.performance.openPositions);
+          return;
+        }
+
+        renderAnalytics(data);
+        document.getElementById('loading').style.display = 'none';
+        document.getElementById('content').style.display = 'block';
+      } catch (err) {
+        console.error('Failed to load analytics:', err);
+        document.getElementById('loading').innerHTML = `
+          <div style="color: #ff6b6b;">
+            Failed to load analytics: ${err.message}
+          </div>
+        `;
+      }
+    }
+
+    function renderAnalytics(data) {
+      const { performance, confidenceAnalysis, recommendations } = data;
+
+      // Win Rate
+      const winRateEl = document.getElementById('win-rate');
+      winRateEl.textContent = `${performance.winRate}%`;
+      winRateEl.className = 'big-number ' + (performance.winRate >= 50 ? 'positive' : 'negative');
+
+      document.getElementById('total-trades').textContent = performance.totalTrades;
+      document.getElementById('wins').textContent = performance.wins;
+      document.getElementById('losses').textContent = performance.losses;
+
+      // P&L
+      const pnlEl = document.getElementById('total-pnl');
+      pnlEl.textContent = `$${performance.totalPnL.toFixed(2)}`;
+      pnlEl.className = 'big-number ' + (performance.totalPnL >= 0 ? 'positive' : 'negative');
+
+      document.getElementById('avg-win').textContent = `$${performance.avgWin.toFixed(2)}`;
+      document.getElementById('avg-loss').textContent = `$${Math.abs(performance.avgLoss).toFixed(2)}`;
+      document.getElementById('profit-factor').textContent = performance.profitFactor.toFixed(2);
+
+      // Risk
+      document.getElementById('max-drawdown').textContent = `$${performance.maxDrawdown.toFixed(2)}`;
+      document.getElementById('avg-hold').textContent = `${performance.avgHoldTimeHours.toFixed(1)}h`;
+      document.getElementById('open-positions').textContent = performance.openPositions.length;
+
+      // Confidence
+      document.getElementById('conf-high').textContent = confidenceAnalysis.high.count;
+      document.getElementById('conf-medium').textContent = confidenceAnalysis.medium.count;
+      document.getElementById('conf-low').textContent = confidenceAnalysis.low.count;
+
+      // Recommendations
+      renderRecommendations(recommendations);
+
+      // Recent Trades
+      renderRecentTrades(performance.trades);
+    }
+
+    function renderRecommendations(recommendations) {
+      const container = document.getElementById('recommendations');
+
+      if (recommendations.length === 0) {
+        container.innerHTML = `
+          <div style="text-align: center; color: #4ade80; padding: 20px;">
+            ✓ All parameters look good! No immediate tuning needed.
+          </div>
+        `;
+        return;
+      }
+
+      container.innerHTML = recommendations.map(rec => `
+        <div class="recommendation ${rec.severity}">
+          <div class="recommendation-header">
+            ${rec.severity.toUpperCase()}: ${rec.category.replace(/_/g, ' ').toUpperCase()}
+          </div>
+          <div class="recommendation-message">${rec.message}</div>
+          <div class="recommendation-action">→ ${rec.action}</div>
+        </div>
+      `).join('');
+    }
+
+    function renderRecentTrades(trades) {
+      const container = document.getElementById('recent-trades');
+
+      if (trades.length === 0) {
+        container.innerHTML = `
+          <div style="text-align: center; color: #666; padding: 20px;">
+            No completed trades yet
+          </div>
+        `;
+        return;
+      }
+
+      container.innerHTML = trades.reverse().map(trade => {
+        const isWin = trade.pnl > 0;
+        return `
+          <div class="trade-item">
+            <div class="trade-header">
+              <div>
+                <span class="trade-symbol">${trade.symbol}</span>
+                <span class="badge ${isWin ? 'badge-success' : 'badge-danger'}">
+                  ${isWin ? 'WIN' : 'LOSS'}
+                </span>
+              </div>
+              <div class="trade-pnl ${isWin ? 'positive' : 'negative'}">
+                ${trade.pnl > 0 ? '+' : ''}$${trade.pnl.toFixed(2)}
+                (${trade.pnlPercent > 0 ? '+' : ''}${trade.pnlPercent.toFixed(2)}%)
+              </div>
+            </div>
+            <div class="trade-details">
+              <div>Entry: $${trade.buyPrice.toFixed(2)}</div>
+              <div>Exit: $${trade.sellPrice.toFixed(2)}</div>
+              <div>Qty: ${trade.quantity}</div>
+              <div>Hold: ${(trade.holdTimeMs / (1000 * 60 * 60)).toFixed(1)}h</div>
+            </div>
+            ${trade.reasoning ? `
+              <div style="margin-top: 8px; font-size: 0.85rem; color: #888;">
+                ${trade.reasoning}
+              </div>
+            ` : ''}
+          </div>
+        `;
+      }).join('');
+    }
+
+    // Auto-refresh every 30 seconds
+    setInterval(refreshAnalytics, 30000);
+
+    // Initial load
+    refreshAnalytics();
+  </script>
+</body>
+</html>
