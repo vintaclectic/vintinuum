@@ -272,6 +272,7 @@
   var personaList = [];
   var open = false;
   var sending = false;
+  var COARSE = !!(window.matchMedia && window.matchMedia('(pointer: coarse)').matches);
 
   function $(id) { return panel.querySelector(id) || document.getElementById(id.replace('#', '')); }
 
@@ -282,7 +283,9 @@
     panel.classList.add('vc-show');
     backdrop.classList.add('vc-show');
     fab.classList.add('vc-open');
-    setTimeout(function () { try { els.ta && els.ta.focus(); } catch (_) {} }, 60);
+    // Touch: don't auto-focus — the on-screen keyboard shoves the panel around
+    // and reads as the console "bouncing". Desktop keeps instant typing.
+    if (!COARSE) setTimeout(function () { try { els.ta && els.ta.focus(); } catch (_) {} }, 60);
     scrollLog();
   }
   function closePanel() {
@@ -400,11 +403,16 @@
     var tok = authToken();
     if (tok) headers['Authorization'] = 'Bearer ' + tok;
 
+    // Hard client wall: a phone on a flaky link must never sit on "thinking"
+    // forever. The brain answers in <=15s by design; 35s covers a slow tunnel.
+    var ctl = (typeof AbortController === 'function') ? new AbortController() : null;
+    var wall = ctl ? setTimeout(function () { try { ctl.abort(); } catch (_) {} }, 35000) : null;
     fetch(apiBase() + '/api/voice/reply', {
       method: 'POST',
       credentials: 'include',
       headers: headers,
-      body: JSON.stringify(body)
+      body: JSON.stringify(body),
+      signal: ctl ? ctl.signal : undefined
     })
       .then(function (r) { return r.json().then(function (j) { return { ok: r.ok, j: j }; }); })
       .then(function (res) {
@@ -417,11 +425,13 @@
         replaceThinking(thinking, j.reply, false);
         speak(j.ttsUrl, j.reply);
       })
-      .catch(function () {
-        replaceThinking(thinking, 'I could not reach the brain. Check your connection and try again.', true);
+      .catch(function (e) {
+        replaceThinking(thinking, (e && e.name === 'AbortError')
+          ? 'The brain took too long to answer. Try once more.'
+          : 'I could not reach the brain. Check your connection and try again.', true);
         emit('vint:voice:idle');
       })
-      .finally(function () { sending = false; syncSend(); });
+      .finally(function () { if (wall) clearTimeout(wall); sending = false; syncSend(); });
   }
 
   function replaceThinking(t, text, isErr) {
@@ -441,7 +451,18 @@
   }
 
   // ── TTS out (autoplay, pill "speaking" reflection) ─────────────────────────
-  var audio = null;
+  var audio = null, audioUnlocked = false;
+  var SILENT = 'data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAIA+AAACABAAZGF0YQAAAAA=';
+  function unlockAudio() {
+    if (audioUnlocked) return;
+    audioUnlocked = true;
+    try {
+      audio = audio || new Audio();
+      audio.src = SILENT;
+      var p = audio.play();
+      if (p && p.catch) p.catch(function () { audioUnlocked = false; });
+    } catch (_) { audioUnlocked = false; }
+  }
   function speak(ttsUrl, reply) {
     var dur = Math.min(11000, 1200 + (reply ? reply.length : 40) * 70);
     emit('vint:voice:speaking', { stickyMs: dur });
@@ -451,7 +472,10 @@
     try {
       if (audio) { try { audio.pause(); } catch (_) {} }
       var src = /^https?:\/\//i.test(ttsUrl) ? ttsUrl : (apiBase() + ttsUrl);
-      audio = new Audio(src);
+      // Reuse the element unlocked during a tap — iOS/Android refuse play() on a
+      // fresh Audio() created after an async fetch, which left phones silent.
+      if (!audio) audio = new Audio();
+      audio.src = src;
       audio.onended = function () { emit('vint:voice:idle'); };
       audio.onerror = function () { emit('vint:voice:idle'); };
       var pr = audio.play();
@@ -463,10 +487,18 @@
   var SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
   var speechOK = !!SpeechRec;
   var recog = null, listening = false, micBase = '';
+  // Phones used to fail silently here: the mic lit up, died, and nothing said why.
+  var MIC_ERR = {
+    'not-allowed': 'I need microphone permission — allow it for this site in your browser settings, or type to me.',
+    'service-not-allowed': 'Voice input is blocked in this browser mode. Tap the box and use your keyboard’s mic, or type to me.',
+    'audio-capture': 'I couldn’t find a microphone. Type to me instead.',
+    'network': 'Voice recognition lost its connection. Try again, or type to me.',
+    'no-speech': 'I didn’t catch anything — tap the mic and speak right away.'
+  };
 
   function startMic() {
     if (!speechOK) {
-      addBubble('them', 'Voice input isn’t supported in this browser — but you can still type to me.', {});
+      addBubble('them', 'Voice input isn’t supported in this browser — tap the box and use your keyboard’s mic, or type to me.', {});
       return;
     }
     if (listening) { stopMic(); return; }
@@ -494,14 +526,22 @@
       autoGrow(); syncSend();
       if (final) micBase = els.ta.value.trim();
     };
-    recog.onerror = function () { stopMic(); };
+    recog.onerror = function (ev) {
+      var code = ev && ev.error;
+      stopMic();
+      var msg = MIC_ERR[code];
+      if (msg) addBubble('them', msg, {});
+    };
     recog.onend = function () {
       var wasListening = listening;
       stopMic(true);
       // Auto-send what we heard, so voice is truly one-tap end to end.
       if (wasListening && els.ta.value.trim() && !sending) send(els.ta.value);
     };
-    try { recog.start(); } catch (_) { stopMic(true); }
+    try { recog.start(); } catch (_) {
+      stopMic(true);
+      addBubble('them', MIC_ERR['service-not-allowed'], {});
+    }
   }
 
   function stopMic(silent) {
@@ -535,8 +575,9 @@
 
     // FAB: short tap toggles the panel; long-press starts push-to-talk.
     var pressTimer = null, longFired = false;
-    fab.addEventListener('pointerdown', function () {
+    fab.addEventListener('pointerdown', function (e) {
       longFired = false;
+      if (e && e.pointerType === 'touch') return;
       pressTimer = setTimeout(function () {
         longFired = true;
         if (!open) openPanel();
@@ -554,12 +595,13 @@
 
     els.close.addEventListener('click', closePanel);
     backdrop.addEventListener('click', closePanel);
-    els.mic.addEventListener('click', function () { startMic(); });
-    els.send.addEventListener('click', function () { send(els.ta.value); });
+    els.mic.addEventListener('click', function () { unlockAudio(); startMic(); });
+    els.send.addEventListener('click', function () { unlockAudio(); send(els.ta.value); });
+    fab.addEventListener('click', unlockAudio);
 
     els.ta.addEventListener('input', function () { autoGrow(); syncSend(); });
     els.ta.addEventListener('keydown', function (e) {
-      if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(els.ta.value); }
+      if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); unlockAudio(); send(els.ta.value); }
     });
 
     // Esc closes; outside-click on desktop closes (backdrop handles it visually,
