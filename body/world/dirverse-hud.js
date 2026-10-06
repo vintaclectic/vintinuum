@@ -676,7 +676,7 @@
       '.dv-prop .pn{font-size:10.5px;letter-spacing:.02em;}',
       // THE FABRICATOR console (GPYSY83) — sits ABOVE the strip in normal flow
       // inside #dvBuild, so it can only push the bar taller, never sit on it.
-      'body.dv-building-tight #vintWorldHud,body.dv-building-tight #hint{visibility:hidden !important;pointer-events:none !important;}',
+      'body.dv-building-tight #vintWorldHud,body.dv-building-tight #hint,body.dv-building-tight #editHeadBtn{visibility:hidden !important;pointer-events:none !important;}',
       '.dv-fab{display:none;margin:0 0 6px;padding:8px 10px;border-radius:14px;',
       ' background:linear-gradient(180deg,rgba(9,22,34,0.86),rgba(6,12,20,0.86));',
       ' border:1px solid rgba(124,207,255,0.28);box-shadow:0 0 18px rgba(80,170,230,0.12) inset;',
@@ -1898,16 +1898,20 @@
     var rail = document.getElementById('dvRail');
     if (!rail) return;
     var rr = rail.getBoundingClientRect(), br = _buildBar.getBoundingClientRect();
-    if (rr.width && rr.bottom > br.top && rr.top < br.bottom && rr.left < W.innerWidth / 2) {
+    // Beside a slim rail; ABOVE a wide one (a phone grid rail can span most of
+    // the width, and a bar squeezed into the sliver beside it is unusable).
+    var railBeside = rr.width && rr.bottom > br.top && rr.top < br.bottom && rr.left < W.innerWidth / 2;
+    var railAbove = false;
+    if (railBeside && W.innerWidth - rr.right - 12 >= 240) {
       _buildBar.style.left = Math.max(0, Math.round(rr.right - 4)) + 'px';
-    }
+    } else if (railBeside) { railAbove = true; }
     // …and the bottom-right band: #topctl joins it on phones, the account dot
     // (#vwg-dot / #vwg-pill) lives there always. Whichever one the bar would
     // touch, the bar rises above it — the bar moves, never the neighbour.
     _buildBar.style.bottom = '';
     for (var pass = 0; pass < 3; pass++) {
       var b2 = _buildBar.getBoundingClientRect(), lift = 0;
-      ['topctl', 'vwg-dot', 'vwg-pill'].forEach(function (id) {
+      (railAbove ? ['topctl', 'vwg-dot', 'vwg-pill', 'dvRail'] : ['topctl', 'vwg-dot', 'vwg-pill']).forEach(function (id) {
         var el = document.getElementById(id); if (!el) return;
         var cs = getComputedStyle(el); if (cs.display === 'none' || cs.visibility === 'hidden') return;
         var r = el.getBoundingClientRect(); if (!r.width) return;
@@ -1924,7 +1928,7 @@
     // and the verdict meanwhile. Applied only when they would actually touch.
     document.body.classList.remove('dv-building-tight');
     var b3 = _buildBar.getBoundingClientRect(), tight = false;
-    ['vintWorldHud', 'hint'].forEach(function (id) {
+    ['vintWorldHud', 'hint', 'editHeadBtn'].forEach(function (id) {
       var el = document.getElementById(id); if (!el) return;
       var r = el.getBoundingClientRect(); if (!r.width) return;
       if (r.left < b3.right && b3.left < r.right && r.top < b3.bottom && b3.top < r.bottom) tight = true;
