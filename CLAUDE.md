@@ -861,3 +861,11 @@ Guessing has already cost real work on this machine and it will not happen again
 *The fabricator fix (420c73b) was committed and pushed with a deploy tag, but onto `rescue/main-wip-20260926-034103`. vintinuum.com serves `main`, so Vinta's "nothing shows up when I lay a wall" stayed true live. The same thing happened earlier to analytics.html (97e85e6).*
 
 **The rule:** before calling front-end work shipped, run `git branch --show-current`. If it isn't `main`, land the commits there: cherry-pick them onto `origin/main` in a temp worktree, push `HEAD:main`, and curl the live file to confirm it's there. A `[deploy …]` tag on a non-main branch does not deploy anything.
+
+## Before EXTENDING a world feature, confirm its BASE is on prod `main` — learned 2026-10-06, task B8CJNB9
+
+*B8CJNB9 (extend agent autonomy to forge/gather/teach/great-work) was built + verified (52/52) on the rescue branch, then could not land on `main`: the cherry-pick conflicted because the feature it extends — the whole gather-agent subsystem (`world:gather:agent`, `world-client.js:_onAgentGather`, the gather-hud inhabited feed) — is itself STRANDED on rescue and never reached prod. The live site confirmed it (`_onAgentGather` → 0 matches on vintinuum.com). The vision units (confluence/weave/spire) reached main via the `land-world-GPYSY83` reconciliation; gather did not.*
+
+**The lesson:** an extension inherits the deploy-state of its base. If the base feature lives only on the dev branch, your extension is born stranded — and a cherry-pick of just your diff onto `main` fails because the surrounding code (your anchors) isn't there.
+
+**The rule:** before building on top of an existing world feature on the rescue branch, verify the base is on `origin/main` (grep `git show origin/main:<file>` for the function/handler you depend on, and/or curl the live file). If the base is NOT on main, say so up front: your work will be deploy-gated on landing the base first (the rescue→main reconciliation), which is a separate unit with production blast radius — do not try to force a 13-commit divergent merge inside one feature card. Build + verify on the dev line, push to preserve it, and `block` on the reconciliation with the exact missing base named — never call it `done` (it is not live) and never ship a half-merged `world.html` to production.
