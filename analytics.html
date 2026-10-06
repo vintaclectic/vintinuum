@@ -428,16 +428,41 @@
 
     <div id="empty-state" class="empty-state" style="display: none;">
       <div class="empty-state-icon">📊</div>
-      <h2>No Trading Data Yet</h2>
-      <p style="margin-top: 10px;">Submit some trades to see analytics appear here.</p>
-      <button class="btn btn-primary" onclick="window.location.href='trading.html'" style="margin-top: 20px;">
-        Go to Trading Control
+      <h2>No Closed Trades Yet</h2>
+      <p style="margin-top: 10px;">Win rate and P&amp;L appear once a position is closed. Until then, here is what is open.</p>
+      <div id="open-positions" style="margin-top: 16px; max-width: 100%; overflow-x: auto;"></div>
+      <button class="btn btn-primary" onclick="window.location.href='mercatus.html'" style="margin-top: 20px;">
+        Open Mercatus
       </button>
     </div>
   </div>
 
   <script>
     const API = 'https://api.vintaclectic.com/api/trading';
+    // /api/trading/* is Bearer-only and owner-only, so cookies alone always 401.
+    // Read the same token chain mercatus.html reads.
+    const TOKEN_KEYS = ['vint_access_token', 'vint_access', 'vint_token', 'soul_auth_token'];
+    function readToken() {
+      for (const k of TOKEN_KEYS) {
+        try { const t = localStorage.getItem(k); if (t) return t; } catch (_) {}
+      }
+      return '';
+    }
+    function esc(v) {
+      return String(v).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    }
+    function renderOpenPositions(list) {
+      const el = document.getElementById('open-positions');
+      if (!list || !list.length) { el.innerHTML = '<p style="opacity:.7">No open positions.</p>'; return; }
+      el.innerHTML = '<table style="margin:0 auto;border-collapse:collapse;font-size:14px">' +
+        '<tr><th style="padding:6px 12px;text-align:left">Symbol</th><th style="padding:6px 12px;text-align:right">Qty</th>' +
+        '<th style="padding:6px 12px;text-align:right">Entry</th><th style="padding:6px 12px;text-align:left">Opened</th></tr>' +
+        list.map(p => '<tr><td style="padding:6px 12px">' + esc(p.symbol) + '</td>' +
+          '<td style="padding:6px 12px;text-align:right">' + esc(Number(p.quantity).toFixed(4)) + '</td>' +
+          '<td style="padding:6px 12px;text-align:right">$' + esc(Number(p.buyPrice).toFixed(2)) + '</td>' +
+          '<td style="padding:6px 12px">' + esc(new Date(p.entryTime).toLocaleString()) + '</td></tr>').join('') +
+        '</table>';
+    }
 
     async function refreshAnalytics() {
       document.getElementById('loading').style.display = 'block';
@@ -445,10 +470,15 @@
       document.getElementById('empty-state').style.display = 'none';
 
       try {
+        const token = readToken();
+        if (!token) throw new Error('not signed in. Sign in as the owner on vintinuum.com, then reload');
         const res = await fetch(`${API}/analytics`, {
-          credentials: 'include',
+          headers: { Authorization: 'Bearer ' + token },
         });
 
+        if (res.status === 401 || res.status === 403) {
+          throw new Error(`HTTP ${res.status}: trading analytics are owner-only. Sign in with the owner account`);
+        }
         if (!res.ok) {
           throw new Error(`HTTP ${res.status}`);
         }
@@ -458,6 +488,7 @@
         if (data.performance.totalTrades === 0) {
           document.getElementById('loading').style.display = 'none';
           document.getElementById('empty-state').style.display = 'block';
+          renderOpenPositions(data.performance.openPositions);
           return;
         }
 
