@@ -304,8 +304,53 @@ const corsFor = req => ({
       try { localStorage.setItem('vwg_dismissed', String(Date.now())); } catch (_) {}
       try { localStorage.setItem('vwg_seen', '1'); } catch (_) {}
     });
-    await auto.goto(`${base}/upgrade.html?tier=estate&interval=yearly`, { waitUntil: 'domcontentloaded', timeout: 30000 });
-    await auto.waitForFunction(() => location.href.includes('/paid.html'), { timeout: 10000 });
+    // Do NOT wait on networkidle0 here (task S7VWG32 — the 30s TimeoutError this
+    // check was filed for). MEASURED this session, puppeteer 23.11.1:
+    //   • upgrade.html with no query params DOES reach networkidle0, in 4.0s —
+    //     so the timeout was never "upgrade.html has a poll that never goes
+    //     quiet". It has no setInterval at all. That hypothesis is disproven.
+    //   • the real cause was THIS FILE's brain stub: it answered credentialed
+    //     fetches with Access-Control-Allow-Origin:*, the browser rejected them,
+    //     and a CORS-blocked fetch under request interception stays in-flight
+    //     forever as far as puppeteer's network manager is concerned — so
+    //     networkidle0 could never fire and goto burned the full 30s. Fixed by
+    //     mirroring the live brain's CORS (74f6351); with that stub correct, the
+    //     same URL reaches networkidle0 in 1.26s.
+    // It still waits on domcontentloaded rather than networkidle0, because this
+    // page is designed to navigate away from itself (?tier=estate runs
+    // auto-checkout → location.href = Stripe's url), and a lifecycle wait on a
+    // page that replaces its own document is a race with no upside here: the
+    // redirect assertion below is a DOM/location signal and is the real proof.
+    // The try/catch is DEFENSIVE, not a reproduced bug: a client-side redirect
+    // during a pending goto RESOLVES cleanly on puppeteer 23.11.1 (verified, not
+    // assumed), but a future version could surface it as net::ERR_ABORTED, and
+    // the navigation's lifecycle is not what this check is asserting. Genuine
+    // errors are NOT swallowed — verified by pointing the goto at a dead host,
+    // which still throws.
+    try {
+      await auto.goto(`${base}/upgrade.html?tier=estate&interval=yearly`, { waitUntil: 'domcontentloaded', timeout: 30000 });
+    } catch (e) {
+      const interrupted = /ERR_ABORTED|Navigation failed because|net::ERR_BLOCKED_BY_RESPONSE|frame was detached|Navigating frame was detached/i.test(e.message || '');
+      if (!interrupted) throw e;
+    }
+    // THE assertion: the page reached Stripe's url. A DOM/location signal, not a
+    // network-quiet guess — it is true exactly when auto-checkout did its job.
+    // A miss is a REAL product failure (the $499 direct link did not open
+    // checkout), so it must be reported as a named check, not escape as an
+    // unhandled rejection that buries the reason in a stack trace.
+    let reachedCheckout = true;
+    try {
+      await auto.waitForFunction(() => location.href.includes('/paid.html'), { timeout: 15000 });
+    } catch (_) {
+      reachedCheckout = false;
+    }
+    checks++;
+    if (!reachedCheckout) {
+      const where = await auto.evaluate(() => location.href).catch(() => '(unreadable)');
+      fail('ESTATE-AUTO-REDIRECT',
+        `the Estate direct link never left upgrade.html for checkout — still at ${where}. ` +
+        `?tier=estate must open Stripe in one click.`);
+    }
     checks++;
     if (!estateCheckoutBody) {
       fail('ESTATE-AUTO-CHECKOUT', 'the Estate direct-link route did not open checkout');
@@ -328,7 +373,7 @@ const corsFor = req => ({
   // A run that asserted nothing is a FAILURE, not a pass — the same false green
   // scripts/verify-one-sheet.js was fixed for in 28b97b3. Two toggle states,
   // ~13 assertions each.
-  const MIN = 24;
+  const MIN = 25;
   if (checks < MIN) {
     console.log(`✗ THE ESTATE PROOF asserted only ${checks} of an expected ${MIN} checks — it verified almost nothing.`);
     failures.forEach(f => console.log(`    ✗ ${f.type} ${f.msg}`));
