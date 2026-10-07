@@ -2526,7 +2526,20 @@
           var lb = lastVis.getBoundingClientRect();
           // above the rail's own top edge = scrolled out of reach
           if (lb.top < rb.top - 1) {
-            _rail.scrollTop = Math.max(0, _rail.scrollTop - (rb.top - lb.top) - 6);
+            // THE SIGN BUG (2026-10-06). `column-reverse` + overflow inverts the
+            // scrollTop direction: Chrome's legal range here is [-(scrollHeight
+            // - clientHeight), 0], not [0, scrollHeight-clientHeight] — the rail
+            // "rests at the bottom" at scrollTop:0, and reaching the overflowed
+            // content means going NEGATIVE. `Math.max(0, ...)` on an already-
+            // negative target clamped it straight back to 0 every time, so this
+            // branch always ran and never actually scrolled. MEASURED at 375px
+            // signed-in with a sheet open: #cnBtn sat at top:-285 (elementFrom-
+            // Point returned null) both before and after this line ran, and
+            // manually assigning scrollTop:-491 moved it to top:206 — fully
+            // reachable. Clamp to the range this container actually has.
+            var minScroll = -(_rail.scrollHeight - _rail.clientHeight);
+            var want = _rail.scrollTop - (rb.top - lb.top) - 6;
+            _rail.scrollTop = Math.max(minScroll, Math.min(0, want));
           }
         }
       }
