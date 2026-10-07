@@ -85,6 +85,18 @@ const TIERS = [
   { tier: 'estate',    display_name: 'Estate',    monthly_price_cents: 49900, yearly_price_cents: 0,     description: "the part of you that doesn't end.",    sort_order: 4, enabled: 1 },
 ];
 
+// Mirror the live brain's CORS answer (verified 2026-10-06: it echoes the
+// caller's Origin + Allow-Credentials:true). upgrade.html fetches with
+// credentials:'include', and browsers REJECT a wildcard '*' origin on
+// credentialed requests — so a '*' stub makes checkout throw inside the test
+// (an alert, no redirect) while production works. Preflights get the same.
+const corsFor = req => ({
+  'Access-Control-Allow-Origin': (req.headers().origin || '*'),
+  'Access-Control-Allow-Credentials': 'true',
+  'Access-Control-Allow-Methods': 'GET,POST,OPTIONS',
+  'Access-Control-Allow-Headers': 'Content-Type,Authorization,X-Surface,X-Device-Id',
+});
+
 (async () => {
   const srv = await serve();
   const base = `http://127.0.0.1:${srv.address().port}`;
@@ -109,7 +121,7 @@ const TIERS = [
       const json = body => req.respond({
         status: 200,
         contentType: 'application/json',
-        headers: { 'Access-Control-Allow-Origin': '*' },
+        headers: corsFor(req),
         body: JSON.stringify(body),
       });
       if (url.includes('/api/tiers'))          return json({ ok: true, tiers: TIERS, gates_live: true });
@@ -271,7 +283,7 @@ const TIERS = [
       const json = body => req.respond({
         status: 200,
         contentType: 'application/json',
-        headers: { 'Access-Control-Allow-Origin': '*' },
+        headers: corsFor(req),
         body: JSON.stringify(body),
       });
       if (url.includes('/api/tiers'))          return json({ ok: true, tiers: TIERS, gates_live: true });
@@ -281,6 +293,10 @@ const TIERS = [
         estateCheckoutBody = req.postData();
         return json({ ok: true, url: `${base}/paid.html` });
       }
+      // paid.html is the stub's fake Stripe landing — it does not exist on disk.
+      // Serve a stand-in, or Chrome swaps an empty 404 for chrome-error:// and
+      // the redirect check below can never see '/paid.html' in location.href.
+      if (url.endsWith('/paid.html')) return req.respond({ status: 200, contentType: 'text/html', body: '<!doctype html><title>paid</title>' });
       if (url.includes('/api/')) return json({ ok: true });
       return req.continue();
     });
@@ -288,7 +304,7 @@ const TIERS = [
       try { localStorage.setItem('vwg_dismissed', String(Date.now())); } catch (_) {}
       try { localStorage.setItem('vwg_seen', '1'); } catch (_) {}
     });
-    await auto.goto(`${base}/upgrade.html?tier=estate&interval=yearly`, { waitUntil: 'networkidle0', timeout: 30000 });
+    await auto.goto(`${base}/upgrade.html?tier=estate&interval=yearly`, { waitUntil: 'domcontentloaded', timeout: 30000 });
     await auto.waitForFunction(() => location.href.includes('/paid.html'), { timeout: 10000 });
     checks++;
     if (!estateCheckoutBody) {
