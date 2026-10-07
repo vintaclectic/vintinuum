@@ -1539,6 +1539,22 @@
       }
     }
 
+    /* Narrowest phones: the right cluster now carries 9 controls (8 + the new
+       handoff button; viz makes 9 for audio). Compact it uniformly so it can
+       NEVER overflow the titlebar at 320px — No-Collision wins over spacing.
+       Worst case (viz visible, 9 btns): 9*30 + 8*4 gaps + 16 padding = 318 < 320. */
+    @media (max-width: 400px) {
+      .dirrm-titlebar { padding-left: 8px; padding-right: 8px; }
+      .dirrm-titlebar-right { gap: 4px; }
+      .dirrm-titlebar-right .dirrm-btn,
+      #btn-mini, #btn-pip, #btn-maximize, #btn-theater {
+        width: 30px !important;
+        height: 30px !important;
+        font-size: 14px !important;
+        padding: 0 !important;
+      }
+    }
+
     /* Platform badge */
     #dirrm-platform-badge {
       position: absolute;
@@ -1563,6 +1579,122 @@
     #dirrm-platform-badge[data-platform="direct"]  { color: #4ecdc4; display: block; }
     #dirrm-platform-badge[data-platform="audio"]   { color: #f7b731; display: block; }
     #dirrm-platform-badge[data-platform="embed"]   { color: #aaa;    display: block; }
+
+    /* ============================================
+       EXTERNAL-PLAYER HANDOFF OVERLAY
+       Intentional modal (the ONE allowed overlap). Scoped to #dirrm-player via
+       position:absolute inside the overflow:hidden player box, so it can never
+       escape the window or collide with the titlebar/controls at any mode. */
+    .dirrm-handoff {
+      position: absolute;
+      inset: 0;
+      z-index: 40;              /* above media (badge is 15), below nothing else in-box */
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+    }
+    .dirrm-handoff[hidden] { display: none; }
+    .dirrm-handoff-backdrop {
+      position: absolute;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.62);
+      backdrop-filter: blur(3px);
+    }
+    .dirrm-handoff-sheet {
+      position: relative;
+      z-index: 1;
+      width: min(420px, 100%);
+      max-height: 100%;
+      overflow-y: auto;
+      overscroll-behavior: contain;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      background: var(--dirrm-bg, #14100a);
+      border: 1px solid var(--dirrm-border, rgba(245,166,35,0.35));
+      border-radius: 14px;
+      box-shadow: 0 18px 50px rgba(0,0,0,0.55);
+      padding: 14px;
+    }
+    .dirrm-handoff-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+    .dirrm-handoff-title {
+      font-size: clamp(0.95rem, 2.6vw, 1.1rem);
+      font-weight: 600;
+      color: var(--dirrm-gold, #f5a623);
+    }
+    .dirrm-handoff-body {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .dirrm-handoff-row {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      padding: 10px 12px;
+      min-height: 40px;
+      border-radius: 10px;
+      border: 1px solid rgba(255,255,255,0.08);
+      background: rgba(255,255,255,0.04);
+      color: var(--dirrm-text, #f3ead9);
+      font-size: clamp(0.85rem, 2.4vw, 0.98rem);
+      text-align: left;
+      cursor: pointer;
+      transition: background 0.15s ease, border-color 0.15s ease;
+      text-decoration: none;
+    }
+    button.dirrm-handoff-row { width: 100%; }
+    .dirrm-handoff-row:hover:not([disabled]) {
+      background: rgba(245,166,35,0.1);
+      border-color: var(--dirrm-border, rgba(245,166,35,0.35));
+    }
+    .dirrm-handoff-row[disabled] {
+      opacity: 0.45;
+      cursor: not-allowed;
+    }
+    .dirrm-handoff-row--ghost {
+      background: transparent;
+      border-style: dashed;
+    }
+    .dirrm-handoff-row-label {
+      font-weight: 600;
+      color: var(--dirrm-gold, #f5a623);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .dirrm-handoff-row--ghost .dirrm-handoff-row-label { color: var(--dirrm-text-muted, #a89b82); }
+    .dirrm-handoff-row-caption {
+      font-size: clamp(0.72rem, 2vw, 0.82rem);
+      color: var(--dirrm-text-muted, #a89b82);
+      line-height: 1.35;
+      overflow-wrap: anywhere;
+    }
+    .dirrm-handoff-note {
+      font-size: clamp(0.72rem, 2vw, 0.82rem);
+      color: var(--dirrm-text-muted, #a89b82);
+      line-height: 1.4;
+    }
+    .dirrm-handoff-fallback {
+      width: 100%;
+      box-sizing: border-box;
+      font-size: clamp(0.72rem, 2vw, 0.82rem);
+      font-family: 'JetBrains Mono', monospace;
+      color: var(--dirrm-text, #f3ead9);
+      background: rgba(0,0,0,0.4);
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 8px;
+      padding: 8px;
+      margin-top: 6px;
+      overflow-wrap: anywhere;
+      resize: none;
+    }
   </style>
     <!-- API base bootstrap — auto-attaches every visitor to api.vintaclectic.com -->
     <script src="body/api_base.js?v=v20260429-council"></script>
@@ -1604,9 +1736,28 @@
         <button class="dirrm-btn" id="btn-theater" title="Theater Mode">
           <span class="icon">▣</span>
         </button>
+        <button class="dirrm-btn" id="btn-handoff" title="Open in external player / copy link">
+          <span class="icon">↗</span>
+        </button>
         <button class="dirrm-btn dirrm-btn--danger" id="btn-close" title="Close">
           <span class="icon">✕</span>
         </button>
+      </div>
+    </div>
+
+    <!-- External-player handoff overlay (intentional modal, scoped to the player box).
+         The in-browser player stays the default; this is a fallback escape hatch so
+         MKV/AVI/FLV etc. can be handed to VLC or the OS default player. -->
+    <div class="dirrm-handoff" id="handoff-overlay" hidden>
+      <div class="dirrm-handoff-backdrop" data-action="handoff-dismiss"></div>
+      <div class="dirrm-handoff-sheet" role="dialog" aria-modal="true" aria-label="Open in external player">
+        <div class="dirrm-handoff-head">
+          <div class="dirrm-handoff-title">Hand off this media</div>
+          <button class="dirrm-btn" id="btn-handoff-close" title="Done" data-action="handoff-dismiss">
+            <span class="icon">✕</span>
+          </button>
+        </div>
+        <div class="dirrm-handoff-body" id="handoff-body"><!-- built by buildHandoffMenu() --></div>
       </div>
     </div>
 
@@ -1781,6 +1932,13 @@
         document.getElementById('btn-maximize').addEventListener('click', () => this.setMode('main'));
         document.getElementById('btn-pip').addEventListener('click', () => this.setMode('pip'));
         document.getElementById('btn-theater').addEventListener('click', () => this.setMode('theater'));
+        document.getElementById('btn-handoff').addEventListener('click', () => this.openHandoffMenu());
+        const handoffOverlay = document.getElementById('handoff-overlay');
+        if (handoffOverlay) {
+          handoffOverlay.addEventListener('click', (e) => {
+            if (e.target.closest('[data-action="handoff-dismiss"]')) this.closeHandoffMenu();
+          });
+        }
         document.getElementById('btn-fullscreen').addEventListener('click', () => this.toggleFullscreen());
         document.getElementById('btn-viz').addEventListener('click', () => this.cycleViz());
         // OG DirHaven +/- incremental sizing
@@ -4875,6 +5033,140 @@
       /**
        * Helpers.
        */
+      /* ============================================================
+         EXTERNAL-PLAYER HANDOFF (task CNS98SE)
+         A fallback escape hatch — the in-browser player stays the default and
+         NOTHING autoplays externally. Lets a user hand the current media to VLC
+         or their OS default player (great for MKV/AVI/FLV). Two browser-safe
+         techniques: copy the direct URL (paste into VLC → Ctrl-N), and download
+         a tiny .m3u playlist the OS opens in the associated player. An optional
+         vlc:// protocol link degrades gracefully where the scheme isn't present.
+         ============================================================ */
+
+      // Is the current media handoff-able to an external player over the network?
+      // Only real http(s) URLs qualify; live/blob:/data:/empty are meaningless.
+      _handoffEligible(url) {
+        if (!url || typeof url !== 'string') return false;
+        const u = url.trim();
+        if (!u) return false;
+        if (this.mediaType === 'live') return false;
+        return /^https?:\/\//i.test(u);
+      }
+
+      // Turn a title into a safe .m3u filename (no path separators / control chars).
+      _handoffFilename(title) {
+        let base = (title || 'media').toString()
+          .replace(/[\/\\:*?"<>|]+/g, ' ')   // illegal on common filesystems
+          .replace(/[\u0000-\u001f]+/g, ' ') // control chars
+          .replace(/\s+/g, ' ')
+          .trim()
+          .slice(0, 80);
+        if (!base) base = 'media';
+        return base + '.m3u';
+      }
+
+      // Build the standard single-entry M3U body for a direct URL.
+      _buildM3u(url, title) {
+        const safeTitle = (title || 'Media').toString().replace(/[\r\n]+/g, ' ').trim() || 'Media';
+        return `#EXTM3U\n#EXTINF:-1,${safeTitle}\n${url}\n`;
+      }
+
+      openHandoffMenu() {
+        const overlay = document.getElementById('handoff-overlay');
+        if (!overlay) return;
+        this.buildHandoffMenu();
+        overlay.hidden = false;
+      }
+
+      closeHandoffMenu() {
+        const overlay = document.getElementById('handoff-overlay');
+        if (overlay) overlay.hidden = true;
+      }
+
+      buildHandoffMenu() {
+        const body = document.getElementById('handoff-body');
+        if (!body) return;
+        const url = (this._lastUrl || '').trim();
+        const title = this._lastTitle || 'Media';
+        const eligible = this._handoffEligible(url);
+
+        if (!url || this.mediaType === 'live') {
+          body.innerHTML = `<div class="dirrm-handoff-note">${
+            this.mediaType === 'live'
+              ? 'Live streams can’t be handed to an external player.'
+              : 'No file is loaded yet — load media, then hand it off.'
+          }</div>`;
+          return;
+        }
+
+        // Copy-link works for any http(s) URL; the external-player rows need an
+        // eligible (non-live, http(s)) URL. For non-http(s) we show copy only.
+        body.innerHTML = `
+          <button class="dirrm-handoff-row" type="button" data-handoff="copy">
+            <span class="dirrm-handoff-row-label"><span>⎘</span> Copy direct link</span>
+            <span class="dirrm-handoff-row-caption">Paste into VLC → Ctrl-N (Open Network Stream), or any player.</span>
+          </button>
+          ${eligible ? `
+          <button class="dirrm-handoff-row" type="button" data-handoff="m3u">
+            <span class="dirrm-handoff-row-label"><span>▶</span> Open in external player (VLC)</span>
+            <span class="dirrm-handoff-row-caption">Downloads a playlist your system opens in VLC (or your default player). Or copy the link and use VLC → Ctrl-N.</span>
+          </button>
+          <a class="dirrm-handoff-row dirrm-handoff-row--ghost" data-handoff="proto" href="media-link-launcher://open?url=${this.escapeHtml(encodeURIComponent(url))}" rel="noopener">
+            <span class="dirrm-handoff-row-label"><span>↗</span> Open via protocol handler</span>
+            <span class="dirrm-handoff-row-caption">Hands off to VLC / your default player IF you’ve installed a media-link-launcher protocol helper. Does nothing otherwise — that’s expected.</span>
+          </a>` : `
+          <div class="dirrm-handoff-note">This source can’t be handed to an external player; copy the link above.</div>`}
+        `;
+
+        const copyRow = body.querySelector('[data-handoff="copy"]');
+        if (copyRow) {
+          copyRow.addEventListener('click', async () => {
+            const label = copyRow.querySelector('.dirrm-handoff-row-label');
+            const orig = label ? label.innerHTML : '';
+            try {
+              await navigator.clipboard.writeText(url);
+              if (label) label.innerHTML = '<span>✓</span> Copied ✓';
+              setTimeout(() => { if (label) label.innerHTML = orig; }, 1600);
+            } catch (_) {
+              if (label) label.innerHTML = '<span>✕</span> Copy failed';
+              // Fallback: a selectable field with the URL for manual copy.
+              if (!copyRow.querySelector('.dirrm-handoff-fallback')) {
+                const ta = document.createElement('textarea');
+                ta.className = 'dirrm-handoff-fallback';
+                ta.readOnly = true;
+                ta.rows = 2;
+                ta.value = url;
+                ta.addEventListener('click', (ev) => { ev.stopPropagation(); ta.select(); });
+                copyRow.appendChild(ta);
+                ta.focus(); ta.select();
+              }
+              setTimeout(() => { if (label) label.innerHTML = orig; }, 1600);
+            }
+          });
+        }
+
+        const m3uRow = body.querySelector('[data-handoff="m3u"]');
+        if (m3uRow) {
+          m3uRow.addEventListener('click', () => {
+            const blob = new Blob([this._buildM3u(url, title)], { type: 'audio/x-mpegurl' });
+            const objUrl = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = objUrl;
+            a.download = this._handoffFilename(title);
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            setTimeout(() => URL.revokeObjectURL(objUrl), 4000);
+            const label = m3uRow.querySelector('.dirrm-handoff-row-label');
+            if (label) {
+              const orig = label.innerHTML;
+              label.innerHTML = '<span>✓</span> Playlist downloaded ✓';
+              setTimeout(() => { label.innerHTML = orig; }, 1600);
+            }
+          });
+        }
+      }
+
       escapeHtml(s) {
         return (s || '').replace(/[&<>"']/g, c => ({
           '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;'
@@ -5259,6 +5551,13 @@
       // Keyboard shortcuts
       handleKeyboard(e) {
         if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+
+        // Handoff overlay is a modal: Escape dismisses it and swallows the key so
+        // it never also exits PiP/fullscreen underneath.
+        if (e.key === 'Escape') {
+          const ho = document.getElementById('handoff-overlay');
+          if (ho && !ho.hidden) { e.preventDefault(); this.closeHandoffMenu(); return; }
+        }
 
         // Surface the legend on first key, auto-hide after 4s
         const legendKeys = [' ', 'k', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'm', 'f'];
