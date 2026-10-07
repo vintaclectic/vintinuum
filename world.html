@@ -147,6 +147,15 @@
     );
     transform: translate(-50%, -50%); }
   #status.show { opacity: 1; }
+  /* #status YIELDS TO AN OPEN SHEET (8SBAT7J). Its band starts at the rail
+     column's right edge (--status-rail), which is exactly where the rail's
+     wall scan looks for things it must not wrap into — so while #status was
+     showing, the wrap was capped, refused, and 9-15 launchers stayed off-screen
+     at 320/375 with any sheet up (verify-one-sheet: 46 violations). A sheet
+     covers the stage and #status (z5) sits under its scrim anyway, so it hides
+     for the sheet's lifetime: visibility, not opacity, so the scan skips it the
+     same frame dv-sheeting lands and layoutRail re-measures. */
+  body.dv-sheeting #status { visibility: hidden; }
 
   /* speech feed — bottom-left, traces fade out (no scroll, no overflow) */
   #feed { position: fixed; left: 16px; bottom: 92px; z-index: 4; max-width: min(78vw, 460px); display: flex; flex-direction: column; gap: 8px; pointer-events: none; }
