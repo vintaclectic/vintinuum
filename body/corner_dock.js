@@ -38,7 +38,9 @@
             └ these two never coexist: brain.html hides #hey-vinta-btn, and
               the dock skips display:none nodes, so the tie is inert BY DESIGN.
               Anything NEW on 'br' must not take 10.
-         30 #carry-pill        40 #vwg-pill / #vwg-dot (account, outermost)
+         30 #carry-pill        40 #vwg-pill (guest "Begin", outermost)
+                            (#vwg-dot retired JSAX335 — a signed-in user gets
+                             no corner affordance at all)
      bl   5 diag pill          10 #vintVoice   15 #micBtn   20 #vint-status-pill
      tr  10 #vtn-pill-right    20 consciousness btn        30 three3d mode btn
      tl  10 #vtn-pill-left

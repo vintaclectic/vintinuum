@@ -213,7 +213,7 @@
     // Fallback anchor (used only until VintDock lands, and on the rare page with
     // no orb): already clear of hey_vinta's 56px orb, so even the pre-dock frame
     // never overlaps. The dock overwrites these inline once it registers.
-    + '#vwg-pill,#vwg-dot{right:max(16px,env(safe-area-inset-right));'
+    + '#vwg-pill{right:max(16px,env(safe-area-inset-right));'
     + 'bottom:calc(88px + env(safe-area-inset-bottom));}'
     + '#vwg-pill{position:fixed;z-index:2147483600;display:inline-flex;align-items:center;gap:8px;'
     + 'min-height:44px;padding:0 18px;border-radius:999px;border:1px solid rgba(255,213,79,.34);'
@@ -221,10 +221,14 @@
     + 'font-size:12px;font-weight:700;letter-spacing:.1em;cursor:pointer;box-shadow:0 6px 24px rgba(0,0,0,.4);'
     + '-webkit-tap-highlight-color:transparent;transition:transform .15s,opacity .2s;}'
     + '#vwg-pill:active{transform:scale(.96);}'
-    + '#vwg-dot{position:fixed;z-index:2147483600;width:34px;height:34px;border-radius:50%;'
-    + 'display:flex;align-items:center;justify-content:center;border:1px solid rgba(255,213,79,.3);'
-    + 'background:rgba(8,12,20,.85);color:#ffd54f;font-family:"Space Mono",monospace;font-size:13px;'
-    + 'cursor:pointer;-webkit-tap-highlight-color:transparent;}'
+    // #vwg-dot is no longer CREATED (JSAX335) — a signed-in user gets nothing in
+    // the corner — so its styling is gone and only an inert rule remains.
+    // What that rule can and cannot do, stated honestly: it ships WITH the new
+    // script, so it cannot discipline an older cached copy of this same file.
+    // What it does cover is any OTHER surface creating a #vwg-dot node —
+    // world.html, brain.html and body/world/dirverse-hud.js all still know the
+    // id. If one ever does, it is inert rather than a collider.
+    + '#vwg-dot{display:none!important;}'
     + '#vwg-scrim{position:fixed;inset:0;z-index:2147483640;background:rgba(2,4,10,.72);backdrop-filter:blur(4px);'
     + 'display:none;align-items:flex-end;justify-content:center;}'
     + '#vwg-scrim.show{display:flex;}'
@@ -420,30 +424,73 @@
   function mountPill() {
     injectCss();
     if (signedIn()) {
-      // SIGNED IN → the "Begin" pill must not exist anywhere, on any page.
-      // (Vinta 2026-08-01: "remove the begin login button if user is loggedin
-      // across entire app".) Removal is UNCONDITIONAL and runs before the early
-      // return — the old code returned early when the dot already existed, so a
-      // pill left over from a pre-login paint could survive the auth flip.
-      var stale = document.getElementById('vwg-pill');
-      if (stale) { try { root.VintDock && root.VintDock.release(stale); } catch (_) {} stale.remove(); }
-      if (document.getElementById('vwg-dot')) return;
-      var dot = document.createElement('button'); dot.id = 'vwg-dot'; dot.title = 'Account & install'; dot.textContent = '✦';
-      dot.onclick = openSheet;
-      document.body.appendChild(dot);
-      dock(dot);
+      // SIGNED IN → NOTHING lives in the corner. Not the "Begin" pill, and (new,
+      // JSAX335) not the account dot either.
+      //
+      // Vinta 2026-08-01 said "remove the begin login button if user is loggedin
+      // across entire app". That was read as "swap the pill for a smaller dot",
+      // and the dot inherited the pill's corner slot — so on phone.html the 34px
+      // #vwg-dot landed directly on top of the chat composer's send button.
+      // MEASURED from Vinta's 2026-10-08 screenshot (1280×2856, DPR≈3.26): the
+      // dot's disc covers the send button's disc almost exactly, which is why he
+      // reported "it's always in the way" — and being dock-positioned, it was
+      // not draggable out of the way either.
+      //
+      // The honest fix is not another corner slot: the account sheet is NOT a
+      // primary action for someone already signed in, so it does not earn a
+      // permanent floating button on all 54 surfaces. It stays reachable through
+      // real entry points instead (see openerHooks(): window.VintWelcomeGate.open,
+      // any [data-vint-account] element, any href="#account" link, and the
+      // #account URL hash). Nothing is lost; a collider is.
+      removeAffordance('vwg-pill');
+      removeAffordance('vwg-dot');
       return;
     }
     // SIGNED OUT → the pill is the way in; make sure no account dot lingers.
-    var staleDot = document.getElementById('vwg-dot');
-    if (staleDot) { try { root.VintDock && root.VintDock.release(staleDot); } catch (_) {} staleDot.remove(); }
+    removeAffordance('vwg-dot');
     if (document.getElementById('vwg-pill')) return;
     var pill = document.createElement('button'); pill.id = 'vwg-pill';
+    // Vinta JSAX335: "can't be moved around". The standing order is that EVERY
+    // button is repositionable (CLAUDE.md "All buttons are draggable"), and the
+    // pill was the one corner affordance that opted out. body/draggable.js only
+    // writes a position once the user has actually dragged it, so the dock stays
+    // the authority for the default placement.
+    pill.setAttribute('data-draggable', 'true');
     pill.innerHTML = '<span>✦</span><span>Begin</span>';
     pill.onclick = openSheet;
     document.body.appendChild(pill);
     dock(pill);
     settleIn(pill);
+  }
+
+  // Remove a corner affordance AND give its dock slot back, so the widgets that
+  // were stacked above it (hey_vinta's orb, the status pill) drop back down
+  // instead of leaving a hole. Null-safe and idempotent.
+  function removeAffordance(id) {
+    var el = document.getElementById(id);
+    if (!el) return;
+    try { root.VintDock && root.VintDock.release && root.VintDock.release(el); } catch (_) {}
+    el.remove();
+    try { root.VintDock && root.VintDock.reflow && root.VintDock.reflow(); } catch (_) {}
+  }
+
+  // THE WAY BACK IN, now that the signed-in user has no corner button. These are
+  // declarative so any surface can offer "Account" wherever it actually belongs
+  // (a menu row, a settings line) without importing anything.
+  function openerHooks() {
+    try {
+      document.addEventListener('click', function (e) {
+        var t = e.target && e.target.closest
+          ? e.target.closest('[data-vint-account],a[href="#account"],a[href$="#account"]')
+          : null;
+        if (!t) return;
+        e.preventDefault();
+        openSheet();
+      }, true);
+      function byHash() { if ((location.hash || '') === '#account') openSheet(); }
+      window.addEventListener('hashchange', byHash);
+      byHash();
+    } catch (_) {}
   }
 
   // DON'T PAINT A POSITION YOU MIGHT HAVE TO TAKE BACK (AETHERHOLD 2026-08-08).
@@ -596,6 +643,7 @@
   function boot() {
     if (!document.body) { return setTimeout(boot, 50); }
     mountPill();
+    openerHooks();
     maybeFirstVisit();
     // Re-evaluate the affordance if auth changes elsewhere (shell.js broadcasts).
     try {

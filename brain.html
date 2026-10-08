@@ -473,9 +473,10 @@ canvas{display:block;}
 }
 
 /* LESS BUTTONS (Vinta 2026-06-26): hide the floating-button clutter on brain.
-   Keeps ONLY: the V chat orb (#vint-chat-btn), the ✦ account/login button
-   (#vwg-pill/#vwg-dot), the topbar header (brand + lore), and the single
-   #footerDock toolbar. Everything else floating is gone. */
+   Keeps ONLY: the V chat orb (#vint-chat-btn), the guest ✦ login pill
+   (#vwg-pill — #vwg-dot was retired in JSAX335, so a SIGNED-IN user now has no
+   floating account button here at all), the topbar header (brand + lore), and
+   the single #footerDock toolbar. Everything else floating is gone. */
 #hey-vinta-btn,
 .vint-vp-btn,
 #vintVoice,
@@ -502,8 +503,9 @@ canvas{display:block;}
 /* ── LOGIN WALL (Vinta 2026-06-26: "login... behind a wall") ──
    When logged OUT, the page is dead-clean: only the ✦ login pill + the V orb.
    The dock and any other chrome hide until the user signs in. <body> gets
-   .vint-guest from the auth probe below; welcome-gate's #vwg-pill/#vwg-dot
-   and #vint-chat-btn are deliberately NOT hidden. */
+   .vint-guest from the auth probe below; welcome-gate's #vwg-pill and
+   #vint-chat-btn are deliberately NOT hidden. (There is no signed-in #vwg-dot
+   to hide any more — JSAX335 deleted it.) */
 body.vint-guest #footerDock,
 body.vint-guest #statsFooterLink,
 body.vint-guest #learningFooterLink,

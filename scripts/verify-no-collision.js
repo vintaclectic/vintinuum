@@ -241,17 +241,30 @@ const TOKEN_KEYS = ['vint_token', 'soul_auth_token', 'vint_access_token', 'acces
         return req.abort();   // external: brain API, fonts, CDNs
       });
 
-      if (signedIn) {
-        await page.evaluateOnNewDocument((keys) => {
-          const fake = 'verify.' + 'a'.repeat(40) + '.token';
-          keys.forEach(k => { try { localStorage.setItem(k, fake); } catch (_) {} });
-          try {
+      // AUTH STATE IS PER-ORIGIN, NOT PER-PAGE (found in JSAX335). Every surface
+      // is served from the same 127.0.0.1:<port> origin and puppeteer shares one
+      // profile, so the localStorage a signed-in pass writes survives into the
+      // NEXT page's guest pass. This loop only ever SET tokens and never cleared
+      // them, so from the first signed-in render onward every "guest" render was
+      // actually a second signed-in render — i.e. the guest half of this sweep
+      // was not being measured at all. Clear explicitly: absence of a set is not
+      // a guest.
+      await page.evaluateOnNewDocument((keys, signed) => {
+        try {
+          if (signed) {
+            const fake = 'verify.' + 'a'.repeat(40) + '.token';
+            keys.forEach(k => localStorage.setItem(k, fake));
             localStorage.setItem('vint_user', JSON.stringify({ id: 1, email: 'verify@local', name: 'Verify' }));
             localStorage.setItem('vint_onboarded', '1');
             localStorage.setItem('vwg_seen', '1');
-          } catch (_) {}
-        }, TOKEN_KEYS);
-      }
+          } else {
+            keys.forEach(k => localStorage.removeItem(k));
+            localStorage.removeItem('vint_user');
+            localStorage.removeItem('vint_refresh_token');
+            localStorage.removeItem('soul_auth_refresh');
+          }
+        } catch (_) {}
+      }, TOKEN_KEYS, signedIn);
 
       for (const w of WIDTHS) {
         await page.setViewport({ width: w, height: 800, deviceScaleFactor: 1 });
@@ -310,6 +323,13 @@ const TOKEN_KEYS = ['vint_token', 'soul_auth_token', 'vint_access_token', 'acces
         // The task's second half, asserted directly.
         if (signedIn && res.hasBeginPill) {
           failures.push({ type: 'BEGIN-PILL-WHILE-SIGNED-IN', label });
+        }
+        // hasAccountDot was COLLECTED here since 2026-08-02 and never asserted —
+        // dead data, so #vwg-dot shipping on top of phone.html's send button ran
+        // through this sweep green for two months (JSAX335). A signed-in user now
+        // gets NO corner affordance at all, and this is the assertion that says so.
+        if (signedIn && res.hasAccountDot) {
+          failures.push({ type: 'ACCOUNT-DOT-WHILE-SIGNED-IN', label });
         }
       }
       await page.close();

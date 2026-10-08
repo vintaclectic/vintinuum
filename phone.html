@@ -4116,7 +4116,10 @@ init();
     slot(document.querySelector('.vint-status-pill'), 'left', 1);
     slot(document.getElementById('hey-vinta-btn'), 'right', 0);
     slot(document.getElementById('vwg-pill'), 'right', 1);  // guest "Begin" pill
-    slot(document.getElementById('vwg-dot'), 'right', 1);   // signed-in account dot (gold ✦ ring)
+    // NO signed-in slot: #vwg-dot was deleted (JSAX335) because it docked on top
+    // of the chat composer's send button. slot() is null-safe, so this stays
+    // correct if a stray dot ever reappears from a cached script.
+    slot(document.getElementById('vwg-dot'), 'right', 1);
     applyFloatVisibility();
   }
 
