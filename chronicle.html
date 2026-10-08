@@ -398,8 +398,24 @@ document.querySelectorAll('.reveal').forEach(el=>io.observe(el));
 // active chapter in rail
 const links=[...document.querySelectorAll('.rail a')];
 const map={};links.forEach(a=>map[a.dataset.t]=a);
+const rail=document.getElementById('rail');
+// Track the active chip WITHOUT ever moving the page. scrollIntoView() walks
+// EVERY scroll ancestor, and on phones .rail is position:static with
+// overflow-x:auto sitting at the top of .shell — so block:'nearest' yanked the
+// document back up to the rail each time a chapter crossed the spy band, i.e.
+// the "it scrolls back to the top after so many scrolls down" bug (S3U2BDT).
+// Setting rail.scrollLeft moves ONLY the rail's own scrollport. Measured with
+// rects, not offsetLeft, because .rail's offsetParent is .shell (position:relative).
+function trackChip(a){
+  if(!rail) return;
+  if(rail.scrollWidth - rail.clientWidth < 2) return; // desktop: column rail, nothing to pan
+  const ar=a.getBoundingClientRect(), rr=rail.getBoundingClientRect();
+  const delta=(ar.left - rr.left) - (rr.width - ar.width)/2;
+  const max=rail.scrollWidth - rail.clientWidth;
+  rail.scrollLeft=Math.max(0, Math.min(rail.scrollLeft + delta, max));
+}
 const spy=new IntersectionObserver((es)=>{
-  es.forEach(e=>{if(e.isIntersecting){links.forEach(l=>l.classList.remove('active'));const a=map[e.target.id];if(a){a.classList.add('active');a.scrollIntoView({block:'nearest',inline:'center'});}}});
+  es.forEach(e=>{if(e.isIntersecting){links.forEach(l=>l.classList.remove('active'));const a=map[e.target.id];if(a){a.classList.add('active');trackChip(a);}}});
 },{rootMargin:'-45% 0px -50% 0px'});
 document.querySelectorAll('.chapter').forEach(c=>spy.observe(c));
 </script>
