@@ -45,6 +45,12 @@
      tr  10 #vtn-pill-right    20 consciousness btn        30 three3d mode btn
      tl  10 #vtn-pill-left
      bc  10 .brain-hint        (center lanes auto-clear BOTH flanking columns)
+
+   OBSTACLES (VintDock.avoid) — a panel the stack must start above rather than
+   stack into. Obstacles may be `position:fixed` (world.html's #invite) OR
+   ORDINARY IN-FLOW CONTENT inside a scroller (phone.html's earned cards): the
+   dock listens on scroll and re-measures, and an obstacle clipped out of its
+   scroller stops counting. See the SCROLL AWARENESS block at the bottom.
 */
 (function (root) {
   'use strict';
@@ -83,6 +89,24 @@
       if (!register._ro) register._ro = new ResizeObserver(function () { reflow(); });
       register._ro.observe(el);
     } catch (_) {}
+  }
+
+  // THE EDGE-BAR SCAN IS THE EXPENSIVE HALF OF A REFLOW, AND SCROLLING CANNOT
+  // CHANGE ITS ANSWER (N2E8EAP 2026-10-08). It walks `document.querySelectorAll('*')`
+  // and calls getComputedStyle on every node — MEASURED on phone.html: 1,478
+  // elements, twice per reflow. Every bar it can find is `position:fixed`, which
+  // by definition does not move when a scroller scrolls, so a scroll-driven
+  // reflow may reuse the previous answer. Anything that CAN change it (resize,
+  // orientation, a DOM mutation, a ResizeObserver hit) clears the cache first.
+  // Without this, making the dock scroll-aware would have put ~3,000
+  // getComputedStyle calls on every scroll frame.
+  var _reserveCache = null;
+  function invalidateReserve() { _reserveCache = null; }
+  function reservedBoth() {
+    if (!_reserveCache) {
+      _reserveCache = { bottom: edgeReserved('bottom'), top: edgeReserved('top') };
+    }
+    return _reserveCache;
   }
 
   function edgeReserved(edge) {
@@ -168,17 +192,76 @@
     } catch (_) { return 0; }
   }
 
+  // AN OBSTACLE INSIDE A SCROLLER IS ONLY AS BIG AS THE PART YOU CAN SEE
+  // (N2E8EAP 2026-10-08). phone.html's earned cards live inside #viewBody, a
+  // `overflow-y:auto` column. getBoundingClientRect() reports the element's
+  // geometry whether or not the scroller clips it away, so a row scrolled just
+  // past the scroller's bottom edge still measured as an obstacle and lifted the
+  // stack over nothing. Intersect the rect with every clipping ancestor and the
+  // extent becomes exactly the part a person can actually collide with; an
+  // obstacle scrolled entirely out of its scroller stops being one.
+  //
+  // Only `overflow` matters here, never `transform`/`filter` containment: we are
+  // asking "is this pixel painted", and a clipping box is the only thing that
+  // answers no.
+  function clippedRect(el) {
+    var r;
+    try { r = el.getBoundingClientRect(); } catch (_) { return null; }
+    // A zero-area node cannot collide with anything. This is also the ONLY test
+    // that catches an obstacle hidden by a `display:none` ANCESTOR: visible()
+    // reads getComputedStyle(el).display, which for a child of a hidden parent
+    // is still 'block'/'flex', never 'none'. phone.html hides whole views that
+    // way when you switch tabs, so without this an off-screen view's card would
+    // still lift the stack.
+    if (r.width <= 0 || r.height <= 0) return null;
+    var box = { top: r.top, bottom: r.bottom, left: r.left, right: r.right, height: r.height };
+    try {
+      var p = el.parentElement;
+      while (p && p !== document.documentElement) {
+        var cs = getComputedStyle(p);
+        if (cs.overflow !== 'visible' || cs.overflowY !== 'visible' || cs.overflowX !== 'visible') {
+          var pr = p.getBoundingClientRect();
+          if (cs.overflowY !== 'visible') {
+            if (pr.top > box.top) box.top = pr.top;
+            if (pr.bottom < box.bottom) box.bottom = pr.bottom;
+          }
+          if (cs.overflowX !== 'visible') {
+            if (pr.left > box.left) box.left = pr.left;
+            if (pr.right < box.right) box.right = pr.right;
+          }
+          if (box.bottom - box.top <= 0 || box.right - box.left <= 0) return null;
+        }
+        p = p.parentElement;
+      }
+    } catch (_) {}
+    box.height = box.bottom - box.top;              // the VISIBLE height
+    return box;
+  }
+
+  // Set by avoidExtent: is ANY registered obstacle actually scroll-affected?
+  // A `position:fixed`/`sticky` obstacle (phone.html's .bottom-nav, world.html's
+  // #invite) cannot move when a scroller scrolls, so a page that only registers
+  // those must pay nothing on scroll. The scroll listener reads this flag.
+  var _hasFlowAvoid = false;
+
   function avoidExtent(corner) {
     var isBottom = corner[0] === 'b';
     var max = 0;
     avoids = avoids.filter(function (a) { return a.el && a.el.isConnected; });
     avoids.forEach(function (a) {
+      try {
+        var apos = getComputedStyle(a.el).position;
+        if (apos !== 'fixed' && apos !== 'sticky') _hasFlowAvoid = true;
+      } catch (_) {}
       if (a.corner !== corner || !visible(a.el)) return;
-      var r;
-      try { r = a.el.getBoundingClientRect(); } catch (_) { return; }
+      var r = clippedRect(a.el);
+      if (!r) return;                               // clipped away — not an obstacle
       // Only obstruct if it actually sits in this corner's column.
       var ext = isBottom ? (root.innerHeight - r.top) : r.bottom;
       // ...and never less than where it will come to rest (see above).
+      // restingExtent() derives from the element's OWN edge offset, which is
+      // meaningless for an in-flow node inside a scroller (`bottom` is 'auto'
+      // there, so it returns 0 and the live rect wins — exactly right).
       var rest = restingExtent(a.el, isBottom, r);
       if (rest > ext) ext = rest;
       if (ext > max && ext < root.innerHeight) max = ext;
@@ -248,7 +331,22 @@
 
   var raf = null;
   function reflow() {
+    // Any caller that is not the scroll handler may have changed the edge bars,
+    // so the cached bar scan is dropped. (The scroll handler goes through
+    // reflowScrolled(), which deliberately keeps it.)
+    invalidateReserve();
     if (raf) return;                        // coalesce bursts into one frame
+    raf = requestAnimationFrame(function () {
+      raf = null;
+      doReflow();
+    });
+  }
+
+  // A reflow caused purely by scrolling: the fixed edge bars cannot have moved,
+  // so reuse the cached scan and only re-measure the slots and obstacles (a
+  // handful of getBoundingClientRect calls, not a whole-document walk).
+  function reflowScrolled() {
+    if (raf) return;
     raf = requestAnimationFrame(function () {
       raf = null;
       doReflow();
@@ -259,9 +357,11 @@
     // Reap detached nodes so a removed widget frees its slot immediately.
     slots = slots.filter(function (s) { return s.el && s.el.isConnected; });
 
+    _hasFlowAvoid = false;                  // recomputed by avoidExtent below
     var ins = insets();
-    var reserveBottom = edgeReserved('bottom');
-    var reserveTop    = edgeReserved('top');
+    var _res = reservedBoth();
+    var reserveBottom = _res.bottom;
+    var reserveTop    = _res.top;
 
     // 'bc'/'tc' are CENTER lanes: same vertical stacking, but the element keeps
     // its own horizontal centering. They're laid out after the corners so a
@@ -397,6 +497,14 @@
 
   // Declare a panel as an obstacle the docked buttons must stack clear of.
   // (defined below `register`; see VintDock.claim for the load-order-safe entry)
+  //
+  // AN OBSTACLE NEED NOT BE FIXED (N2E8EAP). Pass any in-flow element — a card,
+  // a button row — and the dock tracks it through scrolling and clipping. Pass
+  // the smallest thing that must stay reachable, not its whole container: the
+  // stack is lifted above the obstacle's top, so registering a 172px card lifts
+  // the pill to mid-screen while registering its 44px action row lifts it just
+  // clear of the buttons. MEASURED on phone.html @375: the card's top yields a
+  // 276px lift, the action row's yields 161px.
   // A wide sheet (world.html's #invite: centered, up to 500px) reaches into BOTH
   // bottom corners on a phone, so it must be declarable as an obstacle for each.
   // Dedupe is therefore per (element, corner) — keying on the element alone made
@@ -431,6 +539,7 @@
     GUTTER: GUTTER,
     _slots: function () { return slots.slice(); },
     _avoids: function () { return avoids.slice(); },
+    _hasFlowAvoid: function () { return _hasFlowAvoid; },
   };
 
   // Drain anything queued before this file landed.
@@ -446,6 +555,51 @@
     root.addEventListener('resize', function () { _insets = null; reflow(); });
     root.addEventListener('orientationchange', function () { _insets = null; reflow(); });
   } catch (_) {}
+
+  // ─── SCROLL AWARENESS (N2E8EAP 2026-10-08) ────────────────────────────────
+  // avoid() was built for obstacles that are themselves `position:fixed`
+  // (world.html's #invite doorway), so a STATIC offset computed once was always
+  // right. An IN-FLOW obstacle is different: phone.html's earned install card
+  // lives inside #viewBody, an `overflow-y:auto` column, and MEASURED at
+  // 320/375/393/768/1280/1920 its "Not now" button sat 7-9px inside the guest
+  // "Begin" pill's band. Registering it as an obstacle without this listener
+  // would have gone stale the instant the user scrolled — the lift would be
+  // frozen at wherever the card happened to be on the frame the dock last ran.
+  //
+  // `scroll` does NOT bubble, but a non-bubbling event still reaches ancestors
+  // in the CAPTURE phase, so one capturing listener on `window` sees every
+  // scrolling container on the page — no per-scroller registration, and it
+  // keeps working for a scroller that mounts later.
+  //
+  // COST CONTROL, because this runs on every scroll frame of all 54 surfaces:
+  //   1. No obstacle registered at all → return before touching layout.
+  //   2. Obstacles registered, but every one of them is fixed/sticky → return.
+  //      This is the state of every surface today: phone.html registers its
+  //      .bottom-nav and world.html its #invite, both `position:fixed`, and a
+  //      fixed obstacle cannot move when a scroller scrolls. So the common case
+  //      pays one boolean per scroll frame, not a layout pass.
+  //   3. A genuinely in-flow obstacle exists → reflowScrolled(), coalesced to
+  //      one rAF and reusing the cached edge-bar scan (see reservedBoth).
+  // `passive:true` so we never block the scroll itself.
+  //
+  // ⚠ MEASURED AND REJECTED FOR phone.html (N2E8EAP): lifting a float over an
+  // in-flow obstacle inside a tall scroller is a CHASE, not a fix. Registering
+  // #installCard's action row lifted #vwg-pill from bottom:68px to 161px, and as
+  // the row scrolled up the lift grew with it (207 → 254 → 300 → 346px),
+  // walking the pill through everything above: measured new overlaps of
+  // #vwg-pill × #pairScanBtn 44px @393px and × #pairRedeemBtn 44px @375px where
+  // there had been none. On a scroller whose column is full of controls there is
+  // no height a float can retreat to. Use this capability for a BOUNDED obstacle
+  // (a sheet, a bar, a toast) — never to dodge page content.
+  try {
+    root.addEventListener('scroll', function () {
+      // Nothing a scroll can change unless an obstacle moves with the content.
+      if (!avoids.length || !_hasFlowAvoid) return;
+      reflowScrolled();
+    }, { passive: true, capture: true });
+  } catch (_) {
+    try { root.addEventListener('scroll', function () { if (avoids.length && _hasFlowAvoid) reflowScrolled(); }, true); } catch (_) {}
+  }
 
   // Late-mounting widgets (and any page that adds one after load) get picked up.
   //

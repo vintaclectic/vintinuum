@@ -38,6 +38,7 @@
    USAGE
      node scripts/verify-account-dot-gone-JSAX335.js
      node scripts/verify-account-dot-gone-JSAX335.js --control
+     node scripts/verify-account-dot-gone-JSAX335.js --no-occlusion   # N2E8EAP
      node scripts/verify-account-dot-gone-JSAX335.js phone world   # subset
      VERIFY_WIDTHS=393 node scripts/verify-account-dot-gone-JSAX335.js
 */
@@ -56,24 +57,49 @@ const WIDTHS = (process.env.VERIFY_WIDTHS || '320,375,393,768,1280,1920')
   .split(',').map(s => parseInt(s.trim(), 10)).filter(Boolean);
 
 const CONTROL = process.argv.includes('--control');
+/* NEGATIVE CONTROL for the collidability filter itself (N2E8EAP). --no-occlusion
+   reverts isCollidable() to the bare rect test the harness shipped with, and the
+   guest phone.html run MUST go red on #vwg-pill × #installDismissBtn — that is
+   what proves the filter is load-bearing and is what closed the ratchet, rather
+   than the ratchet having been deleted on an argument.
+   The complementary direction is already covered by --control: there, the
+   signed-in lane has a token, #pairScreen is down, and the SAME pair is reported
+   as a real failure (#vwg-dot × #installDismissBtn) — so the filter tracks
+   reachability, not convenience. */
+const NO_OCCLUSION = process.argv.includes('--no-occlusion');
 
-/* THE RATCHET. One guest-state overlap predates this work and is filed as its
-   own card because fixing it needs a mechanism this repo does not have yet:
-   VintDock.avoid() computes a STATIC offset and corner_dock.js listens only to
-   resize/orientationchange/transitionend/animationend — never scroll — so
-   registering a scrolling in-flow card as an obstacle would go stale the instant
-   the user scrolls, across all 54 surfaces.
+/* THE RATCHET — NOW EMPTY (closed by card N2E8EAP, 2026-10-08).
+   It briefly held `phone.html|#installDismissBtn`, a 7-9px #vwg-pill overlap
+   this harness reported on the guest render of phone.html. N2E8EAP measured it
+   and found TWO separate things wrong, neither of them a missing dock feature:
 
-   MEASURED at commit 9891cec in a clean HEAD worktree (so it is not a JSAX335
-   regression): #vwg-pill fixed bottom:68px 97×44 vs #installDismissBtn in-flow —
-   7px @320, 7px @375, 9px @768. Guest only, and only once beforeinstallprompt
-   has fired and the user has neither installed nor dismissed.
+   1. THE PROBE WAS NOT MEASURING WHAT A PERSON CAN TOUCH. On a guest render
+      phone.html shows #pairScreen — `position:fixed; inset:0; background:#050812`,
+      an OPAQUE full-screen overlay — because the pill exists only while
+      welcome-gate's token() is empty, which is exactly when phone.html's TOKEN()
+      is empty, which calls showPairScreen(). So the install card was buried:
+      MEASURED, document.elementFromPoint at #installDismissBtn's centre returned
+      #pairScreen at 320/375/768px. A float cannot collide with something nobody
+      can see or tap. isCollidable() below now clips each control to its scroll
+      ancestors and requires it to be the element actually painted there.
 
-   This set may only SHRINK. Any pill-vs-control overlap not listed here fails
-   the run, and a listed one that stops happening is reported so the entry gets
-   deleted rather than quietly protecting a future bug. → card N2E8EAP */
-const KNOWN_OPEN = new Set(['phone.html|#installDismissBtn']);
+   2. THERE WAS STILL A REAL BUG, in one narrow window. redeemCode() wrote the
+      pair tokens straight to localStorage and dispatched nothing, so
+      welcome-gate never heard the auth flip (`storage` does not fire in the tab
+      that wrote it) and hidePairScreen() 800ms later exposed the body view with
+      the guest pill still on top of it — the 7px overlap, now on a reachable
+      button, until the next reload. Fixed by dispatching 'vint:auth' on pair
+      success; the PAIRED-IN-SESSION lane below is the proof.
+
+   The set may only ever SHRINK, and it is now empty: ANY #vwg-pill overlap with
+   a collidable control fails the run. Do not add an entry here to make a red run
+   green — fix the collision, or prove the control is not collidable. */
+const KNOWN_OPEN = new Set();
 const knownSeen = new Set();
+/* Rect-overlaps the probe FILTERED OUT as not collidable, surfaced at the end of
+   the run. This exists so the filter can never hide something quietly: if a pair
+   shows up here that a person can actually touch, isCollidable() is the bug. */
+const buriedSeen = new Map();
 const TOKEN_KEYS = ['vint_token', 'soul_auth_token', 'vint_access_token', 'access_token'];
 
 const MIME = {
@@ -111,6 +137,63 @@ function probe() {
   };
   const hit = (a, b) => a.left < b.right && b.left < a.right && a.top < b.bottom && b.top < a.bottom;
 
+  /* CLIP TO EVERY SCROLL ANCESTOR, THEN ASK WHO IS ACTUALLY PAINTED THERE
+     (N2E8EAP; the rule from task NFQ2EU6). A rect is not a thing a person can
+     collide with. Two ways it lies:
+
+       • CLIPPING — getBoundingClientRect() reports geometry even for the part
+         of an element its `overflow:auto` ancestor has scrolled out of view.
+         phone.html's cards live in #viewBody, a scrolling column.
+       • OCCLUSION — an opaque overlay above the control (phone.html's
+         #pairScreen, z-index 9999, inset:0) makes it unreachable. A float
+         "overlapping" it overlaps nothing the user has.
+
+     So: intersect the control's rect with every clipping ancestor, and require
+     the surviving centre to actually hit that control. Returns the clipped rect
+     (truthy) or null.
+
+     This is deliberately NARROW so it cannot launder a real collision:
+       — only the control is tested, never the float;
+       — the hit must be the control itself or something INSIDE it, so a sibling
+         painted on top disqualifies it;
+       — the float is temporarily made pointer-transparent for the test, so the
+         float covering the control can never be the reason the control is
+         judged unreachable. That one inversion would have made this harness
+         bless the exact JSAX335 bug it exists to catch, and `--control`
+         (which re-creates #vwg-dot on .chat-send-btn) is what proves it does not. */
+  const clipToScrollers = el => {
+    const r = el.getBoundingClientRect();
+    let top = r.top, bottom = r.bottom, left = r.left, right = r.right;
+    for (let p = el.parentElement; p && p !== document.documentElement; p = p.parentElement) {
+      const cs = getComputedStyle(p);
+      if (cs.overflow === 'visible' && cs.overflowY === 'visible' && cs.overflowX === 'visible') continue;
+      const pr = p.getBoundingClientRect();
+      if (cs.overflowY !== 'visible') { top = Math.max(top, pr.top); bottom = Math.min(bottom, pr.bottom); }
+      if (cs.overflowX !== 'visible') { left = Math.max(left, pr.left); right = Math.min(right, pr.right); }
+      if (bottom - top <= 0 || right - left <= 0) return null;
+    }
+    // ...and clipped to the viewport, which clips everything.
+    top = Math.max(top, 0); left = Math.max(left, 0);
+    bottom = Math.min(bottom, innerHeight); right = Math.min(right, innerWidth);
+    if (bottom - top <= 0 || right - left <= 0) return null;
+    return { top, bottom, left, right };
+  };
+
+  const isCollidable = (el, floats) => {
+    if (window.__N2E_NO_OCCLUSION) return el.getBoundingClientRect();
+    const box = clipToScrollers(el);
+    if (!box) return null;
+    const saved = floats.map(f => [f, f.style.pointerEvents]);
+    saved.forEach(([f]) => { f.style.pointerEvents = 'none'; });
+    let painted = null;
+    try {
+      painted = document.elementFromPoint((box.left + box.right) / 2, (box.top + box.bottom) / 2);
+    } catch (_) {}
+    saved.forEach(([f, v]) => { f.style.pointerEvents = v; });
+    if (!painted) return null;
+    return (painted === el || el.contains(painted)) ? box : null;
+  };
+
   const dot = document.getElementById('vwg-dot');
   const pill = document.getElementById('vwg-pill');
   const gate = [dot, pill].filter(e => e && vis(e));
@@ -125,20 +208,22 @@ function probe() {
   );
 
   const overlaps = [];
+  const buried = [];
   for (const g of gate) {
     const gr = g.getBoundingClientRect();
     for (const c of controls) {
       if (g.contains(c) || c.contains(g)) continue;
       const cr = c.getBoundingClientRect();
       if (!hit(gr, cr)) continue;
-      const ox = Math.min(gr.right, cr.right) - Math.max(gr.left, cr.left);
-      const oy = Math.min(gr.bottom, cr.bottom) - Math.max(gr.top, cr.top);
-      overlaps.push({
-        gate: g.id,
-        other: c.id ? '#' + c.id : (c.className && typeof c.className === 'string'
-          ? '.' + c.className.trim().split(/\s+/)[0] : c.tagName.toLowerCase()),
-        overlap: Math.round(Math.min(ox, oy)),
-      });
+      const name = c.id ? '#' + c.id : (c.className && typeof c.className === 'string'
+        ? '.' + c.className.trim().split(/\s+/)[0] : c.tagName.toLowerCase());
+      // Rect-overlap is necessary but not sufficient — see isCollidable.
+      const box = isCollidable(c, gate);
+      if (!box) { buried.push({ gate: g.id, other: name }); continue; }
+      const ox = Math.min(gr.right, box.right) - Math.max(gr.left, box.left);
+      const oy = Math.min(gr.bottom, box.bottom) - Math.max(gr.top, box.top);
+      if (ox <= 0 || oy <= 0) { buried.push({ gate: g.id, other: name }); continue; }
+      overlaps.push({ gate: g.id, other: name, overlap: Math.round(Math.min(ox, oy)) });
     }
   }
 
@@ -149,6 +234,11 @@ function probe() {
     // body/draggable.js stamps _vintDrag on every element it adopts.
     pillAdopted: pill ? !!pill._vintDrag : null,
     overlaps,
+    // Reported, never asserted: rect-overlaps that are NOT collidable (clipped
+    // out of a scroller, or under an opaque overlay). Printed at the end so a
+    // filtered pair can never vanish silently — if one of these is real, it is
+    // visible in the run output and this filter is what to re-examine.
+    buried,
   };
 }
 
@@ -260,6 +350,7 @@ async function settle(page) {
           localStorage.setItem('vwg_seen', '1');   // never auto-open the sheet
         } catch (_) {}
       }, TOKEN_KEYS, signedIn);
+      if (NO_OCCLUSION) await page.evaluateOnNewDocument(() => { window.__N2E_NO_OCCLUSION = true; });
 
       if (CONTROL && signedIn) {
         // NEGATIVE CONTROL — re-create the pre-fix dot byte-for-byte in behaviour:
@@ -316,6 +407,11 @@ async function settle(page) {
         const dotHits = r.overlaps.filter(o => o.gate === 'vwg-dot');
         ok(dotHits.length === 0, `${label}: #vwg-dot clear of all controls`,
            dotHits.map(o => `#${o.gate} × ${o.other} (${o.overlap}px)`).join(', '));
+
+        (r.buried || []).forEach(b => {
+          const k = `${file}|#${b.gate} × ${b.other}`;
+          buriedSeen.set(k, (buriedSeen.get(k) || 0) + 1);
+        });
 
         const pillHits = r.overlaps.filter(o => o.gate === 'vwg-pill');
         const novel = pillHits.filter(o => !KNOWN_OPEN.has(`${file}|${o.other}`));
@@ -399,6 +495,153 @@ async function settle(page) {
     await q.close();
   }
 
+  // ── N2E8EAP LANE 1: THE PAIRED-IN-SESSION WINDOW ──────────────────────────
+  // The ONLY state in which the reported #vwg-pill × #installDismissBtn overlap
+  // is reachable by a person. Steady-state guest has #pairScreen (opaque,
+  // inset:0) over the whole body view, so nothing the pill covers there is
+  // touchable; but redeemCode() used to write the pair tokens with no
+  // announcement, so hidePairScreen() exposed the body view 800ms later with the
+  // guest pill still floating on it. We reproduce the flip the way the pairing
+  // code does it — write the token, dispatch 'vint:auth', hide the pair screen —
+  // and assert the pill is gone BEFORE the card is exposed.
+  if (!only.length || only.some(o => 'phone.html'.includes(o))) {
+    for (const w of [320, 375, 393, 768]) {
+      const p = await newPageSafe();
+      p.on('dialog', d => d.dismiss().catch(() => {}));
+      await p.setRequestInterception(true);
+      p.on('request', req => {
+        const u = req.url();
+        if (u.startsWith(base) || u.startsWith('data:') || u.startsWith('blob:')) return req.continue();
+        return req.abort();
+      });
+      await p.evaluateOnNewDocument((keys) => {
+        try {
+          keys.forEach(k => localStorage.removeItem(k));
+          localStorage.removeItem('vint_user');
+          localStorage.setItem('vwg_seen', '1');
+        } catch (_) {}
+      }, TOKEN_KEYS);
+      await p.setViewport({ width: w, height: 800, deviceScaleFactor: 1 });
+      try { await p.goto(`${base}/phone.html`, { waitUntil: 'domcontentloaded', timeout: 20000 }); }
+      catch (_) { await p.close(); continue; }
+      await settle(p);
+
+      const before = await p.evaluate(() => {
+        const ps = document.getElementById('pairScreen');
+        return { pill: !!document.getElementById('vwg-pill'), pair: ps ? getComputedStyle(ps).display : 'absent' };
+      });
+      ok(before.pill, `phone.html @${w}px pre-pair: the guest pill is up`, JSON.stringify(before));
+      ok(before.pair === 'flex', `phone.html @${w}px pre-pair: #pairScreen covers the body view`, `display=${before.pair}`);
+
+      const after = await p.evaluate(async () => {
+        // Exactly what redeemCode() does on success, in order.
+        localStorage.setItem('vint_access_token', 'paired.' + 'a'.repeat(40) + '.token');
+        window.dispatchEvent(new Event('vint:auth'));
+        await new Promise(r => setTimeout(r, 400));
+        const ps = document.getElementById('pairScreen');
+        if (ps) ps.style.display = 'none';          // hidePairScreen()
+        await new Promise(r => setTimeout(r, 400));
+        const pill = document.getElementById('vwg-pill');
+        const dis = document.getElementById('installDismissBtn');
+        let overlap = 0;
+        if (pill && dis) {
+          const a = pill.getBoundingClientRect(), b = dis.getBoundingClientRect();
+          const ox = Math.min(a.right, b.right) - Math.max(a.left, b.left);
+          const oy = Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top);
+          if (ox > 0 && oy > 0) overlap = Math.round(Math.min(ox, oy));
+        }
+        return { pill: !!pill, dot: !!document.getElementById('vwg-dot'), overlap };
+      });
+      ok(!after.pill, `phone.html @${w}px paired in-session: the guest pill is GONE`, JSON.stringify(after));
+      ok(!after.dot, `phone.html @${w}px paired in-session: no account dot takes its place`, JSON.stringify(after));
+      ok(after.overlap === 0, `phone.html @${w}px paired in-session: nothing overlaps #installDismissBtn`,
+         `overlap=${after.overlap}px`);
+      await p.close();
+    }
+  }
+
+  // ── N2E8EAP LANE 2: THE DOCK TRACKS AN IN-FLOW OBSTACLE THROUGH SCROLL ────
+  // corner_dock.js gained avoid()-for-in-flow-obstacles for this card. The
+  // capability is dormant in shipped code (phone.html's own fix turned out to be
+  // the auth announcement above, and lifting a float inside a tall scroller was
+  // MEASURED to chase content into NEW collisions — see the warning in
+  // corner_dock.js). Dormant is not untested: exercise it directly, or the next
+  // agent inherits code nobody ever ran.
+  {
+    const p = await newPageSafe();
+    p.on('dialog', d => d.dismiss().catch(() => {}));
+    await p.setRequestInterception(true);
+    p.on('request', req => {
+      const u = req.url();
+      if (u.startsWith(base) || u.startsWith('data:') || u.startsWith('blob:')) return req.continue();
+      return req.abort();
+    });
+    await p.evaluateOnNewDocument((keys) => {
+      try { keys.forEach(k => localStorage.removeItem(k)); localStorage.setItem('vwg_seen', '1'); } catch (_) {}
+    }, TOKEN_KEYS);
+    await p.setViewport({ width: 375, height: 800, deviceScaleFactor: 1 });
+    await p.goto(`${base}/index.html`, { waitUntil: 'domcontentloaded', timeout: 20000 });
+    await settle(p);
+
+    const dock = await p.evaluate(async () => {
+      if (!window.VintDock || !window.VintDock.avoid) return { api: false };
+      // A scroller with an in-flow obstacle 600px down it.
+      const sc = document.createElement('div');
+      sc.id = 'n2e-scroller';
+      sc.style.cssText = 'position:fixed;left:0;top:0;width:200px;height:300px;overflow-y:auto;z-index:1;';
+      const inner = document.createElement('div');
+      inner.style.cssText = 'height:1200px;position:relative;';
+      const obs = document.createElement('div');
+      obs.id = 'n2e-obstacle';
+      obs.style.cssText = 'position:absolute;top:600px;left:0;width:100%;height:40px;background:#123;';
+      inner.appendChild(obs); sc.appendChild(inner); document.body.appendChild(sc);
+
+      const pill = document.getElementById('vwg-pill');
+      if (!pill) { sc.remove(); return { api: true, pill: false }; }
+
+      const flowBefore = window.VintDock._hasFlowAvoid();
+      window.VintDock.avoid(obs, { corner: 'br' });
+      window.VintDock.reflow();
+      await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
+      const flowAfter = window.VintDock._hasFlowAvoid();
+
+      // Obstacle is scrolled far out of the scroller's visible box → CLIPPED
+      // away → it must not lift anything.
+      const clipped = parseFloat(getComputedStyle(pill).bottom);
+
+      // Scroll it into view. No reflow() call — the dock's own scroll listener
+      // must do this, which is the whole point of the lane.
+      sc.scrollTop = 480;                       // obstacle now at ~120px in the box
+      await new Promise(r => setTimeout(r, 300));
+      const lifted = parseFloat(getComputedStyle(pill).bottom);
+
+      // Scroll it back out; the lift must be given back.
+      sc.scrollTop = 0;
+      await new Promise(r => setTimeout(r, 300));
+      const released = parseFloat(getComputedStyle(pill).bottom);
+
+      window.VintDock.unavoid(obs);
+      sc.remove();
+      window.VintDock.reflow();
+      await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
+      return { api: true, pill: true, flowBefore, flowAfter, clipped, lifted, released };
+    });
+
+    ok(dock.api === true, 'VintDock exposes avoid()/unavoid()', JSON.stringify(dock));
+    if (dock.pill) {
+      ok(dock.flowBefore === false && dock.flowAfter === true,
+         'dock: registering an in-flow obstacle arms scroll tracking (and fixed-only does not)',
+         `before=${dock.flowBefore} after=${dock.flowAfter}`);
+      ok(dock.lifted > dock.clipped + 20,
+         'dock: scrolling an in-flow obstacle INTO view lifts the stack, with no reflow() call',
+         `clipped=${dock.clipped}px lifted=${dock.lifted}px`);
+      ok(Math.abs(dock.released - dock.clipped) < 2,
+         'dock: scrolling it back out gives the lift back (clipped obstacle is not an obstacle)',
+         `clipped=${dock.clipped}px released=${dock.released}px`);
+    }
+    await p.close();
+  }
+
   await browser.close();
   srv.close();
   console.log('\n');
@@ -418,15 +661,25 @@ async function settle(page) {
     }
   }
 
+  // Everything the collidability filter removed, in the open.
+  if (buriedSeen.size) {
+    console.log(`ℹ ${buriedSeen.size} rect-overlap(s) filtered as NOT collidable`);
+    console.log(`  (clipped out of a scroller, or under an opaque overlay — a float cannot`);
+    console.log(`   collide with something nobody can see or tap. If one of these IS reachable,`);
+    console.log(`   isCollidable() in this file is the defect, not the ratchet.)`);
+    [...buriedSeen.entries()].sort().forEach(([k, n]) => console.log(`    ${k}  ×${n} render(s)`));
+  }
+
   if (!failures.length) {
     console.log(`${pass}/${checks} pass — ${pages.length} pages × ${WIDTHS.length} widths × 2 auth states`);
-    console.log(`  ratchet: ${knownSeen.size} known-open pill overlap(s) tolerated (card N2E8EAP); 0 new`);
-    console.log(`  widths: ${WIDTHS.join(', ')}${CONTROL ? '   [CONTROL RUN — this SHOULD have failed]' : ''}`);
-    process.exit(CONTROL ? 1 : (skipped.length ? 2 : 0));
+    console.log(`  ratchet: KNOWN_OPEN is EMPTY (closed by N2E8EAP) — zero tolerated overlaps`);
+    const bad = CONTROL || NO_OCCLUSION;
+    console.log(`  widths: ${WIDTHS.join(', ')}${bad ? '   [CONTROL RUN — this SHOULD have failed]' : ''}`);
+    process.exit(bad ? 1 : (skipped.length ? 2 : 0));
   }
 
   console.log(`${pass}/${checks} pass\n\nFAILURES:`);
   failures.slice(0, 60).forEach(f => console.log(`  ✗ ${f.label}${f.detail ? '  — ' + f.detail : ''}`));
   if (failures.length > 60) console.log(`  … and ${failures.length - 60} more`);
-  process.exit(CONTROL ? 0 : 1);
+  process.exit((CONTROL || NO_OCCLUSION) ? 0 : 1);
 })().catch(e => { console.error(e); process.exit(1); });

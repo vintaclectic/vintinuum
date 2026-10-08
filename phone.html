@@ -3627,6 +3627,27 @@ function wireEmbodimentCards() {
         localStorage.setItem('vint_user_id',       String(d.user?.id || ''));
         localStorage.setItem('vint_display_name',  d.user?.display_name || 'Vinta');
       } catch(_){}
+      // ANNOUNCE THE AUTH FLIP, or the guest pill outlives the pair screen
+      // (N2E8EAP 2026-10-08). This is the ONE state in which the reported
+      // collision is reachable by a person, and it is reachable only here:
+      //
+      //   #vwg-pill exists  ⟺  welcome-gate's token() is empty, i.e. none of
+      //   vint_token / vint_access_token / soul_auth_token is set
+      //                     ⟹  phone.html's TOKEN() is empty too
+      //                     ⟹  showPairScreen() — an opaque inset:0 overlay
+      //
+      // so in every STEADY state the whole body view (install card included) is
+      // buried behind #pairScreen and nothing the pill covers is reachable
+      // (MEASURED: document.elementFromPoint at #installDismissBtn's centre
+      // returns #pairScreen at 320/375/768px). The exception is this moment:
+      // we write the tokens straight to localStorage, so welcome-gate never
+      // hears about it — `storage` does not fire in the tab that wrote it — and
+      // 800ms later hidePairScreen() exposes the body view with the guest pill
+      // still floating over it, 7px into #installDismissBtn, until a reload.
+      //
+      // welcome-gate already listens for 'vint:auth' (its setToken() dispatches
+      // the same event); firing it here drops the pill BEFORE the card is shown.
+      try { window.dispatchEvent(new Event('vint:auth')); } catch(_){}
       stat.style.color = 'rgba(100,255,160,0.8)';
       stat.textContent = '✓ Paired! Loading…';
       stopScanner();
