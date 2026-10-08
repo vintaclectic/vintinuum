@@ -146,27 +146,36 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
 
       // Walk down like a reader. Each step: put the page exactly where we want
       // it (instant), let the world settle, then read back where we ARE.
-      const worst = await page.evaluate(async (steps, max) => {
+      const worst = await page.evaluate(async (steps, tol) => {
         const sleep = ms => new Promise(r => setTimeout(r, ms));
-        let worstDrift = 0, worstAt = 0, backSteps = 0, prev = 0;
+        const maxOf = () => document.documentElement.scrollHeight - document.documentElement.clientHeight;
+        let worstDrift = 0, worstAt = 0, backSteps = 0, prev = 0, clamped = 0;
         for (let i = 1; i <= steps; i++) {
-          const target = Math.round((max * i) / steps);
+          const target = Math.round((maxOf() * i) / steps);
           window.scrollTo({ top: target, behavior: 'instant' });
           await sleep(140);                       // let the spy + any animation fire
           await new Promise(r => requestAnimationFrame(() => r()));
           await sleep(140);                       // smooth scroll would still be running
           const actual = window.scrollY;
-          const drift = target - actual;          // >0 means something pulled us UP
-          if (drift > worstDrift) { worstDrift = drift; worstAt = target; }
-          if (actual < prev - 4) backSteps++;     // went backwards while reading forward
+          // The document SHRINKS as the last .reveal drops its translateY(28px),
+          // so the final step's target can exceed the new bottom and the browser
+          // clamps scrollY. That is the reader sitting at the end of the page, not
+          // a yank — only count drift when we are genuinely ABOVE the current
+          // bottom. (Measured live: 25px of pure clamp at step 26, max 12580->12555.)
+          const drift = target - actual;
+          if (drift > tol && actual < maxOf() - tol) {
+            if (drift > worstDrift) { worstDrift = drift; worstAt = target; }
+          } else if (drift > tol) { clamped++; }
+          if (actual < prev - tol && actual < maxOf() - tol) backSteps++;
           prev = actual;
         }
-        return { worstDrift: Math.round(worstDrift), worstAt, backSteps };
-      }, STEPS, geo.max);
+        return { worstDrift: Math.round(worstDrift), worstAt, backSteps, clamped };
+      }, STEPS, DRIFT_PX);
 
       is(`${lane.label}: no upward yank while scrolling down`,
          worst.worstDrift <= DRIFT_PX,
-         `worst pull-up ${worst.worstDrift}px (at y=${worst.worstAt}), tolerance ${DRIFT_PX}px`);
+         `worst pull-up ${worst.worstDrift}px (at y=${worst.worstAt}), tolerance ${DRIFT_PX}px` +
+         (worst.clamped ? `, ${worst.clamped} bottom-clamp step(s) excluded` : ''));
       is(`${lane.label}: scroll position never moves backwards across ${STEPS} steps`,
          worst.backSteps === 0, `${worst.backSteps} backward step(s)`);
 
