@@ -197,7 +197,24 @@
         if (s.position !== 'fixed' && s.position !== 'sticky') continue;
         if (s.display === 'none' || s.visibility === 'hidden') continue;
         if (parseFloat(s.opacity) < 0.05) continue;
-        if (s.pointerEvents === 'none') continue;
+        // pointer-events:none is NOT a licence to overlay. A genuinely visible
+        // bar — #topShell is a gradient fill + bottom border, pointer-events:none
+        // only at the <header> level so its PILLS take the clicks — is a real
+        // surface the pin must yield to, exactly as verify-no-collision.js counts
+        // it. Skip a pass-through element ONLY when it paints nothing of its own
+        // (a bare transparent wrapper). Mirrors that verifier's visible() test, so
+        // the pin yields to precisely what the sweep would flag as a collision.
+        if (s.pointerEvents === 'none') {
+          var ownText = '';
+          for (var c = 0; c < el.childNodes.length; c++) {
+            if (el.childNodes[c].nodeType === 3) ownText += el.childNodes[c].nodeValue;
+          }
+          if (s.backgroundColor === 'rgba(0, 0, 0, 0)' &&
+              s.backgroundImage === 'none' &&
+              s.borderStyle === 'none' &&
+              s.boxShadow === 'none' &&
+              !ownText.trim()) continue;
+        }
         var r = el.getBoundingClientRect();
         if (r.width < 2 || r.height < 2) continue;
         // Ignore full-viewport layers: backdrops, canvases and modal gates

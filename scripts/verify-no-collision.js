@@ -308,8 +308,33 @@ const TOKEN_KEYS = ['vint_token', 'soul_auth_token', 'vint_access_token', 'acces
             if (stable >= 2 && Date.now() - t0 >= 3400) break;
           }
         }).catch(() => {});
+        // A late widget can be transiently STILL at a PRE-DOCK position right as
+        // the floor elapses: brain.js mounts #consciousness-brain-btn at t=3000ms
+        // into the tr lane, and the dock then stacks it BELOW #vtn-pill-right —
+        // sliding it from y≈14 (on top of #topShell) down to y≈126 (clear of it).
+        // The main loop can sample those two pre-stack frames and break before the
+        // reflow lands, reporting topShell×consciousness-brain-btn — a collision
+        // the settled page never shows (measured: settled y=126, overlap none).
+        // A flat 300ms after the reflow was not enough for the tr stack to settle,
+        // so this was an intermittent false positive. Force the reflow, then wait
+        // for the layout to go QUIET once more (not a fixed sleep) so the probe
+        // measures post-dock truth.
         try { await page.evaluate(() => window.VintDock && window.VintDock.reflow()); } catch (_) {}
-        await new Promise(r => setTimeout(r, 300));
+        await page.evaluate(async () => {
+          const snap = () => Array.from(document.querySelectorAll('body *'))
+            .filter(el => getComputedStyle(el).position === 'fixed')
+            .map(el => { const r = el.getBoundingClientRect();
+              return `${el.id}:${Math.round(r.x)},${Math.round(r.y)},${Math.round(r.width)},${Math.round(r.height)}`; })
+            .join('|');
+          let prev = '', stable = 0;
+          for (let i = 0; i < 16; i++) {          // ~2.4s ceiling; exits in ~300ms when quiet
+            await new Promise(r => setTimeout(r, 150));
+            const cur = snap();
+            stable = (cur === prev) ? stable + 1 : 0;
+            prev = cur;
+            if (stable >= 2) break;
+          }
+        }).catch(() => {});
 
         let res;
         try { res = await page.evaluate(probe); } catch (e) { continue; }
