@@ -1159,6 +1159,35 @@ input[type="range"]::-moz-range-thumb {
     transition-duration: 0.01ms !important;
   }
 }
+
+/* ── UNPAIRED GATE OWNS THE SCREEN — hide every docked float (AZGMUTT) ──
+   While the device is unpaired, #pairScreen (position:fixed; inset:0; opaque
+   #050812; z-index:9999) is the blocking pairing gate and the ONLY thing that
+   should be visible. The body view behind it is fully buried, so the docked
+   floats (#vintVoice / #vint-vc-fab / .vint-status-pill in the bottom-left
+   stack; #hey-vinta-btn / #vwg-pill / #vwg-dot bottom-right; the #toast lane)
+   serve no purpose there. MEASURED on the guest render: the bottom-left stack
+   sits BELOW the gate (.vint-status-pill z100, #toast z900) so its rect overlap
+   with #pairScanBtn (2px @375px) is buried behind the opaque gate and not a
+   visible collision — BUT #vwg-pill carries z-index 2147483600 (its own CSS,
+   welcome-gate.js) and WOULD paint on top of the gate, and corner_dock could
+   raise others. Hiding the whole docked set while unpaired makes "nothing shares
+   the gate's space" absolute, behind OR on top, now and for any future float.
+   Driven by one attribute toggled in showPairScreen()/hidePairScreen(); because
+   it is set before the floats dock, a float is hidden the instant corner_dock
+   stamps data-vint-docked on it — no timing, no per-float wiring. The explicit
+   ids are a belt for the pre-dock frame (a float paints at its own z before the
+   dock positions it). */
+html[data-vint-unpaired] [data-vint-docked],
+html[data-vint-unpaired] .vint-status-pill,
+html[data-vint-unpaired] #vintVoice,
+html[data-vint-unpaired] #vint-vc-fab,
+html[data-vint-unpaired] #hey-vinta-btn,
+html[data-vint-unpaired] #vwg-pill,
+html[data-vint-unpaired] #vwg-dot,
+html[data-vint-unpaired] #toast {
+  display: none !important;
+}
 </style>
     <!-- API base bootstrap — auto-attaches every visitor to api.vintaclectic.com -->
     <!-- VintDock queuing stub — MUST precede any script that registers a widget.
@@ -3602,8 +3631,18 @@ function wireEmbodimentCards() {
     return id;
   }
 
-  function showPairScreen() { pairScreen.style.display = 'flex'; }
-  function hidePairScreen() { pairScreen.style.display = 'none'; }
+  // AZGMUTT: mark the document unpaired while the gate is up so the CSS rule in
+  // <head> hides every docked float — the opaque gate owns the screen alone, and
+  // nothing (behind it or on top) may share its space. Set BEFORE the floats dock
+  // so each is hidden the instant it is stamped data-vint-docked.
+  function showPairScreen() {
+    pairScreen.style.display = 'flex';
+    try { document.documentElement.setAttribute('data-vint-unpaired', '1'); } catch (_) {}
+  }
+  function hidePairScreen() {
+    pairScreen.style.display = 'none';
+    try { document.documentElement.removeAttribute('data-vint-unpaired'); } catch (_) {}
+  }
 
   // ── Core redeem call — shared by button, auto-redeem and scanner ──────────
   async function redeemCode(code) {
