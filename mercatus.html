@@ -531,7 +531,7 @@ body{
   grid-template-columns:1fr}
 .mc-tr>div{min-width:0;overflow:hidden;font-size:11.5px;line-height:1.5;
   overflow-wrap:anywhere}
-.mc-tr>div>i{font-style:normal;display:inline-block;min-width:76px;
+.mc-tr>div>i{font-style:normal;display:block;margin-bottom:2px;
   font-size:9.5px;font-weight:800;letter-spacing:.07em;text-transform:uppercase;
   color:var(--dim2)}
 .mc-tr>div>b{font-family:var(--mono);font-weight:700;color:var(--ink2);
@@ -653,8 +653,7 @@ body{
 
   <div class="mc-alert a-live" id="mcAlertLive" hidden>
     <span class="ai" aria-hidden="true">&#9888;</span>
-    <span class="at"><b>LIVE MODE — REAL MONEY.</b> Every order waits in the approval queue
-      below until you explicitly approve it. Nothing executes on its own.</span>
+    <span class="at" id="mcAlertLiveText"><b>LIVE MODE — REAL MONEY.</b> Loading approval policy…</span>
   </div>
   <div class="mc-alert a-paper" id="mcAlertPaper" hidden>
     <span class="ai" aria-hidden="true">&#10003;</span>
@@ -702,7 +701,7 @@ body{
         <div class="mc-rh">
           <span class="mc-rbadge" id="mcRailN">0</span>
           <span class="mc-rt">AWAITING YOUR DECISION</span>
-          <span class="mc-rhint">Nothing reaches the broker until you approve it. The world
+          <span class="mc-rhint" id="mcRailHint">These orders need your review. The world
             pulses in the cosmos until you do.</span>
         </div>
         <div class="mc-rlist" id="mcRailList"></div>
@@ -876,8 +875,23 @@ body{
           <button type="button" class="mc-btn b-go" id="mcCtlResume">Resume trading</button>
           <button type="button" class="mc-btn b-no" id="mcCtlHalt">Emergency stop</button>
         </div>
-        <p class="mc-fhint">“Scan now” runs the real pipeline and <b>can place decisions</b>
-          inside the regular session. The approval queue is still the hard gate in live mode.</p>
+        <p class="mc-fhint">“Scan now” runs the real pipeline during the regular session.
+          Automatic approval can submit qualifying orders using real money. All account limits and the emergency stop still apply.</p>
+        <form class="mc-form" id="mcAutomationForm">
+          <div class="mc-fld wide">
+            <label for="mcAutoConfidence">Automatic trading · minimum merit (0-100)</label>
+            <input id="mcAutoConfidence" type="number" min="0" max="100" step="1" value="62"
+                   inputmode="numeric" required aria-describedby="mcAutoHint mcAutoStatus">
+            <p class="mc-fhint" id="mcAutoHint">Merit is the tribunal's score (record, confluence, regime, setup, reward/risk), not a probability of profit.
+              Only fresh strategy signals qualify; older and manually placed decisions stay in your review queue.</p>
+          </div>
+          <div class="mc-iacts wide">
+            <button type="submit" class="mc-btn b-acc" id="mcAutoEnable" disabled>Enable automatic approval</button>
+            <button type="button" class="mc-btn" id="mcAutoDisable" disabled>Use manual approval</button>
+          </div>
+          <p class="mc-fhint wide" id="mcAutoStatus" role="status">Loading automatic approval settings…</p>
+          <pre class="mc-out wide" id="mcAutoOut" role="status" hidden></pre>
+        </form>
         <div id="mcCtlBody"><div class="mc-empty">Loading…</div></div>
         <pre class="mc-out" id="mcCtlOut" hidden></pre>
       </div>
@@ -2299,6 +2313,36 @@ function mcPill(text, cls, dot) {
   return '<span class="mc-pill ' + (cls || '') + '">' + (dot ? '<i></i>' : '') + mcEsc(text) + '</span>';
 }
 
+function mcAutomation() {
+  // /state is authoritative; do not resurrect an older policy from another poll.
+  return MC.state && MC.state.automation || null;
+}
+function mcApprovalSummary() {
+  var policy = mcAutomation();
+  if (policy && policy.enabled) {
+    var sides = policy.allowBuys && policy.allowSells ? 'buys and sells' :
+      policy.allowBuys ? 'buys' : policy.allowSells ? 'sells' : 'no order sides';
+    // (N9U5FJV) The bar is the merit tribunal's score (WJQTCBA), not raw confidence.
+    return 'AUTO-TRADING ON: Mercatus places ' + sides + ' on its own when a fresh signal earns merit ' +
+      (policy.minMerit != null ? policy.minMerit : policy.minConfidence) + '+ (no veto), signals no older than ' +
+      policy.maxSignalAgeMinutes + ' min, regular session 09:30-16:00 ET. Account limits and the emergency stop still apply.';
+  }
+  if (policy || (MC.state && MC.state.requiresApproval)) {
+    return 'Manual approval: every live order needs your approval before it reaches the broker.';
+  }
+  return 'Approval policy unavailable. Refresh the connection before changing trading controls.';
+}
+function mcTradingError(message) {
+  var text = String(message || 'Request failed');
+  if (/circuit.open|breaker.*open/i.test(text)) {
+    return 'Broker connection paused after repeated failures. Reset the breaker in Controls, then refresh the broker link. ' + text;
+  }
+  if (/account equity unavailable/i.test(text)) {
+    return 'The broker did not return current account equity. Refresh the broker connection before retrying approval; the order has not been sent. ' + text;
+  }
+  return text;
+}
+
 function mcRenderBadges() {
   var el = mcEl('mcBadges'); if (!el) return;
   var st = MC.state, out = '';
@@ -2310,7 +2354,9 @@ function mcRenderBadges() {
     if (st.halted) out += mcPill('HALTED' + (st.haltSource === 'env' ? ' (env)' : ''), 'is-warn', true);
     else if (st.isPaused) out += mcPill('PAUSED', 'is-warn', true);
     else out += mcPill('ARMED', 'is-good', true);
-    if (st.requiresApproval) out += mcPill('approval required', 'is-claim');
+    var policy = mcAutomation();
+    if (policy && policy.enabled) out += mcPill('AUTO-TRADING · merit ≥ ' + (policy.minMerit != null ? policy.minMerit : policy.minConfidence), 'is-good');
+    else if (st.requiresApproval) out += mcPill('manual approval', 'is-claim');
     var c = st.circuit;
     if (c && c.state && c.state !== 'CLOSED') out += mcPill('breaker ' + c.state, 'is-bad', true);
     var lk = st.link;
@@ -2322,6 +2368,8 @@ function mcRenderBadges() {
   var st2 = MC.state || {};
   var aL = mcEl('mcAlertLive'), aP = mcEl('mcAlertPaper'), aH = mcEl('mcAlertHalt');
   if (aL) aL.hidden = !(st2.mode === 'live' && !st2.halted);
+  var liveText = mcEl('mcAlertLiveText');
+  if (liveText) liveText.innerHTML = '<b>LIVE MODE — REAL MONEY.</b> ' + mcEsc(mcApprovalSummary());
   if (aP) aP.hidden = !(st2.mode === 'paper' && !st2.halted);
   if (aH) {
     aH.hidden = !(st2.halted || st2.isPaused);
@@ -2399,6 +2447,7 @@ function mcRenderRail() {
   var pend = (MC.pending && Array.isArray(MC.pending.pending))
     ? MC.pending.pending.filter(function (p) { return !p.status || p.status === 'pending'; }) : [];
   var n = pend.length;
+  mcEl('mcRailHint').textContent = 'These orders need your review. Automatic approval does not release old or manually placed orders.';
   mcEl('mcRailN').textContent = String(n);
   rail.hidden = n === 0;
   if (clear) {
@@ -2546,8 +2595,7 @@ function mcRenderQueueSection() {
   }
   if (cnt) cnt.textContent = pend.length ? (pend.length + ' pending') : 'clear';
   if (!pend.length) {
-    body.innerHTML = mcEmpty('<b>Nothing pending.</b> Every decision the engine makes lands ' +
-      'here first — in live mode nothing reaches the broker until you approve it.');
+    body.innerHTML = mcEmpty('<b>Nothing pending.</b> ' + mcEsc(mcApprovalSummary()));
     return;
   }
   body.innerHTML = '<div class="mc-tbl">' + pend.map(function (p) {
@@ -2754,19 +2802,36 @@ function mcRenderCtl() {
     ['broker session', se ? (se.linked ? 'LINKED' : 'NOT LINKED') : (MC.errs.session || '—'),
       (se && se.linked) ? 'g' : 'r'],
     ['accounts', (se && Array.isArray(se.accounts)) ? se.accounts.length : null],
-    ['link error', (se && se.error) ? se.error : null],
+    ['link error', (se && se.error) ? mcTradingError(se.error) : null],
     ['api', MC.errs.state ? 'ERROR' : 'OK', MC.errs.state ? 'r' : 'g']
   ], 4);
   var errKeys = Object.keys(MC.errs);
   if (errKeys.length) {
-    out += errKeys.map(function (k) { return mcRow([['/' + k + ' error', MC.errs[k], 'r']], 1); }).join('');
+    out += errKeys.map(function (k) { return mcRow([['/' + k + ' error', mcTradingError(MC.errs[k]), 'r']], 1); }).join('');
   }
   out += '</div>';
   body.innerHTML = out;
   // resume only makes sense when something is actually stopped
   var r = mcEl('mcCtlResume'); if (r) r.disabled = !(st && (st.halted || st.isPaused));
   var b = mcEl('mcCtlBreaker');
-  if (b) b.disabled = !(st && st.circuit && st.circuit.state !== 'CLOSED');
+  // A broker request can trip the shared breaker after the /state poll. Permit
+  // recovery when either status source or the actual broker read reports it.
+  var circuits = [st && st.circuit, MC.strat && MC.strat.circuit];
+  var brokerFailed = (se && se.error) || MC.errs.portfolio || MC.errs.session;
+  if (b) b.disabled = !(MC.authed && (brokerFailed || circuits.some(function (c) {
+    return c && c.state !== 'CLOSED';
+  })));
+  var policy = mcAutomation(), available = !!(policy && st && !MC.errs.state && MC.authed);
+  var enable = mcEl('mcAutoEnable'), disable = mcEl('mcAutoDisable');
+  if (!MC.autoSaving) {
+    enable.disabled = !available;
+    disable.disabled = !available || !policy.enabled;
+    enable.textContent = policy && policy.enabled ? 'Save automatic approval' : 'Enable automatic approval';
+  }
+  var confidence = mcEl('mcAutoConfidence');
+  if (policy && !MC.autoDirty && document.activeElement !== confidence) confidence.value = policy.minMerit != null ? policy.minMerit : policy.minConfidence;
+  mcEl('mcAutoStatus').textContent = available ? mcApprovalSummary() :
+    'Automatic approval settings unavailable. Sign in and refresh; the API must support this control.';
 }
 
 /* ══ INSPECTOR — the full dossier, a FLOW block under the stage ═════════════ */
@@ -2937,7 +3002,9 @@ function mcAction(act, btn) {
       .catch(function (e) {
         mcToast(e.status === 409
           ? 'Refused — the brain changed under you: ' + e.message + '. Refreshing.'
-          : 'Approve failed: ' + e.message, 'bad', 10000);
+          : e.status === 425 ? 'Market closed — ' + e.message + '. It stays queued; approve again after 09:30 ET.'
+          : e.status === 423 ? 'Mercatus is mid-scan — tap Approve again in a few seconds.'
+          : 'Approve failed: ' + mcTradingError(e.message), 'bad', 10000);
       })
       .then(function () { mcBusy(btn, false); mcPollAll(true); });
     return;
@@ -3007,14 +3074,46 @@ function mcCtl(path, body, confirmMsg, outId) {
   mcOut(outId || 'mcCtlOut', 'Working…');
   mcFetch(path, { method: 'POST', body: body || {} })
     .then(function (r) {
-      mcOut(outId || 'mcCtlOut', JSON.stringify(r, null, 2), 'ok');
+      mcOut(outId || 'mcCtlOut', (r && r.message) || JSON.stringify(r, null, 2), 'ok');
       mcToast((r && (r.message || r.reason)) || 'Done', 'ok');
     })
     .catch(function (e) {
-      mcOut(outId || 'mcCtlOut', 'Failed (' + (e.status || '?') + '): ' + e.message, 'bad');
-      mcToast('Failed: ' + e.message, 'bad', 9000);
+      mcOut(outId || 'mcCtlOut', 'Failed (' + (e.status || '?') + '): ' + mcTradingError(e.message), 'bad');
+      mcToast('Failed: ' + mcTradingError(e.message), 'bad', 9000);
     })
     .then(function () { mcPollAll(true); });
+}
+
+function mcSaveAutomation(enabled) {
+  if (MC.autoSaving) return;
+  var st = MC.state, policy = mcAutomation();
+  if (!st || !policy || MC.errs.state || !MC.authed) {
+    mcOut('mcAutoOut', 'Refresh your connection before changing automatic approval.', 'bad'); return;
+  }
+  var input = mcEl('mcAutoConfidence');
+  if (enabled && !input.reportValidity()) return;
+  var confidence = enabled ? Number(input.value) : (policy.minMerit != null ? policy.minMerit : policy.minConfidence);
+  if (enabled && st.mode === 'live' && !confirm('ENABLE AUTOMATIC APPROVAL — REAL MONEY.\n\n' +
+      'Fresh strategy signals with merit ' + confidence + '+ may submit orders ' +
+      'without individual approval. Existing account limits and emergency stop still apply. ' +
+      'The score is not a probability of profit.')) return;
+  MC.autoSaving = true;
+  var enable = mcEl('mcAutoEnable'), disable = mcEl('mcAutoDisable');
+  enable.disabled = true; disable.disabled = true;
+  mcOut('mcAutoOut', 'Saving approval policy…');
+  mcFetch('/automation', { method: 'POST', body: {
+    enabled: enabled, minMerit: confidence, confirmMode: st.mode
+  } }).then(function (r) {
+    if (!r || !r.automation) throw new Error('The API did not return the saved policy. Refresh to verify it.');
+    MC.state.automation = r.automation; MC.autoDirty = false;
+    mcOut('mcAutoOut', enabled ? 'Automatic approval saved. ' + mcApprovalSummary() :
+      'Manual approval saved. Orders already submitted to the broker are unchanged.', 'ok');
+    mcRenderBadges(); mcRenderQueueSection();
+  }).catch(function (e) {
+    mcOut('mcAutoOut', 'Could not save: ' + mcTradingError(e.message), 'bad');
+  }).then(function () {
+    MC.autoSaving = false; mcRenderCtl(); mcPollAll(true);
+  });
 }
 
 /* ══ BOOT ════════════════════════════════════════════════════════════════════ */
@@ -3039,11 +3138,16 @@ function mcWireControls() {
   ['mcDcQty', 'mcDcPx'].forEach(function (id) {
     mcEl(id).addEventListener('input', mcDcExposure);
   });
+  mcEl('mcAutomationForm').addEventListener('submit', function (event) {
+    event.preventDefault(); mcSaveAutomation(true);
+  });
+  mcEl('mcAutoDisable').addEventListener('click', function () { mcSaveAutomation(false); });
+  mcEl('mcAutoConfidence').addEventListener('input', function () { MC.autoDirty = true; });
 
   mcEl('mcCtlRefresh').addEventListener('click', function () { mcPollAll(true); mcToast('Refreshing…'); });
   mcEl('mcCtlScan').addEventListener('click', function () {
     mcCtl('/strategy/scan', {}, 'Run a REAL scan now?\n\nInside the regular session this can ' +
-      'place decisions. In live mode they still queue for your approval.');
+      'place decisions. ' + mcApprovalSummary());
   });
   mcEl('mcCtlStart').addEventListener('click', function () { mcCtl('/strategy/start', {}); });
   mcEl('mcCtlStop').addEventListener('click', function () { mcCtl('/strategy/stop', {}); });
