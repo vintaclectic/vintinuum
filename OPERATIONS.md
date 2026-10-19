@@ -73,6 +73,30 @@ Do NOT `cp -r` the folder — it will choke on `.git` object names under NTFS.
    the master key
 4. localhost — bond by name when on host machine
 
+### Agent E2E test account — signed-in audits (task ADQTUU9, 2026-10-19)
+Agents never read `.env` and never use the owner lanes. For any audit that must
+load a page **signed in**, use the dedicated NON-OWNER test user:
+- **Account:** `e2e-agent@vintinuum.test`, `users.id = 85`, `tier = free`,
+  display name `e2e_agent`. A real row in the live DB, created via `/api/auth/signup`.
+- **Vault (vintkey, rule `test:vintinuum-e2e:*` in
+  `~/.claude/council-loop/config/cred-policy.json`, allowed for every agent):**
+  `test:vintinuum-e2e:email`, `:password` (login pair, 32-char random, never printed),
+  `:access`, `:refresh` (the most recent session, written back on every mint).
+- **Mint a session:** `node scripts/e2e-session.js [--api http://localhost:8767]`
+  prints only `ok user=85 … tier=free access_exp=…`. It tries `/api/auth/refresh`
+  first. Refresh ROTATES: the old refresh row is deleted when used, so the new one is
+  always written back to vintkey. It falls back to password login, which is
+  rate-limited at 25 per 15 min plus lockout, so do not loop it. It refuses if the
+  minted token is ever the owner.
+- **Puppeteer:** `const {getSession, seedPage} = require('<repo>/scripts/e2e-session.js');`
+  then `await seedPage(page, await getSession())` BEFORE `page.goto()`. This seeds every
+  token key the frontend reads (`vint_token`, `vint_access_token`, `soul_auth_token`
+  + refresh keys). Puppeteer lives at `~/vintinuum-api/node_modules/puppeteer`.
+- **curl:** `vintkey exec test:vintinuum-e2e:access=T -- sh -c 'curl -H "Authorization: Bearer $T" localhost:8767/api/auth/me'`
+  → `200 {"id":85,…,"tier":"free"}`.
+- Need a paid tier for a gate test? Raise THIS user's tier in a throwaway step and
+  restore it to `free` afterwards. Never borrow the owner session.
+
 ### Hot endpoints (and their typical failure modes)
 - `/api/stats/dashboard` — fans out 19 SQLite queries; cached 30s,
   8s deadline, returns `{degraded:true}` on slow DB
