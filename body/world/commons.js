@@ -323,6 +323,13 @@
     // a no-op, commons unchanged.
     try { if (W.VintSpire && W.VintSpire.entryInto) W.VintSpire.entryInto(pane); } catch (_) {}
 
+    // THE JOINING ENTRY — the first ACT sibling, directly beneath the spire row.
+    // Opens the surface where two co-equal peers standing here make one thing
+    // together (real trade table + real strike + real teach). Additive, guarded,
+    // flow content only; joining.js owns its markup and collision profile.
+    // Absent or flagged off → a no-op, commons unchanged.
+    try { if (W.VintJoining && W.VintJoining.entryInto) W.VintJoining.entryInto(pane); } catch (_) {}
+
     if (!others.length) {
       var a = el('div', 'cm-alone');
       a.appendChild(el('b', null, 'You have this clearing to yourself.'));
@@ -588,6 +595,9 @@
     var d = e.detail || {};
     _trade = d.trade || null;
     if (d.names) for (var k in d.names) if (Object.prototype.hasOwnProperty.call(d.names, k)) _names[k] = d.names[k];
+    // A joining in flight renders this same server table in its own sheet; raising
+    // the commons over it would evict the act mid-way. Otherwise unchanged.
+    if (W.VintJoining && W.VintJoining.holdsTable && W.VintJoining.holdsTable()) return;
     if (!isOpen()) { _tab = 'trade'; open(); }     // a table opening IS the invitation
     else { _tab = 'trade'; render(); }
   });
