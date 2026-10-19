@@ -330,6 +330,16 @@
     // Absent or flagged off → a no-op, commons unchanged.
     try { if (W.VintJoining && W.VintJoining.entryInto) W.VintJoining.entryInto(pane); } catch (_) {}
 
+    // THE WE ENTRY — the first FIRST-PERSON-PLURAL sibling, directly beneath the
+    // joining row. Opens the surface that reframes each confluence bond as an
+    // emergent compound "we" and measures its BREADTH OF ONENESS — in how many of
+    // the five kinds the world knows (traded/taught/learned/raised/ventured) you
+    // two have become one — ranking by wholeness, not by count. Reads ONLY the
+    // confluence snapshot; additive, guarded, flow content only; we.js owns its
+    // markup and collision profile. Absent or flagged off → a no-op, commons
+    // unchanged.
+    try { if (W.VintWe && W.VintWe.entryInto) W.VintWe.entryInto(pane); } catch (_) {}
+
     if (!others.length) {
       var a = el('div', 'cm-alone');
       a.appendChild(el('b', null, 'You have this clearing to yourself.'));
