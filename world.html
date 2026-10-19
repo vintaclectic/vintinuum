@@ -641,6 +641,14 @@
      addLauncher(), controls in one .dv-sheet registered as 'foundry'.
      ── KILL SWITCH: ?foundry=0 / localStorage vint:flag:world_foundry='0'. -->
 <script src="body/world/foundry.js"></script>
+<!-- THE UNDERWEB — the world's own internet (task Y8Z7BAA). A sandboxed net://
+     browser + @council.net mail terminal that agents and players both use. NO
+     real-web egress by construction: real schemes/hosts are refused before
+     render, all content is textContent, the module holds no fetch/XHR/socket.
+     ── NO-COLLISION: zero fixed elements — launcher via addLauncher(), one
+     .dv-sheet registered as 'underweb', VintDock.avoid for the corner pills.
+     ── KILL SWITCH: ?underweb=0 / localStorage vint:flag:world_underweb='0'. -->
+<script src="body/world/underweb.js"></script>
 <!-- THE COMMONS — the other people are real. Room-scoped presence has shipped
      at 5Hz since day one and NOTHING ever told the player a person had arrived,
      so co-presence existed and was invisible. This is the roster (who is here,
