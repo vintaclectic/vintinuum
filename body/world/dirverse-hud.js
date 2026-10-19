@@ -674,6 +674,10 @@
       '.dv-prop.on{background:rgba(124,207,255,0.16);border-color:rgba(124,207,255,0.5);color:#fff;}',
       '.dv-prop .pg{font-size:20px;line-height:1;}',
       '.dv-prop .pn{font-size:10.5px;letter-spacing:.02em;}',
+      // blueprints sit after a hairline gap in the same strip — still a flow child
+      '.dv-prop.bp{border-color:rgba(255,212,121,0.28);color:#f3e2bd;}',
+      '.dv-prop:not(.bp)+.dv-prop.bp{margin-left:10px;}',
+      '.dv-prop.bp.on{background:rgba(255,212,121,0.16);border-color:rgba(255,212,121,0.55);color:#fff;}',
       // THE FABRICATOR console (GPYSY83) — sits ABOVE the strip in normal flow
       // inside #dvBuild, so it can only push the bar taller, never sit on it.
       'body.dv-building-tight #vintWorldHud,body.dv-building-tight #hint,body.dv-building-tight #editHeadBtn{visibility:hidden !important;pointer-events:none !important;}',
@@ -1767,7 +1771,17 @@
   // ═══════════════════════════════════════════════════════════════════════════
   // BUILD PALETTE — the thumb-scroll strip, visible only on your own world
   // ═══════════════════════════════════════════════════════════════════════════
-  var _buildBar = null, _selProp = null;
+  var _buildBar = null, _selProp = null, _selBp = null;
+  // ── BLUEPRINTS (FYBNHVM) — whole snapped rooms a council agent raises for you.
+  // They live in the SAME scroll strip as the pieces (flow children, no new
+  // fixed element, no new band), after a hairline divider. First tap shows what
+  // the room costs in the fabricator console; second tap (or PLACE) commissions
+  // it. The brain plans it with build-snap.js and lays it piece by piece.
+  var BLUEPRINTS = [
+    { b: 'shelter', g: '⌂', n: 'shelter' },
+    { b: 'hut',     g: '⛺', n: 'hut' },
+    { b: 'tower',   g: '♜', n: 'tower' },
+  ];
   // ── TIER GATING (re-applied from council/seat-2, 2026-09-26) ───────────────
   // The Ascent's companion in the build palette. A locked piece is drawn DIMMED
   // with the tier that opens it in its tooltip rather than hidden — you should be
@@ -1794,6 +1808,12 @@
     fitBuildBar();   // the console makes the bar taller — re-measure its neighbours
   }
   function fabPlace() {
+    if (_selBp) {
+      var ok = false;
+      try { ok = world().commission(_selBp) === true; } catch (_) { ok = false; }
+      toast(ok ? 'a council hand takes up the work — watch the ' + _selBp + ' rise.' : 'the clearing is out of reach — reload and try again.');
+      return;
+    }
     if (!_selProp) return;
     if (!_fabOk) {
       var v = _fabEl && _fabEl.querySelector('.fb-v');
@@ -1807,14 +1827,23 @@
     if (sent !== true) toast('the clearing is out of reach — reload and try again.');
   }
   function fabExit() {
-    _selProp = null;
+    _selProp = null; _selBp = null;
     try { world().buildExit(); } catch (_) {}
     if (_fabEl) _fabEl.classList.remove('show');
     fitBuildBar();
     if (_buildBar) _buildBar.querySelectorAll('.dv-prop').forEach(function (x) { x.classList.remove('on'); });
   }
+  W.addEventListener('vint:world-commission', function (e) {
+    var d = e.detail || {};
+    var who = d.agentName || 'a council hand';
+    if (d.state === 'laid') toast(who + ' laid the ' + d.kind + ' — ' + d.laid + ' of ' + d.total + '.');
+    else if (d.state === 'done') toast(who + ' finished ' + (d.n || 'the room') + ' — ' + d.laid + ' pieces, every joint on a socket.');
+    else if (d.state === 'stopped') toast(who + ' stopped at piece ' + ((d.laid || 0) + 1) + ' of ' + (d.total || '?') + ': ' + (d.why || d.code || 'refused') + '.');
+    else if (d.state === 'busy') toast(who + ' is still raising your last room.');
+  });
   W.addEventListener('vint:world-fab', function (e) {
     var d = e.detail; if (!_fabEl) return;
+    if (_selBp) return;           // a blueprint's console text is its plan, not a ghost verdict
     if (!d) { _fabOk = false; return; }
     _fabOk = !!d.ok;
     var v = _fabEl.querySelector('.fb-v');
@@ -1855,6 +1884,29 @@
         b.classList.add('on'); _selProp = p.k;
         try { world().buildSelect(p.k); } catch (_) {}
         fabShow(p);
+      };
+      strip.appendChild(b);
+    });
+    BLUEPRINTS.forEach(function (bp) {
+      var b = document.createElement('button'); b.className = 'dv-prop bp'; b.setAttribute('data-bp', bp.b);
+      b.title = 'commission ' + bp.n + ' — an agent raises it, snapped';
+      b.innerHTML = '<span class="pg">' + esc(bp.g) + '</span><span class="pn">' + esc(bp.n) + '</span>';
+      b.onclick = function () {
+        if (_selBp === bp.b) { fabPlace(); return; }
+        try { world().buildExit(); } catch (_) {}
+        strip.querySelectorAll('.dv-prop').forEach(function (x) { x.classList.remove('on'); });
+        b.classList.add('on'); _selProp = null; _selBp = bp.b;
+        fabShow({ g: bp.g, n: 'commission ' + bp.n });
+        var v = _fabEl.querySelector('.fb-v'), go = _fabEl.querySelector('.go');
+        var S = W.VintSnap, z = null; try { z = world()._buildZone; } catch (_) {}
+        var plan = S ? S.blueprint(bp.b, { x: 0, z: 0 }, 0) : null, line = '';
+        if (plan) {
+          var cost = S.planCost(plan, (z && z.costs) || {}), parts = [];
+          for (var k in cost) parts.push(cost[k] + ' ' + k);
+          line = plan.pieces.length + ' pieces, raised two strides ahead' + (parts.length ? ' · costs ' + parts.join(' + ') : '');
+        }
+        v.textContent = (line || 'an agent raises it two strides ahead') + ' — tap again to commission.';
+        v.classList.remove('bad'); go.disabled = false; _fabOk = true;
       };
       strip.appendChild(b);
     });

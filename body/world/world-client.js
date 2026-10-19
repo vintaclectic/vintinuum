@@ -899,6 +899,8 @@
       try { window.dispatchEvent(new CustomEvent('vint:world-trade-closed', { detail: m })); } catch (_) {}
     } else if (m.t === 'world:err') {
       try { window.dispatchEvent(new CustomEvent('vint:world-err', { detail: m })); } catch (_) {}
+    } else if (m.t === 'world:commission') {
+      try { window.dispatchEvent(new CustomEvent('vint:world-commission', { detail: m })); } catch (_) {}
 
     /* ── THE FORGE (AETHERHOLD 2026-09-25) ───────────────────────────────────
        Fusion, teaching, and the great works. Dispatched as plain events the
@@ -1040,11 +1042,13 @@
       g.userData.spin = core;          // the hearth's core turns slowly, forever
       return g;
     },
-    // occupies y 0.00–1.20 · the plain woven panel
+    // occupies y 0.00–1.90 · the plain woven panel. 1.90 is build-snap.js's
+    // WALL_H: a wall standing on a floor plate tops out exactly one STOREY above
+    // the level line, which is where the next floor and every roof begin.
     wall(THREE, M) {
       const g = new THREE.Group();
-      const w = new THREE.Mesh(new THREE.BoxGeometry(1, 1.2, 0.12), M.weave);
-      w.position.y = 0.6; g.add(w);
+      const w = new THREE.Mesh(new THREE.BoxGeometry(1, 1.9, 0.12), M.weave);
+      w.position.y = 0.95; g.add(w);
       return g;
     },
     // occupies y 0.00–0.08 · a deck plate, the only piece meant to be walked on
@@ -1122,8 +1126,9 @@
         const j = new THREE.Mesh(new THREE.BoxGeometry(0.09, 1.9, 0.16), M.frame);
         j.position.set(x, 0.95, 0); g.add(j);
       }
+      // the head's top is 1.90 (WALL_H) so a roof or the floor above seats on it
       const head = new THREE.Mesh(new THREE.BoxGeometry(1.0, 0.1, 0.16), M.frame);
-      head.position.y = 1.9; g.add(head);
+      head.position.y = 1.85; g.add(head);
       // the leaf sits inside the jambs by design — a door is a hole with a panel
       const leaf = new THREE.Mesh(new THREE.BoxGeometry(0.82, 1.8, 0.07), M.weave);
       leaf.position.set(0, 0.9, 0); g.add(leaf);
@@ -1132,12 +1137,13 @@
       g.userData.door = leaf;          // swings open when you stand in it
       return g;
     },
-    // occupies y 0.00–1.40 · a wall with a glazed opening + a mullion cross
+    // occupies y 0.00–1.90 · a wall with a glazed opening + a mullion cross,
+    // as tall as a wall (WALL_H) so it sits in a wall line without a step
     window(THREE, M) {
       const g = new THREE.Group();
       // the wall around the hole, built as four solids so the hole is REAL
       const sill  = new THREE.Mesh(new THREE.BoxGeometry(1, 0.42, 0.12), M.weave); sill.position.y = 0.21;
-      const head  = new THREE.Mesh(new THREE.BoxGeometry(1, 0.24, 0.12), M.weave); head.position.y = 1.28;
+      const head  = new THREE.Mesh(new THREE.BoxGeometry(1, 0.74, 0.12), M.weave); head.position.y = 1.53;
       const left  = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.74, 0.12), M.weave); left.position.set(-0.42, 0.79, 0);
       const right = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.74, 0.12), M.weave); right.position.set(0.42, 0.79, 0);
       const glass = new THREE.Mesh(new THREE.BoxGeometry(0.68, 0.74, 0.04), M.glaze); glass.position.y = 0.79;
@@ -1309,7 +1315,7 @@
     }
     mesh.position.set(s.x || 0, s.y || 0, s.z || 0);
     mesh.rotation.y = s.rot || 0;
-    mesh.userData.struct = { id: s.id, kind: kind, owner: s.owner_id };
+    mesh.userData.struct = { id: s.id, kind: kind, owner: s.owner_id, x: +s.x || 0, y: +s.y || 0, z: +s.z || 0, rot: +s.rot || 0 };
     World._scene.add(mesh);
     _structMeshes.set(s.id, mesh);
     if (mesh.userData.spin || mesh.userData.sway || mesh.userData.ripple ||
@@ -1914,12 +1920,36 @@
   const _fab = { kind: null, turn: 0, ghost: null, ring: null, grid: null, verdict: null, last: null };
   World._buildZone = null;
 
+  // What is standing in this room, as plain data — the input build-snap reads.
+  function _standing() {
+    const out = [];
+    _structMeshes.forEach(m => { const d = m.userData && m.userData.struct; if (d) out.push(d); });
+    return out;
+  }
+  World.standing = _standing;
+
+  // THE SOCKET (FYBNHVM). The aim point one stride ahead is offered to
+  // build-snap first: if a floor, wall or corner standing nearby has a free
+  // socket for this kind, the ghost jumps onto it — edge-to-edge, seated on the
+  // plate, a storey up when the socket is on a wall top. R flips a wall-line
+  // piece to face the other way and turns everything else a quarter. With no
+  // socket in reach it falls back to the free half-grid at ground level, which
+  // is where every first foundation goes.
   function _fabSpot() {
     const sx = Math.sin(me.yaw || 0), cz = Math.cos(me.yaw || 0);
-    const x = Math.round(((me.x || 0) + sx * AHEAD) / SNAP) * SNAP;
-    const z = Math.round(((me.z || 0) + cz * AHEAD) / SNAP) * SNAP;
+    const ax = (me.x || 0) + sx * AHEAD, az = (me.z || 0) + cz * AHEAD;
+    const S = global.VintSnap, kind = _fab.kind;
+    if (S && kind) {
+      const hit = S.snap(kind, { x: ax, z: az }, _standing());
+      if (hit) {
+        const flip = S.clsOf(kind) === 'edge' ? Math.PI : QUARTER;
+        return { x: hit.x, y: hit.y, z: hit.z, rot: hit.rot + _fab.turn * flip, socket: hit.socket };
+      }
+    }
+    const x = Math.round(ax / SNAP) * SNAP;
+    const z = Math.round(az / SNAP) * SNAP;
     const rot = Math.round((me.yaw || 0) / QUARTER) * QUARTER + _fab.turn * QUARTER;
-    return { x, z, rot };
+    return { x, y: 0, z, rot, socket: null };
   }
 
   // The server's verdict, read ahead of time from its own numbers.
@@ -1934,13 +1964,18 @@
       if (!inv.seed_stone) return { ok: false, why: 'you need a hearth here first, and your seed stone is spent.' };
       anchor = { x: me.x || 0, z: me.z || 0 }; firstHearth = true;   // the server plants it where you stand
     }
+    if (global.VintSnap) {
+      const j = global.VintSnap.judge(kind, spot, _standing());
+      if (!j.ok) return { ok: false, why: j.code === 'occupied' ? 'something already stands in that slot — aim at a free edge.' : 'that would float — set it on a floor, a wall or a wall top.' };
+    }
     const d = Math.hypot(spot.x - anchor.x, spot.z - anchor.z);
     if (d > b.radius + 1e-6) return { ok: false, why: 'beyond your reach (' + b.radius + ') — walk toward your ' + (b.own ? 'world\'s heart' : 'hearth') + '.' };
     const cost = (b.costs && b.costs[kind]) || {};
     for (const it in cost) {
       if ((inv[it] || 0) < cost[it]) return { ok: false, why: 'needs ' + cost[it] + ' ' + it + ' — you hold ' + (inv[it] || 0) + '.' };
     }
-    return { ok: true, why: firstHearth ? 'ready — your hearth will be planted where you stand.' : 'ready', firstHearth, cost };
+    const ready = spot.socket ? 'ready — snaps to the ' + spot.socket.replace('-', ' ') : 'ready';
+    return { ok: true, why: firstHearth ? 'ready — your hearth will be planted where you stand.' : ready, firstHearth, cost };
   }
 
   function _ghostMats(THREE) {
@@ -2000,13 +2035,13 @@
     if (_fab.grid) _fab.grid.position.set(a.x, 0.02, a.z);
     const spot = _fabSpot(), v = _fabJudge(_fab.kind, spot);
     if (_fab.ghost) {
-      _fab.ghost.position.set(spot.x, 0.01 + Math.sin(tnow * 3) * 0.02, spot.z);
+      _fab.ghost.position.set(spot.x, (spot.y || 0) + 0.01 + Math.sin(tnow * 3) * 0.02, spot.z);
       _fab.ghost.rotation.y = spot.rot;
       const fill = v.ok ? _GM.ok : _GM.bad, edge = v.ok ? _GM.edgeOk : _GM.edgeBad;
       fill.opacity = (v.ok ? 0.30 : 0.26) + Math.sin(tnow * 4) * 0.08;
       _fab.ghost.children.forEach(c => { c.material = c.isLineSegments ? edge : fill; });
     }
-    const key = (v.ok ? '1' : '0') + v.why + spot.x + ',' + spot.z;
+    const key = (v.ok ? '1' : '0') + v.why + spot.x + ',' + spot.z + '@' + (spot.y || 0);
     if (key !== _fab.last) {
       _fab.last = key; _fab.verdict = v;
       try { window.dispatchEvent(new CustomEvent('vint:world-fab', { detail: { kind: _fab.kind, spot, ok: v.ok, why: v.why, cost: v.cost || null, firstHearth: !!v.firstHearth } })); } catch (_) {}
@@ -2026,8 +2061,18 @@
   World.placeHere = function (kind) {
     kind = kind || _fab.kind; if (!kind) return false;
     const spot = _fabSpot();
-    World._pendingPlace = { kind, x: spot.x, z: spot.z, at: Date.now() };
-    return World.send({ t: 'world:place', kind, x: spot.x, z: spot.z, rot: spot.rot });
+    World._pendingPlace = { kind, x: spot.x, y: spot.y || 0, z: spot.z, at: Date.now() };
+    return World.send({ t: 'world:place', kind, x: spot.x, y: spot.y || 0, z: spot.z, rot: spot.rot });
+  };
+  // COMMISSION (FYBNHVM) — ask a council agent to raise a whole snapped room
+  // (build-snap BLUEPRINTS: shelter / hut / tower) one stride ahead of you. The
+  // brain plans it with the same socket math, lays each piece through the same
+  // placement gate a hand-laid piece passes, pays from YOUR strand, and stops at
+  // the first refusal. Progress arrives as world:commission frames.
+  World.commission = function (blueprint, agent) {
+    const sx = Math.sin(me.yaw || 0), cz = Math.cos(me.yaw || 0);
+    return World.send({ t: 'world:commission', blueprint: String(blueprint || 'shelter'), agent: agent ? String(agent) : null,
+      x: (me.x || 0) + sx * 2, z: (me.z || 0) + cz * 2, rot: me.yaw || 0 });
   };
   World.harvest = function () { World.send({ t: 'world:harvest' }); };
   World.refine = function (amount) { World.send({ t: 'world:refine', amount: amount || null }); };

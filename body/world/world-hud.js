@@ -1250,6 +1250,11 @@
 
     // ── the palette + the ladder ──────────────────────────────────────────
     bad_kind:        'the world does not know that piece — pick another from the palette.',
+    // ── the sockets (FYBNHVM): pieces join edge-to-edge or not at all ─────
+    occupied:        'something already stands in that slot — aim at a free edge or tile.',
+    unsupported:     'that would float — set it on a floor edge, a wall top or a wall line.',
+    too_high:        'that is above the highest storey the world will hold.',
+    bad_blueprint:   'no council hand knows that blueprint.',
     // `standing` is handled below with the server's tier + gap numbers.
 
     // ── whose world am I standing in ──────────────────────────────────────
