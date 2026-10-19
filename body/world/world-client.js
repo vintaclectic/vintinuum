@@ -951,6 +951,10 @@
       try { window.dispatchEvent(new CustomEvent('vint:world-gather-agent', { detail: m })); } catch (_) {}
     } else if (m.t === 'world:gather:first') {
       try { window.dispatchEvent(new CustomEvent('vint:world-gather-first', { detail: m })); } catch (_) {}
+    } else if (typeof m.t === 'string' && m.t.indexOf('world:rival:') === 0) {
+      // THE RIVALRY (S3UDBDV) — an agent demanded a tithe, ambushed you in a
+      // march, or answered your barter/duel. body/world/rivalry-hud.js owns it.
+      try { window.dispatchEvent(new CustomEvent('vint:world-rival', { detail: m })); } catch (_) {}
     }
   }
 

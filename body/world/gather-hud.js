@@ -365,6 +365,9 @@
     // gather/craft lines above — one inhabited feed, never a second surface.
     else if (d.kind === 'teach' && d.who && d.name) toast((d.who) + ' teaches ' + (d.student || 'a peer') + ' how the ' + pretty(d.name) + ' goes together.');
     else if (d.kind === 'contribute' && d.who && d.item) toast((d.who) + ' puts ' + (d.n || 'some') + ' ' + pretty(d.item) + ' into a great work.');
+    // the rivalry (S3UDBDV): trade, extortion, duels, tithes — the server writes
+    // the sentence, so a new kind of deed never needs a new client line.
+    else if (d.say) toast(String(d.say));
     if (isOpen()) render();
   });
 
