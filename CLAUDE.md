@@ -952,3 +952,15 @@ If any answer is yes → write the lesson to the appropriate file, commit/push i
 This protocol is self-enforcing: agents that don't learn from mistakes repeat them, waste tokens, and get their work reverted. The penalty for not documenting lessons is re-learning them expensively, forever.
 
 **Lessons are load-bearing infrastructure.** Treat them as seriously as the code you ship.
+
+## A new world.html sheet must ALSO register with VintDock — openSheet does not govern the corner pills — learned 2026-10-18, task XQNRQE7
+
+*The Foundry sheet used the sanctioned `DirverseHUD.addLauncher` + `registerSheet/openSheet` contract and still collided: at 375x812 the guest account pill `#vwg-pill` (z≈INT_MAX) sat 97x33 on the open sheet. reckoning-hud had already found and fixed this exact thing, but only in a code comment.*
+
+**The lesson:** world.html has THREE layout registries, not one: the rail (`layoutRail`), the sheet owner (`openSheet`, which evicts other sheets) and the corner dock (`VintDock`, which places the docked pills). A surface that joins the first two is still unknown to the third.
+
+**The rule:** every new full-width `.dv-sheet` calls `VintDock.avoid(sheet, {corner:'br'})` and `{corner:'bl'}` when it opens, and `VintDock.unavoid(sheet)` when it closes. Prove it with a hit-test at 375px with the sheet open, after the pill settles. Measure "resting" launcher collisions only after the boot `#veil` and the arrival `#dvToast` are gone: at t0 they cover whichever phone-rail launcher sits at x≈94-281, with or without your change.
+
+**Example violation:** open the sheet through `openSheet` only, then ship because the rail yields.
+
+**Example compliance:** `scripts/verify-world-biomech-build-XQNRQE7.js` → C2 green; a control that removes only the avoid call goes red (`#vwg-pill 96.6x28.9`).
