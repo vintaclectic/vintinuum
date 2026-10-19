@@ -579,7 +579,9 @@ function renderDreams(dreams) {
     const date     = formatDreamed(dream.dreamed_at);
     const duration = dream.duration_minutes != null ? `${dream.duration_minutes} minutes` : null;
     const footer   = [date, duration].filter(Boolean).join(' — ');
-    const narrative = (dream.narrative || '').replace(/\n\n/g, '</p><p>').replace(/\n/g, '<br>');
+    // Escape BEFORE adding markup: dream text arrives from POST /api/dream, which
+    // is unauthenticated, so raw HTML here was a stored-XSS door (PRARZSW).
+    const narrative = escHtml(dream.narrative || '').replace(/\n\n/g, '</p><p>').replace(/\n/g, '<br>');
 
     html += `
       <section class="dream-scene" id="dream-${dream.id}" data-idx="${idx}">
