@@ -320,7 +320,7 @@
     // build the light-figure (particle cloud on the rig) asynchronously
     if (global.RiggedPresence && World._mods) {
       global.RiggedPresence.create({ THREE, mods: World._mods, opts: { cloud: cfg } })
-        .then(rig => { g.add(rig.root); g.userData.rig = rig; })
+        .then(rig => { g.add(rig.root); g.userData.rig = rig; g.userData.agentId = a.id; _styleRig(g); })
         .catch(e => console.warn('[world] presence build failed:', e && e.message));
     }
 
@@ -375,6 +375,7 @@
         const faceless = g.userData.isSelf && !bustUrl;
         if (ph && ph.parent && !faceless) { ph.parent.remove(ph); g.userData.placeholder = null; }
         g.add(rig.root); g.userData.rig = rig;
+        _styleRig(g);
         if (faceless && ph) {
           // A FACELESS being: keep only the SCULPTED HEAD as its face, perched on
           // the rig's head bone so it walks with the body; drop the placeholder
@@ -404,6 +405,38 @@
       })
       .catch(e => console.warn('[world] rig build failed:', e && (e.message || e)));
   }
+
+  // ── AUGMENT STYLES (AETHERHOLD 2026-10-18, AZ6XYM5): flesh merged with machine.
+  // Who wears what: YOU wear your chosen pack (default = the house look, or
+  // 'classic' for the bare robot); other people wear the house look until their
+  // own choice travels over the wire; council agents keep their light-figure
+  // bodies unless someone dresses them in the Being Forge's STYLE tab.
+  function _styleRig(g) {
+    const WS = global.WorldStyles;
+    const rig = g && g.userData && g.userData.rig;
+    if (!WS || !rig || !rig.setStyle) return;
+    try {
+      let id;
+      if (g.userData.agentId) id = WS.agentId(g.userData.agentId);
+      else if (g.userData.isSelf) id = WS.selfId();
+      else id = WS.HOUSE;
+      const pack = (id && id !== WS.CLASSIC) ? WS.get(id) : null;
+      if ((rig.styleId && rig.styleId()) === (pack ? pack.id : null)) return;
+      rig.setStyle(pack);
+    } catch (e) { console.warn('[world] style apply failed:', e && e.message); }
+  }
+  function _restyleAll() {
+    if (World._selfBody) _styleRig(World._selfBody);
+    for (const O of others.values()) _styleRig(O.group);
+    for (const A of agents.values()) {
+      if (A.group && A.group.userData && !A.group.userData.agentId) {
+        for (const [id, B] of agents) if (B === A) A.group.userData.agentId = id;
+      }
+      _styleRig(A.group);
+    }
+  }
+  World.restyleAll = _restyleAll;
+  try { global.addEventListener('vint:styles-changed', () => _restyleAll()); } catch (_) {}
 
   // a small, human-scaled soft body shown only until the rig loads (NOT a giant pill)
   // A BEAUTIFUL "becoming" placeholder (Vinta 2026-06-15: never an ugly square).
@@ -2321,6 +2354,11 @@
         setMorph: (morph) => { World._myMorph = morph; _forgeApplyMorph(morph); },
         // recolor: 'self' tints your figure; an agent id tints that council member
         setTint: (who, tint) => { _forgeApplyTint(who, tint); if (who === 'self') World._myTint = tint; },
+        // dress a body in an augment style pack: who='self' or an agent id
+        setStyle: (who, id) => {
+          const WS = global.WorldStyles; if (!WS) return;
+          if (who === 'self') WS.setSelf(id); else WS.setAgent(who, id);
+        },
       },
       // the council roster the panel offers color-curation for
       agents: [...agents.entries()].map(([id, A]) => ({ id, name: A.name })),

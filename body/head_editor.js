@@ -44,9 +44,12 @@
     var s = document.createElement('style');
     s.id = 'vint-headed-styles';
     s.textContent = [
+      // max-height leaves room ABOVE the panel for the top-right edit-head button
+      // AND a docked pill the dock stacks over the panel (AZ6XYM5: at -96px the
+      // pill landed on #editHeadBtn whenever a pane filled the panel).
       '#vintHeadEd{position:fixed;z-index:2147483600;right:calc(16px + env(safe-area-inset-right,0px));',
       ' bottom:calc(16px + env(safe-area-inset-bottom,0px));width:320px;max-width:calc(100vw - 24px);',
-      ' max-height:calc(100svh - 96px);display:flex;flex-direction:column;background:rgba(8,12,20,0.96);',
+      ' max-height:calc(100svh - 140px);display:flex;flex-direction:column;background:rgba(8,12,20,0.96);',
       ' border:1px solid rgba(79,195,247,0.22);border-radius:18px;',
       ' box-shadow:0 12px 48px rgba(0,0,0,0.6);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);',
       ' font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#dae4ff;overflow:hidden;}',
@@ -92,7 +95,37 @@
       '#vintHeadEd .he-note{padding:2px 15px 10px;font-size:11px;color:rgba(180,200,230,0.5);font-style:italic;line-height:1.5;}',
       '#vintHeadEd .he-mirror{padding:8px 15px 0;font-size:11px;color:rgba(159,220,255,0.55);letter-spacing:.3px;flex:0 0 auto;}',
       '#vintHeadEd .he-shuf{background:rgba(206,147,216,0.12);border-color:rgba(206,147,216,0.4);color:#e4bbf0;}',
-      '#vintHeadEd .he-shuf:active{transform:scale(0.97);}'
+      '#vintHeadEd .he-shuf:active{transform:scale(0.97);}',
+      // STYLE pane (AZ6XYM5): every block is in normal flow inside the scrolling
+      // body, so nothing here can overlap a neighbour. Cards wrap in a 2-col grid.
+      '#vintHeadEd .he-tab{min-width:0;padding:0 2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}',
+      '@media (max-width:420px){#vintHeadEd .he-tabs{gap:4px;padding:10px 10px 4px;} #vintHeadEd .he-tab{font-size:11px;letter-spacing:0;}}',
+      '#vintHeadEd .st-who{display:flex;flex-wrap:wrap;gap:6px;padding:0 15px 10px;}',
+      '#vintHeadEd .st-chip{min-height:34px;max-width:100%;padding:0 12px;border-radius:17px;font-size:12px;cursor:pointer;',
+      ' border:1px solid rgba(255,255,255,0.14);background:rgba(255,255,255,0.03);color:rgba(218,228,255,0.75);',
+      ' overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}',
+      '#vintHeadEd .st-chip.on{border-color:rgba(79,195,247,0.6);background:rgba(79,195,247,0.16);color:#9fdcff;}',
+      '#vintHeadEd .st-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;padding:0 15px 12px;}',
+      '#vintHeadEd .st-card{display:flex;flex-direction:column;gap:6px;min-width:0;min-height:72px;padding:9px 10px;border-radius:12px;',
+      ' text-align:left;cursor:pointer;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.03);color:#dae4ff;}',
+      '#vintHeadEd .st-card.on{border-color:rgba(79,195,247,0.65);background:rgba(79,195,247,0.12);}',
+      '#vintHeadEd .st-card:active{transform:scale(0.98);}',
+      '#vintHeadEd .st-strip{display:flex;height:10px;border-radius:5px;overflow:hidden;flex:0 0 auto;}',
+      '#vintHeadEd .st-strip i{flex:1;display:block;}',
+      '#vintHeadEd .st-nm{font-size:12px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}',
+      '#vintHeadEd .st-meta{font-size:10px;color:rgba(180,200,230,0.55);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}',
+      '#vintHeadEd .st-form{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;padding:0 15px 8px;}',
+      '#vintHeadEd .st-form label{display:flex;flex-direction:column;gap:4px;min-width:0;font-size:10px;letter-spacing:.5px;color:rgba(218,228,255,0.6);}',
+      '#vintHeadEd .st-form input[type=color]{width:100%;height:36px;border:1px solid rgba(255,255,255,0.14);border-radius:8px;background:none;padding:2px;cursor:pointer;}',
+      '#vintHeadEd .st-in{display:block;box-sizing:border-box;width:calc(100% - 30px);margin:0 15px 8px;min-height:40px;padding:8px 10px;',
+      ' border-radius:10px;border:1px solid rgba(255,255,255,0.14);background:rgba(0,0,0,0.3);color:#dae4ff;font-size:16px;font-family:inherit;}',
+      '#vintHeadEd textarea.st-in{min-height:84px;resize:vertical;font-family:ui-monospace,Menlo,monospace;font-size:16px;}',
+      '#vintHeadEd .st-sel{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;padding:0 15px 8px;}',
+      '#vintHeadEd .st-sel select{min-width:0;min-height:40px;border-radius:10px;border:1px solid rgba(255,255,255,0.14);background:rgba(0,0,0,0.3);color:#dae4ff;font-size:16px;}',
+      '#vintHeadEd .st-btns{display:flex;flex-wrap:wrap;gap:8px;padding:0 15px 8px;}',
+      '#vintHeadEd .st-btns .he-btn{flex:1 1 90px;min-width:0;}',
+      '#vintHeadEd .st-msg{padding:0 15px 12px;font-size:11px;min-height:16px;color:rgba(159,220,255,0.8);overflow-wrap:anywhere;}',
+      '#vintHeadEd .st-msg.err{color:#ff9a8a;}'
     ].join('');
     document.head.appendChild(s);
   }
@@ -158,7 +191,7 @@
 
     // tab strip
     var tabs = document.createElement('div'); tabs.className = 'he-tabs';
-    var TAB_DEFS = [['sculpt', 'SCULPT'], ['colors', 'COLORS'], ['face', 'FACE']];
+    var TAB_DEFS = [['sculpt', 'SCULPT'], ['colors', 'COLORS'], ['style', 'STYLE'], ['face', 'FACE']];
     var tabBtns = {};
     TAB_DEFS.forEach(function (t) {
       var b = document.createElement('button'); b.className = 'he-tab'; b.textContent = t[1]; b.dataset.pane = t[0];
@@ -249,6 +282,10 @@
     });
     body.appendChild(pColors);
 
+    // ── PANE: STYLE (AZ6XYM5) — flesh merged with machine ─────────────────────
+    var pStyle = buildStylePane(preview, agentsList);
+    body.appendChild(pStyle);
+
     // ── PANE: FACE ────────────────────────────────────────────────────────────
     var pFace = document.createElement('div'); pFace.className = 'he-pane';
     if (hasFace) {
@@ -313,9 +350,9 @@
 
     // pane switcher
     function showPane(name) {
-      [pSculpt, pColors, pFace].forEach(function (p) { p.classList.remove('on'); });
+      [pSculpt, pColors, pStyle, pFace].forEach(function (p) { p.classList.remove('on'); });
       Object.keys(tabBtns).forEach(function (k) { tabBtns[k].classList.toggle('on', k === name); });
-      ({ sculpt: pSculpt, colors: pColors, face: pFace })[name].classList.add('on');
+      ({ sculpt: pSculpt, colors: pColors, style: pStyle, face: pFace })[name].classList.add('on');
       body.scrollTop = 0;
     }
     HE._showPane = showPane;
@@ -359,6 +396,123 @@
     row.appendChild(sw);
     row._pick = pick;   // programmatic pick (✦ surprise drives this)
     return row;
+  }
+
+  // ── STYLE PANE (AZ6XYM5): wear, design, import and share augment style packs.
+  //    Packs are JSON (body/world/augment-styles.js validates every field), so a
+  //    look can come from anyone: you, a friend's share link, or an agent.
+  function buildStylePane(preview, agentsList) {
+    var WS = window.WorldStyles;
+    var pane = document.createElement('div'); pane.className = 'he-pane';
+    var note = document.createElement('div'); note.className = 'he-note';
+    pane.appendChild(note);
+    if (!WS) { note.textContent = 'styles are still loading — reopen the forge in a moment.'; return pane; }
+    note.textContent = 'flesh merged with machine. dress yourself or any of the council, design your own look, or import one anyone made.';
+
+    var who = 'self';
+    function sub(t) { var d = document.createElement('div'); d.className = 'he-sub'; d.textContent = t; pane.appendChild(d); return d; }
+    function btn(label, cls, fn) { var b = document.createElement('button'); b.type = 'button'; b.className = 'he-btn ' + (cls || 'he-reset'); b.textContent = label; b.onclick = fn; return b; }
+    function wornId() { return who === 'self' ? WS.selfId() : (WS.agentId(who) || null); }
+    function wear(id) {
+      try { if (preview.setStyle) preview.setStyle(who, id); else if (who === 'self') WS.setSelf(id); else WS.setAgent(who, id); } catch (_) {}
+      renderGrid();
+    }
+
+    sub('dress');
+    var whoRow = document.createElement('div'); whoRow.className = 'st-who'; pane.appendChild(whoRow);
+    var chips = [];
+    [{ id: 'self', name: 'you' }].concat(agentsList).forEach(function (a) {
+      var c = document.createElement('button'); c.type = 'button'; c.className = 'st-chip'; c.textContent = a.name || a.id; c.dataset.who = a.id;
+      c.onclick = function () { who = a.id; chips.forEach(function (x) { x.classList.toggle('on', x === c); }); renderGrid(); };
+      whoRow.appendChild(c); chips.push(c);
+    });
+    chips[0].classList.add('on');
+
+    sub('wardrobe');
+    var grid = document.createElement('div'); grid.className = 'st-grid'; pane.appendChild(grid);
+    function card(id, name, meta, colors) {
+      var c = document.createElement('button'); c.type = 'button'; c.className = 'st-card'; c.dataset.style = id || '';
+      var strip = document.createElement('span'); strip.className = 'st-strip';
+      colors.forEach(function (h) { var i = document.createElement('i'); i.style.background = h; strip.appendChild(i); });
+      var nm = document.createElement('span'); nm.className = 'st-nm'; nm.textContent = name;
+      var mt = document.createElement('span'); mt.className = 'st-meta'; mt.textContent = meta;
+      c.appendChild(strip); c.appendChild(nm); c.appendChild(mt);
+      c.onclick = function () { wear(id); };
+      return c;
+    }
+    function renderGrid() {
+      while (grid.firstChild) grid.removeChild(grid.firstChild);
+      var cur = wornId();
+      var bare = who === 'self'
+        ? card(WS.CLASSIC, 'Classic', 'the bare frame', ['#8aa0b8', '#5a6b80', '#c8d4e0'])
+        : card(null, 'Light', 'their own glow', ['#ffd89a', '#ffc79a', '#9fc4e6']);
+      if ((who === 'self' && cur === WS.CLASSIC) || (who !== 'self' && !cur)) bare.classList.add('on');
+      grid.appendChild(bare);
+      WS.list().forEach(function (p) {
+        var c = card(p.id, p.name, p.body + ' · ' + (p.builtin ? 'council' : 'by ' + p.author), [p.skin, p.plate, p.seam]);
+        if (p.id === cur) c.classList.add('on');
+        grid.appendChild(c);
+      });
+    }
+    renderGrid();
+
+    sub('design your own');
+    var nameIn = document.createElement('input'); nameIn.className = 'st-in'; nameIn.placeholder = 'name your look'; nameIn.maxLength = 40;
+    pane.appendChild(nameIn);
+    var form = document.createElement('div'); form.className = 'st-form'; pane.appendChild(form);
+    function colorField(label, val) {
+      var l = document.createElement('label'); var s = document.createElement('span'); s.textContent = label;
+      var i = document.createElement('input'); i.type = 'color'; i.value = val; l.appendChild(s); l.appendChild(i); form.appendChild(l); return i;
+    }
+    var cSkin = colorField('skin', '#c8957a'), cPlate = colorField('machine', '#2a2d33'), cSeam = colorField('light', '#2f7bff');
+    var covS = mkSlider('coverage', 'machine coverage', 0, 1, 0.01, pct); covS.input.value = 0.4; covS.val.textContent = pct(0.4); pane.appendChild(covS.row);
+    var glowS = mkSlider('glow', 'seam glow', 0, 2, 0.01, pct); glowS.input.value = 1.2; glowS.val.textContent = pct(1.2); pane.appendChild(glowS.row);
+    [covS, glowS].forEach(function (sl) { sl.input.addEventListener('input', function () { sl.val.textContent = sl.fmt(+sl.input.value); }); });
+    var sel = document.createElement('div'); sel.className = 'st-sel'; pane.appendChild(sel);
+    function select(opts, aria) { var s = document.createElement('select'); s.setAttribute('aria-label', aria); opts.forEach(function (o) { var op = document.createElement('option'); op.value = o; op.textContent = o; s.appendChild(op); }); sel.appendChild(s); return s; }
+    var patSel = select(WS.PATTERNS, 'seam pattern');
+    var bodySel = select(['masc', 'femme', 'any'], 'body');
+    var msg = document.createElement('div'); msg.className = 'st-msg';
+    function say(t, err) { msg.textContent = t; msg.classList.toggle('err', !!err); }
+    var b1 = document.createElement('div'); b1.className = 'st-btns'; pane.appendChild(b1);
+    b1.appendChild(btn('✦ create + wear', 'he-save', function () {
+      var femme = bodySel.value === 'femme';
+      try {
+        var p = WS.register({
+          name: nameIn.value || 'untitled look', author: 'you', body: bodySel.value,
+          skin: cSkin.value, plate: cPlate.value, seam: cSeam.value,
+          coverage: +covS.input.value, glow: +glowS.input.value, pattern: patSel.value, asym: 0.6,
+          build: femme ? { height: 0.96, shoulders: 0.5, hips: 0.6, waist: 0.55, bust: 0.5 } : { height: 1 },
+        });
+        wear(p.id); say('“' + p.name + '” is in your wardrobe and on ' + (who === 'self' ? 'you' : 'them') + '.');
+      } catch (e) { say(e.message || 'could not create that look', true); }
+    }));
+
+    sub('import · share');
+    var ta = document.createElement('textarea'); ta.className = 'st-in'; ta.placeholder = 'paste a style pack (JSON) — from a friend, a link, or an agent';
+    ta.spellcheck = false; pane.appendChild(ta);
+    var b2 = document.createElement('div'); b2.className = 'st-btns'; pane.appendChild(b2);
+    b2.appendChild(btn('import', 'he-save', function () {
+      try { var got = WS.importText(ta.value); ta.value = ''; renderGrid(); say('imported ' + got.length + ' look' + (got.length > 1 ? 's' : '') + ': ' + got.map(function (p) { return p.name; }).join(', ')); }
+      catch (e) { say(e.message || 'import failed', true); }
+    }));
+    function copy(t, okMsg) {
+      ta.value = t;
+      try { navigator.clipboard.writeText(t).then(function () { say(okMsg); }, function () { say('copied into the box above — select it to share.'); }); }
+      catch (_) { say('copied into the box above — select it to share.'); }
+    }
+    b2.appendChild(btn('copy JSON', 'he-reset', function () {
+      var id = wornId(); if (!id || id === WS.CLASSIC) return say('wear a style first, then copy it.', true);
+      copy(WS.exportText(id), 'style JSON copied.');
+    }));
+    b2.appendChild(btn('share link', 'he-shuf', function () {
+      var id = wornId(); if (!id || id === WS.CLASSIC) return say('wear a style first, then share it.', true);
+      copy(WS.shareUrl(id), 'link copied — whoever opens it gets this look.');
+    }));
+    pane.appendChild(msg);
+    if (WS.lastShared) say('“' + WS.lastShared.name + '” arrived from a share link and is on you now.');
+    try { window.addEventListener('vint:styles-changed', function () { if (pane.isConnected) renderGrid(); }); } catch (_) {}
+    return pane;
   }
 
   // ── formatters ──

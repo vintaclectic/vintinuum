@@ -199,6 +199,7 @@
       mixer.update(dt);
       // cheap: just advance the light-figure's breath/spark time uniform (no CPU resample)
       if (handle.lightMat && handle.lightMat.userData.uTime) { handle._t += dt; handle.lightMat.userData.uTime.value = handle._t; }
+      if (handle._style) { handle._st = (handle._st || 0) + dt; handle._style.uniforms.uTime.value = handle._st; }
     };
     handle.dispose = function () { mixer.stopAllAction(); };
 
@@ -265,6 +266,41 @@
       }
       handle._headAdjust = adj || null;
     };
+
+    // ── AUGMENT STYLE (AETHERHOLD 2026-10-18, AZ6XYM5) ─────────────────────
+    // Dress the body in a flesh/machine style pack (body/world/augment-styles.js).
+    // pack=null restores what the body wore before (robot surface, or the
+    // light-figure for a council presence). Works with or without a mounted face:
+    // the face stays real, the body below it becomes skin merged with machine.
+    handle._style = null;
+    handle._origMats = null;
+    handle._origScale = root.scale.clone();
+    handle.setStyle = function (pack) {
+      const WS = global.WorldStyles;
+      const skinned = [];
+      root.traverse(o => { if (o.isSkinnedMesh) skinned.push(o); });
+      if (!handle._origMats) handle._origMats = skinned.map(o => ({ o, m: o.material, v: o.visible }));
+      if (handle._style) { try { handle._style.surface.dispose(); handle._style.joints.dispose(); } catch (_) {} }
+      handle._style = null;
+      if (!pack || !WS) {
+        handle._origMats.forEach(r => { r.o.material = r.m; r.o.visible = r.v; });
+        root.scale.copy(handle._origScale);
+        return false;
+      }
+      let mats;
+      try { mats = WS.makeMaterials(THREE, pack, skinned[0] && skinned[0].geometry); } catch (e) { console.warn('[rigged-presence] style rejected:', e && e.message); return false; }
+      skinned.forEach(o => {
+        // xbot ships a skin mesh + a joints mesh; joints are always machine
+        const isJoint = /joint/i.test((o.material && o.material.name) || '') || /joint/i.test(o.name || '');
+        o.material = isJoint ? mats.joints : mats.surface;
+        o.visible = true;
+      });
+      root.scale.copy(handle._origScale).multiplyScalar(mats.pack.build.height);
+      handle._style = mats;
+      return true;
+    };
+    // the style pack id currently worn (null = original body)
+    handle.styleId = function () { return handle._style ? handle._style.pack.id : null; };
 
     // start idle
     handle.play('idle', 0);
