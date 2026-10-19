@@ -825,6 +825,12 @@
     } else if (m.t === 'world:struct') {
       _renderStruct(m.struct);
       try { window.dispatchEvent(new CustomEvent('vint:world-struct', { detail: m.struct })); } catch (_) {}
+    } else if (m.t === 'world:power') {
+      // THE POWER (Q3FFTUD): the server's verdict on this world's networks after
+      // a conduit/node/doorway landed. power-glow.js paints it; nothing here decides.
+      if (m.worldId == null || String(m.worldId) === String(World._worldId)) {
+        try { window.dispatchEvent(new CustomEvent('vint:world-power', { detail: m })); } catch (_) {}
+      }
     } else if (m.t === 'world:soil:ok') {
       // ── THE COVENANTS: what ground am I on, and what can it cost me ─────────
       // Relayed verbatim. The client NEVER derives soil, violence or risk — the

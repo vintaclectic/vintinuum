@@ -528,6 +528,7 @@
     reach: 'too far from your claim — build closer to home',
     bad_kind: 'this world does not know that piece yet',
     standing: 'your standing has not opened that piece yet',
+    bad_piece: 'that shape does not match the piece it was paid as',
   };
   W.addEventListener('vint:world-err', function (e) {
     var d = e.detail || {};
@@ -696,6 +697,8 @@
     // read-only views for verifiers / future organs (power networks, raids)
     candidate: function () { return candidate(); },
     pieces: function () { var a = []; _pieces.forEach(function (p) { a.push({ id: p.id, piece: p.piece, mat: p.mat, x: p.x, y: p.y, z: p.z, rot: p.rot, key: p.key, local: p.local }); }); return a; },
+    // power-glow.js (Q3FFTUD) hangs each powered piece's light on its mesh
+    meshOf: function (id) { var p = _pieces.get(String(id)); return (p && p.mesh) || null; },
     PIECES: PIECES.map(function (p) { return { id: p.id, label: p.label, kind: p.kind, anchor: p.anchor }; }),
   };
 })();
