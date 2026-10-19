@@ -122,6 +122,9 @@
     renderer.outputColorSpace = THREE.SRGBColorSpace;
     World._isMobile = isMobile;
     mountEl.appendChild(renderer.domElement);
+    // BIOMECH (task XQNRQE7): ask the GPU once whether it runs the flesh+machine
+    // program before any body is built; a refusal falls back to the light-figure.
+    try { if (global.RiggedPresence && global.RiggedPresence.probeBiomech) global.RiggedPresence.probeBiomech(THREE, renderer); } catch (_) {}
     // pause rendering when the tab is hidden (zero GPU when not looking)
     document.addEventListener('visibilitychange', () => { World._hidden = (document.visibilityState !== 'visible'); });
     clock = new THREE.Clock();
@@ -1230,6 +1233,28 @@
     const M = _mats(THREE);
     const kind = String(s.kind || '');
     let mesh;
+    // THE FOUNDRY (task XQNRQE7): a snap-connected modular piece rides the SAME
+    // world:place protocol, carrying its true shape in meta.piece. When the
+    // foundry is loaded it draws that shape (concrete/steel/wood/biomech) and
+    // indexes its sockets; otherwise the legacy kind geometry below stands in.
+    // world:struct broadcasts carry meta parsed; the world:state SELECT carries the
+    // raw column string (world-mvp.js stateFor) — accept both.
+    let _meta = (s.meta && typeof s.meta === 'object') ? s.meta : null;
+    if (!_meta && typeof s.meta === 'string' && s.meta.charAt(0) === '{') { try { _meta = JSON.parse(s.meta); } catch (_) {} }
+    if (_meta) s = Object.assign({}, s, { meta: _meta });
+    if (_meta && _meta.piece && global.WorldFoundry && global.WorldFoundry.buildFor) {
+      try {
+        mesh = global.WorldFoundry.buildFor(s);
+        if (mesh) {
+          mesh.userData.struct = { id: s.id, kind: kind, owner: s.owner_id };
+          World._scene.add(mesh);
+          _structMeshes.set(s.id, mesh);
+          mesh.userData._birth = 0;
+          _liveStructs.push(mesh);
+          return mesh;
+        }
+      } catch (e) { console.warn('[world] foundry piece failed, legacy geometry stands in:', e && e.message); }
+    }
     try {
       mesh = _PIECE[kind] ? _PIECE[kind](THREE, M) : _unknownPiece(THREE, M, kind);
     } catch (e) {
@@ -1577,6 +1602,7 @@
     visiting.clear();
     for (const mesh of _structMeshes.values()) { try { World._scene.remove(mesh); } catch (_) {} }
     _structMeshes.clear();
+    try { if (global.WorldFoundry && global.WorldFoundry.reset) global.WorldFoundry.reset(); } catch (_) {}
     // the animation list holds hard references to the removed meshes — leaving
     // it populated across a warp both leaks them and ticks pieces that are no
     // longer in any scene. It is rebuilt as the new room's structures render.

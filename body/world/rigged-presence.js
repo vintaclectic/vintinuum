@@ -24,6 +24,13 @@
 
   function _base() { return (global.__VINTINUUM_API_BASE || '').replace(/\/$/, ''); }
 
+  // BIOMECH state: 'unknown' until RP.probeBiomech has asked the GPU, then
+  // 'ok' or 'failed'. Bodies built while 'unknown' use biomech (the default);
+  // a later 'failed' swaps every live body back via handle._revertBiomech.
+  RP.biomechState = 'unknown';
+  RP.biomechReason = '';
+  const _live = new Set();
+
   // Load the xbot rig template exactly once.
   async function _loadRigTemplate(mods) {
     if (_rigGltf) return _rigGltf;
@@ -62,21 +69,53 @@
       }
     });
 
-    const handle = { root, mixer, actions, _current: null, isRigged: true, bust: null, cloud: null, lightMat: null };
+    const handle = { root, mixer, actions, _current: null, isRigged: true, bust: null, cloud: null, lightMat: null, bioMats: [] };
 
     // LIGHT-FIGURE (ATLAS's perf fix + ARIA's 'warm light gathered into a figure'):
     // the council ARE the xbot SkinnedMesh — but rendered with an additive
     // fresnel/emissive material so they read as a glowing body of light, not
     // flesh. GPU-skinned for free by three.js (zero per-frame CPU). Replaces the
     // 6,800-getVertexPosition/frame cloud that made the world sluggish.
+    // BIOMECH FLESH (AETHERHOLD 2026-10-18, task XQNRQE7) is now the DEFAULT
+    // skin for every body: warm flesh merged with chrome plating, panel seams and
+    // pulsing conduits, with the light-figure's fresnel rim kept so the council
+    // still read as luminous. The old light-figure stays as the fallback for a GPU
+    // whose compiler refused the biomech program (RP.biomechState === 'failed',
+    // set by RP.probeBiomech before any body is built).
+    const useBio = RP.biomechState !== 'failed' && !(opts && opts.noBiomech);
     if (opts.cloud) {
-      const lightMat = _makeLightFigureMaterial(THREE, opts.cloud);
-      root.traverse(o => {
-        if (o.isSkinnedMesh) { o.material = lightMat; o.frustumCulled = true; }
-        else if (o.isMesh) { o.visible = false; }
-      });
-      handle.lightMat = lightMat;
+      if (useBio) {
+        _applyBiomech(THREE, root, handle, { tint: opts.cloud.color || '#ffc79a', rim: 1.35, breath: 1 });
+        root.traverse(o => { if (o.isSkinnedMesh) o.frustumCulled = true; else if (o.isMesh && !o.isSkinnedMesh) o.visible = false; });
+      } else {
+        const lightMat = _makeLightFigureMaterial(THREE, opts.cloud);
+        root.traverse(o => {
+          if (o.isSkinnedMesh) { o.material = lightMat; o.frustumCulled = true; }
+          else if (o.isMesh) { o.visible = false; }
+        });
+        handle.lightMat = lightMat;
+      }
+    } else if (useBio) {
+      // a USER body (the shared walking rig, with or without their face)
+      _applyBiomech(THREE, root, handle, { tint: '#5fe0ff', rim: 0.55, breath: 0 });
     }
+    handle._cloudCfg = opts.cloud || null;
+    // Fallback swap if a late probe says the GPU cannot run the biomech program:
+    // council fall back to the light-figure, users to the rig's own material.
+    handle._revertBiomech = function () {
+      if (!handle.bioMats.length) return;
+      if (handle._cloudCfg) {
+        const lm = _makeLightFigureMaterial(THREE, handle._cloudCfg);
+        if (handle._tint) { lm.color.set(handle._tint); lm.userData.uColor.value.set(handle._tint); }
+        root.traverse(o => { if (o.isSkinnedMesh && o.userData.__bioOrig !== undefined) o.material = lm; });
+        handle.lightMat = lm;
+      } else {
+        root.traverse(o => { if (o.isSkinnedMesh && o.userData.__bioOrig) o.material = o.userData.__bioOrig; });
+      }
+      handle.bioMats.forEach(m => { try { m.dispose(); } catch (_) {} });
+      handle.bioMats = [];
+    };
+    if (handle.bioMats.length) _live.add(handle);
 
     if (bustUrl) {
       // KEEP the robot body visible — we mount the user's face as the HEAD, on the
@@ -199,8 +238,10 @@
       mixer.update(dt);
       // cheap: just advance the light-figure's breath/spark time uniform (no CPU resample)
       if (handle.lightMat && handle.lightMat.userData.uTime) { handle._t += dt; handle.lightMat.userData.uTime.value = handle._t; }
+      // biomech conduits pulse on ONE shared uniform object per body — a float write, no CPU resample
+      else if (handle.bioMats.length) { handle._t += dt; handle.bioMats[0].userData.uTime.value = handle._t; }
     };
-    handle.dispose = function () { mixer.stopAllAction(); };
+    handle.dispose = function () { mixer.stopAllAction(); _live.delete(handle); };
 
     // ── BEING-FORGE hooks (AETHERHOLD 2026-07-06) ────────────────────────────
     // Let the creator sculpt a being's HEAD PROPORTIONS + recolor the whole
@@ -238,6 +279,9 @@
           handle.lightMat.color.copy(c);
           if (handle.lightMat.userData.uColor) handle.lightMat.userData.uColor.value.copy(c);
         }
+        // biomech body: the tint drives the conduit glow, the rim and the plate sheen
+        // (shared uniform object, so one copy recolors every skinned part)
+        if (handle.bioMats.length) handle.bioMats[0].userData.uTint.value.copy(c);
         // any placeholder / solid body mesh: tint its material
         root.traverse(o => {
           if (o.isMesh && o.material && o.userData.__forgeTintable) {
@@ -269,6 +313,171 @@
     // start idle
     handle.play('idle', 0);
     return handle;
+  };
+
+  // ── BIOMECH MATERIAL — flesh merged with machine (AETHERHOLD, task XQNRQE7) ──
+  // A MeshStandardMaterial (lit, PBR, GPU-skinned by three.js for free) extended
+  // via onBeforeCompile. EVERYTHING is procedural in the fragment shader from the
+  // vertex's own position — no textures, no UVs, no extra passes, no per-frame CPU
+  // beyond one float (uTime). What it draws:
+  //   · FLESH  — warm skin with a slow blood-flush mottle and a cheap
+  //              subsurface fake (warm light bleeding out at grazing angles).
+  //   · PLATES — whole 3D cells of the body become chrome plating (metalness .9,
+  //              roughness .24), chosen by a per-cell hash so it is stable.
+  //   · SEAMS  — the cell boundaries, warped by one octave of value noise so they
+  //              read as grown panel lines, not graph paper; recessed + glowing.
+  //   · TRACES — a finer cell grid on flesh only, a hashed subset of its edges =
+  //              circuitry under the skin.
+  //   · CONDUIT PULSE — seams and traces carry a travelling pulse in uTint.
+  //   · RIM    — the light-figure's fresnel rim is KEPT (uRim), so the council
+  //              still read as luminous beings, not mannequins.
+  // `space:'object'` (bodies) samples the BIND-POSE position so the pattern is
+  // glued to the skin while it walks; `space:'world'` (build pieces) samples
+  // world position so adjoining pieces share one continuous seam field.
+  // Cost: ~10 hash evaluations per fragment. No derivatives (WebGL1-safe).
+  const _BM_COMMON = `
+    uniform float uTime; uniform vec3 uTint; uniform float uRim; uniform float uBreath;
+    uniform float uPlateBias; uniform vec3 uSkin;
+    varying vec3 vBP;
+    float bmH(vec3 p){ p = fract(p*0.3183099 + vec3(0.71,0.113,0.419)); p *= 17.0; return fract(p.x*p.y*p.z*(p.x+p.y+p.z)); }
+    float bmN(vec3 x){ vec3 i = floor(x); vec3 f = fract(x); f = f*f*(3.0-2.0*f);
+      return mix(mix(mix(bmH(i),bmH(i+vec3(1.,0.,0.)),f.x),mix(bmH(i+vec3(0.,1.,0.)),bmH(i+vec3(1.,1.,0.)),f.x),f.y),
+                 mix(mix(bmH(i+vec3(0.,0.,1.)),bmH(i+vec3(1.,0.,1.)),f.x),mix(bmH(i+vec3(0.,1.,1.)),bmH(i+vec3(1.,1.,1.)),f.x),f.y),f.z); }
+    float bmEdge(vec3 p, float w){ vec3 f = fract(p); vec3 d = min(f, 1.0-f); return 1.0 - smoothstep(0.0, w, min(min(d.x,d.y),d.z)); }
+  `;
+  RP.makeBiomechMaterial = function (THREE, cfg) {
+    cfg = cfg || {};
+    const U = cfg.uniforms || {
+      uTime: { value: 0 },
+      uTint: { value: new THREE.Color(cfg.tint || '#5fe0ff') },
+      uRim: { value: cfg.rim != null ? cfg.rim : 0.6 },
+      uBreath: { value: cfg.breath || 0 },
+      uSkin: { value: new THREE.Color(cfg.skin || '#c48a70') },
+    };
+    const world = cfg.space === 'world';
+    const mat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.5, metalness: 0.1,
+      side: cfg.side != null ? cfg.side : THREE.FrontSide });
+    mat.userData.uTime = U.uTime; mat.userData.uTint = U.uTint; mat.userData.uRim = U.uRim;
+    mat.userData.uBreath = U.uBreath; mat.userData.uSkin = U.uSkin;
+    mat.userData.uScale = { value: cfg.scale || 4.0 };
+    mat.userData.uPlateBias = { value: cfg.plateBias || 0 };
+    mat.userData.biomech = true;
+    if (world) mat.defines = { BM_WORLD: '' };
+    mat.customProgramCacheKey = () => 'biomech-v1' + (world ? '-w' : '-o');
+    mat.onBeforeCompile = (shader) => {
+      const ud = mat.userData;
+      shader.uniforms.uTime = ud.uTime; shader.uniforms.uTint = ud.uTint; shader.uniforms.uRim = ud.uRim;
+      shader.uniforms.uBreath = ud.uBreath; shader.uniforms.uSkin = ud.uSkin;
+      shader.uniforms.uScale = ud.uScale; shader.uniforms.uPlateBias = ud.uPlateBias;
+      shader.vertexShader = shader.vertexShader
+        .replace('#include <common>', '#include <common>\n uniform float uScale; varying vec3 vBP;')
+        .replace('#include <begin_vertex>', `#include <begin_vertex>
+          #ifdef BM_WORLD
+            vBP = (modelMatrix * vec4(transformed, 1.0)).xyz * uScale;
+          #else
+            vBP = position * uScale;
+          #endif`);
+      shader.fragmentShader = shader.fragmentShader
+        .replace('#include <common>', '#include <common>\n' + _BM_COMMON)
+        .replace('#include <color_fragment>', `#include <color_fragment>
+          vec3 bmPw = vBP + (bmN(vBP*2.3) - 0.5) * 0.22;
+          float bmCell = bmH(floor(bmPw));
+          float bmPlate = step(0.62 - uPlateBias, bmCell);
+          float bmSeam = bmEdge(bmPw, 0.05);
+          vec3 bmFine = bmPw*3.0 + 0.5;
+          float bmTrace = bmEdge(bmFine, 0.07) * step(0.55, bmH(floor(bmFine) + 7.0)) * (1.0 - bmPlate);
+          vec3 bmSkinC = mix(uSkin, uSkin*vec3(0.78,0.48,0.42), smoothstep(0.35, 0.85, bmN(vBP*5.1)));
+          vec3 bmChrome = mix(vec3(0.70,0.73,0.78), uTint, 0.12);
+          diffuseColor.rgb = mix(bmSkinC, bmChrome, bmPlate) * (1.0 - 0.55*bmSeam);`)
+        .replace('#include <roughnessmap_fragment>', `#include <roughnessmap_fragment>
+          roughnessFactor = clamp(mix(0.52, 0.24, bmPlate) + 0.15*bmSeam, 0.04, 1.0);`)
+        .replace('#include <metalnessmap_fragment>', `#include <metalnessmap_fragment>
+          metalnessFactor = mix(0.02, 0.9, bmPlate);`)
+        .replace('#include <emissivemap_fragment>', `#include <emissivemap_fragment>
+          float bmFres = pow(1.0 - clamp(dot(normalize(normal), normalize(vViewPosition)), 0.0, 1.0), 2.2);
+          float bmPulse = 0.55 + 0.45*sin(uTime*2.4 - vBP.y*2.2 + bmCell*6.2831);
+          float bmBr = mix(1.0, 0.82 + 0.22*sin(uTime*1.4), uBreath);
+          totalEmissiveRadiance += uTint * ((bmSeam*0.85*(1.0 - 0.6*bmPlate) + bmTrace*0.7) * bmPulse + bmFres*uRim) * bmBr;
+          totalEmissiveRadiance += uSkin * vec3(1.0,0.45,0.35) * 0.16 * (1.0 - bmPlate) * (0.35 + bmFres);`);
+      mat.userData.__compiled = true;
+    };
+    mat.needsUpdate = true;
+    return mat;
+  };
+
+  // Swap every skinned mesh of a rig onto biomech. One shared uniform bundle per
+  // body (time + tint + rim), a per-mesh pattern scale measured from the mesh's
+  // own bind-pose extent so panels are body-proportioned whatever units the rig
+  // was authored in. A mesh named like a joint/armature shell becomes all-plate.
+  function _applyBiomech(THREE, root, handle, cfg) {
+    const U = {
+      uTime: { value: 0 }, uTint: { value: new THREE.Color(cfg.tint) },
+      uRim: { value: cfg.rim }, uBreath: { value: cfg.breath || 0 },
+      uSkin: { value: new THREE.Color(cfg.skin || '#c48a70') },
+    };
+    root.traverse(o => {
+      if (!o.isSkinnedMesh) return;
+      let ext = 1;
+      try {
+        if (!o.geometry.boundingBox) o.geometry.computeBoundingBox();
+        const sz = o.geometry.boundingBox.getSize(new THREE.Vector3());
+        ext = Math.max(sz.x, sz.y, sz.z) || 1;
+      } catch (_) {}
+      const m = RP.makeBiomechMaterial(THREE, { uniforms: U, scale: 9 / ext, plateBias: /joint/i.test(o.name) ? 1 : 0 });
+      o.userData.__bioOrig = o.material;
+      o.material = m;
+      handle.bioMats.push(m);
+    });
+  }
+
+  // Ask the GPU, once, whether it will run the biomech program — both the
+  // skinned (body) and the world-space (build piece) variants. Called by
+  // world-client right after the renderer exists, before any body is built.
+  // Result lives on RP.biomechState ('ok' | 'failed' | 'unknown') and is
+  // announced as `vint:biomech` so a verifier or a HUD can read it.
+  RP.probeBiomech = function (THREE, renderer) {
+    const out = { state: 'unknown', reason: '' };
+    const disp = [];
+    try {
+      const gl = renderer.getContext();
+      const scene = new THREE.Scene();
+      const cam = new THREE.PerspectiveCamera(50, 1, 0.1, 10); cam.position.z = 3;
+      scene.add(new THREE.DirectionalLight(0xffffff, 1));
+      const geo = new THREE.BoxGeometry(1, 1, 1);
+      const n = geo.attributes.position.count;
+      const sw = new Float32Array(n * 4); for (let i = 0; i < n; i++) sw[i * 4] = 1;
+      geo.setAttribute('skinIndex', new THREE.Uint16BufferAttribute(new Uint16Array(n * 4), 4));
+      geo.setAttribute('skinWeight', new THREE.Float32BufferAttribute(sw, 4));
+      const mO = RP.makeBiomechMaterial(THREE, {});
+      const mW = RP.makeBiomechMaterial(THREE, { space: 'world' });
+      const sk = new THREE.SkinnedMesh(geo, mO); const bone = new THREE.Bone(); sk.add(bone); sk.bind(new THREE.Skeleton([bone]));
+      const wm = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), mW);
+      scene.add(sk, wm); disp.push(geo, wm.geometry, mO, mW);
+      renderer.compile(scene, cam);
+      let checked = 0, bad = '';
+      for (const m of [mO, mW]) {
+        const prog = renderer.properties.get(m).currentProgram;
+        if (!prog || !prog.program) continue;
+        checked++;
+        if (gl.getProgramParameter(prog.program, gl.LINK_STATUS) === false) {
+          bad = (gl.getProgramInfoLog(prog.program) || 'link failed').slice(0, 200);
+        }
+      }
+      if (bad) { out.state = 'failed'; out.reason = bad; }
+      else if (checked === 2) out.state = 'ok';
+      else out.reason = 'program not exposed by this three build (' + checked + '/2 checked)';
+    } catch (e) { out.state = 'failed'; out.reason = String(e && e.message || e).slice(0, 200); }
+    for (const d of disp) { try { d.dispose(); } catch (_) {} }
+    RP.biomechState = out.state; RP.biomechReason = out.reason;
+    if (out.state === 'failed') {
+      console.warn('[rigged-presence] biomech shader refused by this GPU — falling back to light-figure:', out.reason);
+      for (const h of _live) { try { h._revertBiomech(); } catch (_) {} }
+      _live.clear();
+    } else {
+      console.log('[rigged-presence] biomech shader ' + out.state + (out.reason ? ' (' + out.reason + ')' : ''));
+    }
+    try { global.dispatchEvent(new CustomEvent('vint:biomech', { detail: out })); } catch (_) {}
+    return out;
   };
 
   // ── LIGHT-FIGURE MATERIAL — a body made of light (ATLAS's GPU fix) ───────────
