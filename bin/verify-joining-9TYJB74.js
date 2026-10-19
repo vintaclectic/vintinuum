@@ -299,6 +299,50 @@ async function collisionSweep(page, tag) {
     assert(await page.evaluate(() => window.VintJoining._state().pending === null), 'a called-off table clears the act');
     assert(/came back to its hands/.test((await info(page)).text), 'says honestly that everything came back');
 
+    // ── A COUNCIL AGENT TAKES A SEAT (task QEH297M) ─────────────────────────
+    await page.evaluate(() => {
+      const fire = (t, d) => window.dispatchEvent(new CustomEvent(t, { detail: d }));
+      fire('vint:world-state', { worldId: 'universe', resident: { userId: 1, echo: 10, lumen: 0,
+        inventory: { strand: 1, ember: 1 } } });
+      fire('vint:world-who', { worldId: 'universe', trade: null,
+        here: [{ id: 'pSelf', name: 'MESELF', self: true, away: 0 }, { id: 'pM', name: 'MERIDIAN', self: false, away: 3.1 }],
+        agents: [{ id: 'agent:atlas', key: 'atlas', name: 'ATLAS', agent: true, away: 4.4 }] });
+    });
+    await new Promise(r => setTimeout(r, 100));
+    i = await info(page);
+    assert(i.controlText.some(t => /^ATLAS · agent/.test(t)), 'the seated-able council renders as peer chips ("ATLAS · agent")', JSON.stringify(i.controlText));
+    assert(await page.evaluate(() => window.VintJoining._state().withId === 'pM'), 'a person who walked up stays first; agents follow');
+    await page.evaluate(() => document.querySelector('#dvJoiningSheet .jn-chip[data-jn-peer="agent:atlas"]').click());
+    assert(/ask ATLAS for 1 strand/.test(await cardText(page, 'lamp_of_two_hands')), 'choosing ATLAS re-aims the ask at the agent');
+    await page.evaluate(() => { window.__sent = []; });
+    assert(await clickButton(page, /^ask ATLAS/), 'tap "ask ATLAS for 1 strand"');
+    s = await sent(page);
+    assert(s.length === 1 && s[0].t === 'world:trade:agent:open' && s[0].agentKey === 'atlas' && JSON.stringify(s[0].want) === JSON.stringify({ strand: 1 }),
+      'asking an agent sends world:trade:agent:open with EXACTLY the tradeable shortfall', JSON.stringify(s));
+    await page.evaluate(() => window.dispatchEvent(new CustomEvent('vint:world-trade', { detail: {
+      trade: { id: 9, aUser: 1, bUser: 900000003, aOffer: {}, bOffer: { strand: 1 }, aReady: false, bReady: false },
+      names: { 1: 'MESELF', 900000003: 'ATLAS' },
+      agent: { key: 'atlas', name: 'ATLAS', reason: 'unfair', wants: 4, ready: false,
+        say: "ATLAS puts down 1 strand and wants about 4 echo's worth more from you before it is ready." } } })));
+    await new Promise(r => setTimeout(r, 100));
+    i = await info(page);
+    assert(i.live && /at the table with ATLAS/.test(i.text), 'the agent\'s table renders as a live table');
+    assert(/wants about 4 echo/.test(i.text), 'the agent\'s own words about its hand are shown (server say)');
+    await collisionSweep(page, 'agent-table');
+    await page.evaluate(() => { window.__sent = []; });
+    assert(await clickButton(page, /^put 4 echo down/), 'tap "put 4 echo down" (the agent\'s own number)');
+    s = await sent(page);
+    assert(s.length === 1 && s[0].t === 'world:trade:offer' && s[0].tradeId === 9 && s[0].item === 'echo' && s[0].count === 4,
+      'paying the agent sends world:trade:offer echo 4 (absolute)', JSON.stringify(s));
+    await page.evaluate(() => window.dispatchEvent(new CustomEvent('vint:world-trade-closed', { detail: { tradeId: 9, reason: 'cancelled' } })));
+    await new Promise(r => setTimeout(r, 80));
+    assert(await page.evaluate(() => window.VintJoining._state().pending === null), 'the agent table called off clears the act');
+    await page.evaluate(() => { window.__sent = []; });
+    assert(await clickButton(page, /^teach ATLAS this/), 'tap "teach ATLAS this"');
+    s = await sent(page);
+    assert(s.length === 1 && s[0].t === 'world:forge:teach' && s[0].target === 'agent:atlas', 'teaching an agent addresses its seat id (agent:atlas)', JSON.stringify(s));
+    await page.evaluate(() => window.dispatchEvent(new CustomEvent('vint:world-forge-taught', { detail: { say: 'taught.' } })));
+
     // ── MANY PEERS + LONG NAMES ─────────────────────────────────────────────
     await page.evaluate(() => {
       const here = [{ id: 'pSelf', name: 'MESELF', self: true, away: 0 }];

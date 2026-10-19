@@ -43,13 +43,18 @@
 // and yours are named on the same thing (the forge's great works).
 //
 // ── HONEST GAPS (said in the UI, not hidden) ───────────────────────────────
-//   · Only strand, ember, seed stone, echo and lumen cross a table (ledger.js
-//     TRADEABLE). A shortfall in anything else is shown as "whoever holds it
-//     strikes" — never as an ask that the server would refuse.
+//   · Only strand, ember, seed stone, echo, lumen and the raw matter (fiber,
+//     timber, stone, ore, glimmer — rivalry.js widens ledger.TRADEABLE with them
+//     at load) cross a table. A shortfall in anything else is shown as "whoever
+//     holds it strikes" — never as an ask that the server would refuse.
 //   · A small recipe's artifact names the one who struck it (forge.strike); the
 //     crew-named artifact is the great work. The sheet says so.
-//   · Council agents are presences, not table peers: they cannot be asked
-//     across a table today. They join makings through the great works.
+//   · Council agents take a SEAT at the same escrow table (QEH297M,
+//     vintinuum-api/world/agent-table.js). Asked across it, an agent puts down
+//     what it really holds of the ask and readies on its own character: a fair
+//     return, or a gift to it. When it wants more, the server says how much (in
+//     echo) and the sheet offers exactly that — never a guess. Agents are here
+//     only in the shared clearing, and never while the council is paused/hushed.
 //   · The peer who is asked sees the ordinary commons table (their commons
 //     opens it, as it always has). If they also have this sheet open, the table
 //     lens tells them what the table makes for THEM.
@@ -88,7 +93,10 @@
   // MIRROR of vintinuum-api/world/ledger.js TRADEABLE (read 2026-10-19). Used only
   // to decide whether to OFFER an ask; the server refuses anything else anyway
   // (code trade_untradeable), so a drift here can hide a button, never move goods.
-  var TRADEABLE = { strand: 1, ember: 1, seed_stone: 1, echo: 1, lumen: 1 };
+  // Raw matter added 2026-10-19 (QEH297M): rivalry.js adds RAW to the ledger's
+  // set at load, so the live server accepts it — and raw is mostly what agents hold.
+  var TRADEABLE = { strand: 1, ember: 1, seed_stone: 1, echo: 1, lumen: 1,
+    fiber: 1, timber: 1, stone: 1, ore: 1, glimmer: 1 };
 
   // ── FEATURE FLAG — 'world_joining'. Killable in 30s, no deploy. ─────────────
   var _flag = null;
@@ -108,6 +116,8 @@
   var _res = null;      // resident: purse + inventory, from world:state
   var _known = [];      // learned recipes, from world:state.forge.known
   var _here = [];       // world:who rows
+  var _agents = [];     // world:who `agents` rows — council agents who can take a seat
+  var _seat = null;     // the seated agent's own words about its hand (server frame)
   var _trade = null;    // the server's rendering of my one open table
   var _names = {};      // userId → name, from trade frames
   var _withId = null;   // presence id of the peer I am making with
@@ -129,8 +139,13 @@
     return null;
   }
   function others() {
-    return (_here || []).filter(function (r) { return r && !r.self && r.id; })
+    // people first, then the council — both real peers, both seated the same way;
+    // the order only keeps a person who walked up from hiding behind five agents.
+    var people = (_here || []).filter(function (r) { return r && !r.self && r.id; })
       .slice().sort(function (a, b) { return num(a.away, 1e9) - num(b.away, 1e9); });
+    var council = (_agents || []).filter(function (r) { return r && r.id && r.key; })
+      .slice().sort(function (a, b) { return num(a.away, 1e9) - num(b.away, 1e9); });
+    return people.concat(council);
   }
   function peerById(id) {
     var o = others();
@@ -141,6 +156,14 @@
     var p = _withId != null ? peerById(_withId) : null;
     if (!p) { var o = others(); p = o.length ? o[0] : null; _withId = p ? p.id : null; }
     return p;
+  }
+  // Is this trade-side user id one of the seated council? Agents carry reserved
+  // resident ids (vintinuum-api gather.js AGENT_ACTORS); the server names them in
+  // the frame's `agent` field, so the match is on the name the frame gave us.
+  function agentAt(uid) {
+    if (!_seat) return false;
+    var nm = _names[uid];
+    return !nm || String(nm) === String(_seat.name);
   }
   function recipeById(id) {
     for (var i = 0; i < _known.length; i++) if (_known[i] && _known[i].id === id) return _known[i];
@@ -363,7 +386,7 @@
       var chips = el('div', 'jn-chips');
       peers.forEach(function (r) {
         var c = el('button', 'jn-chip' + (p && String(p.id) === String(r.id) ? ' on' : ''),
-          (r.name || 'someone') + (r.away != null ? ' · ' + Math.round(num(r.away, 0)) + 'm' : ''));
+          (r.name || 'someone') + (r.agent ? ' · agent' : '') + (r.away != null ? ' · ' + Math.round(num(r.away, 0)) + 'm' : ''));
         c.type = 'button';
         c.setAttribute('data-draggable', 'false');
         c.setAttribute('data-jn-peer', String(r.id));
@@ -397,7 +420,8 @@
 
   function agentsNote() {
     var n = el('div', 'jn-note',
-      'Agents make things here too — they gather, strike and join great works beside you on their own. ' +
+      'Agents make things here too — they gather, strike and join great works beside you on their own, ' +
+      'and they take a seat at the table like anyone: ask one, and it decides on its own character. ' +
       'A great work is where every hand, person or agent, is named on the same thing. ' +
       'A small making is named for whoever strikes it; teach the other the recipe and you both carry it.');
     return n;
@@ -509,6 +533,14 @@
     }
     c.appendChild(m);
 
+    var seatNow = _seat && agentAt(sd.theirUser) ? _seat : null;
+    if (seatNow && seatNow.say) {
+      var sy = el('div', 'jn-meta');
+      sy.setAttribute('data-jn-seat', seatNow.reason || '');
+      sy.appendChild(el('b', null, seatNow.say));
+      c.appendChild(sy);
+    }
+
     var ls = lens(t);
     if (ls.length) {
       c.appendChild(el('div', 'jn-meta', 'Settle this and you hold everything ' +
@@ -524,6 +556,14 @@
       var placed = Object.keys(part).every(function (k) { return num(sd.myOffer[k], 0) >= part[k]; });
       if (!placed) acts.appendChild(btn('', 'put my part down', function () { putPart(t, part); }));
     }
+    if (seatNow && num(seatNow.wants, 0) > 0) {
+      // the agent's OWN number, from the server — pay it in echo if I hold it
+      var want = num(seatNow.wants, 0), mineE = num(sd.myOffer.echo, 0);
+      var can = held('echo') >= want;
+      acts.appendChild(btn('', 'put ' + want + ' echo down', function () {
+        try { world().tradeOffer(t.id, 'echo', mineE + want); } catch (_) {}
+      }, !can));
+    }
     acts.appendChild(btn(sd.myReady ? 'quiet' : '', sd.myReady ? 'not ready' : 'ready',
       function () { try { world().tradeReady(t.id, !sd.myReady); } catch (_) {} }));
     acts.appendChild(btn('quiet', 'call it off', function () { try { world().tradeCancel(t.id); } catch (_) {} }));
@@ -535,7 +575,21 @@
   function begin(r, p, mode) {
     if (_pending || _trade) { toast('one table at a time — finish the one that is open.'); return; }
     var w = world();
-    if (!w || !w.tradeOpen || !w.tradeOpen(p.id)) { toast('the world is not listening right now — try again in a moment.'); return; }
+    var sent = false;
+    if (p.agent) {
+      // A council agent: ask it up front, so its first hand is on the table the
+      // moment the table appears. A 'give' asks it for nothing — it is a gift.
+      var want = {};
+      if (mode === 'ask') {
+        var sp = split(r);
+        sp.tradeShort.forEach(function (k) { want[k] = sp.short[k]; });
+      }
+      sent = send({ t: 'world:trade:agent:open', agentKey: String(p.key), want: want });
+    } else {
+      sent = !!(w && w.tradeOpen && w.tradeOpen(p.id));
+    }
+    if (!sent) { toast('the world is not listening right now — try again in a moment.'); return; }
+    _seat = null;
     _pending = { recipeId: r.id, name: r.name, mode: mode, peerId: p.id, peerName: p.name || 'them', phase: 'opening' };
     _last = null;
     render(); updateEntry();
@@ -600,25 +654,27 @@
   W.addEventListener('vint:world-who', function (e) {
     var d = (e && e.detail) || {};
     _here = Array.isArray(d.here) ? d.here : [];
+    _agents = Array.isArray(d.agents) ? d.agents.map(function (a) { var o = {}; for (var k in a) o[k] = a[k]; o.agent = true; return o; }) : [];
     if (d.trade !== undefined) _trade = d.trade || null;
     if (isOpen()) render();
   });
   W.addEventListener('vint:world-trade', function (e) {
     var d = (e && e.detail) || {};
     _trade = d.trade || null;
+    if (d.agent !== undefined) _seat = d.agent || null;
     if (d.names) for (var k in d.names) if (Object.prototype.hasOwnProperty.call(d.names, k)) _names[k] = d.names[k];
     if (_pending && _pending.phase === 'opening') _pending.phase = 'table';
     if (isOpen()) render();
     updateEntry();
   });
   W.addEventListener('vint:world-trade-settled', function () {
-    _trade = null;
+    _trade = null; _seat = null;
     if (_pending) { _pending.phase = 'settled'; if (!isOpen()) open(); }
     if (isOpen()) render();
     updateEntry();
   });
   W.addEventListener('vint:world-trade-closed', function () {
-    _trade = null;
+    _trade = null; _seat = null;
     if (_pending) { _last = 'The table was called off — everything put down came back to its hands.'; _pending = null; }
     if (isOpen()) render();
     updateEntry();
@@ -633,6 +689,7 @@
       var why = code === 'trade_busy_other' ? (_pending.peerName + ' is already at another table.')
         : code === 'trade_busy_self' ? 'You already have a table open.'
         : code === 'trade_far' ? (_pending.peerName + ' is not in this world any more.')
+        : code === 'agent_resting' ? (_pending.peerName + ' is resting right now — the council is quiet.')
         : 'The world would not open that table (' + code + ').';
       _last = why; _pending = null;
     } else if (d.say) {
@@ -663,7 +720,7 @@
     if (isOpen()) render();
   });
   W.addEventListener('vint:world-travel', function () {
-    _here = []; _trade = null; _pending = null; _withId = null;
+    _here = []; _agents = []; _seat = null; _trade = null; _pending = null; _withId = null;
     if (isOpen()) close();
     updateEntry();
   });
