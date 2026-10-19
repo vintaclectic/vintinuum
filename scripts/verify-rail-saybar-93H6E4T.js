@@ -150,7 +150,9 @@ function overlap(a, b) {
     if (rects.toast) {
       line += `| toast[${Math.round(rects.toast.top)}..${Math.round(rects.toast.bottom)}] `;
       // the toast must clear EVERY surface it shares the bottom band with
-      const neighbours = [['topctl', rects.topctl], ['saybar', rects.saybar],
+      // rail added MYXJBF4: at f29116a the toast sat 46px over the phone rail
+      // (320/375/768) and this list never looked at it.
+      const neighbours = [['rail', rects.rail], ['topctl', rects.topctl], ['saybar', rects.saybar],
         ['feed', rects.feed], ['micHint', rects.micHint], ['movectl', rects.movectl]];
       (rects.dock || []).forEach(d => neighbours.push(['dock:' + d.id, d]));
       neighbours.forEach(([nm, box]) => { const o = overlap(rects.toast, box);
@@ -165,7 +167,7 @@ function overlap(a, b) {
   srv.close();
   console.log('\n=== verify-rail-saybar-93H6E4T ===');
   report.forEach(l => console.log('  ' + l));
-  console.log(fails === 0 ? '\nPASS — no rail/saybar or toast/topctl overlaps at any breakpoint\n'
+  console.log(fails === 0 ? '\nPASS — no rail/saybar or toast/{rail,topctl,…} overlaps at any breakpoint\n'
                           : `\nFAIL — ${fails} overlap(s)\n`);
   process.exit(fails === 0 ? 0 : 1);
 })().catch(e => { console.error(e); process.exit(2); });
