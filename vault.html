@@ -711,7 +711,7 @@ input[type="range"].weight-slider::-moz-range-thumb {
   var API = 'https://api.vintaclectic.com';
 
   function authHeaders() {
-    var token = localStorage.getItem('vint_token');
+    var token = (localStorage.getItem('vint_access_token') || localStorage.getItem('vint_token') || localStorage.getItem('soul_auth_token') || localStorage.getItem('vintinuum_session'));
     var h = { 'Content-Type': 'application/json' };
     if (token) h['Authorization'] = 'Bearer ' + token;
     return h;

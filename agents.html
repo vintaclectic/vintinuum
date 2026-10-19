@@ -158,7 +158,7 @@
 <script>
   var API_BASE = (location.hostname === 'localhost' || location.hostname === '127.0.0.1')
     ? 'http://localhost:8767' : 'https://api.vintaclectic.com';
-  function token(){ return localStorage.getItem('vintinuum_session') || localStorage.getItem('vint_token') || ''; }
+  function token(){ return (localStorage.getItem('vint_access_token') || localStorage.getItem('vint_token') || localStorage.getItem('soul_auth_token') || localStorage.getItem('vintinuum_session')) || ''; }
   function authHeaders(){ return { 'Content-Type':'application/json', 'Authorization':'Bearer ' + token() }; }
   var $ = function(id){ return document.getElementById(id); };
   function show(el){ el.classList.remove('hidden'); }

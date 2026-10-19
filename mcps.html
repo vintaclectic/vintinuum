@@ -103,7 +103,7 @@ const API = (location.hostname === 'localhost' || location.hostname === '127.0.0
   ? 'http://localhost:8767' : 'https://api.vintaclectic.com';
 const $ = id => document.getElementById(id);
 
-function token(){ return localStorage.getItem('vintinuum_session') || localStorage.getItem('vint_token') || ''; }
+function token(){ return (localStorage.getItem('vint_access_token') || localStorage.getItem('vint_token') || localStorage.getItem('soul_auth_token') || localStorage.getItem('vintinuum_session')) || ''; }
 function headers(){ return { 'Content-Type':'application/json', 'Authorization':'Bearer ' + token() }; }
 function setStatus(id, msg, kind){ const el = $(id); el.textContent = msg || ''; el.className = 'status' + (kind ? ' ' + kind : ''); }
 function esc(s){ return String(s || '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }

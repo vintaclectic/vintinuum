@@ -659,7 +659,7 @@ body {
 <script defer src="body/atlas_pin.js?v=v20260913-abwnyhb"></script>
 <script>
 const API = 'https://api.vintaclectic.com';
-const token = () => localStorage.getItem('vint_token');
+const token = () => (localStorage.getItem('vint_access_token') || localStorage.getItem('vint_token') || localStorage.getItem('soul_auth_token') || localStorage.getItem('vintinuum_session'));
 const headers = () => ({ 'Content-Type': 'application/json', 'Authorization': `Bearer ${token()}` });
 
 let sessionData = null;

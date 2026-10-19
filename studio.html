@@ -740,7 +740,7 @@ input[type=range]::-moz-range-thumb {
 <script defer src="body/atlas_pin.js?v=v20260913-abwnyhb"></script>
 <script>
 const API = 'https://api.vintaclectic.com';
-function getToken() { return localStorage.getItem('vint_token') || ''; }
+function getToken() { return (localStorage.getItem('vint_access_token') || localStorage.getItem('vint_token') || localStorage.getItem('soul_auth_token') || localStorage.getItem('vintinuum_session')) || ''; }
 function headers(extra) { return { 'Content-Type': 'application/json', 'Authorization': `Bearer ${getToken()}`, ...extra }; }
 
 const CHEM_KEYS = ['dopamine','serotonin','gaba','norepinephrine','arousal','valence'];

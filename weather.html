@@ -651,7 +651,7 @@ body.wx-overcast {
           <rect x="2" y="5.5" width="8" height="5.5" rx="1"/>
           <path d="M4 5.5V4a2 2 0 014 0v1.5"/>
         </svg>
-        Mood Trajectory · 7 days
+        Mood Trajectory · <span id="wx-span">recent</span>
       </div>
       <div class="sparkline-container" id="sparkline-container">
         <svg class="sparkline-svg" id="sparkline-svg" viewBox="0 0 700 80" preserveAspectRatio="none">
@@ -677,7 +677,7 @@ body.wx-overcast {
 <script>
 (() => {
   const API = 'https://api.vintaclectic.com';
-  const session = localStorage.getItem('vintinuum_session');
+  const session = (localStorage.getItem('vint_access_token') || localStorage.getItem('vint_token') || localStorage.getItem('soul_auth_token') || localStorage.getItem('vintinuum_session'));
   const headers = session ? { 'Authorization': `Bearer ${session}` } : {};
 
   /* ─── Weather classification ─── */
@@ -869,6 +869,8 @@ body.wx-overcast {
 
   /* ─── Sparkline ─── */
   function buildSparkline(summaryData, type) {
+    const spanEl = document.getElementById('wx-span');
+    if (spanEl) spanEl.textContent = (summaryData && summaryData.span_hours) ? `last ${summaryData.span_hours}h` : 'recent';
     const svg    = document.getElementById('sparkline-svg');
     const labels = document.getElementById('sparkline-labels');
 
@@ -943,7 +945,17 @@ body.wx-overcast {
       const bsRes = await fetch(`${API}/api/body-state`, { headers });
       if (!bsRes.ok) throw new Error(`body-state ${bsRes.status}`);
       const bsData = await bsRes.json();
-      const bs = bsData.body_state ?? bsData ?? {};
+      const raw = bsData.body_state ?? bsData ?? {};
+      // /api/body-state speaks 0-100 (MEASURED 2026-10-19: dopamine 54.7,
+      // serotonin 63.8 …) but classify()/levelLabel() think in 0-1, so every
+      // value read as "high" and the sky was pinned to Electric forever
+      // (PRARZSW). Normalize once, here, at the only door the data enters.
+      const CHEM = ['dopamine', 'serotonin', 'gaba', 'norepinephrine', 'arousal', 'valence'];
+      const hundred = CHEM.some(k => typeof raw[k] === 'number' && raw[k] > 1.5);
+      const bs = { ...raw };
+      for (const k of CHEM) {
+        if (typeof raw[k] === 'number') bs[k] = Math.max(0, Math.min(1, hundred ? raw[k] / 100 : raw[k]));
+      }
 
       // Classify weather
       const type = classify(bs);
@@ -965,6 +977,18 @@ body.wx-overcast {
         try {
           const sRes = await fetch(`${API}/api/stats/summary`, { headers });
           if (sRes.ok) summaryData = await sRes.json();
+        } catch (_) { /* non-fatal */ }
+        // The real valence line (PRARZSW): stats/summary never carried a trend,
+        // so the sparkline was a flat 0.5 forever. /api/body-state/trend buckets
+        // her actual snapshots into 7 points.
+        try {
+          const tRes = await fetch(`${API}/api/body-state/trend`, { headers });
+          if (tRes.ok) {
+            const t = await tRes.json();
+            if (Array.isArray(t.valence_trend) && t.valence_trend.length >= 2) {
+              summaryData = { ...(summaryData || {}), valence_trend: t.valence_trend, span_hours: t.span_hours };
+            }
+          }
         } catch (_) { /* non-fatal */ }
         document.getElementById('locked-overlay').style.display = 'none';
         document.getElementById('lock-icon').style.display = 'none';

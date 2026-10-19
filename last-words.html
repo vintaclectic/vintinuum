@@ -1079,7 +1079,7 @@ body {
 
   // ── AUTH ──
   function getToken() {
-    return localStorage.getItem(SESSION_KEY) || localStorage.getItem('vint_token') || '';
+    return localStorage.getItem(SESSION_KEY) || (localStorage.getItem('vint_access_token') || localStorage.getItem('vint_token') || localStorage.getItem('soul_auth_token') || localStorage.getItem('vintinuum_session')) || '';
   }
 
   function authHeaders() {

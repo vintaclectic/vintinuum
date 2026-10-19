@@ -660,7 +660,7 @@ body {
 <script>
 const API = 'https://api.vintaclectic.com';
 
-function token() { return localStorage.getItem('vintinuum_session') || localStorage.getItem('vint_token'); }
+function token() { return (localStorage.getItem('vint_access_token') || localStorage.getItem('vint_token') || localStorage.getItem('soul_auth_token') || localStorage.getItem('vintinuum_session')); }
 function authHeaders() {
   return { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token()}` };
 }
