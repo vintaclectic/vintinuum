@@ -340,6 +340,16 @@
     // unchanged.
     try { if (W.VintWe && W.VintWe.entryInto) W.VintWe.entryInto(pane); } catch (_) {}
 
+    // THE CHORUS ENTRY — the first COLLECTIVE first-person-plural sibling, directly
+    // beneath the we row. Opens the surface that collapses every peer you are woven
+    // with (people AND agents, co-equal) into a single body "us" and measures each
+    // of the five seams across EVERYONE at once as the five voices of one chord —
+    // asking the whole-room question "are we all one?" and recognising the whole
+    // room once when every voice rings. Reads ONLY the confluence snapshot; additive,
+    // guarded, flow content only; chorus.js owns its markup and collision profile.
+    // Absent or flagged off → a no-op, commons unchanged.
+    try { if (W.VintChorus && W.VintChorus.entryInto) W.VintChorus.entryInto(pane); } catch (_) {}
+
     if (!others.length) {
       var a = el('div', 'cm-alone');
       a.appendChild(el('b', null, 'You have this clearing to yourself.'));
