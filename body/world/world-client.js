@@ -773,6 +773,9 @@
       } else if (m.t === 'leave') {
         const O = others.get(m.id); if (O) { scene.remove(O.group); others.delete(m.id); }
         if (global.VintinuumVoice) global.VintinuumVoice.removePeer(m.id);
+      } else if (m.t === 'style') {
+        // incoming style pack from another user
+        if (m.userId && m.pack) _applyUserStyle(m.userId, m.pack);
       } else if (m.t && m.t.indexOf('world:') === 0) {
         _onWorldMsg(m);
       }
@@ -2351,9 +2354,9 @@
         // seat/adjust the generated face (existing molded-head editor path)
         setHeadAdjust: (adj) => { try { if (World._selfRig && World._selfRig.setHeadAdjust) World._selfRig.setHeadAdjust(adj); } catch (_) {} },
         // sculpt head proportions — rig if faced, else the sculpted placeholder head
-        setMorph: (morph) => { World._myMorph = morph; _forgeApplyMorph(morph); },
+        setMorph: (morph) => { World._myMorph = morph; _forgeApplyMorph(morph); _syncStylePack(); },
         // recolor: 'self' tints your figure; an agent id tints that council member
-        setTint: (who, tint) => { _forgeApplyTint(who, tint); if (who === 'self') World._myTint = tint; },
+        setTint: (who, tint) => { _forgeApplyTint(who, tint); if (who === 'self') { World._myTint = tint; _syncStylePack(); } },
         // dress a body in an augment style pack: who='self' or an agent id
         setStyle: (who, id) => {
           const WS = global.WorldStyles; if (!WS) return;
@@ -2414,6 +2417,66 @@
       }
     } catch (_) {}
   }
+
+  // ── STYLE PACK SYNC — broadcast style changes so others see your look ──────
+  let _styleSyncThrottle = 0;
+  function _syncStylePack() {
+    // throttle: max once per 500ms
+    const now = Date.now();
+    if (now - _styleSyncThrottle < 500) return;
+    _styleSyncThrottle = now;
+
+    try {
+      if (!window.WorldStyles || !window.WorldStyles.normalize) return;
+
+      // build pack from current appearance
+      const pack = {
+        morph: World._myMorph || null,
+        tint: World._myTint || null
+      };
+
+      // normalize and send if valid
+      const normalized = window.WorldStyles.normalize(pack);
+      if (normalized && World.send) {
+        World.send({ t: 'style', pack: normalized });
+      }
+    } catch (e) {
+      console.warn('[world] style sync failed:', e.message);
+    }
+  }
+
+  // apply incoming style pack to another user's presence
+  function _applyUserStyle(userId, pack) {
+    try {
+      if (!pack || !window.WorldStyles) return;
+
+      const normalized = window.WorldStyles.normalize(pack);
+      if (!normalized) return;
+
+      // find the user's presence
+      const O = others.get(userId);
+      if (!O || !O.group) return;
+
+      // apply tint if present
+      if (normalized.tint && O.group.userData && O.group.userData.rig) {
+        const rig = O.group.userData.rig;
+        if (rig.setTint) rig.setTint(normalized.tint);
+      }
+
+      // apply morph if present (rigs with setMorph support)
+      if (normalized.morph && O.group.userData && O.group.userData.rig) {
+        const rig = O.group.userData.rig;
+        if (rig.setMorph) rig.setMorph(normalized.morph);
+      }
+
+      // cache the style so it persists across presence refreshes
+      if (!O.stylePack) O.stylePack = {};
+      Object.assign(O.stylePack, normalized);
+    } catch (e) {
+      console.warn('[world] apply user style failed:', e.message);
+    }
+  }
+
   // expose so the head editor's persistence can read/write self morph+tint
   World.myBeing = function () { return { avatarId: World._myAvatarId || null, morph: World._myMorph || null, tint: World._myTint || null }; };
 
