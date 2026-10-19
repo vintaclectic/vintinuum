@@ -881,6 +881,14 @@
     } else if (m.t === 'world:trade:closed') {
       World._trade = null;
       try { window.dispatchEvent(new CustomEvent('vint:world-trade-closed', { detail: m })); } catch (_) {}
+    } else if (m.t === 'world:struct:gone') {
+      // THE SIEGE (KWD6VBA): a wrecked piece leaves the world for everyone in
+      // the room at once — the server already deleted the row.
+      World.removeStruct(m.id);
+      try { window.dispatchEvent(new CustomEvent('vint:world-siege', { detail: m })); } catch (_) {}
+    } else if (m.t === 'world:siege:hit' || m.t === 'world:siege:mended' || m.t === 'world:siege:lost' ||
+               m.t === 'world:siege:loot' || m.t === 'world:siege:court:ok') {
+      try { window.dispatchEvent(new CustomEvent('vint:world-siege', { detail: m })); } catch (_) {}
     } else if (m.t === 'world:err') {
       try { window.dispatchEvent(new CustomEvent('vint:world-err', { detail: m })); } catch (_) {}
     }
@@ -1616,6 +1624,27 @@
     if (global.VintinuumVoice && global.VintinuumVoice.clearPeers) { try { global.VintinuumVoice.clearPeers(); } catch (_) {} }
   }
 
+  // THE SIEGE (KWD6VBA) — read-only view of the pieces standing in the room, and
+  // the one removal path a wreck takes (scene, registry, animation list, foundry).
+  World.structList = function () {
+    const out = [];
+    for (const [id, mesh] of _structMeshes) {
+      const u = (mesh && mesh.userData && mesh.userData.struct) || {};
+      out.push({ id: id, kind: u.kind, owner: u.owner, x: mesh.position.x, y: mesh.position.y, z: mesh.position.z, mesh: mesh });
+    }
+    return out;
+  };
+  World._renderStruct = function (st) { return _renderStruct(st); };   // seam for organs + verifiers
+  World.removeStruct = function (id) {
+    const key = [...(_structMeshes.keys())].find(k => String(k) === String(id));
+    if (key == null) return false;
+    const mesh = _structMeshes.get(key);
+    try { if (mesh && mesh.parent) mesh.parent.remove(mesh); } catch (_) {}
+    _structMeshes.delete(key);
+    const i = _liveStructs.indexOf(mesh); if (i >= 0) _liveStructs.splice(i, 1);
+    try { if (global.WorldFoundry && global.WorldFoundry.forget) global.WorldFoundry.forget(String(id)); } catch (_) {}
+    return true;
+  };
   World.claimHere = function () { World.send({ t: 'world:claim', x: World._me ? World._me.x : 0, z: World._me ? World._me.z : 0 }); };
   World.placeHere = function (kind) { const me = World._me || {}; World.send({ t: 'world:place', kind, x: me.x || 0, z: me.z || 0, rot: me.yaw || 0 }); };
   World.harvest = function () { World.send({ t: 'world:harvest' }); };

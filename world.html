@@ -648,6 +648,16 @@
      the real escrow trade table from world/ledger.js. Loads AFTER dirverse-hud
      for the rail + one-sheet registry; adds no fixed element of its own. -->
 <script src="body/world/commons.js"></script>
+<!-- THE SIEGE (task KWD6VBA) — raids and fighting over built structures. Pieces
+     carry health, can be struck only by someone who does NOT own them and only
+     where both stand on violent soil (a covenant march); a wreck drops strand
+     into the raider's at-risk carry; the owner mends; a waking court can be sent
+     to the walls. Server-authoritative (vintinuum-api/world/siege.js); this is
+     the mirror + the hands. Loads after the foundry (it reads WorldFoundry and
+     calls its forget() on a wreck). ── NO-COLLISION: zero fixed elements —
+     launcher via addLauncher(), one .dv-sheet registered as 'siege', health bars
+     are 3D sprites. ── KILL SWITCH: ?siege=0 / vint:flag:world_siege='0'. -->
+<script src="body/world/siege.js"></script>
 <!-- THE COVENANTS — factions, contested territory, policy, and the geography of
      consent. Loads AFTER dirverse-hud for the same reason the lanterns do: it
      takes its rail slot from `addLauncher` and registers with the shared sheet

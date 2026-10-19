@@ -693,6 +693,9 @@
     select: select,
     rotate: function () { _rot = (_rot + 1) % 4; },
     place: placeNow,
+    // THE SIEGE (KWD6VBA): a wrecked piece leaves the socket index, so the lattice
+    // can be rebuilt on the ruin
+    forget: function (id) { if (_pieces.delete(String(id))) dirty(); },
     // read-only views for verifiers / future organs (power networks, raids)
     candidate: function () { return candidate(); },
     pieces: function () { var a = []; _pieces.forEach(function (p) { a.push({ id: p.id, piece: p.piece, mat: p.mat, x: p.x, y: p.y, z: p.z, rot: p.rot, key: p.key, local: p.local }); }); return a; },
