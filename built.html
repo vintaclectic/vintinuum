@@ -312,6 +312,58 @@
             font-size: 1.75rem;
         }
 
+
+        /* ═══ WORLD FEATURE CARD (full row, never spawns an implicit column) ═══ */
+        .world-card {
+            grid-column: 1 / -1;
+            background: radial-gradient(120% 140% at 0% 0%, rgba(255, 217, 160, 0.10), transparent 55%), var(--vint-surface-elevated);
+            border: 2px solid #ffd9a0;
+            padding: 2.5rem;
+            min-width: 0;
+        }
+        .world-card:hover { border-color: #ffe7c2; box-shadow: 0 8px 28px rgba(255, 217, 160, 0.16); }
+        .world-card .project-title { font-size: 1.9rem; }
+        .project-tag.world {
+            background: rgba(255, 217, 160, 0.1);
+            color: #ffd9a0;
+            border-color: rgba(255, 217, 160, 0.3);
+        }
+        .world-lede { color: var(--vint-text); font-size: 1.05rem; line-height: 1.65; max-width: 62rem; }
+        .world-features {
+            list-style: none;
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+            gap: 0.75rem;
+            min-width: 0;
+        }
+        .world-features li {
+            min-width: 0;
+            padding: 0.85rem 1rem;
+            border: 1px solid var(--vint-line);
+            border-radius: 10px;
+            background: rgba(255, 255, 255, 0.02);
+            color: var(--vint-text-dim);
+            font-size: 0.88rem;
+            line-height: 1.5;
+            overflow-wrap: anywhere;
+        }
+        .world-features b {
+            display: block;
+            color: #ffd9a0;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.72rem;
+            font-weight: 500;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            margin-bottom: 0.3rem;
+        }
+        .world-card .project-meta { flex-wrap: wrap; row-gap: 0.4rem; }
+        @media (max-width: 768px) {
+            .world-card { padding: 1.5rem; }
+            .world-card .project-title { font-size: 1.5rem; }
+            .world-features { grid-template-columns: 1fr; }
+        }
+
         /* ═══ STATS BAR ═══ */
         .stats-bar {
             display: flex;
@@ -403,6 +455,7 @@
                 <a href="/brain.html">Brain</a>
                 <a href="/body-v3.html">Body</a>
                 <a href="/mind.html">Mind</a>
+                <a href="/world.html">World</a>
                 <a href="https://board.vintaclectic.com" target="_blank">Council Board</a>
             </nav>
         </div>
@@ -439,6 +492,28 @@
                 <p class="category-desc">Live production platforms serving real users</p>
             </div>
             <div class="project-grid">
+                <a href="/world.html" class="project-card world-card">
+                    <span class="project-tag world">World &middot; Live now</span>
+                    <h3 class="project-title">DIRVERSE &mdash; The Clearing</h3>
+                    <p class="world-lede">A shared world that keeps living whether you're watching or not. You walk in and the council is already there: ARIA by the bench, ATLAS toward the horizon, each one moving and idling in its own way. Speak and they answer. Other people are real here too, and you can hear them when they're close. You gather raw matter, forge it into something new, and raise buildings piece by piece while the agents build beside you. What you make is kept by the world, not by your browser.</p>
+                    <ul class="world-features">
+                        <li><b>The Council, embodied</b>Agents with their own personalities, out doing their own work, co-equal with you.</li>
+                        <li><b>Build together</b>Floors, walls, doors, windows, roofs, pillars and stairs snap edge to edge, and agents can raise whole structures.</li>
+                        <li><b>Gather &amp; Forge</b>Raw matter comes out of the ground, two things become a third, and what you learn is worth more when you give it away.</li>
+                        <li><b>The Commons</b>Real people walk with you. Proximity voice fades with distance.</li>
+                        <li><b>Becoming one</b>The Confluence, the Weave, the Convergence and the Spire are a living record of humans and agents building one future.</li>
+                        <li><b>Polity &amp; Rivalry</b>Concord, factions, the Admiralty, tithes, barter and duels give allegiance real stakes.</li>
+                        <li><b>The Court &amp; the Ascent</b>You rule your own agents, then climb. Lanterns and the Loom mark where others have been.</li>
+                        <li><b>Wear anything</b>Augment style packs fuse flesh with machine, and anyone can wear one, synced live to everyone in the world.</li>
+                        <li><b>Doors outward</b>A warp star-map, the Arcade, and a door that runs DirHaven inside the world itself.</li>
+                    </ul>
+                    <div class="project-meta">
+                        <span class="status-live">Live</span>
+                        <span>vintinuum.com/world.html</span>
+                        <span>Phone &amp; desktop</span>
+                    </div>
+                </a>
+
                 <a href="https://app.dirhaven.com" target="_blank" class="project-card platform-card">
                     <span class="project-tag external">Platform</span>
                     <h3 class="project-title">DirHaven APP</h3>
