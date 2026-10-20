@@ -82,7 +82,7 @@ async function logic() {
 
 async function browser() {
   const puppeteer = require('/home/vinta/vintinuum-api/node_modules/puppeteer');
-  const profile = fs.mkdtempSync('/tmp/mercatus-controls-');
+  const profile = fs.mkdtempSync('/dev/shm/mercatus-controls-');
   let browser;
   try {
     browser = await puppeteer.launch({ headless: true, pipe: true, userDataDir: profile,
