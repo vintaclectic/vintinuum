@@ -509,6 +509,28 @@ body{
   font-size:12px;color:var(--dim);line-height:1.65;overflow-wrap:anywhere}
 .mc-iwhy b{color:var(--ink2);font-weight:700}
 .mc-iacts{display:flex;flex-wrap:wrap;gap:7px;min-width:0}
+/* a tile reacts to a hover/focus the way the rest of the page's interactive
+   surfaces already do — a cheap "alive" signal, never a layout change. */
+.mc-ic{transition:border-color .15s,background .15s}
+@media(hover:hover){ .mc-ic:hover{border-color:var(--line2);background:rgba(255,255,255,.035)} }
+
+/* ══ ANALYZE DOSSIER — the on-demand read, reusing the inspector's own box
+      model (.mc-inspect/.mc-ihead/.mc-igrid/.mc-iwhy) so a symbol you analyze
+      and a world you inspect describe the market in the same visual language.
+      The reveal is a one-shot fade+rise, same easing as the toast rail. ══════ */
+.mc-an-reveal{animation:mcAnReveal .28s ease-out}
+@keyframes mcAnReveal{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+.mc-raw{min-width:0;border-top:1px solid var(--hair);padding-top:8px}
+.mc-raw>summary{cursor:pointer;list-style:none;font:800 9.5px/1.3 var(--mono);
+  letter-spacing:.07em;text-transform:uppercase;color:var(--dim2)}
+.mc-raw>summary::-webkit-details-marker{display:none}
+.mc-raw>summary::before{content:'▸ ';color:var(--acc)}
+.mc-raw[open]>summary::before{content:'▾ '}
+.mc-raw>summary:hover{color:var(--dim)}
+
+@media(prefers-reduced-motion:reduce){
+  .mc-an-reveal{animation:none}
+}
 
 /* ══ COLLAPSIBLE SECTIONS — everything the old panel did, kept, below the
       cosmos, exactly as the Council Task Board keeps its task list below the
@@ -836,7 +858,7 @@ body{
             <button type="button" class="mc-btn b-acc" id="mcAnGo">Analyze</button>
           </div>
         </div>
-        <pre class="mc-out" id="mcAnOut" hidden></pre>
+        <div id="mcAnOut" hidden></div>
       </div>
     </details>
 
@@ -1043,6 +1065,18 @@ function mcMoney(v, opts) {
 function mcPct(v, digits) {
   var n = mcNum(v); if (n === null) return null;
   return (n > 0 ? '+' : '') + n.toFixed(digits == null ? 2 : digits) + '%';
+}
+// Dollar figures that can run into the billions/trillions (market cap) — mcMoney's
+// own compaction only goes to 'k'/'M', which is wrong by a factor of 1000+ on a
+// mega-cap. This is a distinct scale, not an extension of mcMoney's options.
+function mcCompactMoney(v) {
+  var n = mcNum(v); if (n === null) return null;
+  var sign = n < 0 ? '-' : ''; var a = Math.abs(n);
+  if (a >= 1e12) return sign + '$' + (a / 1e12).toFixed(2) + 'T';
+  if (a >= 1e9) return sign + '$' + (a / 1e9).toFixed(2) + 'B';
+  if (a >= 1e6) return sign + '$' + (a / 1e6).toFixed(2) + 'M';
+  if (a >= 1e3) return sign + '$' + (a / 1e3).toFixed(1) + 'k';
+  return sign + '$' + a.toFixed(0);
 }
 function mcAgo(ms) {
   if (!ms) return null;
@@ -2996,6 +3030,20 @@ function mcAction(act, btn) {
     if (sec2) sec2.scrollIntoView({ block: 'start' });
     return;
   }
+  if (act === 'anReanalyze') {
+    mcEl('mcAnSym').value = sym || '';
+    mcAnalyze();
+    return;
+  }
+  if (act === 'anPrefill') {
+    var px = btn && btn.getAttribute('data-px');
+    var sec3 = mcEl('mcSecDecide'); if (sec3) sec3.open = true;
+    mcEl('mcDcSym').value = sym || '';
+    if (px) mcEl('mcDcPx').value = Number(px).toFixed(2);
+    mcDcExposure();
+    if (sec3) sec3.scrollIntoView({ block: 'start' });
+    return;
+  }
   if (act === 'approve' || act === 'reject') {
     var item = ((MC.pending && MC.pending.pending) || []).filter(function (p) { return p.id === id; })[0];
     if (!item) { mcToast('That order is no longer in the queue.', 'warn'); mcPollAll(true); return; }
@@ -3045,10 +3093,142 @@ function mcOut(id, text, cls) {
 function mcAnalyze() {
   var sym = String(mcEl('mcAnSym').value || '').trim().toUpperCase();
   if (!/^[A-Z][A-Z0-9.\-]{0,9}$/.test(sym)) { mcOut('mcAnOut', 'Enter a valid ticker.', 'bad'); return; }
+  MC.anAt = null;
   mcOut('mcAnOut', 'Analyzing ' + sym + '…');
+  var btn = mcEl('mcAnGo'); mcBusy(btn, true);
   mcFetch('/analyze', { method: 'POST', body: { symbol: sym } })
-    .then(function (r) { mcOut('mcAnOut', JSON.stringify(r, null, 2), 'ok'); })
-    .catch(function (e) { mcOut('mcAnOut', 'Failed: ' + e.message, 'bad'); });
+    .then(function (r) { mcRenderAnalysis(sym, r); })
+    .catch(function (e) { mcOut('mcAnOut', 'Failed to analyze ' + sym + ': ' + mcTradingError(e.message), 'bad'); })
+    .then(function () { mcBusy(btn, false); });
+}
+
+/* ══ ANALYZE DOSSIER — the on-demand read, rendered as a card, not a JSON dump.
+   /analyze returns raw broker/indicator values and nothing pre-interpreted
+   ({symbol,quote,fundamentals,technicals,errors,timestamp}); every qualitative
+   label below (regime, RSI read, bollinger position…) is computed HERE from
+   those values using the exact thresholds mcRenderInspect's "why" text already
+   documents, so an on-demand analysis and a charted world describe the same
+   symbol the same way. Nothing is fabricated: a missing input prints — never
+   a guess dressed as a number. ══════════════════════════════════════════════ */
+function mcAnRegimeKey(barClose, sma50, sma200, macdHist, atrRatio) {
+  if (atrRatio != null && atrRatio > 2) return 'volatile';
+  if (atrRatio != null && atrRatio < 0.5) return 'quiet';
+  if (barClose != null && sma50 != null && sma200 != null && macdHist != null) {
+    if (barClose > sma50 && sma50 > sma200 && macdHist > 0) return 'trending_up';
+    if (barClose < sma50 && sma50 < sma200 && macdHist < 0) return 'trending_down';
+  }
+  return 'ranging';
+}
+function mcAnTick() {
+  var b = mcEl('mcAnBeat'); if (!b || !MC.anAt) return;
+  b.textContent = 'read ' + mcAgo(MC.anAt);
+}
+function mcRenderAnalysis(sym, r) {
+  var e = mcEl('mcAnOut'); if (!e) return;
+  var q = r && r.quote, t = r && r.technicals, f = r && r.fundamentals;
+  var errs = (r && r.errors) || {};
+  MC.anAt = r && r.timestamp ? Date.parse(r.timestamp) : Date.now();
+
+  if (!q && !t) {
+    e.hidden = false; e.className = 'mc-inspect mc-an-reveal';
+    e.innerHTML = '<div class="mc-ihead"><span class="mc-isym">' + mcEsc(sym) + '</span>' +
+      mcPill('NO DATA', 'is-off', true) + '</div>' +
+      mcEmpty('<b>The broker returned nothing usable for ' + mcEsc(sym) + '.</b><br>' +
+        'Quote: ' + mcEsc(errs.quote || 'unknown') + '<br>Technicals: ' + mcEsc(errs.technicals || 'unknown') +
+        '<br><br>Nothing here is ever guessed at — a dark read stays dark.');
+    return;
+  }
+
+  var price = q ? mcNum(q.price) : null;
+  var barClose = t ? mcNum(t.close) : null;
+  var prevClose = (q && !q.index) ? mcNum(q.previous_close != null ? q.previous_close : q.adjusted_previous_close) : null;
+  var vsPrevPct = (price !== null && prevClose) ? ((price - prevClose) / prevClose * 100) : null;
+  var vsBarPct = (price !== null && barClose) ? ((price - barClose) / barClose * 100) : null;
+  var rsi = t ? mcNum(t.rsi) : null;
+  var macdHist = (t && t.macd) ? mcNum(t.macd.histogram) : null;
+  var sma50 = t ? mcNum(t.sma_50) : null, sma200 = t ? mcNum(t.sma_200) : null;
+  var atrCur = (t && t.atr) ? mcNum(t.atr.current) : null, atrAvg = (t && t.atr) ? mcNum(t.atr.avg) : null;
+  var atrRatio = (atrCur !== null && atrAvg) ? (atrCur / atrAvg) : null;
+  var atrPct = (atrCur !== null && price) ? (atrCur / price * 100) : null;
+  var bb = t && t.bollinger;
+
+  // No technicals at all means no regime claim is honest — a muted "PRICE ONLY"
+  // pill, never a confident-looking colour badge dressed up from nothing.
+  var reg = t ? mcRegime(mcAnRegimeKey(barClose, sma50, sma200, macdHist, atrRatio)) : null;
+  var regPill = reg
+    ? '<span class="mc-pill" style="color:' + mcHsl(reg, 1, 14) + ';border-color:' + mcHsl(reg, .45) + '"><i></i>' + mcEsc(reg.name) + '</span>'
+    : mcPill('PRICE ONLY — no regime data', 'is-off', true);
+
+  var out = '<div class="mc-ihead"><span class="mc-isym">' + mcEsc(sym) + '</span>' +
+    regPill +
+    (q && q.index ? mcPill('INDEX', 'is-off') : '') +
+    (q && q.trading_halted ? mcPill('TRADING HALTED', 'is-warn', true) : '') +
+    (MC.worlds.some(function (w) { return w.symbol === sym; }) ? mcPill('on watchlist', 'is-accent') : '') +
+    '<span class="mc-ispacer"></span>' +
+    '<span class="mc-beat" id="mcAnBeat">read just now</span></div>';
+
+  out += '<div class="mc-igrid">';
+  out += mcIC('price', price === null ? 'NO PRICE' : mcMoney(price), price === null ? 'o' : 'a');
+  if (vsPrevPct !== null) out += mcIC('vs previous close', mcPct(vsPrevPct), vsPrevPct > 0 ? 'g' : (vsPrevPct < 0 ? 'r' : 'o'));
+  if (vsBarPct !== null) out += mcIC('vs last daily bar', mcPct(vsBarPct), vsBarPct > 0 ? 'g' : (vsBarPct < 0 ? 'r' : 'o'));
+  if (q && !q.index && (q.bid_price != null || q.ask_price != null)) {
+    out += mcIC('bid / ask', (mcMoney(mcNum(q.bid_price)) || '—') + ' / ' + (mcMoney(mcNum(q.ask_price)) || '—'));
+  }
+  if (rsi !== null) out += mcIC('rsi (14)', rsi.toFixed(1) + (rsi >= 70 ? '  overbought' : rsi <= 30 ? '  oversold' : '  neutral'),
+    rsi >= 70 || rsi <= 30 ? 'a' : 'o');
+  if (macdHist !== null) out += mcIC('macd histogram', macdHist.toFixed(3) + (macdHist > 0 ? '  bullish' : macdHist < 0 ? '  bearish' : ''),
+    macdHist > 0 ? 'g' : (macdHist < 0 ? 'r' : 'o'));
+  if (bb && bb.middle != null) {
+    var bbPos = price === null ? null : price > bb.upper ? 'above upper band' : price < bb.lower ? 'below lower band' : 'within bands';
+    out += mcIC('bollinger l/m/u', mcMoney(bb.lower) + ' / ' + mcMoney(bb.middle) + ' / ' + mcMoney(bb.upper));
+    if (bbPos) out += mcIC('band position', bbPos, bbPos === 'within bands' ? 'o' : 'a');
+  }
+  if (sma50 !== null || sma200 !== null) {
+    out += mcIC('sma 50 / 200', (sma50 !== null ? mcMoney(sma50) : '—') + ' / ' + (sma200 !== null ? mcMoney(sma200) : '—'),
+      (sma50 !== null && sma200 !== null) ? (sma50 > sma200 ? 'g' : (sma50 < sma200 ? 'r' : 'o')) : 'o');
+  }
+  if (atrPct !== null) out += mcIC('atr % of price', atrPct.toFixed(2) + '%');
+  if (atrRatio !== null) out += mcIC('atr vs its avg', atrRatio.toFixed(2) + 'x', atrRatio > 2 ? 'a' : (atrRatio < 0.5 ? 'o' : ''));
+  if (q && !q.index && q.pe_ratio != null) out += mcIC('p/e ratio', mcNum(q.pe_ratio) !== null ? mcNum(q.pe_ratio).toFixed(1) : q.pe_ratio);
+  if (f && f.market_cap != null) out += mcIC('market cap', mcCompactMoney(f.market_cap) || f.market_cap);
+  // Robinhood's own reference example shows dividend_yield as "0.55" for a sub-1%
+  // yielder — already a percentage number, not a fraction. Never re-scaled here.
+  if (f && f.dividend_yield != null) out += mcIC('dividend yield', (mcNum(f.dividend_yield) !== null ? mcNum(f.dividend_yield).toFixed(2) : f.dividend_yield) + '%');
+  if (f && (f.high_52_weeks != null || f.low_52_weeks != null)) {
+    out += mcIC('52-week range', (mcMoney(mcNum(f.low_52_weeks)) || '—') + ' – ' + (mcMoney(mcNum(f.high_52_weeks)) || '—'));
+  }
+  if (f && f.sector) out += mcIC('sector', f.sector + (f.industry ? ' · ' + f.industry : ''));
+  out += mcIC('bars analysed', t && t.bars != null ? String(t.bars) : '—', t ? '' : 'o');
+  out += '</div>';
+
+  // the plain-English read — same voice as the inspector's "why" box
+  var why = '';
+  if (!reg) why = 'No bar history came back, so there is no trend or volatility read to give — this is a price-only snapshot.';
+  else if (reg.name === 'VOLATILE') why = 'ATR is <b>' + atrRatio.toFixed(2) + 'x</b> its own recent average, above the 2x volatile threshold — expect bigger daily swings than usual.';
+  else if (reg.name === 'QUIET') why = 'ATR is <b>' + atrRatio.toFixed(2) + 'x</b> its own recent average, below the 0.5x quiet threshold — unusually calm right now.';
+  else if (reg.name === 'TRENDING UP') why = 'Price sits above SMA50, which sits above SMA200, with a positive MACD histogram — a clean uptrend read.';
+  else if (reg.name === 'TRENDING DOWN') why = 'Price sits below SMA50, which sits below SMA200, with a negative MACD histogram — a clean downtrend read.';
+  else why = 'No trend and no volatility extreme — the default <b>ranging</b> read.';
+  if (rsi !== null && (rsi >= 70 || rsi <= 30)) {
+    why += ' RSI at <b>' + rsi.toFixed(1) + '</b> is ' + (rsi >= 70 ? 'in overbought territory' : 'in oversold territory') +
+      ' — a stretch, not a signal on its own.';
+  }
+  if (errs.quote) why += '<br><br><b>Quote unavailable:</b> ' + mcEsc(errs.quote) + '.';
+  if (errs.technicals) why += '<br><br><b>Technicals unavailable:</b> ' + mcEsc(errs.technicals) + '.';
+  out += '<div class="mc-iwhy">' + why + '</div>';
+
+  out += '<div class="mc-iacts">' +
+    '<button type="button" class="mc-btn b-sm b-acc" data-mcact="anPrefill" data-sym="' + mcEsc(sym) + '"' +
+    (price !== null ? ' data-px="' + mcEsc(price) + '"' : '') + '>Draft a decision</button>' +
+    '<button type="button" class="mc-btn b-sm" data-mcact="anReanalyze" data-sym="' + mcEsc(sym) + '">Re-analyze</button>' +
+    '</div>';
+
+  if (r) {
+    out += '<details class="mc-raw"><summary>Raw response</summary><pre class="mc-out" style="margin-top:7px">' +
+      mcEsc(JSON.stringify(r, null, 2)) + '</pre></details>';
+  }
+
+  e.hidden = false; e.className = 'mc-inspect mc-an-reveal'; e.innerHTML = out;
 }
 
 function mcDcExposure() {
@@ -3154,6 +3334,7 @@ function mcWireControls() {
   });
 
   mcEl('mcAnGo').addEventListener('click', mcAnalyze);
+  mcEl('mcAnSym').addEventListener('keydown', function (e) { if (e.key === 'Enter') mcAnalyze(); });
   mcEl('mcDcGo').addEventListener('click', mcSubmitDecision);
   ['mcDcQty', 'mcDcPx'].forEach(function (id) {
     mcEl(id).addEventListener('input', mcDcExposure);
@@ -3204,7 +3385,7 @@ function mcBoot() {
   mcStartPolling();
   mcPollAll(true);
   // the deck clock is seconds-resolution, so once a second is exactly enough
-  setInterval(function () { if (!document.hidden) { mcRenderDeck(); mcRenderVitals(); } }, 1000);
+  setInterval(function () { if (!document.hidden) { mcRenderDeck(); mcRenderVitals(); mcAnTick(); } }, 1000);
 }
 
 /* A background tab must never burn a frame OR a request. Guarded on both sides. */
