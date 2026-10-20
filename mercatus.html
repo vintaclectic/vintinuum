@@ -626,6 +626,34 @@ body{
   border:1px dashed var(--line);border-radius:9px;overflow-wrap:anywhere}
 .mc-empty b{color:var(--dim);font-weight:700}
 
+/* (DCSWR89) discovery: one card per scouted stock. The head is a wrapping flex
+   row (symbol, name, stance pill) so a long company name drops to its own line
+   instead of sliding under the pill; reasons are a plain in-flow list. */
+.mc-dgrp{font:800 9.5px/1.3 var(--mono);letter-spacing:.09em;text-transform:uppercase;
+  color:var(--dim2);padding-top:4px;overflow-wrap:anywhere}
+.mc-dc{min-width:0;overflow:hidden;border:1px solid var(--hair);border-left:3px solid var(--line2);
+  border-radius:9px;background:rgba(255,255,255,.022);padding:8px 10px;
+  display:flex;flex-direction:column;gap:6px}
+.mc-dc.d-pursue{border-left-color:var(--good)}
+.mc-dc.d-watch{border-left-color:var(--acc)}
+.mc-dc.d-decline{border-left-color:var(--bad)}
+.mc-dh{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 9px;min-width:0}
+.mc-dsym{flex:0 0 auto;font:800 13px/1.3 var(--mono);color:var(--ink);letter-spacing:.03em}
+.mc-dname{flex:1 1 140px;min-width:0;font-size:11.5px;color:var(--dim);
+  line-height:1.4;overflow-wrap:anywhere}
+.mc-dst{flex:0 0 auto;font:800 9.5px/1 var(--mono);letter-spacing:.08em;
+  text-transform:uppercase;padding:4px 7px;border-radius:999px;
+  border:1px solid var(--line);color:var(--dim)}
+.mc-dst.d-pursue{color:var(--good2);border-color:rgba(34,197,94,.35)}
+.mc-dst.d-watch{color:var(--acc2);border-color:var(--line2)}
+.mc-dst.d-decline{color:var(--bad2);border-color:rgba(239,68,68,.35)}
+.mc-dc .mc-tr{background:none;border:0;padding:0;border-radius:0;
+  grid-template-columns:repeat(2,minmax(0,1fr))}
+@media(min-width:760px){.mc-dc .mc-tr{grid-template-columns:repeat(var(--cols,4),minmax(0,1fr))}}
+.mc-dwhy{margin:0;padding:0 0 0 15px;min-width:0;font-size:11px;line-height:1.55;
+  color:var(--dim);overflow-wrap:anywhere}
+.mc-dwhy li{min-width:0}
+
 .mc-foot{min-width:0;font-size:10.5px;color:var(--dim2);line-height:1.7;
   text-align:center;overflow-wrap:anywhere;padding-top:4px}
 .mc-foot a{color:var(--acc2)}
@@ -836,6 +864,11 @@ body{
     <details class="mc-sec" id="mcSecEngine">
       <summary><span class="sx">&#9656;</span><span class="st">Engine, watchlist &amp; safety rails</span><span class="sc" id="mcEngCount">—</span></summary>
       <div class="mc-sbody"><div id="mcEngBody"><div class="mc-empty">Loading…</div></div></div>
+    </details>
+
+    <details class="mc-sec" id="mcSecDisc">
+      <summary><span class="sx">&#9656;</span><span class="st">Discovery</span><span class="sc" id="mcDiscCount">—</span></summary>
+      <div class="mc-sbody"><div id="mcDiscBody"><div class="mc-empty">Loading…</div></div></div>
     </details>
 
     <details class="mc-sec" id="mcSecJournal">
@@ -2357,6 +2390,7 @@ function mcRenderAll() {
   mcRenderQueueSection();
   mcRenderPerf();
   mcRenderEngine();
+  mcRenderDiscovery();
   mcRenderJournal();
   mcRenderCtl();
   if (MC.sel) mcRenderInspect(MC.sel);
@@ -2803,6 +2837,108 @@ function mcRenderEngine() {
       ], 8);
     }).join('') + '</div>';
   }
+  body.innerHTML = out;
+}
+
+/* (DCSWR89) Discovery — who the whole-market scout (mercatus-discovery.js)
+   pursued, watched and declined, and the written reason for each. Two sources,
+   same rule as mcPickSnapshot(): /strategy/status .lastScan.discovery (in-memory,
+   only when the API process scanned) or the newest `discovery_snapshot` journal
+   row (what mercatus-daemon writes). Whichever is NEWER wins, and the panel says
+   which. A stance is a seat at the scan, never a trade — the merit gate and the
+   guardrails still decide whether anything is bought. */
+function mcPickDiscovery() {
+  var best = null, bestAt = 0, from = '';
+  var h = MC.history;
+  if (h && Array.isArray(h.history)) {
+    for (var i = 0; i < h.history.length; i++) {
+      var row = h.history[i];
+      if (row && row.type === 'discovery_snapshot') {
+        var t = Date.parse(row.at || row.timestamp);
+        if (Number.isFinite(t)) { best = row; bestAt = t; from = 'journal'; }
+        break;
+      }
+    }
+  }
+  var d = MC.strat && MC.strat.lastScan && MC.strat.lastScan.discovery;
+  if (d && typeof d === 'object') {
+    var t2 = Date.parse(d.at || MC.strat.lastScan.finishedAt);
+    if (!best || (Number.isFinite(t2) && t2 > bestAt)) { best = d; bestAt = Number.isFinite(t2) ? t2 : 0; from = 'memory'; }
+  }
+  return best ? { d: best, at: bestAt, from: from } : null;
+}
+
+function mcDiscCard(c) {
+  var st = ['pursue', 'watch', 'decline'].indexOf(c.stance) >= 0 ? c.stance : 'watch';
+  var label = st === 'pursue' ? (c.picked ? 'pursue · picked' : 'pursue') : st;
+  var ch = mcNum(c.changePct), sc = mcNum(c.score), cap = mcNum(c.marketCapB);
+  var src = Array.isArray(c.sources) ? c.sources.join(' · ') : (c.sources || null);
+  var why = Array.isArray(c.reasons) ? c.reasons : [];
+  return '<div class="mc-dc d-' + st + '">' +
+    '<div class="mc-dh"><span class="mc-dsym">' + mcEsc(c.symbol || '?') + '</span>' +
+    '<span class="mc-dname">' + mcEsc(c.name || '') + '</span>' +
+    '<span class="mc-dst d-' + st + '">' + mcEsc(label) + '</span></div>' +
+    mcRow([
+      ['score', sc === null ? null : sc.toFixed(2), 'a'],
+      ['price', mcMoney(mcNum(c.price))],
+      ['change', ch === null ? null : (ch >= 0 ? '+' : '') + ch.toFixed(2) + '%', ch === null ? 'o' : (ch >= 0 ? 'g' : 'r')],
+      ['mkt cap', cap === null ? null : '$' + cap.toFixed(2) + 'B'],
+      ['found via', src]
+    ], 5) +
+    (why.length ? '<ul class="mc-dwhy">' + why.slice(0, 8).map(function (r) {
+      return '<li>' + mcEsc(r) + '</li>';
+    }).join('') + '</ul>' : '') +
+    '</div>';
+}
+
+function mcRenderDiscovery() {
+  var body = mcEl('mcDiscBody'), cnt = mcEl('mcDiscCount'); if (!body) return;
+  var pick = mcPickDiscovery();
+  if (!pick) {
+    if (!MC.strat && !MC.history) {
+      body.innerHTML = mcEmpty(MC.errs.strat ? 'Engine unreachable — <b>' + mcEsc(MC.errs.strat) + '</b>' : 'Loading…');
+    } else {
+      body.innerHTML = mcEmpty('<b>No discovery report yet.</b><br>The whole-market scout publishes one ' +
+        'after its first refresh (in memory on <code>/strategy/status</code>, or as a ' +
+        '<code>discovery_snapshot</code> journal row from the daemon). Until then only the ' +
+        'fixed watchlist is scanned.');
+    }
+    if (cnt) cnt.textContent = '—'; return;
+  }
+  var d = pick.d, k = d.counts || {};
+  var cands = Array.isArray(d.candidates) ? d.candidates : [];
+  var declined = Array.isArray(d.declined) ? d.declined : [];
+  var picks = Array.isArray(d.picks) ? d.picks : [];
+  if (cnt) cnt.textContent = d.enabled === false ? 'disabled'
+    : ((k.pursue || 0) + ' pursue · ' + (k.watch || 0) + ' watch · ' + (k.decline || 0) + ' decline');
+  var lanes = d.lanes && typeof d.lanes === 'object' ? Object.keys(d.lanes).map(function (n) {
+    var v = d.lanes[n];
+    return n + (v && typeof v === 'object' ? (v.ok === false ? ' ✕' : (v.n != null ? ' ' + v.n : '')) : (v != null ? ' ' + v : ''));
+  }).join(' · ') : null;
+  var out = '<div class="mc-tbl">';
+  out += mcRow([
+    ['report', pick.at ? mcAgo(pick.at) : null],
+    ['source', pick.from],
+    ['seen', k.seen != null ? k.seen : null],
+    ['added to scan', picks.length ? picks.join(' · ') : 'none', picks.length ? 'g' : 'o'],
+    ['lanes', lanes]
+  ], 5);
+  if (d.ok === false || d.err) out += mcRow([['scout error', d.err || 'refresh failed', 'r']], 1);
+  if (d.enabled === false) out += mcEmpty('<b>Discovery is disabled.</b> Only the fixed watchlist is scanned.');
+  out += '</div>';
+  var groups = [
+    ['Pursued', cands.filter(function (c) { return c.stance === 'pursue'; })],
+    ['Watched', cands.filter(function (c) { return c.stance === 'watch'; })],
+    ['Declined', declined.length ? declined : cands.filter(function (c) { return c.stance === 'decline'; })]
+  ];
+  groups.forEach(function (g) {
+    out += '<div class="mc-dgrp">' + g[0] + ' (' + g[1].length + ')</div>';
+    out += '<div class="mc-tbl">' + (g[1].length ? g[1].map(mcDiscCard).join('')
+      : mcEmpty('None this refresh.')) + '</div>';
+  });
+  out += '<p class="mc-fhint">A stance earns a stock a seat in the next scan — it is ' +
+    '<b>never</b> an order. Every picked symbol still passes the merit gate and the same ' +
+    'guardrails as the watchlist before anything reaches the broker.</p>';
   body.innerHTML = out;
 }
 
