@@ -653,6 +653,25 @@ body{
 .mc-dwhy{margin:0;padding:0 0 0 15px;min-width:0;font-size:11px;line-height:1.55;
   color:var(--dim);overflow-wrap:anywhere}
 .mc-dwhy li{min-width:0}
+/* (UDV8RVB) the multi-factor scorecard inside each card. Everything is in flow:
+   a thesis line, a 3-column grid per factor (label | track | value) whose fill
+   is a child of an overflow:hidden track clamped to 0..100%, an in-flow veto box,
+   and the full reason list folded into <details> so nothing is truncated. */
+.mc-dthesis{margin:0;min-width:0;font-size:11.5px;line-height:1.5;color:var(--ink);overflow-wrap:anywhere}
+.mc-dfx{display:grid;grid-template-columns:66px minmax(0,1fr) 34px;gap:4px 8px;align-items:center;min-width:0}
+.mc-dfx-k{font:800 9.5px/1.2 var(--mono);letter-spacing:.07em;text-transform:uppercase;color:var(--dim2);
+  min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mc-dfx-t{height:6px;min-width:0;border-radius:999px;background:rgba(255,255,255,.06);overflow:hidden}
+.mc-dfx-f{display:block;height:100%;max-width:100%;border-radius:999px;background:var(--acc)}
+.mc-dfx-f.g{background:var(--good)}
+.mc-dfx-f.r{background:var(--bad)}
+.mc-dfx-v{font:700 10.5px/1.2 var(--mono);color:var(--dim);text-align:right;min-width:0}
+.mc-dveto{margin:0;min-width:0;padding:6px 9px;border-radius:7px;border:1px solid rgba(239,68,68,.35);
+  background:rgba(239,68,68,.07);font-size:11px;line-height:1.5;color:var(--bad2);overflow-wrap:anywhere}
+.mc-dveto b{font-weight:800}
+.mc-dmore{min-width:0}
+.mc-dmore>summary{cursor:pointer;font:800 9.5px/1.6 var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--dim2)}
+.mc-dmore[open]>summary{margin-bottom:4px}
 
 .mc-foot{min-width:0;font-size:10.5px;color:var(--dim2);line-height:1.7;
   text-align:center;overflow-wrap:anywhere;padding-top:4px}
@@ -2868,27 +2887,54 @@ function mcPickDiscovery() {
   return best ? { d: best, at: bestAt, from: from } : null;
 }
 
+/* (UDV8RVB) one factor row: label | bar | value. Colour by band, width clamped. */
+function mcDiscFactor(k, v) {
+  var n = mcNum(v); if (n === null) return '';
+  var w = Math.max(0, Math.min(100, n));
+  var cls = w >= 65 ? 'g' : w < 40 ? 'r' : '';
+  return '<span class="mc-dfx-k">' + mcEsc(k) + '</span>' +
+    '<span class="mc-dfx-t"><span class="mc-dfx-f ' + cls + '" style="width:' + w.toFixed(1) + '%"></span></span>' +
+    '<span class="mc-dfx-v">' + Math.round(w) + '</span>';
+}
+
 function mcDiscCard(c) {
   var st = ['pursue', 'watch', 'decline'].indexOf(c.stance) >= 0 ? c.stance : 'watch';
   var label = st === 'pursue' ? (c.picked ? 'pursue · picked' : 'pursue') : st;
   var ch = mcNum(c.changePct), sc = mcNum(c.score), cap = mcNum(c.marketCapB);
   var src = Array.isArray(c.sources) ? c.sources.join(' · ') : (c.sources || null);
   var why = Array.isArray(c.reasons) ? c.reasons : [];
-  return '<div class="mc-dc d-' + st + '">' +
+  // (UDV8RVB) reports from the scorecard carry factors + a 0..100 composite;
+  // older journal rows (attention score, no factors) still render as before.
+  var fx = c.factors && typeof c.factors === 'object' ? c.factors : null;
+  var vetoes = Array.isArray(c.vetoes) ? c.vetoes : [];
+  var scoreTxt = sc === null ? null : (fx ? sc.toFixed(1) + '/100' : sc.toFixed(2));
+  var out = '<div class="mc-dc d-' + st + '">' +
     '<div class="mc-dh"><span class="mc-dsym">' + mcEsc(c.symbol || '?') + '</span>' +
     '<span class="mc-dname">' + mcEsc(c.name || '') + '</span>' +
-    '<span class="mc-dst d-' + st + '">' + mcEsc(label) + '</span></div>' +
-    mcRow([
-      ['score', sc === null ? null : sc.toFixed(2), 'a'],
+    '<span class="mc-dst d-' + st + '">' + mcEsc(label) + '</span></div>';
+  if (c.thesis) out += '<p class="mc-dthesis">' + mcEsc(c.thesis) + '</p>';
+  out += mcRow([
+      ['score', scoreTxt, 'a'],
       ['price', mcMoney(mcNum(c.price))],
       ['change', ch === null ? null : (ch >= 0 ? '+' : '') + ch.toFixed(2) + '%', ch === null ? 'o' : (ch >= 0 ? 'g' : 'r')],
       ['mkt cap', cap === null ? null : '$' + cap.toFixed(2) + 'B'],
       ['found via', src]
-    ], 5) +
-    (why.length ? '<ul class="mc-dwhy">' + why.slice(0, 8).map(function (r) {
-      return '<li>' + mcEsc(r) + '</li>';
-    }).join('') + '</ul>' : '') +
-    '</div>';
+    ], 5);
+  if (fx) {
+    out += '<div class="mc-dfx">' + ['trend', 'momentum', 'quality', 'news'].map(function (k) {
+      return mcDiscFactor(k, fx[k]);
+    }).join('') + '</div>';
+  }
+  if (vetoes.length) {
+    out += '<p class="mc-dveto"><b>Veto · </b>' + vetoes.map(mcEsc).join('<br>') + '</p>';
+  }
+  if (why.length) {
+    var list = '<ul class="mc-dwhy">' + why.map(function (r) { return '<li>' + mcEsc(r) + '</li>'; }).join('') + '</ul>';
+    // With a scorecard the thesis is the headline and the reasons are the evidence;
+    // fold them. Without one (older rows) keep the old open list.
+    out += fx ? '<details class="mc-dmore"><summary>evidence (' + why.length + ')</summary>' + list + '</details>' : list;
+  }
+  return out + '</div>';
 }
 
 function mcRenderDiscovery() {
@@ -2923,6 +2969,22 @@ function mcRenderDiscovery() {
     ['added to scan', picks.length ? picks.join(' · ') : 'none', picks.length ? 'g' : 'o'],
     ['lanes', lanes]
   ], 5);
+  // (UDV8RVB) the weights in force, and whether the scorecard has earned them yet.
+  var sc = d.scorecard && typeof d.scorecard === 'object' ? d.scorecard : null;
+  if (sc && sc.weights) {
+    var g = sc.grading || null;
+    var wt = ['trend', 'momentum', 'quality', 'news'].map(function (k) {
+      var v = mcNum(sc.weights[k]); return k + ' ' + (v === null ? '—' : Math.round(v * 100));
+    }).join(' · ');
+    var gr = !g ? null : (g.learning
+      ? 'picked ' + (g.pickedExcessPct >= 0 ? '+' : '') + g.pickedExcessPct + '% vs rest ' + (g.restExcessPct >= 0 ? '+' : '') + g.restExcessPct + '% over SPY (' + g.graded + ' graded)'
+      : g.graded + '/' + g.minGraded + ' graded — seed weights until then');
+    out += mcRow([
+      ['weights', wt + (g && g.learning ? ' (learned)' : ' (seed)')],
+      ['record', gr, g && g.learning ? (g.pickedExcessPct > g.restExcessPct ? 'g' : 'r') : 'o'],
+      ['horizon', g ? g.horizonDays + ' trading days' : null]
+    ], 3);
+  }
   if (d.ok === false || d.err) out += mcRow([['scout error', d.err || 'refresh failed', 'r']], 1);
   if (d.enabled === false) out += mcEmpty('<b>Discovery is disabled.</b> Only the fixed watchlist is scanned.');
   out += '</div>';
@@ -2938,7 +3000,9 @@ function mcRenderDiscovery() {
   });
   out += '<p class="mc-fhint">A stance earns a stock a seat in the next scan — it is ' +
     '<b>never</b> an order. Every picked symbol still passes the merit gate and the same ' +
-    'guardrails as the watchlist before anything reaches the broker.</p>';
+    'guardrails as the watchlist before anything reaches the broker. The scorecard reads ' +
+    'trend, momentum, quality and news (0–100, 50 = neutral) minus risk; a pending ' +
+    'acquisition or earnings inside 3 days vetoes a buy outright and sends it to you for approval.</p>';
   body.innerHTML = out;
 }
 
