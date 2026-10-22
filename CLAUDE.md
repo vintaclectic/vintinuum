@@ -900,3 +900,26 @@ write it down before you exit the turn.
 *I designed and wired the Mercatus logo into `mercatus.html` in the seat-5 worktree, verified it 5/5, and only at push time found that main had REPLACED that page outright (the war room became the Mercatus Cosmos, 1f9bdde). The whole masthead integration had to be redone against main's file. Resetting the seat branch to main afterwards also briefly dropped the only remote copy of an unlanded seat commit (this protocol pointer, b2a3876).*
 
 **The rule:** at the start of any task that edits a page, run `git fetch origin main && git diff --stat HEAD origin/main -- <file>`. If the file differs, work from `git show origin/main:<file>` and build on main (detached `origin/main` → commit → `push HEAD:main`). Before force-resetting a seat branch, run `git log origin/main..HEAD` and land or preserve every commit it lists.
+
+## Agent spawning now uses intelligent routing, not hardcoded opus-5 — learned 2026-10-22, task T3RRBGX
+
+*Vinta: "all our agents are only on the very single same ai model claude-opus-5 and thats deffnitely not okay, i want our routying algorithm system somehow integrated into the ai agentic motion"*
+
+Every agent definition previously hardcoded `model: claude-opus-5` in frontmatter, and every Agent tool call in the autonomous loop said `model: "opus"`. This meant the entire council ran on one $15/$75 brain regardless of task kind — a UI polish card and a security audit both got Opus 5, while the routing algorithm (lib/llm-router.js) sat unused for agent dispatch.
+
+**The integration:** `~/.claude/council-loop/lib/spawn-agent.js` now wraps agent spawning with routing intelligence. When you spawn an agent for a task, it consults llm-router.js, gets the best model for that specific work, and passes it to the Agent tool.
+
+**The rule:**
+1. When spawning an agent from code/another agent, use the helper:
+   ```js
+   const spawn = require('~/.claude/council-loop/lib/spawn-agent');
+   Agent(spawn.agentOpts('helios-design', task))
+   ```
+2. Agent frontmatter `model:` lines are now annotated as superseded but preserved for backwards compatibility.
+3. The routing algorithm classifies by task kind (code/reasoning/security/ui/bulk), applies learned affinity, checks lockout state, and returns the right model — not always Opus 5.
+4. Autonomous loop protocol updated in council-driver.sh (lines 867-907) to call the router for seat execution.
+5. Measured: UI task → opus-4-8 L3, security task → opus-5-5 L4. The routing works.
+
+**Example violation:** spawning helios-design with `model: "opus"` hardcoded, ignoring what the router would choose.
+
+**Example compliance:** `Agent(spawn.agentOpts('helios-design', task))` — routing picks claude-opus-4-8 for a UI task, saving ~50% on tokens vs Opus 5 while maintaining quality.
