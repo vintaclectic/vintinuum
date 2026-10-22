@@ -147,27 +147,32 @@ the same commit.
 Every commit to `main` here = a deploy to the public site within ~1 minute.
 Treat `main` as production.
 
-## Drive usage policy (Vinta directive 2026-06-06 — ALL agents)
+## Drive usage policy (Vinta directive 2026-06-06, updated 2026-10-22 — ALL agents)
 
-The main PC has three internal fast drives and external drives are SLOW. Use
-the internal trio for everything active; reserve external for cold storage.
+The main PC now has **four internal fast drives** (added 1TB SATA HDD 2026-10-22) plus
+external drives for cold storage. Use the internal drives for everything active.
 
 | Drive | Mount | Role | Notes |
 |---|---|---|---|
 | **C:** | `/mnt/c` | Windows + tooling | Keep clean — hit 96% once already. Avoid as a working dir for large/growing artifacts. |
 | **D:** | `/mnt/d` | bulk working (DirHaven, large media) | Big, but on the 9P/NTFS bridge — SLOW for many small reads (caused the brain wedge once). Good for media, bad for SQLite hot paths. |
-| **E:** | `/mnt/e` | new — fast scratch + caches | 186GB, basically empty. **Preferred for: puppeteer browser profiles, model caches, ephemeral build dirs, anything that gets read/written a lot.** Label: `Storage`. Already used at `/mnt/e/Vintinuum/`. |
+| **E:** | `/mnt/e` | fast scratch + caches | 186GB, basically empty. **Preferred for: puppeteer browser profiles, model caches, ephemeral build dirs, anything that gets read/written a lot.** Label: `Storage`. Already used at `/mnt/e/Vintinuum/`. |
+| **F:** (`/dev/sde`) | `/mnt/disk400` | **NEW 1TB fast bulk storage** | **1TB SATA HDD, ext4, native Linux filesystem.** Faster than D: (no 9P bridge). **Use for: large datasets, media libraries, model weights/checkpoints, corpus files, heavy I/O workloads, anything >100GB needing fast random access.** Mount: `sudo mount /dev/sde /mnt/disk400` |
 | External | (varies) | cold storage only | SUPER SLOW transfer. Only put files there that cannot be transferred to internal, or pure archives nothing actively reads. |
 
 **Standing order for any agent provisioning a new cache / profile / scratch dir:**
 - Default to `~/...` (WSL ext4) for things ≤ a few GB.
-- Default to **`/mnt/e/Vintinuum/<feature>/`** for any larger or churn-heavy
-  scratch (puppeteer profiles, model caches, build outputs, dump dirs).
-- Use `/mnt/d` only when the data is already there or > 100GB.
+- Default to **`/mnt/e/Vintinuum/<feature>/`** for smaller churn-heavy scratch
+  (puppeteer browser profiles, build outputs, ephemeral caches).
+- Default to **`/mnt/disk400/<feature>/`** for large datasets, model storage,
+  corpus files, or anything >100GB that needs fast access.
+- Use `/mnt/d` only when the data is already there (legacy) or is pure bulk media
+  that tolerates slow random reads.
 - **Never** plan a hot path against an external drive.
 
-When asked to free space: target C first, then D's contents that could live on
-E. Never propose moving things to external unless explicitly told.
+When asked to free space: target C first, then migrate D's performance-critical
+contents to /mnt/disk400 (the new fast 1TB), then E. Never propose moving things
+to external unless explicitly told.
 
 ## Two-repo coordination
 
@@ -869,3 +874,57 @@ Guessing has already cost real work on this machine and it will not happen again
 **The lesson:** an extension inherits the deploy-state of its base. If the base feature lives only on the dev branch, your extension is born stranded — and a cherry-pick of just your diff onto `main` fails because the surrounding code (your anchors) isn't there.
 
 **The rule:** before building on top of an existing world feature on the rescue branch, verify the base is on `origin/main` (grep `git show origin/main:<file>` for the function/handler you depend on, and/or curl the live file). If the base is NOT on main, say so up front: your work will be deploy-gated on landing the base first (the rescue→main reconciliation), which is a separate unit with production blast radius — do not try to force a 13-commit divergent merge inside one feature card. Build + verify on the dev line, push to preserve it, and `block` on the reconciliation with the exact missing base named — never call it `done` (it is not live) and never ship a half-merged `world.html` to production.
+
+---
+
+## 📚 THE LESSONS-LEARNED PROTOCOL — Vintinuum agents evolve their own instructions (Vinta directive 2026-10-02, task KVHPK4E)
+
+Full law in the machine-wide `~/.claude/CLAUDE.md`. The short version for this
+repo: every time you fuck up, over-build, under-build, hit a gap in these
+instructions, get corrected by Vinta, or hit a novel edge case while working on
+Vintinuum, write the lesson down *immediately* so it isn't re-learned next
+session:
+
+- **Lesson is Vintinuum-specific** (an API quirk, a DB gotcha, a DirRM/body
+  pattern, something true only in this repo) → append it here, to this file,
+  under a new `## [TITLE] — learned [DATE], task [TASKID]` heading, with
+  **The lesson / The rule / Example violation / Example compliance**. Commit +
+  push per the push discipline above (this file is in git; it deploys).
+- **Lesson applies to every project, every agent, machine-wide** → append it to
+  `~/.claude/CLAUDE.md` instead (not here) — that file is now git-tracked at
+  `~/.claude` (commit KVHPK4E-fix, 2026-10-02; it was previously silently
+  excluded from the durable-config repo's gitignore and unbacked-up).
+- **Lesson is about Vinta's own feedback/preference** → the memory system
+  (auto-memory), not this file.
+
+Over-documenting is the goal. If unsure whether a lesson counts, it counts —
+write it down before you exit the turn.
+
+## A seat branch can be WEEKS behind main — build on `origin/main`'s file, not the worktree's — learned 2026-10-19, task P86KVXB
+
+*I designed and wired the Mercatus logo into `mercatus.html` in the seat-5 worktree, verified it 5/5, and only at push time found that main had REPLACED that page outright (the war room became the Mercatus Cosmos, 1f9bdde). The whole masthead integration had to be redone against main's file. Resetting the seat branch to main afterwards also briefly dropped the only remote copy of an unlanded seat commit (this protocol pointer, b2a3876).*
+
+**The rule:** at the start of any task that edits a page, run `git fetch origin main && git diff --stat HEAD origin/main -- <file>`. If the file differs, work from `git show origin/main:<file>` and build on main (detached `origin/main` → commit → `push HEAD:main`). Before force-resetting a seat branch, run `git log origin/main..HEAD` and land or preserve every commit it lists.
+
+## Agent spawning now uses intelligent routing, not hardcoded opus-5 — learned 2026-10-22, task T3RRBGX
+
+*Vinta: "all our agents are only on the very single same ai model claude-opus-5 and thats deffnitely not okay, i want our routying algorithm system somehow integrated into the ai agentic motion"*
+
+Every agent definition previously hardcoded `model: claude-opus-5` in frontmatter, and every Agent tool call in the autonomous loop said `model: "opus"`. This meant the entire council ran on one $15/$75 brain regardless of task kind — a UI polish card and a security audit both got Opus 5, while the routing algorithm (lib/llm-router.js) sat unused for agent dispatch.
+
+**The integration:** `~/.claude/council-loop/lib/spawn-agent.js` now wraps agent spawning with routing intelligence. When you spawn an agent for a task, it consults llm-router.js, gets the best model for that specific work, and passes it to the Agent tool.
+
+**The rule:**
+1. When spawning an agent from code/another agent, use the helper:
+   ```js
+   const spawn = require('~/.claude/council-loop/lib/spawn-agent');
+   Agent(spawn.agentOpts('helios-design', task))
+   ```
+2. Agent frontmatter `model:` lines are now annotated as superseded but preserved for backwards compatibility.
+3. The routing algorithm classifies by task kind (code/reasoning/security/ui/bulk), applies learned affinity, checks lockout state, and returns the right model — not always Opus 5.
+4. Autonomous loop protocol updated in council-driver.sh (lines 867-907) to call the router for seat execution.
+5. Measured: UI task → opus-4-8 L3, security task → opus-5-5 L4. The routing works.
+
+**Example violation:** spawning helios-design with `model: "opus"` hardcoded, ignoring what the router would choose.
+
+**Example compliance:** `Agent(spawn.agentOpts('helios-design', task))` — routing picks claude-opus-4-8 for a UI task, saving ~50% on tokens vs Opus 5 while maintaining quality.
