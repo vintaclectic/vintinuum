@@ -1,0 +1,26 @@
+--- /home/vinta/.claude/council-loop/bin/push.js
++++ /home/vinta/.claude/council-loop/bin/push.js
+@@ -42,1 +42,2 @@
+ const PREFS_FILE = path.join(STATE_DIR, 'push-prefs.json');
++const ADAPTER = require(path.join(ROOT, 'lib', 'notify-adapter.js'));
+@@ -166,3 +167,4 @@
+-function subscribe(sub, label) {
++function subscribe(sub, label, platform) {
+   try {
+     if (!validSub(sub)) return { ok: false, error: 'malformed subscription' };
++    if (platform) ADAPTER.tagDevice(sub.endpoint, platform);
+@@ -305,2 +305,1 @@
+-  const { body, options } = shape(tier, payload);
+-  const json = JSON.stringify(body);
++  const { body, options } = shape(tier, payload);
+@@ -309,3 +309,5 @@
+   await Promise.all(subs.map(async (s) => {
+     try {
++      const deviceBody = ADAPTER.forSubscription(s, body, { tier });
++      const json = JSON.stringify(deviceBody);
+       await webpush.sendNotification({ endpoint: s.endpoint, keys: s.keys }, json, options);
+--- /home/vinta/.claude/council-loop/bin/vintask-gui.js
++++ /home/vinta/.claude/council-loop/bin/vintask-gui.js
+@@ -3331,3 +3331,3 @@
+-          return json(res, PUSH.subscribe(b && b.subscription, b && b.label));
++          return json(res, PUSH.subscribe(b && b.subscription, b && b.label, b && b.platform));
