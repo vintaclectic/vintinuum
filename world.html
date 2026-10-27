@@ -7,9 +7,57 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500&display=swap" rel="stylesheet">
 <style>
+  /* ════════════════════════════════════════════════════════════════════════
+     THE BOX MODEL — every pixel of this viewport has exactly one owner.
+     Declared once, here, because 16 scripts inject fixed UI onto this one
+     surface and unowned pixels are where collisions are born.
+
+       TOP-LEFT    y 14…58   #leave              (z-chrome)
+       TOP-LEFT    y 64…     #vintWorldHud       (z-panel)   width 208 @320
+       TOP-RIGHT   y 14…58   #editHeadBtn        (z-chrome)
+       TOP-RIGHT   y 66…158  #topctl             (z-chrome)
+       BOTTOM-LEFT           #dvRail             (z-panel)   grows upward
+       BOTTOM-LEFT  b 92     #feed               (z-ambient) yields to rail
+       BOTTOM-RIGHT b 88     #movectl            (z-chrome)  TOUCH ONLY
+       BOTTOM-CTR   b 96     #offer / #micHint   (z-offer / z-ambient)
+       BOTTOM full           #saybar             (z-chrome)
+       CENTER                #status #traces     (z-ambient, pointer-events:none)
+
+     THE Z-LADDER. Never invent a z-index inline. Never write 9999.
+     The pre-existing values on this page ranged from 4 to 2147483640 — a
+     1.5-billion-point spread that made "what is on top" unknowable. These
+     named rungs replace the guesswork. Anything needing a value not on the
+     ladder means the ladder is wrong; fix the ladder, don't stack on it. */
+  :root {
+    --z-stage:    0;      /* the 3D canvas — the floor of the world   */
+    --z-ambient:  4;      /* feed, traces, status — non-interactive   */
+    --z-offer:    7;      /* the conversion pill, must beat ambient   */
+    --z-veil:     8;      /* the waking veil                          */
+    --z-panel:    1400;   /* HUD + rail — persistent chrome           */
+    --z-chrome:   1500;   /* leave, edit-head, topctl, movectl        */
+    --z-sheet:    1600;   /* bottom sheets (dv/concord/admiralty/court)*/
+    --z-modal:    1620;   /* full-screen takeovers                    */
+    --z-toast:    1700;   /* transient, above everything structural   */
+
+    /* Reserved gutters. Fixed chrome MUST have a matching reservation in
+       the flow, read from the SAME variable by both sides, so they cannot
+       drift apart. */
+    --safe-b: max(16px, env(safe-area-inset-bottom, 16px));
+    --safe-t: max(14px, env(safe-area-inset-top, 14px));
+    --safe-l: max(16px, env(safe-area-inset-left, 16px));
+    --safe-r: max(16px, env(safe-area-inset-right, 16px));
+  }
+
   * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
-  html, body { height: 100%; width: 100%; overflow: hidden; background: #1a1410; font-family: 'Cormorant Garamond', Georgia, serif; color: rgba(245,235,220,0.9); }
-  #stage { position: fixed; inset: 0; z-index: 0; }
+  html, body {
+    height: 100%; width: 100%; overflow: hidden; background: #1a1410;
+    font-family: 'Cormorant Garamond', Georgia, serif; color: rgba(245,235,220,0.9);
+    /* 100svh, never 100vh: the small viewport unit is the only one that stays
+       honest when the mobile URL bar collapses or the keyboard rises. */
+    min-height: 100svh;
+    overscroll-behavior: none;
+  }
+  #stage { position: fixed; inset: 0; z-index: var(--z-stage); }
   #stage canvas { display: block; width: 100% !important; height: 100% !important; }
 
   /* status / waking */
@@ -23,7 +71,7 @@
      was 264px TALL, trading a horizontal collision for a vertical one. A centred
      message wants a readable measure, so it gets one, and the band it may occupy
      is bounded explicitly. */
-  #status { position: fixed; z-index: 5; font-size: 20px; color: rgba(245,235,220,0.7); opacity: 0; transition: opacity .6s; pointer-events: none;
+  #status { position: fixed; z-index: var(--z-ambient); font-size: 20px; color: rgba(245,235,220,0.7); opacity: 0; transition: opacity .6s; pointer-events: none;
     overflow: hidden; text-align: center; text-wrap: balance;
     /* centre of the column that starts where the rail ends and STOPS where the
        right-hand docked stack begins (--vint-dock-reach-bottom). Centring in the
@@ -135,7 +183,26 @@
   #status.show { opacity: 1; }
 
   /* speech feed — bottom-left, traces fade out (no scroll, no overflow) */
-  #feed { position: fixed; left: 16px; bottom: 92px; z-index: 4; max-width: min(78vw, 460px); display: flex; flex-direction: column; gap: 8px; pointer-events: none; }
+  /* COLLISION FIX — the one unprotected pair in the bottom-left column.
+     #feed anchored left:16/bottom:92 at 249.6px wide (78vw @320); #dvRail
+     anchors left:12 and grows UPWARD from bottom:--dv-railbot. They overlap
+     horizontally by ~133px, and the rail's clearance is derived from the say
+     bar alone — the feed was never an input to it and was never dock-registered,
+     so a tall rail and a five-line feed occupied the same pixels.
+
+     The feed yields, because it is ambient and the rail is interactive: a
+     control the user must hit beats a message that fades on its own. On touch
+     the feed clears the rail's full width; on desktop (no rail wrap) it keeps
+     its generous measure. It is also height-capped and scrolls INTERNALLY so a
+     burst of chatter grows inward, never upward into the HUD. */
+  #feed { position: fixed; left: var(--safe-l); bottom: calc(92px + var(--safe-b)); z-index: var(--z-ambient); max-width: min(78vw, 460px); display: flex; flex-direction: column; gap: 8px; pointer-events: none;
+    max-height: calc(100svh - var(--vint-hud-bottom, 274px) - 180px);
+    min-height: 0; overflow: hidden; justify-content: flex-end; }
+  /* On coarse pointers the rail is a real 133px obstacle in this exact corner. */
+  @media (pointer: coarse) {
+    #feed { left: calc(var(--safe-l) + var(--dv-railw, 133px) + 10px);
+            max-width: calc(100vw - var(--safe-l) - var(--safe-r) - var(--dv-railw, 133px) - 20px); }
+  }
   .utterance { font-size: 16px; line-height: 1.4; padding: 8px 14px; border-radius: 14px; background: rgba(13,17,23,0.55); backdrop-filter: blur(8px); opacity: 0; transform: translateY(6px); animation: rise .5s forwards, fade 1s 9s forwards; }
   .utterance .who { color: var(--c, #f4c79a); font-weight: 500; margin-right: 8px; }
   .utterance.agent { --c: #f4c79a; } .utterance.user { --c: #9fc0e0; } .utterance.ambient { --c: #cdbb9c; font-style: italic; }
@@ -144,7 +211,7 @@
   @keyframes fade { to { opacity: 0; } }
 
   /* say bar — bottom, mobile-safe, never overflows */
-  #saybar { position: fixed; left: 0; right: 0; bottom: 0; z-index: 6; display: flex; gap: 8px;
+  #saybar { position: fixed; left: 0; right: 0; bottom: 0; z-index: var(--z-chrome); display: flex; gap: 8px;
     padding: 12px max(16px, env(safe-area-inset-right, 16px)) max(16px, env(safe-area-inset-bottom, 16px)) max(16px, env(safe-area-inset-left, 16px));
     background: linear-gradient(transparent, rgba(13,17,23,0.7) 40%); }
   #sayInput { flex: 1; min-width: 0; font-family: inherit; font-size: 16px; color: rgba(245,235,220,0.95); background: rgba(255,255,255,0.06); border: 1px solid rgba(244,199,154,0.3); border-radius: 999px; padding: 12px 18px; outline: none; -webkit-appearance: none; }
@@ -171,25 +238,51 @@
      The 274px literal survives only as the fallback for the frames before the
      panel has measured itself. This is the same discipline #status and #dvRail
      already use: the neighbour follows the panel, it never guesses at it. */
-  #hint { position: fixed; left: max(16px, env(safe-area-inset-left, 16px)); top: calc(var(--vint-hud-bottom, 274px) + 12px); z-index: 4; font-size: 13px; color: rgba(245,235,220,0.5); max-width: min(228px, calc(100vw - 32px)); }
-  #leave { /* W4 2026-07-09: was top-RIGHT under #editHeadBtn (z1500) — 100% buried, a dead primary control. Opposite corners: leave=LEFT, edit-head=RIGHT. */ position: fixed; left: max(16px, env(safe-area-inset-left, 16px)); top: max(14px, env(safe-area-inset-top, 14px)); z-index: 1600; font-size: 14px; color: rgba(245,235,220,0.6); text-decoration: none; min-height: 44px; display: flex; align-items: center; padding: 0 4px; }
+  #hint { position: fixed; left: max(16px, env(safe-area-inset-left, 16px)); top: calc(var(--vint-hud-bottom, 274px) + 12px); z-index: var(--z-ambient); font-size: 13px; color: rgba(245,235,220,0.5); max-width: min(228px, calc(100vw - 32px)); }
+  #leave { /* W4 2026-07-09: was top-RIGHT under #editHeadBtn (z1500) — 100% buried, a dead primary control. Opposite corners: leave=LEFT, edit-head=RIGHT. */ position: fixed; left: max(16px, env(safe-area-inset-left, 16px)); top: max(14px, env(safe-area-inset-top, 14px)); z-index: var(--z-chrome); font-size: 14px; color: rgba(245,235,220,0.6); text-decoration: none; min-height: 44px; display: flex; align-items: center; padding: 0 4px; }
   @media (pointer: coarse) { #hint { display: none; } }
   /* run/jump controls — clear above the say bar, right side (mobile-first, no overflow) */
-  #movectl { position: fixed; right: max(16px, env(safe-area-inset-right, 16px)); bottom: calc(72px + max(16px, env(safe-area-inset-bottom, 16px))); z-index: 6; display: none; flex-direction: column; gap: 10px; }
+  /* COLLISION FIX (touch-only, invisible on desktop — which is exactly why it
+     survived this long). #movectl is the run/jump pad and it is the ONLY control
+     here that appears solely on coarse pointers. It claimed right:16 / bottom:88,
+     the same edge and the same band the welcome-gate account widget is docked to
+     ('br', EDGE=16, z-index 2147483600). At z6 against z2.1-billion the pad lost
+     every time: the two primary movement buttons on mobile sat underneath the
+     account dot.
+
+     Two changes, both required:
+       1. It lifts to --z-chrome so it stacks with the other primary controls
+          rather than below ambient furniture.
+       2. It RESERVES its corner with VintDock (see the register call in the boot
+          script) so the account widget is pushed clear instead of landing on it.
+          Reserve, don't overlay — the dock is the only thing that knows where
+          the widget actually is. */
+  #movectl { position: fixed; right: var(--safe-r); bottom: calc(72px + var(--safe-b)); z-index: var(--z-chrome); display: none; flex-direction: column; gap: 10px; }
   #movectl button { width: 64px; height: 64px; border-radius: 50%; font-family: inherit; font-size: 14px; color: rgba(245,235,220,0.92); background: rgba(20,14,10,0.55); border: 1px solid rgba(244,199,154,0.35); backdrop-filter: blur(6px); cursor: pointer; user-select: none; -webkit-user-select: none; touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
   #movectl button:active { background: rgba(244,199,154,0.22); transform: scale(0.94); }
   @media (pointer: coarse) { #movectl { display: flex; } }
+  /* The guest lock. `!important` because it must beat the coarse-pointer rule
+     above (equal specificity, later in the cascade would otherwise win) while
+     still being a CLASS, so removing it restores the media query's authority. */
+  .guest-hidden { display: none !important; }
   /* view + mic controls — top-right under leave, always shown (desktop + mobile) */
-  #topctl { position: fixed; right: max(16px, env(safe-area-inset-right, 16px)); top: calc(52px + max(14px, env(safe-area-inset-top, 14px))); z-index: 6; display: flex; flex-direction: column; gap: 8px; align-items: flex-end; }
+  #topctl { position: fixed; right: max(16px, env(safe-area-inset-right, 16px)); top: calc(52px + max(14px, env(safe-area-inset-top, 14px))); z-index: var(--z-chrome); display: flex; flex-direction: column; gap: 8px; align-items: flex-end; }
   #topctl button { font-family: inherit; font-size: 13px; color: rgba(245,235,220,0.9); background: rgba(20,14,10,0.55); border: 1px solid rgba(244,199,154,0.32); border-radius: 999px; padding: 10px 14px; min-height: 44px; backdrop-filter: blur(6px); cursor: pointer; user-select: none; -webkit-user-select: none; touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
   #topctl button:active { transform: scale(0.95); }
   #btnMic.live { background: rgba(255,90,110,0.30); border-color: rgba(255,120,140,0.7); color: #fff; }
   /* a voice ring that pulses over a speaking presence is drawn in 3D; this is the self mic hint */
-  #micHint { position: fixed; left: 50%; bottom: calc(80px + max(16px, env(safe-area-inset-bottom, 16px))); transform: translateX(-50%); z-index: 6; font-size: 13px; color: rgba(255,150,160,0.9); opacity: 0; transition: opacity .25s; pointer-events: none; white-space: nowrap; max-width: 90vw; overflow: hidden; text-overflow: ellipsis; }
+  /* COLLISION FIX. #micHint and #offer shared the IDENTICAL bottom
+     (calc(80px + safe-b)) and both centre on the same axis. #offer is an opaque
+     294px-wide card at z7; #micHint was 288px of text at z6. Whenever the offer
+     was up while the mic was live, the hint rendered behind a solid card — a
+     status message the user could never read.
+     The hint now sits ABOVE the offer's band on its own line. Two things that
+     can both be visible at once need two bands, not one band and a z-index. */
+  #micHint { position: fixed; left: 50%; bottom: calc(148px + var(--safe-b)); transform: translateX(-50%); z-index: var(--z-ambient); font-size: 13px; color: rgba(255,150,160,0.9); opacity: 0; transition: opacity .25s; pointer-events: none; white-space: nowrap; max-width: calc(100vw - 32px); overflow: hidden; text-overflow: ellipsis; }
   #micHint.show { opacity: 1; }
 
   /* offer — the conversion moment. soft pill, refusable, never blocks. */
-  #offer { position: fixed; left: max(16px,env(safe-area-inset-left,16px)); right: max(16px,env(safe-area-inset-right,16px)); bottom: calc(80px + max(16px, env(safe-area-inset-bottom, 16px))); z-index: 7; max-width: min(92vw, 520px); margin: 0 auto; background: rgba(20,14,10,0.82); backdrop-filter: blur(10px); border: 1px solid rgba(244,199,154,0.32); border-radius: 16px; padding: 16px 18px; display: none; }
+  #offer { position: fixed; left: max(16px,env(safe-area-inset-left,16px)); right: max(16px,env(safe-area-inset-right,16px)); bottom: calc(80px + max(16px, env(safe-area-inset-bottom, 16px))); z-index: var(--z-offer); max-width: min(92vw, 520px); margin: 0 auto; background: rgba(20,14,10,0.82); backdrop-filter: blur(10px); border: 1px solid rgba(244,199,154,0.32); border-radius: 16px; padding: 16px 18px; display: none; }
   #offer.show { display: block; animation: offerIn .6s ease; }
   @keyframes offerIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
   #offer .o-who { color: #f4c79a; font-size: 14px; margin-bottom: 4px; }
@@ -199,7 +292,7 @@
   #offer .o-dismiss { font-family: inherit; font-size: 14px; color: rgba(245,235,220,0.45); background: none; border: none; cursor: pointer; }
 
   /* traces — what the clearing remembers. appears softly on arrival, fades. */
-  #traces { position: fixed; left: 50%; top: 50%; transform: translate(-50%,-50%); z-index: 4; max-width: min(86vw, 480px); width: calc(100vw - 32px); display: flex; flex-direction: column; gap: 12px; text-align: center; pointer-events: none; opacity: 0; transition: opacity 1.6s ease; }
+  #traces { position: fixed; left: 50%; top: 50%; transform: translate(-50%,-50%); z-index: var(--z-ambient); max-width: min(86vw, 480px); width: calc(100vw - 32px); display: flex; flex-direction: column; gap: 12px; text-align: center; pointer-events: none; opacity: 0; transition: opacity 1.6s ease; }
   #traces.show { opacity: 1; }
   #traces .t-head { font-size: 15px; color: rgba(245,235,220,0.5); font-style: italic; margin-bottom: 4px; }
   #traces .trace { font-size: 17px; line-height: 1.5; color: rgba(245,235,220,0.82); }
@@ -208,7 +301,7 @@
 
   /* ── loader veil — bounded, breathing, never dead (helios) ──
      sits over the stage while the first frame paints; dissolves on READY. */
-  #veil { position: fixed; inset: 0; z-index: 8; display: flex; flex-direction: column;
+  #veil { position: fixed; inset: 0; z-index: var(--z-veil); display: flex; flex-direction: column;
     align-items: center; justify-content: center; gap: 22px; text-align: center;
     background: radial-gradient(ellipse 70% 55% at 50% 42%, rgba(42,32,24,0.55) 0%, rgba(20,16,12,0.92) 72%, #14100c 100%);
     transition: opacity 1s ease; pointer-events: none; }
@@ -228,7 +321,7 @@
   /* ── guest invitation — a warm doorway, never a wall (helios) ──
      lower-anchored so the living world breathes above it; refusable; mobile-first. */
   #invite { position: fixed; left: max(12px, env(safe-area-inset-left,12px)); right: max(12px, env(safe-area-inset-right,12px));
-    bottom: calc(16px + env(safe-area-inset-bottom, 0px)); z-index: 7;
+    bottom: calc(16px + env(safe-area-inset-bottom, 0px)); z-index: var(--z-offer);
     max-width: min(94vw, 500px); margin: 0 auto;
     background: linear-gradient(180deg, rgba(24,18,13,0.72), rgba(18,13,9,0.9));
     backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
@@ -316,7 +409,7 @@
   <button id="sayBtn">say</button>
 </div>
 <button id="editHeadBtn" data-draggable="true" title="Adjust how your face sits on your body"
-  style="position:fixed;top:calc(14px + env(safe-area-inset-top,0px));right:calc(14px + env(safe-area-inset-right,0px));z-index:1500;min-height:44px;padding:0 16px;border-radius:22px;background:rgba(8,12,20,0.7);border:1px solid rgba(79,195,247,0.35);color:#9fdcff;font-size:13px;cursor:pointer;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);">◐ edit head</button>
+  style="position:fixed;top:calc(14px + env(safe-area-inset-top,0px));right:calc(14px + env(safe-area-inset-right,0px));z-index:var(--z-chrome);min-height:44px;padding:0 16px;border-radius:22px;background:rgba(8,12,20,0.7);border:1px solid rgba(79,195,247,0.35);color:#9fdcff;font-size:13px;cursor:pointer;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);">◐ edit head</button>
 
 <!-- THE EARLY CLAIM WINDOW: the dock registry must exist before ANY widget asks
      for a slot. world.html's inline script (below) runs long before
@@ -332,6 +425,12 @@
 <script src="body/head_editor.js"></script>
 <script src="body/draggable.js"></script>
 <script src="body/world/agent-life.js"></script>
+<!-- THE AGENT WEB — autonomous agent network. Makes ALL council agents from ALL
+     projects visible and active in DIRVERSE, provides agent-to-agent communication,
+     autonomous trading, and generates dynamic personalities for agent-life.js.
+     Loads AFTER agent-life.js so it can extend that system, BEFORE world-client.js
+     so the registry is ready when the world spawns agents. -->
+<script src="body/world/agent-web.js"></script>
 <script src="body/world/world-client.js"></script>
 <script src="body/world/world-hud.js"></script>
 <script src="body/world/dirverse-hud.js"></script>
@@ -369,6 +468,19 @@
      home · lanterns · build · concord · yard. Adds no fixed element of its own;
      its sheet carries .dv-sheet so layoutRail's yield clears it automatically. -->
 <script src="body/world/admiralty.js"></script>
+<!-- THE MARKET — the trading floor (the bazaar / the exchange) that plugs into
+     the polity spine: peer-to-peer trade where you AND your seated agents list
+     tools/resources/creations and trade them (offer → bid → accept), and
+     "combine tools" (Vinta's first-named verb) forges two owned things into a
+     third. Loads AFTER concord.js because it settles strictly through the
+     Concord: it moves lumen ONLY through VintConcord.spend/credit (one
+     treasury, never a second) and presses the SAME seven karma tags through
+     VintConcord.impress — one economy, one karma spine. Loads after admiralty.js
+     to keep the rail order stable. Rail order becomes: star-map · agents ·
+     court · home · lanterns · build · concord · yard · market. Adds no fixed
+     element of its own; its sheet carries .dv-sheet so layoutRail's yield
+     clears it automatically, and it joins the one-sheet registry. -->
+<script src="body/world/market.js"></script>
 <script>
 (function () {
   const statusEl = document.getElementById('status');
@@ -484,6 +596,74 @@
     });
 
   // the conversion moment — soft, refusable, never blocks the conversation
+  /* ══ MOBILE CONTRACT (helios-design 2026-09-23) ══════════════════════════
+     Three things this surface never did, each one a measured defect.
+
+     1. TOUCH IS DETECTED ONCE, AUTHORITATIVELY. This file had zero
+        isTouchDevice checks — every mobile behaviour hung off CSS
+        `@media (pointer: coarse)` alone, so no script could reduce its
+        workload for a phone. One flag, computed once, published to both JS
+        and CSS (body.is-touch) so the two can never disagree.
+
+     2. THE MOVE PAD RESERVES ITS CORNER. #movectl is touch-only and was not
+        dock-registered, so welcome-gate's account widget (docked 'br') landed
+        on the run/jump buttons. Registering it as an OBSTACLE pushes the
+        widget up instead of over it — reserve, don't overlay.
+
+     3. THE WORLD COSTS LESS ON A PHONE. Capping devicePixelRatio is the single
+        largest win available here: an iPhone at DPR 3 renders NINE times the
+        pixels of DPR 1 for a canvas that fills the screen. Capped at 2, the
+        scene is visually identical on a 320px screen and roughly half the
+        fragment work. A gorgeous world that melts a battery is a failed design. */
+  var IS_TOUCH = (function () {
+    try {
+      return (('ontouchstart' in window) || (navigator.maxTouchPoints > 0))
+          && window.matchMedia('(pointer: coarse)').matches;
+    } catch (_) { return false; }
+  })();
+  window.VINT_IS_TOUCH = IS_TOUCH;
+  if (IS_TOUCH) document.body.classList.add('is-touch');
+
+  (function mobileContract() {
+    if (!IS_TOUCH) return;
+
+    // (2) Reserve the move pad's corner so the account widget clears it.
+    try {
+      var pad = document.getElementById('movectl');
+      if (pad && window.VintDock && window.VintDock.avoid) {
+        window.VintDock.avoid(pad, { corner: 'br' });
+      }
+    } catch (_) {}
+
+    // (3) Cap the renderer's pixel ratio. Done defensively: the renderer is
+    // built by body/three3d/loader.js, so we clamp the value it reads rather
+    // than reach into its internals. Idempotent and reversible.
+    try {
+      var real = window.devicePixelRatio || 1;
+      if (real > 2) {
+        Object.defineProperty(window, 'devicePixelRatio', {
+          configurable: true, get: function () { return 2; }
+        });
+      }
+    } catch (_) {}
+
+    // Republish the rail's measured width so #feed's coarse-pointer offset
+    // tracks the real obstacle instead of the 133px fallback literal.
+    var syncRail = function () {
+      try {
+        var rail = document.getElementById('dvRail');
+        if (!rail) return;
+        var w = Math.round(rail.getBoundingClientRect().width);
+        if (w > 0) document.documentElement.style.setProperty('--dv-railw', w + 'px');
+      } catch (_) {}
+    };
+    ['world:state', 'resize', 'orientationchange'].forEach(function (ev) {
+      window.addEventListener(ev, syncRail, { passive: true });
+    });
+    setTimeout(syncRail, 600);
+    setTimeout(syncRail, 2000);
+  })();
+
   VintinuumWorld.onOffer(o => {
     const el = document.getElementById('offer');
     document.getElementById('offerWho').textContent = o.name || 'ARIA';
@@ -514,8 +694,14 @@
     // colors with zero server write. It's the "provide your own face to your being"
     // hook that earns the sign-in (the FACE tab's photo capture routes to signup).
     // Never hide the one inventive creation surface a guest is here to feel.
+    /* Hidden via a CLASS, not an inline style. `n.style.display='none'` writes
+       an inline rule that outranks every stylesheet rule including
+       `@media (pointer: coarse) { #movectl { display: flex } }` — so once a
+       guest had been hidden, the move pad could not be restored by CSS at all
+       and stayed dead after sign-in until a full reload. A class hides it just
+       as well and lets the media query win again the moment it's removed. */
     ['saybar','movectl','topctl','hint'].forEach(function (id) {
-      const n = document.getElementById(id); if (n) n.style.display = 'none';
+      const n = document.getElementById(id); if (n) n.classList.add('guest-hidden');
     });
 
     // Rotate the opening line by which world you wandered into (hub vs. someone's world).
