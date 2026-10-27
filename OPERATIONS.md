@@ -76,6 +76,36 @@ Note: the `dirhaven.com` **apex has no A/AAAA/CNAME record** — it does not
 resolve by design as of 2026-08-07 (`www` CNAMEs to the empty apex, so it is
 dead too). Only `app.dirhaven.com` is live. That is not a regression.
 
+### VPS STANDBY — brain cutover in progress (task 98MRP8C → DKZR8WD, started 2026-10-27)
+
+A second, independent copy of `vintinuum-api` is running as **STANDBY ONLY**
+on a Hetzner VPS (`2.31.76.25`, root, `ctb-app`, cpx22 @ fsn1). DNS for
+`api.vintaclectic.com` still points at the PC's tunnel — **production traffic
+has NOT moved.** Do not treat the VPS as live until the 48h+48h observation
+windows below have actually elapsed and someone deliberately flips DNS.
+
+| Thing | PC (primary, live) | VPS (standby, 2.31.76.25) |
+|---|---|---|
+| vintinuum-api | pm2 `vintinuum-api`, port 8767 | pm2 `vintinuum-api` (namespace `vintinuum`), port 8767, started 2026-10-27 ~15:25 UTC |
+| `.env` TRADING_MODE | `live` (real trading agent) | **forced `paper`**, `.env` line ~185 carries a guard comment — never sync this line from the PC |
+| trading automation running? | yes (`mercatus` + `mercatus-reporter` + `vintinuum-scheduler` pm2 apps) | **NO** — only the `vintinuum-api` pm2 app is started there; the trading-daemon apps were never started on the VPS, so there is no automation loop to arm even if `.env` drifted |
+| Cloudflare tunnel | `vintinuum-named-tunnel` (id `d911c951…`, pm2-managed) | `vintinuum-vps` (id `1c661ac2…`), managed by **systemd** unit `cloudflared.service` (enabled, survives reboot) — NOT pm2 |
+| Tunnel ingress | `api.`/`board.`/`dirmegle.vintaclectic.com` | **`api.vintaclectic.com` only** — `board.vintaclectic.com` deliberately excluded (no tasks.jsonl sync mechanism exists yet; see the 98MRP8C doc) |
+| DB | live `vintinuum.db` | standby copy taken via `scripts/backup-db.sh` (`VACUUM INTO`, never `.backup` — JDK9KKV/2P3YBT7), plus its own live WAL since the service started |
+| Reboot survival | `boot-resurrect.sh` + pm2-vinta.service | `pm2-root` systemd service enabled, `pm2 save` done (dump.pm2 has `vintinuum-api`); `cloudflared.service` enabled |
+
+**Cutover sequence still required (per the doc, cannot be collapsed into one
+sitting by design):** run both in parallel 48h → `cloudflared tunnel route dns
+vintinuum-vps api.vintaclectic.com` (single reversible DNS flip, no restart
+needed on either tunnel) → run 48h more → only then `pm2 stop vintinuum-api`
+on the PC, and only then is it safe to ever let the VPS's `TRADING_MODE` go
+live. Full plan: `~/.claude/council-loop/state/docs/98MRP8C-20261027-1110-vps-cutover-next-phase.md`.
+
+**If you are reading this after 2026-10-29 ~15:25 UTC** and the VPS instance
+has been stable (check `pm2 logs vintinuum-api` on both sides for errors,
+`curl https://api.vintaclectic.com/api/health` still resolving to the PC),
+the DNS flip is the next safe step — not a question, a scheduled action.
+
 ### Process management
 - PM2 process names: `vintinuum-api`, `vintinuum-named-tunnel`,
   `dirmegle-tunnel`, `dirhaven-tunnel`
