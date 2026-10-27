@@ -676,6 +676,12 @@
 <script src="body/draggable.js"></script>
 <script defer src="body/atlas_pin.js?v=v20260913-abwnyhb"></script>
 <script src="body/world/agent-life.js"></script>
+<!-- AGENT NETWORK (Z3BMNEU): Four organs + coordinator for autonomous agent trading/communication -->
+<script src="body/world/agent-ledger.js"></script>
+<script src="body/world/agent-router.js"></script>
+<script src="body/world/agent-exchange.js"></script>
+<script src="body/world/agent-drive.js"></script>
+<script src="body/world/agent-web.js"></script>
 <!-- BUILD-SNAP (FYBNHVM): the socket math the fabricator ghost and the brain share — must load before world-client. -->
 <script src="body/world/build-snap.js"></script>
 <script src="body/world/world-client.js"></script>
@@ -1117,7 +1123,19 @@
   // ticket exists. A thrown module never blanks the page — start() catches its
   // own internals and the loop keeps rendering the clearing.
   VintinuumWorld.start({ mountEl: document.getElementById('stage'), onSpeech: utter, onStatus: status, worldId: _wid, guest: isGuest })
-    .then(() => { if (!isGuest) showTraces(); else guestOverlay(); })
+    .then(() => {
+      // Boot the agent network (Z3BMNEU)
+      if (typeof AgentWeb !== 'undefined') {
+        AgentWeb.boot().then(result => {
+          if (result.ok) {
+            console.log('[AgentWeb] booted:', result);
+          } else {
+            console.error('[AgentWeb] boot failed:', result.error);
+          }
+        }).catch(e => console.error('[AgentWeb] boot exception:', e));
+      }
+      if (!isGuest) showTraces(); else guestOverlay();
+    })
     .catch(e => {
       console.error('[world] start failed:', e);
       // even if start() throws before building, we still owe the visitor SOMETHING
