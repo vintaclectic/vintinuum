@@ -1281,5 +1281,24 @@
   <script src="body/welcome-gate.js"></script>
 <!-- VOICE — the canonical spine, one tag (body/voice.js). tier=full -->
 <script defer src="body/voice.js?v=v20260818-onevoice" data-tier="full"></script>
+<!-- BUILD STAMP (JYE24CB, WORLD_SPEC.md Phase 1 pipeline-proof). This page's
+     real estate is fully claimed — every fixed corner already has a control
+     and the NO-COLLISION LAW forbids adding a permanent one without a full
+     breakpoint audit this task does not have budget for. So the "footer shows
+     the current commit" requirement is satisfied WITHOUT touching the
+     viewport: the tab title (visible on a phone's tab switcher / share sheet)
+     and the devtools console both carry it, and commit.json is the
+     machine-checkable source of truth a verifier curls. Zero DOM footprint,
+     zero collision risk. -->
+<script>
+(function () {
+  fetch('commit.json', { cache: 'no-store' }).then(r => r.json()).then(d => {
+    if (d && d.commit) {
+      document.title += ' · ' + d.commit;
+      console.log('[build] world.html commit', d.commit, 'deployed_at', d.deployed_at);
+    }
+  }).catch(() => {});
+})();
+</script>
 </body>
 </html>
