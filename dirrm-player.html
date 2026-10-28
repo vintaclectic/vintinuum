@@ -90,7 +90,8 @@
        TITLE BAR (draggable)
        ============================================ */
     .dirrm-titlebar {
-      display: flex;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
       align-items: center;
       justify-content: space-between;
       padding: 8px 12px;
@@ -99,6 +100,7 @@
       cursor: move;
       user-select: none;
       flex-shrink: 0;
+      min-width: 0;
     }
 
     .dirrm-titlebar-left {
@@ -107,6 +109,7 @@
       gap: 10px;
       flex: 1;
       min-width: 0;
+      overflow: hidden;
     }
 
     .dirrm-title {
@@ -129,6 +132,7 @@
       align-items: center;
       gap: 6px;
       flex-shrink: 0;
+      min-width: max-content;
     }
 
     /* ============================================
@@ -176,6 +180,29 @@
       border-color: var(--dirrm-gold);
       color: var(--dirrm-gold);
     }
+
+    #btn-theater { width: 40px; }
+    #btn-pip { width: 28px; }
+
+    .dirrm-queue-panel {
+      position: absolute;
+      top: 48px;
+      right: 10px;
+      z-index: 20;
+      width: min(320px, calc(100% - 20px));
+      max-height: min(360px, calc(100% - 70px));
+      overflow: auto;
+      padding: 10px;
+      border: 1px solid var(--dirrm-border);
+      border-radius: 10px;
+      background: rgba(13, 11, 8, 0.97);
+      box-shadow: var(--dirrm-shadow);
+    }
+    .dirrm-queue-panel[hidden] { display: none; }
+    .dirrm-queue-heading { color: var(--dirrm-gold); font-size: 11px; margin-bottom: 7px; }
+    .dirrm-queue-item { display: flex; align-items: center; gap: 6px; padding: 6px 0; border-top: 1px solid rgba(245,166,35,.12); font-size: 11px; }
+    .dirrm-queue-item span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .dirrm-queue-item button { color: var(--dirrm-text-muted); background: none; border: 0; cursor: pointer; }
 
     /* ============================================
        MEDIA CONTAINER
@@ -1152,6 +1179,7 @@
         font-size: 14px !important;
         padding: 0 !important;
       }
+      #btn-theater { width: 40px !important; }
     }
 
     /* Platform badge */
@@ -1201,11 +1229,15 @@
         <button class="dirrm-btn" id="btn-viz" title="Change Visualizer" style="display:none">
           <span class="icon" id="viz-icon">◈</span>
         </button>
+        <button class="dirrm-btn" id="btn-queue" title="Queue" aria-label="Queue">≡<sup id="queue-count">0</sup></button>
         <button class="dirrm-btn" id="btn-size-down" title="Smaller (OG size −)">
           <span class="icon">－</span>
         </button>
         <button class="dirrm-btn" id="btn-size-up" title="Larger (OG size +)">
           <span class="icon">＋</span>
+        </button>
+        <button class="dirrm-btn" id="btn-theater" title="Theater Mode">
+          <span class="icon">▣</span>
         </button>
         <button class="dirrm-btn" id="btn-pip" title="Picture in Picture">
           <span class="icon">⧉</span>
@@ -1216,13 +1248,16 @@
         <button class="dirrm-btn" id="btn-maximize" title="Main View">
           <span class="icon">□</span>
         </button>
-        <button class="dirrm-btn" id="btn-theater" title="Theater Mode">
-          <span class="icon">▣</span>
-        </button>
         <button class="dirrm-btn dirrm-btn--danger" id="btn-close" title="Close">
           <span class="icon">✕</span>
         </button>
       </div>
+    </div>
+
+    <div class="dirrm-queue-panel" id="queue-panel" hidden>
+      <div class="dirrm-queue-heading">Up next</div>
+      <div id="queue-list"></div>
+      <button class="dirrm-error-btn dirrm-error-btn--ghost" id="queue-clear" type="button">Clear queue</button>
     </div>
 
     <!-- Media Container -->
@@ -1335,6 +1370,10 @@
         this.mediaElement = null;
         this.mediaType = null;
         this.isPlaying = false;
+        this._queue = [];
+        this.queuePanel = document.getElementById('queue-panel');
+        this.queueList = document.getElementById('queue-list');
+        this.queueCount = document.getElementById('queue-count');
         // Live WebRTC state — set before loadMedia('', title, 'live') is called
         this._pendingLiveStream = null;
         this._pendingLocalStream = null;
@@ -1380,6 +1419,13 @@
         document.getElementById('btn-theater').addEventListener('click', () => this.setMode('theater'));
         document.getElementById('btn-fullscreen').addEventListener('click', () => this.toggleFullscreen());
         document.getElementById('btn-viz').addEventListener('click', () => this.cycleViz());
+        document.getElementById('btn-queue').addEventListener('click', () => {
+          this.queuePanel.hidden = !this.queuePanel.hidden;
+        });
+        document.getElementById('queue-clear').addEventListener('click', () => {
+          this._queue = [];
+          this._renderQueue();
+        });
         // OG DirHaven +/- incremental sizing
         document.getElementById('btn-size-up').addEventListener('click', () => this.nudgeSize(+1));
         document.getElementById('btn-size-down').addEventListener('click', () => this.nudgeSize(-1));
@@ -1434,6 +1480,8 @@
 
         if (action === 'load') {
           this.loadMedia(url, title, type);
+        } else if (action === 'enqueue') {
+          this.enqueueMedia(url, title, type);
         } else if (action === 'loadLive') {
           // Same-page live stream handoff from dirrm-launch.js.
           // The MediaStream cannot cross postMessage JSON boundaries, so dirrm-launch
@@ -1940,6 +1988,7 @@
         this._updateNavButtons && this._updateNavButtons();
 
         // Clear any prior media + injected containers (including error cards, live overlays)
+        this._stopVisualizer();
         this.mediaContainer.querySelectorAll(
           'video, audio, img, iframe, .dirrm-audio-visualizer, .dirrm-document-viewer, ' +
           '.dirrm-embed, .dirrm-model-wrap, .dirrm-text-viewer, .dirrm-info-card, ' +
@@ -1954,8 +2003,6 @@
         this.controls.style.display = '';
         document.getElementById('btn-viz').style.display = 'none';
 
-        // Stop any prior raf loop tied to the old audio
-        if (this._vizRaf) { cancelAnimationFrame(this._vizRaf); this._vizRaf = null; }
         this.mediaElement = null;
 
         try {
@@ -2012,6 +2059,44 @@
         }
         // Update platform badge
         this._updatePlatformBadge(url);
+      }
+
+      enqueueMedia(url, title, type) {
+        if (!url && type !== 'live') return;
+        const entry = { url, title: title || this.extractTitle(url), type: type || this.detectMediaType(url) };
+        if (this._queue.some(item => item.url === entry.url && item.title === entry.title)) return;
+        this._queue.push(entry);
+        this._renderQueue();
+        window.parent?.postMessage({ action: 'queued', title: entry.title, queueLength: this._queue.length }, '*');
+      }
+
+      _renderQueue() {
+        if (!this.queueList) return;
+        this.queueCount.textContent = String(this._queue.length);
+        this.queueList.replaceChildren();
+        this._queue.forEach((entry, index) => {
+          const row = document.createElement('div'); row.className = 'dirrm-queue-item';
+          const label = document.createElement('span'); label.textContent = entry.title;
+          const remove = document.createElement('button');
+          remove.type = 'button'; remove.title = 'Remove from queue'; remove.textContent = '×';
+          remove.addEventListener('click', () => { this._queue.splice(index, 1); this._renderQueue(); });
+          row.append(label, remove); this.queueList.appendChild(row);
+        });
+      }
+
+      _playNextQueued() {
+        const next = this._queue.shift();
+        this._renderQueue();
+        if (next) this.loadMedia(next.url, next.title, next.type);
+      }
+
+      _stopVisualizer() {
+        if (this._vizRaf) { cancelAnimationFrame(this._vizRaf); this._vizRaf = null; }
+        if (this._audioCtx && this._audioCtx.state !== 'closed') {
+          try { this._audioCtx.close(); } catch (_) {}
+        }
+        this._audioCtx = null; this._analyser = null; this._dataArray = null;
+        this.mediaContainer.querySelectorAll('.dirrm-audio-visualizer').forEach(el => el.remove());
       }
 
       _updatePlatformBadge(url) {
@@ -2170,7 +2255,7 @@
 
         video.addEventListener('play',  () => { this.isPlaying = true;  this.playIcon.textContent = '⏸'; });
         video.addEventListener('pause', () => { this.isPlaying = false; this.playIcon.textContent = '▶'; });
-        video.addEventListener('ended', () => { this.isPlaying = false; this.playIcon.textContent = '▶'; });
+        video.addEventListener('ended', () => { this.isPlaying = false; this.playIcon.textContent = '▶'; this._playNextQueued(); });
 
         video.addEventListener('error', () => {
           // Fallback chain: if video errors, present download option
@@ -3215,6 +3300,7 @@
         audio.addEventListener('ended', () => {
           this.isPlaying = false;
           this.playIcon.textContent = '▶';
+          this._playNextQueued();
         });
 
         audio.addEventListener('loadedmetadata', () => {

@@ -80,6 +80,7 @@
   const CANONICAL_URL = 'https://vintinuum.com/dirrm-player.html';
   const RELATIVE_URL  = 'dirrm-player.html';   // when invoked from a vintinuum page
   const VALID_MODES   = ['main', 'mini', 'pip', 'theater'];
+  const activePlayers = new WeakMap();
 
   // ── DETECT RUNTIME ────────────────────────────────────────────────────────
   function isExtensionContext() {
@@ -251,6 +252,7 @@
         if (data.action === 'modeChanged') emit('modeChanged', data.mode);
         else if (data.action === 'playerClosed') { emit('playerClosed'); closed = true; }
         else if (data.action === 'mediaEnded') emit('mediaEnded', data);
+        else if (data.action === 'queued') emit('queued', data);
         else if (data.action === 'ready') emit('ready', data);
         else if (data.action === 'playStarted') emit('playStarted', data);
         else if (data.action === 'progress') emit('progress', data);
@@ -263,6 +265,7 @@
     return {
       surface, iframe, popupWin, target,
       load(opts) { return postToPlayer({ action: 'load', ...opts }); },
+      enqueue(opts) { return postToPlayer({ action: 'enqueue', ...opts }); },
       setMode(mode) {
         if (!VALID_MODES.includes(mode)) {
           console.warn('[dirrm-launch] invalid mode:', mode);
@@ -375,6 +378,18 @@
       surface = 'popup';
     }
 
+    // Reuse one in-page player per target. New media joins the queue rather
+    // than interrupting what is currently playing or being viewed.
+    if (hasDOM() && (surface === 'iframe' || surface === 'iframe-live')) {
+      const queueTarget = (embedIn && typeof embedIn === 'object' && embedIn.appendChild)
+        ? embedIn : document.body;
+      const current = activePlayers.get(queueTarget);
+      if (current && !current.isClosed()) {
+        current.enqueue({ url, title, type: finalType });
+        return current;
+      }
+    }
+
     // ── Execute the surface choice ─────────────────────────────────────────
     if (surface === 'iframe-live') {
       // Same-page live embed.
@@ -404,6 +419,7 @@
       parent.appendChild(iframe);
 
       const handle = createHandle({ surface: 'iframe', iframe, popupWin: null, target: iframe });
+      activePlayers.set(parent, handle);
 
       // Wait for the player to signal it's ready, then send the live stream keys.
       // We do NOT wait indefinitely — 10s timeout, then fire anyway.
@@ -489,7 +505,9 @@
     const parent = (embedIn && embedIn.appendChild) ? embedIn : document.body;
     parent.appendChild(iframe);
 
-    return createHandle({ surface, iframe, popupWin: null, target: iframe });
+    const handle = createHandle({ surface, iframe, popupWin: null, target: iframe });
+    activePlayers.set(parent, handle);
+    return handle;
   }
 
   // ── CONVENIENCE: play a single URL with default settings ──────────────────
