@@ -1527,6 +1527,32 @@
       .dirrm-btn--play { width: 48px; height: 48px; font-size: 20px; }
       .dirrm-volume { display: none; }
       .dirrm-skip { padding: 6px 10px; font-size: 11px; }
+
+      /* NO-COLLISION TITLE RAIL. The title and its action buttons are two
+         separate rows at phone widths. Keeping them in one flex row makes a
+         long title compete with the fixed-width action cluster; at certain
+         widths the queue/back action then paints over the title. The title
+         owns the first row and the controls own the second, so neither can
+         overlap or overflow the other regardless of title length. */
+      .dirrm-titlebar {
+        flex-wrap: wrap;
+        row-gap: 6px;
+        align-items: flex-start;
+      }
+      .dirrm-titlebar-left,
+      .dirrm-titlebar-right {
+        flex: 0 0 100%;
+        width: 100%;
+      }
+      .dirrm-title {
+        min-width: 0;
+        flex: 1 1 0;
+      }
+      .dirrm-titlebar-right {
+        justify-content: flex-end;
+        flex-wrap: wrap;
+        min-width: 0;
+      }
     }
 
     /* Mode buttons — compact icon-only on mobile, still accessible */
