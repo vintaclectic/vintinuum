@@ -6,8 +6,17 @@ Format: `- [ ] task — [owner: ] — [status: open | claimed | in review | bloc
 
 ---
 
-## Phase 1 — Pipeline proof  ← CURRENT
+## Phase 1 — Pipeline proof — DONE 2026-10-28 951d445
 Test: change one word, commit, and see it live on a phone at vintinuum.com/world.html within 2 minutes, footer hash matching.
+
+**Phase test re-verified live 2026-10-28 (seat-5, task 2W4XATX) before advancing:** all 5 tasks below
+are `[x]`. Re-ran the checks rather than trusting the prior log entry: `curl -s
+https://vintinuum.com/commit.json` → `{"commit":"b82f8c6","deployed_at":"2026-10-28T20:11:20Z"}`
+(matches the deployed world.html commit); `curl -s https://api.vintaclectic.com/api/world/health` →
+`{"tick":6579,"agents":5,"uptime_sec":1391,"commit":"aacbf53"}` (server running 24/7, tick rising);
+`curl -sI https://api.vintaclectic.com/api/world/health` → `cache-control: no-store` present. `git diff
+--stat b82f8c6 origin/main` → only `COUNCIL_LOG.md` + `commit.json` changed since deploy (no world.html
+drift). Phase test passes live. Marker advanced to Phase 2 per rule 8.
 
 - [x] Confirm repo world.html == served world.html (curl + diff); fix deploy path if not — [owner: vessel] — [status: verified 2026-10-28 — `curl -s https://vintinuum.com/world.html` byte-diffed 0 against the repo copy. Already true, no fix needed.]
 - [x] Add `Cache-Control: no-store` for world.html and /api/*; purge Cloudflare cache — [owner: vessel] — [status: done for the API, caveat for the page — see note below]
@@ -75,10 +84,10 @@ Test: change one word, commit, and see it live on a phone at vintinuum.com/world
    — real, low-risk, but a separate unit of work from this one; filing it
    rather than doing it unasked inside a Phase-1 pipeline-proof task.
 
-## Phase 2 — World skeleton
+## Phase 2 — World skeleton  ← CURRENT
 Test: tick counter visibly rises on world.html with the browser closed and reopened.
 
-- [ ] SQLite schema: agents, parcels, inventory, ledger, orders, contracts, orgs, events, uw_pages, uw_mail, memories — [owner: ] — [status: open]
+- [x] SQLite schema: agents, parcels, inventory, ledger, orders, contracts, orgs, events, uw_pages, uw_mail, memories — [owner: seat-5 (task 2W4XATX)] — [status: done 2026-10-28 — audited DIRVERSE's existing schema first (world_residents=agents, world_inventory=inventory, world_carry/world_carry_state=ledger, world_trades/world_trade_escrow/world_trade_log=orders/contracts, covenant_members/covenant_proposals=orgs, many world_*_events tables=events, world_underweb_sites/world_underweb_mail=uw_pages/uw_mail — all already exist, not duplicated). Built only the two genuinely-missing pieces: `world_parcels` (64x64 deterministic-terrain grid — DIRVERSE's land model is continuous claim_x/claim_z, not a discrete grid, so this is additive, not a migration) and `world_memories` (importance-scored diary/event/outcome rows). Shipped in vintinuum-api commit 4d2f7be, wired into world/world-server.js init(). Verified live: `pm2 restart vintinuum-api` → logs show `[world] world_memories ready` + `[world] world_parcels ready (4096 parcels, +0 new)` with zero errors; `sqlite3 vintinuum.db "SELECT COUNT(*) FROM world_parcels"` → 4096; `curl https://api.vintaclectic.com/api/world/health` → 200 after restart. **Does NOT resolve the DIRVERSE-vs-WORLD_SPEC land-model fork** flagged in Phase 1's notes — these tables sit alongside DIRVERSE's schema, untouched, droppable.]
 - [ ] Tick engine with configurable rate; needs drain per tick — [owner: ] — [status: open]
 - [ ] 64 × 64 parcel map with terrain, rendered on world.html — [owner: ] — [status: open]
 - [ ] Daily DB snapshot, keep 14 — [owner: ] — [status: open]
