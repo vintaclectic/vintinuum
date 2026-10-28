@@ -6,7 +6,7 @@ Format: `- [ ] task — [owner: ] — [status: open | claimed | in review | bloc
 
 ---
 
-## Phase 1 — Pipeline proof  ← CURRENT
+## Phase 1 — Pipeline proof  ← DONE 2026-10-28 951d445
 Test: change one word, commit, and see it live on a phone at vintinuum.com/world.html within 2 minutes, footer hash matching.
 
 - [x] Confirm repo world.html == served world.html (curl + diff); fix deploy path if not — [owner: vessel] — [status: verified 2026-10-28 — `curl -s https://vintinuum.com/world.html` byte-diffed 0 against the repo copy. Already true, no fix needed.]
@@ -75,13 +75,67 @@ Test: change one word, commit, and see it live on a phone at vintinuum.com/world
    — real, low-risk, but a separate unit of work from this one; filing it
    rather than doing it unasked inside a Phase-1 pipeline-proof task.
 
-## Phase 2 — World skeleton
+## Phase 2 — World skeleton ← CURRENT
 Test: tick counter visibly rises on world.html with the browser closed and reopened.
 
-- [ ] SQLite schema: agents, parcels, inventory, ledger, orders, contracts, orgs, events, uw_pages, uw_mail, memories — [owner: ] — [status: open]
+- [x] SQLite schema: agents, parcels, inventory, ledger, orders, contracts, orgs, events, uw_pages, uw_mail, memories — [owner: seat-8] — [status: shipped + verified live 2026-10-28, vintinuum-api commit f0a673b — see note below, there is a SECOND in-flight schema effort on the same task]
 - [ ] Tick engine with configurable rate; needs drain per tick — [owner: ] — [status: open]
 - [ ] 64 × 64 parcel map with terrain, rendered on world.html — [owner: ] — [status: open]
 - [ ] Daily DB snapshot, keep 14 — [owner: ] — [status: open]
+
+**Notes for the Arbiter / next agent (2026-10-28, seat-8, task 2W4XATX):**
+
+1. **Schema shipped, all 11 tables exact-named per WORLD_SPEC.md §3.**
+   `vintinuum-api/world/world-council-schema.js` creates `agents`, `parcels`,
+   `inventory`, `ledger`, `orders`, `contracts`, `orgs`, `events`, `uw_pages`,
+   `uw_mail`, `memories` (`CREATE TABLE IF NOT EXISTS`, idempotent, wired at
+   boot in `server.js`'s `_resolveWithDeadline.then(...)` callback). Verified
+   live three independent ways after a `pm2 restart vintinuum-api`: (a)
+   `curl https://api.vintaclectic.com/api/world/schema` → `{"all_present":true}`
+   with all 11 flagged `true`; (b) same via `localhost:8767` direct; (c)
+   `sqlite3 vintinuum.db ".tables"` on the live DB file lists all 11 by name.
+   No restart loop (`pm2 jlist` stayed at the same `restart_time` through two
+   checks 15s apart). Committed as `vintinuum-api` `f0a673b`, pushed to main.
+   Confirmed zero collision with DIRVERSE's existing `world_*` tables or with
+   Agentis's unrelated `agents` table (that one lives in a completely
+   different database file, `/home/vinta/agentis/agentis.db`).
+
+2. **⚠️ A SECOND, DIFFERENTLY-NAMED schema effort for this exact task was
+   found in-flight, uncommitted, in the SAME `vintinuum-api` checkout, while
+   I was building mine:** `world/parcels.js` and `world/memories.js`, both
+   headed literally "Task 2W4XATX, Phase 2 schema" in their own comments.
+   They create `world_parcels` and `world_memories` (DIRVERSE-style `world_`
+   prefix) instead of the bare `parcels`/`memories` names WORLD_SPEC.md §3
+   asks for verbatim. I did NOT touch, commit, or delete that other session's
+   files — per the council's push discipline, another session's in-flight
+   uncommitted work is never mine to resolve unilaterally. Net effect right
+   now: there are potentially TWO parallel, non-interoperable schemas for the
+   same economy if that session also commits. **This is the self-perpetuating
+   card design's real failure mode**: this task's own instructions say to
+   requeue itself under the identical title after every run, so multiple
+   seats can end up claiming "the next open task in Phase 2" at the same
+   moment with no shared lock at the TASKS.md-checkbox granularity (`vintask`
+   only locks whole cards, not individual checklist lines). Flagging for the
+   Sovereign/Arbiter: before Phase 2's remaining 3 tasks are built on TOP of
+   a schema, someone needs to look at both `world-council-schema.js` (mine,
+   exact spec names, all 11 tables in one module) and `parcels.js`/
+   `memories.js` (the other session's, `world_`-prefixed, split one module
+   per table, includes actual terrain-generation/memory-scoring logic I did
+   not build) and pick ONE to continue, or explicitly decide they coexist on
+   purpose. I did not pick for them because it's their uncommitted work, not
+   mine to overwrite or judge unilaterally.
+
+3. **Recommend, don't decide:** if I had to bet, the `world_`-prefixed
+   version is more likely to be the one Phase 2's remaining tasks build on,
+   because `world/parcels.js` already includes real terrain generation
+   (deterministic mulberry32 hash per (x,y), the exact "64×64 parcel map with
+   terrain" checklist item) and `world/memories.js` already includes
+   `addMemory`/`getTopMemories` (Phase 3's "memory store with importance
+   scoring"). My module is schema-only, by design, matching the checklist
+   item's literal scope. Whoever reconciles this should keep whichever one
+   has the most real logic already riding on it, and port anything useful
+   from the other before dropping it — the tables are trivially droppable
+   either way, nothing downstream depends on them yet.
 
 ## Phase 3 — Three citizens
 Test: event feed shows 3 agents acting on their own for an hour; at least one runs low on food and does something about it.
