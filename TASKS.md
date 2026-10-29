@@ -9,7 +9,7 @@ Test: tick counter visibly rises on `world.html` with the browser closed and reo
 - [x] 64 × 64 parcel map with terrain, rendered on world.html — [owner: aetherhold] — [status: shipped 2026-10-29]
 - [x] Daily DB snapshot, keep 14 — [owner: aetherhold] — [status: shipped 2026-10-29]
 
-Phase 2 implementation commit: recorded in the task journal after live verification.
+Phase 2 implementation commit: b96529a (viewer) plus API commit 99ae082.
 
 ## Phase 3 — Three citizens ← CURRENT
 
