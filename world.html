@@ -37,7 +37,7 @@
      was 264px TALL, trading a horizontal collision for a vertical one. A centred
      message wants a readable measure, so it gets one, and the band it may occupy
      is bounded explicitly. */
-  #status { position: fixed; z-index: 5; font-size: 20px; color: rgba(245,235,220,0.7); opacity: 0; transition: opacity .6s; pointer-events: none;
+  #status, #worldState { position: fixed; z-index: 5; font-size: 20px; color: rgba(245,235,220,0.7); opacity: 0; transition: opacity .6s; pointer-events: none;
     overflow: hidden; text-align: center; text-wrap: balance;
     /* centre of the column that starts where the rail ends and STOPS where the
        right-hand docked stack begins (--vint-dock-reach-bottom). Centring in the
@@ -156,6 +156,56 @@
      for the sheet's lifetime: visibility, not opacity, so the scan skips it the
      same frame dv-sheeting lands and layoutRail re-measures. */
   body.dv-sheeting #status { visibility: hidden; }
+
+  /* ── MEF2C4P (Phase 3) — THE WORLD-STATE INDICATOR (WORLD_SPEC §8) ──────────
+     "at 100%, the world pauses ... viewer shows 'world sleeping'". A dedicated
+     pill that reuses #status's EXACT, hard-won free band (shared selectors
+     above), so it inherits #status's proven collision-free geometry at every
+     breakpoint and cannot overlap the HUD, rail, dock, feed or say bar. It is
+     shown ONLY when the world is not running normally (slowdown/sleeping).
+
+     EXCLUSIVITY, NOT z-index (the page's own idiom — see #offer×#feed, the
+     sheeting rule above): #worldState and #status occupy the identical box, so
+     while #worldState is up #status is hidden. Only one of the pair is ever
+     visible, so the two can never collide with each other. */
+  #worldState {
+    /* INHERITS #status's exact free-band geometry (top/left/width/max-height/
+       transform from the shared selectors above), so it sits in the one region
+       this page has already proven collision-free at every breakpoint. Only the
+       APPEARANCE is overridden here — a compact single-line chip. It never grows
+       past the band (max-height is #status's), and it never wraps (nowrap), so
+       it cannot bloom downward into the bottom overlays. */
+    box-sizing: border-box;
+    font-size: clamp(12px, 3.2vw, 14px);
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    background: rgba(20,14,10,0.82);
+    border: 1px solid rgba(244,199,154,0.32);
+    border-radius: 999px;
+    padding: 8px 15px;
+    width: auto;                /* a chip hugs its text, not the whole band width */
+    max-width: min(320px, calc(100vw - var(--status-rail) - var(--vint-dock-reach-bottom, 60px) - 16px));
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    color: rgba(245,235,220,0.92);
+    letter-spacing: 0.01em;
+  }
+  #worldState .ws-dot {
+    display: inline-block; width: 8px; height: 8px; border-radius: 50%;
+    margin-right: 8px; vertical-align: baseline; background: #f4c79a;
+  }
+  #worldState.ws-sleeping { border-color: rgba(150,170,255,0.5); color: rgba(220,228,255,0.95); }
+  #worldState.ws-sleeping .ws-dot { background: #8aa0ff; box-shadow: 0 0 10px rgba(138,160,255,0.7); }
+  #worldState.ws-slowdown { border-color: rgba(255,200,120,0.55); }
+  #worldState.ws-slowdown .ws-dot { background: #ffc878; box-shadow: 0 0 9px rgba(255,200,120,0.6); }
+  #worldState.show { opacity: 1; }
+  /* EXCLUSIVITY (the page's own idiom — #offer×#feed, the sheeting rule above).
+     The pill shares #status's box, and a guest watching a sleeping world would
+     otherwise see it fight the big #invite overlay for the same band, so while
+     the pill is up BOTH #status and #invite stand down. World-state is the
+     salient fact when the world sleeps; the invite returns when it wakes. */
+  body.vw-worldstate #status,
+  body.vw-worldstate #invite { visibility: hidden; }
 
   /* speech feed — bottom-left, traces fade out (no scroll, no overflow) */
   #feed { position: fixed; left: 16px; bottom: 92px; z-index: 4; max-width: min(78vw, 460px); display: flex; flex-direction: column; gap: 8px; pointer-events: none; }
@@ -506,7 +556,7 @@
                       the only left-column surface that reaches below the hint.
        max-height IS the band, so the box can never grow past either edge; when
        the band is short it clips inside its own box, it never spills. */
-    #status {
+    #status, #worldState {
       --st-hint: var(--wh-hint-need, 57px);
       --st-ceil: calc(max(var(--vw-top-h), var(--vint-hud-bottom, 274px) + var(--st-hint)) + var(--vw-gut));
       /* fine pointer: #topctl's row (46px) sits a gutter above the bottom band */
@@ -518,6 +568,14 @@
       max-height: var(--st-band) !important;
       transform: translate(-50%, -50%) !important;
       font-size: clamp(16px, 4.4vw, 19px);
+    }
+    /* MEF2C4P: the pill is a compact chip, smaller than #status's message, but
+       otherwise shares #status's mobile band exactly (top/left/width/max-height
+       from the shared selector above). width:auto so it hugs its short label. */
+    #worldState {
+      width: auto !important;
+      max-width: min(340px, calc(100vw - var(--status-rail) - var(--vw-gut))) !important;
+      font-size: clamp(12px, 3.4vw, 14px) !important;
     }
     #traces {
       top: calc(var(--vw-top-h) + (100svh - var(--vw-top-h) - var(--vw-bot-h)) / 2);
@@ -601,6 +659,9 @@
 <body data-atlas-pin="false">
 <div id="stage"></div>
 <div id="status" class="show">finding the clearing…</div>
+<!-- MEF2C4P (Phase 3): world cost-control state (WORLD_SPEC §8). Hidden until
+     the world is slowing or sleeping; polled from /api/world/budget. -->
+<div id="worldState" aria-live="polite"></div>
 
 <!-- loader veil — bounded, breathing; dissolves the instant the world paints (helios) -->
 <div id="veil">
@@ -1112,6 +1173,55 @@
     } catch (_) {}
   }
   function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+  // ── MEF2C4P (Phase 3) — THE WORLD-STATE INDICATOR (WORLD_SPEC §8) ──────────
+  // Polls /api/world/budget (public, no auth, no-store) and surfaces the world's
+  // cost-control state: silent while running, a pill while slowing, and a clear
+  // "the world is sleeping" while paused (kill switch) or at 100% budget. Shown
+  // for guests and residents alike — the whole point is that a watcher can SEE
+  // the world is asleep rather than think it broke.
+  function pollWorldState() {
+    const base = (window.__VINTINUUM_API_BASE || '').replace(/\/$/, '');
+    const el = document.getElementById('worldState');
+    if (!el) return;
+    const apply = (st) => {
+      const status = st && st.status;
+      // running (or unknown/unreachable) → the pill is gone and #status is free.
+      if (!status || status === 'running') {
+        el.classList.remove('show', 'ws-sleeping', 'ws-slowdown');
+        document.body.classList.remove('vw-worldstate');
+        return;
+      }
+      let label;
+      el.classList.toggle('ws-sleeping', status === 'sleeping');
+      el.classList.toggle('ws-slowdown', status === 'slowdown');
+      // Compact single-line labels — the chip never wraps (see #worldState CSS).
+      if (status === 'sleeping') {
+        label = st.paused && st.pause_source === 'manual'
+          ? 'world sleeping · paused'
+          : 'world sleeping · budget';
+      } else {
+        label = 'world slowing · ' + (st.pct_display != null ? st.pct_display : 80) + '%';
+      }
+      el.innerHTML = '<span class="ws-dot"></span>' + esc(label);
+      el.classList.add('show');
+      document.body.classList.add('vw-worldstate');
+    };
+    const tick = async () => {
+      try {
+        const r = await fetch(base + '/api/world/budget', { cache: 'no-store' });
+        if (!r.ok) { apply(null); return; }
+        apply(await r.json());
+      } catch (_) { apply(null); } // unreachable brain → no pill, never a false alarm
+    };
+    tick();
+    setInterval(tick, 15000);
+    // Test seam: the collision verifier drives states THROUGH this poller (with
+    // /api/world/budget stubbed at the network layer) so it proves the real
+    // apply() path, not a DOM imitation of it. Read-only hook, no behaviour.
+    window.__vwWorldState = { tick };
+  }
+  try { pollWorldState(); } catch (_) {}
 
   // ── CITIZEN FEED (9DHW7ST, Phase 3 — "Live event feed on world.html (SSE)") ──
   // WORLD_SPEC §3 citizen events (hunger, incapacitation, death, and every
