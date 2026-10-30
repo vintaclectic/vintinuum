@@ -163,6 +163,7 @@
   .utterance .who { color: var(--c, #f4c79a); font-weight: 500; margin-right: 8px; }
   .utterance.agent { --c: #f4c79a; } .utterance.user { --c: #9fc0e0; } .utterance.ambient { --c: #cdbb9c; font-style: italic; }
   .utterance.muse { --c: #c0b0e0; font-style: italic; opacity: 0.92; } /* an agent's autonomous thought, left in the clearing */
+  .utterance.world { --c: #8fd0b0; font-style: italic; opacity: 0.9; } /* 9DHW7ST: a WORLD_SPEC citizen event, drifting through the clearing (same box as every utterance — no new surface) */
   @keyframes rise { to { opacity: 1; transform: translateY(0); } }
   @keyframes fade { to { opacity: 0; } }
 
@@ -1112,6 +1113,67 @@
   }
   function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 
+  // ── CITIZEN FEED (9DHW7ST, Phase 3 — "Live event feed on world.html (SSE)") ──
+  // WORLD_SPEC §3 citizen events (hunger, incapacitation, death, and every
+  // Phase 4+ trade/birth/war to come — the world's OWN history) drift through
+  // the clearing in its own voice, routed through the SAME `#feed` / `utter()`
+  // channel RECOGNIZANCE uses, for the SAME reason: that surface is measured,
+  // capped at five children, self-clearing and pointer-events:none, so a
+  // citizen event can NEVER collide with anything or outstay its welcome. This
+  // adds ZERO new DOM and ZERO new fixed element — it is only a new SOURCE for
+  // an existing, already-collision-proof channel (No-Collision Law, by reuse).
+  //
+  // The stream opens at the world's CURRENT high-water mark, never id 0, so the
+  // feed shows what is happening NOW and a connect never floods the clearing
+  // with a replay of all history. Unknown event types still render (generic
+  // phrase) so Phase 4+ events appear here the moment they are emitted, with no
+  // viewer change.
+  function phraseFor(ev){
+    const d = (ev && ev.data) || {};
+    switch (ev && ev.type) {
+      case 'agent_died':         return 'went still' + (d.cause ? ' — ' + d.cause : '');
+      case 'agent_incapacitated':return 'fell, too hungry to go on';
+      case 'agent_born':         return 'drew a first breath';
+      case 'trade':              return 'struck a trade';
+      case 'claim_parcel':       return 'laid claim to a patch of land';
+      case 'craft':              return 'made something with their hands';
+      case 'pay':                return 'settled a debt';
+      case 'move':               return 'moved on';
+      default:                   return String((ev && ev.type) || 'stirred').replace(/_/g, ' ');
+    }
+  }
+  function startCitizenFeed(){
+    if (typeof EventSource === 'undefined') return;   // ancient browser — the 3D world is the content anyway
+    if (window.__citizenFeedStarted) return; window.__citizenFeedStarted = true;
+    const base = (window.__VINTINUUM_API_BASE || '').replace(/\/$/, '');
+    let since = 0, es = null, backoff = 2000;
+    const open = () => {
+      try { es = new EventSource(base + '/api/world/events/stream?since=' + since); }
+      catch (_) { return; }
+      es.addEventListener('world', (e) => {
+        let ev; try { ev = JSON.parse(e.data); } catch (_) { return; }
+        if (!ev) return;
+        if (ev.id) since = ev.id;                       // track so a reconnect resumes with no gap
+        utter({ kind: 'world', name: ev.agent_name || 'a citizen', text: phraseFor(ev) });
+      });
+      es.onopen = () => { backoff = 2000; };
+      es.onerror = () => {
+        // EventSource reconnects on its own; only if the browser gives up
+        // entirely do we reopen, with bounded backoff, resuming from `since`.
+        if (es && es.readyState === EventSource.CLOSED) {
+          try { es.close(); } catch (_) {}
+          setTimeout(open, backoff);
+          backoff = Math.min(backoff * 2, 30000);
+        }
+      };
+    };
+    // Learn the current high-water mark first, then stream only what is newer.
+    fetch(base + '/api/world/events?limit=1')
+      .then(r => r.ok ? r.json() : null)
+      .then(d => { since = (d && Number(d.latest_id)) || 0; open(); })
+      .catch(() => open());   // if the probe fails, stream from 0 (feed caps at 5 + fades, so no flood)
+  }
+
   // The world ALWAYS renders — signed-in or signed-out (Vinta directive 2026-07-05:
   // "never a blank screen"). A guest sees the full 3D clearing and can look around;
   // only joining the LIVING world (other people, agents, voice, building) needs a
@@ -1127,13 +1189,14 @@
   // ticket exists. A thrown module never blanks the page — start() catches its
   // own internals and the loop keeps rendering the clearing.
   VintinuumWorld.start({ mountEl: document.getElementById('stage'), onSpeech: utter, onStatus: status, worldId: _wid, guest: isGuest })
-    .then(() => { if (!isGuest) showTraces(); else guestOverlay(); })
+    .then(() => { if (!isGuest) showTraces(); else guestOverlay(); startCitizenFeed(); })
     .catch(e => {
       console.error('[world] start failed:', e);
       // even if start() throws before building, we still owe the visitor SOMETHING
       // beautiful — a calm status over the warm ground, never a dead brown box.
       status('the clearing is drifting just out of reach — try again in a moment.');
       if (isGuest) guestOverlay();
+      startCitizenFeed();   // the feed is independent of the 3D scene — the world keeps talking even if WebGL fails
     });
 
   // the conversion moment — soft, refusable, never blocks the conversation
