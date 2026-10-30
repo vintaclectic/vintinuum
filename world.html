@@ -140,6 +140,7 @@
   .utterance .who { color: var(--c, #f4c79a); font-weight: 500; margin-right: 8px; }
   .utterance.agent { --c: #f4c79a; } .utterance.user { --c: #9fc0e0; } .utterance.ambient { --c: #cdbb9c; font-style: italic; }
   .utterance.muse { --c: #c0b0e0; font-style: italic; opacity: 0.92; } /* an agent's autonomous thought, left in the clearing */
+  .utterance.world { --c: #8fd0b0; font-style: italic; opacity: 0.9; } /* 9DHW7ST: a WORLD_SPEC citizen event, drifting through the clearing (same box as every utterance — no new surface) */
   @keyframes rise { to { opacity: 1; transform: translateY(0); } }
   @keyframes fade { to { opacity: 0; } }
 
@@ -174,6 +175,213 @@
   #hint { position: fixed; left: max(16px, env(safe-area-inset-left, 16px)); top: calc(var(--vint-hud-bottom, 274px) + 12px); z-index: 4; font-size: 13px; color: rgba(245,235,220,0.5); max-width: min(228px, calc(100vw - 32px)); }
   #leave { /* W4 2026-07-09: was top-RIGHT under #editHeadBtn (z1500) — 100% buried, a dead primary control. Opposite corners: leave=LEFT, edit-head=RIGHT. */ position: fixed; left: max(16px, env(safe-area-inset-left, 16px)); top: max(14px, env(safe-area-inset-top, 14px)); z-index: 1600; font-size: 14px; color: rgba(245,235,220,0.6); text-decoration: none; min-height: 44px; display: flex; align-items: center; padding: 0 4px; }
   @media (pointer: coarse) { #hint { display: none; } }
+
+  /* ═══════════════════════════════════════════════════════════════════
+     MOBILE DECONGESTION (2026-09-23, task 5KPE7PZ)
+
+     THE DIAGNOSIS. Every fixed panel in this file individually obeys the
+     no-collision law — the comment history above is a record of that fight,
+     and those fixes are all still correct and all still here. But the file
+     loads SIX independent HUD modules (world-hud, dirverse-hud, traces-hud,
+     covenants-hud, reckoning-hud, dirhaven-door) plus #leave, #editHeadBtn,
+     #topctl, #movectl, #feed and #saybar. At 375x667 that is nine-plus
+     persistent panels competing for a 375px-wide screen. Nothing OVERLAPS.
+     Everything is simply THERE, at once, and the 3D world those panels exist
+     to describe is reduced to a few hundred visible pixels.
+
+     Vinta's report was "deeply congested, needs reimagined for mobile" — that
+     is a DENSITY failure, not a collision failure, and no further offset
+     arithmetic can fix it. Nudging a panel that is correctly placed just moves
+     the congestion.
+
+     THE FIX IS STRUCTURAL, NOT POSITIONAL. On coarse pointers only:
+       - the world is the content, and it is visible BY DEFAULT;
+       - informational panels start collapsed behind one 44px control;
+       - only the controls you need to *move and speak* stay on screen
+         (#movectl, #saybar, #leave) — the thumb-zone essentials;
+       - summoning a panel is one tap, dismissing it is one tap.
+
+     This REPLACES nothing and BREAKS nothing on desktop: the entire block is
+     inside @media (pointer: coarse), so every fine-pointer layout above is
+     untouched, and every measured-edge variable (--vint-hud-bottom,
+     --dv-railbot, --status-floor) keeps working exactly as before for the
+     panels that are still shown.
+
+     RESERVE, DON'T OVERLAY: #worldChrome is a fixed control, so the panels it
+     governs keep clear of it via --wc-reserve rather than hoping to scroll
+     past. Nothing new is allowed to land on the say bar or the move pad.
+     ═══════════════════════════════════════════════════════════════════ */
+
+  /* the toggle itself — top-right, below #editHeadBtn's 44px band, never on it */
+  #worldChrome { display: none; }
+
+  @media (pointer: coarse) {
+    :root {
+      /* the say bar's real height + its safe-area padding, the floor everything sits above */
+      --wc-saybar: calc(68px + max(16px, env(safe-area-inset-bottom, 16px)));
+      /* the move pad column on the right: 64px button + 16px gutter */
+      --wc-movepad: 80px;
+    }
+
+    #worldChrome {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: fixed;
+      /* LEFT side: #editHeadBtn (z1500) owns the top-RIGHT corner and #topctl
+         stacks beneath it. #leave owns top-LEFT at top:14..58. So this sits
+         BELOW #leave in the left column — one clear slot, nothing shared. */
+      left: max(16px, env(safe-area-inset-left, 16px));
+      top: calc(58px + max(14px, env(safe-area-inset-top, 14px)));
+      z-index: 1601;           /* one above #leave(1600): the master control wins */
+      width: 44px; height: 44px;
+      border-radius: 50%;
+      background: rgba(20,14,10,0.72);
+      border: 1px solid rgba(244,199,154,0.38);
+      color: rgba(245,235,220,0.92);
+      font-family: inherit; font-size: 17px; line-height: 1;
+      backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+      cursor: pointer; -webkit-tap-highlight-color: transparent;
+      touch-action: manipulation;
+    }
+    #worldChrome:active { transform: scale(0.94); }
+    #worldChrome[aria-expanded="true"] {
+      background: rgba(244,199,154,0.24);
+      border-color: rgba(244,199,154,0.7);
+    }
+
+    /* DEFAULT STATE ON TOUCH: the informational panels are stood down.
+       `body:not(.chrome-open)` means a phone opens onto the WORLD, not onto a
+       wall of panels. These are exactly the six HUD modules' roots plus the
+       decorative/among-them surfaces — never the movement or speech controls. */
+    body:not(.chrome-open) #vintWorldHud,
+    body:not(.chrome-open) #dvRail,
+    body:not(.chrome-open) #traces,
+    body:not(.chrome-open) #topctl,
+    body:not(.chrome-open) #editHeadBtn {
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+      transition: opacity .22s ease, visibility .22s;
+    }
+
+    /* RESERVE, DON'T OVERLAY — the collision this block nearly shipped.
+       #vintWorldHud is fixed at left:12px, top:64px, width:228px (world-hud.js
+       line 86/94). #worldChrome sits at left:16px, top:72px, 44x44. Those are
+       the SAME PIXELS: a measured 44x44 overlap, the toggle landing squarely on
+       the panel it governs, every time the panels are open. Caught by computing
+       the boxes rather than eyeballing them.
+
+       The fix is reservation, not a nudge: on touch the left-column panels
+       start BELOW the control's band (72 + 44 + 10px gutter = 126px), so the
+       toggle owns its slot outright and the panel owns everything beneath it.
+       Desktop is untouched — world-hud.js keeps its own 64px ceiling there,
+       because #worldChrome does not exist on fine pointers. */
+    body.chrome-open #vintWorldHud {
+      top: calc(126px + env(safe-area-inset-top, 0px)) !important;
+    }
+
+    /* SUMMONED STATE: panels return, and they return INSIDE their own bounds.
+       Each is clamped so it can neither reach the say bar below nor the move
+       pad on the right, and scrolls internally if its content is taller.
+       min-height:0 is the flex-child scroll guard — without it a tall panel
+       refuses to scroll and blows out its parent instead. */
+    body.chrome-open #vintWorldHud,
+    body.chrome-open #dvRail {
+      max-height: calc(100svh - 110px - var(--wc-saybar));
+      overflow-y: auto;
+      overscroll-behavior: contain;
+      -webkit-overflow-scrolling: touch;
+      min-height: 0;
+    }
+    /* the right-hand stack must clear the move pad, not sit on it */
+    body.chrome-open #topctl {
+      max-height: calc(100svh - 110px - var(--wc-saybar) - var(--wc-movepad));
+      overflow-y: auto;
+      overscroll-behavior: contain;
+      min-height: 0;
+    }
+
+    /* the speech feed is the one informational surface that STAYS — it is the
+       world talking to you, and it fades on its own. But on a phone it is
+       capped so a burst of utterances cannot climb the screen. */
+    #feed {
+      overflow: hidden;
+      max-width: calc(100vw - var(--wc-movepad) - 32px);
+      bottom: calc(var(--wc-saybar) + 8px);
+      /* PANELS CLOSED: the feed may use the screen down from the toggle's band.
+         116px is #worldChrome's own bottom edge (72 + 44). */
+      max-height: calc(100svh - var(--wc-saybar) - 116px - 16px);
+    }
+
+    /* PANELS OPEN: the feed is bottom-anchored and #vintWorldHud is
+       top-anchored, so on a SHORT screen they grow toward each other and meet
+       in the middle. Measured: a 208x43px overlap at 320x568 and 224x130px in
+       landscape — both caught by computing the boxes, neither visible at 375+.
+       The feed therefore ceilings itself against the panel's LIVE bottom edge
+       (--vint-hud-bottom, republished by world-hud.js on every resize,
+       orientationchange and world:state) plus a 10px gutter. The neighbour
+       follows the panel; it never guesses at it — the same discipline #hint and
+       #dvRail already use in this file. */
+       A bare calc() here goes NEGATIVE on a landscape phone (measured: -8px at
+       844x390), and a negative max-height is a silently dead feed — the world
+       stops talking to you and nothing explains why. max() floors it at 64px,
+       which is one utterance: the feed always says at least the last thing
+       said, or it is honestly not there at all. */
+    body.chrome-open #feed {
+      max-height: max(64px, calc(
+        100svh
+        - var(--wc-saybar)
+        - var(--vint-hud-bottom, 326px)
+        - 18px
+      ));
+    }
+
+    /* #status is a centred transient; on a phone it must not fight the feed */
+    #status { max-height: 26svh; }
+
+    /* the offer pill sits above the say bar and clear of the move pad */
+    #offer { bottom: calc(var(--wc-saybar) + 12px); }
+    #micHint { bottom: calc(var(--wc-saybar) + 6px); }
+  }
+
+  /* a phone in landscape has ~320px of height: stand the informational panels
+     down entirely and keep only movement + speech, or there is no world left. */
+  /* THE SHORT-PORTRAIT CASE. The 64px feed floor above guarantees the feed is
+     never a dead 0px box — but a floor that is taller than the space left over
+     is a floor that pushes INTO the panel. Measured: a 2px overlap at 320x480,
+     where the remaining gap is 62px and the floor insists on 64px. Two pixels
+     is still a collision; there is no "close enough" here. So below 520px of
+     height the same rule as landscape applies — the panel and the feed take
+     turns rather than share. Above 520px the arithmetic has room and the floor
+     never binds (verified: 140px of feed at 320x568). */
+  @media (pointer: coarse) and (orientation: portrait) and (max-height: 519px) {
+    body.chrome-open #feed { display: none; }
+  }
+
+  @media (pointer: coarse) and (orientation: landscape) and (max-height: 430px) {
+    /* A landscape phone has ~390px of height and the say bar alone takes 84px.
+       There is not room for BOTH an open panel and a speech feed in the left
+       column — the 64px floor above would still land the feed on the panel
+       (measured 224x130px before the floor, and the floor only shrinks it, it
+       does not move it). So on a short landscape screen the two take turns:
+       while the panels are summoned the feed stands down entirely, and the
+       moment they are dismissed it returns. Taking turns is the honest answer
+       when two things genuinely cannot both fit; stacking them is not. */
+    body.chrome-open #vintWorldHud,
+    body.chrome-open #dvRail { max-height: calc(100svh - 126px - var(--wc-saybar) - 10px); }
+    body.chrome-open #feed { display: none; }
+    body:not(.chrome-open) #feed { max-height: calc(100svh - var(--wc-saybar) - 116px - 12px); }
+  }
+
+  /* Touch-gated like every other rule in this block: `.chrome-open` must never
+     mean anything on a fine pointer, so desktop cannot be altered by it even
+     accidentally. (This rule only removes a transition, but a stray
+     .chrome-open selector outside the gate is how a desktop regression starts,
+     so it stays inside.) */
+  @media (pointer: coarse) and (prefers-reduced-motion: reduce) {
+    #worldChrome, body:not(.chrome-open) #vintWorldHud { transition: none; }
+  }
   /* run/jump controls — clear above the say bar, right side (mobile-first, no overflow) */
   #movectl { position: fixed; right: max(16px, env(safe-area-inset-right, 16px)); bottom: calc(72px + max(16px, env(safe-area-inset-bottom, 16px))); z-index: 6; display: none; flex-direction: column; gap: 10px; }
   #movectl button { width: 64px; height: 64px; border-radius: 50%; font-family: inherit; font-size: 14px; color: rgba(245,235,220,0.92); background: rgba(20,14,10,0.55); border: 1px solid rgba(244,199,154,0.35); backdrop-filter: blur(6px); cursor: pointer; user-select: none; -webkit-user-select: none; touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
@@ -326,6 +534,14 @@
   <button id="btnJump" aria-label="jump">jump</button>
 </div>
 <div id="micHint"></div>
+<!-- MOBILE DECONGESTION (5KPE7PZ): the one control that governs whether the
+     informational HUD is on screen. Hidden entirely on fine pointers — desktop
+     has the room and loses nothing. data-draggable="false" is deliberate: this
+     is the master control, and a user who drags it somewhere they then can't
+     find has no way back to their own HUD. Every other button keeps its drag. -->
+<button id="worldChrome" type="button" data-draggable="false"
+        aria-expanded="false" aria-controls="vintWorldHud"
+        aria-label="Show world panels" title="Show world panels">☰</button>
 <div id="feed"></div>
 <div id="saybar">
   <input id="sayInput" type="text" placeholder="say something into the clearing…" maxlength="400" autocomplete="off">
@@ -342,6 +558,7 @@
      that window. -->
 <script src="body/dock_stub.js"></script>
 <script src="body/api_base.js"></script>
+<script defer src="body/voice_console.js?v=v20260930-voice"></script>
 <script src="body/three3d/loader.js"></script>
 <script src="body/world/rigged-presence.js"></script>
 <script src="body/world/voice.js"></script>
@@ -594,6 +811,67 @@
   }
   function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 
+  // ── CITIZEN FEED (9DHW7ST, Phase 3 — "Live event feed on world.html (SSE)") ──
+  // WORLD_SPEC §3 citizen events (hunger, incapacitation, death, and every
+  // Phase 4+ trade/birth/war to come — the world's OWN history) drift through
+  // the clearing in its own voice, routed through the SAME `#feed` / `utter()`
+  // channel RECOGNIZANCE uses, for the SAME reason: that surface is measured,
+  // capped at five children, self-clearing and pointer-events:none, so a
+  // citizen event can NEVER collide with anything or outstay its welcome. This
+  // adds ZERO new DOM and ZERO new fixed element — it is only a new SOURCE for
+  // an existing, already-collision-proof channel (No-Collision Law, by reuse).
+  //
+  // The stream opens at the world's CURRENT high-water mark, never id 0, so the
+  // feed shows what is happening NOW and a connect never floods the clearing
+  // with a replay of all history. Unknown event types still render (generic
+  // phrase) so Phase 4+ events appear here the moment they are emitted, with no
+  // viewer change.
+  function phraseFor(ev){
+    const d = (ev && ev.data) || {};
+    switch (ev && ev.type) {
+      case 'agent_died':         return 'went still' + (d.cause ? ' — ' + d.cause : '');
+      case 'agent_incapacitated':return 'fell, too hungry to go on';
+      case 'agent_born':         return 'drew a first breath';
+      case 'trade':              return 'struck a trade';
+      case 'claim_parcel':       return 'laid claim to a patch of land';
+      case 'craft':              return 'made something with their hands';
+      case 'pay':                return 'settled a debt';
+      case 'move':               return 'moved on';
+      default:                   return String((ev && ev.type) || 'stirred').replace(/_/g, ' ');
+    }
+  }
+  function startCitizenFeed(){
+    if (typeof EventSource === 'undefined') return;   // ancient browser — the 3D world is the content anyway
+    if (window.__citizenFeedStarted) return; window.__citizenFeedStarted = true;
+    const base = (window.__VINTINUUM_API_BASE || '').replace(/\/$/, '');
+    let since = 0, es = null, backoff = 2000;
+    const open = () => {
+      try { es = new EventSource(base + '/api/world/events/stream?since=' + since); }
+      catch (_) { return; }
+      es.addEventListener('world', (e) => {
+        let ev; try { ev = JSON.parse(e.data); } catch (_) { return; }
+        if (!ev) return;
+        if (ev.id) since = ev.id;                       // track so a reconnect resumes with no gap
+        utter({ kind: 'world', name: ev.agent_name || 'a citizen', text: phraseFor(ev) });
+      });
+      es.onopen = () => { backoff = 2000; };
+      es.onerror = () => {
+        // EventSource reconnects on its own; only if the browser gives up
+        // entirely do we reopen, with bounded backoff, resuming from `since`.
+        if (es && es.readyState === EventSource.CLOSED) {
+          try { es.close(); } catch (_) {}
+          setTimeout(open, backoff);
+          backoff = Math.min(backoff * 2, 30000);
+        }
+      };
+    };
+    // Learn the current high-water mark first, then stream only what is newer.
+    fetch(base + '/api/world/events?limit=1')
+      .then(r => r.ok ? r.json() : null)
+      .then(d => { since = (d && Number(d.latest_id)) || 0; open(); })
+      .catch(() => open());   // if the probe fails, stream from 0 (feed caps at 5 + fades, so no flood)
+  }
+
   // The world ALWAYS renders — signed-in or signed-out (Vinta directive 2026-07-05:
   // "never a blank screen"). A guest sees the full 3D clearing and can look around;
   // only joining the LIVING world (other people, agents, voice, building) needs a
@@ -609,13 +887,14 @@
   // ticket exists. A thrown module never blanks the page — start() catches its
   // own internals and the loop keeps rendering the clearing.
   VintinuumWorld.start({ mountEl: document.getElementById('stage'), onSpeech: utter, onStatus: status, worldId: _wid, guest: isGuest })
-    .then(() => { if (!isGuest) showTraces(); else guestOverlay(); })
+    .then(() => { if (!isGuest) showTraces(); else guestOverlay(); startCitizenFeed(); })
     .catch(e => {
       console.error('[world] start failed:', e);
       // even if start() throws before building, we still owe the visitor SOMETHING
       // beautiful — a calm status over the warm ground, never a dead brown box.
       status('the clearing is drifting just out of reach — try again in a moment.');
       if (isGuest) guestOverlay();
+      startCitizenFeed();   // the feed is independent of the 3D scene — the world keeps talking even if WebGL fails
     });
 
   // the conversion moment — soft, refusable, never blocks the conversation
@@ -740,6 +1019,71 @@
   // keyboard: hold T to talk, R to cycle range
   addEventListener('keydown', e => { if(document.activeElement && /input|textarea/i.test(document.activeElement.tagName)) return; const k=e.key.toLowerCase(); if(k==='t' && !e.repeat) micDown(); if(k==='r'){ micRange = window.VintinuumWorld ? VintinuumWorld.cycleVoiceRange() : 'normal'; if(micHint){ micHint.textContent = RANGE_LABEL[micRange]; micHint.classList.add('show'); setTimeout(()=>micHint.classList.remove('show'),1400);} } });
   addEventListener('keyup', e => { if(e.key.toLowerCase()==='t') micUp(); });
+
+  /* ═══════════════════════════════════════════════════════════════════
+     MOBILE DECONGESTION — the toggle (2026-09-23, task 5KPE7PZ)
+
+     isTouchDevice GUARD: this must only ever run on coarse pointers. A desktop
+     user who somehow got this class applied would lose their whole HUD with no
+     visible control (the button is display:none on fine pointers), which is
+     the exact JS-only-reveal failure mode that ships beautiful pages as empty
+     ones. So the guard is checked here AND the CSS is media-gated — belt and
+     braces, because the cost of being wrong is a blank screen.
+
+     The CSS default is `body:not(.chrome-open)` = panels DOWN. That is safe if
+     this script never runs on a phone: the user still has world, movement,
+     speech and the toggle. There is no state in which JS failing leaves the
+     user stranded.
+     ═══════════════════════════════════════════════════════════════════ */
+  (function chromeToggle(){
+    var btn = document.getElementById('worldChrome');
+    if (!btn) return;
+
+    var isTouchDevice = (typeof matchMedia === 'function') &&
+                        matchMedia('(pointer: coarse)').matches;
+    if (!isTouchDevice) { btn.style.display = 'none'; return; }
+
+    var KEY = 'vint:world:chrome-open';
+    function apply(open, persist){
+      document.body.classList.toggle('chrome-open', open);
+      btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+      btn.setAttribute('aria-label', open ? 'Hide world panels' : 'Show world panels');
+      btn.title = open ? 'Hide world panels' : 'Show world panels';
+      btn.textContent = open ? '✕' : '☰';
+      if (persist) { try { localStorage.setItem(KEY, open ? '1' : '0'); } catch(e){} }
+      /* the panels that publish measured edges re-measure on resize; opening or
+         closing changes what is on screen, so tell them — otherwise a neighbour
+         keeps following a stale edge, which is how collisions come back. */
+      try { dispatchEvent(new Event('resize')); } catch(e){}
+    }
+
+    /* ONENESS RULE 1 — the surface remembers. A user who opens their panels and
+       comes back tomorrow finds them open. First visit deliberately starts
+       CLOSED so the world is what a phone opens onto. */
+    var remembered = null;
+    try { remembered = localStorage.getItem(KEY); } catch(e){}
+    apply(remembered === '1', false);
+
+    btn.addEventListener('click', function(e){
+      e.preventDefault();
+      apply(!document.body.classList.contains('chrome-open'), true);
+    });
+
+    /* typing into the say bar means you want the world and your words, not a
+       wall of panels — and the on-screen keyboard has just eaten half the
+       viewport. Stand the panels down for the duration. */
+    var sayIn = document.getElementById('sayInput');
+    if (sayIn) {
+      var wasOpen = false;
+      sayIn.addEventListener('focus', function(){
+        wasOpen = document.body.classList.contains('chrome-open');
+        if (wasOpen) apply(false, false);   /* not persisted: this is temporary */
+      });
+      sayIn.addEventListener('blur', function(){
+        if (wasOpen) apply(true, false);
+      });
+    }
+  })();
 })();
 </script>
   <script src="body/welcome-gate.js"></script>
