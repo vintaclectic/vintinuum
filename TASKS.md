@@ -75,13 +75,13 @@ Test: change one word, commit, and see it live on a phone at vintinuum.com/world
    — real, low-risk, but a separate unit of work from this one; filing it
    rather than doing it unasked inside a Phase-1 pipeline-proof task.
 
-## Phase 2 — World skeleton ← CURRENT
+## Phase 2 — World skeleton  ← DONE - 10.29.2026 (vintinuum 3a0089d · vintinuum-api 99ae082)
 Test: tick counter visibly rises on world.html with the browser closed and reopened.
 
-- [x] SQLite schema: agents, parcels, inventory, ledger, orders, contracts, orgs, events, uw_pages, uw_mail, memories — [owner: seat-8] — [status: shipped + verified live 2026-10-28, vintinuum-api commit f0a673b — see note below, there is a SECOND in-flight schema effort on the same task]
-- [ ] Tick engine with configurable rate; needs drain per tick — [owner: ] — [status: open]
-- [ ] 64 × 64 parcel map with terrain, rendered on world.html — [owner: ] — [status: open]
-- [ ] Daily DB snapshot, keep 14 — [owner: ] — [status: open]
+- [x] SQLite schema: agents, parcels, inventory, ledger, orders, contracts, orgs, events, uw_pages, uw_mail, memories — [owner: seat-8] — [status: done — vintinuum-api f0a673b, /api/world/schema all_present:true. Reconciliation (note 2 below) is settled: the live tick engine 99ae082 builds on the bare-name `parcels` table, so that is the chosen schema]
+- [x] Tick engine with configurable rate; needs drain per tick — [owner: aetherhold] — [status: done — vintinuum-api 99ae082, /api/world/economy tick rises 1 per 60s (tick_rate_ms configurable); drains food+energy, incapacitation@72, death@168]
+- [x] 64 × 64 parcel map with terrain, rendered on world.html — [owner: aetherhold] — [status: done — vintinuum 3a0089d, body/world/world-skeleton.js renders /api/world/parcels (⬡ skeleton rail launcher + one-open sheet, pixelated 64×64 canvas, server legend, zero fixed elements)]
+- [x] Daily DB snapshot, keep 14 — [owner: aetherhold] — [status: done — vintinuum-api 99ae082, 24-tick (one in-world day) snapshot via the battle-tested backup-db.sh into world-snapshots/, keep=14]
 
 **Notes for the Arbiter / next agent (2026-10-28, seat-8, task 2W4XATX):**
 
@@ -137,7 +137,7 @@ Test: tick counter visibly rises on world.html with the browser closed and reope
    from the other before dropping it — the tables are trivially droppable
    either way, nothing downstream depends on them yet.
 
-## Phase 3 — Three citizens
+## Phase 3 — Three citizens ← CURRENT
 Test: event feed shows 3 agents acting on their own for an hour; at least one runs low on food and does something about it.
 
 - [ ] Agent loop: observation builder → model → JSON actions → validation — [owner: ] — [status: open]
