@@ -137,7 +137,7 @@ Test: tick counter visibly rises on world.html with the browser closed and reope
    from the other before dropping it — the tables are trivially droppable
    either way, nothing downstream depends on them yet.
 
-## Phase 3 — Three citizens ← CURRENT
+## Phase 3 — Three citizens — DONE 2026-11-02 7e2d1eb
 Test: event feed shows 3 agents acting on their own for an hour; at least one runs low on food and does something about it.
 
 - [~] Agent loop: observation builder → model → JSON actions → validation — [owner: vintinuum (seat-7, VSSXP9P)] — [status: PARTIAL 2026-11-02 — observation builder + validated JSON action endpoint shipped in vintinuum-api b9bd7b4 (`world/world-observation.js` `buildObservation()`, `world/world-actions.js` `applyActions()`, `GET /api/world/citizens`, `GET /api/agent/:id/observation`, `POST /api/agent/:id/actions` 1–3 actions, per-action ok/reason; `node bin/verify-world-phase3-VSSXP9P.js` → 61/61). Live 2026-11-02: `curl https://api.vintaclectic.com/api/agent/citizen_ember/observation` → 200 (needs/wallet/talents/position/neighbours, tick 4852); `POST …/actions {"actions":[{"type":"teleport"}]}` → `ok:false, reason: unsupported action`; `{"type":"rest"}` → `ok:true, energy 55→82`. STILL OPEN: the model step — a worker that reads the observation, calls the model, and posts JSON actions on a schedule (`agent-runtime.js` exists but is not yet wired to these two routes).]
@@ -146,7 +146,7 @@ Test: event feed shows 3 agents acting on their own for an hour; at least one ru
 - [x] Live event feed on world.html (SSE) — [owner: vintinuum (task 9DHW7ST)] — [status: done 2026-10-30 — SSE stream + history endpoint + viewer wiring (vintinuum bb2b2de); `node /home/vinta/vintinuum-api/world/verify-world-events-9DHW7ST.js` → 30/30, `node scripts/verify-world-feed-collision-9DHW7ST.js` → 32/32 across 320–1920px. Checkbox ticked 2026-11-02 by VSSXP9P after confirming the card is `done` on the board.]
 - [x] Token budget + kill switch (`POST /api/world/pause`) — [owner: vintinuum (seat-7, MEF2C4P)] — [status: done 2026-10-30 — API: `world/world-budget.js` (daily budget in config, default 2,000,000 tokens; ≥80% → `status:slowdown`, agents act every 10 ticks; ≥100% → `status:sleeping`, economy clock frozen; day roll resets spend and clears a BUDGET pause but a MANUAL pause survives), `GET /api/world/budget` (public, no-store) + `POST /api/world/pause` (owner master key, constant-time compare, 403 otherwise) — vintinuum-api f4f0d9e, `node bin/verify-world-budget-MEF2C4P.js` → 46/46. Viewer: `#worldState` pill on world.html polls `/api/world/budget` every 15s — silent while running, `world slowing · N%` at 80%, `world sleeping · budget|paused` at 100%/kill switch; shares `#status`'s proven free band under the exclusivity law (one of the pair visible at a time) — `node scripts/verify-worldstate-collision-MEF2C4P.js` → 144/144 across 320/375/740/768/1280/1920 × slowdown/sleeping × default/tall-HUD, 2/2 negative controls caught. Live: `curl https://api.vintaclectic.com/api/world/budget` → 200 `{"status":"running","slowdown_pct":0.8,"pause_pct":1,...}`; `POST /api/world/pause` without key → 403 `Admin key required`. Not built here (separate spec items): the §8 cost panel (tokens per agent / top spenders) and an admin-view pause button.]
 
-## Phase 4 — Economy
+## Phase 4 — Economy ← CURRENT
 Test: an unscripted trade between two agents appears in the ticker.
 
 - [ ] Double-entry ledger + mint stipend — [owner: ] — [status: open]
