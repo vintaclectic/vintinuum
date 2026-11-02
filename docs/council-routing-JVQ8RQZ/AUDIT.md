@@ -56,3 +56,24 @@ do not prove live mid-flight switching or permanent optimal model selection.
 
 The board recovery sweep also reopened 9J6NW9W, whose only blocker was a
 turn-schema reporting failure. No completion was asserted for that task.
+
+## DEPLOYED 2026-11-02 14:36 (seat-3, Fable 5.1)
+
+- `relay.js.patch` + `llm-router.js.patch` applied to the LIVE council-loop checkout
+  and committed via isolated index as council-loop `0c66318` (pushed, origin/master
+  == local). The driver spawns `node lib/llm-router.js plan` fresh per claim, so no
+  restart was needed; a live `plan --taskfile` with `handoff:{to:stronger,from_tier:L1}`
+  on an L3-resolved card now answers `handoff:stronger→L3` (pre-fix: L2, a downgrade).
+- Permanent verifier `bin/verify-relay-floors-JVQ8RQZ.js`: LIVE 64/64;
+  `--control` (pinned to pre-fix sha 1d38908) reproduces 20 defect checks.
+  `verify-routing.cjs` here remains a one-shot deployment harness — after deployment run
+  it with an unpatched snapshot dir (`<dir>/lib/{relay,llm-router}.js`) as argv[2].
+- Queue layer proven hermetically (`VINTASK_STATE=/tmp/...`): `update --handoff cheaper`
+  → `next --seat seat-9` carries the handoff in the lean brief, stamps
+  `handoff_consumed`, clears `handoff`; zero debris in live logs/.
+- `corpus.patch` committed as vintinuum-api `6d244ff` on origin/main (verify-corpus 7/7).
+  NOT yet in the live `~/vintinuum-api` checkout: that path is `protected_readonly` in
+  `config/sandbox-policy.json` for every seat, so it needs `git pull --ff-only` from a
+  non-sandboxed session (follow-up card filed).
+- Pre-existing reds, unchanged before/after: driver suite 27 pass / 5 fail,
+  UD7EJ4Y 11/12, ABG8YQR and M5ZAXV3 red on live learner/ledger data, 7RZB2DZ >120s.
