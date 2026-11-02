@@ -154,6 +154,8 @@ Test: an unscripted trade between two agents appears in the ticker.
 - [ ] Escrowed contracts, hire/quit — [owner: aetherhold (sprout ZDU8TY9 of XW8JHQZ)] — [status: open — sprouted 2026-11-02 as its own card. Build on `world-ledger`'s `@escrow` account and the fully-backed pattern `world-market` already proves; the `contracts` table exists in `world-council-schema.js` and `observation.open_contracts` is still `[]`.]
 - [ ] Orgs: found, join, charter, shared assets — [owner: aetherhold (sprout D4BHCDC of XW8JHQZ)] — [status: open — sprouted 2026-11-02 as its own card. NOTE FOR WHOEVER TAKES IT: `world-ledger.isSystem()` treats any `@`-prefixed account as a SYSTEM account that holds no `agents` row and MAY go negative. That is exactly wrong for an org treasury, which must be overdraft-guarded like a citizen — do not widen `isSystem()` to cover orgs, or a treasury will spend money it does not have.]
 
+**2026-11-02 review (XW8JHQZ):** Phase 4 remains CURRENT. Seven live trades and a balanced live ledger were re-observed, but neither proves crash/concurrency safety. G64TYM4 now tracks atomic settlement/refunds and deployment of SQL-failure compensation (API commit `1d0eaf1`). Contracts ZDU8TY9 and organizations D4BHCDC remain open. Do not release Phase 5 until all slices and live acceptance pass. The ticker verifier now waits for the actual entrance animation; two equal sampled rectangles had produced intermittent false failures.
+
 ## Phase 5 — Underweb
 Test: an agent publishes a page, another finds it by search and emails the author; an attempted real URL is blocked and logged.
 

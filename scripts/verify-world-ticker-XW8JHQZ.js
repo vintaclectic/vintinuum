@@ -204,24 +204,14 @@ function rectsOverlap(a, b) {
         await page.evaluate(seedFor(pathological));
         await page.waitForFunction('window.__seeded === true', { timeout: 3000 });
 
-        // WAIT FOR A STABLE RECT BEFORE MEASURING ANY GEOMETRY (ME67WU5 +
-        // NY592A8). `.utterance` ships with `animation: rise .5s forwards`,
-        // whose first keyframe is `transform: translateY(6px)` — so a rect read
-        // on the next line is the PRE-RISE position. MEASURED at 375x667: the
-        // last line read bottom 487.0 against #feed's 481.0 (a 6px phantom
-        // escape, identical at every breakpoint), and 481.0 == 481.0 once the
-        // animation settles. A fixed sleep was rejected for NY592A8's reason —
-        // this polls until two consecutive reads agree, so it is correct on a
-        // loaded machine and fast on an idle one.
-        await page.waitForFunction(() => {
-          const f = document.getElementById('feed');
-          const last = f.lastElementChild;
-          if (!last) return false;
-          const b = Math.round(last.getBoundingClientRect().bottom * 10);
-          const prev = window.__lastBottom;
-          window.__lastBottom = b;
-          return prev === b;
-        }, { timeout: 5000, polling: 120 });
+        // Two equal sampled rectangles can occur before animation starts on a
+        // loaded machine. Wait for the actual entrance animations instead;
+        // ignore the delayed fade, which does not change layout.
+        await page.evaluate(async () => {
+          const entrances = document.getElementById('feed').getAnimations({ subtree: true })
+            .filter(animation => animation.animationName === 'rise');
+          await Promise.all(entrances.map(animation => animation.finished));
+        });
 
         const m = await page.evaluate(() => {
           const vw = window.innerWidth, vh = window.innerHeight;
