@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# git-guard (GITLAND)
+node "/home/vinta/.claude/council-loop/bin/git-guard.js" scan --repo "$(git rev-parse --show-toplevel)" || exit 1
 # NO-COLLISION guard (Vinta directive 2026-08-02): block any commit that
 # reintroduces a hardcoded fixed corner widget.
 #

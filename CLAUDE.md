@@ -147,27 +147,32 @@ the same commit.
 Every commit to `main` here = a deploy to the public site within ~1 minute.
 Treat `main` as production.
 
-## Drive usage policy (Vinta directive 2026-06-06 — ALL agents)
+## Drive usage policy (Vinta directive 2026-06-06, updated 2026-10-22 — ALL agents)
 
-The main PC has three internal fast drives and external drives are SLOW. Use
-the internal trio for everything active; reserve external for cold storage.
+The main PC now has **four internal fast drives** (added 1TB SATA HDD 2026-10-22) plus
+external drives for cold storage. Use the internal drives for everything active.
 
 | Drive | Mount | Role | Notes |
 |---|---|---|---|
 | **C:** | `/mnt/c` | Windows + tooling | Keep clean — hit 96% once already. Avoid as a working dir for large/growing artifacts. |
 | **D:** | `/mnt/d` | bulk working (DirHaven, large media) | Big, but on the 9P/NTFS bridge — SLOW for many small reads (caused the brain wedge once). Good for media, bad for SQLite hot paths. |
-| **E:** | `/mnt/e` | new — fast scratch + caches | 186GB, basically empty. **Preferred for: puppeteer browser profiles, model caches, ephemeral build dirs, anything that gets read/written a lot.** Label: `Storage`. Already used at `/mnt/e/Vintinuum/`. |
+| ~~E:~~ | RETIRED 2026-10-30 | — | **E: drive retired** (failing disk, no longer mounted). Never write to /mnt/e. Use `/mnt/f/Vintinuum` for scratch, snapshots and caches. |
+| **F:** (`/dev/sde`) | `/mnt/disk400` | **NEW 1TB fast bulk storage** | **1TB SATA HDD, ext4, native Linux filesystem.** Faster than D: (no 9P bridge). **Use for: large datasets, media libraries, model weights/checkpoints, corpus files, heavy I/O workloads, anything >100GB needing fast random access.** Mount: `sudo mount /dev/sde /mnt/disk400` |
 | External | (varies) | cold storage only | SUPER SLOW transfer. Only put files there that cannot be transferred to internal, or pure archives nothing actively reads. |
 
 **Standing order for any agent provisioning a new cache / profile / scratch dir:**
 - Default to `~/...` (WSL ext4) for things ≤ a few GB.
-- Default to **`/mnt/e/Vintinuum/<feature>/`** for any larger or churn-heavy
-  scratch (puppeteer profiles, model caches, build outputs, dump dirs).
-- Use `/mnt/d` only when the data is already there or > 100GB.
+- Default to **`/mnt/f/Vintinuum/<feature>/`** for smaller churn-heavy scratch
+  (puppeteer browser profiles, build outputs, ephemeral caches).
+- Default to **`/mnt/disk400/<feature>/`** for large datasets, model storage,
+  corpus files, or anything >100GB that needs fast access.
+- Use `/mnt/d` only when the data is already there (legacy) or is pure bulk media
+  that tolerates slow random reads.
 - **Never** plan a hot path against an external drive.
 
-When asked to free space: target C first, then D's contents that could live on
-E. Never propose moving things to external unless explicitly told.
+When asked to free space: target C first, then migrate D's performance-critical
+contents to /mnt/disk400 (the new fast 1TB), then E. Never propose moving things
+to external unless explicitly told.
 
 ## Two-repo coordination
 

@@ -12,7 +12,7 @@ degeneration/repetition defect on the very first smoke test. Recommendation belo
 
 | Piece | Location | State |
 |---|---|---|
-| bitnet.cpp source | `/mnt/e/Vintinuum/bitnet/bitnet.cpp` | cloned, built |
+| bitnet.cpp source | `/mnt/f/Vintinuum/bitnet/bitnet.cpp` | cloned, built |
 | binaries + shared libs | `/home/vinta/bitnet-bin/` | `llama-cli` build `b9918-390c30775` |
 | BitNet-b1.58-2B-4T weights | `/home/vinta/bitnet-models/ggml-model-i2_s.gguf` | 1.2 GB, ftype `Q1_0` |
 | benchmark harness | `scripts/bitnet-bench.sh` | reproducible, re-runnable |
