@@ -214,6 +214,18 @@
   .utterance.agent { --c: #f4c79a; } .utterance.user { --c: #9fc0e0; } .utterance.ambient { --c: #cdbb9c; font-style: italic; }
   .utterance.muse { --c: #c0b0e0; font-style: italic; opacity: 0.92; } /* an agent's autonomous thought, left in the clearing */
   .utterance.world { --c: #8fd0b0; font-style: italic; opacity: 0.9; } /* 9DHW7ST: a WORLD_SPEC citizen event, drifting through the clearing (same box as every utterance — no new surface) */
+  /* XW8JHQZ (Phase 4) — THE MARKET TICKER. A trade is the loudest thing the
+     economy does, so it gets its own colour and drops the italic (it is a FACT,
+     not a thought) — but it is the SAME .utterance box inside the SAME #feed,
+     which is measured, capped at five children, self-clearing and
+     pointer-events:none. ZERO new DOM, ZERO new fixed element, so the
+     No-Collision Law is satisfied BY CONSTRUCTION rather than by a sweep: this
+     adds a class to a surface whose geometry is already proven at every
+     breakpoint (and which is display:none'd outright under #invite/#offer and
+     at the narrowest heights, by the rules below). Tabular numerals so a column
+     of prices does not jitter as digits change. */
+  .utterance.ticker { --c: #ffd27a; font-style: normal; opacity: 0.96; font-variant-numeric: tabular-nums; }
+  .utterance.ticker .px { color: #ffd27a; font-weight: 500; }
   @keyframes rise { to { opacity: 1; transform: translateY(0); } }
   @keyframes fade { to { opacity: 0; } }
 
@@ -1245,12 +1257,38 @@
       case 'agent_incapacitated':return 'fell, too hungry to go on';
       case 'agent_born':         return 'drew a first breath';
       case 'trade':              return 'struck a trade';
+      // XW8JHQZ (Phase 4) — the ticker lines. A trade must say WHAT, HOW MUCH,
+      // AT WHAT PRICE and WITH WHOM, because "struck a trade" is not a ticker.
+      // The event's agent_id is the BUYER (the events table holds one agent),
+      // so the feed's `who` cell is already the buyer and this line names the
+      // seller — never the buyer twice.
+      case 'market_trade':       return 'bought ' + (d.qty != null ? d.qty + ' ' : '') + (d.good || 'goods') +
+                                        ' at ' + (d.price != null ? d.price : '?') +
+                                        (d.seller ? ' from ' + nameOf(d.seller) : '');
+      case 'order_posted':       return (d.side === 'bid' ? 'bid for ' : 'offered ') +
+                                        (d.qty != null ? d.qty + ' ' : '') + (d.good || 'goods') +
+                                        ' at ' + (d.price != null ? d.price : '?') +
+                                        (d.filled_now ? ' — ' + d.filled_now + ' traded at once' : '');
+      case 'order_cancelled':    return 'withdrew an offer';
+      case 'order_expired':      return 'let an offer lapse';
       case 'claim_parcel':       return 'laid claim to a patch of land';
       case 'craft':              return 'made something with their hands';
       case 'pay':                return 'settled a debt';
       case 'move':               return 'moved on';
       default:                   return String((ev && ev.type) || 'stirred').replace(/_/g, ' ');
     }
+  }
+  // A citizen id (`citizen_sol`) is not a name. The feed already shows display
+  // names for the acting agent, so the counterparty gets the same courtesy.
+  function nameOf(id){
+    const s = String(id || '').replace(/^citizen_/, '');
+    return s ? s.charAt(0).toUpperCase() + s.slice(1) : 'someone';
+  }
+  // Market events read as a ticker, everything else as the world's own voice.
+  function kindFor(ev){
+    const t = ev && ev.type;
+    return (t === 'market_trade' || t === 'order_posted' || t === 'order_cancelled' || t === 'order_expired')
+      ? 'ticker' : 'world';
   }
   function startCitizenFeed(){
     if (typeof EventSource === 'undefined') return;   // ancient browser — the 3D world is the content anyway
@@ -1264,7 +1302,7 @@
         let ev; try { ev = JSON.parse(e.data); } catch (_) { return; }
         if (!ev) return;
         if (ev.id) since = ev.id;                       // track so a reconnect resumes with no gap
-        utter({ kind: 'world', name: ev.agent_name || 'a citizen', text: phraseFor(ev) });
+        utter({ kind: kindFor(ev), name: ev.agent_name || nameOf(ev.agent_id), text: phraseFor(ev) });
       });
       es.onopen = () => { backoff = 2000; };
       es.onerror = () => {
