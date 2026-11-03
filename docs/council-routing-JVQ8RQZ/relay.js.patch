@@ -1,0 +1,39 @@
+--- a/lib/relay.js
++++ b/lib/relay.js
+@@ -120,12 +120,16 @@
+   if (!h || typeof h !== 'object' || !h.to) return null;
+   const to = String(h.to).toLowerCase();
+   let target;
+-  const base = tierIdx(h.from_tier) >= 0 ? h.from_tier : tier;
++  // Preserve the previous run's intended destination, but stale provenance
++  // must never reverse the requested direction against today's resolved tier.
++  const currentIdx = tierIdx(tier);
++  if (currentIdx < 0) return null;
++  const baseIdx = tierIdx(h.from_tier) >= 0 ? tierIdx(h.from_tier) : currentIdx;
+   if (to === 'cheaper') {
+     const m = mayGoCheaper(task, ctx);
+     if (!m.ok) return { tier, note: `handoff(cheaper refused: ${m.why})` };
+-    target = TIERS[Math.max(0, tierIdx(base) - 1)];
+-  } else if (to === 'stronger') target = TIERS[Math.min(TIERS.length - 1, tierIdx(base) + 1)];
++    target = TIERS[Math.min(currentIdx, Math.max(0, baseIdx - 1))];
++  } else if (to === 'stronger') target = TIERS[Math.max(currentIdx, Math.min(TIERS.length - 1, baseIdx + 1))];
+   else if (tierIdx(to) >= 0) {
+     target = to.toUpperCase();
+     if (tierIdx(target) < tierIdx(tier)) { const m = mayGoCheaper(task, ctx); if (!m.ok) return { tier, note: `handoff(${target} refused: ${m.why})` }; }
+@@ -182,12 +186,15 @@
+   if (relay.handoff && relay.handoff.to) lines.push(`HANDOFF honoured: the previous run asked for "${relay.handoff.to}"${relay.handoff.why ? ` (${String(relay.handoff.why).slice(0, 120)})` : ''}; you were routed accordingly.`);
+   if (relay.triage && relay.triage.brief) lines.push(`Triage brief (drafted by ${relay.triage.model || 'a cheap model'} without repo access — VERIFY before trusting): ${relay.triage.brief}`);
+   lines.push(`Phases: ${(relay.phases || []).join(' → ')}.`);
+-  lines.push('DELEGATE sub-work through the Agent tool with the model alias named here — never run recon on the build brain:');
++  lines.push('DELEGATION PREFERENCES (Claude Agent aliases; availability depends on the host):');
+   lines.push(`  • recon (grep/read/inventory/log-reading)      → model: "${d.recon}"`);
+   lines.push(`  • mechanical edits (renames, fixtures, format) → model: "${d.mechanical}"`);
+   lines.push(`  • design / root-cause / the fix itself        → model: "${d.build}" (this run's brain class)`);
+   lines.push(`  • review the diff against acceptance          → model: "${d.review}"`);
+   lines.push(`  • anything auth/secret/permission             → model: "${d.security}" (never delegated down)`);
++  lines.push('Consult the actual Agent tool model enum before delegating. Never invent or pass unsupported aliases.');
++  lines.push('When these aliases are unavailable, use host-supported models only where their capability satisfies the same quality floors.');
++  lines.push('If that mapping is not established, inherit the current model and disclose that delegation savings are not established.');
+   lines.push('MID-FLIGHT SWITCH: when the hard part is landed and what remains is mechanical (or you hit a wall that');
+   lines.push('needs a bigger brain), do NOT grind it out on the wrong model. Checkpoint and hand off:');
+   lines.push(`  node /home/vinta/.claude/council-loop/bin/turn-schema.js emit --task ${taskId || '<TASK_ID>'} --verdict progress --handoff cheaper|stronger|L1|L2|L3|L4 --handoff-why "<what remains>" --evidence "..." --next "..."`);

@@ -1,0 +1,46 @@
+--- a/corpus/sources-extra.js
++++ b/corpus/sources-extra.js
+@@ -216,6 +216,43 @@
+           tags: ['vinta', 'kick', 'stream_voice'], ts: 0, userId: 1,
+         }), 1);
+       }
++    }
++  },
++
++  // System-owned relay telemetry only. Never ingest card text, model-generated
++  // briefs, reasons, identifiers, errors, or arbitrary model/provider strings.
++  // A triage parse result is NOT evidence that its routing recommendation worked.
++  council_relay(_db, c) {
++    const ledger = process.env.COUNCIL_RELAY_LEDGER || path.join(
++      process.env.HOME || '/home/vinta', '.claude/council-loop/state/relay-ledger.jsonl');
++    if (!fs.existsSync(ledger)) return;
++    const kinds = new Set(['triage', 'triage-skip', 'triage-error']);
++    const providers = new Set(['anthropic', 'openai', 'google', 'xai', 'ollama']);
++    const shapes = new Set(['question', 'mechanical', 'feature', 'design', 'investigation', 'security']);
++    const number = (v, max) => typeof v === 'number' && Number.isFinite(v) && v >= 0 && v <= max;
++    for (const line of fs.readFileSync(ledger, 'utf8').split('\n')) {
++      let t; try { t = JSON.parse(line); } catch { continue; }
++      if (!t || !kinds.has(t.kind)) continue;
++      const out = { event: t.kind, task_outcome: 'unverified' };
++      if (providers.has(t.provider)) out.provider = t.provider;
++      if (typeof t.ok === 'boolean') out.triage_parse_ok = t.ok;
++      if (number(t.ms, 86400000)) out.duration_ms = t.ms;
++      if (number(t.tokens, 100000000)) out.tokens = t.tokens;
++      if (number(t.cost_usd, 100000)) out.cost_usd = t.cost_usd;
++      // Labels remain explicitly advisory, even when parsing succeeded.
++      const a = t.answer;
++      if (a && typeof a === 'object') {
++        if (shapes.has(a.shape)) out.advisory_shape = a.shape;
++        if (typeof a.tier_delta === 'number' && [-1, 0, 1].includes(a.tier_delta)) out.advisory_tier_delta = a.tier_delta;
++        if (number(a.read_fraction, 1)) out.advisory_read_fraction = a.read_fraction;
++      }
++      c.push(rec({
++        system: 'Summarize system-owned council relay telemetry. Recommendations are advisory; task success is unverified.',
++        user: 'Describe this recorded relay event without inferring task success.',
++        assistant: JSON.stringify(out),
++        tags: ['work', 'council_relay', 'system_telemetry', 'outcome_unverified'],
++        ts: 0, userId: 0,
++      }), 0);
+     }
+   },
+ 

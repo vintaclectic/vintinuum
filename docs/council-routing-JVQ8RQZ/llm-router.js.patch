@@ -1,0 +1,45 @@
+--- a/lib/llm-router.js
++++ b/lib/llm-router.js
+@@ -1165,15 +1165,16 @@
+   //             `plan --triage` before the run. A handoff outranks triage: the
+   //             brain that did the work knows more than the one that read the card.
+   // Advisory by construction — any throw here leaves the tier untouched.
+-  let relayAdjusted = false;
+   try {
+     const RELAY = require('./relay.js');
+     const _rctx = { aff, kind: cls.kind };
+     const _h = RELAY.applyHandoff(task, tier, _rctx);
+-    if (_h) { if (_h.tier !== tier) { tier = _h.tier; relayAdjusted = true; tierSource = `${_h.note}(${tierSource})`; } else tierSource += `+${_h.note}`; }
+-    if (!relayAdjusted) {
++    if (_h) { if (_h.tier !== tier) { tier = _h.tier; tierSource = `${_h.note}(${tierSource})`; } else tierSource += `+${_h.note}`; }
++    // A valid handoff outranks triage even when held at the current tier.
++    // Only an absent/malformed handoff permits the pre-flight opinion.
++    if (!_h) {
+       const _t = RELAY.applyTriage(task, tier, _rctx);
+-      if (_t) { if (_t.tier !== tier) { tier = _t.tier; relayAdjusted = true; } tierSource += `+${_t.note}`; }
++      if (_t) { if (_t.tier !== tier) { tier = _t.tier; } tierSource += `+${_t.note}`; }
+     }
+   } catch (_) { /* relay is advisory; routing never dies on it */ }
+ 
+@@ -1191,16 +1192,16 @@
+   // driver can wait for it to clear rather than mislabelling them "blocked".
+   const _lockout = lockoutState();
+   if (_lockout.level !== 'none') {
+-    // Only cap the tier for kinds that are NOT force_min_tier. Security has
+-    // force_min_tier=true — if it can't have L4, it must not silently degrade
+-    // to L2 and lie about the answer.
+-    const canDowngrade = !aff.force_min_tier;
++    // Capability-critical work keeps its floor during provider lockouts.
++    // Security and top-brain reasoning defer when no capable provider remains.
++    const protectedStakes = ["high", "critical"].includes(String(task.stakes || "").toLowerCase());
++    const canDowngrade = !aff.force_min_tier && !aff.top_brain && !protectedStakes && !task.escalated;
+     const ceilingIdx = tierIdx(_lockout.tier_ceiling_now);
+     if (canDowngrade && tierIdx(tier) > ceilingIdx) {
+       tier = _lockout.tier_ceiling_now;
+       tierSource += `+lockout(${_lockout.level}:${_lockout.locked_providers.join(',')})`;
+     } else if (!canDowngrade && tierIdx(tier) > tierIdx(_lockout.available_top_tier)) {
+-      // A force_min_tier kind whose floor is above what any available provider
++      // A capability-critical kind whose floor is above what any available provider
+       // can serve — mark as lockout-deferred and let the seat driver skip it.
+       // The route still returns a ladder (best-effort with what's available)
+       // so callers that ignore blockers still get SOMETHING; but the marker
