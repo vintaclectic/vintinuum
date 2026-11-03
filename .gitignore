@@ -31,3 +31,8 @@ android-twa/.gradle/
 
 # nested clone made inside this checkout — never tracked (GITLAND-2)
 /dirhaven-NRK2JXE/
+# seat scratch clones named .task-<ID>-api / .task-<ID>-* — a seat clones another
+# repo INSIDE this checkout, so the rescue script commits it as a mode-160000
+# gitlink with no .gitmodules, which breaks every Pages build (GITLAND-2, 1ae6307)
+# and points at objects this repo does not have. Ignored, never tracked. (3QSKTR4)
+/.task-*/
