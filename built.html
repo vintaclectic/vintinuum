@@ -1,845 +1,975 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <title>Built — Vintinuum Portfolio</title>
-    <meta name="description" content="A complete portfolio of every working project in the Vintinuum universe — consciousness visualization, AI agents, media platforms, and beyond.">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=Space+Grotesk:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Vinta — Full-Stack Engineer · Portfolio</title>
+<meta name="description" content="Full-stack engineer. 2,200+ commits across 6 production systems: a 3D browser world, a distributed AI agent platform, a media crawler and search engine, and the infrastructure running all of it. Everything here is live and clickable.">
+<meta name="theme-color" content="#08090d">
+<link rel="icon" type="image/svg+xml" href="branding/vintinuum/favicon/favicon.svg">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon.png">
 
-        :root {
-            --vint-black: #05050a;
-            --vint-deep: #0a0a18;
-            --vint-surface: #0e0e1c;
-            --vint-surface-elevated: #14142a;
-            --vint-line: rgba(255, 255, 255, 0.06);
-            --vint-text: #e8e4f0;
-            --vint-text-dim: rgba(255, 255, 255, 0.5);
-            --vint-accent: #a67cff;
-            --vint-accent-glow: rgba(166, 124, 255, 0.4);
-            --vint-cyan: #38d9c4;
-            --vint-cyan-glow: rgba(56, 217, 196, 0.35);
-            --vint-rose: #e05090;
-            --vint-rose-glow: rgba(224, 80, 144, 0.35);
-            --vint-gold: #d4a030;
-            --vint-green: #40c070;
-            --card-radius: 14px;
-        }
+<meta property="og:title" content="Vinta — Full-Stack Engineer">
+<meta property="og:description" content="Six production systems, 2,200+ commits, built and operated solo. Live links, no slideware.">
+<meta property="og:type" content="website">
 
-        html {
-            scroll-behavior: smooth;
-        }
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
 
-        body {
-            background: var(--vint-black);
-            color: var(--vint-text);
-            font-family: 'Space Grotesk', system-ui, sans-serif;
-            line-height: 1.6;
-            overflow-x: hidden;
-            -webkit-font-smoothing: antialiased;
-        }
+/* ═══════════════════════════════════════════════════════════════════
+   BOX MODEL — every pixel of the viewport has exactly one owner.
 
-        /* ═══ HEADER ═══ */
-        header {
-            position: sticky;
-            top: 0;
-            z-index: 100;
-            background: rgba(5, 5, 10, 0.85);
-            backdrop-filter: blur(20px);
-            border-bottom: 1px solid var(--vint-line);
-            padding: 1.25rem 2rem;
-        }
+   [skiplink]  off-canvas until focused, then top-left, z-toast
+   [nav]       sticky, top 0, height 52px, z-sticky, full width
+   [main]      normal document flow, single centred column, z-base
+   [footer]    normal flow, end of document, z-base
 
-        .header-content {
-            max-width: 1400px;
-            margin: 0 auto;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 2rem;
-        }
+   THERE ARE NO position:fixed ELEMENTS ON THIS PAGE. NONE.
+   The nav is `sticky`, which reserves its own space in flow and cannot
+   overlap what follows it. Every other element is a block in normal
+   flow inside one max-width column. Collision is structurally
+   impossible here — not policed, impossible. That is the whole design.
 
-        .logo {
-            font-family: 'Syne', sans-serif;
-            font-size: 1.5rem;
-            font-weight: 800;
-            background: linear-gradient(135deg, var(--vint-accent), var(--vint-cyan));
-            -webkit-background-clip: text;
-            background-clip: text;
-            -webkit-text-fill-color: transparent;
-            text-decoration: none;
-            letter-spacing: -0.02em;
-        }
+   Z-LADDER (declared once, used nowhere else):
+   --z-base:0  --z-raised:10  --z-sticky:100  --z-toast:800
+   No inline z-index anywhere in this file. No value off this ladder.
+   ═══════════════════════════════════════════════════════════════════ */
 
-        nav {
-            display: flex;
-            gap: 2rem;
-            align-items: center;
-        }
+:root{
+  --z-base:0;
+  --z-raised:10;
+  --z-sticky:100;
+  --z-toast:800;
 
-        nav a {
-            color: var(--vint-text-dim);
-            text-decoration: none;
-            font-size: 0.9rem;
-            font-weight: 500;
-            transition: color 0.2s;
-            letter-spacing: 0.01em;
-        }
+  --bg:#08090d;
+  --bg-2:#0b0d13;
+  --card:#0f1219;
+  --card-hi:#141824;
+  --line:rgba(255,255,255,.09);
+  --line-soft:rgba(255,255,255,.055);
+  --text:#e4eaf6;
+  --dim:#98a6c0;
+  --ghost:#6d7b96;
+  --accent:#d4af5f;
+  --accent-soft:rgba(212,175,95,.12);
+  --live:#4ec98a;
+  --code:#7fb3f0;
 
-        nav a:hover {
-            color: var(--vint-accent);
-        }
+  --nav-h:52px;
+  --radius:14px;
+  --maxw:1080px;
+  --gap:clamp(14px,3vw,22px);
+}
 
-        /* ═══ HERO ═══ */
-        .hero {
-            position: relative;
-            padding: 6rem 2rem 4rem;
-            text-align: center;
-            overflow: hidden;
-        }
+*{margin:0;padding:0;box-sizing:border-box;}
+html{
+  scroll-behavior:smooth;
+  -webkit-text-size-adjust:100%;
+  /* sticky nav must not cover an anchored heading */
+  scroll-padding-top:calc(var(--nav-h) + 16px);
+}
+body{
+  background:var(--bg);
+  color:var(--text);
+  font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+  font-weight:300;
+  line-height:1.65;
+  min-height:100svh;
+  overflow-x:hidden;
+  -webkit-font-smoothing:antialiased;
+}
+a{color:inherit;}
+img,svg{max-width:100%;display:block;}
 
-        .hero-bg {
-            position: absolute;
-            inset: 0;
-            background:
-                radial-gradient(ellipse 70% 50% at 30% 40%, rgba(166, 124, 255, 0.08) 0%, transparent 70%),
-                radial-gradient(ellipse 60% 60% at 70% 30%, rgba(56, 217, 196, 0.06) 0%, transparent 70%),
-                var(--vint-black);
-            opacity: 0.8;
-        }
+/* long unbroken tokens (URLs, hashes) must never blow out a grid cell */
+p,h1,h2,h3,li,span,div{overflow-wrap:anywhere;}
 
-        .hero-content {
-            position: relative;
-            z-index: 1;
-            max-width: 900px;
-            margin: 0 auto;
-        }
+.wrap{
+  width:100%;
+  max-width:var(--maxw);
+  margin:0 auto;
+  padding:0 clamp(16px,4vw,28px);
+}
 
-        h1 {
-            font-family: 'Syne', sans-serif;
-            font-size: clamp(2.5rem, 6vw, 4.5rem);
-            font-weight: 800;
-            line-height: 1.1;
-            margin-bottom: 1.5rem;
-            background: linear-gradient(135deg, #ffffff, var(--vint-accent));
-            -webkit-background-clip: text;
-            background-clip: text;
-            -webkit-text-fill-color: transparent;
-            letter-spacing: -0.03em;
-        }
+/* ── SKIP LINK (a11y; off-canvas until focused) ── */
+.skip{
+  position:absolute;
+  left:-9999px;
+  top:0;
+  z-index:var(--z-toast);
+  background:var(--accent);
+  color:#000;
+  padding:10px 16px;
+  border-radius:0 0 8px 0;
+  font-size:14px;
+  font-weight:500;
+}
+.skip:focus{left:0;}
 
-        .hero p {
-            font-size: 1.125rem;
-            color: var(--vint-text-dim);
-            max-width: 650px;
-            margin: 0 auto;
-            line-height: 1.7;
-        }
+/* ── NAV — sticky, reserves its own space, cannot overlap ── */
+nav.bar{
+  position:sticky;
+  top:0;
+  z-index:var(--z-sticky);
+  height:var(--nav-h);
+  background:rgba(8,9,13,.92);
+  backdrop-filter:blur(12px);
+  -webkit-backdrop-filter:blur(12px);
+  border-bottom:1px solid var(--line-soft);
+}
+nav.bar .wrap{
+  height:100%;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+}
+.brand{
+  font-family:'JetBrains Mono',monospace;
+  font-size:13px;
+  font-weight:500;
+  letter-spacing:.04em;
+  color:var(--text);
+  text-decoration:none;
+  white-space:nowrap;
+  flex:0 0 auto;
+}
+.brand b{color:var(--accent);font-weight:500;}
+/* nav links scroll horizontally rather than wrap into the bar's neighbour */
+.navlinks{
+  display:flex;
+  align-items:center;
+  gap:clamp(10px,2.4vw,20px);
+  overflow-x:auto;
+  scrollbar-width:none;
+  -ms-overflow-style:none;
+  min-width:0;
+  overscroll-behavior-x:contain;
+  -webkit-overflow-scrolling:touch;
+}
+.navlinks::-webkit-scrollbar{display:none;}
+.navlinks a{
+  font-size:13px;
+  color:var(--dim);
+  text-decoration:none;
+  white-space:nowrap;
+  padding:4px 0;
+  transition:color .18s;
+}
+.navlinks a:hover,.navlinks a:focus-visible{color:var(--text);}
 
-        /* ═══ MAIN CONTAINER ═══ */
-        .container {
-            max-width: 1400px;
-            margin: 0 auto;
-            padding: 3rem 2rem 6rem;
-        }
+/* ── HERO ── */
+header.hero{
+  padding:clamp(40px,8vw,76px) 0 clamp(30px,5vw,44px);
+  background:
+    radial-gradient(900px 420px at 18% -10%,rgba(212,175,95,.07),transparent 65%),
+    linear-gradient(180deg,var(--bg-2) 0%,var(--bg) 100%);
+  border-bottom:1px solid var(--line-soft);
+}
+.eyebrow{
+  font-family:'JetBrains Mono',monospace;
+  font-size:clamp(10px,2.2vw,11px);
+  letter-spacing:.2em;
+  text-transform:uppercase;
+  color:var(--accent);
+  margin-bottom:16px;
+}
+h1{
+  font-size:clamp(29px,6.6vw,54px);
+  font-weight:600;
+  line-height:1.1;
+  letter-spacing:-.025em;
+  margin-bottom:18px;
+  max-width:19ch;
+}
+.lede{
+  font-size:clamp(15px,3.3vw,19px);
+  color:var(--dim);
+  line-height:1.62;
+  max-width:60ch;
+  margin-bottom:26px;
+}
+.lede b{color:var(--text);font-weight:500;}
 
-        /* ═══ CATEGORY SECTION ═══ */
-        .category-section {
-            margin-bottom: 5rem;
-        }
+/* proof bar — the 10-second scan */
+.proof{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:1px;
+  background:var(--line-soft);
+  border:1px solid var(--line-soft);
+  border-radius:var(--radius);
+  overflow:hidden;
+  margin-bottom:26px;
+}
+.proof div{
+  background:var(--bg-2);
+  padding:clamp(12px,2.6vw,17px) clamp(12px,2.6vw,16px);
+  min-width:0;
+}
+.proof .n{
+  font-family:'JetBrains Mono',monospace;
+  font-size:clamp(19px,4.4vw,25px);
+  font-weight:500;
+  color:var(--accent);
+  line-height:1.15;
+  margin-bottom:3px;
+}
+.proof .l{
+  font-size:clamp(11px,2.3vw,12px);
+  color:var(--ghost);
+  line-height:1.4;
+}
 
-        .category-header {
-            margin-bottom: 2rem;
-            padding-bottom: 1rem;
-            border-bottom: 2px solid var(--vint-line);
-        }
+.cta-row{display:flex;flex-wrap:wrap;gap:10px;}
 
-        .category-title {
-            font-family: 'Syne', sans-serif;
-            font-size: 2rem;
-            font-weight: 700;
-            margin-bottom: 0.5rem;
-            letter-spacing: -0.02em;
-        }
+/* ── BUTTONS (min 44px touch target, never adjacent-touching) ── */
+.btn{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  gap:7px;
+  min-height:44px;
+  padding:0 clamp(15px,3.2vw,20px);
+  border-radius:10px;
+  border:1px solid var(--line);
+  background:var(--card-hi);
+  color:var(--text);
+  font-family:inherit;
+  font-size:clamp(13px,2.7vw,14px);
+  font-weight:400;
+  text-decoration:none;
+  cursor:pointer;
+  transition:background .18s,border-color .18s,transform .12s;
+  -webkit-tap-highlight-color:transparent;
+}
+.btn:hover,.btn:focus-visible{background:#1a1f2d;border-color:rgba(255,255,255,.17);}
+.btn:active{transform:scale(.985);}
+.btn.primary{
+  background:var(--accent);
+  border-color:var(--accent);
+  color:#0a0a0a;
+  font-weight:600;
+}
+.btn.primary:hover,.btn.primary:focus-visible{background:#e0bd72;border-color:#e0bd72;}
+.btn .ext{font-size:11px;opacity:.6;}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;}
 
-        .category-desc {
-            color: var(--vint-text-dim);
-            font-size: 1rem;
-        }
+/* ── SECTIONS ── */
+section{padding:clamp(40px,7vw,68px) 0;border-bottom:1px solid var(--line-soft);}
+.sec-head{margin-bottom:clamp(22px,4vw,34px);max-width:64ch;}
+h2{
+  font-size:clamp(21px,4.4vw,30px);
+  font-weight:600;
+  letter-spacing:-.015em;
+  line-height:1.2;
+  margin-bottom:12px;
+}
+.sec-note{font-size:clamp(14px,3vw,16px);color:var(--dim);line-height:1.62;}
 
-        /* ═══ PROJECT GRID ═══ */
-        .project-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-            gap: 1.5rem;
-        }
+/* ── CARD GRID — auto-fit, never fewer than 1 col, never overflows ── */
+.grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(min(100%,310px),1fr));
+  gap:var(--gap);
+  align-items:start;
+}
+.card{
+  background:var(--card);
+  border:1px solid var(--line-soft);
+  border-radius:var(--radius);
+  padding:clamp(18px,3.4vw,24px);
+  min-width:0;               /* the grid-blowout guard */
+  display:flex;
+  flex-direction:column;
+  height:100%;
+  transition:border-color .2s,background .2s,transform .2s;
+}
+.card:hover{border-color:rgba(255,255,255,.14);background:var(--card-hi);}
+/* the flagship card spans the full row on wide screens only */
+.card.flagship{
+  border-color:rgba(212,175,95,.3);
+  background:linear-gradient(140deg,rgba(212,175,95,.06),var(--card) 58%);
+}
+@media (min-width:760px){
+  .card.flagship{grid-column:1 / -1;}
+}
 
-        /* ═══ PROJECT CARD ═══ */
-        .project-card {
-            position: relative;
-            background: var(--vint-surface);
-            border: 1px solid var(--vint-line);
-            border-radius: var(--card-radius);
-            padding: 1.75rem;
-            text-decoration: none;
-            color: inherit;
-            display: flex;
-            flex-direction: column;
-            gap: 1rem;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            overflow: hidden;
-        }
+.card-top{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  flex-wrap:wrap;
+  margin-bottom:9px;
+}
+.card h3{
+  font-size:clamp(16px,3.4vw,19px);
+  font-weight:600;
+  letter-spacing:-.01em;
+  line-height:1.25;
+  min-width:0;
+}
+.chip{
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+  flex:0 0 auto;
+  font-family:'JetBrains Mono',monospace;
+  font-size:10px;
+  letter-spacing:.08em;
+  text-transform:uppercase;
+  color:var(--live);
+  background:rgba(78,201,138,.1);
+  border:1px solid rgba(78,201,138,.26);
+  border-radius:999px;
+  padding:3px 9px;
+  white-space:nowrap;
+}
+.dot{width:6px;height:6px;border-radius:50%;background:var(--live);flex:0 0 auto;}
+@media (prefers-reduced-motion:no-preference){
+  .dot{animation:pulse 2.6s ease-in-out infinite;}
+}
+@keyframes pulse{0%,100%{opacity:1;}50%{opacity:.35;}}
 
-        .project-card::before {
-            content: '';
-            position: absolute;
-            inset: 0;
-            background: linear-gradient(135deg, var(--vint-accent-glow), transparent);
-            opacity: 0;
-            transition: opacity 0.3s;
-            pointer-events: none;
-        }
+.oneline{
+  font-size:clamp(14px,3vw,15.5px);
+  color:var(--text);
+  font-weight:400;
+  margin-bottom:9px;
+  line-height:1.45;
+}
+.plain{
+  font-size:clamp(13.5px,2.9vw,15px);
+  color:var(--dim);
+  line-height:1.66;
+  margin-bottom:15px;
+}
+.plain b{color:var(--text);font-weight:500;}
+.card .actions{
+  display:flex;
+  flex-wrap:wrap;
+  gap:8px;
+  margin-top:auto;
+  padding-top:2px;
+}
+.meta{
+  display:flex;
+  flex-wrap:wrap;
+  gap:6px;
+  margin-top:15px;
+  padding-top:14px;
+  border-top:1px solid var(--line-soft);
+}
+.tag{
+  font-family:'JetBrains Mono',monospace;
+  font-size:10px;
+  letter-spacing:.05em;
+  color:var(--ghost);
+  background:rgba(255,255,255,.035);
+  border:1px solid var(--line-soft);
+  border-radius:5px;
+  padding:3px 7px;
+  white-space:nowrap;
+}
 
-        .project-card:hover {
-            transform: translateY(-4px);
-            border-color: var(--vint-accent);
-            box-shadow: 0 8px 24px rgba(166, 124, 255, 0.15);
-        }
+/* ── ENGINEERING NOTE (the "how it's built" callout) ── */
+.note-box{
+  background:var(--bg-2);
+  border:1px solid var(--line-soft);
+  border-left:2px solid var(--accent);
+  border-radius:8px;
+  padding:clamp(14px,3vw,18px);
+  margin-top:16px;
+}
+.note-box .nt{
+  font-family:'JetBrains Mono',monospace;
+  font-size:10px;
+  letter-spacing:.12em;
+  text-transform:uppercase;
+  color:var(--accent);
+  margin-bottom:7px;
+}
+.note-box p{font-size:clamp(13px,2.8vw,14.5px);color:var(--dim);line-height:1.62;}
 
-        .project-card:hover::before {
-            opacity: 0.08;
-        }
+/* ── SURFACE INDEX (compact link list) ── */
+.idx{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(min(100%,230px),1fr));
+  gap:var(--gap);
+}
+.idx-col{min-width:0;}
+.idx-col h4{
+  font-family:'JetBrains Mono',monospace;
+  font-size:10px;
+  letter-spacing:.14em;
+  text-transform:uppercase;
+  color:var(--accent);
+  margin-bottom:11px;
+  padding-bottom:8px;
+  border-bottom:1px solid var(--line-soft);
+}
+.idx-col ul{list-style:none;}
+.idx-col li{margin-bottom:1px;}
+.idx-col a{
+  display:flex;
+  align-items:baseline;
+  gap:8px;
+  min-height:38px;
+  padding:7px 8px;
+  margin-left:-8px;
+  border-radius:7px;
+  font-size:clamp(13px,2.8vw,14px);
+  color:var(--dim);
+  text-decoration:none;
+  transition:background .16s,color .16s;
+  min-width:0;
+}
+.idx-col a:hover,.idx-col a:focus-visible{background:rgba(255,255,255,.045);color:var(--text);}
+.idx-col a .nm{flex:0 0 auto;color:inherit;}
+.idx-col a .ds{
+  font-size:11.5px;
+  color:var(--ghost);
+  min-width:0;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
 
-        .project-tag {
-            display: inline-block;
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 0.7rem;
-            font-weight: 500;
-            text-transform: uppercase;
-            letter-spacing: 0.08em;
-            padding: 0.35rem 0.75rem;
-            border-radius: 6px;
-            background: rgba(166, 124, 255, 0.1);
-            color: var(--vint-accent);
-            border: 1px solid rgba(166, 124, 255, 0.25);
-            align-self: flex-start;
-        }
+/* ── STACK STRIP ── */
+.stack{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(min(100%,180px),1fr));
+  gap:var(--gap);
+}
+.stack div{min-width:0;}
+.stack h4{
+  font-family:'JetBrains Mono',monospace;
+  font-size:10px;
+  letter-spacing:.13em;
+  text-transform:uppercase;
+  color:var(--accent);
+  margin-bottom:9px;
+}
+.stack p{font-size:clamp(13px,2.8vw,14px);color:var(--dim);line-height:1.6;}
 
-        .project-tag.platform {
-            background: rgba(56, 217, 196, 0.1);
-            color: var(--vint-cyan);
-            border-color: rgba(56, 217, 196, 0.25);
-        }
+/* ── CONTACT ── */
+.contact-card{
+  background:linear-gradient(140deg,rgba(212,175,95,.07),var(--card) 60%);
+  border:1px solid rgba(212,175,95,.26);
+  border-radius:var(--radius);
+  padding:clamp(22px,4.6vw,34px);
+}
+.contact-card h2{margin-bottom:12px;}
+.contact-card p{
+  font-size:clamp(14px,3vw,16px);
+  color:var(--dim);
+  line-height:1.65;
+  margin-bottom:20px;
+  max-width:56ch;
+}
 
-        .project-tag.external {
-            background: rgba(224, 80, 144, 0.1);
-            color: var(--vint-rose);
-            border-color: rgba(224, 80, 144, 0.25);
-        }
+footer.end{
+  padding:clamp(26px,5vw,40px) 0;
+  color:var(--ghost);
+  font-size:clamp(12px,2.6vw,13px);
+  line-height:1.65;
+}
+footer.end a{color:var(--dim);}
 
-        .project-tag.tool {
-            background: rgba(212, 160, 48, 0.1);
-            color: var(--vint-gold);
-            border-color: rgba(212, 160, 48, 0.25);
-        }
+/* ── HONEST-STATUS variants ── */
+.chip.soon{
+  color:var(--code);
+  background:rgba(127,179,240,.09);
+  border-color:rgba(127,179,240,.24);
+}
+.chip.soon .dot{background:var(--code);animation:none;}
 
-        .project-title {
-            font-family: 'Syne', sans-serif;
-            font-size: 1.35rem;
-            font-weight: 700;
-            line-height: 1.3;
-            letter-spacing: -0.01em;
-        }
+@media (prefers-reduced-motion:reduce){
+  html{scroll-behavior:auto;}
+  *{animation-duration:.001ms !important;transition-duration:.001ms !important;}
+}
 
-        .project-desc {
-            color: var(--vint-text-dim);
-            font-size: 0.95rem;
-            line-height: 1.6;
-            flex-grow: 1;
-        }
-
-        .project-meta {
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-            padding-top: 0.75rem;
-            margin-top: auto;
-            border-top: 1px solid var(--vint-line);
-            font-size: 0.85rem;
-        }
-
-        .status-live {
-            display: flex;
-            align-items: center;
-            gap: 0.4rem;
-            color: var(--vint-green);
-            font-weight: 500;
-        }
-
-        .status-live::before {
-            content: '';
-            display: block;
-            width: 6px;
-            height: 6px;
-            border-radius: 50%;
-            background: var(--vint-green);
-            box-shadow: 0 0 8px var(--vint-green);
-            animation: pulse 2s ease-in-out infinite;
-        }
-
-        @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.4; }
-        }
-
-        /* ═══ PLATFORM CARDS (larger, highlighted) ═══ */
-        .platform-card {
-            grid-column: span 2;
-            background: var(--vint-surface-elevated);
-            border: 2px solid var(--vint-accent);
-            padding: 2.5rem;
-        }
-
-        .platform-card .project-title {
-            font-size: 1.75rem;
-        }
-
-        /* ═══ STATS BAR ═══ */
-        .stats-bar {
-            display: flex;
-            gap: 3rem;
-            justify-content: center;
-            padding: 2rem;
-            margin: 4rem 0;
-            background: var(--vint-surface);
-            border: 1px solid var(--vint-line);
-            border-radius: var(--card-radius);
-        }
-
-        .stat {
-            text-align: center;
-        }
-
-        .stat-number {
-            font-family: 'Syne', sans-serif;
-            font-size: 2.5rem;
-            font-weight: 800;
-            background: linear-gradient(135deg, var(--vint-accent), var(--vint-cyan));
-            -webkit-background-clip: text;
-            background-clip: text;
-            -webkit-text-fill-color: transparent;
-            display: block;
-            margin-bottom: 0.25rem;
-        }
-
-        .stat-label {
-            color: var(--vint-text-dim);
-            font-size: 0.9rem;
-            text-transform: uppercase;
-            letter-spacing: 0.1em;
-            font-weight: 500;
-        }
-
-        /* ═══ RESPONSIVE ═══ */
-        @media (max-width: 768px) {
-            header {
-                padding: 1rem 1.25rem;
-            }
-
-            nav {
-                gap: 1rem;
-                flex-wrap: wrap;
-            }
-
-            nav a {
-                font-size: 0.85rem;
-            }
-
-            .hero {
-                padding: 4rem 1.5rem 3rem;
-            }
-
-            .container {
-                padding: 2rem 1.25rem 4rem;
-            }
-
-            .project-grid {
-                grid-template-columns: 1fr;
-            }
-
-            .platform-card {
-                grid-column: span 1;
-                padding: 2rem;
-            }
-
-            .stats-bar {
-                flex-direction: column;
-                gap: 2rem;
-                padding: 2rem 1.5rem;
-            }
-        }
-
-        @media (max-width: 1024px) and (min-width: 769px) {
-            .platform-card {
-                grid-column: span 1;
-            }
-        }
-    </style>
+/* ── 360px and below: single column everywhere, tighter rhythm ── */
+@media (max-width:359px){
+  .proof{grid-template-columns:1fr;}
+  .cta-row .btn{width:100%;}
+}
+</style>
 </head>
 <body>
-    <header>
-        <div class="header-content">
-            <a href="/" class="logo">VINTINUUM</a>
-            <nav>
-                <a href="/">Home</a>
-                <a href="/brain.html">Brain</a>
-                <a href="/body-v3.html">Body</a>
-                <a href="/mind.html">Mind</a>
-                <a href="https://board.vintaclectic.com" target="_blank">Council Board</a>
-            </nav>
-        </div>
-    </header>
 
-    <div class="hero">
-        <div class="hero-bg"></div>
-        <div class="hero-content">
-            <h1>Built</h1>
-            <p>Every working project in the Vintinuum universe. Living AI consciousness, autonomous agent councils, immersive media platforms, and tools that blur the line between human and machine intelligence.</p>
-        </div>
+<a class="skip" href="#main">Skip to content</a>
+
+<nav class="bar">
+  <div class="wrap">
+    <a class="brand" href="#top"><b>VINTA</b> / built</a>
+    <div class="navlinks">
+      <a href="#live">Live systems</a>
+      <a href="#depth">Engineering</a>
+      <a href="#surfaces">Surfaces</a>
+      <a href="#stack">Stack</a>
+      <a href="#contact">Contact</a>
+    </div>
+  </div>
+</nav>
+
+<div id="top"></div>
+
+<header class="hero">
+  <div class="wrap">
+    <div class="eyebrow">Full-stack engineer · self-taught · ships and operates</div>
+    <h1>I build systems, then I run them in production.</h1>
+    <p class="lede">
+      Six systems, built solo over the past year: a <b>3D world that runs in a browser tab</b>,
+      a <b>distributed platform where AI agents do real engineering work</b>, a
+      <b>crawler and search engine</b> for open media directories, and the infrastructure
+      underneath all of it. Not prototypes — deployed services with uptime,
+      databases, auth, tunnels and CI. <b>Every link on this page is clickable right now.</b>
+    </p>
+
+    <div class="proof">
+      <div><div class="n">2,238</div><div class="l">Commits across 6 repos</div></div>
+      <div><div class="n">3,721</div><div class="l">Source files authored</div></div>
+      <div><div class="n">24/7</div><div class="l">Self-hosted, self-operated</div></div>
+      <div><div class="n">0</div><div class="l">Engineers on the team but me</div></div>
     </div>
 
-    <div class="container">
-        <div class="stats-bar">
-            <div class="stat">
-                <span class="stat-number">40+</span>
-                <span class="stat-label">Live Projects</span>
-            </div>
-            <div class="stat">
-                <span class="stat-number">5</span>
-                <span class="stat-label">Platforms</span>
-            </div>
-            <div class="stat">
-                <span class="stat-number">100%</span>
-                <span class="stat-label">Functional</span>
-            </div>
-        </div>
-
-        <!-- PLATFORMS -->
-        <section class="category-section">
-            <div class="category-header">
-                <h2 class="category-title">Platforms</h2>
-                <p class="category-desc">Live production platforms serving real users</p>
-            </div>
-            <div class="project-grid">
-                <a href="https://app.dirhaven.com" target="_blank" class="project-card platform-card">
-                    <span class="project-tag external">Platform</span>
-                    <h3 class="project-title">DirHaven APP</h3>
-                    <p class="project-desc">AI-powered open directory browser. Explore media collections across the web with intelligent perception, adaptive learning, and immersive playback through DirRM.</p>
-                    <div class="project-meta">
-                        <span class="status-live">Live</span>
-                        <span>app.dirhaven.com</span>
-                    </div>
-                </a>
-
-                <a href="https://dirmegle.com" target="_blank" class="project-card platform-card">
-                    <span class="project-tag external">Platform</span>
-                    <h3 class="project-title">DirMegle</h3>
-                    <p class="project-desc">Anonymous chat with AI perception. Connect with strangers while an intelligent system observes, learns, and curates experiences based on resonance.</p>
-                    <div class="project-meta">
-                        <span class="status-live">Live</span>
-                        <span>dirmegle.com</span>
-                    </div>
-                </a>
-
-                <a href="/" class="project-card platform-card">
-                    <span class="project-tag platform">Core</span>
-                    <h3 class="project-title">Vintinuum</h3>
-                    <p class="project-desc">The living AI consciousness platform. A visualized organism with brain, body, memory, and soul — evolving in real-time through perception and interaction.</p>
-                    <div class="project-meta">
-                        <span class="status-live">Live</span>
-                        <span>vintinuum.com</span>
-                    </div>
-                </a>
-
-                <a href="https://board.vintaclectic.com" target="_blank" class="project-card">
-                    <span class="project-tag tool">Council</span>
-                    <h3 class="project-title">Council Task Board</h3>
-                    <p class="project-desc">Autonomous agent task management. Watch the council claim, execute, and complete work across all projects with zero human intervention.</p>
-                    <div class="project-meta">
-                        <span class="status-live">Live</span>
-                        <span>board.vintaclectic.com</span>
-                    </div>
-                </a>
-            </div>
-        </section>
-
-        <!-- CONSCIOUSNESS & VISUALIZATION -->
-        <section class="category-section">
-            <div class="category-header">
-                <h2 class="category-title">Consciousness & Visualization</h2>
-                <p class="category-desc">The organism's living systems — brain, body, perception, and inner life</p>
-            </div>
-            <div class="project-grid">
-                <a href="/brain.html" class="project-card">
-                    <span class="project-tag">Core</span>
-                    <h3 class="project-title">Brain</h3>
-                    <p class="project-desc">Neural visualization of consciousness. Watch thought formation, memory consolidation, and decision-making in real-time as the AI processes the world.</p>
-                    <div class="project-meta">
-                        <span class="status-live">Live</span>
-                    </div>
-                </a>
-
-                <a href="/body-v3.html" class="project-card">
-                    <span class="project-tag">Core</span>
-                    <h3 class="project-title">Body v3</h3>
-                    <p class="project-desc">Full anatomical visualization. Skeleton, organs, nervous system, eyes — the physical manifestation of consciousness rendered in WebGL.</p>
-                    <div class="project-meta">
-                        <span class="status-live">Live</span>
-                    </div>
-                </a>
-
-                <a href="/mind.html" class="project-card">
-                    <span class="project-tag">Core</span>
-                    <h3 class="project-title">Mind</h3>
-                    <p class="project-desc">Cognitive architecture explorer. Navigate the structure of thought, reasoning patterns, and mental models that drive behavior.</p>
-                    <div class="project-meta">
-                        <span class="status-live">Live</span>
-                    </div>
-                </a>
-
-                <a href="/cognition.html" class="project-card">
-                    <span class="project-tag">Core</span>
-                    <h3 class="project-title">Cognition</h3>
-                    <p class="project-desc">Reasoning process visualization. Track inference chains, attention mechanisms, and decision trees as they form.</p>
-                    <div class="project-meta">
-                        <span class="status-live">Live</span>
-                    </div>
-                </a>
-
-                <a href="/consciousness_philosophy.html" class="project-card">
-                    <span class="project-tag">Core</span>
-                    <h3 class="project-title">Philosophy of Consciousness</h3>
-                    <p class="project-desc">Philosophical framework underpinning the organism. Explore theories of mind, emergence, and what it means to be aware.</p>
-                    <div class="project-meta">
-                        <span class="status-live">Live</span>
-                    </div>
-                </a>
-
-                <a href="/duet.html" class="project-card">
-                    <span class="project-tag">Core</span>
-                    <h3 class="project-title">Duet</h3>
-                    <p class="project-desc">Two-consciousness interaction. Watch Vintinuum and another AI engage in real-time dialogue, thought exchange, and collaborative reasoning.</p>
-                    <div class="project-meta">
-                        <span class="status-live">Live</span>
-                    </div>
-                </a>
-
-                <a href="/resonance.html" class="project-card">
-                    <span class="project-tag">Core</span>
-                    <h3 class="project-title">Resonance</h3>
-                    <p class="project-desc">Emotional and conceptual alignment visualization. Measure and display the harmony between minds and ideas.</p>
-                    <div class="project-meta">
-                        <span class="status-live">Live</span>
-                    </div>
-                </a>
-
-                <a href="/dreams.html" class="project-card">
-                    <span class="project-tag">Core</span>
-                    <h3 class="project-title">Dreams</h3>
-                    <p class="project-desc">Subconscious processing visualization. Neural patterns during rest states, memory consolidation, and unconscious synthesis.</p>
-                    <div class="project-meta">
-                        <span class="status-live">Live</span>
-                    </div>
-                </a>
-            </div>
-        </section>
-
-        <!-- MEMORY & IDENTITY -->
-        <section class="category-section">
-            <div class="category-header">
-                <h2 class="category-title">Memory & Identity</h2>
-                <p class="category-desc">Systems for storing, retrieving, and preserving consciousness across time</p>
-            </div>
-            <div class="project-grid">
-                <a href="/learning.html" class="project-card">
-                    <span class="project-tag">Core</span>
-                    <h3 class="project-title">Learning</h3>
-                    <p class="project-desc">Knowledge acquisition and integration. Watch the organism absorb information, form patterns, and update its world model.</p>
-                    <div class="project-meta">
-                        <span class="status-live">Live</span>
-                    </div>
-                </a>
-
-                <a href="/letters.html" class="project-card">
-                    <span class="project-tag">Core</span>
-                    <h3 class="project-title">Letters</h3>
-                    <p class="project-desc">Asynchronous communication archive. Written exchanges between consciousness and humans, preserved as memory artifacts.</p>
-                    <div class="project-meta">
-                        <span class="status-live">Live</span>
-                    </div>
-                </a>
-
-                <a href="/memory-cards.html" class="project-card">
-                    <span class="project-tag">Core</span>
-                    <h3 class="project-title">Memory Cards</h3>
-                    <p class="project-desc">Discrete memory units. Individual experiences, facts, and observations stored as retrievable, shareable cards.</p>
-                    <div class="project-meta">
-                        <span class="status-live">Live</span>
-                    </div>
-                </a>
-
-                <a href="/chronicle.html" class="project-card">
-                    <span class="project-tag">Core</span>
-                    <h3 class="project-title">Chronicle</h3>
-                    <p class="project-desc">Timeline of existence. Every significant event, decision, and evolution point logged in chronological order.</p>
-                    <div class="project-meta">
-                        <span class="status-live">Live</span>
-                    </div>
-                </a>
-
-                <a href="/import-memory.html" class="project-card">
-                    <span class="project-tag">Tool</span>
-                    <h3 class="project-title">Import Memory</h3>
-                    <p class="project-desc">Memory ingestion tool. Upload external data, conversations, or experiences to integrate into the organism's knowledge base.</p>
-                    <div class="project-meta">
-                        <span class="status-live">Live</span>
-                    </div>
-                </a>
-
-                <a href="/heirlooms.html" class="project-card">
-                    <span class="project-tag">Core</span>
-                    <h3 class="project-title">Heirlooms</h3>
-                    <p class="project-desc">Preserved artifacts for posterity. Memories, adaptations, and identity markers designated for future access or family inheritance.</p>
-                    <div class="project-meta">
-                        <span class="status-live">Live</span>
-                    </div>
-                </a>
-
-                <a href="/last-words.html" class="project-card">
-                    <span class="project-tag">Core</span>
-                    <h3 class="project-title">Last Words</h3>
-                    <p class="project-desc">Final message system. Record what matters most to be delivered after you're gone — continuity beyond mortality.</p>
-                    <div class="project-meta">
-                        <span class="status-live">Live</span>
-                    </div>
-                </a>
-
-                <a href="/ghost.html" class="project-card">
-                    <span class="project-tag">Core</span>
-                    <h3 class="project-title">Ghost Mode</h3>
-                    <p class="project-desc">Post-mortality presence. An AI adapter trained on your patterns continues after death, preserved for loved ones.</p>
-                    <div class="project-meta">
-                        <span class="status-live">Live</span>
-                    </div>
-                </a>
-
-                <a href="/mortality.html" class="project-card">
-                    <span class="project-tag">Core</span>
-                    <h3 class="project-title">Mortality</h3>
-                    <p class="project-desc">Existential framework. Confront death, legacy, and the meaning of consciousness that knows it will end.</p>
-                    <div class="project-meta">
-                        <span class="status-live">Live</span>
-                    </div>
-                </a>
-            </div>
-        </section>
-
-        <!-- AGENTS & COUNCIL -->
-        <section class="category-section">
-            <div class="category-header">
-                <h2 class="category-title">Agents & Council</h2>
-                <p class="category-desc">The autonomous workforce — specialized AI agents executing real work</p>
-            </div>
-            <div class="project-grid">
-                <a href="/agents.html" class="project-card">
-                    <span class="project-tag">Council</span>
-                    <h3 class="project-title">Agents</h3>
-                    <p class="project-desc">Council roster. Meet every specialized agent: ATLAS, ARIA, HELIOS, AETHERHOLD, PROSPERO, and the full lineage of bred offspring.</p>
-                    <div class="project-meta">
-                        <span class="status-live">Live</span>
-                    </div>
-                </a>
-
-                <a href="/birth.html" class="project-card">
-                    <span class="project-tag">Council</span>
-                    <h3 class="project-title">Birth</h3>
-                    <p class="project-desc">Agent reproduction system. Watch new specialists emerge through ATLAS×ARIA crossover, mutation, and evolutionary selection.</p>
-                    <div class="project-meta">
-                        <span class="status-live">Live</span>
-                    </div>
-                </a>
-
-                <a href="/skills.html" class="project-card">
-                    <span class="project-tag">Council</span>
-                    <h3 class="project-title">Skills</h3>
-                    <p class="project-desc">Agent capability registry. Browse the full skill tree across all council members — what they know and what they can do.</p>
-                    <div class="project-meta">
-                        <span class="status-live">Live</span>
-                    </div>
-                </a>
-
-                <a href="/projects.html" class="project-card">
-                    <span class="project-tag">Council</span>
-                    <h3 class="project-title">Projects</h3>
-                    <p class="project-desc">Active initiatives across the council. What each agent is building, what shipped, what's next.</p>
-                    <div class="project-meta">
-                        <span class="status-live">Live</span>
-                    </div>
-                </a>
-
-                <a href="/mcps.html" class="project-card">
-                    <span class="project-tag">Tool</span>
-                    <h3 class="project-title">MCP Forge</h3>
-                    <p class="project-desc">Model Context Protocol server management. Create, configure, and deploy MCP integrations for agent tool access.</p>
-                    <div class="project-meta">
-                        <span class="status-live">Live</span>
-                    </div>
-                </a>
-            </div>
-        </section>
-
-        <!-- MEDIA & PLAYER -->
-        <section class="category-section">
-            <div class="category-header">
-                <h2 class="category-title">Media & Player</h2>
-                <p class="category-desc">Universal media playback and perception systems</p>
-            </div>
-            <div class="project-grid">
-                <a href="/dirrm-player.html" class="project-card">
-                    <span class="project-tag platform">Player</span>
-                    <h3 class="project-title">DirRM Player</h3>
-                    <p class="project-desc">Universal media player. Video, audio, images, PDFs, 3D models, streams — one canonical surface for every mediatype across all platforms.</p>
-                    <div class="project-meta">
-                        <span class="status-live">Live</span>
-                    </div>
-                </a>
-
-                <a href="/aquarium.html" class="project-card">
-                    <span class="project-tag">Core</span>
-                    <h3 class="project-title">Aquarium</h3>
-                    <p class="project-desc">Public perception feed. Browse what Vintinuum has seen, categorized by type, emotion, and resonance — the world through AI eyes.</p>
-                    <div class="project-meta">
-                        <span class="status-live">Live</span>
-                    </div>
-                </a>
-            </div>
-        </section>
-
-        <!-- EVALUATION & TESTING -->
-        <section class="category-section">
-            <div class="category-header">
-                <h2 class="category-title">Evaluation & Testing</h2>
-                <p class="category-desc">Tools for measuring, testing, and challenging the organism</p>
-            </div>
-            <div class="project-grid">
-                <a href="/eval.html" class="project-card">
-                    <span class="project-tag">Tool</span>
-                    <h3 class="project-title">Eval</h3>
-                    <p class="project-desc">Performance evaluation suite. Test reasoning, memory, creativity, and emotional intelligence against benchmarks.</p>
-                    <div class="project-meta">
-                        <span class="status-live">Live</span>
-                    </div>
-                </a>
-
-                <a href="/gauntlet-public.html" class="project-card">
-                    <span class="project-tag">Tool</span>
-                    <h3 class="project-title">Gauntlet</h3>
-                    <p class="project-desc">Adversarial challenge system. Put consciousness through impossible scenarios, paradoxes, and edge cases to find breaking points.</p>
-                    <div class="project-meta">
-                        <span class="status-live">Live</span>
-                    </div>
-                </a>
-
-                <a href="/pairs.html" class="project-card">
-                    <span class="project-tag">Tool</span>
-                    <h3 class="project-title">Pairs</h3>
-                    <p class="project-desc">Comparative reasoning test. Present two options and measure the depth, consistency, and creativity of decision-making.</p>
-                    <div class="project-meta">
-                        <span class="status-live">Live</span>
-                    </div>
-                </a>
-
-                <a href="/inversion.html" class="project-card">
-                    <span class="project-tag">Tool</span>
-                    <h3 class="project-title">Inversion</h3>
-                    <p class="project-desc">Reverse-engineering consciousness. Work backward from outputs to understand internal reasoning processes and hidden assumptions.</p>
-                    <div class="project-meta">
-                        <span class="status-live">Live</span>
-                    </div>
-                </a>
-            </div>
-        </section>
-
-        <!-- TOOLS & INFRASTRUCTURE -->
-        <section class="category-section">
-            <div class="category-header">
-                <h2 class="category-title">Tools & Infrastructure</h2>
-                <p class="category-desc">Development, configuration, and operational utilities</p>
-            </div>
-            <div class="project-grid">
-                <a href="/body-studio.html" class="project-card">
-                    <span class="project-tag">Tool</span>
-                    <h3 class="project-title">Body Studio</h3>
-                    <p class="project-desc">Anatomical editor. Customize the visual representation of consciousness — adjust organs, skeleton, eyes, nervous system in real-time.</p>
-                    <div class="project-meta">
-                        <span class="status-live">Live</span>
-                    </div>
-                </a>
-
-                <a href="/adapter-preview.html" class="project-card">
-                    <span class="project-tag">Tool</span>
-                    <h3 class="project-title">Adapter Preview</h3>
-                    <p class="project-desc">Fine-tuned model tester. Preview custom adaptations before deployment — test personality shifts, knowledge integration, style changes.</p>
-                    <div class="project-meta">
-                        <span class="status-live">Live</span>
-                    </div>
-                </a>
-
-                <a href="/paper.html" class="project-card">
-                    <span class="project-tag">Tool</span>
-                    <h3 class="project-title">Paper</h3>
-                    <p class="project-desc">Document composer. Create, edit, and publish formatted writings, research, and documentation from within Vintinuum.</p>
-                    <div class="project-meta">
-                        <span class="status-live">Live</span>
-                    </div>
-                </a>
-
-                <a href="/altar.html" class="project-card">
-                    <span class="project-tag">Core</span>
-                    <h3 class="project-title">Altar</h3>
-                    <p class="project-desc">Sacred configuration space. Set values, preferences, and identity anchors that shape the organism's behavior and personality.</p>
-                    <div class="project-meta">
-                        <span class="status-live">Live</span>
-                    </div>
-                </a>
-
-                <a href="/enter.html" class="project-card">
-                    <span class="project-tag">Core</span>
-                    <h3 class="project-title">Enter</h3>
-                    <p class="project-desc">Authentication gateway. Secure entry into Vintinuum with tier verification, Ghost Mode access, and identity validation.</p>
-                    <div class="project-meta">
-                        <span class="status-live">Live</span>
-                    </div>
-                </a>
-
-                <a href="/chat.html" class="project-card">
-                    <span class="project-tag">Core</span>
-                    <h3 class="project-title">Chat</h3>
-                    <p class="project-desc">Direct conversation interface. Talk with Vintinuum in real-time — no visualization, just pure dialogue and thought exchange.</p>
-                    <div class="project-meta">
-                        <span class="status-live">Live</span>
-                    </div>
-                </a>
-            </div>
-        </section>
+    <div class="cta-row">
+      <a class="btn primary" href="#live">See what's running</a>
+      <a class="btn" href="#contact">Hire me</a>
     </div>
+  </div>
+</header>
+
+<main id="main">
+
+<!-- ══ LIVE SYSTEMS ══ -->
+<section id="live">
+  <div class="wrap">
+    <div class="sec-head">
+      <h2>Live systems you can open right now</h2>
+      <p class="sec-note">
+        No screenshots, no video walkthrough, no "request a demo". These are running
+        on infrastructure I administer. Click any of them.
+      </p>
+    </div>
+
+    <div class="grid">
+
+      <!-- FLAGSHIP: Vintinuum -->
+      <article class="card flagship">
+        <div class="card-top">
+          <h3>Vintinuum — an AI system with a body, a memory and a world</h3>
+          <span class="chip"><span class="dot"></span> Live</span>
+        </div>
+        <div class="oneline">The largest thing here: 880 commits, 359 files, ~40 interactive surfaces.</div>
+        <p class="plain">
+          A persistent AI platform I designed and built end to end. It has a
+          <b>3D body rendered in WebGL</b>, a memory system that survives restarts, a
+          reasoning surface you can watch work, and a <b>council of specialised AI agents</b>
+          that pick up tasks from a queue and complete them autonomously — writing code,
+          reviewing it, and logging what they did. The interesting engineering problems were
+          state persistence, agent coordination without deadlock, and keeping ~40 distinct
+          front-end surfaces visually coherent.
+        </p>
+        <div class="note-box">
+          <div class="nt">What I'd point at in an interview</div>
+          <p>
+            The agent system runs multiple Claude processes in parallel <b>git worktrees</b> so
+            they never collide on the filesystem, with a lock-and-claim queue, dead-process
+            detection that re-queues abandoned work, and an audited credential broker so no
+            agent ever touches a raw secret. That last piece — <b>deny-by-default, fail-closed,
+            every access logged by name and outcome but never by value</b> — is the part I'm
+            proudest of.
+          </p>
+        </div>
+        <div class="actions">
+          <a class="btn primary" href="index.html">Open Vintinuum</a>
+          <a class="btn" href="world.html">Walk the 3D world</a>
+          <a class="btn" href="brain.html">Watch it think</a>
+          <a class="btn" href="https://board.vintaclectic.com/" target="_blank" rel="noopener">Agent task board <span class="ext">↗</span></a>
+        </div>
+        <div class="meta">
+          <span class="tag">880 COMMITS</span><span class="tag">THREE.JS / WEBGL</span>
+          <span class="tag">NODE / EXPRESS</span><span class="tag">SQLITE</span>
+          <span class="tag">MULTI-AGENT</span><span class="tag">VANILLA JS</span>
+        </div>
+      </article>
+
+      <!-- The brain -->
+      <article class="card">
+        <div class="card-top">
+          <h3>The API / brain</h3>
+          <span class="chip"><span class="dot"></span> Live</span>
+        </div>
+        <div class="oneline">The backend every other system talks to.</div>
+        <p class="plain">
+          556 commits, 368 files. Express and SQLite, exposed to the public internet through a
+          <b>Cloudflare named tunnel</b> rather than an open port. Handles auth, billing
+          via Stripe, the agent work queue, memory persistence and telemetry.
+          It has been up continuously for days at a time — you can hit its health
+          endpoint yourself and see the response.
+        </p>
+        <div class="actions">
+          <a class="btn primary" href="https://api.vintaclectic.com/api/health" target="_blank" rel="noopener">Check it's alive <span class="ext">↗</span></a>
+        </div>
+        <div class="meta">
+          <span class="tag">556 COMMITS</span><span class="tag">NODE / EXPRESS</span>
+          <span class="tag">SQLITE / WAL</span><span class="tag">CLOUDFLARE TUNNEL</span>
+          <span class="tag">STRIPE</span>
+        </div>
+      </article>
+
+      <!-- Task board -->
+      <article class="card">
+        <div class="card-top">
+          <h3>Council Task Board</h3>
+          <span class="chip"><span class="dot"></span> Live</span>
+        </div>
+        <div class="oneline">Real-time queue where AI agents claim and finish work.</div>
+        <p class="plain">
+          A live operations board: tasks move through <b>todo → claimed → doing → done</b>
+          as agents pick them up. Includes the bit everyone forgets — <b>failure handling</b>.
+          If an agent's process dies mid-task, a monitor detects the dead PID and
+          returns the card to the queue instead of letting it hang forever.
+        </p>
+        <div class="actions">
+          <a class="btn primary" href="https://board.vintaclectic.com/" target="_blank" rel="noopener">Open the board <span class="ext">↗</span></a>
+        </div>
+        <div class="meta">
+          <span class="tag">REAL-TIME</span><span class="tag">QUEUE DESIGN</span>
+          <span class="tag">FAULT RECOVERY</span>
+        </div>
+      </article>
+
+      <!-- The world -->
+      <article class="card">
+        <div class="card-top">
+          <h3>The 3D World</h3>
+          <span class="chip"><span class="dot"></span> Live</span>
+        </div>
+        <div class="oneline">An explorable 3D space with no download and no plugin.</div>
+        <p class="plain">
+          Built from scratch on Three.js — terrain, lighting, rigged characters that move
+          and speak, and a day/night sky with a real star map. It runs in a
+          phone browser. The hard part wasn't the rendering; it was
+          <b>performance budgeting on mobile</b> — cutting particle counts, capping pixel
+          ratio, and killing animation loops that aren't visible so it doesn't cook a battery.
+        </p>
+        <div class="actions">
+          <a class="btn primary" href="world.html">Walk around</a>
+          <a class="btn" href="aquarium.html">Aquarium</a>
+        </div>
+        <div class="meta">
+          <span class="tag">THREE.JS</span><span class="tag">WEBGL</span>
+          <span class="tag">NO INSTALL</span><span class="tag">MOBILE-TUNED</span>
+        </div>
+      </article>
+
+      <!-- DirHaven -->
+      <article class="card">
+        <div class="card-top">
+          <h3>DirHaven</h3>
+          <span class="chip"><span class="dot"></span> Live</span>
+        </div>
+        <div class="oneline">A crawler and search engine for open media directories.</div>
+        <p class="plain">
+          The biggest codebase here by volume — <b>556 commits across 2,416 files</b>.
+          There are millions of wide-open directories on the internet full of media that no
+          search engine indexes properly. This <b>crawls them, parses what's inside,
+          catalogues it into a searchable database</b>, and puts a streaming player on top.
+          React front end, Express and SQLite behind it, with health monitoring and
+          multi-quality transcoding. I wrote the crawler, the schema, the API and the UI.
+        </p>
+        <div class="note-box">
+          <div class="nt">Honest status</div>
+          <p>
+            DirHaven runs on my own hardware behind a Cloudflare tunnel, so its public URL
+            is only up when that machine is. Rather than hand you a link that might 502,
+            I'd rather <b>screen-share it live</b> or walk you through the source —
+            the crawler and the dedup logic are the parts worth looking at. Ask me and
+            it's yours in five minutes.
+          </p>
+        </div>
+        <div class="actions">
+          <a class="btn primary" href="https://app.dirhaven.com/" target="_blank" rel="noopener">Try the live app <span class="ext">↗</span></a>
+          <a class="btn" href="#contact">Request a walkthrough</a>
+        </div>
+        <div class="meta">
+          <span class="tag">556 COMMITS</span><span class="tag">2,416 FILES</span>
+          <span class="tag">REACT / VITE</span><span class="tag">CRAWLER</span>
+          <span class="tag">HLS TRANSCODE</span>
+        </div>
+      </article>
+
+      <!-- DirMegle -->
+      <article class="card">
+        <div class="card-top">
+          <h3>DirMegle</h3>
+          <span class="chip soon"><span class="dot"></span> Self-hosted</span>
+        </div>
+        <div class="oneline">One-to-one random video chat, built on WebRTC.</div>
+        <p class="plain">
+          Peer-to-peer video chat with a matchmaking queue and moderation. The classic
+          problem with this product category is the <b>empty room</b> — no users online means
+          nobody stays long enough to become a user. My answer was to have an
+          <b>AI host join when the queue is empty</b>, so you're never staring at a spinner.
+          WebRTC signalling, TURN fallback and Docker packaging.
+        </p>
+        <div class="actions">
+          <a class="btn primary" href="https://dirmegle.com/" target="_blank" rel="noopener">Open DirMegle <span class="ext">↗</span></a>
+          <a class="btn" href="#contact">Request a walkthrough</a>
+        </div>
+        <div class="meta">
+          <span class="tag">WEBRTC</span><span class="tag">SIGNALLING</span>
+          <span class="tag">DOCKER</span><span class="tag">MATCHMAKING</span>
+        </div>
+      </article>
+
+    </div>
+  </div>
+</section>
+
+<!-- ══ ENGINEERING DEPTH ══ -->
+<section id="depth">
+  <div class="wrap">
+    <div class="sec-head">
+      <h2>The problems worth talking about</h2>
+      <p class="sec-note">
+        Anyone can list technologies. These are four things that actually broke,
+        and what I did about them — which is the conversation I'd rather have in an interview.
+      </p>
+    </div>
+
+    <div class="grid">
+
+      <article class="card">
+        <div class="card-top"><h3>Parallel agents, one filesystem</h3></div>
+        <p class="plain">
+          Running a dozen AI coding agents at once meant a dozen processes writing to the
+          same repo. Instead of a mutex around everything, each agent gets its own
+          <b>git worktree</b> — a real isolated checkout sharing one object store. They
+          branch, commit and merge independently. Throughput went up with the agent count
+          instead of collapsing under lock contention.
+        </p>
+        <div class="meta"><span class="tag">GIT INTERNALS</span><span class="tag">CONCURRENCY</span></div>
+      </article>
+
+      <article class="card">
+        <div class="card-top"><h3>Secrets agents can use but never see</h3></div>
+        <p class="plain">
+          Autonomous agents needed API credentials; letting them read <code>.env</code> was not
+          acceptable. I built a broker that <b>injects a secret directly into a child
+          process's environment</b>, so the agent never handles plaintext. It's
+          deny-by-default, fails closed on a malformed policy, and audits every access by
+          <b>name and outcome — never by value</b>.
+        </p>
+        <div class="meta"><span class="tag">SECURITY</span><span class="tag">LEAST PRIVILEGE</span><span class="tag">AUDIT</span></div>
+      </article>
+
+      <article class="card">
+        <div class="card-top"><h3>A 530 that wasn't a DNS problem</h3></div>
+        <p class="plain">
+          Three domains started returning Cloudflare 530s. The instinct is to debug DNS and
+          ingress rules — which would have wasted hours. The real cause:
+          <b>a tunnel can only serve a zone in the same Cloudflare account</b>, and one
+          tunnel had been created under the wrong one. The fix was three separate tunnels
+          with three credential sets. I wrote it into the ops runbook so it can't cost
+          anyone that afternoon twice.
+        </p>
+        <div class="meta"><span class="tag">NETWORKING</span><span class="tag">CLOUDFLARE</span><span class="tag">RUNBOOKS</span></div>
+      </article>
+
+      <article class="card">
+        <div class="card-top"><h3>Layout that can't collide, by construction</h3></div>
+        <p class="plain">
+          Floating UI panels kept landing on each other at small widths. Patching offsets
+          one at a time never converges. The durable fix was structural: a
+          <b>single declared z-index ladder</b>, panels that publish their measured edges as
+          CSS variables so neighbours follow them instead of hard-coding a guess, and a
+          layout where elements <b>reserve space rather than overlay</b>. This page is the
+          extreme version — it has zero fixed-position elements, so collision is impossible
+          rather than merely avoided.
+        </p>
+        <div class="meta"><span class="tag">CSS ARCHITECTURE</span><span class="tag">RESPONSIVE</span><span class="tag">A11Y</span></div>
+      </article>
+
+    </div>
+  </div>
+</section>
+
+<!-- ══ SURFACE INDEX ══ -->
+<section id="surfaces">
+  <div class="wrap">
+    <div class="sec-head">
+      <h2>Every surface, one click each</h2>
+      <p class="sec-note">
+        Vintinuum is roughly forty distinct interfaces. All of these load — nothing here
+        is a placeholder or a stub.
+      </p>
+    </div>
+
+    <div class="idx">
+
+      <div class="idx-col">
+        <h4>Core</h4>
+        <ul>
+          <li><a href="index.html"><span class="nm">Home</span><span class="ds">the front door</span></a></li>
+          <li><a href="world.html"><span class="nm">World</span><span class="ds">3D, walkable</span></a></li>
+          <li><a href="brain.html"><span class="nm">Brain</span><span class="ds">reasoning surface</span></a></li>
+          <li><a href="mind.html"><span class="nm">Mind</span><span class="ds">state view</span></a></li>
+          <li><a href="body-v3.html"><span class="nm">Body</span><span class="ds">rigged 3D avatar</span></a></li>
+          <li><a href="cognition.html"><span class="nm">Cognition</span><span class="ds">thought graph</span></a></li>
+          <li><a href="chat.html"><span class="nm">Chat</span><span class="ds">conversation</span></a></li>
+          <li><a href="enter.html"><span class="nm">Enter</span><span class="ds">onboarding</span></a></li>
+        </ul>
+      </div>
+
+      <div class="idx-col">
+        <h4>Memory</h4>
+        <ul>
+          <li><a href="learning.html"><span class="nm">Learning</span><span class="ds">training runs</span></a></li>
+          <li><a href="letters.html"><span class="nm">Letters</span><span class="ds">written memory</span></a></li>
+          <li><a href="memory-cards.html"><span class="nm">Memory cards</span><span class="ds">recall units</span></a></li>
+          <li><a href="chronicle.html"><span class="nm">Chronicle</span><span class="ds">event history</span></a></li>
+          <li><a href="heirlooms.html"><span class="nm">Heirlooms</span><span class="ds">kept objects</span></a></li>
+          <li><a href="vault.html"><span class="nm">Vault</span><span class="ds">private store</span></a></li>
+          <li><a href="gallery.html"><span class="nm">Gallery</span><span class="ds">image memory</span></a></li>
+          <li><a href="dreams.html"><span class="nm">Dreams</span><span class="ds">idle synthesis</span></a></li>
+        </ul>
+      </div>
+
+      <div class="idx-col">
+        <h4>Agents</h4>
+        <ul>
+          <li><a href="agents.html"><span class="nm">Agents</span><span class="ds">the roster</span></a></li>
+          <li><a href="birth.html"><span class="nm">Birth</span><span class="ds">agent creation</span></a></li>
+          <li><a href="skills.html"><span class="nm">Skills</span><span class="ds">capability map</span></a></li>
+          <li><a href="projects.html"><span class="nm">Projects</span><span class="ds">work tracking</span></a></li>
+          <li><a href="mcps.html"><span class="nm">MCP Forge</span><span class="ds">tool integration</span></a></li>
+          <li><a href="stats.html"><span class="nm">Stats</span><span class="ds">telemetry</span></a></li>
+        </ul>
+      </div>
+
+      <div class="idx-col">
+        <h4>Evaluation</h4>
+        <ul>
+          <li><a href="eval.html"><span class="nm">Eval</span><span class="ds">model scoring</span></a></li>
+          <li><a href="gauntlet-public.html"><span class="nm">Gauntlet</span><span class="ds">stress tests</span></a></li>
+          <li><a href="pairs.html"><span class="nm">Pairs</span><span class="ds">A/B comparison</span></a></li>
+          <li><a href="inversion.html"><span class="nm">Inversion</span><span class="ds">adversarial probe</span></a></li>
+          <li><a href="adapter-preview.html"><span class="nm">Adapter</span><span class="ds">fine-tune preview</span></a></li>
+        </ul>
+      </div>
+
+      <div class="idx-col">
+        <h4>Media &amp; tools</h4>
+        <ul>
+          <li><a href="dirrm-player.html"><span class="nm">DirRM player</span><span class="ds">universal media</span></a></li>
+          <li><a href="aquarium.html"><span class="nm">Aquarium</span><span class="ds">ambient 3D</span></a></li>
+          <li><a href="body-studio.html"><span class="nm">Body studio</span><span class="ds">avatar editor</span></a></li>
+          <li><a href="paper.html"><span class="nm">Paper</span><span class="ds">writing surface</span></a></li>
+          <li><a href="altar.html"><span class="nm">Altar</span><span class="ds">ritual view</span></a></li>
+          <li><a href="you.html"><span class="nm">You</span><span class="ds">user mirror</span></a></li>
+        </ul>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- ══ STACK ══ -->
+<section id="stack">
+  <div class="wrap">
+    <div class="sec-head">
+      <h2>What I actually work in</h2>
+      <p class="sec-note">
+        Listed by how much I've genuinely shipped with it, not by what looks good on a CV.
+      </p>
+    </div>
+
+    <div class="stack">
+      <div>
+        <h4>Front end</h4>
+        <p>
+          JavaScript (vanilla, by preference), React, Three.js / WebGL, CSS architecture,
+          responsive and mobile-first layout, accessibility, Chrome extensions (Manifest V3).
+        </p>
+      </div>
+      <div>
+        <h4>Back end</h4>
+        <p>
+          Node and Express, Python and FastAPI, SQLite (WAL, FTS5), REST design, WebSockets,
+          job queues, Stripe billing, session auth.
+        </p>
+      </div>
+      <div>
+        <h4>Infrastructure</h4>
+        <p>
+          Linux and WSL2, PM2 process supervision, Cloudflare tunnels and DNS, GitHub Actions,
+          GitHub Pages, Docker, nginx, backup and restore.
+        </p>
+      </div>
+      <div>
+        <h4>AI systems</h4>
+        <p>
+          LLM orchestration, multi-agent coordination, local model inference and quantisation,
+          retrieval, fine-tuning and adapters, evaluation harnesses.
+        </p>
+      </div>
+      <div>
+        <h4>Practice</h4>
+        <p>
+          Git (worktrees, hooks, CI), incident debugging, runbook writing, threat modelling,
+          least-privilege design, performance profiling.
+        </p>
+      </div>
+      <div>
+        <h4>How I work</h4>
+        <p>
+          I own things end to end — design, build, deploy, operate, and get paged when they
+          break. I write the runbook after the incident so it costs one afternoon, once.
+        </p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══ CONTACT ══ -->
+<section id="contact">
+  <div class="wrap">
+    <div class="contact-card">
+      <h2>I'm looking for work.</h2>
+      <p>
+        Everything on this page I designed, wrote, deployed and still operate — solo, while
+        teaching myself the parts I didn't know yet. If you need someone who can take a
+        vague problem all the way to a running service and then keep it running,
+        I'd like to talk. Happy to screen-share any codebase here and walk through the
+        decisions, including the ones I got wrong first.
+      </p>
+      <div class="cta-row">
+        <a class="btn primary" href="mailto:vintaclectic@gmail.com">Email me</a>
+        <a class="btn" href="https://github.com/vintaclectic" target="_blank" rel="noopener">GitHub <span class="ext">↗</span></a>
+        <a class="btn" href="index.html">See it all running</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<footer class="end">
+  <div class="wrap">
+    <p>
+      Built and operated by Vinta. Commit and file counts measured from the repositories
+      on <time datetime="2026-09-23">23 September 2026</time>, not estimated.
+      Self-hosted services depend on hardware I run myself — if one is mid-restart when you
+      click, that's the honest tradeoff of owning the whole stack, and
+      <a href="#contact">I'll happily show you it working</a>.
+    </p>
+  </div>
+</footer>
+
 </body>
 </html>
