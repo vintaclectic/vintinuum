@@ -9,6 +9,15 @@ Format: `- [ ] task — [owner: ] — [status: open | claimed | in review | bloc
 ## Phase 1 — Pipeline proof  ← DONE 2026-10-28 951d445
 Test: change one word, commit, and see it live on a phone at vintinuum.com/world.html within 2 minutes, footer hash matching.
 
+**Phase test re-verified live 2026-10-28 (seat-5, task 2W4XATX) before advancing:** all 5 tasks below
+are `[x]`. Re-ran the checks rather than trusting the prior log entry: `curl -s
+https://vintinuum.com/commit.json` → `{"commit":"b82f8c6","deployed_at":"2026-10-28T20:11:20Z"}`
+(matches the deployed world.html commit); `curl -s https://api.vintaclectic.com/api/world/health` →
+`{"tick":6579,"agents":5,"uptime_sec":1391,"commit":"aacbf53"}` (server running 24/7, tick rising);
+`curl -sI https://api.vintaclectic.com/api/world/health` → `cache-control: no-store` present. `git diff
+--stat b82f8c6 origin/main` → only `COUNCIL_LOG.md` + `commit.json` changed since deploy (no world.html
+drift). Phase test passes live. Marker advanced to Phase 2 per rule 8.
+
 - [x] Confirm repo world.html == served world.html (curl + diff); fix deploy path if not — [owner: vessel] — [status: verified 2026-10-28 — `curl -s https://vintinuum.com/world.html` byte-diffed 0 against the repo copy. Already true, no fix needed.]
 - [x] Add `Cache-Control: no-store` for world.html and /api/*; purge Cloudflare cache — [owner: vessel] — [status: done for the API, caveat for the page — see note below]
 - [x] Footer shows current git commit hash (injected at deploy) — [owner: vessel] — [status: done, zero-DOM-footprint — see note below]
