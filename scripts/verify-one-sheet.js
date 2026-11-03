@@ -108,6 +108,14 @@ const SURFACES = [
   // precondition below covers it, and the button is waited on for VISIBILITY
   // rather than mere existence.
   { id: 'admiralty', sel: '#adSheet',     btn: '#adBtn',      open: () => window.VintAdmiralty.open() },
+  // THE MARCHES. An eighth full-width sheet, same z-band, same registry. It
+  // joins this proof for the identical reason every surface before it did —
+  // and this one carries the widest dynamic content in the world (user-named
+  // factions and march holders on every row), which is exactly the content
+  // class that pushes a neighbour off a 320px row if a min-width:0 is ever
+  // dropped. Its launcher is hidden until a polity is founded, so the same
+  // visibility wait the Concord and the Admiralty use covers it.
+  { id: 'marches',  sel: '#mrSheet',      btn: '#mrBtn',      open: () => window.VintMarches.open() },
   // THE ARCADE (organ 6). An eighth full-width sheet in the same z-band through
   // the same registry, so it belongs here for exactly the reason the lanterns,
   // the Concord and the Admiralty did: the whole point of this script is that a
