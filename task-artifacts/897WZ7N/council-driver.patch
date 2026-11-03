@@ -1,0 +1,157 @@
+--- a/bin/council-driver.sh
++++ b/bin/council-driver.sh
+@@ -880,7 +880,7 @@
+   # The router is now the SOURCE OF TRUTH for routing. The old hardcoded path below
+   # survives as a fallback ONLY when the router itself is unreachable.
+ 
+-  PLAN_JSON=""  # The failover logic at line 1534+ reads this variable
++  # 897WZ7N: preserve the successful agentic plan for cross-provider failover.
+   if [ -z "$ROUTE" ]; then
+     # Call llm-router.js to get the full ladder with multi-provider failover
+     PLAN_JSON="$(timeout 10 "$NODE_BIN" "$ROUTER_JS" plan \
+@@ -1140,8 +1140,21 @@
+     reap_agent_tree KILL
+   }
+ 
++  # 897WZ7N: keep aggregate logs for usage/UI, but classify only this attempt.
++  attempt_offset() {
++    if [ -f "$1" ]; then wc -c < "$1"; else printf '0'; fi
++  }
++  current_attempt_evidence() {
++    tail -c "+${ATTEMPT_RAW_START:-1}" "$RAW_LOG" 2>/dev/null
++    tail -c "+${ATTEMPT_ROUTER_START:-1}" "$TASK_LOG.routerout" 2>/dev/null
++    tail -c "+${ATTEMPT_STDERR_START:-1}" "$TASK_LOG.stderr" 2>/dev/null
++    return 0
++  }
+   launch_rung() {
+     _lp="$1"; _lm="$2"
++    ATTEMPT_RAW_START=$(( $(attempt_offset "$RAW_LOG") + 1 ))
++    ATTEMPT_ROUTER_START=$(( $(attempt_offset "$TASK_LOG.routerout") + 1 ))
++    ATTEMPT_STDERR_START=$(( $(attempt_offset "$TASK_LOG.stderr") + 1 ))
+     if [ "$_lp" = "anthropic" ]; then
+       # Long-lived Claude token (2026-10-05): if Vinta ran `claude setup-token` and
+       # stored it as provider:claude_code_oauth_token, inject it through vintkey so
+@@ -1154,7 +1167,7 @@
+       ( exec 200>&-; cd "$WORKTREE" && printf '%s' "$PROMPT" | "${_authwrap[@]}" timeout "$TIMEOUT_SECS" "$CLAUDE_BIN" \
+             --print --verbose --output-format stream-json \
+             --model "$_lm" --fallback-model "$FALLBACK" \
+-            --dangerously-skip-permissions >> "$RAW_LOG" 2>>"$TASK_LOG" ) &
++            --dangerously-skip-permissions >> "$RAW_LOG" 2>>"$TASK_LOG.stderr" ) &
+       AGENT_PID=$!
+     else
+       ( exec 200>&-; cd "$WORKTREE" && printf '%s' "$PROMPT" | timeout "$TIMEOUT_SECS" \
+@@ -1162,7 +1175,7 @@
+             --taskfile "$LOGS/task-${TID}.card.json" \
+             --cwd "$WORKTREE" --rawlog "$RAW_LOG" \
+             --provider "$_lp" --model "$_lm" --single \
+-            >> "$TASK_LOG.routerout" 2>>"$TASK_LOG" ) &
++            >> "$TASK_LOG.routerout" 2>>"$TASK_LOG.stderr" ) &
+       AGENT_PID=$!
+     fi
+   }
+@@ -1441,6 +1454,7 @@
+     fi
+   done
+   wait "$AGENT_PID" 2>/dev/null; RC=$?
++  tail -c "+${ATTEMPT_STDERR_START:-1}" "$TASK_LOG.stderr" >> "$TASK_LOG" 2>/dev/null || true
+   AGENT_PID=""   # reaped — clear so the EXIT trap never targets a recycled pid (SBKWSRS)
+ 
+   # human-readable text of the run for status detection (from the stream)
+@@ -1552,6 +1566,8 @@
+     # below the task's capability floor, so an exhausted chain can name its cause.
+     BELOW_FLOOR_MODEL=""; BELOW_FLOOR_TIER=""; LADDER_EXHAUSTED=""
+     HOP=1
++    ATTEMPTS_RUN=1
++    UNAVAILABLE_PROVIDERS=""
+     while :; do
+       # Provider-level failure? (either the CLI itself errored, or the text says outage)
+       PROVIDER_FAILED=""
+@@ -1561,7 +1577,7 @@
+       # saw empty text with rc=0, returned "ok", skipped failover, and killed the seat
+       # 10s after launch (seats.json down_reason=driver-exit). Reading the raw tail too
+       # lets classifyFailure see the real error and hop vendors as designed.
+-      FAIL_TEXT="$( { printf '%s\n' "$OUT"; tail -40 "$TASK_LOG" 2>/dev/null; tail -40 "$RAW_LOG" 2>/dev/null; tail -20 "$TASK_LOG.routerout" 2>/dev/null; } | tail -200 )"
++      FAIL_TEXT="$(current_attempt_evidence | tail -200)"
+       PROVIDER_FAILED="$(printf '%s' "$FAIL_TEXT" | classify_provider_failure "$RC")"
+       if [ -z "$PROVIDER_FAILED" ] && [ "$RC" -ne 0 ] && [ "$RC" -ne 124 ]; then
+         PROVIDER_FAILED="capability"
+@@ -1569,26 +1585,26 @@
+       [ -z "$PROVIDER_FAILED" ] && break
+       record_provider_outcome "$PROVIDER" false "$PROVIDER_FAILED on ${PROVIDER}/${ROUTE}" "$ROUTE" "${FLOOR_KIND:-general}"
+ 
++      # Account/transport failures apply to every model on that provider.
++      # Skip its later rungs, not the rest of the cross-provider ladder.
++      case "$PROVIDER_FAILED" in
++        credit|auth|unavailable) UNAVAILABLE_PROVIDERS="${UNAVAILABLE_PROVIDERS}:${PROVIDER}" ;;
++      esac
++      if printf '%s' "$FAIL_TEXT" | "$NODE_BIN" "$ROOT/lib/outage-signal.js" 2>/dev/null | grep -q "^OUTAGE:"; then
++        UNAVAILABLE_PROVIDERS="${UNAVAILABLE_PROVIDERS}:${PROVIDER}"
++      fi
++      while :; do
+       NEXT="$(printf '%s' "$PLAN_JSON" | HOP="$HOP" $NODE_BIN -e 'let d="";process.stdin.on("data",c=>d+=c).on("end",()=>{try{const p=JSON.parse(d);const h=+process.env.HOP||1;const r=(p.ladder||[])[h];if(!r){console.log("")}else console.log([r.provider,r.model,r.tier].join(" "))}catch{console.log("")}})' 2>/dev/null)"
+-      [ -z "$NEXT" ] && { LADDER_EXHAUSTED="yes"; log "iter $i — [$TID] ladder exhausted after $HOP hop(s) — no vendor left to try"; break; }
+-
+-      NPROV="$(printf '%s' "$NEXT" | cut -d' ' -f1)"
++        [ -z "$NEXT" ] && break
++        NPROV="$(printf '%s' "$NEXT" | cut -d' ' -f1)"
++        case "${UNAVAILABLE_PROVIDERS}:" in
++          *":${NPROV}:"*) HOP=$((HOP+1)); continue ;;
++        esac
++        break
++      done
++      [ -z "$NEXT" ] && { LADDER_EXHAUSTED="yes"; log "iter $i — [$TID] ladder exhausted after $HOP rung(s) — no available vendor left to try"; break; }
+       NMODEL="$(printf '%s' "$NEXT" | cut -d' ' -f2)"
+       NTIER="$(printf '%s' "$NEXT" | cut -d' ' -f3)"
+-
+-      # WADGY4E 2026-10-06: a credit/usage/SESSION-limit outage is an ACCOUNT/window
+-      # wall, not a per-model weakness — retrying a DIFFERENT MODEL of the SAME
+-      # provider just re-hits the identical 429. Walking opus→fable→sonnet→haiku all
+-      # on Anthropic burned four rungs and then mislabeled the result "capability
+-      # exhausted", blocking the card (and a crash_attempt). So if this failure is a
+-      # real usage outage AND the next rung is the SAME vendor, STOP hopping and let
+-      # the CREDIT-OUTAGE GUARD below pause + auto-resume. A DIFFERENT vendor is still
+-      # tried (the AZGKUMK cross-vendor failover intent is preserved).
+-      if [ "$NPROV" = "$PROVIDER" ] \
+-         && printf '%s' "$FAIL_TEXT" | "$NODE_BIN" "$ROOT/lib/outage-signal.js" 2>/dev/null | grep -q "^OUTAGE:"; then
+-        log "iter $i — [$TID] usage/credit outage on ${PROVIDER}; next rung ${NPROV}/${NMODEL} is the same vendor — not walking its ladder down, deferring to credit-outage guard (pause + auto-resume)"
+-        break
+-      fi
+ 
+       log "iter $i — [$TID] ⤳ FAILOVER hop $HOP ($PROVIDER_FAILED on ${PROVIDER}/${ROUTE}) → ${NPROV}/${NMODEL} [${NTIER}]"
+       echo "[$(date -Iseconds)] [$AGENT_ID] ⤳ FAILOVER ${PROVIDER}/${ROUTE} → ${NPROV}/${NMODEL} (${PROVIDER_FAILED})" >> "$TASK_LOG"
+@@ -1672,6 +1688,7 @@
+         fi
+       done
+       wait "$AGENT_PID" 2>/dev/null; RC=$?
++      tail -c "+${ATTEMPT_STDERR_START:-1}" "$TASK_LOG.stderr" >> "$TASK_LOG" 2>/dev/null || true
+       AGENT_PID=""   # reaped — clear so the EXIT trap never targets a recycled pid (SBKWSRS)
+       OUT="$($NODE_BIN "$BIN/extract-text.js" "$RAW_LOG" 2>/dev/null)"
+       FUSAGE="$($NODE_BIN "$BIN/parse-usage.js" "$RAW_LOG" 2>/dev/null || echo "0 0")"
+@@ -1688,7 +1705,8 @@
+       FAILED_OVER="yes"
+       [ -n "$KILLED" ] && break
+       HOP=$((HOP+1))
+-      [ "$HOP" -ge "${MAX_HOPS:-6}" ] && { log "iter $i — [$TID] hit max failover hops ($HOP)"; break; }
++      ATTEMPTS_RUN=$((ATTEMPTS_RUN+1))
++      [ "$ATTEMPTS_RUN" -ge "${MAX_HOPS:-6}" ] && { log "iter $i — [$TID] hit max provider attempts ($ATTEMPTS_RUN)"; break; }
+     done
+     if [ -n "$FAILED_OVER" ] && [ "$RC" -eq 0 ]; then
+       # Same evidence rule on the recovery path — a failover that "recovered" into
+@@ -1768,7 +1786,7 @@
+       # the accumulated failure text reads as a real outage, defer to the CREDIT-
+       # OUTAGE GUARD below — it pauses, polls credit-probe, and auto-resumes without
+       # spending an attempt. Only a genuine capability wall falls through to `block`.
+-      CAP_OUTAGE_TEXT="$( { printf '%s\n' "$OUT"; tail -80 "$RAW_LOG" 2>/dev/null; tail -40 "$TASK_LOG" 2>/dev/null; tail -20 "$TASK_LOG.routerout" 2>/dev/null; } | tail -300 )"
++      CAP_OUTAGE_TEXT="$(current_attempt_evidence | tail -200)"
+       if printf '%s' "$CAP_OUTAGE_TEXT" | "$NODE_BIN" "$ROOT/lib/outage-signal.js" 2>/dev/null | grep -q "^OUTAGE:"; then
+         log "iter $i — [$TID] chain exhausted but the cause is a usage/credit OUTAGE, not capability — deferring to credit-outage guard (pause + auto-resume), not blocking"
+       else
+@@ -1824,7 +1842,7 @@
+   # XPY68KN 2026-08-19: same raw-log blindness as the failover classifier above.
+   # A codex/gemini usage-limit error exists ONLY in the raw jsonl, so grepping $OUT
+   # alone missed it and the seat fell through to exit instead of pausing + auto-resuming.
+-  OUTAGE_TEXT="$( { printf '%s\n' "$OUT"; tail -40 "$RAW_LOG" 2>/dev/null; tail -20 "$TASK_LOG.routerout" 2>/dev/null; } | tail -200 )"
++  OUTAGE_TEXT="$(current_attempt_evidence | tail -200)"
+   # RRQJ5RU 2026-08-19 — the grep that used to live here read the RAW JSON STREAM
+   # as if it were prose, and its `rate.?limit.*reset` arm matched Anthropic's
+   # routine health frame {"subtype":"rate_limit_event","rate_limit_info":{"status":
