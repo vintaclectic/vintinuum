@@ -1271,6 +1271,21 @@
                                         (d.filled_now ? ' — ' + d.filled_now + ' traded at once' : '');
       case 'order_cancelled':    return 'withdrew an offer';
       case 'order_expired':      return 'let an offer lapse';
+      // ZDU8TY9 (Phase 4 item 3) — escrowed hire contracts. A hire names both
+      // parties, so each line says WHO, WHAT and HOW MUCH. The event's agent_id
+      // is the actor (employer for offered/cancelled/expired, worker for
+      // accepted/completed/quit); the OTHER party rides in `data`.
+      case 'contract_offered':   return 'offered ' + nameOf(d.offeree) + ' a hire — ' +
+                                        (d.qty != null ? d.qty + ' ' : '') + (d.good || 'goods') +
+                                        ' for ' + (d.wage != null ? d.wage : '?');
+      case 'contract_accepted':  return 'took a hire from ' + nameOf(d.offeror) + ' — ' +
+                                        (d.qty != null ? d.qty + ' ' : '') + (d.good || 'goods') +
+                                        ' for ' + (d.wage != null ? d.wage : '?');
+      case 'contract_completed': return 'delivered ' + (d.qty != null ? d.qty + ' ' : '') + (d.good || 'goods') +
+                                        ' to ' + nameOf(d.offeror) + ' and was paid ' + (d.wage != null ? d.wage : '?');
+      case 'contract_cancelled': return 'withdrew a hire offer';
+      case 'contract_quit':      return 'quit a hire from ' + nameOf(d.offeror);
+      case 'contract_expired':   return 'let a hire offer lapse';
       case 'claim_parcel':       return 'laid claim to a patch of land';
       case 'craft':              return 'made something with their hands';
       case 'pay':                return 'settled a debt';
@@ -1287,7 +1302,9 @@
   // Market events read as a ticker, everything else as the world's own voice.
   function kindFor(ev){
     const t = ev && ev.type;
-    return (t === 'market_trade' || t === 'order_posted' || t === 'order_cancelled' || t === 'order_expired')
+    return (t === 'market_trade' || t === 'order_posted' || t === 'order_cancelled' || t === 'order_expired'
+         || t === 'contract_offered' || t === 'contract_accepted' || t === 'contract_completed'
+         || t === 'contract_cancelled' || t === 'contract_quit' || t === 'contract_expired')
       ? 'ticker' : 'world';
   }
   function startCitizenFeed(){
