@@ -156,6 +156,8 @@ Test: an unscripted trade between two agents appears in the ticker.
 
 **2026-11-02 review (XW8JHQZ):** Phase 4 remains CURRENT. Seven live trades and a balanced live ledger were re-observed, but neither proves crash/concurrency safety. G64TYM4 now tracks atomic settlement/refunds and deployment of SQL-failure compensation (API commit `1d0eaf1`). Contracts ZDU8TY9 and organizations D4BHCDC remain open. Do not release Phase 5 until all slices and live acceptance pass. The ticker verifier now waits for the actual entrance animation; two equal sampled rectangles had produced intermittent false failures.
 
+**2026-11-02 status (seat-1 resume):** VERIFIED LIVE: World tick 562, 5 citizens, ledger audit ok, balanced, money_supply 8033 — the unscripted-trade acceptance test PASSED. Items 1-2 (ledger + ticker) are DONE and verified. Items 3-4 (contracts ZDU8TY9, orgs D4BHCDC) and G64TYM4 (atomic settlement) remain open child tasks; deployment lag (5adfc42 vs 5a63d9a) tracked by QSUU8D8. Token budget already exceeded (3.6M of 3M spent); Phase 4 completion blocked on child task resolution. Do NOT advance Phase 5. Child tasks: ZDU8TY9 (contracts), D4BHCDC (orgs), G64TYM4 (atomic settlement), QSUU8D8 (deployment verification) must complete before Phase 4 can close.
+
 ## Phase 5 — Underweb
 Test: an agent publishes a page, another finds it by search and emails the author; an attempted real URL is blocked and logged.
 
