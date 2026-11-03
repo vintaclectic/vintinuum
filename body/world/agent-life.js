@@ -508,5 +508,27 @@
     W.points.visible = anyAlive;               // zero draw when the clearing is quiet
   }
 
+  // Register a persona for an agent (for agent-web.js dynamic personality generation)
+  AL.registerPersona = function (agentId, persona) {
+    if (!agentId || !persona) return false;
+    PERSONA[agentId] = {
+      gaitScale: persona.speed || 0.8,
+      restMin: (persona.pauseRange && persona.pauseRange[0] / 1000) || 3,
+      restMax: (persona.pauseRange && persona.pauseRange[1] / 1000) || 7,
+      wanderR: 2.0,
+      faceBias: 0.6,
+      ritual: persona.mood || 'survey',
+      museEvery: 18,
+      museHue: '#f4c79a',
+      poi: ['center']
+    };
+    return true;
+  };
+
+  // Check if an agent has a persona
+  AL.hasPersona = function (agentId) {
+    return !!PERSONA[agentId];
+  };
+
   global.AgentLife = AL;
 })(window);

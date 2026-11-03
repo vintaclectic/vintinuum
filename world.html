@@ -666,6 +666,27 @@
      ambient one stands down. Set by the inline script on show/hide. */
   body.vw-doorway #feed { display: none !important; }
   body.vw-offer   #feed { display: none !important; }
+
+  /* Phase 2 world skeleton: compact, opt-in map avoids competing with the
+     existing measured rail and leaves the live economy tick always visible. */
+  #worldClock { position: fixed; right: max(16px, env(safe-area-inset-right,16px)); top: 160px; z-index: 6;
+    color: rgba(245,235,220,.78); background: rgba(20,14,10,.68); border: 1px solid rgba(244,199,154,.28);
+    border-radius: 999px; padding: 8px 12px; font: 13px/1.2 'Cormorant Garamond', Georgia, serif;
+    backdrop-filter: blur(6px); pointer-events: none; }
+  #worldMapButton { color: rgba(245,235,220,.9) !important; }
+  #worldMapPanel { position: fixed; right: max(16px, env(safe-area-inset-right,16px)); top: 214px; z-index: 7;
+    width: min(280px, calc(100vw - 32px)); padding: 12px; color: rgba(245,235,220,.9);
+    background: rgba(20,14,10,.9); border: 1px solid rgba(244,199,154,.3); border-radius: 16px;
+    box-shadow: 0 12px 32px rgba(0,0,0,.35); backdrop-filter: blur(10px); }
+  .world-map-head, .world-map-legend { display: flex; justify-content: space-between; gap: 8px; align-items: center; }
+  .world-map-head { margin-bottom: 8px; font-size: 14px; } .world-map-head span { opacity: .6; font-size: 12px; }
+  #worldMapCanvas { display: block; width: 100%; height: auto; image-rendering: pixelated; border-radius: 8px; }
+  .world-map-legend { flex-wrap: wrap; justify-content: flex-start; margin-top: 8px; font-size: 11px; opacity: .78; }
+  .world-map-legend span { display: inline-flex; gap: 3px; align-items: center; }
+  .world-map-legend i { display: inline-block; width: 8px; height: 8px; border-radius: 2px; }
+  .terrain-f { background: #92785d; } .terrain-e { background: #a9a76a; } .terrain-o { background: #4d755d; }
+  .terrain-r { background: #967070; } .terrain-w { background: #4c7190; }
+  @media (max-width: 375px) { #worldClock { top: 158px; font-size: 12px; padding: 7px 10px; } #worldMapPanel { top: 208px; } }
 </style>
 </head>
 <body data-atlas-pin="false">
@@ -750,6 +771,12 @@
 <script src="body/draggable.js"></script>
 <script defer src="body/atlas_pin.js?v=v20260913-abwnyhb"></script>
 <script src="body/world/agent-life.js"></script>
+<!-- AGENT NETWORK (Z3BMNEU): Four organs + coordinator for autonomous agent trading/communication -->
+<script src="body/world/agent-ledger.js"></script>
+<script src="body/world/agent-router.js"></script>
+<script src="body/world/agent-exchange.js"></script>
+<script src="body/world/agent-drive.js"></script>
+<script src="body/world/agent-web.js"></script>
 <!-- BUILD-SNAP (FYBNHVM): the socket math the fabricator ghost and the brain share — must load before world-client. -->
 <script src="body/world/build-snap.js"></script>
 <script src="body/world/world-client.js"></script>
@@ -1059,6 +1086,7 @@
      ── KILL SWITCH: ?secrets=0 (read live, never latched). Resentment signal:
      VintSecrets.hush(), one call, silences every future reveal, keeps history. -->
 <script src="body/world/secrets.js"></script>
+<script src="body/world/economy-map.js"></script>
 <script>
 (function () {
   const statusEl = document.getElementById('status');
@@ -1354,7 +1382,20 @@
   // ticket exists. A thrown module never blanks the page — start() catches its
   // own internals and the loop keeps rendering the clearing.
   VintinuumWorld.start({ mountEl: document.getElementById('stage'), onSpeech: utter, onStatus: status, worldId: _wid, guest: isGuest })
-    .then(() => { if (!isGuest) showTraces(); else guestOverlay(); startCitizenFeed(); })
+    .then(() => {
+      // Boot the agent network (Z3BMNEU)
+      if (typeof AgentWeb !== 'undefined') {
+        AgentWeb.boot().then(result => {
+          if (result.ok) {
+            console.log('[AgentWeb] booted:', result);
+          } else {
+            console.error('[AgentWeb] boot failed:', result.error);
+          }
+        }).catch(e => console.error('[AgentWeb] boot exception:', e));
+      }
+      if (!isGuest) showTraces(); else guestOverlay();
+      startCitizenFeed();
+    })
     .catch(e => {
       console.error('[world] start failed:', e);
       // even if start() throws before building, we still owe the visitor SOMETHING

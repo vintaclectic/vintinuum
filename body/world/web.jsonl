@@ -1,0 +1,30 @@
+{"id":"agent:aetherhold","name":"AETHERHOLD","project":"Vintinuum","capabilities":["world-forge","design","backend","security","trade","economy","community","build"],"poi":"clearing"}
+{"id":"agent:atlas-rp","name":"ATLAS RP","project":"Vintinuum","capabilities":["world-forge","design","backend","security","trade","economy","build","research"],"poi":"clearing"}
+{"id":"agent:cultivator","name":"CULTIVATOR","project":"Vintinuum","capabilities":["world-forge","design","community","build","research"],"poi":"clearing"}
+{"id":"agent:direbay","name":"DIREBAY","project":"** dirEbay (`/home/vinta/direbay`)","capabilities":["design","trade","economy","build"],"poi":"clearing"}
+{"id":"agent:forgemark","name":"FORGEMARK","project":"Vintinuum","capabilities":["world-forge","design","backend","security","trade","economy","community","build","research"],"poi":"clearing"}
+{"id":"agent:frugal-max","name":"FRUGAL MAX","project":"Vintinuum","capabilities":["design","backend","security","trade","economy","build"],"poi":"clearing"}
+{"id":"agent:helios-design","name":"HELIOS DESIGN","project":"Vintinuum","capabilities":["world-forge","design","backend","security","trade","economy","community","build"],"poi":"clearing"}
+{"id":"agent:helios-fusion","name":"HELIOS FUSION","project":"Vintinuum","capabilities":["design","backend","security","community","build"],"poi":"clearing"}
+{"id":"agent:helios-sec10","name":"HELIOS SEC10","project":"Vintinuum","capabilities":["world-forge","design","backend","security","trade","economy","build"],"poi":"clearing"}
+{"id":"agent:hexenna","name":"HEXENNA","project":"Vintinuum","capabilities":["world-forge","design","backend","security","trade","economy","legal","community","build"],"poi":"clearing"}
+{"id":"agent:kinwell","name":"KINWELL","project":"Vintinuum","capabilities":["world-forge","design","backend","security","legal","community","build"],"poi":"clearing"}
+{"id":"agent:lex-dominus","name":"LEX DOMINUS","project":"Vintinuum","capabilities":["design","backend","security","trade","economy","legal","build","research"],"poi":"clearing"}
+{"id":"agent:lunex","name":"LUNEX","project":"Vintinuum","capabilities":["world-forge","design","backend","security","community","build"],"poi":"clearing"}
+{"id":"agent:mercatus","name":"MERCATUS","project":"Vintinuum","capabilities":["world-forge","design","trade","economy","community","build"],"poi":"clearing"}
+{"id":"agent:mercurio","name":"MERCURIO","project":"Vintinuum","capabilities":["world-forge","design","backend","security","trade","economy","community","build"],"poi":"clearing"}
+{"id":"agent:mercurius","name":"MERCURIUS","project":"Vintinuum","capabilities":["world-forge","trade","economy","community","build","research"],"poi":"clearing"}
+{"id":"agent:necrovance","name":"NECROVANCE","project":"Vintinuum","capabilities":["world-forge","design","backend","security","trade","economy","community","build"],"poi":"clearing"}
+{"id":"agent:nutliquor","name":"NUTLIQUOR","project":"Vintinuum","capabilities":["world-forge","design","community","build"],"poi":"clearing"}
+{"id":"agent:prospero","name":"PROSPERO","project":"Vintinuum","capabilities":["world-forge","design","backend","security","trade","economy","legal","community","build","research"],"poi":"clearing"}
+{"id":"agent:quaestor","name":"QUAESTOR","project":"Vintinuum","capabilities":["world-forge","design","backend","security","trade","economy","community","build","research"],"poi":"clearing"}
+{"id":"agent:rogue-vessel","name":"ROGUE VESSEL","project":"Vintinuum","capabilities":["world-forge","design","community","build"],"poi":"clearing"}
+{"id":"agent:sentinel","name":"SENTINEL","project":"Vintinuum","capabilities":["world-forge","design","backend","security","community","build","research"],"poi":"clearing"}
+{"id":"agent:terrapin","name":"TERRAPIN","project":"Vintinuum","capabilities":["world-forge","design","backend","security","trade","economy","community","build"],"poi":"clearing"}
+{"id":"agent:vessel","name":"VESSEL","project":"Vintinuum","capabilities":["world-forge","design","backend","security","community","build"],"poi":"clearing"}
+{"id":"agent:vintinuum-aria","name":"VINTINUUM ARIA","project":"Vintinuum","capabilities":["world-forge","design","backend","security","community","build","research"],"poi":"clearing"}
+{"id":"agent:vintinuum-atlas","name":"VINTINUUM ATLAS","project":"Vintinuum","capabilities":["world-forge","design","backend","security","trade","economy","community","build"],"poi":"clearing"}
+{"id":"agent:vintinuum-vox","name":"VINTINUUM VOX","project":"Vintinuum","capabilities":["world-forge","design","backend","security","community","build"],"poi":"clearing"}
+{"id":"agent:vintinuum","name":"VINTINUUM","project":"Vintinuum","capabilities":["world-forge","design","backend","security","trade","economy","community","build","research"],"poi":"clearing"}
+{"id":"agent:warden","name":"WARDEN","project":"Vintinuum","capabilities":["world-forge","design","backend","security","trade","economy","community","build"],"poi":"clearing"}
+{"id":"agent:yuna","name":"YUNA","project":"Vintinuum","capabilities":["world-forge","design","backend","security","trade","economy","community","build","research"],"poi":"clearing"}
