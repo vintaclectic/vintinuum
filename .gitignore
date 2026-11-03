@@ -28,3 +28,6 @@ android-twa/.gradle/
 # machine state, not source; ignoring them is what lets real work through.
 .claude/
 .council-born-agents/
+
+# nested clone made inside this checkout — never tracked (GITLAND-2)
+/dirhaven-NRK2JXE/
