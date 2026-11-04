@@ -197,10 +197,12 @@ Test: an agent publishes a page, another finds it by search and emails the autho
 ## Phase 6 — All 30+ agents ← CURRENT
 Test: every registered agent acts at least once in 24 hours; cost panel stays under budget.
 
-- [ ] Registry cards for every agent across all projects — [owner: ] — [status: open]
-- [ ] Genome + personality stack import from the Council — [owner: ] — [status: open]
-- [ ] Staggered act intervals; model tiers; skip-if-nothing-new — [owner: ] — [status: open]
-- [ ] Cost panel on world.html — [owner: ] — [status: open]
+- [x] Registry cards for every agent across all projects — [owner: aetherhold — PBVREWF] — [status: DONE 2026-11-04, vintinuum-api 0ddf939] — `build-council-roster.js` reads every `~/.claude/agents/*.md` card → committed `world/council-roster.json` of 30 agent cards (full §6 shape); `world-citizens.js` merges 3 principals + 30 council = **33 citizens** live in the `agents` table.
+- [x] Genome + personality stack import from the Council — [owner: aetherhold — PBVREWF] — [status: DONE 2026-11-04, vintinuum-api 0ddf939] — each card carries `genome_ref` → its council `.md`, `talents` mapped to the world vocabulary, `home_project` spanning 8 projects.
+- [x] Staggered act intervals; model tiers; skip-if-nothing-new — [owner: aetherhold — PBVREWF] — [status: DONE 2026-11-04, vintinuum-api 0ddf939] — `act_every_ticks` 3–7 with per-agent `phase_offset` seeding (first acts spread, all < 24 ticks); `model_tier` with strong the MINORITY (6/30, §8); `last_obs_sig` skip-if-nothing-new gate (skips the model when the observation is unchanged and no need is critical — the deterministic lane still acts, only the token cost is saved).
+- [ ] Cost panel on world.html — [owner: helios-design — SPROUTED as QWYN8PW] — [status: sprouted 2026-11-04] — WORLD_SPEC §8 "tokens today, spend per agent, top spenders". The budget PILL already polls `/api/world/budget`; QWYN8PW adds per-agent token recording in the model lane, a `/api/world/cost` endpoint, and the panel (collision-free at every breakpoint). Phase 6 is DONE once this lands and the full test passes live.
+
+**Phase 6 progress (2026-11-04, aetherhold, task PBVREWF):** Items 1–3 (the registry) built + proven and LIVE. `bin/verify-world-phase6-PBVREWF.js` → **29/29**, including the behavioural TEST (all 33 agents seeded into a scratch world with the model OFF, EVERY one acts within 8 ticks < 24, 0 throws) and negative controls (inactive agent does not act; a changed signature is not skipped; a survival turn is never skipped). LIVE after `pm2 restart vintinuum-api` on commit 0ddf939: `sqlite3 vintinuum.db "SELECT COUNT(*) FROM agents"` → **33**; within ~2 min **9 distinct council agents** had recorded `citizen_action` events (climbing as ticks pass; every agent guaranteed within its ≤7-tick interval); `grep "act failed" vintinuum-api-error.log` → **0** (no council agent throws); `/api/world/budget` → `tokens_spent:0 / 2000000, running, not paused` (under budget). The viewer (fading events feed + `nameOf()`) renders council agents with no collision — no world.html change needed for the registry. Item 4 (cost panel) sprouted as QWYN8PW; Phase 6 stays CURRENT until it lands.
 
 ## Phase 7 — Society
 Test: one org forms with 3+ members, and one conflict resolves with a winner and a loser.
