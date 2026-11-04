@@ -674,10 +674,26 @@
     border-radius: 999px; padding: 8px 12px; font: 13px/1.2 'Cormorant Garamond', Georgia, serif;
     backdrop-filter: blur(6px); pointer-events: none; }
   #worldMapButton { color: rgba(245,235,220,.9) !important; }
-  #worldMapPanel { position: fixed; right: max(16px, env(safe-area-inset-right,16px)); top: 214px; z-index: 7;
+  /* --wmp-base is the panel's AUTHORED anchor; economy-map.js may push it down to
+     --wmp-top when something above reaches across it, and publishes --wmp-floor
+     below it. The height budget subtracts the SAME value `top` uses, so the two
+     can never drift when a breakpoint or a measurement moves the panel.
+     max-height + overflow-y is what makes QWYN8PW's ledger section safe: the
+     box grows INWARD and scrolls, it can never spill past the viewport (the
+     overflow declaration is the load-bearing half, not the max-height). */
+  #worldMapPanel { --wmp-base: 214px;
+    position: fixed; right: max(16px, env(safe-area-inset-right,16px));
+    top: var(--wmp-top, var(--wmp-base)); z-index: 7;
     width: min(280px, calc(100vw - 32px)); padding: 12px; color: rgba(245,235,220,.9);
     background: rgba(20,14,10,.9); border: 1px solid rgba(244,199,154,.3); border-radius: 16px;
-    box-shadow: 0 12px 32px rgba(0,0,0,.35); backdrop-filter: blur(10px); }
+    box-shadow: 0 12px 32px rgba(0,0,0,.35); backdrop-filter: blur(10px);
+    /* --wmp-floor is MEASURED by economy-map.js: the top edge of the highest
+       visible fixed element below this panel that shares its columns, minus a
+       gutter. The fallback keeps the box inside the viewport before the first
+       measurement lands, so the pre-measure frame is never a spill either. */
+    max-height: calc(var(--wmp-floor, calc(100svh - max(16px, env(safe-area-inset-bottom,16px))))
+                     - var(--wmp-top, var(--wmp-base)));
+    overflow-y: auto; overscroll-behavior: contain; }
   .world-map-head, .world-map-legend { display: flex; justify-content: space-between; gap: 8px; align-items: center; }
   .world-map-head { margin-bottom: 8px; font-size: 14px; } .world-map-head span { opacity: .6; font-size: 12px; }
   #worldMapCanvas { display: block; width: 100%; height: auto; image-rendering: pixelated; border-radius: 8px; }
@@ -686,7 +702,46 @@
   .world-map-legend i { display: inline-block; width: 8px; height: 8px; border-radius: 2px; }
   .terrain-f { background: #92785d; } .terrain-e { background: #a9a76a; } .terrain-o { background: #4d755d; }
   .terrain-r { background: #967070; } .terrain-w { background: #4c7190; }
-  @media (max-width: 375px) { #worldClock { top: 158px; font-size: 12px; padding: 7px 10px; } #worldMapPanel { top: 208px; } }
+  /* QWYN8PW (Phase 6 item 4) — WORLD_SPEC §8 cost panel, rendered as a section
+     INSIDE #worldMapPanel. Flow layout only: no position:absolute, no negative
+     margin, no transform — nothing here can leave the panel's content box, and
+     the panel itself scrolls (above) when the ledger is long. */
+  /* THE STAND-DOWN (QWYN8PW). On a viewport too short to hold both the guest
+     doorway and this panel, the transient sheet wins and the ambient panel
+     stands down — the same law #feed already obeys under body.vw-doorway. The
+     flag is set from a MEASUREMENT (economy-map.js fitPanel), not a breakpoint,
+     so it is true exactly when the room is genuinely not there. */
+  /* visibility, NOT display: the panel measures its own floor from its rect, and
+     a display:none box reports a zero rect — which made the stand-down clear
+     itself on the next beat and flash the panel back (measured: an 80ms
+     flip-flop). visibility:hidden keeps the box measurable, paints nothing, and
+     is excluded by the collision probe's own visibility test. */
+  #worldMapPanel[data-standdown] { visibility: hidden !important; pointer-events: none !important; }
+  .world-cost { margin-top: 10px; padding-top: 10px; border-top: 1px solid rgba(244,199,154,.18); }
+  .world-cost-head { display: flex; justify-content: space-between; gap: 8px; align-items: baseline;
+    font-size: 14px; margin-bottom: 6px; }
+  .world-cost-head span { opacity: .55; font-size: 11px; font-variant-numeric: tabular-nums; }
+  .world-cost-row { display: flex; justify-content: space-between; gap: 8px; align-items: baseline;
+    font-size: 12px; opacity: .85; }
+  .world-cost-row b { font-weight: 600; font-variant-numeric: tabular-nums;
+    overflow-wrap: anywhere; text-align: right; }
+  .world-cost-bar { height: 4px; margin: 6px 0 8px; border-radius: 999px;
+    background: rgba(244,199,154,.16); overflow: hidden; }
+  .world-cost-bar i { display: block; height: 100%; width: 0%; border-radius: 999px;
+    background: linear-gradient(90deg, rgba(244,199,154,.75), rgba(255,200,120,.95));
+    transition: width .5s ease; }
+  .world-cost-sub { font-size: 11px; opacity: .6; margin-bottom: 4px; }
+  .world-cost-top { list-style: none; margin: 0; padding: 0; font-size: 12px; }
+  .world-cost-top li { display: grid; grid-template-columns: minmax(0,1fr) auto; gap: 2px 8px;
+    align-items: baseline; padding: 3px 0; border-bottom: 1px solid rgba(244,199,154,.08); }
+  .world-cost-top li:last-child { border-bottom: 0; }
+  /* The name is the only unbounded string here, so it is the only one allowed to
+     wrap; it may never widen the grid past its own column. */
+  .world-cost-top .wc-who { min-width: 0; overflow-wrap: anywhere; }
+  .world-cost-top .wc-tok { font-variant-numeric: tabular-nums; opacity: .9; text-align: right; }
+  .world-cost-top .wc-turns { grid-column: 1 / -1; font-size: 10px; opacity: .48; }
+  .world-cost-top .wc-rest .wc-who { opacity: .6; font-style: italic; }
+  @media (max-width: 375px) { #worldClock { top: 158px; font-size: 12px; padding: 7px 10px; } #worldMapPanel { --wmp-base: 208px; } }
 </style>
 </head>
 <body data-atlas-pin="false">
