@@ -209,10 +209,12 @@ Test: every registered agent acts at least once in 24 hours; cost panel stays un
 ## Phase 7 — Society ← CURRENT
 Test: one org forms with 3+ members, and one conflict resolves with a winner and a loser.
 
-- [ ] Governments, territory, taxes, laws — [owner: ] — [status: open]
-- [ ] War: declare_war, commit_force, seeded battle resolution — [owner: ] — [status: open]
-- [ ] Theft and fraud with ledger evidence — [owner: ] — [status: open]
-- [ ] Birth (genome breeding), death, wills, inheritance — [owner: ] — [status: open]
+- [ ] Governments, territory, taxes, laws — [owner: aetherhold — 3Z8UMZQ / AMPQ7KU] — [status: PARTIAL 2026-11-05 — territory shipped in API 7a10777; live DB has 7 owned parcels. Government taxes/laws remain in sprout AMPQ7KU.]
+- [ ] War: declare_war, commit_force, seeded battle resolution — [owner: aetherhold — 3Z8UMZQ] — [status: IMPLEMENTED 2026-11-05 — API 7a10777, viewer 288bb63; live conflict proof still pending: read-only live DB query returned 0 wars.]
+- [ ] Theft and fraud with ledger evidence — [owner: aetherhold — S254JDR] — [status: open — linked Phase 7 sprout]
+- [ ] Birth (genome breeding), death, wills, inheritance — [owner: aetherhold — H4PCHBT] — [status: open — linked Phase 7 sprout]
+
+**Phase 7 checkpoint (2026-11-05, 3Z8UMZQ):** LIVE read-only SQLite: Sol Council has **23 members**, **7 deeds**, **0 wars**; clock **7695**, last persisted **20:11:53 UTC**. Local API health timed out after 10s and public API health after 15s; PM2 reported the brain online, which alone does not prove HTTP health. Public world.html contains `war_resolved`; commit.json still reports `2f8c86d`, so footer correlation remains unproven for this slice. Phase 7 stays CURRENT and unchecked until all sprouts and the full live test pass. The later CHAIN UPDATE supersedes the old manual-resume instruction: completing this parent releases Phase 8 through board dependencies.
 
 ## Phase 8 — Story layer
 Test: you can read what happened yesterday in under 2 minutes.
