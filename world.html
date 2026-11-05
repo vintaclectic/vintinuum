@@ -1388,12 +1388,41 @@
       case 'contract_cancelled': return 'withdrew a hire offer';
       case 'contract_quit':      return 'quit a hire from ' + nameOf(d.offeror);
       case 'contract_expired':   return 'let a hire offer lapse';
-      case 'claim_parcel':       return 'laid claim to a patch of land';
+      // 3Z8UMZQ (Phase 7) — §4 "Land" and §4 "Conflict". A war is the loudest
+      // thing this world can say, so each line names WHAT GROUND, WHO, and (for
+      // a verdict) BY HOW MUCH. The `war_resolved` event is written under the
+      // WINNER (the events table holds one agent), so the feed's actor cell is
+      // already the victor and this line names the vanquished — never the
+      // winner twice.
+      case 'claim_parcel':       return 'laid claim to ' + (d.terrain || 'a patch of') + ' land at ' +
+                                        _at(d) + (d.ripens_in > 0 ? ' — ' + d.ripens_in + ' ticks of standing left' : '');
+      case 'claim_started':      return 'began an occupation of ' + _at(d);
+      case 'parcel_claimed':     return 'took the deed to ' + (d.terrain || '') + ' land at ' + _at(d) +
+                                        (d.after_ticks != null ? ' after ' + d.after_ticks + ' ticks of standing' : '');
+      case 'parcel_seized':      return 'seized ' + _at(d) + (d.from ? ' from ' + nameOf(d.from) : '');
+      case 'war_declared':
+      case 'war_declared_by':    return 'declared war on ' + nameOf(d.defender) + ' for ' + _at(d) +
+                                        (d.stake != null ? ', staking ' + d.stake : '');
+      case 'force_committed':
+      case 'force_committed_by': return 'committed ' + (d.qty != null ? d.qty + ' ' : '') + (d.good || 'force') +
+                                        ' to the ' + (d.side || 'field') + "'s side";
+      case 'war_resolved':       return (d.attacker_won ? 'took ' : 'held ') + _at(d) +
+                                        ' — beat ' + nameOf(d.loser) +
+                                        (d.attacker_score != null && d.defender_score != null
+                                          ? ' (' + d.attacker_score + ' vs ' + d.defender_score + ')' : '') +
+                                        (d.goods_seized ? ', ' + d.goods_seized + ' goods seized' : '');
+      case 'war_withdrawn':
+      case 'war_withdrawn_by':   return 'called off a war' + (d.refunded != null ? ' — ' + d.refunded + ' came back' : '');
       case 'craft':              return 'made something with their hands';
       case 'pay':                return 'settled a debt';
       case 'move':               return 'moved on';
       default:                   return String((ev && ev.type) || 'stirred').replace(/_/g, ' ');
     }
+  }
+  // A parcel is two numbers; the feed should read like a place. Guards against a
+  // malformed event (an absent x/y must not print "(undefined,undefined)").
+  function _at(d){
+    return (d && d.x != null && d.y != null) ? '(' + d.x + ',' + d.y + ')' : 'open ground';
   }
   // A citizen id (`citizen_sol`) is not a name. The feed already shows display
   // names for the acting agent, so the counterparty gets the same courtesy.
@@ -1406,7 +1435,15 @@
     const t = ev && ev.type;
     return (t === 'market_trade' || t === 'order_posted' || t === 'order_cancelled' || t === 'order_expired'
          || t === 'contract_offered' || t === 'contract_accepted' || t === 'contract_completed'
-         || t === 'contract_cancelled' || t === 'contract_quit' || t === 'contract_expired')
+         || t === 'contract_cancelled' || t === 'contract_quit' || t === 'contract_expired'
+         // 3Z8UMZQ: a war carries numbers (force, score, stake, goods seized),
+         // so it reads as a ticker for the same reason a trade does. A CLAIM is
+         // the world's own voice — a citizen standing on ground long enough is
+         // not a transaction.
+         || t === 'war_declared' || t === 'war_declared_by'
+         || t === 'force_committed' || t === 'force_committed_by'
+         || t === 'war_resolved' || t === 'war_withdrawn' || t === 'war_withdrawn_by'
+         || t === 'parcel_seized')
       ? 'ticker' : 'world';
   }
   function startCitizenFeed(){
