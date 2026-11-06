@@ -1,0 +1,259 @@
+diff --git a/boot-resurrect.sh b/boot-resurrect.sh
+index a90a697..9c1fdb3 100755
+--- a/boot-resurrect.sh
++++ b/boot-resurrect.sh
+@@ -195,9 +195,9 @@ if [ -n "$(find /home/vinta/vintinuum-api/.db-maintenance -mmin -360 2>/dev/null
+ elif [ "$(pm2_status vintinuum-api)" = "online" ]; then
+   echo "vintinuum-api online — left running (no forced restart)"
+ elif pm2 describe vintinuum-api >/dev/null 2>&1; then
+-  pm2 restart vintinuum-api --update-env 2>&1 | tail -1
++  bash /home/vinta/vintinuum-api/scripts/recover-brain.sh boot-resurrect 2>&1 | tail -2
+ else
+-  pm2 start /home/vinta/vintinuum-api/ecosystem.config.cjs --only vintinuum-api 2>&1 | tail -1
++  bash /home/vinta/vintinuum-api/scripts/recover-brain.sh boot-resurrect 2>&1 | tail -2
+ fi
+ 
+ # ── I/O + CPU PRIORITY (Vinta directive 2026-07-29: "when claude sessions die
+diff --git a/resurrect.sh b/resurrect.sh
+index 29ec862..fc4b9e6 100755
+--- a/resurrect.sh
++++ b/resurrect.sh
+@@ -13,11 +13,17 @@ echo_log() { echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1" >> "$LOG"; }
+ # ── 1. API health check and restart ──────────────────────────────────────────
+ API_OK=$(curl -s --max-time 3 http://localhost:8767/health 2>/dev/null | grep -c '"ok":true')
+ if [ "$API_OK" != "1" ]; then
+-    echo_log "API dead — resurrecting..."
+-    pm2 restart vintinuum-api --update-env >> "$LOG" 2>&1 || pm2 start /home/vinta/vintinuum-api/server.js --name vintinuum-api >> "$LOG" 2>&1
++    echo_log "API health missed — checking recovery policy..."
++    # No fallback bypass: HOLD is a deliberate decision, not a failed start.
++    bash /home/vinta/vintinuum-api/scripts/recover-brain.sh resurrect >> "$LOG" 2>&1
++    recovery_rc=$?
++    if [ "$recovery_rc" = 75 ]; then
++      echo_log "API recovery HOLDING — preserving existing process"
++    else
+     sleep 3
+     API_OK=$(curl -s --max-time 3 http://localhost:8767/health 2>/dev/null | grep -c '"ok":true')
+-    [ "$API_OK" = "1" ] && echo_log "API back online" || echo_log "API FAILED to restart"
++    [ "$API_OK" = "1" ] && echo_log "API back online" || echo_log "API still unhealthy after recovery attempt"
++    fi
+ else
+     echo_log "API alive"
+ fi
+diff --git a/vintinuum-keepalive.sh b/vintinuum-keepalive.sh
+index 650c4bf..e0a3a86 100755
+--- a/vintinuum-keepalive.sh
++++ b/vintinuum-keepalive.sh
+@@ -136,15 +136,7 @@ recover_pm2_daemon() {
+ }
+ 
+ recover_brain() {
+-  log "RECOVER: vintinuum-api unresponsive — restarting"
+-  if pm2 describe vintinuum-api >/dev/null 2>&1; then
+-    pm2 restart vintinuum-api --update-env 2>&1 | tail -2
+-  else
+-    # Ecosystem config carries VINTINUUM_DB_LOCAL=1 + UV_THREADPOOL_SIZE=16 —
+-    # a bare `pm2 start server.js` loses both and reintroduces the brain wedge
+-    # (slow /mnt/d DB + 4-thread libuv pool). Vinta directive 2026-06-03.
+-    pm2 start /home/vinta/vintinuum-api/ecosystem.config.cjs --only vintinuum-api 2>&1 | tail -2
+-  fi
++  bash /home/vinta/vintinuum-api/scripts/recover-brain.sh keepalive || return $?
+   safe_save
+ }
+ 
+@@ -285,9 +277,10 @@ while true; do
+       # clip a brain that restarted just after a probe pass began.
+       if [ "$brain_fails" -ge 5 ]; then
+         log "brain DEAD (no health, :8767 not listening, ${brain_fails} strikes) — restarting"
+-        recover_brain
+-        echo 0 > "$STATE_DIR/brain.fails"
+-        date +%s > "$STATE_DIR/brain.recovered_at"   # arm the boot grace
++        if recover_brain; then
++          echo 0 > "$STATE_DIR/brain.fails"
++          date +%s > "$STATE_DIR/brain.recovered_at"   # only after actual recovery
++        fi
+       else
+         log "brain unreachable (:8767 down, strike ${brain_fails}/5) — grace before restart"
+       fi
+diff --git a/watchdog.sh b/watchdog.sh
+index b3a15a7..5f279b3 100755
+--- a/watchdog.sh
++++ b/watchdog.sh
+@@ -78,14 +78,7 @@ else
+   echo "$fails" > "$FAIL_FILE"
+   if [ "$fails" -ge 2 ]; then
+     echo "[$(ts)] local brain HTTP=$local_code (fail #$fails) — keepalive inactive, restarting vintinuum-api"
+-    if pm2 describe vintinuum-api >/dev/null 2>&1; then
+-      pm2 restart vintinuum-api --update-env 2>&1 | tail -1
+-    else
+-      # Start from the ecosystem config — it carries VINTINUUM_DB_LOCAL=1 (fast
+-      # local DB instead of slow /mnt/d 9P) and UV_THREADPOOL_SIZE=16. A bare
+-      # `pm2 start server.js` here loses both and reintroduces the brain wedge.
+-      pm2 start /home/vinta/vintinuum-api/ecosystem.config.cjs --only vintinuum-api 2>&1 | tail -1
+-    fi
++    bash /home/vinta/vintinuum-api/scripts/recover-brain.sh watchdog
+     bash /home/vinta/vintinuum-api/scripts/pm2-safe-save.sh --reason "watchdog.sh" 2>&1 | tail -1
+     echo 0 > "$FAIL_FILE"
+   else
+diff --git a/wedge-guard.sh b/wedge-guard.sh
+index 456a252..7d5cd71 100755
+--- a/wedge-guard.sh
++++ b/wedge-guard.sh
+@@ -105,11 +105,15 @@ for svc in $SERVICES; do
+           log "⚠ $name is ${_st} and nothing is on :$port (${n}/${FAILS_TO_ACT}) — holding"
+         else
+           log "⛔ $name has been ${_st} with :$port unbound ${n}x — pm2 will NOT restart a stopped app. Starting it."
+-          "$PM2" start "$name" >>"$LOG" 2>&1
++          if [ "$name" = vintinuum-api ]; then
++            BRAIN_RECOVERY_PM2="$PM2" BRAIN_RECOVERY_STATE="$STATE_DIR" bash /home/vinta/vintinuum-api/scripts/recover-brain.sh wedge-guard >>"$LOG" 2>&1 || continue
++          else
++            "$PM2" start "$name" >>"$LOG" 2>&1
++          fi
+           sleep 10
+           if curl -fsS -m 10 -o /dev/null "http://127.0.0.1:${port}${hpath}" 2>/dev/null; then
+             log "✓ $name started and answering again"
+-            "$PM2" save >/dev/null 2>&1
++            bash /home/vinta/vintinuum-api/scripts/pm2-safe-save.sh --reason wedge-guard >/dev/null 2>&1
+           else
+             log "⛔ $name still not answering after start — needs a human"
+           fi
+@@ -189,8 +193,16 @@ for svc in $SERVICES; do
+     } > "$_f" 2>&1
+     log "   forensics captured → $_f"
+   fi
+-  printf '%s' "$_now" > "$_stamp" 2>/dev/null
+-  if [ -n "${PM2:-}" ] && "$PM2" restart "$name" >>"$LOG" 2>&1; then
++  if [ "$name" = vintinuum-api ]; then
++    BRAIN_RECOVERY_PM2="$PM2" BRAIN_RECOVERY_STATE="$STATE_DIR" bash /home/vinta/vintinuum-api/scripts/recover-brain.sh wedge-guard --allow-live-wedge >>"$LOG" 2>&1
++    _restart_rc=$?
++  else
++    printf '%s' "$_now" > "$_stamp" 2>/dev/null
++    "$PM2" restart "$name" >>"$LOG" 2>&1
++    _restart_rc=$?
++  fi
++  [ "$_restart_rc" = 75 ] && continue
++  if [ "$_restart_rc" = 0 ]; then
+     sleep 12
+     if probe_http "$port" "$hpath" "$PROBE_TIMEOUT"; then
+       log "✓ $name restarted and answering again"
+diff --git a/scripts/recover-brain.sh b/scripts/recover-brain.sh
+new file mode 100644
+index 0000000..cc32913
+--- /dev/null
++++ b/scripts/recover-brain.sh
+@@ -0,0 +1,66 @@
++#!/usr/bin/env bash
++# Shared operation for existing health guards, NOT a new scheduled guard.
++# Exit 0 = action succeeded; 75 = HOLD; other nonzero = action failed.
++set -uo pipefail
++ROOT="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
++PM2="${BRAIN_RECOVERY_PM2:-pm2}"
++STATE="${BRAIN_RECOVERY_STATE:-$ROOT/.wedge-state}"
++PROC="${BRAIN_RECOVERY_PROC:-/proc}"
++AUDIT="${BRAIN_RECOVERY_AUDIT:-$ROOT/logs/brain-recovery.log}"
++CALLER="${1:?caller required}"
++ALLOW_LIVE="${2:-}"
++PRESERVE_ENV="${3:-}"
++GAP="${WEDGE_MIN_GAP_S:-1800}"
++HIGH="${WEDGE_IO_HIGH:-40}"
++log() { local line="[$(date -Iseconds)] caller=$CALLER $*"; printf '%s\n' "$line"; printf '%s\n' "$line" >> "$AUDIT"; }
++hold() { log "HOLDING $*"; exit 75; }
++mkdir -p "$STATE" "$(dirname "$AUDIT")" || exit 1
++# Stable inode, persistent directory; all participating callers share this lock.
++exec 9>"$STATE/vintinuum-api.recovery.lock" || exit 1
++flock -n 9 || hold 'another recovery owns the lock'
++case "$GAP:$HIGH" in *[!0-9:]*|:*|*:) hold 'invalid policy configuration';; esac
++if [ -n "$(find "$ROOT/.db-maintenance" -mmin -360 2>/dev/null)" ]; then hold 'DB maintenance lock present'; fi
++snapshot=$(timeout 20 "$PM2" jlist 9>&-) || hold 'PM2 inventory unavailable'
++# Exact name, exactly one match; never pass a name to PM2 mutation (path aliases).
++record=$(printf '%s' "$snapshot" | node -e '
++const fs=require("fs");try {const a=JSON.parse(fs.readFileSync(0,"utf8"));
++if(!Array.isArray(a))throw Error(); const p=a.filter(p=>p.name==="vintinuum-api");
++if(p.length>1)throw Error();if(!p.length){console.log("missing 0 0 0");process.exit()}
++const x=p[0],e=x.pm2_env||{}; if(!Number.isInteger(x.pm_id)||x.pm_id<0||!Number.isInteger(x.pid)||x.pid<0)throw Error();
++const restarts=e.restart_time||0,uptime=e.pm_uptime||0;
++if(!Number.isSafeInteger(restarts)||restarts<0||!Number.isSafeInteger(uptime)||uptime<0)throw Error();
++console.log([x.pm_id,x.pid,restarts,uptime].join(" "));
++}catch(e){process.exit(1)}') || hold 'ambiguous or invalid PM2 inventory'
++read -r id pid restarts uptime <<< "$record"
++io=$(awk '/^some /{for(i=1;i<=NF;i++) if($i ~ /^avg60=[0-9]+([.][0-9]+)?$/){sub(/^avg60=/,"",$i);print $i;exit}}' "${BRAIN_RECOVERY_IO:-$PROC/pressure/io}" 2>/dev/null)
++live=0
++[ "$pid" -gt 0 ] && [ -d "$PROC/$pid" ] && live=1
++if [ "$live" = 1 ]; then
++  [ -n "$io" ] || hold "id=$id pid=$pid pressure unreadable"
++  awk -v n="$io" -v h="$HIGH" 'BEGIN{exit !(n>=h)}' && hold "id=$id pid=$pid io_avg60=$io >= $HIGH"
++  state=$(sed 's/.*) //' "$PROC/$pid/stat" 2>/dev/null | cut -d' ' -f1)
++  [ -n "$state" ] || hold "id=$id pid=$pid process state unreadable"
++  [ "$state" != D ] || hold "id=$id pid=$pid main thread D io_avg60=$io"
++  [ "$ALLOW_LIVE" = --allow-live-wedge ] || hold "id=$id pid=$pid alive; health timeout is not death io_avg60=$io"
++fi
++stamp="$STATE/vintinuum-api.last-restart"
++now=$(date +%s); last=$(cat "$stamp" 2>/dev/null || echo 0)
++case "$last" in ''|*[!0-9]*) hold 'invalid restart budget stamp';; esac
++[ "$((now-last))" -ge "$GAP" ] || hold "budget 1/${GAP}s last=$last id=$id pid=$pid io_avg60=${io:-unknown}"
++# Include other operators/PM2 autorestarts in the budget when a live pid exists.
++if [ "$live" = 1 ] && [ "$uptime" -gt 0 ] && [ "$((now-uptime/1000))" -lt "$GAP" ]; then hold "recent PM2 uptime id=$id pid=$pid budget=${GAP}s"; fi
++# Reserve BEFORE action, including failed attempts, so concurrent guards cannot storm.
++printf '%s\n' "$now" > "$stamp" || exit 1
++log "ACTION id=$id pid=$pid restarts=$restarts io_avg60=${io:-unknown} live=$live caller_pid=$PPID"
++if [ "$id" = missing ]; then
++  timeout 45 "$PM2" start "$ROOT/ecosystem.config.cjs" --only vintinuum-api 9>&-
++else
++  restart_args=(restart "$id")
++  # Broker requests preserve the existing PM2 environment; shell guards keep
++  # their established --update-env behavior. Never inject task env via broker.
++  [ "$PRESERVE_ENV" = --preserve-env ] || restart_args+=(--update-env)
++  timeout 45 "$PM2" "${restart_args[@]}" 9>&-
++fi
++rc=$?
++log "RESULT id=$id exit=$rc"
++exit "$rc"
+diff --git a/bin/verify-brain-recovery-YRCXQ9E.js b/bin/verify-brain-recovery-YRCXQ9E.js
+new file mode 100644
+index 0000000..a8efd70
+--- /dev/null
++++ b/bin/verify-brain-recovery-YRCXQ9E.js
+@@ -0,0 +1,44 @@
++#!/usr/bin/env node
++'use strict';
++// All mutations target a throwaway fake PM2; never contact the live daemon.
++const fs=require('fs'),os=require('os'),path=require('path'),cp=require('child_process'),assert=require('assert');
++const root=path.resolve(__dirname,'..'), tmp=fs.mkdtempSync(path.join(os.tmpdir(),'brain-recovery-'));
++let count=0;
++const check=(name,fn)=>{fn(); console.log(`PASS ${++count} ${name}`)};
++const proc=path.join(tmp,'proc'),state=path.join(tmp,'state'),calls=path.join(tmp,'calls'),snapshot=path.join(tmp,'snapshot'),audit=path.join(tmp,'audit');
++fs.mkdirSync(path.join(proc,'123'),{recursive:true});fs.mkdirSync(path.join(proc,'pressure'));fs.mkdirSync(state);
++const fake=path.join(tmp,'pm2');
++fs.writeFileSync(fake,'#!/bin/bash\nif [ "$1" = jlist ]; then cat "$TEST_SNAPSHOT"; exit 0; fi\nprintf "%s\\n" "$*" >> "$TEST_CALLS"\nexit "${TEST_PM2_EXIT:-0}"\n',{mode:0o755});
++const env={...process.env,BRAIN_RECOVERY_PM2:fake,BRAIN_RECOVERY_STATE:state,BRAIN_RECOVERY_PROC:proc,BRAIN_RECOVERY_AUDIT:audit,TEST_SNAPSHOT:snapshot,TEST_CALLS:calls};
++const stamp=path.join(state,'vintinuum-api.last-restart');
++function setup({io=1,pid=123,status='S',uptime=Date.now()-3600000,apps}={}) {
++ fs.rmSync(stamp,{force:true});fs.rmSync(calls,{force:true});
++ fs.writeFileSync(path.join(proc,'pressure','io'),`some avg10=1.00 avg60=${io} avg300=1.00 total=1\n`);
++ fs.writeFileSync(path.join(proc,'123','stat'),`123 (node app with spaces) ${status} 1 2 3\n`);
++ fs.writeFileSync(snapshot,JSON.stringify(apps||[{name:'vintinuum-api',pm_id:7,pid,pm2_env:{restart_time:5,pm_uptime:uptime}}]));
++}
++function run(args=['--allow-live-wedge'],more={}){return cp.spawnSync('bash',[path.join(root,'scripts/recover-brain.sh'),'test',...args],{env:{...env,...more},encoding:'utf8',timeout:8000});}
++function held(r,reason){assert.equal(r.status,75,r.stderr+r.stdout);assert.match(r.stdout,reason);assert(!fs.existsSync(calls),'HOLD must issue no PM2 mutation');}
++try{
++ check('high IO 80% holds live process',()=>{setup({io:80});held(run(),/io_avg60=80/)});
++ check('40% boundary holds',()=>{setup({io:40});held(run(),/io_avg60=40/)});
++ check('unreadable PSI fails closed for live process',()=>{setup();fs.unlinkSync(path.join(proc,'pressure','io'));held(run(),/pressure unreadable/)});
++ check('D-state with spaced comm holds even at low IO',()=>{setup({status:'D'});held(run(),/main thread D/)});
++ check('live process is preserved by ordinary recovery',()=>{setup();held(run([]),/alive; health timeout is not death/)});
++ check('low-IO confirmed wedge restarts exact numeric ID',()=>{setup({io:39.99});const r=run();assert.equal(r.status,0,r.stderr+r.stdout);assert.equal(fs.readFileSync(calls,'utf8'),'restart 7 --update-env\n');assert(fs.existsSync(stamp))});
++ check('second caller shares budget and cannot restart',()=>{fs.rmSync(calls);held(run(),/budget 1\/1800s/)});
++ check('broker mode preserves the existing PM2 environment',()=>{setup();assert.equal(run(['--allow-live-wedge','--preserve-env']).status,0);assert.equal(fs.readFileSync(calls,'utf8'),'restart 7\n')});
++ check('recent PM2 uptime also budgets externally initiated restarts',()=>{setup({uptime:Date.now()-60000});held(run(),/recent PM2 uptime/)});
++ check('absent pid recovers under high IO',()=>{setup({io:95,pid:0});assert.equal(run([]).status,0);assert.match(fs.readFileSync(calls,'utf8'),/^restart 7 /)});
++ check('missing app starts only ecosystem entry',()=>{setup({io:95,apps:[]});assert.equal(run([]).status,0);assert.equal(fs.readFileSync(calls,'utf8'),`start ${root}/ecosystem.config.cjs --only vintinuum-api\n`)});
++ check('duplicate exact names refuse ambiguous action',()=>{setup({apps:[{name:'vintinuum-api',pm_id:7,pid:123},{name:'vintinuum-api',pm_id:8,pid:123}]});held(run(),/ambiguous/)});
++ check('invalid PM2 JSON fails closed',()=>{setup();fs.writeFileSync(snapshot,'broken');held(run(),/invalid PM2/)});
++ check('malformed uptime rejected before shell arithmetic',()=>{setup({uptime:'invalid'});held(run(),/invalid PM2/)});
++ check('future restart stamp holds after clock rollback',()=>{setup();fs.writeFileSync(stamp,String(Math.floor(Date.now()/1000)+900));held(run(),/budget/)});
++ check('failed action still consumes budget',()=>{setup();assert.equal(run(undefined,{TEST_PM2_EXIT:'2'}).status,2);fs.rmSync(calls);held(run(),/budget/)});
++ check('concurrent caller cannot bypass persistent flock',()=>{setup();const r=cp.spawnSync('flock',[path.join(state,'vintinuum-api.recovery.lock'),'bash',path.join(root,'scripts/recover-brain.sh'),'concurrent','--allow-live-wedge'],{env,encoding:'utf8',timeout:8000});held(r,/another recovery owns/)});
++ check('audit records caller, pressure, identity, baseline count, result',()=>{const s=fs.readFileSync(audit,'utf8');assert.match(s,/caller=test ACTION id=7 pid=123 restarts=5 io_avg60=39.99/);assert.match(s,/RESULT id=7 exit=0/)});
++ check('all existing brain recovery paths use shared operation',()=>{for(const f of ['boot-resurrect.sh','resurrect.sh','watchdog.sh','vintinuum-keepalive.sh','wedge-guard.sh']){const s=fs.readFileSync(path.join(root,f),'utf8');assert(s.includes('scripts/recover-brain.sh'),f);assert(!/^\s*pm2 restart vintinuum-api/m.test(s),f);const r=cp.spawnSync('bash',['-n',path.join(root,f)]);assert.equal(r.status,0,f)}});
++ check('helper shell syntax',()=>assert.equal(cp.spawnSync('bash',['-n',path.join(root,'scripts/recover-brain.sh')]).status,0));
++ console.log(`${count}/${count} pass (fake PM2 only)`);
++}finally{fs.rmSync(tmp,{recursive:true,force:true});}
