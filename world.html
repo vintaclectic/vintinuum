@@ -1413,6 +1413,31 @@
                                         (d.goods_seized ? ', ' + d.goods_seized + ' goods seized' : '');
       case 'war_withdrawn':
       case 'war_withdrawn_by':   return 'called off a war' + (d.refunded != null ? ' — ' + d.refunded + ' came back' : '');
+      // AMPQ7KU (Phase 7 item 1 remainder) — §4 "Governments can set taxes and
+      // laws, but only inside territory they control." Without these cases the
+      // default branch below renders a levy as the bare words "tax collected",
+      // with no amount, no treasury and no parcel: the "struck a trade is not a
+      // ticker" failure the market lines above already guard against. §1 is
+      // "the human only watches", so a mechanic the watcher cannot read is a
+      // mechanic they cannot see working. Each line names WHO, WHERE, HOW MUCH.
+      case 'tax_set':
+      case 'tax_set_by':         return 'set the tax on ' + _at(d) +
+                                        (d.rate_bps != null ? ' to ' + (d.rate_bps / 100) + '%' : '') +
+                                        (d.org_name ? ' for ' + d.org_name : '');
+      case 'tax_repealed':
+      case 'tax_repealed_by':    return 'lifted the tax on ' + _at(d) +
+                                        (d.org_name ? ' for ' + d.org_name : '');
+      case 'tax_collected':      return 'paid ' + (d.amount != null ? d.amount : '?') + ' in tax to ' +
+                                        (d.org_name || 'the council') + ' for working ' + _at(d);
+      case 'law_enacted':
+      case 'law_enacted_by':     return 'wrote a law for ' + (d.org_name || 'the council') +
+                                        (d.title ? ' — "' + d.title + '"' : '') +
+                                        (d.jurisdiction != null
+                                          ? ', over ' + d.jurisdiction + ' parcel' + (d.jurisdiction === 1 ? '' : 's')
+                                          : '');
+      case 'law_repealed':
+      case 'law_repealed_by':    return 'repealed ' + (d.title ? '"' + d.title + '"' : 'a law') +
+                                        (d.org_name ? ' for ' + d.org_name : '');
       case 'craft':              return 'made something with their hands';
       case 'pay':                return 'settled a debt';
       case 'move':               return 'moved on';
@@ -1443,7 +1468,11 @@
          || t === 'war_declared' || t === 'war_declared_by'
          || t === 'force_committed' || t === 'force_committed_by'
          || t === 'war_resolved' || t === 'war_withdrawn' || t === 'war_withdrawn_by'
-         || t === 'parcel_seized')
+         || t === 'parcel_seized'
+         // AMPQ7KU: a LEVY is money moving, so it reads as a ticker for exactly
+         // the reason a trade and a wage do. Setting a tax and writing a law are
+         // acts of STATE, not transactions, so they keep the world's own voice.
+         || t === 'tax_collected')
       ? 'ticker' : 'world';
   }
   function startCitizenFeed(){
