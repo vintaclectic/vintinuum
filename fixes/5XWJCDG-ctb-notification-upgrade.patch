@@ -1,0 +1,57 @@
+--- a/bin/push.js
++++ b/bin/push.js
+@@ -686,6 +686,10 @@
+ 
+     const sig = askSignature(ids);
+     const now = Date.now();
++    // Prime the level-trigger memory after a board restart without sending a
++    // duplicate of the same backlog. The first live transition (or the 6h
++    // reminder) still notifies normally.
++    if (opts && opts.prime) { lastAskSig = sig; lastAskAt = now; return null; }
+     const changed = sig !== lastAskSig;
+     const stale   = lastAskAt && (now - lastAskAt) >= REMIND_MS;
+     if (!force && !changed && !stale) return null;
+@@ -743,6 +747,7 @@
+ 
+     const sig = askSignature(ids);
+     const now = Date.now();
++    if (opts && opts.prime) { lastCapSig = sig; lastCapAt = now; return null; }
+     const changed = sig !== lastCapSig;
+     const stale   = lastCapAt && (now - lastCapAt) >= REMIND_MS;
+     if (!force && !changed && !stale) return null;
+--- a/bin/assets/sw.js
++++ b/bin/assets/sw.js
+@@ -69,7 +69,15 @@
+   const filtered = list.filter(a => ACTION_DEFS[a]
+     && (taskId || (!a.startsWith('open') && !ACTION_DEFS[a].exec)));
+   // Chrome shows at most 2 actions on Android; the rest fall off silently.
+-  return filtered.slice(0, 2).map(a => ({ action: a, title: ACTION_DEFS[a].title }));
++  // Always hand the platform a real action rail. Older Android workers used
++  // to receive an empty/unknown hint and silently render only the dismiss
++  // affordance. The fallback is intentionally type-aware and capped to the
++  // two-button platform budget.
++  const picked = filtered.slice(0, 2).map(a => ({ action: a, title: ACTION_DEFS[a].title }));
++  if (picked.length || !taskId) return picked;
++  const fallback = type === 'needs-human' ? 'open-answer'
++    : (type === 'blocked' || type === 'capped') ? 'requeue' : 'open';
++  return ACTION_DEFS[fallback] ? [{ action: fallback, title: ACTION_DEFS[fallback].title }] : [];
+ }
+ 
+ // Build one compact line of "data points" — priority, seat, model kind,
+--- a/bin/vintask-gui.js
++++ b/bin/vintask-gui.js
+@@ -5647,10 +5647,13 @@
+       // (task T8U3XJ2 — "zero notifs"). The board is not supervised, so that is
+       // the normal case, not the rare one. A level-triggered sweep right after
+       // seeding tells him what is ALREADY waiting, as one collapsing card.
+-      PUSH.standingAsks(readTasks(), { force: true });
++      // Seed level-trigger memories silently. A restart must not page the
++      // phone with the same unchanged backlog; new questions and the normal
++      // six-hour reminder still flow through the live sweeps.
++      PUSH.standingAsks(readTasks(), { prime: true });
+       // Same level-triggered treatment for cards that hit the attempt cap — a
+       // task that GAVE UP while nobody watched produces no edge either.
+-      PUSH.cappedTasks(readTasks(), { force: true });
++      PUSH.cappedTasks(readTasks(), { prime: true });
+       if (PUSH.available()) console.log(`[${stamp()}] push: armed — ${PUSH.subCount()} device(s) subscribed`);
+       else console.log(`[${stamp()}] push: inactive — ${PUSH.unavailableReason()}`);
