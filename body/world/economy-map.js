@@ -72,6 +72,8 @@
   mapButton.id = 'worldMapButton';
   mapButton.type = 'button';
   mapButton.textContent = '🗺 map';
+  mapButton.title = 'Map, history timeline, Gazette and citizen profiles';
+  mapButton.setAttribute('aria-label', 'Open map, history and citizen profiles');
   mapButton.setAttribute('aria-expanded', 'false');
   mapButton.setAttribute('aria-controls', 'worldMapPanel');
   var top = document.getElementById('topctl');
@@ -80,7 +82,7 @@
   var panel = document.createElement('section');
   panel.id = 'worldMapPanel';
   panel.hidden = true;
-  panel.setAttribute('aria-label', 'World parcel map');
+  panel.setAttribute('aria-label', 'World map, history and citizen profiles');
   panel.innerHTML = '<div class="world-map-head"><strong>the land</strong><span id="worldMapMeta">64 × 64</span></div>' +
     '<canvas id="worldMapCanvas" width="512" height="512" aria-label="64 by 64 parcel terrain map"></canvas>' +
     '<div class="world-map-legend"><span><i class="terrain-f"></i>flat</span><span><i class="terrain-e"></i>fertile</span><span><i class="terrain-o"></i>forest</span><span><i class="terrain-r"></i>ore</span><span><i class="terrain-w"></i>water</span></div>' +
@@ -90,7 +92,21 @@
       '<div class="world-cost-bar"><i id="worldCostFill"></i></div>' +
       '<div class="world-cost-sub" id="worldCostSub">top spenders</div>' +
       '<ol class="world-cost-top" id="worldCostTop"></ol>' +
-    '</div>';
+    '</div>' +
+    // ── 9SABEEP (Phase 8 items 2+3) — THE STORY LAYER ──────────────────────
+    // Two <details> sections, COLLAPSED by default, inside this same box. See
+    // the CSS block in world.html for why they live here and not behind a new
+    // #topctl pill (QWYN8PW measured that a fourth pill overflows 320px).
+    // Each body is max-height + overflow-y:auto, so an open section grows
+    // INWARD and can never evict the canvas or the ledger above it.
+    '<details class="world-disc" id="worldStory">' +
+      '<summary><strong>the story</strong><span class="wd-note" id="worldStoryNote">what happened</span></summary>' +
+      '<div class="wd-body" id="worldStoryBody"></div>' +
+    '</details>' +
+    '<details class="world-disc" id="worldFolk">' +
+      '<summary><strong>the folk</strong><span class="wd-note" id="worldFolkNote">who is here</span></summary>' +
+      '<div class="wd-body" id="worldFolkBody"></div>' +
+    '</details>';
   document.body.appendChild(panel);
   var canvas = panel.querySelector('canvas');
   var ctx = canvas.getContext('2d');
@@ -378,14 +394,235 @@
     if (on) { refreshCost(); costTimer = setInterval(refreshCost, 15000); }
   }
 
+  /* ── 9SABEEP (Phase 8) — THE HISTORY TIMELINE and THE AGENT PROFILES ───────
+     Read-only windows onto /api/world/timeline and /api/world/agents. Polled
+     ONLY while their own disclosure is OPEN — a closed section costs the brain
+     nothing, which is the same discipline the ledger section already follows.
+
+     EVERY string from the API is inserted with textContent or through esc(),
+     never as raw HTML. The API's own scrubber (world-gazette.scrubText) has
+     already replaced < > " in citizen text with look-alikes, so this is the
+     SECOND of two independent guards, not the only one.
+  ─────────────────────────────────────────────────────────────────────────── */
+  var story = document.getElementById('worldStory');
+  var folk = document.getElementById('worldFolk');
+  var pickedAgent = null, profileRequest = 0;
+
+  function plural(n, one, many) { return (Number(n) === 1 ? one : many); }
+
+  function renderStory(t) {
+    var body = document.getElementById('worldStoryBody');
+    var note = document.getElementById('worldStoryNote');
+    if (!body) return;
+    if (!t || !Array.isArray(t.days) || !t.days.length) {
+      body.innerHTML = '<p class="wd-empty">' +
+        (t ? 'Nothing has happened yet. The clock is running.' : 'The history is unreachable.') + '</p>';
+      if (note) note.textContent = t ? 'no days yet' : 'unreachable';
+      if (window.__vwCostFit) window.__vwCostFit();
+      return;
+    }
+    if (note) note.textContent = t.days.length + ' ' + plural(t.days.length, 'day', 'days') +
+      ' · tick ' + num(t.tick);
+    body.innerHTML = t.days.map(function (d) {
+      var head = '<div class="wd-day-head"><b>' +
+        (d.is_today ? 'today' : Number(d.day) === Number(t.today) - 1 ? 'yesterday' : 'day ' + num(d.day)) + '</b>' +
+        '<span>hours ' + num(d.from_tick) + '–' + num(d.to_tick) + ' · ' +
+        num(d.events_total) + ' recorded</span></div>';
+      // The gazette's own headline when the paper has been printed, so the
+      // timeline never tells a different story about a day than the paper does.
+      var lead = d.headline
+        ? '<div class="wd-day-lead">' + esc(d.headline) + '</div>'
+        : (d.is_today ? '<div class="wd-day-lead" style="opacity:.5">still happening</div>' : '');
+      var beats = (d.beats || []).map(function (b) {
+        return '<li data-kind="' + esc(b.kind) + '">' +
+          '<span class="wd-hr">' + num(b.hour) + 'h</span>' +
+          '<span class="wd-txt">' + esc(b.text) + '</span></li>';
+      }).join('');
+      var more = (Number(d.beats_total) || 0) > (Number(d.beats_shown) || 0)
+        ? '<li><span class="wd-hr"></span><span class="wd-txt" style="opacity:.45">and ' +
+          num(d.beats_total - d.beats_shown) + ' more</span></li>' : '';
+      // The PAPER is one tap away from the day it belongs to. Absolute, because
+      // /uw/... is served by the brain's origin, not by this static page.
+      var paper = d.gazette_url
+        ? '<a class="wd-paper" href="' + esc(API + d.gazette_url) + '" target="_blank" rel="noopener">' +
+          'read the Gazette for this day' + (d.gazette_words ? ' · ' + num(d.gazette_words) + ' words' : '') + '</a>'
+        : '';
+      return '<div class="wd-day">' + head + lead +
+        (beats ? '<ul class="wd-beats">' + beats + more + '</ul>'
+               : '<p class="wd-empty">nothing the world thought worth writing down</p>') +
+        paper + '</div>';
+    }).join('');
+    if (window.__vwCostFit) window.__vwCostFit();
+  }
+
+  function renderFolk(list) {
+    var body = document.getElementById('worldFolkBody');
+    var note = document.getElementById('worldFolkNote');
+    if (!body) return;
+    var agents = (list && list.agents) || [];
+    if (!agents.length) {
+      body.innerHTML = '<p class="wd-empty">' + (list ? 'Nobody is registered yet.' : 'The registry is unreachable.') + '</p>';
+      if (note) note.textContent = list ? 'empty' : 'unreachable';
+      // The box's height just changed from inside, so re-measure the floor —
+      // every other render path here does, and this early return was the one
+      // that skipped it (a stale floor is how the panel keeps a measurement
+      // taken for a taller box).
+      if (window.__vwCostFit) window.__vwCostFit();
+      return;
+    }
+    if (note) note.textContent = agents.length + ' ' + plural(agents.length, 'citizen', 'citizens');
+    body.innerHTML = '<div id="worldProfile" aria-live="polite"></div><ul class="wd-folk">' + agents.map(function (a) {
+      var where = (a.x != null && a.y != null) ? '(' + num(a.x) + ',' + num(a.y) + ')' : 'nowhere yet';
+      return '<li><button type="button" data-agent="' + esc(a.id) + '" ' +
+        'aria-pressed="' + (pickedAgent === a.id ? 'true' : 'false') + '">' +
+        '<span class="wd-who">' + esc(a.name) + (a.active ? '' : ' †') + '</span>' +
+        '<span class="wd-coin">' + num(a.wallet_cached) + '</span>' +
+        '<span class="wd-sub">' + where + ' · acted at tick ' + num(a.last_acted_tick) +
+        (a.talents && a.talents.length ? ' · ' + esc(a.talents.join(', ')) : '') +
+        '</span></button></li>';
+    }).join('') + '</ul>';
+    if (pickedAgent) loadProfile(pickedAgent);
+    if (window.__vwCostFit) window.__vwCostFit();
+  }
+
+  function renderProfile(p) {
+    var host = document.getElementById('worldProfile');
+    if (!host) return;
+    if (!p) { host.innerHTML = '<p class="wd-empty">that profile is unreachable</p>'; return; }
+    var w = p.wallet || {};
+    var rel = p.relationships || {};
+    var rows = [];
+    rows.push(['wallet', num(w.balance)]);
+    // The DRIFT between the journal and the cached column is SHOWN, never
+    // hidden: it is the one number on this page that can only be a bug.
+    if (Number(w.drift)) rows.push(['cache drift', '<span class="wd-drift">' + num(w.drift) + '</span>']);
+    rows.push(['earned · spent', num(w.lifetime_earned) + ' · ' + num(w.lifetime_spent)]);
+    rows.push(['reputation', num(p.reputation)]);
+    rows.push(['deeds', num(p.deeds)]);
+    if (p.parcel) rows.push(['stands on', '(' + num(p.parcel.x) + ',' + num(p.parcel.y) + ')' +
+      (p.parcel.terrain ? ' ' + esc(p.parcel.terrain) : '')]);
+    if (p.inventory && p.inventory.length) {
+      rows.push(['carries', p.inventory.map(function (i) { return num(i.qty) + ' ' + esc(i.good); }).join(', ')]);
+    }
+    if (p.death) rows.push(['died', esc(p.death.cause) + ' · tick ' + num(p.death.died_tick)]);
+
+    var peers = (rel.peers || []).map(function (x) {
+      var ev = [];
+      if (x.parts) {
+        if (x.parts.contracts) ev.push(x.parts.contracts + ' ' + plural(x.parts.contracts, 'deal', 'deals'));
+        if (x.parts.transfers) ev.push(x.parts.transfers + ' ' + plural(x.parts.transfers, 'payment', 'payments'));
+        if (x.parts.orgs) ev.push('same org');
+        if (x.parts.wars) ev.push('fought beside');
+        if (x.parts.crimes) ev.push(x.parts.crimes + ' ' + plural(x.parts.crimes, 'wrong', 'wrongs'));
+      }
+      return '<li><i>' + x.trust.toFixed(2) + '</i> ' + esc(x.agent_id.replace(/^citizen_/, '')) +
+        (ev.length ? ' — ' + esc(ev.join(', ')) : ' — no history yet') + '</li>';
+    }).join('');
+
+    var diary = (p.diary || []).map(function (e) {
+      return '<li><i>' + num(e.tick) + 'h</i> ' + esc(e.text) + '</li>';
+    }).join('');
+
+    host.innerHTML = '<div class="wd-prof">' +
+      '<h4>' + esc(p.name) + (p.alive ? '' : ' — dead') + '</h4>' +
+      rows.map(function (r) {
+        return '<div class="wd-rowline"><span>' + r[0] + '</span><b>' + r[1] + '</b></div>';
+      }).join('') +
+      (rel.orgs && rel.orgs.length
+        ? '<div class="wd-lbl">bound to</div><ul class="wd-diary">' + rel.orgs.map(function (o) {
+            return '<li>' + esc(o.name) + (o.is_founder ? ' (founded it)' : '') +
+              ' · ' + num(o.members) + ' ' + plural(o.members, 'member', 'members') + '</li>';
+          }).join('') + '</ul>' : '') +
+      '<div class="wd-lbl">who they trust' +
+        (rel.crimes && (rel.crimes.committed || rel.crimes.suffered)
+          ? ' · wronged ' + num(rel.crimes.committed) + ', wronged by ' + num(rel.crimes.suffered) : '') +
+      '</div>' +
+      (peers ? '<ul class="wd-diary">' + peers + '</ul>'
+             : '<p class="wd-empty">nobody yet — no deals, no payments, no shared roof</p>') +
+      (rel.will ? '<div class="wd-lbl">their will</div><ul class="wd-diary"><li>everything to ' +
+        esc(rel.will.kind === 'state' ? 'the state' : rel.will.beneficiary.replace(/^citizen_/, '')) +
+        (rel.will.note ? ' — ' + esc(rel.will.note) : '') + '</li></ul>' : '') +
+      '<div class="wd-lbl">their diary, in their own words</div>' +
+      (diary ? '<ul class="wd-diary">' + diary + '</ul>'
+             : '<p class="wd-empty">they have not written anything down yet</p>') +
+      '</div>';
+    if (window.__vwCostFit) window.__vwCostFit();
+  }
+
+  function loadProfile(id) {
+    var request = ++profileRequest;
+    return get('/api/world/agent/' + encodeURIComponent(id))
+      .then(function (p) { if (request === profileRequest && pickedAgent === id) renderProfile(p); })
+      .catch(function () { if (request === profileRequest && pickedAgent === id) renderProfile(null); });
+  }
+
+  // One delegated listener on the body, so a re-render never leaves a dead
+  // handler behind and the list can be rebuilt on every poll.
+  var folkBody = document.getElementById('worldFolkBody');
+  if (folkBody) folkBody.addEventListener('click', function (e) {
+    var btn = e.target && e.target.closest ? e.target.closest('button[data-agent]') : null;
+    if (!btn) return;
+    var id = btn.getAttribute('data-agent');
+    pickedAgent = (pickedAgent === id) ? null : id;
+    Array.prototype.forEach.call(folkBody.querySelectorAll('button[data-agent]'), function (b) {
+      b.setAttribute('aria-pressed', String(b.getAttribute('data-agent') === pickedAgent));
+    });
+    var host = document.getElementById('worldProfile');
+    if (!pickedAgent) { profileRequest++; if (host) host.innerHTML = ''; if (window.__vwCostFit) window.__vwCostFit(); return; }
+    if (host) host.innerHTML = '<p class="wd-empty">reading…</p>';
+    folkBody.scrollTop = 0;
+    loadProfile(pickedAgent);
+  });
+
+  function refreshStory() {
+    return get('/api/world/timeline?days=7&per_day=5')
+      .then(renderStory).catch(function () { renderStory(null); });
+  }
+  function refreshFolk() {
+    return get('/api/world/agents?limit=40')
+      .then(renderFolk).catch(function () { renderFolk(null); });
+  }
+  // A section polls only while it is OPEN. `toggle` fires on both open and
+  // close, so one listener covers starting and stopping.
+  function discPolling(el, on, refresh, ref) {
+    if (ref.t) { clearInterval(ref.t); ref.t = null; }
+    if (!on) return;
+    refresh();
+    ref.t = setInterval(refresh, 20000);
+  }
+  var storyRef = { t: null }, folkRef = { t: null };
+  if (story) story.addEventListener('toggle', function () {
+    discPolling(story, story.open && !panel.hidden, refreshStory, storyRef);
+    // An opened band changes this box's height from inside, so re-measure the
+    // floor immediately rather than waiting for the 700ms beat.
+    requestAnimationFrame(refit);
+  });
+  if (folk) folk.addEventListener('toggle', function () {
+    discPolling(folk, folk.open && !panel.hidden, refreshFolk, folkRef);
+    requestAnimationFrame(refit);
+  });
+  // Closing the whole panel must stop both polls — a hidden panel costs nothing.
+  function storyPolling(on) {
+    discPolling(story, !!(on && story && story.open), refreshStory, storyRef);
+    discPolling(folk, !!(on && folk && folk.open), refreshFolk, folkRef);
+  }
+
   mapButton.addEventListener('click', function () {
     var open = !panel.hidden;
     panel.hidden = open;
+    // Choosing the world is the same guest intent as 'just wandering'.
+    // Reuse that existing collapse action so the welcome sheet cannot hide
+    // the map/history on a small phone. The join pill remains available.
+    if (!open && window.innerWidth <= 768 && doorway && !doorway.classList.contains('min')) {
+      var wander = document.getElementById('inviteWander');
+      if (wander) wander.click();
+    }
     mapButton.setAttribute('aria-expanded', String(!open));
     if (!open) get('/api/world/parcels').then(draw).catch(function () {
       var meta = document.getElementById('worldMapMeta'); if (meta) meta.textContent = 'map unavailable';
     });
     costPolling(!open);
+    storyPolling(!open);
     fitting(!open);
   });
   refreshClock();
