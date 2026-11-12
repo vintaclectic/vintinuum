@@ -29,6 +29,45 @@
   clock.textContent = 'world · tick —';
   document.body.appendChild(clock);
 
+  // HNER9E3: the short right rail ends at the doorway's RESTING top, not
+  // its animated rect. Clock first, then the Begin pill above it (12px gutters).
+  // Only short screens need this extra obstacle; registering it everywhere
+  // would needlessly haul the desktop pill up to the top of the page.
+  var doorway = document.getElementById('invite');
+  var clockAvoided = false;
+  function fitClock() {
+    var short = window.innerHeight <= 430;
+    var shown = doorway && !doorway.hidden && !doorway.classList.contains('min') &&
+      getComputedStyle(doorway).display !== 'none' && getComputedStyle(doorway).visibility !== 'hidden';
+    var oldTop = clock.style.top;
+    var nextTop = '';
+    if (short && shown) {
+      var ds = getComputedStyle(doorway);
+      var floor = window.innerHeight - (parseFloat(ds.bottom) || 0) - doorway.offsetHeight - 12;
+      nextTop = Math.max(12, Math.min(160, floor - clock.offsetHeight)) + 'px';
+    }
+    if (oldTop !== nextTop) clock.style.top = nextTop;
+    var avoid = !!(short && shown);
+    if (window.VintDock && avoid !== clockAvoided) {
+      if (avoid) window.VintDock.avoid(clock, { corner: 'br' });
+      else if (window.VintDock.unavoid) window.VintDock.unavoid(clock);
+      clockAvoided = avoid;
+    }
+    if (oldTop !== nextTop && window.VintDock) window.VintDock.reflow();
+  }
+  if (doorway) {
+    new MutationObserver(fitClock).observe(doorway, {
+      attributes: true, attributeFilter: ['class', 'style', 'hidden']
+    });
+    if (window.ResizeObserver) {
+      var clockSizer = new ResizeObserver(fitClock);
+      clockSizer.observe(doorway);
+      clockSizer.observe(clock);
+    }
+  }
+  window.addEventListener('resize', fitClock);
+  fitClock();
+
   var mapButton = document.createElement('button');
   mapButton.id = 'worldMapButton';
   mapButton.type = 'button';
@@ -274,6 +313,11 @@
   function refit() { if (!panel.hidden) { scanObstacles(); fitPanel(); } }
   window.addEventListener('resize', refit);
   window.addEventListener('orientationchange', refit);
+  // Toasts reserve a row immediately. Measure after the dock's mutation-driven
+  // frame callback, before paint, rather than letting the 700ms beat catch up.
+  window.addEventListener('vint:world-toast', function () {
+    Promise.resolve().then(function () { requestAnimationFrame(refit); });
+  });
   // The ledger is the one thing that changes this box's height from inside, so
   // re-fit right after it renders.
   window.__vwCostFit = refit;

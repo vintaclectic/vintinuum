@@ -104,7 +104,10 @@
     ':root{--vc-accent:' + ACCENT + ';--vc-accent-soft:#5eead4;}',
     // ── FAB ──
     '.vc-fab{',
-    '  position:fixed;left:14px;bottom:calc(14px + env(safe-area-inset-bottom,0px));',
+    // HNER9E3: before the dock's first animation frame, the voice button owns
+    // bottom 56..112px (responsive). Keep this fallback above it with a 12px
+    // gutter; the dock then replaces both anchors with measured stack slots.
+    '  position:fixed;left:14px;bottom:calc(124px + env(safe-area-inset-bottom,0px));',
     '  width:56px;height:56px;border-radius:50%;z-index:480;',
     '  display:flex;align-items:center;justify-content:center;',
     '  background:radial-gradient(circle at 34% 30%,rgba(0,255,200,.28),rgba(8,14,18,.96) 68%);',

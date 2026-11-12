@@ -42,6 +42,9 @@ const ROOT = path.resolve(__dirname, '..');
 const puppeteer = require('/home/vinta/vintinuum-api/node_modules/puppeteer');
 
 const NOCAP = process.argv.includes('--control-nocap');
+// Restore the former clock/toast behavior and pre-dock voice fallback:
+// every previously exempt pair must now make the gate red.
+const HUD_CONTROL = process.argv.includes('--control-hud');
 // --baseline MEASURES the pre-existing collision set of the OPEN map panel, so
 // a red here can be attributed to HEAD rather than to this change (NFQ2EU6).
 // Run it from a REAL COPY of HEAD, never a symlink:
@@ -53,7 +56,9 @@ const BASELINE = process.argv.includes('--baseline');
 
 // 740x360 is the SHORT LANDSCAPE lane: the one where a panel at top:214px has
 // barely 130px of room, i.e. where an uncapped box must spill.
-const VIEWPORTS = [[320, 568], [375, 667], [740, 360], [768, 1024], [1280, 800], [1920, 1080]];
+const VIEWPORTS = [[320, 568], [375, 667], [740, 360], [768, 1024], [1280, 800], [1920, 1080]]
+  .filter(([w]) => !process.env.COLLISION_WIDTH || w === Number(process.env.COLLISION_WIDTH));
+if (!VIEWPORTS.length) throw new Error('COLLISION_WIDTH must select an audited width');
 
 const MIME = {
   '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css',
@@ -72,6 +77,18 @@ function serve() {
       fs.readFile(file, (err, buf) => {
         if (err) { res.writeHead(404).end(); return; }
         res.writeHead(200, { 'Content-Type': MIME[path.extname(file)] || 'application/octet-stream' });
+        if (HUD_CONTROL && p === '/body/voice_console.js') {
+          buf = Buffer.from(buf.toString().replace('bottom:calc(124px + env(', 'bottom:calc(14px + env('));
+        }
+        if (HUD_CONTROL && p === '/body/world/economy-map.js') {
+          buf = Buffer.from(buf.toString().replace('if (short && shown)', 'if (false)')
+            .replace('var avoid = !!(short && shown);', 'var avoid = false;'));
+        }
+        if (HUD_CONTROL && p === '/body/world/dirverse-hud.js') {
+          buf = Buffer.from(buf.toString().replaceAll('if (toastDoorwayOpen())', 'if (false)')
+            .replace('body.vw-doorway #dvToast{visibility:hidden;}', '')
+            .replace(' width:min(90vw,340px);max-width:', ' max-width:'));
+        }
         res.end(buf);
       });
     });
@@ -273,7 +290,7 @@ function stripCap() {
 }
 function killTransitions() {
   const s = document.createElement('style');
-  s.textContent = '#worldState,#status,.world-cost-bar i{transition:none !important}';
+  s.textContent = '#worldState,#status,.world-cost-bar i,#dvToast{transition:none !important}';
   document.head.appendChild(s);
 }
 
@@ -285,7 +302,6 @@ function killTransitions() {
     timeout: 120000, protocolTimeout: 180000 });
 
   const failures = [];
-  const preexisting = [];
   const limitations = [];
   let checks = 0;
   const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -345,6 +361,14 @@ function killTransitions() {
         const hasPanel = await page.evaluate(() =>
           !!document.getElementById('worldMapPanel') && !!document.getElementById('worldMapButton'));
         if (!hasPanel) { await page.close().catch(() => {}); throw new Error('world.html loaded without the map panel + button'); }
+        await page.waitForFunction(() => {
+          const inv = document.getElementById('invite');
+          return inv && inv.classList.contains('show') && window.DirverseHUD &&
+            ['vintVoice', 'vint-vc-fab', 'vwg-pill'].every(id => {
+              const el = document.getElementById(id);
+              return el && el.hasAttribute('data-vint-docked');
+            });
+        }, { timeout: 15000 });
         await page.evaluate(killTransitions);
         if (NOCAP) await page.evaluate(stripCap);
         return page;
@@ -357,6 +381,27 @@ function killTransitions() {
 
   for (const [w, h] of VIEWPORTS) {
     const page = await loadPage(w, h);
+    // Keep a real stream of messages alive across slow software-WebGL renders.
+    // Each request uses the production toast API; no synthetic visible node.
+    await page.evaluate(() => {
+      const send = () => window.DirverseHUD.toast('HNER9E3 latest arrival message');
+      send();
+      window.__hudToastPulse = setInterval(send, 500);
+    });
+    // Reproduce the real pre-dock frame using the two shipped CSS fallbacks.
+    // They are independent controls, not an ancestor/wrapper pair. Registering
+    // vintVoice as an obstacle in its OWN dock column would chase itself upward.
+    const fallback = await page.evaluate(() => {
+      const a = document.getElementById('vintVoice'), b = document.getElementById('vint-vc-fab');
+      const styles = [a.getAttribute('style'), b.getAttribute('style')];
+      a.removeAttribute('style'); b.removeAttribute('style');
+      const ar = a.getBoundingClientRect(), br = b.getBoundingClientRect();
+      const gap = ar.top - br.bottom;
+      [a,b].forEach((el,i) => styles[i] === null ? el.removeAttribute('style') : el.setAttribute('style', styles[i]));
+      return Math.round(gap);
+    });
+    checks++;
+    if (fallback < 12) failures.push(`[VOICE FALLBACK] ${w}x${h}: ${fallback}px gutter (requires 12px)`);
     for (const state of STATES) {
       page.__state = state;
       // Open the panel through its REAL control, then drive one real refresh.
@@ -369,6 +414,26 @@ function killTransitions() {
       // it after the render lands).
       const PENDING = '__QWYN8PW_PENDING__';
       if (state.endsWith('-nodoorway')) {
+        await page.evaluate(() => {
+          clearInterval(window.__hudToastPulse);
+          window.DirverseHUD.toast('HNER9E3 older queued message');
+          window.DirverseHUD.toast('HNER9E3 latest queued message');
+          document.getElementById('inviteWander').click();
+        });
+        await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+        const delivered = await page.evaluate(() => {
+          const t = document.getElementById('dvToast');
+          return t && t.classList.contains('show') && t.textContent === 'HNER9E3 latest queued message';
+        });
+        checks++;
+        if (!delivered) failures.push(`[TOAST QUEUE] ${w}x${h}: latest deferred message not delivered on collapse`);
+        const collapsed = await page.evaluate(probe);
+        await page.evaluate(() => {
+          window.__hudToastPulse = setInterval(() => window.DirverseHUD.toast('HNER9E3 latest arrival message'), 500);
+        });
+        checks++;
+        if (collapsed.hits.length) failures.push(`[COLLAPSED COLLISION] ${w}x${h}: ` +
+          collapsed.hits.map(x => `${x.a}×${x.b} ${x.overlap}`).join('; '));
         await page.evaluate(() => {
           const w = document.getElementById('inviteWander');
           if (w) w.click();
@@ -410,9 +475,45 @@ function killTransitions() {
         }, { timeout: 15000, polling: 200 });
       } catch (_) {}
       await sleep(120);
+      if (state.endsWith('-nodoorway')) {
+        // First painted frame, not just steady-state: clear the prior toast,
+        // let the dock reclaim the row, then request a fresh SHORT message.
+        await page.evaluate(() => {
+          clearInterval(window.__hudToastPulse);
+          const t = document.getElementById('dvToast');
+          if (t) t.classList.remove('show');
+        });
+        await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+        await page.evaluate(() => window.__vwCostFit());
+        await page.evaluate(async () => {
+          window.DirverseHUD.toast('Hi');
+          // MutationObserver queues the dock before this continuation queues
+          // our first-frame sample; all callbacks finish before browser paint.
+          await Promise.resolve();
+          await new Promise(resolve => requestAnimationFrame(resolve));
+        });
+        const firstFrame = await page.evaluate(probe);
+        checks++;
+        if (firstFrame.hits.length) failures.push(`[FIRST TOAST FRAME] ${w}x${h}: ` +
+          firstFrame.hits.map(x => `${x.a}×${x.b} ${x.overlap}`).join('; '));
+        await page.evaluate(() => {
+          window.__hudToastPulse = setInterval(() => window.DirverseHUD.toast('HNER9E3 latest arrival message'), 500);
+        });
+      }
       const tag = `${w}x${h} ${state}`;
       checks++;
       if (!opened) { failures.push(`[NOT OPEN] ${tag}`); continue; }
+      const toastState = await page.evaluate(() => {
+        const el = document.getElementById('dvToast');
+        const cs = el && getComputedStyle(el);
+        return !!(el && cs.visibility !== 'hidden' && Number(cs.opacity) > 0);
+      });
+      checks++;
+      if (toastState !== state.endsWith('-nodoorway')) {
+        failures.push(`[TOAST] ${tag}: ${toastState ? 'painted over expanded doorway' : 'not delivered after dismissal'}`);
+      }
+      // The same all-pair gate measures a LIVE toast, never whichever frame of
+      // the 2.6s arrival timeout happened to survive software WebGL startup.
       const res = await page.evaluate(probe);
 
       if (BASELINE) {
@@ -421,21 +522,14 @@ function killTransitions() {
           : 'clean'));
         continue;
       }
-      // THE GATE IS THIS CHANGE'S SURFACE. Pairs that involve NEITHER the panel
-      // nor the ledger are other modules' pre-existing overlaps (MEASURED at
-      // HEAD by --baseline: invite×worldClock, worldClock×vwg-pill,
-      // vint-vc-fab×vintVoice, invite×dvToast). They are real and they are
-      // filed, but failing this run on them would mean this card can never go
-      // green on work it did not cause — and a filter that hides its work is
-      // how a real collision gets laundered, so every filtered pair is PRINTED.
-      const mine = (x) => /worldMapPanel|worldCost|world-cost/.test(x.a + x.b);
-      const ours = res.hits.filter(mine);
-      const theirs = res.hits.filter((x) => !mine(x));
-      if (theirs.length) preexisting.push(`  ${tag}: ` +
-        theirs.map((x) => `${x.a}×${x.b} ${x.overlap}`).join('; '));
+      // HNER9E3: every visible fixed pair gates this surface. No legacy allowlist.
+      const ours = res.hits;
       checks++;
-      if (ours.length) failures.push(`[COLLISION] ${tag}: ` +
-        ours.map((x) => `${x.a}×${x.b} ${x.overlap}`).join('; '));
+      if (ours.length) {
+        const collision = `[COLLISION] ${tag}: ` + ours.map((x) => `${x.a}×${x.b} ${x.overlap}`).join('; ');
+        failures.push(collision);
+        console.log(collision);
+      }
       if (res.standdown && state.endsWith('-nodoorway')) {
         // FLIPPED FROM LIMITATION → GATE (card RCNFBGS). QWYN8PW measured that
         // the portrait right-rail panel had only a 62px band at 740x360 and so
@@ -506,6 +600,23 @@ function killTransitions() {
         ` floor ${String(res.floorVar || '-').padStart(6)}` +
         ` ${ours.length + res.spills.length + res.inner.length === 0 ? 'clean' : 'DIRTY'}`);
     }
+    if (w === 320 && !BASELINE) {
+      // The tightest viewport legitimately yields the map to a live toast.
+      // Prove that is temporary using the real 2.6s expiry (no forced class edit).
+      await page.evaluate(() => clearInterval(window.__hudToastPulse));
+      await page.waitForFunction(() => {
+        const t = document.getElementById('dvToast');
+        return t && !t.classList.contains('show');
+      }, { timeout: 4000 });
+      await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+      await page.waitForFunction(() => !document.getElementById('worldMapPanel').hasAttribute('data-standdown'), { timeout: 2000 });
+      const released = await page.evaluate(probe);
+      checks++;
+      if (!released.rendered || released.standdown) failures.push('[TOAST RELEASE] 320x568: map did not return after toast expiry');
+      checks++;
+      if (released.hits.length) failures.push('[TOAST RELEASE COLLISION] 320x568: ' +
+        released.hits.map(x => `${x.a}×${x.b} ${x.overlap}`).join('; '));
+    }
     await page.close().catch(() => {});
   }
 
@@ -513,11 +624,6 @@ function killTransitions() {
   srv.close();
 
   console.log('\n' + '='.repeat(74));
-  if (preexisting.length) {
-    console.log('PRE-EXISTING overlaps NOT involving this change (measured at HEAD too):');
-    preexisting.forEach((f) => console.log(f));
-    console.log('');
-  }
   if (limitations.length) {
     console.log('MEASURED LIMITATIONS (no overlap, simply no room):');
     limitations.forEach((f) => console.log(f));
@@ -532,6 +638,6 @@ function killTransitions() {
     process.exit(0);
   }
   console.log(`${checks - failures.length}/${checks} pass` +
-    (NOCAP ? '  (negative control --control-nocap active — this run MUST be red)' : ''));
+    (NOCAP || HUD_CONTROL ? '  (negative control active — this run MUST be red)' : ''));
   process.exit(failures.length ? 1 : 0);
 })().catch((e) => { console.error('HARNESS ERROR:', e); process.exit(2); });
