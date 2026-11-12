@@ -1,0 +1,30 @@
+--- a/lib/host-ops.js
++++ b/lib/host-ops.js
+@@ -124,7 +124,26 @@
+     case 'proc.locks': return procLocks(a.target ? resolvePid(a.target) : null);
+     case 'pm2.list': return pm2List();
+     case 'pm2.describe': { const p = pm2List().find((x) => x.name === a.name || String(x.id) === String(a.name)); if (!p) throw new Error(`no pm2 process "${a.name}"`); return p; }
+-    case 'pm2.restart': { const p = pm2List().find((x) => x.name === a.name || String(x.id) === String(a.name)); if (!p) throw new Error(`no pm2 process "${a.name}"`); sh(PM2(), ['restart', String(p.id)]); return { restarted: p.name, id: p.id }; }
++    case 'pm2.restart': {
++      const p = pm2List().find((x) => x.name === a.name || String(x.id) === String(a.name));
++      if (!p) throw new Error(`no pm2 process "${a.name}"`);
++      if (p.name === 'vintinuum-api') {
++        // Shared IO/D-state hold + persistent budget, including council deploys.
++        // Never fall back to a direct restart when the policy operation refuses.
++        const helper = path.join(os.homedir(), 'vintinuum-api/scripts/recover-brain.sh');
++        try {
++          sh('/bin/bash', [helper, `hostop:${tid}`, '--allow-live-wedge', '--preserve-env'], {
++            timeout: 90000, env: { ...process.env, BRAIN_RECOVERY_PM2: PM2() },
++          });
++        } catch (e) {
++          const reason = String(e.stdout || '').trim().split('\n').pop();
++          throw new Error(`brain restart refused or failed: ${reason || e.message}`);
++        }
++      } else {
++        sh(PM2(), ['restart', String(p.id)]);
++      }
++      return { restarted: p.name, id: p.id };
++    }
+     case 'cron.list': return { crontab: cronRead().split('\n').filter(Boolean), mine: cronRead().split('\n').filter((l) => l.includes(`# council:${tid}:`)) };
+     case 'cron.add': return cronAdd(tid, a);
+     case 'cron.remove': return cronRemove(tid, a);
