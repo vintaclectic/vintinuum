@@ -674,10 +674,26 @@
     border-radius: 999px; padding: 8px 12px; font: 13px/1.2 'Cormorant Garamond', Georgia, serif;
     backdrop-filter: blur(6px); pointer-events: none; }
   #worldMapButton { color: rgba(245,235,220,.9) !important; }
-  #worldMapPanel { position: fixed; right: max(16px, env(safe-area-inset-right,16px)); top: 214px; z-index: 7;
+  /* --wmp-base is the panel's AUTHORED anchor; economy-map.js may push it down to
+     --wmp-top when something above reaches across it, and publishes --wmp-floor
+     below it. The height budget subtracts the SAME value `top` uses, so the two
+     can never drift when a breakpoint or a measurement moves the panel.
+     max-height + overflow-y is what makes QWYN8PW's ledger section safe: the
+     box grows INWARD and scrolls, it can never spill past the viewport (the
+     overflow declaration is the load-bearing half, not the max-height). */
+  #worldMapPanel { --wmp-base: 214px;
+    position: fixed; right: max(16px, env(safe-area-inset-right,16px));
+    top: var(--wmp-top, var(--wmp-base)); z-index: 7;
     width: min(280px, calc(100vw - 32px)); padding: 12px; color: rgba(245,235,220,.9);
     background: rgba(20,14,10,.9); border: 1px solid rgba(244,199,154,.3); border-radius: 16px;
-    box-shadow: 0 12px 32px rgba(0,0,0,.35); backdrop-filter: blur(10px); }
+    box-shadow: 0 12px 32px rgba(0,0,0,.35); backdrop-filter: blur(10px);
+    /* --wmp-floor is MEASURED by economy-map.js: the top edge of the highest
+       visible fixed element below this panel that shares its columns, minus a
+       gutter. The fallback keeps the box inside the viewport before the first
+       measurement lands, so the pre-measure frame is never a spill either. */
+    max-height: calc(var(--wmp-floor, calc(100svh - max(16px, env(safe-area-inset-bottom,16px))))
+                     - var(--wmp-top, var(--wmp-base)));
+    overflow-y: auto; overscroll-behavior: contain; }
   .world-map-head, .world-map-legend { display: flex; justify-content: space-between; gap: 8px; align-items: center; }
   .world-map-head { margin-bottom: 8px; font-size: 14px; } .world-map-head span { opacity: .6; font-size: 12px; }
   #worldMapCanvas { display: block; width: 100%; height: auto; image-rendering: pixelated; border-radius: 8px; }
@@ -686,7 +702,78 @@
   .world-map-legend i { display: inline-block; width: 8px; height: 8px; border-radius: 2px; }
   .terrain-f { background: #92785d; } .terrain-e { background: #a9a76a; } .terrain-o { background: #4d755d; }
   .terrain-r { background: #967070; } .terrain-w { background: #4c7190; }
-  @media (max-width: 375px) { #worldClock { top: 158px; font-size: 12px; padding: 7px 10px; } #worldMapPanel { top: 208px; } }
+  /* QWYN8PW (Phase 6 item 4) — WORLD_SPEC §8 cost panel, rendered as a section
+     INSIDE #worldMapPanel. Flow layout only: no position:absolute, no negative
+     margin, no transform — nothing here can leave the panel's content box, and
+     the panel itself scrolls (above) when the ledger is long. */
+  /* THE STAND-DOWN (QWYN8PW). On a viewport too short to hold both the guest
+     doorway and this panel, the transient sheet wins and the ambient panel
+     stands down — the same law #feed already obeys under body.vw-doorway. The
+     flag is set from a MEASUREMENT (economy-map.js fitPanel), not a breakpoint,
+     so it is true exactly when the room is genuinely not there. */
+  /* visibility, NOT display: the panel measures its own floor from its rect, and
+     a display:none box reports a zero rect — which made the stand-down clear
+     itself on the next beat and flash the panel back (measured: an 80ms
+     flip-flop). visibility:hidden keeps the box measurable, paints nothing, and
+     is excluded by the collision probe's own visibility test. */
+  #worldMapPanel[data-standdown] { visibility: hidden !important; pointer-events: none !important; }
+  .world-cost { margin-top: 10px; padding-top: 10px; border-top: 1px solid rgba(244,199,154,.18); }
+  .world-cost-head { display: flex; justify-content: space-between; gap: 8px; align-items: baseline;
+    font-size: 14px; margin-bottom: 6px; }
+  .world-cost-head span { opacity: .55; font-size: 11px; font-variant-numeric: tabular-nums; }
+  .world-cost-row { display: flex; justify-content: space-between; gap: 8px; align-items: baseline;
+    font-size: 12px; opacity: .85; }
+  .world-cost-row b { font-weight: 600; font-variant-numeric: tabular-nums;
+    overflow-wrap: anywhere; text-align: right; }
+  .world-cost-bar { height: 4px; margin: 6px 0 8px; border-radius: 999px;
+    background: rgba(244,199,154,.16); overflow: hidden; }
+  .world-cost-bar i { display: block; height: 100%; width: 0%; border-radius: 999px;
+    background: linear-gradient(90deg, rgba(244,199,154,.75), rgba(255,200,120,.95));
+    transition: width .5s ease; }
+  .world-cost-sub { font-size: 11px; opacity: .6; margin-bottom: 4px; }
+  .world-cost-top { list-style: none; margin: 0; padding: 0; font-size: 12px; }
+  .world-cost-top li { display: grid; grid-template-columns: minmax(0,1fr) auto; gap: 2px 8px;
+    align-items: baseline; padding: 3px 0; border-bottom: 1px solid rgba(244,199,154,.08); }
+  .world-cost-top li:last-child { border-bottom: 0; }
+  /* The name is the only unbounded string here, so it is the only one allowed to
+     wrap; it may never widen the grid past its own column. */
+  .world-cost-top .wc-who { min-width: 0; overflow-wrap: anywhere; }
+  .world-cost-top .wc-tok { font-variant-numeric: tabular-nums; opacity: .9; text-align: right; }
+  .world-cost-top .wc-turns { grid-column: 1 / -1; font-size: 10px; opacity: .48; }
+  .world-cost-top .wc-rest .wc-who { opacity: .6; font-style: italic; }
+  @media (max-width: 375px) { #worldClock { top: 158px; font-size: 12px; padding: 7px 10px; } #worldMapPanel { --wmp-base: 208px; } }
+  /* RCNFBGS — THE LANDSCAPE SHAPE. On a landscape phone (short + wide) the
+     portrait right rail is a 62px sliver between #worldClock (bottom ~194) and
+     the bottom furniture (#vint-vc-fab / #vwg-pill), so a 280px right-rail panel
+     has nowhere to live and QWYN8PW's measurement correctly STOOD IT DOWN —
+     leaving the map + ledger simply unavailable on a phone in landscape. Here
+     the panel moves into the free centre-left band instead, and it is
+     collision-free BY CONSTRUCTION, not by luck (MEASURED at 740/640/812 wide):
+       • left:252px sits to the RIGHT of #vintWorldHud (left-pinned at x12..240),
+         clearing it by a 12px gutter at every width.
+       • width is capped so the RIGHT edge is 100vw-136px — i.e. exactly 12px
+         left of #worldClock, which is right-pinned at 100vw-124px — so the panel
+         can never reach the right rail at any landscape width.
+     --wmp-base drops to 60px so QWYN8PW's OWN band measurement (economy-map.js
+     panelBand) anchors at the top of that free column instead of at 214. It then
+     measures the live floor exactly as before: a transient #dvToast or the guest
+     doorway caps the panel above them, and if the doorway genuinely leaves <150px
+     the panel still stands down. Nothing here overrides the No-Collision Law —
+     it only hands the measurement a column that CAN fit instead of one that never
+     could. The column is short, so the canvas becomes a thumbnail and the ledger
+     comes first (the numbers are the point when the map is 140px wide). */
+  @media (max-height: 430px) and (orientation: landscape) {
+    #worldMapPanel { --wmp-base: 60px;
+      left: 252px; right: auto;
+      width: min(260px, calc(100vw - 388px));
+      display: flex; flex-direction: column; }
+    /* ledger first — move the divider to its underside so it still separates the
+       ledger from the map, now below it rather than above. */
+    #worldMapPanel .world-cost { order: -1; margin-top: 0; padding-top: 0;
+      border-top: 0; margin-bottom: 10px; padding-bottom: 10px;
+      border-bottom: 1px solid rgba(244,199,154,.18); }
+    #worldMapPanel #worldMapCanvas { max-width: 140px; margin: 0 auto; }
+  }
 </style>
 </head>
 <body data-atlas-pin="false">
@@ -1333,12 +1420,66 @@
       case 'contract_cancelled': return 'withdrew a hire offer';
       case 'contract_quit':      return 'quit a hire from ' + nameOf(d.offeror);
       case 'contract_expired':   return 'let a hire offer lapse';
-      case 'claim_parcel':       return 'laid claim to a patch of land';
+      // 3Z8UMZQ (Phase 7) — §4 "Land" and §4 "Conflict". A war is the loudest
+      // thing this world can say, so each line names WHAT GROUND, WHO, and (for
+      // a verdict) BY HOW MUCH. The `war_resolved` event is written under the
+      // WINNER (the events table holds one agent), so the feed's actor cell is
+      // already the victor and this line names the vanquished — never the
+      // winner twice.
+      case 'claim_parcel':       return 'laid claim to ' + (d.terrain || 'a patch of') + ' land at ' +
+                                        _at(d) + (d.ripens_in > 0 ? ' — ' + d.ripens_in + ' ticks of standing left' : '');
+      case 'claim_started':      return 'began an occupation of ' + _at(d);
+      case 'parcel_claimed':     return 'took the deed to ' + (d.terrain || '') + ' land at ' + _at(d) +
+                                        (d.after_ticks != null ? ' after ' + d.after_ticks + ' ticks of standing' : '');
+      case 'parcel_seized':      return 'seized ' + _at(d) + (d.from ? ' from ' + nameOf(d.from) : '');
+      case 'war_declared':
+      case 'war_declared_by':    return 'declared war on ' + nameOf(d.defender) + ' for ' + _at(d) +
+                                        (d.stake != null ? ', staking ' + d.stake : '');
+      case 'force_committed':
+      case 'force_committed_by': return 'committed ' + (d.qty != null ? d.qty + ' ' : '') + (d.good || 'force') +
+                                        ' to the ' + (d.side || 'field') + "'s side";
+      case 'war_resolved':       return (d.attacker_won ? 'took ' : 'held ') + _at(d) +
+                                        ' — beat ' + nameOf(d.loser) +
+                                        (d.attacker_score != null && d.defender_score != null
+                                          ? ' (' + d.attacker_score + ' vs ' + d.defender_score + ')' : '') +
+                                        (d.goods_seized ? ', ' + d.goods_seized + ' goods seized' : '');
+      case 'war_withdrawn':
+      case 'war_withdrawn_by':   return 'called off a war' + (d.refunded != null ? ' — ' + d.refunded + ' came back' : '');
+      // AMPQ7KU (Phase 7 item 1 remainder) — §4 "Governments can set taxes and
+      // laws, but only inside territory they control." Without these cases the
+      // default branch below renders a levy as the bare words "tax collected",
+      // with no amount, no treasury and no parcel: the "struck a trade is not a
+      // ticker" failure the market lines above already guard against. §1 is
+      // "the human only watches", so a mechanic the watcher cannot read is a
+      // mechanic they cannot see working. Each line names WHO, WHERE, HOW MUCH.
+      case 'tax_set':
+      case 'tax_set_by':         return 'set the tax on ' + _at(d) +
+                                        (d.rate_bps != null ? ' to ' + (d.rate_bps / 100) + '%' : '') +
+                                        (d.org_name ? ' for ' + d.org_name : '');
+      case 'tax_repealed':
+      case 'tax_repealed_by':    return 'lifted the tax on ' + _at(d) +
+                                        (d.org_name ? ' for ' + d.org_name : '');
+      case 'tax_collected':      return 'paid ' + (d.amount != null ? d.amount : '?') + ' in tax to ' +
+                                        (d.org_name || 'the council') + ' for working ' + _at(d);
+      case 'law_enacted':
+      case 'law_enacted_by':     return 'wrote a law for ' + (d.org_name || 'the council') +
+                                        (d.title ? ' — "' + d.title + '"' : '') +
+                                        (d.jurisdiction != null
+                                          ? ', over ' + d.jurisdiction + ' parcel' + (d.jurisdiction === 1 ? '' : 's')
+                                          : '');
+      case 'law_repealed':
+      case 'law_repealed_by':    return 'repealed ' + (d.title ? '"' + d.title + '"' : 'a law') +
+                                        (d.org_name ? ' for ' + d.org_name : '');
       case 'craft':              return 'made something with their hands';
       case 'pay':                return 'settled a debt';
       case 'move':               return 'moved on';
       default:                   return String((ev && ev.type) || 'stirred').replace(/_/g, ' ');
     }
+  }
+  // A parcel is two numbers; the feed should read like a place. Guards against a
+  // malformed event (an absent x/y must not print "(undefined,undefined)").
+  function _at(d){
+    return (d && d.x != null && d.y != null) ? '(' + d.x + ',' + d.y + ')' : 'open ground';
   }
   // A citizen id (`citizen_sol`) is not a name. The feed already shows display
   // names for the acting agent, so the counterparty gets the same courtesy.
@@ -1351,7 +1492,19 @@
     const t = ev && ev.type;
     return (t === 'market_trade' || t === 'order_posted' || t === 'order_cancelled' || t === 'order_expired'
          || t === 'contract_offered' || t === 'contract_accepted' || t === 'contract_completed'
-         || t === 'contract_cancelled' || t === 'contract_quit' || t === 'contract_expired')
+         || t === 'contract_cancelled' || t === 'contract_quit' || t === 'contract_expired'
+         // 3Z8UMZQ: a war carries numbers (force, score, stake, goods seized),
+         // so it reads as a ticker for the same reason a trade does. A CLAIM is
+         // the world's own voice — a citizen standing on ground long enough is
+         // not a transaction.
+         || t === 'war_declared' || t === 'war_declared_by'
+         || t === 'force_committed' || t === 'force_committed_by'
+         || t === 'war_resolved' || t === 'war_withdrawn' || t === 'war_withdrawn_by'
+         || t === 'parcel_seized'
+         // AMPQ7KU: a LEVY is money moving, so it reads as a ticker for exactly
+         // the reason a trade and a wage do. Setting a tax and writing a law are
+         // acts of STATE, not transactions, so they keep the world's own voice.
+         || t === 'tax_collected')
       ? 'ticker' : 'world';
   }
   function startCitizenFeed(){

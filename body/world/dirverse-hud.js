@@ -739,7 +739,8 @@
       ' border:1px solid rgba(124,207,255,0.3);color:#dce7ff;font-family:"Cormorant Garamond",Georgia,serif;',
       ' font-size:14.5px;opacity:0;pointer-events:none;transition:opacity .25s,transform .25s;',
       ' text-align:center;box-shadow:0 6px 24px rgba(0,0,0,0.5);}',
-      '#dvToast.show{opacity:1;transform:translateX(-50%) translateY(0);}',
+      '#dvToast.show{opacity:1;transform:translateX(-50%) translateY(0);transition:none;}',
+      'body.vw-doorway #dvToast{visibility:hidden;}',
       // ON A PHONE THE TOAST YIELDS TO #topctl (93H6E4T). At <=859px world.html
       // moves #topctl (the view/mic pills) OUT of the top-right corner down INTO
       // the bottom band (bottom:var(--vw-bot-h)+var(--vw-gut), a 46px pill row).
@@ -755,7 +756,9 @@
       // the top-right corner — is untouched.
       '@media(max-width:859px){#dvToast{',
       ' bottom:calc(76px + env(safe-area-inset-bottom,0px));',
-      ' max-width:min(90vw,340px);white-space:nowrap;',
+      // HNER9E3: a short message must reserve the same phone-wide row as a
+      // long one. VintDock's edge-bar scan then lifts BOTH corners above it.
+      ' width:min(90vw,340px);max-width:min(90vw,340px);white-space:nowrap;',
       ' overflow:hidden;text-overflow:ellipsis;}}',
 
       // WARP flash veil — the cinematic white/blue bloom at jump apex
@@ -880,13 +883,38 @@
   // ═══════════════════════════════════════════════════════════════════════════
   // TOAST
   // ═══════════════════════════════════════════════════════════════════════════
-  var _toastEl = null, _toastT = null;
+  var _toastEl = null, _toastT = null, _pendingToast = null;
+  // HNER9E3: the invitation owns the bottom band. Keep the latest transient
+  // message until it collapses instead of painting it through the invitation
+  // or chasing the toast upward through the two corner stacks.
+  var _toastDoorway = document.getElementById('invite');
+  function toastDoorwayOpen() {
+    return _toastDoorway && _toastDoorway.classList.contains('show') &&
+      !_toastDoorway.classList.contains('min') && getComputedStyle(_toastDoorway).display !== 'none';
+  }
   function toast(msg) {
+    if (toastDoorwayOpen()) { _pendingToast = msg; return; }
     if (!_toastEl) { _toastEl = document.createElement('div'); _toastEl.id = 'dvToast'; document.body.appendChild(_toastEl); }
     _toastEl.textContent = msg;
     _toastEl.classList.add('show');
+    W.dispatchEvent(new Event('vint:world-toast'));
     clearTimeout(_toastT);
     _toastT = setTimeout(function () { _toastEl.classList.remove('show'); }, 2600);
+  }
+  if (_toastDoorway && W.MutationObserver) {
+    new W.MutationObserver(function () {
+      if (toastDoorwayOpen()) {
+        if (_toastEl && _toastEl.classList.contains('show')) {
+          if (_pendingToast === null) _pendingToast = _toastEl.textContent;
+          clearTimeout(_toastT);
+          _toastEl.classList.remove('show');
+        }
+      } else if (_pendingToast !== null) {
+        var msg = _pendingToast;
+        _pendingToast = null;
+        toast(msg);
+      }
+    }).observe(_toastDoorway, { attributes: true, attributeFilter: ['class', 'style', 'hidden'] });
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
