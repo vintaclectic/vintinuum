@@ -741,6 +741,105 @@
   .world-cost-top .wc-tok { font-variant-numeric: tabular-nums; opacity: .9; text-align: right; }
   .world-cost-top .wc-turns { grid-column: 1 / -1; font-size: 10px; opacity: .48; }
   .world-cost-top .wc-rest .wc-who { opacity: .6; font-style: italic; }
+  /* ── 9SABEEP (Phase 8 items 2+3) — THE STORY LAYER, as two DISCLOSURES inside
+     the already-positioned, already-width-capped #worldMapPanel.
+
+     WHY INSIDE, AND WHY COLLAPSED (No-Collision Law, QWYN8PW's precedent):
+     world.html's right rail is fully spoken for — #topctl from 52px, #worldClock
+     at 160px, this panel at 214px — and QWYN8PW already MEASURED that a FOURTH
+     #topctl pill overflows a 320px viewport (4*46 + 3*8 = 208px against a rail
+     that already starts 126px in). So a new button was the one shape that could
+     not be made collision-free, and the map's own button and box are reused for
+     the third time: ZERO new fixed element, ZERO new rail slot, ZERO new button.
+
+     COLLAPSED BY DEFAULT, because the panel is already a map plus a ledger: two
+     more open sections would add ~400px to a box whose whole safety argument is
+     that it fits between a measured ceiling and a measured floor. Closed, each
+     section costs ONE 30px summary row (60px for both). Opened, the section
+     grows INWARD — `max-height` plus `overflow-y:auto` on the section itself,
+     not just on the panel — so a 14-day timeline or a long diary scrolls inside
+     its own band and can never push #worldCost or the canvas out of the panel.
+     Per CSS Flexbox §4.5 and the MU6GKNH lesson the OVERFLOW declaration is the
+     load-bearing half of that pair, not the max-height.
+
+     Flow layout only: no position:absolute, no fixed, no negative margin, no
+     transform. Nothing here can leave the panel's content box. */
+  .world-disc { margin-top: 10px; padding-top: 10px; border-top: 1px solid rgba(244,199,154,.18); }
+  .world-disc > summary { cursor: pointer; display: flex; justify-content: space-between;
+    gap: 8px; align-items: baseline; font-size: 14px; list-style: none;
+    min-height: 30px; padding: 2px 0; }
+  .world-disc > summary::-webkit-details-marker { display: none; }
+  .world-disc > summary .wd-note { opacity: .55; font-size: 11px; font-variant-numeric: tabular-nums;
+    min-width: 0; overflow-wrap: anywhere; text-align: right; }
+  .world-disc > summary::after { content: '▸'; opacity: .5; font-size: 10px; flex: 0 0 auto; }
+  .world-disc[open] > summary::after { content: '▾'; }
+  /* THE BAND. It grows inward and scrolls; it never evicts a sibling.
+     The cap is derived from THE PANEL'S OWN measured slot (--wmp-floor and
+     --wmp-top, both written by economy-map.js's band measurement), never from
+     the viewport — one source of truth for "how much room is there".
+     MEASURED at 375x667: the panel's slot is 180px while 44svh is 293px, so a
+     viewport-relative cap let a band be 113px TALLER than the box it lives in,
+     which is a scroller inside a scroller: the reader has to scroll the panel to
+     find the band and then scroll the band. The `- 96px` leaves the two summary
+     rows and the top of the ledger on screen with the band open, and the 96px
+     floor keeps the band usable on the shortest measured slot.
+     The `overflow-y` is the load-bearing half of the pair, not the max-height:
+     per CSS Flexbox §4.5 and the MU6GKNH lesson, a band only stops being able
+     to evict its neighbour once its main-axis overflow is not `visible`. */
+  .world-disc .wd-body { overflow-y: auto; overscroll-behavior: contain;
+    min-height: 0; margin-top: 6px;
+    max-height: min(44svh,
+      max(96px, calc(var(--wmp-floor, 100svh) - var(--wmp-top, var(--wmp-base)) - 96px))); }
+  @media (max-height: 560px) { .world-disc .wd-body { max-height: min(34svh,
+      max(84px, calc(var(--wmp-floor, 100svh) - var(--wmp-top, var(--wmp-base)) - 84px))); } }
+  /* the timeline */
+  .wd-day { padding: 6px 0; border-bottom: 1px solid rgba(244,199,154,.08); }
+  .wd-day:last-child { border-bottom: 0; }
+  .wd-day-head { display: flex; justify-content: space-between; gap: 8px; align-items: baseline;
+    font-size: 12px; }
+  .wd-day-head b { font-weight: 600; min-width: 0; overflow-wrap: anywhere; }
+  .wd-day-head span { opacity: .5; font-size: 10px; flex: 0 0 auto; font-variant-numeric: tabular-nums; }
+  .wd-day-lead { font-size: 11px; opacity: .8; margin: 2px 0 4px; overflow-wrap: anywhere; }
+  .wd-beats { list-style: none; margin: 0; padding: 0; font-size: 11px; }
+  .wd-beats li { display: grid; grid-template-columns: 26px minmax(0,1fr); gap: 2px 6px;
+    align-items: baseline; padding: 2px 0; }
+  .wd-beats .wd-hr { opacity: .4; font-size: 10px; font-variant-numeric: tabular-nums; }
+  .wd-beats .wd-txt { min-width: 0; overflow-wrap: anywhere; }
+  .wd-beats li[data-kind="war"] .wd-txt { color: #f0b49a; }
+  .wd-beats li[data-kind="crime"] .wd-txt { color: #e8a0a0; }
+  .wd-beats li[data-kind="life"] .wd-txt { color: #b9d9b0; }
+  .wd-beats li[data-kind="state"] .wd-txt { color: #c9bbe8; }
+  .wd-beats li[data-kind="market"] .wd-txt { color: #e8d9a8; }
+  .wd-beats li[data-kind="land"] .wd-txt { color: #d8c4a0; }
+  .wd-beats li[data-kind="underweb"] .wd-txt { color: #a8cfe0; }
+  .wd-paper { display: inline-block; margin-top: 4px; font-size: 10px; opacity: .65;
+    color: inherit; text-decoration: underline; }
+  /* the roster + one profile */
+  .wd-folk { list-style: none; margin: 0; padding: 0; font-size: 12px; }
+  .wd-folk li { padding: 0; }
+  .wd-folk button { width: 100%; display: grid; grid-template-columns: minmax(0,1fr) auto;
+    gap: 2px 8px; align-items: baseline; text-align: left; min-height: 30px;
+    padding: 4px 2px; background: none; border: 0; border-bottom: 1px solid rgba(244,199,154,.08);
+    color: inherit; font: inherit; cursor: pointer; }
+  .wd-folk button:hover, .wd-folk button:focus-visible { background: rgba(244,199,154,.08); }
+  .wd-folk .wd-who { min-width: 0; overflow-wrap: anywhere; }
+  .wd-folk .wd-coin { font-variant-numeric: tabular-nums; opacity: .8; text-align: right; }
+  .wd-folk .wd-sub { grid-column: 1 / -1; font-size: 10px; opacity: .48; }
+  .wd-folk button[aria-pressed="true"] .wd-who { color: #f4c79a; }
+  .wd-prof { margin-top: 8px; padding-top: 8px; border-top: 1px solid rgba(244,199,154,.18); }
+  .wd-prof h4 { margin: 0 0 4px; font-size: 13px; overflow-wrap: anywhere; }
+  .wd-prof .wd-rowline { display: flex; justify-content: space-between; gap: 8px;
+    align-items: baseline; font-size: 11px; padding: 2px 0; }
+  .wd-prof .wd-rowline b { font-variant-numeric: tabular-nums; font-weight: 600;
+    text-align: right; overflow-wrap: anywhere; }
+  .wd-prof .wd-lbl { font-size: 10px; opacity: .55; margin: 6px 0 2px; }
+  .wd-prof .wd-diary { list-style: none; margin: 0; padding: 0; font-size: 11px; }
+  .wd-prof .wd-diary li { padding: 3px 0; opacity: .85; overflow-wrap: anywhere;
+    border-bottom: 1px solid rgba(244,199,154,.08); }
+  .wd-prof .wd-diary li:last-child { border-bottom: 0; }
+  .wd-prof .wd-diary i { opacity: .45; font-style: normal; font-size: 10px; }
+  .wd-prof .wd-drift { color: #e8a0a0; }
+  .wd-empty { font-size: 11px; opacity: .55; padding: 4px 0; }
   @media (max-width: 375px) { #worldClock { top: 158px; font-size: 12px; padding: 7px 10px; } #worldMapPanel { --wmp-base: 208px; } }
   /* RCNFBGS — THE LANDSCAPE SHAPE. On a landscape phone (short + wide) the
      portrait right rail is a 62px sliver between #worldClock (bottom ~194) and
