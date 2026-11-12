@@ -437,20 +437,30 @@ function killTransitions() {
       if (ours.length) failures.push(`[COLLISION] ${tag}: ` +
         ours.map((x) => `${x.a}×${x.b} ${x.overlap}`).join('; '));
       if (res.standdown && state.endsWith('-nodoorway')) {
-        // A stand-down with the doorway GONE is only a defect if there WAS room
-        // to show in. MEASURED at 740x360: the free band between the economy
-        // clock (bottom 194) and the bottom furniture (vint-vc-fab top 288) is
-        // 62px, so a 280px-wide right-rail panel does not fit a landscape phone
-        // whatever the doorway does — a SHAPE problem (filed as RCNFBGS), not a
-        // collision and not a dead control. Printed as a limitation, never
-        // hidden; and the gate still fires the moment real room goes unused.
+        // FLIPPED FROM LIMITATION → GATE (card RCNFBGS). QWYN8PW measured that
+        // the portrait right-rail panel had only a 62px band at 740x360 and so
+        // stood down — correct under the No-Collision Law, but it left the map +
+        // ledger unavailable on a landscape phone, and that was logged here as a
+        // tolerated LIMITATION. RCNFBGS shipped an actual landscape shape: the
+        // panel relocates into the free centre-left band (left:252, right edge
+        // capped 12px short of #worldClock, --wmp-base:60) so the SAME band
+        // measurement now anchors in a column that CAN fit (173px of room at
+        // 740x360). So on a landscape phone the map MUST render with the doorway
+        // dismissed — standing down there is now a SHAPE REGRESSION, never an
+        // acceptable limitation. The limitation escape hatch is closed for this
+        // lane; the DEAD CONTROL gate still guards the other lanes.
         checks++;
-        if (res.room >= 150) {
+        const landscapePhone = h <= 430 && w > h;
+        if (landscapePhone) {
+          failures.push(`[SHAPE REGRESSION] ${tag}: stands down on a landscape phone with the ` +
+            `doorway dismissed (${res.room}px measured) — the RCNFBGS landscape shape is gone; ` +
+            `the map + ledger must render in the centre-left band here`);
+        } else if (res.room >= 150) {
           failures.push(`[DEAD CONTROL] ${tag}: stands down with the doorway dismissed ` +
             `while ${res.room}px of room was free — the map would be unreachable`);
         } else {
           limitations.push(`  ${tag}: only ${res.room}px of free band — the panel cannot ` +
-            `fit this viewport at all (shape, not collision — card RCNFBGS)`);
+            `fit this viewport at all (shape, not collision)`);
         }
         continue;
       }

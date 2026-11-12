@@ -240,6 +240,20 @@
   // is not enough. A short fast tail catches the rise, then a slow beat holds it
   // true, and both stop dead when the panel closes. Bounded: ~10 rect reads,
   // only while a human has the panel open.
+  //
+  // RE-SCANNING, not just re-reading (RCNFBGS). The fast tail re-reads the
+  // rects of obstacles ALREADY in _cands, which tracks #invite GROWING once it
+  // is a candidate. But an obstacle that is display:none / not-yet-in-DOM at
+  // open (the guest doorway animating up a beat after the panel opens) is in
+  // NOBODY's rect list until the next scanObstacles — and before RCNFBGS the
+  // landscape panel always stood down (--wmp-base 214 left <150px), so that gap
+  // never mattered. Now that the landscape panel RENDERS, a doorway that appears
+  // after open must be caught before it rises INTO the panel. MEASURED: the
+  // 740x360 'empty' state opened the panel at floor 348 (doorway not yet a
+  // candidate) and the doorway then rose into it — invite×worldMapPanel 260x166.
+  // So the tail now RE-SCANS on a coarse cadence (every ~400ms, 4 extra sweeps
+  // over the 1.6s tail — far below the every-80ms sweep that once starved the
+  // thread) so a late-appearing doorway or toast becomes a floor within 400ms.
   function fitting(on) {
     if (fitTimer) { clearInterval(fitTimer); fitTimer = null; }
     if (!on) return;
@@ -247,6 +261,7 @@
     scanObstacles();
     fitPanel();
     fitTimer = setInterval(function () {
+      if (fitTail % 5 === 0) scanObstacles();  // ~every 400ms: catch a late doorway/toast
       fitPanel();                              // cheap: candidate rects only
       if (++fitTail === 20) {                   // ~1.6s of fast settling...
         clearInterval(fitTimer);

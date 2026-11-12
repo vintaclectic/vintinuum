@@ -742,6 +742,38 @@
   .world-cost-top .wc-turns { grid-column: 1 / -1; font-size: 10px; opacity: .48; }
   .world-cost-top .wc-rest .wc-who { opacity: .6; font-style: italic; }
   @media (max-width: 375px) { #worldClock { top: 158px; font-size: 12px; padding: 7px 10px; } #worldMapPanel { --wmp-base: 208px; } }
+  /* RCNFBGS — THE LANDSCAPE SHAPE. On a landscape phone (short + wide) the
+     portrait right rail is a 62px sliver between #worldClock (bottom ~194) and
+     the bottom furniture (#vint-vc-fab / #vwg-pill), so a 280px right-rail panel
+     has nowhere to live and QWYN8PW's measurement correctly STOOD IT DOWN —
+     leaving the map + ledger simply unavailable on a phone in landscape. Here
+     the panel moves into the free centre-left band instead, and it is
+     collision-free BY CONSTRUCTION, not by luck (MEASURED at 740/640/812 wide):
+       • left:252px sits to the RIGHT of #vintWorldHud (left-pinned at x12..240),
+         clearing it by a 12px gutter at every width.
+       • width is capped so the RIGHT edge is 100vw-136px — i.e. exactly 12px
+         left of #worldClock, which is right-pinned at 100vw-124px — so the panel
+         can never reach the right rail at any landscape width.
+     --wmp-base drops to 60px so QWYN8PW's OWN band measurement (economy-map.js
+     panelBand) anchors at the top of that free column instead of at 214. It then
+     measures the live floor exactly as before: a transient #dvToast or the guest
+     doorway caps the panel above them, and if the doorway genuinely leaves <150px
+     the panel still stands down. Nothing here overrides the No-Collision Law —
+     it only hands the measurement a column that CAN fit instead of one that never
+     could. The column is short, so the canvas becomes a thumbnail and the ledger
+     comes first (the numbers are the point when the map is 140px wide). */
+  @media (max-height: 430px) and (orientation: landscape) {
+    #worldMapPanel { --wmp-base: 60px;
+      left: 252px; right: auto;
+      width: min(260px, calc(100vw - 388px));
+      display: flex; flex-direction: column; }
+    /* ledger first — move the divider to its underside so it still separates the
+       ledger from the map, now below it rather than above. */
+    #worldMapPanel .world-cost { order: -1; margin-top: 0; padding-top: 0;
+      border-top: 0; margin-bottom: 10px; padding-bottom: 10px;
+      border-bottom: 1px solid rgba(244,199,154,.18); }
+    #worldMapPanel #worldMapCanvas { max-width: 140px; margin: 0 auto; }
+  }
 </style>
 </head>
 <body data-atlas-pin="false">
