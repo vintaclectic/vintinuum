@@ -176,19 +176,36 @@ async function getJson(path) {
     is('the folk band rendered a live roster', roster.length >= 3, roster.length);
 
     const pick = roster.includes(who) ? who : roster[0];
+    // Capture the response used by this render: the world can advance between
+    // the initial API probe and clicking a citizen, so stale snapshots lie.
+    const profileResponse = page.waitForResponse(r => {
+      const u = new URL(r.url());
+      return u.pathname === `/api/world/agent/${encodeURIComponent(pick)}` && r.status() === 200;
+    }, { timeout: 60000 });
     await page.click(`#worldFolkBody button[data-agent="${pick}"]`);
+    const renderedProfile = await (await profileResponse).json();
     await page.waitForFunction(() => {
       const h = document.getElementById('worldProfile');
       return h && h.querySelector('.wd-prof');
     }, { timeout: 60000 });
     const profTxt = await page.$eval('#worldProfile', (e) => e.textContent);
     is(`clicking ${pick} opened a profile on the LIVE page`, profTxt.length > 30, profTxt.length);
-    is('the live profile shows a wallet figure', /\d/.test(profTxt) && /wallet|balance|holds|coin|money/i.test(profTxt), profTxt.slice(0, 120));
-    if (pick === who) {
-      is('the live profile shows the selected citizen name', profTxt.includes(prof.name), prof.name);
-      is('the live profile shows a real diary sentence', prof.diary.some(d => profTxt.includes(d.text)), prof.diary.length);
-      is('the live profile shows a named relationship', peers.some(p => profTxt.includes(p.agent_id.replace(/^citizen_/, ''))), peers.length);
-    }
+    const walletText = await page.$$eval('#worldProfile .wd-rowline', rows => {
+      const row = rows.find(r => r.querySelector('span')?.textContent === 'wallet');
+      return row?.querySelector('b')?.textContent;
+    });
+    const expectedWallet = Number(renderedProfile.wallet?.balance).toLocaleString('en-US');
+    is('the live profile wallet equals its actual API balance',
+      Number.isFinite(Number(renderedProfile.wallet?.balance)) && walletText === expectedWallet,
+      { actual: walletText, expected: expectedWallet });
+    is('the live profile shows the selected citizen name',
+      profTxt.includes(renderedProfile.name), renderedProfile.name);
+    is('the live profile shows a real diary sentence from its response',
+      (renderedProfile.diary || []).some(d => profTxt.includes(d.text)), renderedProfile.diary?.length);
+    const renderedPeers = renderedProfile.relationships?.peers || [];
+    is('the live profile shows a named relationship and exact trust',
+      renderedPeers.some(p => profTxt.includes(p.agent_id.replace(/^citizen_/, '')) &&
+        profTxt.includes(Number(p.trust).toFixed(2))), renderedPeers.length);
     is('the live profile shows diary or relationship prose',
       /diary|wrote|peer|trust|knows|remember/i.test(profTxt), profTxt.slice(0, 160));
 
