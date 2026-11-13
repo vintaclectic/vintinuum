@@ -62,11 +62,19 @@ const MAX_EDGE_TRIES = 4;
 let edgeRetries = 0; const edgeRetryLog = [];
 const transientStatus = (s) => s === 502 || s === 503 || s === 504 || s === 520 || s === 521 || s === 522 || s === 523 || s === 524;
 
+/* `timeoutMs`, never a caller-built `signal`: AbortSignal.timeout() is
+   ONE-SHOT. Passing one in from the call site means the first 60s timeout
+   leaves the signal already aborted, so every retry after it aborts
+   instantly and the bounded retry silently becomes no retry at all.
+   MEASURED before this fix: the gazette front-page fetch aborted and the whole
+   run died at 6 checks with "The operation was aborted due to timeout".
+   A fresh signal is therefore built per ATTEMPT, inside the loop. */
 async function edgeFetch(url, opts = {}) {
+  const { timeoutMs = 60000, ...rest } = opts;
   let last = null;
   for (let attempt = 1; attempt <= MAX_EDGE_TRIES; attempt++) {
     let r = null, err = null;
-    try { r = await fetch(url, opts); } catch (e) { err = e; }
+    try { r = await fetch(url, { ...rest, signal: AbortSignal.timeout(timeoutMs) }); } catch (e) { err = e; }
     if (r && !transientStatus(r.status)) return r;          // answered (200 or a real 4xx)
     last = err ? `${err.name}: ${err.message}` : `HTTP ${r.status}`;
     if (attempt < MAX_EDGE_TRIES) {
@@ -82,7 +90,7 @@ async function edgeFetch(url, opts = {}) {
 }
 
 async function getJson(path) {
-  const r = await edgeFetch(API + path, { signal: AbortSignal.timeout(60000) });
+  const r = await edgeFetch(API + path, { timeoutMs: 60000 });
   if (!r.ok) throw new Error(`${path} → ${r.status}`);
   return r.json();
 }
@@ -93,13 +101,36 @@ async function getJson(path) {
   /* ── 1 · the public brain answers all three Phase 8 surfaces ───────────── */
   console.log('── 1 · the three surfaces answer on the PUBLIC host ──');
   const t0 = Date.now();
-  const gaz = await getJson('/api/world/gazette');
+  let gaz = await getJson('/api/world/gazette');
   const gazMs = Date.now() - t0;
   is('gazette: the public API lists editions', Array.isArray(gaz.editions) && gaz.editions.length > 0, gaz.editions && gaz.editions.length);
-  const newest = (gaz.editions || [])[0] || {};
+  let newest = (gaz.editions || [])[0] || {};
   is('gazette: the newest edition carries a real headline', words(newest.headline) >= 2, newest.headline);
 
   const tl = await getJson('/api/world/timeline');
+  /* ── READ SKEW ACROSS THE DAY BOUNDARY ────────────────────────────────────
+     These are two requests to a LIVING world, and a day rolls every 24 ticks
+     (~24 min). The gazette is read first and the timeline second, so a roll
+     landing between them reads as disagreement that no defect produced.
+     MEASURED 2026-11-13: the run died on {"timeline":397,"paper":396} while
+     the SAME brain, queried seconds later, held today 398 / yesterday 397 and
+     a day-397 edition published at tick 9552 — i.e. the paper was already
+     correct and the two fetches simply sat on opposite sides of tick 9552.
+
+     So when the timeline has moved past the paper by exactly one day, the
+     PAPER is re-read once, on the timeline's side of the boundary, and the
+     assertion below runs on that consistent snapshot.
+     This does NOT weaken the check: the paper must still carry an edition for
+     the timeline's own yesterday. A paper that is genuinely a day behind fails
+     exactly as before, because the re-read returns the same stale newest. The
+     re-read is REPORTED so a roll is never invisible. */
+  const tlYesterday = Number(tl.today) - 1;
+  if (Number(newest.day) === tlYesterday - 1) {
+    console.log(`       day boundary rolled mid-read (paper ${newest.day}, timeline yesterday ${tlYesterday}) — re-reading the paper once`);
+    gaz = await getJson('/api/world/gazette');
+    newest = (gaz.editions || [])[0] || {};
+    console.log(`       paper after re-read: day ${newest.day}`);
+  }
   is('timeline: days came back', Array.isArray(tl.days) && tl.days.length > 1, tl.days && tl.days.length);
   const yday = (tl.days || []).find((d) => Number(d.day) === Number(tl.today) - 1);
   is('timeline: YESTERDAY is present as its own day', !!yday, yday && yday.day);
@@ -114,7 +145,7 @@ async function getJson(path) {
 
   /* ── 2 · THE PHASE TEST — under two minutes, measured ──────────────────── */
   console.log('\n── 2 · THE PHASE TEST: read what happened yesterday in <2 min ──');
-  const frontRes = await edgeFetch(`${API}/uw/gazette.uw/`, { signal: AbortSignal.timeout(60000) });
+  const frontRes = await edgeFetch(`${API}/uw/gazette.uw/`, { timeoutMs: 60000 });
   const frontHtml = await frontRes.text();
   const frontText = frontHtml.replace(/<style[\s\S]*?<\/style>/g, ' ').replace(/<[^>]*>/g, ' ');
   const frontWords = words(frontText);
@@ -144,7 +175,7 @@ async function getJson(path) {
     // edgeFetch already retried a transient edge answer; a non-200 that
     // survives that is a REAL dead link, and a thrown network error is
     // recorded as such rather than laundered into a null (the benign-return trap).
-    const r = await edgeFetch(API + u, { method: 'GET', signal: AbortSignal.timeout(40000) })
+    const r = await edgeFetch(API + u, { method: 'GET', timeoutMs: 40000 })
       .catch((e) => ({ status: `network: ${e.name}` }));
     if (!r || r.status !== 200) dead.push([u, r && r.status]);
   }
@@ -175,7 +206,7 @@ async function getJson(path) {
     const page = await browser.newPage();
     await page.setViewport({ width: 1280, height: 900 });
     page.on('requestfailed', r => { if (r.url().includes('/api/world/')) failures.push(r.url() + ': ' + (r.failure() || {}).errorText); });
-    const markerResponse = await edgeFetch(new URL('commit.json', PAGE), { signal: AbortSignal.timeout(20000) });
+    const markerResponse = await edgeFetch(new URL('commit.json', PAGE), { timeoutMs: 20000 });
     const marker = await markerResponse.json();
     const expectedCommit = process.env.STORY_EXPECT_COMMIT;
     is('public build marker is a git hash', /^[a-f0-9]{7,40}$/.test(marker.commit || ''), marker.commit);
