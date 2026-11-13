@@ -225,17 +225,19 @@
   // bounded sheet, not for a tall column. The panel is the transient, opt-in
   // thing here, so it is the thing that fits itself into the free space.
   //
-  // `visible()` below is the SAME predicate the collision probe uses
-  // (scripts/verify-no-collision.js -> verify-worldstate-collision-MEF2C4P.js
-  // -> this harness). That is deliberate: if the panel yielded to a different
-  // set than the probe measures, the two could disagree forever — the panel
-  // would either collapse against an invisible container (#dvRail is filtered
-  // out by exactly this predicate, and at 375px its top is 237px, which would
-  // otherwise crush the panel to 17px) or ignore something the probe flags.
   var FLOOR_GUTTER = 12;
-  function visibleObstacle(el, cs) {
+  // J3EASMR: preserve the direct-obstacle predicate, but separate hidden
+  // elements from transparent wrappers. Only the latter may offer children.
+  // At 375x667 #topctl's three painted buttons start at y489; ignoring this
+  // transparent wrapper let the panel reach y540 and cover its own toggle.
+  // Opacity is not inherited: children of an opacity:0 parent still report 1.
+  // Descending through hidden .vc-panel would also break the landscape band.
+  function shownEl(el, cs) {
     if (cs.display === 'none' || cs.visibility === 'hidden') return false;
     if (parseFloat(cs.opacity) === 0) return false;
+    return true;
+  }
+  function paintsEl(el, cs) {
     var ownText = Array.prototype.filter.call(el.childNodes, function (n) { return n.nodeType === 3; })
       .map(function (n) { return n.nodeValue; }).join('').trim();
     if (cs.backgroundColor === 'rgba(0, 0, 0, 0)' && cs.backgroundImage === 'none' &&
@@ -250,12 +252,42 @@
         ((blur && parseFloat(blur[1]) >= 20) || faint)) return false;
     return true;
   }
+  function visibleObstacle(el, cs) {
+    return shownEl(el, cs) && paintsEl(el, cs);
+  }
   // The candidate scan is the EXPENSIVE half (getComputedStyle over every node
   // in the document — measured ~1,500 elements on world.html), so it runs on the
   // SLOW beat and the fast settling tail only re-reads the candidates' rects.
   // Sweeping the whole document every 60ms starved the main thread badly enough
   // that the ledger's own fetch callbacks ran a full state late in the harness —
   // the panel was correct and looked broken.
+  // #dvRail is deliberately excluded: its launchers leave only 80px free at
+  // 375x667, below MIN_USABLE 150. EF3CRMF instead yields the rail to the
+  // reader through body.vw-map-reading (see railOverReader below).
+  var NO_DESCENT = { dvRail: 1 };
+  // At desktop sizes #topctl ends at y214. Counting it restores the existing
+  // 12px gutter: the panel starts at 226, rather than touching the toggle.
+  // Current included wrappers offer at most three children. Bound the number
+  // of retained children; overflow stands the panel down until the next scan.
+  // A host rect is not a safe fallback: positioned children can escape it.
+  var DESCENT_CAP = 12;
+  function descendInto(host, out, vw, vh) {
+    var kids = host.children, keep = [];
+    for (var k = 0; k < kids.length; k++) {
+      var kid = kids[k];
+      if (kid === panel || panel.contains(kid)) continue;
+      var ks = getComputedStyle(kid);
+      if (!shownEl(kid, ks) || !paintsEl(kid, ks)) continue;
+      var kr = kid.getBoundingClientRect();
+      if (kr.width <= 0 || kr.height <= 0) continue;
+      if (kr.width >= vw * 0.9 && kr.height >= vh * 0.9) continue;
+      if (keep.length >= DESCENT_CAP) { out.push({ el: host, host: null, overflow: true }); return; }
+      keep.push(kid);
+    }
+    for (var j = 0; j < keep.length; j++) out.push({ el: keep[j], host: host, overflow: false });
+  }
+  // Retain the wrapper so fast band updates can re-check its visibility:
+  // opacity changes on a parent are invisible to its children's computed style.
   var _cands = [];
   function scanObstacles() {
     var vw = window.innerWidth, vh = window.innerHeight;
@@ -266,12 +298,16 @@
       if (el === panel || panel.contains(el)) continue;
       var cs = getComputedStyle(el);
       if (cs.position !== 'fixed') continue;
-      if (!visibleObstacle(el, cs)) continue;
+      if (!shownEl(el, cs)) continue;          // hidden: it AND its children are out
+      if (!paintsEl(el, cs)) {                 // a transparent wrapper...
+        if (!NO_DESCENT[el.id]) descendInto(el, out, vw, vh);   // ...its children are the paint
+        continue;
+      }
       var r = el.getBoundingClientRect();
       if (r.width <= 0 || r.height <= 0) continue;
       // a full-bleed backdrop (#stage, #veil) is scenery, not furniture
       if (r.width >= vw * 0.9 && r.height >= vh * 0.9) continue;
-      out.push(el);
+      out.push({ el: el, host: null, overflow: false });
     }
     _cands = out;
     return out;
@@ -293,10 +329,17 @@
     var pr = panel.getBoundingClientRect();        // width/left do not depend on top
     var ceil = base, floor = vh - FLOOR_GUTTER;
     for (var i = 0; i < _cands.length; i++) {
-      var el = _cands[i];
+      var el = _cands[i].el, host = _cands[i].host;
       if (!el.isConnected) continue;
       var cs = getComputedStyle(el);
-      if (!visibleObstacle(el, cs)) continue;         // it may have faded out
+      if (_cands[i].overflow) {
+        if (shownEl(el, cs)) return { top: base, floor: base };
+        continue;
+      }
+      if (!visibleObstacle(el, cs)) continue;  // it may have faded out
+      // ...and so may the wrapper it was reached through, invisibly to it
+      // (opacity is not inherited — see _cands above).
+      if (host && (!host.isConnected || !shownEl(host, getComputedStyle(host)))) continue;
       var r = el.getBoundingClientRect();
       if (r.width <= 0 || r.height <= 0) continue;
       if (r.right <= pr.left + 1 || r.left >= pr.right - 1) continue;   // other columns
@@ -378,8 +421,8 @@
     panel.style.setProperty('--wmp-floor', raw + 'px');
   }
   // ── DOES THE RAIL ACTUALLY REACH THIS PANEL? (EF3CRMF) ───────────────────
-  // #dvRail is deliberately NOT in the obstacle set above — visibleObstacle's
-  // comment says why, and the arithmetic backs it: with the rail counted, the
+  // #dvRail is deliberately NOT in the obstacle set above — it is named in
+  // NO_DESCENT, and the arithmetic backs it: with the rail counted, the
   // largest free gap left in this panel's column at 375x667 is 80px against
   // MIN_USABLE 150 (hud 64..128, rail 178..412, vwg-pill 492..536, dvToast
   // 552..591, invite 593..659), so the map, the ledger and the story would stand
