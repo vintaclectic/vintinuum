@@ -283,6 +283,9 @@
       delete panel.dataset.standdown;
       if (!panel.hidden) mapButton.setAttribute('aria-expanded', 'true');
     }
+    // The phone rail wraps into this panel's column. The transient reader wins
+    // while visible; keep the rail's layout box so its sizing does not oscillate.
+    document.body.classList.toggle('vw-map-reading', !panel.hidden && room >= MIN_USABLE);
     // The floor is published RAW: clamping it up to top+MIN_USABLE would let a
     // visible box reach past its floor, and the short case is already answered
     // by the stand-down above (room < MIN_USABLE is exactly raw < top+MIN_USABLE,
@@ -311,7 +314,7 @@
   // thread) so a late-appearing doorway or toast becomes a floor within 400ms.
   function fitting(on) {
     if (fitTimer) { clearInterval(fitTimer); fitTimer = null; }
-    if (!on) return;
+    if (!on) { document.body.classList.remove('vw-map-reading'); return; }
     fitTail = 0;
     scanObstacles();
     fitPanel();

@@ -31,6 +31,8 @@
        keeps hidden===false and a 0×0 rect, which reads as a live band (966XX38).
 
    NEGATIVE CONTROLS:
+     --no-rail-yield restores the mobile launcher rail while the reader is open,
+                     exposing the wrapped-rail reachability regression.
      --no-band-cap   strips the bands' own `max-height`/`overflow-y:auto`, i.e.
                      the containment this slice added. The band then grows to
                      its content and evicts its siblings out of the panel.
@@ -69,6 +71,8 @@ const ROOT = path.resolve(__dirname, '..');
 const NOCAP = process.argv.includes('--no-band-cap');
 const NOSCRUB = process.argv.includes('--no-scrub');
 const PROVE = process.argv.includes('--prove-escape');
+// Negative control: restore the competing rail while the reader is open.
+const NORAILYIELD = process.argv.includes('--no-rail-yield');
 // --old-settle: restore the pre-fix settle key (fixed elements ONLY, blind to
 // their flow children). The control for the settle fix: it must reproduce the
 // 13 "BURIED under cvBtn" reds at 375x667 that the fix removes.
@@ -553,6 +557,8 @@ function stripBandCap() {
           return cs.display === 'none' || cs.visibility === 'hidden' || parseFloat(cs.opacity) < 0.05;
         }, { timeout: 20000 }).catch(() => {});
         await page.evaluate(killTransitions);
+        if (NORAILYIELD) await page.addStyleTag({ content:
+          'body.vw-map-reading #dvRail, body.vw-map-reading #dvRail * { visibility:visible !important; pointer-events:auto !important; }' });
         if (NOCAP) await page.evaluate(stripBandCap);
         if (PROVE) await page.evaluate((raw) => {
           // The non-vacuity payment for the injection checks: the same citizen
@@ -672,6 +678,7 @@ function stripBandCap() {
         await page.evaluate(() => {
           const p = document.getElementById('worldMapPanel');
           if (!p.hidden) document.getElementById('worldMapButton').click();
+          if (document.body.classList.contains('vw-map-reading')) throw new Error('closing reader did not restore rail');
         });
         await sleep(150);
         await page.evaluate(() => document.getElementById('worldMapButton').click());

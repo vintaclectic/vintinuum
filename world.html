@@ -717,6 +717,13 @@
      flip-flop). visibility:hidden keeps the box measurable, paints nothing, and
      is excluded by the collision probe's own visibility test. */
   #worldMapPanel[data-standdown] { visibility: hidden !important; pointer-events: none !important; }
+  /* A phone's wrapped launchers share the reader's column. The selected reader
+     wins until closed; preserve rail geometry for the dock's measurements. */
+  @media (max-width: 768px) {
+    body.vw-map-reading #dvRail, body.vw-map-reading #dvRail * {
+      visibility: hidden !important; pointer-events: none !important;
+    }
+  }
   .world-cost { margin-top: 10px; padding-top: 10px; border-top: 1px solid rgba(244,199,154,.18); }
   .world-cost-head { display: flex; justify-content: space-between; gap: 8px; align-items: baseline;
     font-size: 14px; margin-bottom: 6px; }
