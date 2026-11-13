@@ -41,6 +41,14 @@
                      the page's esc() are two INDEPENDENT guards. Reported as
                      doubly fail-closed rather than removing a layer to make a
                      control look sharper (UB8NTTR).
+     --old-loadgate  skips the rail-stability load gate, so a lane can be
+                     measured while #dvRail's launchers are still arriving.
+                     MUST reproduce the "BURIED under cvBtn" reds at 375x667 in
+                     a FULL sweep — they do not appear in a single-width run.
+     --old-settle    restores the pre-fix settle key (fixed elements only, blind
+                     to their position:relative flow children). MUST reproduce
+                     the 13 "storySummary is BURIED under cvBtn" reds at
+                     375x667 — that is what proves the settle fix load-bearing.
      --prove-escape  pays for that claim: it injects the same raw markup through
                      innerHTML WITHOUT esc(), so the injection checks MUST go
                      red. A safety check that has never been seen to fail is an
@@ -61,8 +69,25 @@ const ROOT = path.resolve(__dirname, '..');
 const NOCAP = process.argv.includes('--no-band-cap');
 const NOSCRUB = process.argv.includes('--no-scrub');
 const PROVE = process.argv.includes('--prove-escape');
+// --old-settle: restore the pre-fix settle key (fixed elements ONLY, blind to
+// their flow children). The control for the settle fix: it must reproduce the
+// 13 "BURIED under cvBtn" reds at 375x667 that the fix removes.
+const OLDSETTLE = process.argv.includes('--old-settle');
+// --old-loadgate: skip the rail-stability load gate, i.e. measure a page whose
+// #dvRail launchers may still be arriving. The control for that gate.
+const OLDGATE = process.argv.includes('--old-loadgate');
 const VIEWPORTS = [[320, 568], [375, 667], [393, 852], [740, 360], [768, 1024], [1280, 800], [1920, 1080]]
-  .filter(([w]) => !process.env.COLLISION_WIDTH || w === Number(process.env.COLLISION_WIDTH));
+  // COLLISION_WIDTH=375 runs one viewport; COLLISION_WIDTHS=320,375 runs a
+  // SUBSET IN ORDER. The second one exists because a red can depend on which
+  // viewports ran BEFORE it in the same browser, and re-running the whole 84-lane
+  // sweep to test that is 13 minutes a reproduction should not cost (9SABEEP).
+  .filter(([w]) => {
+    if (process.env.COLLISION_WIDTH) return w === Number(process.env.COLLISION_WIDTH);
+    if (process.env.COLLISION_WIDTHS) {
+      return process.env.COLLISION_WIDTHS.split(',').map(Number).includes(w);
+    }
+    return true;
+  });
 
 const MIME = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css',
   '.json': 'application/json', '.svg': 'image/svg+xml', '.png': 'image/png',
@@ -460,6 +485,7 @@ function stripBandCap() {
           if (/^https?:\/\/(api\.vintaclectic\.com|localhost:8767)/.test(u)) return req.abort('connectionrefused');
           return req.continue();
         });
+        await page.evaluateOnNewDocument((off) => { window.__railGateOff = off; }, OLDGATE);
         if (page.setBypassServiceWorker) await page.setBypassServiceWorker(true);
         await page.setViewport({ width: w, height: h, deviceScaleFactor: 1 });
         try { await page.goto(base + '/world.html', { waitUntil: 'domcontentloaded', timeout: 30000 }); }
@@ -484,6 +510,40 @@ function stripBandCap() {
               return el && el.hasAttribute('data-vint-docked');
             });
         }, { timeout: 15000 }).catch(() => {});
+        // AND WAIT FOR THE RAIL TO STOP MOVING. The dock gate above waits for
+        // #vintVoice / #vint-vc-fab / #vwg-pill to publish data-vint-docked —
+        // it says NOTHING about #dvRail's launchers (#cvBtn, #fgBtn,
+        // #gatherBtn, #dhDoorBtn, the ascent button), which their own modules
+        // append on their own schedule and which the rail then re-measures and
+        // REPOSITIONS on a later beat. Those are flow children of a fixed
+        // column, so they are invisible to a settle key keyed on
+        // position:fixed, and they are appended AFTER this gate used to pass.
+        //
+        // MEASURED 2026-11-13: the full 84-lane sweep reported 13
+        // "storySummary/folkSummary/storyLast is BURIED under cvBtn" reds at
+        // 375x667, while FOUR standalone runs of that same width — one of them
+        // with --old-settle, i.e. the pre-fix settle key — scored 223/223.
+        // A red that only appears once the browser has already ground through a
+        // previous viewport is the harness measuring a page whose rail has not
+        // finished arriving, not a collision (NFQ2EU6; the comment on the dock
+        // gate above records the SAME class for #fgBtn and fixed it only for
+        // the dock). So wait until the rail's launcher SET and their RECTS are
+        // both stable across several frames.
+        await page.waitForFunction(() => {
+          if (window.__railGateOff) return true;             // --old-loadgate control
+          const rail = document.getElementById('dvRail');
+          if (!rail) return true;                            // no rail on this page
+          const key = [...rail.querySelectorAll('*')].map((el) => {
+            const r = el.getBoundingClientRect();
+            return (el.id || el.className || el.tagName) + ':' +
+              Math.round(r.top) + ',' + Math.round(r.left) + ',' +
+              Math.round(r.width) + ',' + Math.round(r.height);
+          }).sort().join(';');
+          window.__railKey = window.__railKey || { k: '', n: 0 };
+          if (key === window.__railKey.k) window.__railKey.n++;
+          else { window.__railKey.k = key; window.__railKey.n = 0; }
+          return window.__railKey.n >= 6;
+        }, { polling: 100, timeout: 20000 }).catch(() => {});
         // #hint fades on its own timer; it is page furniture this slice does not
         // touch, so wait it out rather than assert against a transient.
         await page.waitForFunction(() => {
@@ -514,7 +574,8 @@ function stripBandCap() {
   // A STABLE rect, not a fixed sleep: a <details> toggle plus a fetch render
   // settles at a different speed on an idle box than on a loaded one (NY592A8).
   async function settle(page) {
-    await page.evaluate(async () => {
+    await page.evaluate(async (oldKey) => {
+      window.__oldSettleKey = oldKey;
       const panel = document.getElementById('worldMapPanel');
       let last = '', same = 0;
       for (let i = 0; i < 70 && same < 4; i++) {
@@ -541,13 +602,42 @@ function stripBandCap() {
         // collision. Keying on every fixed element's rounded rect removes the
         // class instead of re-rolling the dice (NY592A8: wait for a STABLE
         // rect, never a fixed sleep).
-        const fixedKey = [...document.body.querySelectorAll('*')]
-          .filter((el) => {
-            const st = getComputedStyle(el);
-            if (st.position !== 'fixed' || st.visibility === 'hidden' || st.display === 'none') return false;
-            const r = el.getBoundingClientRect();
-            return r.width > 0 && r.height > 0;
-          })
+        // ...AND THE FURNITURE'S OWN CHILDREN. The comment above names
+        // #gatherBtn, #dhDoorBtn and the covenants button as the things that
+        // move — and then this key used to filter on `position === 'fixed'`,
+        // which EXCLUDES every one of them: they are position:relative FLOW
+        // children of the fixed #dvRail. So the key went quiet while exactly
+        // the elements it was written to track were still in flight, and the
+        // hit-test ran mid-layout.
+        //
+        // MEASURED 2026-11-13 at 375x667, load 2.4, nothing else running:
+        // 13 lanes reported "storySummary is BURIED under cvBtn" with this key;
+        // an instrumented copy differing ONLY by one extra elementFromPoint
+        // (which forces a layout flush before the measurement) scored 223/223
+        // on the same tree in the same minute. The page was never dirty — the
+        // key was blind to #cvBtn, whose own rect is what moves.
+        //
+        // So the key now covers each fixed/sticky element AND its visible
+        // descendants, capped per obstacle so the poll stays bounded
+        // (N2E8EAP: this runs on every settle frame).
+        const KEYDESC_CAP = 48;
+        const furniture = [];
+        for (const el of document.body.querySelectorAll('*')) {
+          const st = getComputedStyle(el);
+          if ((st.position !== 'fixed' && st.position !== 'sticky') ||
+              st.visibility === 'hidden' || st.display === 'none') continue;
+          const r = el.getBoundingClientRect();
+          if (r.width <= 0 || r.height <= 0) continue;
+          furniture.push(el);
+          if (window.__oldSettleKey) continue;        // --old-settle control
+          const kids = el.querySelectorAll('*');
+          const n = kids.length < KEYDESC_CAP ? kids.length : KEYDESC_CAP;
+          for (let j = 0; j < n; j++) {
+            const kr = kids[j].getBoundingClientRect();
+            if (kr.width > 0 && kr.height > 0) furniture.push(kids[j]);
+          }
+        }
+        const fixedKey = furniture
           .map((el) => {
             const r = el.getBoundingClientRect();
             return `${el.id || el.className || el.tagName}:${Math.round(r.top)},${Math.round(r.left)},` +
@@ -560,7 +650,7 @@ function stripBandCap() {
           fixedKey].join('|');
         if (k === last) same++; else { same = 0; last = k; }
       }
-    });
+    }, OLDSETTLE);
   }
 
   for (const [w, h] of VIEWPORTS) {
@@ -602,9 +692,30 @@ function stripBandCap() {
             const btn = () => document.querySelector('#worldFolkBody .wd-folk button');
             if (!btn()) return { ok: false, reason: 'no citizen rows' };
             const prof = () => document.querySelector('#worldFolkBody .wd-prof');
-            for (let i = 0; i < 3 && !prof(); i++) { btn().click(); await sleep(450); }
+            // TAP AT MOST ONCE. The row is a TOGGLE (economy-map.js:
+            // `pickedAgent = (pickedAgent === id) ? null : id`, and the closing
+            // branch runs `profileRequest++; host.innerHTML = ''`), so a retry
+            // LOOP around the tap closes the profile it just opened whenever
+            // the first render needs longer than the loop's sleep — a retry
+            // that fights the thing it is retrying. Drive from the page's OWN
+            // published state instead of counting taps, then WAIT for the
+            // render rather than guessing how long it takes.
+            if (btn().getAttribute('aria-pressed') !== 'true') btn().click();
+            for (let i = 0; i < 40 && !prof(); i++) await sleep(150);   // <= 6s
             const opened = !!prof();
-            return { ok: opened, reason: opened ? '' : 'profile never rendered after 3 taps' };
+            if (!opened) {
+              const host = document.getElementById('worldProfile');
+              return { ok: false, reason: 'profile never rendered within 6s after ONE tap' +
+                ' (aria-pressed=' + btn().getAttribute('aria-pressed') +
+                ', host="' + String(host && host.textContent || '').slice(0, 40) + '")' };
+            }
+            // the toggle still closes, and re-opens — asserted here, not assumed
+            btn().click();
+            for (let i = 0; i < 20 && prof(); i++) await sleep(100);
+            if (prof()) return { ok: false, reason: 'tapping the open citizen did not close the profile' };
+            btn().click();
+            for (let i = 0; i < 40 && !prof(); i++) await sleep(150);
+            return { ok: !!prof(), reason: prof() ? '' : 'the profile did not re-open after a close' };
           });
           if (picked && !picked.ok && state !== 'empty') add('pick: ' + picked.reason);
           await sleep(300); await settle(page);
