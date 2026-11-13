@@ -37,8 +37,52 @@ const is = (label, ok, got) => { if (ok) { pass++; console.log(`  PASS  ${label}
 
 const words = (s) => String(s || '').trim().split(/\s+/).filter(Boolean).length;
 
+/* ── the EDGE, not the story: a bounded retry that hides nothing ──────────
+   The public host is reached through a cloudflared named tunnel whose
+   individual edge connections CYCLE. MEASURED 2026-11-13 08:39-08:43Z in
+   ~/.pm2/logs/vintinuum-named-tunnel-error.log: "Lost connection with the
+   edge" -> "Registered tunnel connection" on connIndex 2 and 3 every ~1-2
+   minutes (ewr12/ewr13/ewr16), while the SAME brain answered localhost
+   /api/health 200 in 1.1ms throughout and the tunnel process never restarted.
+   With four edge connections cycling, one request lands on a dropping
+   connection and reads 502/000 while the next reads 200 — measured here as
+   `pub timeline 502 0.87s` four minutes after `pub timeline 200 2.22s`.
+
+   That is an EDGE defect (owned by task 5WM3QQX), not a story-layer defect, so
+   a transient answer is retried a bounded number of times and EVERY retry is
+   reported — a flap must never become invisible just because the run went
+   green.
+
+   It stays FAIL-CLOSED: after MAX_EDGE_TRIES the real status/error is handed
+   back and the assertion that asked for it fails. A host that is genuinely
+   down cannot be retried into a pass; only a host that answers correctly on a
+   later attempt can. 4xx is never retried (a 404 back issue is a real dead
+   link, which is exactly what section 3 exists to catch). */
+const MAX_EDGE_TRIES = 4;
+let edgeRetries = 0; const edgeRetryLog = [];
+const transientStatus = (s) => s === 502 || s === 503 || s === 504 || s === 520 || s === 521 || s === 522 || s === 523 || s === 524;
+
+async function edgeFetch(url, opts = {}) {
+  let last = null;
+  for (let attempt = 1; attempt <= MAX_EDGE_TRIES; attempt++) {
+    let r = null, err = null;
+    try { r = await fetch(url, opts); } catch (e) { err = e; }
+    if (r && !transientStatus(r.status)) return r;          // answered (200 or a real 4xx)
+    last = err ? `${err.name}: ${err.message}` : `HTTP ${r.status}`;
+    if (attempt < MAX_EDGE_TRIES) {
+      edgeRetries++;
+      edgeRetryLog.push(`${String(url).replace(API, '')} attempt ${attempt} -> ${last}`);
+      await new Promise((res) => setTimeout(res, 1500 * attempt));
+      continue;
+    }
+    if (r) return r;                                         // exhausted: hand back the real failure
+    throw err;
+  }
+  throw new Error(`edgeFetch exhausted: ${last}`);
+}
+
 async function getJson(path) {
-  const r = await fetch(API + path, { signal: AbortSignal.timeout(60000) });
+  const r = await edgeFetch(API + path, { signal: AbortSignal.timeout(60000) });
   if (!r.ok) throw new Error(`${path} → ${r.status}`);
   return r.json();
 }
@@ -70,7 +114,7 @@ async function getJson(path) {
 
   /* ── 2 · THE PHASE TEST — under two minutes, measured ──────────────────── */
   console.log('\n── 2 · THE PHASE TEST: read what happened yesterday in <2 min ──');
-  const frontRes = await fetch(`${API}/uw/gazette.uw/`, { signal: AbortSignal.timeout(60000) });
+  const frontRes = await edgeFetch(`${API}/uw/gazette.uw/`, { signal: AbortSignal.timeout(60000) });
   const frontHtml = await frontRes.text();
   const frontText = frontHtml.replace(/<style[\s\S]*?<\/style>/g, ' ').replace(/<[^>]*>/g, ' ');
   const frontWords = words(frontText);
@@ -97,7 +141,11 @@ async function getJson(path) {
   is('the front page advertises back issues', links.length > 0, links.length);
   const dead = [];
   for (const u of links) {
-    const r = await fetch(API + u, { method: 'GET', signal: AbortSignal.timeout(40000) }).catch(() => null);
+    // edgeFetch already retried a transient edge answer; a non-200 that
+    // survives that is a REAL dead link, and a thrown network error is
+    // recorded as such rather than laundered into a null (the benign-return trap).
+    const r = await edgeFetch(API + u, { method: 'GET', signal: AbortSignal.timeout(40000) })
+      .catch((e) => ({ status: `network: ${e.name}` }));
     if (!r || r.status !== 200) dead.push([u, r && r.status]);
   }
   is('EVERY advertised back issue answers 200 (0 dead links)', dead.length === 0, dead);
@@ -127,7 +175,7 @@ async function getJson(path) {
     const page = await browser.newPage();
     await page.setViewport({ width: 1280, height: 900 });
     page.on('requestfailed', r => { if (r.url().includes('/api/world/')) failures.push(r.url() + ': ' + (r.failure() || {}).errorText); });
-    const markerResponse = await fetch(new URL('commit.json', PAGE), { signal: AbortSignal.timeout(20000) });
+    const markerResponse = await edgeFetch(new URL('commit.json', PAGE), { signal: AbortSignal.timeout(20000) });
     const marker = await markerResponse.json();
     const expectedCommit = process.env.STORY_EXPECT_COMMIT;
     is('public build marker is a git hash', /^[a-f0-9]{7,40}$/.test(marker.commit || ''), marker.commit);
@@ -227,6 +275,15 @@ async function getJson(path) {
   } finally { await browser.close(); }
 
   console.log(`\n${'═'.repeat(66)}`);
+  // REPORT, never an assertion: the edge's own behaviour during this run. A
+  // green run that needed retries is still green — the story layer answered —
+  // but the flap is printed so it cannot hide behind the tally (task 5WM3QQX).
+  if (edgeRetries) {
+    console.log(`EDGE FLAP (reported, not asserted): ${edgeRetries} transient retry(ies) against ${API}`);
+    edgeRetryLog.forEach((l) => console.log('  · ' + l));
+  } else {
+    console.log(`EDGE: no transient retries needed against ${API}`);
+  }
   if (fails.length) { console.log('FAILURES:'); fails.forEach((f) => console.log('  · ' + f)); }
   console.log(`${pass}/${pass + fails.length} pass`);
   console.log(`${'═'.repeat(66)}\n`);
