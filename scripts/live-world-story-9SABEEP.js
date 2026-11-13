@@ -203,9 +203,11 @@ async function getJson(path) {
     is('the live profile shows a real diary sentence from its response',
       (renderedProfile.diary || []).some(d => profTxt.includes(d.text)), renderedProfile.diary?.length);
     const renderedPeers = renderedProfile.relationships?.peers || [];
+    const profileLines = await page.$$eval('#worldProfile li', rows => rows.map(r => r.textContent));
     is('the live profile shows a named relationship and exact trust',
-      renderedPeers.some(p => profTxt.includes(p.agent_id.replace(/^citizen_/, '')) &&
-        profTxt.includes(Number(p.trust).toFixed(2))), renderedPeers.length);
+      renderedPeers.some(p => profileLines.some(line =>
+        line.includes(p.agent_id.replace(/^citizen_/, '')) &&
+        line.startsWith(Number(p.trust).toFixed(2) + ' '))), renderedPeers.length);
     is('the live profile shows diary or relationship prose',
       /diary|wrote|peer|trust|knows|remember/i.test(profTxt), profTxt.slice(0, 160));
 
