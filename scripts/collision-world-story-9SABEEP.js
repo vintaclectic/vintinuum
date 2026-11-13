@@ -32,7 +32,10 @@
 
    NEGATIVE CONTROLS:
      --no-rail-yield restores the mobile launcher rail while the reader is open,
-                     exposing the wrapped-rail reachability regression.
+                     exposing the wrapped-rail reachability regression. THIS is
+                     the control that owns the "BURIED under <launcher>" reds at
+                     375x667 — see the note on --old-settle below, whose claim to
+                     them is no longer true.
      --no-band-cap   strips the bands' own `max-height`/`overflow-y:auto`, i.e.
                      the containment this slice added. The band then grows to
                      its content and evicts its siblings out of the panel.
@@ -45,12 +48,23 @@
                      control look sharper (UB8NTTR).
      --old-loadgate  skips the rail-stability load gate, so a lane can be
                      measured while #dvRail's launchers are still arriving.
-                     MUST reproduce the "BURIED under cvBtn" reds at 375x667 in
-                     a FULL sweep — they do not appear in a single-width run.
      --old-settle    restores the pre-fix settle key (fixed elements only, blind
-                     to their position:relative flow children). MUST reproduce
-                     the 13 "storySummary is BURIED under cvBtn" reds at
-                     375x667 — that is what proves the settle fix load-bearing.
+                     to their position:relative flow children).
+                     BOTH OF THESE USED TO CLAIM the 13 "storySummary is BURIED
+                     under cvBtn" reds at 375x667, and that claim is now FALSE —
+                     it is re-pointed at --no-rail-yield above rather than left
+                     standing, because a control that pins a bug becomes a lie
+                     the day the bug is fixed (DHTXG92).
+                     Those reds were never only a settle race. MEASURED
+                     (EF3CRMF) at 375x667 with both bands open: 17 of #dvRail's
+                     launchers hold rects INSIDE #worldMapPanel's box while the
+                     rail sits at z-index 1450 against the panel's 7, and
+                     393x852 has the same burial latently (10 launchers) where
+                     this harness's probe points happen to miss it. The page was
+                     dirty in the timing sense AND genuinely collided. These two
+                     controls still earn their keep — a lane measured mid-layout
+                     is a real way to manufacture a false red — but the burial
+                     itself belongs to --no-rail-yield.
      --prove-escape  pays for that claim: it injects the same raw markup through
                      innerHTML WITHOUT esc(), so the injection checks MUST go
                      red. A safety check that has never been seen to fail is an
@@ -412,7 +426,59 @@ function probe() {
       Array.from(el.attributes || []).some((a) => /^on[a-z]+$/i.test(a.name))).length,
   };
 
+  // ── EF3CRMF: the rail-yield decision, and what justifies it ───────────────
+  // `reading` is the flag economy-map.js publishes; `railOver` re-derives, from
+  // the rects, whether any launcher actually falls inside this panel — the
+  // question the flag is supposed to answer. The two must agree, which is what
+  // turns the stand-down from a breakpoint into a measurement. `railHittable`
+  // asks whether a launcher can still be tapped, so "the rail was kept" is
+  // proven rather than assumed.
+  const railYield = (() => {
+    const rail = document.getElementById('dvRail');
+    const reading = document.body.classList.contains('vw-map-reading');
+    if (!rail) return { reading, railOver: false, nOver: 0, railHittable: false, noRail: true };
+    let nOver = 0;
+    for (const el of rail.querySelectorAll('.dv-launch')) {
+      if (getComputedStyle(el).display === 'none') continue;
+      const r = el.getBoundingClientRect();
+      if (r.width <= 0 || r.height <= 0) continue;
+      if (r.right <= pr.left + 1 || r.left >= pr.right - 1) continue;
+      if (r.bottom <= pr.top + 1 || r.top >= pr.bottom - 1) continue;
+      nOver++;
+    }
+    // can a human still reach the rail?  one launcher hit-tested at its centre,
+    // clipped to the viewport, is enough to answer it.
+    let railHittable = false;
+    for (const el of rail.querySelectorAll('.dv-launch')) {
+      const r = el.getBoundingClientRect();
+      if (r.width <= 0 || r.height <= 0) continue;
+      const cx = Math.round(r.left + r.width / 2), cy = Math.round(r.top + r.height / 2);
+      if (cx < 0 || cy < 0 || cx >= vw || cy >= vh) continue;
+      const hit = document.elementFromPoint(cx, cy);
+      if (hit && (hit === el || el.contains(hit))) { railHittable = true; break; }
+    }
+    return { reading, railOver: nOver > 0, nOver, railHittable, noRail: false };
+  })();
+  // ── EF3CRMF: the panel's own exit, which must exist whenever the rail is gone
+  const exit = (() => {
+    const c = document.getElementById('worldMapClose');
+    if (!c) return { present: false };
+    const cr = c.getBoundingClientRect();
+    const cs = getComputedStyle(c);
+    const shown = cs.display !== 'none' && cs.visibility !== 'hidden' &&
+      parseFloat(cs.opacity) !== 0 && cr.width > 0 && cr.height > 0;
+    if (!shown) return { present: true, shown: false };
+    const cx = Math.round(cr.left + cr.width / 2), cy = Math.round(cr.top + cr.height / 2);
+    const hit = (cx >= 0 && cy >= 0 && cx < vw && cy < vh) ? document.elementFromPoint(cx, cy) : null;
+    return { present: true, shown: true,
+      own: !!hit && (hit === c || c.contains(hit)),
+      hitId: hit ? (hit.id || hit.className || hit.tagName) : null,
+      inside: cr.left >= pr.left - 1 && cr.right <= pr.right + 1 &&
+              cr.top >= pr.top - 1 && cr.bottom <= pr.bottom + 1,
+      tap: Math.min(Math.round(cr.width), Math.round(cr.height)) };
+  })();
   return {
+    railYield, exit,
     hits, open: true, rendered: true, standdown: false,
     panel: { t: Math.round(pr.top), b: Math.round(pr.bottom), l: Math.round(pr.left),
       r: Math.round(pr.right), h: Math.round(pr.height) },
@@ -794,9 +860,50 @@ function stripBandCap() {
           if (!/no days yet|empty/.test(note)) add(`the empty state is not stated honestly (note: "${note}")`);
         }
 
+        // ── EF3CRMF: the stand-down is a MEASUREMENT, and it carries an exit ──
+        // The rail yields only where it genuinely reaches the reader. Before
+        // this, the rule was wrapped in @media (max-width: 768px), which hid the
+        // whole launcher rail at 740x360 and 768x1024 — where ZERO launchers
+        // overlap the reader — costing the only route to sixteen other surfaces
+        // for no collision. These two checks are what keep that honest in both
+        // directions, so neither a breakpoint nor an over-eager flag can return.
+        checks++;
+        if (r.railYield.reading && !r.railYield.railOver) {
+          add('the rail stood down while NO launcher overlaps the reader ' +
+              `(nOver=${r.railYield.nOver}) — a reachability cost with no collision behind it`);
+        }
+        checks++;
+        if (!r.railYield.reading && r.railYield.railOver) {
+          add(`${r.railYield.nOver} launcher(s) overlap the reader and the rail did NOT stand down`);
+        }
+        // Where the rail is kept, it must still be usable — not merely present.
+        checks++;
+        if (!r.railYield.reading && !r.railYield.noRail && !r.railYield.railHittable) {
+          add('the rail was kept (correctly) but no launcher is hit-testable');
+        }
+        // A surface that hides the navigation must carry its own way out. The
+        // only other dismissal is #topctl's pill, and MEASURED at 375x667 the
+        // panel's box can reach y521 while those pills sit at y489..535 with
+        // #topctl at z-index 6 against the panel's 7 — so it cannot be relied on.
+        if (r.railYield.reading) {
+          checks++; if (!r.exit.present) add('the rail is stood down and the panel has NO close control');
+          checks++; if (r.exit.present && !r.exit.shown) add('the rail is stood down and the panel\'s ✕ is not painted');
+          checks++; if (r.exit.shown && !r.exit.own) add(`the panel's ✕ is not hittable (elementFromPoint -> ${r.exit.hitId})`);
+          checks++; if (r.exit.shown && !r.exit.inside) add('the panel\'s ✕ escaped the panel box');
+          checks++; if (r.exit.shown && r.exit.tap < 44) add(`the panel's ✕ is a ${r.exit.tap}px tap target, under the 44px floor`);
+        } else {
+          // and it costs nothing where the rail stayed: the ✕ must be absent
+          // there, so no viewport that keeps its rail changes shape.
+          checks++;
+          if (r.exit.present && r.exit.shown) {
+            add('the panel\'s ✕ is painted while the rail is still up — that viewport\'s geometry should be untouched');
+          }
+        }
+
         console.log(`  ${tag.padEnd(34)} panel ${String(r.panel.h).padStart(4)}px  ` +
           `${r.counts.days}d/${r.counts.beats}b/${r.counts.folk}f${r.counts.profile ? '+prof' : ''}  ` +
           `${r.panelScrolls ? 'scrolls' : 'fits   '}  ` +
+          `rail:${r.railYield.reading ? 'yields' : 'kept  '}(${r.railYield.nOver})  ` +
           (failures.length && failures[failures.length - 1].startsWith(tag) ? 'DIRTY' : 'clean'));
       }
     }

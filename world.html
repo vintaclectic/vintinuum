@@ -718,12 +718,61 @@
      is excluded by the collision probe's own visibility test. */
   #worldMapPanel[data-standdown] { visibility: hidden !important; pointer-events: none !important; }
   /* A phone's wrapped launchers share the reader's column. The selected reader
-     wins until closed; preserve rail geometry for the dock's measurements. */
-  @media (max-width: 768px) {
-    body.vw-map-reading #dvRail, body.vw-map-reading #dvRail * {
-      visibility: hidden !important; pointer-events: none !important;
-    }
+     wins until closed; preserve rail geometry for the dock's measurements.
+     NO BREAKPOINT (EF3CRMF). This was wrapped in @media (max-width: 768px) as a
+     proxy for "the rail wraps into the reader's column". MEASURED, with the
+     panel and both story bands open, the number of the rail's launchers whose
+     rects actually fall inside the panel's box is: 375x667 -> 17, 393x852 -> 10,
+     and 740x360 / 768x1024 / 1280x800 / 1920x1080 -> ZERO. The breakpoint
+     therefore hid the whole launcher rail at 740x360 and 768x1024 for no
+     collision at all, which costs the only route to sixteen other surfaces.
+     economy-map.js now sets .vw-map-reading from that measurement
+     (railOverReader), so the gate is the geometry at every width and this rule
+     needs no width test of its own. */
+  body.vw-map-reading #dvRail, body.vw-map-reading #dvRail * {
+    visibility: hidden !important; pointer-events: none !important;
   }
+  /* THE READER'S OWN WAY OUT (EF3CRMF). While .vw-map-reading is set the rail is
+     hidden, and the panel's only other dismissal is #topctl's 🗺 pill —
+     economy-map.js's click handler is the single toggle; there is no Escape and
+     no outside-click path. MEASURED at 375x667 the panel's box can reach y521
+     while #topctl's pills sit at y489..535, and #topctl is z-index 6 against the
+     panel's 7, so that pill is not reliably clear of the panel it closes. The ✕
+     is therefore shown exactly when the rail is stood down.
+     DISPLAY:NONE OTHERWISE, so every viewport that keeps its rail (measured:
+     740x360, 768x1024, 1280x800, 1920x1080) keeps byte-identical geometry and
+     nothing that passes today can move.
+     It is a FLOW child of the head's existing flex row — no position:absolute
+     inside this panel, ever — so it takes its own space and cannot overlap the
+     title or the 64 × 64 readout; the row already carries gap:8px and
+     justify-content:space-between, which seats the ✕ at the end.
+     NO NEGATIVE MARGIN. The first cut pulled it back with
+     `margin:-10px -6px -10px 0` to stop the head growing, and MEASURED that put
+     its box at y211..255 inside a panel whose content box starts at ~221 — i.e.
+     sitting in the panel's own padding, its top-right arc landing about a pixel
+     from the 16px border-radius corner at x343..359/y208..224. A control tucked
+     into its container's padding is the "clip into" case the No-Collision Law
+     names, so the head is simply allowed to become 44px tall instead. That
+     growth is free: the panel is max-height + overflow-y:auto, so it grows
+     INWARD and scrolls. Measured after the change: ✕ at y221..265, exactly the
+     content-box top, 13px clear of the right edge, no pair in the head
+     overlapping at 320/375/393. */
+  .world-map-head .wmp-close { display: none; }
+  body.vw-map-reading .world-map-head { min-height: 44px; align-items: center; }
+  body.vw-map-reading .world-map-head .wmp-close {
+    display: inline-flex; align-items: center; justify-content: center;
+    flex: 0 0 auto; width: 44px; height: 44px;
+    font-family: inherit; font-size: 15px; line-height: 1; opacity: .9;
+    color: rgba(245,235,220,.9); background: rgba(20,14,10,.55);
+    border: 1px solid rgba(244,199,154,.32); border-radius: 999px;
+    cursor: pointer; user-select: none; -webkit-user-select: none;
+    touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
+  body.vw-map-reading .world-map-head .wmp-close:active { transform: scale(0.95); }
+  /* The title and the readout may shrink; the ✕ may not — it is the control that
+     always has to be hittable (NFQ2EU6). */
+  body.vw-map-reading .world-map-head strong,
+  body.vw-map-reading .world-map-head span { min-width: 0; overflow: hidden;
+    white-space: nowrap; text-overflow: ellipsis; }
   .world-cost { margin-top: 10px; padding-top: 10px; border-top: 1px solid rgba(244,199,154,.18); }
   .world-cost-head { display: flex; justify-content: space-between; gap: 8px; align-items: baseline;
     font-size: 14px; margin-bottom: 6px; }

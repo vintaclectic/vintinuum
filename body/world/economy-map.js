@@ -109,7 +109,18 @@
   panel.id = 'worldMapPanel';
   panel.hidden = true;
   panel.setAttribute('aria-label', 'World map, history and citizen profiles');
-  panel.innerHTML = '<div class="world-map-head"><strong>the land</strong><span id="worldMapMeta">64 × 64</span></div>' +
+  // THE READER'S OWN WAY OUT (EF3CRMF). While body.vw-map-reading is set this
+  // panel has hidden #dvRail, and its only other dismissal is #topctl's 🗺 pill:
+  // the click handler at the foot of this file is the single toggle — there is
+  // no Escape path and no outside-click path. A surface that stands the
+  // navigation down has to carry its own exit, and it cannot borrow the rail's,
+  // so the head gains a ✕. MEASURED at 375x667, this panel's own box can reach
+  // y521 while #topctl's pills sit at y489..535 and #topctl is z-index 6 against
+  // this panel's 7 — so the 🗺 pill is not reliably clear of the very panel it
+  // closes. It is a FLOW child of the existing flex row (no position:absolute
+  // inside this panel, ever), and world.html paints it only while the rail is
+  // actually stood down, so no viewport that keeps its rail changes shape.
+  panel.innerHTML = '<div class="world-map-head"><strong>the land</strong><span id="worldMapMeta">64 × 64</span><button type="button" class="wmp-close" id="worldMapClose" aria-label="Close the map, history and citizen profiles" title="Close">✕</button></div>' +
     '<canvas id="worldMapCanvas" width="512" height="512" aria-label="64 by 64 parcel terrain map"></canvas>' +
     '<div class="world-map-legend"><span><i class="terrain-f"></i>flat</span><span><i class="terrain-e"></i>fertile</span><span><i class="terrain-o"></i>forest</span><span><i class="terrain-r"></i>ore</span><span><i class="terrain-w"></i>water</span></div>' +
     '<div class="world-cost" id="worldCost">' +
@@ -338,12 +349,74 @@
     }
     // The phone rail wraps into this panel's column. The transient reader wins
     // while visible; keep the rail's layout box so its sizing does not oscillate.
-    document.body.classList.toggle('vw-map-reading', !panel.hidden && room >= MIN_USABLE);
+    //
+    // AND IT ASKS THE RECTS, NOT THE VIEWPORT (EF3CRMF). This landed keyed on
+    // `room >= MIN_USABLE` plus an `@media (max-width:768px)` wrapper on the rule
+    // in world.html, which is a proxy for "the rail wraps into this column" and
+    // is wrong on both sides of it. MEASURED, panel open and both story bands
+    // open, counting the rail's launchers whose own rects fall inside this
+    // panel's box:
+    //     320x568   2  (panel already stands down, so the flag is off anyway)
+    //     375x667  17  <- the 13 reds of collision-world-story-9SABEEP.js
+    //     393x852  10  <- the same burial, latent: the harness's probe points miss it
+    //     740x360   0
+    //     768x1024  0
+    //     1280x800  0
+    //     1920x1080 0
+    // So the breakpoint hid the ENTIRE launcher rail at 740x360 and 768x1024
+    // with nothing to justify it — the rail is the only way to reach sixteen
+    // other surfaces, and standing it down where it collides with nothing is a
+    // reachability cost paid for no collision. railOverRreader() below asks the
+    // one question that actually matters, so the decision is taken from the
+    // geometry at every viewport and the rule in world.html needs no breakpoint.
+    document.body.classList.toggle('vw-map-reading',
+      !panel.hidden && room >= MIN_USABLE && railOverReader());
     // The floor is published RAW: clamping it up to top+MIN_USABLE would let a
     // visible box reach past its floor, and the short case is already answered
     // by the stand-down above (room < MIN_USABLE is exactly raw < top+MIN_USABLE,
     // so the two can never disagree).
     panel.style.setProperty('--wmp-floor', raw + 'px');
+  }
+  // ── DOES THE RAIL ACTUALLY REACH THIS PANEL? (EF3CRMF) ───────────────────
+  // #dvRail is deliberately NOT in the obstacle set above — visibleObstacle's
+  // comment says why, and the arithmetic backs it: with the rail counted, the
+  // largest free gap left in this panel's column at 375x667 is 80px against
+  // MIN_USABLE 150 (hud 64..128, rail 178..412, vwg-pill 492..536, dvToast
+  // 552..591, invite 593..659), so the map, the ledger and the story would stand
+  // down permanently on a phone. Nor can the two sit side by side: clearing a
+  // 290px wrapped rail leaves this panel 133px of a 375px viewport and it needs
+  // 280. One of them must own the band, and the page's own law says which — the
+  // transient surface wins and the ambient furniture stands down.
+  //
+  // What that law still needs is the WHEN, and only the rects can answer it: the
+  // rail's width swings with how many launchers have mounted and whether it has
+  // wrapped (MEASURED at 375x667 across runs: 202px, 214px and 290px wide), so
+  // no breakpoint describes it.
+  //
+  // IT READS GEOMETRY, NEVER VISIBILITY, AND THAT IS LOAD-BEARING. The rule this
+  // feeds hides the rail with `visibility`, which leaves every rect exactly where
+  // it was — deliberately, so the rail's own sizing cannot oscillate. Reading
+  // `visibility` (or `opacity`) back would therefore be a feedback loop: hidden
+  // launchers would score as absent, the flag would clear, the rail would
+  // repaint, the overlap would return, and the flag would be set again — the same
+  // flip-flop the stand-down comment above records for display:none.
+  // `display:none` is still honoured, because it collapses the rect to zero and
+  // the size test below rejects that.
+  function railOverReader() {
+    var rail = document.getElementById('dvRail');
+    if (!rail) return false;
+    var pr = panel.getBoundingClientRect();
+    if (pr.width <= 0 || pr.height <= 0) return false;
+    var kids = rail.querySelectorAll('.dv-launch');
+    for (var i = 0; i < kids.length; i++) {
+      if (getComputedStyle(kids[i]).display === 'none') continue;
+      var r = kids[i].getBoundingClientRect();
+      if (r.width <= 0 || r.height <= 0) continue;              // not mounted yet
+      if (r.right <= pr.left + 1 || r.left >= pr.right - 1) continue;
+      if (r.bottom <= pr.top + 1 || r.top >= pr.bottom - 1) continue;
+      return true;
+    }
+    return false;
   }
   var fitTimer = null, fitTail = 0;
   // Obstacles MOVE: #invite rises over 0.8s (getting taller as it goes) and a
@@ -700,6 +773,11 @@
     storyPolling(!open);
     fitting(!open);
   });
+  // The ✕ delegates to the one toggle above rather than repeating its work, so
+  // the parcels fetch, the aria state, the pollers, fitting() and the
+  // vw-map-reading flag can never drift between the two ways out (EF3CRMF).
+  var closeBtn = document.getElementById('worldMapClose');
+  if (closeBtn) closeBtn.addEventListener('click', function () { mapButton.click(); });
   refreshClock();
   setInterval(refreshClock, 15000);
 }());
