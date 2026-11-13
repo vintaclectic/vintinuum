@@ -126,11 +126,38 @@
     var meta = document.getElementById('worldMapMeta');
     if (meta) meta.textContent = w + ' × ' + h + ' · ' + (grid.claims || []).length + ' claimed';
   }
+  // ── A HUNG REQUEST IS THE EDGE'S REAL FAILURE MODE (task 3WCDCFV) ────────
+  // This page is served from vintinuum.com and reads api.vintaclectic.com
+  // through a cloudflared named tunnel whose individual edge connections
+  // cycle. MEASURED 2026-11-13 09:0xZ, three identical requests back to back
+  // from this box: attempt 1 `code=000 t=30.016s` (no response at all),
+  // attempts 2 and 3 `200` in 0.62s and 1.51s, CORS correct on every one.
+  // So the failure is not an error status — it is SILENCE.
+  //
+  // fetch() without a signal waits forever on that silence: it never resolves
+  // and never rejects, so the 20s poll below simply stacked more hung sockets
+  // and the band sat empty indefinitely. MEASURED: the live story band never
+  // rendered a .wd-day inside 60s while `requestfailed` stayed EMPTY — a hung
+  // socket raises no event, which is exactly why this looked like nothing
+  // happening rather than like a failure.
+  //
+  // So every read is bounded well under the poll interval: a hung attempt is
+  // abandoned at 8s and the next poll gets a fresh chance, on what is usually
+  // a different edge connection. The brain itself answers localhost in
+  // 0.3-1.7s for these same URLs, so 8s accuses nobody slow.
+  var READ_TIMEOUT_MS = 8000;
   function get(path) {
-    return fetch(API + path, { cache: 'no-store' }).then(function (r) {
+    // AbortController, not AbortSignal.timeout(), so this still bounds the
+    // read on older mobile browsers that never shipped the static helper.
+    var ctl = (typeof AbortController === 'function') ? new AbortController() : null;
+    var timer = ctl ? setTimeout(function () { ctl.abort(); }, READ_TIMEOUT_MS) : null;
+    var opts = { cache: 'no-store' };
+    if (ctl) opts.signal = ctl.signal;
+    return fetch(API + path, opts).then(function (r) {
+      if (timer) clearTimeout(timer);
       if (!r.ok) throw new Error('world api ' + r.status);
       return r.json();
-    });
+    }, function (e) { if (timer) clearTimeout(timer); throw e; });
   }
   function refreshClock() {
     get('/api/world/health').then(function (data) {
@@ -577,13 +604,32 @@
     loadProfile(pickedAgent);
   });
 
+  // A FLAP MUST NOT ERASE WHAT THE READER IS ALREADY READING. renderStory(null)
+  // replaces the rendered days with "The history is unreachable.", so before
+  // this guard one dropped edge connection blanked a band that had been
+  // correct a second earlier, and the next poll 20s later put it back —
+  // a visible flicker that told the reader the world had lost its history.
+  // Rendered content therefore STAYS and only the note says so; the empty
+  // message is still shown when there is nothing to keep (a first load that
+  // cannot reach the brain), which is the honest answer in that case.
+  function keepOrEmpty(bodyId, noteId, render) {
+    var b = document.getElementById(bodyId);
+    if (b && b.querySelector('.wd-day, button[data-agent]')) {
+      var n = document.getElementById(noteId);
+      if (n) n.textContent = 'unreachable · retrying';
+      return;
+    }
+    render(null);
+  }
   function refreshStory() {
     return get('/api/world/timeline?days=7&per_day=5')
-      .then(renderStory).catch(function () { renderStory(null); });
+      .then(renderStory)
+      .catch(function () { keepOrEmpty('worldStoryBody', 'worldStoryNote', renderStory); });
   }
   function refreshFolk() {
     return get('/api/world/agents?limit=40')
-      .then(renderFolk).catch(function () { renderFolk(null); });
+      .then(renderFolk)
+      .catch(function () { keepOrEmpty('worldFolkBody', 'worldFolkNote', renderFolk); });
   }
   // A section polls only while it is OPEN. `toggle` fires on both open and
   // close, so one listener covers starting and stopping.

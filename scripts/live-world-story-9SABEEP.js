@@ -193,10 +193,49 @@ async function getJson(path) {
   is('profile: the diary holds real sentences, not empty rows',
     Array.isArray(prof.diary) && prof.diary.length > 0 && words(prof.diary[0].text) >= 5,
     prof.diary && prof.diary.length);
+  /* ── RELATIONSHIPS: the SHAPE is universal, the VALUES need a peer ────────
+     `who` is whichever agent the timeline's first beat happens to name, and an
+     agent with NO measured peer is a legitimate state, not a defect: trust is
+     DERIVED from completed contracts, transfers, shared orgs and wars fought
+     together, so an agent that has not yet interacted scores nothing and
+     honestly lists nobody. Phase 7 recorded exactly this — `vintinuum-aria`
+     wrote its will to `@mint`, the state, "having no measured peer" — and
+     MEASURED here 2026-11-13, vintinuum-aria came back with peers: 0, which
+     failed an assertion that demanded values every citizen cannot have.
+
+     So the contract every profile must satisfy (the block exists and is
+     well-formed) is asserted on whoever came up, and the VALUES are proven on
+     an agent that actually has a peer, found by sampling the live roster. That
+     sample is a capability demonstration, deliberately chosen — so it proves
+     the surface renders real trust, and NO rate is quoted from it. */
   const peers = (prof.relationships && prof.relationships.peers) || [];
-  is('profile: relationships name peers with trust', peers.length > 0 && typeof peers[0].agent_id === 'string' && Number.isFinite(Number(peers[0].trust)), peers.length);
+  is('profile: the relationships block is present and well-formed for every agent',
+    !!(prof.relationships && Array.isArray(prof.relationships.peers)),
+    { agent: who, peers: peers.length });
+
+  let trustWho = peers.length ? who : null;
+  let trustPeers = peers.length ? peers : [];
+  let sampled = 1, withPeers = peers.length ? 1 : 0;
+  if (!trustWho) {
+    const roster = await getJson('/api/world/agents?limit=40');
+    const ids = (roster.agents || roster || []).map((a) => a.id || a.agent_id).filter(Boolean);
+    for (const id of ids.slice(0, 10)) {
+      if (id === who) continue;
+      const cand = await getJson(`/api/world/agent/${encodeURIComponent(id)}`);
+      sampled++;
+      const cp = (cand.relationships && cand.relationships.peers) || [];
+      if (cp.length) { withPeers++; trustWho = id; trustPeers = cp; break; }
+    }
+  }
+  console.log(`       peer sample: ${withPeers} of ${sampled} agent(s) read carried a measured peer (report, not a rate)`);
+  is('profile: SOME live agent carries a measured peer to prove trust with',
+    !!trustWho, { sampled, withPeers });
+  is(`profile: ${trustWho || 'n/a'} names a peer with a numeric trust`,
+    !!(trustPeers[0] && typeof trustPeers[0].agent_id === 'string' && Number.isFinite(Number(trustPeers[0].trust))),
+    trustPeers[0] && { peer: trustPeers[0].agent_id, trust: trustPeers[0].trust });
   is('profile: a peer trust is DERIVED, not asserted (its parts are shown)',
-    !!(peers[0] && peers[0].parts && Object.keys(peers[0].parts).length >= 3), peers[0] && peers[0].parts);
+    !!(trustPeers[0] && trustPeers[0].parts && Object.keys(trustPeers[0].parts).length >= 3),
+    trustPeers[0] && trustPeers[0].parts);
 
   /* ── 5 · the PUBLIC PAGE renders it — the deployment, not the repo ─────── */
   console.log('\n── 5 · the live page renders the story layer ──');
@@ -254,7 +293,11 @@ async function getJson(path) {
     const roster = await page.$$eval('#worldFolkBody button[data-agent]', (b) => b.map((x) => x.getAttribute('data-agent')));
     is('the folk band rendered a live roster', roster.length >= 3, roster.length);
 
-    const pick = roster.includes(who) ? who : roster[0];
+    // Prefer the agent proven above to carry a measured peer: the rendered-trust
+    // assertion below compares a NAMED peer and its exact trust against what the
+    // page painted, and an agent with no peer cannot satisfy it (see section 4).
+    const pick = (trustWho && roster.includes(trustWho)) ? trustWho
+      : (roster.includes(who) ? who : roster[0]);
     // Capture the response used by this render: the world can advance between
     // the initial API probe and clicking a citizen, so stale snapshots lie.
     const profileResponse = page.waitForResponse(r => {
@@ -283,8 +326,15 @@ async function getJson(path) {
       (renderedProfile.diary || []).some(d => profTxt.includes(d.text)), renderedProfile.diary?.length);
     const renderedPeers = renderedProfile.relationships?.peers || [];
     const profileLines = await page.$$eval('#worldProfile li', rows => rows.map(r => r.textContent));
+    // Bound to the response THIS render used (the world advances between the
+    // probe and the click), and stated against the rendered peer list: if the
+    // clicked citizen genuinely has no peer the page has nothing to paint, and
+    // that is reported rather than asserted away.
+    if (!renderedPeers.length) {
+      console.log(`       ${pick} carried no peer in the response this render used — no trust line to compare`);
+    }
     is('the live profile shows a named relationship and exact trust',
-      renderedPeers.some(p => profileLines.some(line =>
+      renderedPeers.length > 0 && renderedPeers.some(p => profileLines.some(line =>
         line.includes(p.agent_id.replace(/^citizen_/, '')) &&
         line.startsWith(Number(p.trust).toFixed(2) + ' '))), renderedPeers.length);
     is('the live profile shows diary or relationship prose',
