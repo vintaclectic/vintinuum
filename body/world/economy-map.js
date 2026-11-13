@@ -22,7 +22,33 @@
  */
 (function () {
   'use strict';
-  var API = (window.VINT_API_BASE || '').replace(/\/$/, '');
+  // ── WHERE THE BRAIN IS (task 3WCDCFV) ────────────────────────────────────
+  // This read `window.VINT_API_BASE || ''`. NOTHING sets VINT_API_BASE — every
+  // other module that mentions it says so in a comment, "legacy, never set" —
+  // so this resolved to '' and every story/folk/clock read went to the PAGE's
+  // own origin. MEASURED 2026-11-13 on the live site: the band requested
+  // `https://vintinuum.com/api/world/timeline?days=7&per_day=5` and got 404
+  // from GitHub Pages, which has no API, so it rendered "The history is
+  // unreachable." immediately and forever. wdDays 0, folkBtns 0, note
+  // "unreachable" — the Phase 8 story layer could never have worked in public.
+  //
+  // It passed every local and harness check because both hide the defect:
+  // served from the API host, '' happens to be right, and
+  // scripts/collision-world-story-9SABEEP.js intercepts by PATH
+  // (`u.includes('/api/world/timeline')`) before it ever looks at the host, so
+  // a wrong host is invisible to it. The live page was the only thing that
+  // could catch this, which is why the phase's acceptance demands it.
+  //
+  // body/api_base.js is loaded by world.html at line 957, before this module
+  // at 1301, and is the single source of truth: it sets
+  // __VINTINUUM_API_BASE to localhost:8767 on localhost and to the production
+  // brain everywhere else, honouring ?api= for power users. So read THAT, the
+  // same canonical global altar.html / stream.html / body-v2.html read, and
+  // keep the production default as a floor in case api_base.js ever fails to
+  // load. VINT_API_BASE stays as a second chance purely so an existing
+  // override cannot stop working.
+  var API = (window.__VINTINUUM_API_BASE || window.VINT_API_BASE ||
+             'https://api.vintaclectic.com').replace(/\/$/, '');
   var clock = document.createElement('div');
   clock.id = 'worldClock';
   clock.setAttribute('aria-live', 'polite');

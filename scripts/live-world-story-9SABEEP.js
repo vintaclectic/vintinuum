@@ -245,6 +245,21 @@ async function getJson(path) {
     const page = await browser.newPage();
     await page.setViewport({ width: 1280, height: 900 });
     page.on('requestfailed', r => { if (r.url().includes('/api/world/')) failures.push(r.url() + ': ' + (r.failure() || {}).errorText); });
+    /* THE HOST THE BAND ACTUALLY ASKS (task 3WCDCFV) ────────────────────────
+       The story layer shipped reading `window.VINT_API_BASE || ''` — a global
+       nothing sets — so every band read went to the PAGE's own origin and got
+       404 from GitHub Pages: "The history is unreachable.", forever, in public
+       only. Nothing in the suite could see it, because every other check
+       either talks to the API directly from node or (in the collision sweep)
+       intercepts by PATH before looking at the host.
+       So the page's OWN requests are recorded here, and asserted below to go
+       to the API origin and to answer 200. This is the ratchet: a base that
+       regresses to the page origin fails the run instead of shipping. */
+    const bandReqs = [];
+    page.on('response', (r) => {
+      const u = r.url();
+      if (/\/api\/world\/(timeline|agents)/.test(u)) bandReqs.push({ url: u, status: r.status() });
+    });
     const markerResponse = await edgeFetch(new URL('commit.json', PAGE), { timeoutMs: 20000 });
     const marker = await markerResponse.json();
     const expectedCommit = process.env.STORY_EXPECT_COMMIT;
@@ -292,6 +307,17 @@ async function getJson(path) {
     }, { timeout: 60000 });
     const roster = await page.$$eval('#worldFolkBody button[data-agent]', (b) => b.map((x) => x.getAttribute('data-agent')));
     is('the folk band rendered a live roster', roster.length >= 3, roster.length);
+
+    // The band's own reads must leave the page origin for the brain.
+    const apiOrigin = new URL(API).origin;
+    const pageOrigin = new URL(PAGE).origin;
+    const offHost = bandReqs.filter((r) => new URL(r.url).origin !== apiOrigin);
+    const notOk = bandReqs.filter((r) => r.status !== 200);
+    console.log(`       the page made ${bandReqs.length} band request(s); origins: ${[...new Set(bandReqs.map((r) => new URL(r.url).origin))].join(', ') || 'none'}`);
+    is('the live page made band requests at all', bandReqs.length > 0, bandReqs.length);
+    is(`every band request went to the brain (${apiOrigin}), not the page origin (${pageOrigin})`,
+      offHost.length === 0, offHost.slice(0, 3));
+    is('every band request answered 200 on the live page', notOk.length === 0, notOk.slice(0, 3));
 
     // Prefer the agent proven above to carry a measured peer: the rendered-trust
     // assertion below compares a NAMED peer and its exact trust against what the
