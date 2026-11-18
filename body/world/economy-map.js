@@ -148,7 +148,15 @@
   var canvas = panel.querySelector('canvas');
   var ctx = canvas.getContext('2d');
   var colors = { f: '#92785d', e: '#a9a76a', o: '#4d755d', r: '#967070', w: '#4c7190' };
+  // THE LAST GRID (AC2WP9A). This canvas is a COMPOSITE: terrain, claims and
+  // now citizens all live in one 512x512 buffer, so repainting the people means
+  // repainting the land under them. Keeping the last grid is what lets a 60s
+  // citizen update re-composite without re-fetching the parcels, which never
+  // change between ticks.
+  var lastGrid = null;
   function draw(grid) {
+    if (grid && grid.terrain) lastGrid = grid;
+    grid = grid || lastGrid;
     if (!grid || !grid.terrain || !ctx) return;
     var w = Number(grid.w) || 64, h = Number(grid.h) || 64;
     var sx = canvas.width / w, sy = canvas.height / h;
@@ -160,9 +168,56 @@
       ctx.fillStyle = '#f4c79a';
       ctx.fillRect(claim.x * sx + sx * .25, claim.y * sy + sy * .25, sx * .5, sy * .5);
     });
+    paintFolk(w, h);
     var meta = document.getElementById('worldMapMeta');
-    if (meta) meta.textContent = w + ' × ' + h + ' · ' + (grid.claims || []).length + ' claimed';
+    if (meta) {
+      var folkN = 0;
+      try { var fr = window.VintWorldFolk && window.VintWorldFolk.placed(); folkN = fr ? fr.length : 0; } catch (_) {}
+      meta.textContent = w + ' × ' + h + ' · ' + (grid.claims || []).length + ' claimed' +
+        (folkN ? ' · ' + folkN + ' here' : '');
+    }
   }
+
+  // ── THE PEOPLE, ON THE LAND (AC2WP9A) ──────────────────────────────────────
+  // Same store, same painter as the skeleton sheet's overlay, so the two maps
+  // can never disagree about where a citizen stands. Adds NO element and NO
+  // height to this panel — it writes into the canvas that was already here —
+  // so every collision budget this box has been fought over (QWYN8PW, 9SABEEP,
+  // J3EASMR, EF3CRMF) is untouched by construction.
+  //
+  // The marker scale is derived from how far this canvas is DOWN-SCALED by CSS
+  // (backing 512px wide, displayed at 100% of the panel and capped to 140px in
+  // the short-column lane), so a dot stays the same apparent size whether the
+  // map is a thumbnail or full width, instead of vanishing on the thumbnail.
+  function paintFolk(w, h) {
+    var F = window.VintWorldFolk;
+    if (!F || !F.enabled || !F.enabled() || !ctx) return;
+    var rows = F.get();
+    if (!rows || !rows.length) return;
+    var shown = 1;
+    try {
+      var r = canvas.getBoundingClientRect();
+      if (r && r.width > 2) shown = Math.max(1, Math.min(6, canvas.width / r.width));
+    } catch (_) {}
+    try {
+      var g = F.geometry(canvas.width, canvas.height, w, h, shown);
+      F.paint(ctx, g, rows, null);
+    } catch (_) {}
+  }
+
+  // Re-composite on the world's own cadence: the store notifies at most once a
+  // minute and only when a position or an action actually moved. A hidden panel
+  // repaints nothing.
+  try {
+    if (window.VintWorldFolk && window.VintWorldFolk.subscribe) {
+      window.VintWorldFolk.subscribe(function (rows, changed) {
+        if (!changed || !rows) return;
+        if (!panel || panel.hidden || !lastGrid) return;
+        draw(lastGrid);
+        if (folk && folk.open) refreshFolk();
+      });
+    }
+  } catch (_) {}
   // ── A HUNG REQUEST IS THE EDGE'S REAL FAILURE MODE (task 3WCDCFV) ────────
   // This page is served from vintinuum.com and reads api.vintaclectic.com
   // through a cloudflared named tunnel whose individual edge connections
@@ -645,11 +700,19 @@
     if (note) note.textContent = agents.length + ' ' + plural(agents.length, 'citizen', 'citizens');
     body.innerHTML = '<div id="worldProfile" aria-live="polite"></div><ul class="wd-folk">' + agents.map(function (a) {
       var where = (a.x != null && a.y != null) ? '(' + num(a.x) + ',' + num(a.y) + ')' : 'nowhere yet';
+      // WHAT THEY ARE DOING (AC2WP9A). /api/world/agents — the endpoint this
+      // band reads — carries x/y and last_acted_tick but NOT last_action, which
+      // is why this roster could say where everyone stood and never what anyone
+      // was doing. The verb is read from the folk store (/api/world/citizens)
+      // by id; absent (unknown id, store not loaded, flag off) it is simply
+      // omitted rather than guessed.
+      var doing = '';
+      try { var dv = window.VintWorldFolk && window.VintWorldFolk.actionOf(a.id); if (dv) doing = ' · ' + esc(dv); } catch (_) {}
       return '<li><button type="button" data-agent="' + esc(a.id) + '" ' +
         'aria-pressed="' + (pickedAgent === a.id ? 'true' : 'false') + '">' +
         '<span class="wd-who">' + esc(a.name) + (a.active ? '' : ' †') + '</span>' +
         '<span class="wd-coin">' + num(a.wallet_cached) + '</span>' +
-        '<span class="wd-sub">' + where + ' · acted at tick ' + num(a.last_acted_tick) +
+        '<span class="wd-sub">' + where + doing + ' · acted at tick ' + num(a.last_acted_tick) +
         (a.talents && a.talents.length ? ' · ' + esc(a.talents.join(', ')) : '') +
         '</span></button></li>';
     }).join('') + '</ul>';

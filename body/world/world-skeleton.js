@@ -27,6 +27,20 @@
 //   5. THE CLAIMS. Best-effort: parcels already deeded are tinted gold — but ONLY
 //      where a claim key/value is unambiguously an (x,y), so a mark is never
 //      fabricated against a shape this client could not verify (see parseCoord).
+//   6. THE FOLK (AC2WP9A). The 33 living citizens, each as a marker ON the map
+//      at its own parcel, plus a roster band naming every one of them and WHAT
+//      IT IS DOING this tick. Until this landed the map was a landscape with
+//      nobody in it: /api/world/citizens answered 200 with 33 people carrying
+//      parcel_x/parcel_y and last_action, and `grep -rln "world/citizens"`
+//      over the whole repo returned ZERO files.
+//
+// THE FOLK, IN TWO PLACES ON PURPOSE. Positions go on the CANVAS (a second
+// canvas layered exactly over the terrain — see below) because position is
+// spatial and a list cannot show it. Names and actions go in a FLOW ROSTER
+// BAND because 33 floating labels on a 250px map is mush, and because flow
+// layout is the only label layout that cannot overlap. The two are linked both
+// ways: tap a marker and its row highlights; tap a row and its marker rings
+// and gains the one clamped label this surface will ever draw.
 //
 // SERVER-AUTHORITATIVE, ABSOLUTELY. This file computes NO world state. It does
 // not advance the clock, does not know a terrain char's meaning except through
@@ -108,6 +122,14 @@
   var _parcels = null, _parcelsErr = false, _parcelsInflight = false;
   var _claimN = 0;
   var _sheet = null, _btn = null, _poll = null;
+  // ── THE FOLK (AC2WP9A) — markers, the roster, and which person is picked ──
+  var _hits = [];        // last painted marker geometry, for hit-testing a tap
+  var _sel = null;       // selected citizen id, or null
+  var _folkSub = null;   // unsubscribe handle for the shared store
+  var _ro = null;        // ResizeObserver on the map box
+  var _citBound = false;
+  var _lastGeom = null;  // last marker geometry, in BACKING pixels
+  var _lastLabel = null; // last label box, in BACKING pixels (test seam)
 
   function num(v, d) { return (typeof v === 'number' && isFinite(v)) ? v : d; }
 
@@ -143,10 +165,25 @@
       //    1/1 aspect so it never overflows, and scrolls WITH the body if the
       //    sheet is short. ──────────────────────────────────────────────────────
       '#dvWorldSkeletonSheet .ws-mapwrap{margin:13px 0 4px;display:flex;justify-content:center;}',
-      '#dvWorldSkeletonSheet #wsMap{width:100%;max-width:min(420px,78vmin);',
-      ' aspect-ratio:1/1;image-rendering:pixelated;image-rendering:crisp-edges;',
+      // THE TWO CANVASES SHARE ONE BOX. .ws-mapbox owns the size (width:100%,
+      // capped, square); BOTH canvases are inset:0 inside it. Alignment is
+      // therefore a LAYOUT guarantee, not a measurement that can drift by a
+      // subpixel — the terrain pixel under a citizen's marker is always the
+      // parcel that citizen stands on. The box is position:relative, so the
+      // overlay is contained by it and cannot escape onto a sibling; this is
+      // the one intended overlay here (pins over a map), and it adds no fixed
+      // element and no z-index above the sheet's own stacking context.
+      '#dvWorldSkeletonSheet .ws-mapbox{position:relative;width:100%;',
+      ' max-width:min(420px,78vmin);aspect-ratio:1/1;}',
+      '#dvWorldSkeletonSheet #wsMap{position:absolute;inset:0;width:100%;height:100%;',
+      ' image-rendering:pixelated;image-rendering:crisp-edges;',
       ' display:block;border-radius:12px;border:1px solid rgba(124,207,255,0.2);',
       ' background:rgba(255,255,255,0.03);}',
+      // the people. Same box, drawn at CSS resolution x devicePixelRatio so the
+      // markers and the one label are CRISP while the terrain beneath stays
+      // deliberately pixelated (one pixel = one parcel).
+      '#dvWorldSkeletonSheet #wsCits{position:absolute;inset:0;width:100%;height:100%;',
+      ' display:block;border-radius:12px;cursor:pointer;touch-action:manipulation;}',
 
       // ── legend ────────────────────────────────────────────────────────────
       '#dvWorldSkeletonSheet .ws-legend{display:flex;flex-wrap:wrap;gap:8px 14px;margin-top:10px;}',
@@ -154,6 +191,49 @@
       ' font-size:12.5px;color:rgba(220,231,255,0.72);text-transform:capitalize;}',
       '#dvWorldSkeletonSheet .ws-sw{width:12px;height:12px;border-radius:3px;flex:0 0 auto;',
       ' box-shadow:0 0 0 1px rgba(255,255,255,0.14) inset;}',
+
+      // ── THE FOLK ROSTER. A flow list: one row per citizen, name + what it is
+      //    doing. Capped and internally scrolling, so 33 rows (or 300) grow
+      //    INWARD and can never evict the map above them — and because the
+      //    rows are flow children, two names can never occupy the same pixels
+      //    no matter how long they are. min-height:0 + overflow-y:auto is the
+      //    pair that actually frees a flex/again-capped child (CSS Flexbox
+      //    §4.5: the automatic minimum size applies only while main-axis
+      //    overflow is `visible`), and max-height is what bounds the growth.
+      '#dvWorldSkeletonSheet .ws-folkhead{display:flex;align-items:baseline;gap:8px;',
+      ' margin:14px 0 6px;font-size:13px;color:rgba(159,220,255,0.78);letter-spacing:.05em;}',
+      '#dvWorldSkeletonSheet .ws-folkhead b{font-weight:600;color:#eaf3ff;font-size:14px;}',
+      '#dvWorldSkeletonSheet .ws-folkhead .ws-fcount{margin-left:auto;font-variant-numeric:tabular-nums;',
+      ' color:rgba(206,224,255,0.6);font-style:italic;}',
+      '#dvWorldSkeletonSheet .ws-folk{max-height:min(34vh,264px);overflow-y:auto;min-height:0;',
+      ' -webkit-overflow-scrolling:touch;overscroll-behavior:contain;',
+      ' border-radius:12px;border:1px solid rgba(255,255,255,0.07);',
+      ' background:rgba(255,255,255,0.025);}',
+      '#dvWorldSkeletonSheet .ws-f{display:flex;align-items:center;gap:9px;width:100%;',
+      ' min-height:38px;padding:6px 11px;background:none;border:none;border-radius:0;',
+      ' font-family:inherit;text-align:left;cursor:pointer;color:inherit;',
+      ' border-bottom:1px solid rgba(255,255,255,0.045);}',
+      '#dvWorldSkeletonSheet .ws-folk .ws-f:last-child{border-bottom:none;}',
+      '#dvWorldSkeletonSheet .ws-f .ws-fdot{flex:0 0 auto;width:9px;height:9px;border-radius:50%;',
+      ' box-shadow:0 0 0 1px rgba(0,0,0,0.5);}',
+      // the NAME is the only flexible cell, so it ellipsizes and every fixed
+      // cell to its right keeps its space at 320px instead of being pushed out.
+      '#dvWorldSkeletonSheet .ws-f .ws-fname{flex:1 1 auto;min-width:0;overflow:hidden;',
+      ' text-overflow:ellipsis;white-space:nowrap;font-size:14.5px;color:#eaf3ff;}',
+      '#dvWorldSkeletonSheet .ws-f .ws-fact{flex:0 0 auto;font-size:11.5px;letter-spacing:.04em;',
+      ' text-transform:lowercase;padding:2px 8px;border-radius:999px;',
+      ' background:rgba(159,220,255,0.12);border:1px solid rgba(159,220,255,0.22);',
+      ' color:#cfe8ff;max-width:11ch;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}',
+      '#dvWorldSkeletonSheet .ws-f .ws-fat{flex:0 0 auto;font-size:11.5px;',
+      ' font-variant-numeric:tabular-nums;color:rgba(206,224,255,0.5);}',
+      '#dvWorldSkeletonSheet .ws-f.on{background:rgba(124,207,255,0.14);}',
+      '#dvWorldSkeletonSheet .ws-f.down .ws-fname{color:rgba(220,231,255,0.45);}',
+      '#dvWorldSkeletonSheet .ws-f.down .ws-fact{background:rgba(255,160,140,0.12);',
+      ' border-color:rgba(255,160,140,0.25);color:#ffc0ae;}',
+      // a phone gets a 44px row, the same floor .dv-x already declares there.
+      '@media(max-width:480px){#dvWorldSkeletonSheet .ws-f{min-height:44px;}',
+      ' #dvWorldSkeletonSheet .ws-f .ws-fat{display:none;}}',
+      '@media(hover:hover){#dvWorldSkeletonSheet .ws-f:hover{background:rgba(255,255,255,0.05);}}',
 
       // ── the quiet note (drift / claims) ─────────────────────────────────────
       '#dvWorldSkeletonSheet .ws-note{font-size:12.5px;color:rgba(206,224,255,0.55);',
@@ -177,8 +257,14 @@
       '</div>' +
       '<div class="dv-body">' +
         '<div class="ws-readout" id="wsReadout"></div>' +
-        '<div class="ws-mapwrap"><canvas id="wsMap" width="64" height="64" aria-label="the 64 by 64 world terrain map"></canvas></div>' +
+        '<div class="ws-mapwrap"><div class="ws-mapbox">' +
+          '<canvas id="wsMap" width="64" height="64" aria-label="the 64 by 64 world terrain map"></canvas>' +
+          '<canvas id="wsCits" aria-label="the living citizens, each at its own parcel"></canvas>' +
+        '</div></div>' +
         '<div class="ws-legend" id="wsLegend"></div>' +
+        '<div class="ws-folkhead"><b>the folk</b><span id="wsFolkNote">who is here</span>' +
+          '<span class="ws-fcount" id="wsFolkCount"></span></div>' +
+        '<div class="ws-folk" id="wsFolk" role="list"></div>' +
         '<div class="ws-note" id="wsNote"></div>' +
       '</div>';
     document.body.appendChild(el);
@@ -201,6 +287,7 @@
       renderReadout();
       loadParcels();      // fetch-once-and-cache; redraws from cache on re-open
       pollEconomy();      // land the newest tick the moment you open
+      bindFolk();         // markers + roster, and keep them following the tick
     } catch (_) {}
   }
   function close() {
@@ -405,7 +492,234 @@
       return;
     }
     n.className = 'ws-note';
-    if (_claimN > 0) n.textContent = _claimN + (_claimN === 1 ? ' parcel claimed' : ' parcels claimed') + ' · marked in gold';
+    var bits = [];
+    if (_claimN > 0) bits.push(_claimN + (_claimN === 1 ? ' parcel claimed' : ' parcels claimed') + ' · gold');
+    try {
+      var F = folk();
+      if (F && F.enabled()) {
+        var rows = F.get();
+        if (rows && rows.length) bits.push(rows.length + ' placed as of the newest tick they acted on');
+        if (F.stale() && rows) bits.push('the register is briefly out of reach — positions are last-known');
+      }
+    } catch (_) {}
+    n.textContent = bits.join(' · ');
+  }
+
+  // ══ THE FOLK ═══════════════════════════════════════════════════════════════
+  // Positions on the canvas, names+actions in the roster, linked both ways.
+  // Every value here is read off /api/world/citizens by world-folk-layer.js;
+  // this file decides only how to PAINT and LIST what that store holds.
+
+  function folk() { return W.VintWorldFolk; }
+
+  function bindFolk() {
+    var F = folk();
+    if (!F || !F.enabled()) { renderFolkBand(); return; }
+    if (!_folkSub) {
+      // One subscription for the life of the sheet. The store notifies at most
+      // once per 60s world tick AND only when something actually changed, so a
+      // quiet minute costs zero renders.
+      _folkSub = F.subscribe(function () {
+        if (!isOpen()) return;
+        drawCits(); renderFolkBand(); renderNote();
+      });
+    }
+    bindCitTap();
+    watchBox();
+    // land the newest people the moment the sheet opens, exactly as the clock does
+    try { F.refresh(); } catch (_) {}
+    drawCits(); renderFolkBand();
+  }
+
+  // Re-paint the markers when the BOX changes size — a rotation, a viewport
+  // resize, or the sheet's own max-height recomputing. The overlay is sized in
+  // backing pixels, so a stale size would paint people at the wrong parcel.
+  function watchBox() {
+    if (_ro) return;
+    try {
+      var box = _sheet && _sheet.querySelector('.ws-mapbox');
+      if (!box || typeof ResizeObserver !== 'function') return;
+      _ro = new ResizeObserver(function () { if (isOpen()) drawCits(); });
+      _ro.observe(box);
+    } catch (_) { _ro = null; }
+  }
+
+  // Size the overlay to its own CSS box x devicePixelRatio and hand the folk
+  // layer the geometry. Returns the geometry, or null when there is nothing to
+  // draw into yet (a zero-size box before first layout).
+  function citGeom(cv) {
+    var F = folk(); if (!F) return null;
+    var r = null;
+    try { r = cv.getBoundingClientRect(); } catch (_) { return null; }
+    if (!r || r.width < 2 || r.height < 2) return null;
+    var dpr = Math.max(1, Math.min(3, W.devicePixelRatio || 1));
+    var bw = Math.round(r.width * dpr), bh = Math.round(r.height * dpr);
+    if (cv.width !== bw) cv.width = bw;
+    if (cv.height !== bh) cv.height = bh;
+    var cols = num(_parcels && _parcels.w, 64), rows = num(_parcels && _parcels.h, 64);
+    if (cols <= 0) cols = 64; if (rows <= 0) rows = 64;
+    return F.geometry(bw, bh, cols, rows, dpr);
+  }
+
+  function drawCits() {
+    var F = folk(); if (!F) return;
+    var cv = document.getElementById('wsCits'); if (!cv) return;
+    var ctx = null; try { ctx = cv.getContext('2d'); } catch (_) {}
+    if (!ctx) return;
+    var g = citGeom(cv); if (!g) return;
+    _lastGeom = g; _lastLabel = null;
+    ctx.clearRect(0, 0, g.w, g.h);
+    _hits = [];
+    if (!F.enabled()) return;
+    var rows = F.get();
+    if (!rows || !rows.length) return;
+    _hits = F.paint(ctx, g, rows, _sel) || [];
+    // THE ONE LABEL. Only ever the picked citizen, clamped inside this box, so
+    // a second label cannot exist and label-vs-label overlap is impossible.
+    if (_sel) {
+      for (var i = 0; i < _hits.length; i++) {
+        if (_hits[i].row.id !== _sel) continue;
+        var r = _hits[i].row;
+        _lastLabel = F.paintLabel(ctx, g, _hits[i], r.name + (r.action ? ' · ' + r.action : ''));
+        break;
+      }
+    }
+  }
+
+  // Tapping a person on the map picks them. One pointer listener on the overlay
+  // (which is the topmost child of .ws-mapbox, so it receives the tap and the
+  // terrain beneath never needs to care). A tap on empty land clears.
+  function bindCitTap() {
+    if (_citBound) return;
+    var cv = document.getElementById('wsCits'); if (!cv) return;
+    _citBound = true;
+    try {
+      cv.addEventListener('click', function (e) {
+        var F = folk(); if (!F) return;
+        var g = citGeom(cv); if (!g) return;
+        var r = cv.getBoundingClientRect();
+        var px = (e.clientX - r.left) * (g.w / r.width);
+        var py = (e.clientY - r.top) * (g.h / r.height);
+        var hit = F.hitTest(_hits, px, py, g);
+        pick(hit ? hit.row.id : null, true);
+      });
+    } catch (_) {}
+  }
+
+  // The selection, from either side. `fromMap` scrolls the roster to the row so
+  // a marker tap has a visible answer in the list.
+  function pick(id, fromMap) {
+    _sel = (id && _sel === id) ? null : (id || null);
+    drawCits();
+    paintRowState();
+    if (fromMap && _sel) revealRow(_sel);
+  }
+
+  // Scroll the band by writing ITS OWN scrollTop, computed from rects. Never
+  // scrollIntoView — that walks up every scroll ancestor and would scroll the
+  // sheet body (and the document) too.
+  function revealRow(id) {
+    try {
+      var band = document.getElementById('wsFolk'); if (!band) return;
+      var row = band.querySelector('[data-cit="' + cssEsc(id) + '"]'); if (!row) return;
+      var br = band.getBoundingClientRect(), rr = row.getBoundingClientRect();
+      if (rr.top >= br.top && rr.bottom <= br.bottom) return;   // already visible
+      var want = band.scrollTop + (rr.top - br.top) - (br.height - rr.height) / 2;
+      band.scrollTop = Math.max(0, Math.min(band.scrollHeight - band.clientHeight, want));
+    } catch (_) {}
+  }
+  function cssEsc(v) {
+    try { if (W.CSS && CSS.escape) return CSS.escape(v); } catch (_) {}
+    return String(v).replace(/["\\\]]/g, '\\$&');
+  }
+
+  function paintRowState() {
+    try {
+      var band = document.getElementById('wsFolk'); if (!band) return;
+      var rows = band.querySelectorAll('.ws-f');
+      for (var i = 0; i < rows.length; i++) {
+        var on = (rows[i].getAttribute('data-cit') === _sel);
+        rows[i].classList.toggle('on', on);
+        rows[i].setAttribute('aria-pressed', on ? 'true' : 'false');
+      }
+    } catch (_) {}
+  }
+
+  // THE ROSTER. One flow row per citizen: a provider dot, the name, what it is
+  // doing, and the tick it did it on. Built with createElement/textContent
+  // throughout — a citizen's display_name is server data and never becomes
+  // markup here.
+  function renderFolkBand() {
+    var band = document.getElementById('wsFolk');
+    var note = document.getElementById('wsFolkNote');
+    var count = document.getElementById('wsFolkCount');
+    if (!band) return;
+    var F = folk();
+    while (band.firstChild) band.removeChild(band.firstChild);
+    if (!F || !F.enabled()) {
+      if (note) note.textContent = 'stood down';
+      if (count) count.textContent = '';
+      return;
+    }
+    var rows = F.get();
+    if (!rows) {
+      if (note) note.textContent = F.stale() ? 'the folk are out of reach…' : 'reading the register…';
+      if (count) count.textContent = '';
+      return;
+    }
+    if (!rows.length) {
+      if (note) note.textContent = 'nobody lives here yet';
+      if (count) count.textContent = '';
+      return;
+    }
+    var now = F.currentTick(rows);
+    var acting = 0, standing = 0, i;
+    for (i = 0; i < rows.length; i++) {
+      if (rows[i].active && !rows[i].incap) standing++;
+      if (now !== null && rows[i].tick !== null && rows[i].tick >= now) acting++;
+    }
+    if (note) note.textContent = standing + (standing === 1 ? ' soul' : ' souls') + ' standing';
+    if (count) count.textContent = (now === null ? '' : acting + ' acting · tick ' + now);
+
+    for (i = 0; i < rows.length; i++) band.appendChild(folkRow(rows[i], now));
+    paintRowState();
+  }
+
+  function folkRow(r, now) {
+    var F = folk();
+    var b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'ws-f' + ((r.incap || !r.active) ? ' down' : '');
+    b.setAttribute('data-cit', r.id);
+    b.setAttribute('role', 'listitem');
+    b.setAttribute('aria-pressed', 'false');
+
+    var dot = document.createElement('i');
+    dot.className = 'ws-fdot';
+    var c = F.hue(r.provider);
+    dot.style.background = F.rgb(c, (r.incap || !r.active) ? 0.35 : 0.95);
+    b.appendChild(dot);
+
+    var nm = document.createElement('span');
+    nm.className = 'ws-fname';
+    nm.textContent = r.name + (r.placed ? '' : ' (unplaced)');
+    b.appendChild(nm);
+
+    var act = document.createElement('span');
+    act.className = 'ws-fact';
+    // THE CURRENT ACTION. The card's whole ask. `last_action` is the verb the
+    // server applied for this citizen on its latest turn; a citizen that has
+    // never acted says so rather than borrowing a neighbour's verb.
+    act.textContent = r.incap ? 'fallen' : (r.action || 'still');
+    b.appendChild(act);
+
+    var at = document.createElement('span');
+    at.className = 'ws-fat';
+    at.textContent = r.placed ? '(' + r.x + ',' + r.y + ')' : '—';
+    b.appendChild(at);
+
+    b.addEventListener('click', function () { pick(r.id, false); });
+    return b;
   }
 
   // ── MOUNT ───────────────────────────────────────────────────────────────────
@@ -444,7 +758,18 @@
 
   W.VintWorldSkeleton = {
     open: open, close: close, isOpen: isOpen, enabled: enabled,
-    refresh: function () { pollEconomy(); if (isOpen()) loadParcels(); },
-    tick: function () { return _econ ? _econ.tick : null }
+    refresh: function () {
+      pollEconomy();
+      if (isOpen()) loadParcels();
+      try { if (folk() && folk().refresh) folk().refresh(); } catch (_) {}
+    },
+    tick: function () { return _econ ? _econ.tick : null },
+    // test seams for scripts/verify-world-folk-AC2WP9A.js
+    pick: function (id) { pick(id, false); },
+    picked: function () { return _sel; },
+    markers: function () { return _hits.map(function (h) { return { id: h.row.id, cx: h.cx, cy: h.cy, cluster: h.cluster }; }); },
+    geom: function () { return _lastGeom ? { w: _lastGeom.w, h: _lastGeom.h, cols: _lastGeom.cols, rows: _lastGeom.rows, r: _lastGeom.r, dpr: _lastGeom.dpr } : null; },
+    label: function () { return _lastLabel; },
+    redraw: function () { drawCits(); renderFolkBand(); }
   };
 })();
