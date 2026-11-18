@@ -69,6 +69,35 @@ async function getJSON(url, tries = 4) {
 const maxTick = (cs) => cs.reduce((m, c) =>
   (typeof c.last_acted_tick === 'number' && c.last_acted_tick > m) ? c.last_acted_tick : m, -1);
 
+/* ── COMPARE THE PAGE AND THE BRAIN AT THE *SAME* TICK ────────────────────
+   MEASURED 2026-11-18: this check first reported 3 citizens whose page verb
+   disagreed with the brain's (wren "rest" vs "build", sol "rest" vs "explore",
+   helios-sec10 "rest" vs "forage") and ZERO verbs changing across two ticks.
+   Both were artefacts of THIS harness. The world advances every 60s, and
+   three page loads at three viewports take longer than that, so sample A's
+   brain curl (tick 17103) was being compared against pages that had already
+   read 17104. The arithmetic gave it away: sample B PASSED, and page A's verbs
+   equalled page B's which equalled brain B's — i.e. the page was AHEAD of the
+   curl, not wrong. Confirmed directly with a tight probe: read the page and
+   the brain seconds apart and the ticks agree (17105 == 17105) with ZERO
+   mismatched verbs.
+   So every comparison is now anchored on the tick the PAGE rendered. A tick
+   that cannot be aligned is reported as a note, never as a verb failure —
+   the world is allowed to move while we measure it. */
+async function brainAtTick(tick, tries = 4) {
+  if (typeof tick !== 'number') return null;
+  for (let i = 0; i < tries; i++) {
+    try {
+      const j = await getJSON(`${API}/api/world/citizens`, 2);
+      const cs = (j && j.citizens) || [];
+      if (maxTick(cs) === tick) return cs;
+      note(`brain is at tick ${maxTick(cs)}, page rendered ${tick} (align attempt ${i + 1}/${tries})`);
+    } catch (e) { note(String(e.message || e)); }
+    await sleep(2000);
+  }
+  return null;
+}
+
 /* ── read the sheet: the roster, the markers, the terrain, the footer ───── */
 const READ = () => {
   const out = { rows: [], markers: [], geom: null, terrainColors: 0, citInk: 0, footer: null };
@@ -81,6 +110,10 @@ const READ = () => {
   }
   try { out.markers = window.VintWorldSkeleton.markers() || []; } catch (_) {}
   try { out.geom = window.VintWorldSkeleton.geom(); } catch (_) {}
+  // THE TICK THE PAGE IS SHOWING. Without this, a page snapshot gets compared
+  // against a brain snapshot from a DIFFERENT moment — see brainAtTick below.
+  try { out.renderedTick = window.VintWorldFolk.currentTick(window.VintWorldFolk.get()); }
+  catch (_) { out.renderedTick = null; }
   // the terrain must still be there: distinct opaque colours on #wsMap
   try {
     const cv = document.getElementById('wsMap');
@@ -97,12 +130,17 @@ const READ = () => {
     for (let i = 3; i < d.length; i += 4) if (d[i] > 24) n++;
     out.citInk = n;
   } catch (_) {}
-  const f = document.querySelector('[data-build-commit], #buildCommit, .build-commit');
-  if (f) out.footer = f.textContent.trim();
-  else {
-    const m = (document.body.innerText || '').match(/\b[0-9a-f]{7,40}\b/);
-    out.footer = m ? m[0] : null;
-  }
+  // ── WHERE THE BUILD HASH ACTUALLY LIVES ────────────────────────────────
+  // NOT in a DOM element. world.html states the reason in its own source: at
+  // the time the build-footer requirement landed, every fixed corner already
+  // held a control and the No-Collision Law forbade adding a permanent one
+  // without a full breakpoint audit. So the hash is carried by the TAB TITLE
+  // (visible in a phone's tab switcher and share sheet) and the console, with
+  // commit.json as the machine-checkable source of truth:
+  //     document.title += ' \u00b7 ' + d.commit;
+  // Scraping the body for a hex string would be asserting a promise this page
+  // never made (NFQ2EU6) — and would pass or fail for the wrong reason.
+  out.footer = document.title || null;
   return out;
 };
 
@@ -218,10 +256,15 @@ async function openSheet(page) {
         await openSheet(page);
         const m = await page.evaluate(READ);
         const tag = `${w}x${h}`;
+        // the brain AS THE PAGE SAW IT, not as it was before the page loaded
+        const alignedCs = await brainAtTick(m.renderedTick);
+        const cs = alignedCs || csA;
+        is(`${tag}: the page's rendered tick could be aligned with the brain (${m.renderedTick})`,
+           !!alignedCs, { renderedTick: m.renderedTick });
 
         // the roster names the LIVE people, with a verb each
         const byId = {}; for (const r of m.rows) byId[r.id] = r;
-        const active = csA.filter((c) => c.active === 1 || c.active === true);
+        const active = cs.filter((c) => c.active === 1 || c.active === true);
         const missing = active.filter((c) => !byId[c.id]).map((c) => c.id);
         is(`${tag}: every ACTIVE live citizen has a roster row (${active.length})`,
            missing.length === 0, missing.slice(0, 5));
@@ -240,7 +283,7 @@ async function openSheet(page) {
            wrongVerb.length === 0, wrongVerb.slice(0, 3));
 
         // positions: a marker per placed citizen, each on its own parcel
-        const placed = csA.filter((c) => typeof c.parcel_x === 'number' && typeof c.parcel_y === 'number');
+        const placed = cs.filter((c) => typeof c.parcel_x === 'number' && typeof c.parcel_y === 'number');
         const mk = {}; for (const k of m.markers) mk[k.id] = k;
         const noMarker = placed.filter((c) => !mk[c.id]).map((c) => c.id);
         is(`${tag}: every PLACED live citizen has a marker (${placed.length})`,
@@ -270,17 +313,22 @@ async function openSheet(page) {
            !p.err && p.over.length === 0, p.over && p.over.slice(0, 4));
 
         // the footer must carry the DEPLOYED commit
-        is(`${tag}: the footer hash matches the deployed commit (${stamp.commit})`,
+        is(`${tag}: the build hash in the tab title matches the deployed commit (${stamp.commit})`,
            !!(m.footer && stamp.commit && m.footer.includes(stamp.commit)), m.footer);
 
-        if (w === 1920) for (const r of m.rows) sampleA[r.id] = r.action;
+        if (w === 1920) {
+          for (const r of m.rows) sampleA[r.id] = r.action;
+          sampleA.__tick = m.renderedTick;
+        }
       } finally { await page.close().catch(() => {}); }
     }
 
     // ── 3. SAMPLE TWO — AFTER THE WORLD'S OWN TICK ADVANCES ─────────────
     console.log('');
-    console.log(`waiting for the world to tick past ${tickA} (up to ${Math.round(WAIT_TICK_MS / 1000)}s)…`);
-    let csB = csA, tickB = tickA;
+    const baseTick = (typeof sampleA.__tick === 'number') ? sampleA.__tick : tickA;
+    console.log(`waiting for the world to tick past the tick SAMPLE A RENDERED (${baseTick}) ` +
+                `(up to ${Math.round(WAIT_TICK_MS / 1000)}s)…`);
+    let csB = csA, tickB = baseTick;
     const deadline = Date.now() + WAIT_TICK_MS;
     while (Date.now() < deadline) {
       await sleep(10000);
@@ -288,14 +336,14 @@ async function openSheet(page) {
         const b = await getJSON(`${API}/api/world/citizens`, 2);
         csB = (b && b.citizens) || [];
         tickB = maxTick(csB);
-        if (tickB > tickA) break;
+        if (tickB > baseTick) break;
       } catch (e) { note(String(e.message || e)); }
     }
     const waited = ((Date.now() - tA) / 1000).toFixed(0);
-    is(`the world's newest tick ADVANCED across two samples (${tickA} -> ${tickB} in ${waited}s)`,
-       tickB > tickA, { tickA, tickB });
+    is(`the world's newest tick ADVANCED past the tick sample A rendered ` +
+       `(${baseTick} -> ${tickB} in ${waited}s)`, tickB > baseTick, { baseTick, tickB });
 
-    if (tickB > tickA) {
+    if (tickB > baseTick) {
       const page = await browser.newPage();
       await page.setViewport({ width: 1920, height: 1080, deviceScaleFactor: 1 });
       try {
@@ -304,9 +352,19 @@ async function openSheet(page) {
         await openSheet(page);
         const m2 = await page.evaluate(READ);
         const sampleB = {}; for (const r of m2.rows) sampleB[r.id] = r.action;
+        // The acceptance asks for TWO SAMPLES ACROSS TWO TICKS. The thing that
+        // must differ is the tick the PAGE RENDERED — if both page loads read
+        // the same tick, "nothing changed" says nothing about the feature and
+        // everything about how fast the measurement ran.
+        is(`the page rendered a DIFFERENT tick on the second sample ` +
+           `(${baseTick} -> ${m2.renderedTick})`,
+           typeof m2.renderedTick === 'number' && m2.renderedTick > baseTick,
+           { sampleA: baseTick, sampleB: m2.renderedTick });
 
         // the page's SECOND sample must agree with the brain's second sample
-        const byB = {}; for (const c of csB) byB[c.id] = c;
+        const alignedB = await brainAtTick(m2.renderedTick);
+        const csB2 = alignedB || csB;
+        const byB = {}; for (const c of csB2) byB[c.id] = c;
         const drift = Object.keys(sampleB).filter((k) => {
           const c = byB[k]; if (!c) return false;
           const want = (c.incapacitated === 1 || c.incapacitated === true)
@@ -317,7 +375,8 @@ async function openSheet(page) {
            drift.length === 0, drift.slice(0, 3));
 
         // THE ACCEPTANCE'S OWN CLAUSE: a current-action line that CHANGES
-        const changed = Object.keys(sampleA).filter((k) => sampleB[k] && sampleB[k] !== sampleA[k]);
+        const changed = Object.keys(sampleA).filter((k) =>
+          k !== '__tick' && sampleB[k] && sampleB[k] !== sampleA[k]);
         is(`a current-action line CHANGED across two world ticks (${changed.length} citizens)`,
            changed.length > 0, { sampleA_size: Object.keys(sampleA).length });
         for (const k of changed.slice(0, 6)) console.log(`        ${k}: ${sampleA[k]} -> ${sampleB[k]}`);
