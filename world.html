@@ -1059,6 +1059,20 @@
      server's), and a sheet with the live tick readout, the 64x64 terrain drawn to
      a pixelated canvas, and a legend. Loads AFTER dirverse-hud for the rail +
      one-sheet registry; adds NO fixed element of its own. -->
+<!-- THE FOLK LAYER (AC2WP9A) — the world's 33 living CITIZENS as a shared
+     store plus one canvas painter, so the two surfaces that already draw the
+     same 64x64 terrain (the skeleton sheet's #wsMap and the land panel's
+     #worldMapCanvas) show the same people in the same places from ONE fetch of
+     /api/world/citizens. MEASURED before this landed: that endpoint answered
+     200 with 33 citizens carrying parcel_x/parcel_y and last_action, and
+     `grep -rln "world/citizens"` over the repo returned ZERO files — the map
+     was a landscape with nobody in it.
+     Loads BEFORE world-skeleton.js and economy-map.js, its two consumers.
+     Creates NO DOM of its own, so it cannot collide with anything. Distinct
+     from the presence-socket sprite lane (agent-life.js / world-client.js):
+     those are council avatars at 5Hz, these are simulated people who move once
+     per 60s economy tick. -->
+<script src="body/world/world-folk-layer.js"></script>
 <script src="body/world/world-skeleton.js"></script>
 <!-- THE COMMONS — the other people are real. Room-scoped presence has shipped
      at 5Hz since day one and NOTHING ever told the player a person had arrived,
