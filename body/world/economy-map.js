@@ -871,6 +871,19 @@
     var head =
       '<div class="wd-prof"><div class="wd-rowline"><span>in circulation</span><b>' + num(t.money_supply) + '</b></div>' +
       '<div class="wd-rowline"><span>held by the folk</span><b>' + num(t.held_by_citizens) + '</b></div>' +
+      // Orgs hold REAL shared money (world-ledger's third account class) —
+      // MEASURED live, two of them held 4,462 of a 20,383 supply. Omitting
+      // them would make the numbers on this screen fail to add up, which is
+      // exactly the kind of quiet wrongness this band replaced.
+      (t.held_by_orgs ? '<div class="wd-rowline"><span>held by orgs' +
+        ((t.orgs || []).length ? ' (' + (t.orgs || []).length + ')' : '') +
+        '</span><b>' + num(t.held_by_orgs) + '</b></div>' : '') +
+      (t.in_escrow ? '<div class="wd-rowline"><span>committed in escrow</span><b>' + num(-t.in_escrow) + '</b></div>' : '') +
+      // `unaccounted` is a money bug announcing itself. Zero is the healthy
+      // answer and renders nothing; anything else is shown in the drift colour,
+      // because a supply that does not add up must never look like one that does.
+      (Number(t.unaccounted) ? '<div class="wd-rowline"><span class="wd-drift">unaccounted</span><b class="wd-drift">' +
+        num(t.unaccounted) + '</b></div>' : '') +
       '<div class="wd-rowline"><span>yesterday, all told</span><b>' +
         (t.totals && t.totals.yesterday_delta != null ? signed(t.totals.yesterday_delta) : '<span class="wd-flat">—</span>') +
       '</b></div>' +

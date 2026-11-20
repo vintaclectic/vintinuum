@@ -29,6 +29,7 @@
      --control-noday    hardcode ticks_per_day=1 → the daily buckets are wrong
      --control-mint     fold @mint into citizens → the mint renders as a person
      --control-nodrift  drop the drift field     → a money bug goes invisible
+     --control-orgs     drop the orgs bucket     → org money vanishes from the supply
    ─────────────────────────────────────────────────────────────────────────── */
 
 const fs = require('fs');
@@ -41,6 +42,7 @@ const CTL = {
   noday:   ARGV.includes('--control-noday'),
   mint:    ARGV.includes('--control-mint'),
   nodrift: ARGV.includes('--control-nodrift'),
+  orgs:    ARGV.includes('--control-orgs'),
 };
 const LIVE = ARGV.includes('--live');
 
@@ -208,6 +210,12 @@ async function seed(h) {
   await h.dbRun(`CREATE TABLE ledger (id INTEGER PRIMARY KEY AUTOINCREMENT, transfer_id TEXT NOT NULL,
     tick INTEGER NOT NULL, agent_id TEXT NOT NULL, delta INTEGER NOT NULL, reason TEXT NOT NULL, memo TEXT)`);
   await h.dbRun(`CREATE TABLE world_clock (id INTEGER PRIMARY KEY, tick INTEGER NOT NULL)`);
+  // `treasury` and `dissolved_tick` are MIGRATED columns (world-orgs.js ALTERs
+  // them in); the fixture carries the post-migration shape measured live with
+  // PRAGMA table_info(orgs) on brain-srv 2026-11-20.
+  await h.dbRun(`CREATE TABLE orgs (id TEXT PRIMARY KEY, name TEXT NOT NULL, kind TEXT NOT NULL DEFAULT 'company',
+    charter TEXT, founder_id TEXT NOT NULL, members TEXT NOT NULL DEFAULT '[]', created_tick INTEGER NOT NULL,
+    treasury INTEGER NOT NULL DEFAULT 0, dissolved_tick INTEGER)`);
   await h.dbRun('INSERT INTO world_clock (id, tick) VALUES (1, ?)', [NOW]);
 
   // ash: +100 on day 98, -30 on day 99, +5 today  → balance 75
@@ -227,15 +235,24 @@ async function seed(h) {
     // An account with journal rows and NO agents row and NOT a system account.
     ['t5', 99 * TPD + 9,  'ghost',    11, 'odd'],
     ['t5', 99 * TPD + 9,  '@fees',   -11, 'odd'],
+    // An ORG treasury: the third account class. +60 on day 99, -10 today.
+    ['t6', 99 * TPD + 2,  'org:guild', 60, 'mint'],
+    ['t6', 99 * TPD + 2,  '@mint',    -60, 'mint'],
+    ['t7', NOW,           'org:guild', -10, 'pay'],
+    ['t7', NOW,           'ash',        10, 'pay'],
   ];
   for (const [tid, tick, agent, delta, reason] of rows) {
     await h.dbRun('INSERT INTO ledger (transfer_id, tick, agent_id, delta, reason) VALUES (?,?,?,?,?)',
       [tid, tick, agent, delta, reason]);
   }
   for (const [id, name, active, cached] of [
-    ['ash', 'Ash', 1, 75], ['bry', 'Bry', 1, 40], ['cal', 'Cal', 1, 0], ['dus', 'Dus', 0, 70],
+    ['ash', 'Ash', 1, 85], ['bry', 'Bry', 1, 40], ['cal', 'Cal', 1, 0], ['dus', 'Dus', 0, 70],
   ]) await h.dbRun('INSERT INTO agents (id, display_name, active, wallet_balance) VALUES (?,?,?,?)',
       [id, name, active, cached]);
+  // treasury deliberately WRONG (45 vs journal 50) so the org drift is proven
+  // the same way the citizen drift is.
+  await h.dbRun(`INSERT INTO orgs (id, name, kind, founder_id, created_tick, treasury) VALUES
+    ('org:guild', 'The Guild', 'company', 'ash', 90 * 24, 45)`);
 }
 
 function loadTreasury() {
@@ -250,6 +267,12 @@ function loadTreasury() {
     src = src.replace('const system = sysNames.map((id) => pack(id, { kind: \'system\' }));',
       'const system = sysNames.map((id) => pack(id, { kind: \'system\' }));\n  for (const sid of sysNames) citizens.push(pack(sid, { display_name: sid, active: 1, cached_balance: null }));');
     if (src === b) die('--control-mint could not apply (anchor drifted); this run is NOT evidence');
+  }
+  if (CTL.orgs) {
+    const b = src;
+    src = src.replace("_db.dbAll('SELECT id, name, kind, treasury, dissolved_tick FROM orgs ORDER BY id')",
+      "Promise.resolve([])");
+    if (src === b) die('--control-orgs could not apply (anchor drifted); this run is NOT evidence');
   }
   if (CTL.nodrift) {
     const b = src;
@@ -284,7 +307,7 @@ function loadTreasury() {
 
   group('C1. per-citizen balance EQUALS SUM(ledger.delta)');
   const byId = new Map(t.citizens.map((c) => [c.id, c]));
-  for (const [id, want] of [['ash', 75], ['bry', 40], ['cal', 0], ['dus', 50]]) {
+  for (const [id, want] of [['ash', 85], ['bry', 40], ['cal', 0], ['dus', 50]]) {
     const row = await h.dbGet('SELECT COALESCE(SUM(delta),0) AS s FROM ledger WHERE agent_id = ?', [id]);
     eq('C1 ' + id + ": payload balance == the journal's own SUM(delta)",
        byId.get(id) ? byId.get(id).balance : null, row.s);
@@ -295,7 +318,7 @@ function loadTreasury() {
      byId.get('cal') ? byId.get('cal').balance : 'MISSING', 0);
 
   group('C2. the cached wallet column, and the DRIFT between them (shown, never hidden)');
-  eq('C2 ash: cached_balance mirrors agents.wallet_balance', byId.get('ash').cached_balance, 75);
+  eq('C2 ash: cached_balance mirrors agents.wallet_balance', byId.get('ash').cached_balance, 85);
   eq('C2b ash: drift is 0 when the journal and the cache agree', byId.get('ash').drift, 0);
   eq('C2c dus: the SEEDED disagreement (journal 50, cache 70) surfaces as drift -20',
      byId.get('dus').drift, -20);
@@ -304,7 +327,7 @@ function loadTreasury() {
   eq('C3 world_day is floor(tick / ticks_per_day)', t.world_day, DAY);
   eq('C3b ticks_per_day on the payload', t.ticks_per_day, TPD);
   eq('C3c today is declared PARTIAL (it is 7 ticks into a 24-tick day)', t.today_partial, true);
-  eq('C3d ash today_delta = +5 (the one entry inside the current day)', byId.get('ash').today_delta, 5);
+  eq('C3d ash today_delta = +15 (a stipend of 5 and 10 paid by the org — both inside the current day)', byId.get('ash').today_delta, 15);
   eq('C3e ash yesterday_delta = -30 (day 99, the last COMPLETE day)', byId.get('ash').yesterday_delta, -30);
   eq('C3f bry yesterday_delta = +40', byId.get('bry').yesterday_delta, 40);
   eq('C3g bry today_delta = 0 — a quiet day is 0, not null and not yesterday', byId.get('bry').today_delta, 0);
@@ -314,6 +337,7 @@ function loadTreasury() {
   const ash = byId.get('ash');
   const last = ash.days[ash.days.length - 1];
   eq('C4 balance_at_end of the newest (partial) day IS the balance now', last.balance_at_end, ash.balance);
+  eq('C4a and that balance is 85', ash.balance, 85);
   const d99 = ash.days.find((d) => d.day === 99);
   const d98 = ash.days.find((d) => d.day === 98);
   const d97 = ash.days.find((d) => d.day === 97);
@@ -331,12 +355,39 @@ function loadTreasury() {
   eq('C5b @escrow does not appear in citizens[]', t.citizens.some((c) => c.id === '@escrow'), false);
   is('C5c they appear in system[] instead', t.system.some((s) => s.id === '@mint') && t.system.some((s) => s.id === '@escrow'),
      JSON.stringify(t.system.map((s) => s.id)));
-  eq('C5d money_supply = -(@mint balance) = 155', t.money_supply, 155);
-  eq('C5e held_by_citizens is the sum of the PEOPLE only = 165', t.held_by_citizens, 75 + 40 + 0 + 50);
+  eq('C5d money_supply = -(@mint balance) = 215', t.money_supply, 215);
+  eq('C5e held_by_citizens is the sum of the PEOPLE only = 175', t.held_by_citizens, 85 + 40 + 0 + 50);
+
+  group('C5f. ORGS are the third account class — real shared money, own cached column');
+  const guild = (t.orgs || []).find((o) => o.id === 'org:guild');
+  is('C5f orgs[] exists and carries the seeded org', !!guild, JSON.stringify((t.orgs || []).map((o) => o.id)));
+  if (guild) {
+    eq('C5g org balance == SUM(ledger.delta) = 50', guild.balance, 50);
+    eq('C5h org cached_balance mirrors orgs.treasury', guild.cached_balance, 45);
+    eq('C5i and the SEEDED org drift (journal 50, treasury 45) surfaces as +5', guild.drift, 5);
+    eq('C5j org yesterday_delta = +60', guild.yesterday_delta, 60);
+    eq('C5k org today_delta = -10', guild.today_delta, -10);
+    eq('C5l it carries its org kind', guild.org_kind, 'company');
+    eq('C5m and is marked as an org, not a citizen', guild.kind, 'org');
+  }
+  eq('C5n an org NEVER appears in citizens[]', t.citizens.some((c) => c.id === 'org:guild'), false);
+  eq('C5o nor in unattributed[] once it is classified', t.unattributed.some((u) => u.id === 'org:guild'), false);
+  eq('C5p held_by_orgs = 50', t.held_by_orgs, 50);
+
+  group('C5q. the money supply ADDS UP — a remainder is a money bug announcing itself');
+  eq('C5q money_supply = 215 (100 + 5 + 50 + 60 minted)', t.money_supply, 215);
+  eq('C5q2 in_system sums EVERY non-mint system account (@escrow -10 + @fees -11), not just escrow', t.in_system, -21);
+  eq('C5r in_escrow mirrors the @escrow balance', t.in_escrow, -10);
+  eq('C5s held_by_unattributed = 11 (ghost)', t.held_by_unattributed, 11);
+  eq('C5t unaccounted = supply - citizens - orgs - unattributed - in_system',
+     t.unaccounted, t.money_supply - t.held_by_citizens - t.held_by_orgs - t.held_by_unattributed - t.in_system);
+  eq('C5u and that remainder really is zero on a sound journal', t.unaccounted, 0);
 
   group('C6. an unattributed account is surfaced, never silently dropped');
-  eq('C6 "ghost" has journal rows, no agents row, is no system account — and is reported',
+  eq('C6 "ghost" has journal rows, no agents row, no orgs row, is no system account — and is reported',
      t.unattributed.some((u) => u.id === 'ghost'), true);
+  eq('C6c and it names which class it CLAIMS to be, so a missing roster row is diagnosable',
+     (t.unattributed.find((u) => u.id === 'ghost') || {}).claims_class, 'agent');
   eq('C6b with its real balance', (t.unattributed.find((u) => u.id === 'ghost') || {}).balance, 11);
 
   group('C7. the label: world money, and real money is OFF');
@@ -406,6 +457,12 @@ function loadTreasury() {
      /t\.unit && t\.unit\.real_money/.test(renderFn));
   is('D8b and prints the unit note from the payload', /t\.unit\.note/.test(renderFn));
   is('D9 drift is shown when present', /wd-drift/.test(renderFn));
+  is('D9b orgs are shown — omitting a class that holds real money makes the on-screen supply fail to add up',
+     /t\.held_by_orgs/.test(renderFn) && /t\.orgs/.test(renderFn));
+  is('D9c and `unaccounted` is shown in the drift colour when non-zero (a supply that does not add up must not look like one that does)',
+     /Number\(t\.unaccounted\)[\s\S]{0,160}wd-drift/.test(renderFn));
+  is('D9d a zero `unaccounted` renders NOTHING — healthy must read as healthy, not as a warning showing 0',
+     /Number\(t\.unaccounted\) \?/.test(renderFn));
 
   group('D10. the No-Collision contract on the new CSS');
   // Anchor the slice on the comment's OPENING `/*`, not on the marker text
