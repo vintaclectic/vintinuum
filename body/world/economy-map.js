@@ -143,6 +143,23 @@
     '<details class="world-disc" id="worldFolk">' +
       '<summary><strong>the folk</strong><span class="wd-note" id="worldFolkNote">who is here</span></summary>' +
       '<div class="wd-body" id="worldFolkBody"></div>' +
+    '</details>' +
+    // ── RVCP3MY — THE TREASURY ────────────────────────────────────────────
+    // What every citizen HOLDS and how that moved since yesterday, read from
+    // GET /api/world/treasury (SUM(ledger.delta), the world's real
+    // double-entry journal). The fourth <details> in this same box, same
+    // contract as the three above: COLLAPSED by default, flow layout only, a
+    // max-height + overflow-y body that grows INWARD, and it polls only while
+    // it is open. It adds NO fixed element and no #topctl pill (QWYN8PW
+    // measured that a fourth pill overflows 320px).
+    //
+    // This replaces nothing on screen — before this, the ONLY client-side
+    // treasury was body/world/agent-ledger.js, an in-memory mock seeded with a
+    // flat 1000 "LUM" per agent. That mock is now quarantined (it answers null
+    // rather than a plausible number) and this band is the real surface.
+    '<details class="world-disc" id="worldTreasury">' +
+      '<summary><strong>the treasury</strong><span class="wd-note" id="worldTreasNote">who holds what</span></summary>' +
+      '<div class="wd-body" id="worldTreasBody"></div>' +
     '</details>';
   document.body.appendChild(panel);
   var canvas = panel.querySelector('canvas');
@@ -817,6 +834,90 @@
   // Rendered content therefore STAYS and only the note says so; the empty
   // message is still shown when there is nothing to keep (a first load that
   // cannot reach the brain), which is the honest answer in that case.
+  // ── RVCP3MY — THE TREASURY BAND ────────────────────────────────────────
+  // signed() is the whole point of this band: a bare number cannot say whether
+  // a citizen got richer or poorer today, and the SIGN is what a day-over-day
+  // delta IS. Zero renders as a dash rather than "+0", so a quiet day reads as
+  // quiet instead of as a gain of nothing.
+  function signed(n) {
+    var v = Number(n) || 0;
+    if (!v) return '<span class="wd-flat">—</span>';
+    return '<span class="' + (v > 0 ? 'wd-up' : 'wd-down') + '">' +
+      (v > 0 ? '+' : '−') + num(Math.abs(v)) + '</span>';
+  }
+  function renderTreasury(t) {
+    var body = document.getElementById('worldTreasBody');
+    var note = document.getElementById('worldTreasNote');
+    if (!body) return;
+    if (!t || !Array.isArray(t.citizens)) {
+      body.innerHTML = '<p class="wd-empty">' + (t ? 'The treasury is empty.' : 'The treasury is unreachable.') + '</p>';
+      if (note) note.textContent = t ? 'empty' : 'unreachable';
+      // The box's height just changed from inside; a stale floor is a
+      // measurement taken for a taller box (the same reason renderFolk refits
+      // on its own early return).
+      if (window.__vwCostFit) window.__vwCostFit();
+      return;
+    }
+    // Only the world's PEOPLE are listed. @mint/@escrow/@fees arrive in
+    // t.system and are deliberately NOT folded in: @mint's balance is negative
+    // by construction (its magnitude IS the money supply), so rendering it as a
+    // row would show a person owing the world everything that exists.
+    var live = t.citizens.filter(function (c) { return c.active || c.balance; });
+    if (note) note.textContent = 'day ' + num(t.world_day);
+    // Richest first. A treasury that sorted by id would bury the answer.
+    live.sort(function (a, b) { return (b.balance - a.balance) || (a.id < b.id ? -1 : 1); });
+
+    var drifted = live.filter(function (c) { return Number(c.drift); });
+    var head =
+      '<div class="wd-prof"><div class="wd-rowline"><span>in circulation</span><b>' + num(t.money_supply) + '</b></div>' +
+      '<div class="wd-rowline"><span>held by the folk</span><b>' + num(t.held_by_citizens) + '</b></div>' +
+      '<div class="wd-rowline"><span>yesterday, all told</span><b>' +
+        (t.totals && t.totals.yesterday_delta != null ? signed(t.totals.yesterday_delta) : '<span class="wd-flat">—</span>') +
+      '</b></div>' +
+      '<div class="wd-rowline"><span>today so far</span><b>' +
+        signed(t.totals ? t.totals.today_delta : 0) + '</b></div>' +
+      // The DRIFT between the journal and the cached wallet column is SHOWN,
+      // never hidden — it is the one number in this band that can only be a
+      // bug, and world-profile.js already holds that same line per citizen.
+      (drifted.length
+        ? '<div class="wd-rowline"><span class="wd-drift">cache drift</span><b class="wd-drift">' +
+            drifted.length + ' ' + plural(drifted.length, 'citizen', 'citizens') + '</b></div>'
+        : '') +
+      '</div>';
+
+    var rows = live.map(function (c) {
+      var ds = (c.days || []).slice(-7);
+      // A seven-day sparkline in text: one glyph per in-world day, so the
+      // shape of a citizen's week is readable without a canvas (and without a
+      // second positioned element inside this box).
+      var spark = ds.map(function (d) {
+        var k = d.delta > 0 ? 'wd-up' : (d.delta < 0 ? 'wd-down' : 'wd-flat');
+        return '<i class="' + k + '" title="day ' + d.day + ': ' +
+          (d.delta > 0 ? '+' : '') + d.delta + ' → ' + d.balance_at_end + '"></i>';
+      }).join('');
+      return '<li><span class="wd-who">' + esc(c.display_name || c.id.replace(/^citizen_/, '')) +
+          (c.active ? '' : ' †') + (c.incapacitated ? ' · down' : '') + '</span>' +
+        '<span class="wd-coin">' + num(c.balance) + '</span>' +
+        '<span class="wd-spark">' + spark + '</span>' +
+        '<span class="wd-sub">yesterday ' + (c.yesterday_delta != null ? signed(c.yesterday_delta) : '—') +
+          ' · today ' + signed(c.today_delta) +
+          (Number(c.drift) ? ' · <span class="wd-drift">drift ' + num(c.drift) + '</span>' : '') +
+        '</span></li>';
+    }).join('');
+
+    // THE LABEL (the card's "label LUM vs anything real-money"). The unit is
+    // the world's one minted currency; the server names no unit and invents
+    // none, and "LUM"/"XMR" were the client mock's own invention. Real money is
+    // OFF and the endpoint reports it, so the line is read, never asserted.
+    var foot = '<p class="wd-unit">' +
+      esc(t.unit && t.unit.note ? t.unit.note : "the world's one minted currency") +
+      ' · ' + (t.unit && t.unit.real_money ? 'REAL MONEY ON' : 'real money off') +
+      ' · ' + esc(t.day_is || '') + '</p>';
+
+    body.innerHTML = head + '<ul class="wd-folk wd-treas">' + rows + '</ul>' + foot;
+    if (window.__vwCostFit) window.__vwCostFit();
+  }
+
   function keepOrEmpty(bodyId, noteId, render) {
     var b = document.getElementById(bodyId);
     if (b && b.querySelector('.wd-day, button[data-agent]')) {
@@ -836,6 +937,11 @@
       .then(renderFolk)
       .catch(function () { keepOrEmpty('worldFolkBody', 'worldFolkNote', renderFolk); });
   }
+  function refreshTreasury() {
+    return get('/api/world/treasury')
+      .then(renderTreasury)
+      .catch(function () { keepOrEmpty('worldTreasBody', 'worldTreasNote', renderTreasury); });
+  }
   // A section polls only while it is OPEN. `toggle` fires on both open and
   // close, so one listener covers starting and stopping.
   function discPolling(el, on, refresh, ref) {
@@ -844,7 +950,8 @@
     refresh();
     ref.t = setInterval(refresh, 20000);
   }
-  var storyRef = { t: null }, folkRef = { t: null };
+  var treas = document.getElementById('worldTreasury');
+  var storyRef = { t: null }, folkRef = { t: null }, treasRef = { t: null };
   if (story) story.addEventListener('toggle', function () {
     discPolling(story, story.open && !panel.hidden, refreshStory, storyRef);
     // An opened band changes this box's height from inside, so re-measure the
@@ -855,10 +962,15 @@
     discPolling(folk, folk.open && !panel.hidden, refreshFolk, folkRef);
     requestAnimationFrame(refit);
   });
+  if (treas) treas.addEventListener('toggle', function () {
+    discPolling(treas, treas.open && !panel.hidden, refreshTreasury, treasRef);
+    requestAnimationFrame(refit);
+  });
   // Closing the whole panel must stop both polls — a hidden panel costs nothing.
   function storyPolling(on) {
     discPolling(story, !!(on && story && story.open), refreshStory, storyRef);
     discPolling(folk, !!(on && folk && folk.open), refreshFolk, folkRef);
+    discPolling(treas, !!(on && treas && treas.open), refreshTreasury, treasRef);
   }
 
   mapButton.addEventListener('click', function () {

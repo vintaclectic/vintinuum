@@ -896,6 +896,40 @@
   .wd-prof .wd-diary i { opacity: .45; font-style: normal; font-size: 10px; }
   .wd-prof .wd-drift { color: #e8a0a0; }
   .wd-empty { font-size: 11px; opacity: .55; padding: 4px 0; }
+  /* RVCP3MY — THE TREASURY BAND. Flow layout only, inside the same
+     max-height + overflow-y .wd-body as the three bands above, so an open
+     treasury grows INWARD and can never evict the canvas, the ledger or a
+     neighbour (No-Collision Law). Nothing here is position:absolute/fixed,
+     nothing carries a negative margin or a transform, and every text cell is
+     min-width:0 + overflow-wrap:anywhere so a long display name wraps inside
+     its own column instead of pushing the coin column off the panel.
+     .wd-treas rows are <li> with spans (not buttons like .wd-folk — a
+     treasury row is a reading, not a control), so they declare their own grid
+     rather than inheriting .wd-folk button's two-column one. */
+  .wd-treas li { display: grid; grid-template-columns: minmax(0,1fr) auto auto;
+    gap: 2px 8px; align-items: baseline; padding: 4px 2px;
+    border-bottom: 1px solid rgba(244,199,154,.08); }
+  .wd-treas li:last-child { border-bottom: 0; }
+  .wd-treas .wd-sub { grid-column: 1 / -1; font-size: 10px; opacity: .55;
+    min-width: 0; overflow-wrap: anywhere; }
+  /* The seven-day shape, one glyph per in-world day. Fixed 3px columns in an
+     inline flex, so the whole strip is a bounded 7*(3+2)px box the auto grid
+     column sizes to exactly — it cannot grow with the data. */
+  .wd-treas .wd-spark { display: inline-flex; gap: 2px; align-items: flex-end;
+    flex: 0 0 auto; height: 11px; }
+  .wd-treas .wd-spark i { display: block; width: 3px; border-radius: 1px; }
+  .wd-treas .wd-spark i.wd-up { height: 11px; background: #b9d9b0; }
+  .wd-treas .wd-spark i.wd-down { height: 11px; background: #e8a0a0; }
+  .wd-treas .wd-spark i.wd-flat { height: 3px; background: rgba(245,235,220,.22); }
+  .wd-up { color: #b9d9b0; font-variant-numeric: tabular-nums; }
+  .wd-down { color: #e8a0a0; font-variant-numeric: tabular-nums; }
+  .wd-flat { opacity: .4; }
+  /* Unscoped, because a drift reading appears in a treasury ROW as well as in
+     a .wd-prof block, and the one number that can only be a bug must never be
+     the one that silently renders unstyled. */
+  .wd-drift { color: #e8a0a0; }
+  .wd-unit { margin: 6px 0 0; font-size: 10px; opacity: .5; line-height: 1.35;
+    overflow-wrap: anywhere; }
   @media (max-width: 375px) { #worldClock { top: 158px; font-size: 12px; padding: 7px 10px; } #worldMapPanel { --wmp-base: 208px; } }
   /* RCNFBGS — THE LANDSCAPE SHAPE. On a landscape phone (short + wide) the
      portrait right rail is a 62px sliver between #worldClock (bottom ~194) and
