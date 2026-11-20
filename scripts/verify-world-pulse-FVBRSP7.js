@@ -727,6 +727,30 @@ function killTransitions() {
         const rows = window.VintWorldPulse.rows();
         return ids.every((i) => rows.some((r) => r.id === i));
       }, LATE_SHOWABLE.map((e) => e.id)));
+
+    // ── THE LANE WHERE `_seen` IS THE SOLE GUARD (added FVBRSP7 2026-11-20) ──
+    // C5/C6 above cannot measure the id dedupe at all. Polls 1 and 2 are
+    // DISJOINT BY CONSTRUCTION: MIDBURST is `tick < TICK` and poll 2 is served
+    // `tick > TICK-1`, so the two sets share no row and dropping `_seen` cannot
+    // duplicate anything across them. MEASURED: --control-nodedupe ran
+    // 544/544 GREEN, i.e. it was structurally incapable of going red and
+    // proved nothing (JX6M6BP).
+    // Production re-reads the boundary tick on EVERY poll, because next_since
+    // is always TICK and the page stores next_since-1 — so `_since` is TICK-1
+    // forever. A THIRD poll is therefore served the SAME boundary rows the
+    // page already holds, and only the id dedupe can keep them out.
+    await page.evaluate(() => new Promise((r) => window.VintWorldPulse.refresh(r)));
+    await sleep(200);
+    const p3 = await page.evaluate(() => {
+      const rows = window.VintWorldPulse.rows();
+      const ids = {}; let dupes = 0;
+      for (const r of rows) { if (ids[r.id]) dupes++; ids[r.id] = 1; }
+      return { rows: rows.length, dupes };
+    });
+    eqv('C6c a THIRD poll re-served the boundary tick and the page gained NOTHING',
+      p3.rows, showable.length);
+    eqv('C6d no two lines share an event id after the boundary tick was re-read',
+      p3.dupes, 0);
     const polls = page.__pollN;
     is(`C7 the page really did poll /api/world/state at least twice — got ${polls}`, polls >= 2);
     eqv(`C8 the second poll asked for the boundary tick`, page.__lastSince, TICK - 1);

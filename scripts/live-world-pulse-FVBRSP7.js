@@ -93,9 +93,15 @@ const VIEWPORTS = [[320, 568], [375, 667], [768, 1024], [1280, 800], [1920, 1080
 
 /* ── read the sheet: the rows, the footer note, the build stamp ───────────── */
 const READ = () => {
-  const out = { rows: [], note: '', tick: null, stale: null, unphrased: null, title: null, chips: [] };
+  const out = { rows: [], prows: [], note: '', tick: null, stale: null, unphrased: null, title: null, chips: [] };
   const P = window.VintWorldPulse;
-  if (P) { out.tick = P.tick(); out.stale = P.stale(); out.unphrased = P.unphrased(); }
+  if (P) { out.tick = P.tick(); out.stale = P.stale(); out.unphrased = P.unphrased();
+    // The DOM row carries no event id, so a reader built only from the DOM can
+    // match a page line to a brain event ONLY by type — and a tick with six
+    // order_posted rows then resolves all six to the SAME line. The module's
+    // own rows() is id-bearing and carries the identical `text` that is
+    // rendered into .wp-say, so matching happens on it. (FVBRSP7 2026-11-20)
+    out.prows = (P.rows() || []).map((x) => ({ id: x.id, tick: x.tick, type: x.type, text: String(x.text || '') })); }
   for (const r of document.querySelectorAll('#wpFeed .wp-row')) {
     out.rows.push({ type: r.getAttribute('data-type'), lane: r.getAttribute('data-lane'),
       tick: Number(r.getAttribute('data-tick')),
@@ -312,9 +318,23 @@ function killTransitions() {
             Math.abs(pageNewest - newest) <= 1, { page: pageNewest, brain: newest });
           // EVERY showable event the brain reports at its newest tick must be
           // on the page. This is the check that a rendered-but-empty feed fails.
+          // THE INTRA-TICK BURST. Anchoring on the page's tick removes the
+          // CROSS-tick artefact, not the WITHIN-tick one: the brain keeps
+          // appending rows for a tick after the page has polled it. MEASURED
+          // 2026-11-20 at tick 20130 — the 1280x800 lane read 1 of 7 while
+          // three later lanes read 7 of 7 at the SAME tick from the SAME brain.
+          // Event ids are monotonic, so the honest bound is: only require the
+          // rows that already existed when the page took its newest row.
+          const pMaxId = (r.prows || []).reduce((m, x) => (x.id > m ? x.id : m), -1);
           const want = bEvents.filter((e) => e.tick === newest &&
-            mirrors.indexOf(e.type) < 0 && quiet.indexOf(e.type) < 0);
+            mirrors.indexOf(e.type) < 0 && quiet.indexOf(e.type) < 0 &&
+            (pMaxId < 0 || e.id <= pMaxId));
           const got = r.rows.filter((x) => x.tick === newest);
+          // VACUITY GUARD. Every id-matched assertion below is skipped when
+          // `matched` is 0, so an unreadable rows() would make them all pass
+          // with nothing to check.
+          is(`${lane}: the module's id-bearing rows were readable — ${(r.prows || []).length}`,
+            (r.prows || []).length >= 5, (r.prows || []).length);
           is(`${lane}: every showable brain event at tick ${newest} is on the page — brain ${want.length}, page ${got.length}`,
             want.length === 0 ? true : got.length >= want.length,
             { brainTypes: want.map((e) => e.type), pageTypes: got.map((x) => x.type) });
@@ -322,7 +342,7 @@ function killTransitions() {
           //    BRAIN's own values for the newest tick's events.
           let named = 0, valued = 0;
           for (const e of want) {
-            const row = got.find((x) => x.type === e.type);
+            const row = (r.prows || []).find((x) => x.id === e.id);
             if (!row) continue;
             const parties = [e.agent_id];
             for (const k of ['buyer', 'seller', 'winner', 'loser', 'attacker', 'defender', 'victim',
@@ -342,7 +362,7 @@ function killTransitions() {
             walk(e.data, 0);
             if (vals.length === 0 || vals.some((v) => row.text.indexOf(v) >= 0)) valued++;
           }
-          const matched = want.filter((e) => got.some((x) => x.type === e.type)).length;
+          const matched = want.filter((e) => (r.prows || []).some((x) => x.id === e.id)).length;
           is(`${lane}: every matched line NAMES its actor — ${named}/${matched}`, matched === 0 ? true : named === matched);
           is(`${lane}: every matched line carries a VALUE from the brain's own event — ${valued}/${matched}`,
             matched === 0 ? true : valued === matched);
