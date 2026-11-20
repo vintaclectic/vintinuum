@@ -2479,6 +2479,78 @@
       var fromFloor = Math.min(deficit, Math.max(0, bot - Math.max(8, botFloor, inviteFloor, dockFloor, sayFloor)));
       if (fromFloor > 0) bot -= fromFloor;
     }
+
+    // -- 3c) A ONE-LAUNCHER BAND IS NOT A SCROLLPORT (W7PVYAJ 2026-11-20) ------
+    // Step 3 guarantees exactly `avail >= 46` -- ONE launcher's worth of band --
+    // and step 3b then tries to make the rest up FROM THE FLOOR ONLY. On a short
+    // viewport the floor is entirely un-borrowable (it is saybar + the bottom-left
+    // dock stack, both opaque), so 3b gets nothing and the rail is left as a 46px
+    // slot. Meanwhile the CEILING still holds real room that NOTHING ever asks
+    // for: step 3 stopped the moment it reached 46, and no later clause re-opens
+    // it. MEASURED on the real page at 393x420 signed-in with 21 launchers:
+    //     railtop=170 railbot=204 -> band 46px, clientH 46, scrollH 1002
+    //     ceilFloor (under #leave) = 62  ->  108px of borrowable ceiling unused
+    // and verify-rail-reach.js scored 163 violations across all 8 states of that
+    // one viewport (320x568, 375x667 and 1280x800 were green), every one of them
+    // "not reachable by scrolling the rail: rail band 46px holds < 2 launchers".
+    // That guard is right: a scroll gesture inside a strip that shows ONE of 21
+    // launchers is not a discoverable affordance, which is the same judgement the
+    // squeeze comment above already makes about the same failure arriving by a
+    // different road.
+    //
+    // THE SCROLL ITSELF IS SOUND -- this is a band problem, not a scroll problem.
+    // Measured on the same page: the rail's legal scrollTop range is
+    // [-(scrollHeight - clientHeight), 0] (column-reverse, so Chrome puts the
+    // overflow on the negative side -- see THE SIGN BUG in step 4), it RESTS at
+    // -max with the newest launcher pinned at the rail's top edge, scrollTop 0
+    // shows the oldest, and `scrollTop + (launcherCentre - bandCentre)` traverses
+    // it correctly end to end. Nothing here needs a second scroll convention.
+    //
+    // So: having taken the ceiling only as far as the 46px floor demanded, take
+    // it the rest of the way to a band that can actually be scrolled -- THREE
+    // rows, the point at which the column visibly continues past both edges and
+    // the fade has something to fade. Bounded three ways so it can only ever
+    // help: never past `ceilFloor` (so never onto #leave), never more than the
+    // launchers actually need (`needH`, so a two-launcher rail is not handed a
+    // three-row band), and ONLY when the band is already under that target -- so
+    // every viewport that already has room is left bit-for-bit alone. Measured
+    // after this clause: 393x420 -> top 78, band 138px (3 rows); 320x568 (163px),
+    // 375x667 (256px) and 1280x800 (246px) are untouched, which is why the three
+    // lanes that were already green stay green.
+    //
+    // It yields the panel and the hint through the SAME `yieldPanel` flag step 3
+    // uses, for the same reason: borrowing the ceiling without yielding what sits
+    // in it is not a squeeze, it is a collision. #status is deliberately NOT
+    // affected -- it derives its ceiling from --vint-hud-bottom, the panel's
+    // never-squeezed bottom, precisely so the rail's squeeze cannot move it
+    // (see world.html's --status-top).
+    try {
+      var rowH = 42, rowGapC = 6;
+      var pAll = _rail.querySelectorAll('.dv-launch');
+      for (var pci = 0; pci < pAll.length; pci++) {
+        if (pAll[pci].offsetParent === null) continue;
+        var pcr = pAll[pci].getBoundingClientRect();
+        if (pcr.height > 2) { rowH = Math.ceil(pcr.height); }
+        break;
+      }
+      var reachMin = 3 * rowH + 2 * rowGapC;
+      if (needH > 0 && needH < reachMin) reachMin = needH;
+      var bandNow = vh - top - bot;
+      if (bandNow < reachMin) {
+        var fromCeil = Math.min(reachMin - bandNow, Math.max(0, top - ceilFloor));
+        if (fromCeil > 0) {
+          top -= fromCeil;
+          if (panel) {
+            var pr4 = panel.getBoundingClientRect();
+            if (pr4.height > 0 && top < pr4.bottom) yieldPanel = true;
+          }
+          if (hint && getComputedStyle(hint).display !== 'none') {
+            var hr4 = hint.getBoundingClientRect();
+            if (hr4.height > 0 && top < hr4.bottom) yieldPanel = true;
+          }
+        }
+      }
+    } catch (_) {}
     // one authoritative write, AFTER every branch that can set it (the squeeze
     // above can raise it too, so toggling before that was a stale decision).
     try { document.body.classList.toggle('dv-panel-yield', yieldPanel); } catch (_) {}

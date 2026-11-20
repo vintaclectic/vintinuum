@@ -33,8 +33,13 @@ const http = require('http');
 const puppeteer = require('/home/vinta/vintinuum-api/node_modules/puppeteer');
 const ROOT = path.resolve(__dirname, '..');
 
+// 393x420 IS IN THE DEFAULT SET (W7PVYAJ) — a phone with the keyboard up, and
+// the ONLY lane where this proof was ever red: measured 163 violations across
+// all 8 of its states while 320x568, 375x667 and 1280x800 were green, because
+// layoutRail's squeeze bought only a 46px one-launcher band there. A defect that
+// lives at one viewport height is invisible until that height is in the list.
 const VIEWPORTS = (process.env.VIEWPORTS ||
-  '320x568,320x812,375x667,375x812,768x1024,1280x800,1920x1080')
+  '320x568,320x812,375x667,375x812,393x420,768x1024,1280x800,1920x1080')
   .split(',').map(s => s.trim().split('x').map(Number)).filter(v => v[0] && v[1]);
 const COARSE = process.env.COARSE === '1';
 
