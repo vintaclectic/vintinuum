@@ -818,6 +818,91 @@
     return null;
   }
 
+  // ── THE OPEN-SHEET SELECTOR, NAMED ONCE (QACME5Q) ─────────────────────────
+  // Two readers need "which bottom sheet is painted right now": layoutRail's
+  // step 2b (how far the rail must stand clear) and syncDockAvoid below (which
+  // obstacles the corner floats must start above). They had one selector
+  // written inline in step 2b and NOTHING at all on the dock side. Both are
+  // the same question, so it is asked in one place — step 2b's own comment
+  // already says why a hand-written list is the wrong shape:
+  //
+  //     "A list that has to be edited by whoever adds a surface is a list
+  //      that will be wrong."
+  //
+  // `.dv-sheet` is the shared scaffold almost every surface reuses, so a sheet
+  // shipped tomorrow is covered the day it ships. Three ids are named because
+  // they deliberately keep their OWN class and the shared selector cannot see
+  // them: #ctSheet (court.js — "own class so the Court can be killed without
+  // touching the DIRVERSE stylesheet"), #rkSheet (reckoning-hud.js, same
+  // reason), and #dvTraceSheet, which does carry .dv-sheet and is belt-and-
+  // braces. #rkSheet was MISSING from step 2b's inline list — measured on
+  // origin/main: '#rkSheet{position:fixed;left:0;right:0;bottom:0;z-index:1600}'
+  // in the one-open registry via registerSheet('reckoning'), and absent from
+  // the yield — so extracting this closed a pre-existing hole in step 2b too.
+  var SHEET_SEL = '.dv-sheet.open, #ctSheet.open, #rkSheet.open, #dvTraceSheet.open';
+  function openSheetEls() {
+    var out = [];
+    try {
+      var n = document.querySelectorAll(SHEET_SEL);
+      for (var i = 0; i < n.length; i++) {
+        // a zero-area node cannot be collided with, and is the only test that
+        // catches a sheet hidden by a display:none ANCESTOR.
+        var r = n[i].getBoundingClientRect();
+        if (r.width > 0 && r.height > 0) out.push(n[i]);
+      }
+    } catch (_) {}
+    return out;
+  }
+
+  // ── EVERY OPEN SHEET YIELDS BOTH BOTTOM CORNERS (QACME5Q) ─────────────────
+  // A .dv-sheet is `position:fixed; left:0; right:0; bottom:0; z-index:1600`.
+  // #vwg-pill, the welcome-gate guest affordance, is a fixed float at z-index
+  // 2147483600 docked into the `br` corner by body/corner_dock.js. The pill is
+  // therefore painted OVER the sheet and, on a phone, over the sheet's own
+  // header: MEASURED at 375x667, the pill's rect [262,400,97,44] sat on a
+  // sheet spanning y387..667 and document.elementFromPoint at #wsX's clipped
+  // centre returned #vwg-pill — the only way out of the sheet, covered.
+  //
+  // corner_dock.js has had the cure since 2026-08-08: VintDock.avoid(el,
+  // {corner}) makes the docked stack start ABOVE an obstacle, and it measures
+  // an obstacle's RESTING extent from its own edge offset, so a sheet still
+  // mid-transform lifts the stack to where it will settle rather than to where
+  // it currently is. Two sheets had remembered to call it (world-pulse.js,
+  // reckoning-hud.js). MEASURED on origin/main: TWENTY-FIVE elements are given
+  // `className = 'dv-sheet'` under body/world/, so 23 never did — and every
+  // one of them put the pill on its header. A gate every new surface must
+  // remember is a gate that will be forgotten, so the gate lives HERE, in the
+  // one door every sheet transition already runs through (HAAXZR2).
+  //
+  // BOTH bottom corners, because a .dv-sheet is full-width and reaches into
+  // each of them; corner_dock's avoid() dedupes per (element, corner) on
+  // purpose, so the second call cannot delete the first. The two sheets that
+  // still call avoid() themselves are left alone deliberately: the calls are
+  // idempotent against this one (same element, same corners, deduped), and
+  // a sibling harness pins one of them as its own negative control.
+  var AVOID_CORNERS = ['br', 'bl'];
+  var _avoided = [];
+  function syncDockAvoid() {
+    var D = W.VintDock;
+    if (!D || !D.avoid || !D.unavoid) return;     // dock not landed yet; the
+    var now = openSheetEls();                     // 250ms beat will catch it.
+    var prev = _avoided, i, j;
+    // DIFF, never re-register: syncScrim runs on every transition AND on a
+    // 250ms beat while a sheet is up, and avoid()/unavoid() each force a dock
+    // reflow. Acting only on change makes the steady state two array scans.
+    for (i = 0; i < prev.length; i++) {
+      if (now.indexOf(prev[i]) === -1) { try { W.VintDock.unavoid(prev[i]); } catch (_) {} }
+    }
+    for (i = 0; i < now.length; i++) {
+      if (prev.indexOf(now[i]) !== -1) continue;
+      for (j = 0; j < AVOID_CORNERS.length; j++) {
+        try { W.VintDock.avoid(now[i], { corner: AVOID_CORNERS[j] }); } catch (_) {}
+      }
+    }
+    _avoided = now;
+  }
+
+
   // Close every open sheet except `exceptId`. Returns how many it closed.
   function closeSheets(exceptId) {
     var n = 0;
@@ -840,6 +925,10 @@
     // body.dv-sheeting rule). A body class rather than an inline style so the
     // rail's own stylesheet keeps owning its z-index in one place.
     try { document.body.classList.toggle('dv-sheeting', open); } catch (_) {}
+    // and hand the bottom corners to the sheet: the docked floats must start
+    // ABOVE it, or they paint on its header (QACME5Q). Before layoutRail, so
+    // the dock's own reflow lands first and the rail measures a settled page.
+    try { syncDockAvoid(); } catch (_) {}
     // and re-measure: an open sheet is a full-width bar the rail has to clear,
     // exactly like the saybar (see layoutRail step 2b). Without this the bottom
     // launchers stay under the sheet and are unclickable.
@@ -2315,7 +2404,10 @@
       // every open sheet, not just the first — the yield must clear the TALLEST
       // of them, and taking only one would under-shorten the rail if a future
       // flow ever has two up deliberately.
-      var open = document.querySelectorAll('.dv-sheet.open, #ctSheet.open, #dvTraceSheet.open');
+      //     ...and it asks that question through openSheetEls(), the ONE
+      //     selector (QACME5Q), shared with syncDockAvoid so the rail's yield
+      //     and the floats' yield can never disagree about what is open.
+      var open = openSheetEls();
       for (var oi = 0; oi < open.length; oi++) {
         var shr = open[oi].getBoundingClientRect();
         if (shr.height > 0 && shr.top < vh) {

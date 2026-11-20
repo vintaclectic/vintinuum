@@ -747,21 +747,27 @@ function stripFolkCap() {
              !!(last && last.visible && last.own));
         }
         const x = await page.evaluate(REACH, '#dvWorldSkeletonSheet #wsX');
-        // ── A PRE-EXISTING OCCLUDER, SUBTRACTED AND PAID FOR (PEV3XFM) ─────
+        // ── THE EXEMPTION SET, NOW EMPTY (QACME5Q closed it) ──────────────
+        // HISTORY, kept because it is the reason this branch exists at all.
         // MEASURED at the 375x667 lane with this feature entirely OFF
         // (--control-nofolk => ?folk=0: no marker painted, no roster row
-        // built, no element added by this slice): the sheet's ✕ is still
-        // covered by #vwg-pill, the welcome-gate guest pill. That pill is a
-        // position:fixed float owned by body/welcome-gate.js (8 references on
-        // origin/main, ZERO in any file this slice touches). It is a real
-        // No-Collision violation and is filed as its own card; it is not this
-        // card's, and this harness must not assert a promise this card never
-        // made (NFQ2EU6).
-        // THE EXEMPTION IS NAMED AND NARROW, so it is not a blanket pass: any
-        // OTHER occluder still FAILS, which means a float introduced by this
-        // slice (or the roster band growing over the header) cannot hide
-        // behind it. The set can therefore only shrink.
-        const INHERITED_OCCLUDERS = ['vwg-pill', 'vwg-dot'];
+        // built, no element added by this slice): the sheet's ✕ was covered by
+        // #vwg-pill, the welcome-gate guest pill — a position:fixed float
+        // owned by body/welcome-gate.js with ZERO references in any file this
+        // slice touches. It was a real No-Collision violation, it was not this
+        // card's, and this harness refused to assert a promise this card never
+        // made (NFQ2EU6). So it was SUBTRACTED into a named, narrow set —
+        // narrow precisely so the set could only ever shrink.
+        //
+        // IT HAS SHRUNK TO NOTHING. QACME5Q moved the yield into the shared
+        // sheet door: dirverse-hud.js's syncScrim() now hands both bottom
+        // corners to every open sheet via VintDock.avoid(), so the platform
+        // DOES make this promise and this harness can hold it to it. An empty
+        // set means any occluder — inherited or introduced — now FAILS.
+        // Proven by scripts/verify-sheet-dock-yield-QACME5Q.js, whose own
+        // group A asserts this array is still empty so it cannot quietly
+        // re-grow.
+        const INHERITED_OCCLUDERS = [];
         checks++;
         if (x && x.visible && x.own) {
           /* reachable: nothing to report */
