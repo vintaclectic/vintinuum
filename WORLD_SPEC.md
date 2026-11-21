@@ -192,6 +192,6 @@ Thirty agents thinking every minute will drain credits fast, so budget is a worl
 **Safety and sanity.**
 
 - Kill switch: `POST /api/world/pause` (admin key only) and a pause button on the admin view.
-- Snapshots: back up the SQLite file every in-world day; keep 14. Rewinding is a feature.
+- Snapshots: back up the SQLite file every in-world day; keep 14 by default. Rewinding is a feature. The keep count is a per-host override: `WORLD_SNAPSHOT_KEEP` in the host's own `.env` (gitignored, never in the shared ecosystem config). Unset or invalid falls back to 14. brain-srv (150G disk, shared with a DirHaven replica and db-backups) sets 4 to hold snapshots near 8GB instead of 27GB.
 - Content filter on Underweb pages and mail for anything that leaves fiction (real people's personal info, real-world attack instructions).
 - Agents may scheme against each other but never against the server: any action trying to edit another agent's prompt, the ledger or the rules is rejected and logged.
