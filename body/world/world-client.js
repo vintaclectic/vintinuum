@@ -130,6 +130,24 @@
       }
     } catch (e) { console.warn('[world] agent-life init failed (world still lives):', e && e.message); }
 
+    // ── THE FOLK LAYER, IN 3D (S8UVUC2): spawn the SIMULATION citizens
+    //    (/api/world/citizens, server-side people on the 60s economy tick) as
+    //    distinct 3D beings standing in the clearing, each with an action glyph
+    //    over its head. A SEPARATE lane from the `agents` Map above (council
+    //    presences): different population, different cadence, different endpoint.
+    //    Wired exactly like AgentLife — init once with the scene, tick each frame
+    //    — and guarded, so a failure degrades to "no folk bodies", never a dead
+    //    world. Guest-visible: it rides the same scene a logged-out visitor sees.
+    try {
+      if (global.WorldFolk3D) {
+        global.WorldFolk3D.init({
+          THREE, scene,
+          getPlayer: () => ({ x: me.x, z: me.z, yaw: me.yaw }),
+          isMobile,
+        });
+      }
+    } catch (e) { console.warn('[world] folk-3d init failed (world still lives):', e && e.message); }
+
     // From here on, NOTHING may throw past this point and stop the render loop.
     // Each of the remaining wirings (self-body, avatar, WS, voice, controls) is
     // individually guarded so one failure degrades gracefully — the clearing stays up.
@@ -2315,6 +2333,12 @@
     // player-regard, earshot glow, listen/speak arcs). Cheap; guarded.
     if (global.AgentLife && global.AgentLife.isReady && global.AgentLife.isReady()) {
       try { global.AgentLife.tick(dt, tnow); } catch (_) {}
+    }
+    // drive the SIM-CITIZEN bodies (S8UVUC2) in the SAME frame — they lerp toward
+    // their new sim site between 60s ticks and distance-gate their labels. Cheap,
+    // guarded, after the presence lerp so it never disturbs the council lane.
+    if (global.WorldFolk3D && global.WorldFolk3D.isReady && global.WorldFolk3D.isReady()) {
+      try { global.WorldFolk3D.tick(dt, tnow); } catch (_) {}
     }
     World._frame = (World._frame || 0) + 1;
     if (World._motes) World._motes.rotation.y += dt * 0.02;

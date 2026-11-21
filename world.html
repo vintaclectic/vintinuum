@@ -1125,6 +1125,11 @@
      those are council avatars at 5Hz, these are simulated people who move once
      per 60s economy tick. -->
 <script src="body/world/world-folk-layer.js"></script>
+<!-- THE FOLK, IN 3D (S8UVUC2) — the same sim citizens the 2D panels read, spawned
+     as distinct 3D beings in the clearing with an action glyph over each head.
+     Subscribes to the VintWorldFolk store above (no second fetch); world-client
+     init/tick it like AgentLife. Guest-visible. ?folk3d=0 kills the bodies. -->
+<script src="body/world/world-folk-3d.js"></script>
 <script src="body/world/world-skeleton.js"></script>
 <!-- THE PULSE (FVBRSP7) — the world's own account of itself, in sentences.
      MEASURED 2026-11-18: GET /api/world/state?since=0 -> 200, economy tick
