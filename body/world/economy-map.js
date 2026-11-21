@@ -988,6 +988,7 @@
 
   mapButton.addEventListener('click', function () {
     var open = !panel.hidden;
+    document.body.classList.toggle('vw-map-open', !open);
     panel.hidden = open;
     // Choosing the world is the same guest intent as 'just wandering'.
     // Reuse that existing collapse action so the welcome sheet cannot hide

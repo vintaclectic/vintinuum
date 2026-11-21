@@ -674,6 +674,15 @@
     border-radius: 999px; padding: 8px 12px; font: 13px/1.2 'Cormorant Garamond', Georgia, serif;
     backdrop-filter: blur(6px); pointer-events: none; }
   #worldMapButton { color: rgba(245,235,220,.9) !important; }
+  /* Guests keep one read-only launcher in the narrow right lane, below
+     edit-head and above the world clock. The phone's bottom control band is
+     occupied by the invitation and dock, even after the invitation shrinks. */
+  body.vw-guest #topctl {
+    top: calc(52px + max(14px, env(safe-area-inset-top,14px)));
+    bottom: auto; right: max(10px, env(safe-area-inset-right,10px));
+  }
+  /* Explicit reading owns the ambient feed's pixels until the reader closes. */
+  body.vw-guest.vw-map-open #feed { display: none !important; }
   /* --wmp-base is the panel's AUTHORED anchor; economy-map.js may push it down to
      --wmp-top when something above reaches across it, and publishes --wmp-floor
      below it. The height budget subtracts the SAME value `top` uses, so the two
@@ -931,6 +940,15 @@
   .wd-unit { margin: 6px 0 0; font-size: 10px; opacity: .5; line-height: 1.35;
     overflow-wrap: anywhere; }
   @media (max-width: 375px) { #worldClock { top: 158px; font-size: 12px; padding: 7px 10px; } #worldMapPanel { --wmp-base: 208px; } }
+  /* 2URKUAX: at 320x568 the old 208px anchor leaves only 105px above
+     the voice dock, or 52px when the ambient feed returns. The chosen reader
+     borrows the clock's lane; fitPanel still measures the HUD and dock edges
+     (HUD bottom128 + gutter12 => top140, dock top325 - gutter12 => floor313).
+     The existing 150px usability floor and internal scrolling remain intact. */
+  @media (max-width: 375px) {
+    body.vw-guest.vw-map-open #worldClock { display: none; }
+    body.vw-guest.vw-map-open #worldMapPanel { --wmp-base: 124px; }
+  }
   /* RCNFBGS — THE LANDSCAPE SHAPE. On a landscape phone (short + wide) the
      portrait right rail is a 62px sliver between #worldClock (bottom ~194) and
      the bottom furniture (#vint-vc-fab / #vwg-pill), so a 280px right-rail panel
@@ -1832,7 +1850,11 @@
     // colors with zero server write. It's the "provide your own face to your being"
     // hook that earns the sign-in (the FACE tab's photo capture routes to signup).
     // Never hide the one inventive creation surface a guest is here to feel.
-    ['saybar','movectl','topctl','hint'].forEach(function (id) {
+    // #topctl also owns the read-only map/story/folk/treasury launcher. Keep
+    // that launcher available; preserve the original guest hiding of the
+    // camera/microphone controls individually so they do not fill its lane.
+    document.body.classList.add('vw-guest');
+    ['saybar','movectl','btnView','btnMic','hint'].forEach(function (id) {
       const n = document.getElementById(id); if (n) n.style.display = 'none';
     });
 
