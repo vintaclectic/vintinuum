@@ -902,6 +902,97 @@
     _avoided = now;
   }
 
+  // ── SPILL A SHEET-LIFTED bl FLOAT OUT OF THE RAIL'S COLUMN (DSAZ7GJ) ────────
+  // #dvRail is a left-edge launcher column; corner_dock docks #vint-vc-fab and
+  // #vintVoice into the bl corner — the SAME column. syncDockAvoid (above) makes
+  // those floats start ABOVE an open sheet, and on a short phone that lift
+  // carries them up INTO the rail's reachable band. layoutRail then reads their
+  // live top as an un-borrowable floor (step 2b's dockFloor) and the rail
+  // collapses to one launcher. MEASURED at 393x420 with a sheet up, before this:
+  // the rail band fell 150px->46px and verify-rail-reach.js counted 142 launchers
+  // off the top of the scroller across the 7 open-sheet states of that one
+  // viewport, while 320x568 / 375x667 / 1280x800 stayed green.
+  //
+  // THE DOCK IS THE THING THAT MOVES; THE RAIL CANNOT. When #leave (the rail's
+  // fixed top furniture) plus a minimum reachable rail band plus the floats'
+  // stacked height cannot all fit between the top edge and the sheet, we re-home
+  // the bl floats to the br corner for the duration: the right side has no rail,
+  // the sheet already yields br (its br avoid is registered above), and dockFloor
+  // then finds nothing in the rail's column, so the rail reclaims the full band.
+  // This is layoutRail step 2b's own comment carried one step further — "the dock
+  // does not move for the rail … so the rail yields instead" is true until the
+  // rail has nothing left to yield, and then the dock must move after all.
+  //
+  // THE DECISION IS A PURE FUNCTION OF STABLE GEOMETRY — the sheet's top, #leave's
+  // bottom, and the floats' own stacked height — NONE of which changes when the
+  // floats spill (the sheet's own clamp reads --dv-railneed = the rail's
+  // scrollHeight, which is the full launcher list and is constant whatever band
+  // the rail is given). So the rail growing after a spill cannot feed back and
+  // flip the decision: there is no oscillation. Spilling only when it is actually
+  // too tight means the taller phones never move the FAB needlessly.
+  var MIN_RAIL_BAND = 100;   // ~2 launchers (42-48px) + a gutter — verify-rail-
+                             // reach.js's own floor is clientHeight >= 2*height.
+  var _railSpilled = [];
+  function syncRailSpill() {
+    var D = W.VintDock;
+    if (!D || !D.overrideCorner || !D._slots) return;   // dock not landed yet
+    var vh = window.innerHeight || document.documentElement.clientHeight || 0;
+    if (!vh) return;
+    var GUT = (typeof D.GUTTER === 'number') ? D.GUTTER : 12;
+
+    // the open sheets' HIGHEST top edge — the obstacle the bl stack lifts over.
+    var sheets = openSheetEls();
+    var sheetTop = vh;
+    for (var i = 0; i < sheets.length; i++) {
+      try { var t = sheets[i].getBoundingClientRect().top; if (t < sheetTop) sheetTop = t; } catch (_) {}
+    }
+
+    // the dock floats whose HOME is bl and that the dock may actually re-home
+    // (a keepSide float authors its own x and would not follow a corner change,
+    // so it is left where it is and never spilled). Heights are read live but are
+    // position-independent, so this is correct whether or not they have already
+    // been lifted or spilled this frame.
+    var slots = D._slots(), ids = [], stackH = 0, n = 0;
+    for (i = 0; i < slots.length; i++) {
+      var s = slots[i];
+      if (!s || !s.el || !s.el.isConnected || !s.id) continue;
+      if (s.home !== 'bl' || s.keepSide) continue;
+      var cs; try { cs = getComputedStyle(s.el); } catch (_) { continue; }
+      if (cs.display === 'none' || cs.visibility === 'hidden' || +cs.opacity < 0.05) continue;
+      var h = 0; try { h = s.el.getBoundingClientRect().height; } catch (_) { h = 0; }
+      if (h < 2) continue;
+      ids.push(s.id); stackH += h; n++;
+    }
+    if (n > 1) stackH += (n - 1) * GUT;
+
+    // #leave owns the top of the rail column and never yields; the rail's
+    // reachable band begins below it.
+    var topReserve = 0;
+    try {
+      var lv = document.getElementById('leave');
+      if (lv) { var lr = lv.getBoundingClientRect(); if (lr.height > 1) topReserve = lr.bottom + GUT; }
+    } catch (_) {}
+
+    // Spill only when a sheet is open AND the column above the sheet cannot hold
+    // the rail's minimum band plus the floats. No sheet, no floats, or a
+    // tall-enough column → restore the home corner.
+    var avail = sheetTop - topReserve;          // room the rail + bl stack share
+    var need  = MIN_RAIL_BAND + GUT + stackH;
+    var spill = sheets.length > 0 && ids.length > 0 && avail < need;
+
+    var apply = spill ? ids.slice() : [];
+    // clear any float we spilled last time that is no longer being spilled.
+    for (i = 0; i < _railSpilled.length; i++) {
+      if (apply.indexOf(_railSpilled[i]) === -1) {
+        try { D.overrideCorner(_railSpilled[i], null); } catch (_) {}
+      }
+    }
+    for (i = 0; i < apply.length; i++) {
+      try { D.overrideCorner(apply[i], 'br'); } catch (_) {}
+    }
+    _railSpilled = apply;
+  }
+
 
   // Close every open sheet except `exceptId`. Returns how many it closed.
   function closeSheets(exceptId) {
@@ -929,6 +1020,11 @@
     // ABOVE it, or they paint on its header (QACME5Q). Before layoutRail, so
     // the dock's own reflow lands first and the rail measures a settled page.
     try { syncDockAvoid(); } catch (_) {}
+    // then spill any bl float the sheet just lifted out of the rail's own column,
+    // if the column is too short to hold both (DSAZ7GJ). overrideCorner relays
+    // out the dock SYNCHRONOUSLY, so the very next layoutRail measures the float
+    // in its new corner — never one frame behind.
+    try { syncRailSpill(); } catch (_) {}
     // and re-measure: an open sheet is a full-width bar the rail has to clear,
     // exactly like the saybar (see layoutRail step 2b). Without this the bottom
     // launchers stay under the sheet and are unclickable.

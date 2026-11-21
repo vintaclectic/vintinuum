@@ -440,9 +440,12 @@ const MEASURE = (sheetId) => {
 
     eqv('A1 openSheetEls() is defined exactly once in the shared door',
         (code.match(/function openSheetEls\s*\(/g) || []).length, 1);
-    // one definition + layoutRail's step 2b + syncDockAvoid = 3 occurrences.
-    eqv('A2 openSheetEls() is the ONE selector, consumed by both readers',
-        (code.match(/openSheetEls\s*\(/g) || []).length, 3);
+    // one definition + layoutRail's step 2b + syncDockAvoid + syncRailSpill
+    // (the rail-column spill door, DSAZ7GJ) = 4 occurrences. The point stands:
+    // every reader asks the SAME selector, so they can never disagree about what
+    // is open — a new reader is welcome, a new inline copy is not (A6 guards that).
+    eqv('A2 openSheetEls() is the ONE selector, consumed by every reader',
+        (code.match(/openSheetEls\s*\(/g) || []).length, 4);
     eqv('A3 syncScrim() calls syncDockAvoid()',
         (code.match(/syncDockAvoid\(\)/g) || []).length >= 2, true);
     eqv('A4 both bottom corners are declared', /AVOID_CORNERS\s*=\s*\['br',\s*'bl'\]/.test(code), true);

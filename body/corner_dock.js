@@ -162,6 +162,21 @@
   var slots = [];     // { el, corner, priority, id }
   var avoids = [];    // { el, corner } — big panels the button stack must clear
 
+  // A SLOT'S HOME CORNER CAN BE TEMPORARILY OVERRIDDEN (DSAZ7GJ 2026-11-21).
+  // A bottom dock float avoids an open bottom sheet by STARTING ABOVE it (see
+  // avoidExtent). On a short phone that lift can carry a bl float up into the
+  // band another tenant owns — world.html's #dvRail launcher column lives in
+  // exactly the bl column — squeezing that tenant to nothing. The dock is the
+  // thing that moves and the rail is the thing that cannot, so the coordinator
+  // that owns both (dirverse-hud's shared sheet door) tells the dock to SPILL
+  // the offending floats to the opposite bottom corner for the duration. This
+  // map keeps the generic mechanism here; the WHEN (which needs the rail's own
+  // geometry) stays with the coordinator. Keyed by slot id; a null clears it.
+  var overrides = {};
+  function eff(s) {
+    return (s && s.id && overrides[s.id]) ? overrides[s.id] : (s ? s.corner : 'br');
+  }
+
   // A large panel (e.g. world.html's 320px head editor) owns the corner while
   // it's open. Rather than docking it into the button stack — wrong shape, and
   // it's draggable/full-width on mobile — we treat it as an obstacle: the
@@ -317,8 +332,9 @@
   function columnHeight(edge) {
     var max = 0;
     slots.forEach(function (s) {
-      if (s.corner[0] !== edge) return;
-      if (s.corner[1] === 'c') return;              // other centre items don't count
+      var c = eff(s);
+      if (c[0] !== edge) return;
+      if (c[1] === 'c') return;                     // other centre items don't count
       if (!visible(s.el)) return;
       var r;
       try { r = s.el.getBoundingClientRect(); } catch (_) { return; }
@@ -368,7 +384,7 @@
     // centered bar can be told how much room the corner stacks actually left it.
     ['br', 'bl', 'tr', 'tl', 'bc', 'tc'].forEach(function (corner) {
       var mine = slots
-        .filter(function (s) { return s.corner === corner && visible(s.el); })
+        .filter(function (s) { return eff(s) === corner && visible(s.el); })
         .sort(function (a, b) { return a.priority - b.priority; });
 
       var isBottom = corner[0] === 'b';
@@ -440,8 +456,9 @@
         try { r = s.el.getBoundingClientRect(); } catch (_) { return; }
         if (!r.width) return;
         // How far this widget intrudes from ITS OWN vertical edge.
-        var in_ = (s.corner[1] === 'r') ? (vw - r.left) : r.right;
-        var edge = (s.corner[0] === 'b') ? 'bottom' : 'top';
+        var c = eff(s);
+        var in_ = (c[1] === 'r') ? (vw - r.left) : r.right;
+        var edge = (c[0] === 'b') ? 'bottom' : 'top';
         if (in_ > reach[edge]) reach[edge] = in_;
       });
       var st = document.documentElement.style;
@@ -528,16 +545,44 @@
     reflow();
   }
 
+  // Temporarily re-home the slot with this id to `corner` (one of br/bl/tr/tl/
+  // bc/tc), or pass null to restore its registered corner. Used by a coordinator
+  // that owns a shared column (see `overrides` above): on a short phone a bl
+  // float lifted over an open sheet can land in a tenant's band, so the tenant's
+  // owner spills the float to the opposite corner. The relayout is SYNCHRONOUS
+  // when the home actually changes, because the caller (dirverse-hud's shared
+  // door) measures the rail in the very next statement and must see the float in
+  // its new place, not one animation frame behind. A no-op change costs nothing.
+  function overrideCorner(id, corner) {
+    if (!id) return;
+    var cur = overrides[id] || null;
+    var next = corner || null;
+    if (cur === next) return;                       // idempotent: no reflow churn
+    if (next) overrides[id] = next; else delete overrides[id];
+    invalidateReserve();
+    doReflow();                                     // move NOW, not on the next rAF
+  }
+
   root.VintDock = {
     register: register,
     release: release,
     claim: claim,
     avoid: avoid,
     unavoid: unavoid,
+    overrideCorner: overrideCorner,
     reflow: reflow,
     EDGE: EDGE,
     GUTTER: GUTTER,
-    _slots: function () { return slots.slice(); },
+    // `corner` is the EFFECTIVE corner the slot is laid out in (an override, if
+    // any, wins); `home` is its registered corner. A consumer that reasons about
+    // where a float actually sits (e.g. layoutRail's dockFloor) reads `corner`; a
+    // coordinator that wants to find a float's registered column reads `home`.
+    _slots: function () {
+      return slots.map(function (s) {
+        return { el: s.el, id: s.id, corner: eff(s), home: s.corner,
+          priority: s.priority, keepSide: s.keepSide };
+      });
+    },
     _avoids: function () { return avoids.slice(); },
     _hasFlowAvoid: function () { return _hasFlowAvoid; },
   };
