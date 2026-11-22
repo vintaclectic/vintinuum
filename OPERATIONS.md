@@ -186,6 +186,55 @@ Original plan: `~/.claude/council-loop/state/docs/98MRP8C-20261027-1110-vps-cuto
 - `/api/life/stream` — SSE; bg DB connection + soft timeouts; client
   reconnect on close
 
+### The organism loop — sensorium (CQ7YFSE) + decision cortex (R5TVS9R), on brain-srv
+- **Sensorium** `~/vintinuum-api/organism-sensorium.js`: hourly, zero-token; one
+  observation row in `organism_observations` (council/mercatus/corpus/world/journal/
+  system) → corpus shard `organism`. Public pulse `GET /api/organism/pulse`;
+  owner-only `GET /api/organism/observations`. `SENSORIUM_TICK_MS` overrides cadence.
+- **Decision cortex** `~/vintinuum-api/decision-cortex.js` + `cortex-actions.js`:
+  hourly, 90s after boot; local model FIRST (knob `cortex.local_model`, default
+  qwen2.5:3b — measured best on brain-srv — then the fallback chain qwen2.5:3b →
+  vintinuum-local:latest → llama3.2:latest → qwen2.5:1.5b, filtered by what ollama
+  actually has), frontier (`CORTEX_FRONTIER_MODEL`,
+  needs `ANTHROPIC_API_KEY`) only when the stakes score ≥ knob
+  `cortex.frontier_stakes_threshold` AND local produced nothing. Candidates are
+  schema-checked against the executors' menu; the doctrine filter is in code:
+  reversible (file/pin/unpin/nudge a card, tune an allowlisted knob) executes,
+  Reserved (money/public/destructive/strategy) becomes a needs-human proposal
+  card and NEVER executes. Tables: `decision_ledger`, `cortex_ticks`,
+  `cortex_knobs`, `cortex_board_digest`; corpus shard `decision_cortex`.
+  **Knob rails (8e1eb58):** the cortex's own caps (`cortex.max_acts_per_tick`,
+  `cortex.max_proposals_per_tick`) are owner-only — refused for every candidate,
+  hidden from the menu; set them by hand (`setKnob(knob, value, 'owner')` or a
+  row in `cortex_knobs`). A tunable knob is guarded: no-op tunes, a flip back to
+  the value the cortex just left, and re-tunes inside `CORTEX_KNOB_COOLDOWN_S`
+  (24h) are HELD in the ledger. (Measured 2026-11-22: the local rung had
+  flip-flopped max_acts 3→4→3→4 on four hourly ticks before this rail.)
+  **Repair path (7c47524):** a proposal whose `add` landed but whose `need` died
+  (transient fs error — seen live as a tasks.jsonl temp rename ENOENT from a
+  sandboxed seat) is acked `retry:true`; the brain keeps the row queued (≤3 tries,
+  card id recorded) and the next hands pass finishes the ask on the SAME marker
+  card — never a second card. Owner requeue by hand:
+  `UPDATE decision_ledger SET act_status='queued' WHERE id=<n>` on brain-srv.
+  **Kill switch:** `DECISION_CORTEX=off` in the brain env (honoured at tick top).
+  Routes: public `GET /api/cortex/pulse`; owner-only (`x-master-key`)
+  `GET /api/cortex/ledger`, `GET /api/cortex/outbox`,
+  `POST /api/cortex/outbox/:id/ack`, `POST /api/cortex/board`, `POST /api/cortex/tick`.
+- **The hands live on the PC**, not the brain: `~/vintinuum-api/bin/cortex-hands.js`
+  runs every `vintinuum-scheduler` (pm2, smart-scheduler.js LIGHT_JOBS) tick: uploads
+  the live board digest from `~/.claude/council-loop/state/tasks.jsonl`, applies the
+  outbox through the `vintask` CLI (never edits tasks.jsonl), acks. Every card it files
+  carries `cortex-ledger:<id>` in its detail (idempotency key). Drill one tick now:
+  `node bin/cortex-hands.js --tick [--inject-file cands.json --skip-model]`.
+  Log: `~/vintinuum-api/logs/cortex-hands.log`. Verifier (73 checks + 3 negative controls):
+  `node bin/verify-decision-cortex-R5TVS9R.js [--control-nofilter|--control-vocab|--control-killswitch]`.
+- **Deploy to brain-srv** (`ssh brain-srv`, repo `/home/vinta/vintinuum-api`, user
+  vinta, pm2 at `/home/vinta/.nvm/versions/node/v22.22.0/bin/pm2`): the server tree
+  carries `git am`-applied commits and local edits, so ship as a patch
+  (`git format-patch -1 --stdout`, `scp`, `su vinta -c "git stash && git am … && git stash pop"`
+  when the patch touches a locally-modified file), then
+  `pm2 restart vintinuum-api --update-env` and check `/api/health` → 200.
+
 ### Helpers added 2026-05-04 (server.js, near top)
 - `withDeadline(promise, ms, fallback)` — race a producer against time
 - `cached(key, ttlMs, producer)` — in-memory TTL cache
