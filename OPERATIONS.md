@@ -229,11 +229,31 @@ Original plan: `~/.claude/council-loop/state/docs/98MRP8C-20261027-1110-vps-cuto
   Log: `~/vintinuum-api/logs/cortex-hands.log`. Verifier (73 checks + 3 negative controls):
   `node bin/verify-decision-cortex-R5TVS9R.js [--control-nofilter|--control-vocab|--control-killswitch]`.
 - **Deploy to brain-srv** (`ssh brain-srv`, repo `/home/vinta/vintinuum-api`, user
-  vinta, pm2 at `/home/vinta/.nvm/versions/node/v22.22.0/bin/pm2`): the server tree
-  carries `git am`-applied commits and local edits, so ship as a patch
-  (`git format-patch -1 --stdout`, `scp`, `su vinta -c "git stash && git am … && git stash pop"`
-  when the patch touches a locally-modified file), then
-  `pm2 restart vintinuum-api --update-env` and check `/api/health` → 200.
+  vinta, pm2 at `/home/vinta/.nvm/versions/node/v22.22.0/bin/pm2`).
+  **brain-srv has no GitHub credential** (`git fetch/push origin` dies with
+  `could not read Username for 'https://github.com'` — confirmed it reaches
+  github.com fine over HTTPS/ping, 2026-11-22; it's purely a missing
+  credential, not an egress block) — so GitHub is never the transport for
+  this repo on this host. **The deploy path is a direct ssh push from the
+  PC, fixed 2026-11-22 (task 4KNDD4T):**
+  1. On the PC, add/keep a remote: `git remote add brainsrv
+     ssh://vinta@2.29.194.240/home/vinta/vintinuum-api` (brain-srv's
+     `receive.denyCurrentBranch` is set to `updateInstead`, so a push that
+     fast-forwards `main` also safely updates brain-srv's checked-out
+     working tree — git refuses the push outright if brain-srv's tree has
+     diverged or has local dirty changes, which is the safety rail).
+  2. Push to GitHub first (`git push origin main`), then mirror it:
+     `git push brainsrv main`.
+  3. `ssh brain-srv "sudo -u vinta /home/vinta/.nvm/versions/node/v22.22.0/bin/pm2 restart vintinuum-api --update-env"`
+     and check `/api/health` → 200.
+  **Never leave brain-srv's `main` with local commits or a dirty working
+  tree** — that's what silently broke the fast-forward before 4KNDD4T (11
+  content-duplicate commits from the old `git am`-patch workflow, plus ~55
+  dirty/untracked files, several of them real unlanded features that had to
+  be recovered and landed to `origin/main` by hand — see COUNCIL_LOG.md
+  2026-11-22). If a one-off single-commit patch is ever needed instead of a
+  full push, the old `git format-patch -1 --stdout` / `scp` / `git am` path
+  still works, but prefer the direct push above — it can't drift twice.
 
 ### Helpers added 2026-05-04 (server.js, near top)
 - `withDeadline(promise, ms, fallback)` — race a producer against time
