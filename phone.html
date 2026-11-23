@@ -3489,7 +3489,7 @@ const PushState = (() => {
       // Send to server
       const res = await fetch(API_BASE + '/api/push/subscribe', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: authHeaders(), // 2026-11-23: the brain now requires a signed-in device here
         body: JSON.stringify({
           subscription: sub.toJSON(),
           label: navigator.userAgent.slice(0, 100),

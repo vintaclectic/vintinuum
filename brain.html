@@ -4492,9 +4492,9 @@ setTimeout(function() {
       var d = await r.json();
       if (!r.ok || !d.code) throw new Error(d.error || 'failed');
       codeEl.textContent = d.code;
-      var pairUrl = d.pairUrl || (apiBase + '/pair?code=' + d.code);
+      var pairUrl = 'https://vintinuum.com/pulse/?pair=' + d.code; // 2026-11-23: pair on the app's own origin
       qrEl.innerHTML = '<img alt="pair QR" width="180" height="180" style="border-radius:10px;background:#fff;padding:8px;" src="https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=' + encodeURIComponent(pairUrl) + '">';
-      statEl.textContent = 'Expires in 5 minutes. Open phone.html → enter code, or scan QR.';
+      statEl.textContent = 'Expires in 5 minutes. Scan with your phone camera, or open vintinuum.com/pulse and type the code.';
 
       // Poll for redemption
       var pollTimer = setInterval(async function(){

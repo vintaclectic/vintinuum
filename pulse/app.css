@@ -1,0 +1,129 @@
+/* Vintinuum Pulse — phone app. One grid, every region owns its own box, everything
+   taller than its box scrolls INSIDE it (No-Collision Law). No floating elements
+   except the toast, which lives in its own lane above the dock. */
+:root{
+  --bg:#05070f; --panel:#0c1120; --panel2:#111a2e; --line:rgba(160,190,255,.12);
+  --ink:#e6ecff; --mute:rgba(214,224,255,.55); --accent:#00ffc8; --accent2:#8b7bff;
+  --warn:#ffb347; --bad:#ff6b81; --ok:#5dffa8;
+  --r:14px; --gut:16px; --top:56px; --dock:64px;
+  --safe-b:env(safe-area-inset-bottom,0px); --safe-t:env(safe-area-inset-top,0px);
+  color-scheme:dark;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;background:var(--bg);color:var(--ink);overflow:hidden;
+  font:15px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;-webkit-tap-highlight-color:transparent}
+svg{width:22px;height:22px;fill:currentColor;stroke:currentColor;flex:none}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer;touch-action:manipulation}
+button:disabled{opacity:.4;cursor:default}
+[hidden]{display:none!important}
+.muted{color:var(--mute)} .small{font-size:13px} .tiny{font-size:11px}
+
+.app{height:100svh;display:grid;grid-template-rows:calc(var(--top) + var(--safe-t)) auto minmax(0,1fr) calc(var(--dock) + var(--safe-b));
+  max-width:640px;margin:0 auto;position:relative;overflow:hidden}
+
+/* top bar */
+.top{display:grid;grid-template-columns:auto minmax(0,1fr) auto auto;align-items:center;gap:8px;
+  padding:var(--safe-t) var(--gut) 0;border-bottom:1px solid var(--line);min-width:0}
+.glyph{color:var(--accent);font-size:22px;line-height:1;text-shadow:0 0 14px rgba(0,255,200,.5)}
+.conn{display:flex;align-items:center;gap:8px;min-width:0;justify-self:center}
+.conn .dot{width:9px;height:9px;border-radius:50%;background:var(--warn);box-shadow:0 0 10px currentColor;flex:none}
+.conn.ok .dot{background:var(--ok)} .conn.bad .dot{background:var(--bad)}
+.conn-txt{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--mute);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.icon-btn{width:44px;height:44px;border-radius:12px;display:grid;place-items:center;color:var(--mute)}
+.icon-btn:active,.icon-btn.on{color:var(--accent);background:rgba(0,255,200,.07)}
+.icon-btn.wide{width:100%;border:1px solid var(--line);margin-top:4px}
+
+/* views: the only scroll container for page content */
+.views{min-height:0;overflow:hidden;position:relative}
+.view{height:100%;overflow-y:auto;overscroll-behavior:contain;padding:var(--gut);display:flex;flex-direction:column;gap:var(--gut)}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:14px;min-width:0;overflow-wrap:anywhere}
+
+/* body */
+.orb-wrap{display:grid;place-items:center;padding:8px 0;flex:none}
+.orb{--h:170;--a:.35;width:min(46vw,190px);aspect-ratio:1;border-radius:50%;display:grid;place-items:center;
+  background:radial-gradient(circle at 50% 45%,hsla(var(--h),100%,70%,.85),hsla(var(--h),90%,40%,.25) 55%,transparent 72%);
+  box-shadow:0 0 60px hsla(var(--h),100%,60%,var(--a));animation:breathe var(--beat,4s) ease-in-out infinite}
+.orb-core{width:24%;aspect-ratio:1;border-radius:50%;background:#fff;opacity:.85;filter:blur(2px)}
+@keyframes breathe{50%{transform:scale(1.06)}}
+@media (prefers-reduced-motion:reduce){.orb{animation:none}}
+.chem{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;flex:none}
+.meter{display:grid;justify-items:center;gap:2px;min-width:0}
+.meter svg{width:100%;max-width:64px;height:auto;transform:rotate(-90deg)}
+.meter circle{fill:none;stroke-width:3.2}
+.meter .trk{stroke:var(--line)} .meter .val{stroke:var(--accent);stroke-linecap:round;stroke-dasharray:94.25;stroke-dashoffset:94.25;transition:stroke-dashoffset .8s}
+.meter[data-k=serotonin] .val{stroke:var(--accent2)} .meter[data-k=norepinephrine] .val{stroke:var(--warn)} .meter[data-k=gaba] .val{stroke:#6ec8ff}
+.meter b{font-size:10px;letter-spacing:.08em;color:var(--mute);font-weight:600}
+.meter span{font-size:13px;font-variant-numeric:tabular-nums}
+.thought p{font-size:16px;line-height:1.5}
+.feed{list-style:none;display:flex;flex-direction:column;gap:8px}
+.feed li{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:10px;align-items:start;padding:10px 12px;
+  background:var(--panel);border:1px solid var(--line);border-radius:12px;font-size:13px;min-width:0}
+.feed li i{font-style:normal;color:var(--accent);width:16px;text-align:center}
+.feed li span{overflow-wrap:anywhere;min-width:0}
+.feed li time{color:var(--mute);font-size:11px;white-space:nowrap}
+
+/* pulse composer */
+.composer{display:flex;flex-direction:column;gap:12px}
+textarea{width:100%;resize:none;background:var(--panel2);color:var(--ink);border:1px solid var(--line);border-radius:12px;
+  padding:12px;font:inherit;min-width:0}
+textarea:focus,input:focus{outline:2px solid rgba(0,255,200,.35);outline-offset:1px}
+.acts{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:6px}
+.chip{height:44px;border-radius:12px;border:1px solid var(--line);display:grid;place-items:center;color:var(--mute);min-width:0}
+.chip.on{color:var(--bg);background:var(--accent);border-color:var(--accent)}
+.slider{display:grid;grid-template-columns:22px minmax(0,1fr) 22px;align-items:center;gap:8px;color:var(--mute)}
+input[type=range]{width:100%;accent-color:var(--accent);min-width:0}
+.row{display:flex;align-items:center;justify-content:space-between;gap:12px;min-width:0}
+.row.gap{justify-content:flex-start;flex-wrap:wrap}
+.send{width:52px;height:52px;border-radius:50%;display:grid;place-items:center;flex:none;
+  background:linear-gradient(135deg,var(--accent),var(--accent2));color:#041016;box-shadow:0 0 18px rgba(0,255,200,.35)}
+
+/* chat: personas row / messages (scroll) / bar — a grid inside the view, nothing escapes */
+.view.chat{display:grid;grid-template-rows:auto minmax(0,1fr) auto;gap:10px;overflow:hidden;padding-bottom:10px}
+.personas{display:flex;gap:8px;overflow-x:auto;padding-bottom:2px;scrollbar-width:none;min-width:0}
+.personas::-webkit-scrollbar{display:none}
+.persona{flex:none;width:44px;height:44px;border-radius:50%;border:1.5px solid var(--line);display:grid;place-items:center;font-size:18px}
+.persona.on{border-color:currentColor;box-shadow:0 0 12px currentColor}
+.msgs{overflow-y:auto;overscroll-behavior:contain;display:flex;flex-direction:column;gap:10px;min-height:0;padding-right:2px}
+.msg{max-width:86%;padding:10px 13px;border-radius:16px;font-size:15px;white-space:pre-wrap;overflow-wrap:anywhere}
+.msg.me{align-self:flex-end;background:var(--panel2);border-bottom-right-radius:5px}
+.msg.her{align-self:flex-start;background:var(--panel);border:1px solid var(--line);border-bottom-left-radius:5px}
+.msg.sys{align-self:center;color:var(--mute);font-size:12px;background:none}
+.chatbar{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:8px;align-items:end}
+.chatbar textarea{max-height:120px;overflow-y:auto}
+.mic.rec{color:var(--bad);background:rgba(255,107,129,.12);animation:pulse 1s ease-in-out infinite}
+@keyframes pulse{50%{opacity:.55}}
+
+/* dock */
+.dock{display:grid;grid-template-columns:repeat(3,1fr);align-items:start;padding:6px var(--gut) var(--safe-b);border-top:1px solid var(--line);background:var(--bg)}
+.tab{height:52px;display:grid;place-items:center;color:var(--mute);border-radius:14px}
+.tab svg{width:26px;height:26px}
+.tab.on{color:var(--accent)} .tab.on svg{filter:drop-shadow(0 0 8px rgba(0,255,200,.55))}
+
+/* toast: its own grid row under the top bar — it pushes content down for a moment instead of covering it */
+.toast{margin:8px var(--gut) 0;padding:9px 14px;border-radius:12px;background:var(--panel2);border:1px solid var(--line);
+  font-size:13px;text-align:center;overflow-wrap:anywhere;min-width:0}
+
+/* sheets: cover the whole frame, content scrolls inside */
+.sheet{position:absolute;inset:0;z-index:40;background:var(--bg);display:grid;overflow-y:auto;padding:calc(var(--safe-t) + 24px) var(--gut) calc(var(--safe-b) + 24px)}
+.sheet-in{width:100%;max-width:420px;margin:auto;display:flex;flex-direction:column;gap:14px;align-items:stretch;text-align:center}
+.sheet-head{display:flex;justify-content:space-between;align-items:center}
+.glyph.big{font-size:56px}
+.lead{font-size:20px;font-weight:600}
+.pair-form{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px}
+.pair-form input{background:var(--panel2);border:1px solid var(--line);border-radius:12px;color:var(--ink);padding:0 14px;height:52px;
+  font:600 20px/1 ui-monospace,Menlo,monospace;letter-spacing:.14em;text-transform:uppercase;min-width:0;text-align:center}
+.cam{width:100%;border-radius:14px;background:#000;aspect-ratio:1;height:auto}
+.status{min-height:1.4em} .status.ok{color:var(--ok)} .status.err{color:var(--bad)}
+.perms{display:flex;flex-direction:column;gap:8px;text-align:left}
+.perm{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:6px 10px;align-items:center}
+.perm b{font-weight:600} .perm .st{font-size:12px;text-transform:uppercase;letter-spacing:.06em}
+.perm .st.granted{color:var(--ok)} .perm .st.denied,.perm .st.blocked{color:var(--bad)} .perm .st.prompt,.perm .st.default{color:var(--warn)}
+.perm .how{grid-column:1/-1;font-size:13px;color:var(--mute)}
+.perm .how ol{padding-left:18px;margin-top:4px}
+.pill{height:40px;padding:0 16px;border-radius:20px;border:1px solid var(--line);color:var(--ink)}
+.pill.act{border-color:var(--accent);color:var(--accent)}
+.pill.danger{border-color:rgba(255,107,129,.4);color:var(--bad)}
+#who{text-align:left}
+
+@media (min-width:641px){.app{border-left:1px solid var(--line);border-right:1px solid var(--line)}}
+@media (max-width:359px){:root{--gut:12px} .acts{gap:4px} .chip{height:40px}}

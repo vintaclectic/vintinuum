@@ -232,7 +232,7 @@
       const data = await res.json();
       codeEl.textContent = data.code;
       // Simple QR via google chart endpoint (no JS lib pull needed for v1).
-      const url = encodeURIComponent(data.pairUrl || data.code);
+      const url = encodeURIComponent('https://vintinuum.com/pulse/?pair=' + data.code); // 2026-11-23: pair on the app's own origin
       canvas.innerHTML = `<img alt="pair QR" width="180" height="180"
         style="border-radius:12px;background:#fff;padding:8px;"
         src="https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${url}" />`;

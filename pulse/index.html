@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,interactive-widget=resizes-content">
+<meta name="theme-color" content="#05070f">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Vintinuum Pulse</title>
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="../branding/vintinuum/favicon/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="../icons/icon-192.png">
+<link rel="stylesheet" href="app.css?v=20261123a">
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-body" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3.2"/><circle cx="12" cy="12" r="7.5" fill="none" stroke-width="1.6"/><circle cx="12" cy="12" r="11" fill="none" stroke-width="1" opacity=".5"/></symbol>
+  <symbol id="i-pulse" viewBox="0 0 24 24"><path d="M2 12h4l2.5-6 4 12 3-9 1.5 3H22" fill="none" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="i-chat" viewBox="0 0 24 24"><path d="M4 5h16v11H9l-5 4z" fill="none" stroke-width="1.8" stroke-linejoin="round"/></symbol>
+  <symbol id="i-gear" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3.2" fill="none" stroke-width="1.8"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1 7 17M17 7l2.1-2.1" stroke-width="1.8" stroke-linecap="round"/></symbol>
+  <symbol id="i-send" viewBox="0 0 24 24"><path d="M3 11.5 21 3l-7 18-2.5-7.5z" fill="none" stroke-width="1.8" stroke-linejoin="round"/></symbol>
+  <symbol id="i-mic" viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3" fill="none" stroke-width="1.8"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21" fill="none" stroke-width="1.8" stroke-linecap="round"/></symbol>
+  <symbol id="i-stop" viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="2"/></symbol>
+  <symbol id="i-speaker" viewBox="0 0 24 24"><path d="M4 9h4l5-4v14l-5-4H4z" fill="none" stroke-width="1.8" stroke-linejoin="round"/><path d="M16 9a4 4 0 0 1 0 6M18.5 6.5a7.5 7.5 0 0 1 0 11" fill="none" stroke-width="1.6" stroke-linecap="round"/></symbol>
+  <symbol id="i-mute" viewBox="0 0 24 24"><path d="M4 9h4l5-4v14l-5-4H4z" fill="none" stroke-width="1.8" stroke-linejoin="round"/><path d="m16 9 5 6M21 9l-5 6" stroke-width="1.8" stroke-linecap="round"/></symbol>
+  <symbol id="i-qr" viewBox="0 0 24 24"><path d="M3 3h7v7H3zM14 3h7v7h-7zM3 14h7v7H3z" fill="none" stroke-width="1.7"/><path d="M14 14h3v3h-3zM18 18h3v3h-3zM18 14h3M14 18v3" stroke-width="1.7" fill="none"/></symbol>
+  <symbol id="i-close" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18" stroke-width="2" stroke-linecap="round"/></symbol>
+  <symbol id="i-work" viewBox="0 0 24 24"><rect x="3" y="7" width="18" height="13" rx="2" fill="none" stroke-width="1.7"/><path d="M9 7V4h6v3" fill="none" stroke-width="1.7"/></symbol>
+  <symbol id="i-walk" viewBox="0 0 24 24"><circle cx="13" cy="4" r="2"/><path d="m10 21 2-6-2-3 1-4 3 3 3 1M8 12l2-4" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="i-eat" viewBox="0 0 24 24"><path d="M7 3v8a2 2 0 0 0 4 0V3M9 13v8M17 3c-2 2-2 6 0 8v10" fill="none" stroke-width="1.7" stroke-linecap="round"/></symbol>
+  <symbol id="i-create" viewBox="0 0 24 24"><path d="m4 20 4-1 11-11-3-3L5 16z" fill="none" stroke-width="1.7" stroke-linejoin="round"/></symbol>
+  <symbol id="i-rest" viewBox="0 0 24 24"><path d="M20 14A8 8 0 1 1 10 4a6.5 6.5 0 0 0 10 10z" fill="none" stroke-width="1.7" stroke-linejoin="round"/></symbol>
+  <symbol id="i-social" viewBox="0 0 24 24"><circle cx="8" cy="8" r="3" fill="none" stroke-width="1.7"/><circle cx="17" cy="9" r="2.5" fill="none" stroke-width="1.7"/><path d="M2.5 20a5.5 5.5 0 0 1 11 0M14 20a4 4 0 0 1 7.5-2" fill="none" stroke-width="1.7" stroke-linecap="round"/></symbol>
+</svg>
+
+<div class="app" id="app">
+  <header class="top">
+    <div class="brand" aria-label="Vintinuum Pulse"><span class="glyph">◉</span></div>
+    <div class="conn" id="conn" role="status" aria-live="polite"><span class="dot"></span><span class="conn-txt" id="connTxt">…</span></div>
+    <button class="icon-btn" id="speakToggle" data-draggable="false" aria-label="Spoken replies" title="Spoken replies"><svg><use href="#i-speaker"/></svg></button>
+    <button class="icon-btn" id="openSettings" data-draggable="false" aria-label="Settings" title="Settings"><svg><use href="#i-gear"/></svg></button>
+  </header>
+  <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+
+  <main class="views" id="views">
+    <!-- BODY -->
+    <section class="view" id="v-body" data-view="body" aria-label="Body">
+      <div class="orb-wrap"><div class="orb" id="orb"><span class="orb-core"></span></div></div>
+      <div class="chem" id="chem">
+        <div class="meter" data-k="dopamine"><svg viewBox="0 0 36 36"><circle class="trk" cx="18" cy="18" r="15"/><circle class="val" cx="18" cy="18" r="15"/></svg><b>DA</b><span>–</span></div>
+        <div class="meter" data-k="serotonin"><svg viewBox="0 0 36 36"><circle class="trk" cx="18" cy="18" r="15"/><circle class="val" cx="18" cy="18" r="15"/></svg><b>5HT</b><span>–</span></div>
+        <div class="meter" data-k="norepinephrine"><svg viewBox="0 0 36 36"><circle class="trk" cx="18" cy="18" r="15"/><circle class="val" cx="18" cy="18" r="15"/></svg><b>NE</b><span>–</span></div>
+        <div class="meter" data-k="gaba"><svg viewBox="0 0 36 36"><circle class="trk" cx="18" cy="18" r="15"/><circle class="val" cx="18" cy="18" r="15"/></svg><b>GABA</b><span>–</span></div>
+      </div>
+      <article class="card thought" id="thought"><p class="muted">listening for a thought…</p></article>
+      <ol class="feed" id="feed" aria-label="Live inner life"></ol>
+    </section>
+
+    <!-- PULSE -->
+    <section class="view" id="v-pulse" data-view="pulse" aria-label="Send a pulse" hidden>
+      <form class="card composer" id="pulseForm" autocomplete="off">
+        <textarea id="pulseBody" rows="3" maxlength="2000" placeholder="what's happening…" aria-label="Moment"></textarea>
+        <div class="acts" id="acts" role="group" aria-label="Activity">
+          <button type="button" class="chip" data-act="working" data-draggable="false" aria-label="Working"><svg><use href="#i-work"/></svg></button>
+          <button type="button" class="chip" data-act="walking" data-draggable="false" aria-label="Walking"><svg><use href="#i-walk"/></svg></button>
+          <button type="button" class="chip" data-act="eating" data-draggable="false" aria-label="Eating"><svg><use href="#i-eat"/></svg></button>
+          <button type="button" class="chip" data-act="creating" data-draggable="false" aria-label="Creating"><svg><use href="#i-create"/></svg></button>
+          <button type="button" class="chip" data-act="socializing" data-draggable="false" aria-label="With people"><svg><use href="#i-social"/></svg></button>
+          <button type="button" class="chip" data-act="resting" data-draggable="false" aria-label="Resting"><svg><use href="#i-rest"/></svg></button>
+        </div>
+        <label class="slider"><span aria-hidden="true">☹</span><input type="range" id="mood" min="-100" max="100" value="0" aria-label="Mood"><span aria-hidden="true">☺</span></label>
+        <label class="slider"><span aria-hidden="true">▁</span><input type="range" id="energy" min="0" max="100" value="50" aria-label="Energy"><span aria-hidden="true">▇</span></label>
+        <div class="row">
+          <span class="muted small" id="queueTxt"></span>
+          <button type="submit" class="send" id="pulseSend" data-draggable="false" aria-label="Send pulse"><svg><use href="#i-send"/></svg></button>
+        </div>
+      </form>
+      <ol class="feed" id="pulseList" aria-label="Today's pulses"></ol>
+    </section>
+
+    <!-- CHAT -->
+    <section class="view chat" id="v-chat" data-view="chat" aria-label="Chat" hidden>
+      <div class="personas" id="personas" role="tablist" aria-label="Who to talk to"></div>
+      <div class="msgs" id="msgs" aria-live="polite"></div>
+      <form class="chatbar" id="chatForm" autocomplete="off">
+        <button type="button" class="icon-btn mic" id="micBtn" data-draggable="false" aria-label="Hold a thought: record"><svg><use href="#i-mic"/></svg></button>
+        <textarea id="chatIn" rows="1" maxlength="4000" placeholder="say something…" aria-label="Message"></textarea>
+        <button type="submit" class="send" id="chatSend" data-draggable="false" aria-label="Send"><svg><use href="#i-send"/></svg></button>
+      </form>
+    </section>
+  </main>
+
+  <nav class="dock" id="dock" aria-label="Views">
+    <button class="tab on" data-go="body" data-draggable="false" aria-label="Body"><svg><use href="#i-body"/></svg></button>
+    <button class="tab" data-go="pulse" data-draggable="false" aria-label="Pulse"><svg><use href="#i-pulse"/></svg></button>
+    <button class="tab" data-go="chat" data-draggable="false" aria-label="Chat"><svg><use href="#i-chat"/></svg></button>
+  </nav>
+
+  <!-- PAIR (shown when this phone has no sign-in) -->
+  <div class="sheet pair" id="pair" hidden>
+    <div class="sheet-in">
+      <div class="glyph big">◉</div>
+      <p class="lead" id="pairLead">Pair this phone</p>
+      <p class="muted small">On your computer: brain.html → ⊕ PAIR. Scan the QR or type the code.</p>
+      <form id="pairForm" class="pair-form" autocomplete="off">
+        <input id="pairCode" inputmode="text" autocapitalize="characters" spellcheck="false" maxlength="16" placeholder="CODE" aria-label="Pairing code">
+        <button type="submit" class="send" id="pairGo" data-draggable="false" aria-label="Pair"><svg><use href="#i-send"/></svg></button>
+      </form>
+      <button class="icon-btn wide" id="scanBtn" data-draggable="false" aria-label="Scan QR" hidden><svg><use href="#i-qr"/></svg></button>
+      <canvas id="scanCam" class="cam" width="480" height="480" hidden></canvas>
+      <p class="status small" id="pairStatus"></p>
+    </div>
+  </div>
+
+  <!-- SETTINGS -->
+  <div class="sheet" id="settings" hidden>
+    <div class="sheet-in">
+      <div class="sheet-head"><span class="lead">◉</span><button class="icon-btn" id="closeSettings" data-draggable="false" aria-label="Close"><svg><use href="#i-close"/></svg></button></div>
+      <div class="perms" id="perms"></div>
+      <div class="card small" id="who"></div>
+      <div class="row gap">
+        <button class="pill" id="installBtn" data-draggable="false" hidden>install</button>
+        <button class="pill danger" id="unpairBtn" data-draggable="false">unpair</button>
+      </div>
+      <p class="muted tiny" id="ver"></p>
+    </div>
+  </div>
+</div>
+
+<script src="../body/api_base.js?v=v20260429-council"></script>
+<script src="app.js?v=20261123a"></script>
+</body>
+</html>
