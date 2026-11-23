@@ -10,6 +10,7 @@ pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#0c1120;border:1px so
 <h1>Notification check</h1>
 <p>Tap the button. Whatever your phone answers shows below — copy it all and paste it to Claude.</p>
 <button id="go">ask for notifications</button>
+<button id="push">try Pulse’s notification sign-up</button>
 <button id="copy" style="background:none;border:1px solid rgba(160,190,255,.3);color:#e6ecff">copy result</button>
 <pre id="out">…</pre>
 <script>
@@ -40,6 +41,31 @@ document.getElementById('go').onclick = async () => {
   await snapshot('after asking');
 };
 document.getElementById('copy').onclick = () => { navigator.clipboard.writeText(out.textContent).then(() => { document.getElementById('copy').textContent = 'copied ✓'; }, () => {}); };
+// Runs exactly what the Pulse app does to sign up for notifications, logging every step.
+document.getElementById('push').onclick = async () => {
+  const API = 'https://api.vintaclectic.com';
+  log('— pulse sign-up', new Date().toLocaleTimeString());
+  try {
+    const reg = await navigator.serviceWorker.getRegistration('/pulse/');
+    log('1 pulse worker', reg ? (reg.scope.replace(location.origin, '') + ' · ' + (reg.active ? reg.active.state : 'no active worker')) : 'NOT registered');
+    if (!reg) return;
+    const ready = await Promise.race([navigator.serviceWorker.ready, new Promise(r => setTimeout(() => r(null), 4000))]);
+    log('2 serviceWorker.ready', ready ? ready.scope.replace(location.origin, '') : 'never resolved (4s)');
+    const existing = await reg.pushManager.getSubscription();
+    log('3 existing subscription', existing ? new URL(existing.endpoint).host : 'none');
+    const kr = await fetch(API + '/api/push/public-key'); const k = await kr.json().catch(() => ({}));
+    log('4 brain public key', kr.status + (k.publicKey ? ' · ' + k.publicKey.slice(0, 12) + '…' : ' · MISSING'));
+    const b64u = s => { const p = '='.repeat((4 - s.length % 4) % 4); return Uint8Array.from(atob((s + p).replace(/-/g, '+').replace(/_/g, '/')), c => c.charCodeAt(0)); };
+    let sub = existing;
+    if (!sub) { try { sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: b64u(k.publicKey) }); log('5 subscribe', 'ok · ' + new URL(sub.endpoint).host); }
+                catch (e) { log('5 subscribe', 'FAILED ' + e.name + ': ' + e.message); return; } }
+    const tok = localStorage.getItem('vint_access_token') || localStorage.getItem('vint_token') || '';
+    log('6 sign-in on this phone', tok ? 'yes (' + tok.length + ' chars)' : 'NONE — pair first');
+    const r = await fetch(API + '/api/push/subscribe', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Device-Id': localStorage.getItem('_vint_did') || '', ...(tok ? { Authorization: 'Bearer ' + tok } : {}) },
+      body: JSON.stringify({ subscription: sub.toJSON(), label: 'Pulse diag · ' + navigator.userAgent.slice(0, 60) }) });
+    log('7 brain saved it', r.status + ' ' + (await r.text()).slice(0, 160));
+  } catch (e) { log('stopped', e.name + ': ' + e.message); }
+};
 log('user agent', ua);
 snapshot('on open');
 </script></body></html>
