@@ -1,8 +1,8 @@
 /* Vintinuum Pulse service worker — scope /pulse/ only, so it never fights phone-sw.js.
  * App shell: network-first (a deploy is visible on the next open), cache as fallback.
  * The brain's API is never cached. Bump VERSION on every shell change. */
-const VERSION = 'pulse-v1-20261123a';
-const SHELL = ['./', './index.html', './app.css?v=20261123a', './app.js?v=20261123a', './manifest.json', '../body/api_base.js?v=v20260429-council'];
+const VERSION = 'pulse-v1-20261123b';
+const SHELL = ['./', './index.html', './app.css?v=20261123b', './app.js?v=20261123b', './manifest.json', '../body/api_base.js?v=v20260429-council'];
 let cfg = { api: 'https://api.vintaclectic.com', token: '', device: '', outbox: [] };
 
 self.addEventListener('install', e => {

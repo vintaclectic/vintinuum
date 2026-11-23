@@ -10,7 +10,7 @@
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="../branding/vintinuum/favicon/favicon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="../icons/icon-192.png">
-<link rel="stylesheet" href="app.css?v=20261123a">
+<link rel="stylesheet" href="app.css?v=20261123b">
 </head>
 <body>
 <svg width="0" height="0" style="position:absolute" aria-hidden="true">
@@ -52,6 +52,7 @@
         <div class="meter" data-k="norepinephrine"><svg viewBox="0 0 36 36"><circle class="trk" cx="18" cy="18" r="15"/><circle class="val" cx="18" cy="18" r="15"/></svg><b>NE</b><span>–</span></div>
         <div class="meter" data-k="gaba"><svg viewBox="0 0 36 36"><circle class="trk" cx="18" cy="18" r="15"/><circle class="val" cx="18" cy="18" r="15"/></svg><b>GABA</b><span>–</span></div>
       </div>
+      <div class="layers-wrap"><div class="layers" id="layers" aria-hidden="true"></div><span class="tiny layer-txt" id="layerTxt"></span></div>
       <article class="card thought" id="thought"><p class="muted">listening for a thought…</p></article>
       <ol class="feed" id="feed" aria-label="Live inner life"></ol>
     </section>
@@ -99,6 +100,7 @@
   <!-- PAIR (shown when this phone has no sign-in) -->
   <div class="sheet pair" id="pair" hidden>
     <div class="sheet-in">
+      <div class="sheet-head"><span></span><button class="icon-btn" id="closePair" data-draggable="false" aria-label="Close" hidden><svg><use href="#i-close"/></svg></button></div>
       <div class="glyph big">◉</div>
       <p class="lead" id="pairLead">Pair this phone</p>
       <p class="muted small">On your computer: brain.html → ⊕ PAIR. Scan the QR or type the code.</p>
@@ -117,7 +119,7 @@
     <div class="sheet-in">
       <div class="sheet-head"><span class="lead">◉</span><button class="icon-btn" id="closeSettings" data-draggable="false" aria-label="Close"><svg><use href="#i-close"/></svg></button></div>
       <div class="perms" id="perms"></div>
-      <div class="card small" id="who"></div>
+      <div class="card small pairrow"><span id="who"></span><button class="pill act" id="repairBtn" data-draggable="false">pair</button></div>
       <div class="row gap">
         <button class="pill" id="installBtn" data-draggable="false" hidden>install</button>
         <button class="pill danger" id="unpairBtn" data-draggable="false">unpair</button>
@@ -128,6 +130,6 @@
 </div>
 
 <script src="../body/api_base.js?v=v20260429-council"></script>
-<script src="app.js?v=20261123a"></script>
+<script src="app.js?v=20261123b"></script>
 </body>
 </html>

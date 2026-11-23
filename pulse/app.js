@@ -6,7 +6,7 @@
  * brain rejects sends you back to pairing with the brain's own reason on screen. */
 (() => {
 'use strict';
-const VERSION = 'pulse 1.0 · 2026-11-23';
+const VERSION = 'pulse 1.1 · 2026-11-23';
 const API = (window.__VINTINUUM_API_BASE || 'https://api.vintaclectic.com').replace(/\/$/, '');
 const $ = s => document.querySelector(s);
 const LS = {
@@ -97,9 +97,10 @@ function signedOut(why) {
 }
 function showPair(why) {
   sheet('#pair', true);
-  $('#pairLead').textContent = why ? 'Pair again' : 'Pair this phone';
+  $('#pairLead').textContent = why ? 'Pair again' : (token() ? 'Pair with a new code' : 'Pair this phone');
+  $('#closePair').hidden = !token();   // already signed in → you can back out
   const s = $('#pairStatus'); s.className = 'status small' + (why ? ' err' : ''); s.textContent = why || '';
-  setConn('bad', 'not paired');
+  setConn('bad', 'tap to pair');
 }
 async function redeem(code) {
   code = codeFrom(code);
@@ -188,14 +189,50 @@ async function loadThought() {
     if (d.bodyState) paintBody(d.bodyState);
   } catch (_) {}
 }
-const ICON = { neural: '◎', emotional: '♥', endocrine: '⚗', immune: '✚', memory: '◇', dream: '☽', pulse: '∿' };
+// The brain's life layers (life:event.layer / life:snapshot.layers), each with its own mark + colour.
+const LAYER = {
+  neural:       { g: '◎', c: '#00ffc8', n: 'neural' },
+  emotional:    { g: '♥', c: '#ff7aa8', n: 'emotional' },
+  subconscious: { g: '☽', c: '#8b7bff', n: 'subconscious' },
+  immune:       { g: '✚', c: '#5dffa8', n: 'immune' },
+  metabolic:    { g: '⚡', c: '#ffb347', n: 'metabolic' },
+  genetic:      { g: '⧖', c: '#6ec8ff', n: 'genetic' },
+  social:       { g: '◍', c: '#ffd36e', n: 'social' },
+  endocrine:    { g: '⚗', c: '#ff9d5c', n: 'endocrine' },
+  memory:       { g: '◇', c: '#c9b6ff', n: 'memory' },
+  pulse:        { g: '∿', c: '#00ffc8', n: 'your pulse' },
+};
+const layerOf = k => LAYER[k] || { g: '·', c: '#a0b4ff', n: k || 'life' };
 const ago = ts => { const s = Math.max(0, (Date.now() - ts) / 1000); return s < 60 ? 'now' : s < 3600 ? Math.round(s / 60) + 'm' : s < 86400 ? Math.round(s / 3600) + 'h' : Math.round(s / 86400) + 'd'; };
-function feedItem(list, icon, text, ts, max = 30) {
+function feedItem(list, layer, text, ts, intensity, max = 40) {
+  const L = typeof layer === 'object' ? layer : layerOf(layer);
   const li = document.createElement('li');
-  li.innerHTML = '<i></i><span></span><time></time>';
-  li.querySelector('i').textContent = icon; li.querySelector('span').textContent = text;
-  li.querySelector('time').textContent = ago(ts || Date.now());
+  li.innerHTML = '<i></i><div class="ev"><span></span><small></small></div><time></time>';
+  li.style.setProperty('--lc', L.c);
+  li.style.setProperty('--li', String(Math.max(.15, Math.min(1, intensity == null ? .4 : Number(intensity) || .4))));
+  li.querySelector('i').textContent = L.g; li.querySelector('span').textContent = text;
+  li.querySelector('small').textContent = L.n;
+  const t = li.querySelector('time'); t.dataset.ts = String(ts || Date.now()); t.textContent = ago(ts || Date.now());
   list.prepend(li); while (list.children.length > max) list.lastChild.remove();
+  return li;
+}
+setInterval(() => document.querySelectorAll('.feed time[data-ts]').forEach(t => { t.textContent = ago(Number(t.dataset.ts)); }), 30000);
+function flashOrb(color, intensity) {
+  const o = $('#orb'); o.style.setProperty('--flash', color); o.style.setProperty('--fi', String(.35 + (Number(intensity) || .3) * .65));
+  o.classList.remove('flash'); void o.offsetWidth; o.classList.add('flash');
+}
+function paintLayers(layers, dominant) {
+  const bar = $('#layers'); if (!bar || !layers) return;
+  const entries = Object.entries(layers).filter(([, v]) => Number(v) > 0).sort((a, b) => b[1] - a[1]);
+  const total = entries.reduce((s, [, v]) => s + Number(v), 0) || 1;
+  bar.replaceChildren(...entries.map(([k, v]) => {
+    const L = layerOf(k), s = document.createElement('span');
+    s.style.flexGrow = String(v / total); s.style.background = L.c; s.title = L.n + ' · ' + v;
+    return s;
+  }));
+  const D = layerOf(dominant || (entries[0] && entries[0][0]));
+  $('#layerTxt').textContent = D.g + ' ' + D.n + ' leads';
+  $('#layerTxt').style.color = D.c;
 }
 let es = null;
 function openStream() {
@@ -205,9 +242,13 @@ function openStream() {
     es.onmessage = ev => {
       let d; try { d = JSON.parse(ev.data); } catch (_) { return; }
       if (!d || d.type === 'life:hello') return;
-      if (d.type === 'life:snapshot') return;
-      const txt = d.detail || d.text || d.thought || d.message || d.summary || String(d.type || '').replace(/^life:/, '').replace(/[_:]/g, ' ');
-      if (txt) feedItem($('#feed'), ICON[d.region || d.layer] || '·', String(txt).slice(0, 240), d.ts);
+      if (d.type === 'life:snapshot') { if (d.bodyState) paintBody(d.bodyState); paintLayers(d.layers, d.dominant); return; }
+      const txt = d.content || d.detail || d.text || d.thought || d.message || d.summary;
+      if (!txt) return;                       // never show a bare type name
+      const L = layerOf(d.layer || d.region);
+      const li = feedItem($('#feed'), L, String(txt).slice(0, 280), d.ts, d.intensity);
+      li.classList.add('fresh'); setTimeout(() => li.classList.remove('fresh'), 1600);
+      flashOrb(L.c, d.intensity);
     };
     es.onerror = () => {};
   } catch (_) {}
@@ -255,7 +296,7 @@ async function loadPulses() {
     const d = await getJSON('/api/life/pulse/recent?limit=20');
     const rows = d.pulses || d.items || d.rows || (Array.isArray(d) ? d : []);
     const list = $('#pulseList'); list.innerHTML = '';
-    rows.slice(0, 20).reverse().forEach(r => feedItem(list, '∿', r.body || r.title || r.pulse_type, (r.created_at > 1e12 ? r.created_at : (r.created_at || r.ts || 0) * 1000) || Date.parse(r.created_at)));
+    rows.slice(0, 20).reverse().forEach(r => feedItem(list, 'pulse', r.body || r.title || r.pulse_type, (r.created_at > 1e12 ? r.created_at : (r.created_at || r.ts || 0) * 1000) || Date.parse(r.created_at)));
   } catch (_) {}
 }
 
@@ -430,8 +471,9 @@ async function openSettings() {
   const w = $('#who'); w.textContent = 'checking sign-in…';
   try {
     const d = await getJSON('/api/auth/whoami');
-    w.textContent = d.user ? ('signed in as ' + (d.user.display_name || d.user.email || ('#' + d.user.id)) + (d.user.tier ? ' · ' + d.user.tier : '')) : 'not signed in';
+    w.textContent = d.user ? ('this phone is paired as ' + (d.user.display_name || d.user.email || ('#' + d.user.id)) + (d.user.tier ? ' · ' + d.user.tier : '')) : 'not signed in';
   } catch (_) { w.textContent = 'could not reach the brain'; }
+  if (w.textContent === 'not signed in') w.textContent = 'this phone is not paired';
   paintPerms();
 }
 
@@ -455,7 +497,10 @@ function wire() {
   $('#micBtn').onclick = toggleMic;
   $('#speakToggle').onclick = () => { speak = !speak; LS.set('pulse:speak', speak ? '' : 'off'); paintSpeak(); toast(speak ? 'she’ll speak replies' : 'replies stay silent'); };
   $('#openSettings').onclick = openSettings;
+  $('#conn').onclick = () => { if (!token()) showPair(''); };
   $('#closeSettings').onclick = () => sheet('#settings', false);
+  $('#repairBtn').onclick = () => { sheet('#settings', false); $('#pairCode').value = ''; showPair(''); };
+  $('#closePair').onclick = () => { stopScan(); sheet('#pair', false); if (token()) setConn('ok', 'connected'); };
   $('#unpairBtn').onclick = () => { sheet('#settings', false); signedOut(''); };
   $('#installBtn').onclick = async () => { if (!installEvt) return; installEvt.prompt(); await installEvt.userChoice.catch(() => {}); installEvt = null; $('#installBtn').hidden = true; };
   $('#pairForm').onsubmit = e => { e.preventDefault(); redeem($('#pairCode').value); };

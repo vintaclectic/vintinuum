@@ -56,11 +56,23 @@ button:disabled{opacity:.4;cursor:default}
 .meter span{font-size:13px;font-variant-numeric:tabular-nums}
 .thought p{font-size:16px;line-height:1.5}
 .feed{list-style:none;display:flex;flex-direction:column;gap:8px}
-.feed li{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:10px;align-items:start;padding:10px 12px;
-  background:var(--panel);border:1px solid var(--line);border-radius:12px;font-size:13px;min-width:0}
-.feed li i{font-style:normal;color:var(--accent);width:16px;text-align:center}
-.feed li span{overflow-wrap:anywhere;min-width:0}
-.feed li time{color:var(--mute);font-size:11px;white-space:nowrap}
+.feed li{--lc:var(--accent);--li:.4;display:grid;grid-template-columns:28px minmax(0,1fr) auto;gap:10px;align-items:start;padding:10px 12px;
+  background:linear-gradient(90deg,color-mix(in srgb,var(--lc) calc(var(--li)*18%),transparent),var(--panel) 55%);
+  border:1px solid var(--line);border-left:3px solid var(--lc);border-radius:12px;font-size:14px;min-width:0;transition:box-shadow .6s}
+.feed li i{font-style:normal;color:var(--lc);font-size:18px;line-height:1.2;text-align:center;
+  text-shadow:0 0 calc(4px + var(--li)*14px) var(--lc)}
+.feed li .ev{display:flex;flex-direction:column;gap:2px;min-width:0}
+.feed li span{overflow-wrap:anywhere;min-width:0;line-height:1.4}
+.feed li small{font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--lc);opacity:.8}
+.feed li time{color:var(--mute);font-size:11px;white-space:nowrap;padding-top:2px}
+.feed li.fresh{box-shadow:0 0 0 1px var(--lc),0 0 22px color-mix(in srgb,var(--lc) 45%,transparent);animation:arrive .5s ease-out}
+@keyframes arrive{from{opacity:0;transform:translateY(-6px)}}
+.layers-wrap{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:center;flex:none}
+.layers{display:flex;height:6px;border-radius:3px;overflow:hidden;background:var(--line);min-width:0}
+.layers span{min-width:2px;transition:flex-grow .8s}
+.layer-txt{letter-spacing:.06em;white-space:nowrap}
+.orb.flash{animation:breathe var(--beat,4s) ease-in-out infinite,flash 1.1s ease-out}
+@keyframes flash{0%{box-shadow:0 0 90px 10px var(--flash);filter:brightness(calc(1 + var(--fi)*.6))}100%{}}
 
 /* pulse composer */
 .composer{display:flex;flex-direction:column;gap:12px}
@@ -123,7 +135,8 @@ input[type=range]{width:100%;accent-color:var(--accent);min-width:0}
 .pill{height:40px;padding:0 16px;border-radius:20px;border:1px solid var(--line);color:var(--ink)}
 .pill.act{border-color:var(--accent);color:var(--accent)}
 .pill.danger{border-color:rgba(255,107,129,.4);color:var(--bad)}
-#who{text-align:left}
+.pairrow{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:center;text-align:left}
+#who{overflow-wrap:anywhere}
 
 @media (min-width:641px){.app{border-left:1px solid var(--line);border-right:1px solid var(--line)}}
 @media (max-width:359px){:root{--gut:12px} .acts{gap:4px} .chip{height:40px}}
