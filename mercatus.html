@@ -974,9 +974,9 @@ body{
         </div>
         <div class="mc-linkbox" id="mcLinkBox" hidden>
           <p class="mc-fhint" id="mcLinkMsg">—</p>
-          <p class="mc-fhint" id="mcLinkUrlRow" hidden><a id="mcLinkUrl" href="#" target="_blank" rel="noopener noreferrer">Open the Robinhood approval page</a> — approve there, then this panel confirms on its own within a minute.</p>
+          <p class="mc-fhint" id="mcLinkUrlRow" hidden><a id="mcLinkUrl" href="#" target="_blank" rel="noopener noreferrer">Open the Robinhood approval page</a> — approve there. After you allow, Robinhood sends the browser to a 127.0.0.1 address that will likely show “This site can’t be reached” — <b>that is normal here</b>. The code this panel needs is in that page's ADDRESS BAR.</p>
           <div class="mc-fld wide" id="mcLinkPasteRow" hidden>
-            <label for="mcLinkPaste">Approved on another device? Paste the address the browser landed on:</label>
+            <label for="mcLinkPaste">On the “can’t be reached” page: click the address bar, select ALL of it (Ctrl+A), copy, paste it here, then press Complete link. Do this within ~5 minutes of clicking Link Robinhood or the code expires and you re-click.</label>
             <input type="text" id="mcLinkPaste" autocomplete="off" placeholder="http://127.0.0.1:…/callback?code=…" />
             <button type="button" class="mc-btn" id="mcLinkComplete">Complete link</button>
           </div>
