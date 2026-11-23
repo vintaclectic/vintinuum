@@ -33,7 +33,7 @@
       throw new Error('Your session could not be verified. Sign in through your council host, then refresh.');
     }
     const result = await response.json().catch(() => ({}));
-    if (!response.ok) throw new Error(result.message || result.error || 'Your request could not be completed. Try again.');
+    if (!response.ok) throw new Error(result.message || result.error?.message || (typeof result.error === 'string' && result.error) || 'Your request could not be completed. Try again.');
     return result;
   }
   async function action(message, fn) {
@@ -79,7 +79,7 @@
     $('identity').textContent = session.tenantLabel;
     const [packageData, taskData, costs] = await Promise.all([api('packages'), api('tasks'), api('costs')]);
     renderPackages(packageData.packages);
-    $('provider-status').textContent = session.providerConnected ? 'Provider connected' : 'No provider connected yet';
+    $('provider-status').textContent = session.providerConnected ? 'Credential saved for this preview. No live provider request made.' : 'No provider connected yet';
     ready = session.providerConnected && packageData.packages.some(pack => pack.active);
     $('task-help').textContent = ready ? 'Your council is ready for an assignment.' : 'Connect a provider and activate an approved package to create a task.';
     $('tasks').replaceChildren();
