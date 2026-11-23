@@ -3474,7 +3474,7 @@ const PushState = (() => {
   async function subscribe() {
     if (!supported()) return { ok: false, reason: 'unsupported' };
     const perm = await Notification.requestPermission();
-    if (perm !== 'granted') return { ok: false, reason: 'denied' };
+    if (perm !== 'granted') return { ok: false, reason: perm === 'denied' ? 'denied' : 'quiet' }; // 2026-11-23: 'default' = prompt dismissed or hidden by Chrome's quiet mode
     const key = await fetchPublicKey();
     if (!key) return { ok: false, reason: 'no_public_key' };
     try {
@@ -3592,8 +3592,11 @@ function wireEmbodimentCards() {
       pushAccept.textContent = 'Enable';
       if (result.ok) {
         showToast('notifications live', 1800);
-      } else if (result.reason === 'denied') {
-        showToast('permission denied', 2400);
+      } else if (result.reason === 'denied' || result.reason === 'quiet') {
+        // 2026-11-23: the phone answered without asking — say why and where to fix it
+        showToast(result.reason === 'quiet'
+          ? 'Chrome hid the prompt — tap the 🔕 in the address bar → Allow'
+          : 'Blocked by your phone — Android Settings → Apps → Chrome → Notifications, then Site settings → vintinuum.com → Allow', 7000);
       } else {
         showToast('subscribe failed: ' + result.reason, 2400);
       }

@@ -6,7 +6,7 @@
  * brain rejects sends you back to pairing with the brain's own reason on screen. */
 (() => {
 'use strict';
-const VERSION = 'pulse 1.1 · 2026-11-23';
+const VERSION = 'pulse 1.2 · 2026-11-23';
 const API = (window.__VINTINUUM_API_BASE || 'https://api.vintaclectic.com').replace(/\/$/, '');
 const $ = s => document.querySelector(s);
 const LS = {
@@ -385,7 +385,7 @@ const standalone = matchMedia('(display-mode: standalone)').matches || navigator
 const HOW = {
   notifications: isIOS
     ? ['Notifications only work from the home-screen app.', 'Safari → Share → Add to Home Screen.', 'Open it from the home screen, then ⚙ → turn on.']
-    : ['Android Settings → Apps → Chrome → Notifications → on.', 'In Chrome: ⋮ → Settings → Site settings → Notifications → vintinuum.com → Allow.', 'Installed app? Settings → Apps → Vintinuum Pulse → Notifications → on.'],
+    : ['Chrome ⋮ → Settings → Notifications → turn off “Use quieter messaging”.', 'Android Settings → Apps → Chrome → Notifications → on.', 'In Chrome: ⋮ → Settings → Site settings → Notifications → vintinuum.com → Allow.', 'Installed app? Settings → Apps → Vintinuum Pulse → Notifications → on.'],
   microphone: isIOS ? ['Settings → Safari → Microphone → Allow (or Ask).'] : ['Chrome: tap the lock icon by the address → Permissions → Microphone → Allow.'],
   geolocation: isIOS ? ['Settings → Privacy → Location Services → Safari Websites → While Using.'] : ['Chrome: lock icon → Permissions → Location → Allow.'],
 };
@@ -426,7 +426,8 @@ async function enablePerm(k, el) {
     if (isIOS && !standalone) return showHow(k, el, 'On iPhone this needs the home-screen app:');
     const res = await pushOn();
     if (res.ok) toast('she can reach you now');
-    else if (res.reason === 'denied') return showHow(k, el, 'Your phone refused without asking — it has notifications blocked for this site or for the browser. To fix:');
+    else if (res.reason === 'quiet') return showHow(k, el, 'Chrome hid the prompt (quiet mode). Tap the 🔕 in the address bar → Allow. If there is none:');
+    else if (res.reason === 'denied') return showHow(k, el, 'Your phone refused without asking — notifications are blocked for this site or for the browser. To fix:');
     else toast('couldn’t turn on: ' + res.reason, 5000);
   } else if (k === 'microphone') {
     try { (await navigator.mediaDevices.getUserMedia({ audio: true })).getTracks().forEach(t => t.stop()); } catch (_) { return showHow(k, el, 'The microphone is blocked. To fix:'); }
@@ -452,7 +453,7 @@ function b64u(s) { const p = '='.repeat((4 - s.length % 4) % 4); const raw = ato
 async function pushOn() {
   if (!('PushManager' in window)) return { ok: false, reason: 'this browser has no push' };
   const perm = await Notification.requestPermission();
-  if (perm !== 'granted') return { ok: false, reason: 'denied' };
+  if (perm !== 'granted') return { ok: false, reason: perm === 'denied' ? 'denied' : 'quiet' };
   try {
     const { publicKey } = await (await fetch(API + '/api/push/public-key')).json();
     const reg = await navigator.serviceWorker.ready;
