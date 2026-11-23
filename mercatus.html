@@ -2466,7 +2466,16 @@ function mcRenderBadges() {
     var c = st.circuit;
     if (c && c.state && c.state !== 'CLOSED') out += mcPill('breaker ' + c.state, 'is-bad', true);
     var lk = st.link;
-    if (lk && lk.linked === false) out += mcPill('broker not linked', 'is-warn');
+    // linkStatus() never returns a `linked` field, so the old `lk.linked === false`
+    // check could NEVER fire — the panel showed green ARMED pills while the
+    // heartbeat journaled 36 consecutive broker_session_lost probes (2026-11-23).
+    // The live truth is the heartbeat's probe state and /session's own answer.
+    var hb = lk && lk.heartbeat;
+    var brokerLost = (lk && lk.linked === false)
+      || (hb && hb.state === 'lost')
+      || (hb && hb.lastTick && hb.lastTick.linked === false)
+      || (MC.session && MC.session.linked === false);
+    if (brokerLost) out += mcPill('BROKER NOT LINKED', 'is-bad', true);
     el.innerHTML = out;
   }
 
