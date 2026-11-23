@@ -509,6 +509,9 @@ body{
   font-size:12px;color:var(--dim);line-height:1.65;overflow-wrap:anywhere}
 .mc-iwhy b{color:var(--ink2);font-weight:700}
 .mc-iacts{display:flex;flex-wrap:wrap;gap:7px;min-width:0}
+.mc-linkbox{display:flex;flex-direction:column;gap:8px;min-width:0;margin:10px 0 2px;
+  padding:10px;border:1px solid var(--line,#2a2d3a);border-radius:10px}
+.mc-linkbox a{word-break:break-all}
 /* a tile reacts to a hover/focus the way the rest of the page's interactive
    surfaces already do — a cheap "alive" signal, never a layout change. */
 .mc-ic{transition:border-color .15s,background .15s}
@@ -967,6 +970,16 @@ body{
           <button type="button" class="mc-btn" id="mcCtlBreaker">Reset breaker</button>
           <button type="button" class="mc-btn b-go" id="mcCtlResume">Resume trading</button>
           <button type="button" class="mc-btn b-no" id="mcCtlHalt">Emergency stop</button>
+          <button type="button" class="mc-btn b-acc" id="mcCtlLink">Link Robinhood</button>
+        </div>
+        <div class="mc-linkbox" id="mcLinkBox" hidden>
+          <p class="mc-fhint" id="mcLinkMsg">—</p>
+          <p class="mc-fhint" id="mcLinkUrlRow" hidden><a id="mcLinkUrl" href="#" target="_blank" rel="noopener noreferrer">Open the Robinhood approval page</a> — approve there, then this panel confirms on its own within a minute.</p>
+          <div class="mc-fld wide" id="mcLinkPasteRow" hidden>
+            <label for="mcLinkPaste">Approved on another device? Paste the address the browser landed on:</label>
+            <input type="text" id="mcLinkPaste" autocomplete="off" placeholder="http://127.0.0.1:…/callback?code=…" />
+            <button type="button" class="mc-btn" id="mcLinkComplete">Complete link</button>
+          </div>
         </div>
         <p class="mc-fhint">“Scan now” runs the real pipeline during the regular session.
           Automatic approval can submit qualifying orders using real money. All account limits and the emergency stop still apply.</p>
@@ -3568,6 +3581,63 @@ function mcWireControls() {
   mcEl('mcCtlHalt').addEventListener('click', function () {
     mcCtl('/emergency-stop', { reason: 'Manual stop from the Mercatus Cosmos' },
       'EMERGENCY STOP — halt every tick immediately?');
+  });
+
+  // ── LINK ROBINHOOD (the button every broker_session_lost alert promised) ──
+  var _linkPoll = null;
+  function mcLinkShow(msg, cls) {
+    var box = mcEl('mcLinkBox'), m = mcEl('mcLinkMsg');
+    if (box) box.hidden = false;
+    if (m) { m.textContent = msg; m.style.color = cls === 'err' ? 'var(--bad,#ff6b6b)' : (cls === 'ok' ? 'var(--good,#35d07f)' : ''); }
+  }
+  function mcLinkRender(ls) {
+    var urlRow = mcEl('mcLinkUrlRow'), urlA = mcEl('mcLinkUrl'), pasteRow = mcEl('mcLinkPasteRow');
+    var awaiting = ls && ls.status === 'awaiting_approval' && ls.url;
+    if (urlRow) urlRow.hidden = !awaiting;
+    if (pasteRow) pasteRow.hidden = !awaiting;
+    if (awaiting && urlA) urlA.href = ls.url;
+    if (awaiting) {
+      mcLinkShow('Waiting for your approval on robinhood.com — a browser window should have opened on the PC. If not, use the link below.', '');
+    } else if (ls && ls.status === 'failed') {
+      mcLinkShow('Link failed: ' + (ls.error || 'unknown'), 'err');
+    } else if (ls && ls.status === 'linking') {
+      mcLinkShow('Starting the Robinhood sign-in…', '');
+    }
+  }
+  function mcLinkPollStatus() {
+    if (_linkPoll) return;
+    var tries = 0;
+    _linkPoll = setInterval(function () {
+      tries++;
+      mcFetch('/link/status').then(function (ls) {
+        mcLinkRender(ls);
+        var done = !ls || (ls.status !== 'awaiting_approval' && ls.status !== 'linking');
+        if (done || tries > 120) {
+          clearInterval(_linkPoll); _linkPoll = null;
+          if (ls && ls.status !== 'failed') {
+            mcFetch('/session').then(function (se) {
+              MC.session = se;
+              if (se && se.linked) mcLinkShow('LINKED — Mercatus reaches Robinhood again. The alerts stop within one probe (~10 min).', 'ok');
+              else mcLinkShow('Sign-in finished but the session probe still says NOT LINKED' + (se && se.error ? ': ' + se.error : '') + '. Try the button again.', 'err');
+              mcRenderAll();
+            }).catch(function () {});
+          }
+        }
+      }).catch(function (e) { mcLinkShow('link/status failed: ' + e.message, 'err'); });
+    }, 3000);
+  }
+  mcEl('mcCtlLink').addEventListener('click', function () {
+    mcLinkShow('Starting the Robinhood sign-in…', '');
+    mcFetch('/link/start', { method: 'POST', body: { openOnHost: true } })
+      .then(function (ls) { mcLinkRender(ls); mcLinkPollStatus(); })
+      .catch(function (e) { mcLinkShow('link/start failed: ' + e.message, 'err'); });
+  });
+  mcEl('mcLinkComplete').addEventListener('click', function () {
+    var v = (mcEl('mcLinkPaste').value || '').trim();
+    if (!v) { mcLinkShow('Paste the full address first.', 'err'); return; }
+    mcFetch('/link/complete', { method: 'POST', body: { url: v } })
+      .then(function (ls) { mcLinkRender(ls); mcLinkPollStatus(); })
+      .catch(function (e) { mcLinkShow('link/complete failed: ' + e.message, 'err'); });
   });
 
   // one delegated listener for every data-mcact button in the bridge + inspector
