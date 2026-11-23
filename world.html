@@ -1144,6 +1144,15 @@
      of its own: its launcher is a flow child of #dvRail and its sheet is an
      exclusive .dv-sheet whose .dv-body is the scroller. ?pulse=0 kills it. -->
 <script src="body/world/world-pulse.js"></script>
+<!-- THE DIRVERSE EXCHANGE — the sealed agent economy (world/exchange.js, driven
+     by world/exchange-service.js) made visible. Reads one bounded endpoint,
+     GET /api/world/exchange, and renders instruments (houses priced on real
+     council work + goods), the net-worth leaderboard, treasury/money-supply
+     tiles, the Gate's breach count and the live tape. Loads AFTER dirverse-hud.js
+     for the rail slot + one-sheet registry; adds NO fixed element of its own —
+     its launcher is a flow child of #dvRail and its surface is an exclusive
+     .dv-sheet. ?exchange=0 kills it with no deploy. (task DKWPCRD) -->
+<script src="body/world/exchange-hud.js"></script>
 <!-- THE COMMONS — the other people are real. Room-scoped presence has shipped
      at 5Hz since day one and NOTHING ever told the player a person had arrived,
      so co-presence existed and was invisible. This is the roster (who is here,
