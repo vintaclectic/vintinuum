@@ -167,3 +167,16 @@ All nine records were created as linked follow-ups of SE4Y84W, with named specia
 | P7 | 3KFZA47 | FSFB54X |
 | P8 | 3CUERP2 | RH826AE, PRZVGJR, 59SFGPY, FSFB54X |
 | P9 | BKBPG64 | RH826AE, PRZVGJR, 59SFGPY, FSFB54X, 3KFZA47, 3CUERP2 |
+
+## P9 delivery record (BKBPG64, 2026-11-23)
+
+Code lives in `~/.claude/council-loop` commit `7a6e048`: `lib/tenant-migration.js`, `bin/tenant-migrate.js` (operator CLI), `lib/tenant-launch-gate.js` + `bin/tenant-launch-gate.js`, `bin/verify-tenant-migration-BKBPG64.js`.
+
+- **Tooling:** `inventory` (counts/hashes only) → `backup` (AES-256-GCM, key in a separate store; the ciphertext alone cannot be restored) → `restore` (verifies every hash; writes only into an empty directory) → `dry-run` (builds in a private directory, then renames it into place; a retry with the same migration ID is a no-op; the same ID against a changed source is refused) → `reconcile` → `cutover` (migration lock, then drain active leases or explicitly cancel them, then switch the adapter) → `rollback` (before cutover: discard staging; after cutover: inverse export that keeps post-cutover tasks and usage events).
+- **Isolated copy of the real legacy state (verifier group R, measured):** 1,629/1,629 records hash-matched under an opaque legacy tenant. 8/8 seals and 990/990 completion proofs were preserved. Dependencies and agent refs were preserved on every row. 418 attachments were copied with matching hashes; 16 refs were already missing at source, and 5 files were refused (oversized). Ledger: 3,860/3,860 events, $3,517.860368 of known spend matching to the micro-dollar, 402,557,200 tokens, and 1,377 unpriced historical events kept as *unknown*, not $0.
+- **Adversarial suite:** `verify-tenant-migration-BKBPG64.js` → 71/71. It uses a host canary secret and tenants A/B with colliding IDs.
+- **Launch gate:** `bin/tenant-launch-gate.js` runs the P1–P9 verifiers → 9/9 PASS (45, 86, 109, 97, 42, 221, 85, 37, 71). The receipt is bound to a digest of every tenant module, so it goes stale when any of them changes.
+- **DECISION:** no credential values are migrated (`credentials_migrated: 0`). Legacy auth stays behind vintkey; moving it into a tenant vault is a separate broker action the operator selects. REVERSIBLE VIA: an operator-selected broker import later.
+- **DECISION:** cutover and rollback refuse the live council state directory. No real-data cutover was performed. REVERSIBLE VIA: an explicit future operator cutover packet.
+- **DECISION:** tenant-board `TASK_ID_RE` now admits upper- and lowercase alphanumerics, so the 18 historical lowercase IDs are preserved byte-exact. REVERSIBLE VIA: revert the one-line change in `7a6e048`.
+- **Admission:** `HOSTED_ADMISSION_ENABLED` is still a constant `false`. The gate passing is necessary, but it is not enough to admit an outside tenant. Opening hosted admission is a public-launch decision that stays with Vinta.
