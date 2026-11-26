@@ -928,3 +928,6 @@ Every agent definition previously hardcoded `model: claude-opus-5` in frontmatte
 **Example violation:** spawning helios-design with `model: "opus"` hardcoded, ignoring what the router would choose.
 
 **Example compliance:** `Agent(spawn.agentOpts('helios-design', task))` — routing picks claude-opus-4-8 for a UI task, saving ~50% on tokens vs Opus 5 while maintaining quality.
+
+## The brain lives on brain-srv, NOT this PC — learned 2026-11-24, task CMR4R5U
+Since 2026-11-17 the live brain (vintinuum-api, Mercatus, the DB, owner-only mints) runs on Hetzner brain-srv **2.29.194.240** (`ssh vinta@2.29.194.240`). `~/.vintinuum/brain-remote` on the PC is the switch: the PC ecosystem refuses to start vintinuum-api and every keepalive layer stands down. A vintinuum-api answering localhost:8767 on the PC is a DUPLICATE — on 2026-11-23 card 3Y6EBWQ restarted one and CMR4R5U minted Gmail consent against it (tokens landed in the dead PC DB). **Never** start/restart vintinuum-api on the PC or delete brain-remote; checks, consent mints and restarts happen ON brain-srv. ctb-app / dirhaven-app are other boxes, not the brain.
