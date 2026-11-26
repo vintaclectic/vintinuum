@@ -36,3 +36,6 @@ android-twa/.gradle/
 # gitlink with no .gitmodules, which breaks every Pages build (GITLAND-2, 1ae6307)
 # and points at objects this repo does not have. Ignored, never tracked. (3QSKTR4)
 /.task-*/
+
+# council task scratch clones of the api repo (never commit a nested repo)
+.api-relay-*/

@@ -266,6 +266,18 @@ CMDS.login = async function (args) {
   else say('vintbrowse: no --submit-sel given; click the submit control yourself when ready.');
 };
 
+// Force the brain to retry the relay now instead of waiting out its backoff.
+// Owner JWT only — an agent never handles VINTA_MASTER_KEY (2MH3CNU).
+CMDS.resume = async function () {
+  const t = await auth();
+  const r = await request('POST', '/api/browser/relay/resume', {},
+    { Authorization: 'Bearer ' + t, 'X-Agent-Id': AGENT_ID, 'X-Task-Id': TASK_ID || '' });
+  if (r.status !== 200 || !r.body || r.body.ok !== true) {
+    die('resume failed (HTTP ' + r.status + '): ' + JSON.stringify(r.body).slice(0, 300), 5);
+  }
+  out(r.body);
+};
+
 CMDS.audit = async function (args) {
   const n = parseInt(args[0] || '20', 10);
   const t = await auth();
@@ -292,6 +304,7 @@ CMDS.help = function () {
                                        this process's output or your context.
   vintbrowse exec --i-know "<js>"      arbitrary JS (SENSITIVE — logged)
   vintbrowse audit [n]                 recent browser audit rows
+  vintbrowse resume                    force the brain to reconnect the relay now
 
   Auth: loopback-only COUNCIL_AGENT_TOKEN → 15-minute owner JWT.
   Every command writes a row to browser_relay_audit.`);
@@ -308,7 +321,7 @@ CMDS.help = function () {
   // are recorded in agent_cred_audit. `help`/`audit` are read-only; audit requires an owner JWT.
   if (cmd !== 'audit' && cmd !== 'help') {
     require(path.join(COUNCIL_ROOT, 'lib', 'capabilities.js'))
-      .enforce(cmd === 'status' ? ['browser'] : ['browser', 'network'], { action: cmd }, 'vintbrowse');
+      .enforce(['status', 'resume'].includes(cmd) ? ['browser'] : ['browser', 'network'], { action: cmd }, 'vintbrowse');
   }
   try {
     await CMDS[cmd](rest);
