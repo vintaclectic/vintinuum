@@ -77,5 +77,16 @@ if connected; then
   log 'resume restored the relay'
   exit $rc
 fi
-log "relay still disconnected after resume (relay health: $(relay_healthy && echo ok || echo down))"
+# A channel can be half-dead: the -L side answers (so the tunnel looks healthy)
+# while the -R side no longer reaches the relay. Rebuild it outright, then ask
+# the brain once more.
+log 'resume did not take — rebuilding the SSH channel from scratch'
+bash "$ROOT/bin/browser-relay-tunnel.sh" start >/dev/null
+vb resume >/dev/null
+sleep 5
+if connected; then
+  log 'rebuilt channel restored the relay'
+  exit $rc
+fi
+log "relay still disconnected after a channel rebuild (relay health: $(relay_healthy && echo ok || echo down))"
 exit 1

@@ -38,6 +38,7 @@ brain_host() {
 }
 
 # The ssh process is identified by its own forward spec — no marker env needed.
+# Only used to stop/replace a tunnel we can actually see (see healthy() below).
 tunnel_pids() { pgrep -f -- "-L ${FORWARD_L}" 2>/dev/null; }
 
 port_listening() {
@@ -50,7 +51,12 @@ brain_answers() {
     "http://127.0.0.1:${LOCAL_BRAIN_PORT}/api/auth/whoami" 2>/dev/null | grep -qE '^(200|401|403)$'
 }
 
-healthy() { [ -n "$(tunnel_pids)" ] && port_listening && brain_answers; }
+# Judge the channel by what it DOES, never by whether we can see its process:
+# a council sandbox runs with its own PID namespace (--unshare-all), so pgrep
+# there cannot see an ssh started by cron on the host. Measured 2026-11-26: a
+# perfectly working tunnel reported "healthy: no" for exactly that reason.
+# A bound local port that the remote brain answers through IS the channel.
+healthy() { port_listening && brain_answers; }
 
 stop_tunnel() {
   local pids; pids="$(tunnel_pids)"
@@ -102,7 +108,7 @@ ensure() {
 }
 
 status() {
-  printf 'tunnel_pids: %s\n' "$(tunnel_pids | tr '\n' ' ')"
+  printf 'tunnel_pids: %s (empty inside a sandbox PID namespace — not a fault)\n' "$(tunnel_pids | tr '\n' ' ')"
   printf 'local_brain_port_%s_listening: %s\n' "$LOCAL_BRAIN_PORT" "$(port_listening && echo yes || echo no)"
   printf 'brain_answers: %s\n' "$(brain_answers && echo yes || echo no)"
   printf 'brain_host: %s\n' "$(brain_host || echo '(unset)')"

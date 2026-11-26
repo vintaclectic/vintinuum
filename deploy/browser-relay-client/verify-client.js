@@ -67,7 +67,9 @@ function fixture({ remote = true, env = {}, response = { ok:true, auditLogged:tr
   check('tunnel dies rather than start without its forwards',()=>assert.ok(/ExitOnForwardFailure=yes/.test(tunnel)));
   check('tunnel detects a half-dead link',()=>assert.ok(/ServerAliveInterval=15/.test(tunnel)&&/ServerAliveCountMax=3/.test(tunnel)));
   check('tunnel needs no sudo and no systemd unit',()=>assert.ok(!/^\s*(sudo|systemctl)\b/m.test(tunnel)));
-  check('tunnel ensure is idempotent on a healthy link',()=>assert.ok(/healthy\(\) \{ \[ -n "\$\(tunnel_pids\)" \]/.test(tunnel)&&/if healthy; then return 0; fi/.test(tunnel)));
+  check('tunnel ensure is idempotent on a healthy link',()=>assert.ok(/if healthy; then return 0; fi/.test(tunnel)));
+  check('tunnel health is judged by function, not process visibility',()=>assert.ok(/healthy\(\) \{ port_listening && brain_answers; \}/.test(tunnel)));
+  check('watchdog rebuilds a half-dead channel when resume does not take',()=>assert.ok(/browser-relay-tunnel\.sh" start/.test(watchdog)));
   check('tunnel retries once past a stale remote forward',()=>assert.ok(/retrying once/.test(tunnel)));
   check('tunnel takes the brain host from the migration marker',()=>assert.ok(/brain-remote/.test(tunnel)));
 
