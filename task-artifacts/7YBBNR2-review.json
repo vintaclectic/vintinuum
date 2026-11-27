@@ -1,0 +1,119 @@
+{
+  "task": "7YBBNR2",
+  "reviewed_task": "S4EVFZQ",
+  "reviewer": {
+    "agent": "vintinuum_review",
+    "provider": "openai",
+    "model": "gpt-6-astra",
+    "mode": "Actual independent specialist review in the current Codex session; not a simulated external-provider response",
+    "builder_provider": "anthropic",
+    "builder_model": "claude-opus-5"
+  },
+  "base": "3f77dc3cba67920746e01691f19fbb4af1637a1a",
+  "tip": "edc1f1ba81fabf1a237b01300669c59f3e9107da",
+  "observed_later_head": "361b7007dd08d6bc4d4473be2c51c2fe7db2a3e7",
+  "scope": "All 30 changed paths inventoried. Functional social, authentication, privacy and quarantine changes reviewed directly; client integration, CSS and verifier changes inspected for context and coverage. This is an adversarial break verdict, not exhaustive certification or a fresh mobile/build test. Unlike the legacy 24k-character prompt, review included backend code beyond the opening CSS/client diff.",
+  "findings": [
+    {
+      "severity": "high",
+      "claim": "The newly added case-sensitive namespace checks in DirMods and media-server quarantine skip uppercase paths that default case-insensitive Express routes still match; the owner-only quarantine can be bypassed using /api/DIRMODS or /api/MEDIASERVERS paths.",
+      "check": "node /home/vinta/.council-worktrees/Vintinuum-seat-6/task-artifacts/7YBBNR2-review-repro.cjs",
+      "introduced_by_diff": true,
+      "evidence": "Exact namespace regex extraction: lowercase passes; uppercase returns false for both namespaces. Real Express Router matches the uppercase endpoint path in both cases, proving the routing mismatch. Prior quarantine middleware was unconditional.",
+      "files": [
+        "server/routes/dirmods.routes.js",
+        "server/mediaservers/router.js"
+      ]
+    },
+    {
+      "severity": "high",
+      "claim": "New follow/privacy policy wiring fails open when its backing state cannot be read: a throwing block lookup still permits a follow mutation and a throwing privacy lookup still returns another account's private follower list.",
+      "check": "node /home/vinta/.council-worktrees/Vintinuum-seat-6/task-artifacts/7YBBNR2-review-repro.cjs",
+      "introduced_by_diff": true,
+      "evidence": "Exact committed route factory with failure-injected dependencies returns success=true and performs one follow write after a block exception; privacy exception returns private-follower rows. The preexisting database isUserBlocked accessor also catches errors as false, so repair must preserve failure information end to end, not only adjust the new wrapper. Shared-cards uses the same new default-visible catch pattern.",
+      "files": [
+        "server/routes/social.core.routes.js",
+        "server/routes/user.routes.js",
+        "server/database.js"
+      ]
+    },
+    {
+      "severity": "medium",
+      "claim": "The new unseen-count SQL omits the bidirectional block filter used by the following feed, so posts from a blocked author still increase the viewer's unread badge even though no corresponding feed card is visible.",
+      "check": "node /home/vinta/.council-worktrees/Vintinuum-seat-6/task-artifacts/7YBBNR2-review-repro.cjs",
+      "introduced_by_diff": true,
+      "evidence": "Exact unseen-count SQL executed against an in-memory SQLite fixture: viewer follows author, author blocks viewer, one public card exists; unseen returns 1 instead of 0.",
+      "files": [
+        "server/database.js"
+      ]
+    }
+  ],
+  "verdict": "break",
+  "checks": [
+    "node task-artifacts/7YBBNR2-review-repro.cjs -> 10 probes, 4 pass, 6 failing expectations reproducing the three findings at edc1f1b; exit 1 (parent independently reran)",
+    "node task-artifacts/7YBBNR2-review-repro.cjs --control-fixed -> 10/10 pass, exit 0; synthetic source mutations in memory only, not an application repair (parent independently reran)",
+    "git diff --name-status 3f77dc3 edc1f1b -> 30 changed paths; 6090 insertions, 1582 deletions",
+    "ensemble board before review -> builder anthropic/claude-opus-5; 30 failed provider attempts, zero valid reviews; latest failures are read-only Codex runtime initialization",
+    "REVIEW_REF=HEAD node task-artifacts/7YBBNR2-review-repro.cjs -> same 10 probes, 4 pass, 6 defects; exit 1 (parent independently ran at 361b700)"
+  ],
+  "limitations": [
+    "No production data mutated; application source remains unchanged.",
+    "The 10-probe harness uses exact source with stub route registration, real Python SQLite, and real Express route matching for uppercase paths; the original and corrected control both confirm the case-insensitive match. No production exploit request was needed.",
+    "The synthetic corrected control proves the probes respond to the relevant predicates; it is not proof any application fixes shipped.",
+    "Historical 155/155 social and 407/407 identity tallies are not claimed as fresh results.",
+    "The parent card remains paused. Its close gate should now name actual findings instead of a provider outage."
+  ],
+  "coverage": {
+    ".gitignore": "Removed stale test-result ignore entry; no new credential pattern.",
+    "client/src/App-working.jsx": "Shared hook integration, signout resets, feed entry points, username buttons and profile/card wiring inspected.",
+    "client/src/App.css": "Username target geometry, hover guards, feed layout and responsive rail rules inspected; no browser run claimed.",
+    "client/src/Profile.jsx": "Relationship source of truth, viewed-user cards and async follow control inspected.",
+    "client/src/__tests__/following-feed-collisions-S4EVFZQ.mjs": "Actual component bundling, scenarios, viewport inventory and negative-control design inspected; not executed.",
+    "client/src/__tests__/username-first-click-S4EVFZQ.mjs": "Shared button props, representative card fixtures, controls and browser dependency inspected; not executed.",
+    "client/src/dbSync.js": "Social payload/error contracts, opt-in writes, feed and notification API wiring inspected.",
+    "client/src/hooks/useFollow.js": "Optimistic state, in-flight guard, refusal handling and opt-in flow inspected.",
+    "client/src/hooks/useSocialFeed.js": "Badge, paging, seen marker, suggestions and notification state inspected.",
+    "client/src/shared/FollowingFeed.jsx": "Feed, suggestions, notification controls and callback contracts inspected.",
+    "client/src/shared/clickableUsername.js": "Propagation/default prevention and accessible button contract inspected.",
+    "scripts/verify-gate.sh": "Verifier additions and claimed coverage compared with relevant test sources; historical counts not reused as fresh proof.",
+    "server/account-deletion.js": "New feed-seen and notification-pair purge policies inspected.",
+    "server/database.js": "Follow result semantics, email omission, lazy schema, SQL privacy/block conditions, notification marker and unseen count inspected; unseen SQL executed.",
+    "server/karma-policy.js": "Follower milestone once-per-reference registration inspected.",
+    "server/karma-scale.js": "Milestone configuration and bounded reward reference inspected.",
+    "server/mediaservers/router.js": "New namespace quarantine predicate executed; uppercase bypass found.",
+    "server/routes/dirmods.routes.js": "New namespace quarantine predicate executed; uppercase bypass found.",
+    "server/routes/friend-requests-dm.routes.js": "Session-derived sender and mismatch/self checks inspected.",
+    "server/routes/index.js": "Removed shadow mounts, namespace repair and lowercased double-prefix refusal inspected.",
+    "server/routes/social.core.routes.js": "Session binding, policy deps, lists, relationships, feed, notifications and watch-party changes inspected; failure paths reproduced.",
+    "server/routes/social.routes.js": "Deletion and removal of aggregator import/mount checked; replaced legacy implementation not treated as live code.",
+    "server/routes/user.routes.js": "Shared-card owner/public/privacy filtering inspected; default-visible exception noted.",
+    "server/routes/users-index-cards.routes.js": "Viewer attribution now derives from verified session.",
+    "server/social/follow-service.js": "Pure policy, churn caps, list privacy, participant reads and milestone logic inspected.",
+    "server/test-route-imports.js": "Deletion checked against replacement verifier and registry entry.",
+    "server/verify-follow-integrity.mjs": "Exact route tests and schema-repair fixture inspected; exceptions absent from test cases.",
+    "server/verify-route-imports.js": "Derived module inventory, vacuity floors, exit sentinel and controlled failures inspected.",
+    "server/verify-session-identity-FM86AN2.js": "Expanded identity fields, binders and mount-prefix analysis inspected.",
+    "server/verify-social-shadow-S4EVFZQ.mjs": "Route stubs, negative controls and SQL fixture coverage inspected; blocked unseen and state-read failures absent from assertions."
+  },
+  "repair_task": "96EZSJM",
+  "receipt": {
+    "ok": true,
+    "round": 31,
+    "rung": {
+      "provider": "openai",
+      "model": "gpt-6-astra"
+    },
+    "findings": [
+      "F1",
+      "F2",
+      "F3"
+    ],
+    "rulings": [],
+    "verdict": "break"
+  },
+  "close_holds": [
+    "finding F1 [high] open: The newly added case-sensitive namespace checks in DirMods and media-server quarantine skip uppercase paths that default case-insensitive Ex — fix (ensemble.js fix) or rebut (ensemble.js rebut) with evidence",
+    "finding F2 [high] open: New follow/privacy policy wiring fails open when its backing state cannot be read: a throwing block lookup still permits a follow mutation a — fix (ensemble.js fix) or rebut (ensemble.js rebut) with evidence",
+    "finding F3 [medium] open: The new unseen-count SQL omits the bidirectional block filter used by the following feed, so posts from a blocked author still increase the  — fix (ensemble.js fix) or rebut (ensemble.js rebut) with evidence"
+  ]
+}
